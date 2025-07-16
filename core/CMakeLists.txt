@@ -13,7 +13,7 @@ set(HELIOS_SOURCES
         src/Context_data.cpp
         src/global.cpp
         src/selfTest.cpp
-        src/pugixml.cpp
+        lib/pugixml/pugixml.cpp
 )
 add_library(helios STATIC ${HELIOS_SOURCES})
 
@@ -21,7 +21,11 @@ add_library(helios STATIC ${HELIOS_SOURCES})
 target_include_directories(helios
         PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/pugixml>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/doctest>
         $<INSTALL_INTERFACE:include>
+        $<INSTALL_INTERFACE:lib/pugixml>
+        $<INSTALL_INTERFACE:lib/doctest>
 )
 
 # External libraries

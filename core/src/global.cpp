@@ -15,14 +15,14 @@
 
 #include "global.h"
 
-//PNG Libraries (reading and writing PNG images)
+// PNG Libraries (reading and writing PNG images)
 //! PNG debug level.
 #define PNG_DEBUG 3
 //! Macro to skip setjmp check.
 #define PNG_SKIP_SETJMP_CHECK 1
 #include "png.h"
 
-//JPEG Libraries (reading and writing JPEG images)
+// JPEG Libraries (reading and writing JPEG images)
 extern "C" {
 #include "jpeglib.h"
 }
@@ -164,7 +164,7 @@ vec3 helios::rotatePointAboutLine(const vec3 &point, const vec3 &line_base, cons
         return point;
     }
 
-    //for reference this was taken from http://inside.mines.edu/fs_home/gmurray/ArbitraryAxisRotation/
+    // for reference this was taken from http://inside.mines.edu/fs_home/gmurray/ArbitraryAxisRotation/
 
     vec3 position;
 
@@ -210,9 +210,9 @@ int helios::Date::JulianDay() const {
     int skips_nonleap[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
     int *skips;
 
-    if (isLeapYear()) { //leap year
+    if (isLeapYear()) { // leap year
         skips = skips_leap;
-    } else { //non-leap year
+    } else { // non-leap year
         skips = skips_nonleap;
     }
 
@@ -246,10 +246,14 @@ void helios::Date::incrementDay() {
 }
 
 bool helios::Date::isLeapYear() const {
-    if ((year - 2000) % 4 == 0) { //leap year
-        return true;
-    } else { //non-leap year
-        return false;
+    if (year % 400 == 0) {
+        return true; // Divisible by 400: leap year
+    } else if (year % 100 == 0) {
+        return false; // Divisible by 100 but not 400: not a leap year
+    } else if (year % 4 == 0) {
+        return true; // Divisible by 4 but not 100: leap year
+    } else {
+        return false; // Not divisible by 4: not a leap year
     }
 }
 
@@ -268,64 +272,122 @@ int helios::randu(int imin, int imax) {
 }
 
 float helios::acos_safe(float x) {
-    if (x < -1.0) x = -1.0;
-    else if (x > 1.0) x = 1.0;
+    if (x < -1.0)
+        x = -1.0;
+    else if (x > 1.0)
+        x = 1.0;
     return acosf(x);
 }
 
 float helios::asin_safe(float x) {
-    if (x < -1.0) x = -1.0;
-    else if (x > 1.0) x = 1.0;
+    if (x < -1.0)
+        x = -1.0;
+    else if (x > 1.0)
+        x = 1.0;
     return asinf(x);
 }
 
 bool helios::lineIntersection(const vec2 &p1, const vec2 &q1, const vec2 &p2, const vec2 &q2) {
+    constexpr float EPSILON = 1e-9f;
+
     float ax = q1.x - p1.x; // direction of line a
-    float ay = q1.y - p1.y; // ax and ay as above
+    float ay = q1.y - p1.y;
 
     float bx = p2.x - q2.x; // direction of line b, reversed
-    float by = p2.y - q2.y; // really -by and -by as above
+    float by = p2.y - q2.y;
 
     float dx = p2.x - p1.x; // right-hand side
     float dy = p2.y - p1.y;
 
     float det = ax * by - ay * bx;
 
-    if (det == 0) return false;
+    if (std::abs(det) < EPSILON) {
+        // Lines are parallel or collinear
+        // Check if they are collinear by testing if p2 lies on line through p1 and q1
+        float cross = dx * ay - dy * ax;
+        if (std::abs(cross) > EPSILON) {
+            return false; // Parallel but not collinear
+        }
 
+        // Lines are collinear - check if segments overlap
+        // Project all points onto the dominant axis to avoid division by zero
+        float dot_aa = ax * ax + ay * ay;
+        if (dot_aa < EPSILON) {
+            // First segment is a point
+            return pointOnSegment(p1, p2, q2);
+        }
+
+        // Project onto the line through p1,q1
+        float t0 = 0.0f; // p1 projection
+        float t1 = 1.0f; // q1 projection
+        float t2 = ((p2.x - p1.x) * ax + (p2.y - p1.y) * ay) / dot_aa; // p2 projection
+        float t3 = ((q2.x - p1.x) * ax + (q2.y - p1.y) * ay) / dot_aa; // q2 projection
+
+        // Ensure t2 <= t3
+        if (t2 > t3) {
+            std::swap(t2, t3);
+        }
+
+        // Check if intervals [t0,t1] and [t2,t3] overlap
+        return !(t1 < t2 || t3 < t0);
+    }
+
+    // Lines are not parallel - check if intersection point lies on both segments
     float r = (dx * by - dy * bx) / det;
     float s = (ax * dy - ay * dx) / det;
 
-    return !(r < 0 || r > 1 || s < 0 || s > 1);
+    return (r >= 0 && r <= 1 && s >= 0 && s <= 1);
 }
 
-bool helios::pointInPolygon(const vec2 &point, const std::vector<vec2> &polygon_verts) {
-    std::vector<vec2> pverts = polygon_verts;
-    pverts.push_back(polygon_verts.front());
+bool helios::pointOnSegment(const vec2 &point, const vec2 &seg_start, const vec2 &seg_end) {
+    constexpr float EPSILON = 1e-9f;
 
-    vec2 p1 = point;
-    vec2 q1 = make_vec2(100000, 0); //todo: calculate a bounding box
+    // Check if point is collinear with segment
+    float cross = (point.y - seg_start.y) * (seg_end.x - seg_start.x) - (point.x - seg_start.x) * (seg_end.y - seg_start.y);
+    if (std::abs(cross) > EPSILON) {
+        return false;
+    }
 
-    int Nintersect = 0;
-    for (size_t i = 0; i < pverts.size() - 1; i++) {
-        vec2 p2 = pverts.at(i);
-        vec2 q2 = pverts.at(i + 1);
+    // Check if point is within segment bounds
+    float min_x = std::min(seg_start.x, seg_end.x);
+    float max_x = std::max(seg_start.x, seg_end.x);
+    float min_y = std::min(seg_start.y, seg_end.y);
+    float max_y = std::max(seg_start.y, seg_end.y);
 
-        if (lineIntersection(p1, q1, p2, q2)) {
-            Nintersect++;
+    return (point.x >= min_x - EPSILON && point.x <= max_x + EPSILON && point.y >= min_y - EPSILON && point.y <= max_y + EPSILON);
+}
+
+bool helios::pointInPolygon(const vec2 &p, const std::vector<vec2> &poly) {
+    constexpr float EPS = 1e-6f;
+    const std::size_t n = poly.size();
+    if (n < 3) {
+        return false;
+    }
+
+    /* vertex coincidence */
+    for (const vec2 &v: poly) {
+        if (std::abs(p.x - v.x) < EPS && std::abs(p.y - v.y) < EPS) {
+            return true; // vertex counts as inside
         }
     }
 
-    if (Nintersect != 0 && Nintersect % 2 == 1) {
-        return true;
-    } else {
-        return false;
-    }
-}
+    /* ray–edge crossings */
+    int crossings = 0;
+    for (std::size_t i = 0; i < n; ++i) {
+        const vec2 &a = poly[i];
+        const vec2 &b = poly[(i + 1) % n];
 
-void helios::wait(float seconds) {
-    int msec = (int) lround(seconds * 1000.f);
-    std::this_thread::sleep_for(std::chrono::milliseconds(msec));
+        if ((a.y > p.y) != (b.y > p.y)) {
+
+            float x_hit = a.x + (p.y - a.y) * (b.x - a.x) / (b.y - a.y);
+
+            if (x_hit >= p.x - EPS) {
+                ++crossings;
+            }
+        }
+    }
+
+    return (crossings & 1) == 1;
 }
 
 void helios::makeRotationMatrix(const float rotation, const char *axis, float (&T)[16]) {
@@ -403,7 +465,7 @@ void helios::makeRotationMatrix(float rotation, const helios::vec3 &axis, float 
 }
 
 void helios::makeRotationMatrix(float rotation, const helios::vec3 &origin, const helios::vec3 &axis, float (&T)[16]) {
-    //Construct inverse translation matrix to translate back to the origin
+    // Construct inverse translation matrix to translate back to the origin
     float Ttrans[16];
     makeIdentityMatrix(Ttrans);
 
@@ -411,7 +473,7 @@ void helios::makeRotationMatrix(float rotation, const helios::vec3 &origin, cons
     Ttrans[7] = -origin.y; //(1,3)
     Ttrans[11] = -origin.z; //(2,3)
 
-    //Construct rotation matrix
+    // Construct rotation matrix
     vec3 u = axis;
     u.normalize();
 
@@ -434,10 +496,10 @@ void helios::makeRotationMatrix(float rotation, const helios::vec3 &origin, cons
     Trot[10] = cx + u.z * u.z * (1.f - cx); //(2,2)
     Trot[11] = 0.f; //(2,3)
 
-    //Multiply first two matrices and store in 'T'
+    // Multiply first two matrices and store in 'T'
     matmult(Trot, Ttrans, T);
 
-    //Construct transformation matrix to translate back to 'origin'
+    // Construct transformation matrix to translate back to 'origin'
     Ttrans[3] = origin.x; //(0,3)
     Ttrans[7] = origin.y; //(1,3)
     Ttrans[11] = origin.z; //(2,3)
@@ -626,128 +688,146 @@ vec3 helios::sphere2cart(const SphericalCoord &Spherical) {
 }
 
 vec2 helios::string2vec2(const char *str) {
-    float o[2] = {99999, 99999};
+    float o[2];
     std::string tmp;
 
     std::istringstream stream(str);
     int c = 0;
-    while (stream >> tmp) {
-        if (c == 2) {
-            break;
-        }
+    while (stream >> tmp && c < 2) {
         if (!parse_float(tmp, o[c])) {
-            o[c] = 99999;
+            helios_runtime_error("ERROR (string2vec2): Invalid float value '" + tmp + "' in input string '" + std::string(str) + "'");
         }
         c++;
     }
+
+    if (c < 2) {
+        helios_runtime_error("ERROR (string2vec2): Insufficient values in input string '" + std::string(str) + "'. Expected 2 values, got " + std::to_string(c));
+    }
+
     return make_vec2(o[0], o[1]);
 }
 
 vec3 helios::string2vec3(const char *str) {
-    float o[3] = {99999, 99999, 99999};
+    float o[3];
     std::string tmp;
 
     std::istringstream stream(str);
     int c = 0;
-    while (stream >> tmp) {
-        if (c == 3) {
-            break;
-        }
+    while (stream >> tmp && c < 3) {
         if (!parse_float(tmp, o[c])) {
-            o[c] = 99999;
+            helios_runtime_error("ERROR (string2vec3): Invalid float value '" + tmp + "' in input string '" + std::string(str) + "'");
         }
         c++;
     }
+
+    if (c < 3) {
+        helios_runtime_error("ERROR (string2vec3): Insufficient values in input string '" + std::string(str) + "'. Expected 3 values, got " + std::to_string(c));
+    }
+
     return make_vec3(o[0], o[1], o[2]);
 }
 
 vec4 helios::string2vec4(const char *str) {
-    float o[4] = {99999, 99999, 99999, 99999};
+    float o[4];
     std::string tmp;
 
     std::istringstream stream(str);
     int c = 0;
-    while (stream >> tmp) {
-        if (c == 4) {
-            break;
-        }
+    while (stream >> tmp && c < 4) {
         if (!parse_float(tmp, o[c])) {
-            o[c] = 99999;
+            helios_runtime_error("ERROR (string2vec4): Invalid float value '" + tmp + "' in input string '" + std::string(str) + "'");
         }
         c++;
     }
+
+    if (c < 4) {
+        helios_runtime_error("ERROR (string2vec4): Insufficient values in input string '" + std::string(str) + "'. Expected 4 values, got " + std::to_string(c));
+    }
+
     return make_vec4(o[0], o[1], o[2], o[3]);
 }
 
 int2 helios::string2int2(const char *str) {
-    int o[2] = {99999, 99999};
+    int o[2];
     std::string tmp;
 
     std::istringstream stream(str);
     int c = 0;
-    while (stream >> tmp) {
-        if (c == 2) {
-            break;
-        }
+    while (stream >> tmp && c < 2) {
         if (!parse_int(tmp, o[c])) {
-            o[c] = 99999;
+            helios_runtime_error("ERROR (string2int2): Invalid int value '" + tmp + "' in input string '" + std::string(str) + "'");
         }
         c++;
     }
+
+    if (c < 2) {
+        helios_runtime_error("ERROR (string2int2): Insufficient values in input string '" + std::string(str) + "'. Expected 2 values, got " + std::to_string(c));
+    }
+
     return make_int2(o[0], o[1]);
 }
 
 int3 helios::string2int3(const char *str) {
-    int o[3] = {99999, 99999, 99999};
+    int o[3];
     std::string tmp;
 
     std::istringstream stream(str);
     int c = 0;
-    while (stream >> tmp) {
-        if (c == 3) {
-            break;
-        }
+    while (stream >> tmp && c < 3) {
         if (!parse_int(tmp, o[c])) {
-            o[c] = 99999;
+            helios_runtime_error("ERROR (string2int3): Invalid int value '" + tmp + "' in input string '" + std::string(str) + "'");
         }
         c++;
     }
+
+    if (c < 3) {
+        helios_runtime_error("ERROR (string2int3): Insufficient values in input string '" + std::string(str) + "'. Expected 3 values, got " + std::to_string(c));
+    }
+
     return make_int3(o[0], o[1], o[2]);
 }
 
 int4 helios::string2int4(const char *str) {
-    int o[4] = {99999, 99999, 99999, 99999};
+    int o[4];
     std::string tmp;
 
     std::istringstream stream(str);
     int c = 0;
-    while (stream >> tmp) {
-        if (c == 4) {
-            break;
-        }
+    while (stream >> tmp && c < 4) {
         if (!parse_int(tmp, o[c])) {
-            o[c] = 99999;
+            helios_runtime_error("ERROR (string2int4): Invalid int value '" + tmp + "' in input string '" + std::string(str) + "'");
         }
         c++;
     }
+
+    if (c < 4) {
+        helios_runtime_error("ERROR (string2int4): Insufficient values in input string '" + std::string(str) + "'. Expected 4 values, got " + std::to_string(c));
+    }
+
     return make_int4(o[0], o[1], o[2], o[3]);
 }
 
 RGBAcolor helios::string2RGBcolor(const char *str) {
-    float o[4] = {0, 0, 0, 1};
+    float o[4] = {0, 0, 0, 1}; // Keep default alpha of 1
     std::string tmp;
 
     std::istringstream stream(str);
     int c = 0;
     while (stream >> tmp) {
-        if (c == 4) {
-            break;
+        if (c >= 4) {
+            helios_runtime_error("ERROR (string2RGBcolor): Too many values in input string '" + std::string(str) + "'. Expected at most 4 values (RGBA), but found additional value '" + tmp + "'");
         }
+
         if (!parse_float(tmp, o[c])) {
-            o[c] = 0;
+            helios_runtime_error("ERROR (string2RGBcolor): Invalid float value '" + tmp + "' in input string '" + std::string(str) + "'");
         }
         c++;
     }
+
+    if (c < 3) {
+        helios_runtime_error("ERROR (string2RGBcolor): Insufficient values in input string '" + std::string(str) + "'. Expected at least 3 values (RGB), got " + std::to_string(c));
+    }
+
     return make_RGBAcolor(o[0], o[1], o[2], o[3]);
 }
 
@@ -891,10 +971,10 @@ bool helios::open_xml_file(const std::string &xml_file, pugi::xml_document &xmld
         return false;
     }
 
-    //load file
+    // load file
     pugi::xml_parse_result load_result = xmldoc.load_file(xml_file.c_str());
 
-    //error checking
+    // error checking
     if (!load_result) {
         error_string = "XML file " + xml_file + " parsed with errors: " + load_result.description();
         return false;
@@ -996,11 +1076,19 @@ std::string helios::trim_whitespace(const std::string &input) {
 std::vector<std::string> helios::separate_string_by_delimiter(const std::string &inputstring, const std::string &delimiter) {
     std::vector<std::string> separated_string;
 
+    // Handle empty delimiter case
+    if (delimiter.empty()) {
+        helios_runtime_error("ERROR (helios::separate_string_by_delimiter): Delimiter cannot be an empty string.");
+    }
+
     size_t pos = 0;
     size_t found;
-    while ((found = inputstring.find(delimiter, pos)) != std::string::npos) {
+    size_t max_characters = inputstring.size();
+    size_t iter = 0;
+    while ((found = inputstring.find(delimiter, pos)) != std::string::npos && iter <= max_characters) {
         separated_string.push_back(trim_whitespace(inputstring.substr(pos, found - pos)));
         pos = found + delimiter.size();
+        iter++;
     }
 
     // add the remaining part (including case of no delimiter found)
@@ -1161,9 +1249,8 @@ Date helios::CalendarDay(int Julian_day, int year) {
     if (year < 1000)
         helios_runtime_error("ERROR (CalendarDay): Year must be given in YYYY format.");
 
-    const bool leap =
-            (year % 4 == 0 && year % 100 != 0) || // divisible by 4 but not by 100
-            (year % 400 == 0); // or divisible by 400
+    const bool leap = (year % 4 == 0 && year % 100 != 0) || // divisible by 4 but not by 100
+                      (year % 400 == 0); // or divisible by 400
 
     if (!leap && Julian_day == 366)
         helios_runtime_error("ERROR (CalendarDay): Day 366 occurs only in leap years.");
@@ -1216,8 +1303,7 @@ int helios::JulianDay(const Date &date) {
     }
 
     if (day < 1 || day > daysInMonth[month]) {
-        helios_runtime_error("ERROR (JulianDay): Day of month is out of range (day of " + std::to_string(day) +
-                             " was given for month " + std::to_string(month) + ").");
+        helios_runtime_error("ERROR (JulianDay): Day of month is out of range (day of " + std::to_string(day) + " was given for month " + std::to_string(month) + ").");
     }
 
     if (year < 1000) {
@@ -1249,21 +1335,19 @@ bool helios::PNGHasAlpha(const char *filename) {
     }
 
     // 3) Open file with RAII
-    auto fileCloser = [](FILE *f) { if (f) std::fclose(f); };
-    std::unique_ptr<FILE, decltype(fileCloser)> fp(
-        std::fopen(fn.c_str(), "rb"), fileCloser);
+    auto fileCloser = [](FILE *f) {
+        if (f)
+            std::fclose(f);
+    };
+    std::unique_ptr<FILE, decltype(fileCloser)> fp(std::fopen(fn.c_str(), "rb"), fileCloser);
     if (!fp) {
-        helios_runtime_error(
-            "ERROR (PNGHasAlpha): File " + fn +
-            " could not be opened for reading.");
+        helios_runtime_error("ERROR (PNGHasAlpha): File " + fn + " could not be opened for reading.");
     }
 
     // 4) Read & validate PNG signature
     unsigned char header[8];
-    if (std::fread(header, 1, 8, fp.get()) != 8 ||
-        png_sig_cmp(header, 0, 8)) {
-        helios_runtime_error(
-            "ERROR (PNGHasAlpha): File " + fn + " is not a valid PNG file.");
+    if (std::fread(header, 1, 8, fp.get()) != 8 || png_sig_cmp(header, 0, 8)) {
+        helios_runtime_error("ERROR (PNGHasAlpha): File " + fn + " is not a valid PNG file.");
     }
 
     png_structp png_ptr = nullptr;
@@ -1271,8 +1355,7 @@ bool helios::PNGHasAlpha(const char *filename) {
 
     try {
         // 5) Create libpng read & info structs
-        png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING,
-                                         nullptr, nullptr, nullptr);
+        png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
         if (!png_ptr) {
             throw std::runtime_error("png_create_read_struct failed.");
         }
@@ -1297,9 +1380,7 @@ bool helios::PNGHasAlpha(const char *filename) {
         bool has_tRNS = png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) != 0;
 
         // 9) Determine alpha presence
-        bool has_alpha =
-                ((color_type & PNG_COLOR_MASK_ALPHA) != 0) ||
-                has_tRNS;
+        bool has_alpha = ((color_type & PNG_COLOR_MASK_ALPHA) != 0) || has_tRNS;
 
         // 10) Clean up libpng structs
         png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
@@ -1320,7 +1401,7 @@ bool helios::PNGHasAlpha(const char *filename) {
     return false;
 }
 
-std::vector<std::vector<bool> > helios::readPNGAlpha(const std::string &filename) {
+std::vector<std::vector<bool>> helios::readPNGAlpha(const std::string &filename) {
     const std::string &fn = filename;
     auto dot = fn.find_last_of('.');
     if (dot == std::string::npos) {
@@ -1333,7 +1414,7 @@ std::vector<std::vector<bool> > helios::readPNGAlpha(const std::string &filename
 
     int y;
 
-    std::vector<std::vector<bool> > mask;
+    std::vector<std::vector<bool>> mask;
 
     png_structp png_ptr;
     png_infop info_ptr;
@@ -1436,8 +1517,7 @@ void helios::readPNG(const std::string &filename, uint &width, uint &height, std
         helios_runtime_error("ERROR (readPNG): File " + filename + " has no extension.");
     }
     std::string ext = filename.substr(ext_pos + 1);
-    std::transform(ext.begin(), ext.end(), ext.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return std::tolower(c); });
     if (ext != "png") {
         helios_runtime_error("ERROR (readPNG): File " + filename + " is not PNG format.");
     }
@@ -1449,9 +1529,11 @@ void helios::readPNG(const std::string &filename, uint &width, uint &height, std
         //
         // 2) RAII for FILE*
         //
-        auto fileDeleter = [](FILE *f) { if (f) fclose(f); };
-        std::unique_ptr<FILE, decltype(fileDeleter)> fp(
-            fopen(filename.c_str(), "rb"), fileDeleter);
+        auto fileDeleter = [](FILE *f) {
+            if (f)
+                fclose(f);
+        };
+        std::unique_ptr<FILE, decltype(fileDeleter)> fp(fopen(filename.c_str(), "rb"), fileDeleter);
         if (!fp) {
             throw std::runtime_error("File " + filename + " could not be opened.");
         }
@@ -1503,13 +1585,10 @@ void helios::readPNG(const std::string &filename, uint &width, uint &height, std
             png_set_tRNS_to_alpha(png_ptr);
         }
         // Ensure we have RGBA
-        if (color_type == PNG_COLOR_TYPE_RGB ||
-            color_type == PNG_COLOR_TYPE_GRAY ||
-            color_type == PNG_COLOR_TYPE_PALETTE) {
+        if (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE) {
             png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
         }
-        if (color_type == PNG_COLOR_TYPE_GRAY ||
-            color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
+        if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
             png_set_gray_to_rgb(png_ptr);
         }
 
@@ -1525,9 +1604,7 @@ void helios::readPNG(const std::string &filename, uint &width, uint &height, std
         // Prevent overflow when resizing vectors
         constexpr size_t max_pixels = (std::numeric_limits<size_t>::max)() / sizeof(helios::RGBAcolor);
         if (w == 0 || h == 0 || w > max_pixels / h) {
-            throw std::runtime_error(
-                "Invalid image dimensions: " +
-                std::to_string(w) + "×" + std::to_string(h));
+            throw std::runtime_error("Invalid image dimensions: " + std::to_string(w) + "×" + std::to_string(h));
         }
         width = scast<uint>(w);
         height = scast<uint>(h);
@@ -1535,11 +1612,9 @@ void helios::readPNG(const std::string &filename, uint &width, uint &height, std
         // 11) Prepare row pointers
         size_t rowbytes = png_get_rowbytes(png_ptr, info_ptr);
         if (rowbytes < width * 4) {
-            throw std::runtime_error(
-                "Unexpected row size: " + std::to_string(rowbytes));
+            throw std::runtime_error("Unexpected row size: " + std::to_string(rowbytes));
         }
-        std::vector<std::vector<png_byte> > row_data(
-            height, std::vector<png_byte>(rowbytes));
+        std::vector<std::vector<png_byte>> row_data(height, std::vector<png_byte>(rowbytes));
         std::vector<png_bytep> row_pointers(height);
         for (uint y = 0; y < height; ++y) {
             row_pointers[y] = row_data[y].data();
@@ -1567,16 +1642,20 @@ void helios::readPNG(const std::string &filename, uint &width, uint &height, std
     } catch (const std::exception &e) {
         // Clean up libpng structs on error
         if (png_ptr) {
-            if (info_ptr) png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
-            else png_destroy_read_struct(&png_ptr, nullptr, nullptr);
+            if (info_ptr)
+                png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+            else
+                png_destroy_read_struct(&png_ptr, nullptr, nullptr);
         }
         helios_runtime_error("ERROR (readPNG): " + std::string(e.what()));
     }
 
     // Normal cleanup
     if (png_ptr) {
-        if (info_ptr) png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
-        else png_destroy_read_struct(&png_ptr, nullptr, nullptr);
+        if (info_ptr)
+            png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+        else
+            png_destroy_read_struct(&png_ptr, nullptr, nullptr);
     }
 }
 
@@ -1604,27 +1683,17 @@ void helios::writePNG(const std::string &filename, uint width, uint height, cons
     png_init_io(png, fp);
 
     // Output is 8bit depth, RGBA format.
-    png_set_IHDR(
-        png,
-        info,
-        width,
-        height,
-        8,
-        PNG_COLOR_TYPE_RGBA,
-        PNG_INTERLACE_NONE,
-        PNG_COMPRESSION_TYPE_DEFAULT,
-        PNG_FILTER_TYPE_DEFAULT
-    );
+    png_set_IHDR(png, info, width, height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
     png_write_info(png, info);
 
     // To remove the alpha channel for PNG_COLOR_TYPE_RGB format,
     // Use png_set_filler().
-    //png_set_filler(png, 0, PNG_FILLER_AFTER);
+    // png_set_filler(png, 0, PNG_FILLER_AFTER);
 
     std::vector<unsigned char *> row_pointers;
     row_pointers.resize(height);
 
-    std::vector<std::vector<unsigned char> > data;
+    std::vector<std::vector<unsigned char>> data;
     data.resize(height);
 
     for (uint row = 0; row < height; row++) {
@@ -1702,43 +1771,43 @@ void helios::readJPEG(const std::string &filename, uint &width, uint &height, st
     jerr.error_exit = jpg_error_exit;
 
     try {
-    jpeg_create_decompress(&cinfo);
+        jpeg_create_decompress(&cinfo);
         jpeg_stdio_src(&cinfo, infile.get());
-    (void) jpeg_read_header(&cinfo, TRUE);
+        (void) jpeg_read_header(&cinfo, TRUE);
 
-    (void) jpeg_start_decompress(&cinfo);
+        (void) jpeg_start_decompress(&cinfo);
 
-    row_stride = cinfo.output_width * cinfo.output_components;
-    buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
+        row_stride = cinfo.output_width * cinfo.output_components;
+        buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
 
-    width = cinfo.output_width;
-    height = cinfo.output_height;
+        width = cinfo.output_width;
+        height = cinfo.output_height;
 
-    if (cinfo.output_components != 3) {
-        helios_runtime_error("ERROR (Context::readJPEG): Image file does not have RGB components.");
-    } else if (width == 0 || height == 0) {
-        helios_runtime_error("ERROR (Context::readJPEG): Image file is empty.");
-    }
-
-    pixel_data.resize(width * height);
-
-    JSAMPLE *ba;
-    int row = 0;
-    while (cinfo.output_scanline < cinfo.output_height) {
-        (void) jpeg_read_scanlines(&cinfo, buffer, 1);
-
-        ba = buffer[0];
-
-        for (int col = 0; col < row_stride; col += 3) {
-            pixel_data.at(row * width + col / 3) = make_RGBcolor(ba[col] / 255.f, ba[col + 1] / 255.f, ba[col + 2] / 255.f);
+        if (cinfo.output_components != 3) {
+            helios_runtime_error("ERROR (Context::readJPEG): Image file does not have RGB components.");
+        } else if (width == 0 || height == 0) {
+            helios_runtime_error("ERROR (Context::readJPEG): Image file is empty.");
         }
 
-        row++;
-    }
+        pixel_data.resize(width * height);
 
-    (void) jpeg_finish_decompress(&cinfo);
+        JSAMPLE *ba;
+        int row = 0;
+        while (cinfo.output_scanline < cinfo.output_height) {
+            (void) jpeg_read_scanlines(&cinfo, buffer, 1);
 
-    jpeg_destroy_decompress(&cinfo);
+            ba = buffer[0];
+
+            for (int col = 0; col < row_stride; col += 3) {
+                pixel_data.at(row * width + col / 3) = make_RGBcolor(ba[col] / 255.f, ba[col + 1] / 255.f, ba[col + 2] / 255.f);
+            }
+
+            row++;
+        }
+
+        (void) jpeg_finish_decompress(&cinfo);
+
+        jpeg_destroy_decompress(&cinfo);
     } catch (...) {
         jpeg_destroy_decompress(&cinfo);
         throw;
@@ -1763,12 +1832,12 @@ helios::int2 helios::getImageResolutionJPEG(const std::string &filename) {
     jerr.error_exit = jpg_error_exit;
 
     try {
-    jpeg_create_decompress(&cinfo);
+        jpeg_create_decompress(&cinfo);
         jpeg_stdio_src(&cinfo, infile.get());
-    (void) jpeg_read_header(&cinfo, TRUE);
-    (void) jpeg_start_decompress(&cinfo);
+        (void) jpeg_read_header(&cinfo, TRUE);
+        (void) jpeg_start_decompress(&cinfo);
 
-    jpeg_destroy_decompress(&cinfo);
+        jpeg_destroy_decompress(&cinfo);
     } catch (...) {
         jpeg_destroy_decompress(&cinfo);
         throw;
@@ -1830,15 +1899,15 @@ void helios::writeJPEG(const std::string &a_filename, uint width, uint height, c
     jpeg_start_compress(&cinfo, TRUE);
 
     try {
-    row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
+        row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
 
-    while (cinfo.next_scanline < cinfo.image_height) {
-        row_pointer = (JSAMPROW) &screen_shot_trans[(cinfo.image_height - cinfo.next_scanline - 1) * row_stride];
-        (void) jpeg_write_scanlines(&cinfo, &row_pointer, 1);
-    }
+        while (cinfo.next_scanline < cinfo.image_height) {
+            row_pointer = (JSAMPROW) &screen_shot_trans[(cinfo.image_height - cinfo.next_scanline - 1) * row_stride];
+            (void) jpeg_write_scanlines(&cinfo, &row_pointer, 1);
+        }
 
-    jpeg_finish_compress(&cinfo);
-    jpeg_destroy_compress(&cinfo);
+        jpeg_finish_compress(&cinfo);
+        jpeg_destroy_compress(&cinfo);
     } catch (...) {
         jpeg_destroy_compress(&cinfo);
         throw;
@@ -1872,20 +1941,20 @@ void helios::writeJPEG(const std::string &a_filename, uint width, uint height, c
 }
 
 helios::vec3 helios::spline_interp3(float u, const vec3 &x_start, const vec3 &tan_start, const vec3 &x_end, const vec3 &tan_end) {
-    //Perform interpolation between two 3D points using Cubic Hermite Spline
+    // Perform interpolation between two 3D points using Cubic Hermite Spline
 
     if (u < 0 || u > 1.f) {
-        std::cout << "WARNING (spline_interp3): Clamping query point 'u' to the interval (0,1)" << std::endl;
+        std::cerr << "WARNING (spline_interp3): Clamping query point 'u' to the interval (0,1)" << std::endl;
         u = clamp(u, 0.f, 1.f);
     }
 
-    //Basis matrix
+    // Basis matrix
     float B[16] = {2.f, -2.f, 1.f, 1.f, -3.f, 3.f, -2.f, -1.f, 0, 0, 1.f, 0, 1.f, 0, 0, 0};
 
-    //Control matrix
+    // Control matrix
     const float C[12] = {x_start.x, x_start.y, x_start.z, x_end.x, x_end.y, x_end.z, tan_start.x, tan_start.y, tan_start.z, tan_end.x, tan_end.y, tan_end.z};
 
-    //Parameter vector
+    // Parameter vector
     const float P[4] = {u * u * u, u * u, u, 1.f};
 
     float R[12] = {0.f};
@@ -1946,7 +2015,7 @@ std::string helios::XMLloadstring(const pugi::xml_node node, const char *field) 
     if (field_str.empty()) {
         value = "99999";
     } else {
-        value = field_str; //note: pugi loads xml data as a character.  need to separate it into int
+        value = field_str; // note: pugi loads xml data as a character.  need to separate it into int
     }
 
     return value;
@@ -1959,7 +2028,7 @@ helios::vec2 helios::XMLloadvec2(const pugi::xml_node node, const char *field) {
     if (strlen(field_str) == 0) {
         value = make_vec2(99999, 99999);
     } else {
-        value = string2vec2(field_str); //note: pugi loads xml data as a character.  need to separate it into 2 floats
+        value = string2vec2(field_str); // note: pugi loads xml data as a character.  need to separate it into 2 floats
     }
 
     return value;
@@ -1972,7 +2041,7 @@ helios::vec3 helios::XMLloadvec3(const pugi::xml_node node, const char *field) {
     if (strlen(field_str) == 0) {
         value = make_vec3(99999, 99999, 99999);
     } else {
-        value = string2vec3(field_str); //note: pugi loads xml data as a character.  need to separate it into 3 floats
+        value = string2vec3(field_str); // note: pugi loads xml data as a character.  need to separate it into 3 floats
     }
 
     return value;
@@ -1985,7 +2054,7 @@ helios::vec4 helios::XMLloadvec4(const pugi::xml_node node, const char *field) {
     if (strlen(field_str) == 0) {
         value = make_vec4(99999, 99999, 99999, 99999);
     } else {
-        value = string2vec4(field_str); //note: pugi loads xml data as a character.  need to separate it into 4 floats
+        value = string2vec4(field_str); // note: pugi loads xml data as a character.  need to separate it into 4 floats
     }
 
     return value;
@@ -1998,7 +2067,7 @@ helios::int2 helios::XMLloadint2(const pugi::xml_node node, const char *field) {
     if (strlen(field_str) == 0) {
         value = make_int2(99999, 99999);
     } else {
-        value = string2int2(field_str); //note: pugi loads xml data as a character.  need to separate it into 2 ints
+        value = string2int2(field_str); // note: pugi loads xml data as a character.  need to separate it into 2 ints
     }
 
     return value;
@@ -2011,7 +2080,7 @@ helios::int3 helios::XMLloadint3(const pugi::xml_node node, const char *field) {
     if (strlen(field_str) == 0) {
         value = make_int3(99999, 99999, 99999);
     } else {
-        value = string2int3(field_str); //note: pugi loads xml data as a character.  need to separate it into 3 ints
+        value = string2int3(field_str); // note: pugi loads xml data as a character.  need to separate it into 3 ints
     }
 
     return value;
@@ -2024,7 +2093,7 @@ helios::int4 helios::XMLloadint4(const pugi::xml_node node, const char *field) {
     if (strlen(field_str) == 0) {
         value = make_int4(99999, 99999, 99999, 99999);
     } else {
-        value = string2int4(field_str); //note: pugi loads xml data as a character.  need to separate it into 4 ints
+        value = string2int4(field_str); // note: pugi loads xml data as a character.  need to separate it into 4 ints
     }
 
     return value;
@@ -2037,7 +2106,7 @@ helios::RGBcolor helios::XMLloadrgb(const pugi::xml_node node, const char *field
     if (strlen(field_str) == 0) {
         value = make_RGBAcolor(1, 1, 1, 0);
     } else {
-        value = string2RGBcolor(field_str); //note: pugi loads xml data as a character.  need to separate it into 3 floats
+        value = string2RGBcolor(field_str); // note: pugi loads xml data as a character.  need to separate it into 3 floats
     }
 
     return make_RGBcolor(value.r, value.g, value.b);
@@ -2048,62 +2117,88 @@ helios::RGBAcolor helios::XMLloadrgba(const pugi::xml_node node, const char *fie
 
     helios::RGBAcolor value;
     if (strlen(field_str) == 0) {
-        value = make_RGBAcolor(1, 1, 1, 0);
+        value = make_RGBAcolor(1, 1, 1, 1);
     } else {
-        value = string2RGBcolor(field_str); //note: pugi loads xml data as a character.  need to separate it into 3 floats
+        value = string2RGBcolor(field_str); // note: pugi loads xml data as a character.  need to separate it into 3 floats
     }
 
     return value;
 }
 
-float helios::fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol, int max_iterations) {
-    float T = init_guess;
+float helios::fzero(
+        float (*f)(float, std::vector<float>&, const void*),
+        std::vector<float>& vars,
+        const void* params,
+        float init_guess,
+        float err_tol,
+        int   max_iter)
+{
+    constexpr float DELTA_SEED = 1e-4f;
+    constexpr float DENOM_EPS  = 1e-12f;
 
-    float T_old_old = 1.1f * init_guess;
+    /* ---- initial pair ---------------------------------------------- */
+    float x0 = init_guess;
+    float x1 = (std::fabs(init_guess) > 1.0f)
+               ? init_guess * (1.0f + DELTA_SEED)
+               : init_guess + DELTA_SEED;
 
-    float T_old = init_guess;
+    float f0 = f(x0, vars, params);
+    float f1 = f(x1, vars, params);
 
-    float resid_old = function(T_old, variables, parameters);
-    float resid_old_old = function(T_old_old, variables, parameters);
+    for (int iter = 0; iter < max_iter; ++iter) {
 
-    float resid = 100;
-    float err = resid;
-    uint iter = 0;
-    while (err > err_tol && iter < max_iterations) {
-        if (resid_old == resid_old_old) { //this condition will cause NaN
-            err = 0;
-            break;
+        float denom = f1 - f0;
+
+        /* ------- flat or nearly flat function ----------------------- */
+        if (std::fabs(denom) < DENOM_EPS) {
+            if (std::fabs(f1) < err_tol) {      // already “close enough”
+                return x1;
+            }
+            std::cerr << "WARNING: fzero stagnated (|f'|≈0).\n";
+            return x1;                          // graceful exit, finite value
         }
 
-        T = fabs((T_old_old * resid_old - T_old * resid_old_old) / (resid_old - resid_old_old));
+        /* ------- secant update  x₂ = x₁ − f₁ (x₁−x₀)/(f₁−f₀) -------- */
+        float x2 = x1 - f1 * (x1 - x0) / denom;
+        if (!std::isfinite(x2)) {               // overflow / NaN safeguard
+            std::cerr << "WARNING: fzero produced non-finite iterate.\n";
+            return x1;
+        }
 
-        resid = function(T, variables, parameters);
+        float f2 = f(x2, vars, params);
 
-        resid_old_old = resid_old;
-        resid_old = resid;
+        /* ------- convergence criteria -------------------------------- */
+        float rel_step = std::fabs(x2 - x1) / (std::fabs(x2) + 1.0f);
+        if (std::fabs(f2) < err_tol && rel_step < err_tol) {
+            return x2;
+        }
 
-        err = fabs(T_old - T_old_old) / fabs(T_old_old);
-
-        T_old_old = T_old;
-        T_old = T;
-
-        iter++;
+        /* ------- next iteration -------------------------------------- */
+        x0 = x1;  f0 = f1;
+        x1 = x2;  f1 = f2;
     }
 
-    if (err > err_tol) {
-        printf("WARNING: fzero solution did not converge.\n");
-    }
-
-    return T;
+    std::cerr << "WARNING: fzero did not converge after " << max_iter << " iterations.\n";
+    return x1;                                  // best finite estimate
 }
 
 float helios::interp1(const std::vector<helios::vec2> &points, float x) {
-    //Ensure that no 2 adjacent x values are equal, and that x values are monotonically increasing
-    constexpr float EPSILON{1.0E-5};
-    for (std::size_t i = 1; i < points.size(); ++i) {
-        float deltaX{std::abs(points[i].x - points[i - 1].x)};
+    // Handle empty input
+    if (points.empty()) {
+        helios_runtime_error("ERROR (interp1): Cannot interpolate with empty points vector.");
+    }
+
+    // Handle single point case
+    if (points.size() == 1) {
+        return points[0].y;
+    }
+
+    // Validate input: ensure x values are sorted and unique
+    constexpr float EPSILON = 1.0E-5f;
+    for (size_t i = 1; i < points.size(); ++i) {
+        float deltaX = points[i].x - points[i - 1].x;
         if (deltaX < EPSILON) {
-            if (deltaX > -EPSILON) {
+            if (std::abs(deltaX) < EPSILON) {
                 helios_runtime_error("ERROR (interp1): Adjacent X points cannot be equal.");
             } else {
                 helios_runtime_error("ERROR (interp1): X points must increase monotonically.");
@@ -2111,41 +2206,31 @@ float helios::interp1(const std::vector<helios::vec2> &points, float x) {
         }
     }
 
-    //Define a lambda that returns true if the x value
-    //of a point pair is < the caller's x value
-    auto lessThan = [](const vec2 &point, float x) {
-        return point.x < x;
-    };
-
-    //Find the first table entry whose value is >= caller's x value
-    const auto iter = std::lower_bound(points.cbegin(), points.cend(), x, lessThan);
-
-    //If the caller's X value is greater than the largest
-    //X value in the table, we can't interpolate.
-    if (iter == points.cend()) {
-        return (points.cend() - 1)->y;
+    // Handle extrapolation cases
+    if (x <= points.front().x) {
+        return points.front().y; // Extrapolate to first point
+    }
+    if (x >= points.back().x) {
+        return points.back().y; // Extrapolate to last point
     }
 
-    //If the caller's X value is less than the smallest X value in the table,
-    //we can't interpolate.
-    if (iter == points.cbegin() && x <= points.cbegin()->x) {
-        return points.cbegin()->y;
+    // Find the interpolation interval
+    // Use binary search to find the right interval
+    auto it = std::lower_bound(points.begin(), points.end(), x, [](const vec2 &point, float value) { return point.x < value; });
+
+    // At this point, it points to the first element with x >= target x
+    // We need the interval [it-1, it] for interpolation
+    if (it == points.begin()) {
+        // This shouldn't happen due to our earlier checks, but handle it safely
+        return points.front().y;
     }
 
-    //We can interpolate!
-    float upperX{iter->x};
-    float upperY{iter->y};
-    float lowerX{(iter - 1)->x};
-    float lowerY{(iter - 1)->y};
+    const vec2 &p1 = *(it - 1); // Lower bound
+    const vec2 &p2 = *it; // Upper bound
 
-    float deltaY{upperY - lowerY};
-    float deltaX{upperX - lowerX};
-
-    return lowerY + ((x - lowerX) / deltaX) * deltaY;
-}
-
-float helios::point_distance(const helios::vec3 &p1, const helios::vec3 &p2) {
-    return (p1 - p2).magnitude();
+    // Linear interpolation
+    float t = (x - p1.x) / (p2.x - p1.x);
+    return p1.y + t * (p2.y - p1.y);
 }
 
 std::string helios::getFileExtension(const std::string &filepath) {
@@ -2177,7 +2262,7 @@ std::string helios::getFilePath(const std::string &filepath, bool trailingslash)
 }
 
 bool helios::validateOutputPath(std::string &output_path, const std::vector<std::string> &allowable_file_extensions) {
-    if (output_path.empty()) { //path was empty
+    if (output_path.empty()) { // path was empty
         return false;
     }
 
@@ -2187,7 +2272,7 @@ bool helios::validateOutputPath(std::string &output_path, const std::vector<std:
     std::string output_file_ext = output_path_fs.extension().string();
     std::string output_dir = output_path_fs.parent_path().string();
 
-    if (output_file.empty()) { //path was a directory without a file
+    if (output_file.empty()) { // path was a directory without a file
 
         // Make sure directory has a trailing slash
         if (output_dir.find_last_of('/') != output_dir.length() - 1) {
@@ -2203,7 +2288,7 @@ bool helios::validateOutputPath(std::string &output_path, const std::vector<std:
     }
 
     if (!output_file.empty() && !allowable_file_extensions.empty()) {
-        //validate file extension
+        // validate file extension
         bool valid_extension = false;
         for (const auto &ext: allowable_file_extensions) {
             if (output_file_ext == ext) {
@@ -2270,11 +2355,7 @@ float evaluate_ellipsoidal_azimuth_PDF(float phi, float e, float phi0, float K_e
 }
 
 // Sample phi from ellipsoidal distribution via rejection sampling
-float helios::sample_ellipsoidal_azimuth(
-    float e,
-    float phi0_degrees,
-    std::minstd_rand0 *generator
-) {
+float helios::sample_ellipsoidal_azimuth(float e, float phi0_degrees, std::minstd_rand0 *generator) {
     // sanity‐check
     if (e < 0.f || e > 1.f) {
         helios_runtime_error("ERROR (helios::sample_ellipsoidal_azimuth): Eccentricity must be in [0,1].");

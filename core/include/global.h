@@ -18,7 +18,7 @@
 
 //! Macro for marking functions as deprecated.
 #ifdef __GNUC__
-#define DEPRECATED(func) func __attribute__ ((deprecated))
+#define DEPRECATED(func) func __attribute__((deprecated))
 #elif defined(_MSC_VER)
 #define DEPRECATED(func) __declspec(deprecated) func
 #else
@@ -34,30 +34,29 @@
 //! Pi constant as a float.
 constexpr float PI_F = 3.14159265358979323846f;
 
-#include <cstdlib>
-#include <cstdio>
-#include <cstring>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <vector>
-#include <array>
-#include <stdexcept>
-#include <exception>
-#include <cassert>
-#include <cmath>
-#include <memory>
-#include <ctime>
-#include <map>
-#include <unordered_map>
 #include <algorithm>
-#include <ctime>
-#include <random>
+#include <array>
+#include <cassert>
 #include <chrono>
-#include <thread>
-#include <iomanip>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <exception>
 #include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <random>
+#include <sstream>
+#include <stdexcept>
+#include <thread>
 #include <type_traits>
+#include <unordered_map>
+#include <vector>
 
 #ifdef USE_OPENMP
 #include <omp.h>
@@ -68,15 +67,14 @@ typedef unsigned int uint;
 
 //! Static cast for converting between types.
 template<typename To, typename From>
-constexpr To scast(From&& v) noexcept
-{
+constexpr To scast(From &&v) noexcept {
     return static_cast<To>(std::forward<From>(v));
 }
 
 
 #include "helios_vector_types.h"
 
-//pugi XML parser
+// pugi XML parser
 #include "pugixml.hpp"
 
 // *** Groups *** //
@@ -108,20 +106,20 @@ namespace helios {
 
     //! Construct a rotation matrix to perform rotation about the x-, y-, or z-axis.
     /** 4x4 Affine rotation matrix
-        * \param[in] rotation Rotation angle about axis in radians.
-        * \param[in] axis Axis about which to rotate (one of 'x', 'y', or 'z').
-        * \param[out] transform Transformation matrix in a 1D array
-        * \ingroup functions
-    */
+     * \param[in] rotation Rotation angle about axis in radians.
+     * \param[in] axis Axis about which to rotate (one of 'x', 'y', or 'z').
+     * \param[out] transform Transformation matrix in a 1D array
+     * \ingroup functions
+     */
     void makeRotationMatrix(float rotation, const char *axis, float (&transform)[16]);
 
     //! Construct a rotation matrix to perform rotation about an arbitrary axis passing through the origin.
     /** 4x4 Affine rotation matrix
-        * \param[in] rotation Rotation angle about axis in radians.
-        * \param[in] axis Vector describing axis about which to perform rotation.
-        * \param[out] transform Transformation matrix in a 1D array
-        * \ingroup functions
-    */
+     * \param[in] rotation Rotation angle about axis in radians.
+     * \param[in] axis Vector describing axis about which to perform rotation.
+     * \param[out] transform Transformation matrix in a 1D array
+     * \ingroup functions
+     */
     void makeRotationMatrix(float rotation, const helios::vec3 &axis, float (&transform)[16]);
 
     //! Construct a rotation matrix to perform rotation about an arbitrary line (not necessarily passing through the origin).
@@ -131,45 +129,45 @@ namespace helios {
      * \param[in] axis Vector describing axis about which to perform rotation.
      * \param[out] transform Transformation matrix in a 1D array
      * \ingroup functions
-    */
+     */
     void makeRotationMatrix(float rotation, const helios::vec3 &origin, const helios::vec3 &axis, float (&transform)[16]);
 
     //! Construct translation matrix
     /** 4x4 Affine translation matrix
-        * \param[in] translation Distance to translate in x, y, and z directions.
-        * \param[out] transform Transformation matrix in a 1D array
-        * \ingroup functions
-    */
+     * \param[in] translation Distance to translate in x, y, and z directions.
+     * \param[out] transform Transformation matrix in a 1D array
+     * \ingroup functions
+     */
     void makeTranslationMatrix(const helios::vec3 &translation, float (&transform)[16]);
 
     //! Construct matrix to scale about the origin
     /** 4x4 Affine scaling matrix
-        * \param[in] scale Scaling factor to apply in x, y, and z directions.
-        * \param[out] transform Transformation matrix in a 1D array
-        * \ingroup functions
-    */
+     * \param[in] scale Scaling factor to apply in x, y, and z directions.
+     * \param[out] transform Transformation matrix in a 1D array
+     * \ingroup functions
+     */
     void makeScaleMatrix(const helios::vec3 &scale, float (&transform)[16]);
 
     //! Construct matrix to scale about arbitrary point in space
     /** 4x4 Affine scaling matrix
-        * \param[in] scale Scaling factor to apply in x, y, and z directions.
-        * \param[in] point Cartesian coordinates of point about which to scale
-        * \param[out] transform Transformation matrix in a 1D array
-        * \ingroup functions
-    */
+     * \param[in] scale Scaling factor to apply in x, y, and z directions.
+     * \param[in] point Cartesian coordinates of point about which to scale
+     * \param[out] transform Transformation matrix in a 1D array
+     * \ingroup functions
+     */
     void makeScaleMatrix(const helios::vec3 &scale, const helios::vec3 &point, float (&transform)[16]);
 
     //! Multiply 4x4 matrices: T=ML*MR
     /**
-    * Performs matrix multiplication between two 4x4 matrices (ML and MR) and
-    * stores the result in the output matrix T. This function implements the standard
-    * matrix multiplication algorithm where each element of the result is the dot product
-    * of the corresponding row of ML and column of MR.
-    *
-    * \param[in] ML The left 4x4 matrix in the multiplication
-    * \param[in] MR The right 4x4 matrix in the multiplication
-    * \param[out] T Reference to a 4x4 matrix where the result will be stored
-    */
+     * Performs matrix multiplication between two 4x4 matrices (ML and MR) and
+     * stores the result in the output matrix T. This function implements the standard
+     * matrix multiplication algorithm where each element of the result is the dot product
+     * of the corresponding row of ML and column of MR.
+     *
+     * \param[in] ML The left 4x4 matrix in the multiplication
+     * \param[in] MR The right 4x4 matrix in the multiplication
+     * \param[out] T Reference to a 4x4 matrix where the result will be stored
+     */
     void matmult(const float ML[16], const float MR[16], float (&T)[16]);
 
     //! Multiply 4x4 transformation matrix by 3-element vector: T=M*v
@@ -200,8 +198,8 @@ namespace helios {
      * \return angle in radians
      * \sa rad2deg()
      * \ingroup functions
-    */
-    [[nodiscard ]] float deg2rad(float deg);
+     */
+    [[nodiscard]] float deg2rad(float deg);
 
     //! Convert radians to degrees
     /**
@@ -209,15 +207,15 @@ namespace helios {
      * \return angle in degrees
      * \sa deg2rad()
      * \ingroup functions
-    */
-    [[nodiscard ]] float rad2deg(float rad);
+     */
+    [[nodiscard]] float rad2deg(float rad);
 
     //! Four quadrant arc tangent between 0 and 2*pi
     /**
      * \note atan2_2pi(0,1) = 0, atan2_2pi(1,0) = pi/2, etc.
      * \ingroup functions
      */
-    [[nodiscard ]] float atan2_2pi(float y, float x);
+    [[nodiscard]] float atan2_2pi(float y, float x);
 
     //! Convert Cartesian coordinates to spherical coordinates
     /**
@@ -225,8 +223,8 @@ namespace helios {
      * \returns SphericalCoord vector.
      * \sa sphere2cart(), SphericalCoord
      * \ingroup functions
-    */
-    [[nodiscard ]] SphericalCoord cart2sphere(const vec3 &Cartesian);
+     */
+    [[nodiscard]] SphericalCoord cart2sphere(const vec3 &Cartesian);
 
     //! Convert Spherical coordinates to Cartesian coordinates
     /**
@@ -234,44 +232,44 @@ namespace helios {
      * \returns vec3 vector of Cartesian coordinates
      * \sa cart2sphere()
      * \ingroup functions
-    */
-    [[nodiscard ]] vec3 sphere2cart(const SphericalCoord &Spherical);
+     */
+    [[nodiscard]] vec3 sphere2cart(const SphericalCoord &Spherical);
 
     //! Convert a space-delimited string into a vec2 vector
     /**
      * \ingroup functions
      */
-    [[nodiscard ]] vec2 string2vec2(const char *str);
+    [[nodiscard]] vec2 string2vec2(const char *str);
 
     //! Convert a space-delimited string into a vec3 vector
     /**
      * \ingroup functions
      */
-    [[nodiscard ]] vec3 string2vec3(const char *str);
+    [[nodiscard]] vec3 string2vec3(const char *str);
 
     //! Convert a space-delimited string into a vec4 vector
     /**
      * \ingroup functions
      */
-    [[nodiscard ]] vec4 string2vec4(const char *str);
+    [[nodiscard]] vec4 string2vec4(const char *str);
 
     //! Convert a space-delimited string into an int2 vector
     /**
      * \ingroup functions
      */
-    [[nodiscard ]] int2 string2int2(const char *str);
+    [[nodiscard]] int2 string2int2(const char *str);
 
     //! Convert a space-delimited string into an int3 vector
     /**
      * \ingroup functions
      */
-    [[nodiscard ]] int3 string2int3(const char *str);
+    [[nodiscard]] int3 string2int3(const char *str);
 
     //! Convert a space-delimited string into an int4 vector
     /**
      * \ingroup functions
      */
-    [[nodiscard ]] int4 string2int4(const char *str);
+    [[nodiscard]] int4 string2int4(const char *str);
 
     //! Convert a string into a float with error checking
     /**
@@ -347,11 +345,11 @@ namespace helios {
 
     //! Opens and parses an XML file into a pugi::xml_document object
     /**
-    * \param[in] xml_file Path to the XML file to be opened and parsed
-    * \param[out] xmldoc Reference to a pugi::xml_document object that will hold the parsed XML data
-    * \param[out] error_string Reference to a string that will be populated with error information if the function fails
-    * \return true if the XML file was successfully opened and parsed, false otherwise (in case of failure, check error_string for details)
-    */
+     * \param[in] xml_file Path to the XML file to be opened and parsed
+     * \param[out] xmldoc Reference to a pugi::xml_document object that will hold the parsed XML data
+     * \param[out] error_string Reference to a string that will be populated with error information if the function fails
+     * \return true if the XML file was successfully opened and parsed, false otherwise (in case of failure, check error_string for details)
+     */
     bool open_xml_file(const std::string &xml_file, pugi::xml_document &xmldoc, std::string &error_string);
 
     //! Parse an XML tag containing an integer value
@@ -370,8 +368,7 @@ namespace helios {
      * \param[in] calling_function Name of the function calling this function (for error reporting). e.g., Context::loadXML
      * \return Float value of the tag
      */
-    [[nodiscard]] float parse_xml_tag_float(const pugi::xml_node &node, const std::string &tag,
-                                            const std::string &calling_function);
+    [[nodiscard]] float parse_xml_tag_float(const pugi::xml_node &node, const std::string &tag, const std::string &calling_function);
 
     //! Parse an XML tag containing a vec2 value (i.e., two space delimited floats)
     /**
@@ -380,8 +377,7 @@ namespace helios {
      * \param[in] calling_function Name of the function calling this function (for error reporting). e.g., Context::loadXML
      * \return vec2 value of the tag
      */
-    [[nodiscard]] vec2 parse_xml_tag_vec2(const pugi::xml_node &node, const std::string &tag,
-                                          const std::string &calling_function);
+    [[nodiscard]] vec2 parse_xml_tag_vec2(const pugi::xml_node &node, const std::string &tag, const std::string &calling_function);
 
     //! Parse an XML tag containing a vec3 value (i.e., three space delimited floats)
     /**
@@ -390,8 +386,7 @@ namespace helios {
      * \param[in] calling_function Name of the function calling this function (for error reporting). e.g., Context::loadXML
      * \return vec3 value of the tag
      */
-    [[nodiscard]] vec3 parse_xml_tag_vec3(const pugi::xml_node &node, const std::string &tag,
-                                          const std::string &calling_function);
+    [[nodiscard]] vec3 parse_xml_tag_vec3(const pugi::xml_node &node, const std::string &tag, const std::string &calling_function);
 
     //! Parse an XML tag containing a string
     /**
@@ -400,8 +395,7 @@ namespace helios {
      * \param[in] calling_function Name of the function calling this function (for error reporting). e.g., Context::loadXML
      * \return String value of the tag
      */
-    [[nodiscard]] std::string parse_xml_tag_string(const pugi::xml_node &node, const std::string &tag,
-                                                   const std::string &calling_function);
+    [[nodiscard]] std::string parse_xml_tag_string(const pugi::xml_node &node, const std::string &tag, const std::string &calling_function);
 
     //! Convert a space-delimited string into an RGBcolor vector
     /**
@@ -434,8 +428,7 @@ namespace helios {
      * \return Vector of substrings. If inputstring does not contain delimiter, empty vector is returned
      * \ingroup functions
      */
-    [[nodiscard]] std::vector<std::string> separate_string_by_delimiter(const std::string &inputstring,
-                                                                        const std::string &delimiter);
+    [[nodiscard]] std::vector<std::string> separate_string_by_delimiter(const std::string &inputstring, const std::string &delimiter);
 
     //! Clamp value to be within some specified bounds
     /**
@@ -445,9 +438,9 @@ namespace helios {
      * \ingroup functions
      */
     template<typename anytype>
-    [[nodiscard]] anytype clamp(anytype value, anytype min, anytype max){
+    [[nodiscard]] anytype clamp(anytype value, anytype min, anytype max) {
         static_assert(std::is_same_v<anytype, int> || std::is_same_v<anytype, uint> || std::is_same_v<anytype, float> || std::is_same_v<anytype, double> || std::is_same_v<anytype, char> || std::is_same_v<anytype, unsigned char>,
-                          "helios::clamp() was called with an unsupported type.");
+                      "helios::clamp() was called with an unsupported type.");
         if (value < min) {
             value = min;
         } else if (value > max) {
@@ -460,56 +453,56 @@ namespace helios {
     /**
      * \param[in] vect C++ vector of floats
      * \ingroup functions
-    */
+     */
     [[nodiscard]] float sum(const std::vector<float> &vect);
 
     //! Mean value of a vector of floats
     /**
      * \param[in] vect C++ vector of floats
      * \ingroup functions
-    */
+     */
     [[nodiscard]] float mean(const std::vector<float> &vect);
 
     //! Minimum value of a vector of floats
     /**
      * \param[in] vect C++ vector of floats
      * \ingroup functions
-    */
+     */
     [[nodiscard]] float min(const std::vector<float> &vect);
 
     //! Minimum value of a vector of ints
     /**
      * \param[in] vect C++ vector of ints
      * \ingroup functions
-    */
+     */
     [[nodiscard]] int min(const std::vector<int> &vect);
 
     //! Minimum value of a vector of vec3's
     /**
      * \param[in] vect C++ vector of vec3's
      * \ingroup functions
-    */
+     */
     [[nodiscard]] vec3 min(const std::vector<vec3> &vect);
 
     //! Maximum value of a vector of floats
     /**
      * \param[in] vect C++ vector of floats
      * \ingroup functions
-    */
+     */
     [[nodiscard]] float max(const std::vector<float> &vect);
 
     //! Maximum value of a vector of ints
     /**
      * \param[in] vect C++ vector of ints
      * \ingroup functions
-    */
+     */
     [[nodiscard]] int max(const std::vector<int> &vect);
 
     //! Maximum value of a vector of vec3's
     /**
      * \param[in] vect C++ vector of vec3's
      * \ingroup functions
-    */
+     */
     [[nodiscard]] vec3 max(const std::vector<vec3> &vect);
 
     //! Standard deviation of a vector of floats
@@ -532,10 +525,9 @@ namespace helios {
      * \param[in] Nx Size of vector in x-direction, i.e., vec.at(0).size()
      * \param[in] Ny Size of vector in y-direction, i.e., vec.size()
      * \ingroup functions
-    */
+     */
     template<typename anytype>
-    typename std::enable_if<std::is_default_constructible<anytype>::value>::type
-    resize_vector(std::vector<std::vector<anytype>>& vec, size_t Nx, size_t Ny) {
+    typename std::enable_if<std::is_default_constructible<anytype>::value>::type resize_vector(std::vector<std::vector<anytype>> &vec, size_t Nx, size_t Ny) {
         vec.assign(Ny, std::vector<anytype>(Nx));
     }
 
@@ -546,10 +538,9 @@ namespace helios {
      * \param[in] Ny Size of vector in y-direction, i.e., vec[0].size()
      * \param[in] Nz Size of vector in y-direction, i.e., vec.size()
      * \ingroup functions
-    */
+     */
     template<typename anytype>
-    typename std::enable_if<std::is_default_constructible<anytype>::value>::type
-    resize_vector(std::vector<std::vector<std::vector<anytype> > > &vec, size_t Nx, size_t Ny, size_t Nz){
+    typename std::enable_if<std::is_default_constructible<anytype>::value>::type resize_vector(std::vector<std::vector<std::vector<anytype>>> &vec, size_t Nx, size_t Ny, size_t Nz) {
         vec.assign(Nz, std::vector<std::vector<anytype>>(Ny, std::vector<anytype>(Nx)));
     }
 
@@ -561,10 +552,9 @@ namespace helios {
      * \param[in] Nz Size of vector in y-direction, i.e., vec[0].size()
      * \param[in] Nw Size of vector in y-direction, i.e., vec.size()
      * \ingroup functions
-    */
+     */
     template<typename anytype>
-    typename std::enable_if<std::is_default_constructible<anytype>::value>::type
-    resize_vector(std::vector<std::vector<std::vector<std::vector<anytype> > > > &vec, size_t Nx, size_t Ny, size_t Nz, size_t Nw){
+    typename std::enable_if<std::is_default_constructible<anytype>::value>::type resize_vector(std::vector<std::vector<std::vector<std::vector<anytype>>>> &vec, size_t Nx, size_t Ny, size_t Nz, size_t Nw) {
         vec.assign(Nw, std::vector<std::vector<std::vector<anytype>>>(Nz, std::vector<std::vector<anytype>>(Ny, std::vector<anytype>(Nx))));
     }
 
@@ -589,7 +579,7 @@ namespace helios {
      * \param[in] position 3D coordinate of point to be rotated.
      * \param[in] rotation Spherical rotation angles (elevation,azimuth)
      * \ingroup functions
-    */
+     */
     [[nodiscard]] vec3 rotatePoint(const vec3 &position, const SphericalCoord &rotation);
 
     //! Function to rotate a 3D vector given spherical angles elevation and azimuth
@@ -598,7 +588,7 @@ namespace helios {
      * \param[in] theta elevation angle of rotation.
      * \param[in] phi azimuthal angle of rotation.
      * \ingroup functions
-    */
+     */
     [[nodiscard]] vec3 rotatePoint(const vec3 &position, float theta, float phi);
 
     //! Rotate a 3D vector about an arbitrary line
@@ -607,9 +597,8 @@ namespace helios {
      * \param[in] line_base Point through which line passes
      * \param[in] line_direction Unit vector pointing in the direction of the line
      * \param[in] theta Rotation angle in radians
-    */
-    [[nodiscard]] vec3 rotatePointAboutLine(const vec3 &point, const vec3 &line_base, const vec3 &line_direction,
-                                            float theta);
+     */
+    [[nodiscard]] vec3 rotatePointAboutLine(const vec3 &point, const vec3 &line_base, const vec3 &line_direction, float theta);
 
     //! Calculate the area of a triangle given its three vertices
     /**
@@ -618,7 +607,7 @@ namespace helios {
      * \param[in] v2 (x,y,z) coordinate of third vertex
      * \return One-sided surface area of triangle
      * \ingroup functions
-    */
+     */
     [[nodiscard]] float calculateTriangleArea(const vec3 &v0, const vec3 &v1, const vec3 &v2);
 
     //! Convert Julian day to calendar day (day,month,year)
@@ -627,7 +616,7 @@ namespace helios {
      * \param[in] year Year in YYYY format
      * \return int3, with int3::x = day, int3::y = month, int3::z = year
      * \sa JulianDay()
-    */
+     */
     [[nodiscard]] Date CalendarDay(int Julian_day, int year);
 
     //! Convert calendar day (day,month,year) to Julian day
@@ -637,7 +626,7 @@ namespace helios {
      * \param[in] year Year in YYYY format
      * \return Julian day of year
      * \sa CalendarDay()
-    */
+     */
     [[nodiscard]] int JulianDay(int day, int month, int year);
 
     //! Convert calendar day (day,month,year) to Julian day
@@ -646,7 +635,7 @@ namespace helios {
      * \return Julian day of year
      * \sa CalendarDay()
      * \ingroup functions
-    */
+     */
     [[nodiscard]] int JulianDay(const Date &date);
 
     //! Random number from a uniform distribution between 0 and 1
@@ -677,9 +666,8 @@ namespace helios {
      * \param[in] exp Exponent to which the base is raised (must be a non-negative integer)
      */
     template<typename T>
-    T powi(T base, std::size_t exp){
-        static_assert(std::is_same_v<T, uint> || std::is_same_v<T, int> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, char> || std::is_same_v<T, size_t>,
-                          "helios::powi() was called with an unsupported type.");
+    T powi(T base, std::size_t exp) {
+        static_assert(std::is_same_v<T, uint> || std::is_same_v<T, int> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, char> || std::is_same_v<T, size_t>, "helios::powi() was called with an unsupported type.");
         T result = static_cast<T>(1);
         while (exp > 0) {
             // If the low bit is set, multiply result by current base
@@ -694,13 +682,22 @@ namespace helios {
         return result;
     }
 
-    //!Determine if two line segments intersect. The lines segments are defined by vertices (p1,q1) and (p2,q2)
+    //! Determine if two line segments intersect. The lines segments are defined by vertices (p1,q1) and (p2,q2)
     /**
      * \ingroup functions
      */
     [[nodiscard]] bool lineIntersection(const vec2 &p1, const vec2 &q1, const vec2 &p2, const vec2 &q2);
 
-    //!Determine whether point lines within a polygon
+    //! Determines if a point lies on a given segment.
+    /**
+     * \param[in] point The point to check.
+     * \param[in] seg_start The start point of the segment.
+     * \param[in] seg_end The end point of the segment.
+     * \return True if the point lies on the segment, otherwise false.
+     */
+    [[nodiscard]] bool pointOnSegment(const vec2 &point, const vec2 &seg_start, const vec2 &seg_end);
+
+    //! Determine whether point lines within a polygon
     /**
      * \ingroup functions
      */
@@ -731,15 +728,15 @@ namespace helios {
         /**
          * \param[in] message Message to print with elapsed time
          * \note the timer print message can be turned off by passing the message argument  "mute"
-        */
+         */
         double toc(const char *message) const {
             if (!running) {
-                std::cerr << "ERROR (Timer): You must call `tic' before calling `toc'. Ignoring call to `toc'..." <<
-                        std::endl;
+                std::cerr << "ERROR (Timer): You must call `tic' before calling `toc'. Ignoring call to `toc'..." << std::endl;
                 return 0;
             }
 
-            auto timer_end = std::chrono::high_resolution_clock::now();;
+            auto timer_end = std::chrono::high_resolution_clock::now();
+            ;
             double duration = std::chrono::duration<double>(timer_end - timer_start).count();
             if (strcmp(message, "mute") != 0) {
                 std::cout << "Elapsed time is " << duration << " seconds: " << message << std::endl;
@@ -756,7 +753,7 @@ namespace helios {
     /**
      * \param[in] seconds Number of seconds to wait
      * \ingroup functions
-    */
+     */
     void wait(float seconds);
 
     //! Check whether PNG image file has an alpha/transparency channel
@@ -769,8 +766,8 @@ namespace helios {
     /**
      * \param[in] filename Name of the PNG image file
      * \return 2D mask, where false denotes no material
-    */
-    [[nodiscard]] std::vector<std::vector<bool> > readPNGAlpha(const std::string &filename);
+     */
+    [[nodiscard]] std::vector<std::vector<bool>> readPNGAlpha(const std::string &filename);
 
     //! Function to read a PNG image file into pixel data array
     /**
@@ -783,64 +780,64 @@ namespace helios {
 
     //! Function to write a PNG image based on pixel data
     /**
-    * \param[in] filename Name of the PNG image file
-    * \param[in] width Image width in pixels
-    * \param[in] height Image height in pixels
-    * \param[in] pixel_data Colors at each pixel (index at pixel_data[row*width+column])
-    */
+     * \param[in] filename Name of the PNG image file
+     * \param[in] width Image width in pixels
+     * \param[in] height Image height in pixels
+     * \param[in] pixel_data Colors at each pixel (index at pixel_data[row*width+column])
+     */
     void writePNG(const std::string &filename, uint width, uint height, const std::vector<helios::RGBAcolor> &pixel_data);
 
     //! Function to write a PNG image based on pixel data
     /**
-    * \param[in] filename Name of the PNG image file
-    * \param[in] width Image width in pixels
-    * \param[in] height Image height in pixels
-    * \param[in] pixel_data pixel_data Flat 1D array of pixel color data (index at pixel_data[(row*width+column)*width*height+channel]).
-        * \note The length of pixel_data must be width*height*4 (or if it is width*height*3, the last channel is assumed opaque).
-    */
+     * \param[in] filename Name of the PNG image file
+     * \param[in] width Image width in pixels
+     * \param[in] height Image height in pixels
+     * \param[in] pixel_data pixel_data Flat 1D array of pixel color data (index at pixel_data[(row*width+column)*width*height+channel]).
+     * \note The length of pixel_data must be width*height*4 (or if it is width*height*3, the last channel is assumed opaque).
+     */
     void writePNG(const std::string &filename, uint width, uint height, const std::vector<unsigned char> &pixel_data);
 
     //! Function to read a JPEG image file into pixel data array
     /**
-        * \param[in] filename Name of the JPEG image file
-        * \param[out] width Image width in pixels
-        * \param[out] height Image height in pixels
-        * \param[out] pixel_data Colors at each pixel (index at pixel_data[row*width+column])
-    */
+     * \param[in] filename Name of the JPEG image file
+     * \param[out] width Image width in pixels
+     * \param[out] height Image height in pixels
+     * \param[out] pixel_data Colors at each pixel (index at pixel_data[row*width+column])
+     */
     void readJPEG(const std::string &filename, uint &width, uint &height, std::vector<helios::RGBcolor> &pixel_data);
 
     //! Function to read a JPEG image file into pixel data array
     /**
-        * \param[in] filename Name of the JPEG image file
-    */
+     * \param[in] filename Name of the JPEG image file
+     */
     [[nodiscard]] helios::int2 getImageResolutionJPEG(const std::string &filename);
 
     //! Function to write a JPEG image based on pixel data
     /**
-        * \param[in] filename Name of the JPEG image file
-        * \param[in] width Image width in pixels
-        * \param[in] height Image height in pixels
-        * \param[in] pixel_data Colors at each pixel (index at pixel_data[row*width+column])
-    */
+     * \param[in] filename Name of the JPEG image file
+     * \param[in] width Image width in pixels
+     * \param[in] height Image height in pixels
+     * \param[in] pixel_data Colors at each pixel (index at pixel_data[row*width+column])
+     */
     void writeJPEG(const std::string &filename, uint width, uint height, const std::vector<helios::RGBcolor> &pixel_data);
 
     //! Function to write a JPEG image based on pixel data
     /**
-        * \param[in] filename Name of the JPEG image file
-        * \param[in] width Image width in pixels
-        * \param[in] height Image height in pixels
-        * \param[in] pixel_data Flat 1D array of pixel color data (index at pixel_data[(row*width+column)*width*height+channel]).
-        * \note The length of pixel_data must be width*height*3 (or if it is width*height*4, the last channel is ignored).
-    */
+     * \param[in] filename Name of the JPEG image file
+     * \param[in] width Image width in pixels
+     * \param[in] height Image height in pixels
+     * \param[in] pixel_data Flat 1D array of pixel color data (index at pixel_data[(row*width+column)*width*height+channel]).
+     * \note The length of pixel_data must be width*height*3 (or if it is width*height*4, the last channel is ignored).
+     */
     void writeJPEG(const std::string &filename, uint width, uint height, const std::vector<unsigned char> &pixel_data);
 
     //! Template function to flatten a 2D vector into a 1D vector
     /**
-    * \ingroup functions
-    * @tparam T Type of elements in the vector
-    */
-    template <typename T>
-    [[nodiscard]] std::vector<T> flatten(const std::vector<std::vector<T>>& vec){
+     * \ingroup functions
+     * @tparam T Type of elements in the vector
+     */
+    template<typename T>
+    [[nodiscard]] std::vector<T> flatten(const std::vector<std::vector<T>> &vec) {
         std::vector<T> result;
         for (const auto &row: vec) {
             result.insert(result.end(), row.begin(), row.end());
@@ -850,11 +847,11 @@ namespace helios {
 
     //! Template function to flatten a 3D vector into a 1D vector
     /**
-    * \ingroup functions
-    * @tparam T Type of elements in the vector
-    */
-    template <typename T>
-    [[nodiscard]] std::vector<T> flatten(const std::vector<std::vector<std::vector<T>>>& vec){
+     * \ingroup functions
+     * @tparam T Type of elements in the vector
+     */
+    template<typename T>
+    [[nodiscard]] std::vector<T> flatten(const std::vector<std::vector<std::vector<T>>> &vec) {
         std::vector<T> result;
         for (const auto &matrix: vec) {
             for (const auto &row: matrix) {
@@ -866,11 +863,11 @@ namespace helios {
 
     //! Template function to flatten a 4D vector into a 1D vector
     /**
-    * \ingroup functions
-    * @tparam T Type of elements in the vector
-    */
-    template <typename T>
-    [[nodiscard]] std::vector<T> flatten(const std::vector<std::vector<std::vector<std::vector<T>>>>& vec){
+     * \ingroup functions
+     * @tparam T Type of elements in the vector
+     */
+    template<typename T>
+    [[nodiscard]] std::vector<T> flatten(const std::vector<std::vector<std::vector<std::vector<T>>>> &vec) {
         std::vector<T> result;
         for (const auto &tensor: vec) {
             for (const auto &matrix: tensor) {
@@ -890,87 +887,86 @@ namespace helios {
      * \param[in] x_end (x,y,z) Cartesian coordinate of spline ending point.
      * \param[in] tan_end Vector tangent to spline at ending point.
      * \return Interpolated (x,y,z) Cartesian point.
-      * \ingroup functions
-    */
-    [[nodiscard]] helios::vec3 spline_interp3(float u, const vec3 &x_start, const vec3 &tan_start, const vec3 &x_end,
-                                const vec3 &tan_end);
+     * \ingroup functions
+     */
+    [[nodiscard]] helios::vec3 spline_interp3(float u, const vec3 &x_start, const vec3 &tan_start, const vec3 &x_end, const vec3 &tan_end);
 
     //! Function to load and convert a field in a pugi XML node into a float
     /**
      * \param[in] node Pugi XML node
      * \param[in] field String corresponding to field value to be read
-    */
+     */
     [[nodiscard]] float XMLloadfloat(pugi::xml_node node, const char *field);
 
     //! Function to load and convert a field in a pugi XML node into an int
     /**
      * \param[in] node Pugi XML node
      * \param[in] field String corresponding to field value to be read
-    */
+     */
     [[nodiscard]] int XMLloadint(pugi::xml_node node, const char *field);
 
     //! Function to load and convert a field in a pugi XML node into a string
     /**
      * \param[in] node Pugi XML node
      * \param[in] field String corresponding to field value to be read
-    */
+     */
     [[nodiscard]] std::string XMLloadstring(pugi::xml_node node, const char *field);
 
     //! Function to load and convert a field in a pugi XML node into a vec2
     /**
      * \param[in] node Pugi XML node
      * \param[in] field String corresponding to field value to be read
-    */
+     */
     [[nodiscard]] helios::vec2 XMLloadvec2(pugi::xml_node node, const char *field);
 
     //! Function to load and convert a field in a pugi XML node into a vec3
     /**
      * \param[in] node Pugi XML node
      * \param[in] field String corresponding to field value to be read
-    */
+     */
     [[nodiscard]] helios::vec3 XMLloadvec3(pugi::xml_node node, const char *field);
 
     //! Function to load and convert a field in a pugi XML node into a vec4
     /**
      * \param[in] node Pugi XML node
      * \param[in] field String corresponding to field value to be read
-    */
+     */
     [[nodiscard]] helios::vec4 XMLloadvec4(pugi::xml_node node, const char *field);
 
     //! Function to load and convert a field in a pugi XML node into a vec2
     /**
      * \param[in] node Pugi XML node
      * \param[in] field String corresponding to field value to be read
-    */
+     */
     [[nodiscard]] helios::int2 XMLloadint2(pugi::xml_node node, const char *field);
 
     //! Function to load and convert a field in a pugi XML node into a int3
     /**
      * \param[in] node Pugi XML node
      * \param[in] field String corresponding to field value to be read
-    */
+     */
     [[nodiscard]] helios::int3 XMLloadint3(pugi::xml_node node, const char *field);
 
     //! Function to load and convert a field in a pugi XML node into a int4
     /**
      * \param[in] node Pugi XML node
      * \param[in] field String corresponding to field value to be read
-    */
+     */
     [[nodiscard]] helios::int4 XMLloadint4(pugi::xml_node node, const char *field);
 
     //! Function to load and convert a field in a pugi XML node into an RGB color vector
     /**
      * \param[in] node Pugi XML node
      * \param[in] field String corresponding to field value to be read
-    */
+     */
     [[nodiscard]] helios::RGBcolor XMLloadrgb(pugi::xml_node node, const char *field);
 
     //! Function to load and convert a field in a pugi XML node into an RGBA color vector
     /**
      * \param[in] node Pugi XML node
      * \param[in] field String corresponding to field value to be read
-    */
-   [[nodiscard]]  helios::RGBAcolor XMLloadrgba(pugi::xml_node node, const char *field);
+     */
+    [[nodiscard]] helios::RGBAcolor XMLloadrgba(pugi::xml_node node, const char *field);
 
     //! Use Newton-Raphson method to find the zero of a function
     /**
@@ -981,60 +977,58 @@ namespace helios {
      * \param[in] err_tol [optional] Maximum allowable relative error in solution.
      * \param[in] max_iterations [optional] Maximum number of iterations to allow before exiting solver.
      */
-    [[nodiscard]] float fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters),
-                std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f,
-                int max_iterations = 100);
+    [[nodiscard]] float fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f, int max_iterations = 100);
 
     //! Function to perform linear interpolation based on a vector of discrete (x,y) values
     /**
-      * \param[in] points Vector of (x,y) pairs. x values must be monotonically increasing and not duplicated.
-      * \param[in] x x value at which to interpolate. If x is less than the first x-value in points or greater than the last x-value in points, interp1 will respectively return the first or last y value.
-      * \return Value of y interpolated at location x.
+     * \param[in] points Vector of (x,y) pairs. x values must be monotonically increasing and not duplicated.
+     * \param[in] x x value at which to interpolate. If x is less than the first x-value in points or greater than the last x-value in points, interp1 will respectively return the first or last y value.
+     * \return Value of y interpolated at location x.
      */
     [[nodiscard]] float interp1(const std::vector<helios::vec2> &points, float x);
 
     //! Function to calculate the distance between two points
     /**
-      * \param[in] p1 first point (vec3)
-      * \param[in] p2 second point (vec3)
-      * \return distance between p1 and p2 in three dimensions
+     * \param[in] p1 first point (vec3)
+     * \param[in] p2 second point (vec3)
+     * \return distance between p1 and p2 in three dimensions
      */
     [[nodiscard]] float point_distance(const helios::vec3 &p1, const helios::vec3 &p2);
 
     //! Parse a file string to get the extension
     /**
-      * Example: /path/to/file/filename.ext -> extension=".ext"
-      * \param[in] filepath String containing file path and name
-      * \return File extension contained in input string
-      * \note If the string does not contain an extension, an empty string is returned
+     * Example: /path/to/file/filename.ext -> extension=".ext"
+     * \param[in] filepath String containing file path and name
+     * \return File extension contained in input string
+     * \note If the string does not contain an extension, an empty string is returned
      */
     [[nodiscard]] std::string getFileExtension(const std::string &filepath);
 
     //! Parse a file string to get the filename without extension
     /**
-      * Example: /path/to/file/filename.ext -> stem="filename"
-      * \param[in] filepath String containing file path and name
-      * \return Filename without extension contained in input string
-      * \note If the string does not contain a file name, an empty string is returned
+     * Example: /path/to/file/filename.ext -> stem="filename"
+     * \param[in] filepath String containing file path and name
+     * \return Filename without extension contained in input string
+     * \note If the string does not contain a file name, an empty string is returned
      */
     [[nodiscard]] std::string getFileStem(const std::string &filepath);
 
     //! Parse a file string to get the filename including extension
     /**
-      * Example: /path/to/file/filename.ext -> filename="filename.ext"
-      * \param[in] filepath String containing file path and name
-      * \return Filename including extension contained in input string
-      * \note If the string does not contain a file name, an empty string is returned
+     * Example: /path/to/file/filename.ext -> filename="filename.ext"
+     * \param[in] filepath String containing file path and name
+     * \return Filename including extension contained in input string
+     * \note If the string does not contain a file name, an empty string is returned
      */
     [[nodiscard]] std::string getFileName(const std::string &filepath);
 
     //! Parse a file string to get the path (i.e., portion of the string before the file name).
     /**
-      * Example: /path/to/file/filename.ext -> path="/path/to/file/"
-      * \param[in] filepath String containing file path and name
-      * \param[in] trailingslash If true, a trailing slash is added to the path
-      * \return File path contained in input string
-      * \note If the string does not contain a path, an empty string is returned
+     * Example: /path/to/file/filename.ext -> path="/path/to/file/"
+     * \param[in] filepath String containing file path and name
+     * \param[in] trailingslash If true, a trailing slash is added to the path
+     * \return File path contained in input string
+     * \note If the string does not contain a path, an empty string is returned
      */
     [[nodiscard]] std::string getFilePath(const std::string &filepath, bool trailingslash = true);
 
@@ -1048,18 +1042,18 @@ namespace helios {
 
     //! Read values contained in a text file into a one-dimensional vector of floats
     /**
-      * \param[in] filepath Path to text file
-      * \return One-dimensional vector of floats contained in text file
+     * \param[in] filepath Path to text file
+     * \return One-dimensional vector of floats contained in text file
      */
     [[nodiscard]] std::vector<float> importVectorFromFile(const std::string &filepath);
 
     //! Sample from Beta(μ,ν) distribution
     /**
-        *  Sample θ_L ∈ [0, π/2] from beta distribution given u∼Uniform[0,1]
-        *  \param[in] mu First parameter of beta distribution
-        *  \param[in] nu Second parameter of beta distribution
-        *  \param[in] generator Random number generator
-    */
+     *  Sample θ_L ∈ [0, π/2] from beta distribution given u∼Uniform[0,1]
+     *  \param[in] mu First parameter of beta distribution
+     *  \param[in] nu Second parameter of beta distribution
+     *  \param[in] generator Random number generator
+     */
     [[nodiscard]] float sample_Beta_distribution(float mu, float nu, std::minstd_rand0 *generator);
 
     /**
@@ -1072,7 +1066,7 @@ namespace helios {
      */
     [[nodiscard]] float sample_ellipsoidal_azimuth(float e, float phi0_degrees, std::minstd_rand0 *generator);
 
-    inline std::vector<float>& operator+=(std::vector<float>& lhs, const std::vector<float>& rhs) {
+    inline std::vector<float> &operator+=(std::vector<float> &lhs, const std::vector<float> &rhs) {
         // Make sure vectors have the same size
         if (lhs.size() != rhs.size()) {
             throw std::invalid_argument("Vector sizes must match for element-wise addition");
@@ -1086,8 +1080,7 @@ namespace helios {
         return lhs;
     }
 
-    inline std::vector<float> operator+(const std::vector<float>& vector1, const std::vector<float>& vector2)
-    {
+    inline std::vector<float> operator+(const std::vector<float> &vector1, const std::vector<float> &vector2) {
         if (vector1.size() != vector2.size()) {
             throw std::invalid_argument("Vector sizes must match for element-wise addition");
         }
@@ -1106,7 +1099,7 @@ namespace helios {
      * Combines the U and V coordinates of a pixel into a unique identifier, which is then used for a hash table lookup to see if these (u,v)'s have been used before for a given texture.
      */
     struct PixelUVKey {
-        std::vector<int> coords;            // {x0,y0, x1,y1, …}
+        std::vector<int> coords; // {x0,y0, x1,y1, …}
         bool operator==(PixelUVKey const &o) const noexcept {
             return coords == o.coords;
         }
@@ -1119,36 +1112,53 @@ namespace helios {
      */
     struct PixelUVKeyHash {
         size_t operator()(PixelUVKey const &k) const noexcept {
-            uint64_t h = 146527;  // arbitrary seed
-            for(int v: k.coords) {
+            uint64_t h = 146527; // arbitrary seed
+            for (int v: k.coords) {
                 // mix in v
-                h ^= uint64_t(v) + 0x9e3779b97f4a7c15ULL + (h<<6) + (h>>2);
+                h ^= uint64_t(v) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
             }
             return size_t(h);
         }
     };
 
-    //! A utility struct to temporarily silence `std::cerr`.
+    //! A utility struct to capture and store what is written to `std::cerr`.
     /**
-     * This struct redirects the `std::cerr` stream to a null output stream
+     * This struct redirects the `std::cerr` stream to an internal string stream
      * while an instance of the struct exists. When the struct is destroyed,
-     * it restores the original `std::cerr` output stream.
+     * it restores the original `std::cerr` output stream. The captured output
+     * can be queried and cleared as needed.
      */
-    struct silence_cerr {
-        std::streambuf* old_buf;
-        std::ofstream null_stream;
+    struct capture_cerr {
+        std::streambuf *old_buf;
+        std::ostringstream captured_stream;
 
-        silence_cerr() {
-#ifdef _WIN32
-            null_stream.open("NUL");
-#else
-            null_stream.open("/dev/null");
-#endif
-            old_buf = std::cerr.rdbuf(null_stream.rdbuf());
+        capture_cerr() {
+            old_buf = std::cerr.rdbuf(captured_stream.rdbuf());
         }
 
-        ~silence_cerr() {
+        ~capture_cerr() {
             std::cerr.rdbuf(old_buf);
+        }
+
+        //! Get the captured cerr output as a string
+        std::string get_captured_output() const {
+            return captured_stream.str();
+        }
+
+        //! Check if any output has been captured
+        bool has_output() const {
+            return !captured_stream.str().empty();
+        }
+
+        //! Clear the captured output
+        void clear() {
+            captured_stream.str("");
+            captured_stream.clear();
+        }
+
+        //! Get the number of characters captured
+        size_t size() const {
+            return captured_stream.str().size();
         }
     };
 
@@ -1156,6 +1166,6 @@ namespace helios {
     extern SphericalCoord nullrotation;
     //! Default null vec3 that gives the origin (0,0,0)
     extern vec3 nullorigin;
-}
+} // namespace helios
 
 #endif

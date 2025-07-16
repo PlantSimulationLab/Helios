@@ -19,6 +19,7 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+#include "global.h"
 
 typedef unsigned int uint;
 
@@ -331,7 +332,7 @@ namespace helios {
     }
 
     constexpr int4 int4::operator-(const int4 &a) const noexcept {
-        return {a.x - x, a.y - y, a.z - z, a.w - w};
+        return {x - a.x, y - a.y, z - a.z, w - a.w};
     }
 
     constexpr bool int4::operator==(const int4 &a) const noexcept {
@@ -1405,7 +1406,8 @@ namespace helios {
     }
 
     constexpr bool RGBcolor::operator==(const RGBcolor &c) const noexcept {
-        return c.r == r && c.g == g && c.b == b;
+        constexpr float epsilon = 1e-6f;
+        return (std::abs(r - c.r) < epsilon) && (std::abs(g - c.g) < epsilon) && (std::abs(b - c.b) < epsilon);
     }
 
     constexpr bool RGBcolor::operator!=(const RGBcolor &c) const noexcept {
@@ -1582,7 +1584,8 @@ namespace helios {
     RGBAcolor blend(const helios::RGBAcolor &color0, const helios::RGBAcolor &color1, float weight);
 
     constexpr bool RGBAcolor::operator==(const RGBAcolor &c) const noexcept {
-        return c.r == r && c.g == g && c.b == b && c.a == a;
+        constexpr float epsilon = 1e-6f;
+        return (std::abs(r - c.r) < epsilon) && (std::abs(g - c.g) < epsilon) && (std::abs(b - c.b) < epsilon && (std::abs(a - c.a) < epsilon));
     }
 
     constexpr bool RGBAcolor::operator!=(const RGBAcolor &c) const noexcept {
@@ -1791,7 +1794,9 @@ namespace helios {
         }
 
         int JD = skips[date.month - 1] + date.day;
-        assert(JD > 0 && JD < 366);
+        if(JD <= 0 || JD > 366) {
+            throw("ERROR (Calendar2Julian): Julian day of " + std::to_string(JD) + " is out of range (should be >0 and <=366).");
+        }
 
         return JD;
     }
@@ -1992,12 +1997,12 @@ namespace helios {
         //! Radius
         float radius;
         //! Elevation angle (radians)
-        /*
+        /**
          * \note Elevation angle is read-only, since it is linked to the zenith angle.
          */
         const float &elevation;
         //! Zenithal angle (radians)
-        /*
+        /**
          * \note Zenith angle is read-only, since it is linked to the elevation angle.
          */
         const float &zenith;
@@ -2062,6 +2067,11 @@ namespace helios {
      * \param[in] azimuth_radians Azimuthal angle (radians)
      */
     inline SphericalCoord make_SphericalCoord(float radius, float elevation_radians, float azimuth_radians) {
+#ifdef HELIOS_DEBUG
+        if( radius<=0.f ) {
+            throw("ERROR (helios::make_SphericalCoord): radius should be positive, but " + std::to_string(radius) + " was given.");
+        }
+#endif
         return {radius, elevation_radians, azimuth_radians};
     }
 

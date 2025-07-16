@@ -2439,6 +2439,9 @@ The radiation model has been re-designed, with the following primary additions:
 ## Context
 - Reverted a previous change in `Context::setPrimitiveData()` and `Context::setObjectData()` to not use range-based for loops when it is an openmp paralell loop.
 - There was an issue in `Context::setObjectData()` and `Context::getObjectData()` where the openmp preprocessor directive needed to be placed after the static assert.
+- Moved third-party library pugixml into the `core/lib` directory for better organization.
+- Improved robustness of geometric intersection functions (`lineIntersection`, `pointInPolygon`, `fzero`).
+- Added new geometric utility function `pointOnSegment`.
 
 ## Visualizer
 - Updated visualizer code to only transfer buffer data to the GPU that has changed, rather than re-building all geometry every time any geometry changes.
