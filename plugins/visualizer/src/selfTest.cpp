@@ -2,6 +2,7 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest.h"
+#include "global.h"
 
 using namespace helios;
 
@@ -10,14 +11,10 @@ TEST_CASE("Visualizer::disableMessages") {
 
     DOCTEST_CHECK_NOTHROW(visualizer.disableMessages());
 
-    std::ostringstream buffer;
-    std::streambuf* old = std::cout.rdbuf(buffer.rdbuf());  // redirect std::cout
-
+    capture_cerr cerr_buffer;
     visualizer.setColorbarRange(20,10);
 
-    std::cout.rdbuf(old);  // restore original streambuf
-
-    DOCTEST_CHECK(buffer.str().empty());
+    DOCTEST_CHECK(!cerr_buffer.has_output());
 }
 
 TEST_CASE("Visualizer::enableMessages") {
@@ -25,14 +22,10 @@ TEST_CASE("Visualizer::enableMessages") {
 
     DOCTEST_CHECK_NOTHROW(visualizer.enableMessages());
 
-    std::ostringstream buffer;
-    std::streambuf* old = std::cout.rdbuf(buffer.rdbuf());  // redirect std::cout
-
+    capture_cerr cerr_buffer;
     visualizer.setColorbarRange(20,10);
 
-    std::cout.rdbuf(old);  // restore original streambuf
-
-    DOCTEST_CHECK(!buffer.str().empty());
+    DOCTEST_CHECK(cerr_buffer.has_output());
 }
 
 TEST_CASE("Visualizer::setCameraPosition") {
@@ -77,14 +70,14 @@ TEST_CASE("Visualizer::enableColorbar and Visualizer::disableColorbar") {
 TEST_CASE("Visualizer::setColorbarPosition") {
     Visualizer visualizer(1000, true);
     DOCTEST_CHECK_NOTHROW(visualizer.setColorbarPosition(make_vec3(0.5f, 0.5f, 0.f)));
-    silence_cerr silence;
+    capture_cerr cerr_buffer;
     DOCTEST_CHECK_THROWS_AS(visualizer.setColorbarPosition(make_vec3(-0.1f, 0.f, 0.f)), std::runtime_error);
 }
 
 TEST_CASE("Visualizer::setColorbarSize") {
     Visualizer visualizer(1000, true);
     DOCTEST_CHECK_NOTHROW(visualizer.setColorbarSize(make_vec2(0.1f, 0.05f)));
-    silence_cerr silence;
+    capture_cerr cerr_buffer;
     DOCTEST_CHECK_THROWS_AS(visualizer.setColorbarSize(make_vec2(1.5f, 0.f)), std::runtime_error);
 }
 
@@ -92,11 +85,9 @@ TEST_CASE("Visualizer::setColorbarRange") {
     Visualizer visualizer(1000, true);
     visualizer.enableMessages();
     visualizer.setColorbarRange(0.f, 1.f);
-    std::ostringstream buffer;
-    std::streambuf *old = std::cout.rdbuf(buffer.rdbuf());
+    capture_cerr cerr_buffer;
     DOCTEST_CHECK_NOTHROW(visualizer.setColorbarRange(20.f, 10.f));
-    std::cout.rdbuf(old);
-    DOCTEST_CHECK(!buffer.str().empty());
+    DOCTEST_CHECK(cerr_buffer.has_output());
 }
 
 TEST_CASE("Visualizer::setColorbarTicks") {
@@ -104,7 +95,7 @@ TEST_CASE("Visualizer::setColorbarTicks") {
     visualizer.setColorbarRange(0.f, 1.f);
     std::vector<float> ticks{0.f, 0.5f, 1.f};
     DOCTEST_CHECK_NOTHROW(visualizer.setColorbarTicks(ticks));
-    silence_cerr silence;
+    capture_cerr cerr_buffer;
     DOCTEST_CHECK_THROWS_AS(visualizer.setColorbarTicks({}), std::runtime_error);
     DOCTEST_CHECK_THROWS_AS(visualizer.setColorbarTicks({0.f, 0.5f, 0.4f}), std::runtime_error);
 }
@@ -114,14 +105,14 @@ TEST_CASE("Visualizer colorbar text attributes") {
     DOCTEST_CHECK_NOTHROW(visualizer.setColorbarTitle("MyBar"));
     DOCTEST_CHECK_NOTHROW(visualizer.setColorbarFontColor(RGB::yellow));
     DOCTEST_CHECK_NOTHROW(visualizer.setColorbarFontSize(14));
-    silence_cerr silence;
+    capture_cerr cerr_buffer;
     DOCTEST_CHECK_THROWS_AS(visualizer.setColorbarFontSize(0), std::runtime_error);
 }
 
 TEST_CASE("Visualizer::setColormap") {
     Visualizer visualizer(1000, true);
     DOCTEST_CHECK_NOTHROW(visualizer.setColormap(Visualizer::COLORMAP_COOL));
-    silence_cerr silence;
+    capture_cerr cerr_buffer;
     DOCTEST_CHECK_THROWS_AS(visualizer.setColormap(Visualizer::COLORMAP_CUSTOM), std::runtime_error);
     DOCTEST_CHECK_THROWS_AS(visualizer.setColormap(std::vector<RGBcolor>{RGB::red}, std::vector<float>{0.f, 1.f}), std::runtime_error);
 }
@@ -243,12 +234,14 @@ TEST_CASE("Visualizer::validateTextureFile") {
 
 int Visualizer::selfTest() {
 
-    doctest::Context ctx;
-    ctx.setOption("exit", true);           // propagate exit code
-    ctx.setOption("no-breaks", true);      // continue on failure
-    ctx.setOption("reporters", "console"); // plain output
+    // Run all the tests
+    doctest::Context context;
+    int res = context.run();
 
-    int result = ctx.run();
-    return result == 0;
+    if (context.shouldExit()) {
+        return res;
+    }
+
+    return res;
 
 }
