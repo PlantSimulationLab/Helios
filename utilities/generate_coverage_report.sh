@@ -198,19 +198,9 @@ if [[ "$compiler_type" == "clang" ]]; then
         text)
             echo "Generating text coverage report..."
             if [ ${#subset_files[@]} -gt 0 ]; then
-                run_command "${llvm_cov_common[@]}" -format=text "${subset_files[@]}"
-                if [ -n "$log_file" ]; then
-                    "${llvm_cov_common[@]}" -format=text "${subset_files[@]}" > coverage_details.txt 2>/dev/null
-                else
-                    "${llvm_cov_common[@]}" -format=text "${subset_files[@]}" > coverage_details.txt
-                fi
+                "${llvm_cov_common[@]}" -format=text "${subset_files[@]}" > coverage_details.txt
             else
-                run_command "${llvm_cov_common[@]}" -format=text
-                if [ -n "$log_file" ]; then
-                    "${llvm_cov_common[@]}" -format=text > coverage_details.txt 2>/dev/null
-                else
-                    "${llvm_cov_common[@]}" -format=text > coverage_details.txt
-                fi
+                "${llvm_cov_common[@]}" -format=text > coverage_details.txt
             fi
             echo "Text report written to coverage_details.txt"
             ;;
@@ -250,25 +240,44 @@ elif [[ "$compiler_type" == "gcc" ]]; then
             ;;
         text)
             echo "Generating text coverage report with gcov..."
+            
+            # Create a subdirectory for gcov files
+            gcov_dir="gcov_files"
+            rm -rf "$gcov_dir"
+            mkdir -p "$gcov_dir"
+            
             # Generate text report using gcov
             if [ ${#subset_files[@]} -gt 0 ]; then
-                for file in "${subset_files[@]}"; do
-                    echo "Coverage for $file:"
-                    run_command gcov -b -c "$build_dir"/"$(basename "$file" .cpp)".gcno
-                done
-                if [ -z "$log_file" ]; then
+                (
+                    cd "$gcov_dir"
+                    for file in "${subset_files[@]}"; do
+                        echo "Coverage for $file:"
+                        run_command gcov -b -c "$build_dir"/"$(basename "$file" .cpp)".gcno
+                    done
+                )
+                
+                # Generate the coverage details file
+                (
+                    cd "$gcov_dir"
                     for file in "${subset_files[@]}"; do
                         echo "Coverage for $file:"
                         gcov -b -c "$build_dir"/"$(basename "$file" .cpp)".gcno 2>/dev/null || true
-                    done > coverage_details.txt
-                fi
+                    done
+                ) > coverage_details.txt
             else
                 echo "Generating text coverage report for all files..."
-                run_command find "$build_dir" -name "*.gcno" -exec gcov -b -c {} \;
-                if [ -z "$log_file" ]; then
-                    find "$build_dir" -name "*.gcno" -exec gcov -b -c {} \; > coverage_details.txt 2>/dev/null || true
-                fi
+                (
+                    cd "$gcov_dir"
+                    run_command find "$build_dir" -name "*.gcno" -exec gcov -b -c {} \;
+                )
+                
+                # Generate the coverage details file
+                (
+                    cd "$gcov_dir"
+                    find "$build_dir" -name "*.gcno" -exec gcov -b -c {} \; 2>/dev/null || true
+                ) > coverage_details.txt
             fi
+            
             echo "Text report written to coverage_details.txt"
             ;;
         *)
