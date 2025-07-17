@@ -2,6 +2,7 @@ var global_8h =
 [
     [ "helios::PixelUVKey", "structhelios_1_1_pixel_u_v_key.html", null ],
     [ "helios::PixelUVKeyHash", "structhelios_1_1_pixel_u_v_key_hash.html", null ],
+    [ "helios::capture_cerr", "structhelios_1_1capture__cerr.html", "structhelios_1_1capture__cerr" ],
     [ "DEPRECATED", "global_8h.html#aaf225a2b96038de3a42d61a1fa63654b", null ],
     [ "M_PI", "global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3", null ],
     [ "uint", "global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14", null ],
@@ -66,6 +67,7 @@ var global_8h =
     [ "helios::PNGHasAlpha", "global_8h.html#a07b0dda8b9aee4100e9f6332dbfe7f64", null ],
     [ "helios::point_distance", "global_8h.html#a4d55bb8abc86cb7dabab1d4e6201a754", null ],
     [ "helios::pointInPolygon", "group__functions.html#gaaa7da223bd02271d4f037b9e5305c023", null ],
+    [ "helios::pointOnSegment", "global_8h.html#af258298db44c8d38dbfa18320dd900ed", null ],
     [ "helios::powi", "global_8h.html#a29cdb66817a966ce144b518e9916b105", null ],
     [ "helios::rad2deg", "group__functions.html#ga0b9a2dac200293044d7e2ae1c03a3140", null ],
     [ "helios::randu", "group__functions.html#ga06cb0bc53a3903c6c487dd524bc2315e", null ],

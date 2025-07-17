@@ -71,28 +71,32 @@ The next section provides information on how to load existing models from the li
 
 A number of plant models are available in the plant architecture library, which can be created based on default parameters, or parameters modified by the user. Plant models available in the library are given in the table below.
 
-| Plant Type/Species | Variety/Variation | Plant type string argument | %Shoot types |
-| ------| ------ | ------ | ------ |
-| Almond Tree (*Prunus dulcis*) | Nonpareil | "almond" | trunk, scaffold, proleptic |
-| Apple Tree (*Malus pumila*) | Fuji | "apple" | trunk, proleptic |
-| Bindweed (*Convolvulus arvensis*) | generic | "bindweed" | base, offshoots, children |
-| Butter Lettuce (*Lactuca sativa*) | generic | "butterlettuce" | mainstem |
-| Cheeseweed (*Malva neglecta*) | generic | "cheeseweed" | mainstem |
-| Common Bean (*Phaseolus vulgaris*) | upright growth habit (determinate) | "bean" | unifoliate, trifoliate |
-| Cowpea (*Vigna unguiculata*) | upright growth habit (determinate) | "cowpea" | unifoliate, trifoliate |
-| Eastern Redbud (*Cercis canadensis*) | generic | "easternredbud" | eastern_redubud_trunk, eastern_redbud_shoot |
-| Grapevine (*Vitis vinifera*) | VSP trellis | "grapevine_VSP" | grapevine_trunk, grapevine_cane, grapevine_shoot |
-| Maize (*Zea mays*) | generic | "maize" | mainstem |
-| Olive Tree (*Olea europaea*) | generic | "olive" | trunk, scaffold, proleptic |
-| Pistachio Tree (*Pistachia vera*) | generic | "pistachio" | trunk, proleptic |
-| Puncturevine (*Tribulus terrestris*) | generic | "puncturevine" | base, offshoots, children |
-| Rice (*Oryza sativa*) | generic | "rice" | mainstem |
-| Sorghum (*Sorghum bicolor*) | grain sorghum | "sorghum" | mainstem |
-| Soybean (*Glycine max*) | upright growth habit (determinate) | "soybean" | unifoliate, trifoliate |
-| Sugar Beet (*Beta vulgaris*) | generic | "sugarbeet" | mainstem |
-| Tomato (*Solanum lycopersicum*) | determinate growth | "tomato" | mainstem |
-| Walnut Tree (*Juglans regia*) | generic | "walnut" | trunk, scaffold, proleptic |
-| Wheat (*Triticum aestivum*) | generic | "wheat" | mainstem |
+| Plant Type/Species                       | Variety/Variation                  | Plant type string argument | %Shoot types                                     |
+|------------------------------------------|------------------------------------|----------------------------|--------------------------------------------------|
+| Almond Tree (*Prunus dulcis*)            | Nonpareil                          | "almond"                   | trunk, scaffold, proleptic                       |
+| Apple Tree (*Malus pumila*)              | Fuji                               | "apple"                    | trunk, proleptic                                 |
+| Bindweed (*Convolvulus arvensis*)        | generic                            | "bindweed"                 | base, offshoots, children                        |
+| Butter Lettuce (*Lactuca sativa*)        | generic                            | "butterlettuce"            | mainstem                                         |
+| Capsicum Pepper (*Capsicum annuum*)      | generic                            | "capsicum"                 | mainstem                                         |
+| Cheeseweed (*Malva neglecta*)            | generic                            | "cheeseweed"               | mainstem                                         |
+| Common Bean (*Phaseolus vulgaris*)       | upright growth habit (determinate) | "bean"                     | unifoliate, trifoliate                           |
+| Cowpea (*Vigna unguiculata*)             | upright growth habit (determinate) | "cowpea"                   | unifoliate, trifoliate                           |
+| Eastern Redbud (*Cercis canadensis*)     | generic                            | "easternredbud"            | eastern_redubud_trunk, eastern_redbud_shoot      |
+| Grapevine (*Vitis vinifera*)             | VSP trellis                        | "grapevine_VSP"            | grapevine_trunk, grapevine_cane, grapevine_shoot |
+| Ground Cherry (*Physalis philadelphica*) | generic                            | "groundcherryweed"         | mainstem                                         |
+| Maize (*Zea mays*)                       | generic                            | "maize"                    | mainstem                                         |
+| Olive Tree (*Olea europaea*)             | generic                            | "olive"                    | trunk, scaffold, proleptic                       |
+| Pistachio Tree (*Pistachia vera*)        | generic                            | "pistachio"                | trunk, proleptic                                 |
+| Puncturevine (*Tribulus terrestris*)     | generic                            | "puncturevine"             | base, offshoots, children                        |
+| Rice (*Oryza sativa*)                    | generic                            | "rice"                     | mainstem                                         |
+| Sorghum (*Sorghum bicolor*)              | grain sorghum                      | "sorghum"                  | mainstem                                         |
+| Soybean (*Glycine max*)                  | upright growth habit (determinate) | "soybean"                  | unifoliate, trifoliate                           |
+| Strawberry (*Fragaria × ananassa*)       | generic                            | "strawberry"               | mainstem                                         |
+| Sugar Beet (*Beta vulgaris*)             | generic                            | "sugarbeet"                | mainstem                                         |
+| Tomato (*Solanum lycopersicum*)          | determinate growth                 | "tomato"                   | mainstem                                         |
+| Cherry Tomato (*Solanum lycopersicum*)   | upright trained                    | "cherrytomato"             | mainstem                                         |
+| Walnut Tree (*Juglans regia*)            | generic                            | "walnut"                   | trunk, scaffold, proleptic                       |
+| Wheat (*Triticum aestivum*)              | generic                            | "wheat"                    | mainstem                                         |
 
 \subsection PlantArchBuild_default Loading a Plant from the Library with Default Parameters
 

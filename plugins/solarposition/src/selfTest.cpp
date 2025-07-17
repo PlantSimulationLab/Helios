@@ -1,221 +1,242 @@
 #include "SolarPosition.h"
 
+#define DOCTEST_CONFIG_IMPLEMENT
+#include <doctest.h>
+
 using namespace helios;
 
-int SolarPosition::selfTest() const {
-
-    std::cout << "Running solar position model self-test..." << std::flush;
-    int error_count = 0;
-
-    float latitude;
-    float longitude;
-    Date date;
-    Time time;
-    int UTC;
-
-    float errtol = 1e-6;
-
+TEST_CASE("SolarPosition sun position Boulder") {
     Context context_s;
 
-    //---- Sun Zenith/Azimuth Test for Boulder, CO ---- //
-    latitude = 40.1250;
-    longitude = 105.2369;
-    date = make_Date(1, 1, 2000);
-    time = make_Time(10, 30, 0);
-    UTC = 7;
+    DOCTEST_CHECK_NOTHROW(context_s.setDate(make_Date(1, 1, 2000)));
+    DOCTEST_CHECK_NOTHROW(context_s.setTime(make_Time(10, 30, 0)));
 
-    float theta_actual = 29.49;
-    float phi_actual = 154.18;
+    SolarPosition sp(7, 40.1250f, 105.2369f, &context_s);
+    float theta_s = sp.getSunElevation() * 180.f / M_PI;
+    float phi_s = sp.getSunAzimuth() * 180.f / M_PI;
 
-    context_s.setDate(date);
-    context_s.setTime(time);
+    DOCTEST_CHECK(std::fabs(theta_s - 29.49f) <= 10.0f);
+    DOCTEST_CHECK(std::fabs(phi_s - 154.18f) <= 5.0f);
+}
 
-    SolarPosition solarposition_1(UTC, latitude, longitude, &context_s);
+TEST_CASE("SolarPosition ambient longwave model") {
+    Context context_s;
+    DOCTEST_CHECK_NOTHROW(context_s.setDate(make_Date(5, 5, 2003)));
+    DOCTEST_CHECK_NOTHROW(context_s.setTime(make_Time(9, 10, 0)));
 
-    float theta_s = solarposition_1.getSunElevation() * 180.f / M_PI;
-    float phi_s = solarposition_1.getSunAzimuth() * 180.f / M_PI;
+    SolarPosition sp(6, 36.5289f, 97.4439f, &context_s);
 
-    if (fabs(theta_s - theta_actual) > 10 || fabs(phi_s - phi_actual) > 5) {
-        error_count++;
-        std::cout << "failed: verification test for known solar position does not agree with calculated result." << std::endl;
+    float temperature = 290.f;
+    float humidity = 0.5f;
+
+    float LW;
+    DOCTEST_CHECK_NOTHROW(LW = sp.getAmbientLongwaveFlux(temperature, humidity));
+
+    DOCTEST_CHECK(doctest::Approx(310.03192f).epsilon(1e-6f) == LW);
+}
+
+TEST_CASE("SolarPosition sunrise and sunset") {
+    Context context_s;
+    DOCTEST_CHECK_NOTHROW(context_s.setDate(make_Date(1, 1, 2023)));
+    SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
+
+    Time sunrise;
+    DOCTEST_CHECK_NOTHROW(sunrise = sp.getSunriseTime());
+    Time sunset;
+    DOCTEST_CHECK_NOTHROW(sunset = sp.getSunsetTime());
+
+    DOCTEST_CHECK(!(sunrise.hour == 0 && sunrise.minute == 0));
+    DOCTEST_CHECK(!(sunset.hour == 0 && sunset.minute == 0));
+}
+
+TEST_CASE("SolarPosition sun direction vector") {
+    Context context_s;
+    DOCTEST_CHECK_NOTHROW(context_s.setDate(make_Date(1, 1, 2023)));
+    SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
+
+    vec3 dir;
+    DOCTEST_CHECK_NOTHROW(dir = sp.getSunDirectionVector());
+    DOCTEST_CHECK(dir.x != 0.f);
+    DOCTEST_CHECK(dir.y != 0.f);
+    DOCTEST_CHECK(dir.z != 0.f);
+}
+
+TEST_CASE("SolarPosition sun direction spherical") {
+    Context context_s;
+    DOCTEST_CHECK_NOTHROW(context_s.setDate(make_Date(1, 1, 2023)));
+    SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
+
+    SphericalCoord dir;
+    DOCTEST_CHECK_NOTHROW(dir = sp.getSunDirectionSpherical());
+    DOCTEST_CHECK(dir.elevation > 0.f);
+    DOCTEST_CHECK(dir.azimuth > 0.f);
+}
+
+TEST_CASE("SolarPosition flux and fractions") {
+    Context context_s;
+    SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
+
+    float flux;
+    DOCTEST_CHECK_NOTHROW(flux = sp.getSolarFlux(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK(flux > 0.f);
+
+    float diffuse_fraction;
+    DOCTEST_CHECK_NOTHROW(diffuse_fraction = sp.getDiffuseFraction(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK(diffuse_fraction >= 0.f);
+    DOCTEST_CHECK(diffuse_fraction <= 1.f);
+
+    float flux_par;
+    DOCTEST_CHECK_NOTHROW(flux_par = sp.getSolarFluxPAR(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK(flux_par > 0.f);
+
+    float flux_nir;
+    DOCTEST_CHECK_NOTHROW(flux_nir = sp.getSolarFluxNIR(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK(flux_nir > 0.f);
+}
+
+TEST_CASE("SolarPosition elevation, zenith, azimuth") {
+    Context context_s;
+    SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
+
+    float elevation;
+    DOCTEST_CHECK_NOTHROW(elevation = sp.getSunElevation());
+    DOCTEST_CHECK(elevation >= 0.f);
+    DOCTEST_CHECK(elevation <= M_PI / 2.f);
+
+    float zenith;
+    DOCTEST_CHECK_NOTHROW(zenith = sp.getSunZenith());
+    DOCTEST_CHECK(zenith >= 0.f);
+    DOCTEST_CHECK(zenith <= M_PI);
+
+    float azimuth;
+    DOCTEST_CHECK_NOTHROW(azimuth = sp.getSunAzimuth());
+    DOCTEST_CHECK(azimuth >= 0.f);
+    DOCTEST_CHECK(azimuth <= 2.f * M_PI);
+}
+
+TEST_CASE("SolarPosition turbidity calibration") {
+    Context context_s;
+    SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
+    std::string label = "test_flux_timeseries";
+
+    if (!context_s.doesTimeseriesVariableExist(label.c_str())) {
+        return; // skip test if data does not exist
     }
 
-    //---- Test of Gueymard Solar Flux Model ---- //
-    latitude = 36.5289; // Billings, OK
-    longitude = 97.4439;
-    date = make_Date(5, 5, 2003);
-    time = make_Time(9, 10, 0);
-    UTC = 6;
+    float turbidity;
+    DOCTEST_CHECK_NOTHROW(turbidity = sp.calibrateTurbidityFromTimeseries(label));
+    DOCTEST_CHECK(turbidity > 0.f);
+}
 
-    context_s.setDate(date);
-    context_s.setTime(time);
+TEST_CASE("SolarPosition invalid lat/long") {
+    Context context_s;
 
-    SolarPosition solarposition_2(UTC, latitude, longitude, &context_s);
+    capture_cerr cerr_buffer;
+    SolarPosition sp_1(7, -100.f, 105.2369f, &context_s);
+    DOCTEST_CHECK( cerr_buffer.has_output() );
 
-    float pressure = 96660;
-    float temperature = 290;
-    float humidity = 0.5;
-    float turbidity = 0.025;
+    cerr_buffer.clear();
+    SolarPosition sp_2(7, 40.125f, -200.f, &context_s);
+    DOCTEST_CHECK( cerr_buffer.has_output() );
+}
 
-    float Eb, Eb_PAR, Eb_NIR, fdiff;
+TEST_CASE("SolarPosition invalid solar angle") {
+    Context context_s;
+    SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
 
-    solarposition_2.GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
-    Eb = Eb_PAR + Eb_NIR;
+    DOCTEST_CHECK_NOTHROW( sp.setSunDirection( make_SphericalCoord(0.75*M_PI, M_PI / 2.f) ) );
 
-    //----- Test of Ambient Longwave Model ------ //
-    SolarPosition solarposition_3(UTC, latitude, longitude, &context_s);
+    float flux;
+    DOCTEST_CHECK_NOTHROW(flux = sp.getSolarFlux(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK(flux == 0.f);
+}
 
-    temperature = 290;
-    humidity = 0.5;
 
-    float LW = solarposition_3.getAmbientLongwaveFlux(temperature, humidity);
+TEST_CASE("SolarPosition solor position overridden") {
+    Context context_s;
+    SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
 
-    if (fabs(LW - 310.03192f) > errtol) {
-        error_count++;
-        std::cout << "failed: verification test for ambient longwave model does not agree with known result." << std::endl;
+    DOCTEST_CHECK_NOTHROW( sp.setSunDirection( make_SphericalCoord(M_PI / 4.f, M_PI / 2.f) ) )  ;
+
+    float elevation;
+    DOCTEST_CHECK_NOTHROW(elevation = sp.getSunElevation());
+    DOCTEST_CHECK(elevation >= 0.f);
+    DOCTEST_CHECK(elevation <= M_PI / 2.f);
+
+    float zenith;
+    DOCTEST_CHECK_NOTHROW(zenith = sp.getSunZenith());
+    DOCTEST_CHECK(zenith >= 0.f);
+    DOCTEST_CHECK(zenith <= M_PI);
+
+    float azimuth;
+    DOCTEST_CHECK_NOTHROW(azimuth = sp.getSunAzimuth());
+    DOCTEST_CHECK(azimuth >= 0.f);
+    DOCTEST_CHECK(azimuth <= 2.f * M_PI);
+
+    vec3 sun_vector;
+    DOCTEST_CHECK_NOTHROW(sun_vector = sp.getSunDirectionVector());
+
+    SphericalCoord sun_spherical;
+    DOCTEST_CHECK_NOTHROW(sun_spherical = sp.getSunDirectionSpherical());
+}
+
+TEST_CASE("SolarPosition cloud calibration") {
+    Context context_s;
+    SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
+
+    DOCTEST_CHECK_NOTHROW(context_s.loadTabularTimeseriesData( "lib/testdata/cimis.csv", {"CIMIS"}, "," ));
+
+    context_s.setDate(make_Date(13,7,2023));
+    context_s.setTime(make_Time(12,0,0));
+
+    DOCTEST_CHECK_NOTHROW(sp.enableCloudCalibration("net_radiation"));
+
+    float flux;
+    DOCTEST_CHECK_NOTHROW(flux = sp.getSolarFlux(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK(flux > 0.f);
+
+    float diffuse_fraction;
+    DOCTEST_CHECK_NOTHROW(diffuse_fraction = sp.getDiffuseFraction(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK(diffuse_fraction >= 0.f);
+    DOCTEST_CHECK(diffuse_fraction <= 1.f);
+
+    float flux_par;
+    DOCTEST_CHECK_NOTHROW(flux_par = sp.getSolarFluxPAR(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK(flux_par > 0.f);
+
+    float flux_nir;
+    DOCTEST_CHECK_NOTHROW(flux_nir = sp.getSolarFluxNIR(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK(flux_nir > 0.f);
+
+    DOCTEST_CHECK_NOTHROW(sp.disableCloudCalibration());
+
+    capture_cerr cerr_buffer;
+    DOCTEST_CHECK_THROWS_AS(sp.enableCloudCalibration("non_existent_timeseries"), std::runtime_error);
+}
+
+TEST_CASE("SolarPosition turbidity calculation") {
+    Context context_s;
+    SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
+
+    DOCTEST_CHECK_NOTHROW(context_s.loadTabularTimeseriesData( "lib/testdata/cimis.csv", {"CIMIS"}, "," ));
+
+    float turbidity;
+    DOCTEST_CHECK_NOTHROW(turbidity = sp.calibrateTurbidityFromTimeseries("net_radiation"));
+    DOCTEST_CHECK(turbidity > 0.f);
+
+    capture_cerr cerr_buffer;
+    DOCTEST_CHECK_THROWS_AS(turbidity = sp.calibrateTurbidityFromTimeseries("non_existent_timeseries"), std::runtime_error);
+}
+
+int SolarPosition::selfTest() {
+
+    // Run all the tests
+    doctest::Context context;
+    int res = context.run();
+
+    if (context.shouldExit()) {
+        return res;
     }
 
-    //---- New Tests for Sunrise and Sunset Times ---- //
-    {
-        SolarPosition solar(7, 40.125, 105.2369, &context_s);
-        context_s.setDate(make_Date(1, 1, 2023));
-        Time sunrise = solar.getSunriseTime();
-        Time sunset = solar.getSunsetTime();
-
-        if (sunrise.hour == 0 && sunrise.minute == 0) {
-            std::cout << "failed: sunrise time test." << std::endl;
-            error_count++;
-        }
-        if (sunset.hour == 0 && sunset.minute == 0) {
-            std::cout << "failed: sunset time test." << std::endl;
-            error_count++;
-        }
-    }
-
-    //---- New Test for Sun Direction Vector ---- //
-    {
-        SolarPosition solar(7, 40.125, 105.2369, &context_s);
-        context_s.setDate(make_Date(1, 1, 2023));
-        vec3 sun_dir_vector = solar.getSunDirectionVector();
-
-        if (sun_dir_vector.x == 0 && sun_dir_vector.y == 0 && sun_dir_vector.z == 0) {
-            std::cout << "failed: sun direction vector test." << std::endl;
-            error_count++;
-        }
-    }
-
-    //---- New Test for Sun Direction Spherical ---- //
-    {
-        SolarPosition solar(7, 40.125, 105.2369, &context_s);
-        context_s.setDate(make_Date(1, 1, 2023));
-        SphericalCoord sun_dir_spherical = solar.getSunDirectionSpherical();
-
-        if (sun_dir_spherical.elevation <= 0 || sun_dir_spherical.azimuth <= 0) {
-            std::cout << "failed: sun direction spherical test." << std::endl;
-            error_count++;
-        }
-    }
-
-    //---- New Test for Solar Flux ---- //
-    {
-        SolarPosition solar(7, 40.125, 105.2369, &context_s);
-        float flux = solar.getSolarFlux(101325, 300, 0.5, 0.02);
-
-        if (flux <= 0) {
-            std::cout << "failed: solar flux test." << std::endl;
-            error_count++;
-        }
-    }
-
-    //---- New Test for Diffuse Fraction ---- //
-    {
-        SolarPosition solar(7, 40.125, 105.2369, &context_s);
-        float diffuse_fraction = solar.getDiffuseFraction(101325, 300, 0.5, 0.02);
-
-        if (diffuse_fraction < 0 || diffuse_fraction > 1) {
-            std::cout << "failed: diffuse fraction test." << std::endl;
-            error_count++;
-        }
-    }
-
-    //---- New Test for Sun Elevation ---- //
-    {
-        SolarPosition solar(7, 40.125, 105.2369, &context_s);
-        float elevation = solar.getSunElevation();
-
-        if (elevation < 0 || elevation > M_PI / 2) {
-            std::cout << "failed: sun elevation test." << std::endl;
-            error_count++;
-        }
-    }
-
-    //---- New Test for Sun Zenith ---- //
-    {
-        SolarPosition solar(7, 40.125, 105.2369, &context_s);
-        float zenith = solar.getSunZenith();
-
-        if (zenith < 0 || zenith > M_PI) {
-            std::cout << "failed: sun zenith test." << std::endl;
-            error_count++;
-        }
-    }
-
-    //---- New Test for Sun Azimuth ---- //
-    {
-        SolarPosition solar(7, 40.125, 105.2369, &context_s);
-        float azimuth = solar.getSunAzimuth();
-
-        if (azimuth < 0 || azimuth > 2 * M_PI) {
-            std::cout << "failed: sun azimuth test." << std::endl;
-            error_count++;
-        }
-    }
-
-    //---- New Test for Solar Flux PAR ---- //
-    {
-        SolarPosition solar(7, 40.125, 105.2369, &context_s);
-        float flux_par = solar.getSolarFluxPAR(101325, 300, 0.5, 0.02);
-
-        if (flux_par <= 0) {
-            std::cout << "failed: solar flux PAR test." << std::endl;
-            error_count++;
-        }
-    }
-
-    //---- New Test for Solar Flux NIR ---- //
-    {
-        SolarPosition solar(7, 40.125, 105.2369, &context_s);
-        float flux_nir = solar.getSolarFluxNIR(101325, 300, 0.5, 0.02);
-
-        if (flux_nir <= 0) {
-            std::cout << "failed: solar flux NIR test." << std::endl;
-            error_count++;
-        }
-    }
-
-    {
-        SolarPosition solar(7, 40.125, 105.2369, &context_s);
-        std::string timeseries_label = "test_flux_timeseries";
-
-        // Check if the timeseries exists
-        if (!context_s.doesTimeseriesVariableExist(timeseries_label.c_str())) {
-            std::cout << "Skipping test: Timeseries variable does not exist." << std::endl;
-        } else {
-            float turbidity = solar.calibrateTurbidityFromTimeseries(timeseries_label);
-
-            if (turbidity <= 0) {
-                std::cout << "failed: calibrate turbidity from timeseries test." << std::endl;
-                error_count++;
-            }
-        }
-    }
-
-
-    if (error_count == 0) {
-        std::cout << "passed." << std::endl;
-        return 0;
-    } else {
-        std::cout << "Failed Context self-test with " << error_count << " errors." << std::endl;
-        return 1;
-    }
+    return res;
 }

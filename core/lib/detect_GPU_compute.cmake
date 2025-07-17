@@ -17,7 +17,24 @@ foreach(_code IN LISTS _gpu_codes)
     endif()
 endforeach()
 
-# build gencode flags: one entry per sm_XX
+# Extract architecture numbers for CMAKE_CUDA_ARCHITECTURES
+set(_cuda_architectures "")
+foreach(_sm IN LISTS _sm_codes)
+    # Extract the number from sm_XX
+    string(REGEX REPLACE "sm_(.+)" "\\1" _arch_num "${_sm}")
+    list(APPEND _cuda_architectures ${_arch_num})
+endforeach()
+
+# if no architectures were detected, fall back to SM 5.0
+if(NOT _cuda_architectures)
+    message(WARNING "No CUDA architectures detected; defaulting to 50")
+    set(_cuda_architectures "50")
+endif()
+
+# Set CMAKE_CUDA_ARCHITECTURES for modern CMake
+set(CMAKE_CUDA_ARCHITECTURES "${_cuda_architectures}")
+
+# Also build gencode flags for compatibility (if needed elsewhere)
 set(_gencode_flags "")
 foreach(_sm IN LISTS _sm_codes)
     # derive compute_XX from sm_XX
@@ -33,6 +50,6 @@ if(NOT _gencode_flags)
     list(APPEND _gencode_flags  "-gencode" "arch=compute_50,code=sm_50" )
 endif()
 
-# append to your CUDA flags
+# append to your CUDA flags (for compatibility)
 string (JOIN " " _joined "${_gencode_flags}")
 set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} ${_joined}")

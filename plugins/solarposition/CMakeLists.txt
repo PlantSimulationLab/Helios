@@ -1,11 +1,11 @@
-cmake_minimum_required(VERSION 2.0)
+cmake_minimum_required(VERSION 3.15)
 
 project(helios)  
 
-include_directories(include)
-include_directories(../../core/include)
-
 add_library( solarposition STATIC "src/SolarPosition.cpp" "src/selfTest.cpp" )
 
-set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
+target_include_directories(solarposition PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include )
 
+add_executable( solarposition_tests "src/TestMain.cpp" )
+target_link_libraries( solarposition_tests PRIVATE solarposition )
+add_test( NAME solarposition_tests COMMAND solarposition_tests )

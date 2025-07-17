@@ -65,6 +65,9 @@ var NAVTREE =
       [ "Tutorial 11: Light interception for a homogeneous canopy", "radiation__beers_law_tutorial.html#radiation_BeersLaw_tutorial", null ],
       [ "Tutorial 12: Water-use efficiency for a canopy of spherical crowns", "canopy__w_u_e_tutorial.html#canopy_WUE_tutorial", null ]
     ] ],
+    [ "Benchmarks", "_benchmarks.html", [
+      [ "Homogeneous Canopy Radiation", "_benchmarks.html#RadCanopyBenchmark", null ]
+    ] ],
     [ "Files", "files.html", [
       [ "File List", "files.html", "files_dup" ],
       [ "Globals", "globals.html", [
@@ -82,7 +85,7 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "_a_p_i.html",
-"dir_76097ff1d2d869b3a6f5e29bdfb9cd12.html"
+"dir_676c0954ed84853013df50d94356577b.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';
