@@ -102,7 +102,7 @@ detect_compiler() {
         compiler_path="$CC"
     else
         # Try to find the default compiler
-        compiler_path=$(command -v c++ 2>/dev/null || command -v gcc 2>/dev/null || command -v clang++ 2>/dev/null || echo "")
+        compiler_path=$(command -v c++ 2>/dev/null || command -v g++ 2>/dev/null || command -v gcc 2>/dev/null || command -v clang++ 2>/dev/null || command -v clang 2>/dev/null || echo "")
     fi
     
     if [[ -z "$compiler_path" ]]; then
@@ -110,17 +110,26 @@ detect_compiler() {
         exit 1
     fi
     
-    # Get compiler version info
-    local compiler_version
-    compiler_version=$($compiler_path --version 2>/dev/null | head -1)
-    
-    if [[ $compiler_version =~ [Cc]lang ]]; then
-        echo "clang"
-    elif [[ $compiler_version =~ [Gg]cc ]]; then
-        echo "gcc"
-    else
-        echo "unknown"
-    fi
+    local compiler_name
+    compiler_name=$(basename "$compiler_path")
+    case "$compiler_name" in
+        clang*|clang++*)
+            echo "clang" ;;
+        gcc*|g++*|c++)
+            echo "gcc" ;;
+        *)
+            # Fallback to parsing version string
+            local compiler_version
+            compiler_version=$($compiler_path --version 2>/dev/null | head -1)
+            if [[ $compiler_version =~ [Cc]lang ]]; then
+                echo "clang"
+            elif [[ $compiler_version =~ [Gg][Cc][Cc] || $compiler_version =~ g\+\+ ]]; then
+                echo "gcc"
+            else
+                echo "unknown"
+            fi
+            ;;
+    esac
 }
 
 compiler_type=$(detect_compiler)

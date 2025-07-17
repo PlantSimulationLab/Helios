@@ -1318,6 +1318,19 @@ TEST_SUITE("Context Class") {
             DOCTEST_CHECK(!std::isnan(r_norm));
         }
 
+        SUBCASE("Random number ranges") {
+            Context ctx;
+            ctx.seedRandomGenerator(6789);
+            float r = ctx.randu(-1.f, 1.f);
+            DOCTEST_CHECK(r >= -1.f);
+            DOCTEST_CHECK(r <= 1.f);
+            int ri = ctx.randu(0, 5);
+            DOCTEST_CHECK(ri >= 0);
+            DOCTEST_CHECK(ri <= 5);
+            float rn = ctx.randn(2.f, 0.5f);
+            DOCTEST_CHECK(!std::isnan(rn));
+        }
+
         SUBCASE("Texture utility methods") {
             Context ctx;
             capture_cerr cerr_buffer;
@@ -1358,6 +1371,27 @@ TEST_SUITE("Context Class") {
 
             ctx.markGeometryDirty();
             DOCTEST_CHECK(ctx.isGeometryDirty());
+        }
+
+        SUBCASE("Geometry dirty flags vector") {
+            Context ctx;
+            std::vector<uint> ids{ctx.addPatch(), ctx.addPatch()};
+            ctx.markGeometryClean();
+            ctx.markPrimitiveDirty(ids);
+            for (uint id: ids) {
+                DOCTEST_CHECK(ctx.isPrimitiveDirty(id));
+            }
+            ctx.markPrimitiveClean(ids);
+            for (uint id: ids) {
+                DOCTEST_CHECK(!ctx.isPrimitiveDirty(id));
+            }
+
+            vec3 shift = make_vec3(1.f, 0.f, 0.f);
+            ctx.translatePrimitive(ids, shift);
+            for (uint id: ids) {
+                vec3 c = ctx.getPatchCenter(id);
+                DOCTEST_CHECK(c.x == doctest::Approx(shift.x).epsilon(errtol));
+            }
         }
 
         SUBCASE("Date and Time Manipulation") {
@@ -1729,6 +1763,33 @@ TEST_SUITE("Context Class") {
             float solid_fraction = context_test.getPrimitiveSolidFraction(UUIDt);
             DOCTEST_CHECK(solid_fraction == doctest::Approx(0.5f).epsilon(errtol));
         }
+
+        SUBCASE("advanced primitive transforms") {
+            Context ctx;
+            uint p1 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+            uint p2 = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+            std::vector<uint> ids{p1, p2};
+            ctx.markGeometryClean();
+
+            ctx.rotatePrimitive(p1, 0.5f * PI_F, "x");
+            vec3 n = ctx.getPrimitiveNormal(p1);
+            DOCTEST_CHECK(n.y == doctest::Approx(-1.f).epsilon(errtol));
+            DOCTEST_CHECK(n.z == doctest::Approx(0.f).epsilon(errtol));
+
+            ctx.rotatePrimitive(ids, PI_F, make_vec3(0, 1, 0));
+            vec3 c = ctx.getPatchCenter(p2);
+            DOCTEST_CHECK(c.x == doctest::Approx(-1.f).epsilon(errtol));
+
+            ctx.rotatePrimitive(p1, PI_F, make_vec3(0, 0, 0), make_vec3(0, 0, 1));
+
+            ctx.scalePrimitiveAboutPoint(p2, make_vec3(2.f, 2.f, 2.f), make_vec3(0, 0, 0));
+            vec2 sz = ctx.getPatchSize(p2);
+            DOCTEST_CHECK(sz.x == doctest::Approx(2.f).epsilon(errtol));
+
+            ctx.scalePrimitiveAboutPoint(ids, make_vec3(0.5f, 0.5f, 0.5f), make_vec3(0, 0, 0));
+            sz = ctx.getPatchSize(p2);
+            DOCTEST_CHECK(sz.x == doctest::Approx(1.f).epsilon(errtol));
+        }
     }
 
     TEST_CASE("Object Management") {
@@ -1819,6 +1880,58 @@ TEST_SUITE("Context Class") {
             DOCTEST_CHECK(radii.at(0) == doctest::Approx(2 * r0).epsilon(errtol));
             DOCTEST_CHECK(radii.at(1) == doctest::Approx(2 * r1).epsilon(errtol));
         }
+
+        SUBCASE("rotate and scale objects") {
+            Context ctx;
+            uint obj = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
+            ctx.rotateObject(obj, 0.5f * PI_F, "z");
+            vec3 bmin, bmax;
+            ctx.getObjectBoundingBox(obj, bmin, bmax);
+            DOCTEST_CHECK(bmax.x == doctest::Approx(0.5f).epsilon(errtol));
+
+            ctx.scaleObjectAboutPoint(obj, make_vec3(2.f, 2.f, 2.f), make_vec3(0, 0, 0));
+            ctx.getObjectBoundingBox(obj, bmin, bmax);
+            DOCTEST_CHECK(bmax.x > 0.5f);
+        }
+
+        SUBCASE("domain bounding sphere") {
+            Context ctx;
+            std::vector<uint> ids;
+            ids.push_back(ctx.addPatch(make_vec3(-1, 0, 0), make_vec2(1, 1)));
+            ids.push_back(ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1)));
+            vec3 c;
+            float r;
+            ctx.getDomainBoundingSphere(ids, c, r);
+            DOCTEST_CHECK(c.x == doctest::Approx(0.f).epsilon(errtol));
+            DOCTEST_CHECK(r > 1.f);
+        }
+
+        SUBCASE("copy and delete objects") {
+            Context ctx;
+            uint obj1 = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
+            uint obj2 = ctx.copyObject(obj1);
+            DOCTEST_CHECK(ctx.doesObjectExist(obj1));
+            DOCTEST_CHECK(ctx.doesObjectExist(obj2));
+            ctx.deleteObject(obj2);
+            DOCTEST_CHECK(!ctx.doesObjectExist(obj2));
+        }
+
+        SUBCASE("domain cropping") {
+            Context ctx;
+            uint p1 = ctx.addPatch(make_vec3(-2.f, 0.f, 0.f), make_vec2(1, 1));
+            uint p2 = ctx.addPatch(make_vec3(2.f, 0.f, 0.f), make_vec2(1, 1));
+            uint p3 = ctx.addPatch(make_vec3(0.f, 3.f, 0.f), make_vec2(1, 1));
+            uint p4 = ctx.addPatch(make_vec3(0.f, 0.f, 3.f), make_vec2(1, 1));
+            ctx.cropDomainX(make_vec2(-1.f, 1.f));
+            DOCTEST_CHECK(!ctx.doesPrimitiveExist(p1));
+            ctx.cropDomainY(make_vec2(-1.f, 1.f));
+            DOCTEST_CHECK(!ctx.doesPrimitiveExist(p3));
+            ctx.cropDomainZ(make_vec2(-1.f, 1.f));
+            DOCTEST_CHECK(!ctx.doesPrimitiveExist(p4));
+            std::vector<uint> ids_rem = ctx.getAllUUIDs();
+            ctx.cropDomain(ids_rem, make_vec2(-0.5f, 1.f), make_vec2(-0.5f, 1.f), make_vec2(-0.5f, 1.f));
+            DOCTEST_CHECK(!ctx.doesPrimitiveExist(p2));
+        }
     }
 
     TEST_CASE("Data Management") {
@@ -1859,6 +1972,16 @@ TEST_SUITE("Context Class") {
             DOCTEST_CHECK(ctx.queryTimeseriesData("ts", 1) == doctest::Approx(305.3f));
             float val = ctx.queryTimeseriesData("ts", date, time1);
             DOCTEST_CHECK(val == doctest::Approx(305.3f));
+            DOCTEST_CHECK(ctx.doesTimeseriesVariableExist("ts"));
+            std::vector<std::string> labels = ctx.listTimeseriesVariables();
+            DOCTEST_CHECK(std::find(labels.begin(), labels.end(), "ts") != labels.end());
+            DOCTEST_CHECK(ctx.queryTimeseriesData("ts", ctx.getTimeseriesLength("ts") - 1) == doctest::Approx(305.3f));
+            Time t1_r = ctx.queryTimeseriesTime("ts", 1);
+            Date d1_r = ctx.queryTimeseriesDate("ts", 1);
+            DOCTEST_CHECK(t1_r.minute == time1.minute);
+            DOCTEST_CHECK(d1_r.day == date.day);
+            ctx.setCurrentTimeseriesPoint("ts", 1);
+            DOCTEST_CHECK(ctx.queryTimeseriesData("ts") == doctest::Approx(305.3f));
         }
         SUBCASE("Context_data coverage") {
             SUBCASE("Primitive data") {
