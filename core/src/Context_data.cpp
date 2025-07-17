@@ -315,7 +315,7 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
     }
 
     if (count == 0) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         mean = 0;
     } else {
         mean = sum / float(count);
@@ -336,7 +336,7 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
     }
 
     if (count == 0) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         mean = 0;
     } else {
         mean = sum / float(count);
@@ -357,7 +357,7 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
     }
 
     if (count == 0) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         mean = make_vec2(0, 0);
     } else {
         mean = sum / float(count);
@@ -378,7 +378,7 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
     }
 
     if (count == 0) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         mean = make_vec3(0, 0, 0);
     } else {
         mean = sum / float(count);
@@ -399,7 +399,7 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
     }
 
     if (count == 0) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         mean = make_vec4(0, 0, 0, 0);
     } else {
         mean = sum / float(count);
@@ -425,10 +425,10 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
     }
 
     if (area == 0) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = 0;
     } else if (nan_warning) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     } else {
         awt_mean = sum / area;
     }
@@ -454,10 +454,10 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
     }
 
     if (area == 0) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = 0;
     } else if (nan_warning) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     } else {
         awt_mean = sum / area;
     }
@@ -482,10 +482,10 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
     }
 
     if (area == 0) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = make_vec2(0, 0);
     } else if (nan_warning) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     } else {
         awt_mean = sum / area;
     }
@@ -510,10 +510,10 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
     }
 
     if (area == 0) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = make_vec3(0, 0, 0);
     } else if (nan_warning) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     } else {
         awt_mean = sum / area;
     }
@@ -538,10 +538,10 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
     }
 
     if (area == 0) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
         awt_mean = make_vec4(0, 0, 0, 0);
     } else if (nan_warning) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedMean): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     } else {
         awt_mean = sum / area;
     }
@@ -562,7 +562,7 @@ void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const st
     }
 
     if (!added_to_sum) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
     }
 }
 
@@ -581,7 +581,7 @@ void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const st
     }
 
     if (!added_to_sum) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
     }
 }
 
@@ -600,7 +600,7 @@ void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const st
     }
 
     if (!added_to_sum) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
     }
 }
 
@@ -619,7 +619,7 @@ void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const st
     }
 
     if (!added_to_sum) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
     }
 }
 
@@ -638,7 +638,7 @@ void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const st
     }
 
     if (!added_to_sum) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
     }
 }
 
@@ -663,9 +663,9 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
     }
 
     if (!added_to_sum) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
     } else if (nan_warning) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     }
 }
 
@@ -690,9 +690,9 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
     }
 
     if (!added_to_sum) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
     } else if (nan_warning) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     }
 }
 
@@ -717,9 +717,9 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
     }
 
     if (!added_to_sum) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
     } else if (nan_warning) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     }
 }
 
@@ -744,9 +744,9 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
     }
 
     if (!added_to_sum) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
     } else if (nan_warning) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     }
 }
 
@@ -771,9 +771,9 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
     }
 
     if (!added_to_sum) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): No primitives found with primitive data of '" << label << "'. Returning a value of 0." << std::endl;
     } else if (nan_warning) {
-        std::cout << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
+        std::cerr << "WARNING (Context::calculatePrimitiveDataAreaWeightedSum): At least one primitive has an area of NaN and was excluded from calculations" << std::endl;
     }
 }
 
@@ -824,10 +824,10 @@ void Context::scalePrimitiveData(const std::vector<uint> &UUIDs, const std::stri
     }
 
     if (primitives_not_exist > 0) {
-        std::cout << "WARNING (Context::scalePrimitiveData): " << primitives_not_exist << " of " << UUIDs.size() << " from the input UUID vector did not exist." << std::endl;
+        std::cerr << "WARNING (Context::scalePrimitiveData): " << primitives_not_exist << " of " << UUIDs.size() << " from the input UUID vector did not exist." << std::endl;
     }
     if (primitive_data_not_exist > 0) {
-        std::cout << "WARNING (Context::scalePrimitiveData): Primitive data did not exist for " << primitive_data_not_exist << " primitives, and thus no scaling was applied." << std::endl;
+        std::cerr << "WARNING (Context::scalePrimitiveData): Primitive data did not exist for " << primitive_data_not_exist << " primitives, and thus no scaling was applied." << std::endl;
     }
 }
 
@@ -1042,10 +1042,10 @@ void Context::aggregatePrimitiveDataSum(const std::vector<uint> &UUIDs, const st
     }
 
     if (primitives_not_exist > 0) {
-        std::cout << "WARNING (Context::aggregatePrimitiveDataSum): " << primitives_not_exist << " of " << UUIDs.size() << " from the input UUID vector did not exist." << std::endl;
+        std::cerr << "WARNING (Context::aggregatePrimitiveDataSum): " << primitives_not_exist << " of " << UUIDs.size() << " from the input UUID vector did not exist." << std::endl;
     }
     if (primitive_data_not_exist > 0) {
-        std::cout << "WARNING (Context::aggregatePrimitiveDataSum): Primitive data did not exist for " << primitive_data_not_exist
+        std::cerr << "WARNING (Context::aggregatePrimitiveDataSum): Primitive data did not exist for " << primitive_data_not_exist
                   << " primitives, and thus no scaling summation was performed and new primitive data was not created for this primitive." << std::endl;
     }
 }
@@ -1217,10 +1217,10 @@ void Context::aggregatePrimitiveDataProduct(const std::vector<uint> &UUIDs, cons
     }
 
     if (primitives_not_exist > 0) {
-        std::cout << "WARNING (Context::aggregatePrimitiveDataProduct): " << primitives_not_exist << " of " << UUIDs.size() << " from the input UUID vector did not exist." << std::endl;
+        std::cerr << "WARNING (Context::aggregatePrimitiveDataProduct): " << primitives_not_exist << " of " << UUIDs.size() << " from the input UUID vector did not exist." << std::endl;
     }
     if (primitive_data_not_exist > 0) {
-        std::cout << "WARNING (Context::aggregatePrimitiveDataProduct): Primitive data did not exist for " << primitive_data_not_exist
+        std::cerr << "WARNING (Context::aggregatePrimitiveDataProduct): Primitive data did not exist for " << primitive_data_not_exist
                   << " primitives, and thus no multiplication was performed and new primitive data was not created for this primitive." << std::endl;
     }
 }
@@ -1248,9 +1248,9 @@ float Context::sumPrimitiveSurfaceArea(const std::vector<uint> &UUIDs) const {
     }
 
     if (primitive_warning) {
-        std::cout << "WARNING (Context::sumPrimitiveSurfaceArea): One or more primitives reference in the UUID vector did not exist." << std::endl;
+        std::cerr << "WARNING (Context::sumPrimitiveSurfaceArea): One or more primitives reference in the UUID vector did not exist." << std::endl;
     } else if (nan_warning) {
-        std::cout << "WARNING (Context::sumPrimitiveSurfaceArea): One or more primitives had an area of NaN." << std::endl;
+        std::cerr << "WARNING (Context::sumPrimitiveSurfaceArea): One or more primitives had an area of NaN." << std::endl;
     }
 
     return area;

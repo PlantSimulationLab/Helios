@@ -2427,3 +2427,31 @@ The radiation model has been re-designed, with the following primary additions:
 
 ## Stomatal Conductance
 - Added optional output primitive data to write stomatal conductance model parameters to primitive data.
+- 
+# [1.3.40] 2025-07-17
+
+- Improvements to `utilities/run_benchmarks.sh` script with corresponding changes in `utilities/plot_benchmarks.py`.
+- Added benchmarks to documentation.
+- Added benchmark cases `energy_balance_dragon` and `plant_architecture_bean`.
+- Updated required CMake version to 3.15 for plug-ins, and made many updates to plug-in CMakeLists.txt files to use more modern CMake features.
+- Started transitioning tests to using the "doctest" framework. This will be a gradual process, and the old self-test framework will still be supported for now.
+
+## Context
+- Reverted a previous change in `Context::setPrimitiveData()` and `Context::setObjectData()` to not use range-based for loops when it is an openmp paralell loop.
+- There was an issue in `Context::setObjectData()` and `Context::getObjectData()` where the openmp preprocessor directive needed to be placed after the static assert.
+- Moved third-party library pugixml into the `core/lib` directory for better organization.
+- Improved robustness of geometric intersection functions (`lineIntersection`, `pointInPolygon`, `fzero`).
+- Added new geometric utility function `pointOnSegment`.
+- Converted the self-tests to use the doctest framework.
+
+## Visualizer
+- Updated visualizer code to only transfer buffer data to the GPU that has changed, rather than re-building all geometry every time any geometry changes.
+- Changed the GLFW code to continuously update the window even when there are no new input events. This prevents the usual lag that can occur if the user doesn't move the mouse in the window.
+- Converted the self-tests to use the doctest framework.
+
+## Radiation
+- Removed MacOS OptiX files from the repository.
+
+## Solar Position
+- Minor updates based on edge cases found in the self-tests.
+- Converted the self-tests to use the doctest framework.

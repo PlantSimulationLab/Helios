@@ -41,6 +41,9 @@
       <tab type="user" visible="yes" url="@ref radiation_BeersLaw_tutorial" title="Tutorial 11: Light interception for a homogeneous canopy"/>
       <tab type="user" visible="yes" url="@ref canopy_WUE_tutorial" title="Tutorial 12: Water-use efficiency for a canopy of spherical crowns"/>
     </tab>
+    <tab type="usergroup" visible="yes" url="@ref Benchmarks" title="Benchmarks">
+      <tab type="user" visible="yes" url="@ref RadCanopyBenchmark" title="Homogeneous Canopy Radiation"/>
+    </tab>
     <tab type="files" visible="yes" title="Files">
       <tab type="filelist" visible="yes" title="" intro=""/>
       <tab type="globals" visible="yes" title="" intro=""/>

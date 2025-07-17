@@ -37,28 +37,28 @@ class SolarPosition{
   SolarPosition(float UTC_hrs, float latitude_deg, float longitude_deg, helios::Context* context_ptr );
 
   //! Function to perform a self-test of model functions
-  int selfTest() const;
+  static int selfTest();
 
   //! Get the approximate time of sunrise at the current location 
-  helios::Time getSunriseTime() const;
+  [[nodiscard]] helios::Time getSunriseTime() const;
 
   //! Get the approximate time of sunset at the current location
-  helios::Time getSunsetTime() const;
+  [[nodiscard]] helios::Time getSunsetTime() const;
 
   //! Get the current sun elevation angle in radians for the current location. The sun angle is computed based on the current time and date set in the Helios context
-  float getSunElevation() const;
+  [[nodiscard]] float getSunElevation() const;
 
   //! Get the current sun zenithal angle in radians for the current location. The sun angle is computed based on the current time and date set in the Helios context
-  float getSunZenith() const;
+  [[nodiscard]] float getSunZenith() const;
 
   //! Get the current sun azimuthal angle in radians for the current location. The sun angle is computed based on the current time and date set in the Helios context
-  float getSunAzimuth() const;
+  [[nodiscard]] float getSunAzimuth() const;
 
   //! Get a unit vector pointing toward the sun for the current location. The sun angle is computed based on the current time and date set in the Helios context
-  helios::vec3 getSunDirectionVector() const;
+  [[nodiscard]] helios::vec3 getSunDirectionVector() const;
 
   //! Get a spherical coordinate vector pointing toward the sun for the current location. The sun angle is computed based on the current time and date set in the Helios context
-  helios::SphericalCoord getSunDirectionSpherical() const;
+  [[nodiscard]] helios::SphericalCoord getSunDirectionSpherical() const;
 
   //! Override solar position calculation based on time in the Context by using a prescribed solar position
   /**
@@ -76,7 +76,7 @@ class SolarPosition{
    * \note The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>.
    * \return Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
   */
-  float getSolarFlux(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity ) const;
+  [[nodiscard]] float getSolarFlux(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity ) const;
 
   //! Get the photosynthetically active (PAR) component of solar radiation flux perpendicular to the sun direction.
   /**
@@ -88,7 +88,7 @@ class SolarPosition{
    * \note The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>.
    * \return Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
   */
-  float getSolarFluxPAR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity ) const;
+  [[nodiscard]] float getSolarFluxPAR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity ) const;
 
   //! Get the near-infrared (NIR) component of solar radiation flux perpendicular to the sun direction.
   /**
@@ -100,7 +100,7 @@ class SolarPosition{
    * \note The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>.
    * \return Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
   */
-  float getSolarFluxNIR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity ) const;
+  [[nodiscard]] float getSolarFluxNIR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity ) const;
 
   //! Get the fraction of solar radiation flux that is diffuse
   /**
@@ -110,7 +110,7 @@ class SolarPosition{
    * \param[in] turbidity Angstrom's aerosol turbidity coefficient
    * \return Fraction of global radiation that is diffuse
   */
-  float getDiffuseFraction(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity ) const;
+  [[nodiscard]] float getDiffuseFraction(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity ) const;
 
   //! Calculate the ambient (sky) longwave radiation flux
   /**
@@ -119,7 +119,7 @@ class SolarPosition{
    * \return Ambient longwave flux in W/m^2
    * \note The longwave flux model is based on <a href="http://onlinelibrary.wiley.com/doi/10.1002/qj.49712253306/full">Prata (1996)</a>.
   */
-  float getAmbientLongwaveFlux(float temperature_K, float humidity_rel ) const;
+  [[nodiscard]] float getAmbientLongwaveFlux(float temperature_K, float humidity_rel ) const;
 
   //! Calculate the turbidity value based on a timeseries of net radiation measurements
     /**
@@ -127,7 +127,7 @@ class SolarPosition{
      * \return Turbidity value
      * \note The net radiation flux measurements contained in the timeseries should be global shortwave radiation flux on a horizontal plane in W/m^2. The data should contain at least one day with clear sky conditions.
     */
-  float calibrateTurbidityFromTimeseries( const std::string &timeseries_shortwave_flux_label_Wm2 ) const;
+  [[nodiscard]] float calibrateTurbidityFromTimeseries( const std::string &timeseries_shortwave_flux_label_Wm2 ) const;
 
   //! Enable calibration of solar flux and diffuse fraction when possibility of clouds are present against measured solar flux data
   /**
@@ -151,7 +151,7 @@ class SolarPosition{
 
   std::string cloudcalibrationlabel;
 
-  helios::SphericalCoord calculateSunDirection( const helios::Time &time, const helios::Date &date ) const;
+  [[nodiscard]] helios::SphericalCoord calculateSunDirection( const helios::Time &time, const helios::Date &date ) const;
 
   void GueymardSolarModel( float pressure, float temperature, float humidity, float turbidity, float& Eb_PAR, float& Eb_NIR, float &fdiff ) const;
 

@@ -74,7 +74,7 @@ if("solarposition" IN_LIST PLUGINS OR "radiation" IN_LIST PLUGINS) # solarpositi
         endif()
         add_subdirectory( "${BASE_DIRECTORY}/plugins/${TEMP_PLUGIN}" "${PROJECT_BINARY_DIR}/plugins/${TEMP_PLUGIN}" )
         target_link_libraries( ${EXECUTABLE_NAME} ${TEMP_PLUGIN} )
-        target_link_libraries( ${TEMP_PLUGIN} helios )
+        target_link_libraries( ${TEMP_PLUGIN} PUBLIC helios )
     endif()
     add_definitions(-DENABLE_SOLARPOSITION)
     include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../solarposition/include")
@@ -118,24 +118,11 @@ if("visualizer" IN_LIST PLUGINS)
     endif(APPLE)
 endif()
 
-include_directories(include)
-include_directories(../../core/include)
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
 add_library(projectbuilder STATIC ${SOURCES})
 
-# this target includes all plugin include dirs unconditionally
-#target_include_directories(projectbuilder PUBLIC
-#    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/boundarylayerconductance/include
-#    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/energybalance/include
-#    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/plantarchitecture/include
-#    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/radiation/include
-#    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/solarposition/include
-#    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins/visualizer/include
-#)
-
-target_include_directories(projectbuilder PUBLIC ${PLUGIN_INCLUDE_DIRS})
+target_include_directories(projectbuilder PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 #target_compile_definitions(projectbuilder PUBLIC BOUNDARYLAYERCONDUCTANCEMODEL)
 #target_compile_definitions(projectbuilder PUBLIC BOUNDARYLAYERCONDUCTANCEMODEL)
@@ -145,7 +132,7 @@ if("radiation" IN_LIST PLUGINS OR "energybalanace" IN_LIST PLUGINS)
     find_package(CUDA REQUIRED)
     if(CUDA_FOUND)
         include_directories(${CUDA_INCLUDE_DIRS})
-        target_link_libraries( projectbuilder ${CUDA_LIBRARIES} )
+        target_link_libraries( projectbuilder PRIVATE ${CUDA_LIBRARIES} )
     endif(CUDA_FOUND)
     if(UNIX AND NOT APPLE)
         if( OPTIX_VERSION_LEGACY )
@@ -156,12 +143,12 @@ if("radiation" IN_LIST PLUGINS OR "energybalanace" IN_LIST PLUGINS)
             message("Using OptiX version 6.5")
         endif()
         include_directories(${OPTIX_PATH}include)
-        target_link_libraries( projectbuilder ${OPTIX_PATH}lib64/liboptix.so )
+        target_link_libraries( projectbuilder PRIVATE ${OPTIX_PATH}lib64/liboptix.so )
     endif(UNIX AND NOT APPLE)
     if(APPLE)
         set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../radiation/lib/OptiX/mac64-4.0.2/)
         include_directories(${OPTIX_PATH}include)
-        target_link_libraries( projectbuilder ${OPTIX_PATH}lib64/liboptix.dylib )
+        target_link_libraries( projectbuilder PRIVATE ${OPTIX_PATH}lib64/liboptix.dylib )
     endif(APPLE)
     if(WIN32)
         if( OPTIX_VERSION_LEGACY )
@@ -176,7 +163,7 @@ if("radiation" IN_LIST PLUGINS OR "energybalanace" IN_LIST PLUGINS)
             message("Using OptiX version 6.5")
         endif()
         include_directories(${OPTIX_PATH}include)
-        target_link_libraries( projectbuilder "${OPTIX_PATH}lib64/${OPTIX_LIB}" )
+        target_link_libraries( projectbuilder PRIVATE "${OPTIX_PATH}lib64/${OPTIX_LIB}" )
         add_custom_command( TARGET projectbuilder POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${OPTIX_PATH}lib64/${OPTIX_LIB}" "${CMAKE_BINARY_DIR}/." )
         add_custom_command( TARGET projectbuilder POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${OPTIX_PATH}bin64/${OPTIX_DLL}" "${CMAKE_BINARY_DIR}/." )
 
@@ -189,27 +176,27 @@ endif()
 # CUDA + OPTIX END
 
 if("boundarylayerconductance" IN_LIST PLUGINS)
-    target_link_libraries( projectbuilder boundarylayerconductance )
+    target_link_libraries( projectbuilder PUBLIC boundarylayerconductance )
 endif()
 
 if("energybalance" IN_LIST PLUGINS)
-    target_link_libraries( projectbuilder energybalance )
+    target_link_libraries( projectbuilder PUBLIC energybalance )
 endif()
 
 if("plantarchitecture" IN_LIST PLUGINS)
-    target_link_libraries( projectbuilder plantarchitecture )
+    target_link_libraries( projectbuilder PUBLIC plantarchitecture )
 endif()
 
 if("radiation" IN_LIST PLUGINS)
-    target_link_libraries( projectbuilder radiation )
+    target_link_libraries( projectbuilder PUBLIC radiation )
 endif()
 
 if("solarposition" IN_LIST PLUGINS OR "radiation" IN_LIST PLUGINS)
-    target_link_libraries( projectbuilder solarposition )
+    target_link_libraries( projectbuilder PUBLIC solarposition )
 endif()
 
 if("visualizer" IN_LIST PLUGINS)
-    target_link_libraries( projectbuilder visualizer )
+    target_link_libraries( projectbuilder PUBLIC visualizer )
     #imgui
     include_directories(lib/imgui)
     include_directories(lib/imgui/backends)
@@ -218,8 +205,6 @@ if("visualizer" IN_LIST PLUGINS)
     target_include_directories( projectbuilder PUBLIC lib/imgui/backends )
     target_include_directories( projectbuilder PUBLIC lib/imgui/misc/cpp )
 endif()
-
-target_link_libraries( projectbuilder helios )
 
 add_dependencies( projectbuilder helios )
 
@@ -231,7 +216,7 @@ if("visualizer" IN_LIST PLUGINS)
         include_directories(lib/nativefiledialog/src/include)
         target_include_directories( projectbuilder PUBLIC lib/nativefiledialog/src )
         target_include_directories( projectbuilder PUBLIC lib/nativefiledialog/src/include )
-        target_link_libraries(projectbuilder dl)
+        target_link_libraries(projectbuilder PUBLIC dl)
         # uncomment for GTK
 #        find_package(PkgConfig REQUIRED)
 #        pkg_check_modules(GTK REQUIRED gtkmm-3.0)
@@ -247,7 +232,7 @@ if("visualizer" IN_LIST PLUGINS)
         if(NOT COCOA_LIBRARY)
             message(FATAL_ERROR "Cocoa library not found.")
         endif()
-        target_link_libraries(projectbuilder ${COCOA_LIBRARY})
+        target_link_libraries(projectbuilder PUBLIC ${COCOA_LIBRARY})
         add_compile_options(
             "$<$<COMPILE_LANGUAGE:CXX>:-x objective-c++>"
             "$<$<COMPILE_LANGUAGE:C>:-x objective-c++>"
@@ -260,8 +245,6 @@ if("visualizer" IN_LIST PLUGINS)
         target_include_directories( projectbuilder PUBLIC lib/nativefiledialog/src )
         target_include_directories( projectbuilder PUBLIC lib/nativefiledialog/src/include )
     endif(APPLE)
-else()
-    set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS};" PARENT_SCOPE )
 endif()
 
 file( COPY inputs DESTINATION ${CMAKE_BINARY_DIR}/plugins/projectbuilder/ )

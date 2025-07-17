@@ -9,5 +9,6 @@ var struct_shader =
     [ "setLightingModel", "struct_shader.html#a08f9e96dbdea98bf178f902549c8096b", null ],
     [ "setLightIntensity", "struct_shader.html#adb7e2c4c14638b056e39b6b9827bef97", null ],
     [ "setTransformationMatrix", "struct_shader.html#af0ef553d486d1c50da7e2a96ec048ba9", null ],
-    [ "useShader", "struct_shader.html#a07520fd004cb1fd118597151d00e2c24", null ]
+    [ "useShader", "struct_shader.html#a07520fd004cb1fd118597151d00e2c24", null ],
+    [ "initialized", "struct_shader.html#a0d52bd031b59908bdd13aba3446015bb", null ]
 ];
