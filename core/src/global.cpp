@@ -390,6 +390,11 @@ bool helios::pointInPolygon(const vec2 &p, const std::vector<vec2> &poly) {
     return (crossings & 1) == 1;
 }
 
+void helios::wait(float seconds) {
+    int msec = (int) lround(seconds * 1000.f);
+    std::this_thread::sleep_for(std::chrono::milliseconds(msec));
+}
+
 void helios::makeRotationMatrix(const float rotation, const char *axis, float (&T)[16]) {
     float sx = sin(rotation);
     float cx = cos(rotation);

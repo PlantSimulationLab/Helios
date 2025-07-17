@@ -32,13 +32,5 @@ SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
 
 CUDA_ADD_LIBRARY( energybalance STATIC "src/EnergyBalanceModel.cpp" "src/EnergyBalanceModel.cu" "src/selfTest.cpp" )
 
-target_include_directories(energybalance
-    PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../core/include
-        ${CUDA_INCLUDE_DIRS}
-)
-
-target_link_libraries( energybalance PRIVATE helios ${CUDA_LIBRARIES} )
-
-set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${CUDA_INCLUDE_DIRS};${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
+target_include_directories(energybalance PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" )
+target_include_directories(energybalance PRIVATE "${CUDA_INCLUDE_DIRS}" )

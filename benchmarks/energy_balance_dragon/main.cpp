@@ -3,8 +3,8 @@
 using namespace helios;
 
 int main(){
-    uint Nx = 1000;      // grid size in x
-    uint Ny = 1000;      // grid size in y
+    uint Nx = 500;      // grid size in x
+    uint Ny = 500;      // grid size in y
     float D = 10.f;     // domain width
     vec2 ground_size(D, D);
 
@@ -16,12 +16,12 @@ int main(){
     std::vector<uint> ground_UUIDs, dragon_UUIDs, all_UUIDs;
 
     timer.tic();
-    dragon_UUIDs = context.loadPLY("../../../PLY/StanfordDragon.ply");
+    dragon_UUIDs = context.loadPLY("../../../../PLY/StanfordDragon.ply");
     elapsed = timer.toc("PLY model load");
     outfile << "PLY model load, " << elapsed << "\n";
 
     timer.tic();
-    ground_UUIDs = context.addTile(nullorigin, ground_size, nullrotation, make_int2(Nx, Ny), "plugins/visualizer/textures/dirt.jpg");
+    ground_UUIDs = context.addTile(nullorigin, ground_size, nullrotation, make_int2(Nx, Ny) );
     elapsed = timer.toc("Ground geometry creation");
     outfile << "Ground geometry creation, " << elapsed << "\n";
 

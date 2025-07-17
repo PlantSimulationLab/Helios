@@ -2433,7 +2433,7 @@ The radiation model has been re-designed, with the following primary additions:
 - Improvements to `utilities/run_benchmarks.sh` script with corresponding changes in `utilities/plot_benchmarks.py`.
 - Added benchmarks to documentation.
 - Added benchmark cases `energy_balance_dragon` and `plant_architecture_bean`.
-- Updated required CMake version to 3.15 for plug-ins.
+- Updated required CMake version to 3.15 for plug-ins, and made many updates to plug-in CMakeLists.txt files to use more modern CMake features.
 - Started transitioning tests to using the "doctest" framework. This will be a gradual process, and the old self-test framework will still be supported for now.
 
 ## Context

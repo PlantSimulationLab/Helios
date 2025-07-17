@@ -11,15 +11,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mo
 
 add_library( syntheticannotation STATIC "${CMAKE_CURRENT_SOURCE_DIR}/src/SyntheticAnnotation.cpp" )
 
-target_include_directories(syntheticannotation
-    PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../core/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../visualizer/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../visualizer/lib/glm
-)
+target_include_directories(syntheticannotation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include )
 
-target_link_libraries( syntheticannotation PRIVATE helios visualizer )
 add_dependencies( syntheticannotation visualizer )
-
-set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${CMAKE_CURRENT_SOURCE_DIR}/lib/s_hull_pro;${CUDA_INCLUDE_DIRS};${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
+target_link_libraries( syntheticannotation PUBLIC visualizer )

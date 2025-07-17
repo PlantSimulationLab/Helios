@@ -3,7 +3,7 @@
 # Run Helios benchmarks and collect runtime information.
 #
 # Usage:
-#   $(basename "$0") [THREAD_COUNTS] [--verbose] [--log-file <file>] [--help]
+#   ./run_benchmarks.sh [THREAD_COUNTS] [--verbose] [--log-file <file>] [--samples <samples>] [--help]
 #
 # Arguments:
 #   THREAD_COUNTS - Optional comma or space separated list of thread counts
@@ -12,6 +12,10 @@
 #   --verbose     - Print build and run output to the console.
 #   --log-file    - Write all output to the specified file. If used together
 #                   with --verbose the output is also echoed to the console.
+#   --samples     - Comma or space separated list of samples to run (e.g.,
+#                   "radiation_homogeneous_canopy,energy_balance_dragon" or
+#                   "radiation_homogeneous_canopy energy_balance_dragon").
+#                   If omitted, all samples are run.
 #   --help        - Show this help message and exit.
 #
 # Output:
@@ -25,7 +29,7 @@
 
 # Function to display usage information
 usage() {
-    sed -n '3,18p' "$0"
+    sed -n '3,21p' "$0"
     exit 1
 }
 
@@ -45,7 +49,7 @@ run_command() {
     fi
 }
 
-SAMPLES=("radiation_homogeneous_canopy" "energy_balance_dragon" "plant_architecture_bean")
+ALL_SAMPLES=("radiation_homogeneous_canopy" "energy_balance_dragon" "plant_architecture_bean")
 
 BUILD_TYPES=("Debug" "Release")
 
@@ -56,6 +60,7 @@ THREAD_COUNTS=(1)
 VERBOSE="OFF"
 LOG_FILE=""
 THREAD_STRING=""
+SAMPLES_STRING=""
 
 while [ $# -gt 0 ]; do
     case $1 in
@@ -69,6 +74,11 @@ while [ $# -gt 0 ]; do
             else
                 LOG_FILE="$(pwd)/$2"
             fi
+            shift
+            ;;
+        --samples)
+            [ -z "$2" ] && usage
+            SAMPLES_STRING="$2"
             shift
             ;;
         --help|-h)
@@ -93,6 +103,30 @@ fi
 if [ -n "$THREAD_STRING" ]; then
     THREAD_COUNTS=()
     IFS=', ' read -r -a THREAD_COUNTS <<< "$THREAD_STRING"
+fi
+
+# Set up samples to run
+if [ -n "$SAMPLES_STRING" ]; then
+    SAMPLES=()
+    IFS=', ' read -r -a SAMPLES <<< "$SAMPLES_STRING"
+    
+    # Validate that all specified samples exist in the ALL_SAMPLES array
+    for sample in "${SAMPLES[@]}"; do
+        found=false
+        for valid_sample in "${ALL_SAMPLES[@]}"; do
+            if [ "$sample" = "$valid_sample" ]; then
+                found=true
+                break
+            fi
+        done
+        if [ "$found" = false ]; then
+            echo "Error: invalid sample '$sample'. Valid samples are: ${ALL_SAMPLES[*]}" >&2
+            exit 1
+        fi
+    done
+else
+    # Use all samples if none specified
+    SAMPLES=("${ALL_SAMPLES[@]}")
 fi
 
 # Validate that all thread counts are positive integers
@@ -162,6 +196,7 @@ echo "---------------------------------------------"
 echo "Benchmarking Helios ${HELIOS_VERSION} on ${GPU_NAME}"
 echo "CPU: ${CPU_NAME}"
 echo "Using thread counts: ${THREAD_COUNTS[*]}"
+echo "Running samples: ${SAMPLES[*]}"
 echo "---------------------------------------------"
 
 ERROR_COUNT=0

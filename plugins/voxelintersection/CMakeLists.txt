@@ -31,18 +31,7 @@ SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
 
 CUDA_ADD_LIBRARY( voxelintersection STATIC "src/VoxelIntersection.cu" "src/VoxelIntersection.cpp" )
 
-target_include_directories(voxelintersection
-    PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../core/include
-        ${CUDA_INCLUDE_DIRS}
-)
+target_include_directories(voxelintersection PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include )
+target_include_directories(voxelintersection PRIVATE ${CUDA_INCLUDE_DIRS} )
 
-target_link_libraries( voxelintersection
-    PRIVATE
-        helios
-        ${CUDA_LIBRARIES}
-)
-
-set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${CUDA_INCLUDE_DIRS};${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
-
+target_link_libraries( voxelintersection ${CUDA_LIBRARIES} )

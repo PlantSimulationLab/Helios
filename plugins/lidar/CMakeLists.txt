@@ -33,24 +33,11 @@ SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
 
 CUDA_ADD_LIBRARY( lidar STATIC "src/LiDAR.cu" "src/LiDAR.cpp" "src/fileIO.cpp" "src/selfTest.cpp" "../../core/src/pugixml.cpp" "lib/s_hull_pro/s_hull_pro.cpp" )
 
-target_include_directories(lidar
-    PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../core/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../visualizer/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../visualizer/lib/glm
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/s_hull_pro
-        ${CUDA_INCLUDE_DIRS}
-)
-
-target_link_libraries( lidar
-    PRIVATE
-        helios
-        ${CUDA_LIBRARIES}
-        visualizer
-)
+target_include_directories(lidar PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include )
+target_include_directories(lidar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/s_hull_pro ${CUDA_INCLUDE_DIRS} )
 
 #add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/../visualizer/ "plugins/visualizer" )
+target_link_libraries( lidar visualizer )
 add_dependencies( lidar visualizer )
 
 #add_subdirectory( "${CMAKE_CURRENT_SOURCE_DIR}/lib/laszip" )
