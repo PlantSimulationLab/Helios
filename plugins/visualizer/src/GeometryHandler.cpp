@@ -187,6 +187,8 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType& geo
         color_data[geometry_type].at(color_index+3) = color.a;
     }
 
+    markDirty(UUID);
+
 }
 
 bool GeometryHandler::doesGeometryExist(size_t UUID) const {
@@ -299,6 +301,8 @@ void GeometryHandler::setVertices( size_t UUID, const std::vector<helios::vec3>&
     normal_data[index_map.geometry_type].at( normal_ind + ii+1 ) = normal.y;
     normal_data[index_map.geometry_type].at( normal_ind + ii+2 ) = normal.z;
 
+    markDirty(UUID);
+
 }
 
 std::vector<helios::vec3> GeometryHandler::getVertices( size_t UUID ) const {
@@ -374,6 +378,8 @@ void GeometryHandler::setColor( size_t UUID, const helios::RGBAcolor &color ) {
     color_data[index_map.geometry_type].at( color_ind + 2 ) = color.b;
     color_data[index_map.geometry_type].at( color_ind + 3 ) = color.a;
 
+    markDirty(UUID);
+
 }
 
 helios::RGBAcolor GeometryHandler::getColor( size_t UUID ) const {
@@ -432,6 +438,8 @@ void GeometryHandler::setUVs( size_t UUID, const std::vector<helios::vec2>& uvs 
         ii+=2;
     }
 
+    markDirty(UUID);
+
 }
 
 std::vector<helios::vec2> GeometryHandler::getUVs( size_t UUID ) const {
@@ -481,6 +489,8 @@ void GeometryHandler::setTextureID( size_t UUID, int textureID ) {
 
     texture_ID_data.at(index_map.geometry_type).at( texture_ind ) = textureID;
 
+    markDirty(UUID);
+
 }
 
 int GeometryHandler::getTextureID( size_t UUID ) const {
@@ -525,6 +535,8 @@ void GeometryHandler::overrideTextureColor( size_t UUID ) {
         texture_flag_data.at(index_map.geometry_type).at(texture_flag_ind) = 2;
     }
     
+    markDirty(UUID);
+
 }
 
 void GeometryHandler::useTextureColor( size_t UUID ) {
@@ -544,6 +556,8 @@ void GeometryHandler::useTextureColor( size_t UUID ) {
 
     // \todo This might be a problem in the case that the primitive does not have a texture image. In this case, we would want to set to 0.
     texture_flag_data.at(index_map.geometry_type).at(texture_flag_ind) = 1;
+
+    markDirty(UUID);
 
 }
 
@@ -565,6 +579,8 @@ void GeometryHandler::setVisibility( size_t UUID, bool isvisible ) {
     const size_t visibile_ind = index_map.visible_index;
     
     visible_flag_data.at(index_map.geometry_type).at(visibile_ind) = static_cast<char>(isvisible);
+
+    markDirty(UUID);
 
 }
 
@@ -618,6 +634,8 @@ void GeometryHandler::deleteGeometry( size_t UUID ) {
 
     delete_flag_data.at(index_map.geometry_type).at(index_map.delete_flag_index) = true;
     visible_flag_data.at(index_map.geometry_type).at(index_map.visible_index) = false;
+
+    markDirty(UUID);
 
     deleted_primitive_count ++;
 
@@ -916,4 +934,16 @@ char GeometryHandler::getVertexCount(const VisualizerGeometryType &geometry_type
             return 0;
     }
 
+}
+
+void GeometryHandler::markDirty(size_t UUID) {
+    dirty_UUIDs.insert(UUID);
+}
+
+const std::unordered_set<size_t> &GeometryHandler::getDirtyUUIDs() const {
+    return dirty_UUIDs;
+}
+
+void GeometryHandler::clearDirtyUUIDs() {
+    dirty_UUIDs.clear();
 }

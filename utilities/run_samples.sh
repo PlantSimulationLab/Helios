@@ -230,7 +230,7 @@ for i in "${SAMPLES[@]}"; do
 
   cd "$i"/build || exit 1
 
-  rm -rf *
+  rm -rf ./*
 
   echo -ne "Building sample ${i}..."
 
@@ -241,7 +241,7 @@ for i in "${SAMPLES[@]}"; do
   else
     echo -e "\r\x1B[31mBuilding sample ${i}...failed.\x1B[39m"
     ERROR_COUNT=$((ERROR_COUNT + 1))
-    rm -rf "$i"/build/*
+    rm -rf ./*
     cd ../..
     continue
   fi
@@ -256,14 +256,14 @@ for i in "${SAMPLES[@]}"; do
     else
       echo -e "\r\x1B[31mCompiling sample ${i}...failed.\x1B[39m"
       ERROR_COUNT=$((ERROR_COUNT + 1))
-      rm -rf "$i"/build/*
+      rm -rf ./*glob*
       cd ../..
       continue
     fi
   else
     echo -e "\r\x1B[31mCompiling sample ${i}...failed.\x1B[39m"
     ERROR_COUNT=$((ERROR_COUNT + 1))
-    rm -rf "$i"/build/*
+    rm -rf ./*
     cd ../..
     continue
   fi
@@ -289,7 +289,7 @@ for i in "${SAMPLES[@]}"; do
   else
     echo -e "\r\x1B[31mRunning sample ${i}...failed.\x1B[39m"
     ERROR_COUNT=$((ERROR_COUNT + 1))
-    rm -rf "$i"/build/*
+    rm -rf ./*
     cd ../..
     continue
   fi
@@ -317,7 +317,7 @@ for i in "${SAMPLES[@]}"; do
     else
       echo -e "\r\x1B[31mRunning memcheck for sample ${i}...failed.\x1B[39m"
       ERROR_COUNT=$((ERROR_COUNT + 1))
-      rm -rf "$i"/build/*
+      rm -rf ./*
       cd ../..
       continue
     fi

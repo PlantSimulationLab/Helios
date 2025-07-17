@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.39</span>
+       <span id="projectnumber">&#160;v1.3.40</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -3970,408 +3970,396 @@ $(function(){initNavTree('_plant_architecture_8cpp_source.html',''); initResizab
 <div class="line"><a id="l03585" name="l03585"></a><span class="lineno"> 3585</span> </div>
 <div class="line"><a id="l03586" name="l03586"></a><span class="lineno"> 3586</span>    <span class="keywordtype">float</span> dt_max_days;</div>
 <div class="line"><a id="l03587" name="l03587"></a><span class="lineno"> 3587</span>    <span class="keywordtype">int</span> Nsteps;</div>
-<div class="line"><a id="l03588" name="l03588"></a><span class="lineno"> 3588</span>    <span class="keywordtype">bool</span> final_geometry_updated = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l03589" name="l03589"></a><span class="lineno"> 3589</span> </div>
-<div class="line"><a id="l03590" name="l03590"></a><span class="lineno"> 3590</span>    <span class="keywordflow">if</span> (time_step_days &lt;= phyllochron_min) {</div>
-<div class="line"><a id="l03591" name="l03591"></a><span class="lineno"> 3591</span>        Nsteps = time_step_days;</div>
-<div class="line"><a id="l03592" name="l03592"></a><span class="lineno"> 3592</span>        dt_max_days = 1;</div>
-<div class="line"><a id="l03593" name="l03593"></a><span class="lineno"> 3593</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l03594" name="l03594"></a><span class="lineno"> 3594</span>        Nsteps = std::floor(time_step_days / phyllochron_min);</div>
-<div class="line"><a id="l03595" name="l03595"></a><span class="lineno"> 3595</span>        dt_max_days = phyllochron_min;</div>
-<div class="line"><a id="l03596" name="l03596"></a><span class="lineno"> 3596</span>    }</div>
-<div class="line"><a id="l03597" name="l03597"></a><span class="lineno"> 3597</span> </div>
-<div class="line"><a id="l03598" name="l03598"></a><span class="lineno"> 3598</span>    <span class="keywordtype">float</span> remainder_time = time_step_days - dt_max_days * float(Nsteps);</div>
-<div class="line"><a id="l03599" name="l03599"></a><span class="lineno"> 3599</span>    <span class="keywordflow">if</span> (remainder_time &gt; 0.f) {</div>
-<div class="line"><a id="l03600" name="l03600"></a><span class="lineno"> 3600</span>        Nsteps++;</div>
-<div class="line"><a id="l03601" name="l03601"></a><span class="lineno"> 3601</span>    }</div>
-<div class="line"><a id="l03602" name="l03602"></a><span class="lineno"> 3602</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> timestep = 0; timestep &lt; Nsteps; timestep++) {</div>
-<div class="line"><a id="l03603" name="l03603"></a><span class="lineno"> 3603</span>        <span class="keywordflow">if</span> (timestep == Nsteps - 1 &amp;&amp; remainder_time != 0.f) {</div>
-<div class="line"><a id="l03604" name="l03604"></a><span class="lineno"> 3604</span>            dt_max_days = remainder_time;</div>
-<div class="line"><a id="l03605" name="l03605"></a><span class="lineno"> 3605</span>        }</div>
+<div class="line"><a id="l03588" name="l03588"></a><span class="lineno"> 3588</span> </div>
+<div class="line"><a id="l03589" name="l03589"></a><span class="lineno"> 3589</span>    <span class="keywordflow">if</span> (time_step_days &lt;= phyllochron_min) {</div>
+<div class="line"><a id="l03590" name="l03590"></a><span class="lineno"> 3590</span>        Nsteps = time_step_days;</div>
+<div class="line"><a id="l03591" name="l03591"></a><span class="lineno"> 3591</span>        dt_max_days = 1;</div>
+<div class="line"><a id="l03592" name="l03592"></a><span class="lineno"> 3592</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l03593" name="l03593"></a><span class="lineno"> 3593</span>        Nsteps = std::floor(time_step_days / phyllochron_min);</div>
+<div class="line"><a id="l03594" name="l03594"></a><span class="lineno"> 3594</span>        dt_max_days = phyllochron_min;</div>
+<div class="line"><a id="l03595" name="l03595"></a><span class="lineno"> 3595</span>    }</div>
+<div class="line"><a id="l03596" name="l03596"></a><span class="lineno"> 3596</span> </div>
+<div class="line"><a id="l03597" name="l03597"></a><span class="lineno"> 3597</span>    <span class="keywordtype">float</span> remainder_time = time_step_days - dt_max_days * float(Nsteps);</div>
+<div class="line"><a id="l03598" name="l03598"></a><span class="lineno"> 3598</span>    <span class="keywordflow">if</span> (remainder_time &gt; 0.f) {</div>
+<div class="line"><a id="l03599" name="l03599"></a><span class="lineno"> 3599</span>        Nsteps++;</div>
+<div class="line"><a id="l03600" name="l03600"></a><span class="lineno"> 3600</span>    }</div>
+<div class="line"><a id="l03601" name="l03601"></a><span class="lineno"> 3601</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> timestep = 0; timestep &lt; Nsteps; timestep++) {</div>
+<div class="line"><a id="l03602" name="l03602"></a><span class="lineno"> 3602</span>        <span class="keywordflow">if</span> (timestep == Nsteps - 1 &amp;&amp; remainder_time != 0.f) {</div>
+<div class="line"><a id="l03603" name="l03603"></a><span class="lineno"> 3603</span>            dt_max_days = remainder_time;</div>
+<div class="line"><a id="l03604" name="l03604"></a><span class="lineno"> 3604</span>        }</div>
+<div class="line"><a id="l03605" name="l03605"></a><span class="lineno"> 3605</span> </div>
 <div class="line"><a id="l03606" name="l03606"></a><span class="lineno"> 3606</span> </div>
-<div class="line"><a id="l03607" name="l03607"></a><span class="lineno"> 3607</span>        plant_instance.current_age += dt_max_days;</div>
-<div class="line"><a id="l03608" name="l03608"></a><span class="lineno"> 3608</span>        plant_instance.time_since_dormancy += dt_max_days;</div>
-<div class="line"><a id="l03609" name="l03609"></a><span class="lineno"> 3609</span> </div>
-<div class="line"><a id="l03610" name="l03610"></a><span class="lineno"> 3610</span>        <span class="keywordtype">size_t</span> shoot_count = shoot_tree-&gt;size();</div>
-<div class="line"><a id="l03611" name="l03611"></a><span class="lineno"> 3611</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; shoot_count; i++) {</div>
-<div class="line"><a id="l03612" name="l03612"></a><span class="lineno"> 3612</span>            <span class="keyword">auto</span> shoot = shoot_tree-&gt;at(i);</div>
-<div class="line"><a id="l03613" name="l03613"></a><span class="lineno"> 3613</span> </div>
-<div class="line"><a id="l03614" name="l03614"></a><span class="lineno"> 3614</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;phytomer: shoot-&gt;phytomers) {</div>
-<div class="line"><a id="l03615" name="l03615"></a><span class="lineno"> 3615</span>                phytomer-&gt;age += dt_max_days;</div>
-<div class="line"><a id="l03616" name="l03616"></a><span class="lineno"> 3616</span> </div>
-<div class="line"><a id="l03617" name="l03617"></a><span class="lineno"> 3617</span>                <span class="keywordflow">if</span> (phytomer-&gt;age &gt; plant_instance.max_leaf_lifespan &amp;&amp; phytomer-&gt;hasLeaf() ) {</div>
-<div class="line"><a id="l03618" name="l03618"></a><span class="lineno"> 3618</span>                    <span class="comment">// delete old leaves that exceed maximum lifespan</span></div>
-<div class="line"><a id="l03619" name="l03619"></a><span class="lineno"> 3619</span>                    phytomer-&gt;removeLeaf();</div>
-<div class="line"><a id="l03620" name="l03620"></a><span class="lineno"> 3620</span>                }</div>
-<div class="line"><a id="l03621" name="l03621"></a><span class="lineno"> 3621</span>            }</div>
-<div class="line"><a id="l03622" name="l03622"></a><span class="lineno"> 3622</span>        }</div>
-<div class="line"><a id="l03623" name="l03623"></a><span class="lineno"> 3623</span> </div>
-<div class="line"><a id="l03624" name="l03624"></a><span class="lineno"> 3624</span>        <span class="keywordflow">if</span> (plant_instance.current_age &lt;= plant_instance.max_age &amp;&amp; plant_instance.current_age + dt_max_days &gt; plant_instance.max_age) {</div>
-<div class="line"><a id="l03625" name="l03625"></a><span class="lineno"> 3625</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;PlantArchitecture::advanceTime: Plant has reached its maximum supported age. No further growth will occur.&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"><a id="l03626" name="l03626"></a><span class="lineno"> 3626</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (plant_instance.current_age &gt;= plant_instance.max_age) {</div>
-<div class="line"><a id="l03627" name="l03627"></a><span class="lineno"> 3627</span>            <span class="comment">// update Context geometry</span></div>
-<div class="line"><a id="l03628" name="l03628"></a><span class="lineno"> 3628</span>            <span class="keywordflow">if</span> (!final_geometry_updated) {</div>
-<div class="line"><a id="l03629" name="l03629"></a><span class="lineno"> 3629</span>                shoot_tree-&gt;front()-&gt;updateShootNodes(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l03630" name="l03630"></a><span class="lineno"> 3630</span>                final_geometry_updated = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l03631" name="l03631"></a><span class="lineno"> 3631</span>            }</div>
-<div class="line"><a id="l03632" name="l03632"></a><span class="lineno"> 3632</span>            <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l03633" name="l03633"></a><span class="lineno"> 3633</span>        }</div>
-<div class="line"><a id="l03634" name="l03634"></a><span class="lineno"> 3634</span> </div>
-<div class="line"><a id="l03635" name="l03635"></a><span class="lineno"> 3635</span>        <span class="keywordflow">if</span> (plant_instance.time_since_dormancy &gt; plant_instance.dd_to_dormancy_break + plant_instance.dd_to_dormancy) {</div>
-<div class="line"><a id="l03636" name="l03636"></a><span class="lineno"> 3636</span>            <span class="comment">// std::cout &lt;&lt; &quot;Going dormant &quot; &lt;&lt; plant_instance.current_age &lt;&lt; &quot; &quot; &lt;&lt; plant_instance.time_since_dormancy &lt;&lt; std::endl;</span></div>
-<div class="line"><a id="l03637" name="l03637"></a><span class="lineno"> 3637</span>            plant_instance.time_since_dormancy = 0;</div>
-<div class="line"><a id="l03638" name="l03638"></a><span class="lineno"> 3638</span>            <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span> &amp;shoot: *shoot_tree) {</div>
-<div class="line"><a id="l03639" name="l03639"></a><span class="lineno"> 3639</span>                shoot-&gt;makeDormant();</div>
-<div class="line"><a id="l03640" name="l03640"></a><span class="lineno"> 3640</span>                shoot-&gt;phyllochron_counter = 0;</div>
-<div class="line"><a id="l03641" name="l03641"></a><span class="lineno"> 3641</span>            }</div>
-<div class="line"><a id="l03642" name="l03642"></a><span class="lineno"> 3642</span>            <a class="code hl_function" href="class_plant_architecture.html#a62001cd119f677017b3fd6446e910d0f" title="Harvests a plant by removing all leaves and fruit.">harvestPlant</a>(plantID);</div>
-<div class="line"><a id="l03643" name="l03643"></a><span class="lineno"> 3643</span>            <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l03644" name="l03644"></a><span class="lineno"> 3644</span>        }</div>
-<div class="line"><a id="l03645" name="l03645"></a><span class="lineno"> 3645</span> </div>
-<div class="line"><a id="l03646" name="l03646"></a><span class="lineno"> 3646</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; shoot_count; i++) {</div>
-<div class="line"><a id="l03647" name="l03647"></a><span class="lineno"> 3647</span>            <span class="keyword">auto</span> shoot = shoot_tree-&gt;at(i);</div>
+<div class="line"><a id="l03607" name="l03607"></a><span class="lineno"> 3607</span>        <span class="keywordflow">if</span> (plant_instance.current_age &lt;= plant_instance.max_age &amp;&amp; plant_instance.current_age + dt_max_days &gt; plant_instance.max_age) {</div>
+<div class="line"><a id="l03608" name="l03608"></a><span class="lineno"> 3608</span>            std::cout &lt;&lt; <span class="stringliteral">&quot;PlantArchitecture::advanceTime: Plant has reached its maximum supported age. No further growth will occur.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l03609" name="l03609"></a><span class="lineno"> 3609</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (plant_instance.current_age &gt;= plant_instance.max_age) {</div>
+<div class="line"><a id="l03610" name="l03610"></a><span class="lineno"> 3610</span>            <span class="comment">// update Context geometry</span></div>
+<div class="line"><a id="l03611" name="l03611"></a><span class="lineno"> 3611</span>                shoot_tree-&gt;front()-&gt;updateShootNodes(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l03612" name="l03612"></a><span class="lineno"> 3612</span>            <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l03613" name="l03613"></a><span class="lineno"> 3613</span>            }</div>
+<div class="line"><a id="l03614" name="l03614"></a><span class="lineno"> 3614</span> </div>
+<div class="line"><a id="l03615" name="l03615"></a><span class="lineno"> 3615</span>        plant_instance.current_age += dt_max_days;</div>
+<div class="line"><a id="l03616" name="l03616"></a><span class="lineno"> 3616</span>        plant_instance.time_since_dormancy += dt_max_days;</div>
+<div class="line"><a id="l03617" name="l03617"></a><span class="lineno"> 3617</span> </div>
+<div class="line"><a id="l03618" name="l03618"></a><span class="lineno"> 3618</span>        <span class="keywordflow">if</span> (plant_instance.time_since_dormancy &gt; plant_instance.dd_to_dormancy_break + plant_instance.dd_to_dormancy) {</div>
+<div class="line"><a id="l03619" name="l03619"></a><span class="lineno"> 3619</span>            <span class="comment">// std::cout &lt;&lt; &quot;Going dormant &quot; &lt;&lt; plant_instance.current_age &lt;&lt; &quot; &quot; &lt;&lt; plant_instance.time_since_dormancy &lt;&lt; std::endl;</span></div>
+<div class="line"><a id="l03620" name="l03620"></a><span class="lineno"> 3620</span>            plant_instance.time_since_dormancy = 0;</div>
+<div class="line"><a id="l03621" name="l03621"></a><span class="lineno"> 3621</span>            <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span> &amp;shoot: *shoot_tree) {</div>
+<div class="line"><a id="l03622" name="l03622"></a><span class="lineno"> 3622</span>                shoot-&gt;makeDormant();</div>
+<div class="line"><a id="l03623" name="l03623"></a><span class="lineno"> 3623</span>                shoot-&gt;phyllochron_counter = 0;</div>
+<div class="line"><a id="l03624" name="l03624"></a><span class="lineno"> 3624</span>            }</div>
+<div class="line"><a id="l03625" name="l03625"></a><span class="lineno"> 3625</span>            <a class="code hl_function" href="class_plant_architecture.html#a62001cd119f677017b3fd6446e910d0f" title="Harvests a plant by removing all leaves and fruit.">harvestPlant</a>(plantID);</div>
+<div class="line"><a id="l03626" name="l03626"></a><span class="lineno"> 3626</span>            <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l03627" name="l03627"></a><span class="lineno"> 3627</span>        }</div>
+<div class="line"><a id="l03628" name="l03628"></a><span class="lineno"> 3628</span> </div>
+<div class="line"><a id="l03629" name="l03629"></a><span class="lineno"> 3629</span>        <span class="keywordtype">size_t</span> shoot_count = shoot_tree-&gt;size();</div>
+<div class="line"><a id="l03630" name="l03630"></a><span class="lineno"> 3630</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; shoot_count; i++) {</div>
+<div class="line"><a id="l03631" name="l03631"></a><span class="lineno"> 3631</span>            <span class="keyword">auto</span> shoot = shoot_tree-&gt;at(i);</div>
+<div class="line"><a id="l03632" name="l03632"></a><span class="lineno"> 3632</span> </div>
+<div class="line"><a id="l03633" name="l03633"></a><span class="lineno"> 3633</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;phytomer: shoot-&gt;phytomers) {</div>
+<div class="line"><a id="l03634" name="l03634"></a><span class="lineno"> 3634</span>                phytomer-&gt;age += dt_max_days;</div>
+<div class="line"><a id="l03635" name="l03635"></a><span class="lineno"> 3635</span> </div>
+<div class="line"><a id="l03636" name="l03636"></a><span class="lineno"> 3636</span>                <span class="keywordflow">if</span> (phytomer-&gt;phytomer_parameters.phytomer_callback_function != <span class="keyword">nullptr</span>) {</div>
+<div class="line"><a id="l03637" name="l03637"></a><span class="lineno"> 3637</span>                    phytomer-&gt;phytomer_parameters.phytomer_callback_function(phytomer);</div>
+<div class="line"><a id="l03638" name="l03638"></a><span class="lineno"> 3638</span>                }</div>
+<div class="line"><a id="l03639" name="l03639"></a><span class="lineno"> 3639</span>            }</div>
+<div class="line"><a id="l03640" name="l03640"></a><span class="lineno"> 3640</span> </div>
+<div class="line"><a id="l03641" name="l03641"></a><span class="lineno"> 3641</span>            <span class="comment">// ****** PHENOLOGICAL TRANSITIONS ****** //</span></div>
+<div class="line"><a id="l03642" name="l03642"></a><span class="lineno"> 3642</span> </div>
+<div class="line"><a id="l03643" name="l03643"></a><span class="lineno"> 3643</span>            <span class="comment">// breaking dormancy</span></div>
+<div class="line"><a id="l03644" name="l03644"></a><span class="lineno"> 3644</span>            <span class="keywordflow">if</span> (shoot-&gt;isdormant &amp;&amp; plant_instance.time_since_dormancy &gt;= plant_instance.dd_to_dormancy_break) {</div>
+<div class="line"><a id="l03645" name="l03645"></a><span class="lineno"> 3645</span>                shoot-&gt;phyllochron_counter = 0;</div>
+<div class="line"><a id="l03646" name="l03646"></a><span class="lineno"> 3646</span>                shoot-&gt;breakDormancy();</div>
+<div class="line"><a id="l03647" name="l03647"></a><span class="lineno"> 3647</span>            }</div>
 <div class="line"><a id="l03648" name="l03648"></a><span class="lineno"> 3648</span> </div>
-<div class="line"><a id="l03649" name="l03649"></a><span class="lineno"> 3649</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;phytomer: shoot-&gt;phytomers) {</div>
-<div class="line"><a id="l03650" name="l03650"></a><span class="lineno"> 3650</span>                phytomer-&gt;age += dt_max_days;</div>
-<div class="line"><a id="l03651" name="l03651"></a><span class="lineno"> 3651</span> </div>
-<div class="line"><a id="l03652" name="l03652"></a><span class="lineno"> 3652</span>                <span class="keywordflow">if</span> (phytomer-&gt;phytomer_parameters.phytomer_callback_function != <span class="keyword">nullptr</span>) {</div>
-<div class="line"><a id="l03653" name="l03653"></a><span class="lineno"> 3653</span>                    phytomer-&gt;phytomer_parameters.phytomer_callback_function(phytomer);</div>
-<div class="line"><a id="l03654" name="l03654"></a><span class="lineno"> 3654</span>                }</div>
-<div class="line"><a id="l03655" name="l03655"></a><span class="lineno"> 3655</span>            }</div>
-<div class="line"><a id="l03656" name="l03656"></a><span class="lineno"> 3656</span> </div>
-<div class="line"><a id="l03657" name="l03657"></a><span class="lineno"> 3657</span>            <span class="comment">// ****** PHENOLOGICAL TRANSITIONS ****** //</span></div>
-<div class="line"><a id="l03658" name="l03658"></a><span class="lineno"> 3658</span> </div>
-<div class="line"><a id="l03659" name="l03659"></a><span class="lineno"> 3659</span>            <span class="comment">// breaking dormancy</span></div>
-<div class="line"><a id="l03660" name="l03660"></a><span class="lineno"> 3660</span>            <span class="keywordflow">if</span> (shoot-&gt;isdormant &amp;&amp; plant_instance.time_since_dormancy &gt;= plant_instance.dd_to_dormancy_break) {</div>
-<div class="line"><a id="l03661" name="l03661"></a><span class="lineno"> 3661</span>                shoot-&gt;phyllochron_counter = 0;</div>
-<div class="line"><a id="l03662" name="l03662"></a><span class="lineno"> 3662</span>                shoot-&gt;breakDormancy();</div>
-<div class="line"><a id="l03663" name="l03663"></a><span class="lineno"> 3663</span>            }</div>
+<div class="line"><a id="l03649" name="l03649"></a><span class="lineno"> 3649</span>            <span class="keywordflow">if</span> (shoot-&gt;isdormant) {</div>
+<div class="line"><a id="l03650" name="l03650"></a><span class="lineno"> 3650</span>                <span class="comment">// dormant, don&#39;t do anything</span></div>
+<div class="line"><a id="l03651" name="l03651"></a><span class="lineno"> 3651</span>                <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l03652" name="l03652"></a><span class="lineno"> 3652</span>            }</div>
+<div class="line"><a id="l03653" name="l03653"></a><span class="lineno"> 3653</span> </div>
+<div class="line"><a id="l03654" name="l03654"></a><span class="lineno"> 3654</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;phytomer: shoot-&gt;phytomers) {</div>
+<div class="line"><a id="l03655" name="l03655"></a><span class="lineno"> 3655</span>                <span class="keywordflow">if</span> (phytomer-&gt;age &gt; plant_instance.max_leaf_lifespan) {</div>
+<div class="line"><a id="l03656" name="l03656"></a><span class="lineno"> 3656</span>                    <span class="comment">// delete old leaves that exceed maximum lifespan</span></div>
+<div class="line"><a id="l03657" name="l03657"></a><span class="lineno"> 3657</span>                    phytomer-&gt;removeLeaf();</div>
+<div class="line"><a id="l03658" name="l03658"></a><span class="lineno"> 3658</span>                }</div>
+<div class="line"><a id="l03659" name="l03659"></a><span class="lineno"> 3659</span> </div>
+<div class="line"><a id="l03660" name="l03660"></a><span class="lineno"> 3660</span>                <span class="keywordflow">if</span> (phytomer-&gt;floral_buds.empty()) {</div>
+<div class="line"><a id="l03661" name="l03661"></a><span class="lineno"> 3661</span>                    <span class="comment">// no floral buds - skip this phytomer</span></div>
+<div class="line"><a id="l03662" name="l03662"></a><span class="lineno"> 3662</span>                    <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l03663" name="l03663"></a><span class="lineno"> 3663</span>                }</div>
 <div class="line"><a id="l03664" name="l03664"></a><span class="lineno"> 3664</span> </div>
-<div class="line"><a id="l03665" name="l03665"></a><span class="lineno"> 3665</span>            <span class="keywordflow">if</span> (shoot-&gt;isdormant) {</div>
-<div class="line"><a id="l03666" name="l03666"></a><span class="lineno"> 3666</span>                <span class="comment">// dormant, don&#39;t do anything</span></div>
-<div class="line"><a id="l03667" name="l03667"></a><span class="lineno"> 3667</span>                <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l03668" name="l03668"></a><span class="lineno"> 3668</span>            }</div>
-<div class="line"><a id="l03669" name="l03669"></a><span class="lineno"> 3669</span> </div>
-<div class="line"><a id="l03670" name="l03670"></a><span class="lineno"> 3670</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;phytomer: shoot-&gt;phytomers) {</div>
-<div class="line"><a id="l03671" name="l03671"></a><span class="lineno"> 3671</span> </div>
-<div class="line"><a id="l03672" name="l03672"></a><span class="lineno"> 3672</span>                <span class="keywordflow">if</span> (phytomer-&gt;floral_buds.empty()) {</div>
-<div class="line"><a id="l03673" name="l03673"></a><span class="lineno"> 3673</span>                    <span class="comment">// no floral buds - skip this phytomer</span></div>
-<div class="line"><a id="l03674" name="l03674"></a><span class="lineno"> 3674</span>                    <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l03675" name="l03675"></a><span class="lineno"> 3675</span>                }</div>
-<div class="line"><a id="l03676" name="l03676"></a><span class="lineno"> 3676</span> </div>
-<div class="line"><a id="l03677" name="l03677"></a><span class="lineno"> 3677</span>                <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;petiole: phytomer-&gt;floral_buds) {</div>
-<div class="line"><a id="l03678" name="l03678"></a><span class="lineno"> 3678</span>                    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;fbud: petiole) {</div>
-<div class="line"><a id="l03679" name="l03679"></a><span class="lineno"> 3679</span>                        <span class="keywordflow">if</span> (fbud.state != BUD_DORMANT &amp;&amp; fbud.state != BUD_DEAD) {</div>
-<div class="line"><a id="l03680" name="l03680"></a><span class="lineno"> 3680</span>                            fbud.time_counter += dt_max_days;</div>
-<div class="line"><a id="l03681" name="l03681"></a><span class="lineno"> 3681</span>                        }</div>
-<div class="line"><a id="l03682" name="l03682"></a><span class="lineno"> 3682</span> </div>
-<div class="line"><a id="l03683" name="l03683"></a><span class="lineno"> 3683</span>                        <span class="comment">// -- Flowering -- //</span></div>
-<div class="line"><a id="l03684" name="l03684"></a><span class="lineno"> 3684</span>                        <span class="keywordflow">if</span> (shoot-&gt;shoot_parameters.phytomer_parameters.inflorescence.flower_prototype_function != <span class="keyword">nullptr</span>) { <span class="comment">// user defined a flower prototype function</span></div>
-<div class="line"><a id="l03685" name="l03685"></a><span class="lineno"> 3685</span>                            <span class="comment">// -- Flower initiation (closed flowers) -- //</span></div>
-<div class="line"><a id="l03686" name="l03686"></a><span class="lineno"> 3686</span>                            <span class="keywordflow">if</span> (fbud.state == BUD_ACTIVE &amp;&amp; plant_instance.dd_to_flower_initiation &gt;= 0.f) { <span class="comment">// bud is active and flower initiation is enabled</span></div>
-<div class="line"><a id="l03687" name="l03687"></a><span class="lineno"> 3687</span>                                <span class="keywordflow">if</span> ((!shoot-&gt;shoot_parameters.flowers_require_dormancy &amp;&amp; fbud.time_counter &gt;= plant_instance.dd_to_flower_initiation) ||</div>
-<div class="line"><a id="l03688" name="l03688"></a><span class="lineno"> 3688</span>                                    (shoot-&gt;shoot_parameters.flowers_require_dormancy &amp;&amp; fbud.time_counter &gt;= plant_instance.dd_to_flower_initiation)) {</div>
-<div class="line"><a id="l03689" name="l03689"></a><span class="lineno"> 3689</span>                                    fbud.time_counter = 0;</div>
-<div class="line"><a id="l03690" name="l03690"></a><span class="lineno"> 3690</span>                                    <span class="keywordflow">if</span> (context_ptr-&gt;randu() &lt; shoot-&gt;shoot_parameters.flower_bud_break_probability.val()) {</div>
-<div class="line"><a id="l03691" name="l03691"></a><span class="lineno"> 3691</span>                                        phytomer-&gt;setFloralBudState(BUD_FLOWER_CLOSED, fbud);</div>
-<div class="line"><a id="l03692" name="l03692"></a><span class="lineno"> 3692</span>                                    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l03693" name="l03693"></a><span class="lineno"> 3693</span>                                        phytomer-&gt;setFloralBudState(BUD_DEAD, fbud);</div>
-<div class="line"><a id="l03694" name="l03694"></a><span class="lineno"> 3694</span>                                    }</div>
-<div class="line"><a id="l03695" name="l03695"></a><span class="lineno"> 3695</span>                                    <span class="keywordflow">if</span> (shoot-&gt;shoot_parameters.determinate_shoot_growth) {</div>
-<div class="line"><a id="l03696" name="l03696"></a><span class="lineno"> 3696</span>                                        shoot-&gt;terminateApicalBud();</div>
-<div class="line"><a id="l03697" name="l03697"></a><span class="lineno"> 3697</span>                                        shoot-&gt;terminateAxillaryVegetativeBuds();</div>
-<div class="line"><a id="l03698" name="l03698"></a><span class="lineno"> 3698</span>                                    }</div>
-<div class="line"><a id="l03699" name="l03699"></a><span class="lineno"> 3699</span>                                }</div>
-<div class="line"><a id="l03700" name="l03700"></a><span class="lineno"> 3700</span> </div>
-<div class="line"><a id="l03701" name="l03701"></a><span class="lineno"> 3701</span>                                <span class="comment">// -- Flower opening -- //</span></div>
-<div class="line"><a id="l03702" name="l03702"></a><span class="lineno"> 3702</span>                            } <span class="keywordflow">else</span> <span class="keywordflow">if</span> ((fbud.state == BUD_FLOWER_CLOSED &amp;&amp; plant_instance.dd_to_flower_opening &gt;= 0.f) || (fbud.state == BUD_ACTIVE &amp;&amp; plant_instance.dd_to_flower_initiation &lt; 0.f &amp;&amp; plant_instance.dd_to_flower_opening &gt;= 0.f)) {</div>
-<div class="line"><a id="l03703" name="l03703"></a><span class="lineno"> 3703</span>                                <span class="keywordflow">if</span> (fbud.time_counter &gt;= plant_instance.dd_to_flower_opening) {</div>
-<div class="line"><a id="l03704" name="l03704"></a><span class="lineno"> 3704</span>                                    fbud.time_counter = 0;</div>
-<div class="line"><a id="l03705" name="l03705"></a><span class="lineno"> 3705</span>                                    <span class="keywordflow">if</span> (fbud.state == BUD_FLOWER_CLOSED) {</div>
-<div class="line"><a id="l03706" name="l03706"></a><span class="lineno"> 3706</span>                                        phytomer-&gt;setFloralBudState(BUD_FLOWER_OPEN, fbud);</div>
-<div class="line"><a id="l03707" name="l03707"></a><span class="lineno"> 3707</span>                                    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l03708" name="l03708"></a><span class="lineno"> 3708</span>                                        <span class="keywordflow">if</span> (context_ptr-&gt;randu() &lt; shoot-&gt;shoot_parameters.flower_bud_break_probability.val()) {</div>
-<div class="line"><a id="l03709" name="l03709"></a><span class="lineno"> 3709</span>                                            phytomer-&gt;setFloralBudState(BUD_FLOWER_OPEN, fbud);</div>
-<div class="line"><a id="l03710" name="l03710"></a><span class="lineno"> 3710</span>                                        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l03711" name="l03711"></a><span class="lineno"> 3711</span>                                            phytomer-&gt;setFloralBudState(BUD_DEAD, fbud);</div>
-<div class="line"><a id="l03712" name="l03712"></a><span class="lineno"> 3712</span>                                        }</div>
-<div class="line"><a id="l03713" name="l03713"></a><span class="lineno"> 3713</span>                                    }</div>
-<div class="line"><a id="l03714" name="l03714"></a><span class="lineno"> 3714</span>                                    <span class="keywordflow">if</span> (shoot-&gt;shoot_parameters.determinate_shoot_growth) {</div>
-<div class="line"><a id="l03715" name="l03715"></a><span class="lineno"> 3715</span>                                        shoot-&gt;terminateApicalBud();</div>
-<div class="line"><a id="l03716" name="l03716"></a><span class="lineno"> 3716</span>                                        shoot-&gt;terminateAxillaryVegetativeBuds();</div>
-<div class="line"><a id="l03717" name="l03717"></a><span class="lineno"> 3717</span>                                    }</div>
-<div class="line"><a id="l03718" name="l03718"></a><span class="lineno"> 3718</span>                                }</div>
-<div class="line"><a id="l03719" name="l03719"></a><span class="lineno"> 3719</span>                            }</div>
-<div class="line"><a id="l03720" name="l03720"></a><span class="lineno"> 3720</span>                        }</div>
-<div class="line"><a id="l03721" name="l03721"></a><span class="lineno"> 3721</span> </div>
-<div class="line"><a id="l03722" name="l03722"></a><span class="lineno"> 3722</span>                        <span class="comment">// -- Fruit Set -- //</span></div>
-<div class="line"><a id="l03723" name="l03723"></a><span class="lineno"> 3723</span>                        <span class="comment">// If the flower bud is in a &#39;flowering&#39; state, the fruit set occurs after a certain amount of time</span></div>
-<div class="line"><a id="l03724" name="l03724"></a><span class="lineno"> 3724</span>                        <span class="keywordflow">if</span> (shoot-&gt;shoot_parameters.phytomer_parameters.inflorescence.fruit_prototype_function != <span class="keyword">nullptr</span>) {</div>
-<div class="line"><a id="l03725" name="l03725"></a><span class="lineno"> 3725</span>                            <span class="keywordflow">if</span> ((fbud.state == BUD_FLOWER_OPEN &amp;&amp; plant_instance.dd_to_fruit_set &gt;= 0.f) || <span class="comment">// flower opened and fruit set is enabled</span></div>
-<div class="line"><a id="l03726" name="l03726"></a><span class="lineno"> 3726</span>                                (fbud.state == BUD_ACTIVE &amp;&amp; plant_instance.dd_to_flower_initiation &lt; 0.f &amp;&amp; plant_instance.dd_to_flower_opening &lt; 0.f &amp;&amp; plant_instance.dd_to_fruit_set &gt;= 0.f) || <span class="comment">// jumped straight to fruit set with no flowering</span></div>
-<div class="line"><a id="l03727" name="l03727"></a><span class="lineno"> 3727</span>                                (fbud.state == BUD_FLOWER_CLOSED &amp;&amp; plant_instance.dd_to_flower_opening &lt; 0.f &amp;&amp; plant_instance.dd_to_fruit_set &gt;= 0.f)) { <span class="comment">// jumped from closed flower to fruit set with no flower opening</span></div>
-<div class="line"><a id="l03728" name="l03728"></a><span class="lineno"> 3728</span>                                <span class="keywordflow">if</span> (fbud.time_counter &gt;= plant_instance.dd_to_fruit_set) {</div>
-<div class="line"><a id="l03729" name="l03729"></a><span class="lineno"> 3729</span>                                    fbud.time_counter = 0;</div>
-<div class="line"><a id="l03730" name="l03730"></a><span class="lineno"> 3730</span>                                    <span class="keywordflow">if</span> (context_ptr-&gt;randu() &lt; shoot-&gt;shoot_parameters.fruit_set_probability.val()) {</div>
-<div class="line"><a id="l03731" name="l03731"></a><span class="lineno"> 3731</span>                                        phytomer-&gt;setFloralBudState(BUD_FRUITING, fbud);</div>
-<div class="line"><a id="l03732" name="l03732"></a><span class="lineno"> 3732</span>                                    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l03733" name="l03733"></a><span class="lineno"> 3733</span>                                        phytomer-&gt;setFloralBudState(BUD_DEAD, fbud);</div>
-<div class="line"><a id="l03734" name="l03734"></a><span class="lineno"> 3734</span>                                    }</div>
-<div class="line"><a id="l03735" name="l03735"></a><span class="lineno"> 3735</span>                                    <span class="keywordflow">if</span> (shoot-&gt;shoot_parameters.determinate_shoot_growth) {</div>
-<div class="line"><a id="l03736" name="l03736"></a><span class="lineno"> 3736</span>                                        shoot-&gt;terminateApicalBud();</div>
-<div class="line"><a id="l03737" name="l03737"></a><span class="lineno"> 3737</span>                                        shoot-&gt;terminateAxillaryVegetativeBuds();</div>
-<div class="line"><a id="l03738" name="l03738"></a><span class="lineno"> 3738</span>                                    }</div>
-<div class="line"><a id="l03739" name="l03739"></a><span class="lineno"> 3739</span>                                }</div>
-<div class="line"><a id="l03740" name="l03740"></a><span class="lineno"> 3740</span>                            }</div>
-<div class="line"><a id="l03741" name="l03741"></a><span class="lineno"> 3741</span>                        }</div>
-<div class="line"><a id="l03742" name="l03742"></a><span class="lineno"> 3742</span>                    }</div>
+<div class="line"><a id="l03665" name="l03665"></a><span class="lineno"> 3665</span>                <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;petiole: phytomer-&gt;floral_buds) {</div>
+<div class="line"><a id="l03666" name="l03666"></a><span class="lineno"> 3666</span>                    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;fbud: petiole) {</div>
+<div class="line"><a id="l03667" name="l03667"></a><span class="lineno"> 3667</span>                        <span class="keywordflow">if</span> (fbud.state != BUD_DORMANT &amp;&amp; fbud.state != BUD_DEAD) {</div>
+<div class="line"><a id="l03668" name="l03668"></a><span class="lineno"> 3668</span>                            fbud.time_counter += dt_max_days;</div>
+<div class="line"><a id="l03669" name="l03669"></a><span class="lineno"> 3669</span>                        }</div>
+<div class="line"><a id="l03670" name="l03670"></a><span class="lineno"> 3670</span> </div>
+<div class="line"><a id="l03671" name="l03671"></a><span class="lineno"> 3671</span>                        <span class="comment">// -- Flowering -- //</span></div>
+<div class="line"><a id="l03672" name="l03672"></a><span class="lineno"> 3672</span>                        <span class="keywordflow">if</span> (shoot-&gt;shoot_parameters.phytomer_parameters.inflorescence.flower_prototype_function != <span class="keyword">nullptr</span>) { <span class="comment">// user defined a flower prototype function</span></div>
+<div class="line"><a id="l03673" name="l03673"></a><span class="lineno"> 3673</span>                            <span class="comment">// -- Flower initiation (closed flowers) -- //</span></div>
+<div class="line"><a id="l03674" name="l03674"></a><span class="lineno"> 3674</span>                            <span class="keywordflow">if</span> (fbud.state == BUD_ACTIVE &amp;&amp; plant_instance.dd_to_flower_initiation &gt;= 0.f) { <span class="comment">// bud is active and flower initiation is enabled</span></div>
+<div class="line"><a id="l03675" name="l03675"></a><span class="lineno"> 3675</span>                                <span class="keywordflow">if</span> ((!shoot-&gt;shoot_parameters.flowers_require_dormancy &amp;&amp; fbud.time_counter &gt;= plant_instance.dd_to_flower_initiation) ||</div>
+<div class="line"><a id="l03676" name="l03676"></a><span class="lineno"> 3676</span>                                    (shoot-&gt;shoot_parameters.flowers_require_dormancy &amp;&amp; fbud.time_counter &gt;= plant_instance.dd_to_flower_initiation)) {</div>
+<div class="line"><a id="l03677" name="l03677"></a><span class="lineno"> 3677</span>                                    fbud.time_counter = 0;</div>
+<div class="line"><a id="l03678" name="l03678"></a><span class="lineno"> 3678</span>                                    <span class="keywordflow">if</span> (context_ptr-&gt;randu() &lt; shoot-&gt;shoot_parameters.flower_bud_break_probability.val()) {</div>
+<div class="line"><a id="l03679" name="l03679"></a><span class="lineno"> 3679</span>                                        phytomer-&gt;setFloralBudState(BUD_FLOWER_CLOSED, fbud);</div>
+<div class="line"><a id="l03680" name="l03680"></a><span class="lineno"> 3680</span>                                    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l03681" name="l03681"></a><span class="lineno"> 3681</span>                                        phytomer-&gt;setFloralBudState(BUD_DEAD, fbud);</div>
+<div class="line"><a id="l03682" name="l03682"></a><span class="lineno"> 3682</span>                                    }</div>
+<div class="line"><a id="l03683" name="l03683"></a><span class="lineno"> 3683</span>                                    <span class="keywordflow">if</span> (shoot-&gt;shoot_parameters.determinate_shoot_growth) {</div>
+<div class="line"><a id="l03684" name="l03684"></a><span class="lineno"> 3684</span>                                        shoot-&gt;terminateApicalBud();</div>
+<div class="line"><a id="l03685" name="l03685"></a><span class="lineno"> 3685</span>                                        shoot-&gt;terminateAxillaryVegetativeBuds();</div>
+<div class="line"><a id="l03686" name="l03686"></a><span class="lineno"> 3686</span>                                    }</div>
+<div class="line"><a id="l03687" name="l03687"></a><span class="lineno"> 3687</span>                                }</div>
+<div class="line"><a id="l03688" name="l03688"></a><span class="lineno"> 3688</span> </div>
+<div class="line"><a id="l03689" name="l03689"></a><span class="lineno"> 3689</span>                                <span class="comment">// -- Flower opening -- //</span></div>
+<div class="line"><a id="l03690" name="l03690"></a><span class="lineno"> 3690</span>                            } <span class="keywordflow">else</span> <span class="keywordflow">if</span> ((fbud.state == BUD_FLOWER_CLOSED &amp;&amp; plant_instance.dd_to_flower_opening &gt;= 0.f) || (fbud.state == BUD_ACTIVE &amp;&amp; plant_instance.dd_to_flower_initiation &lt; 0.f &amp;&amp; plant_instance.dd_to_flower_opening &gt;= 0.f)) {</div>
+<div class="line"><a id="l03691" name="l03691"></a><span class="lineno"> 3691</span>                                <span class="keywordflow">if</span> (fbud.time_counter &gt;= plant_instance.dd_to_flower_opening) {</div>
+<div class="line"><a id="l03692" name="l03692"></a><span class="lineno"> 3692</span>                                    fbud.time_counter = 0;</div>
+<div class="line"><a id="l03693" name="l03693"></a><span class="lineno"> 3693</span>                                    <span class="keywordflow">if</span> (fbud.state == BUD_FLOWER_CLOSED) {</div>
+<div class="line"><a id="l03694" name="l03694"></a><span class="lineno"> 3694</span>                                        phytomer-&gt;setFloralBudState(BUD_FLOWER_OPEN, fbud);</div>
+<div class="line"><a id="l03695" name="l03695"></a><span class="lineno"> 3695</span>                                    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l03696" name="l03696"></a><span class="lineno"> 3696</span>                                        <span class="keywordflow">if</span> (context_ptr-&gt;randu() &lt; shoot-&gt;shoot_parameters.flower_bud_break_probability.val()) {</div>
+<div class="line"><a id="l03697" name="l03697"></a><span class="lineno"> 3697</span>                                            phytomer-&gt;setFloralBudState(BUD_FLOWER_OPEN, fbud);</div>
+<div class="line"><a id="l03698" name="l03698"></a><span class="lineno"> 3698</span>                                        } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l03699" name="l03699"></a><span class="lineno"> 3699</span>                                            phytomer-&gt;setFloralBudState(BUD_DEAD, fbud);</div>
+<div class="line"><a id="l03700" name="l03700"></a><span class="lineno"> 3700</span>                                        }</div>
+<div class="line"><a id="l03701" name="l03701"></a><span class="lineno"> 3701</span>                                    }</div>
+<div class="line"><a id="l03702" name="l03702"></a><span class="lineno"> 3702</span>                                    <span class="keywordflow">if</span> (shoot-&gt;shoot_parameters.determinate_shoot_growth) {</div>
+<div class="line"><a id="l03703" name="l03703"></a><span class="lineno"> 3703</span>                                        shoot-&gt;terminateApicalBud();</div>
+<div class="line"><a id="l03704" name="l03704"></a><span class="lineno"> 3704</span>                                        shoot-&gt;terminateAxillaryVegetativeBuds();</div>
+<div class="line"><a id="l03705" name="l03705"></a><span class="lineno"> 3705</span>                                    }</div>
+<div class="line"><a id="l03706" name="l03706"></a><span class="lineno"> 3706</span>                                }</div>
+<div class="line"><a id="l03707" name="l03707"></a><span class="lineno"> 3707</span>                            }</div>
+<div class="line"><a id="l03708" name="l03708"></a><span class="lineno"> 3708</span>                        }</div>
+<div class="line"><a id="l03709" name="l03709"></a><span class="lineno"> 3709</span> </div>
+<div class="line"><a id="l03710" name="l03710"></a><span class="lineno"> 3710</span>                        <span class="comment">// -- Fruit Set -- //</span></div>
+<div class="line"><a id="l03711" name="l03711"></a><span class="lineno"> 3711</span>                        <span class="comment">// If the flower bud is in a &#39;flowering&#39; state, the fruit set occurs after a certain amount of time</span></div>
+<div class="line"><a id="l03712" name="l03712"></a><span class="lineno"> 3712</span>                        <span class="keywordflow">if</span> (shoot-&gt;shoot_parameters.phytomer_parameters.inflorescence.fruit_prototype_function != <span class="keyword">nullptr</span>) {</div>
+<div class="line"><a id="l03713" name="l03713"></a><span class="lineno"> 3713</span>                            <span class="keywordflow">if</span> ((fbud.state == BUD_FLOWER_OPEN &amp;&amp; plant_instance.dd_to_fruit_set &gt;= 0.f) || <span class="comment">// flower opened and fruit set is enabled</span></div>
+<div class="line"><a id="l03714" name="l03714"></a><span class="lineno"> 3714</span>                                (fbud.state == BUD_ACTIVE &amp;&amp; plant_instance.dd_to_flower_initiation &lt; 0.f &amp;&amp; plant_instance.dd_to_flower_opening &lt; 0.f &amp;&amp; plant_instance.dd_to_fruit_set &gt;= 0.f) || <span class="comment">// jumped straight to fruit set with no flowering</span></div>
+<div class="line"><a id="l03715" name="l03715"></a><span class="lineno"> 3715</span>                                (fbud.state == BUD_FLOWER_CLOSED &amp;&amp; plant_instance.dd_to_flower_opening &lt; 0.f &amp;&amp; plant_instance.dd_to_fruit_set &gt;= 0.f)) { <span class="comment">// jumped from closed flower to fruit set with no flower opening</span></div>
+<div class="line"><a id="l03716" name="l03716"></a><span class="lineno"> 3716</span>                                <span class="keywordflow">if</span> (fbud.time_counter &gt;= plant_instance.dd_to_fruit_set) {</div>
+<div class="line"><a id="l03717" name="l03717"></a><span class="lineno"> 3717</span>                                    fbud.time_counter = 0;</div>
+<div class="line"><a id="l03718" name="l03718"></a><span class="lineno"> 3718</span>                                    <span class="keywordflow">if</span> (context_ptr-&gt;randu() &lt; shoot-&gt;shoot_parameters.fruit_set_probability.val()) {</div>
+<div class="line"><a id="l03719" name="l03719"></a><span class="lineno"> 3719</span>                                        phytomer-&gt;setFloralBudState(BUD_FRUITING, fbud);</div>
+<div class="line"><a id="l03720" name="l03720"></a><span class="lineno"> 3720</span>                                    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l03721" name="l03721"></a><span class="lineno"> 3721</span>                                        phytomer-&gt;setFloralBudState(BUD_DEAD, fbud);</div>
+<div class="line"><a id="l03722" name="l03722"></a><span class="lineno"> 3722</span>                                    }</div>
+<div class="line"><a id="l03723" name="l03723"></a><span class="lineno"> 3723</span>                                    <span class="keywordflow">if</span> (shoot-&gt;shoot_parameters.determinate_shoot_growth) {</div>
+<div class="line"><a id="l03724" name="l03724"></a><span class="lineno"> 3724</span>                                        shoot-&gt;terminateApicalBud();</div>
+<div class="line"><a id="l03725" name="l03725"></a><span class="lineno"> 3725</span>                                        shoot-&gt;terminateAxillaryVegetativeBuds();</div>
+<div class="line"><a id="l03726" name="l03726"></a><span class="lineno"> 3726</span>                                    }</div>
+<div class="line"><a id="l03727" name="l03727"></a><span class="lineno"> 3727</span>                                }</div>
+<div class="line"><a id="l03728" name="l03728"></a><span class="lineno"> 3728</span>                            }</div>
+<div class="line"><a id="l03729" name="l03729"></a><span class="lineno"> 3729</span>                        }</div>
+<div class="line"><a id="l03730" name="l03730"></a><span class="lineno"> 3730</span>                    }</div>
+<div class="line"><a id="l03731" name="l03731"></a><span class="lineno"> 3731</span>                }</div>
+<div class="line"><a id="l03732" name="l03732"></a><span class="lineno"> 3732</span>            }</div>
+<div class="line"><a id="l03733" name="l03733"></a><span class="lineno"> 3733</span> </div>
+<div class="line"><a id="l03734" name="l03734"></a><span class="lineno"> 3734</span>            <span class="comment">// ****** GROWTH/SCALING OF CURRENT PHYTOMERS/FRUIT ****** //</span></div>
+<div class="line"><a id="l03735" name="l03735"></a><span class="lineno"> 3735</span> </div>
+<div class="line"><a id="l03736" name="l03736"></a><span class="lineno"> 3736</span>            <span class="keywordtype">int</span> node_index = 0;</div>
+<div class="line"><a id="l03737" name="l03737"></a><span class="lineno"> 3737</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;phytomer: shoot-&gt;phytomers) {</div>
+<div class="line"><a id="l03738" name="l03738"></a><span class="lineno"> 3738</span>                <span class="comment">// scale internode length</span></div>
+<div class="line"><a id="l03739" name="l03739"></a><span class="lineno"> 3739</span>                <span class="keywordflow">if</span> (phytomer-&gt;current_internode_scale_factor &lt; 1) {</div>
+<div class="line"><a id="l03740" name="l03740"></a><span class="lineno"> 3740</span>                    <span class="keywordtype">float</span> dL_internode = dt_max_days * shoot-&gt;elongation_rate_instantaneous * phytomer-&gt;internode_length_max;</div>
+<div class="line"><a id="l03741" name="l03741"></a><span class="lineno"> 3741</span>                    <span class="keywordtype">float</span> length_scale = fmin(1.f, (phytomer-&gt;getInternodeLength() + dL_internode) / phytomer-&gt;internode_length_max);</div>
+<div class="line"><a id="l03742" name="l03742"></a><span class="lineno"> 3742</span>                    phytomer-&gt;setInternodeLengthScaleFraction(length_scale, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l03743" name="l03743"></a><span class="lineno"> 3743</span>                }</div>
-<div class="line"><a id="l03744" name="l03744"></a><span class="lineno"> 3744</span>            }</div>
-<div class="line"><a id="l03745" name="l03745"></a><span class="lineno"> 3745</span> </div>
-<div class="line"><a id="l03746" name="l03746"></a><span class="lineno"> 3746</span>            <span class="comment">// ****** GROWTH/SCALING OF CURRENT PHYTOMERS/FRUIT ****** //</span></div>
-<div class="line"><a id="l03747" name="l03747"></a><span class="lineno"> 3747</span> </div>
-<div class="line"><a id="l03748" name="l03748"></a><span class="lineno"> 3748</span>            <span class="keywordtype">int</span> node_index = 0;</div>
-<div class="line"><a id="l03749" name="l03749"></a><span class="lineno"> 3749</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;phytomer: shoot-&gt;phytomers) {</div>
-<div class="line"><a id="l03750" name="l03750"></a><span class="lineno"> 3750</span>                <span class="comment">// scale internode length</span></div>
-<div class="line"><a id="l03751" name="l03751"></a><span class="lineno"> 3751</span>                <span class="keywordflow">if</span> (phytomer-&gt;current_internode_scale_factor &lt; 1) {</div>
-<div class="line"><a id="l03752" name="l03752"></a><span class="lineno"> 3752</span>                    <span class="keywordtype">float</span> dL_internode = dt_max_days * shoot-&gt;elongation_rate_instantaneous * phytomer-&gt;internode_length_max;</div>
-<div class="line"><a id="l03753" name="l03753"></a><span class="lineno"> 3753</span>                    <span class="keywordtype">float</span> length_scale = fmin(1.f, (phytomer-&gt;getInternodeLength() + dL_internode) / phytomer-&gt;internode_length_max);</div>
-<div class="line"><a id="l03754" name="l03754"></a><span class="lineno"> 3754</span>                    phytomer-&gt;setInternodeLengthScaleFraction(length_scale, <span class="keyword">false</span>);</div>
-<div class="line"><a id="l03755" name="l03755"></a><span class="lineno"> 3755</span>                }</div>
+<div class="line"><a id="l03744" name="l03744"></a><span class="lineno"> 3744</span> </div>
+<div class="line"><a id="l03745" name="l03745"></a><span class="lineno"> 3745</span>                <span class="comment">// scale internode girth</span></div>
+<div class="line"><a id="l03746" name="l03746"></a><span class="lineno"> 3746</span>                <span class="keywordflow">if</span> (shoot-&gt;shoot_parameters.girth_area_factor.val() &gt; 0.f) {</div>
+<div class="line"><a id="l03747" name="l03747"></a><span class="lineno"> 3747</span>                    <span class="keywordflow">if</span> (carbon_model_enabled) {</div>
+<div class="line"><a id="l03748" name="l03748"></a><span class="lineno"> 3748</span>                        incrementPhytomerInternodeGirth_carb(plantID, shoot-&gt;ID, node_index, dt_max_days, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l03749" name="l03749"></a><span class="lineno"> 3749</span>                    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l03750" name="l03750"></a><span class="lineno"> 3750</span>                        incrementPhytomerInternodeGirth(plantID, shoot-&gt;ID, node_index, dt_max_days, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l03751" name="l03751"></a><span class="lineno"> 3751</span>                    }</div>
+<div class="line"><a id="l03752" name="l03752"></a><span class="lineno"> 3752</span>                }</div>
+<div class="line"><a id="l03753" name="l03753"></a><span class="lineno"> 3753</span> </div>
+<div class="line"><a id="l03754" name="l03754"></a><span class="lineno"> 3754</span>                node_index++;</div>
+<div class="line"><a id="l03755" name="l03755"></a><span class="lineno"> 3755</span>            }</div>
 <div class="line"><a id="l03756" name="l03756"></a><span class="lineno"> 3756</span> </div>
-<div class="line"><a id="l03757" name="l03757"></a><span class="lineno"> 3757</span>                <span class="comment">// scale internode girth</span></div>
-<div class="line"><a id="l03758" name="l03758"></a><span class="lineno"> 3758</span>                <span class="keywordflow">if</span> (shoot-&gt;shoot_parameters.girth_area_factor.val() &gt; 0.f) {</div>
-<div class="line"><a id="l03759" name="l03759"></a><span class="lineno"> 3759</span>                    <span class="keywordflow">if</span> (carbon_model_enabled) {</div>
-<div class="line"><a id="l03760" name="l03760"></a><span class="lineno"> 3760</span>                        incrementPhytomerInternodeGirth_carb(plantID, shoot-&gt;ID, node_index, dt_max_days, <span class="keyword">false</span>);</div>
-<div class="line"><a id="l03761" name="l03761"></a><span class="lineno"> 3761</span>                    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l03762" name="l03762"></a><span class="lineno"> 3762</span>                        incrementPhytomerInternodeGirth(plantID, shoot-&gt;ID, node_index, dt_max_days, <span class="keyword">false</span>);</div>
-<div class="line"><a id="l03763" name="l03763"></a><span class="lineno"> 3763</span>                    }</div>
-<div class="line"><a id="l03764" name="l03764"></a><span class="lineno"> 3764</span>                }</div>
-<div class="line"><a id="l03765" name="l03765"></a><span class="lineno"> 3765</span> </div>
-<div class="line"><a id="l03766" name="l03766"></a><span class="lineno"> 3766</span>                node_index++;</div>
-<div class="line"><a id="l03767" name="l03767"></a><span class="lineno"> 3767</span>            }</div>
-<div class="line"><a id="l03768" name="l03768"></a><span class="lineno"> 3768</span> </div>
-<div class="line"><a id="l03769" name="l03769"></a><span class="lineno"> 3769</span>            node_index = 0;</div>
-<div class="line"><a id="l03770" name="l03770"></a><span class="lineno"> 3770</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;phytomer: shoot-&gt;phytomers) {</div>
-<div class="line"><a id="l03771" name="l03771"></a><span class="lineno"> 3771</span>                <span class="comment">// scale petiole/leaves</span></div>
-<div class="line"><a id="l03772" name="l03772"></a><span class="lineno"> 3772</span>                <span class="keywordflow">if</span> (phytomer-&gt;hasLeaf()) {</div>
-<div class="line"><a id="l03773" name="l03773"></a><span class="lineno"> 3773</span>                    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> petiole_index = 0; petiole_index &lt; phytomer-&gt;current_leaf_scale_factor.size(); petiole_index++) {</div>
-<div class="line"><a id="l03774" name="l03774"></a><span class="lineno"> 3774</span> </div>
-<div class="line"><a id="l03775" name="l03775"></a><span class="lineno"> 3775</span>                        <span class="keywordflow">if</span> (phytomer-&gt;current_leaf_scale_factor.at(petiole_index) &gt;= 1) {</div>
-<div class="line"><a id="l03776" name="l03776"></a><span class="lineno"> 3776</span>                            <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l03777" name="l03777"></a><span class="lineno"> 3777</span>                        }</div>
-<div class="line"><a id="l03778" name="l03778"></a><span class="lineno"> 3778</span> </div>
-<div class="line"><a id="l03779" name="l03779"></a><span class="lineno"> 3779</span>                        <span class="keywordtype">float</span> tip_ind = ceil(<span class="keywordtype">float</span>(phytomer-&gt;leaf_size_max.at(petiole_index).size() - 1) / 2.f);</div>
-<div class="line"><a id="l03780" name="l03780"></a><span class="lineno"> 3780</span>                        <span class="keywordtype">float</span> leaf_length = phytomer-&gt;current_leaf_scale_factor.at(petiole_index) * phytomer-&gt;leaf_size_max.at(petiole_index).at(tip_ind);</div>
-<div class="line"><a id="l03781" name="l03781"></a><span class="lineno"> 3781</span>                        <span class="keywordtype">float</span> dL_leaf = dt_max_days * shoot-&gt;elongation_rate_instantaneous * phytomer-&gt;leaf_size_max.at(petiole_index).at(tip_ind);</div>
-<div class="line"><a id="l03782" name="l03782"></a><span class="lineno"> 3782</span>                        <span class="keywordtype">float</span> scale = fmin(1.f, (leaf_length + dL_leaf) / phytomer-&gt;phytomer_parameters.leaf.prototype_scale.val());</div>
-<div class="line"><a id="l03783" name="l03783"></a><span class="lineno"> 3783</span>                        phytomer-&gt;phytomer_parameters.leaf.prototype_scale.resample();</div>
-<div class="line"><a id="l03784" name="l03784"></a><span class="lineno"> 3784</span>                        phytomer-&gt;setLeafScaleFraction(petiole_index, scale);</div>
-<div class="line"><a id="l03785" name="l03785"></a><span class="lineno"> 3785</span>                    }</div>
-<div class="line"><a id="l03786" name="l03786"></a><span class="lineno"> 3786</span>                }</div>
-<div class="line"><a id="l03787" name="l03787"></a><span class="lineno"> 3787</span> </div>
-<div class="line"><a id="l03788" name="l03788"></a><span class="lineno"> 3788</span>                <span class="comment">// Fruit Growth</span></div>
-<div class="line"><a id="l03789" name="l03789"></a><span class="lineno"> 3789</span>                <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;petiole: phytomer-&gt;floral_buds) {</div>
-<div class="line"><a id="l03790" name="l03790"></a><span class="lineno"> 3790</span>                    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;fbud: petiole) {</div>
-<div class="line"><a id="l03791" name="l03791"></a><span class="lineno"> 3791</span>                        <span class="comment">// If the floral bud it in a &#39;fruiting&#39; state, the fruit grows with time</span></div>
-<div class="line"><a id="l03792" name="l03792"></a><span class="lineno"> 3792</span>                        <span class="keywordflow">if</span> (fbud.state == BUD_FRUITING &amp;&amp; fbud.time_counter &gt; 0) {</div>
-<div class="line"><a id="l03793" name="l03793"></a><span class="lineno"> 3793</span>                            <span class="keywordtype">float</span> scale = fmin(1, 0.25f + 0.75f * fbud.time_counter / plant_instance.dd_to_fruit_maturity);</div>
-<div class="line"><a id="l03794" name="l03794"></a><span class="lineno"> 3794</span>                            phytomer-&gt;setInflorescenceScaleFraction(fbud, scale);</div>
-<div class="line"><a id="l03795" name="l03795"></a><span class="lineno"> 3795</span>                        }</div>
-<div class="line"><a id="l03796" name="l03796"></a><span class="lineno"> 3796</span>                    }</div>
-<div class="line"><a id="l03797" name="l03797"></a><span class="lineno"> 3797</span>                }</div>
-<div class="line"><a id="l03798" name="l03798"></a><span class="lineno"> 3798</span> </div>
-<div class="line"><a id="l03799" name="l03799"></a><span class="lineno"> 3799</span>                <span class="comment">// ****** NEW CHILD SHOOTS FROM VEGETATIVE BUDS ****** //</span></div>
-<div class="line"><a id="l03800" name="l03800"></a><span class="lineno"> 3800</span>                <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> parent_petiole_index = 0;</div>
-<div class="line"><a id="l03801" name="l03801"></a><span class="lineno"> 3801</span>                <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;petiole: phytomer-&gt;axillary_vegetative_buds) {</div>
-<div class="line"><a id="l03802" name="l03802"></a><span class="lineno"> 3802</span>                    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;vbud: petiole) {</div>
-<div class="line"><a id="l03803" name="l03803"></a><span class="lineno"> 3803</span>                        <span class="keywordflow">if</span> (vbud.state == BUD_ACTIVE &amp;&amp; phytomer-&gt;age + dt_max_days &gt; shoot-&gt;shoot_parameters.vegetative_bud_break_time.val()) {</div>
-<div class="line"><a id="l03804" name="l03804"></a><span class="lineno"> 3804</span>                            <a class="code hl_struct" href="struct_shoot_parameters.html">ShootParameters</a> *new_shoot_parameters = &amp;shoot_types.at(vbud.shoot_type_label);</div>
-<div class="line"><a id="l03805" name="l03805"></a><span class="lineno"> 3805</span>                            <span class="keywordtype">int</span> parent_node_count = shoot-&gt;current_node_number;</div>
+<div class="line"><a id="l03757" name="l03757"></a><span class="lineno"> 3757</span>            node_index = 0;</div>
+<div class="line"><a id="l03758" name="l03758"></a><span class="lineno"> 3758</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;phytomer: shoot-&gt;phytomers) {</div>
+<div class="line"><a id="l03759" name="l03759"></a><span class="lineno"> 3759</span>                <span class="comment">// scale petiole/leaves</span></div>
+<div class="line"><a id="l03760" name="l03760"></a><span class="lineno"> 3760</span>                <span class="keywordflow">if</span> (phytomer-&gt;hasLeaf()) {</div>
+<div class="line"><a id="l03761" name="l03761"></a><span class="lineno"> 3761</span>                    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> petiole_index = 0; petiole_index &lt; phytomer-&gt;current_leaf_scale_factor.size(); petiole_index++) {</div>
+<div class="line"><a id="l03762" name="l03762"></a><span class="lineno"> 3762</span> </div>
+<div class="line"><a id="l03763" name="l03763"></a><span class="lineno"> 3763</span>                        <span class="keywordflow">if</span> (phytomer-&gt;current_leaf_scale_factor.at(petiole_index) &gt;= 1) {</div>
+<div class="line"><a id="l03764" name="l03764"></a><span class="lineno"> 3764</span>                            <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l03765" name="l03765"></a><span class="lineno"> 3765</span>                        }</div>
+<div class="line"><a id="l03766" name="l03766"></a><span class="lineno"> 3766</span> </div>
+<div class="line"><a id="l03767" name="l03767"></a><span class="lineno"> 3767</span>                        <span class="keywordtype">float</span> tip_ind = ceil(<span class="keywordtype">float</span>(phytomer-&gt;leaf_size_max.at(petiole_index).size() - 1) / 2.f);</div>
+<div class="line"><a id="l03768" name="l03768"></a><span class="lineno"> 3768</span>                        <span class="keywordtype">float</span> leaf_length = phytomer-&gt;current_leaf_scale_factor.at(petiole_index) * phytomer-&gt;leaf_size_max.at(petiole_index).at(tip_ind);</div>
+<div class="line"><a id="l03769" name="l03769"></a><span class="lineno"> 3769</span>                        <span class="keywordtype">float</span> dL_leaf = dt_max_days * shoot-&gt;elongation_rate_instantaneous * phytomer-&gt;leaf_size_max.at(petiole_index).at(tip_ind);</div>
+<div class="line"><a id="l03770" name="l03770"></a><span class="lineno"> 3770</span>                        <span class="keywordtype">float</span> scale = fmin(1.f, (leaf_length + dL_leaf) / phytomer-&gt;phytomer_parameters.leaf.prototype_scale.val());</div>
+<div class="line"><a id="l03771" name="l03771"></a><span class="lineno"> 3771</span>                        phytomer-&gt;phytomer_parameters.leaf.prototype_scale.resample();</div>
+<div class="line"><a id="l03772" name="l03772"></a><span class="lineno"> 3772</span>                        phytomer-&gt;setLeafScaleFraction(petiole_index, scale);</div>
+<div class="line"><a id="l03773" name="l03773"></a><span class="lineno"> 3773</span>                    }</div>
+<div class="line"><a id="l03774" name="l03774"></a><span class="lineno"> 3774</span>                }</div>
+<div class="line"><a id="l03775" name="l03775"></a><span class="lineno"> 3775</span> </div>
+<div class="line"><a id="l03776" name="l03776"></a><span class="lineno"> 3776</span>                <span class="comment">// Fruit Growth</span></div>
+<div class="line"><a id="l03777" name="l03777"></a><span class="lineno"> 3777</span>                <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;petiole: phytomer-&gt;floral_buds) {</div>
+<div class="line"><a id="l03778" name="l03778"></a><span class="lineno"> 3778</span>                    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;fbud: petiole) {</div>
+<div class="line"><a id="l03779" name="l03779"></a><span class="lineno"> 3779</span>                        <span class="comment">// If the floral bud it in a &#39;fruiting&#39; state, the fruit grows with time</span></div>
+<div class="line"><a id="l03780" name="l03780"></a><span class="lineno"> 3780</span>                        <span class="keywordflow">if</span> (fbud.state == BUD_FRUITING &amp;&amp; fbud.time_counter &gt; 0) {</div>
+<div class="line"><a id="l03781" name="l03781"></a><span class="lineno"> 3781</span>                            <span class="keywordtype">float</span> scale = fmin(1, 0.25f + 0.75f * fbud.time_counter / plant_instance.dd_to_fruit_maturity);</div>
+<div class="line"><a id="l03782" name="l03782"></a><span class="lineno"> 3782</span>                            phytomer-&gt;setInflorescenceScaleFraction(fbud, scale);</div>
+<div class="line"><a id="l03783" name="l03783"></a><span class="lineno"> 3783</span>                        }</div>
+<div class="line"><a id="l03784" name="l03784"></a><span class="lineno"> 3784</span>                    }</div>
+<div class="line"><a id="l03785" name="l03785"></a><span class="lineno"> 3785</span>                }</div>
+<div class="line"><a id="l03786" name="l03786"></a><span class="lineno"> 3786</span> </div>
+<div class="line"><a id="l03787" name="l03787"></a><span class="lineno"> 3787</span>                <span class="comment">// ****** NEW CHILD SHOOTS FROM VEGETATIVE BUDS ****** //</span></div>
+<div class="line"><a id="l03788" name="l03788"></a><span class="lineno"> 3788</span>                <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> parent_petiole_index = 0;</div>
+<div class="line"><a id="l03789" name="l03789"></a><span class="lineno"> 3789</span>                <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;petiole: phytomer-&gt;axillary_vegetative_buds) {</div>
+<div class="line"><a id="l03790" name="l03790"></a><span class="lineno"> 3790</span>                    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;vbud: petiole) {</div>
+<div class="line"><a id="l03791" name="l03791"></a><span class="lineno"> 3791</span>                        <span class="keywordflow">if</span> (vbud.state == BUD_ACTIVE &amp;&amp; phytomer-&gt;age + dt_max_days &gt; shoot-&gt;shoot_parameters.vegetative_bud_break_time.val()) {</div>
+<div class="line"><a id="l03792" name="l03792"></a><span class="lineno"> 3792</span>                            <a class="code hl_struct" href="struct_shoot_parameters.html">ShootParameters</a> *new_shoot_parameters = &amp;shoot_types.at(vbud.shoot_type_label);</div>
+<div class="line"><a id="l03793" name="l03793"></a><span class="lineno"> 3793</span>                            <span class="keywordtype">int</span> parent_node_count = shoot-&gt;current_node_number;</div>
+<div class="line"><a id="l03794" name="l03794"></a><span class="lineno"> 3794</span> </div>
+<div class="line"><a id="l03795" name="l03795"></a><span class="lineno"> 3795</span>                            <span class="comment">//                            float insertion_angle_adjustment = fmin(new_shoot_parameters-&gt;insertion_angle_tip.val() + new_shoot_parameters-&gt;insertion_angle_decay_rate.val() * float(parent_node_count -</span></div>
+<div class="line"><a id="l03796" name="l03796"></a><span class="lineno"> 3796</span>                            <span class="comment">//                            phytomer-&gt;shoot_index.x - 1), 90.f); AxisRotation base_rotation = make_AxisRotation(deg2rad(insertion_angle_adjustment), deg2rad(new_shoot_parameters-&gt;base_yaw.val()),</span></div>
+<div class="line"><a id="l03797" name="l03797"></a><span class="lineno"> 3797</span>                            <span class="comment">//                            deg2rad(new_shoot_parameters-&gt;base_roll.val())); new_shoot_parameters-&gt;base_yaw.resample(); if( new_shoot_parameters-&gt;insertion_angle_decay_rate.val()==0 ){</span></div>
+<div class="line"><a id="l03798" name="l03798"></a><span class="lineno"> 3798</span>                            <span class="comment">//                                new_shoot_parameters-&gt;insertion_angle_tip.resample();</span></div>
+<div class="line"><a id="l03799" name="l03799"></a><span class="lineno"> 3799</span>                            <span class="comment">//                            }</span></div>
+<div class="line"><a id="l03800" name="l03800"></a><span class="lineno"> 3800</span>                            <span class="keywordtype">float</span> insertion_angle_adjustment = fmin(shoot-&gt;shoot_parameters.insertion_angle_tip.val() + shoot-&gt;shoot_parameters.insertion_angle_decay_rate.val() * <span class="keywordtype">float</span>(parent_node_count - phytomer-&gt;shoot_index.x - 1), 90.f);</div>
+<div class="line"><a id="l03801" name="l03801"></a><span class="lineno"> 3801</span>                            <a class="code hl_struct" href="struct_axis_rotation.html">AxisRotation</a> base_rotation = make_AxisRotation(<a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(insertion_angle_adjustment), <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(new_shoot_parameters-&gt;<a class="code hl_variable" href="struct_shoot_parameters.html#ae435cc66aaf2c0d5e82ab7de18b5afc7" title="Yaw angle (deg) of the shoot relative to the parent shoot.">base_yaw</a>.val()), <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(new_shoot_parameters-&gt;<a class="code hl_variable" href="struct_shoot_parameters.html#a924da6864d28bfb283367c6510082f88" title="Roll angle (deg) of the shoot specifying the orientation of the first petiole relative to the parent ...">base_roll</a>.val()));</div>
+<div class="line"><a id="l03802" name="l03802"></a><span class="lineno"> 3802</span>                            new_shoot_parameters-&gt;<a class="code hl_variable" href="struct_shoot_parameters.html#ae435cc66aaf2c0d5e82ab7de18b5afc7" title="Yaw angle (deg) of the shoot relative to the parent shoot.">base_yaw</a>.resample();</div>
+<div class="line"><a id="l03803" name="l03803"></a><span class="lineno"> 3803</span>                            <span class="keywordflow">if</span> (shoot-&gt;shoot_parameters.insertion_angle_decay_rate.val() == 0) {</div>
+<div class="line"><a id="l03804" name="l03804"></a><span class="lineno"> 3804</span>                                shoot-&gt;shoot_parameters.insertion_angle_tip.resample();</div>
+<div class="line"><a id="l03805" name="l03805"></a><span class="lineno"> 3805</span>                            }</div>
 <div class="line"><a id="l03806" name="l03806"></a><span class="lineno"> 3806</span> </div>
-<div class="line"><a id="l03807" name="l03807"></a><span class="lineno"> 3807</span>                            <span class="comment">//                            float insertion_angle_adjustment = fmin(new_shoot_parameters-&gt;insertion_angle_tip.val() + new_shoot_parameters-&gt;insertion_angle_decay_rate.val() * float(parent_node_count -</span></div>
-<div class="line"><a id="l03808" name="l03808"></a><span class="lineno"> 3808</span>                            <span class="comment">//                            phytomer-&gt;shoot_index.x - 1), 90.f); AxisRotation base_rotation = make_AxisRotation(deg2rad(insertion_angle_adjustment), deg2rad(new_shoot_parameters-&gt;base_yaw.val()),</span></div>
-<div class="line"><a id="l03809" name="l03809"></a><span class="lineno"> 3809</span>                            <span class="comment">//                            deg2rad(new_shoot_parameters-&gt;base_roll.val())); new_shoot_parameters-&gt;base_yaw.resample(); if( new_shoot_parameters-&gt;insertion_angle_decay_rate.val()==0 ){</span></div>
-<div class="line"><a id="l03810" name="l03810"></a><span class="lineno"> 3810</span>                            <span class="comment">//                                new_shoot_parameters-&gt;insertion_angle_tip.resample();</span></div>
-<div class="line"><a id="l03811" name="l03811"></a><span class="lineno"> 3811</span>                            <span class="comment">//                            }</span></div>
-<div class="line"><a id="l03812" name="l03812"></a><span class="lineno"> 3812</span>                            <span class="keywordtype">float</span> insertion_angle_adjustment = fmin(shoot-&gt;shoot_parameters.insertion_angle_tip.val() + shoot-&gt;shoot_parameters.insertion_angle_decay_rate.val() * <span class="keywordtype">float</span>(parent_node_count - phytomer-&gt;shoot_index.x - 1), 90.f);</div>
-<div class="line"><a id="l03813" name="l03813"></a><span class="lineno"> 3813</span>                            <a class="code hl_struct" href="struct_axis_rotation.html">AxisRotation</a> base_rotation = make_AxisRotation(<a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(insertion_angle_adjustment), <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(new_shoot_parameters-&gt;<a class="code hl_variable" href="struct_shoot_parameters.html#ae435cc66aaf2c0d5e82ab7de18b5afc7" title="Yaw angle (deg) of the shoot relative to the parent shoot.">base_yaw</a>.val()), <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(new_shoot_parameters-&gt;<a class="code hl_variable" href="struct_shoot_parameters.html#a924da6864d28bfb283367c6510082f88" title="Roll angle (deg) of the shoot specifying the orientation of the first petiole relative to the parent ...">base_roll</a>.val()));</div>
-<div class="line"><a id="l03814" name="l03814"></a><span class="lineno"> 3814</span>                            new_shoot_parameters-&gt;<a class="code hl_variable" href="struct_shoot_parameters.html#ae435cc66aaf2c0d5e82ab7de18b5afc7" title="Yaw angle (deg) of the shoot relative to the parent shoot.">base_yaw</a>.resample();</div>
-<div class="line"><a id="l03815" name="l03815"></a><span class="lineno"> 3815</span>                            <span class="keywordflow">if</span> (shoot-&gt;shoot_parameters.insertion_angle_decay_rate.val() == 0) {</div>
-<div class="line"><a id="l03816" name="l03816"></a><span class="lineno"> 3816</span>                                shoot-&gt;shoot_parameters.insertion_angle_tip.resample();</div>
-<div class="line"><a id="l03817" name="l03817"></a><span class="lineno"> 3817</span>                            }</div>
-<div class="line"><a id="l03818" name="l03818"></a><span class="lineno"> 3818</span> </div>
-<div class="line"><a id="l03819" name="l03819"></a><span class="lineno"> 3819</span>                            <span class="comment">// scale the shoot internode length based on proximity from the tip</span></div>
-<div class="line"><a id="l03820" name="l03820"></a><span class="lineno"> 3820</span>                            <span class="keywordtype">float</span> internode_length_max;</div>
-<div class="line"><a id="l03821" name="l03821"></a><span class="lineno"> 3821</span>                            <span class="keywordflow">if</span> (new_shoot_parameters-&gt;<a class="code hl_variable" href="struct_shoot_parameters.html#a8bbe95d907caaa7a2b4456e2b97ec7c2" title="Flag indicating whether vegetative buds require a winter dormancy period to emerge.">growth_requires_dormancy</a>) {</div>
-<div class="line"><a id="l03822" name="l03822"></a><span class="lineno"> 3822</span>                                internode_length_max = fmax(new_shoot_parameters-&gt;<a class="code hl_variable" href="struct_shoot_parameters.html#afe1464fa9e5c6ed18754d73c5b3cb171" title="Maximum internode length (m) of a child shoot.">internode_length_max</a>.val() - new_shoot_parameters-&gt;<a class="code hl_variable" href="struct_shoot_parameters.html#a9da3ac928344b7f28abd1cb99c82c669" title="Rate (m/node) at which internode length decreases moving down the parent shoot.">internode_length_decay_rate</a>.val() * <span class="keywordtype">float</span>(parent_node_count - phytomer-&gt;shoot_index.x - 1),</div>
-<div class="line"><a id="l03823" name="l03823"></a><span class="lineno"> 3823</span>                                                            new_shoot_parameters-&gt;<a class="code hl_variable" href="struct_shoot_parameters.html#a4eb9b881c5d457515f51648330b3ccd6" title="Minimum internode length (m) of a child shoot.">internode_length_min</a>.val());</div>
-<div class="line"><a id="l03824" name="l03824"></a><span class="lineno"> 3824</span>                            } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l03825" name="l03825"></a><span class="lineno"> 3825</span>                                internode_length_max = new_shoot_parameters-&gt;<a class="code hl_variable" href="struct_shoot_parameters.html#afe1464fa9e5c6ed18754d73c5b3cb171" title="Maximum internode length (m) of a child shoot.">internode_length_max</a>.val();</div>
-<div class="line"><a id="l03826" name="l03826"></a><span class="lineno"> 3826</span>                            }</div>
+<div class="line"><a id="l03807" name="l03807"></a><span class="lineno"> 3807</span>                            <span class="comment">// scale the shoot internode length based on proximity from the tip</span></div>
+<div class="line"><a id="l03808" name="l03808"></a><span class="lineno"> 3808</span>                            <span class="keywordtype">float</span> internode_length_max;</div>
+<div class="line"><a id="l03809" name="l03809"></a><span class="lineno"> 3809</span>                            <span class="keywordflow">if</span> (new_shoot_parameters-&gt;<a class="code hl_variable" href="struct_shoot_parameters.html#a8bbe95d907caaa7a2b4456e2b97ec7c2" title="Flag indicating whether vegetative buds require a winter dormancy period to emerge.">growth_requires_dormancy</a>) {</div>
+<div class="line"><a id="l03810" name="l03810"></a><span class="lineno"> 3810</span>                                internode_length_max = fmax(new_shoot_parameters-&gt;<a class="code hl_variable" href="struct_shoot_parameters.html#afe1464fa9e5c6ed18754d73c5b3cb171" title="Maximum internode length (m) of a child shoot.">internode_length_max</a>.val() - new_shoot_parameters-&gt;<a class="code hl_variable" href="struct_shoot_parameters.html#a9da3ac928344b7f28abd1cb99c82c669" title="Rate (m/node) at which internode length decreases moving down the parent shoot.">internode_length_decay_rate</a>.val() * <span class="keywordtype">float</span>(parent_node_count - phytomer-&gt;shoot_index.x - 1),</div>
+<div class="line"><a id="l03811" name="l03811"></a><span class="lineno"> 3811</span>                                                            new_shoot_parameters-&gt;<a class="code hl_variable" href="struct_shoot_parameters.html#a4eb9b881c5d457515f51648330b3ccd6" title="Minimum internode length (m) of a child shoot.">internode_length_min</a>.val());</div>
+<div class="line"><a id="l03812" name="l03812"></a><span class="lineno"> 3812</span>                            } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l03813" name="l03813"></a><span class="lineno"> 3813</span>                                internode_length_max = new_shoot_parameters-&gt;<a class="code hl_variable" href="struct_shoot_parameters.html#afe1464fa9e5c6ed18754d73c5b3cb171" title="Maximum internode length (m) of a child shoot.">internode_length_max</a>.val();</div>
+<div class="line"><a id="l03814" name="l03814"></a><span class="lineno"> 3814</span>                            }</div>
+<div class="line"><a id="l03815" name="l03815"></a><span class="lineno"> 3815</span> </div>
+<div class="line"><a id="l03816" name="l03816"></a><span class="lineno"> 3816</span>                            <span class="keywordtype">float</span> internode_radius = phytomer-&gt;internode_radius_initial;</div>
+<div class="line"><a id="l03817" name="l03817"></a><span class="lineno"> 3817</span> </div>
+<div class="line"><a id="l03818" name="l03818"></a><span class="lineno"> 3818</span>                            <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> childID = <a class="code hl_function" href="class_plant_architecture.html#a0832e7e5e15d64c3ee52ea3d640dee27" title="Manually add a child shoot at the axillary bud of a phytomer.">addChildShoot</a>(plantID, shoot-&gt;ID, node_index, 1, base_rotation, internode_radius, internode_length_max, 0.01, 0.01, 0, vbud.shoot_type_label, parent_petiole_index);</div>
+<div class="line"><a id="l03819" name="l03819"></a><span class="lineno"> 3819</span> </div>
+<div class="line"><a id="l03820" name="l03820"></a><span class="lineno"> 3820</span>                            phytomer-&gt;setVegetativeBudState(BUD_DEAD, vbud);</div>
+<div class="line"><a id="l03821" name="l03821"></a><span class="lineno"> 3821</span>                            vbud.shoot_ID = childID;</div>
+<div class="line"><a id="l03822" name="l03822"></a><span class="lineno"> 3822</span>                            shoot_tree-&gt;at(childID)-&gt;isdormant = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l03823" name="l03823"></a><span class="lineno"> 3823</span>                        }</div>
+<div class="line"><a id="l03824" name="l03824"></a><span class="lineno"> 3824</span>                    }</div>
+<div class="line"><a id="l03825" name="l03825"></a><span class="lineno"> 3825</span>                    parent_petiole_index++;</div>
+<div class="line"><a id="l03826" name="l03826"></a><span class="lineno"> 3826</span>                }</div>
 <div class="line"><a id="l03827" name="l03827"></a><span class="lineno"> 3827</span> </div>
-<div class="line"><a id="l03828" name="l03828"></a><span class="lineno"> 3828</span>                            <span class="keywordtype">float</span> internode_radius = phytomer-&gt;internode_radius_initial;</div>
-<div class="line"><a id="l03829" name="l03829"></a><span class="lineno"> 3829</span> </div>
-<div class="line"><a id="l03830" name="l03830"></a><span class="lineno"> 3830</span>                            <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> childID = <a class="code hl_function" href="class_plant_architecture.html#a0832e7e5e15d64c3ee52ea3d640dee27" title="Manually add a child shoot at the axillary bud of a phytomer.">addChildShoot</a>(plantID, shoot-&gt;ID, node_index, 1, base_rotation, internode_radius, internode_length_max, 0.01, 0.01, 0, vbud.shoot_type_label, parent_petiole_index);</div>
-<div class="line"><a id="l03831" name="l03831"></a><span class="lineno"> 3831</span> </div>
-<div class="line"><a id="l03832" name="l03832"></a><span class="lineno"> 3832</span>                            phytomer-&gt;setVegetativeBudState(BUD_DEAD, vbud);</div>
-<div class="line"><a id="l03833" name="l03833"></a><span class="lineno"> 3833</span>                            vbud.shoot_ID = childID;</div>
-<div class="line"><a id="l03834" name="l03834"></a><span class="lineno"> 3834</span>                            shoot_tree-&gt;at(childID)-&gt;isdormant = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l03835" name="l03835"></a><span class="lineno"> 3835</span>                        }</div>
-<div class="line"><a id="l03836" name="l03836"></a><span class="lineno"> 3836</span>                    }</div>
-<div class="line"><a id="l03837" name="l03837"></a><span class="lineno"> 3837</span>                    parent_petiole_index++;</div>
-<div class="line"><a id="l03838" name="l03838"></a><span class="lineno"> 3838</span>                }</div>
-<div class="line"><a id="l03839" name="l03839"></a><span class="lineno"> 3839</span> </div>
-<div class="line"><a id="l03840" name="l03840"></a><span class="lineno"> 3840</span>                <span class="keywordflow">if</span> (output_object_data.at(<span class="stringliteral">&quot;age&quot;</span>)) {</div>
-<div class="line"><a id="l03841" name="l03841"></a><span class="lineno"> 3841</span>                    <span class="keywordflow">if</span> (shoot-&gt;build_context_geometry_internode) {</div>
-<div class="line"><a id="l03842" name="l03842"></a><span class="lineno"> 3842</span>                        <span class="comment">//\todo This is redundant and only needs to be done once per shoot</span></div>
-<div class="line"><a id="l03843" name="l03843"></a><span class="lineno"> 3843</span>                        <span class="keywordflow">if</span> (context_ptr-&gt;doesObjectExist(shoot-&gt;internode_tube_objID)) {</div>
-<div class="line"><a id="l03844" name="l03844"></a><span class="lineno"> 3844</span>                            context_ptr-&gt;setObjectData(shoot-&gt;internode_tube_objID, <span class="stringliteral">&quot;age&quot;</span>, phytomer-&gt;age);</div>
-<div class="line"><a id="l03845" name="l03845"></a><span class="lineno"> 3845</span>                        }</div>
-<div class="line"><a id="l03846" name="l03846"></a><span class="lineno"> 3846</span>                    }</div>
-<div class="line"><a id="l03847" name="l03847"></a><span class="lineno"> 3847</span>                    <span class="keywordflow">if</span> (phytomer-&gt;build_context_geometry_petiole) {</div>
-<div class="line"><a id="l03848" name="l03848"></a><span class="lineno"> 3848</span>                        context_ptr-&gt;setObjectData(phytomer-&gt;petiole_objIDs, <span class="stringliteral">&quot;age&quot;</span>, phytomer-&gt;age);</div>
-<div class="line"><a id="l03849" name="l03849"></a><span class="lineno"> 3849</span>                    }</div>
-<div class="line"><a id="l03850" name="l03850"></a><span class="lineno"> 3850</span>                    context_ptr-&gt;setObjectData(phytomer-&gt;leaf_objIDs, <span class="stringliteral">&quot;age&quot;</span>, phytomer-&gt;age);</div>
-<div class="line"><a id="l03851" name="l03851"></a><span class="lineno"> 3851</span>                }</div>
-<div class="line"><a id="l03852" name="l03852"></a><span class="lineno"> 3852</span> </div>
-<div class="line"><a id="l03853" name="l03853"></a><span class="lineno"> 3853</span>                node_index++;</div>
-<div class="line"><a id="l03854" name="l03854"></a><span class="lineno"> 3854</span>            }</div>
-<div class="line"><a id="l03855" name="l03855"></a><span class="lineno"> 3855</span> </div>
-<div class="line"><a id="l03856" name="l03856"></a><span class="lineno"> 3856</span>            <span class="comment">// if shoot has reached max_nodes, stop apical growth</span></div>
-<div class="line"><a id="l03857" name="l03857"></a><span class="lineno"> 3857</span>            <span class="keywordflow">if</span> (shoot-&gt;current_node_number &gt;= shoot-&gt;shoot_parameters.max_nodes.val()) {</div>
-<div class="line"><a id="l03858" name="l03858"></a><span class="lineno"> 3858</span>                shoot-&gt;terminateApicalBud();</div>
-<div class="line"><a id="l03859" name="l03859"></a><span class="lineno"> 3859</span>            }</div>
-<div class="line"><a id="l03860" name="l03860"></a><span class="lineno"> 3860</span> </div>
-<div class="line"><a id="l03861" name="l03861"></a><span class="lineno"> 3861</span>            <span class="comment">// If the apical bud is dead, don&#39;t do anything more with the shoot</span></div>
-<div class="line"><a id="l03862" name="l03862"></a><span class="lineno"> 3862</span>            <span class="keywordflow">if</span> (!shoot-&gt;meristem_is_alive) {</div>
-<div class="line"><a id="l03863" name="l03863"></a><span class="lineno"> 3863</span>                <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l03864" name="l03864"></a><span class="lineno"> 3864</span>            }</div>
-<div class="line"><a id="l03865" name="l03865"></a><span class="lineno"> 3865</span> </div>
-<div class="line"><a id="l03866" name="l03866"></a><span class="lineno"> 3866</span>            <span class="comment">// ****** PHYLLOCHRON - NEW PHYTOMERS ****** //</span></div>
-<div class="line"><a id="l03867" name="l03867"></a><span class="lineno"> 3867</span>            shoot-&gt;phyllochron_counter += dt_max_days;</div>
-<div class="line"><a id="l03868" name="l03868"></a><span class="lineno"> 3868</span>            <span class="keywordflow">if</span> (shoot-&gt;phyllochron_counter &gt;= shoot-&gt;phyllochron_instantaneous &amp;&amp; !shoot-&gt;phytomers.back()-&gt;isdormant) {</div>
-<div class="line"><a id="l03869" name="l03869"></a><span class="lineno"> 3869</span>                <span class="keywordtype">float</span> internode_radius = shoot-&gt;shoot_parameters.phytomer_parameters.internode.radius_initial.val();</div>
-<div class="line"><a id="l03870" name="l03870"></a><span class="lineno"> 3870</span>                shoot-&gt;shoot_parameters.phytomer_parameters.internode.radius_initial.resample();</div>
-<div class="line"><a id="l03871" name="l03871"></a><span class="lineno"> 3871</span>                <span class="keywordtype">float</span> internode_length_max = shoot-&gt;internode_length_max_shoot_initial;</div>
-<div class="line"><a id="l03872" name="l03872"></a><span class="lineno"> 3872</span>                <a class="code hl_function" href="class_plant_architecture.html#a122fad48603e2e0f2fe6d870c691bfd1" title="Add a new phytomer at the terminal bud of a shoot.">appendPhytomerToShoot</a>(plantID, shoot-&gt;ID, shoot_types.at(shoot-&gt;shoot_type_label).phytomer_parameters, internode_radius, internode_length_max, 0.01, 0.01); <span class="comment">//\todo These factors should be set to be consistent with the shoot</span></div>
-<div class="line"><a id="l03873" name="l03873"></a><span class="lineno"> 3873</span>                shoot-&gt;phyllochron_counter = shoot-&gt;phyllochron_counter - shoot-&gt;phyllochron_instantaneous;</div>
-<div class="line"><a id="l03874" name="l03874"></a><span class="lineno"> 3874</span>            }</div>
-<div class="line"><a id="l03875" name="l03875"></a><span class="lineno"> 3875</span> </div>
-<div class="line"><a id="l03876" name="l03876"></a><span class="lineno"> 3876</span>            <span class="comment">// ****** EPICORMIC SHOOTS ****** //</span></div>
-<div class="line"><a id="l03877" name="l03877"></a><span class="lineno"> 3877</span>            std::string epicormic_shoot_label = plant_instance.epicormic_shoot_probability_perlength_per_day.first;</div>
-<div class="line"><a id="l03878" name="l03878"></a><span class="lineno"> 3878</span>            <span class="keywordflow">if</span> (!epicormic_shoot_label.empty()) {</div>
-<div class="line"><a id="l03879" name="l03879"></a><span class="lineno"> 3879</span>                std::vector&lt;float&gt; epicormic_fraction;</div>
-<div class="line"><a id="l03880" name="l03880"></a><span class="lineno"> 3880</span>                <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Nepicormic = shoot-&gt;sampleEpicormicShoot(time_step_days, epicormic_fraction);</div>
-<div class="line"><a id="l03881" name="l03881"></a><span class="lineno"> 3881</span>                <span class="keywordflow">for</span> (<span class="keywordtype">int</span> s = 0; s &lt; Nepicormic; s++) {</div>
-<div class="line"><a id="l03882" name="l03882"></a><span class="lineno"> 3882</span>                    <span class="keywordtype">float</span> internode_radius = shoot_types.at(epicormic_shoot_label).phytomer_parameters.internode.radius_initial.val();</div>
-<div class="line"><a id="l03883" name="l03883"></a><span class="lineno"> 3883</span>                    shoot_types.at(epicormic_shoot_label).phytomer_parameters.internode.radius_initial.resample();</div>
-<div class="line"><a id="l03884" name="l03884"></a><span class="lineno"> 3884</span>                    <span class="keywordtype">float</span> internode_length_max = shoot_types.at(epicormic_shoot_label).internode_length_max.val();</div>
-<div class="line"><a id="l03885" name="l03885"></a><span class="lineno"> 3885</span>                    shoot_types.at(epicormic_shoot_label).internode_length_max.resample();</div>
-<div class="line"><a id="l03886" name="l03886"></a><span class="lineno"> 3886</span>                    std::cout &lt;&lt; <span class="stringliteral">&quot;Adding epicormic shoot&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"><a id="l03887" name="l03887"></a><span class="lineno"> 3887</span>                    <a class="code hl_function" href="class_plant_architecture.html#ade786dc8bb429eb033d29ccf9df6b254" title="Manually add a child epicormic shoot (water sprout) at an arbitrary position along the shoot.">addEpicormicShoot</a>(plantID, shoot-&gt;ID, epicormic_fraction.at(s), 1, 0, internode_radius, internode_length_max, 0.01, 0.01, 0, epicormic_shoot_label);</div>
-<div class="line"><a id="l03888" name="l03888"></a><span class="lineno"> 3888</span>                }</div>
-<div class="line"><a id="l03889" name="l03889"></a><span class="lineno"> 3889</span>            }</div>
-<div class="line"><a id="l03890" name="l03890"></a><span class="lineno"> 3890</span>            <span class="keywordflow">if</span> (carbon_model_enabled) {</div>
-<div class="line"><a id="l03891" name="l03891"></a><span class="lineno"> 3891</span>                <span class="keywordflow">if</span> (output_object_data.find(<span class="stringliteral">&quot;carbohydrate_concentration&quot;</span>) != output_object_data.end() &amp;&amp; context_ptr-&gt;doesObjectExist(shoot-&gt;internode_tube_objID)) {</div>
-<div class="line"><a id="l03892" name="l03892"></a><span class="lineno"> 3892</span>                    <span class="keywordtype">float</span> shoot_volume = shoot-&gt;calculateShootInternodeVolume();</div>
-<div class="line"><a id="l03893" name="l03893"></a><span class="lineno"> 3893</span>                    context_ptr-&gt;setObjectData(shoot-&gt;internode_tube_objID, <span class="stringliteral">&quot;carbohydrate_concentration&quot;</span>, shoot-&gt;carbohydrate_pool_molC / shoot_volume);</div>
-<div class="line"><a id="l03894" name="l03894"></a><span class="lineno"> 3894</span>                }</div>
-<div class="line"><a id="l03895" name="l03895"></a><span class="lineno"> 3895</span>            }</div>
-<div class="line"><a id="l03896" name="l03896"></a><span class="lineno"> 3896</span>        }</div>
-<div class="line"><a id="l03897" name="l03897"></a><span class="lineno"> 3897</span> </div>
-<div class="line"><a id="l03898" name="l03898"></a><span class="lineno"> 3898</span>        <span class="comment">// **** subtract maintenance carbon costs **** //</span></div>
-<div class="line"><a id="l03899" name="l03899"></a><span class="lineno"> 3899</span>        <span class="keywordflow">if</span> (carbon_model_enabled) {</div>
-<div class="line"><a id="l03900" name="l03900"></a><span class="lineno"> 3900</span>            subtractShootMaintenanceCarbon(dt_max_days);</div>
-<div class="line"><a id="l03901" name="l03901"></a><span class="lineno"> 3901</span>            subtractShootGrowthCarbon();</div>
-<div class="line"><a id="l03902" name="l03902"></a><span class="lineno"> 3902</span>            checkCarbonPool_transferCarbon(dt_max_days);</div>
-<div class="line"><a id="l03903" name="l03903"></a><span class="lineno"> 3903</span>            checkCarbonPool_adjustPhyllochron(dt_max_days);</div>
-<div class="line"><a id="l03904" name="l03904"></a><span class="lineno"> 3904</span>            checkCarbonPool_abortOrgans(dt_max_days);</div>
-<div class="line"><a id="l03905" name="l03905"></a><span class="lineno"> 3905</span>        }</div>
-<div class="line"><a id="l03906" name="l03906"></a><span class="lineno"> 3906</span>    }</div>
-<div class="line"><a id="l03907" name="l03907"></a><span class="lineno"> 3907</span> </div>
-<div class="line"><a id="l03908" name="l03908"></a><span class="lineno"> 3908</span>    <span class="comment">// update Context geometry</span></div>
-<div class="line"><a id="l03909" name="l03909"></a><span class="lineno"> 3909</span>    shoot_tree-&gt;front()-&gt;updateShootNodes(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l03910" name="l03910"></a><span class="lineno"> 3910</span> </div>
-<div class="line"><a id="l03911" name="l03911"></a><span class="lineno"> 3911</span>    <span class="comment">// *** ground collision detection *** //</span></div>
-<div class="line"><a id="l03912" name="l03912"></a><span class="lineno"> 3912</span>    <span class="keywordflow">if</span> (ground_clipping_height != -99999) {</div>
-<div class="line"><a id="l03913" name="l03913"></a><span class="lineno"> 3913</span> </div>
-<div class="line"><a id="l03914" name="l03914"></a><span class="lineno"> 3914</span>        pruneGroundCollisions( plantID );</div>
-<div class="line"><a id="l03915" name="l03915"></a><span class="lineno"> 3915</span> </div>
-<div class="line"><a id="l03916" name="l03916"></a><span class="lineno"> 3916</span>    }</div>
-<div class="line"><a id="l03917" name="l03917"></a><span class="lineno"> 3917</span> </div>
-<div class="line"><a id="l03918" name="l03918"></a><span class="lineno"> 3918</span>    <span class="comment">// Assign current volume as old volume for your next timestep</span></div>
-<div class="line"><a id="l03919" name="l03919"></a><span class="lineno"> 3919</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;shoot: *shoot_tree) {</div>
-<div class="line"><a id="l03920" name="l03920"></a><span class="lineno"> 3920</span>        <span class="keywordtype">float</span> shoot_volume = plant_instances.at(plantID).shoot_tree.at(shoot-&gt;ID)-&gt;calculateShootInternodeVolume(); <span class="comment">// Find current volume for each shoot in the plant</span></div>
-<div class="line"><a id="l03921" name="l03921"></a><span class="lineno"> 3921</span>        shoot-&gt;old_shoot_volume = shoot_volume; <span class="comment">// Set old volume to the current volume for the next timestep</span></div>
-<div class="line"><a id="l03922" name="l03922"></a><span class="lineno"> 3922</span>    }</div>
-<div class="line"><a id="l03923" name="l03923"></a><span class="lineno"> 3923</span>}</div>
+<div class="line"><a id="l03828" name="l03828"></a><span class="lineno"> 3828</span>                <span class="keywordflow">if</span> (output_object_data.at(<span class="stringliteral">&quot;age&quot;</span>)) {</div>
+<div class="line"><a id="l03829" name="l03829"></a><span class="lineno"> 3829</span>                    <span class="keywordflow">if</span> (shoot-&gt;build_context_geometry_internode) {</div>
+<div class="line"><a id="l03830" name="l03830"></a><span class="lineno"> 3830</span>                        <span class="comment">//\todo This is redundant and only needs to be done once per shoot</span></div>
+<div class="line"><a id="l03831" name="l03831"></a><span class="lineno"> 3831</span>                        <span class="keywordflow">if</span> (context_ptr-&gt;doesObjectExist(shoot-&gt;internode_tube_objID)) {</div>
+<div class="line"><a id="l03832" name="l03832"></a><span class="lineno"> 3832</span>                            context_ptr-&gt;setObjectData(shoot-&gt;internode_tube_objID, <span class="stringliteral">&quot;age&quot;</span>, phytomer-&gt;age);</div>
+<div class="line"><a id="l03833" name="l03833"></a><span class="lineno"> 3833</span>                        }</div>
+<div class="line"><a id="l03834" name="l03834"></a><span class="lineno"> 3834</span>                    }</div>
+<div class="line"><a id="l03835" name="l03835"></a><span class="lineno"> 3835</span>                    <span class="keywordflow">if</span> (phytomer-&gt;build_context_geometry_petiole) {</div>
+<div class="line"><a id="l03836" name="l03836"></a><span class="lineno"> 3836</span>                        context_ptr-&gt;setObjectData(phytomer-&gt;petiole_objIDs, <span class="stringliteral">&quot;age&quot;</span>, phytomer-&gt;age);</div>
+<div class="line"><a id="l03837" name="l03837"></a><span class="lineno"> 3837</span>                    }</div>
+<div class="line"><a id="l03838" name="l03838"></a><span class="lineno"> 3838</span>                    context_ptr-&gt;setObjectData(phytomer-&gt;leaf_objIDs, <span class="stringliteral">&quot;age&quot;</span>, phytomer-&gt;age);</div>
+<div class="line"><a id="l03839" name="l03839"></a><span class="lineno"> 3839</span>                }</div>
+<div class="line"><a id="l03840" name="l03840"></a><span class="lineno"> 3840</span> </div>
+<div class="line"><a id="l03841" name="l03841"></a><span class="lineno"> 3841</span>                node_index++;</div>
+<div class="line"><a id="l03842" name="l03842"></a><span class="lineno"> 3842</span>            }</div>
+<div class="line"><a id="l03843" name="l03843"></a><span class="lineno"> 3843</span> </div>
+<div class="line"><a id="l03844" name="l03844"></a><span class="lineno"> 3844</span>            <span class="comment">// if shoot has reached max_nodes, stop apical growth</span></div>
+<div class="line"><a id="l03845" name="l03845"></a><span class="lineno"> 3845</span>            <span class="keywordflow">if</span> (shoot-&gt;current_node_number &gt;= shoot-&gt;shoot_parameters.max_nodes.val()) {</div>
+<div class="line"><a id="l03846" name="l03846"></a><span class="lineno"> 3846</span>                shoot-&gt;terminateApicalBud();</div>
+<div class="line"><a id="l03847" name="l03847"></a><span class="lineno"> 3847</span>            }</div>
+<div class="line"><a id="l03848" name="l03848"></a><span class="lineno"> 3848</span> </div>
+<div class="line"><a id="l03849" name="l03849"></a><span class="lineno"> 3849</span>            <span class="comment">// If the apical bud is dead, don&#39;t do anything more with the shoot</span></div>
+<div class="line"><a id="l03850" name="l03850"></a><span class="lineno"> 3850</span>            <span class="keywordflow">if</span> (!shoot-&gt;meristem_is_alive) {</div>
+<div class="line"><a id="l03851" name="l03851"></a><span class="lineno"> 3851</span>                <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l03852" name="l03852"></a><span class="lineno"> 3852</span>            }</div>
+<div class="line"><a id="l03853" name="l03853"></a><span class="lineno"> 3853</span> </div>
+<div class="line"><a id="l03854" name="l03854"></a><span class="lineno"> 3854</span>            <span class="comment">// ****** PHYLLOCHRON - NEW PHYTOMERS ****** //</span></div>
+<div class="line"><a id="l03855" name="l03855"></a><span class="lineno"> 3855</span>            shoot-&gt;phyllochron_counter += dt_max_days;</div>
+<div class="line"><a id="l03856" name="l03856"></a><span class="lineno"> 3856</span>            <span class="keywordflow">if</span> (shoot-&gt;phyllochron_counter &gt;= shoot-&gt;phyllochron_instantaneous &amp;&amp; !shoot-&gt;phytomers.back()-&gt;isdormant) {</div>
+<div class="line"><a id="l03857" name="l03857"></a><span class="lineno"> 3857</span>                <span class="keywordtype">float</span> internode_radius = shoot-&gt;shoot_parameters.phytomer_parameters.internode.radius_initial.val();</div>
+<div class="line"><a id="l03858" name="l03858"></a><span class="lineno"> 3858</span>                shoot-&gt;shoot_parameters.phytomer_parameters.internode.radius_initial.resample();</div>
+<div class="line"><a id="l03859" name="l03859"></a><span class="lineno"> 3859</span>                <span class="keywordtype">float</span> internode_length_max = shoot-&gt;internode_length_max_shoot_initial;</div>
+<div class="line"><a id="l03860" name="l03860"></a><span class="lineno"> 3860</span>                <a class="code hl_function" href="class_plant_architecture.html#a122fad48603e2e0f2fe6d870c691bfd1" title="Add a new phytomer at the terminal bud of a shoot.">appendPhytomerToShoot</a>(plantID, shoot-&gt;ID, shoot_types.at(shoot-&gt;shoot_type_label).phytomer_parameters, internode_radius, internode_length_max, 0.01, 0.01); <span class="comment">//\todo These factors should be set to be consistent with the shoot</span></div>
+<div class="line"><a id="l03861" name="l03861"></a><span class="lineno"> 3861</span>                shoot-&gt;phyllochron_counter = shoot-&gt;phyllochron_counter - shoot-&gt;phyllochron_instantaneous;</div>
+<div class="line"><a id="l03862" name="l03862"></a><span class="lineno"> 3862</span>            }</div>
+<div class="line"><a id="l03863" name="l03863"></a><span class="lineno"> 3863</span> </div>
+<div class="line"><a id="l03864" name="l03864"></a><span class="lineno"> 3864</span>            <span class="comment">// ****** EPICORMIC SHOOTS ****** //</span></div>
+<div class="line"><a id="l03865" name="l03865"></a><span class="lineno"> 3865</span>            std::string epicormic_shoot_label = plant_instance.epicormic_shoot_probability_perlength_per_day.first;</div>
+<div class="line"><a id="l03866" name="l03866"></a><span class="lineno"> 3866</span>            <span class="keywordflow">if</span> (!epicormic_shoot_label.empty()) {</div>
+<div class="line"><a id="l03867" name="l03867"></a><span class="lineno"> 3867</span>                std::vector&lt;float&gt; epicormic_fraction;</div>
+<div class="line"><a id="l03868" name="l03868"></a><span class="lineno"> 3868</span>                <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Nepicormic = shoot-&gt;sampleEpicormicShoot(time_step_days, epicormic_fraction);</div>
+<div class="line"><a id="l03869" name="l03869"></a><span class="lineno"> 3869</span>                <span class="keywordflow">for</span> (<span class="keywordtype">int</span> s = 0; s &lt; Nepicormic; s++) {</div>
+<div class="line"><a id="l03870" name="l03870"></a><span class="lineno"> 3870</span>                    <span class="keywordtype">float</span> internode_radius = shoot_types.at(epicormic_shoot_label).phytomer_parameters.internode.radius_initial.val();</div>
+<div class="line"><a id="l03871" name="l03871"></a><span class="lineno"> 3871</span>                    shoot_types.at(epicormic_shoot_label).phytomer_parameters.internode.radius_initial.resample();</div>
+<div class="line"><a id="l03872" name="l03872"></a><span class="lineno"> 3872</span>                    <span class="keywordtype">float</span> internode_length_max = shoot_types.at(epicormic_shoot_label).internode_length_max.val();</div>
+<div class="line"><a id="l03873" name="l03873"></a><span class="lineno"> 3873</span>                    shoot_types.at(epicormic_shoot_label).internode_length_max.resample();</div>
+<div class="line"><a id="l03874" name="l03874"></a><span class="lineno"> 3874</span>                    std::cout &lt;&lt; <span class="stringliteral">&quot;Adding epicormic shoot&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l03875" name="l03875"></a><span class="lineno"> 3875</span>                    <a class="code hl_function" href="class_plant_architecture.html#ade786dc8bb429eb033d29ccf9df6b254" title="Manually add a child epicormic shoot (water sprout) at an arbitrary position along the shoot.">addEpicormicShoot</a>(plantID, shoot-&gt;ID, epicormic_fraction.at(s), 1, 0, internode_radius, internode_length_max, 0.01, 0.01, 0, epicormic_shoot_label);</div>
+<div class="line"><a id="l03876" name="l03876"></a><span class="lineno"> 3876</span>                }</div>
+<div class="line"><a id="l03877" name="l03877"></a><span class="lineno"> 3877</span>            }</div>
+<div class="line"><a id="l03878" name="l03878"></a><span class="lineno"> 3878</span>            <span class="keywordflow">if</span> (carbon_model_enabled) {</div>
+<div class="line"><a id="l03879" name="l03879"></a><span class="lineno"> 3879</span>                <span class="keywordflow">if</span> (output_object_data.find(<span class="stringliteral">&quot;carbohydrate_concentration&quot;</span>) != output_object_data.end() &amp;&amp; context_ptr-&gt;doesObjectExist(shoot-&gt;internode_tube_objID)) {</div>
+<div class="line"><a id="l03880" name="l03880"></a><span class="lineno"> 3880</span>                    <span class="keywordtype">float</span> shoot_volume = shoot-&gt;calculateShootInternodeVolume();</div>
+<div class="line"><a id="l03881" name="l03881"></a><span class="lineno"> 3881</span>                    context_ptr-&gt;setObjectData(shoot-&gt;internode_tube_objID, <span class="stringliteral">&quot;carbohydrate_concentration&quot;</span>, shoot-&gt;carbohydrate_pool_molC / shoot_volume);</div>
+<div class="line"><a id="l03882" name="l03882"></a><span class="lineno"> 3882</span>                }</div>
+<div class="line"><a id="l03883" name="l03883"></a><span class="lineno"> 3883</span>            }</div>
+<div class="line"><a id="l03884" name="l03884"></a><span class="lineno"> 3884</span>        }</div>
+<div class="line"><a id="l03885" name="l03885"></a><span class="lineno"> 3885</span> </div>
+<div class="line"><a id="l03886" name="l03886"></a><span class="lineno"> 3886</span>        <span class="comment">// **** subtract maintenance carbon costs **** //</span></div>
+<div class="line"><a id="l03887" name="l03887"></a><span class="lineno"> 3887</span>        <span class="keywordflow">if</span> (carbon_model_enabled) {</div>
+<div class="line"><a id="l03888" name="l03888"></a><span class="lineno"> 3888</span>            subtractShootMaintenanceCarbon(dt_max_days);</div>
+<div class="line"><a id="l03889" name="l03889"></a><span class="lineno"> 3889</span>            subtractShootGrowthCarbon();</div>
+<div class="line"><a id="l03890" name="l03890"></a><span class="lineno"> 3890</span>            checkCarbonPool_transferCarbon(dt_max_days);</div>
+<div class="line"><a id="l03891" name="l03891"></a><span class="lineno"> 3891</span>            checkCarbonPool_adjustPhyllochron(dt_max_days);</div>
+<div class="line"><a id="l03892" name="l03892"></a><span class="lineno"> 3892</span>            checkCarbonPool_abortOrgans(dt_max_days);</div>
+<div class="line"><a id="l03893" name="l03893"></a><span class="lineno"> 3893</span>        }</div>
+<div class="line"><a id="l03894" name="l03894"></a><span class="lineno"> 3894</span>    }</div>
+<div class="line"><a id="l03895" name="l03895"></a><span class="lineno"> 3895</span> </div>
+<div class="line"><a id="l03896" name="l03896"></a><span class="lineno"> 3896</span>    <span class="comment">// update Context geometry</span></div>
+<div class="line"><a id="l03897" name="l03897"></a><span class="lineno"> 3897</span>    shoot_tree-&gt;front()-&gt;updateShootNodes(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l03898" name="l03898"></a><span class="lineno"> 3898</span> </div>
+<div class="line"><a id="l03899" name="l03899"></a><span class="lineno"> 3899</span>    <span class="comment">// *** ground collision detection *** //</span></div>
+<div class="line"><a id="l03900" name="l03900"></a><span class="lineno"> 3900</span>    <span class="keywordflow">if</span> (ground_clipping_height != -99999) {</div>
+<div class="line"><a id="l03901" name="l03901"></a><span class="lineno"> 3901</span> </div>
+<div class="line"><a id="l03902" name="l03902"></a><span class="lineno"> 3902</span>        pruneGroundCollisions( plantID );</div>
+<div class="line"><a id="l03903" name="l03903"></a><span class="lineno"> 3903</span> </div>
+<div class="line"><a id="l03904" name="l03904"></a><span class="lineno"> 3904</span>    }</div>
+<div class="line"><a id="l03905" name="l03905"></a><span class="lineno"> 3905</span> </div>
+<div class="line"><a id="l03906" name="l03906"></a><span class="lineno"> 3906</span>    <span class="comment">// Assign current volume as old volume for your next timestep</span></div>
+<div class="line"><a id="l03907" name="l03907"></a><span class="lineno"> 3907</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;shoot: *shoot_tree) {</div>
+<div class="line"><a id="l03908" name="l03908"></a><span class="lineno"> 3908</span>        <span class="keywordtype">float</span> shoot_volume = plant_instances.at(plantID).shoot_tree.at(shoot-&gt;ID)-&gt;calculateShootInternodeVolume(); <span class="comment">// Find current volume for each shoot in the plant</span></div>
+<div class="line"><a id="l03909" name="l03909"></a><span class="lineno"> 3909</span>        shoot-&gt;old_shoot_volume = shoot_volume; <span class="comment">// Set old volume to the current volume for the next timestep</span></div>
+<div class="line"><a id="l03910" name="l03910"></a><span class="lineno"> 3910</span>    }</div>
+<div class="line"><a id="l03911" name="l03911"></a><span class="lineno"> 3911</span>}</div>
 </div>
-<div class="line"><a id="l03924" name="l03924"></a><span class="lineno"> 3924</span> </div>
-<div class="line"><a id="l03925" name="l03925"></a><span class="lineno"> 3925</span>std::vector&lt;uint&gt; <a class="code hl_function" href="_plant_architecture_8h.html#a90314e1f16ad76c838da858b9bf0ae86" title="Add geometry to the Context consisting of a series of Cone objects to form a tube-like shape.">makeTubeFromCones</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> radial_subdivisions, <span class="keyword">const</span> std::vector&lt;helios::vec3&gt; &amp;vertices, <span class="keyword">const</span> std::vector&lt;float&gt; &amp;radii, <span class="keyword">const</span> std::vector&lt;helios::RGBcolor&gt; &amp;colors, <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a> *context_ptr) {</div>
-<div class="line"><a id="l03926" name="l03926"></a><span class="lineno"> 3926</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Nverts = vertices.size();</div>
-<div class="line"><a id="l03927" name="l03927"></a><span class="lineno"> 3927</span> </div>
-<div class="line"><a id="l03928" name="l03928"></a><span class="lineno"> 3928</span>    <span class="keywordflow">if</span> (radii.size() != Nverts || colors.size() != Nverts) {</div>
-<div class="line"><a id="l03929" name="l03929"></a><span class="lineno"> 3929</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (makeTubeFromCones): Length of vertex vectors is not consistent.&quot;</span>);</div>
+<div class="line"><a id="l03912" name="l03912"></a><span class="lineno"> 3912</span> </div>
+<div class="line"><a id="l03913" name="l03913"></a><span class="lineno"> 3913</span>std::vector&lt;uint&gt; <a class="code hl_function" href="_plant_architecture_8h.html#a90314e1f16ad76c838da858b9bf0ae86" title="Add geometry to the Context consisting of a series of Cone objects to form a tube-like shape.">makeTubeFromCones</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> radial_subdivisions, <span class="keyword">const</span> std::vector&lt;helios::vec3&gt; &amp;vertices, <span class="keyword">const</span> std::vector&lt;float&gt; &amp;radii, <span class="keyword">const</span> std::vector&lt;helios::RGBcolor&gt; &amp;colors, <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">helios::Context</a> *context_ptr) {</div>
+<div class="line"><a id="l03914" name="l03914"></a><span class="lineno"> 3914</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Nverts = vertices.size();</div>
+<div class="line"><a id="l03915" name="l03915"></a><span class="lineno"> 3915</span> </div>
+<div class="line"><a id="l03916" name="l03916"></a><span class="lineno"> 3916</span>    <span class="keywordflow">if</span> (radii.size() != Nverts || colors.size() != Nverts) {</div>
+<div class="line"><a id="l03917" name="l03917"></a><span class="lineno"> 3917</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (makeTubeFromCones): Length of vertex vectors is not consistent.&quot;</span>);</div>
+<div class="line"><a id="l03918" name="l03918"></a><span class="lineno"> 3918</span>    }</div>
+<div class="line"><a id="l03919" name="l03919"></a><span class="lineno"> 3919</span> </div>
+<div class="line"><a id="l03920" name="l03920"></a><span class="lineno"> 3920</span>    std::vector&lt;uint&gt; objIDs;</div>
+<div class="line"><a id="l03921" name="l03921"></a><span class="lineno"> 3921</span>    objIDs.reserve(Nverts - 1);</div>
+<div class="line"><a id="l03922" name="l03922"></a><span class="lineno"> 3922</span> </div>
+<div class="line"><a id="l03923" name="l03923"></a><span class="lineno"> 3923</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> v = 0; v &lt; Nverts - 1; v++) {</div>
+<div class="line"><a id="l03924" name="l03924"></a><span class="lineno"> 3924</span>        <span class="keywordflow">if</span> ((vertices.at(v + 1) - vertices.at(v)).magnitude() &lt; 1e-6f) {</div>
+<div class="line"><a id="l03925" name="l03925"></a><span class="lineno"> 3925</span>            <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l03926" name="l03926"></a><span class="lineno"> 3926</span>        }</div>
+<div class="line"><a id="l03927" name="l03927"></a><span class="lineno"> 3927</span>        <span class="keywordtype">float</span> r0 = std::max(radii.at(v), 1e-5f);</div>
+<div class="line"><a id="l03928" name="l03928"></a><span class="lineno"> 3928</span>        <span class="keywordtype">float</span> r1 = std::max(radii.at(v + 1), 1e-5f);</div>
+<div class="line"><a id="l03929" name="l03929"></a><span class="lineno"> 3929</span>        objIDs.push_back(context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#ga91e46b44e9d7ece5a7e75e739cac4610" title="Add a 3D cone compound object to the Context.">addConeObject</a>(radial_subdivisions, vertices.at(v), vertices.at(v + 1), r0, r1, colors.at(v)));</div>
 <div class="line"><a id="l03930" name="l03930"></a><span class="lineno"> 3930</span>    }</div>
 <div class="line"><a id="l03931" name="l03931"></a><span class="lineno"> 3931</span> </div>
-<div class="line"><a id="l03932" name="l03932"></a><span class="lineno"> 3932</span>    std::vector&lt;uint&gt; objIDs;</div>
-<div class="line"><a id="l03933" name="l03933"></a><span class="lineno"> 3933</span>    objIDs.reserve(Nverts - 1);</div>
+<div class="line"><a id="l03932" name="l03932"></a><span class="lineno"> 3932</span>    <span class="keywordflow">return</span> objIDs;</div>
+<div class="line"><a id="l03933" name="l03933"></a><span class="lineno"> 3933</span>}</div>
 <div class="line"><a id="l03934" name="l03934"></a><span class="lineno"> 3934</span> </div>
-<div class="line"><a id="l03935" name="l03935"></a><span class="lineno"> 3935</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> v = 0; v &lt; Nverts - 1; v++) {</div>
-<div class="line"><a id="l03936" name="l03936"></a><span class="lineno"> 3936</span>        <span class="keywordflow">if</span> ((vertices.at(v + 1) - vertices.at(v)).magnitude() &lt; 1e-6f) {</div>
-<div class="line"><a id="l03937" name="l03937"></a><span class="lineno"> 3937</span>            <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l03938" name="l03938"></a><span class="lineno"> 3938</span>        }</div>
-<div class="line"><a id="l03939" name="l03939"></a><span class="lineno"> 3939</span>        <span class="keywordtype">float</span> r0 = std::max(radii.at(v), 1e-5f);</div>
-<div class="line"><a id="l03940" name="l03940"></a><span class="lineno"> 3940</span>        <span class="keywordtype">float</span> r1 = std::max(radii.at(v + 1), 1e-5f);</div>
-<div class="line"><a id="l03941" name="l03941"></a><span class="lineno"> 3941</span>        objIDs.push_back(context_ptr-&gt;<a class="code hl_function" href="group__compoundobjects.html#ga91e46b44e9d7ece5a7e75e739cac4610" title="Add a 3D cone compound object to the Context.">addConeObject</a>(radial_subdivisions, vertices.at(v), vertices.at(v + 1), r0, r1, colors.at(v)));</div>
-<div class="line"><a id="l03942" name="l03942"></a><span class="lineno"> 3942</span>    }</div>
-<div class="line"><a id="l03943" name="l03943"></a><span class="lineno"> 3943</span> </div>
-<div class="line"><a id="l03944" name="l03944"></a><span class="lineno"> 3944</span>    <span class="keywordflow">return</span> objIDs;</div>
-<div class="line"><a id="l03945" name="l03945"></a><span class="lineno"> 3945</span>}</div>
-<div class="line"><a id="l03946" name="l03946"></a><span class="lineno"> 3946</span> </div>
-<div class="line"><a id="l03947" name="l03947"></a><span class="lineno"> 3947</span><span class="keywordtype">bool</span> PlantArchitecture::detectGroundCollision(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> objID) {</div>
-<div class="line"><a id="l03948" name="l03948"></a><span class="lineno"> 3948</span>    std::vector&lt;uint&gt; objIDs = {objID};</div>
-<div class="line"><a id="l03949" name="l03949"></a><span class="lineno"> 3949</span>    <span class="keywordflow">return</span> detectGroundCollision(objIDs);</div>
-<div class="line"><a id="l03950" name="l03950"></a><span class="lineno"> 3950</span>}</div>
-<div class="line"><a id="l03951" name="l03951"></a><span class="lineno"> 3951</span> </div>
-<div class="line"><a id="l03952" name="l03952"></a><span class="lineno"> 3952</span><span class="keywordtype">bool</span> PlantArchitecture::detectGroundCollision(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;objID)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l03953" name="l03953"></a><span class="lineno"> 3953</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> ID: objID) {</div>
-<div class="line"><a id="l03954" name="l03954"></a><span class="lineno"> 3954</span>        <span class="keywordflow">if</span> (context_ptr-&gt;doesObjectExist(ID)) {</div>
-<div class="line"><a id="l03955" name="l03955"></a><span class="lineno"> 3955</span>            <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs = context_ptr-&gt;getObjectPrimitiveUUIDs(ID);</div>
-<div class="line"><a id="l03956" name="l03956"></a><span class="lineno"> 3956</span>            <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID: UUIDs) {</div>
-<div class="line"><a id="l03957" name="l03957"></a><span class="lineno"> 3957</span>                <span class="keyword">const</span> std::vector&lt;vec3&gt; &amp;vertices = context_ptr-&gt;getPrimitiveVertices(UUID);</div>
-<div class="line"><a id="l03958" name="l03958"></a><span class="lineno"> 3958</span>                <span class="keywordflow">for</span> (<span class="keyword">const</span> vec3 &amp;v: vertices) {</div>
-<div class="line"><a id="l03959" name="l03959"></a><span class="lineno"> 3959</span>                    <span class="keywordflow">if</span> (v.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a> &lt; ground_clipping_height) {</div>
-<div class="line"><a id="l03960" name="l03960"></a><span class="lineno"> 3960</span>                        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l03961" name="l03961"></a><span class="lineno"> 3961</span>                    }</div>
-<div class="line"><a id="l03962" name="l03962"></a><span class="lineno"> 3962</span>                }</div>
-<div class="line"><a id="l03963" name="l03963"></a><span class="lineno"> 3963</span>            }</div>
-<div class="line"><a id="l03964" name="l03964"></a><span class="lineno"> 3964</span>        }</div>
-<div class="line"><a id="l03965" name="l03965"></a><span class="lineno"> 3965</span>    }</div>
-<div class="line"><a id="l03966" name="l03966"></a><span class="lineno"> 3966</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l03967" name="l03967"></a><span class="lineno"> 3967</span>}</div>
-<div class="line"><a id="l03968" name="l03968"></a><span class="lineno"> 3968</span> </div>
-<div class="foldopen" id="foldopen03969" data-start="{" data-end="}">
-<div class="line"><a id="l03969" name="l03969"></a><span class="lineno"><a class="line" href="class_plant_architecture.html#acc53c4a5dd259f25b2b4a26907f8b749"> 3969</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_architecture.html#acc53c4a5dd259f25b2b4a26907f8b749" title="Add optional output object data values to the Context.">PlantArchitecture::optionalOutputObjectData</a>(<span class="keyword">const</span> std::string &amp;object_data_label) {</div>
-<div class="line"><a id="l03970" name="l03970"></a><span class="lineno"> 3970</span>    <span class="keywordflow">if</span> (output_object_data.find(object_data_label) == output_object_data.end()) {</div>
-<div class="line"><a id="l03971" name="l03971"></a><span class="lineno"> 3971</span>        std::cerr &lt;&lt; <span class="stringliteral">&quot;WARNING (PlantArchitecture::optionalOutputObjectData): Output object data of &#39;&quot;</span> &lt;&lt; object_data_label &lt;&lt; <span class="stringliteral">&quot;&#39; is not a valid option.&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"><a id="l03972" name="l03972"></a><span class="lineno"> 3972</span>        <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l03973" name="l03973"></a><span class="lineno"> 3973</span>    }</div>
-<div class="line"><a id="l03974" name="l03974"></a><span class="lineno"> 3974</span>    output_object_data.at(object_data_label) = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l03975" name="l03975"></a><span class="lineno"> 3975</span>}</div>
+<div class="line"><a id="l03935" name="l03935"></a><span class="lineno"> 3935</span><span class="keywordtype">bool</span> PlantArchitecture::detectGroundCollision(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> objID) {</div>
+<div class="line"><a id="l03936" name="l03936"></a><span class="lineno"> 3936</span>    std::vector&lt;uint&gt; objIDs = {objID};</div>
+<div class="line"><a id="l03937" name="l03937"></a><span class="lineno"> 3937</span>    <span class="keywordflow">return</span> detectGroundCollision(objIDs);</div>
+<div class="line"><a id="l03938" name="l03938"></a><span class="lineno"> 3938</span>}</div>
+<div class="line"><a id="l03939" name="l03939"></a><span class="lineno"> 3939</span> </div>
+<div class="line"><a id="l03940" name="l03940"></a><span class="lineno"> 3940</span><span class="keywordtype">bool</span> PlantArchitecture::detectGroundCollision(<span class="keyword">const</span> std::vector&lt;uint&gt; &amp;objID)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l03941" name="l03941"></a><span class="lineno"> 3941</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> ID: objID) {</div>
+<div class="line"><a id="l03942" name="l03942"></a><span class="lineno"> 3942</span>        <span class="keywordflow">if</span> (context_ptr-&gt;doesObjectExist(ID)) {</div>
+<div class="line"><a id="l03943" name="l03943"></a><span class="lineno"> 3943</span>            <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs = context_ptr-&gt;getObjectPrimitiveUUIDs(ID);</div>
+<div class="line"><a id="l03944" name="l03944"></a><span class="lineno"> 3944</span>            <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID: UUIDs) {</div>
+<div class="line"><a id="l03945" name="l03945"></a><span class="lineno"> 3945</span>                <span class="keyword">const</span> std::vector&lt;vec3&gt; &amp;vertices = context_ptr-&gt;getPrimitiveVertices(UUID);</div>
+<div class="line"><a id="l03946" name="l03946"></a><span class="lineno"> 3946</span>                <span class="keywordflow">for</span> (<span class="keyword">const</span> vec3 &amp;v: vertices) {</div>
+<div class="line"><a id="l03947" name="l03947"></a><span class="lineno"> 3947</span>                    <span class="keywordflow">if</span> (v.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a> &lt; ground_clipping_height) {</div>
+<div class="line"><a id="l03948" name="l03948"></a><span class="lineno"> 3948</span>                        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l03949" name="l03949"></a><span class="lineno"> 3949</span>                    }</div>
+<div class="line"><a id="l03950" name="l03950"></a><span class="lineno"> 3950</span>                }</div>
+<div class="line"><a id="l03951" name="l03951"></a><span class="lineno"> 3951</span>            }</div>
+<div class="line"><a id="l03952" name="l03952"></a><span class="lineno"> 3952</span>        }</div>
+<div class="line"><a id="l03953" name="l03953"></a><span class="lineno"> 3953</span>    }</div>
+<div class="line"><a id="l03954" name="l03954"></a><span class="lineno"> 3954</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l03955" name="l03955"></a><span class="lineno"> 3955</span>}</div>
+<div class="line"><a id="l03956" name="l03956"></a><span class="lineno"> 3956</span> </div>
+<div class="foldopen" id="foldopen03957" data-start="{" data-end="}">
+<div class="line"><a id="l03957" name="l03957"></a><span class="lineno"><a class="line" href="class_plant_architecture.html#acc53c4a5dd259f25b2b4a26907f8b749"> 3957</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_architecture.html#acc53c4a5dd259f25b2b4a26907f8b749" title="Add optional output object data values to the Context.">PlantArchitecture::optionalOutputObjectData</a>(<span class="keyword">const</span> std::string &amp;object_data_label) {</div>
+<div class="line"><a id="l03958" name="l03958"></a><span class="lineno"> 3958</span>    <span class="keywordflow">if</span> (output_object_data.find(object_data_label) == output_object_data.end()) {</div>
+<div class="line"><a id="l03959" name="l03959"></a><span class="lineno"> 3959</span>        std::cerr &lt;&lt; <span class="stringliteral">&quot;WARNING (PlantArchitecture::optionalOutputObjectData): Output object data of &#39;&quot;</span> &lt;&lt; object_data_label &lt;&lt; <span class="stringliteral">&quot;&#39; is not a valid option.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l03960" name="l03960"></a><span class="lineno"> 3960</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l03961" name="l03961"></a><span class="lineno"> 3961</span>    }</div>
+<div class="line"><a id="l03962" name="l03962"></a><span class="lineno"> 3962</span>    output_object_data.at(object_data_label) = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l03963" name="l03963"></a><span class="lineno"> 3963</span>}</div>
 </div>
-<div class="line"><a id="l03976" name="l03976"></a><span class="lineno"> 3976</span> </div>
-<div class="foldopen" id="foldopen03977" data-start="{" data-end="}">
-<div class="line"><a id="l03977" name="l03977"></a><span class="lineno"><a class="line" href="class_plant_architecture.html#a435b4a07a5ce3ed4e0de58b286c5b883"> 3977</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_architecture.html#acc53c4a5dd259f25b2b4a26907f8b749" title="Add optional output object data values to the Context.">PlantArchitecture::optionalOutputObjectData</a>(<span class="keyword">const</span> std::vector&lt;std::string&gt; &amp;object_data_labels) {</div>
-<div class="line"><a id="l03978" name="l03978"></a><span class="lineno"> 3978</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;label: object_data_labels) {</div>
-<div class="line"><a id="l03979" name="l03979"></a><span class="lineno"> 3979</span>        <span class="keywordflow">if</span> (output_object_data.find(label) == output_object_data.end()) {</div>
-<div class="line"><a id="l03980" name="l03980"></a><span class="lineno"> 3980</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;WARNING (PlantArchitecture::optionalOutputObjectData): Output object data of &#39;&quot;</span> &lt;&lt; label &lt;&lt; <span class="stringliteral">&quot;&#39; is not a valid option.&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"><a id="l03981" name="l03981"></a><span class="lineno"> 3981</span>            <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l03982" name="l03982"></a><span class="lineno"> 3982</span>        }</div>
-<div class="line"><a id="l03983" name="l03983"></a><span class="lineno"> 3983</span>        output_object_data.at(label) = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l03984" name="l03984"></a><span class="lineno"> 3984</span>    }</div>
-<div class="line"><a id="l03985" name="l03985"></a><span class="lineno"> 3985</span>}</div>
+<div class="line"><a id="l03964" name="l03964"></a><span class="lineno"> 3964</span> </div>
+<div class="foldopen" id="foldopen03965" data-start="{" data-end="}">
+<div class="line"><a id="l03965" name="l03965"></a><span class="lineno"><a class="line" href="class_plant_architecture.html#a435b4a07a5ce3ed4e0de58b286c5b883"> 3965</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_plant_architecture.html#acc53c4a5dd259f25b2b4a26907f8b749" title="Add optional output object data values to the Context.">PlantArchitecture::optionalOutputObjectData</a>(<span class="keyword">const</span> std::vector&lt;std::string&gt; &amp;object_data_labels) {</div>
+<div class="line"><a id="l03966" name="l03966"></a><span class="lineno"> 3966</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp;label: object_data_labels) {</div>
+<div class="line"><a id="l03967" name="l03967"></a><span class="lineno"> 3967</span>        <span class="keywordflow">if</span> (output_object_data.find(label) == output_object_data.end()) {</div>
+<div class="line"><a id="l03968" name="l03968"></a><span class="lineno"> 3968</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;WARNING (PlantArchitecture::optionalOutputObjectData): Output object data of &#39;&quot;</span> &lt;&lt; label &lt;&lt; <span class="stringliteral">&quot;&#39; is not a valid option.&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l03969" name="l03969"></a><span class="lineno"> 3969</span>            <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l03970" name="l03970"></a><span class="lineno"> 3970</span>        }</div>
+<div class="line"><a id="l03971" name="l03971"></a><span class="lineno"> 3971</span>        output_object_data.at(label) = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l03972" name="l03972"></a><span class="lineno"> 3972</span>    }</div>
+<div class="line"><a id="l03973" name="l03973"></a><span class="lineno"> 3973</span>}</div>
 </div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->

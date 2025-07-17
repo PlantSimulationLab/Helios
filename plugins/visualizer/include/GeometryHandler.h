@@ -17,6 +17,7 @@ Copyright (C) 2016-2025 Brian Bailey
 #define VISUALIZER_GEOMETRY_HANDLER_H
 
 #include "global.h"
+#include <unordered_set>
 
 class GeometryHandler {
 private:
@@ -94,6 +95,15 @@ public:
      */
     void addGeometry(size_t UUID, const VisualizerGeometryType &geometry_type, const std::vector<helios::vec3> &vertices, const helios::RGBAcolor &color,
                      const std::vector<helios::vec2> &uvs, int textureID, bool override_texture_color, bool has_glyph_texture, uint coordinate_system, bool visible_flag, bool iscontextgeometry, int size = 0);
+
+    //! Mark a geometry primitive as modified
+    void markDirty(size_t UUID);
+
+    //! Retrieve the set of modified primitives
+    [[nodiscard]] const std::unordered_set<size_t> &getDirtyUUIDs() const;
+
+    //! Clear the list of modified primitives
+    void clearDirtyUUIDs();
 
     [[nodiscard]] bool doesGeometryExist(size_t UUID) const;
 
@@ -420,6 +430,8 @@ private:
     std::unordered_map< VisualizerGeometryType, std::vector<char> > visible_flag_data;
     std::unordered_map< VisualizerGeometryType, std::vector<bool> > context_geometry_flag_data;
     std::unordered_map< VisualizerGeometryType, std::vector<bool> > delete_flag_data;
+
+    std::unordered_set<size_t> dirty_UUIDs;
 
     size_t deleted_primitive_count = 0;
 

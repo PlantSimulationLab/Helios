@@ -2,12 +2,17 @@ cmake_minimum_required(VERSION 3.15)
 
 project(helios)
 
-include_directories(include)
-include_directories(../../core/include)
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
-add_library(visualizer STATIC "src/Visualizer.cpp;src/GeometryHandler.cpp")
+set( VISUALIZER_SOURCES
+	"src/Visualizer.cpp"
+	"src/GeometryHandler.cpp"
+	"src/selfTest.cpp"
+)
+
+add_library(visualizer STATIC ${VISUALIZER_SOURCES})
+
+target_include_directories(visualizer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/lib/glm" )
 
 #External libraries
 set(SAVED_LOG_LEVEL ${CMAKE_MESSAGE_LOG_LEVEL})
@@ -16,29 +21,29 @@ set(CMAKE_MESSAGE_LOG_LEVEL WARNING)
 #freetype
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/lib/freetype-2.7/include")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/freetype-2.7")
-target_link_libraries( visualizer freetype )
+target_link_libraries( visualizer PRIVATE freetype )
 
 #glew
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/lib/glew-2.2.0/include")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/glew-2.2.0/build/cmake")
-target_link_libraries( visualizer glew_s )
+target_link_libraries( visualizer PRIVATE glew_s )
 #target_link_libraries( visualizer GLEW_static )
 
 #jpeg (built with the Helios core)
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../core/lib/libjpeg-9a")
 include_directories("${CMAKE_BINARY_DIR}/lib/libjpeg-9a")
-target_link_libraries( visualizer jpeg )
+target_link_libraries( visualizer PRIVATE jpeg )
 add_dependencies( visualizer jpeg )
 
 #libpng
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../core/lib/libpng")
-target_link_libraries( visualizer png_static )
+target_link_libraries( visualizer PRIVATE png_static )
 add_dependencies( png_static zlibstatic )
 
 #glfw
 include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/lib/glfw-3.3.2/include")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/glfw-3.3.2")
-target_link_libraries( visualizer glfw )
+target_link_libraries( visualizer PUBLIC glfw )
 target_compile_options(glfw
 		PRIVATE
 		# for clang, AppleClang & gcc
@@ -48,31 +53,23 @@ target_compile_options(glfw
 		$<$<C_COMPILER_ID:MSVC>:/wd4996>
 )
 
-
-#glm
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/lib/glm")
-
 #openGL
 find_package(OpenGL REQUIRED)
 if(OPENGL_FOUND)
 	include_directories(${OPENGL_INCLUDE_DIRS})
-	target_link_libraries( visualizer ${OPENGL_LIBRARIES} )
+	target_link_libraries( visualizer PRIVATE ${OPENGL_LIBRARIES} )
 endif(OPENGL_FOUND)
 
 #X11      
 find_package(X11 REQUIRED)
 if(X11_FOUND)
 	include_directories(${X11_INCLUDE_DIRS})
-	target_link_libraries( visualizer ${X11_LIBRARIES} )
+	target_link_libraries( visualizer PRIVATE ${X11_LIBRARIES} )
 endif(X11_FOUND)
 
 set(CMAKE_MESSAGE_LOG_LEVEL ${SAVED_LOG_LEVEL})
 
-target_link_libraries( visualizer helios )
-
 add_dependencies( visualizer helios )
-
-set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS};${CMAKE_CURRENT_SOURCE_DIR}/lib/glm" PARENT_SCOPE )
 
 file( COPY fonts DESTINATION ${CMAKE_BINARY_DIR}/plugins/visualizer/ )
 
@@ -88,7 +85,7 @@ add_custom_command(
 		COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_BINARY_DIR}/plugins/visualizer/shader_assets.stamp"
 		DEPENDS ${SHADER_FILES}
 )
-add_custom_target(copy_shaders ALL DEPENDS "${CMAKE_BINARY_DIR}/plugins/visualizer/shader_assets.stamp")
+add_custom_target(copy_shaders DEPENDS "${CMAKE_BINARY_DIR}/plugins/visualizer/shader_assets.stamp")
 
 add_custom_command(
 		OUTPUT "${CMAKE_BINARY_DIR}/plugins/visualizer/texture_assets.stamp"
@@ -99,7 +96,10 @@ add_custom_command(
 		COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_BINARY_DIR}/plugins/visualizer/texture_assets.stamp"
 		DEPENDS ${TEXTURE_FILES}
 )
-add_custom_target(copy_textures ALL DEPENDS "${CMAKE_BINARY_DIR}/plugins/visualizer/texture_assets.stamp")
+add_custom_target(copy_textures DEPENDS "${CMAKE_BINARY_DIR}/plugins/visualizer/texture_assets.stamp")
 
 add_dependencies(visualizer copy_shaders copy_textures)
 
+add_executable( visualizer_tests "src/TestMain.cpp" )
+target_link_libraries( visualizer_tests PRIVATE visualizer )
+add_test( NAME visualizer_tests COMMAND visualizer_tests )

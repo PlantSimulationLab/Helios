@@ -296,7 +296,7 @@ void SyntheticAnnotation::render( const char* outputdir ) {
         std::cout << "Rendering RGB image containing " << UUIDs_all.size() / 1000.f << "K primitives..." << std::flush;
     }
 
-    Visualizer vis_RGB(window_width, window_height, 8, false);
+    Visualizer vis_RGB(window_width, window_height, 8, false, false);
     vis_RGB.disableMessages();
 
     vis_RGB.getFramebufferSize(framebufferW, framebufferH);
@@ -351,7 +351,7 @@ void SyntheticAnnotation::render( const char* outputdir ) {
         std::cout << "Generating labeled image containing " << labelIDs.size() << " label groups..." << std::endl;
     }
 
-    Visualizer vis(window_width, window_height, 0, false);
+    Visualizer vis(window_width, window_height, 0, false, false);
     vis.disableMessages();
 
     vis.getFramebufferSize(framebufferW, framebufferH);

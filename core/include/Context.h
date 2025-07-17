@@ -2834,8 +2834,8 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (uint id: UUIDs) {
-                primitives.at(id)->setPrimitiveData(label, data);
+            for (size_t i=0; i<UUIDs.size(); ++i) {
+                primitives.at(UUIDs[i])->setPrimitiveData(label, data);
             }
         }
 
@@ -3360,14 +3360,14 @@ namespace helios {
          */
         template<typename T>
         void setObjectData(const std::vector<uint> &objIDs, const char *label, const T &data) {
-#ifdef USE_OPENMP
-#pragma omp parallel for
-#endif
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
-            for (uint id: objIDs) {
-                objects.at(id)->setObjectData(label, data);
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+            for ( size_t i = 0; i < objIDs.size(); ++i) {
+                objects.at(objIDs[i])->setObjectData(label, data);
             }
         }
 
@@ -3380,15 +3380,16 @@ namespace helios {
          */
         template<typename T>
         void setObjectData(const std::vector<std::vector<uint>> &objIDs, const char *label, const T &data) {
-#ifdef USE_OPENMP
-#pragma omp parallel for
-#endif
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
-            for (const auto &j: objIDs) {
-                for (uint id: j) {
-                    objects.at(id)->setObjectData(label, data);
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+            for ( size_t j = 0; j < objIDs.size(); ++j) {
+                for ( size_t i = 0; i < objIDs[j].size(); ++i) {
+                    uint objID = objIDs[j][i];
+                    objects.at(objID)->setObjectData(label, data);
                 }
             }
         }
@@ -3402,16 +3403,17 @@ namespace helios {
          */
         template<typename T>
         void setObjectData(const std::vector<std::vector<std::vector<uint>>> &objIDs, const char *label, const T &data) {
-#ifdef USE_OPENMP
-#pragma omp parallel for
-#endif
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
-            for (const auto &k: objIDs) {
-                for (const auto &j: k) {
-                    for (uint id: j) {
-                        objects.at(id)->setObjectData(label, data);
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
+            for ( size_t k = 0; k < objIDs.size(); ++k) {
+                for ( size_t j = 0; j < objIDs[k].size(); ++j) {
+                    for ( size_t i = 0; i < objIDs[k][j].size(); ++i) {
+                        uint objID = objIDs[k][j][i];
+                        objects.at(objID)->setObjectData(label, data);
                     }
                 }
             }
@@ -3453,12 +3455,12 @@ namespace helios {
                 helios_runtime_error("ERROR (Context::setObjectData): Object IDs and data vectors must be the same size.");
             }
 #endif
-#ifdef USE_OPENMP
-#pragma omp parallel for
-#endif
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
+#ifdef USE_OPENMP
+#pragma omp parallel for
+#endif
             for (size_t i = 0; i < objIDs.size(); ++i) {
                 objects.at(objIDs[i])->setObjectData(label, data[i]);
             }
