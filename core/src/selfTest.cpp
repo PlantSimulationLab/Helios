@@ -2017,6 +2017,7 @@ TEST_SUITE("Context Class") {
                 filtered = ctx.filterPrimitivesByData(uuids, "filter_me", 1, "==");
                 DOCTEST_CHECK(filtered.size() == 1);
                 DOCTEST_CHECK(filtered[0] == uuids[1]);
+                capture_cerr cerr_buffer;
                 DOCTEST_CHECK_THROWS_AS(filtered = ctx.filterPrimitivesByData(uuids, "filter_me", 1, "!!"), std::runtime_error);
             }
 
@@ -2029,6 +2030,7 @@ TEST_SUITE("Context Class") {
                 // getObjectDataType
                 DOCTEST_CHECK(ctx.getObjectDataType(o, "test_int") == HELIOS_TYPE_INT);
 #ifdef HELIOS_DEBUG
+                capture_cerr cerr_buffer;
                 DOCTEST_CHECK_THROWS_AS(ctx.getObjectDataType(o, "non_existent"), std::runtime_error);
 #endif
 
