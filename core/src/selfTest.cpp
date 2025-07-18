@@ -2042,6 +2042,11 @@ TEST_SUITE("Context Class") {
         ctx.duplicatePrimitiveData("global_copy_test", "global_copy_test_new");
         DOCTEST_CHECK(ctx.doesPrimitiveDataExist(p1, "global_copy_test_new"));
         DOCTEST_CHECK(!ctx.doesPrimitiveDataExist(p2, "global_copy_test_new")); // p2 doesn't have original
+
+        std::vector<std::string> all_labels = ctx.listAllPrimitiveDataLabels();
+        DOCTEST_CHECK(std::find(all_labels.begin(), all_labels.end(), "my_data") != all_labels.end());
+        DOCTEST_CHECK(std::find(all_labels.begin(), all_labels.end(), "my_data_copy") != all_labels.end());
+        DOCTEST_CHECK(std::find(all_labels.begin(), all_labels.end(), "new_data_name") != all_labels.end());
     }
 
     TEST_CASE("Context primitive data calculations") {
@@ -2178,6 +2183,11 @@ TEST_SUITE("Context Class") {
         // duplicateObjectData
         ctx.duplicateObjectData(o2, "my_data", "my_data_copy");
         DOCTEST_CHECK(ctx.doesObjectDataExist(o2, "my_data_copy"));
+
+        std::vector<std::string> all_obj_labels = ctx.listAllObjectDataLabels();
+        DOCTEST_CHECK(std::find(all_obj_labels.begin(), all_obj_labels.end(), "my_data") != all_obj_labels.end());
+        DOCTEST_CHECK(std::find(all_obj_labels.begin(), all_obj_labels.end(), "my_data_copy") != all_obj_labels.end());
+        DOCTEST_CHECK(std::find(all_obj_labels.begin(), all_obj_labels.end(), "new_name") != all_obj_labels.end());
     }
 
     TEST_CASE("Global data") {
@@ -2873,7 +2883,6 @@ TEST_SUITE("Additional Coverage and Edge Cases") {
             std::vector<uint> g_uint;
             ctx.getGlobalData("g_uint", g_uint);
             DOCTEST_CHECK(g_uint[0] == 2);
-
         }
     }
 }
@@ -3338,7 +3347,7 @@ TEST_SUITE("Data Management") {
 
     TEST_CASE("Primitive Data Types") {
         capture_cerr cerr_buffer;
-        
+
         Context ctx;
         uint p = ctx.addPatch();
 
@@ -3520,6 +3529,11 @@ TEST_SUITE("Data Management") {
         ctx.duplicatePrimitiveData("global_copy_test", "global_copy_test_new");
         DOCTEST_CHECK(ctx.doesPrimitiveDataExist(p1, "global_copy_test_new"));
         DOCTEST_CHECK(!ctx.doesPrimitiveDataExist(p2, "global_copy_test_new")); // p2 doesn't have original
+
+        std::vector<std::string> all_labels = ctx.listAllPrimitiveDataLabels();
+        DOCTEST_CHECK(std::find(all_labels.begin(), all_labels.end(), "my_data") != all_labels.end());
+        DOCTEST_CHECK(std::find(all_labels.begin(), all_labels.end(), "my_data_copy") != all_labels.end());
+        DOCTEST_CHECK(std::find(all_labels.begin(), all_labels.end(), "new_data_name") != all_labels.end());
     }
 
     TEST_CASE("Context primitive data calculations") {
@@ -3656,6 +3670,11 @@ TEST_SUITE("Data Management") {
         // duplicateObjectData
         ctx.duplicateObjectData(o2, "my_data", "my_data_copy");
         DOCTEST_CHECK(ctx.doesObjectDataExist(o2, "my_data_copy"));
+
+        std::vector<std::string> all_obj_labels = ctx.listAllObjectDataLabels();
+        DOCTEST_CHECK(std::find(all_obj_labels.begin(), all_obj_labels.end(), "my_data") != all_obj_labels.end());
+        DOCTEST_CHECK(std::find(all_obj_labels.begin(), all_obj_labels.end(), "my_data_copy") != all_obj_labels.end());
+        DOCTEST_CHECK(std::find(all_obj_labels.begin(), all_obj_labels.end(), "new_name") != all_obj_labels.end());
     }
 
     TEST_CASE("Global data") {

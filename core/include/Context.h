@@ -422,8 +422,8 @@ namespace helios {
             }
 #endif
 
-            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> ||
-                                  std::is_same_v<T, int2> || std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char*> || std::is_same_v<std::decay_t<T>, char*>,
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "CompoundObject::getObjectData() was called with an unsupported type.");
 
             HeliosDataType type = object_data_types.at(label);
@@ -488,7 +488,7 @@ namespace helios {
                 } else {
                     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int4, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type int4.");
                 }
-            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char*> || std::is_same_v<std::decay_t<T>, char*>) {
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                 if (type == HELIOS_TYPE_STRING) {
                     data = object_data_string.at(label).front();
                 } else {
@@ -573,7 +573,7 @@ namespace helios {
                 } else {
                     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int4, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type int4.");
                 }
-            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char*> || std::is_same_v<std::decay_t<T>, char*>) {
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                 if (type == HELIOS_TYPE_STRING) {
                     data = object_data_string.at(label);
                 } else {
@@ -2148,6 +2148,14 @@ namespace helios {
 
         std::map<std::string, GlobalData> globaldata;
 
+        std::unordered_map<std::string, size_t> primitive_data_label_counts;
+        std::unordered_map<std::string, size_t> object_data_label_counts;
+
+        void incrementPrimitiveDataLabel(const std::string &label);
+        void decrementPrimitiveDataLabel(const std::string &label);
+        void incrementObjectDataLabel(const std::string &label);
+        void decrementObjectDataLabel(const std::string &label);
+
         //---------- CONTEXT PRIVATE MEMBER VARIABLES ---------//
 
         //! Simulation date (Date vector)
@@ -2796,6 +2804,9 @@ namespace helios {
                 helios_runtime_error("ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
             }
 #endif
+            if (!primitives.at(UUID)->doesPrimitiveDataExist(label)) {
+                incrementPrimitiveDataLabel(label);
+            }
             primitives.at(UUID)->setPrimitiveData(label, data);
         }
 
@@ -2818,6 +2829,9 @@ namespace helios {
 #pragma omp parallel for
 #endif
             for (size_t i = 0; i < UUIDs.size(); ++i) {
+                if (!primitives.at(UUIDs[i])->doesPrimitiveDataExist(label)) {
+                    incrementPrimitiveDataLabel(label);
+                }
                 primitives.at(UUIDs[i])->setPrimitiveData(label, data[i]);
             }
         }
@@ -2834,7 +2848,10 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t i=0; i<UUIDs.size(); ++i) {
+            for (size_t i = 0; i < UUIDs.size(); ++i) {
+                if (!primitives.at(UUIDs[i])->doesPrimitiveDataExist(label)) {
+                    incrementPrimitiveDataLabel(label);
+                }
                 primitives.at(UUIDs[i])->setPrimitiveData(label, data);
             }
         }
@@ -3348,6 +3365,12 @@ namespace helios {
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
+            if (!objects.at(objID)->doesObjectDataExist(label)) {
+                incrementObjectDataLabel(label);
+            }
+            if (!objects.at(objID)->doesObjectDataExist(label)) {
+                incrementObjectDataLabel(label);
+            }
             objects.at(objID)->setObjectData(label, data);
         }
 
@@ -3366,7 +3389,10 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for ( size_t i = 0; i < objIDs.size(); ++i) {
+            for (size_t i = 0; i < objIDs.size(); ++i) {
+                if (!objects.at(objIDs[i])->doesObjectDataExist(label)) {
+                    incrementObjectDataLabel(label);
+                }
                 objects.at(objIDs[i])->setObjectData(label, data);
             }
         }
@@ -3386,9 +3412,12 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for ( size_t j = 0; j < objIDs.size(); ++j) {
-                for ( size_t i = 0; i < objIDs[j].size(); ++i) {
+            for (size_t j = 0; j < objIDs.size(); ++j) {
+                for (size_t i = 0; i < objIDs[j].size(); ++i) {
                     uint objID = objIDs[j][i];
+                    if (!objects.at(objID)->doesObjectDataExist(label)) {
+                        incrementObjectDataLabel(label);
+                    }
                     objects.at(objID)->setObjectData(label, data);
                 }
             }
@@ -3409,10 +3438,13 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for ( size_t k = 0; k < objIDs.size(); ++k) {
-                for ( size_t j = 0; j < objIDs[k].size(); ++j) {
-                    for ( size_t i = 0; i < objIDs[k][j].size(); ++i) {
+            for (size_t k = 0; k < objIDs.size(); ++k) {
+                for (size_t j = 0; j < objIDs[k].size(); ++j) {
+                    for (size_t i = 0; i < objIDs[k][j].size(); ++i) {
                         uint objID = objIDs[k][j][i];
+                        if (!objects.at(objID)->doesObjectDataExist(label)) {
+                            incrementObjectDataLabel(label);
+                        }
                         objects.at(objID)->setObjectData(label, data);
                     }
                 }
@@ -3462,6 +3494,9 @@ namespace helios {
 #pragma omp parallel for
 #endif
             for (size_t i = 0; i < objIDs.size(); ++i) {
+                if (!objects.at(objIDs[i])->doesObjectDataExist(label)) {
+                    incrementObjectDataLabel(label);
+                }
                 objects.at(objIDs[i])->setObjectData(label, data[i]);
             }
         }
@@ -3893,6 +3928,9 @@ namespace helios {
          * \return Vector of labels for all global data
          */
         [[nodiscard]] std::vector<std::string> listGlobalData() const;
+
+        [[nodiscard]] std::vector<std::string> listAllPrimitiveDataLabels() const;
+        [[nodiscard]] std::vector<std::string> listAllObjectDataLabels() const;
 
         //! Check if global data 'label' exists
         /**

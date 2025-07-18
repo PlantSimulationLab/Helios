@@ -1598,6 +1598,10 @@ void Context::deletePrimitive(uint UUID) {
 
     Primitive *prim = primitives.at(UUID);
 
+    for (const auto &[lbl, type]: prim->primitive_data_types) {
+        decrementPrimitiveDataLabel(lbl);
+    }
+
     if (prim->getParentObjectID() != 0) { // primitive belongs to an object
 
         uint ObjID = prim->getParentObjectID();
@@ -2683,6 +2687,10 @@ void Context::deleteObject(uint ObjID) {
     }
 
     CompoundObject *obj = objects.at(ObjID);
+
+    for (const auto &[lbl, type]: obj->object_data_types) {
+        decrementObjectDataLabel(lbl);
+    }
 
     const std::vector<uint> &UUIDs = obj->getPrimitiveUUIDs();
 
