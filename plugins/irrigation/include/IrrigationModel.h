@@ -17,23 +17,66 @@
 #define IRRIGATIONMODEL
 
 #include "Context.h"
+#include <vector>
+#include <cmath>
+#include <string>
 
-// ─────────────── Network primitives ───────────────────────────────────── //
-struct IrrigationNode {
-    double x{}, y{};      //!< plan-view coordinates [m]
-    double pressure{0.0}; //!< hydraulic head [psi]
-    bool   fixed{false};  //!< true ⇒ boundary condition
+
+#include <map>
+#include <unordered_map>
+
+struct Position {
+    double x, y;
 };
 
+// Using std::map with node IDs
+struct Node {
+    int id;
+    std::string type; //junction, barb, emitter
+    Position position;
+    double pressure;
+    bool is_fixed;
+};
+
+struct Link {
+    int from;
+    int to;
+    double length;
+    double diameter;
+    std::string type; //lateral, submain, main, barbToemitter
+    //double resistance;
+};
+
+class IrrigationModel {
+public:
+    std::unordered_map<int, Node> nodes;  // NodeID -> Node
+    std::vector<Link> links;              // Pipe connections
+
+    // Create a sprinkler system
+    void createSprinklerSystem(double Pw, double fieldLength, double fieldWidth,
+                             double sprinklerSpacing, double lineSpacing,
+                             const std::string& connectionType);
+
+    // Helper functions
+    double calculateEmitterFlow(double Pw) const;
+    void printNetwork() const;
+
+private:
+    static constexpr double INCH_TO_METER = 0.0254;
+};
+
+/*
 struct IrrigationPipe {
     int    n1{-1}, n2{-1}; //!< node indices
     double length{0.0};    //!< centre-to-centre length [m]
     double diameter{0.05}; //!< internal diameter [m]
     double kminor{1.0};    //!< minor-loss coefficient
+    double resistance{0.0};
 };
+*/
 
 // ─────────────────────── Main class ───────────────────────────────────── //
-class IrrigationModel {
+/*class IrrigationModel {
 public:
     explicit IrrigationModel(helios::Context* ctx);
 
@@ -67,6 +110,27 @@ private:
     helios::Context*               context{nullptr};
     std::vector<IrrigationNode>    nodes;
     std::vector<IrrigationPipe>    pipes;
-};
+};*/
+//
+// class IrrigationModel{
+// public:
+//     explicit IrrigationModel(helios::Context* context);
+//
+//     // Core functionality
+//     void createBasicSystem(float field_length, float field_width);
+//     void solveHydraulics();
+//
+//     // Getters
+//     const std::vector<IrrigationNode>& getNodes() const { return nodes; }
+//     const std::vector<IrrigationPipe>& getPipes() const { return pipes; }
+//
+// private:
+//     helios::Context* context;
+//     std::vector<IrrigationNode> nodes;
+//     std::vector<IrrigationPipe> pipes;
+//
+//     void calculatePipeResistances();
+// };
+
 
 #endif
