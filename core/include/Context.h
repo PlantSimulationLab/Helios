@@ -422,8 +422,8 @@ namespace helios {
             }
 #endif
 
-            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> ||
-                                  std::is_same_v<T, int2> || std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char*> || std::is_same_v<std::decay_t<T>, char*>,
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "CompoundObject::getObjectData() was called with an unsupported type.");
 
             HeliosDataType type = object_data_types.at(label);
@@ -488,7 +488,7 @@ namespace helios {
                 } else {
                     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int4, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type int4.");
                 }
-            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char*> || std::is_same_v<std::decay_t<T>, char*>) {
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                 if (type == HELIOS_TYPE_STRING) {
                     data = object_data_string.at(label).front();
                 } else {
@@ -573,7 +573,7 @@ namespace helios {
                 } else {
                     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int4, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type int4.");
                 }
-            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char*> || std::is_same_v<std::decay_t<T>, char*>) {
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                 if (type == HELIOS_TYPE_STRING) {
                     data = object_data_string.at(label);
                 } else {
@@ -2834,7 +2834,7 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t i=0; i<UUIDs.size(); ++i) {
+            for (size_t i = 0; i < UUIDs.size(); ++i) {
                 primitives.at(UUIDs[i])->setPrimitiveData(label, data);
             }
         }
@@ -3366,7 +3366,7 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for ( size_t i = 0; i < objIDs.size(); ++i) {
+            for (size_t i = 0; i < objIDs.size(); ++i) {
                 objects.at(objIDs[i])->setObjectData(label, data);
             }
         }
@@ -3386,8 +3386,8 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for ( size_t j = 0; j < objIDs.size(); ++j) {
-                for ( size_t i = 0; i < objIDs[j].size(); ++i) {
+            for (size_t j = 0; j < objIDs.size(); ++j) {
+                for (size_t i = 0; i < objIDs[j].size(); ++i) {
                     uint objID = objIDs[j][i];
                     objects.at(objID)->setObjectData(label, data);
                 }
@@ -3409,9 +3409,9 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for ( size_t k = 0; k < objIDs.size(); ++k) {
-                for ( size_t j = 0; j < objIDs[k].size(); ++j) {
-                    for ( size_t i = 0; i < objIDs[k][j].size(); ++i) {
+            for (size_t k = 0; k < objIDs.size(); ++k) {
+                for (size_t j = 0; j < objIDs[k].size(); ++j) {
+                    for (size_t i = 0; i < objIDs[k][j].size(); ++i) {
                         uint objID = objIDs[k][j][i];
                         objects.at(objID)->setObjectData(label, data);
                     }
@@ -4622,6 +4622,72 @@ namespace helios {
          */
         uint addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius, const char *texturefile);
 
+        //! Add an icosphere compound object to the Context
+        /**
+         * \param[in] Ndivs Number of icosphere subdivision iterations
+         * \param[in] center (x,y,z) coordinate of sphere center
+         * \param[in] radius Radius of sphere
+         * \return Object ID of new icosphere object.
+         * \note Assumes a default color of green
+         * \ingroup compoundobjects
+         */
+        uint addIcoSphereObject(uint Ndivs, const vec3 &center, float radius);
+
+        //! Add an icosphere compound object to the Context
+        /**
+         * \param[in] Ndivs Number of icosphere subdivision iterations
+         * \param[in] center (x,y,z) coordinate of sphere center
+         * \param[in] radius Radius of sphere
+         * \param[in] color r-g-b color of sphere
+         * \return Object ID of new icosphere object.
+         * \ingroup compoundobjects
+         */
+        uint addIcoSphereObject(uint Ndivs, const vec3 &center, float radius, const RGBcolor &color);
+
+        //! Add an icosphere compound object to the Context colored by texture map
+        /**
+         * \param[in] Ndivs Number of icosphere subdivision iterations
+         * \param[in] center (x,y,z) coordinate of sphere center
+         * \param[in] radius Radius of sphere
+         * \param[in] texturefile Name of image file for texture map
+         * \return Object ID of new icosphere object.
+         * \ingroup compoundobjects
+         */
+        uint addIcoSphereObject(uint Ndivs, const vec3 &center, float radius, const char *texturefile);
+
+        //! Add an icosphere/ellipsoid compound object to the Context
+        /**
+         * \param[in] Ndivs Number of icosphere subdivision iterations
+         * \param[in] center (x,y,z) coordinate of sphere center
+         * \param[in] radius Radius of sphere in x-, y-, and z-directions
+         * \return Object ID of new icosphere object.
+         * \note Assumes a default color of green
+         * \ingroup compoundobjects
+         */
+        uint addIcoSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius);
+
+        //! Add an icosphere/ellipsoid compound object to the Context
+        /**
+         * \param[in] Ndivs Number of icosphere subdivision iterations
+         * \param[in] center (x,y,z) coordinate of sphere center
+         * \param[in] radius Radius of sphere in x-, y-, and z-directions
+         * \param[in] color r-g-b color of sphere
+         * \return Object ID of new icosphere object.
+         * \ingroup compoundobjects
+         */
+        uint addIcoSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius, const RGBcolor &color);
+
+        //! Add an icosphere/ellipsoid compound object to the Context colored by texture map
+        /**
+         * \param[in] Ndivs Number of icosphere subdivision iterations
+         * \param[in] center (x,y,z) coordinate of sphere center
+         * \param[in] radius Radius of sphere in x-, y-, and z-directions
+         * \param[in] texturefile Name of image file for texture map
+         * \return Object ID of new icosphere object.
+         * \ingroup compoundobjects
+         */
+        uint addIcoSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius, const char *texturefile);
+
         //! Add a 3D tube compound object to the Context
         /** A `tube' or `snake' compound object comprised of Triangle primitives
          * \image html doc/images/Tube.png "Sample image of a Tube compound object." width=0.1cm
@@ -4915,6 +4981,39 @@ namespace helios {
          * \ingroup compoundobjects
          */
         std::vector<uint> addSphere(uint Ndivs, const vec3 &center, float radius, const char *texturefile);
+
+        //! Add an icosphere to the Context
+        /**
+         * \param[in] Ndivs Number of icosphere subdivision iterations
+         * \param[in] center (x,y,z) coordinate of sphere center
+         * \param[in] radius Radius of sphere
+         * \return Vector of UUIDs for each sub-triangle
+         * \note Assumes a default color of green
+         * \ingroup compoundobjects
+         */
+        std::vector<uint> addIcoSphere(uint Ndivs, const vec3 &center, float radius);
+
+        //! Add an icosphere to the Context
+        /**
+         * \param[in] Ndivs Number of icosphere subdivision iterations
+         * \param[in] center (x,y,z) coordinate of sphere center
+         * \param[in] radius Radius of sphere
+         * \param[in] color r-g-b color of sphere
+         * \return Vector of UUIDs for each sub-triangle
+         * \ingroup compoundobjects
+         */
+        std::vector<uint> addIcoSphere(uint Ndivs, const vec3 &center, float radius, const RGBcolor &color);
+
+        //! Add an icosphere to the Context colored by texture map
+        /**
+         * \param[in] Ndivs Number of icosphere subdivision iterations
+         * \param[in] center (x,y,z) coordinate of sphere center
+         * \param[in] radius Radius of sphere
+         * \param[in] texturefile Name of image file for texture map
+         * \return Vector of UUIDs for each sub-triangle
+         * \ingroup compoundobjects
+         */
+        std::vector<uint> addIcoSphere(uint Ndivs, const vec3 &center, float radius, const char *texturefile);
 
         //! Add a patch that is subdivided into a regular grid of sub-patches (tiled)
         /**

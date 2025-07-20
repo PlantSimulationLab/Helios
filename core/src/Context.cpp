@@ -4607,6 +4607,202 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius
     return currentObjectID - 1;
 }
 
+uint Context::addIcoSphereObject(uint Ndivs, const vec3 &center, float radius) {
+    return addIcoSphereObject(Ndivs, center, {radius, radius, radius}, {0.f, 0.75f, 0.f});
+}
+
+uint Context::addIcoSphereObject(uint Ndivs, const vec3 &center, float radius, const RGBcolor &color) {
+    return addIcoSphereObject(Ndivs, center, {radius, radius, radius}, color);
+}
+
+uint Context::addIcoSphereObject(uint Ndivs, const vec3 &center, float radius, const char *texturefile) {
+    return addIcoSphereObject(Ndivs, center, {radius, radius, radius}, texturefile);
+}
+
+uint Context::addIcoSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius) {
+    return addIcoSphereObject(Ndivs, center, radius, {0.f, 0.75f, 0.f});
+}
+
+// Helper struct for edge key in icosphere subdivision
+struct EdgeKey {
+    int v0;
+    int v1;
+    bool operator==(const EdgeKey &o) const noexcept {
+        return (v0 == o.v0 && v1 == o.v1) || (v0 == o.v1 && v1 == o.v0);
+    }
+};
+
+struct EdgeKeyHash {
+    size_t operator()(const EdgeKey &e) const noexcept {
+        int a = std::min(e.v0, e.v1);
+        int b = std::max(e.v0, e.v1);
+        return std::hash<int>()(a) ^ (std::hash<int>()(b) << 1);
+    }
+};
+
+uint Context::addIcoSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius, const RGBcolor &color) {
+    if (radius.x <= 0.f || radius.y <= 0.f || radius.z <= 0.f) {
+        helios_runtime_error("ERROR (Context::addIcoSphereObject): Radius of sphere must be positive.");
+    }
+
+    // initial icosahedron vertices
+    const float t = (1.f + std::sqrt(5.f)) / 2.f;
+    std::vector<vec3> verts = {normalize(make_vec3(-1, t, 0)),  normalize(make_vec3(1, t, 0)),  normalize(make_vec3(-1, -t, 0)), normalize(make_vec3(1, -t, 0)), normalize(make_vec3(0, -1, t)),  normalize(make_vec3(0, 1, t)),
+                               normalize(make_vec3(0, -1, -t)), normalize(make_vec3(0, 1, -t)), normalize(make_vec3(t, 0, -1)),  normalize(make_vec3(t, 0, 1)),  normalize(make_vec3(-t, 0, -1)), normalize(make_vec3(-t, 0, 1))};
+
+    std::vector<int3> faces = {{0, 11, 5}, {0, 5, 1}, {0, 1, 7}, {0, 7, 10}, {0, 10, 11}, {1, 5, 9}, {5, 11, 4}, {11, 10, 2}, {10, 7, 6}, {7, 1, 8},
+                               {3, 9, 4},  {3, 4, 2}, {3, 2, 6}, {3, 6, 8},  {3, 8, 9},   {4, 9, 5}, {2, 4, 11}, {6, 2, 10},  {8, 6, 7},  {9, 8, 1}};
+
+    for (uint s = 0; s < Ndivs; ++s) {
+        std::unordered_map<EdgeKey, int, EdgeKeyHash> midCache;
+        std::vector<int3> newFaces;
+        newFaces.reserve(faces.size() * 4);
+        for (const auto &f: faces) {
+            EdgeKey e1{f.x, f.y};
+            EdgeKey e2{f.y, f.z};
+            EdgeKey e3{f.z, f.x};
+
+            auto getMid = [&](EdgeKey e) {
+                auto it = midCache.find(e);
+                if (it != midCache.end())
+                    return it->second;
+                vec3 mid = 0.5f * (verts[e.v0] + verts[e.v1]);
+                mid.normalize();
+                verts.push_back(mid);
+                int idx = scast<int>(verts.size() - 1);
+                midCache[e] = idx;
+                return idx;
+            };
+
+            int a = getMid(e1);
+            int b = getMid(e2);
+            int c = getMid(e3);
+
+            newFaces.push_back({f.x, a, c});
+            newFaces.push_back({f.y, b, a});
+            newFaces.push_back({f.z, c, b});
+            newFaces.push_back({a, b, c});
+        }
+        faces.swap(newFaces);
+    }
+
+    std::vector<uint> UUID;
+    UUID.reserve(faces.size());
+    for (const auto &f: faces) {
+        vec3 v0 = make_vec3(verts[f.x].x * radius.x, verts[f.x].y * radius.y, verts[f.x].z * radius.z) + center;
+        vec3 v1 = make_vec3(verts[f.y].x * radius.x, verts[f.y].y * radius.y, verts[f.y].z * radius.z) + center;
+        vec3 v2 = make_vec3(verts[f.z].x * radius.x, verts[f.z].y * radius.y, verts[f.z].z * radius.z) + center;
+        UUID.push_back(addTriangle(v0, v1, v2, color));
+    }
+
+    auto *sphere_new = (new Sphere(currentObjectID, UUID, Ndivs, "", this));
+
+    float T[16], transform[16];
+    sphere_new->getTransformationMatrix(transform);
+    makeScaleMatrix(radius, T);
+    matmult(T, transform, transform);
+    makeTranslationMatrix(center, T);
+    matmult(T, transform, transform);
+    sphere_new->setTransformationMatrix(transform);
+
+    sphere_new->setColor(color);
+
+    for (uint p: UUID) {
+        getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
+    }
+
+    objects[currentObjectID] = sphere_new;
+    currentObjectID++;
+    return currentObjectID - 1;
+}
+
+uint Context::addIcoSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius, const char *texturefile) {
+    if (!validateTextureFileExtenstion(texturefile)) {
+        helios_runtime_error("ERROR (Context::addIcoSphereObject): Texture file " + std::string(texturefile) + " is not PNG or JPEG format.");
+    } else if (!doesTextureFileExist(texturefile)) {
+        helios_runtime_error("ERROR (Context::addIcoSphereObject): Texture file " + std::string(texturefile) + " does not exist.");
+    } else if (radius.x <= 0.f || radius.y <= 0.f || radius.z <= 0.f) {
+        helios_runtime_error("ERROR (Context::addIcoSphereObject): Radius of sphere must be positive.");
+    }
+
+    const float t = (1.f + std::sqrt(5.f)) / 2.f;
+    std::vector<vec3> verts = {normalize(make_vec3(-1, t, 0)),  normalize(make_vec3(1, t, 0)),  normalize(make_vec3(-1, -t, 0)), normalize(make_vec3(1, -t, 0)), normalize(make_vec3(0, -1, t)),  normalize(make_vec3(0, 1, t)),
+                               normalize(make_vec3(0, -1, -t)), normalize(make_vec3(0, 1, -t)), normalize(make_vec3(t, 0, -1)),  normalize(make_vec3(t, 0, 1)),  normalize(make_vec3(-t, 0, -1)), normalize(make_vec3(-t, 0, 1))};
+
+    std::vector<int3> faces = {{0, 11, 5}, {0, 5, 1}, {0, 1, 7}, {0, 7, 10}, {0, 10, 11}, {1, 5, 9}, {5, 11, 4}, {11, 10, 2}, {10, 7, 6}, {7, 1, 8},
+                               {3, 9, 4},  {3, 4, 2}, {3, 2, 6}, {3, 6, 8},  {3, 8, 9},   {4, 9, 5}, {2, 4, 11}, {6, 2, 10},  {8, 6, 7},  {9, 8, 1}};
+
+    for (uint s = 0; s < Ndivs; ++s) {
+        std::unordered_map<EdgeKey, int, EdgeKeyHash> midCache;
+        std::vector<int3> newFaces;
+        newFaces.reserve(faces.size() * 4);
+        for (const auto &f: faces) {
+            EdgeKey e1{f.x, f.y};
+            EdgeKey e2{f.y, f.z};
+            EdgeKey e3{f.z, f.x};
+            auto getMid = [&](EdgeKey e) {
+                auto it = midCache.find(e);
+                if (it != midCache.end())
+                    return it->second;
+                vec3 mid = 0.5f * (verts[e.v0] + verts[e.v1]);
+                mid.normalize();
+                verts.push_back(mid);
+                int idx = scast<int>(verts.size() - 1);
+                midCache[e] = idx;
+                return idx;
+            };
+            int a = getMid(e1);
+            int b = getMid(e2);
+            int c = getMid(e3);
+            newFaces.push_back({f.x, a, c});
+            newFaces.push_back({f.y, b, a});
+            newFaces.push_back({f.z, c, b});
+            newFaces.push_back({a, b, c});
+        }
+        faces.swap(newFaces);
+    }
+
+    std::vector<uint> UUID;
+    UUID.reserve(faces.size());
+    for (const auto &f: faces) {
+        vec3 p0 = verts[f.x];
+        vec3 p1 = verts[f.y];
+        vec3 p2 = verts[f.z];
+
+        vec3 n0 = p0;
+        vec3 n1 = p1;
+        vec3 n2 = p2;
+
+        vec2 uv0 = make_vec2(1.f - atan2f(n0.x, -n0.y) / (2.f * PI_F) - 0.5f, 1.f - n0.z * 0.5f - 0.5f);
+        vec2 uv1 = make_vec2(1.f - atan2f(n1.x, -n1.y) / (2.f * PI_F) - 0.5f, 1.f - n1.z * 0.5f - 0.5f);
+        vec2 uv2 = make_vec2(1.f - atan2f(n2.x, -n2.y) / (2.f * PI_F) - 0.5f, 1.f - n2.z * 0.5f - 0.5f);
+
+        vec3 v0 = make_vec3(p0.x * radius.x, p0.y * radius.y, p0.z * radius.z) + center;
+        vec3 v1 = make_vec3(p1.x * radius.x, p1.y * radius.y, p1.z * radius.z) + center;
+        vec3 v2 = make_vec3(p2.x * radius.x, p2.y * radius.y, p2.z * radius.z) + center;
+
+        UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
+    }
+
+    auto *sphere_new = (new Sphere(currentObjectID, UUID, Ndivs, texturefile, this));
+
+    float T[16], transform[16];
+    sphere_new->getTransformationMatrix(transform);
+    makeScaleMatrix(radius, T);
+    matmult(T, transform, transform);
+    makeTranslationMatrix(center, T);
+    matmult(T, transform, transform);
+    sphere_new->setTransformationMatrix(transform);
+
+    for (uint p: UUID) {
+        getPrimitivePointer_private(p)->setParentObjectID(currentObjectID);
+    }
+
+    objects[currentObjectID] = sphere_new;
+    currentObjectID++;
+    return currentObjectID - 1;
+}
+
 uint Context::addTileObject(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const int2 &subdiv) {
     RGBcolor color(0.f, 0.75f, 0.f); // Default color is green
 
@@ -5875,6 +6071,125 @@ std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radiu
             UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
             UUID.push_back(addTriangle(v0, v2, v3, texturefile, uv0, uv2, uv3));
         }
+    }
+
+    return UUID;
+}
+
+std::vector<uint> Context::addIcoSphere(uint Ndivs, const vec3 &center, float radius) {
+    RGBcolor color = make_RGBcolor(0.f, 0.75f, 0.f);
+    return addIcoSphere(Ndivs, center, radius, color);
+}
+
+std::vector<uint> Context::addIcoSphere(uint Ndivs, const vec3 &center, float radius, const RGBcolor &color) {
+    const float t = (1.f + std::sqrt(5.f)) / 2.f;
+    std::vector<vec3> verts = {normalize(make_vec3(-1, t, 0)),  normalize(make_vec3(1, t, 0)),  normalize(make_vec3(-1, -t, 0)), normalize(make_vec3(1, -t, 0)), normalize(make_vec3(0, -1, t)),  normalize(make_vec3(0, 1, t)),
+                               normalize(make_vec3(0, -1, -t)), normalize(make_vec3(0, 1, -t)), normalize(make_vec3(t, 0, -1)),  normalize(make_vec3(t, 0, 1)),  normalize(make_vec3(-t, 0, -1)), normalize(make_vec3(-t, 0, 1))};
+
+    std::vector<int3> faces = {{0, 11, 5}, {0, 5, 1}, {0, 1, 7}, {0, 7, 10}, {0, 10, 11}, {1, 5, 9}, {5, 11, 4}, {11, 10, 2}, {10, 7, 6}, {7, 1, 8},
+                               {3, 9, 4},  {3, 4, 2}, {3, 2, 6}, {3, 6, 8},  {3, 8, 9},   {4, 9, 5}, {2, 4, 11}, {6, 2, 10},  {8, 6, 7},  {9, 8, 1}};
+
+    for (uint s = 0; s < Ndivs; ++s) {
+        std::unordered_map<EdgeKey, int, EdgeKeyHash> midCache;
+        std::vector<int3> newFaces;
+        newFaces.reserve(faces.size() * 4);
+        for (const auto &f: faces) {
+            EdgeKey e1{f.x, f.y};
+            EdgeKey e2{f.y, f.z};
+            EdgeKey e3{f.z, f.x};
+            auto getMid = [&](EdgeKey e) {
+                auto it = midCache.find(e);
+                if (it != midCache.end())
+                    return it->second;
+                vec3 mid = 0.5f * (verts[e.v0] + verts[e.v1]);
+                mid.normalize();
+                verts.push_back(mid);
+                int idx = scast<int>(verts.size() - 1);
+                midCache[e] = idx;
+                return idx;
+            };
+            int a = getMid(e1);
+            int b = getMid(e2);
+            int c = getMid(e3);
+            newFaces.push_back({f.x, a, c});
+            newFaces.push_back({f.y, b, a});
+            newFaces.push_back({f.z, c, b});
+            newFaces.push_back({a, b, c});
+        }
+        faces.swap(newFaces);
+    }
+
+    std::vector<uint> UUID;
+    UUID.reserve(faces.size());
+    for (const auto &f: faces) {
+        vec3 v0 = verts[f.x] * radius + center;
+        vec3 v1 = verts[f.y] * radius + center;
+        vec3 v2 = verts[f.z] * radius + center;
+        UUID.push_back(addTriangle(v0, v1, v2, color));
+    }
+    return UUID;
+}
+
+std::vector<uint> Context::addIcoSphere(uint Ndivs, const vec3 &center, float radius, const char *texturefile) {
+    if (!validateTextureFileExtenstion(texturefile)) {
+        helios_runtime_error("ERROR (Context::addIcoSphere): Texture file " + std::string(texturefile) + " is not PNG or JPEG format.");
+    } else if (!doesTextureFileExist(texturefile)) {
+        helios_runtime_error("ERROR (Context::addIcoSphere): Texture file " + std::string(texturefile) + " does not exist.");
+    }
+
+    const float t = (1.f + std::sqrt(5.f)) / 2.f;
+    std::vector<vec3> verts = {normalize(make_vec3(-1, t, 0)),  normalize(make_vec3(1, t, 0)),  normalize(make_vec3(-1, -t, 0)), normalize(make_vec3(1, -t, 0)), normalize(make_vec3(0, -1, t)),  normalize(make_vec3(0, 1, t)),
+                               normalize(make_vec3(0, -1, -t)), normalize(make_vec3(0, 1, -t)), normalize(make_vec3(t, 0, -1)),  normalize(make_vec3(t, 0, 1)),  normalize(make_vec3(-t, 0, -1)), normalize(make_vec3(-t, 0, 1))};
+
+    std::vector<int3> faces = {{0, 11, 5}, {0, 5, 1}, {0, 1, 7}, {0, 7, 10}, {0, 10, 11}, {1, 5, 9}, {5, 11, 4}, {11, 10, 2}, {10, 7, 6}, {7, 1, 8},
+                               {3, 9, 4},  {3, 4, 2}, {3, 2, 6}, {3, 6, 8},  {3, 8, 9},   {4, 9, 5}, {2, 4, 11}, {6, 2, 10},  {8, 6, 7},  {9, 8, 1}};
+
+    for (uint s = 0; s < Ndivs; ++s) {
+        std::unordered_map<EdgeKey, int, EdgeKeyHash> midCache;
+        std::vector<int3> newFaces;
+        newFaces.reserve(faces.size() * 4);
+        for (const auto &f: faces) {
+            EdgeKey e1{f.x, f.y};
+            EdgeKey e2{f.y, f.z};
+            EdgeKey e3{f.z, f.x};
+            auto getMid = [&](EdgeKey e) {
+                auto it = midCache.find(e);
+                if (it != midCache.end())
+                    return it->second;
+                vec3 mid = 0.5f * (verts[e.v0] + verts[e.v1]);
+                mid.normalize();
+                verts.push_back(mid);
+                int idx = scast<int>(verts.size() - 1);
+                midCache[e] = idx;
+                return idx;
+            };
+            int a = getMid(e1);
+            int b = getMid(e2);
+            int c = getMid(e3);
+            newFaces.push_back({f.x, a, c});
+            newFaces.push_back({f.y, b, a});
+            newFaces.push_back({f.z, c, b});
+            newFaces.push_back({a, b, c});
+        }
+        faces.swap(newFaces);
+    }
+
+    std::vector<uint> UUID;
+    UUID.reserve(faces.size());
+    for (const auto &f: faces) {
+        vec3 p0 = verts[f.x];
+        vec3 p1 = verts[f.y];
+        vec3 p2 = verts[f.z];
+
+        vec2 uv0 = make_vec2(1.f - atan2f(p0.x, -p0.y) / (2.f * PI_F) - 0.5f, 1.f - p0.z * 0.5f - 0.5f);
+        vec2 uv1 = make_vec2(1.f - atan2f(p1.x, -p1.y) / (2.f * PI_F) - 0.5f, 1.f - p1.z * 0.5f - 0.5f);
+        vec2 uv2 = make_vec2(1.f - atan2f(p2.x, -p2.y) / (2.f * PI_F) - 0.5f, 1.f - p2.z * 0.5f - 0.5f);
+
+        vec3 v0 = p0 * radius + center;
+        vec3 v1 = p1 * radius + center;
+        vec3 v2 = p2 * radius + center;
+
+        UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
     }
 
     return UUID;

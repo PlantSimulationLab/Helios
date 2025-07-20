@@ -945,8 +945,8 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
      </td>
      <td>\image html images/Tile.png </td>
    </tr>
-   <tr>
-     <td>Sphere</td>
+  <tr>
+    <td>Sphere</td>
      <td>Spherical object tessellated with Triangle primitives.</td>
      <td> <ul>
 	 <li> \ref helios::Context::addSphere( uint Ndivs, const helios::vec3 &center, float radius ) "addSphere( uint Ndivs, const vec3 &center, float radius )" </li>
@@ -954,10 +954,24 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
 	 <li> \ref helios::Context::addSphere( uint Ndivs, const helios::vec3 &center, float radius, const char* texturefile ) "addSphere( uint Ndivs, const vec3 &center, float radius, const char* texturefille )" </li>
        </ul>
      </td>
-     <td>\image html images/Sphere.png </td>
-   </tr>
-   <tr>
-     <td>Tube</td>
+    <td>\image html images/Sphere.png </td>
+  </tr>
+  <tr>
+    <td>IcoSphere</td>
+    <td>Icosahedron-based sphere or ellipsoid tessellated with Triangle primitives.</td>
+    <td><ul>
+        <li> \ref helios::Context::addIcoSphereObject( uint Ndivs, const helios::vec3 &center, float radius ) "addIcoSphereObject( uint Ndivs, const vec3 &center, float radius )" </li>
+        <li> \ref helios::Context::addIcoSphereObject( uint Ndivs, const helios::vec3 &center, float radius, const helios::RGBcolor &color ) "addIcoSphereObject( uint Ndivs, const vec3 &center, float radius, const RGBcolor &color )" </li>
+        <li> \ref helios::Context::addIcoSphereObject( uint Ndivs, const helios::vec3 &center, float radius, const char* texturefile ) "addIcoSphereObject( uint Ndivs, const vec3 &center, float radius, const char* texturefile )" </li>
+        <li> \ref helios::Context::addIcoSphereObject( uint Ndivs, const helios::vec3 &center, const helios::vec3 &radius ) "addIcoSphereObject( uint Ndivs, const vec3 &center, const vec3 &radius )" </li>
+        <li> \ref helios::Context::addIcoSphereObject( uint Ndivs, const helios::vec3 &center, const helios::vec3 &radius, const helios::RGBcolor &color ) "addIcoSphereObject( uint Ndivs, const vec3 &center, const vec3 &radius, const RGBcolor &color )" </li>
+        <li> \ref helios::Context::addIcoSphereObject( uint Ndivs, const helios::vec3 &center, const helios::vec3 &radius, const char* texturefile ) "addIcoSphereObject( uint Ndivs, const vec3 &center, const vec3 &radius, const char* texturefile )" </li>
+      </ul>
+    </td>
+    <td>\image html images/Sphere.png </td>
+  </tr>
+  <tr>
+    <td>Tube</td>
      <td>Cylindrical tube object tessellated with Triangle primitives. Follows a specified path and can change radius along its length.</td>
      <td><ul>
 	 <li>\ref helios::Context::addTube( uint Ndivs, const std::vector< helios::vec3 > &nodes, const std::vector< float > &radius ) "addTube( uint Ndivs, const vector<vec3> &nodes, const vector<float> &radius )"</li>
