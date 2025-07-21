@@ -33,6 +33,13 @@ struct WeberPennTreeParameters{
   // Fractional height of split (if BaseSplits>0)
   float BaseSplitSize, BaseSplitSizeV;
 
+  // Tilt of the trunk
+  helios::vec2 BaseTilt, BaseTiltV;
+
+  // x and y spread values for the positions of the nodes along the trunk
+  // If 0, the base will be perfectly straight. Otherwise it will be more winding or crooked.
+  helios::vec2 BaseAlignmentV;
+
   // Size and scaling of tree
   float Scale, ScaleV, ZScale, ZScaleV;
 
