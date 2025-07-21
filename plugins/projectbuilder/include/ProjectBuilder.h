@@ -187,10 +187,10 @@ struct distribution {
 };
 
 //! Band group struct
-struct bandGroup {
-    std::vector<std::string> bands;
-    bool grayscale;
-    bool norm;
+struct bandGroup{
+ std::vector<std::string> bands;
+ bool grayscale;
+ bool norm;
 };
 
 //! Canopy struct
@@ -211,22 +211,22 @@ struct canopy {
 };
 
 //! Object struct
-struct object {
-    int index;
-    std::string name;
-    std::string file;
-    std::string data_group;
-    std::vector<uint> UUIDs;
-    helios::vec3 position;
-    helios::vec3 prev_position;
-    helios::vec3 orientation;
-    helios::vec3 prev_orientation;
-    helios::vec3 scale;
-    helios::vec3 prev_scale;
-    helios::RGBcolor color;
-    helios::RGBcolor prev_color;
-    bool use_texture_file;
-    bool is_dirty;
+struct object{
+ int index;
+ std::string name;
+ std::string file;
+ std::string data_group;
+ std::vector<uint> UUIDs;
+ helios::vec3 position;
+ helios::vec3 prev_position;
+ helios::vec3 orientation;
+ helios::vec3 prev_orientation;
+ helios::vec3 scale;
+ helios::vec3 prev_scale;
+ helios::RGBcolor color;
+ helios::RGBcolor prev_color;
+ bool use_texture_file;
+ bool is_dirty;
 };
 
 //! Rig struct
@@ -395,8 +395,9 @@ private:
     std::vector<std::string> primitive_names = {"All", "ground", "leaf", "petiolule", "petiole", "internode", "peduncle", "petal", "pedicel", "fruit"};
 
     //! Bounding boxes
-    std::map<std::string, bool> bounding_boxes = {
-            {"plantID", false}, {"leafID", false}, {"peduncleID", false}, {"closedflowerID", false}, {"openflowerID", false}, {"fruitID", false}, {"rank", false}, {"age", false}, {"carbohydrate_concentration", false}};
+    std::map<std::string, bool> bounding_boxes = {{"plantID", false}, {"leafID", false}, {"peduncleID", false},
+                                                  {"closedflowerID", false}, {"openflowerID", false}, {"fruitID", false},
+                                                  {"rank", false}, {"age", false}, {"carbohydrate_concentration", false}};
 
     //! Bounding boxes map
     std::map<std::string, int> bounding_boxes_map;
