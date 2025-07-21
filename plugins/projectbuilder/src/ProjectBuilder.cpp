@@ -510,12 +510,12 @@ void ProjectBuilder::updatePrimitiveTypes() {
 void ProjectBuilder::updateDataGroups() {
     data_groups_set.clear();
     data_groups_set.insert("All");
-    std::vector<uint> all_UUIDs = context->getAllUUIDs();
-    for (uint UUID: all_UUIDs) {
+    std::vector<uint> all_objIDs = context->getAllObjectIDs();
+    for (uint objID: all_objIDs) {
         std::string curr_data_group = "";
-        if (!context->doesPrimitiveDataExist(UUID, "data_group"))
+        if (!context->doesObjectDataExist(objID, "data_group"))
             continue;
-        context->getPrimitiveData(UUID, "data_group", curr_data_group);
+        context->getObjectData(objID, "data_group", curr_data_group);
         if (!curr_data_group.empty()) {
             data_groups_set.insert(curr_data_group);
         }
@@ -585,11 +585,12 @@ void ProjectBuilder::updateSpectra() {
     }
     std::vector<uint> all_UUIDs = context->getAllUUIDs();
     for (uint UUID: all_UUIDs) {
-        if (!context->doesPrimitiveDataExist(UUID, "data_group"))
+        uint parentObjID = context->getPrimitiveParentObjectID(UUID);
+        if ( !context->doesObjectExist(parentObjID) || !context->doesObjectDataExist(parentObjID, "data_group"))
             continue;
         // Get data group of UUID
         std::string curr_data_group;
-        context->getPrimitiveData(UUID, "data_group", curr_data_group);
+        context->getObjectData(parentObjID, "data_group", curr_data_group);
         // Get primitive type of UUID
         std::string curr_prim_type;
         if (context->doesPrimitiveDataExist(UUID, "object_label")) {
@@ -777,7 +778,7 @@ void ProjectBuilder::record() {
                         if (std::find(curr_band_group.bands.begin(), curr_band_group.bands.end(), "red") != curr_band_group.bands.end() &&
                             std::find(curr_band_group.bands.begin(), curr_band_group.bands.end(), "green") != curr_band_group.bands.end() &&
                             std::find(curr_band_group.bands.begin(), curr_band_group.bands.end(), "blue") != curr_band_group.bands.end()) {
-                            radiation->applyImageProcessingPipeline(rig_camera_label, "red", "green", "blue", true);
+                            radiation->applyImageProcessingPipeline(rig_camera_label, "red", "green", "blue", curr_band_group.hdr);
                         }
                         std::vector<std::string> band_group_vec;
                         if (!curr_band_group.grayscale) {
@@ -802,8 +803,13 @@ void ProjectBuilder::record() {
                                 primitive_name[0] = std::tolower(static_cast<unsigned char>(primitive_name[0]));
                             }
                         }
-                        for (auto &box_pair: bounding_boxes_map)
-                            radiation->writeImageBoundingBoxes_ObjectData(cameralabel, box_pair.first, box_pair.second, band_group_ + std::to_string(i), image_dir + rig_label + '/', true);
+                        for (auto &box_pair: bounding_boxes_map) {
+                            if (bounding_boxes_object.find(box_pair.first) != bounding_boxes_object.end() ) {
+                                radiation->writeImageBoundingBoxes_ObjectData(cameralabel, box_pair.first, box_pair.second, band_group_ + std::to_string(i), image_dir + rig_label + '/', true);
+                            } else if (bounding_boxes_primitive.find(box_pair.first) == bounding_boxes_object.end()) {
+                                radiation->writeImageBoundingBoxes(cameralabel, box_pair.first, box_pair.second, band_group_ + std::to_string(i), image_dir + rig_label + '/', true);
+                            }
+                        }
                     }
                     //
                 }
@@ -2201,9 +2207,9 @@ void ProjectBuilder::visualize() {
                 std::set_union(visualization_types_primitive.begin(), visualization_types_primitive.end(), visualization_types_object.begin(), visualization_types_object.end(), std::inserter(vis_types, vis_types.begin()));
                 for (auto &type: vis_types) {
                     if (visualization_types_primitive.find(type) != visualization_types_primitive.end()) {
-                        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 165, 0, 255)); // Red text
+                        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 165, 0, 255)); // orange text
                     } else {
-                        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 128, 128, 255)); // Red text
+                        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 255, 255)); // blue text
                     }
                     if (ImGui::MenuItem(type.c_str()) && visualization_type != type) {
                         visualization_type = type;
@@ -2479,7 +2485,6 @@ void ProjectBuilder::visualize() {
                     updatePrimitiveTypes();
                     updateSpectra();
                     is_dirty = true;
-                    // refreshVisualization();
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Delete Ground")) {
@@ -2487,7 +2492,6 @@ void ProjectBuilder::visualize() {
                     updatePrimitiveTypes();
                     updateSpectra();
                     is_dirty = true;
-                    // refreshVisualization();
                 }
                 // ImGui::RadioButton("Manually Set Color", ground_flag == 0); if (ImGui::IsItemClicked()) ground_flag = 0;
                 // ImGui::SameLine();
@@ -2645,6 +2649,7 @@ void ProjectBuilder::visualize() {
                             new_obj.name = new_obj_label;
                             new_obj.file = new_obj_file;
                             new_obj.UUIDs = new_UUIDs;
+                            new_obj.objID = context->addPolymeshObject(new_UUIDs); // TODO: change transformations to object level
                             new_obj.position = vec3(0, 0, 0);
                             new_obj.prev_position = vec3(0, 0, 0);
                             new_obj.orientation = vec3(0, 0, 0);
@@ -2713,8 +2718,13 @@ void ProjectBuilder::visualize() {
                             objects_dict[current_obj].data_group = prev_obj_data_group;
                         }
                         if (!objects_dict[current_obj].data_group.empty() && prev_obj_data_group != objects_dict[current_obj].data_group) {
+                            if ( context->doesObjectDataExist(objects_dict[current_obj].objID, prev_obj_data_group.c_str()) ) {
+                                context->clearObjectData(objects_dict[current_obj].objID, prev_obj_data_group.c_str());
+                            }
                             std::string new_data_group = objects_dict[current_obj].data_group;
-                            context->setPrimitiveData(objects_dict[current_obj].UUIDs, "data_group", new_data_group);
+                            context->setObjectData(objects_dict[current_obj].objID, "data_group", new_data_group);
+                            int index = objects_dict[current_obj].index;
+                            context->setObjectData(objects_dict[current_obj].objID, new_data_group.c_str(), index);
                         }
                         ImGui::SameLine();
                         ImGui::Text("Data Group");
@@ -2836,7 +2846,6 @@ void ProjectBuilder::visualize() {
                         updatePrimitiveTypes();
                         is_dirty = true;
                         context->markGeometryDirty();
-                        // refreshVisualization();
                     }
                     if (canopy_dict[current_canopy].is_dirty) {
                         ImGui::SameLine();
@@ -2880,12 +2889,12 @@ void ProjectBuilder::visualize() {
                     }
                     if (!canopy_dict[current_canopy].data_group.empty() && prev_canopy_data_group != canopy_dict[current_canopy].data_group) {
                         std::string new_data_group = canopy_dict[current_canopy].data_group;
-                        std::vector<uint> canopy_primID_vec;
                         for (int i = 0; i < canopy_dict[current_canopy].IDs.size(); i++) {
-                            std::vector<uint> new_canopy_primIDs = plantarchitecture->getAllPlantUUIDs(canopy_dict[current_canopy].IDs[i]);
-                            canopy_primID_vec.insert(canopy_primID_vec.end(), new_canopy_primIDs.begin(), new_canopy_primIDs.end());
+                            std::vector<uint> new_canopy_objIDs = plantarchitecture->getAllPlantObjectIDs(canopy_dict[current_canopy].IDs[i]);
+                            context->clearObjectData(new_canopy_objIDs, prev_canopy_data_group.c_str());
+                            context->setObjectData(new_canopy_objIDs, "data_group", new_data_group);
+                            context->setObjectData(new_canopy_objIDs, new_data_group.c_str(), new_canopy_objIDs);
                         }
-                        context->setPrimitiveData(canopy_primID_vec, "data_group", new_data_group);
                     }
                     ImGui::SameLine();
                     ImGui::Text("Data Group");
@@ -3714,6 +3723,10 @@ void ProjectBuilder::visualize() {
                         if (ImGui::Button("Select Bounding Box Objects")) {
                             ImGui::OpenPopup("multi_select_popup");
                         }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Refresh List")) {
+                            refreshBoundingBoxObjectList();
+                        }
                         // ImGui::OpenPopupOnItemClick(("rig_position_noise_" + std::to_string(rig_dict[current_rig])).c_str(), ImGuiPopupFlags_MouseButtonLeft);
                         // Display selected items
                         ImGui::Text("Objects:");
@@ -3926,7 +3939,7 @@ void ProjectBuilder::visualize() {
                         new_band_group_vector.push_back("red");
                         new_band_group_vector.push_back("green");
                         new_band_group_vector.push_back("blue");
-                        bandGroup new_band_group{new_band_group_vector, false, false};
+                        bandGroup new_band_group{new_band_group_vector, false, false, false};
                         band_group_lookup[new_band_group_label] = new_band_group;
                         band_group_names.insert(new_band_group_label);
                         current_band_group = new_band_group_label;
@@ -3957,6 +3970,11 @@ void ProjectBuilder::visualize() {
                         ImGui::Checkbox("Grayscale", &band_group_lookup[current_band_group].grayscale);
                         ImGui::SameLine();
                         ImGui::Checkbox("Norm", &band_group_lookup[current_band_group].norm);
+                        if (std::find(band_group_lookup[current_band_group].bands.begin(), band_group_lookup[current_band_group].bands.end(), "red") != band_group_lookup[current_band_group].bands.end() &&
+                            std::find(band_group_lookup[current_band_group].bands.begin(), band_group_lookup[current_band_group].bands.end(), "green") != band_group_lookup[current_band_group].bands.end() &&
+                            std::find(band_group_lookup[current_band_group].bands.begin(), band_group_lookup[current_band_group].bands.end(), "blue") != band_group_lookup[current_band_group].bands.end()) {
+                            band_group_lookup[current_band_group].hdr = true;
+                        }
                         // Band 1
                         ImGui::SetNextItemWidth(100);
                         dropDown("##band_1_combo", band_group_lookup[current_band_group].bands[0], bandlabels);
@@ -4939,7 +4957,7 @@ void ProjectBuilder::objectTab(std::string curr_obj_name, int id) {
 #ifdef ENABLE_HELIOS_VISUALIZER
     if (ImGui::Button("Update Object")) {
         updateObject(curr_obj_name);
-        refreshVisualization();
+        is_dirty = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Delete Object")) {
@@ -5093,7 +5111,6 @@ void ProjectBuilder::canopyTab(std::string curr_canopy_name, int id) {
         deleteCanopy(curr_canopy_name);
         is_dirty = true;
         canopy_dict[current_canopy].is_dirty = false;
-        // refreshVisualization();
     }
     if (canopy_dict[curr_canopy_name].is_dirty) {
         ImGui::SameLine();
@@ -5800,7 +5817,6 @@ void ProjectBuilder::updateRigs() {
     camera_models_dict.clear();
     updateCameraModels();
     // Update visualizer
-    // refreshVisualization();
     is_dirty = true;
 }
 
@@ -5865,7 +5881,6 @@ void ProjectBuilder::deleteCanopy(const std::string &canopy) {
 
 void ProjectBuilder::deleteObject(const std::string &obj) {
     context->deletePrimitive(objects_dict[obj].UUIDs);
-    // refreshVisualization();
     objects_dict.erase(obj);
     obj_names_set.erase(obj);
     if (!obj_names_set.empty()) {
@@ -6172,3 +6187,29 @@ void ProjectBuilder::buildTiledGround(const vec3 &ground_origin, const vec2 &gro
     context->setPrimitiveData(ground_UUIDs, "object_label", "ground");
     primitive_UUIDs["ground"] = ground_UUIDs;
 }
+
+void ProjectBuilder::refreshBoundingBoxObjectList() {
+    for (auto &primitive_UUID : context->getAllUUIDs()) {
+        for (std::string data : context->listPrimitiveData(primitive_UUID)) {
+            if ( context->getPrimitiveDataType( primitive_UUID, data.c_str() ) == HELIOS_TYPE_INT ||
+                 context->getPrimitiveDataType( primitive_UUID, data.c_str() ) == HELIOS_TYPE_UINT ) {
+                if ( bounding_boxes.find( data ) == bounding_boxes.end() ) {
+                    bounding_boxes.insert({data, false});
+                    bounding_boxes_primitive.insert(data);
+                }
+            }
+        }
+    }
+    for (auto &object_UUID : context->getAllObjectIDs()) {
+        for (std::string data : context->listObjectData(object_UUID)) {
+            if ( context->getObjectDataType( object_UUID, data.c_str() ) == HELIOS_TYPE_INT ||
+                 context->getObjectDataType( object_UUID, data.c_str() ) == HELIOS_TYPE_UINT ) {
+                if ( bounding_boxes.find( data ) == bounding_boxes.end() ) {
+                    bounding_boxes.insert({data, false});
+                    bounding_boxes_object.insert(data);
+                }
+            }
+        }
+    }
+}
+
