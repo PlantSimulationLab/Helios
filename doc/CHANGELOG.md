@@ -2455,3 +2455,27 @@ The radiation model has been re-designed, with the following primary additions:
 ## Solar Position
 - Minor updates based on edge cases found in the self-tests.
 - Converted the self-tests to use the doctest framework.
+
+# [1.3.41] 2025-07-22
+
+🚨+ NEW PLUG-IN + 🚨
+- Added a new `parameteroptimization` plug-in. Credit to Kyle Rizzo for developing this plug-in.
+
+- Applied `.clang-format` to all source files. As such, there are a lot of small changes to many files in this commit.
+- Converted the following plug-ins to use the doctest framework: `energybalance`, `photosynthesis`, `radiation`, `stomatalconductance`, `canopygenerator`, `leafoptics`, `lidar`, `planthydraulics`, `plantarchitecture`, `projectbuilder`, `voxelintersection`, `weberpenntree`, and `boundarylayerconductance`.
+
+# Context
+- Added `Context::listAllPrimitiveDataLabels()` and `Context::listAllObjectDataLabels()` methods to efficiently get a list of all primitive or object data labels that exist.
+- Added `Context::showPrimitive()` and `Context::showObject()` methods to show a previously hidden primitive or object.
+- Fixed an error in `Tube::scaleTubeGirth(float S)` where the stored radius value was not being updated (although the actual primitive geometry was).
+- Split doctest tests into separate files for better organization.
+- An error was corrected in `Context::cleanDeletedUUIDs(std::vector<std::vector<uint>> &UUIDs)` and `Context::cleanDeletedUUIDs(std::vector<std::vector<std::vector<uint>>> &UUIDs)`, which were checking for object IDs instead of primitive UUIDs.
+
+# Boundary-Layer Conductance
+- Modified inclined plate model code to fall back to purely free convection when wind speed is zero, rather than giving NaN.
+
+# Plant Architecture
+- Re-factored the plug-in to streamline creation of new plant models in the library (see documentation).
+
+# Visualizer 
+- Functions for reading/writing of PNG and JPEG files have been removed from the Visualizer. Functions from the Context are now used instead, which reduces redundant code.

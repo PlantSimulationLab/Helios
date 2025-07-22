@@ -7,7 +7,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mo
 set( VISUALIZER_SOURCES
 	"src/Visualizer.cpp"
 	"src/GeometryHandler.cpp"
-	"src/selfTest.cpp"
+	"tests/selfTest.cpp"
 )
 
 add_library(visualizer STATIC ${VISUALIZER_SOURCES})
@@ -28,17 +28,6 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/lib/glew-2.2.0/include")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/glew-2.2.0/build/cmake")
 target_link_libraries( visualizer PRIVATE glew_s )
 #target_link_libraries( visualizer GLEW_static )
-
-#jpeg (built with the Helios core)
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../core/lib/libjpeg-9a")
-include_directories("${CMAKE_BINARY_DIR}/lib/libjpeg-9a")
-target_link_libraries( visualizer PRIVATE jpeg )
-add_dependencies( visualizer jpeg )
-
-#libpng
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../core/lib/libpng")
-target_link_libraries( visualizer PRIVATE png_static )
-add_dependencies( png_static zlibstatic )
 
 #glfw
 include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/lib/glfw-3.3.2/include")
@@ -100,6 +89,6 @@ add_custom_target(copy_textures DEPENDS "${CMAKE_BINARY_DIR}/plugins/visualizer/
 
 add_dependencies(visualizer copy_shaders copy_textures)
 
-add_executable( visualizer_tests "src/TestMain.cpp" )
+add_executable( visualizer_tests "tests/TestMain.cpp" )
 target_link_libraries( visualizer_tests PRIVATE visualizer )
 add_test( NAME visualizer_tests COMMAND visualizer_tests )

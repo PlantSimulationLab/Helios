@@ -30,42 +30,6 @@
 
 class Visualizer;
 
-//! Function to create a texture map from a JPEG image
-/**
- * \param[in] filename Name of the JPEG image file
- * \param[out] texture Texture map created from JPEG image
- * \param[out] height Height of the image/texture in pixels
- * \param[out] width Width of the image/texture in pixels
- */
-int read_JPEG_file(const char *filename, std::vector<unsigned char> &texture, uint &height, uint &width);
-
-//! Write current graphics window to a JPEG image file
-/**
- * \param[in] filename Name of the JPEG image file
- * \param[in] width Width of the graphics window in pixels
- * \param[in] height Height of the graphics window in pixels
- * \param[in] print_messages [optional] Flag to print output messages to the console
- */
-int write_JPEG_file(const char *filename, uint width, uint height, bool print_messages = true);
-
-//! Write a JPEG image file based on array of pixel data
-/**
- * \param[in] filename Name of the JPEG image file
- * \param[in] width Width of the graphics window in pixels
- * \param[in] height Height of the graphics window in pixels
- * \param[in] data Vector of RGB pixel data
- * \param[in] print_messages [optional] Flag to print output messages to the console
- */
-int write_JPEG_file(const char *filename, uint width, uint height, const std::vector<helios::RGBcolor> &data, bool print_messages = true);
-
-//! Function to create a texture map from a PNG image
-/**
- * \param[in] filename Name of the PNG image file
- * \param[out] texture Texture map created from PNG image
- * \param[out] height Height of the image/texture in pixels
- * \param[out] width Width of the image/texture in pixels
- */
-void read_png_file(const char *filename, std::vector<unsigned char> &texture, uint &height, uint &width);
 
 /**
  * \brief Validates the given texture file.
@@ -274,7 +238,8 @@ public:
      */
     Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool headless = false);
 
-    //! Visualizer constructor with option to remove window decorations (e.g., header bar, trim). This is a workaround for an error that occurs on Linux systems when printing the window to a JPEG image (printWindow). Once a fix is found, this function will likely be removed
+    //! Visualizer constructor with option to remove window decorations (e.g., header bar, trim). This is a workaround for an error that occurs on Linux systems when printing the window to a JPEG image (printWindow). Once a fix is found, this
+    //! function will likely be removed
     /**
      * \param[in] Wdisplay Width of the display in pixels.
      * \param[in] Hdisplay Height of the display in pixels.
@@ -288,7 +253,7 @@ public:
     ~Visualizer();
 
     //! Visualizer self-test routine
-    [[nodiscard]] static int selfTest();
+    static int selfTest();
 
     //! Enable standard output from this plug-in (default)
     void enableMessages();
@@ -655,7 +620,7 @@ public:
     /**
      * \param[in] geometry_id The unique identifier of the geometry to delete.
      */
-    void deleteGeometry( size_t geometry_id);
+    void deleteGeometry(size_t geometry_id);
 
     //! Add a coordinate axis with at the origin with unit length
     void addCoordinateAxes();
@@ -889,7 +854,8 @@ public:
 
     //! Get R-G-B pixel data in the current display window
     /**
-     * \param[out] buffer Pixel data. The data is stored as r-g-b * column * row. So indices (0,1,2) would be the RGB values for row 0 and column 0, indices (3,4,5) would be RGB values for row 0 and column 1, and so on. Thus, buffer is of size 3*width*height.
+     * \param[out] buffer Pixel data. The data is stored as r-g-b * column * row. So indices (0,1,2) would be the RGB values for row 0 and column 0, indices (3,4,5) would be RGB values for row 0 and column 1, and so on. Thus, buffer is of size
+     * 3*width*height.
      */
     void getWindowPixelsRGB(uint *buffer) const;
 

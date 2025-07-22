@@ -2,14 +2,14 @@
 
 using namespace helios;
 
-int SyntheticAnnotation::selfTest()const {
+int SyntheticAnnotation::selfTest() {
     std::cout << "Running synthetic annotation self-test..." << std::flush;
 
     int error_count = 0; // Track errors
 
     // ---- Test RGB Encoding ---- //
     {
-        SyntheticAnnotation test_instance(nullptr);  // Create a test instance
+        SyntheticAnnotation test_instance(nullptr); // Create a test instance
 
         int ID1 = 77830;
         int ID2 = test_instance.rgb2int(test_instance.int2rgb(ID1));
@@ -39,9 +39,7 @@ int SyntheticAnnotation::selfTest()const {
         helios::RGBcolor originalColor = helios::make_RGBcolor(0.9, 0.9, 0.9);
         test_instance.setBackgroundColor(helios::make_RGBcolor(0.5, 0.5, 0.5));
 
-        if (test_instance.background_color.r != 0.5 ||
-            test_instance.background_color.g != 0.5 ||
-            test_instance.background_color.b != 0.5) {
+        if (test_instance.background_color.r != 0.5 || test_instance.background_color.g != 0.5 || test_instance.background_color.b != 0.5) {
             std::cerr << "FAILED: setBackgroundColor()" << std::endl;
             error_count++;
         }
@@ -208,7 +206,7 @@ int SyntheticAnnotation::selfTest()const {
         SyntheticAnnotation test_instance(nullptr);
 
         int edgeCases[] = {0, 1, 255, 256, 10000, 16777215}; // Max RGB range
-        for (int id : edgeCases) {
+        for (int id: edgeCases) {
             int convertedBack = test_instance.rgb2int(test_instance.int2rgb(id));
             if (id != convertedBack) {
                 std::cerr << "FAILED: RGB encoding for value " << id << std::endl;
@@ -216,7 +214,6 @@ int SyntheticAnnotation::selfTest()const {
             }
         }
     }
-
 
 
     // ---- Final Summary ---- //

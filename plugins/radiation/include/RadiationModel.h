@@ -184,7 +184,6 @@ struct RadiationCamera {
     void globalHistogramEqualization(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label);
 
 private:
-
     //! Computes the luminance of a color given its red, green, and blue components.
     /**
      * \param[in] red Red component of the color.
@@ -203,7 +202,7 @@ private:
      */
     static float lin_to_srgb(float x) noexcept {
         x = std::fminf(std::fmaxf(x, 0.0f), 1.0f);
-        return (x <= 0.0031308f) ? 12.92f*x : 1.055f*std::pow(x, 1.0f/2.4f) - 0.055f;
+        return (x <= 0.0031308f) ? 12.92f * x : 1.055f * std::pow(x, 1.0f / 2.4f) - 0.055f;
     }
 
     //! Converts an sRGB color component to its linear representation.
@@ -212,9 +211,8 @@ private:
      * \return Corresponding linear color component in the range [0, 1]
      */
     static float srgb_to_lin(float v) noexcept {
-        return (v <= 0.04045f) ? v/12.92f : std::pow((v + 0.055f)/1.055f, 2.4f);
+        return (v <= 0.04045f) ? v / 12.92f : std::pow((v + 0.055f) / 1.055f, 2.4f);
     }
-
 };
 
 //! Properties defining a radiation band
@@ -268,7 +266,6 @@ struct RadiationBand {
 
     //! Waveband range of band
     helios::vec2 wavebandBounds;
-
 };
 
 //! Possible types of radiation sources
@@ -362,11 +359,15 @@ public:
     ~RadiationModel();
 
     //! Self-test
-    /** \return 0 if test was successful, 1 if test failed */
-    int selfTest();
+    /**
+     * \return 0 if test was successful, 1 if test failed
+     */
+    static int selfTest();
 
     //! Disable/silence status messages
-    /** \note Error messages are still displayed. */
+    /**
+     * \note Error messages are still displayed.
+     */
     void disableMessages();
 
     //! Enable status messages
@@ -395,14 +396,16 @@ public:
     void setDiffuseRayCount(const std::string &label, size_t N);
 
     //! Diffuse (ambient) radiation flux
-    /** Diffuse component of radiation incident on a horizontal surface above all geometry in the domain.
+    /**
+     * Diffuse component of radiation incident on a horizontal surface above all geometry in the domain.
      * \param[in] label Label used to reference the band
      * \param[in] flux Radiative flux
      */
     void setDiffuseRadiationFlux(const std::string &label, float flux);
 
     //! Extinction coefficient of diffuse ambient radiation
-    /** The angular distribution of diffuse ambient radiation is computed according to N = Psi^-K, where Psi is the angle between the distribution peak (usually the sun direction) and the ambient direction, and K is the extinction coefficient. When
+    /**
+     * The angular distribution of diffuse ambient radiation is computed according to N = Psi^-K, where Psi is the angle between the distribution peak (usually the sun direction) and the ambient direction, and K is the extinction coefficient. When
      * K=0 the ambient distribution is uniform, which is the default setting
      * \param[in] label Label used to reference the radiative band
      * \param[in] K Extinction coefficient value
@@ -411,7 +414,8 @@ public:
     void setDiffuseRadiationExtinctionCoeff(const std::string &label, float K, const helios::vec3 &peak_dir);
 
     //! Extinction coefficient of diffuse ambient radiation
-    /** The angular distribution of diffuse ambient radiation is computed according to N = Psi^-K, where Psi is the angle between the distribution peak (usually the sun direction) and the ambient direction, and K is the extinction coefficient. When
+    /**
+     * The angular distribution of diffuse ambient radiation is computed according to N = Psi^-K, where Psi is the angle between the distribution peak (usually the sun direction) and the ambient direction, and K is the extinction coefficient. When
      * K=0 the ambient distribution is uniform, which is the default setting
      * \param[in] label Label used to reference the radiative band
      * \param[in] K Extinction coefficient value
@@ -1022,7 +1026,8 @@ public:
      * \param[in] brightness_adjustment [optional] Adjustment factor for brightness (default is 1.0, which means no adjustment)
      * \param[in] contrast_adjustment [optional] Adjustment factor for contrast (default is 1.0, which means no adjustment)
      */
-    void applyImageProcessingPipeline(const std::string &cameralabel, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float saturation_adjustment = 1.f, float brightness_adjustment = 1.f, float contrast_adjustment = 1.f);
+    void applyImageProcessingPipeline(const std::string &cameralabel, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float saturation_adjustment = 1.f, float brightness_adjustment = 1.f,
+                                      float contrast_adjustment = 1.f);
 
     //! Write camera data for one or more bands to a JPEG image
     /**

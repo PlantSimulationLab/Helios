@@ -2,10 +2,10 @@
 
 using namespace helios;
 
-int main(){
-    uint Nx = 500;      // grid size in x
-    uint Ny = 500;      // grid size in y
-    float D = 10.f;     // domain width
+int main() {
+    uint Nx = 500; // grid size in x
+    uint Ny = 500; // grid size in y
+    float D = 10.f; // domain width
     vec2 ground_size(D, D);
 
     std::ofstream outfile("../results/runtime.txt");
@@ -21,7 +21,7 @@ int main(){
     outfile << "PLY model load, " << elapsed << "\n";
 
     timer.tic();
-    ground_UUIDs = context.addTile(nullorigin, ground_size, nullrotation, make_int2(Nx, Ny) );
+    ground_UUIDs = context.addTile(nullorigin, ground_size, nullrotation, make_int2(Nx, Ny));
     elapsed = timer.toc("Ground geometry creation");
     outfile << "Ground geometry creation, " << elapsed << "\n";
 

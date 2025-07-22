@@ -48,93 +48,6 @@ StomatalConductanceModel::StomatalConductanceModel(helios::Context *m_context) {
     model = "BMF"; // default model - Buckley, Mott, Farquhar
 }
 
-int StomatalConductanceModel::selfTest() {
-
-    Context context_selftest;
-
-    if (message_flag) {
-        std::cout << "Running stomatal conductance model self-test..." << std::flush;
-    }
-
-    float RMSE_max = 0.03;
-
-    std::vector<float> An_ref{21.81, 22.71, 20.02, 22.60, 19.97, 17.32, 11.90, 6.87, 1.21, -1.49};
-    std::vector<float> Tair_ref{20.69, 30.37, 39.19, 27.06, 27.12, 27.11, 27.08, 26.98, 26.87, 26.81};
-    std::vector<float> TL_ref{21.00, 30.02, 38.01, 26.99, 27.00, 27.01, 27.01, 27.00, 27.00, 26.99};
-    std::vector<float> Q_ref{2000, 2000, 2000, 2000, 1200, 800, 400, 200, 50, 0};
-    float gbw_ref = 3.5;
-    float Cs_ref = 400;
-    float hs_ref = 0.55;
-    float Patm_ref = 101300;
-    std::vector<float> Gamma_ref = {43.7395, 70.2832, 105.5414, 60.0452, 60.0766, 60.1080, 60.1080, 60.0766, 60.0766, 60.0452};
-
-    std::vector<float> gs_ref{0.3437, 0.3386, 0.3531, 0.3811, 0.3247, 0.2903, 0.2351, 0.1737, 0.0868, 0.0421};
-    std::vector<float> gs_BWB(gs_ref.size());
-    std::vector<float> gs_BBL(gs_ref.size());
-    std::vector<float> gs_MOPT(gs_ref.size());
-    std::vector<float> gs_BMF(gs_ref.size());
-
-    uint UUID0 = context_selftest.addPatch();
-
-    BWBcoefficients BWBcoeffs;
-    BBLcoefficients BBLcoeffs;
-    MOPTcoefficients MOPTcoeffs;
-    BMFcoefficients BMFcoeffs;
-
-    StomatalConductanceModel gsm(&context_selftest);
-
-    float RMSE_BWB = 0.f;
-    float RMSE_BBL = 0.f;
-    float RMSE_MOPT = 0.f;
-    float RMSE_BMF = 0.f;
-
-    for (uint i = 0; i < gs_ref.size(); i++) {
-
-        context_selftest.setPrimitiveData(UUID0, "radiation_flux_PAR", Q_ref.at(i) / 4.57f);
-        context_selftest.setPrimitiveData(UUID0, "net_photosynthesis", An_ref.at(i));
-        context_selftest.setPrimitiveData(UUID0, "temperature", TL_ref.at(i) + 273.f);
-        context_selftest.setPrimitiveData(UUID0, "air_temperature", Tair_ref.at(i) + 273.f);
-        context_selftest.setPrimitiveData(UUID0, "air_CO2", Cs_ref);
-        context_selftest.setPrimitiveData(UUID0, "air_humidity", hs_ref);
-        context_selftest.setPrimitiveData(UUID0, "air_pressure", Patm_ref);
-        context_selftest.setPrimitiveData(UUID0, "boundarylayer_conductance", gbw_ref);
-        context_selftest.setPrimitiveData(UUID0, "Gamma_CO2", Gamma_ref.at(i));
-
-        gsm.setModelCoefficients(BWBcoeffs);
-        gsm.run();
-        context_selftest.getPrimitiveData(UUID0, "moisture_conductance", gs_BWB.at(i));
-        RMSE_BWB += pow(gs_BWB.at(i) - gs_ref.at(i), 2) / float(gs_ref.size());
-
-        gsm.setModelCoefficients(BBLcoeffs);
-        gsm.run();
-        context_selftest.getPrimitiveData(UUID0, "moisture_conductance", gs_BBL.at(i));
-        RMSE_BBL += pow(gs_BBL.at(i) - gs_ref.at(i), 2) / float(gs_ref.size());
-
-        gsm.setModelCoefficients(MOPTcoeffs);
-        gsm.run();
-        context_selftest.getPrimitiveData(UUID0, "moisture_conductance", gs_MOPT.at(i));
-        RMSE_MOPT += pow(gs_MOPT.at(i) - gs_ref.at(i), 2) / float(gs_ref.size());
-
-        gsm.setModelCoefficients(BMFcoeffs);
-        gsm.run();
-        context_selftest.getPrimitiveData(UUID0, "moisture_conductance", gs_BMF.at(i));
-        RMSE_BMF += pow(gs_BMF.at(i) - gs_ref.at(i), 2) / float(gs_ref.size());
-    }
-
-    if (sqrtf(RMSE_BWB) > RMSE_max || sqrtf(RMSE_BBL) > RMSE_max || sqrtf(RMSE_MOPT) > RMSE_max || sqrtf(RMSE_BMF) > RMSE_max) {
-        if (message_flag) {
-            std::cout << "failed." << std::endl;
-            std::cout << sqrtf(RMSE_BWB) << " " << sqrtf(RMSE_BBL) << " " << sqrtf(RMSE_MOPT) << " " << sqrtf(RMSE_BMF) << std::endl;
-        }
-        return 1;
-    }
-
-    if (message_flag) {
-        std::cout << "passed." << std::endl;
-    }
-    return 0;
-}
-
 void StomatalConductanceModel::setModelCoefficients(const BWBcoefficients &coeffs) {
     BWBcoeffs = coeffs;
     BWBmodel_coefficients.clear();
@@ -666,22 +579,29 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
     if (message_flag) {
         if (model == "BWB" && assumed_default_An > 0) {
-            std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Woodrow-Berry stomatal conductance model requires net photosynthesis, but primitive data net_photosynthesis could not be found for " << assumed_default_An << " primitives. Did you forget to run the photosynthesis model?" << std::endl;
+            std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Woodrow-Berry stomatal conductance model requires net photosynthesis, but primitive data net_photosynthesis could not be found for " << assumed_default_An
+                      << " primitives. Did you forget to run the photosynthesis model?" << std::endl;
         } else if (model == "BBL" && assumed_default_An > 0) {
-            std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Berry-Leuning stomatal conductance model requires net photosynthesis, but primitive data net_photosynthesis could not be found for " << assumed_default_An << " primitives. Did you forget to run the photosynthesis model?" << std::endl;
+            std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Berry-Leuning stomatal conductance model requires net photosynthesis, but primitive data net_photosynthesis could not be found for " << assumed_default_An
+                      << " primitives. Did you forget to run the photosynthesis model?" << std::endl;
         }
         if (model == "BBL" && assumed_default_Gamma > 0) {
-            std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Berry-Leuning stomatal conductance model requires the CO2 compensation point Gamma , but primitive data Gamma_CO2 could not be found for " << assumed_default_An << " primitives. Did you forget to set optional output primitive data Gamma_CO2 in the photosynthesis model?" << std::endl;
+            std::cout << "WARNING (StomatalConductanceModel::run): The Ball-Berry-Leuning stomatal conductance model requires the CO2 compensation point Gamma , but primitive data Gamma_CO2 could not be found for " << assumed_default_An
+                      << " primitives. Did you forget to set optional output primitive data Gamma_CO2 in the photosynthesis model?" << std::endl;
         }
 
         if (warn_dt_too_large) {
             std::cout << "WARNING (StomatalConductanceModel::run): The specified time step is larger than the dynamic stomatal conductance time constant. This may result in inaccurate stomatal conductance values." << std::endl;
         }
         if (warn_old_gs_unspecified) {
-            std::cout << "WARNING (StomatalConductanceModel::run): The dynamic stomatal conductance model requires the previous stomatal conductance value, but primitive data moisture_conductance could not be found for one or more primitives. Dynamic model was not run for these primitives this time step." << std::endl;
+            std::cout
+                    << "WARNING (StomatalConductanceModel::run): The dynamic stomatal conductance model requires the previous stomatal conductance value, but primitive data moisture_conductance could not be found for one or more primitives. Dynamic model was not run for these primitives this time step."
+                    << std::endl;
         }
         if (warn_tau_unspecified) {
-            std::cout << "WARNING (StomatalConductanceModel::run): The dynamic stomatal conductance model requires the time constants to be specified using the StomatalConductance::setDynamicTimeConstants() method, but these were not specified for one or more primitives. Dynamic model was not run for these primitives." << std::endl;
+            std::cout
+                    << "WARNING (StomatalConductanceModel::run): The dynamic stomatal conductance model requires the time constants to be specified using the StomatalConductance::setDynamicTimeConstants() method, but these were not specified for one or more primitives. Dynamic model was not run for these primitives."
+                    << std::endl;
         }
     }
 }
@@ -910,22 +830,84 @@ void StomatalConductanceModel::printDefaultValueReport(const std::vector<uint> &
 
     std::cout << "--- Stomatal Conductance Model Default Value Report ---" << std::endl;
 
-    std::cout << "PAR flux: " << assumed_default_i << " of " << Nprimitives << " used default value of " << i_default << " because ""radiation_flux_PAR"" primitive data did not exist" << std::endl;
-    std::cout << "surface temperature: " << assumed_default_TL << " of " << Nprimitives << " used default value of " << TL_default << " because ""temperature"" primitive data did not exist" << std::endl;
-    std::cout << "air pressure: " << assumed_default_p << " of " << Nprimitives << " used default value of " << pressure_default << " because ""air_pressure"" primitive data did not exist" << std::endl;
-    std::cout << "air temperature: " << assumed_default_Ta << " of " << Nprimitives << " used default value of " << air_temperature_default << " because ""air_temperature"" primitive data did not exist" << std::endl;
-    std::cout << "air humidity: " << assumed_default_rh << " of " << Nprimitives << " used default value of " << air_humidity_default << " because ""air_humidity"" primitive data did not exist" << std::endl;
-    std::cout << "boundary-layer conductance: " << assumed_default_gbw << " of " << Nprimitives << " used default value of " << blconductance_default << " because ""boundarylayer_conductance"" primitive data did not exist" << std::endl;
-    std::cout << "soil moisture factor: " << assumed_default_beta << " of " << Nprimitives << " used default value of " << beta_default << " because ""soil_beta"" primitive data did not exist" << std::endl;
+    std::cout << "PAR flux: " << assumed_default_i << " of " << Nprimitives << " used default value of " << i_default
+              << " because "
+                 "radiation_flux_PAR"
+                 " primitive data did not exist"
+              << std::endl;
+    std::cout << "surface temperature: " << assumed_default_TL << " of " << Nprimitives << " used default value of " << TL_default
+              << " because "
+                 "temperature"
+                 " primitive data did not exist"
+              << std::endl;
+    std::cout << "air pressure: " << assumed_default_p << " of " << Nprimitives << " used default value of " << pressure_default
+              << " because "
+                 "air_pressure"
+                 " primitive data did not exist"
+              << std::endl;
+    std::cout << "air temperature: " << assumed_default_Ta << " of " << Nprimitives << " used default value of " << air_temperature_default
+              << " because "
+                 "air_temperature"
+                 " primitive data did not exist"
+              << std::endl;
+    std::cout << "air humidity: " << assumed_default_rh << " of " << Nprimitives << " used default value of " << air_humidity_default
+              << " because "
+                 "air_humidity"
+                 " primitive data did not exist"
+              << std::endl;
+    std::cout << "boundary-layer conductance: " << assumed_default_gbw << " of " << Nprimitives << " used default value of " << blconductance_default
+              << " because "
+                 "boundarylayer_conductance"
+                 " primitive data did not exist"
+              << std::endl;
+    std::cout << "soil moisture factor: " << assumed_default_beta << " of " << Nprimitives << " used default value of " << beta_default
+              << " because "
+                 "soil_beta"
+                 " primitive data did not exist"
+              << std::endl;
 
     if (model == "BWB" || model == "BBL" || model == "MOPT") {
-        std::cout << "net photosynthesis: " << assumed_default_An << " of " << Nprimitives << " used default value of " << An_default << " because ""net_photosynthesis"" primitive data did not exist" << std::endl;
-        std::cout << "Gamma: " << assumed_default_Gamma << " of " << Nprimitives << " used default value of " << Gamma_default << " because ""Gamma_CO2"" primitive data did not exist" << std::endl;
-        std::cout << "air CO2: " << assumed_default_CO2 << " of " << Nprimitives << " used default value of " << air_CO2_default << " because ""air_CO2"" primitive data did not exist" << std::endl;
-    }else if( model == "BB" ){
-        std::cout << "xylem water potential: " << assumed_default_Psix << " of " << Nprimitives << " used default value of " << xylem_potential_default << " because ""xylem_water_potential"" primitive data did not exist" << std::endl;
+        std::cout << "net photosynthesis: " << assumed_default_An << " of " << Nprimitives << " used default value of " << An_default
+                  << " because "
+                     "net_photosynthesis"
+                     " primitive data did not exist"
+                  << std::endl;
+        std::cout << "Gamma: " << assumed_default_Gamma << " of " << Nprimitives << " used default value of " << Gamma_default
+                  << " because "
+                     "Gamma_CO2"
+                     " primitive data did not exist"
+                  << std::endl;
+        std::cout << "air CO2: " << assumed_default_CO2 << " of " << Nprimitives << " used default value of " << air_CO2_default
+                  << " because "
+                     "air_CO2"
+                     " primitive data did not exist"
+                  << std::endl;
+    } else if (model == "BB") {
+        std::cout << "xylem water potential: " << assumed_default_Psix << " of " << Nprimitives << " used default value of " << xylem_potential_default
+                  << " because "
+                     "xylem_water_potential"
+                     " primitive data did not exist"
+                  << std::endl;
     }
 
     std::cout << "------------------------------------------------------" << std::endl;
+}
 
+void StomatalConductanceModel::setModelCoefficients(const std::vector<BMFcoefficients> &coeffs, const std::vector<uint> &UUIDs) {
+    
+    if(coeffs.size() != UUIDs.size()) {
+        helios_runtime_error("ERROR (StomatalConductanceModel::setModelCoefficients): The number of coefficient sets (" + std::to_string(coeffs.size()) + ") does not match the number of UUIDs provided (" + std::to_string(UUIDs.size()) + ").");
+    }
+
+    model = "BMF";
+
+    for( size_t i=0; i<UUIDs.size(); i++ ){
+
+        if( context->doesPrimitiveDataExist( UUIDs.at(i), "twoway_stomatal_conductance_flag") ){
+            std::cerr << "WARNING (StomatalConductanceModel::setModelCoefficients): Stomatal conductance model coefficients for UUID " << UUIDs.at(i) << " are being overwritten." << std::endl;
+        }
+
+        BMFmodel_coefficients[UUIDs.at(i)] = coeffs.at(i);
+        context->setPrimitiveData( UUIDs.at(i), "twoway_stomatal_conductance_flag", 1 );
+    }
 }

@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.40</span>
+       <span id="projectnumber">&#160;v1.3.41</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -159,6 +159,7 @@ $(function(){initNavTree('globals.html',''); initResizable(true); });
 <h3><a id="index_b" name="index_b"></a>- b -</h3><ul>
 <li>bbox_bounds()&#160;:&#160;<a class="el" href="primitive_intersection_8cu.html#a463610deabc8971f8d92607f462e28f3">primitiveIntersection.cu</a></li>
 <li>bbox_intersect()&#160;:&#160;<a class="el" href="primitive_intersection_8cu.html#a4b1369e96290adffabbbcc86b92d8560">primitiveIntersection.cu</a></li>
+<li>bvhTraversalKernel()&#160;:&#160;<a class="el" href="_collision_detection_8cu.html#a477305ecd8f0b15fc329e42324235172">CollisionDetection.cu</a></li>
 </ul>
 
 
@@ -168,6 +169,7 @@ $(function(){initNavTree('globals.html',''); initResizable(true); });
 <li>computeOsmoticPotential()&#160;:&#160;<a class="el" href="_plant_hydraulics_model_8h.html#a5a976d4ed98dddb65eeffb2be7055ead">PlantHydraulicsModel.h</a>, <a class="el" href="_plant_hydraulics_model_8cpp.html#a5a976d4ed98dddb65eeffb2be7055ead">PlantHydraulicsModel.cpp</a></li>
 <li>computeTurgorPressure()&#160;:&#160;<a class="el" href="_plant_hydraulics_model_8h.html#afef148150eea27bf7aeef67af21ff59d">PlantHydraulicsModel.h</a>, <a class="el" href="_plant_hydraulics_model_8cpp.html#afef148150eea27bf7aeef67af21ff59d">PlantHydraulicsModel.cpp</a></li>
 <li>computeWaterPotential()&#160;:&#160;<a class="el" href="_plant_hydraulics_model_8h.html#a5506054acb669be2e5878d81c9a0f4fb">PlantHydraulicsModel.h</a>, <a class="el" href="_plant_hydraulics_model_8cpp.html#a5506054acb669be2e5878d81c9a0f4fb">PlantHydraulicsModel.cpp</a></li>
+<li>coneIntersectionKernel()&#160;:&#160;<a class="el" href="_collision_detection_8cu.html#a1bef44ae09809e93595618541613bdb2">CollisionDetection.cu</a></li>
 <li>cp_air_mol&#160;:&#160;<a class="el" href="_energy_balance_model_8h.html#adaaf7d57c17dff3c06430b8380c06e80">EnergyBalanceModel.h</a></li>
 <li>createDistribution()&#160;:&#160;<a class="el" href="_project_builder_8h.html#a103dcbbdd88aa36e2e27b95ca83bc8b5">ProjectBuilder.h</a></li>
 <li>createTaggedPtr()&#160;:&#160;<a class="el" href="_project_builder_8h.html#ad47910406a5f4d3b38e94520345768d4">ProjectBuilder.h</a></li>
@@ -176,6 +178,8 @@ $(function(){initNavTree('globals.html',''); initResizable(true); });
 
 
 <h3><a id="index_d" name="index_d"></a>- d -</h3><ul>
+<li>d_aabbIntersect()&#160;:&#160;<a class="el" href="_collision_detection_8cu.html#a69d47caef398324459fd2f5f7ecb3e50">CollisionDetection.cu</a></li>
+<li>d_coneAABBIntersect()&#160;:&#160;<a class="el" href="_collision_detection_8cu.html#a56e53a770a71103a6092277abec65ea6">CollisionDetection.cu</a></li>
 <li>DEPRECATED&#160;:&#160;<a class="el" href="global_8h.html#aaf225a2b96038de3a42d61a1fa63654b">global.h</a></li>
 <li>disk_bounds()&#160;:&#160;<a class="el" href="primitive_intersection_8cu.html#aab2e16ff4d5a4bca2d90c49f777500e9">primitiveIntersection.cu</a></li>
 <li>disk_intersect()&#160;:&#160;<a class="el" href="primitive_intersection_8cu.html#a45dc4da4927abe579fd24be608e4cd75">primitiveIntersection.cu</a></li>
@@ -189,12 +193,18 @@ $(function(){initNavTree('globals.html',''); initResizable(true); });
 
 <h3><a id="index_f" name="index_f"></a>- f -</h3><ul>
 <li>file_dialog()&#160;:&#160;<a class="el" href="_project_builder_8h.html#a08a876d41e64daa8f53f1822c059e91b">ProjectBuilder.h</a></li>
+<li>float3ToHeliosVec()&#160;:&#160;<a class="el" href="_collision_detection_8cu.html#a3437177405ed4c25a1e8d003202dfae6">CollisionDetection.cu</a></li>
 </ul>
 
 
 <h3><a id="index_g" name="index_g"></a>- g -</h3><ul>
 <li>get_xml_node_values()&#160;:&#160;<a class="el" href="_project_builder_8h.html#a37ea8aaac001a1f2eb0218c28a8e7c5a">ProjectBuilder.h</a></li>
 <li>getVariation()&#160;:&#160;<a class="el" href="_canopy_generator_8h.html#accfb46da54c7b0e83878a1331bbc94d1">CanopyGenerator.h</a>, <a class="el" href="_canopy_generator_8cpp.html#aa0b21a2d6b9506b33d05047716d671e0">CanopyGenerator.cpp</a></li>
+</ul>
+
+
+<h3><a id="index_h" name="index_h"></a>- h -</h3><ul>
+<li>heliosVecToFloat3()&#160;:&#160;<a class="el" href="_collision_detection_8cu.html#a4564a83bb1f06a908b63b20bdf68fe3b">CollisionDetection.cu</a></li>
 </ul>
 
 
@@ -206,6 +216,8 @@ $(function(){initNavTree('globals.html',''); initResizable(true); });
 
 <h3><a id="index_l" name="index_l"></a>- l -</h3><ul>
 <li>lambda_mol&#160;:&#160;<a class="el" href="_energy_balance_model_8h.html#a7859a25432fdd19a97ec8cd3bc591aea">EnergyBalanceModel.h</a></li>
+<li>launchBVHTraversal()&#160;:&#160;<a class="el" href="_collision_detection_8cpp.html#a9613831fda0fbaf95b71961b83be82a9">CollisionDetection.cpp</a>, <a class="el" href="_collision_detection_8cu.html#a9613831fda0fbaf95b71961b83be82a9">CollisionDetection.cu</a></li>
+<li>launchConeIntersection()&#160;:&#160;<a class="el" href="_collision_detection_8cu.html#aa3bb8741309e24c8d820ab184f81a9b9">CollisionDetection.cu</a></li>
 <li>linspace()&#160;:&#160;<a class="el" href="_project_builder_8h.html#ab5dbf3e7cbda62126b5dc0b34456e149">ProjectBuilder.h</a></li>
 </ul>
 
@@ -219,6 +231,7 @@ $(function(){initNavTree('globals.html',''); initResizable(true); });
 
 
 <h3><a id="index_p" name="index_p"></a>- p -</h3><ul>
+<li>ParametersToOptimize&#160;:&#160;<a class="el" href="_parameter_optimization_8h.html#a0333ed688ad6c84cfab68a10c6a5f078">ParameterOptimization.h</a></li>
 <li>PI_F&#160;:&#160;<a class="el" href="global_8h.html#a2d6b12d3f019b61b427ec3c63270143d">global.h</a></li>
 <li>PNG_DEBUG&#160;:&#160;<a class="el" href="global_8cpp.html#a6f9dac5522b0dd6350aeac619663c353">global.cpp</a></li>
 <li>PNG_SKIP_SETJMP_CHECK&#160;:&#160;<a class="el" href="global_8cpp.html#a73b861b0190d3c6e8300676c40550bcc">global.cpp</a></li>
@@ -228,8 +241,6 @@ $(function(){initNavTree('globals.html',''); initResizable(true); });
 <h3><a id="index_r" name="index_r"></a>- r -</h3><ul>
 <li>R&#160;:&#160;<a class="el" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f">EnergyBalanceModel.h</a></li>
 <li>RadiationSourceType&#160;:&#160;<a class="el" href="_radiation_model_8h.html#a87dc3655cd959da2cde2b3b72e844579">RadiationModel.h</a></li>
-<li>read_JPEG_file()&#160;:&#160;<a class="el" href="_visualizer_8h.html#a1ffc8a34ba2895084c71e95ed615d10a">Visualizer.h</a>, <a class="el" href="_visualizer_8cpp.html#a1ffc8a34ba2895084c71e95ed615d10a">Visualizer.cpp</a></li>
-<li>read_png_file()&#160;:&#160;<a class="el" href="_visualizer_8h.html#a0e60a86e54784ea9f2b178ce9540713f">Visualizer.h</a>, <a class="el" href="_visualizer_8cpp.html#a0e60a86e54784ea9f2b178ce9540713f">Visualizer.cpp</a></li>
 <li>rectangle_bounds()&#160;:&#160;<a class="el" href="primitive_intersection_8cu.html#a31b2bef2ed3e97edbd08bfa1243e9d40">primitiveIntersection.cu</a></li>
 <li>rectangle_intersect()&#160;:&#160;<a class="el" href="primitive_intersection_8cu.html#a84078834a363095c77877d20e45cc16b">primitiveIntersection.cu</a></li>
 </ul>
@@ -262,11 +273,6 @@ $(function(){initNavTree('globals.html',''); initResizable(true); });
 <li>von_Karman_constant&#160;:&#160;<a class="el" href="_energy_balance_model_8h.html#a28334bb6bed09fac6473d5c67318cdc3">EnergyBalanceModel.h</a></li>
 <li>voxel_bounds()&#160;:&#160;<a class="el" href="primitive_intersection_8cu.html#a904cdd1733732aa1a8dbaf2e958176a9">primitiveIntersection.cu</a></li>
 <li>voxel_intersect()&#160;:&#160;<a class="el" href="primitive_intersection_8cu.html#ac0a2a895d2e98227a3905e56939228fe">primitiveIntersection.cu</a></li>
-</ul>
-
-
-<h3><a id="index_w" name="index_w"></a>- w -</h3><ul>
-<li>write_JPEG_file()&#160;:&#160;<a class="el" href="_visualizer_8h.html#a84fd755e2a00dced4e9ad598f04bea8e">Visualizer.h</a>, <a class="el" href="_visualizer_8cpp.html#a5ff866086e40938721ed22a35edada7d">Visualizer.cpp</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

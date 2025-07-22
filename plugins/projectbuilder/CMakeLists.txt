@@ -6,7 +6,7 @@ project(helios)
 set(PLUGIN_INCLUDE_DIRS "")
 set(SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/ProjectBuilder.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/src/InitializeSimulation.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/src/selfTest.cpp")
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/selfTest.cpp")
 
 # Conditional Plugins
 file(GLOB PLUGIN_DIRS LIST_DIRECTORIES true ${CMAKE_SOURCE_DIR}/plugins/*)
@@ -248,3 +248,7 @@ if("visualizer" IN_LIST PLUGINS)
 endif()
 
 file( COPY inputs DESTINATION ${CMAKE_BINARY_DIR}/plugins/projectbuilder/ )
+
+add_executable(projectbuilder_tests "tests/TestMain.cpp")
+target_link_libraries(projectbuilder_tests PRIVATE projectbuilder)
+add_test(NAME projectbuilder_tests COMMAND projectbuilder_tests)

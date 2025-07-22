@@ -23,6 +23,7 @@
       <tab type="user" visible="yes" url="@ref CanopyGeneratorDoc" title="Canopy Generator"/>
       <tab type="user" visible="yes" url="@ref WeberPennDoc" title="Weber-Penn Tree"/>
       <tab type="user" visible="yes" url="@ref PlantHydraulicsDoc" title="Plant Hydraulics Model"/>
+      <tab type="user" visible="yes" url="@ref ParameterOptimizationDoc" title="Model Parameter Optimization Utility"/>
       <tab type="user" visible="yes" url="@ref LeafOpticsDoc" title="Leaf Optics Model"/>
       <tab type="user" visible="yes" url="@ref ProjectBuilderDoc" title="Project Builder"/>
     </tab>

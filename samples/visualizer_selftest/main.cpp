@@ -2,9 +2,8 @@
 
 using namespace helios;
 
-int main(){
+int main() {
 
-  // Run the self-test
-  return Visualizer::selfTest();
-	
+    // Run the self-test
+    return Visualizer::selfTest();
 }

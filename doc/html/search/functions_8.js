@@ -17,12 +17,14 @@ var searchData=
   ['interpolate_14',['interpolate',['../_project_builder_8h.html#a4721e8292143200215a5142e64575a8f',1,'ProjectBuilder.h']]],
   ['interpolate_5ftexture_5fuv_5fto_5fslice_5fpoint_15',['interpolate_texture_UV_to_slice_point',['../class_voxel_intersection.html#aba4e8fce246ada7df4f9975bc7b9624f',1,'VoxelIntersection']]],
   ['interpolatetube_16',['interpolateTube',['../_canopy_generator_8h.html#a339d165bb0c396a75ce255fbe16a20d4',1,'interpolateTube(const std::vector&lt; helios::vec3 &gt; &amp;P, float frac):&#160;CanopyGenerator.cpp'],['../_canopy_generator_8h.html#a3d09d2e054283f9202ad662a2c131018',1,'interpolateTube(const std::vector&lt; float &gt; &amp;P, float frac):&#160;CanopyGenerator.cpp'],['../_canopy_generator_8cpp.html#a2d10c56b3c11e46ebfd346ce37f38612',1,'interpolateTube(const std::vector&lt; vec3 &gt; &amp;P, float frac):&#160;CanopyGenerator.cpp'],['../_canopy_generator_8cpp.html#a3d09d2e054283f9202ad662a2c131018',1,'interpolateTube(const std::vector&lt; float &gt; &amp;P, float frac):&#160;CanopyGenerator.cpp']]],
-  ['isgeometrydirty_17',['isGeometryDirty',['../classhelios_1_1_context.html#a64f402ff71dd246be8c1b06699c05e26',1,'helios::Context']]],
-  ['isleapyear_18',['isLeapYear',['../structhelios_1_1_date.html#ae54ee66704fedfe50c8efc16695f3e9e',1,'helios::Date']]],
-  ['isobjecthidden_19',['isObjectHidden',['../classhelios_1_1_context.html#a084b7fb6ef0cec4a83207ce3c7f70843',1,'helios::Context']]],
-  ['isplantdormant_20',['isPlantDormant',['../class_plant_architecture.html#a456e4bd711ec3275c02aa7c46fca0373',1,'PlantArchitecture']]],
-  ['isprimitivedirty_21',['isPrimitiveDirty',['../classhelios_1_1_context.html#a14bb122b9fb651ba149970a2571f448c',1,'helios::Context']]],
-  ['isprimitivehidden_22',['isPrimitiveHidden',['../classhelios_1_1_context.html#a94d5c318d9f7edaf1f5410ad8b17e141',1,'helios::Context']]],
-  ['isprimitivetexturecoloroverridden_23',['isPrimitiveTextureColorOverridden',['../classhelios_1_1_context.html#aaaa6de8a55765b258d6e65c52bf5df69',1,'helios::Context']]],
-  ['isprimitivevisible_24',['isPrimitiveVisible',['../class_geometry_handler.html#a067487ef464eccfbfddcd856a7b26bad',1,'GeometryHandler']]]
+  ['isbvhvalid_17',['isBVHValid',['../class_collision_detection.html#a44500043dedb9938d97badac89ac820c',1,'CollisionDetection']]],
+  ['isgeometrydirty_18',['isGeometryDirty',['../classhelios_1_1_context.html#a64f402ff71dd246be8c1b06699c05e26',1,'helios::Context']]],
+  ['isgpuaccelerationenabled_19',['isGPUAccelerationEnabled',['../class_collision_detection.html#ac4329fb87b63e27de7bf285cdc070ddf',1,'CollisionDetection']]],
+  ['isleapyear_20',['isLeapYear',['../structhelios_1_1_date.html#ae54ee66704fedfe50c8efc16695f3e9e',1,'helios::Date']]],
+  ['isobjecthidden_21',['isObjectHidden',['../classhelios_1_1_context.html#a084b7fb6ef0cec4a83207ce3c7f70843',1,'helios::Context']]],
+  ['isplantdormant_22',['isPlantDormant',['../class_plant_architecture.html#a456e4bd711ec3275c02aa7c46fca0373',1,'PlantArchitecture']]],
+  ['isprimitivedirty_23',['isPrimitiveDirty',['../classhelios_1_1_context.html#a14bb122b9fb651ba149970a2571f448c',1,'helios::Context']]],
+  ['isprimitivehidden_24',['isPrimitiveHidden',['../classhelios_1_1_context.html#a94d5c318d9f7edaf1f5410ad8b17e141',1,'helios::Context']]],
+  ['isprimitivetexturecoloroverridden_25',['isPrimitiveTextureColorOverridden',['../classhelios_1_1_context.html#aaaa6de8a55765b258d6e65c52bf5df69',1,'helios::Context']]],
+  ['isprimitivevisible_26',['isPrimitiveVisible',['../class_geometry_handler.html#a067487ef464eccfbfddcd856a7b26bad',1,'GeometryHandler']]]
 ];

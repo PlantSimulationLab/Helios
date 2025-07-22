@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['obj_0',['obj',['../structobj.html',1,'']]],
-  ['object_1',['object',['../structobject.html',1,'']]]
+  ['max_5falign_5ft_0',['max_align_t',['../structmax__align__t.html',1,'']]],
+  ['moptcoefficients_1',['MOPTcoefficients',['../struct_m_o_p_tcoefficients.html',1,'']]]
 ];

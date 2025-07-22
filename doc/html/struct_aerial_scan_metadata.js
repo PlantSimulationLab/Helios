@@ -1,6 +1,6 @@
 var struct_aerial_scan_metadata =
 [
-    [ "AerialScanMetadata", "struct_aerial_scan_metadata.html#a7335ab6e76b88c50520e3fd205d4c575", null ],
+    [ "AerialScanMetadata", "struct_aerial_scan_metadata.html#a334f0fd10b11f2a6e3e13b735ff45df9", null ],
     [ "beamDivergence", "struct_aerial_scan_metadata.html#a8572a62a5c28d56c69e55737272d07b4", null ],
     [ "center", "struct_aerial_scan_metadata.html#a8aaa9b231aca939a27d438bdf203699c", null ],
     [ "coneangle", "struct_aerial_scan_metadata.html#a5fbcc96d692e7be7e52c983eb9d242fd", null ],

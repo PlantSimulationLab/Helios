@@ -619,6 +619,124 @@ uint plantID = plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );
 plantarchitecture.setPlantPhenologicalThresholds( plantID, 0, 20, 10, 10, 5, 70 );
 ~~~~~~
 
+\section PlantArchAddingModels Adding New Plant Models to the Library
+
+The PlantArchitecture plugin includes a streamlined system for adding new plant species to the built-in library. This section describes the workflow for implementing a new plant model.
+
+\subsection PlantArchAddWorkflow General Workflow
+
+Adding a new plant model to the library involves the following steps:
+
+1. **Create assets (if needed)** - Prepare texture images, OBJ models, or other visual assets if needed.
+2. **Implement the plant-specific methods** - Create the `initialize[*]Shoots()` and `build[*]()` methods that define the plant's architecture and parameters in \ref PlantLibrary.cpp. You can find many examples in this file for existing plants.
+3. **Register the plant model** - Add a single registration line to \ref initializePlantModelRegistrations() in \ref PlantLibrary.cpp to make the model available in the library. This can be found at the top of \ref PlantLibrary.cpp, with examples for existing plants.
+
+A good approach is to start with an existing plant model that is similar to the new plant, and copy paste its code `initialize[*]Shoots()` and `build[*]()` for your new plant. You can then tweak parameters to achieve your desired result.
+
+\subsubsection PlantArchAddStep1 Step 1: Create Assets (if needed)
+
+Most plant models require visual assets located in `plugins/plantarchitecture/assets/`. You can either create your own, or copy existing assets from other plants if they are similar enough.
+
+<b>Texture Images (`assets/textures/`):</b>
+- **Leaf textures** - PNG images for leaf appearance (e.g., `NewPlantLeaf.png`)
+- **Bark textures** - JPG images for stem/trunk appearance (e.g., `NewPlantBark.jpg`)
+- **Flower/fruit textures** - Images for reproductive organs if applicable
+
+<b>3D Models (`assets/obj/`):</b>
+- **Leaf OBJ files** - For complex leaf shapes that can't be created procedurally
+- **Flower OBJ files** - 3D models for flowers (if the plant produces flowers)
+- **Fruit OBJ files** - 3D models for fruits (if applicable)
+
+<b>Asset Guidelines:</b>
+- Use PNG format for textures with transparency (leaves)
+- Use JPG format for opaque textures (bark, fruit)
+- Follow existing naming conventions: `[PlantName][OrganType].[ext]`
+- Ensure OBJ models follow the prototype coordinate system (see \ref PlantArchOrgans)
+
+\subsubsection PlantArchAddStep2 Step 2: Implement Plant-Specific Methods
+
+For a new plant called "newplant", you need to implement two methods in the PlantArchitecture class:
+
+**Method Declarations (add to \ref PlantArchitecture.h):**
+~~~~~~
+void initializeNewPlantShoots();
+uint buildNewPlant(const helios::vec3 &base_position);
+~~~~~~
+
+**Method Implementations (add to PlantLibrary.cpp):**
+
+The `initialize*Shoots()` method defines all shoot types and their parameters:
+~~~~~~{cpp}
+void PlantArchitecture::initializeNewPlantShoots() {
+    
+    // ---- Leaf Prototype ---- //
+    LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
+    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/NewPlantLeaf.png";
+    leaf_prototype.leaf_aspect_ratio = 1.2f;
+    // ... set other leaf parameters
+    
+    // ---- Phytomer Parameters ---- //
+    PhytomerParameters phytomer_parameters(context_ptr->getRandomGenerator());
+    phytomer_parameters.internode.pitch = 0.f;
+    phytomer_parameters.internode.phyllotactic_angle = 137.5f;
+    phytomer_parameters.internode.color = RGB::brown;
+    phytomer_parameters.internode.image_texture = "plugins/plantarchitecture/assets/textures/NewPlantBark.jpg";
+    // ... set other internode parameters
+    
+    phytomer_parameters.petiole.radius = 0.002f;
+    phytomer_parameters.petiole.length = 0.05f;
+    // ... set other petiole parameters
+    
+    phytomer_parameters.leaf.prototype = leaf_prototype;
+    phytomer_parameters.leaf.pitch = 20.f;
+    // ... set other leaf parameters
+    
+    // ---- Shoot Parameters ---- //
+    ShootParameters shoot_parameters(context_ptr->getRandomGenerator());
+    shoot_parameters.phytomer_parameters = phytomer_parameters;
+    shoot_parameters.max_nodes = 20;
+    shoot_parameters.internode_length_max = 0.04f;
+    shoot_parameters.phyllochron_min = 3.f;
+    // ... set other shoot parameters
+    
+    // Register the shoot type
+    shoot_types["mainstem"] = shoot_parameters;
+}
+~~~~~~
+
+The `build*()` method creates the actual plant instance:
+~~~~~~{cpp}
+uint PlantArchitecture::buildNewPlant(const helios::vec3 &base_position) {
+    
+    if (shoot_types.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::buildNewPlant): shoot types have not been initialized. You must initialize shoot types first.");
+    }
+    
+    uint plantID = addPlantInstance(base_position, 0);
+    
+    // Build the main stem
+    uint shootID = addBaseStemShoot(plantID, 1, base_position, 0.001f, 0.06f, 1.f, 1.f, "mainstem");
+    
+    // Set phenology thresholds (in days)
+    setPlantPhenologicalThresholds(plantID, 0, -1, -1, -1, -1, 9999); 
+    
+    return plantID;
+}
+~~~~~~
+
+\subsubsection PlantArchAddStep3 Step 3: Register the Plant Model
+
+Add a single registration line to the `initializePlantModelRegistrations()` method in \ref PlantLibrary.cpp:
+~~~~~~{cpp}
+void PlantArchitecture::initializePlantModelRegistrations() {
+    // ... existing registrations ...
+    
+    registerPlantModel("newplant", 
+        [this](){ initializeNewPlantShoots(); },
+        [this](const helios::vec3& pos){ return buildNewPlant(pos); });
+}
+~~~~~~
+
 \section PlantArchQuery Retrieving Information from the Model
 
 \subsection PlantArchQueryobjIDs Getting Object IDs and Primitive UUIDs of Model Geometry

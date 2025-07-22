@@ -11,7 +11,6 @@ var class_stomatal_conductance_model =
     [ "run", "class_stomatal_conductance_model.html#ae08af8bff0c6924133948c7459baf91f", null ],
     [ "run", "class_stomatal_conductance_model.html#ab3cf7261085bc4f5292a5340285a75ec", null ],
     [ "run", "class_stomatal_conductance_model.html#ab83b66067cdd933ec48ee1c75cbfe1b7", null ],
-    [ "selfTest", "class_stomatal_conductance_model.html#aa32dad6bf0ee3ecb37b02957ebea0e3d", null ],
     [ "setBMFCoefficientsFromLibrary", "class_stomatal_conductance_model.html#a67b1af836d98f934a9e4ba1390523413", null ],
     [ "setBMFCoefficientsFromLibrary", "class_stomatal_conductance_model.html#abca589232617a8543feff66ca10d5d79", null ],
     [ "setDynamicTimeConstants", "class_stomatal_conductance_model.html#a045fd837e2328617901dfd4e15f1da29", null ],

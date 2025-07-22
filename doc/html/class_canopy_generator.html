@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.40</span>
+       <span id="projectnumber">&#160;v1.3.41</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -155,7 +155,8 @@ $(function(){initNavTree('class_canopy_generator.html',''); initResizable(true);
 
 <div class="header">
   <div class="summary">
-<a href="#pub-methods">Public Member Functions</a>  </div>
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a>  </div>
   <div class="headertitle"><div class="title">CanopyGenerator Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -165,13 +166,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ac146e7630eb8d80fb91a3795d7b9f9f4" id="r_ac146e7630eb8d80fb91a3795d7b9f9f4"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac146e7630eb8d80fb91a3795d7b9f9f4">CanopyGenerator</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context)</td></tr>
 <tr class="memdesc:ac146e7630eb8d80fb91a3795d7b9f9f4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Canopy geometry generator constructor.  <br /></td></tr>
 <tr class="separator:ac146e7630eb8d80fb91a3795d7b9f9f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af7f6d2ec2ee512af381cfaf5c414b505" id="r_af7f6d2ec2ee512af381cfaf5c414b505"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af7f6d2ec2ee512af381cfaf5c414b505">selfTest</a> ()</td></tr>
-<tr class="memdesc:af7f6d2ec2ee512af381cfaf5c414b505"><td class="mdescLeft">&#160;</td><td class="mdescRight">Unit testing routine.  <br /></td></tr>
-<tr class="separator:af7f6d2ec2ee512af381cfaf5c414b505"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1d73a30e5717cdd18a89ff51fe9970e3" id="r_a1d73a30e5717cdd18a89ff51fe9970e3"><td class="memTemplParams" colspan="2">template&lt;typename CanopyType, typename... Args&gt; </td></tr>
-<tr class="memitem:a1d73a30e5717cdd18a89ff51fe9970e3"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a1d73a30e5717cdd18a89ff51fe9970e3">storeCanopyParameters</a> (Args &amp;&amp;... args)</td></tr>
-<tr class="memdesc:a1d73a30e5717cdd18a89ff51fe9970e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stores the given canopy parameters.  <br /></td></tr>
-<tr class="separator:a1d73a30e5717cdd18a89ff51fe9970e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4cd2800ae4fcc20c4f225d9f13905f7f" id="r_a4cd2800ae4fcc20c4f225d9f13905f7f"><td class="memTemplParams" colspan="2">template&lt;typename CanopyType, typename... Args&gt; </td></tr>
+<tr class="memitem:a4cd2800ae4fcc20c4f225d9f13905f7f"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a4cd2800ae4fcc20c4f225d9f13905f7f">storeCanopyParameters</a> (Args &amp;&amp;...args)</td></tr>
+<tr class="memdesc:a4cd2800ae4fcc20c4f225d9f13905f7f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stores the given canopy parameters.  <br /></td></tr>
+<tr class="separator:a4cd2800ae4fcc20c4f225d9f13905f7f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a44b196829274f28d9f010991597775c6" id="r_a44b196829274f28d9f010991597775c6"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::shared_ptr&lt; <a class="el" href="struct_base_canopy_parameters.html">BaseCanopyParameters</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a44b196829274f28d9f010991597775c6">getCanopyParametersList</a> ()</td></tr>
 <tr class="separator:a44b196829274f28d9f010991597775c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa481909b393a67953f2366217cf98843" id="r_aa481909b393a67953f2366217cf98843"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa481909b393a67953f2366217cf98843">loadXML</a> (const char *filename, bool build=true)</td></tr>
@@ -312,10 +310,16 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a96b61b2224ca9adb3ccef157447d07c1" id="r_a96b61b2224ca9adb3ccef157447d07c1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a96b61b2224ca9adb3ccef157447d07c1">disableElementLabels</a> ()</td></tr>
 <tr class="memdesc:a96b61b2224ca9adb3ccef157447d07c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Toggle off primitive data element type labels.  <br /></td></tr>
 <tr class="separator:a96b61b2224ca9adb3ccef157447d07c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:af7f6d2ec2ee512af381cfaf5c414b505" id="r_af7f6d2ec2ee512af381cfaf5c414b505"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af7f6d2ec2ee512af381cfaf5c414b505">selfTest</a> ()</td></tr>
+<tr class="memdesc:af7f6d2ec2ee512af381cfaf5c414b505"><td class="mdescLeft">&#160;</td><td class="mdescRight">Unit testing routine.  <br /></td></tr>
+<tr class="separator:af7f6d2ec2ee512af381cfaf5c414b505"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l01052">1052</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8h_source.html#l01037">1037</a> of file <a class="el" href="_canopy_generator_8h_source.html">CanopyGenerator.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="ac146e7630eb8d80fb91a3795d7b9f9f4" name="ac146e7630eb8d80fb91a3795d7b9f9f4"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ac146e7630eb8d80fb91a3795d7b9f9f4">&#9670;&#160;</a></span>CanopyGenerator()</h2>
@@ -348,7 +352,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l01893">1893</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l01879">1879</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -432,7 +436,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Plant ID of bean plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="bean_8cpp_source.html#l00291">291</a> of file <a class="el" href="bean_8cpp_source.html">bean.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="bean_8cpp_source.html#l00284">284</a> of file <a class="el" href="bean_8cpp_source.html">bean.cpp</a>.</p>
 
 </div>
 </div>
@@ -453,7 +457,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Builds canopies for all the stored canopy parameters. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02334">2334</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02150">2150</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -480,7 +484,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02945">2945</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02737">2737</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -507,7 +511,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02502">2502</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02314">2314</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -534,7 +538,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02729">2729</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02532">2532</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -561,7 +565,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02340">2340</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02156">2156</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -588,7 +592,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02914">2914</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02708">2708</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -615,7 +619,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02407">2407</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02222">2222</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -642,7 +646,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02645">2645</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02452">2452</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -669,7 +673,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02852">2852</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02650">2650</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -696,7 +700,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02821">2821</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02621">2621</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -723,7 +727,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02687">2687</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02492">2492</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -750,7 +754,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02598">2598</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02407">2407</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -777,7 +781,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02883">2883</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02679">2679</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -804,7 +808,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02771">2771</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02572">2572</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -854,7 +858,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02296">2296</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02114">2114</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -910,7 +914,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02300">2300</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02118">2118</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -931,7 +935,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Builds individual plants based on the stored canopy parameters (using canopy_origin as the position) </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03226">3226</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03007">3007</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -953,7 +957,7 @@ Public Member Functions</h2></td></tr>
 <p>Builds individual plants based on the stored canopy parameters, at the given position. </p>
 <dl class="section note"><dt>Note</dt><dd>If you have multiple canopy parameters stored, this will try to build an individual plant of each type at the same position </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03220">3220</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03001">3001</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -974,7 +978,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Create primitive data that explicitly labels all primitives according to the plant element they correspond to. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03353">3353</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03130">3130</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -995,7 +999,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Toggle off primitive data element type labels. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03357">3357</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03134">3134</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1016,7 +1020,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Disable standard messages from being printed to screen (default is to enable messages) </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03212">3212</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02993">2993</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1037,7 +1041,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Enable standard messages to be printed to screen (default is to enable messages) </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03216">3216</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02997">2997</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1064,7 +1068,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03178">3178</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02959">2959</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1085,7 +1089,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the unique universal identifiers (UUIDs) for all branch primitives in a single 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03116">3116</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02900">2900</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1112,7 +1116,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03105">3105</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02890">2890</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1131,7 +1135,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02060">2060</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l01898">1898</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1152,7 +1156,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the unique universal identifiers (UUIDs) for all fruit primitives in a single 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03149">3149</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02932">2932</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1180,7 +1184,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>First index is the cluster of fruit (if applicable), second index is the fruit, third index is the UUIDs making up the sub-primitives of the fruit. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03138">3138</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02922">2922</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1201,7 +1205,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the unique universal identifiers (UUIDs) for the primitives that make up the ground. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03162">3162</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02945">2945</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1222,7 +1226,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the unique universal identifiers (UUIDs) for all leaf primitives in a single 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03132">3132</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02916">2916</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1250,7 +1254,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>The first index is the leaf, second index is the UUIDs making up the sub-primitives of the leaf (if applicable). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03122">3122</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02906">2906</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1271,7 +1275,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the current number of plants added to the Canopy Generator. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03204">3204</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02985">2985</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1292,7 +1296,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Get the unique universal identifiers (UUIDs) for all trunk primitives in a single 1D vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03099">3099</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02884">2884</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1319,7 +1323,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03088">3088</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02874">2874</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1352,7 +1356,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Plant ID of bean plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="grapevine_8cpp_source.html#l01065">1065</a> of file <a class="el" href="grapevine_8cpp_source.html">grapevine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="grapevine_8cpp_source.html#l01047">1047</a> of file <a class="el" href="grapevine_8cpp_source.html">grapevine.cpp</a>.</p>
 
 </div>
 </div>
@@ -1385,7 +1389,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Plant ID of bean plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="grapevine_8cpp_source.html#l00464">464</a> of file <a class="el" href="grapevine_8cpp_source.html">grapevine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="grapevine_8cpp_source.html#l00455">455</a> of file <a class="el" href="grapevine_8cpp_source.html">grapevine.cpp</a>.</p>
 
 </div>
 </div>
@@ -1418,7 +1422,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Plant ID of bean plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="grapevine_8cpp_source.html#l00830">830</a> of file <a class="el" href="grapevine_8cpp_source.html">grapevine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="grapevine_8cpp_source.html#l00816">816</a> of file <a class="el" href="grapevine_8cpp_source.html">grapevine.cpp</a>.</p>
 
 </div>
 </div>
@@ -1451,7 +1455,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Plant ID of bean plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="grapevine_8cpp_source.html#l00150">150</a> of file <a class="el" href="grapevine_8cpp_source.html">grapevine.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="grapevine_8cpp_source.html#l00146">146</a> of file <a class="el" href="grapevine_8cpp_source.html">grapevine.cpp</a>.</p>
 
 </div>
 </div>
@@ -1483,7 +1487,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02068">2068</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l01906">1906</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1510,7 +1514,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l03208">3208</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02989">2989</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1519,6 +1523,9 @@ Public Member Functions</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">int CanopyGenerator::selfTest </td>
@@ -1527,11 +1534,16 @@ Public Member Functions</h2></td></tr>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Unit testing routine. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l01907">1907</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2canopygenerator_2tests_2self_test_8cpp_source.html#l00183">183</a> of file <a class="el" href="plugins_2canopygenerator_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
@@ -1568,8 +1580,8 @@ Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a1d73a30e5717cdd18a89ff51fe9970e3" name="a1d73a30e5717cdd18a89ff51fe9970e3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1d73a30e5717cdd18a89ff51fe9970e3">&#9670;&#160;</a></span>storeCanopyParameters()</h2>
+<a id="a4cd2800ae4fcc20c4f225d9f13905f7f" name="a4cd2800ae4fcc20c4f225d9f13905f7f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4cd2800ae4fcc20c4f225d9f13905f7f">&#9670;&#160;</a></span>storeCanopyParameters()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1587,7 +1599,7 @@ template&lt;typename CanopyType, typename... Args&gt; </div>
 
 <p>Stores the given canopy parameters. </p>
 
-<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l02055">2055</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_canopy_generator_8cpp_source.html#l01893">1893</a> of file <a class="el" href="_canopy_generator_8cpp_source.html">CanopyGenerator.cpp</a>.</p>
 
 </div>
 </div>
@@ -1620,7 +1632,7 @@ template&lt;typename CanopyType, typename... Args&gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Plant ID of bean plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="strawberry_8cpp_source.html#l00215">215</a> of file <a class="el" href="strawberry_8cpp_source.html">strawberry.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="strawberry_8cpp_source.html#l00203">203</a> of file <a class="el" href="strawberry_8cpp_source.html">strawberry.cpp</a>.</p>
 
 </div>
 </div>
@@ -1653,7 +1665,7 @@ template&lt;typename CanopyType, typename... Args&gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Plant ID of bean plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="tomato_8cpp_source.html#l00139">139</a> of file <a class="el" href="tomato_8cpp_source.html">tomato.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="tomato_8cpp_source.html#l00130">130</a> of file <a class="el" href="tomato_8cpp_source.html">tomato.cpp</a>.</p>
 
 </div>
 </div>
@@ -1686,7 +1698,7 @@ template&lt;typename CanopyType, typename... Args&gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Plant ID of bean plant. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="walnut_8cpp_source.html#l00333">333</a> of file <a class="el" href="walnut_8cpp_source.html">walnut.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="walnut_8cpp_source.html#l00316">316</a> of file <a class="el" href="walnut_8cpp_source.html">walnut.cpp</a>.</p>
 
 </div>
 </div>
@@ -1733,6 +1745,7 @@ template&lt;typename CanopyType, typename... Args&gt; </div>
 <li>plugins/canopygenerator/src/<a class="el" href="tomato_8cpp_source.html">tomato.cpp</a></li>
 <li>plugins/canopygenerator/src/<a class="el" href="walnut_8cpp_source.html">walnut.cpp</a></li>
 <li>plugins/canopygenerator/src/<a class="el" href="whitespruce_8cpp_source.html">whitespruce.cpp</a></li>
+<li>plugins/canopygenerator/tests/<a class="el" href="plugins_2canopygenerator_2tests_2self_test_8cpp_source.html">selfTest.cpp</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

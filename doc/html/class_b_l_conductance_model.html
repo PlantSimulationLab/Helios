@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.40</span>
+       <span id="projectnumber">&#160;v1.3.41</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -155,7 +155,8 @@ $(function(){initNavTree('class_b_l_conductance_model.html',''); initResizable(t
 
 <div class="header">
   <div class="summary">
-<a href="#pub-methods">Public Member Functions</a>  </div>
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a>  </div>
   <div class="headertitle"><div class="title">BLConductanceModel Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -170,9 +171,6 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:af507e5b75f21372ec225d5e5c0c8c97a" id="r_af507e5b75f21372ec225d5e5c0c8c97a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af507e5b75f21372ec225d5e5c0c8c97a">BLConductanceModel</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context)</td></tr>
 <tr class="memdesc:af507e5b75f21372ec225d5e5c0c8c97a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor.  <br /></td></tr>
 <tr class="separator:af507e5b75f21372ec225d5e5c0c8c97a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6e85abcd1e8544d66af25394cace6ed4" id="r_a6e85abcd1e8544d66af25394cace6ed4"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6e85abcd1e8544d66af25394cace6ed4">selfTest</a> ()</td></tr>
-<tr class="memdesc:a6e85abcd1e8544d66af25394cace6ed4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Self-test.  <br /></td></tr>
-<tr class="separator:a6e85abcd1e8544d66af25394cace6ed4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afd2d53808eb3ab1d3b104229c7bf3817" id="r_afd2d53808eb3ab1d3b104229c7bf3817"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afd2d53808eb3ab1d3b104229c7bf3817">enableMessages</a> ()</td></tr>
 <tr class="memdesc:afd2d53808eb3ab1d3b104229c7bf3817"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable standard output from this plug-in (default)  <br /></td></tr>
 <tr class="separator:afd2d53808eb3ab1d3b104229c7bf3817"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -194,6 +192,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a0b46d5ade5b84be8e8a44723c5dcf720" id="r_a0b46d5ade5b84be8e8a44723c5dcf720"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0b46d5ade5b84be8e8a44723c5dcf720">run</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs)</td></tr>
 <tr class="memdesc:a0b46d5ade5b84be8e8a44723c5dcf720"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run boundary-layer conductance calculations for a subset of primitives in the Context based on a vector of UUIDs.  <br /></td></tr>
 <tr class="separator:a0b46d5ade5b84be8e8a44723c5dcf720"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:a6e85abcd1e8544d66af25394cace6ed4" id="r_a6e85abcd1e8544d66af25394cace6ed4"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6e85abcd1e8544d66af25394cace6ed4">selfTest</a> ()</td></tr>
+<tr class="memdesc:a6e85abcd1e8544d66af25394cace6ed4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Self-test.  <br /></td></tr>
+<tr class="separator:a6e85abcd1e8544d66af25394cace6ed4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Boundary-layer conductance model class. </p>
@@ -206,6 +210,9 @@ Public Member Functions</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">BLConductanceModel::BLConductanceModel </td>
@@ -214,6 +221,11 @@ Public Member Functions</h2></td></tr>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel explicit">explicit</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Constructor. </p>
@@ -246,7 +258,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Disable standard output from this plug-in. </p>
 
-<p class="definition">Definition at line <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html#l00090">90</a> of file <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html">BoundaryLayerConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html#l00038">38</a> of file <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html">BoundaryLayerConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -267,7 +279,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Enable standard output from this plug-in (default) </p>
 
-<p class="definition">Definition at line <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html#l00086">86</a> of file <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html">BoundaryLayerConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html#l00034">34</a> of file <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html">BoundaryLayerConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -288,7 +300,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Run boundary-layer conductance calculations for all primitives in the Context. </p>
 
-<p class="definition">Definition at line <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html#l00127">127</a> of file <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html">BoundaryLayerConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html#l00074">74</a> of file <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html">BoundaryLayerConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -309,7 +321,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Run boundary-layer conductance calculations for a subset of primitives in the Context based on a vector of UUIDs. </p>
 
-<p class="definition">Definition at line <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html#l00133">133</a> of file <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html">BoundaryLayerConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html#l00079">79</a> of file <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html">BoundaryLayerConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -318,6 +330,9 @@ Public Member Functions</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">int BLConductanceModel::selfTest </td>
@@ -326,12 +341,17 @@ Public Member Functions</h2></td></tr>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Self-test. </p>
 <dl class="section return"><dt>Returns</dt><dd>0 if test was successful, 1 if test failed. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html#l00035">35</a> of file <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html">BoundaryLayerConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2boundarylayerconductance_2tests_2self_test_8cpp_source.html#l00226">226</a> of file <a class="el" href="plugins_2boundarylayerconductance_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
@@ -353,12 +373,12 @@ Public Member Functions</h2></td></tr>
 <p>Set the boundary-layer conductance model to be used for all primitives in the Context. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">gH_model</td><td>String corresponding to model to be run. One of "hhausen", "InclinedPlate", "Sphere", or "Ground". </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">gH_model</td><td>String corresponding to model to be run. One of "Pohlhausen", "InclinedPlate", "Sphere", or "Ground". </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html#l00094">94</a> of file <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html">BoundaryLayerConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html#l00042">42</a> of file <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html">BoundaryLayerConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -390,7 +410,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html#l00104">104</a> of file <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html">BoundaryLayerConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html#l00052">52</a> of file <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html">BoundaryLayerConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
@@ -422,14 +442,14 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html#l00099">99</a> of file <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html">BoundaryLayerConductanceModel.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html#l00047">47</a> of file <a class="el" href="_boundary_layer_conductance_model_8cpp_source.html">BoundaryLayerConductanceModel.cpp</a>.</p>
 
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>plugins/boundarylayerconductance/include/<a class="el" href="_boundary_layer_conductance_model_8h_source.html">BoundaryLayerConductanceModel.h</a></li>
 <li>plugins/boundarylayerconductance/src/<a class="el" href="_boundary_layer_conductance_model_8cpp_source.html">BoundaryLayerConductanceModel.cpp</a></li>
-<li>plugins/boundarylayerconductance/src/<a class="el" href="plugins_2boundarylayerconductance_2src_2self_test_8cpp_source.html">selfTest.cpp</a></li>
+<li>plugins/boundarylayerconductance/tests/<a class="el" href="plugins_2boundarylayerconductance_2tests_2self_test_8cpp_source.html">selfTest.cpp</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

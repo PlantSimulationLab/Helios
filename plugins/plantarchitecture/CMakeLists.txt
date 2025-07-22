@@ -2,7 +2,13 @@ cmake_minimum_required(VERSION 3.15)
 
 project(helios)
 
-add_library( plantarchitecture STATIC "src/PlantArchitecture.cpp;src/PlantLibrary.cpp;src/Assets.cpp;src/InputOutput.cpp;src/CarbohydrateModel.cpp;src/Hungarian.cpp;src/selfTest.cpp")
+add_library( plantarchitecture STATIC "src/PlantArchitecture.cpp"
+        "src/PlantLibrary.cpp"
+        "src/Assets.cpp;src/InputOutput.cpp"
+        "src/CarbohydrateModel.cpp"
+        "src/Hungarian.cpp"
+        "tests/selfTest.cpp"
+)
 
 target_include_directories(plantarchitecture PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include )
 
@@ -31,3 +37,7 @@ add_custom_command(
 )
 add_custom_target(copy_texture_assets DEPENDS "${CMAKE_BINARY_DIR}/plugins/plantarchitecture/texture_assets.stamp")
 add_dependencies(plantarchitecture copy_texture_assets)
+
+add_executable(plantarchitecture_tests "tests/TestMain.cpp")
+target_link_libraries(plantarchitecture_tests PRIVATE plantarchitecture)
+add_test(NAME plantarchitecture_tests COMMAND plantarchitecture_tests)

@@ -33,7 +33,7 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++${CMAKE_CXX_STANDARD}")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D_MWAITXINTRIN_H_INCLUDED -D__STRICT_ANSI__")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-add_library(energybalance STATIC "src/EnergyBalanceModel.cpp" "src/EnergyBalanceModel.cu" "src/selfTest.cpp")
+add_library(energybalance STATIC "src/EnergyBalanceModel.cpp" "src/EnergyBalanceModel.cu" "tests/selfTest.cpp")
 
 # Set CUDA properties for the target
 set_target_properties(energybalance PROPERTIES CUDA_RUNTIME_LIBRARY Static CUDA_RESOLVE_DEVICE_SYMBOLS ON )
@@ -42,3 +42,7 @@ target_link_libraries(energybalance PUBLIC CUDA::cudart_static)
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_include_directories(energybalance PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
+add_executable(energybalance_tests "tests/TestMain.cpp")
+target_link_libraries(energybalance_tests PRIVATE energybalance)
+add_test(NAME energybalance_tests COMMAND energybalance_tests)

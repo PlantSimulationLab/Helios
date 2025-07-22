@@ -58,7 +58,6 @@ var class_radiation_model =
     [ "scaleSpectrum", "class_radiation_model.html#a32496f56edc4837c7cc2b28d154a108f", null ],
     [ "scaleSpectrum", "class_radiation_model.html#abfd1f6bc9d59a09ff3baab866c0b124c", null ],
     [ "scaleSpectrumRandomly", "class_radiation_model.html#ac292f5d218647fc7cbb0a58bc3d284ae", null ],
-    [ "selfTest", "class_radiation_model.html#a4c9038e22b7457bc0eae2ef0ffed25ad", null ],
     [ "setCameraLookat", "class_radiation_model.html#a8560b5c278ae279e0a2bf78ec33409bf", null ],
     [ "setCameraOrientation", "class_radiation_model.html#aa8e73030b94c82fc52635affca88ebf9", null ],
     [ "setCameraOrientation", "class_radiation_model.html#a2fb90fb962f16b13e4afc020ecb74b31", null ],

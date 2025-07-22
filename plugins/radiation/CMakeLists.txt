@@ -9,10 +9,9 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
-add_library(radiation STATIC "src/RadiationModel.cpp" "src/selfTest.cpp" "src/CameraCalibration.cpp;")
+add_library(radiation STATIC "src/RadiationModel.cpp" "src/CameraCalibration.cpp" "tests/selfTest.cpp")
 
 target_include_directories(radiation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include )
-#include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 find_package(CUDA REQUIRED)
 if(CUDA_FOUND)
@@ -98,3 +97,7 @@ endif()
 file( COPY include/disk.png DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/)
 file( COPY spectral_data DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
 file( COPY camera_light_models DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
+
+add_executable(radiation_tests "tests/TestMain.cpp")
+target_link_libraries(radiation_tests PRIVATE radiation)
+add_test(NAME radiation_tests COMMAND radiation_tests)

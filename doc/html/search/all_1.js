@@ -12,5 +12,6 @@ var searchData=
   ['12_20visualization_9',['12. Visualization',['../canopy__w_u_e_tutorial.html#tutorial12_visualization',1,'']]],
   ['12_3a_20water_20use_20efficiency_20photosyntheses_20per_20unit_20transpiration_20for_20a_20canopy_20of_20spherical_20crowns_10',['Tutorial 12: Water-use efficiency (photosyntheses per unit transpiration) for a canopy of spherical crowns',['../canopy__w_u_e_tutorial.html',1,'context_timeseries_tutorial']]],
   ['1987_20model_20theory_11',['Ball, Woodrow, Berry (1987) Model Theory',['../_stomatal_doc.html#BWBTheory',1,'']]],
-  ['1_3a_20helios_20vector_20types_20tutorial_12',['Tutorial 1: Helios Vector Types Tutorial',['../context_vectors_tutorial.html',1,'Tutorials']]]
+  ['1_3a_20create_20assets_20if_20needed_12',['Step 1: Create Assets (if needed)',['../_plant_architecture_doc.html#PlantArchAddStep1',1,'']]],
+  ['1_3a_20helios_20vector_20types_20tutorial_13',['Tutorial 1: Helios Vector Types Tutorial',['../context_vectors_tutorial.html',1,'Tutorials']]]
 ];

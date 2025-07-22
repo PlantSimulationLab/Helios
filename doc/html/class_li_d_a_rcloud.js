@@ -100,7 +100,6 @@ var class_li_d_a_rcloud =
     [ "peakFinder", "class_li_d_a_rcloud.html#acffd90677f0584b05b73183747be4e0c", null ],
     [ "reflectanceFilter", "class_li_d_a_rcloud.html#adf2d9ef2301fd7fdee97e2adc0947dd3", null ],
     [ "scalarFilter", "class_li_d_a_rcloud.html#aa2ea59f063b3c951a1e58af9e4ddfd7e", null ],
-    [ "selfTest", "class_li_d_a_rcloud.html#aaa2f35f02a65d4a7a731c4989dd9aa36", null ],
     [ "setCellGtheta", "class_li_d_a_rcloud.html#a4c8d55452f2423ddf8b77effbf443075", null ],
     [ "setCellLeafArea", "class_li_d_a_rcloud.html#a32643f365dda44670b5b132c4eee8442", null ],
     [ "setHitData", "class_li_d_a_rcloud.html#a4ad8b12380a24f48ecfbae0ad6b5cfaa", null ],

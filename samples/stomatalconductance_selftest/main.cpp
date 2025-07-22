@@ -2,13 +2,11 @@
 
 using namespace helios;
 
-int main()
-{
+int main() {
 
     Context context;
 
     StomatalConductanceModel gs(&context);
 
     return gs.selfTest();
-
 }

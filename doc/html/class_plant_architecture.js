@@ -40,6 +40,7 @@ var class_plant_architecture =
     [ "getAllPlantObjectIDs", "class_plant_architecture.html#acf9855048c790d30d8d4de7fa1dc3550", null ],
     [ "getAllPlantUUIDs", "class_plant_architecture.html#a3bdffb4e53fe0da836a40de80946d31f", null ],
     [ "getAllUUIDs", "class_plant_architecture.html#afec06c56ae296984727c90413511cf6a", null ],
+    [ "getAvailablePlantModels", "class_plant_architecture.html#ad1a989d84c50c671d06152a3c9e52e8e", null ],
     [ "getCurrentPhytomerParameters", "class_plant_architecture.html#aaba5ecb6c069be56b3706a4060f5ff49", null ],
     [ "getCurrentShootParameters", "class_plant_architecture.html#a190d91f02c5cfcfad036879460b2e495", null ],
     [ "getCurrentShootParameters", "class_plant_architecture.html#aa696281e805e8879a78dacdf4354ff38", null ],

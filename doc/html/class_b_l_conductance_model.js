@@ -5,7 +5,6 @@ var class_b_l_conductance_model =
     [ "enableMessages", "class_b_l_conductance_model.html#afd2d53808eb3ab1d3b104229c7bf3817", null ],
     [ "run", "class_b_l_conductance_model.html#aaa522103af850ee1fff89c0f698ee049", null ],
     [ "run", "class_b_l_conductance_model.html#a0b46d5ade5b84be8e8a44723c5dcf720", null ],
-    [ "selfTest", "class_b_l_conductance_model.html#a6e85abcd1e8544d66af25394cace6ed4", null ],
     [ "setBoundaryLayerModel", "class_b_l_conductance_model.html#a601d3eba5024cff7290fa564f619c9df", null ],
     [ "setBoundaryLayerModel", "class_b_l_conductance_model.html#a0a9e992d831834b188474e973cd41ee4", null ],
     [ "setBoundaryLayerModel", "class_b_l_conductance_model.html#ab07e423e0cbc9a431368b9fddcfd93c7", null ]

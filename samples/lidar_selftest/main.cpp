@@ -3,11 +3,9 @@
 
 using namespace helios;
 
-int main()
-{
+int main() {
 
-  LiDARcloud pointcloud;
+    LiDARcloud pointcloud;
 
-  return pointcloud.selfTest();
-
+    return pointcloud.selfTest();
 }

@@ -1,17 +1,5 @@
 var searchData=
 [
-  ['_7eaeriallidarcloud_0',['~AerialLiDARcloud',['../class_aerial_li_d_a_rcloud.html#ac6d082f7928a865787aa4b1d88fd4f55',1,'AerialLiDARcloud']]],
-  ['_7ebox_1',['~Box',['../classhelios_1_1_box.html#ab040ad0ee078cb1c9b4fc3c29ec3688d',1,'helios::Box']]],
-  ['_7ecompoundobject_2',['~CompoundObject',['../classhelios_1_1_compound_object.html#a482d328646e3da071d4504664d205fe9',1,'helios::CompoundObject']]],
-  ['_7econe_3',['~Cone',['../classhelios_1_1_cone.html#ac4f380f30c6bb1dbdf2e8c215c05677c',1,'helios::Cone']]],
-  ['_7econtext_4',['~Context',['../classhelios_1_1_context.html#a2d34e4556448e40693f61d15e091b604',1,'helios::Context']]],
-  ['_7edisk_5',['~Disk',['../classhelios_1_1_disk.html#aa670ffa43a0cf0570ea1d789cb8653a5',1,'helios::Disk']]],
-  ['_7elidarcloud_6',['~LiDARcloud',['../class_li_d_a_rcloud.html#a849627f4e1cd43c49ab21757e812ca68',1,'LiDARcloud']]],
-  ['_7epolymesh_7',['~Polymesh',['../classhelios_1_1_polymesh.html#a19617972bebd43a3bff944250fc7ddb1',1,'helios::Polymesh']]],
-  ['_7eprojectbuilder_8',['~ProjectBuilder',['../class_project_builder.html#a3833132c3dad125b4f843aea337f7d7b',1,'ProjectBuilder']]],
-  ['_7eradiationmodel_9',['~RadiationModel',['../class_radiation_model.html#aeae03b4de9b9c57ac987407fdfd6afa4',1,'RadiationModel']]],
-  ['_7esphere_10',['~Sphere',['../classhelios_1_1_sphere.html#ae7e8121c9a60f9c4e4efa853fd2cee59',1,'helios::Sphere']]],
-  ['_7etile_11',['~Tile',['../classhelios_1_1_tile.html#a001e45730aa531c75c90a599b5524956',1,'helios::Tile']]],
-  ['_7etube_12',['~Tube',['../classhelios_1_1_tube.html#a15d0248cb525ce91129abcb398f728e8',1,'helios::Tube']]],
-  ['_7evisualizer_13',['~Visualizer',['../class_visualizer.html#a013ec3101407fbe4805f289bc32d1265',1,'Visualizer']]]
+  ['z_0',['z',['../structhelios_1_1int3.html#adb4b47bc05bdb62677200e025e4bf641',1,'helios::int3::z'],['../structhelios_1_1int4.html#a5c5969a3b94d165c3a24a5235ea50a99',1,'helios::int4::z'],['../structhelios_1_1uint3.html#a3c5a8fd409ec304c5535d85d39e3984e',1,'helios::uint3::z'],['../structhelios_1_1uint4.html#ae02e4a894b323f1f0f96a0803db09577',1,'helios::uint4::z'],['../structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f',1,'helios::vec3::z'],['../structhelios_1_1vec4.html#a660ee0cf07d74bac3c989ce39e035d3b',1,'helios::vec4::z']]],
+  ['zenith_1',['zenith',['../structhelios_1_1_spherical_coord.html#a1cf17b1a139ed955ab0dd765e49b0643',1,'helios::SphericalCoord']]]
 ];

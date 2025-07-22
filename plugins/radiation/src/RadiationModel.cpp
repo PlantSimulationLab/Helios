@@ -5775,7 +5775,8 @@ std::vector<helios::vec2> RadiationModel::generateGaussianCameraResponse(float F
     return cameraresponse;
 }
 
-void RadiationModel::applyImageProcessingPipeline(const std::string &cameralabel, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float saturation_adjustment, float brightness_adjustment, float contrast_adjustment) {
+void RadiationModel::applyImageProcessingPipeline(const std::string &cameralabel, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float saturation_adjustment, float brightness_adjustment,
+                                                  float contrast_adjustment) {
 
     if (cameras.find(cameralabel) == cameras.end()) {
         helios_runtime_error("ERROR (RadiationModel::applyImageProcessingPipeline): Camera '" + cameralabel + "' does not exist.");
@@ -5798,11 +5799,11 @@ void RadiationModel::applyImageProcessingPipeline(const std::string &cameralabel
 
     camera.globalHistogramEqualization(red_band_label, green_band_label, blue_band_label);
 
-    if ( saturation_adjustment != 1.f || brightness_adjustment != 1.f || contrast_adjustment != 1.f) {
+    if (saturation_adjustment != 1.f || brightness_adjustment != 1.f || contrast_adjustment != 1.f) {
         camera.adjustSBC(red_band_label, green_band_label, blue_band_label, saturation_adjustment, brightness_adjustment, contrast_adjustment);
     }
 
-    //camera.applyCCM(red_band_label, green_band_label, blue_band_label);
+    // camera.applyCCM(red_band_label, green_band_label, blue_band_label);
 
     // camera.gammaCompress(red_band_label, green_band_label, blue_band_label);
 }
@@ -5979,7 +5980,7 @@ void RadiationCamera::applyGain(const std::string &red_band_label, const std::st
     }
 }
 
-void RadiationCamera::globalHistogramEqualization(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label){
+void RadiationCamera::globalHistogramEqualization(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label) {
 
     const size_t N = resolution.x * resolution.y;
     const float eps = 1e-6f;
@@ -5990,46 +5991,47 @@ void RadiationCamera::globalHistogramEqualization(const std::string &red_band_la
 
     /* luminance array */
     std::vector<float> lum(N);
-    for (size_t i=0;i<N;++i){
+    for (size_t i = 0; i < N; ++i) {
         // vec3 p;
         // p.x = srgb_to_lin(data_red[i]);
         // p.y = srgb_to_lin(data_green[i]);
         // p.z = srgb_to_lin(data_blue[i]);
         vec3 p(data_red[i], data_green[i], data_blue[i]);
-        lum[i] = 0.2126f*p.x + 0.7152f*p.y + 0.0722f*p.z;
+        lum[i] = 0.2126f * p.x + 0.7152f * p.y + 0.0722f * p.z;
     }
 
     /* build CDF on 2048-bin histogram */
-    const int B=2048;
-    std::vector<int> hist(B,0);
-    for (float v:lum){
-        int b = int(std::clamp(v,0.0f,1.0f-eps)*B);
+    const int B = 2048;
+    std::vector<int> hist(B, 0);
+    for (float v: lum) {
+        int b = int(std::clamp(v, 0.0f, 1.0f - eps) * B);
         hist[b]++;
     }
-    std::vector<float> cdf(B); int acc=0;
-    for (int b=0;b<B;++b){
-        acc+=hist[b];
-        cdf[b]=float(acc)/float(N);
+    std::vector<float> cdf(B);
+    int acc = 0;
+    for (int b = 0; b < B; ++b) {
+        acc += hist[b];
+        cdf[b] = float(acc) / float(N);
     }
 
     /* remap */
-    for (size_t i=0;i<N;++i){
-        int b=int(std::clamp(lum[i],0.0f,1.0f-eps)*B);
+    for (size_t i = 0; i < N; ++i) {
+        int b = int(std::clamp(lum[i], 0.0f, 1.0f - eps) * B);
 
-        constexpr float k  = 0.2f;   // how far to pull towards equalised value  (0.2–0.3 OK)
-        constexpr float cs = 0.2f;   // S-curve strength   (0.4–0.7 recommended)
+        constexpr float k = 0.2f; // how far to pull towards equalised value  (0.2–0.3 OK)
+        constexpr float cs = 0.2f; // S-curve strength   (0.4–0.7 recommended)
 
-        float Yeq  = cdf[b];                      // equalised luminance  ∈[0,1]
-        float Ynew = (1.0f - k)*lum[i] + k*Yeq;   // partial equalisation
+        float Yeq = cdf[b]; // equalised luminance  ∈[0,1]
+        float Ynew = (1.0f - k) * lum[i] + k * Yeq; // partial equalisation
 
         /* symmetric S-curve centred at 0.5  :  y = ½ + (x–½)*(1+cs–2·cs·|x–½|)   */
         float t = Ynew - 0.5f;
-        Ynew = 0.5f + t * (1.0f + cs - 2.0f*cs*std::fabs(t));
+        Ynew = 0.5f + t * (1.0f + cs - 2.0f * cs * std::fabs(t));
 
-        float scale = lum[i]>0.0f? Ynew/lum[i]:0;
-        data_red[i] = lin_to_srgb(data_red[i]*scale);
-        data_green[i] = lin_to_srgb(data_green[i]*scale);
-        data_blue[i] = lin_to_srgb(data_blue[i]*scale);
+        float scale = lum[i] > 0.0f ? Ynew / lum[i] : 0;
+        data_red[i] = lin_to_srgb(data_red[i] * scale);
+        data_green[i] = lin_to_srgb(data_green[i] * scale);
+        data_blue[i] = lin_to_srgb(data_blue[i] * scale);
     }
 }
 
@@ -6040,9 +6042,9 @@ void RadiationCamera::adjustSBC(const std::string &red_band_label, const std::st
     }
 #endif
 
-    constexpr float kRedW   = 0.2126f;
+    constexpr float kRedW = 0.2126f;
     constexpr float kGreenW = 0.7152f;
-    constexpr float kBlueW  = 0.0722f;
+    constexpr float kBlueW = 0.0722f;
 
     const size_t N = resolution.x * resolution.y;
 
@@ -6050,7 +6052,7 @@ void RadiationCamera::adjustSBC(const std::string &red_band_label, const std::st
     auto &data_green = pixel_data.at(green_band_label);
     auto &data_blue = pixel_data.at(blue_band_label);
 
-    for (int i=0; i<N; ++i) {
+    for (int i = 0; i < N; ++i) {
 
         helios::vec3 p(data_red[i], data_green[i], data_blue[i]);
 
@@ -6071,7 +6073,6 @@ void RadiationCamera::adjustSBC(const std::string &red_band_label, const std::st
         data_green[i] = clamp(p.y, 0.0f, 1.0f);
         data_blue[i] = clamp(p.z, 0.0f, 1.0f);
     }
-
 }
 
 // void RadiationCamera::applyCCM(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label) {

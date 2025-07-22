@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.40</span>
+       <span id="projectnumber">&#160;v1.3.41</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -246,7 +246,7 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span> </div>
 <div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    <a class="code hl_struct" href="structhelios_1_1_time.html" title="Time vector.">Time</a> result = <a class="code hl_function" href="group__vectors.html#ga7a29e9916b97d9f7533e87e7125e5b66" title="Make a Time vector.">make_Time</a>(0, 0); <span class="comment">// default/fallback value</span></div>
 <div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    <span class="keywordtype">bool</span> found = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    </div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span> </div>
 <div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> h = 1; h &lt;= 23 &amp;&amp; !found; h++) {</div>
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>        <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> m = 1; m &lt;= 59 &amp;&amp; !found; m++) {</div>
 <div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>            <a class="code hl_struct" href="structhelios_1_1_spherical_coord.html" title="Vector of spherical coordinates (elevation,azimuth)">SphericalCoord</a> sun_dir = calculateSunDirection(<a class="code hl_function" href="group__vectors.html#ga7a29e9916b97d9f7533e87e7125e5b66" title="Make a Time vector.">make_Time</a>(h, m, 0), context-&gt;getDate());</div>
@@ -256,7 +256,7 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>            }</div>
 <div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>        }</div>
 <div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    }</div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>    </div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span> </div>
 <div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>    <span class="keywordflow">return</span> result;</div>
 <div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>}</div>
 </div>
@@ -522,114 +522,113 @@ $(function(){initNavTree('_solar_position_8cpp_source.html',''); initResizable(t
 <div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>    <span class="comment">// diffuse fraction</span></div>
 <div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>    fdiff = Edp / (Eb + Edp);</div>
 <div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span> </div>
-<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>    assert( fdiff&gt;= 0.f &amp;&amp; fdiff &lt;= 1.f );</div>
-<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span> </div>
-<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>}</div>
-<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span> </div>
-<div class="foldopen" id="foldopen00355" data-start="{" data-end="}">
-<div class="line"><a id="l00355" name="l00355"></a><span class="lineno"><a class="line" href="class_solar_position.html#a30ee555eedece8b7e19855877a74da71">  355</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a30ee555eedece8b7e19855877a74da71" title="Calculate the ambient (sky) longwave radiation flux.">SolarPosition::getAmbientLongwaveFlux</a>(<span class="keywordtype">float</span> temperature_K, <span class="keywordtype">float</span> humidity_rel)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span> </div>
-<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span>    <span class="comment">// Model from Prata (1996) Q. J. R. Meteorol. Soc.</span></div>
-<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span> </div>
-<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>    <span class="keywordtype">float</span> e0 = 611.f * exp(17.502f * (temperature_K - 273.f) / ((temperature_K - 273.f) + 240.9f)) * humidity_rel; <span class="comment">// Pascals</span></div>
-<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span> </div>
-<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>    <span class="keywordtype">float</span> K = 0.465f; <span class="comment">// cm-K/Pa</span></div>
-<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span> </div>
-<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>    <span class="keywordtype">float</span> xi = e0 / temperature_K * K;</div>
-<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>    <span class="keywordtype">float</span> eps = 1.f - (1.f + xi) * exp(-sqrt(1.2f + 3.f * xi));</div>
-<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span> </div>
-<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>    <span class="keywordflow">return</span> eps * 5.67e-8 * pow(temperature_K, 4);</div>
-<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span>}</div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>    assert(fdiff &gt;= 0.f &amp;&amp; fdiff &lt;= 1.f);</div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>}</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span> </div>
+<div class="foldopen" id="foldopen00354" data-start="{" data-end="}">
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno"><a class="line" href="class_solar_position.html#a30ee555eedece8b7e19855877a74da71">  354</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#a30ee555eedece8b7e19855877a74da71" title="Calculate the ambient (sky) longwave radiation flux.">SolarPosition::getAmbientLongwaveFlux</a>(<span class="keywordtype">float</span> temperature_K, <span class="keywordtype">float</span> humidity_rel)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span> </div>
+<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>    <span class="comment">// Model from Prata (1996) Q. J. R. Meteorol. Soc.</span></div>
+<div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span> </div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>    <span class="keywordtype">float</span> e0 = 611.f * exp(17.502f * (temperature_K - 273.f) / ((temperature_K - 273.f) + 240.9f)) * humidity_rel; <span class="comment">// Pascals</span></div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span> </div>
+<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span>    <span class="keywordtype">float</span> K = 0.465f; <span class="comment">// cm-K/Pa</span></div>
+<div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span> </div>
+<div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>    <span class="keywordtype">float</span> xi = e0 / temperature_K * K;</div>
+<div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>    <span class="keywordtype">float</span> eps = 1.f - (1.f + xi) * exp(-sqrt(1.2f + 3.f * xi));</div>
+<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span> </div>
+<div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>    <span class="keywordflow">return</span> eps * 5.67e-8 * pow(temperature_K, 4);</div>
+<div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>}</div>
 </div>
-<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span> </div>
-<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span><span class="keywordtype">float</span> SolarPosition::turbidityResidualFunction(<span class="keywordtype">float</span> turbidity, std::vector&lt;float&gt; &amp;parameters, <span class="keyword">const</span> <span class="keywordtype">void</span> *a_solarpositionmodel) {</div>
-<div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span> </div>
-<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>    <span class="keyword">auto</span> *solarpositionmodel = <span class="keyword">reinterpret_cast&lt;</span><span class="keyword">const </span><a class="code hl_class" href="class_solar_position.html">SolarPosition</a> *<span class="keyword">&gt;</span>(a_solarpositionmodel);</div>
-<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span> </div>
-<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>    <span class="keywordtype">float</span> pressure = parameters.at(0);</div>
-<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>    <span class="keywordtype">float</span> temperature = parameters.at(1);</div>
-<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>    <span class="keywordtype">float</span> humidity = parameters.at(2);</div>
-<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>    <span class="keywordtype">float</span> flux_target = parameters.at(3);</div>
-<div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span> </div>
-<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>    <span class="keywordtype">float</span> flux_model = solarpositionmodel-&gt;<a class="code hl_function" href="class_solar_position.html#a9701cb29a0336a11c445d285405b6956" title="Get the solar radiation flux perpendicular to the sun direction.">getSolarFlux</a>(pressure, temperature, humidity, turbidity) * cosf(solarpositionmodel-&gt;getSunZenith());</div>
-<div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span>    <span class="keywordflow">return</span> flux_model - flux_target;</div>
-<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span>}</div>
-<div class="line"><a id="l00381" name="l00381"></a><span class="lineno">  381</span> </div>
-<div class="foldopen" id="foldopen00382" data-start="{" data-end="}">
-<div class="line"><a id="l00382" name="l00382"></a><span class="lineno"><a class="line" href="class_solar_position.html#aeefa73ede0d1797f94fd4ca2739f7f3e">  382</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#aeefa73ede0d1797f94fd4ca2739f7f3e" title="Calculate the turbidity value based on a timeseries of net radiation measurements.">SolarPosition::calibrateTurbidityFromTimeseries</a>(<span class="keyword">const</span> std::string &amp;timeseries_shortwave_flux_label_Wm2)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00383" name="l00383"></a><span class="lineno">  383</span> </div>
-<div class="line"><a id="l00384" name="l00384"></a><span class="lineno">  384</span>    <span class="keywordflow">if</span> (!context-&gt;doesTimeseriesVariableExist(timeseries_shortwave_flux_label_Wm2.c_str())) {</div>
-<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (SolarPosition::calibrateTurbidityFromTimeseries): Timeseries variable &quot;</span> + timeseries_shortwave_flux_label_Wm2 + <span class="stringliteral">&quot; does not exist.&quot;</span>);</div>
-<div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span>    }</div>
-<div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span> </div>
-<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> length = context-&gt;getTimeseriesLength(timeseries_shortwave_flux_label_Wm2.c_str());</div>
-<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span> </div>
-<div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>    <span class="keywordtype">float</span> min_flux = 1e6;</div>
-<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>    <span class="keywordtype">float</span> max_flux = 0;</div>
-<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>    <span class="keywordtype">int</span> max_flux_index = 0;</div>
-<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> t = 0; t &lt; length; t++) {</div>
-<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>        <span class="keywordtype">float</span> flux = context-&gt;queryTimeseriesData(timeseries_shortwave_flux_label_Wm2.c_str(), t);</div>
-<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>        <span class="keywordflow">if</span> (flux &lt; min_flux) {</div>
-<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>            min_flux = flux;</div>
-<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>        }</div>
-<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>        <span class="keywordflow">if</span> (flux &gt; max_flux) {</div>
-<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>            max_flux = flux;</div>
-<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>            max_flux_index = t;</div>
-<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>        }</div>
-<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>    }</div>
-<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span> </div>
-<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>    <span class="keywordflow">if</span> (max_flux &lt; 750 || max_flux &gt; 1200) {</div>
-<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (SolarPosition::calibrateTurbidityFromTimeseries): The maximum flux for the timeseries data is not within the expected range. Either it is not solar flux data, or there are no clear sky days in the dataset&quot;</span>);</div>
-<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span>    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (min_flux &lt; 0) {</div>
-<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (SolarPosition::calibrateTurbidityFromTimeseries): The minimum flux for the timeseries data is negative. Solar fluxes cannot be negative.&quot;</span>);</div>
-<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>    }</div>
-<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span> </div>
-<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span>    std::vector&lt;float&gt; parameters{101325, 300, 0.5, max_flux};</div>
-<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span> </div>
-<div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>    <a class="code hl_function" href="class_solar_position.html#a25fa8345e4101fa2d63757ca1bc9fe10" title="Solar position model default constructor. Initializes location based on the location set in the Conte...">SolarPosition</a> solarposition_copy(UTC, latitude, longitude, context);</div>
-<div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>    <a class="code hl_struct" href="structhelios_1_1_date.html" title="Date vector.">Date</a> date_max = context-&gt;queryTimeseriesDate(timeseries_shortwave_flux_label_Wm2.c_str(), max_flux_index);</div>
-<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>    <a class="code hl_struct" href="structhelios_1_1_time.html" title="Time vector.">Time</a> time_max = context-&gt;queryTimeseriesTime(timeseries_shortwave_flux_label_Wm2.c_str(), max_flux_index);</div>
-<div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span> </div>
-<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>    solarposition_copy.<a class="code hl_function" href="class_solar_position.html#af52dad396956d1699fb08ceed6f9a29e" title="Override solar position calculation based on time in the Context by using a prescribed solar position...">setSunDirection</a>(solarposition_copy.calculateSunDirection(time_max, date_max));</div>
-<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span> </div>
-<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>    <span class="keywordtype">float</span> turbidity = <a class="code hl_function" href="global_8h.html#a464923f1888b6ba4dc1a3b6881fa9e80" title="Use Newton-Raphson method to find the zero of a function.">fzero</a>(turbidityResidualFunction, parameters, &amp;solarposition_copy, 0.01);</div>
-<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span> </div>
-<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span>    <span class="keywordflow">return</span> std::max(1e-4F, turbidity);</div>
-<div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span>}</div>
+<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span> </div>
+<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span><span class="keywordtype">float</span> SolarPosition::turbidityResidualFunction(<span class="keywordtype">float</span> turbidity, std::vector&lt;float&gt; &amp;parameters, <span class="keyword">const</span> <span class="keywordtype">void</span> *a_solarpositionmodel) {</div>
+<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span> </div>
+<div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>    <span class="keyword">auto</span> *solarpositionmodel = <span class="keyword">reinterpret_cast&lt;</span><span class="keyword">const </span><a class="code hl_class" href="class_solar_position.html">SolarPosition</a> *<span class="keyword">&gt;</span>(a_solarpositionmodel);</div>
+<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span> </div>
+<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>    <span class="keywordtype">float</span> pressure = parameters.at(0);</div>
+<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>    <span class="keywordtype">float</span> temperature = parameters.at(1);</div>
+<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>    <span class="keywordtype">float</span> humidity = parameters.at(2);</div>
+<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>    <span class="keywordtype">float</span> flux_target = parameters.at(3);</div>
+<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span> </div>
+<div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>    <span class="keywordtype">float</span> flux_model = solarpositionmodel-&gt;<a class="code hl_function" href="class_solar_position.html#a9701cb29a0336a11c445d285405b6956" title="Get the solar radiation flux perpendicular to the sun direction.">getSolarFlux</a>(pressure, temperature, humidity, turbidity) * cosf(solarpositionmodel-&gt;getSunZenith());</div>
+<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>    <span class="keywordflow">return</span> flux_model - flux_target;</div>
+<div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span>}</div>
+<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span> </div>
+<div class="foldopen" id="foldopen00381" data-start="{" data-end="}">
+<div class="line"><a id="l00381" name="l00381"></a><span class="lineno"><a class="line" href="class_solar_position.html#aeefa73ede0d1797f94fd4ca2739f7f3e">  381</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="class_solar_position.html#aeefa73ede0d1797f94fd4ca2739f7f3e" title="Calculate the turbidity value based on a timeseries of net radiation measurements.">SolarPosition::calibrateTurbidityFromTimeseries</a>(<span class="keyword">const</span> std::string &amp;timeseries_shortwave_flux_label_Wm2)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span> </div>
+<div class="line"><a id="l00383" name="l00383"></a><span class="lineno">  383</span>    <span class="keywordflow">if</span> (!context-&gt;doesTimeseriesVariableExist(timeseries_shortwave_flux_label_Wm2.c_str())) {</div>
+<div class="line"><a id="l00384" name="l00384"></a><span class="lineno">  384</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (SolarPosition::calibrateTurbidityFromTimeseries): Timeseries variable &quot;</span> + timeseries_shortwave_flux_label_Wm2 + <span class="stringliteral">&quot; does not exist.&quot;</span>);</div>
+<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>    }</div>
+<div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span> </div>
+<div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> length = context-&gt;getTimeseriesLength(timeseries_shortwave_flux_label_Wm2.c_str());</div>
+<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span> </div>
+<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>    <span class="keywordtype">float</span> min_flux = 1e6;</div>
+<div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>    <span class="keywordtype">float</span> max_flux = 0;</div>
+<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>    <span class="keywordtype">int</span> max_flux_index = 0;</div>
+<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> t = 0; t &lt; length; t++) {</div>
+<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>        <span class="keywordtype">float</span> flux = context-&gt;queryTimeseriesData(timeseries_shortwave_flux_label_Wm2.c_str(), t);</div>
+<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>        <span class="keywordflow">if</span> (flux &lt; min_flux) {</div>
+<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>            min_flux = flux;</div>
+<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>        }</div>
+<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>        <span class="keywordflow">if</span> (flux &gt; max_flux) {</div>
+<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>            max_flux = flux;</div>
+<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>            max_flux_index = t;</div>
+<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>        }</div>
+<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>    }</div>
+<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span> </div>
+<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>    <span class="keywordflow">if</span> (max_flux &lt; 750 || max_flux &gt; 1200) {</div>
+<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (SolarPosition::calibrateTurbidityFromTimeseries): The maximum flux for the timeseries data is not within the expected range. Either it is not solar flux data, or there are no clear sky days in the dataset&quot;</span>);</div>
+<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (min_flux &lt; 0) {</div>
+<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (SolarPosition::calibrateTurbidityFromTimeseries): The minimum flux for the timeseries data is negative. Solar fluxes cannot be negative.&quot;</span>);</div>
+<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>    }</div>
+<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span> </div>
+<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>    std::vector&lt;float&gt; parameters{101325, 300, 0.5, max_flux};</div>
+<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span> </div>
+<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>    <a class="code hl_function" href="class_solar_position.html#a25fa8345e4101fa2d63757ca1bc9fe10" title="Solar position model default constructor. Initializes location based on the location set in the Conte...">SolarPosition</a> solarposition_copy(UTC, latitude, longitude, context);</div>
+<div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>    <a class="code hl_struct" href="structhelios_1_1_date.html" title="Date vector.">Date</a> date_max = context-&gt;queryTimeseriesDate(timeseries_shortwave_flux_label_Wm2.c_str(), max_flux_index);</div>
+<div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>    <a class="code hl_struct" href="structhelios_1_1_time.html" title="Time vector.">Time</a> time_max = context-&gt;queryTimeseriesTime(timeseries_shortwave_flux_label_Wm2.c_str(), max_flux_index);</div>
+<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span> </div>
+<div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>    solarposition_copy.<a class="code hl_function" href="class_solar_position.html#af52dad396956d1699fb08ceed6f9a29e" title="Override solar position calculation based on time in the Context by using a prescribed solar position...">setSunDirection</a>(solarposition_copy.calculateSunDirection(time_max, date_max));</div>
+<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span> </div>
+<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>    <span class="keywordtype">float</span> turbidity = <a class="code hl_function" href="global_8h.html#a464923f1888b6ba4dc1a3b6881fa9e80" title="Use Newton-Raphson method to find the zero of a function.">fzero</a>(turbidityResidualFunction, parameters, &amp;solarposition_copy, 0.01);</div>
+<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span> </div>
+<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>    <span class="keywordflow">return</span> std::max(1e-4F, turbidity);</div>
+<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span>}</div>
 </div>
-<div class="line"><a id="l00422" name="l00422"></a><span class="lineno">  422</span> </div>
-<div class="foldopen" id="foldopen00423" data-start="{" data-end="}">
-<div class="line"><a id="l00423" name="l00423"></a><span class="lineno"><a class="line" href="class_solar_position.html#abee2003c22cbbffb671e8e6a9305b66f">  423</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#abee2003c22cbbffb671e8e6a9305b66f" title="Enable calibration of solar flux and diffuse fraction when possibility of clouds are present against ...">SolarPosition::enableCloudCalibration</a>(<span class="keyword">const</span> std::string &amp;timeseries_shortwave_flux_label_Wm2) {</div>
-<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span> </div>
-<div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>    <span class="keywordflow">if</span> (!context-&gt;doesTimeseriesVariableExist(timeseries_shortwave_flux_label_Wm2.c_str())) {</div>
-<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (SolarPosition::enableCloudCalibration): Timeseries variable &quot;</span> + timeseries_shortwave_flux_label_Wm2 + <span class="stringliteral">&quot; does not exist.&quot;</span>);</div>
-<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>    }</div>
-<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span> </div>
-<div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span>    cloudcalibrationlabel = timeseries_shortwave_flux_label_Wm2;</div>
-<div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>}</div>
+<div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span> </div>
+<div class="foldopen" id="foldopen00422" data-start="{" data-end="}">
+<div class="line"><a id="l00422" name="l00422"></a><span class="lineno"><a class="line" href="class_solar_position.html#abee2003c22cbbffb671e8e6a9305b66f">  422</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#abee2003c22cbbffb671e8e6a9305b66f" title="Enable calibration of solar flux and diffuse fraction when possibility of clouds are present against ...">SolarPosition::enableCloudCalibration</a>(<span class="keyword">const</span> std::string &amp;timeseries_shortwave_flux_label_Wm2) {</div>
+<div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span> </div>
+<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span>    <span class="keywordflow">if</span> (!context-&gt;doesTimeseriesVariableExist(timeseries_shortwave_flux_label_Wm2.c_str())) {</div>
+<div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (SolarPosition::enableCloudCalibration): Timeseries variable &quot;</span> + timeseries_shortwave_flux_label_Wm2 + <span class="stringliteral">&quot; does not exist.&quot;</span>);</div>
+<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>    }</div>
+<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span> </div>
+<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>    cloudcalibrationlabel = timeseries_shortwave_flux_label_Wm2;</div>
+<div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span>}</div>
 </div>
-<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span> </div>
-<div class="foldopen" id="foldopen00432" data-start="{" data-end="}">
-<div class="line"><a id="l00432" name="l00432"></a><span class="lineno"><a class="line" href="class_solar_position.html#a282ed51f351684b847255212dcd53869">  432</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#a282ed51f351684b847255212dcd53869" title="Disable calibration of solar flux and diffuse fraction for clouds.">SolarPosition::disableCloudCalibration</a>() {</div>
-<div class="line"><a id="l00433" name="l00433"></a><span class="lineno">  433</span>    cloudcalibrationlabel = <span class="stringliteral">&quot;&quot;</span>;</div>
-<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>}</div>
+<div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span> </div>
+<div class="foldopen" id="foldopen00431" data-start="{" data-end="}">
+<div class="line"><a id="l00431" name="l00431"></a><span class="lineno"><a class="line" href="class_solar_position.html#a282ed51f351684b847255212dcd53869">  431</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_solar_position.html#a282ed51f351684b847255212dcd53869" title="Disable calibration of solar flux and diffuse fraction for clouds.">SolarPosition::disableCloudCalibration</a>() {</div>
+<div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span>    cloudcalibrationlabel = <span class="stringliteral">&quot;&quot;</span>;</div>
+<div class="line"><a id="l00433" name="l00433"></a><span class="lineno">  433</span>}</div>
 </div>
-<div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span> </div>
-<div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span><span class="keywordtype">void</span> SolarPosition::applyCloudCalibration(<span class="keywordtype">float</span> &amp;R_calc_Wm2, <span class="keywordtype">float</span> &amp;fdiff_calc)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span> </div>
-<div class="line"><a id="l00438" name="l00438"></a><span class="lineno">  438</span>    assert(context-&gt;<a class="code hl_function" href="group__timeseries.html#ga8beaa8454ad248064b74698f7f0534a2" title="Query whether a timeseries variable exists.">doesTimeseriesVariableExist</a>(cloudcalibrationlabel.c_str()));</div>
-<div class="line"><a id="l00439" name="l00439"></a><span class="lineno">  439</span> </div>
-<div class="line"><a id="l00440" name="l00440"></a><span class="lineno">  440</span>    <span class="keywordtype">float</span> R_meas = context-&gt;<a class="code hl_function" href="group__timeseries.html#ga8845155a8f5df1e6db968b78f5a5fb18" title="Get a timeseries data point by specifying a date and time vector.">queryTimeseriesData</a>(cloudcalibrationlabel.c_str());</div>
-<div class="line"><a id="l00441" name="l00441"></a><span class="lineno">  441</span>    <span class="keywordtype">float</span> R_calc_horiz = R_calc_Wm2 * cosf(<a class="code hl_function" href="class_solar_position.html#a4c4ba4931d13c6cc2ad69e8eab90ac14" title="Get the current sun zenithal angle in radians for the current location. The sun angle is computed bas...">getSunZenith</a>());</div>
-<div class="line"><a id="l00442" name="l00442"></a><span class="lineno">  442</span> </div>
-<div class="line"><a id="l00443" name="l00443"></a><span class="lineno">  443</span>    <span class="keywordtype">float</span> fdiff = fmin(fmax(0, 1.f - (R_meas - R_calc_horiz) / (R_calc_horiz)), 1);</div>
-<div class="line"><a id="l00444" name="l00444"></a><span class="lineno">  444</span>    <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = R_calc_Wm2 * R_meas / R_calc_horiz;</div>
-<div class="line"><a id="l00445" name="l00445"></a><span class="lineno">  445</span> </div>
-<div class="line"><a id="l00446" name="l00446"></a><span class="lineno">  446</span>    <span class="keywordflow">if</span> (fdiff &gt; 0.001 &amp;&amp; R_calc_horiz &gt; 1.f) {</div>
-<div class="line"><a id="l00447" name="l00447"></a><span class="lineno">  447</span>        R_calc_Wm2 = <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>;</div>
-<div class="line"><a id="l00448" name="l00448"></a><span class="lineno">  448</span>        fdiff_calc = fdiff;</div>
-<div class="line"><a id="l00449" name="l00449"></a><span class="lineno">  449</span>    }</div>
-<div class="line"><a id="l00450" name="l00450"></a><span class="lineno">  450</span>}</div>
+<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span> </div>
+<div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span><span class="keywordtype">void</span> SolarPosition::applyCloudCalibration(<span class="keywordtype">float</span> &amp;R_calc_Wm2, <span class="keywordtype">float</span> &amp;fdiff_calc)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span> </div>
+<div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span>    assert(context-&gt;<a class="code hl_function" href="group__timeseries.html#ga8beaa8454ad248064b74698f7f0534a2" title="Query whether a timeseries variable exists.">doesTimeseriesVariableExist</a>(cloudcalibrationlabel.c_str()));</div>
+<div class="line"><a id="l00438" name="l00438"></a><span class="lineno">  438</span> </div>
+<div class="line"><a id="l00439" name="l00439"></a><span class="lineno">  439</span>    <span class="keywordtype">float</span> R_meas = context-&gt;<a class="code hl_function" href="group__timeseries.html#ga8845155a8f5df1e6db968b78f5a5fb18" title="Get a timeseries data point by specifying a date and time vector.">queryTimeseriesData</a>(cloudcalibrationlabel.c_str());</div>
+<div class="line"><a id="l00440" name="l00440"></a><span class="lineno">  440</span>    <span class="keywordtype">float</span> R_calc_horiz = R_calc_Wm2 * cosf(<a class="code hl_function" href="class_solar_position.html#a4c4ba4931d13c6cc2ad69e8eab90ac14" title="Get the current sun zenithal angle in radians for the current location. The sun angle is computed bas...">getSunZenith</a>());</div>
+<div class="line"><a id="l00441" name="l00441"></a><span class="lineno">  441</span> </div>
+<div class="line"><a id="l00442" name="l00442"></a><span class="lineno">  442</span>    <span class="keywordtype">float</span> fdiff = fmin(fmax(0, 1.f - (R_meas - R_calc_horiz) / (R_calc_horiz)), 1);</div>
+<div class="line"><a id="l00443" name="l00443"></a><span class="lineno">  443</span>    <span class="keywordtype">float</span> <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a> = R_calc_Wm2 * R_meas / R_calc_horiz;</div>
+<div class="line"><a id="l00444" name="l00444"></a><span class="lineno">  444</span> </div>
+<div class="line"><a id="l00445" name="l00445"></a><span class="lineno">  445</span>    <span class="keywordflow">if</span> (fdiff &gt; 0.001 &amp;&amp; R_calc_horiz &gt; 1.f) {</div>
+<div class="line"><a id="l00446" name="l00446"></a><span class="lineno">  446</span>        R_calc_Wm2 = <a class="code hl_variable" href="_energy_balance_model_8h.html#a05a585aa2556ffe7e436900a76c2113f" title="Gas constant, J mol⁻¹ K⁻¹">R</a>;</div>
+<div class="line"><a id="l00447" name="l00447"></a><span class="lineno">  447</span>        fdiff_calc = fdiff;</div>
+<div class="line"><a id="l00448" name="l00448"></a><span class="lineno">  448</span>    }</div>
+<div class="line"><a id="l00449" name="l00449"></a><span class="lineno">  449</span>}</div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

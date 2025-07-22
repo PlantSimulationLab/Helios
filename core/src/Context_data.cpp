@@ -1,21 +1,49 @@
-/** \file "Context_data.cpp" Context primitive data, object data, and global data declarations.
-
-Copyright (C) 2016-2025 Brian Bailey
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, version 2.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
+/**
+ * \file "Context_data.cpp" Context primitive data, object data, and global data declarations.
+ *
+ * Copyright (C) 2016-2025 Brian Bailey
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 2
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
 */
 
 #include "Context.h"
 
 using namespace helios;
+
+void Context::incrementPrimitiveDataLabelCounter(const std::string &primitive_data_label) {
+    primitive_data_label_counts[primitive_data_label]++;
+}
+
+void Context::decrementPrimitiveDataLabelCounter(const std::string &primitive_data_label) {
+    auto it = primitive_data_label_counts.find(primitive_data_label);
+    if (it != primitive_data_label_counts.end() && it->second > 0) {
+        it->second--;
+        if (it->second == 0) {
+            primitive_data_label_counts.erase(it);
+        }
+    }
+}
+
+void Context::incrementObjectDataLabelCounter(const std::string &object_data_label) {
+    object_data_label_counts[object_data_label]++;
+}
+
+void Context::decrementObjectDataLabelCounter(const std::string &object_data_label) {
+    auto it = object_data_label_counts.find(object_data_label);
+    if (it != object_data_label_counts.end() && it->second > 0) {
+        it->second--;
+        if (it->second == 0) {
+            object_data_label_counts.erase(it);
+        }
+    }
+}
 
 // ------ Primitive Data -------- //
 
@@ -168,6 +196,9 @@ void Context::clearPrimitiveData(uint UUID, const char *label) {
         helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }
 #endif
+    if (primitives.at(UUID)->doesPrimitiveDataExist(label)) {
+        decrementPrimitiveDataLabelCounter(label);
+    }
     primitives.at(UUID)->clearPrimitiveData(label);
 }
 
@@ -178,6 +209,9 @@ void Context::clearPrimitiveData(const std::vector<uint> &UUIDs, const char *lab
             helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
         }
 #endif
+        if (primitives.at(UUID)->doesPrimitiveDataExist(label)) {
+            decrementPrimitiveDataLabelCounter(label);
+        }
         primitives.at(UUID)->clearPrimitiveData(label);
     }
 }
@@ -192,6 +226,11 @@ void Context::copyPrimitiveData(uint sourceUUID, uint destinationUUID) {
     }
 #endif
 
+    const auto &dest_labels = primitives.at(destinationUUID)->primitive_data_types;
+    for (const auto &[label, type]: dest_labels) {
+        decrementPrimitiveDataLabelCounter(label);
+    }
+
     primitives.at(destinationUUID)->primitive_data_types = primitives.at(sourceUUID)->primitive_data_types;
 
     primitives.at(destinationUUID)->primitive_data_int = primitives.at(sourceUUID)->primitive_data_int;
@@ -205,6 +244,10 @@ void Context::copyPrimitiveData(uint sourceUUID, uint destinationUUID) {
     primitives.at(destinationUUID)->primitive_data_int3 = primitives.at(sourceUUID)->primitive_data_int3;
     primitives.at(destinationUUID)->primitive_data_int4 = primitives.at(sourceUUID)->primitive_data_int4;
     primitives.at(destinationUUID)->primitive_data_string = primitives.at(sourceUUID)->primitive_data_string;
+
+    for (const auto &[label, type]: primitives.at(destinationUUID)->primitive_data_types) {
+        incrementPrimitiveDataLabelCounter(label);
+    }
 
     primitives.at(destinationUUID)->dirty_flag = true;
 }
@@ -236,6 +279,9 @@ void Context::duplicatePrimitiveData(uint UUID, const char *old_label, const cha
 
     HeliosDataType type = getPrimitiveDataType(UUID, old_label);
 
+    if (!primitives.at(UUID)->doesPrimitiveDataExist(new_label)) {
+        incrementPrimitiveDataLabelCounter(new_label);
+    }
     primitives.at(UUID)->primitive_data_types[new_label] = type;
     if (type == HELIOS_TYPE_INT) {
         primitives.at(UUID)->primitive_data_int[new_label] = primitives.at(UUID)->primitive_data_int.at(old_label);
@@ -274,6 +320,9 @@ void Context::duplicatePrimitiveData(const char *existing_data_label, const char
     for (auto &[UUID, primitive]: primitives) {
         if (primitive->doesPrimitiveDataExist(existing_data_label)) {
             const HeliosDataType type = primitive->getPrimitiveDataType(existing_data_label);
+            if (!primitive->doesPrimitiveDataExist(copy_data_label)) {
+                incrementPrimitiveDataLabelCounter(copy_data_label);
+            }
             primitive->primitive_data_types[copy_data_label] = type;
             if (type == HELIOS_TYPE_FLOAT) {
                 primitive->primitive_data_float[copy_data_label] = primitive->primitive_data_float.at(existing_data_label);
@@ -1472,6 +1521,11 @@ void Context::copyObjectData(uint source_objID, uint destination_objID) {
     }
 #endif
 
+    const auto &dest_labels = objects.at(destination_objID)->object_data_types;
+    for (const auto &[label, type]: dest_labels) {
+        decrementObjectDataLabelCounter(label);
+    }
+
     objects.at(destination_objID)->object_data_types = objects.at(source_objID)->object_data_types;
 
     objects.at(destination_objID)->object_data_int = objects.at(source_objID)->object_data_int;
@@ -1485,6 +1539,10 @@ void Context::copyObjectData(uint source_objID, uint destination_objID) {
     objects.at(destination_objID)->object_data_int3 = objects.at(source_objID)->object_data_int3;
     objects.at(destination_objID)->object_data_int4 = objects.at(source_objID)->object_data_int4;
     objects.at(destination_objID)->object_data_string = objects.at(source_objID)->object_data_string;
+
+    for (const auto &[lbl, type]: objects.at(destination_objID)->object_data_types) {
+        incrementObjectDataLabelCounter(lbl);
+    }
 }
 
 void Context::duplicateObjectData(uint objID, const char *old_label, const char *new_label) {
@@ -1499,6 +1557,9 @@ void Context::duplicateObjectData(uint objID, const char *old_label, const char 
 
     HeliosDataType type = getObjectDataType(objID, old_label);
 
+    if (!objects.at(objID)->doesObjectDataExist(new_label)) {
+        incrementObjectDataLabelCounter(new_label);
+    }
     objects.at(objID)->object_data_types[new_label] = type;
     if (type == HELIOS_TYPE_INT) {
         objects.at(objID)->object_data_int[new_label] = objects.at(objID)->object_data_int.at(old_label);
@@ -1548,6 +1609,9 @@ void Context::clearObjectData(uint objID, const char *label) {
         helios_runtime_error("ERROR (Context::clearObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
     }
 #endif
+    if (objects.at(objID)->doesObjectDataExist(label)) {
+        decrementObjectDataLabelCounter(label);
+    }
     objects.at(objID)->clearObjectData(label);
 }
 
@@ -1558,6 +1622,9 @@ void Context::clearObjectData(const std::vector<uint> &objIDs, const char *label
             helios_runtime_error("ERROR (Context::clearObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
         }
 #endif
+        if (objects.at(objID)->doesObjectDataExist(label)) {
+            decrementObjectDataLabelCounter(label);
+        }
         objects.at(objID)->clearObjectData(label);
     }
 }
@@ -1942,10 +2009,32 @@ std::vector<std::string> Context::listGlobalData() const {
 
     std::vector<std::string> labels;
     labels.reserve(globaldata.size());
-    for (const auto & [label, data] : globaldata) {
+    for (const auto &[label, data]: globaldata) {
         labels.push_back(label);
     }
 
+    return labels;
+}
+
+std::vector<std::string> Context::listAllPrimitiveDataLabels() const {
+    std::vector<std::string> labels;
+    labels.reserve(primitive_data_label_counts.size());
+    for (const auto &[label, count]: primitive_data_label_counts) {
+        if (count > 0) {
+            labels.push_back(label);
+        }
+    }
+    return labels;
+}
+
+std::vector<std::string> Context::listAllObjectDataLabels() const {
+    std::vector<std::string> labels;
+    labels.reserve(object_data_label_counts.size());
+    for (const auto &[label, count]: object_data_label_counts) {
+        if (count > 0) {
+            labels.push_back(label);
+        }
+    }
     return labels;
 }
 
