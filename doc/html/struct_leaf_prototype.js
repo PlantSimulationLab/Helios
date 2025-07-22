@@ -8,7 +8,7 @@ var struct_leaf_prototype =
     [ "leaf_buckle_angle", "struct_leaf_prototype.html#ab24b8cb372c52a7cd2c138d415fc9622", null ],
     [ "leaf_buckle_length", "struct_leaf_prototype.html#ab628d133df921861f8db3d36f4fc6496", null ],
     [ "leaf_offset", "struct_leaf_prototype.html#aa8fc5dd4868a81ef7c8d34d4aa255daf", null ],
-    [ "leaf_texture_file", "struct_leaf_prototype.html#a418960ee0b7f6c6693d09cd5f0d2ba59", null ],
+    [ "leaf_texture_file", "struct_leaf_prototype.html#a006c09a090b728e154b211ea6b1b9551", null ],
     [ "longitudinal_curvature", "struct_leaf_prototype.html#af14f092796a2c241521be4f50cad1552", null ],
     [ "midrib_fold_fraction", "struct_leaf_prototype.html#ab6a5584fbf19ee9c61f979e020eeb834", null ],
     [ "OBJ_model_file", "struct_leaf_prototype.html#abf799f4b6c6a0eb64ddccb0e310c6259", null ],

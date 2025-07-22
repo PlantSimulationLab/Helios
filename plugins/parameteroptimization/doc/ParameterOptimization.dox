@@ -1,0 +1,120 @@
+/*! \page ParameterOptimizationDoc Parameter Optimization Plugin Documentation
+
+ \tableofcontents
+
+ <table>
+ <tr><th>Dependencies</th><td>None</td></tr>
+ <tr><th>CMakeLists.txt</th><td>set( PLUGINS "parameteroptimization" )</td></tr>
+ <tr><th>Header File</th><td>#include "ParameterOptimization.h"</td></tr>
+ <tr><th>Class</th><td>\ref ParameterOptimization</td></tr>
+ </table>
+
+ \section ParameterOptimizationConstructor Class Constructor
+
+ <table>
+ <tr><th>Constructors</th></tr>
+ <tr><td>\ref ParameterOptimization()</td></tr>
+ </table>
+
+
+
+\section POissues Known Issues
+Currently under construction.
+
+\section PO_Intro Introduction
+The Parameter Optimization plugin performs a genetic algorithm-based optimization on arbitrary parameters used in Helios simulations.
+The plugin takes in a function that defines the Helios simulation, a parameter structure that enumerates decision variables to optimize over, and a
+settings structure that sets algorithm options.
+
+\section PO_Algorithm Genetic Algorithm
+
+The optimization procedure implemented in this plugin is a simple but robust [**Genetic Algorithm (GA)**](https://www.geeksforgeeks.org/dsa/genetic-algorithms/).
+It is designed to explore the parameter space of Helios simulations to find the parameter set that **minimizes** a user-defined objective function.
+At a high level, the algorithm maintains a population of candidate solutions (parameter sets), which it evolves over multiple generations using biologically inspired operations:
+
+- **Initialization**: A population of individuals is randomly initialized within the user-specified parameter bounds. Optionally, a known best individual can be injected from a file.
+- **Evaluation**: Each individual in the population is evaluated using the user-supplied simulation function. The function must return a single float value, interpreted as the **cost** or **error** to minimize.
+- **Elitism**: The best-performing individuals (top 5% by default) are preserved unchanged into the next generation.
+- **Selection**: Parents are selected from the population using a nonuniform random selection (tournament selection).
+- **Crossover (Recombination)**: For each child, corresponding parameters from two parents are blended using the **BLX-α operator** (Eshelman & Shaffer, 1993), which samples new values uniformly from an extended range around the parent values.
+- **Mutation**: Each parameter has a probability of mutation, implemented as Gaussian noise added to the parameter value, scaled to 10% of the parameter's range.
+- **Clamping**: After crossover and mutation, parameter values are clamped within the user-defined bounds to ensure validity.
+- **Termination**: The algorithm terminates after a fixed number of generations.
+
+This approach allows robust global optimization of parameters even when the simulation function is nonlinear, non-differentiable, or noisy.
+
+\section PO_Params Settings
+Genetic Algorithm Settings
+| Parameter   | Description                                                              | Default Value |
+| ----------- | -----------------------------------------------------------------------  | ----- |
+| Generations  | number of iterations the algorithm is run for                                 | 100  |
+| Population Size | number of individuals used to explore the objective function space         | 100  |
+| Elitism Rate   | fraction of best-performing individuals to be preserved unchanged into the next generation | 0.05 |
+| Crossover Rate   | fraction of cross-over, or mixing, of the parameters of parent individuals    | 0.5 |
+| Mutation Rate   | probability of mutation, or perturbation, of the parameters of generated child individuals | 0.1 |
+
+\section PO_Example Examples
+
+A minimal working example is given below.
+
+\code{.cpp}
+#include "ParameterOptimization.h"
+using namespace helios;
+
+// Define a function that contains any ordinary C++ or Helios simulation code and computes a singular float to minimize
+// Here, we attempt to minimize the error, or distance, from known parameter values
+float sim(const ParametersToOptimize& p) {
+    float error = 0.0f;
+
+    error += std::fabs(p.at("Em_BMF").value - 5.f);
+    error += std::fabs(p.at("i0_BMF").value - 100.f);
+    error += std::fabs(p.at("k_BMF").value - 1000.f);
+    error += std::fabs(p.at("b_BMF").value - 7.f);
+
+    return error;
+}
+
+int main() {
+    //Initialize the optimization class
+    ParameterOptimization popt;
+
+    //Initialize the parameter structure
+    ParametersToOptimize params;
+
+    //Set the parameters to optimize over using a map from string "name" to {initial_value, min_value, max_value}
+    params = {
+        {"Em_BMF",{10,0,100}},
+        {"i0_BMF",{10,0,1000}},
+        {"k_BMF",{1e5,0,20000}},
+        {"b_BMF",{0.5,0,100}}
+    };
+
+    //Set the algorithm settings
+    OptimizationSettings settings;
+    settings.population_size = 100;
+    settings.generations = 100;
+    settings.crossover_rate = 0.5;
+    settings.mutation_rate = 0.1;
+    settings.print_progress = true;
+    settings.write_progress_to_file = "progress.txt";
+    settings.write_result_to_file = "result.txt";
+
+    auto result = popt.run(sim,params,settings);
+
+    std::cout << "Expected (5,100,1000,7), got (" << result.parameters.at("Em_BMF").value << "," <<
+        result.parameters.at("i0_BMF").value << ")" << result.parameters.at("k_BMF").value << "," <<
+        result.parameters.at("b").value << ")" << std::endl;
+
+}
+\endcode
+
+A previously written resulting parameter set can be read and imported into the population before subsequent running of the algorithm.
+
+\code{.cpp}
+ ...
+    settings.read_input_from_file = "result.txt";
+    auto result = popt.run(sim,params,settings);
+ ...
+\endcode
+
+*/

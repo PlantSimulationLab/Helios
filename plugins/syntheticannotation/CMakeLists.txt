@@ -9,7 +9,7 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
-add_library( syntheticannotation STATIC "${CMAKE_CURRENT_SOURCE_DIR}/src/SyntheticAnnotation.cpp" )
+add_library( syntheticannotation STATIC "src/SyntheticAnnotation.cpp" "src/selfTest.cpp" )
 
 target_include_directories(syntheticannotation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include )
 

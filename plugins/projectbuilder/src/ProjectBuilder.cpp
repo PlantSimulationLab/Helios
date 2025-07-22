@@ -2,6 +2,7 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <commdlg.h>
 #elif defined(__APPLE__)
@@ -2274,10 +2275,10 @@ void ProjectBuilder::visualize() {
         recordPopup();
         ImGui::OpenPopupOnItemClick("repeat_record", ImGuiPopupFlags_MouseButtonRight);
 #endif // RADIATION_MODEL
-        // ####### RESULTS ####### //
-        // ImGui::Text("Absorbed PAR: %f W/m^2", PAR_absorbed);
-        // ImGui::Text("Absorbed NIR: %f W/m^2", NIR_absorbed);
-        // ImGui::Text("Absorbed  LW: %f W/m^2", LW_absorbed);
+       // ####### RESULTS ####### //
+       // ImGui::Text("Absorbed PAR: %f W/m^2", PAR_absorbed);
+       // ImGui::Text("Absorbed NIR: %f W/m^2", NIR_absorbed);
+       // ImGui::Text("Absorbed  LW: %f W/m^2", LW_absorbed);
         ImGui::Text("Console:");
         outputConsole();
         if (ImGui::BeginTabBar("Settings#left_tabs_bar")) {
@@ -2783,15 +2784,14 @@ void ProjectBuilder::visualize() {
                         ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_z_" + std::to_string(objects_dict[current_obj].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::Text("Object Orientation");
-                    if (objects_dict[current_obj].position != objects_dict[current_obj].prev_position || objects_dict[current_obj].orientation != objects_dict[current_obj].prev_orientation ||
-                        objects_dict[current_obj].scale != objects_dict[current_obj].prev_scale || objects_dict[current_obj].color != objects_dict[current_obj].prev_color) {
+                        if (objects_dict[current_obj].position != objects_dict[current_obj].prev_position || objects_dict[current_obj].orientation != objects_dict[current_obj].prev_orientation ||
+                            objects_dict[current_obj].scale != objects_dict[current_obj].prev_scale || objects_dict[current_obj].color != objects_dict[current_obj].prev_color) {
                             objects_dict[current_obj].is_dirty = true;
-
                         }
                         if (objects_dict[current_obj].is_dirty && !ImGui::IsAnyItemActive() && !ImGui::IsAnyItemFocused()) {
-                        updateObject(current_obj);
+                            updateObject(current_obj);
+                        }
                     }
-                }
                 }
                 ImGui::EndTabItem();
             }

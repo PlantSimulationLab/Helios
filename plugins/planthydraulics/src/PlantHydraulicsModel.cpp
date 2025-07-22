@@ -24,13 +24,13 @@ std::vector<float> linspace(double begin, double end, int n) {
     if (n <= 0)
         return result;
     if (n == 1) {
-        result.emplace_back(begin);
+        result.emplace_back(static_cast<float>(begin));
         return result;
     }
 
     double step = (end - begin) / (n - 1);
     for (int i = 0; i < n; i++) {
-        result.emplace_back(begin + i * step);
+        result.emplace_back(static_cast<float>(begin + i * step));
     }
     return result;
 }
@@ -437,12 +437,11 @@ void PlantHydraulicsModel::outputCapacitancePrimitiveData(bool toggle) {
 void PlantHydraulicsModel::groupPrimitivesIntoPlantObject(const std::vector<uint> &UUIDs) {
     if (!UUIDs.empty()) {
         bool found = false;
-        for(auto UUID:UUIDs) {
+        for (auto UUID: UUIDs) {
             uint parentID = context->getPrimitiveParentObjectID(UUID);
             if (parentID != 0u && context->doesObjectDataExist(parentID, "plantID")) {
                 std::stringstream ss;
-                ss << "(PlantHydraulicsModel::groupPrimitivesIntoPlantObject): UUID " << UUID
-                   << " already has parent object data 'plantID'; cannot re-group into new plant object.";
+                ss << "(PlantHydraulicsModel::groupPrimitivesIntoPlantObject): UUID " << UUID << " already has parent object data 'plantID'; cannot re-group into new plant object.";
                 helios_runtime_error(ss.str());
             }
         }
@@ -460,16 +459,14 @@ int PlantHydraulicsModel::getPlantID(uint UUID) {
     if (parentID != 0u && context->doesObjectDataExist(parentID, "plantID")) {
         context->getObjectData(parentID, "plantID", plantID);
         found = true;
-    }
-    else if (context->doesPrimitiveDataExist(UUID, "plantID")) {
+    } else if (context->doesPrimitiveDataExist(UUID, "plantID")) {
         context->getPrimitiveData(UUID, "plantID", plantID);
         found = true;
     }
 
     if (!found) {
         std::stringstream ss;
-        ss << "(PlantHydraulicsModel::getPlantID): UUID " << UUID
-           << " has no parent object data or primitive data 'plantID'.";
+        ss << "(PlantHydraulicsModel::getPlantID): UUID " << UUID << " has no parent object data or primitive data 'plantID'.";
         helios_runtime_error(ss.str());
     }
 
@@ -504,7 +501,7 @@ std::vector<uint> PlantHydraulicsModel::getPrimitivesByPlantID(const int plantID
     auto allUUIDs = context->getAllUUIDs();
     auto objectIDs = context->getUniquePrimitiveParentObjectIDs(allUUIDs);
 
-    for (uint objID : objectIDs) {
+    for (uint objID: objectIDs) {
         if (objID != 0u && context->doesObjectDataExist(objID, "plantID")) {
             int objPlantID;
             context->getObjectData(objID, "plantID", objPlantID);
@@ -516,7 +513,7 @@ std::vector<uint> PlantHydraulicsModel::getPrimitivesByPlantID(const int plantID
     }
 
     // From primitive data
-    for (uint UUID : allUUIDs) {
+    for (uint UUID: allUUIDs) {
         if (context->doesPrimitiveDataExist(UUID, "plantID")) {
             int primPlantID;
             context->getPrimitiveData(UUID, "plantID", primPlantID);
@@ -538,23 +535,21 @@ std::vector<int> PlantHydraulicsModel::getUniquePlantIDs(const std::vector<uint>
     std::vector<int> plantIDs;
     int plantID;
 
-    for (auto UUID : UUIDs) {
+    for (auto UUID: UUIDs) {
         bool found = false;
         uint parentID = context->getPrimitiveParentObjectID(UUID);
 
         if (parentID != 0u && context->doesObjectDataExist(parentID, "plantID")) {
             context->getObjectData(parentID, "plantID", plantID);
             found = true;
-        }
-        else if (context->doesPrimitiveDataExist(UUID, "plantID")) {
+        } else if (context->doesPrimitiveDataExist(UUID, "plantID")) {
             context->getPrimitiveData(UUID, "plantID", plantID);
             found = true;
         }
 
         if (!found) {
             std::stringstream ss;
-            ss << "(PlantHydraulicsModel::getUniquePlantIDs): UUID " << UUID
-               << " has no parent object data or primitive data 'plantID'.";
+            ss << "(PlantHydraulicsModel::getUniquePlantIDs): UUID " << UUID << " has no parent object data or primitive data 'plantID'.";
             helios_runtime_error(ss.str());
         }
 
@@ -622,8 +617,7 @@ std::vector<uint> PlantHydraulicsModel::getPrimitivesWithoutPlantID(std::vector<
 
         if (parentID != 0u && context->doesObjectDataExist(parentID, "plantID")) {
             found = true;
-        }
-        else if (context->doesPrimitiveDataExist(UUID, "plantID")) {
+        } else if (context->doesPrimitiveDataExist(UUID, "plantID")) {
             found = true;
         }
 

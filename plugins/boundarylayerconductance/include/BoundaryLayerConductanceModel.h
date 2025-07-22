@@ -20,73 +20,70 @@
 
 //! Boundary-layer conductance model class
 /** This model computes boundary-layer conductance values for a number of objects */
-class BLConductanceModel{
+class BLConductanceModel {
 public:
+    //! Constructor
+    /**
+     * \param[in] context Pointer to the Helios context
+     */
+    explicit BLConductanceModel(helios::Context *context);
 
-  //! Constructor
-  /**
-   * \param[in] context Pointer to the Helios context
-   */
-  BLConductanceModel( helios::Context* context );
+    //! Self-test
+    /**
+     * \return 0 if test was successful, 1 if test failed.
+     */
+    static int selfTest();
 
-  //! Self-test
-  /**
-   * \return 0 if test was successful, 1 if test failed.
-   */
-  int selfTest();
+    //! Enable standard output from this plug-in (default)
+    void enableMessages();
 
-  //! Enable standard output from this plug-in (default)
-  void enableMessages();
+    //! Disable standard output from this plug-in
+    void disableMessages();
 
-  //! Disable standard output from this plug-in
-  void disableMessages();
+    //! Set the boundary-layer conductance model to be used for all primitives in the Context
+    /**
+     * \param[in] gH_model String corresponding to model to be run. One of "Pohlhausen", "InclinedPlate", "Sphere", or "Ground".
+     */
+    void setBoundaryLayerModel(const char *gH_model);
 
-  //! Set the boundary-layer conductance model to be used for all primitives in the Context
-  /**
-   * \param[in] gH_model String corresponding to model to be run. One of "hhausen", "InclinedPlate", "Sphere", or "Ground".
-  */
-  void setBoundaryLayerModel( const char* gH_model );
+    //! Set the boundary-layer conductance model to be used for a set of primitives
+    /**
+     * \param[in] UUID  Unique universal identifier (UUID) for primitive the conductance model should be used.
+     * \param[in] gH_model String corresponding to model to be run. One of "Pohlhausen", "InclinedPlate", "Sphere", or "Ground".
+     */
+    void setBoundaryLayerModel(uint UUID, const char *gH_model);
 
-  //! Set the boundary-layer conductance model to be used for a set of primitives
-  /**
-   * \param[in] UUID  Unique universal identifier (UUID) for primitive the conductance model should be used.
-   * \param[in] gH_model String corresponding to model to be run. One of "Pohlhausen", "InclinedPlate", "Sphere", or "Ground".
-  */
-  void setBoundaryLayerModel( uint UUID, const char* gH_model );
+    //! Set the boundary-layer conductance model to be used for a set of primitives
+    /**
+     * \param[in] UUIDs  Unique universal identifiers (UUIDs) for primitives the conductance model should be used.
+     * \param[in] gH_model String corresponding to model to be run. One of "Pohlhausen", "InclinedPlate", "Sphere", or "Ground".
+     */
+    void setBoundaryLayerModel(const std::vector<uint> &UUIDs, const char *gH_model);
 
-  //! Set the boundary-layer conductance model to be used for a set of primitives
-  /**
-   * \param[in] UUIDs  Unique universal identifiers (UUIDs) for primitives the conductance model should be used.
-   * \param[in] gH_model String corresponding to model to be run. One of "Pohlhausen", "InclinedPlate", "Sphere", or "Ground".
-  */
-  void setBoundaryLayerModel(const std::vector<uint> &UUIDs, const char* gH_model );
+    //! Run boundary-layer conductance calculations for all primitives in the Context
+    void run();
 
-  //! Run boundary-layer conductance calculations for all primitives in the Context
-  void run();
-
-  //! Run boundary-layer conductance calculations for a subset of primitives in the Context based on a vector of UUIDs
-  void run(const std::vector<uint> &UUIDs );
+    //! Run boundary-layer conductance calculations for a subset of primitives in the Context based on a vector of UUIDs
+    void run(const std::vector<uint> &UUIDs);
 
 private:
+    //! Copy of a pointer to the context
+    helios::Context *context;
 
-  //! Copy of a pointer to the context
-  helios::Context* context;
+    //! Default wind speed if it was not specified in the context
+    float wind_speed_default;
 
-  //! Default wind speed if it was not specified in the context
-  float wind_speed_default;
+    //! Default air temperature if it was not specified in the context
+    float air_temperature_default;
 
-  //! Default air temperature if it was not specified in the context
-  float air_temperature_default;
+    //! Default surface temperature if it was not specified in the context
+    float surface_temperature_default;
 
-  //! Default surface temperature if it was not specified in the context
-  float surface_temperature_default;
+    bool message_flag;
 
-  bool message_flag;
+    float calculateBoundaryLayerConductance(uint gH_model, float U, float L, char Nsides, float inclination, float TL, float Ta);
 
-  float calculateBoundaryLayerConductance( uint gH_model, float U, float L, char Nsides, float inclination, float TL, float Ta );
-
-  std::map<uint,uint> boundarylayer_model;
-
+    std::map<uint, uint> boundarylayer_model;
 };
 
 #endif

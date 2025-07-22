@@ -155,6 +155,7 @@
   - \subpage CanopyGeneratorDoc "Canopy Generator: Simple generation of different type of plant and canopy geometries."
   - \subpage PlantArchitectureDoc "Plant Architecture: Flexible procedural plant generation with dynamic growth and phenology."
   - \subpage PlantHydraulicsDoc "Plant Hydraulics: Models the water potentials, water contents, hydraulic conductances, and hydraulic capacitances."
+  - \subpage ParameterOptimizationDoc "Parameter Optimization: Utility for optimization of model parameters."
   - \subpage LeafOpticsDoc "Leaf Optics: Implementation of the PROSPECT-PRO leaf optical model of leaf reflectance and transmittance spectra."
   - \subpage ProjectBuilderDoc "GUI and XML interface for creating and running Helios projects."
 

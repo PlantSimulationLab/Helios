@@ -9,12 +9,15 @@ endif()
 # Defining Helios Context source files to be built
 set(HELIOS_SOURCES
         src/Context.cpp
+        src/Context_primitive.cpp
+        src/Context_object.cpp
         src/Context_fileIO.cpp
         src/Context_data.cpp
         src/global.cpp
-        src/selfTest.cpp
+        tests/selfTest.cpp
         lib/pugixml/pugixml.cpp
 )
+
 add_library(helios STATIC ${HELIOS_SOURCES})
 
 # Defining Helios Context include files
@@ -50,6 +53,6 @@ file( COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/images" DESTINATION "${CMAKE_BINARY_
 file( COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/models" DESTINATION "${CMAKE_BINARY_DIR}/lib/" )
 file( COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/testdata" DESTINATION "${CMAKE_BINARY_DIR}/lib/" )
 
-add_executable( context_tests "src/TestMain.cpp" )
+add_executable( context_tests tests/TestMain.cpp )
 target_link_libraries( context_tests PRIVATE helios )
 add_test( NAME context_tests COMMAND context_tests )

@@ -11,7 +11,6 @@ var class_weber_penn_tree =
     [ "loadXML", "class_weber_penn_tree.html#a3cc9a0c0b3039e5fa44fc77a117a72dc", null ],
     [ "optionalOutputPrimitiveData", "class_weber_penn_tree.html#adb6095aad4b1dd1da8adc15fbd295775", null ],
     [ "seedRandomGenerator", "class_weber_penn_tree.html#a8a9df18ae61815739063b0baff142f9d", null ],
-    [ "selfTest", "class_weber_penn_tree.html#a9fc96eafd81b0aa3ca628e25abbda28b", null ],
     [ "setBranchRecursionLevel", "class_weber_penn_tree.html#a7aee9ed5ca2f7696179029b0c3ec5522", null ],
     [ "setBranchSegmentResolution", "class_weber_penn_tree.html#a8b39281ab94cb9d77bcc4aa67a226796", null ],
     [ "setLeafSubdivisions", "class_weber_penn_tree.html#a085a56d129e306469147762509fa7378", null ],

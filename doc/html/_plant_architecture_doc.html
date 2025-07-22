@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.40</span>
+       <span id="projectnumber">&#160;v1.3.41</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -280,6 +280,25 @@ $(function(){initNavTree('_plant_architecture_doc.html',''); initResizable(true)
       </li>
       <li class="level2">
         <a href="#PlantArchPhenoMod">Modifying Phenological Threshold Parameters</a>
+      </li>
+    </ul>
+  </li>
+  <li class="level1">
+    <a href="#PlantArchAddingModels">Adding New Plant Models to the Library</a>
+    <ul>
+      <li class="level2">
+        <a href="#PlantArchAddWorkflow">General Workflow</a>
+        <ul>
+          <li class="level3">
+            <a href="#PlantArchAddStep1">Step 1: Create Assets (if needed)</a>
+          </li>
+          <li class="level3">
+            <a href="#PlantArchAddStep2">Step 2: Implement Plant-Specific Methods</a>
+          </li>
+          <li class="level3">
+            <a href="#PlantArchAddStep3">Step 3: Register the Plant Model</a>
+          </li>
+        </ul>
       </li>
     </ul>
   </li>
@@ -958,6 +977,103 @@ Modifying Phenological Threshold Parameters</h2>
 <div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID = plantarchitecture.buildPlantInstanceFromLibrary( <a class="code hl_variable" href="global_8h.html#a876dc18d1da8ace50c131f428f8883be" title="Default null vec3 that gives the origin (0,0,0)">nullorigin</a>, 0 );</div>
 <div class="line"> </div>
 <div class="line">plantarchitecture.setPlantPhenologicalThresholds( plantID, 0, 20, 10, 10, 5, 70 );</div>
+</div><!-- fragment --><h1><a class="anchor" id="PlantArchAddingModels"></a>
+Adding New Plant Models to the Library</h1>
+<p>The PlantArchitecture plugin includes a streamlined system for adding new plant species to the built-in library. This section describes the workflow for implementing a new plant model.</p>
+<h2><a class="anchor" id="PlantArchAddWorkflow"></a>
+General Workflow</h2>
+<p>Adding a new plant model to the library involves the following steps:</p>
+<ol type="1">
+<li><b>Create assets (if needed)</b> - Prepare texture images, OBJ models, or other visual assets if needed.</li>
+<li><b>Implement the plant-specific methods</b> - Create the <code>initialize[*]Shoots()</code> and <code>build[*]()</code> methods that define the plant's architecture and parameters in <a class="el" href="_plant_library_8cpp.html">PlantLibrary.cpp</a>. You can find many examples in this file for existing plants.</li>
+<li><b>Register the plant model</b> - Add a single registration line to initializePlantModelRegistrations() in <a class="el" href="_plant_library_8cpp.html">PlantLibrary.cpp</a> to make the model available in the library. This can be found at the top of <a class="el" href="_plant_library_8cpp.html">PlantLibrary.cpp</a>, with examples for existing plants.</li>
+</ol>
+<p>A good approach is to start with an existing plant model that is similar to the new plant, and copy paste its code <code>initialize[*]Shoots()</code> and <code>build[*]()</code> for your new plant. You can then tweak parameters to achieve your desired result.</p>
+<h3><a class="anchor" id="PlantArchAddStep1"></a>
+Step 1: Create Assets (if needed)</h3>
+<p>Most plant models require visual assets located in <code>plugins/plantarchitecture/assets/</code>. You can either create your own, or copy existing assets from other plants if they are similar enough.</p>
+<p><b>Texture Images (<code>assets/textures/</code>):</b></p><ul>
+<li><b>Leaf textures</b> - PNG images for leaf appearance (e.g., <code>NewPlantLeaf.png</code>)</li>
+<li><b>Bark textures</b> - JPG images for stem/trunk appearance (e.g., <code>NewPlantBark.jpg</code>)</li>
+<li><b>Flower/fruit textures</b> - Images for reproductive organs if applicable</li>
+</ul>
+<p><b>3D Models (<code>assets/obj/</code>):</b></p><ul>
+<li><b>Leaf OBJ files</b> - For complex leaf shapes that can't be created procedurally</li>
+<li><b>Flower OBJ files</b> - 3D models for flowers (if the plant produces flowers)</li>
+<li><b>Fruit OBJ files</b> - 3D models for fruits (if applicable)</li>
+</ul>
+<p><b>Asset Guidelines:</b></p><ul>
+<li>Use PNG format for textures with transparency (leaves)</li>
+<li>Use JPG format for opaque textures (bark, fruit)</li>
+<li>Follow existing naming conventions: <code>[PlantName][OrganType].[ext]</code></li>
+<li>Ensure OBJ models follow the prototype coordinate system (see <a class="el" href="#PlantArchOrgans">Creating Plant Organ Prototypes</a>)</li>
+</ul>
+<h3><a class="anchor" id="PlantArchAddStep2"></a>
+Step 2: Implement Plant-Specific Methods</h3>
+<p>For a new plant called "newplant", you need to implement two methods in the PlantArchitecture class:</p>
+<p>Method Declarations (add to <a class="el" href="_plant_architecture_8h.html">PlantArchitecture.h</a>):** </p><div class="fragment"><div class="line"><span class="keywordtype">void</span> initializeNewPlantShoots();</div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> buildNewPlant(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;base_position);</div>
+</div><!-- fragment --><p>Method Implementations (add to PlantLibrary.cpp):**</p>
+<p>The <code>initialize*Shoots()</code> method defines all shoot types and their parameters: </p><div class="fragment"><div class="line"><span class="keywordtype">void</span> PlantArchitecture::initializeNewPlantShoots() {</div>
+<div class="line">    </div>
+<div class="line">    <span class="comment">// ---- Leaf Prototype ---- //</span></div>
+<div class="line">    <a class="code hl_struct" href="struct_leaf_prototype.html">LeafPrototype</a> leaf_prototype(context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a96a928fa28d3d771ba310f798b56bd63" title="Get the random number generator engine.">getRandomGenerator</a>());</div>
+<div class="line">    leaf_prototype.leaf_texture_file[0] = <span class="stringliteral">&quot;plugins/plantarchitecture/assets/textures/NewPlantLeaf.png&quot;</span>;</div>
+<div class="line">    leaf_prototype.leaf_aspect_ratio = 1.2f;</div>
+<div class="line">    <span class="comment">// ... set other leaf parameters</span></div>
+<div class="line">    </div>
+<div class="line">    <span class="comment">// ---- Phytomer Parameters ---- //</span></div>
+<div class="line">    <a class="code hl_struct" href="struct_phytomer_parameters.html">PhytomerParameters</a> phytomer_parameters(context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a96a928fa28d3d771ba310f798b56bd63" title="Get the random number generator engine.">getRandomGenerator</a>());</div>
+<div class="line">    phytomer_parameters.internode.pitch = 0.f;</div>
+<div class="line">    phytomer_parameters.internode.phyllotactic_angle = 137.5f;</div>
+<div class="line">    phytomer_parameters.internode.color = RGB::brown;</div>
+<div class="line">    phytomer_parameters.internode.image_texture = <span class="stringliteral">&quot;plugins/plantarchitecture/assets/textures/NewPlantBark.jpg&quot;</span>;</div>
+<div class="line">    <span class="comment">// ... set other internode parameters</span></div>
+<div class="line">    </div>
+<div class="line">    phytomer_parameters.petiole.radius = 0.002f;</div>
+<div class="line">    phytomer_parameters.petiole.length = 0.05f;</div>
+<div class="line">    <span class="comment">// ... set other petiole parameters</span></div>
+<div class="line">    </div>
+<div class="line">    phytomer_parameters.leaf.prototype = leaf_prototype;</div>
+<div class="line">    phytomer_parameters.leaf.pitch = 20.f;</div>
+<div class="line">    <span class="comment">// ... set other leaf parameters</span></div>
+<div class="line">    </div>
+<div class="line">    <span class="comment">// ---- Shoot Parameters ---- //</span></div>
+<div class="line">    <a class="code hl_struct" href="struct_shoot_parameters.html">ShootParameters</a> shoot_parameters(context_ptr-&gt;<a class="code hl_function" href="classhelios_1_1_context.html#a96a928fa28d3d771ba310f798b56bd63" title="Get the random number generator engine.">getRandomGenerator</a>());</div>
+<div class="line">    shoot_parameters.phytomer_parameters = phytomer_parameters;</div>
+<div class="line">    shoot_parameters.max_nodes = 20;</div>
+<div class="line">    shoot_parameters.internode_length_max = 0.04f;</div>
+<div class="line">    shoot_parameters.phyllochron_min = 3.f;</div>
+<div class="line">    <span class="comment">// ... set other shoot parameters</span></div>
+<div class="line">    </div>
+<div class="line">    <span class="comment">// Register the shoot type</span></div>
+<div class="line">    shoot_types[<span class="stringliteral">&quot;mainstem&quot;</span>] = shoot_parameters;</div>
+<div class="line">}</div>
+</div><!-- fragment --><p>The <code>build*()</code> method creates the actual plant instance: </p><div class="fragment"><div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> PlantArchitecture::buildNewPlant(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> &amp;base_position) {</div>
+<div class="line">    </div>
+<div class="line">    <span class="keywordflow">if</span> (shoot_types.empty()) {</div>
+<div class="line">        helios_runtime_error(<span class="stringliteral">&quot;ERROR (PlantArchitecture::buildNewPlant): shoot types have not been initialized. You must initialize shoot types first.&quot;</span>);</div>
+<div class="line">    }</div>
+<div class="line">    </div>
+<div class="line">    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> plantID = <a class="code hl_function" href="class_plant_architecture.html#a046541b573d8e03845a2038370cd6665" title="Create an instance of a plant.">addPlantInstance</a>(base_position, 0);</div>
+<div class="line">    </div>
+<div class="line">    <span class="comment">// Build the main stem</span></div>
+<div class="line">    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> shootID = <a class="code hl_function" href="class_plant_architecture.html#a32e88ebd4d0bb468f6c0a2655833bff6" title="Define the stem/trunk shoot (base of plant) to start a new plant. This requires a plant instance has ...">addBaseStemShoot</a>(plantID, 1, base_position, 0.001f, 0.06f, 1.f, 1.f, <span class="stringliteral">&quot;mainstem&quot;</span>);</div>
+<div class="line">    </div>
+<div class="line">    <span class="comment">// Set phenology thresholds (in days)</span></div>
+<div class="line">    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, -1, -1, -1, -1, 9999); </div>
+<div class="line">    </div>
+<div class="line">    <span class="keywordflow">return</span> plantID;</div>
+<div class="line">}</div>
+</div><!-- fragment --><h3><a class="anchor" id="PlantArchAddStep3"></a>
+Step 3: Register the Plant Model</h3>
+<p>Add a single registration line to the <code>initializePlantModelRegistrations()</code> method in PlantLibrary.cpp: </p><div class="fragment"><div class="line"><span class="keywordtype">void</span> PlantArchitecture::initializePlantModelRegistrations() {</div>
+<div class="line">    <span class="comment">// ... existing registrations ...</span></div>
+<div class="line">    </div>
+<div class="line">    registerPlantModel(<span class="stringliteral">&quot;newplant&quot;</span>, </div>
+<div class="line">        [<span class="keyword">this</span>](){ initializeNewPlantShoots(); },</div>
+<div class="line">        [<span class="keyword">this</span>](<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a>&amp; pos){ <span class="keywordflow">return</span> buildNewPlant(pos); });</div>
+<div class="line">}</div>
 </div><!-- fragment --><h1><a class="anchor" id="PlantArchQuery"></a>
 Retrieving Information from the Model</h1>
 <h2><a class="anchor" id="PlantArchQueryobjIDs"></a>

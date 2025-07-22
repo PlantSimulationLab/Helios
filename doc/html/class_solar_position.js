@@ -17,6 +17,5 @@ var class_solar_position =
     [ "getSunriseTime", "class_solar_position.html#a2d15fe2ca0d29adf33971916b1d8cd83", null ],
     [ "getSunsetTime", "class_solar_position.html#a4c58aa642b4fc2300d1c1447388bc0d8", null ],
     [ "getSunZenith", "class_solar_position.html#a4c4ba4931d13c6cc2ad69e8eab90ac14", null ],
-    [ "selfTest", "class_solar_position.html#aced032bb94f6fcff47e66747f7547396", null ],
     [ "setSunDirection", "class_solar_position.html#af52dad396956d1699fb08ceed6f9a29e", null ]
 ];

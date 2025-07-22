@@ -19,6 +19,43 @@ if(GIT_FOUND)
             OUTPUT_STRIP_TRAILING_WHITESPACE
     )
     message( STATUS "[Helios] Detected Git commit hash: ${GIT_COMMIT_HASH}" )
+    
+    # Get current branch name
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE CURRENT_BRANCH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE BRANCH_RESULT
+    )
+    
+    # Only check for updates if we're on master/main branch
+    if(BRANCH_RESULT EQUAL 0 AND (CURRENT_BRANCH STREQUAL "master" OR CURRENT_BRANCH STREQUAL "main"))
+        execute_process(
+            COMMAND ${GIT_EXECUTABLE} fetch --dry-run
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            OUTPUT_QUIET
+            ERROR_QUIET
+            RESULT_VARIABLE FETCH_RESULT
+        )
+        
+        if(FETCH_RESULT EQUAL 0)
+            # Check if local branch is behind remote
+            execute_process(
+                COMMAND ${GIT_EXECUTABLE} rev-list HEAD..origin/${CURRENT_BRANCH} --count
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                OUTPUT_VARIABLE COMMITS_BEHIND
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET
+                RESULT_VARIABLE REV_LIST_RESULT
+            )
+            
+            if(REV_LIST_RESULT EQUAL 0 AND COMMITS_BEHIND AND NOT COMMITS_BEHIND STREQUAL "0")
+                message(WARNING "[Helios] Your local ${CURRENT_BRANCH} branch is ${COMMITS_BEHIND} commit(s) behind the remote ${CURRENT_BRANCH} branch. Consider updating with 'git pull origin ${CURRENT_BRANCH}'.")
+            endif()
+        endif()
+    endif()
 else()
     set(GIT_COMMIT_HASH "unknown")
 endif()

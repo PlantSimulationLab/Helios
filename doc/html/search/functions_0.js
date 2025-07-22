@@ -67,7 +67,7 @@ var searchData=
   ['adjustsbc_64',['adjustSBC',['../struct_radiation_camera.html#a68674e96b32dfc81d502d5c254c4bb43',1,'RadiationCamera']]],
   ['advancetime_65',['advanceTime',['../class_plant_architecture.html#a1df979fc7a8523961ae37d934be5bfa7',1,'PlantArchitecture::advanceTime(float time_step_days)'],['../class_plant_architecture.html#a30eb9cf338188dd725852d63919a9aa4',1,'PlantArchitecture::advanceTime(int time_step_years, float time_step_days)'],['../class_plant_architecture.html#a48c8a01f66fb38357bddc9eac35173e4',1,'PlantArchitecture::advanceTime(uint plantID, float time_step_days)']]],
   ['aeriallidarcloud_66',['AerialLiDARcloud',['../class_aerial_li_d_a_rcloud.html#aa56199214b8be55a45ce72951ffef361',1,'AerialLiDARcloud']]],
-  ['aerialscanmetadata_67',['AerialScanMetadata',['../struct_aerial_scan_metadata.html#a7335ab6e76b88c50520e3fd205d4c575',1,'AerialScanMetadata']]],
+  ['aerialscanmetadata_67',['AerialScanMetadata',['../struct_aerial_scan_metadata.html#a334f0fd10b11f2a6e3e13b735ff45df9',1,'AerialScanMetadata']]],
   ['aggregateprimitivedataproduct_68',['aggregatePrimitiveDataProduct',['../classhelios_1_1_context.html#a66b69dc68ed0a21353485eff97257047',1,'helios::Context']]],
   ['aggregateprimitivedatasum_69',['aggregatePrimitiveDataSum',['../classhelios_1_1_context.html#aad6f828c598f574cab637a263562bea2',1,'helios::Context']]],
   ['allocatebuffersize_70',['allocateBufferSize',['../class_geometry_handler.html#a29108f6eba6919900cb65e326d000c3b',1,'GeometryHandler']]],

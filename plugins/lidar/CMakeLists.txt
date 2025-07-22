@@ -32,7 +32,7 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++${CMAKE_CXX_STANDARD}")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D_MWAITXINTRIN_H_INCLUDED -D__STRICT_ANSI__")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-add_library(lidar STATIC "src/LiDAR.cu" "src/LiDAR.cpp" "src/fileIO.cpp" "src/selfTest.cpp" "../../core/lib/pugixml/pugixml.cpp" "lib/s_hull_pro/s_hull_pro.cpp")
+add_library(lidar STATIC "src/LiDAR.cu" "src/LiDAR.cpp" "src/fileIO.cpp" "tests/selfTest.cpp" "../../core/lib/pugixml/pugixml.cpp" "lib/s_hull_pro/s_hull_pro.cpp")
 
 # Set CUDA properties for the target
 set_target_properties(lidar PROPERTIES CUDA_RUNTIME_LIBRARY Static CUDA_RESOLVE_DEVICE_SYMBOLS ON )
@@ -69,3 +69,7 @@ add_dependencies(lidar visualizer)
 
 file( COPY xml DESTINATION ${CMAKE_BINARY_DIR}/plugins/lidar/ )
 file( COPY data DESTINATION ${CMAKE_BINARY_DIR}/plugins/lidar/ )
+
+add_executable(lidar_tests "tests/TestMain.cpp")
+target_link_libraries(lidar_tests PRIVATE lidar)
+add_test(NAME lidar_tests COMMAND lidar_tests)

@@ -2,11 +2,11 @@
 
 using namespace helios;
 
-int main(){
-    uint Nx = 5;       // number of plants in x-direction
-    uint Ny = 5;       // number of plants in y-direction
-    vec2 spacing(0.3f, 0.3f);  // plant spacing
-    float age = 45.f;   // age of plants in days
+int main() {
+    uint Nx = 5; // number of plants in x-direction
+    uint Ny = 5; // number of plants in y-direction
+    vec2 spacing(0.3f, 0.3f); // plant spacing
+    float age = 45.f; // age of plants in days
 
     std::ofstream outfile("../results/runtime.txt");
     Timer timer;

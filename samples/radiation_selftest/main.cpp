@@ -2,13 +2,11 @@
 
 using namespace helios;
 
-int main()
-{
-  
-  Context context;
+int main() {
 
-  RadiationModel radiationmodel(&context);
+    Context context;
 
-  return radiationmodel.selfTest();
+    RadiationModel radiationmodel(&context);
 
+    return radiationmodel.selfTest();
 }

@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.40</span>
+       <span id="projectnumber">&#160;v1.3.41</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -155,7 +155,8 @@ $(function(){initNavTree('class_voxel_intersection.html',''); initResizable(true
 
 <div class="header">
   <div class="summary">
-<a href="#pub-methods">Public Member Functions</a>  </div>
+<a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a>  </div>
   <div class="headertitle"><div class="title">VoxelIntersection Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -165,12 +166,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a45bf9a3a44c9373452753480c8e47c72" id="r_a45bf9a3a44c9373452753480c8e47c72"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a45bf9a3a44c9373452753480c8e47c72">VoxelIntersection</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context)</td></tr>
 <tr class="memdesc:a45bf9a3a44c9373452753480c8e47c72"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor.  <br /></td></tr>
 <tr class="separator:a45bf9a3a44c9373452753480c8e47c72"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a320f16f7b1ee5c32b35c91331b426221" id="r_a320f16f7b1ee5c32b35c91331b426221"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a320f16f7b1ee5c32b35c91331b426221">selfTest</a> (void)</td></tr>
-<tr class="memdesc:a320f16f7b1ee5c32b35c91331b426221"><td class="mdescLeft">&#160;</td><td class="mdescRight">Self-test function (unit tests)  <br /></td></tr>
-<tr class="separator:a320f16f7b1ee5c32b35c91331b426221"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a11089d71d85cd247bd281edd664052fb" id="r_a11089d71d85cd247bd281edd664052fb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a11089d71d85cd247bd281edd664052fb">calculatePrimitiveVoxelIntersection</a> (void)</td></tr>
-<tr class="memdesc:a11089d71d85cd247bd281edd664052fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate primitives that reside in all voxels for every primitive in the Context.  <br /></td></tr>
-<tr class="separator:a11089d71d85cd247bd281edd664052fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ade047100dd1d41e72f4a023595792fc5" id="r_ade047100dd1d41e72f4a023595792fc5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ade047100dd1d41e72f4a023595792fc5">calculatePrimitiveVoxelIntersection</a> ()</td></tr>
+<tr class="memdesc:ade047100dd1d41e72f4a023595792fc5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate primitives that reside in all voxels for every primitive in the Context.  <br /></td></tr>
+<tr class="separator:ade047100dd1d41e72f4a023595792fc5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab8514a6e5868e77b6074bcd15bda831f" id="r_ab8514a6e5868e77b6074bcd15bda831f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab8514a6e5868e77b6074bcd15bda831f">calculatePrimitiveVoxelIntersection</a> (std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; UUIDs)</td></tr>
 <tr class="memdesc:ab8514a6e5868e77b6074bcd15bda831f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate primitives that reside in all voxels for a subset of primitives in the Context.  <br /></td></tr>
 <tr class="separator:ab8514a6e5868e77b6074bcd15bda831f"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -201,6 +199,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aba4e8fce246ada7df4f9975bc7b9624f" id="r_aba4e8fce246ada7df4f9975bc7b9624f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec2.html">helios::vec2</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aba4e8fce246ada7df4f9975bc7b9624f">interpolate_texture_UV_to_slice_point</a> (<a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> p1, <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> uv1, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> p2, <a class="el" href="structhelios_1_1vec2.html">helios::vec2</a> uv2, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> ps)</td></tr>
 <tr class="memdesc:aba4e8fce246ada7df4f9975bc7b9624f"><td class="mdescLeft">&#160;</td><td class="mdescRight">find the uv coordinate of a slice point  <br /></td></tr>
 <tr class="separator:aba4e8fce246ada7df4f9975bc7b9624f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:aa7450eb51e333a23453764444349b7bb" id="r_aa7450eb51e333a23453764444349b7bb"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa7450eb51e333a23453764444349b7bb">selfTest</a> ()</td></tr>
+<tr class="memdesc:aa7450eb51e333a23453764444349b7bb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Self-test function (unit tests)  <br /></td></tr>
+<tr class="separator:aa7450eb51e333a23453764444349b7bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
@@ -275,7 +279,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>boolean true if absolute difference between a and b is within absolute or relative tolerances </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01969">1969</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01419">1419</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
 
 </div>
 </div>
@@ -314,12 +318,33 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>boolean true if absolute difference between each element of a and b is within the absolute tolerance </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01975">1975</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01424">1424</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ade047100dd1d41e72f4a023595792fc5" name="ade047100dd1d41e72f4a023595792fc5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ade047100dd1d41e72f4a023595792fc5">&#9670;&#160;</a></span>calculatePrimitiveVoxelIntersection() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void VoxelIntersection::calculatePrimitiveVoxelIntersection </td>
+          <td>(</td>
+          <td class="paramtype">void</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Calculate primitives that reside in all voxels for every primitive in the Context. </p>
+
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cu_source.html#l00218">218</a> of file <a class="el" href="_voxel_intersection_8cu_source.html">VoxelIntersection.cu</a>.</p>
 
 </div>
 </div>
 <a id="ab8514a6e5868e77b6074bcd15bda831f" name="ab8514a6e5868e77b6074bcd15bda831f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab8514a6e5868e77b6074bcd15bda831f">&#9670;&#160;</a></span>calculatePrimitiveVoxelIntersection() <span class="overload">[1/2]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ab8514a6e5868e77b6074bcd15bda831f">&#9670;&#160;</a></span>calculatePrimitiveVoxelIntersection() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -342,27 +367,6 @@ Public Member Functions</h2></td></tr>
 </dl>
 
 <p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cu_source.html#l00222">222</a> of file <a class="el" href="_voxel_intersection_8cu_source.html">VoxelIntersection.cu</a>.</p>
-
-</div>
-</div>
-<a id="a11089d71d85cd247bd281edd664052fb" name="a11089d71d85cd247bd281edd664052fb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a11089d71d85cd247bd281edd664052fb">&#9670;&#160;</a></span>calculatePrimitiveVoxelIntersection() <span class="overload">[2/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void VoxelIntersection::calculatePrimitiveVoxelIntersection </td>
-          <td>(</td>
-          <td class="paramtype">void</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Calculate primitives that reside in all voxels for every primitive in the Context. </p>
-
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cu_source.html#l00218">218</a> of file <a class="el" href="_voxel_intersection_8cu_source.html">VoxelIntersection.cu</a>.</p>
 
 </div>
 </div>
@@ -427,7 +431,7 @@ Public Member Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>2D vector of UUIDs within grid cells with grid cell ID as the first index and primitive ID as second index </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>vector is one element longer than the number of grid cells, with the last element storing UUIDs that didn't fall into any grid cell </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01963">1963</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01414">1414</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
 
 </div>
 </div>
@@ -478,7 +482,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>vec2 uvs the uv coordinate of the slice point </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01980">1980</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01428">1428</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
 
 </div>
 </div>
@@ -524,28 +528,36 @@ Public Member Functions</h2></td></tr>
 <dl class="section note"><dt>Note</dt><dd>this function assumes that the lines intersect - behavior for lines that don't intersect currently untested </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>coordinate of the intersection point between the two lines </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l00471">471</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l00029">29</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
 
 </div>
 </div>
-<a id="a320f16f7b1ee5c32b35c91331b426221" name="a320f16f7b1ee5c32b35c91331b426221"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a320f16f7b1ee5c32b35c91331b426221">&#9670;&#160;</a></span>selfTest()</h2>
+<a id="aa7450eb51e333a23453764444349b7bb" name="aa7450eb51e333a23453764444349b7bb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa7450eb51e333a23453764444349b7bb">&#9670;&#160;</a></span>selfTest()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">int VoxelIntersection::selfTest </td>
           <td>(</td>
-          <td class="paramtype">void</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Self-test function (unit tests) </p>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l00028">28</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2voxelintersection_2tests_2self_test_8cpp_source.html#l00195">195</a> of file <a class="el" href="plugins_2voxelintersection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
@@ -578,7 +590,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>the number of new triangles created by slicing the original primitive </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l00492">492</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l00050">50</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
 
 </div>
 </div>
@@ -623,7 +635,7 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>vector of new planar primitives representing the original surfaces provided in UUIDs </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01709">1709</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_voxel_intersection_8cpp_source.html#l01178">1178</a> of file <a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a>.</p>
 
 </div>
 </div>
@@ -631,6 +643,7 @@ Public Member Functions</h2></td></tr>
 <li>plugins/voxelintersection/include/<a class="el" href="_voxel_intersection_8h_source.html">VoxelIntersection.h</a></li>
 <li>plugins/voxelintersection/src/<a class="el" href="_voxel_intersection_8cpp_source.html">VoxelIntersection.cpp</a></li>
 <li>plugins/voxelintersection/src/<a class="el" href="_voxel_intersection_8cu_source.html">VoxelIntersection.cu</a></li>
+<li>plugins/voxelintersection/tests/<a class="el" href="plugins_2voxelintersection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

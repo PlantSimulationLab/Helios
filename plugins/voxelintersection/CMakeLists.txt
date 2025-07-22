@@ -30,7 +30,7 @@ endif()
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++${CMAKE_CXX_STANDARD}")
 
-add_library(voxelintersection STATIC "src/VoxelIntersection.cu" "src/VoxelIntersection.cpp")
+add_library(voxelintersection STATIC "src/VoxelIntersection.cu" "src/VoxelIntersection.cpp" "tests/selfTest.cpp")
 
 # Set CUDA properties for the target
 set_target_properties(voxelintersection PROPERTIES CUDA_RUNTIME_LIBRARY Static CUDA_RESOLVE_DEVICE_SYMBOLS ON)
@@ -38,3 +38,7 @@ set_target_properties(voxelintersection PROPERTIES CUDA_RUNTIME_LIBRARY Static C
 target_include_directories(voxelintersection PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_link_libraries(voxelintersection PUBLIC CUDA::cudart_static)
+
+add_executable(voxelintersection_tests "tests/TestMain.cpp")
+target_link_libraries(voxelintersection_tests PRIVATE voxelintersection)
+add_test(NAME voxelintersection_tests COMMAND voxelintersection_tests)

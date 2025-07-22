@@ -33,6 +33,7 @@ var searchData=
   ['cordon_5fspacing_30',['cordon_spacing',['../struct_split_grapevine_parameters.html#a6d65cd7d6a101ce083020c08f7237dcb',1,'SplitGrapevineParameters']]],
   ['cordon_5fspacing_5fspread_31',['cordon_spacing_spread',['../struct_split_grapevine_parameters.html#abe4c3510d79f5543ea86ec9d4c5baf81',1,'SplitGrapevineParameters']]],
   ['cp_5fair_5fmol_32',['cp_air_mol',['../_energy_balance_model_8h.html#adaaf7d57c17dff3c06430b8380c06e80',1,'EnergyBalanceModel.h']]],
-  ['crown_5fheight_33',['crown_height',['../struct_conical_crowns_canopy_parameters.html#a40b24b7e99ad96e967bc4d3d9af277e2',1,'ConicalCrownsCanopyParameters']]],
-  ['crown_5fradius_34',['crown_radius',['../struct_spherical_crowns_canopy_parameters.html#a1695b7794ffb1c8ab8618ebb701fbb6d',1,'SphericalCrownsCanopyParameters::crown_radius'],['../struct_conical_crowns_canopy_parameters.html#ab8ad6dd9a6bdb0ccfbccb268a58e3275',1,'ConicalCrownsCanopyParameters::crown_radius'],['../struct_white_spruce_canopy_parameters.html#a97c71fefdb2f53e1e058f0be363ee592',1,'WhiteSpruceCanopyParameters::crown_radius']]]
+  ['crossover_5frate_33',['crossover_rate',['../struct_optimization_settings.html#a6f518ac3afaee1671b313e38b3b153d2',1,'OptimizationSettings']]],
+  ['crown_5fheight_34',['crown_height',['../struct_conical_crowns_canopy_parameters.html#a40b24b7e99ad96e967bc4d3d9af277e2',1,'ConicalCrownsCanopyParameters']]],
+  ['crown_5fradius_35',['crown_radius',['../struct_spherical_crowns_canopy_parameters.html#a1695b7794ffb1c8ab8618ebb701fbb6d',1,'SphericalCrownsCanopyParameters::crown_radius'],['../struct_conical_crowns_canopy_parameters.html#ab8ad6dd9a6bdb0ccfbccb268a58e3275',1,'ConicalCrownsCanopyParameters::crown_radius'],['../struct_white_spruce_canopy_parameters.html#a97c71fefdb2f53e1e058f0be363ee592',1,'WhiteSpruceCanopyParameters::crown_radius']]]
 ];

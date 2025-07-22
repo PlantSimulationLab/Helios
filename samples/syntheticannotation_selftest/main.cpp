@@ -2,13 +2,11 @@
 
 using namespace helios;
 
-int main()
-{
+int main() {
 
     Context context;
 
     SyntheticAnnotation syntheticannotation(&context);
 
     return syntheticannotation.selfTest();
-
 }

@@ -2,9 +2,8 @@
 
 using namespace helios;
 
-int main(){
+int main() {
 
-  //Run the self-test
-  return LeafOptics::selfTest();
-	
+    // Run the self-test
+    return LeafOptics::selfTest();
 }

@@ -1,16 +1,16 @@
-/** \file "helios_vector_types.h" Declarations for vector types
-
-    Copyright (C) 2016-2025 Brian Bailey
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, version 2
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
+/**
+ * \file "helios_vector_types.h" Declarations for vector types
+ *
+ * Copyright (C) 2016-2025 Brian Bailey
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 2
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
 */
 
 #ifndef HELIOS_VECTOR_TYPES
@@ -1308,14 +1308,16 @@ namespace helios {
          * \param[in] blue Blue color component
          * \note If arguments are outside of the range 0 to 1, values are clamped.
          */
-        constexpr RGBcolor(float red, float green, float blue) : r(RGBcolor::clamp(red)), g(RGBcolor::clamp(green)), b(RGBcolor::clamp(blue)) {}
+        constexpr RGBcolor(float red, float green, float blue) : r(RGBcolor::clamp(red)), g(RGBcolor::clamp(green)), b(RGBcolor::clamp(blue)) {
+        }
 
         //! Constructor given an array of three floats denoting R-G-B components.
         /**
          * \param[in] C Array (3-elements) of R-G-B color components
          * \note If arguments are outside of the range 0 to 1, values are clamped.
          */
-        explicit constexpr RGBcolor(const float C[3]) : r(RGBcolor::clamp(C[0])), g(RGBcolor::clamp(C[1])), b(RGBcolor::clamp(C[2])) {}
+        explicit constexpr RGBcolor(const float C[3]) : r(RGBcolor::clamp(C[0])), g(RGBcolor::clamp(C[1])), b(RGBcolor::clamp(C[2])) {
+        }
 
         //! Constructor given a vector of three floats denoting R-G-B components.
         /**
@@ -1407,7 +1409,6 @@ namespace helios {
         constexpr float epsilon = 1e-6f;
         auto constexpr_abs = [](float x) constexpr { return x < 0 ? -x : x; };
         return (constexpr_abs(r - c.r) < epsilon) && (constexpr_abs(g - c.g) < epsilon) && (constexpr_abs(b - c.b) < epsilon);
-
     }
 
     constexpr bool RGBcolor::operator!=(const RGBcolor &c) const noexcept {
@@ -1480,7 +1481,8 @@ namespace helios {
         float a;
 
         //! Default constructor - initializes color to black.
-        constexpr RGBAcolor() : r(0), g(0), b(0), a(1) {}
+        constexpr RGBAcolor() : r(0), g(0), b(0), a(1) {
+        }
 
         //! Constructor given three floats denoting R-G-B components.
         /**
@@ -1490,14 +1492,16 @@ namespace helios {
          * \param[in] alpha Alpha (transparency) component
          * \note If arguments are outside of the range 0 to 1, values are clamped.
          */
-        constexpr RGBAcolor(float red, float green, float blue, float alpha) : r(RGBAcolor::clamp(red)), g(RGBAcolor::clamp(green)), b(RGBAcolor::clamp(blue)), a(RGBAcolor::clamp(alpha)) {}
+        constexpr RGBAcolor(float red, float green, float blue, float alpha) : r(RGBAcolor::clamp(red)), g(RGBAcolor::clamp(green)), b(RGBAcolor::clamp(blue)), a(RGBAcolor::clamp(alpha)) {
+        }
 
         //! Constructor given an array of three floats denoting R-G-B-A components.
         /**
          * \note If arguments are outside of the range 0 to 1, values are clamped.
          * \param[in] C Array (4-elements) of R-G-B-A color components
          */
-        explicit constexpr RGBAcolor(const float C[4]) : r(RGBAcolor::clamp(C[0])), g(RGBAcolor::clamp(C[1])), b(RGBAcolor::clamp(C[2])), a(RGBAcolor::clamp(C[3])) {}
+        explicit constexpr RGBAcolor(const float C[4]) : r(RGBAcolor::clamp(C[0])), g(RGBAcolor::clamp(C[1])), b(RGBAcolor::clamp(C[2])), a(RGBAcolor::clamp(C[3])) {
+        }
 
         //! Constructor given a vector of three floats denoting R-G-B-A components.
         /**
@@ -1795,7 +1799,7 @@ namespace helios {
         }
 
         int JD = skips[date.month - 1] + date.day;
-        if(JD <= 0 || JD > 366) {
+        if (JD <= 0 || JD > 366) {
             throw("ERROR (Calendar2Julian): Julian day of " + std::to_string(JD) + " is out of range (should be >0 and <=366).");
         }
 
@@ -2069,7 +2073,7 @@ namespace helios {
      */
     inline SphericalCoord make_SphericalCoord(float radius, float elevation_radians, float azimuth_radians) {
 #ifdef HELIOS_DEBUG
-        if( radius<=0.f ) {
+        if (radius <= 0.f) {
             throw("ERROR (helios::make_SphericalCoord): radius should be positive, but " + std::to_string(radius) + " was given.");
         }
 #endif

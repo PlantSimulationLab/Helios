@@ -1,17 +1,17 @@
-/** \file "Context.h" Context header file.
-
- Copyright (C) 2016-2025 Brian Bailey
-
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, version 2
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- */
+/**
+ * \file "Context.h" Context header file.
+ *
+ * Copyright (C) 2016-2025 Brian Bailey
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, version 2
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+*/
 
 #ifndef HELIOS_CONTEXT
 #define HELIOS_CONTEXT
@@ -422,8 +422,8 @@ namespace helios {
             }
 #endif
 
-            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> ||
-                                  std::is_same_v<T, int2> || std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char*> || std::is_same_v<std::decay_t<T>, char*>,
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "CompoundObject::getObjectData() was called with an unsupported type.");
 
             HeliosDataType type = object_data_types.at(label);
@@ -488,7 +488,7 @@ namespace helios {
                 } else {
                     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int4, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type int4.");
                 }
-            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char*> || std::is_same_v<std::decay_t<T>, char*>) {
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                 if (type == HELIOS_TYPE_STRING) {
                     data = object_data_string.at(label).front();
                 } else {
@@ -573,7 +573,7 @@ namespace helios {
                 } else {
                     helios_runtime_error("ERROR (CompoundObject::getObjectData): Attempted to get data for type int4, but data " + std::string(label) + " for object " + std::to_string(OID) + " does not have type int4.");
                 }
-            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char*> || std::is_same_v<std::decay_t<T>, char*>) {
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                 if (type == HELIOS_TYPE_STRING) {
                     data = object_data_string.at(label);
                 } else {
@@ -2148,6 +2148,33 @@ namespace helios {
 
         std::map<std::string, GlobalData> globaldata;
 
+        std::unordered_map<std::string, size_t> primitive_data_label_counts;
+        std::unordered_map<std::string, size_t> object_data_label_counts;
+
+        //! Increments the count associated with a given primitive data label.
+        /**
+         * \param[in] primitive_data_label The label of the primitive data whose count is to be incremented.
+         */
+        void incrementPrimitiveDataLabelCounter(const std::string &primitive_data_label);
+
+        //! Decrements the count associated with a given primitive data label.
+        /**
+         * \param[in] primitive_data_label The label of the primitive data whose count is to be decremented.
+         */
+        void decrementPrimitiveDataLabelCounter(const std::string &primitive_data_label);
+
+        //! Increments the count associated with a given object data label.
+        /**
+         * \param[in] object_data_label The label of the object data whose count is to be incremented.
+         */
+        void incrementObjectDataLabelCounter(const std::string &object_data_label);
+
+        //! Decrements the count associated with a given object data label.
+        /**
+         * \param[in] object_data_label The label of the object data whose count is to be decremented.
+         */
+        void decrementObjectDataLabelCounter(const std::string &object_data_label);
+
         //---------- CONTEXT PRIVATE MEMBER VARIABLES ---------//
 
         //! Simulation date (Date vector)
@@ -2755,6 +2782,18 @@ namespace helios {
          */
         void hidePrimitive(const std::vector<uint> &UUIDs) const;
 
+        //! Show a previously hidden primitive in the Context
+        /**
+         * \param[in] UUID Primitive UUID to show
+         */
+        void showPrimitive(uint UUID) const;
+
+        //! Show previously hidden primitives in the Context
+        /**
+         * \param[in] UUIDs Vector of primitive UUIDs to show
+         */
+        void showPrimitive(const std::vector<uint> &UUIDs) const;
+
         //! Query whether a primitive is hidden
         /**
          * \param[in] UUID Unique universal identifier of primitive element
@@ -2796,6 +2835,9 @@ namespace helios {
                 helios_runtime_error("ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
             }
 #endif
+            if (!primitives.at(UUID)->doesPrimitiveDataExist(label)) {
+                incrementPrimitiveDataLabelCounter(label);
+            }
             primitives.at(UUID)->setPrimitiveData(label, data);
         }
 
@@ -2814,6 +2856,18 @@ namespace helios {
                 helios_runtime_error("ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size.");
             }
 #endif
+
+            for (uint UUID: UUIDs) {
+#ifdef HELIOS_DEBUG
+                if (primitives.find(UUID) == primitives.end()) {
+                    helios_runtime_error("ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+                }
+#endif
+                if (!primitives.at(UUID)->doesPrimitiveDataExist(label)) {
+                    incrementPrimitiveDataLabelCounter(label);
+                }
+            }
+
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
@@ -2831,10 +2885,22 @@ namespace helios {
          */
         template<typename T>
         void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const T &data) {
+
+            for (uint UUID: UUIDs) {
+#ifdef HELIOS_DEBUG
+                if (primitives.find(UUID) == primitives.end()) {
+                    helios_runtime_error("ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+                }
+#endif
+                if (!primitives.at(UUID)->doesPrimitiveDataExist(label)) {
+                    incrementPrimitiveDataLabelCounter(label);
+                }
+            }
+
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t i=0; i<UUIDs.size(); ++i) {
+            for (size_t i = 0; i < UUIDs.size(); ++i) {
                 primitives.at(UUIDs[i])->setPrimitiveData(label, data);
             }
         }
@@ -2912,6 +2978,12 @@ namespace helios {
          * \param[in] label Name/label associated with data
          */
         void clearPrimitiveData(const std::vector<uint> &UUIDs, const char *label);
+
+        //! Lists all primitive data labels that exist in the Context.
+        /**
+         * \return A vector of strings containing the labels of all primitive data.
+         */
+        [[nodiscard]] std::vector<std::string> listAllPrimitiveDataLabels() const;
 
         //! Method to get the Primitive type
         /**
@@ -2992,6 +3064,18 @@ namespace helios {
          * \param[in] ObjIDs Identifier of the object.
          */
         void hideObject(const std::vector<uint> &ObjIDs);
+
+        //! Show a previously hidden compound object in the Context
+        /**
+         * \param[in] ObjID Identifier of the object.
+         */
+        void showObject(uint ObjID);
+
+        //! Show previously hidden compound objects in the Context
+        /**
+         * \param[in] ObjIDs Identifier of the object.
+         */
+        void showObject(const std::vector<uint> &ObjIDs);
 
         //! Query if an object is hidden
         /**
@@ -3348,6 +3432,9 @@ namespace helios {
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
+            if (!objects.at(objID)->doesObjectDataExist(label)) {
+                incrementObjectDataLabelCounter(label);
+            }
             objects.at(objID)->setObjectData(label, data);
         }
 
@@ -3363,10 +3450,17 @@ namespace helios {
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
+
+            for (uint objID: objIDs) {
+                if (!objects.at(objID)->doesObjectDataExist(label)) {
+                    incrementObjectDataLabelCounter(label);
+                }
+            }
+
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for ( size_t i = 0; i < objIDs.size(); ++i) {
+            for (size_t i = 0; i < objIDs.size(); ++i) {
                 objects.at(objIDs[i])->setObjectData(label, data);
             }
         }
@@ -3383,13 +3477,21 @@ namespace helios {
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
+
+            for (const auto &j: objIDs) {
+                for (uint objID: j) {
+                    if (!objects.at(objID)->doesObjectDataExist(label)) {
+                        incrementObjectDataLabelCounter(label);
+                    }
+                }
+            }
+
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for ( size_t j = 0; j < objIDs.size(); ++j) {
-                for ( size_t i = 0; i < objIDs[j].size(); ++i) {
-                    uint objID = objIDs[j][i];
-                    objects.at(objID)->setObjectData(label, data);
+            for (size_t j = 0; j < objIDs.size(); ++j) {
+                for (size_t i = 0; i < objIDs[j].size(); ++i) {
+                    objects.at(objIDs[j][i])->setObjectData(label, data);
                 }
             }
         }
@@ -3406,12 +3508,23 @@ namespace helios {
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
+
+            for (const auto &k: objIDs) {
+                for (const auto &j: k) {
+                    for (uint objID: j) {
+                        if (!objects.at(objID)->doesObjectDataExist(label)) {
+                            incrementObjectDataLabelCounter(label);
+                        }
+                    }
+                }
+            }
+
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for ( size_t k = 0; k < objIDs.size(); ++k) {
-                for ( size_t j = 0; j < objIDs[k].size(); ++j) {
-                    for ( size_t i = 0; i < objIDs[k][j].size(); ++i) {
+            for (size_t k = 0; k < objIDs.size(); ++k) {
+                for (size_t j = 0; j < objIDs[k].size(); ++j) {
+                    for (size_t i = 0; i < objIDs[k][j].size(); ++i) {
                         uint objID = objIDs[k][j][i];
                         objects.at(objID)->setObjectData(label, data);
                     }
@@ -3458,6 +3571,13 @@ namespace helios {
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
+
+            for (uint objID: objIDs) {
+                if (!objects.at(objID)->doesObjectDataExist(label)) {
+                    incrementObjectDataLabelCounter(label);
+                }
+            }
+
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
@@ -3545,6 +3665,12 @@ namespace helios {
          * \param[in] label Name/label associated with data
          */
         void clearObjectData(const std::vector<uint> &objIDs, const char *label);
+
+        //! Lists all object data labels that exist in the Context.
+        /**
+         * \return A vector of strings containing the labels of all object data.
+         */
+        [[nodiscard]] std::vector<std::string> listAllObjectDataLabels() const;
 
         //! Method to query whether all object primitives are in tact
         /**

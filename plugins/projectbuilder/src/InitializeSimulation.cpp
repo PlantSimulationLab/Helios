@@ -2,12 +2,12 @@
 
 using namespace helios;
 
-void InitializeSimulation(const std::string &xml_input_file, helios::Context *context_ptr ){
+void InitializeSimulation(const std::string &xml_input_file, helios::Context *context_ptr) {
 
     pugi::xml_document xmldoc;
 
     std::string xml_error_string;
-    if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
+    if (!open_xml_file(xml_input_file, xmldoc, xml_error_string)) {
         helios_runtime_error(xml_error_string);
     }
 
@@ -20,47 +20,44 @@ void InitializeSimulation(const std::string &xml_input_file, helios::Context *co
 
     float latitude;
     node = helios.child("latitude");
-    if( node.empty() ){
+    if (node.empty()) {
         std::cout << "WARNING: No value given for 'latitude'. Using default value of " << location.latitude_deg << std::endl;
-    }else {
+    } else {
 
         const char *latitude_str = node.child_value();
         if (!parse_float(latitude_str, latitude)) {
             helios_runtime_error("ERROR: Value given for 'latitude' could not be parsed.");
-        }else{
+        } else {
             location.latitude_deg = latitude;
         }
-
     }
 
     float longitude;
     node = helios.child("longitude");
-    if( node.empty() ){
+    if (node.empty()) {
         std::cout << "WARNING: No value given for 'longitude'. Using default value of " << location.longitude_deg << std::endl;
-    }else {
+    } else {
 
         const char *longitude_str = node.child_value();
         if (!parse_float(longitude_str, longitude)) {
             helios_runtime_error("ERROR: Value given for 'longitude' could not be parsed.");
-        }else{
+        } else {
             location.longitude_deg = longitude;
         }
-
     }
 
     float UTC_offset;
     node = helios.child("UTC_offset");
-    if( node.empty() ){
+    if (node.empty()) {
         std::cout << "WARNING: No value given for 'UTC_offset'. Using default value of " << location.UTC_offset << std::endl;
-    }else {
+    } else {
 
         const char *UTC_offset_str = node.child_value();
         if (!parse_float(UTC_offset_str, UTC_offset)) {
             helios_runtime_error("ERROR: Value given for 'UTC_offset' could not be parsed.");
-        }else{
+        } else {
             location.UTC_offset = UTC_offset;
         }
-
     }
 
     context_ptr->setLocation(location);
@@ -151,28 +148,27 @@ void InitializeSimulation(const std::string &xml_input_file, helios::Context *co
 
     std::string weather_data_file;
     node = helios.child("csv_weather_file");
-    if( !node.empty() ){
+    if (!node.empty()) {
 
         const char *weather_data_file_str = node.child_value();
         weather_data_file = trim_whitespace(std::string(weather_data_file_str));
 
-        if( weather_data_file.empty() ){
+        if (weather_data_file.empty()) {
             helios_runtime_error("ERROR: Value given for 'weather_data_file' is empty.");
-        }else if( !std::filesystem::exists(weather_data_file) ){
+        } else if (!std::filesystem::exists(weather_data_file)) {
             helios_runtime_error("ERROR: File given for 'weather_data_file' does not exist.");
         }
 
-        context_ptr->loadTabularTimeseriesData(weather_data_file, {}, ",", "YYYYMMDD", 1 );
-
+        context_ptr->loadTabularTimeseriesData(weather_data_file, {}, ",", "YYYYMMDD", 1);
     }
 
     std::string cimis_data_file;
     node = helios.child("cimis_weather_file");
     if (!node.empty()) {
 
-        if( !weather_data_file.empty() ){
+        if (!weather_data_file.empty()) {
             std::cout << "WARNING: Both 'csv_weather_file' and 'cimis_weather_file' were given, but only one weather data file can be loaded for the simulation. Using the CSV weather data file." << std::endl;
-        }else{
+        } else {
 
             const char *cimis_data_file_str = node.child_value();
             cimis_data_file = trim_whitespace(std::string(cimis_data_file_str));
@@ -184,8 +180,6 @@ void InitializeSimulation(const std::string &xml_input_file, helios::Context *co
             }
 
             context_ptr->loadTabularTimeseriesData(cimis_data_file, {"CIMIS"}, ",");
-
         }
-
     }
 }

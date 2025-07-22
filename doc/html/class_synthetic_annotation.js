@@ -7,6 +7,5 @@ var class_synthetic_annotation =
     [ "enableInstanceSegmentation", "class_synthetic_annotation.html#af2bc966a2a1074b763c8bbd5d81eda37", null ],
     [ "enableObjectDetection", "class_synthetic_annotation.html#a999f1f8f6e0135c20af979044668abb2", null ],
     [ "enableSemanticSegmentation", "class_synthetic_annotation.html#abd40e35ef90be948265ef8b0d08206e1", null ],
-    [ "render", "class_synthetic_annotation.html#ab217bc96eaee704af3fd032eb0f999fc", null ],
-    [ "selfTest", "class_synthetic_annotation.html#a8ed7db69b40f2b0c49da32a87d5ef34e", null ]
+    [ "render", "class_synthetic_annotation.html#ab217bc96eaee704af3fd032eb0f999fc", null ]
 ];

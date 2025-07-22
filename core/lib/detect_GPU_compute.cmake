@@ -1,4 +1,4 @@
-set(NVCC_EXECUTABLE "${CUDA_NVCC_EXECUTABLE}")
+set(NVCC_EXECUTABLE "${CUDAToolkit_NVCC_EXECUTABLE}")
 
 # ask nvcc for all supported GPU codes (sm_* and compute_*)
 execute_process( COMMAND ${NVCC_EXECUTABLE} --list-gpu-code OUTPUT_VARIABLE _nvcc_gpu_codes OUTPUT_STRIP_TRAILING_WHITESPACE )

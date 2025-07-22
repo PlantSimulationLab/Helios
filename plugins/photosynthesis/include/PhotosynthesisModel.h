@@ -450,7 +450,7 @@ public:
      */
     explicit PhotosynthesisModel(helios::Context *a_context);
 
-    int selfTest();
+    static int selfTest();
 
     //! Sets photosynthesis to be calculated according to the empirical model
     void setModelType_Empirical();

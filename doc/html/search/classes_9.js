@@ -1,8 +1,6 @@
 var searchData=
 [
-  ['leafoptics_0',['LeafOptics',['../class_leaf_optics.html',1,'']]],
-  ['leafopticsproperties_1',['LeafOpticsProperties',['../struct_leaf_optics_properties.html',1,'']]],
-  ['leafprototype_2',['LeafPrototype',['../struct_leaf_prototype.html',1,'']]],
-  ['lidarcloud_3',['LiDARcloud',['../class_li_d_a_rcloud.html',1,'']]],
-  ['location_4',['Location',['../structhelios_1_1_location.html',1,'helios']]]
+  ['int2_0',['int2',['../structhelios_1_1int2.html',1,'helios']]],
+  ['int3_1',['int3',['../structhelios_1_1int3.html',1,'helios']]],
+  ['int4_2',['int4',['../structhelios_1_1int4.html',1,'helios']]]
 ];

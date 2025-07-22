@@ -15,6 +15,5 @@ var class_energy_balance_model =
     [ "run", "class_energy_balance_model.html#aaee8cda49702db14f26e26bddaf3c16a", null ],
     [ "run", "class_energy_balance_model.html#a2053c71e6ae107ba6ba612c56b245cf4", null ],
     [ "run", "class_energy_balance_model.html#a4accc5ed86460c662db1352ef1857e0c", null ],
-    [ "run", "class_energy_balance_model.html#a5048dec148d795d76d10d331bdb35156", null ],
-    [ "selfTest", "class_energy_balance_model.html#ad4a1681ae6edd9f82d23e6a8ef3fc26c", null ]
+    [ "run", "class_energy_balance_model.html#a5048dec148d795d76d10d331bdb35156", null ]
 ];

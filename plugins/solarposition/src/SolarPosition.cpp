@@ -95,7 +95,7 @@ Time SolarPosition::getSunriseTime() const {
 
     Time result = make_Time(0, 0); // default/fallback value
     bool found = false;
-    
+
     for (uint h = 1; h <= 23 && !found; h++) {
         for (uint m = 1; m <= 59 && !found; m++) {
             SphericalCoord sun_dir = calculateSunDirection(make_Time(h, m, 0), context->getDate());
@@ -105,7 +105,7 @@ Time SolarPosition::getSunriseTime() const {
             }
         }
     }
-    
+
     return result;
 }
 
@@ -348,8 +348,7 @@ void SolarPosition::GueymardSolarModel(float pressure, float temperature, float 
     // diffuse fraction
     fdiff = Edp / (Eb + Edp);
 
-    assert( fdiff>= 0.f && fdiff <= 1.f );
-
+    assert(fdiff >= 0.f && fdiff <= 1.f);
 }
 
 float SolarPosition::getAmbientLongwaveFlux(float temperature_K, float humidity_rel) const {

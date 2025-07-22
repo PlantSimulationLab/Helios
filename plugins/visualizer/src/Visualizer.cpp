@@ -23,92 +23,26 @@ extern "C" {
 #include FT_FREETYPE_H
 }
 
-// JPEG Libraries (reading and writing JPEG images)
-#include <cstdio> //<-- note libjpeg requires this header be included before its headers.
-#include <jpeglib.h>
-// #include <setjmp.h>
-
-// PNG Libraries (reading and writing PNG images)
-#ifndef _WIN32
-#include <unistd.h>
-#endif
-#define PNG_DEBUG 3
-#define PNG_SKIP_SETJMP_CHECK 1
-#include <png.h>
-
+ 
 #include "Visualizer.h"
 
 using namespace helios;
 
-struct my_error_mgr {
-    jpeg_error_mgr pub; /* "public" fields */
-};
-
-using my_error_ptr = my_error_mgr *;
-
-METHODDEF(void) my_error_exit(j_common_ptr cinfo) {
-    char buffer[JMSG_LENGTH_MAX];
-    (*cinfo->err->format_message)(cinfo, buffer);
-    throw std::runtime_error(buffer);
-}
 
 int read_JPEG_file(const char *filename, std::vector<unsigned char> &texture, uint &height, uint &width) {
-    std::string fn = filename;
-    if (fn.substr(fn.find_last_of('.') + 1) != "jpg" && fn.substr(fn.find_last_of('.') + 1) != "jpeg" && fn.substr(fn.find_last_of('.') + 1) != "JPG" && fn.substr(fn.find_last_of('.') + 1) != "JPEG") {
-        helios_runtime_error("ERROR (read_JPEG_file): File " + fn + " is not JPEG format.");
+    std::vector<helios::RGBcolor> rgb_data;
+    helios::readJPEG(filename, width, height, rgb_data);
+    
+    texture.clear();
+    texture.reserve(width * height * 4);
+    
+    for (const auto &pixel : rgb_data) {
+        texture.push_back(static_cast<unsigned char>(pixel.r * 255.0f));
+        texture.push_back(static_cast<unsigned char>(pixel.g * 255.0f));
+        texture.push_back(static_cast<unsigned char>(pixel.b * 255.0f));
+        texture.push_back(255); // alpha channel - opaque
     }
-
-    jpeg_decompress_struct cinfo{};
-    my_error_mgr jerr{};
-    JSAMPARRAY buffer;
-    uint row_stride;
-
-    std::unique_ptr<FILE, decltype(&fclose)> infile(fopen(filename, "rb"), fclose);
-    if (!infile) {
-        fprintf(stderr, "can't open %s\n", filename);
-        return 0;
-    }
-
-    cinfo.err = jpeg_std_error(&jerr.pub);
-    jerr.pub.error_exit = my_error_exit;
-
-    try {
-        jpeg_create_decompress(&cinfo);
-        jpeg_stdio_src(&cinfo, infile.get());
-        (void) jpeg_read_header(&cinfo, TRUE);
-
-        (void) jpeg_start_decompress(&cinfo);
-
-        row_stride = cinfo.output_width * cinfo.output_components;
-        buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
-
-        width = cinfo.output_width;
-        height = cinfo.output_height;
-
-        assert(cinfo.output_components == 3);
-        texture.reserve(width * height * 4);
-
-        JSAMPLE *ba;
-        while (cinfo.output_scanline < cinfo.output_height) {
-            (void) jpeg_read_scanlines(&cinfo, buffer, 1);
-
-            ba = buffer[0];
-
-            for (int i = 0; i < row_stride; i += 3) {
-                texture.push_back(ba[i]);
-                texture.push_back(ba[i + 1]);
-                texture.push_back(ba[i + 2]);
-                texture.push_back(255.f); // alpha channel -- opaque
-            }
-        }
-
-        (void) jpeg_finish_decompress(&cinfo);
-        jpeg_destroy_decompress(&cinfo);
-    } catch (...) {
-        jpeg_destroy_decompress(&cinfo);
-        throw;
-    }
-
+    
     return 0;
 }
 
@@ -130,212 +64,44 @@ int write_JPEG_file(const char *filename, uint width, uint height, bool print_me
     glReadPixels(0, 0, scast<GLsizei>(width), scast<GLsizei>(height), GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
     glFinish();
 
-    jpeg_compress_struct cinfo{};
-    jpeg_error_mgr jerr{};
-    JSAMPROW row_pointer;
-    int row_stride;
-
-    cinfo.err = jpeg_std_error(&jerr);
-    jerr.error_exit = my_error_exit;
-
-    std::unique_ptr<FILE, decltype(&fclose)> outfile(fopen(filename, "wb"), fclose);
-    if (!outfile) {
-        helios_runtime_error("ERROR (write_JPEG_file): Can't open file " + std::string(filename));
+    // Convert to RGBcolor vector and use Context's writeJPEG
+    std::vector<helios::RGBcolor> rgb_data;
+    rgb_data.reserve(width * height);
+    
+    for (size_t i = 0; i < width * height; i++) {
+        size_t pixel_idx = (height - 1 - (i / width)) * width + (i % width); // Flip vertically
+        size_t byte_idx = pixel_idx * 3;
+        rgb_data.emplace_back(screen_shot_trans[byte_idx] / 255.0f, 
+                              screen_shot_trans[byte_idx + 1] / 255.0f, 
+                              screen_shot_trans[byte_idx + 2] / 255.0f);
     }
-
-    jpeg_create_compress(&cinfo);
-    jpeg_stdio_dest(&cinfo, outfile.get());
-
-    cinfo.image_width = width; /* image width and height, in pixels */
-    try {
-        cinfo.image_height = height;
-        cinfo.input_components = 3; /* # of color components per pixel */
-        cinfo.in_color_space = JCS_RGB; /* colorspace of input image */
-
-        jpeg_set_defaults(&cinfo);
-
-        jpeg_set_quality(&cinfo, 100, TRUE /* limit to baseline-JPEG values */);
-
-        jpeg_start_compress(&cinfo, TRUE);
-
-        row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
-
-        while (cinfo.next_scanline < cinfo.image_height) {
-            row_pointer = &screen_shot_trans[(cinfo.image_height - cinfo.next_scanline - 1) * row_stride];
-            (void) jpeg_write_scanlines(&cinfo, &row_pointer, 1);
-        }
-
-        jpeg_finish_compress(&cinfo);
-        jpeg_destroy_compress(&cinfo);
-    } catch (...) {
-        jpeg_destroy_compress(&cinfo);
-        throw;
-    }
-
+    
+    helios::writeJPEG(filename, width, height, rgb_data);
     return 1;
 }
 
 int write_JPEG_file(const char *filename, uint width, uint height, const std::vector<helios::RGBcolor> &data, bool print_messages) {
-    assert(data.size() == width * height);
-
     if (print_messages) {
         std::cout << "writing JPEG image: " << filename << std::endl;
     }
-
-    const uint bsize = 3 * width * height;
-    std::vector<GLubyte> screen_shot_trans;
-    screen_shot_trans.resize(bsize);
-
-    size_t ii = 0;
-    for (size_t i = 0; i < width * height; i++) {
-        screen_shot_trans.at(ii) = (unsigned char) data.at(i).r * 255;
-        screen_shot_trans.at(ii + 1) = (unsigned char) data.at(i).g * 255;
-        screen_shot_trans.at(ii + 2) = (unsigned char) data.at(i).b * 255;
-        ii += 3;
-    }
-
-    jpeg_compress_struct cinfo{};
-
-    jpeg_error_mgr jerr{};
-    JSAMPROW row_pointer;
-    int row_stride;
-
-    cinfo.err = jpeg_std_error(&jerr);
-    jerr.error_exit = my_error_exit;
-
-    std::unique_ptr<FILE, decltype(&fclose)> outfile(fopen(filename, "wb"), fclose);
-    if (!outfile) {
-        helios_runtime_error("ERROR (write_JPEG_file): Can't open file " + std::string(filename));
-    }
-
-    jpeg_create_compress(&cinfo);
-    jpeg_stdio_dest(&cinfo, outfile.get());
-
-    cinfo.image_width = width; /* image width and height, in pixels */
-    try {
-        cinfo.image_height = height;
-        cinfo.input_components = 3; /* # of color components per pixel */
-        cinfo.in_color_space = JCS_RGB; /* colorspace of input image */
-
-        jpeg_set_defaults(&cinfo);
-
-        jpeg_set_quality(&cinfo, 100, TRUE /* limit to baseline-JPEG values */);
-
-        jpeg_start_compress(&cinfo, TRUE);
-
-        row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
-
-        while (cinfo.next_scanline < cinfo.image_height) {
-            row_pointer = &screen_shot_trans[(cinfo.image_height - cinfo.next_scanline - 1) * row_stride];
-            (void) jpeg_write_scanlines(&cinfo, &row_pointer, 1);
-        }
-
-        jpeg_finish_compress(&cinfo);
-        jpeg_destroy_compress(&cinfo);
-    } catch (...) {
-        jpeg_destroy_compress(&cinfo);
-        throw;
-    }
-
+    
+    helios::writeJPEG(filename, width, height, data);
     return 1;
 }
 
 void read_png_file(const char *filename, std::vector<unsigned char> &texture, uint &height, uint &width) {
-    std::string fn = filename;
-    if (fn.substr(fn.find_last_of('.') + 1) != "png" && fn.substr(fn.find_last_of('.') + 1) != "PNG") {
-        helios_runtime_error("ERROR (read_PNG_file): File " + fn + " is not PNG format.");
+    std::vector<helios::RGBAcolor> rgba_data;
+    helios::readPNG(filename, width, height, rgba_data);
+    
+    texture.clear();
+    texture.reserve(width * height * 4);
+    
+    for (const auto &pixel : rgba_data) {
+        texture.push_back(static_cast<unsigned char>(pixel.r * 255.0f));
+        texture.push_back(static_cast<unsigned char>(pixel.g * 255.0f));
+        texture.push_back(static_cast<unsigned char>(pixel.b * 255.0f));
+        texture.push_back(static_cast<unsigned char>(pixel.a * 255.0f));
     }
-
-    int y;
-
-    png_structp png_ptr;
-    png_infop info_ptr;
-
-    char header[8]; // 8 is the maximum size that can be checked
-
-    /* open file and test for it being a png */
-    FILE *fp = fopen(filename, "rb");
-    if (!fp) {
-        helios_runtime_error("ERROR (read_png_file): File " + std::string(filename) + " could not be opened for reading");
-    }
-    fread(header, 1, 8, fp);
-
-    /* initialize stuff */
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
-
-    if (!png_ptr) {
-        helios_runtime_error("ERROR (read_png_file): png_create_read_struct failed.");
-    }
-
-    info_ptr = png_create_info_struct(png_ptr);
-    if (!info_ptr) {
-        helios_runtime_error("ERROR (read_png_file): png_create_info_struct failed.");
-    }
-
-    if (setjmp(png_jmpbuf(png_ptr))) {
-        helios_runtime_error("ERROR (read_png_file): init_io failed.");
-    }
-
-    png_init_io(png_ptr, fp);
-    png_set_sig_bytes(png_ptr, 8);
-
-    png_read_info(png_ptr, info_ptr);
-
-    width = png_get_image_width(png_ptr, info_ptr);
-    height = png_get_image_height(png_ptr, info_ptr);
-    png_byte color_type = png_get_color_type(png_ptr, info_ptr);
-    png_byte bit_depth = png_get_bit_depth(png_ptr, info_ptr);
-    bool has_alpha = (color_type & PNG_COLOR_MASK_ALPHA) != 0 || png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) != 0;
-
-    if (bit_depth == 16) {
-        png_set_strip_16(png_ptr);
-    }
-    if (color_type == PNG_COLOR_TYPE_PALETTE) {
-        png_set_palette_to_rgb(png_ptr);
-    }
-    if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) {
-        png_set_expand_gray_1_2_4_to_8(png_ptr);
-    }
-    if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
-        png_set_tRNS_to_alpha(png_ptr);
-    }
-    if (!has_alpha) {
-        png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
-    }
-    if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
-        png_set_gray_to_rgb(png_ptr);
-    }
-
-    png_read_update_info(png_ptr, info_ptr);
-
-    /* read file */
-    if (setjmp(png_jmpbuf(png_ptr))) {
-        helios_runtime_error("ERROR (read_png_file): read_image failed.");
-    }
-
-    auto *row_pointers = static_cast<png_bytep *>(malloc(sizeof(png_bytep) * height));
-    for (y = 0; y < height; y++)
-        row_pointers[y] = static_cast<png_byte *>(malloc(png_get_rowbytes(png_ptr, info_ptr)));
-
-    png_read_image(png_ptr, row_pointers);
-
-    fclose(fp);
-
-    for (uint j = 0; j < height; j++) {
-        png_byte *row = row_pointers[j];
-        for (int i = 0; i < width; i++) {
-            png_byte *ba = &(row[i * 4]);
-            texture.push_back(ba[0]);
-            texture.push_back(ba[1]);
-            texture.push_back(ba[2]);
-            texture.push_back(ba[3]);
-        }
-    }
-
-    for (y = 0; y < height; y++)
-        png_free(png_ptr, row_pointers[y]);
-    png_free(png_ptr, row_pointers);
-    png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
 }
 
 Visualizer::Visualizer(uint Wdisplay, bool headless) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {

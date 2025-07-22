@@ -2,17 +2,17 @@
 
 using namespace helios;
 
-int main(){
+int main() {
 
     bool failure = false;
 
     uint Ndirect = 1024;
     uint Ndiffuse = 1024;
 
-    float D = 20;          //domain width
-    float LAI = 1.0;       //canopy leaf area index
-    float h = 3;           //canopy height
-    float w_leaf = 0.05;   //leaf width
+    float D = 20; // domain width
+    float LAI = 1.0; // canopy leaf area index
+    float h = 3; // canopy height
+    float w_leaf = 0.05; // leaf width
 
     std::ofstream outfile("../results/runtime.txt");
 
@@ -23,42 +23,41 @@ int main(){
 
     timer.tic();
 
-    uint objID_ptype = context.addTileObject( make_vec3(0,0,0), make_vec2(w_leaf,w_leaf), make_SphericalCoord(0,0), make_int2(2,2), "plugins/radiation/disk.png" );
+    uint objID_ptype = context.addTileObject(make_vec3(0, 0, 0), make_vec2(w_leaf, w_leaf), make_SphericalCoord(0, 0), make_int2(2, 2), "plugins/radiation/disk.png");
     std::vector<uint> UUIDs_ptype = context.getObjectPointer(objID_ptype)->getPrimitiveUUIDs();
 
     float A_leaf = 0;
-    for( uint p=0; p<UUIDs_ptype.size(); p++ ){
+    for (uint p = 0; p < UUIDs_ptype.size(); p++) {
         A_leaf += context.getPrimitiveArea(UUIDs_ptype.at(p));
     }
 
-    int Nleaves = round(LAI*D*D/A_leaf);
+    int Nleaves = round(LAI * D * D / A_leaf);
 
     std::vector<uint> UUIDs_leaf;
 
-    for( int i=0; i<Nleaves; i++ ){
+    for (int i = 0; i < Nleaves; i++) {
 
-        vec3 position( (-0.5+context.randu())*D, (-0.5+context.randu())*D, 0.5*w_leaf+context.randu()*h );
+        vec3 position((-0.5 + context.randu()) * D, (-0.5 + context.randu()) * D, 0.5 * w_leaf + context.randu() * h);
 
-        SphericalCoord rotation( 1.f, acos(1.f-context.randu()), 2.f*M_PI*context.randu() );
+        SphericalCoord rotation(1.f, acos(1.f - context.randu()), 2.f * M_PI * context.randu());
 
-        uint objID = context.copyObject( objID_ptype );
+        uint objID = context.copyObject(objID_ptype);
 
-        context.getObjectPointer( objID )->rotate( -rotation.elevation, "y" );
-        context.getObjectPointer( objID )->rotate( rotation.azimuth, "z" );
+        context.getObjectPointer(objID)->rotate(-rotation.elevation, "y");
+        context.getObjectPointer(objID)->rotate(rotation.azimuth, "z");
 
-        context.getObjectPointer( objID )->translate( position );
+        context.getObjectPointer(objID)->translate(position);
 
-        std::vector<uint> UUIDs = context.getObjectPointer( objID )->getPrimitiveUUIDs();
+        std::vector<uint> UUIDs = context.getObjectPointer(objID)->getPrimitiveUUIDs();
 
-        UUIDs_leaf.insert( UUIDs_leaf.end(), UUIDs.begin(), UUIDs.end() );
-
+        UUIDs_leaf.insert(UUIDs_leaf.end(), UUIDs.begin(), UUIDs.end());
     }
 
-    context.deleteObject( objID_ptype );
+    context.deleteObject(objID_ptype);
 
-    std::vector<uint> UUIDs_ground = context.addTile( make_vec3(0,0,0), make_vec2(D,D), make_SphericalCoord(0,0), make_int2(100,100) );
+    std::vector<uint> UUIDs_ground = context.addTile(make_vec3(0, 0, 0), make_vec2(D, D), make_SphericalCoord(0, 0), make_int2(100, 100));
 
-    context.setPrimitiveData( UUIDs_ground, "twosided_flag", uint(0) );
+    context.setPrimitiveData(UUIDs_ground, "twosided_flag", uint(0));
 
     elapsed = timer.toc("Geometry creation");
     outfile << "Geometry Creation, " << elapsed << "\n";
@@ -68,15 +67,15 @@ int main(){
 
     radiation.addRadiationBand("direct");
     radiation.disableEmission("direct");
-    radiation.setDirectRayCount("direct",Ndirect);
-    float theta_s = 0.2*M_PI;
-    uint ID = radiation.addCollimatedRadiationSource( make_SphericalCoord(0.5*M_PI-theta_s,0.f) );
-    radiation.setSourceFlux(ID,"direct",1.f/cos(theta_s));
+    radiation.setDirectRayCount("direct", Ndirect);
+    float theta_s = 0.2 * M_PI;
+    uint ID = radiation.addCollimatedRadiationSource(make_SphericalCoord(0.5 * M_PI - theta_s, 0.f));
+    radiation.setSourceFlux(ID, "direct", 1.f / cos(theta_s));
 
     radiation.addRadiationBand("diffuse");
     radiation.disableEmission("diffuse");
-    radiation.setDiffuseRayCount("diffuse",Ndiffuse);
-    radiation.setDiffuseRadiationFlux("diffuse",1.f);
+    radiation.setDiffuseRayCount("diffuse", Ndiffuse);
+    radiation.setDiffuseRadiationFlux("diffuse", 1.f);
 
     radiation.enforcePeriodicBoundary("xy");
 
@@ -104,5 +103,4 @@ int main(){
     outfile.close();
 
     return EXIT_SUCCESS;
-
 }
