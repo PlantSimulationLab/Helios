@@ -82,32 +82,48 @@ set( CUDA_SOURCES
 		src/rayHit.cu
 )
 
-# Modern PTX compilation using CUDA language support
-add_library(radiation_ptx OBJECT ${CUDA_SOURCES})
-set_property(TARGET radiation_ptx PROPERTY CUDA_PTX_COMPILATION ON)
+# Modern PTX compilation using custom targets (avoids OBJECT library limitations)
+set(PTX_FILES "")
+foreach(CUDA_SOURCE ${CUDA_SOURCES})
+	get_filename_component(CUDA_SOURCE_NAME ${CUDA_SOURCE} NAME_WE)
+	set(PTX_FILE "${CMAKE_BINARY_DIR}/plugins/radiation/${CUDA_SOURCE_NAME}.ptx")
+	list(APPEND PTX_FILES ${PTX_FILE})
+	
+	# Create custom command to compile each CUDA source to PTX
+	add_custom_command(
+		OUTPUT ${PTX_FILE}
+		COMMAND ${CMAKE_CUDA_COMPILER}
+			${CMAKE_CUDA_FLAGS}
+			-I"${CMAKE_CURRENT_SOURCE_DIR}/include"
+			-I"${OPTIX_PATH}include"
+			--ptx
+			-o ${PTX_FILE}
+			${CMAKE_CURRENT_SOURCE_DIR}/${CUDA_SOURCE}
+		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${CUDA_SOURCE}
+		COMMENT "Compiling ${CUDA_SOURCE} to PTX"
+		VERBATIM
+	)
+endforeach()
 
-# Set CUDA properties for the PTX target
-set_target_properties(radiation_ptx PROPERTIES 
-	CUDA_RUNTIME_LIBRARY Static 
-	CUDA_RESOLVE_DEVICE_SYMBOLS ON
-)
+# Create custom target for all PTX files
+add_custom_target(radiation_ptx ALL DEPENDS ${PTX_FILES})
 
-# Include directories for PTX compilation
-target_include_directories(radiation_ptx PRIVATE 
-	"${CMAKE_CURRENT_SOURCE_DIR}/include"
-	"${OPTIX_PATH}include"
+# Create legacy-named PTX files for compatibility (the application expects these names)
+add_custom_command(TARGET radiation_ptx POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+		${CMAKE_BINARY_DIR}/plugins/radiation/primitiveIntersection.ptx
+		${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+		${CMAKE_BINARY_DIR}/plugins/radiation/rayGeneration.ptx
+		${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_rayGeneration.cu.ptx  
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+		${CMAKE_BINARY_DIR}/plugins/radiation/rayHit.ptx
+		${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx
+	COMMENT "Creating legacy-named PTX files for compatibility"
 )
 
 # Ensure main project depends on PTX target
 add_dependencies(radiation radiation_ptx)
-
-# Copy PTX files to expected locations for compatibility
-add_custom_command(TARGET radiation_ptx POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different 
-		$<TARGET_OBJECTS:radiation_ptx> 
-		${CMAKE_BINARY_DIR}/plugins/radiation/
-	COMMENT "Copying PTX files to radiation plugin directory"
-)
 
 file( COPY include/disk.png DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/)
 file( COPY spectral_data DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
