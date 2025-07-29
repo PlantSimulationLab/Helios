@@ -144,6 +144,13 @@ set_target_properties(radiation_cuda PROPERTIES
 	POSITION_INDEPENDENT_CODE ON
 )
 
+# Windows-specific: Clear any inherited global compile options that cause nvcc issues
+if(WIN32 AND MSVC)
+	# Remove the global /utf-8 flag and other MSVC options from CUDA compilation
+	set_property(TARGET radiation_cuda PROPERTY COMPILE_OPTIONS "")
+	set_property(TARGET radiation_cuda PROPERTY COMPILE_DEFINITIONS "")
+endif()
+
 # Include directories for CUDA compilation
 target_include_directories(radiation_cuda PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/include
