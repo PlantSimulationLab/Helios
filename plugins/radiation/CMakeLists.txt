@@ -132,54 +132,82 @@ set( CUDA_SOURCES
 		src/rayHit.cu
 )
 
-# Modern PTX compilation using CMake CUDA language support
-add_library(radiation_cuda OBJECT ${CUDA_SOURCES})
+# OptiX-specific PTX compilation using direct nvcc calls
+# OptiX requires special compilation with OptiX headers and runtime support
 
-# Set CUDA compilation to PTX instead of object files
-set_property(TARGET radiation_cuda PROPERTY CUDA_PTX_COMPILATION ON)
-
-# Set CUDA properties
-set_target_properties(radiation_cuda PROPERTIES
-	CUDA_SEPARABLE_COMPILATION OFF
-	POSITION_INDEPENDENT_CODE ON
+# Prepare OptiX-specific compilation flags
+set(OPTIX_NVCC_FLAGS
+	--ptx
+	--use_fast_math
+	-I${CMAKE_CURRENT_SOURCE_DIR}/include
+	-I${OPTIX_PATH}include
+	--gpu-architecture=${CMAKE_CUDA_ARCHITECTURES}
 )
 
-# Windows-specific: Clear any inherited global compile options that cause nvcc issues
-if(WIN32 AND MSVC)
-	# Remove the global /utf-8 flag and other MSVC options from CUDA compilation
-	set_property(TARGET radiation_cuda PROPERTY COMPILE_OPTIONS "")
-	set_property(TARGET radiation_cuda PROPERTY COMPILE_DEFINITIONS "")
+if(WIN32)
+	list(APPEND OPTIX_NVCC_FLAGS 
+		-DNOMINMAX
+		-D_USE_MATH_DEFINES
+		-D_MWAITXINTRIN_H_INCLUDED
+		-D__STRICT_ANSI__
+	)
+	if(CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
+		list(APPEND OPTIX_NVCC_FLAGS -g)
+	else()
+		list(APPEND OPTIX_NVCC_FLAGS -O2)
+	endif()
+else()
+	list(APPEND OPTIX_NVCC_FLAGS -Wno-deprecated-gpu-targets)
+	if(CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
+		list(APPEND OPTIX_NVCC_FLAGS -g -O0)
+	else()
+		list(APPEND OPTIX_NVCC_FLAGS -O3)
+	endif()
+	list(APPEND OPTIX_NVCC_FLAGS -std=c++${CMAKE_CXX_STANDARD})
 endif()
 
-# Include directories for CUDA compilation
-target_include_directories(radiation_cuda PRIVATE
-	${CMAKE_CURRENT_SOURCE_DIR}/include
-	${OPTIX_PATH}include
-)
-
-# Get the list of PTX files that will be generated
+# Generate PTX files using custom commands
 set(PTX_FILES "")
 foreach(CUDA_SOURCE ${CUDA_SOURCES})
 	get_filename_component(CUDA_SOURCE_NAME ${CUDA_SOURCE} NAME_WE)
+	get_filename_component(CUDA_SOURCE_DIR ${CUDA_SOURCE} DIRECTORY)
 	
-	# CMake generates PTX files in a specific pattern
-	set(PTX_FILE "${CMAKE_BINARY_DIR}/plugins/radiation/CMakeFiles/radiation_cuda.dir/src/${CUDA_SOURCE_NAME}.ptx")
+	# Output PTX file path
+	set(PTX_FILE "${CMAKE_BINARY_DIR}/plugins/radiation/${CUDA_SOURCE_NAME}.ptx")
 	list(APPEND PTX_FILES ${PTX_FILE})
+	
+	# Source file absolute path
+	set(CUDA_SOURCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${CUDA_SOURCE}")
+	
+	# Custom command to compile CUDA source to PTX with OptiX support
+	add_custom_command(
+		OUTPUT ${PTX_FILE}
+		COMMAND ${CMAKE_CUDA_COMPILER} ${OPTIX_NVCC_FLAGS} -o ${PTX_FILE} ${CUDA_SOURCE_PATH}
+		DEPENDS ${CUDA_SOURCE_PATH}
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+		COMMENT "Compiling OptiX PTX file ${CUDA_SOURCE_NAME}.ptx"
+		VERBATIM
+	)
 endforeach()
 
-# Create custom target to copy PTX files to expected locations
+# Create custom target to build all PTX files and copy them to expected locations
 add_custom_target(ptx ALL
-	DEPENDS radiation_cuda
+	DEPENDS ${PTX_FILES}
+	COMMENT "Building all OptiX PTX files"
+)
+
+# Ensure output directory exists
+add_custom_command(TARGET ptx PRE_BUILD
 	COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/plugins/radiation/
 )
 
-# Copy PTX files with both legacy and new naming conventions
+# Copy PTX files with both legacy and new naming conventions for compatibility
 set(CUDA_SOURCE_INDEX 0)
 foreach(CUDA_SOURCE ${CUDA_SOURCES})
 	get_filename_component(CUDA_SOURCE_NAME ${CUDA_SOURCE} NAME_WE)
 	list(GET PTX_FILES ${CUDA_SOURCE_INDEX} PTX_FILE)
 	
-	# Copy to new-style name
+	# Copy to new-style name (expected by newer versions)
 	add_custom_command(TARGET ptx POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			${PTX_FILE}
@@ -187,7 +215,7 @@ foreach(CUDA_SOURCE ${CUDA_SOURCES})
 		COMMENT "Copying ${CUDA_SOURCE_NAME}.ptx to new-style name"
 	)
 	
-	# Copy to legacy name
+	# Copy to legacy name (expected by older versions)
 	add_custom_command(TARGET ptx POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			${PTX_FILE}
