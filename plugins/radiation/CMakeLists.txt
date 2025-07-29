@@ -13,20 +13,11 @@ add_library(radiation STATIC "src/RadiationModel.cpp" "src/CameraCalibration.cpp
 
 target_include_directories(radiation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include )
 
-find_package(CUDAToolkit REQUIRED)
-set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
-
-# Set CUDA architectures before enabling CUDA language
-if( OPTIX_VERSION_LEGACY )
-	set(CMAKE_CUDA_ARCHITECTURES "35")
-else()
-	include("${CMAKE_BINARY_DIR}/lib/detect_GPU_compute.cmake")
-endif()
-
-# Enable CUDA as a language (modern CMake approach)
-enable_language(CUDA)
-
-target_link_libraries(radiation PUBLIC CUDA::cudart_static)
+find_package(CUDA REQUIRED)
+if(CUDA_FOUND)
+	target_include_directories(radiation PUBLIC "${CUDA_INCLUDE_DIRS}" )
+	target_link_libraries( radiation PUBLIC ${CUDA_LIBRARIES} )
+endif(CUDA_FOUND)
 
 if(UNIX AND NOT APPLE)
 	if( OPTIX_VERSION_LEGACY )
@@ -61,20 +52,36 @@ if(NOT DEFINED OPTIX_PATH)
        message( FATAL_ERROR "ERROR: Could not determine operating system for unknown reason." )
 endif(NOT DEFINED OPTIX_PATH)
 
-# Set additional CUDA flags
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --use_fast_math -Wno-deprecated-gpu-targets")
+if( OPTIX_VERSION_LEGACY )
+	set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -gencode arch=compute_35,code=sm_35")
+else()
+	set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -gencode arch=compute_50,code=sm_50")
+endif()
+
+set( CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --use_fast_math -Wno-deprecated-gpu-targets" )
 
 if( CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "" )
-	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -O0")
+	set( CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -g -O0" )
 	set( OPTIX_COMPILE_OPTIMIZATION_LEVEL_0 ON )
 else()
-	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
+	set( CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -O3" )
 	set( OPTIX_COMPILE_OPTIMIZATION_LEVEL_3 ON )
 endif()
 
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++${CMAKE_CXX_STANDARD}")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/include")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -I${OPTIX_PATH}include")
+set( CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++${CMAKE_CXX_STANDARD}" )
+
+set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -I${OPTIX_PATH}include")
+set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -I${CUDA_INCLUDE_DIRS}")
+
+# Windows-specific: Prevent MSVC-specific flags from being passed to nvcc
+if(WIN32 AND MSVC)
+	# Add defines to prevent CUDA headers from interfering with standard C++ compilation
+	target_compile_definitions(radiation PRIVATE 
+		_MWAITXINTRIN_H_INCLUDED 
+		__STRICT_ANSI__
+	)
+endif()
 
 set( CUDA_SOURCES
 		src/primitiveIntersection.cu
@@ -82,48 +89,19 @@ set( CUDA_SOURCES
 		src/rayHit.cu
 )
 
-# Modern PTX compilation using custom targets (avoids OBJECT library limitations)
-set(PTX_FILES "")
-foreach(CUDA_SOURCE ${CUDA_SOURCES})
-	get_filename_component(CUDA_SOURCE_NAME ${CUDA_SOURCE} NAME_WE)
-	set(PTX_FILE "${CMAKE_BINARY_DIR}/plugins/radiation/${CUDA_SOURCE_NAME}.ptx")
-	list(APPEND PTX_FILES ${PTX_FILE})
-	
-	# Create custom command to compile each CUDA source to PTX
-	add_custom_command(
-		OUTPUT ${PTX_FILE}
-		COMMAND ${CMAKE_CUDA_COMPILER}
-			${CMAKE_CUDA_FLAGS}
-			-I"${CMAKE_CURRENT_SOURCE_DIR}/include"
-			-I"${OPTIX_PATH}include"
-			--ptx
-			-o ${PTX_FILE}
-			${CMAKE_CURRENT_SOURCE_DIR}/${CUDA_SOURCE}
-		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${CUDA_SOURCE}
-		COMMENT "Compiling ${CUDA_SOURCE} to PTX"
-		VERBATIM
-	)
-endforeach()
+cuda_compile_ptx(  cuda_ptx_files ${CUDA_SOURCES} )
+add_custom_target(ptx DEPENDS ${cuda_ptx_files} ${CUDA_SOURCES} ${OPTIX_LIBRARIES} SOURCES ${CUDA_SOURCES} )
+add_dependencies( radiation ptx )
 
-# Create custom target for all PTX files
-add_custom_target(radiation_ptx ALL DEPENDS ${PTX_FILES})
-
-# Create legacy-named PTX files for compatibility (the application expects these names)
-add_custom_command(TARGET radiation_ptx POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different 
-		${CMAKE_BINARY_DIR}/plugins/radiation/primitiveIntersection.ptx
-		${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different 
-		${CMAKE_BINARY_DIR}/plugins/radiation/rayGeneration.ptx
-		${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_rayGeneration.cu.ptx  
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different 
-		${CMAKE_BINARY_DIR}/plugins/radiation/rayHit.ptx
-		${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx
-	COMMENT "Creating legacy-named PTX files for compatibility"
-)
+#for cmake version 3.7 or greater, cuda_compile_ptx puts an _1_ in the ptx filename.  Rename the file to stay consistent.
+if( CMAKE_VERSION VERSION_GREATER 3.6 )
+add_custom_command( TARGET ptx POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_primitiveIntersection.cu.ptx ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx DEPENDS ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_primitiveIntersection.cu.ptx )
+add_custom_command( TARGET ptx POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayGeneration.cu.ptx ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_rayGeneration.cu.ptx DEPENDS ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayGeneration.cu.ptx )
+add_custom_command( TARGET ptx POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayHit.cu.ptx ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx DEPENDS ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayHit.cu.ptx )
+endif()
 
 # Ensure main project depends on PTX target
-add_dependencies(radiation radiation_ptx)
+#add_dependencies(radiation ptx)
 
 file( COPY include/disk.png DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/)
 file( COPY spectral_data DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
