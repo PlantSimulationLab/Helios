@@ -20,18 +20,7 @@ set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
 if( OPTIX_VERSION_LEGACY )
 	set(CMAKE_CUDA_ARCHITECTURES "35")
 else()
-	if(WIN32)
-		# On Windows, use a single architecture to avoid command line issues
-		set(CMAKE_CUDA_ARCHITECTURES "75")
-		message(STATUS "Windows detected: Using single CUDA architecture 75 for compatibility")
-	else()
-		# On other platforms, try to detect or use defaults
-		if(EXISTS "${CMAKE_BINARY_DIR}/lib/detect_GPU_compute.cmake")
-			include("${CMAKE_BINARY_DIR}/lib/detect_GPU_compute.cmake")
-		else()
-			set(CMAKE_CUDA_ARCHITECTURES "50;60;70;75;80")
-		endif()
-	endif()
+	include("${CMAKE_BINARY_DIR}/lib/detect_GPU_compute.cmake")
 endif()
 
 # Enable CUDA as a language (modern CMake approach)
@@ -135,13 +124,17 @@ set( CUDA_SOURCES
 # OptiX-specific PTX compilation using direct nvcc calls
 # OptiX requires special compilation with OptiX headers and runtime support
 
+# Select first CUDA architecture for PTX compilation (PTX needs single architecture)
+list(GET CMAKE_CUDA_ARCHITECTURES 0 PTX_ARCHITECTURE)
+message(STATUS "Using CUDA architecture ${PTX_ARCHITECTURE} for OptiX PTX compilation")
+
 # Prepare OptiX-specific compilation flags
 set(OPTIX_NVCC_FLAGS
 	--ptx
 	--use_fast_math
 	-I${CMAKE_CURRENT_SOURCE_DIR}/include
 	-I${OPTIX_PATH}include
-	--gpu-architecture=${CMAKE_CUDA_ARCHITECTURES}
+	--gpu-architecture=${PTX_ARCHITECTURE}
 )
 
 if(WIN32)
