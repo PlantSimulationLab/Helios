@@ -99,9 +99,52 @@ set( CUDA_SOURCES
 		src/rayHit.cu
 )
 
-cuda_compile_ptx(  cuda_ptx_files ${CUDA_SOURCES} )
-add_custom_target(ptx DEPENDS ${cuda_ptx_files} ${CUDA_SOURCES} ${OPTIX_LIBRARIES} SOURCES ${CUDA_SOURCES} )
-add_dependencies( radiation ptx )
+# Manual PTX compilation to avoid deprecated cuda_compile_ptx Windows issues
+set(PTX_FILES "")
+
+# Define PTX compilation flags (clean, no MSVC interference)
+set(PTX_NVCC_FLAGS 
+	${CUDA_NVCC_FLAGS}
+	--ptx 
+	-m64
+)
+
+foreach(CUDA_SOURCE ${CUDA_SOURCES})
+	get_filename_component(CUDA_SOURCE_NAME ${CUDA_SOURCE} NAME_WE)
+	
+	# Generate both old and new style PTX filenames for compatibility
+	set(PTX_FILE_NEW "${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_${CUDA_SOURCE_NAME}.cu.ptx")
+	set(PTX_FILE_OLD "${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_${CUDA_SOURCE_NAME}.cu.ptx")
+	
+	list(APPEND PTX_FILES ${PTX_FILE_NEW} ${PTX_FILE_OLD})
+	
+	# Create custom command to compile CUDA source to PTX (new filename)
+	add_custom_command(
+		OUTPUT ${PTX_FILE_NEW}
+		COMMAND ${CUDA_NVCC_EXECUTABLE}
+			${PTX_NVCC_FLAGS}
+			-o ${PTX_FILE_NEW}
+			${CMAKE_CURRENT_SOURCE_DIR}/${CUDA_SOURCE}
+		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${CUDA_SOURCE}
+		COMMENT "Compiling ${CUDA_SOURCE} to PTX (new style)"
+		VERBATIM
+	)
+	
+	# Create legacy filename copy for compatibility
+	add_custom_command(
+		OUTPUT ${PTX_FILE_OLD}
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PTX_FILE_NEW} ${PTX_FILE_OLD}
+		DEPENDS ${PTX_FILE_NEW}
+		COMMENT "Creating legacy PTX filename for ${CUDA_SOURCE_NAME}"
+		VERBATIM
+	)
+endforeach()
+
+# Create custom target for all PTX files
+add_custom_target(ptx ALL DEPENDS ${PTX_FILES})
+
+# Ensure main project depends on PTX target
+add_dependencies(radiation ptx)
 
 # Windows-specific: Restore CMake flags after PTX compilation
 if(WIN32 AND MSVC)
@@ -110,16 +153,6 @@ if(WIN32 AND MSVC)
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE_BACKUP}")
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG_BACKUP}")
 endif()
-
-#for cmake version 3.7 or greater, cuda_compile_ptx puts an _1_ in the ptx filename.  Rename the file to stay consistent.
-if( CMAKE_VERSION VERSION_GREATER 3.6 )
-add_custom_command( TARGET ptx POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_primitiveIntersection.cu.ptx ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_primitiveIntersection.cu.ptx DEPENDS ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_primitiveIntersection.cu.ptx )
-add_custom_command( TARGET ptx POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayGeneration.cu.ptx ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_rayGeneration.cu.ptx DEPENDS ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayGeneration.cu.ptx )
-add_custom_command( TARGET ptx POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayHit.cu.ptx ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_rayHit.cu.ptx DEPENDS ${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_rayHit.cu.ptx )
-endif()
-
-# Ensure main project depends on PTX target
-#add_dependencies(radiation ptx)
 
 file( COPY include/disk.png DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/)
 file( COPY spectral_data DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
