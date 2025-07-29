@@ -124,17 +124,12 @@ set( CUDA_SOURCES
 # OptiX-specific PTX compilation using direct nvcc calls
 # OptiX requires special compilation with OptiX headers and runtime support
 
-# Select first CUDA architecture for PTX compilation (PTX needs single architecture)
-list(GET CMAKE_CUDA_ARCHITECTURES 0 PTX_ARCHITECTURE)
-message(STATUS "Using CUDA architecture ${PTX_ARCHITECTURE} for OptiX PTX compilation")
-
-# Prepare OptiX-specific compilation flags
+# Prepare OptiX-specific compilation flags  
 set(OPTIX_NVCC_FLAGS
 	--ptx
 	--use_fast_math
 	-I${CMAKE_CURRENT_SOURCE_DIR}/include
 	-I${OPTIX_PATH}include
-	--gpu-architecture=${PTX_ARCHITECTURE}
 )
 
 if(WIN32)
