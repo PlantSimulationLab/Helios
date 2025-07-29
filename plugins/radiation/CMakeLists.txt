@@ -37,6 +37,19 @@ endif()
 # Enable CUDA as a language (modern CMake approach)
 enable_language(CUDA)
 
+# Windows-specific: Override CMake's automatic CUDA flag injection
+if(WIN32 AND MSVC)
+	# Clear all CMake-generated CUDA flags that contain problematic MSVC options
+	set(CMAKE_CUDA_FLAGS_DEBUG "")
+	set(CMAKE_CUDA_FLAGS_RELEASE "")
+	set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "")
+	set(CMAKE_CUDA_FLAGS_MINSIZEREL "")
+	
+	# Override the CUDA compile rule to prevent MSVC flag injection
+	set(CMAKE_CUDA_COMPILE_OBJECT 
+		"<CMAKE_CUDA_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -c <SOURCE> -o <OBJECT>")
+endif()
+
 target_link_libraries(radiation PUBLIC CUDA::cudart_static)
 
 if(UNIX AND NOT APPLE)
@@ -72,9 +85,9 @@ if(NOT DEFINED OPTIX_PATH)
        message( FATAL_ERROR "ERROR: Could not determine operating system for unknown reason." )
 endif(NOT DEFINED OPTIX_PATH)
 
-# Minimal CUDA flags to avoid Windows command line issues
+# Set CUDA flags after enabling language to override defaults
 if(WIN32)
-	# On Windows, use minimal flags to avoid nvcc conflicts
+	# On Windows, use minimal flags and override any CMake defaults
 	set(CMAKE_CUDA_FLAGS "--use_fast_math")
 	if( CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "" )
 		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g")
@@ -83,6 +96,12 @@ if(WIN32)
 		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O2")
 		set( OPTIX_COMPILE_OPTIMIZATION_LEVEL_3 ON )
 	endif()
+	
+	# Force override CMake's build-type specific flags after they're set
+	set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS}")
+	set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS}")
+	set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "${CMAKE_CUDA_FLAGS}")
+	set(CMAKE_CUDA_FLAGS_MINSIZEREL "${CMAKE_CUDA_FLAGS}")
 	
 	# Windows-specific defines
 	target_compile_definitions(radiation PRIVATE 
