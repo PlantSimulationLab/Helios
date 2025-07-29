@@ -193,7 +193,6 @@ endforeach()
 # Create custom target to build all PTX files and copy them to expected locations
 add_custom_target(ptx ALL
 	DEPENDS ${PTX_FILES}
-	COMMENT "Building all OptiX PTX files"
 )
 
 # Ensure output directory exists
@@ -212,7 +211,6 @@ foreach(CUDA_SOURCE ${CUDA_SOURCES})
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			${PTX_FILE}
 			${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_1_generated_${CUDA_SOURCE_NAME}.cu.ptx
-		COMMENT "Copying ${CUDA_SOURCE_NAME}.ptx to new-style name"
 	)
 	
 	# Copy to legacy name (expected by older versions)
@@ -220,7 +218,6 @@ foreach(CUDA_SOURCE ${CUDA_SOURCES})
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			${PTX_FILE}
 			${CMAKE_BINARY_DIR}/plugins/radiation/cuda_compile_ptx_generated_${CUDA_SOURCE_NAME}.cu.ptx
-		COMMENT "Copying ${CUDA_SOURCE_NAME}.ptx to legacy name"
 	)
 	
 	math(EXPR CUDA_SOURCE_INDEX "${CUDA_SOURCE_INDEX} + 1")
