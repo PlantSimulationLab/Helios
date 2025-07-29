@@ -132,21 +132,6 @@ if("radiation" IN_LIST PLUGINS OR "energybalance" IN_LIST PLUGINS)
     find_package(CUDAToolkit REQUIRED)
     if(CUDAToolkit_FOUND)
         target_link_libraries( projectbuilder PRIVATE CUDA::cudart_static )
-        
-        # Windows-specific: Prevent MSVC flags from being passed to nvcc
-        if(WIN32 AND MSVC)
-            # Use language-specific compiler options to avoid nvcc flag conflicts
-            target_compile_options(projectbuilder PRIVATE 
-                $<$<COMPILE_LANGUAGE:CXX>:/std:c++${CMAKE_CXX_STANDARD}>
-            )
-            # If CUDA language is enabled, add CUDA-specific options
-            get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
-            if("CUDA" IN_LIST languages)
-                target_compile_options(projectbuilder PRIVATE 
-                    $<$<COMPILE_LANGUAGE:CUDA>:--compiler-options=/std:c++${CMAKE_CXX_STANDARD}>
-                )
-            endif()
-        endif()
     endif(CUDAToolkit_FOUND)
     if(UNIX AND NOT APPLE)
         if( OPTIX_VERSION_LEGACY )
