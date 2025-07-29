@@ -20,6 +20,9 @@
 
 // GLM Libraries (math-related functions for graphics)
 #define GLM_FORCE_RADIANS
+#ifndef APIENTRY
+#define APIENTRY
+#endif
 #include <GLFW/glfw3.h>
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"

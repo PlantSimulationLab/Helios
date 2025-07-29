@@ -102,7 +102,7 @@ std::vector<vec3> interpolate(const std::vector<int> &keypoints, const std::vect
     }
     if (keypoints_sorted[keypoints_sorted.size() - 1] != num_points - 1) {
         keypoints_sorted.push_back(num_points - 1);
-        keypoints_loc.insert({num_points - 1, keypoints.size()});
+        keypoints_loc.insert({num_points - 1, static_cast<int>(keypoints.size())});
         pos.push_back(pos[pos.size() - 1]);
     }
     for (int i = 0; i < keypoints_sorted.size() - 1; i++) {
