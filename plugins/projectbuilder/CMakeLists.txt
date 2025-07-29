@@ -73,7 +73,7 @@ if("solarposition" IN_LIST PLUGINS OR "radiation" IN_LIST PLUGINS) # solarpositi
             message( FATAL_ERROR "The executable name cannot be the same as a plugin name. Please rename your executable." )
         endif()
         add_subdirectory( "${BASE_DIRECTORY}/plugins/${TEMP_PLUGIN}" "${PROJECT_BINARY_DIR}/plugins/${TEMP_PLUGIN}" )
-        target_link_libraries( ${EXECUTABLE_NAME} ${TEMP_PLUGIN} )
+        target_link_libraries( ${EXECUTABLE_NAME} PUBLIC ${TEMP_PLUGIN} )
         target_link_libraries( ${TEMP_PLUGIN} PUBLIC helios )
     endif()
     add_definitions(-DENABLE_SOLARPOSITION)
