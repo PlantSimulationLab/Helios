@@ -76,6 +76,16 @@ set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -I${CUDA_INCLUDE_DIRS}")
 
 # Windows-specific: Prevent MSVC-specific flags from being passed to nvcc
 if(WIN32 AND MSVC)
+	# Clear problematic CMake variables that cuda_compile_ptx inherits
+	set(CMAKE_CXX_FLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
+	set(CMAKE_CXX_FLAGS_RELEASE_BACKUP "${CMAKE_CXX_FLAGS_RELEASE}")
+	set(CMAKE_CXX_FLAGS_DEBUG_BACKUP "${CMAKE_CXX_FLAGS_DEBUG}")
+	
+	# Temporarily clear MSVC-specific flags
+	set(CMAKE_CXX_FLAGS "")
+	set(CMAKE_CXX_FLAGS_RELEASE "")
+	set(CMAKE_CXX_FLAGS_DEBUG "")
+	
 	# Add defines to prevent CUDA headers from interfering with standard C++ compilation
 	target_compile_definitions(radiation PRIVATE 
 		_MWAITXINTRIN_H_INCLUDED 
@@ -92,6 +102,14 @@ set( CUDA_SOURCES
 cuda_compile_ptx(  cuda_ptx_files ${CUDA_SOURCES} )
 add_custom_target(ptx DEPENDS ${cuda_ptx_files} ${CUDA_SOURCES} ${OPTIX_LIBRARIES} SOURCES ${CUDA_SOURCES} )
 add_dependencies( radiation ptx )
+
+# Windows-specific: Restore CMake flags after PTX compilation
+if(WIN32 AND MSVC)
+	# Restore backed up flags
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE_BACKUP}")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG_BACKUP}")
+endif()
 
 #for cmake version 3.7 or greater, cuda_compile_ptx puts an _1_ in the ptx filename.  Rename the file to stay consistent.
 if( CMAKE_VERSION VERSION_GREATER 3.6 )
