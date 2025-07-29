@@ -20,10 +20,17 @@ set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
 if( OPTIX_VERSION_LEGACY )
 	set(CMAKE_CUDA_ARCHITECTURES "35")
 else()
-	if(EXISTS "${CMAKE_BINARY_DIR}/lib/detect_GPU_compute.cmake")
-		include("${CMAKE_BINARY_DIR}/lib/detect_GPU_compute.cmake")
+	if(WIN32)
+		# On Windows, use a single architecture to avoid command line issues
+		set(CMAKE_CUDA_ARCHITECTURES "75")
+		message(STATUS "Windows detected: Using single CUDA architecture 75 for compatibility")
 	else()
-		set(CMAKE_CUDA_ARCHITECTURES "50;60;70;75;80;86")
+		# On other platforms, try to detect or use defaults
+		if(EXISTS "${CMAKE_BINARY_DIR}/lib/detect_GPU_compute.cmake")
+			include("${CMAKE_BINARY_DIR}/lib/detect_GPU_compute.cmake")
+		else()
+			set(CMAKE_CUDA_ARCHITECTURES "50;60;70;75;80")
+		endif()
 	endif()
 endif()
 
@@ -65,29 +72,40 @@ if(NOT DEFINED OPTIX_PATH)
        message( FATAL_ERROR "ERROR: Could not determine operating system for unknown reason." )
 endif(NOT DEFINED OPTIX_PATH)
 
-# Set additional CUDA flags
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --use_fast_math -Wno-deprecated-gpu-targets")
-
-if( CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "" )
-	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -O0")
-	set( OPTIX_COMPILE_OPTIMIZATION_LEVEL_0 ON )
-else()
-	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
-	set( OPTIX_COMPILE_OPTIMIZATION_LEVEL_3 ON )
-endif()
-
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++${CMAKE_CXX_STANDARD}")
-
-# Windows-specific defines to prevent doctest compilation errors
-if(WIN32 AND MSVC)
-	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D_MWAITXINTRIN_H_INCLUDED -D__STRICT_ANSI__")
+# Minimal CUDA flags to avoid Windows command line issues
+if(WIN32)
+	# On Windows, use minimal flags to avoid nvcc conflicts
+	set(CMAKE_CUDA_FLAGS "--use_fast_math")
+	if( CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "" )
+		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g")
+		set( OPTIX_COMPILE_OPTIMIZATION_LEVEL_0 ON )
+	else()
+		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O2")
+		set( OPTIX_COMPILE_OPTIMIZATION_LEVEL_3 ON )
+	endif()
+	
+	# Windows-specific defines
 	target_compile_definitions(radiation PRIVATE 
-		NOMINMAX  # Prevent Windows.h min/max macros
-		_USE_MATH_DEFINES  # Enable M_PI etc
+		NOMINMAX
+		_USE_MATH_DEFINES
+		_MWAITXINTRIN_H_INCLUDED
+		__STRICT_ANSI__
 	)
+else()
+	# Non-Windows platforms use full flags
+	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --use_fast_math -Wno-deprecated-gpu-targets")
+	
+	if( CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "" )
+		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -O0")
+		set( OPTIX_COMPILE_OPTIMIZATION_LEVEL_0 ON )
+	else()
+		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
+		set( OPTIX_COMPILE_OPTIMIZATION_LEVEL_3 ON )
+	endif()
+	
+	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++${CMAKE_CXX_STANDARD}")
+	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/include -I${OPTIX_PATH}include")
 endif()
-
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/include -I${OPTIX_PATH}include")
 
 set( CUDA_SOURCES
 		src/primitiveIntersection.cu
