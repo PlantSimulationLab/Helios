@@ -29,19 +29,13 @@ if(WIN32 AND MSVC)
 	set(CMAKE_CUDA_FLAGS_MINSIZEREL "")
 	
 	# Override the CUDA compile rule to prevent MSVC flag injection
-	set(CMAKE_CUDA_COMPILE_OBJECT 
-		"<CMAKE_CUDA_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -c <SOURCE> -o <OBJECT>")
+	set(CMAKE_CUDA_COMPILE_OBJECT "<CMAKE_CUDA_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -c <SOURCE> -o <OBJECT>")
 endif()
 
 # Set CUDA flags after enabling language to override defaults
 if(WIN32)
 	# On Windows, use minimal flags and override any CMake defaults
 	set(CMAKE_CUDA_FLAGS "--use_fast_math")
-	if( CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "" )
-		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g")
-	else()
-		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O2")
-	endif()
 	
 	# Force override CMake's build-type specific flags after they're set
 	set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS}")
@@ -52,15 +46,15 @@ else()
 	# Non-Windows platforms use full flags
 	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --use_fast_math -Wno-deprecated-gpu-targets")
 	
-	if( CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "" )
-		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -O0")
-	else()
-		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
-	endif()
-	
 	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++${CMAKE_CXX_STANDARD}")
 	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D_MWAITXINTRIN_H_INCLUDED -D__STRICT_ANSI__")
 	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/include")
+endif()
+
+if( CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "" )
+	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -O0")
+else()
+	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
 endif()
 
 add_library(energybalance STATIC "src/EnergyBalanceModel.cpp" "src/EnergyBalanceModel.cu" "tests/selfTest.cpp")
@@ -75,12 +69,7 @@ if(WIN32 AND MSVC)
 	set_property(TARGET energybalance PROPERTY COMPILE_DEFINITIONS "")
 	
 	# Windows-specific defines
-	target_compile_definitions(energybalance PRIVATE 
-		NOMINMAX
-		_USE_MATH_DEFINES
-		_MWAITXINTRIN_H_INCLUDED
-		__STRICT_ANSI__
-	)
+	target_compile_definitions(energybalance PRIVATE NOMINMAX _USE_MATH_DEFINES _MWAITXINTRIN_H_INCLUDED __STRICT_ANSI__ )
 endif()
 
 target_link_libraries(energybalance PUBLIC CUDA::cudart_static)
