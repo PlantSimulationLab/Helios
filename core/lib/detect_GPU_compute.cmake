@@ -1,17 +1,8 @@
 set(NVCC_EXECUTABLE "${CUDAToolkit_NVCC_EXECUTABLE}")
 
-# Windows-specific: Limit architectures to avoid command line length issues
-if(WIN32)
-    # On Windows, use a conservative set of common architectures
-    # This avoids command line length issues and compilation errors
-    set(_cuda_architectures "50;60;70;75;80")
-    message(STATUS "Windows detected: Using limited CUDA architectures: ${_cuda_architectures}")
-else()
-    # On other platforms, detect architectures normally
     # ask nvcc for all supported GPU codes (sm_* and compute_*)
-    execute_process( COMMAND ${NVCC_EXECUTABLE} --list-gpu-code OUTPUT_VARIABLE _nvcc_gpu_codes OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET RESULT_VARIABLE _nvcc_result)
-    
-    if(_nvcc_result EQUAL 0)
+execute_process( COMMAND ${NVCC_EXECUTABLE} --list-gpu-code OUTPUT_VARIABLE _nvcc_gpu_codes OUTPUT_STRIP_TRAILING_WHITESPACE )
+
         # split lines into a CMake list
         string(REPLACE "\n" ";" _gpu_codes "${_nvcc_gpu_codes}")
         
@@ -33,10 +24,6 @@ else()
             string(REGEX REPLACE "sm_(.+)" "\\1" _arch_num "${_sm}")
             list(APPEND _cuda_architectures ${_arch_num})
         endforeach()
-    else()
-        set(_cuda_architectures "")
-    endif()
-endif()
 
 # if no architectures were detected, fall back to SM 5.0
 if(NOT _cuda_architectures)
@@ -48,9 +35,6 @@ endif()
 set(CMAKE_CUDA_ARCHITECTURES "${_cuda_architectures}")
 
 # Also build gencode flags for compatibility (if needed elsewhere)
-# NOTE: We don't generate gencode flags anymore on Windows to avoid command line issues
-# Modern CMake uses CMAKE_CUDA_ARCHITECTURES instead
-if(NOT WIN32 AND DEFINED _sm_codes)
     set(_gencode_flags "")
     foreach(_sm IN LISTS _sm_codes)
         # derive compute_XX from sm_XX
@@ -66,7 +50,6 @@ if(NOT WIN32 AND DEFINED _sm_codes)
         list(APPEND _gencode_flags  "-gencode" "arch=compute_50,code=sm_50" )
     endif()
     
-    # append to your CUDA flags (for compatibility with old code)
+# append to your CUDA flags (for compatibility)
     string (JOIN " " _joined "${_gencode_flags}")
     set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} ${_joined}")
-endif()
