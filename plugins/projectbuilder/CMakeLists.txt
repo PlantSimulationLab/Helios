@@ -73,7 +73,7 @@ if("solarposition" IN_LIST PLUGINS OR "radiation" IN_LIST PLUGINS) # solarpositi
             message( FATAL_ERROR "The executable name cannot be the same as a plugin name. Please rename your executable." )
         endif()
         add_subdirectory( "${BASE_DIRECTORY}/plugins/${TEMP_PLUGIN}" "${PROJECT_BINARY_DIR}/plugins/${TEMP_PLUGIN}" )
-        target_link_libraries( ${EXECUTABLE_NAME} PUBLIC ${TEMP_PLUGIN} )
+        target_link_libraries( ${EXECUTABLE_NAME} ${TEMP_PLUGIN} )
         target_link_libraries( ${TEMP_PLUGIN} PUBLIC helios )
     endif()
     add_definitions(-DENABLE_SOLARPOSITION)
@@ -124,14 +124,6 @@ add_library(projectbuilder STATIC ${SOURCES})
 
 target_include_directories(projectbuilder PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-# Set Objective-C++ compile flags for macOS when visualizer is enabled
-if(APPLE AND "visualizer" IN_LIST PLUGINS)
-    # Only apply -x objective-c++ to C++ source files, not .m files
-    target_compile_options(projectbuilder PRIVATE
-        $<$<COMPILE_LANGUAGE:CXX>:-x objective-c++>
-    )
-endif()
-
 #target_compile_definitions(projectbuilder PUBLIC BOUNDARYLAYERCONDUCTANCEMODEL)
 #target_compile_definitions(projectbuilder PUBLIC BOUNDARYLAYERCONDUCTANCEMODEL)
 
@@ -140,6 +132,21 @@ if("radiation" IN_LIST PLUGINS OR "energybalance" IN_LIST PLUGINS)
     find_package(CUDAToolkit REQUIRED)
     if(CUDAToolkit_FOUND)
         target_link_libraries( projectbuilder PRIVATE CUDA::cudart_static )
+        
+        # Windows-specific: Prevent MSVC flags from being passed to nvcc
+        if(WIN32 AND MSVC)
+            # Use language-specific compiler options to avoid nvcc flag conflicts
+            target_compile_options(projectbuilder PRIVATE 
+                $<$<COMPILE_LANGUAGE:CXX>:/std:c++${CMAKE_CXX_STANDARD}>
+            )
+            # If CUDA language is enabled, add CUDA-specific options
+            get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+            if("CUDA" IN_LIST languages)
+                target_compile_options(projectbuilder PRIVATE 
+                    $<$<COMPILE_LANGUAGE:CUDA>:--compiler-options=/std:c++${CMAKE_CXX_STANDARD}>
+                )
+            endif()
+        endif()
     endif(CUDAToolkit_FOUND)
     if(UNIX AND NOT APPLE)
         if( OPTIX_VERSION_LEGACY )
@@ -240,6 +247,10 @@ if("visualizer" IN_LIST PLUGINS)
             message(FATAL_ERROR "Cocoa library not found.")
         endif()
         target_link_libraries(projectbuilder PUBLIC ${COCOA_LIBRARY})
+        add_compile_options(
+            "$<$<COMPILE_LANGUAGE:CXX>:-x objective-c++>"
+            "$<$<COMPILE_LANGUAGE:C>:-x objective-c++>"
+        )
         # list(APPEND CMAKE_C_FLAGS  "-x objective-c++")
         # list(APPEND CMAKE_CXX_FLAGS "-x objective-c++")
         #nfd
