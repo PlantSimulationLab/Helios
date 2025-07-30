@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.41</span>
+       <span id="projectnumber">&#160;v1.3.42</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -187,6 +187,11 @@ $(function(){initNavTree('_collision_detection_doc.html',''); initResizable(true
       </li>
       <li class="level2">
         <a href="#CDBasicUsage">Basic Usage Workflow</a>
+        <ul>
+          <li class="level3">
+            <a href="#CDManualBVH">Manual BVH Management (Optional)</a>
+          </li>
+        </ul>
       </li>
       <li class="level2">
         <a href="#CDBVH">Bounding Volume Hierarchy (BVH)</a>
@@ -211,6 +216,26 @@ $(function(){initNavTree('_collision_detection_doc.html',''); initResizable(true
           <li class="level3">
             <a href="#CDObjectCollision">Object-Based Collision</a>
           </li>
+          <li class="level3">
+            <a href="#CDRestrictedCollision">Restricted Geometry Collision Detection (NEW)</a>
+          </li>
+        </ul>
+      </li>
+      <li class="level2">
+        <a href="#CDConeCollision">Optimal Cone Path Detection</a>
+        <ul>
+          <li class="level3">
+            <a href="#CDConeStructure">Cone Data Structure</a>
+          </li>
+          <li class="level3">
+            <a href="#CDOptimalPath">Optimal Cone Path Detection</a>
+          </li>
+          <li class="level3">
+            <a href="#CDOptimalPathApplications">Applications</a>
+          </li>
+          <li class="level3">
+            <a href="#CDConeIntersection">Additional Cone Methods (Future)</a>
+          </li>
         </ul>
       </li>
       <li class="level2">
@@ -218,6 +243,9 @@ $(function(){initNavTree('_collision_detection_doc.html',''); initResizable(true
         <ul>
           <li class="level3">
             <a href="#CDGPUEnable">Enabling/Disabling GPU Acceleration</a>
+          </li>
+          <li class="level3">
+            <a href="#CDGPUMessages">GPU/CPU Traversal Messages (NEW)</a>
           </li>
           <li class="level3">
             <a href="#CDGPUPerformance">GPU Performance Considerations</a>
@@ -250,7 +278,10 @@ $(function(){initNavTree('_collision_detection_doc.html',''); initResizable(true
     <a href="#CDExamples">Example Applications</a>
     <ul>
       <li class="level2">
-        <a href="#CDGrowthSim">Growth Simulation</a>
+        <a href="#CDGrowthSim">Plant Growth Simulation with Optimal Path Detection</a>
+      </li>
+      <li class="level2">
+        <a href="#CDBasicCollision">Basic Collision Detection</a>
       </li>
       <li class="level2">
         <a href="#CDSpatialAnalysis">Spatial Analysis</a>
@@ -314,6 +345,9 @@ Introduction</h1>
 <li>Support for primitive-to-primitive and primitive-to-object collision detection</li>
 <li>Efficient memory management with automatic cleanup</li>
 <li>Integration with Helios primitive and object systems</li>
+<li>Automatic BVH management (no manual rebuild required)</li>
+<li>Restricted geometry collision detection for targeted queries</li>
+<li><b>Optimal cone path detection</b> for directional obstacle avoidance</li>
 </ul>
 <h1><a class="anchor" id="CDConstructor"></a>
 CollisionDetection Class Constructor</h1>
@@ -355,14 +389,12 @@ Model Class Constructor</h2>
 <div class="fragment"><div class="line"><a class="code hl_class" href="class_collision_detection.html" title="Class for GPU-accelerated collision detection and spatial queries in Helios.">CollisionDetection</a> collision(&amp;context); <span class="comment">//declare the collision detection system</span></div>
 </div><!-- fragment --><h2><a class="anchor" id="CDBasicUsage"></a>
 Basic Usage Workflow</h2>
-<p>The typical workflow for using the collision detection system is:</p>
+<p>The collision detection system now features <b>automatic BVH management</b>, so users no longer need to manually build or rebuild the BVH. The typical workflow is:</p>
 <ol type="1">
-<li><b>Build the spatial data structure</b> using <a class="el" href="class_collision_detection.html#a885abe5c3788b02384e72329f1b41935">CollisionDetection::buildBVH()</a></li>
 <li><b>Query for collisions</b> using <a class="el" href="class_collision_detection.html#a2512277b35d3c68fee5191a63b69cd42">CollisionDetection::findCollisions()</a></li>
 <li><b>Process the results</b> as needed by your application</li>
 </ol>
-<div class="fragment"><div class="line"><span class="comment">// Build the BVH for all primitives in the context</span></div>
-<div class="line">collision.buildBVH();</div>
+<div class="fragment"><div class="line"><span class="comment">// The BVH is built automatically when needed - no manual buildBVH() required!</span></div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Find all primitives that collide with a specific primitive</span></div>
 <div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> target_UUID = some_primitive_UUID;</div>
@@ -372,6 +404,14 @@ Basic Usage Workflow</h2>
 <div class="line"><span class="keywordflow">for</span>( <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID : colliding_UUIDs ){</div>
 <div class="line">    std::cout &lt;&lt; <span class="stringliteral">&quot;Primitive &quot;</span> &lt;&lt; target_UUID &lt;&lt; <span class="stringliteral">&quot; collides with primitive &quot;</span> &lt;&lt; UUID &lt;&lt; std::endl;</div>
 <div class="line">}</div>
+</div><!-- fragment --><h3><a class="anchor" id="CDManualBVH"></a>
+Manual BVH Management (Optional)</h3>
+<p>While automatic BVH management handles most use cases, manual control is still available:</p>
+<div class="fragment"><div class="line"><span class="comment">// Manual BVH building (optional - only needed for special cases)</span></div>
+<div class="line">collision.buildBVH();</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Force a complete rebuild</span></div>
+<div class="line">collision.rebuildBVH();</div>
 </div><!-- fragment --><h2><a class="anchor" id="CDBVH"></a>
 Bounding Volume Hierarchy (BVH)</h2>
 <p>The collision detection system uses a Bounding Volume Hierarchy (BVH) to efficiently organize primitives in 3D space. The BVH is a binary tree where each node contains an axis-aligned bounding box (AABB), and leaf nodes contain references to actual primitives.</p>
@@ -421,6 +461,89 @@ Object-Based Collision</h3>
 <div class="fragment"><div class="line">std::vector&lt;uint&gt; primitive_UUIDs = {UUID1, UUID2};</div>
 <div class="line">std::vector&lt;uint&gt; object_IDs = {objID1, objID2};</div>
 <div class="line">std::vector&lt;uint&gt; collisions = collision.findCollisions(primitive_UUIDs, object_IDs);</div>
+</div><!-- fragment --><h3><a class="anchor" id="CDRestrictedCollision"></a>
+Restricted Geometry Collision Detection (NEW)</h3>
+<p>The plugin now supports restricting collision detection to specific target geometry, improving performance and providing more precise control:</p>
+<div class="fragment"><div class="line"><span class="comment">// Restrict collision detection to specific target UUIDs only</span></div>
+<div class="line">std::vector&lt;uint&gt; query_UUIDs = {UUID1, UUID2};    <span class="comment">// Primitives to test for collisions</span></div>
+<div class="line">std::vector&lt;uint&gt; query_objects = {};              <span class="comment">// Objects to test for collisions  </span></div>
+<div class="line">std::vector&lt;uint&gt; target_UUIDs = {UUID3, UUID4};   <span class="comment">// Only test against these primitives</span></div>
+<div class="line">std::vector&lt;uint&gt; target_objects = {};             <span class="comment">// Only test against these objects</span></div>
+<div class="line"> </div>
+<div class="line">std::vector&lt;uint&gt; restricted_collisions = collision.findCollisions(query_UUIDs, query_objects, </div>
+<div class="line">                                                                   target_UUIDs, target_objects);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Mixed UUID/Object ID restrictions</span></div>
+<div class="line">std::vector&lt;uint&gt; mixed_query_UUIDs = {UUID1};</div>
+<div class="line">std::vector&lt;uint&gt; mixed_query_objects = {objID1};</div>
+<div class="line">std::vector&lt;uint&gt; mixed_target_UUIDs = {UUID2, UUID3};</div>
+<div class="line">std::vector&lt;uint&gt; mixed_target_objects = {objID2};</div>
+<div class="line"> </div>
+<div class="line">std::vector&lt;uint&gt; mixed_collisions = collision.findCollisions(mixed_query_UUIDs, mixed_query_objects,</div>
+<div class="line">                                                             mixed_target_UUIDs, mixed_target_objects);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Empty target lists default to all geometry in context (same as unrestricted collision detection)</span></div>
+<div class="line">std::vector&lt;uint&gt; empty_targets = {};</div>
+<div class="line">std::vector&lt;uint&gt; unrestricted_collisions = collision.findCollisions(query_UUIDs, query_objects, </div>
+<div class="line">                                                                     empty_targets, empty_targets);</div>
+</div><!-- fragment --><p>This feature is particularly useful for:</p><ul>
+<li><b>Performance optimization</b>: Only test collisions against relevant geometry</li>
+<li><b>Selective collision queries</b>: Ignore certain objects during collision detection <br  />
+</li>
+<li><b>Spatial filtering</b>: Restrict collision testing to specific regions or object types</li>
+</ul>
+<h2><a class="anchor" id="CDConeCollision"></a>
+Optimal Cone Path Detection</h2>
+<p>The plugin provides advanced cone-based optimal path detection with inertia weighting for directional obstacle avoidance applications:</p>
+<h3><a class="anchor" id="CDConeStructure"></a>
+Cone Data Structure</h3>
+<div class="fragment"><div class="line"><span class="comment">// Cone structure for collision queries</span></div>
+<div class="line"><span class="keyword">struct </span>Cone {</div>
+<div class="line">    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> apex;        <span class="comment">// Cone apex/tip position</span></div>
+<div class="line">    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> axis;        <span class="comment">// Normalized axis direction (apex to base)</span></div>
+<div class="line">    <span class="keywordtype">float</span> half_angle;         <span class="comment">// Half-angle of cone in radians</span></div>
+<div class="line">    <span class="keywordtype">float</span> height;             <span class="comment">// Height of cone (0 = infinite)</span></div>
+<div class="line">};</div>
+</div><!-- fragment --><h3><a class="anchor" id="CDOptimalPath"></a>
+Optimal Cone Path Detection</h3>
+<p>Find the optimal direction through a cone for directional obstacle avoidance:</p>
+<div class="fragment"><div class="line"><span class="comment">// Basic optimal path detection</span></div>
+<div class="line"><a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> apex = make_vec3(0, 0, 0);</div>
+<div class="line"><a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> central_axis = make_vec3(0, 0, 1);</div>
+<div class="line"><span class="keywordtype">float</span> half_angle = <a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a> / 6.0f;  <span class="comment">// 30 degrees</span></div>
+<div class="line"><span class="keywordtype">float</span> height = 50.0f;            <span class="comment">// Finite cone (0 = infinite)</span></div>
+<div class="line"><span class="keywordtype">int</span> samples = 64;                <span class="comment">// Number of sample directions</span></div>
+<div class="line"> </div>
+<div class="line"><a class="code hl_struct" href="struct_collision_detection_1_1_optimal_path_result.html" title="Structure representing the result of optimal cone path detection.">CollisionDetection::OptimalPathResult</a> result = collision.findOptimalConePath(</div>
+<div class="line">    apex, central_axis, half_angle, height, samples);</div>
+<div class="line"> </div>
+<div class="line">std::cout &lt;&lt; <span class="stringliteral">&quot;Optimal direction: &quot;</span> &lt;&lt; result.<a class="code hl_variable" href="struct_collision_detection_1_1_optimal_path_result.html#a7a5d6c6c36f4eebec6042a983d7187d6" title="Optimal direction vector (normalized)">direction</a> &lt;&lt; std::endl;</div>
+<div class="line">std::cout &lt;&lt; <span class="stringliteral">&quot;Collision count: &quot;</span> &lt;&lt; result.<a class="code hl_variable" href="struct_collision_detection_1_1_optimal_path_result.html#aa093742ac57623ce3b88713bcaf0a8e1" title="Number of collisions along this path.">collisionCount</a> &lt;&lt; std::endl;</div>
+<div class="line">std::cout &lt;&lt; <span class="stringliteral">&quot;Confidence: &quot;</span> &lt;&lt; result.<a class="code hl_variable" href="struct_collision_detection_1_1_optimal_path_result.html#aabccd0f46f24b93871cc0cdcc55c6b9c" title="Confidence score (0-1)">confidence</a> &lt;&lt; std::endl;</div>
+</div><!-- fragment --><h3><a class="anchor" id="CDOptimalPathApplications"></a>
+Applications</h3>
+<p>The optimal cone path detection is perfect for applications like:</p>
+<div class="fragment"><div class="line">  <span class="comment">// Example: Plant growth with obstacle avoidance</span></div>
+<div class="line"><a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> current_tip = make_vec3(0, 0, 0);</div>
+<div class="line"><a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> growth_direction = make_vec3(0, 0, 1);</div>
+<div class="line"><span class="keywordtype">float</span> perception_angle = <a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a> / 4.0f;  <span class="comment">// 45-degree perception</span></div>
+<div class="line"><span class="keywordtype">float</span> segment_length = 1.0f;</div>
+<div class="line"> </div>
+<div class="line"><span class="keyword">auto</span> result = collision.findOptimalConePath(current_tip, growth_direction, </div>
+<div class="line">                                           perception_angle, segment_length, 128);</div>
+<div class="line"> </div>
+<div class="line"> <span class="comment">// Grow in the optimal direction</span></div>
+<div class="line"> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> new_tip = current_tip + result.<a class="code hl_variable" href="struct_collision_detection_1_1_optimal_path_result.html#a7a5d6c6c36f4eebec6042a983d7187d6" title="Optimal direction vector (normalized)">direction</a> * segment_length;</div>
+</div><!-- fragment --><h3><a class="anchor" id="CDConeIntersection"></a>
+Additional Cone Methods (Future)</h3>
+<p>The following methods are planned for future releases:</p>
+<div class="fragment"><div class="line"><span class="comment">// Single cone intersection query (planned)</span></div>
+<div class="line">std::vector&lt;uint&gt; cone_collisions = collision.coneIntersection(origin, direction, </div>
+<div class="line">                                                               cone_angle, max_distance);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Batch cone intersection queries (planned)</span></div>
+<div class="line">std::vector&lt;std::vector&lt;uint&gt;&gt; batch_results = collision.coneIntersection(origins, directions,</div>
+<div class="line">                                                                         cone_angles, max_distances);</div>
 </div><!-- fragment --><h2><a class="anchor" id="CDGPU"></a>
 GPU Acceleration</h2>
 <h3><a class="anchor" id="CDGPUEnable"></a>
@@ -436,7 +559,28 @@ Enabling/Disabling GPU Acceleration</h3>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Re-enable GPU acceleration</span></div>
 <div class="line">collision.enableGPUAcceleration();</div>
-</div><!-- fragment --><h3><a class="anchor" id="CDGPUPerformance"></a>
+</div><!-- fragment --><h3><a class="anchor" id="CDGPUMessages"></a>
+GPU/CPU Traversal Messages (NEW)</h3>
+<p>The plugin now automatically displays which traversal mode is being used during collision detection:</p>
+<div class="fragment"><div class="line"><span class="comment">// With messages enabled (default), collision detection will display:</span></div>
+<div class="line">collision.enableMessages();</div>
+<div class="line">collision.findCollisions(UUID1);</div>
+<div class="line"><span class="comment">// Output: &quot;Using GPU acceleration for collision detection.&quot; </span></div>
+<div class="line"><span class="comment">//     or: &quot;Using CPU traversal for collision detection.&quot;</span></div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Messages are properly suppressed when disabled</span></div>
+<div class="line">collision.disableMessages();</div>
+<div class="line">collision.findCollisions(UUID1);  <span class="comment">// No traversal messages displayed</span></div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Messages respect the current GPU/CPU state</span></div>
+<div class="line">collision.enableMessages();</div>
+<div class="line">collision.disableGPUAcceleration();</div>
+<div class="line">collision.findCollisions(UUID1);  <span class="comment">// Output: &quot;Using CPU traversal for collision detection.&quot;</span></div>
+<div class="line"> </div>
+<div class="line">collision.enableGPUAcceleration();</div>
+<div class="line">collision.findCollisions(UUID1);  <span class="comment">// Output: &quot;Using GPU acceleration for collision detection.&quot; (if GPU available)</span></div>
+</div><!-- fragment --><p>This feature helps users understand performance characteristics and troubleshoot GPU availability issues.</p>
+<h3><a class="anchor" id="CDGPUPerformance"></a>
 GPU Performance Considerations</h3>
 <p>GPU acceleration provides the most benefit for:</p><ul>
 <li>Large scenes with &gt;1000 primitives</li>
@@ -502,11 +646,32 @@ Performance Guidelines</h2>
 </div><!-- fragment --><h1><a class="anchor" id="CDExamples"></a>
 Example Applications</h1>
 <h2><a class="anchor" id="CDGrowthSim"></a>
-Growth Simulation</h2>
-<p>Collision detection is commonly used in plant growth simulation to prevent organs from overlapping:</p>
+Plant Growth Simulation with Optimal Path Detection</h2>
+<p>Advanced plant growth simulation using cone-based optimal path detection:</p>
 <div class="fragment"><div class="line"><span class="comment">// During growth simulation</span></div>
 <div class="line"><a class="code hl_class" href="class_collision_detection.html" title="Class for GPU-accelerated collision detection and spatial queries in Helios.">CollisionDetection</a> collision(&amp;context);</div>
-<div class="line">collision.buildBVH();</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Simulate a growing plant shoot</span></div>
+<div class="line"><a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> shoot_tip = make_vec3(0, 0, 0);</div>
+<div class="line"><a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> current_direction = make_vec3(0, 0, 1);  <span class="comment">// Currently growing upward</span></div>
+<div class="line"><span class="keywordtype">float</span> perception_angle = <a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a> / 4.0f;  <span class="comment">// 45-degree perception cone</span></div>
+<div class="line"><span class="keywordtype">float</span> segment_length = 0.5f;</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Find optimal growth direction</span></div>
+<div class="line"><span class="keyword">auto</span> result = collision.findOptimalConePath(shoot_tip, current_direction, </div>
+<div class="line">                                           perception_angle, segment_length, 64);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Grow in the optimal direction</span></div>
+<div class="line"><a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">helios::vec3</a> new_tip = shoot_tip + result.<a class="code hl_variable" href="struct_collision_detection_1_1_optimal_path_result.html#a7a5d6c6c36f4eebec6042a983d7187d6" title="Optimal direction vector (normalized)">direction</a> * segment_length;</div>
+<div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> new_segment = context.addCylinder( shoot_tip, new_tip, 0.05f );</div>
+<div class="line"> </div>
+<div class="line">std::cout &lt;&lt; <span class="stringliteral">&quot;Growth direction chosen with &quot;</span> &lt;&lt; result.<a class="code hl_variable" href="struct_collision_detection_1_1_optimal_path_result.html#aa093742ac57623ce3b88713bcaf0a8e1" title="Number of collisions along this path.">collisionCount</a> </div>
+<div class="line">          &lt;&lt; <span class="stringliteral">&quot; collisions, confidence: &quot;</span> &lt;&lt; result.<a class="code hl_variable" href="struct_collision_detection_1_1_optimal_path_result.html#aabccd0f46f24b93871cc0cdcc55c6b9c" title="Confidence score (0-1)">confidence</a> &lt;&lt; std::endl;</div>
+</div><!-- fragment --><h2><a class="anchor" id="CDBasicCollision"></a>
+Basic Collision Detection</h2>
+<p>Traditional collision detection for overlapping geometry:</p>
+<div class="fragment"><div class="line"><span class="comment">// Basic collision detection</span></div>
+<div class="line"><a class="code hl_class" href="class_collision_detection.html" title="Class for GPU-accelerated collision detection and spatial queries in Helios.">CollisionDetection</a> collision(&amp;context);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Before placing a new leaf</span></div>
 <div class="line"><a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> new_leaf_UUID = context.addPatch( leaf_position, leaf_size, leaf_rotation );</div>

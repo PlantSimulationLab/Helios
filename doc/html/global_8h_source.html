@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.41</span>
+       <span id="projectnumber">&#160;v1.3.42</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -769,11 +769,53 @@ $(function(){initNavTree('global_8h_source.html',''); initResizable(true); });
 <div class="line"><a id="l01163" name="l01163"></a><span class="lineno"> 1163</span>    };</div>
 </div>
 <div class="line"><a id="l01164" name="l01164"></a><span class="lineno"> 1164</span></div>
-<div class="line"><a id="l01166" name="l01166"></a><span class="lineno"> 1166</span>    <span class="keyword">extern</span> SphericalCoord nullrotation;</div>
-<div class="line"><a id="l01168" name="l01168"></a><span class="lineno"> 1168</span>    <span class="keyword">extern</span> vec3 nullorigin;</div>
-<div class="line"><a id="l01169" name="l01169"></a><span class="lineno"> 1169</span>} <span class="comment">// namespace helios</span></div>
-<div class="line"><a id="l01170" name="l01170"></a><span class="lineno"> 1170</span> </div>
-<div class="line"><a id="l01171" name="l01171"></a><span class="lineno"> 1171</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l01166" name="l01166"></a><span class="lineno"> 1166</span></div>
+<div class="foldopen" id="foldopen01172" data-start="{" data-end="};">
+<div class="line"><a id="l01172" name="l01172"></a><span class="lineno"><a class="line" href="structhelios_1_1capture__cout.html"> 1172</a></span>    <span class="keyword">struct </span>capture_cout {</div>
+<div class="line"><a id="l01173" name="l01173"></a><span class="lineno"> 1173</span>        std::streambuf *old_buf;</div>
+<div class="line"><a id="l01174" name="l01174"></a><span class="lineno"> 1174</span>        std::ostringstream captured_stream;</div>
+<div class="line"><a id="l01175" name="l01175"></a><span class="lineno"> 1175</span> </div>
+<div class="line"><a id="l01176" name="l01176"></a><span class="lineno"> 1176</span>        capture_cout() {</div>
+<div class="line"><a id="l01177" name="l01177"></a><span class="lineno"> 1177</span>            old_buf = std::cout.rdbuf(captured_stream.rdbuf());</div>
+<div class="line"><a id="l01178" name="l01178"></a><span class="lineno"> 1178</span>        }</div>
+<div class="line"><a id="l01179" name="l01179"></a><span class="lineno"> 1179</span> </div>
+<div class="line"><a id="l01180" name="l01180"></a><span class="lineno"> 1180</span>        ~capture_cout() {</div>
+<div class="line"><a id="l01181" name="l01181"></a><span class="lineno"> 1181</span>            std::cout.rdbuf(old_buf);</div>
+<div class="line"><a id="l01182" name="l01182"></a><span class="lineno"> 1182</span>        }</div>
+<div class="line"><a id="l01183" name="l01183"></a><span class="lineno"> 1183</span></div>
+<div class="foldopen" id="foldopen01185" data-start="{" data-end="}">
+<div class="line"><a id="l01185" name="l01185"></a><span class="lineno"><a class="line" href="structhelios_1_1capture__cout.html#a6ca71bda183d4ad317ee5320b215d31a"> 1185</a></span>        std::string <a class="code hl_function" href="structhelios_1_1capture__cout.html#a6ca71bda183d4ad317ee5320b215d31a" title="Get the captured cout output as a string.">get_captured_output</a>()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l01186" name="l01186"></a><span class="lineno"> 1186</span>            <span class="keywordflow">return</span> captured_stream.str();</div>
+<div class="line"><a id="l01187" name="l01187"></a><span class="lineno"> 1187</span>        }</div>
+</div>
+<div class="line"><a id="l01188" name="l01188"></a><span class="lineno"> 1188</span></div>
+<div class="foldopen" id="foldopen01190" data-start="{" data-end="}">
+<div class="line"><a id="l01190" name="l01190"></a><span class="lineno"><a class="line" href="structhelios_1_1capture__cout.html#a3ebb8b2c68f0adda939a357a5b1142b6"> 1190</a></span>        <span class="keywordtype">bool</span> <a class="code hl_function" href="structhelios_1_1capture__cout.html#a3ebb8b2c68f0adda939a357a5b1142b6" title="Check if any output has been captured.">has_output</a>()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l01191" name="l01191"></a><span class="lineno"> 1191</span>            <span class="keywordflow">return</span> !captured_stream.str().empty();</div>
+<div class="line"><a id="l01192" name="l01192"></a><span class="lineno"> 1192</span>        }</div>
+</div>
+<div class="line"><a id="l01193" name="l01193"></a><span class="lineno"> 1193</span></div>
+<div class="foldopen" id="foldopen01195" data-start="{" data-end="}">
+<div class="line"><a id="l01195" name="l01195"></a><span class="lineno"><a class="line" href="structhelios_1_1capture__cout.html#aeb83d0da4d3de8d683c9901c0af5e017"> 1195</a></span>        <span class="keywordtype">void</span> <a class="code hl_function" href="structhelios_1_1capture__cout.html#aeb83d0da4d3de8d683c9901c0af5e017" title="Clear the captured output.">clear</a>() {</div>
+<div class="line"><a id="l01196" name="l01196"></a><span class="lineno"> 1196</span>            captured_stream.str(<span class="stringliteral">&quot;&quot;</span>);</div>
+<div class="line"><a id="l01197" name="l01197"></a><span class="lineno"> 1197</span>            captured_stream.clear();</div>
+<div class="line"><a id="l01198" name="l01198"></a><span class="lineno"> 1198</span>        }</div>
+</div>
+<div class="line"><a id="l01199" name="l01199"></a><span class="lineno"> 1199</span></div>
+<div class="foldopen" id="foldopen01201" data-start="{" data-end="}">
+<div class="line"><a id="l01201" name="l01201"></a><span class="lineno"><a class="line" href="structhelios_1_1capture__cout.html#adf1171cbcedfbb7de2699591602ae91f"> 1201</a></span>        <span class="keywordtype">size_t</span> <a class="code hl_function" href="structhelios_1_1capture__cout.html#adf1171cbcedfbb7de2699591602ae91f" title="Get the number of characters captured.">size</a>()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l01202" name="l01202"></a><span class="lineno"> 1202</span>            <span class="keywordflow">return</span> captured_stream.str().size();</div>
+<div class="line"><a id="l01203" name="l01203"></a><span class="lineno"> 1203</span>        }</div>
+</div>
+<div class="line"><a id="l01204" name="l01204"></a><span class="lineno"> 1204</span>    };</div>
+</div>
+<div class="line"><a id="l01205" name="l01205"></a><span class="lineno"> 1205</span> </div>
+<div class="line"><a id="l01206" name="l01206"></a><span class="lineno"> 1206</span></div>
+<div class="line"><a id="l01208" name="l01208"></a><span class="lineno"> 1208</span>    <span class="keyword">extern</span> SphericalCoord nullrotation;</div>
+<div class="line"><a id="l01210" name="l01210"></a><span class="lineno"> 1210</span>    <span class="keyword">extern</span> vec3 nullorigin;</div>
+<div class="line"><a id="l01211" name="l01211"></a><span class="lineno"> 1211</span>} <span class="comment">// namespace helios</span></div>
+<div class="line"><a id="l01212" name="l01212"></a><span class="lineno"> 1212</span> </div>
+<div class="line"><a id="l01213" name="l01213"></a><span class="lineno"> 1213</span><span class="preprocessor">#endif</span></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

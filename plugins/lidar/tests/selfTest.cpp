@@ -223,3 +223,163 @@ DOCTEST_TEST_CASE("LiDAR Synthetic Almond Tree Test") {
     DOCTEST_CHECK(RMSE_Gtheta <= 0.15f);
     DOCTEST_CHECK(RMSE_LAD != 0.f);
 }
+
+DOCTEST_TEST_CASE("LiDAR Synthetic Scan Append/Overwrite Test") {
+    Context context_test;
+    context_test.loadXML("plugins/lidar/xml/leaf_cube_LAI2_lw0_01_spherical.xml", true);
+
+    LiDARcloud synthetic_test;
+    synthetic_test.disableMessages();
+
+    DOCTEST_CHECK_NOTHROW(synthetic_test.loadXML("plugins/lidar/xml/synthetic_test.xml"));
+
+    // First scan with default append behavior (should append to empty scan)
+    DOCTEST_CHECK_NOTHROW(synthetic_test.syntheticScan(&context_test));
+    uint hit_count_first = synthetic_test.getHitCount();
+    DOCTEST_CHECK(hit_count_first > 0);
+
+    // Second scan with append=true (should double the hit count)
+    DOCTEST_CHECK_NOTHROW(synthetic_test.syntheticScan(&context_test, true));
+    uint hit_count_append = synthetic_test.getHitCount();
+    DOCTEST_CHECK(hit_count_append == 2 * hit_count_first);
+
+    // Third scan with append=false (should reset and have same count as first scan)
+    DOCTEST_CHECK_NOTHROW(synthetic_test.syntheticScan(&context_test, false));
+    uint hit_count_overwrite = synthetic_test.getHitCount();
+    DOCTEST_CHECK(hit_count_overwrite == hit_count_first);
+
+    // Test with other overloads
+    // Test scan_grid_only, record_misses overload with append=false
+    DOCTEST_CHECK_NOTHROW(synthetic_test.syntheticScan(&context_test, false, false, false));
+    uint hit_count_overwrite2 = synthetic_test.getHitCount();
+    DOCTEST_CHECK(hit_count_overwrite2 == hit_count_first);
+
+    // Test full-waveform overload with append=true
+    DOCTEST_CHECK_NOTHROW(synthetic_test.syntheticScan(&context_test, 1, 0.0f, true));
+    uint hit_count_append2 = synthetic_test.getHitCount();
+    DOCTEST_CHECK(hit_count_append2 == 2 * hit_count_first);
+}
+
+DOCTEST_TEST_CASE("LiDAR TreeQSM Loading Test") {
+    Context context_treeqsm;
+    LiDARcloud lidar;
+    lidar.disableMessages();
+
+    // Test loading TreeQSM file without texture
+    std::vector<uint> tube_UUIDs;
+    uint radial_subdivisions = 6;
+    DOCTEST_CHECK_NOTHROW(tube_UUIDs = lidar.loadTreeQSM(&context_treeqsm, "plugins/lidar/data/cylinder_tree_QSM_test.txt", radial_subdivisions));
+
+    // Check that tube objects were created
+    DOCTEST_CHECK(tube_UUIDs.size() > 0);
+
+    // Check that all returned UUIDs are valid
+    for (uint UUID: tube_UUIDs) {
+        DOCTEST_CHECK(context_treeqsm.doesObjectExist(UUID));
+        DOCTEST_CHECK(context_treeqsm.getObjectType(UUID) == helios::OBJECT_TYPE_TUBE);
+    }
+
+    // Test that object data was set correctly
+    for (uint UUID: tube_UUIDs) {
+        DOCTEST_CHECK(context_treeqsm.doesObjectDataExist(UUID, "branch_order"));
+        DOCTEST_CHECK(context_treeqsm.doesObjectDataExist(UUID, "branch_id"));
+
+        int branch_order;
+        context_treeqsm.getObjectData(UUID, "branch_order", branch_order);
+        DOCTEST_CHECK(branch_order >= 0);
+
+        int branch_id;
+        context_treeqsm.getObjectData(UUID, "branch_id", branch_id);
+        DOCTEST_CHECK(branch_id >= 0);
+    }
+
+    // Test loading with empty texture file (should still work)
+    Context context_treeqsm2;
+    std::vector<uint> tube_UUIDs2;
+    DOCTEST_CHECK_NOTHROW(tube_UUIDs2 = lidar.loadTreeQSM(&context_treeqsm2, "plugins/lidar/data/cylinder_tree_QSM_test.txt", radial_subdivisions, ""));
+    DOCTEST_CHECK(tube_UUIDs2.size() == tube_UUIDs.size());
+
+    // Test error handling for non-existent file
+    Context context_error;
+    DOCTEST_CHECK_THROWS(lidar.loadTreeQSM(&context_error, "nonexistent_file.txt", radial_subdivisions));
+
+    // Test with different radial subdivisions
+    Context context_treeqsm3;
+    std::vector<uint> tube_UUIDs3;
+    uint different_subdivisions = 8;
+    DOCTEST_CHECK_NOTHROW(tube_UUIDs3 = lidar.loadTreeQSM(&context_treeqsm3, "plugins/lidar/data/cylinder_tree_QSM_test.txt", different_subdivisions));
+    DOCTEST_CHECK(tube_UUIDs3.size() == tube_UUIDs.size()); // Same number of tubes
+
+    // Test that each tube has appropriate number of nodes and primitives
+    for (uint UUID: tube_UUIDs) {
+        std::vector<uint> primitive_UUIDs = context_treeqsm.getObjectPrimitiveUUIDs(UUID);
+        DOCTEST_CHECK(primitive_UUIDs.size() > 0);
+
+        // Each tube should have triangular primitives
+        for (uint prim_UUID: primitive_UUIDs) {
+            DOCTEST_CHECK(context_treeqsm.getPrimitiveType(prim_UUID) == helios::PRIMITIVE_TYPE_TRIANGLE);
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("LiDAR TreeQSM Colormap Loading Test") {
+    Context context_colormap;
+    LiDARcloud lidar;
+    lidar.disableMessages();
+
+    // Test loading TreeQSM file with colormap
+    std::vector<uint> tube_UUIDs;
+    uint radial_subdivisions = 6;
+    std::string colormap_name = "hot";
+    DOCTEST_CHECK_NOTHROW(tube_UUIDs = lidar.loadTreeQSMColormap(&context_colormap, "plugins/lidar/data/cylinder_tree_QSM_test.txt", radial_subdivisions, colormap_name));
+
+    // Check that tube objects were created
+    DOCTEST_CHECK(tube_UUIDs.size() > 0);
+
+    // Check that all returned UUIDs are valid
+    for (uint UUID: tube_UUIDs) {
+        DOCTEST_CHECK(context_colormap.doesObjectExist(UUID));
+        DOCTEST_CHECK(context_colormap.getObjectType(UUID) == helios::OBJECT_TYPE_TUBE);
+    }
+
+    // Test that object data was set correctly
+    for (uint UUID: tube_UUIDs) {
+        DOCTEST_CHECK(context_colormap.doesObjectDataExist(UUID, "branch_order"));
+        DOCTEST_CHECK(context_colormap.doesObjectDataExist(UUID, "branch_id"));
+
+        int branch_order;
+        context_colormap.getObjectData(UUID, "branch_order", branch_order);
+        DOCTEST_CHECK(branch_order >= 0);
+
+        int branch_id;
+        context_colormap.getObjectData(UUID, "branch_id", branch_id);
+        DOCTEST_CHECK(branch_id >= 0);
+    }
+
+    // Test with different colormap
+    Context context_colormap2;
+    std::vector<uint> tube_UUIDs2;
+    std::string colormap_name2 = "cool";
+    DOCTEST_CHECK_NOTHROW(tube_UUIDs2 = lidar.loadTreeQSMColormap(&context_colormap2, "plugins/lidar/data/cylinder_tree_QSM_test.txt", radial_subdivisions, colormap_name2));
+    DOCTEST_CHECK(tube_UUIDs2.size() == tube_UUIDs.size());
+
+    // Test error handling for non-existent file
+    Context context_error2;
+    DOCTEST_CHECK_THROWS(lidar.loadTreeQSMColormap(&context_error2, "nonexistent_file.txt", radial_subdivisions, colormap_name));
+
+    // Test that each tube has appropriate number of primitives
+    for (uint UUID: tube_UUIDs) {
+        std::vector<uint> primitive_UUIDs = context_colormap.getObjectPrimitiveUUIDs(UUID);
+        DOCTEST_CHECK(primitive_UUIDs.size() > 0);
+
+        // Each tube should have triangular primitives
+        for (uint prim_UUID: primitive_UUIDs) {
+            DOCTEST_CHECK(context_colormap.getPrimitiveType(prim_UUID) == helios::PRIMITIVE_TYPE_TRIANGLE);
+        }
+    }
+
+    // Test with invalid colormap name (should throw an exception)
+    Context context_colormap3;
+    std::string invalid_colormap = "invalid_colormap_name";
+    DOCTEST_CHECK_THROWS(lidar.loadTreeQSMColormap(&context_colormap3, "plugins/lidar/data/cylinder_tree_QSM_test.txt", radial_subdivisions, invalid_colormap));
+}

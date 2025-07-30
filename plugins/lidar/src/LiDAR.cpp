@@ -483,6 +483,20 @@ void LiDARcloud::addHitsToVisualizer(Visualizer *visualizer, uint pointsize) con
     addHitsToVisualizer(visualizer, pointsize, "");
 }
 
+void LiDARcloud::addHitsToVisualizer(Visualizer *visualizer, uint pointsize, const RGBcolor &point_color) const {
+
+    if (printmessages && scans.size() == 0) {
+        std::cout << "WARNING (LiDARcloud::addHitsToVisualizer): There are no scans in the point cloud, and thus there is no geometry to add...skipping." << std::endl;
+        return;
+    }
+
+    for (uint i = 0; i < getHitCount(); i++) {
+        vec3 center = getHitXYZ(i);
+
+        visualizer->addPoint(center, point_color, pointsize, Visualizer::COORDINATES_CARTESIAN);
+    }
+}
+
 void LiDARcloud::addHitsToVisualizer(Visualizer *visualizer, uint pointsize, const char *color_value) const {
 
     if (printmessages && scans.size() == 0) {
@@ -666,7 +680,7 @@ void LiDARcloud::addGrid(const vec3 &center, const vec3 &size, const int3 &ndiv,
     }
 }
 
-void LiDARcloud::addGridWireFrametoVisualizer(Visualizer *visualizer) const {
+void LiDARcloud::addGridWireFrametoVisualizer(Visualizer *visualizer, float linewidth_pixels) const {
 
 
     for (int i = 0; i < getGridCellCount(); i++) {
@@ -678,22 +692,22 @@ void LiDARcloud::addGridWireFrametoVisualizer(Visualizer *visualizer) const {
         boxmax = make_vec3(center.x + 0.5 * size.x, center.y + 0.5 * size.y, center.z + 0.5 * size.z);
 
         // vertical edges of the cell
-        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmin.z), make_vec3(boxmin.x, boxmin.y, boxmax.z), RGB::black, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmin.x, boxmax.y, boxmin.z), make_vec3(boxmin.x, boxmax.y, boxmax.z), RGB::black, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmax.x, boxmin.y, boxmin.z), make_vec3(boxmax.x, boxmin.y, boxmax.z), RGB::black, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmax.x, boxmax.y, boxmin.z), make_vec3(boxmax.x, boxmax.y, boxmax.z), RGB::black, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmin.z), make_vec3(boxmin.x, boxmin.y, boxmax.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmin.x, boxmax.y, boxmin.z), make_vec3(boxmin.x, boxmax.y, boxmax.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmax.x, boxmin.y, boxmin.z), make_vec3(boxmax.x, boxmin.y, boxmax.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmax.x, boxmax.y, boxmin.z), make_vec3(boxmax.x, boxmax.y, boxmax.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
 
         // horizontal top edges
-        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmax.z), make_vec3(boxmin.x, boxmax.y, boxmax.z), RGB::black, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmax.z), make_vec3(boxmax.x, boxmin.y, boxmax.z), RGB::black, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmax.x, boxmin.y, boxmax.z), make_vec3(boxmax.x, boxmax.y, boxmax.z), RGB::black, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmin.x, boxmax.y, boxmax.z), make_vec3(boxmax.x, boxmax.y, boxmax.z), RGB::black, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmax.z), make_vec3(boxmin.x, boxmax.y, boxmax.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmax.z), make_vec3(boxmax.x, boxmin.y, boxmax.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmax.x, boxmin.y, boxmax.z), make_vec3(boxmax.x, boxmax.y, boxmax.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmin.x, boxmax.y, boxmax.z), make_vec3(boxmax.x, boxmax.y, boxmax.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
 
         // horizontal bottom edges
-        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmin.z), make_vec3(boxmin.x, boxmax.y, boxmin.z), RGB::black, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmin.z), make_vec3(boxmax.x, boxmin.y, boxmin.z), RGB::black, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmax.x, boxmin.y, boxmin.z), make_vec3(boxmax.x, boxmax.y, boxmin.z), RGB::black, Visualizer::COORDINATES_CARTESIAN);
-        visualizer->addLine(make_vec3(boxmin.x, boxmax.y, boxmin.z), make_vec3(boxmax.x, boxmax.y, boxmin.z), RGB::black, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmin.z), make_vec3(boxmin.x, boxmax.y, boxmin.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmin.x, boxmin.y, boxmin.z), make_vec3(boxmax.x, boxmin.y, boxmin.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmax.x, boxmin.y, boxmin.z), make_vec3(boxmax.x, boxmax.y, boxmin.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
+        visualizer->addLine(make_vec3(boxmin.x, boxmax.y, boxmin.z), make_vec3(boxmax.x, boxmax.y, boxmin.z), RGB::black, linewidth_pixels, Visualizer::COORDINATES_CARTESIAN);
     }
 }
 
@@ -2314,15 +2328,13 @@ void LiDARcloud::calculateLeafAngleCDF(uint Nbins, std::vector<std::vector<float
     float db_theta = 0.5 * M_PI / Nbins;
     float db_phi = 2.f * M_PI / Nbins;
 
-    // calculate PDF
-    for (size_t g = 0; g < reconstructed_triangles.size(); g++) {
-        for (size_t t = 0; t < reconstructed_triangles.at(g).size(); t++) {
+    // calculate PDF from triangulated hit points (not reconstructed triangles)
+    for (size_t t = 0; t < triangles.size(); t++) {
+        float triangle_area = triangles.at(t).area;
+        int gridcell = triangles.at(t).gridcell;
 
-            float triangle_area = reconstructed_triangles.at(g).at(t).area;
-
-            int gridcell = reconstructed_triangles.at(g).at(t).gridcell;
-
-            helios::vec3 normal = cross(reconstructed_triangles.at(g).at(t).vertex1 - reconstructed_triangles.at(g).at(t).vertex0, reconstructed_triangles.at(g).at(t).vertex2 - reconstructed_triangles.at(g).at(t).vertex0);
+        if (gridcell >= 0 && gridcell < (int) Ncells) { // Valid grid cell
+            helios::vec3 normal = cross(triangles.at(t).vertex1 - triangles.at(t).vertex0, triangles.at(t).vertex2 - triangles.at(t).vertex0);
             normal.z = fabs(normal.z); // keep in upper hemisphere
 
             helios::SphericalCoord normal_dir = cart2sphere(normal);
@@ -2352,20 +2364,20 @@ void LiDARcloud::calculateLeafAngleCDF(uint Nbins, std::vector<std::vector<float
         }
     }
 
-    char filename[50];
-    std::ofstream file_theta, file_phi;
-    for (uint v = 0; v < Ncells; v++) {
-        sprintf(filename, "../output/PDF_theta%d.txt", v);
-        file_theta.open(filename);
-        sprintf(filename, "../output/PDF_phi%d.txt", v);
-        file_phi.open(filename);
-        for (uint i = 0; i < Nbins; i++) {
-            file_theta << PDF_theta.at(v).at(i) << std::endl;
-            file_phi << PDF_phi.at(v).at(i) << std::endl;
-        }
-        file_theta.close();
-        file_phi.close();
-    }
+    // char filename[50];
+    // std::ofstream file_theta, file_phi;
+    // for (uint v = 0; v < Ncells; v++) {
+    //     sprintf(filename, "../output/PDF_theta%d.txt", v);
+    //     file_theta.open(filename);
+    //     sprintf(filename, "../output/PDF_phi%d.txt", v);
+    //     file_phi.open(filename);
+    //     for (uint i = 0; i < Nbins; i++) {
+    //         file_theta << PDF_theta.at(v).at(i) << std::endl;
+    //         file_phi << PDF_phi.at(v).at(i) << std::endl;
+    //     }
+    //     file_theta.close();
+    //     file_phi.close();
+    // }
 }
 
 void LiDARcloud::cropBeamsToGridAngleRange(uint source) {

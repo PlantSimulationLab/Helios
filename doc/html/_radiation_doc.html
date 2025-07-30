@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.41</span>
+       <span id="projectnumber">&#160;v1.3.42</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -263,6 +263,9 @@ $(function(){initNavTree('_radiation_doc.html',''); initResizable(true); });
           </li>
           <li class="level3">
             <a href="#RadCamOut">Writing Camera Images to File</a>
+          </li>
+          <li class="level3">
+            <a href="#RadCamSegmentation">Writing Camera Image Segmentation Masks</a>
           </li>
         </ul>
       </li>
@@ -805,7 +808,25 @@ Integrating Fluxes</h3>
 Writing Camera Images to File</h3>
 <p>Simulated camera data can be written to file as a JPEG image, or the raw pixel data can be queried from the Context.</p>
 <p>JPEG images are written either as a grayscale image (1 spectral band) or and RGB image (3 spectral bands) using the <a class="el" href="class_radiation_model.html#aa30ec7ec3b6c3b109e9a9544b890e8de">RadiationModel::writeCameraImage()</a> method. This method takes three required arguments and two optional arguments: 1) a string denoting the label of a camera that was added through the <a class="el" href="class_radiation_model.html#aedf80552eaf2bf6a8544dcb2c72cb331">RadiationModel::addRadiationCamera()</a> method, 2) a vector of strings denoting the label(s) of radiation bands to be written to the image(s), which must contain exactly 1 element (grayscale image) or 3 elements (RGB image), and 3) a string denoting the base of the image filename, which may be appended with information like a radiation band label or frame count. The two optional arguments are: 1) the relative path to the directory where the images should be stored, and 2) a numerical integer identifier to be appended to the image file name (e.g., "camera_thermal_00001.jpeg"). Note that this value must be less than or equal to 99,9999. By default, images are stored in the directory where the executable is being run (usually the build directory), and the numerical identifier is omitted unless a value is provided.</p>
-<p>Below is example code of writing an RGB image (3 spectral bands).</p>
+<h3><a class="anchor" id="RadCamSegmentation"></a>
+Writing Camera Image Segmentation Masks</h3>
+<p>In addition to regular camera images, the radiation model can generate segmentation masks in COCO JSON format for machine learning applications. Segmentation masks identify and outline objects within camera images, providing pixel-level annotations that can be used for training object detection and segmentation models.</p>
+<p>Two methods are available for writing segmentation masks:</p>
+<p>1. <a class="el" href="class_radiation_model.html#ae6a2af975c952e8f0a728421ab566a5c">RadiationModel::writeImageSegmentationMasks()</a> - Creates segmentation masks based on primitive data labels.</p>
+<p>2. <a class="el" href="class_radiation_model.html#a0b2cf44026deb42cd8d1660facc9bec7">RadiationModel::writeImageSegmentationMasks_ObjectData()</a> - Creates segmentation masks based on object data labels.</p>
+<p>Both methods take the following arguments: 1) a string denoting the camera label, 2) a string denoting the primitive/object data label to use for segmentation, 3) an integer object class ID for COCO annotations, 4) a string denoting the base filename for the JSON output, 5) an optional string specifying the output directory path (defaults to current directory), 6) an optional boolean flag to append to existing JSON files (defaults to false for new files), and 7) an optional frame number for time series data.</p>
+<p>The segmentation masks are generated using boundary tracing algorithms that identify connected regions of pixels with the same data label values. Each unique label value becomes a separate annotation in the COCO JSON output, with precise polygon boundaries traced around the object regions.</p>
+<p>When the append flag is set to true, new annotations are added to existing JSON files, allowing multiple primitive/object types to be combined into a single segmentation dataset. This is useful for creating comprehensive annotations that include both foreground objects and background elements like ground surfaces.</p>
+<div class="fragment"><div class="line"><span class="comment">// Write segmentation masks for bunny objects (primitive data approach)</span></div>
+<div class="line">radiationmodel.writeImageSegmentationMasks(<span class="stringliteral">&quot;visible&quot;</span>, <span class="stringliteral">&quot;bunny&quot;</span>, 1, <span class="stringliteral">&quot;bunny_masks&quot;</span>, <span class="stringliteral">&quot;./&quot;</span>);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Write segmentation masks for ground surfaces  </span></div>
+<div class="line">radiationmodel.writeImageSegmentationMasks(<span class="stringliteral">&quot;visible&quot;</span>, <span class="stringliteral">&quot;ground&quot;</span>, 0, <span class="stringliteral">&quot;ground_masks&quot;</span>, <span class="stringliteral">&quot;./&quot;</span>);</div>
+<div class="line"> </div>
+<div class="line"><span class="comment">// Append both to create combined annotations</span></div>
+<div class="line">radiationmodel.writeImageSegmentationMasks(<span class="stringliteral">&quot;visible&quot;</span>, <span class="stringliteral">&quot;ground&quot;</span>, 0, <span class="stringliteral">&quot;combined_masks&quot;</span>, <span class="stringliteral">&quot;./&quot;</span>, <span class="keyword">false</span>);</div>
+<div class="line">radiationmodel.writeImageSegmentationMasks(<span class="stringliteral">&quot;visible&quot;</span>, <span class="stringliteral">&quot;bunny&quot;</span>, 1, <span class="stringliteral">&quot;combined_masks&quot;</span>, <span class="stringliteral">&quot;./&quot;</span>, <span class="keyword">true</span>);</div>
+</div><!-- fragment --><p>Below is example code of writing an RGB image (3 spectral bands).</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_radiation_model_8h.html">RadiationModel.h</a>&quot;</span></div>
 <div class="line"><span class="keyword">using namespace </span>helios;</div>
 <div class="line"> </div>

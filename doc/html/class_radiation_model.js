@@ -96,6 +96,8 @@ var class_radiation_model =
     [ "writeDepthImageData", "class_radiation_model.html#ad495efb7a88df316cc8117e1d181d104", null ],
     [ "writeImageBoundingBoxes", "class_radiation_model.html#a59db63fb5cf7d82ab641f636378923fd", null ],
     [ "writeImageBoundingBoxes_ObjectData", "class_radiation_model.html#ac78340f2c7f5cf9089e26d15ea5dc41b", null ],
+    [ "writeImageSegmentationMasks", "class_radiation_model.html#ae6a2af975c952e8f0a728421ab566a5c", null ],
+    [ "writeImageSegmentationMasks_ObjectData", "class_radiation_model.html#a0b2cf44026deb42cd8d1660facc9bec7", null ],
     [ "writeNormCameraImage", "class_radiation_model.html#a61abdff90fd75f3ebebc6b8f189cdac9", null ],
     [ "writeNormDepthImage", "class_radiation_model.html#a633d84a823ad4cd99495a06afc13d7a3", null ],
     [ "writeObjectDataLabelMap", "class_radiation_model.html#afdbe940b3c4ae5855a0fcbe5b0b7f708", null ],

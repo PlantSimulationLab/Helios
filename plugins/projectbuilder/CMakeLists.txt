@@ -73,7 +73,7 @@ if("solarposition" IN_LIST PLUGINS OR "radiation" IN_LIST PLUGINS) # solarpositi
             message( FATAL_ERROR "The executable name cannot be the same as a plugin name. Please rename your executable." )
         endif()
         add_subdirectory( "${BASE_DIRECTORY}/plugins/${TEMP_PLUGIN}" "${PROJECT_BINARY_DIR}/plugins/${TEMP_PLUGIN}" )
-        target_link_libraries( ${EXECUTABLE_NAME} ${TEMP_PLUGIN} )
+        target_link_libraries( ${EXECUTABLE_NAME} PUBLIC ${TEMP_PLUGIN} )
         target_link_libraries( ${TEMP_PLUGIN} PUBLIC helios )
     endif()
     add_definitions(-DENABLE_SOLARPOSITION)
@@ -124,16 +124,23 @@ add_library(projectbuilder STATIC ${SOURCES})
 
 target_include_directories(projectbuilder PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
+# Set Objective-C++ compile flags for macOS when visualizer is enabled
+if(APPLE AND "visualizer" IN_LIST PLUGINS)
+    # Only apply -x objective-c++ to C++ source files, not .m files
+    target_compile_options(projectbuilder PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:-x objective-c++>
+    )
+endif()
+
 #target_compile_definitions(projectbuilder PUBLIC BOUNDARYLAYERCONDUCTANCEMODEL)
 #target_compile_definitions(projectbuilder PUBLIC BOUNDARYLAYERCONDUCTANCEMODEL)
 
 # CUDA + OPTIX required for energybalance and radiation
-if("radiation" IN_LIST PLUGINS OR "energybalanace" IN_LIST PLUGINS)
-    find_package(CUDA REQUIRED)
-    if(CUDA_FOUND)
-        include_directories(${CUDA_INCLUDE_DIRS})
-        target_link_libraries( projectbuilder PRIVATE ${CUDA_LIBRARIES} )
-    endif(CUDA_FOUND)
+if("radiation" IN_LIST PLUGINS OR "energybalance" IN_LIST PLUGINS)
+    find_package(CUDAToolkit REQUIRED)
+    if(CUDAToolkit_FOUND)
+        target_link_libraries( projectbuilder PRIVATE CUDA::cudart_static )
+    endif(CUDAToolkit_FOUND)
     if(UNIX AND NOT APPLE)
         if( OPTIX_VERSION_LEGACY )
             set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../radiation/lib/OptiX/linux64-5.1.0/)
@@ -233,10 +240,6 @@ if("visualizer" IN_LIST PLUGINS)
             message(FATAL_ERROR "Cocoa library not found.")
         endif()
         target_link_libraries(projectbuilder PUBLIC ${COCOA_LIBRARY})
-        add_compile_options(
-            "$<$<COMPILE_LANGUAGE:CXX>:-x objective-c++>"
-            "$<$<COMPILE_LANGUAGE:C>:-x objective-c++>"
-        )
         # list(APPEND CMAKE_C_FLAGS  "-x objective-c++")
         # list(APPEND CMAKE_CXX_FLAGS "-x objective-c++")
         #nfd

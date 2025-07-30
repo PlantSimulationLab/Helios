@@ -509,6 +509,191 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
     output_xml.close();
 }
 
+void PlantArchitecture::writeQSMCylinderFile(uint plantID, const std::string &filename) const {
+
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::writeQSMCylinderFile): Plant ID " + std::to_string(plantID) + " does not exist.");
+    }
+
+    std::string output_file = filename;
+    if (!validateOutputPath(output_file, {".txt", ".TXT"})) {
+        helios_runtime_error("ERROR (PlantArchitecture::writeQSMCylinderFile): Could not open file " + filename + " for writing. Make sure the directory exists and is writable.");
+    } else if (getFileName(output_file).empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::writeQSMCylinderFile): The output file given was a directory. This argument should be the path to a file not to a directory.");
+    }
+
+    std::ofstream output_qsm(filename);
+
+    if (!output_qsm.is_open()) {
+        helios_runtime_error("ERROR (PlantArchitecture::writeQSMCylinderFile): Could not open file " + filename + " for writing. Make sure the directory exists and is writable.");
+    }
+
+    // Write header line
+    output_qsm << "radius (m)\tlength (m)\tstart_point\taxis_direction\tparent\textension\tbranch\tbranch_order\tposition_in_branch\tmad\tSurfCov\tadded\tUnmodRadius (m)" << std::endl;
+
+    const auto &plant = plant_instances.at(plantID);
+
+    // Cylinder ID counter (row number = cylinder ID in TreeQSM format)
+    uint cylinder_id = 1;
+
+    // Maps to track relationships between shoots and cylinders
+    std::map<int, std::vector<uint>> shoot_cylinder_ids; // shoot ID -> cylinder IDs
+    std::map<int, uint> shoot_branch_id; // shoot ID -> branch ID
+    std::map<int, uint> shoot_branch_order; // shoot ID -> branch order
+
+    // Assign branch IDs and orders to shoots
+    uint branch_id_counter = 1;
+    for (const auto &shoot: plant.shoot_tree) {
+        shoot_branch_id[shoot->ID] = branch_id_counter++;
+
+        // Determine branch order based on parent
+        if (shoot->parent_shoot_ID == -1) {
+            // Base shoot is order 0 (trunk)
+            shoot_branch_order[shoot->ID] = 0;
+        } else {
+            // Child shoot has order = parent order + 1
+            shoot_branch_order[shoot->ID] = shoot_branch_order[shoot->parent_shoot_ID] + 1;
+        }
+    }
+
+    // Process each shoot
+    for (const auto &shoot: plant.shoot_tree) {
+
+        // Get shoot properties
+        uint branch_id = shoot_branch_id[shoot->ID];
+        uint branch_order = shoot_branch_order[shoot->ID];
+        uint position_in_branch = 1;
+        // Track the last vertex position for vertex sharing between phytomers
+        helios::vec3 last_vertex_position;
+        bool has_last_vertex = false;
+
+        // Process each phytomer in the shoot
+        for (uint phytomer_idx = 0; phytomer_idx < shoot->phytomers.size(); phytomer_idx++) {
+
+            const auto &vertices = shoot->shoot_internode_vertices[phytomer_idx];
+            const auto &radii = shoot->shoot_internode_radii[phytomer_idx];
+
+            // Handle vertex sharing for single-segment phytomer tubes
+            if (vertices.size() == 1 && has_last_vertex) {
+                // This phytomer has only one vertex - use the last vertex from previous phytomer as start
+                helios::vec3 start = last_vertex_position;
+                helios::vec3 current_end = vertices[0];
+                float current_radius = radii[0];
+
+                // Calculate initial length
+                helios::vec3 axis = current_end - start;
+                float length = axis.magnitude();
+
+                axis = axis / length; // Normalize axis
+
+                // Process this as a single cylinder
+                // Determine parent cylinder ID
+                uint parent_id = 0;
+                if (cylinder_id > 1) {
+                    parent_id = cylinder_id - 1; // Parent is previous cylinder
+                }
+
+                // Extension cylinder (next cylinder in same branch) - will be updated later if needed
+                uint extension_id = 0;
+
+                // Write cylinder data
+                output_qsm << std::fixed << std::setprecision(4);
+                output_qsm << current_radius << "\t";
+                output_qsm << length << "\t";
+                output_qsm << start.x << "\t" << start.y << "\t" << start.z << "\t";
+                output_qsm << axis.x << "\t" << axis.y << "\t" << axis.z << "\t";
+                output_qsm << parent_id << "\t";
+                output_qsm << extension_id << "\t";
+                output_qsm << branch_id << "\t";
+                output_qsm << branch_order << "\t";
+                output_qsm << position_in_branch << "\t";
+                output_qsm << "0.0002" << "\t"; // mad (using default value)
+                output_qsm << "1" << "\t"; // SurfCov (using default value)
+                output_qsm << "0" << "\t"; // added flag
+                output_qsm << current_radius << std::endl; // UnmodRadius
+
+                // Store cylinder ID for this shoot
+                shoot_cylinder_ids[shoot->ID].push_back(cylinder_id);
+
+                cylinder_id++;
+                position_in_branch++;
+
+                // Update last vertex for next phytomer
+                last_vertex_position = current_end;
+
+            } else {
+                // Normal processing for phytomers with multiple vertices
+                for (int seg = 0; seg < vertices.size() - 1; seg++) {
+
+                    // Start with the current segment
+                    helios::vec3 start = vertices[seg];
+                    helios::vec3 current_end = vertices[seg + 1];
+                    float current_radius = radii[seg];
+
+                    // Calculate initial length
+                    helios::vec3 axis = current_end - start;
+                    float length = axis.magnitude();
+
+                    axis = axis / length; // Normalize axis
+
+                    // Determine parent cylinder ID
+                    uint parent_id = 0;
+                    if (cylinder_id > 1) {
+                        if (seg == 0 && phytomer_idx == 0 && shoot->parent_shoot_ID != -1) {
+                            // First cylinder of child shoot - parent is last cylinder of connection point
+                            // For simplicity, using previous cylinder as parent
+                            parent_id = cylinder_id - 1;
+                        } else if (seg == 0 && phytomer_idx > 0) {
+                            // First segment of new phytomer - parent is last segment of previous phytomer
+                            parent_id = cylinder_id - 1;
+                        } else {
+                            // Continuation within phytomer - parent is previous segment
+                            parent_id = cylinder_id - 1;
+                        }
+                    }
+
+                    // Extension cylinder (next cylinder in same branch) - will be updated later if needed
+                    uint extension_id = 0;
+
+                    // Write cylinder data
+                    output_qsm << std::fixed << std::setprecision(4);
+                    output_qsm << current_radius << "\t";
+                    output_qsm << length << "\t";
+                    output_qsm << start.x << "\t" << start.y << "\t" << start.z << "\t";
+                    output_qsm << axis.x << "\t" << axis.y << "\t" << axis.z << "\t";
+                    output_qsm << parent_id << "\t";
+                    output_qsm << extension_id << "\t";
+                    output_qsm << branch_id << "\t";
+                    output_qsm << branch_order << "\t";
+                    output_qsm << position_in_branch << "\t";
+                    output_qsm << "0.0002" << "\t"; // mad (using default value)
+                    output_qsm << "1" << "\t"; // SurfCov (using default value)
+                    output_qsm << "0" << "\t"; // added flag
+                    output_qsm << current_radius << std::endl; // UnmodRadius
+
+                    // Store cylinder ID for this shoot
+                    shoot_cylinder_ids[shoot->ID].push_back(cylinder_id);
+
+                    cylinder_id++;
+                    position_in_branch++;
+                }
+
+                // Update last vertex position for vertex sharing
+                if (vertices.size() >= 2) {
+                    last_vertex_position = vertices.back();
+                    has_last_vertex = true;
+                } else if (vertices.size() == 1) {
+                    // This shouldn't happen in normal processing, but handle it for completeness
+                    last_vertex_position = vertices[0];
+                    has_last_vertex = true;
+                }
+            }
+        }
+    }
+
+    output_qsm.close();
+}
+
 std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &filename, bool quiet) {
 
     if (!quiet) {

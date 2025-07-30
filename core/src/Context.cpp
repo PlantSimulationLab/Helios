@@ -11,7 +11,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-*/
+ */
 
 #include "Context.h"
 
@@ -439,14 +439,6 @@ float Context::randn() {
 float Context::randn(float mean, float stddev) {
     return mean + norm_distribution(generator) * fabs(stddev);
 }
-
-
-
-
-
-
-
-
 
 
 std::vector<uint> Context::getAllUUIDs() const {
@@ -1763,7 +1755,6 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
 }
 
 
-
 std::vector<uint> Context::addSphere(uint Ndivs, const vec3 &center, float radius) {
     RGBcolor color = make_RGBcolor(0.f, 0.75f, 0.f); // Default color is green
 
@@ -2867,12 +2858,12 @@ std::vector<RGBcolor> Context::generateColormap(const std::string &colormap, uin
         clocs_c.at(4) = 1.f;
     } else if (colormap == "cool") {
         ctable_c.resize(2);
-        ctable_c.at(1) = RGB::cyan;
-        ctable_c.at(2) = RGB::magenta;
+        ctable_c.at(0) = RGB::cyan;
+        ctable_c.at(1) = RGB::magenta;
 
         clocs_c.resize(2);
-        clocs_c.at(1) = 0.f;
-        clocs_c.at(2) = 1.f;
+        clocs_c.at(0) = 0.f;
+        clocs_c.at(1) = 1.f;
     } else if (colormap == "lava") {
         ctable_c.resize(5);
         ctable_c.at(0) = make_RGBcolor(0.f, 0.05f, 0.05f);

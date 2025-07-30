@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.41</span>
+       <span id="projectnumber">&#160;v1.3.42</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -331,7 +331,7 @@ $(function(){initNavTree('plugins_2planthydraulics_2tests_2self_test_8cpp_source
 <div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>        DOCTEST_CHECK_NOTHROW(psi_soil = hydraulics.getSoilWaterPotential(leafUUID));</div>
 <div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>        DOCTEST_CHECK_NOTHROW(psi_root = hydraulics.getRootWaterPotential(leafUUID));</div>
 <div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>        DOCTEST_CHECK_NOTHROW(psi_stem = hydraulics.getStemWaterPotential(leafUUID));</div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>        </div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span> </div>
 <div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>        <span class="comment">// Check that values are finite and reasonable</span></div>
 <div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>        DOCTEST_CHECK(std::isfinite(psi_soil));</div>
 <div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>        DOCTEST_CHECK(std::isfinite(psi_root));</div>
@@ -349,13 +349,13 @@ $(function(){initNavTree('plugins_2planthydraulics_2tests_2self_test_8cpp_source
 <div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>    context.setOption(<span class="stringliteral">&quot;silence&quot;</span>, <span class="keyword">true</span>);</div>
 <div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span> </div>
 <div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    <span class="keywordtype">int</span> result = context.run();</div>
-<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>    </div>
-<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>    <span class="keywordflow">if</span>(result == 0) {</div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span> </div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>    <span class="keywordflow">if</span> (result == 0) {</div>
 <div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;Plant Hydraulics Model self-test PASSED.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>    } <span class="keywordflow">else</span> {</div>
 <div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;Plant Hydraulics Model self-test FAILED.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>    }</div>
-<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>    </div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span> </div>
 <div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>    <span class="keywordflow">return</span> result;</div>
 <div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>}</div>
 </div>

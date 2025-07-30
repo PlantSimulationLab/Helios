@@ -2479,3 +2479,44 @@ The radiation model has been re-designed, with the following primary additions:
 
 # Visualizer 
 - Functions for reading/writing of PNG and JPEG files have been removed from the Visualizer. Functions from the Context are now used instead, which reduces redundant code.
+
+# [1.3.42] 2025-07-30
+
+- Split tutorials into separate files for better organization.
+- `detect_GPU_compute.cmake` script updated to fix some issues on Windows systems.
+
+  🚨+ NEW PLUG-IN + 🚨
+- Added a new `collisiondetection` plug-in for efficiently calculating primitive and object collisions.
+
+# Context
+- `Context::generateColormap()` is now public. An error with the "cool" colormap was also fixed.
+
+# LiDAR 
+- Added tutorials for several LiDAR application examples.
+- `LiDARcloud::addGridWireframeToVisualizer()` now has an optional argument to specify the line width.
+- All of the file exporting methods now try to create the output directory if it does not exist.
+- Updated error throwing to use `helios_runtime_error()`.
+- Added `LiDARcloud::loadTreeQSM()` and `LiDARcloud::loadTreeQSMColormap()` methods to load a TreeQSM output file and build it in the Context using tube objects.
+- Made `LiDARcloud::loadASCIIFile()` public, and modified it to take a file name rather than a parameters structure.
+- Added overloaded `LiDARcloud::addHitsToVisualizer()` that allows specification of the point color.
+
+# Visualizer
+- Added option to `Visualizer::addLine()` to be able to specify the line width.
+- Added option to `Visualizer::addPoint()` to be able to specify the point size.
+- Refactored how points are visualized to add automatic culling that speeds up rendering of large point clouds.
+- Broke `Visualizer.cpp` into four different files, as it was getting huge.
+- Fixed an issue introduced in v1.3.40 causing images to be written up-side down when using the `Visualizer::printWindow()` method.
+- Fixed an issue that could cause `Visualizer::printWindow()` to write black images on Linux.
+
+# Plant Architecture
+- Added `PlantArchitecture::writeQSMCylinderFile()` method to export the plant geometry as a TreeQSM cylinder file.
+- Added collision detection capabilities within the plant architecture plug-in. This is in the intial testing phase for now, and will be further developed in future versions.
+
+# Radiation
+- Added `RadiationModel::writeImageSegmentationMasks()` and `RadiationModel::writeImageSegmentationMasks_ObjectData()` to directly write COCO JSON segmentation masks for objects in the scene.
+- Moved camera-related code to separate file `RadiationCamera.cpp` to improve organization.
+- Many modifications to `CMakeLists.txt` file to fix an issue on Windows systems introduced in v1.3.40.
+- Fixed an error checking issue with camera processing pipeline functions to allow cameras with more than 3 channels.
+
+# Aerial LiDAR, LiDAR, Energy Balance, and Voxel Intersection
+- Some modifications to `CMakeLists.txt` to allow building with the project builder on Windows systems.

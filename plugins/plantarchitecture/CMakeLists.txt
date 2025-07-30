@@ -2,15 +2,26 @@ cmake_minimum_required(VERSION 3.15)
 
 project(helios)
 
+# Automatically include collision detection plugin if not already in PLUGINS list
+if(NOT "collisiondetection" IN_LIST PLUGINS AND NOT TARGET collisiondetection)
+    message(STATUS "[Plant Architecture] Automatically loading collision detection dependency")
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../collisiondetection" "${CMAKE_BINARY_DIR}/plugins/collisiondetection_auto")
+    target_link_libraries(collisiondetection PUBLIC helios)
+endif()
+
 add_library( plantarchitecture STATIC "src/PlantArchitecture.cpp"
         "src/PlantLibrary.cpp"
-        "src/Assets.cpp;src/InputOutput.cpp"
+        "src/Assets.cpp"
+        "src/InputOutput.cpp"
         "src/CarbohydrateModel.cpp"
         "src/Hungarian.cpp"
         "tests/selfTest.cpp"
 )
 
-target_include_directories(plantarchitecture PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include )
+target_include_directories(plantarchitecture PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" )
+
+target_link_libraries(plantarchitecture PUBLIC collisiondetection)
+add_dependencies(plantarchitecture collisiondetection)
 
 file(GLOB_RECURSE OBJ_ASSET_FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/obj/*")
 add_custom_command(

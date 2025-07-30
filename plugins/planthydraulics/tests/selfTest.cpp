@@ -185,7 +185,7 @@ DOCTEST_TEST_CASE("PlantHydraulicsModel - Documentation Example 2") {
         DOCTEST_CHECK_NOTHROW(psi_soil = hydraulics.getSoilWaterPotential(leafUUID));
         DOCTEST_CHECK_NOTHROW(psi_root = hydraulics.getRootWaterPotential(leafUUID));
         DOCTEST_CHECK_NOTHROW(psi_stem = hydraulics.getStemWaterPotential(leafUUID));
-        
+
         // Check that values are finite and reasonable
         DOCTEST_CHECK(std::isfinite(psi_soil));
         DOCTEST_CHECK(std::isfinite(psi_root));
@@ -202,12 +202,12 @@ int PlantHydraulicsModel::selfTest() {
     context.setOption("silence", true);
 
     int result = context.run();
-    
-    if(result == 0) {
+
+    if (result == 0) {
         std::cout << "Plant Hydraulics Model self-test PASSED." << std::endl;
     } else {
         std::cout << "Plant Hydraulics Model self-test FAILED." << std::endl;
     }
-    
+
     return result;
 }

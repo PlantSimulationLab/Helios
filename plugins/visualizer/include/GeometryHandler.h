@@ -45,6 +45,7 @@ public:
             visible_flag_data[geometry_type] = {};
             context_geometry_flag_data[geometry_type] = {};
             delete_flag_data[geometry_type] = {};
+            size_data[geometry_type] = {};
         }
     }
 
@@ -325,6 +326,30 @@ public:
      */
     [[nodiscard]] const std::vector<int> *getCoordinateFlagData_ptr(VisualizerGeometryType geometry_type) const;
 
+    /**
+     * \brief Sets the size for a geometry element identified by its UUID.
+     *
+     * \param[in] UUID The unique identifier of the geometry element.
+     * \param[in] size The size value to set for the geometry element.
+     */
+    void setSize(size_t UUID, float size);
+
+    /**
+     * \brief Retrieves the size value associated with a specific UUID.
+     *
+     * \param[in] UUID Unique identifier of the geometry whose size is to be retrieved.
+     * \return The size value corresponding to the specified UUID.
+     */
+    [[nodiscard]] float getSize(size_t UUID) const;
+
+    /**
+     * \brief Retrieves a pointer to the size data associated with the specified geometry type.
+     *
+     * \param[in] geometry_type The type of visualizer geometry for which the size data is requested.
+     * \return A constant pointer to a vector of floats representing the size data for the given geometry type.
+     */
+    [[nodiscard]] const std::vector<float> *getSizeData_ptr(VisualizerGeometryType geometry_type) const;
+
     [[nodiscard]] bool getDeleteFlag(size_t UUID) const;
 
     /**
@@ -400,6 +425,7 @@ private:
         size_t visible_index;
         size_t context_geometry_flag_index;
         size_t delete_flag_index;
+        size_t size_index;
     };
 
     std::mt19937_64 random_generator;
@@ -417,6 +443,7 @@ private:
     std::unordered_map<VisualizerGeometryType, std::vector<char>> visible_flag_data;
     std::unordered_map<VisualizerGeometryType, std::vector<bool>> context_geometry_flag_data;
     std::unordered_map<VisualizerGeometryType, std::vector<bool>> delete_flag_data;
+    std::unordered_map<VisualizerGeometryType, std::vector<float>> size_data;
 
     std::unordered_set<size_t> dirty_UUIDs;
 

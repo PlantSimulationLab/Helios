@@ -102,7 +102,7 @@ std::vector<vec3> interpolate(const std::vector<int> &keypoints, const std::vect
     }
     if (keypoints_sorted[keypoints_sorted.size() - 1] != num_points - 1) {
         keypoints_sorted.push_back(num_points - 1);
-        keypoints_loc.insert({num_points - 1, keypoints.size()});
+        keypoints_loc.insert({num_points - 1, static_cast<int>(keypoints.size())});
         pos.push_back(pos[pos.size() - 1]);
     }
     for (int i = 0; i < keypoints_sorted.size() - 1; i++) {
@@ -3625,7 +3625,7 @@ void ProjectBuilder::visualize() {
                             count++;
                             new_rig_label = default_rig_label + "_" + std::to_string(count);
                         }
-                        rig_dict.insert({new_rig_label, rig_labels.size()});
+                        rig_dict.insert({new_rig_label, scast<int>(rig_labels.size())});
                         camera_positions.push_back(camera_position);
                         camera_lookats.push_back(camera_lookat);
                         camera_labels.push_back(camera_label);
@@ -3979,7 +3979,7 @@ void ProjectBuilder::visualize() {
                             count++;
                             new_cam_name = default_cam_name + "_" + std::to_string(count);
                         }
-                        camera_dict.insert({new_cam_name, camera_names.size()});
+                        camera_dict.insert({new_cam_name, scast<int>(camera_names.size())});
                         camera_resolutions.push_back(camera_resolution);
                         camera_calibrations.push_back(camera_calibrations[camera_dict[current_cam]]);
                         focal_plane_distances.push_back(focal_plane_distance);
@@ -4109,7 +4109,7 @@ void ProjectBuilder::visualize() {
                             count++;
                             new_light_name = default_light_name + "_" + std::to_string(count);
                         }
-                        light_dict.insert({new_light_name, light_names.size()});
+                        light_dict.insert({new_light_name, scast<int>(light_names.size())});
                         light_spectra.push_back(light_spectra[light_dict[current_light]]);
                         light_types.push_back(light_types[light_dict[current_light]]);
                         light_direction_vec.push_back(light_direction_vec[light_dict[current_light]]);

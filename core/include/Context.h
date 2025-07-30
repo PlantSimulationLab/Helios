@@ -11,7 +11,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-*/
+ */
 
 #ifndef HELIOS_CONTEXT
 #define HELIOS_CONTEXT
@@ -2225,12 +2225,6 @@ namespace helios {
         void loadOsubPData(pugi::xml_node p, uint ID);
 
         void writeDataToXMLstream(const char *data_group, const std::vector<std::string> &data_labels, void *ptr, std::ofstream &outfile) const;
-
-        std::vector<std::string> generateTexturesFromColormap(const std::string &texturefile, const std::vector<RGBcolor> &colormap_data);
-
-        std::vector<RGBcolor> generateColormap(const std::string &colormap, uint Ncolors);
-
-        std::vector<RGBcolor> generateColormap(const std::vector<helios::RGBcolor> &ctable, const std::vector<float> &cfrac, uint Ncolors);
 
 
         //---------- CONTEXT INITIALIZATION FLAGS ---------//
@@ -6188,6 +6182,38 @@ namespace helios {
          * \note If object data does not exist, or object data does not have type of 'std::string', the object is excluded.
          */
         [[nodiscard]] std::vector<uint> filterObjectsByData(const std::vector<uint> &objIDs, const std::string &object_data_label, const std::string &filter_value) const;
+
+        //! Generates texture files by applying a colormap to an input texture image.
+        /**
+         * This function reads an existing texture file and modifies its colors based
+         * on a provided colormap. A new set of texture files is created, one for each
+         * color in the colormap. Each texture file reflects the applied color from
+         * the colormap while preserving the texture's original alpha values.
+         *
+         * \param[in] texturefile The path to the input texture file that will be used as the base for generating new textures.
+         * \param[in] colormap_data A vector containing the RGB colors that will be applied to the texture file. Each color in the colormap results in the generation of one texture file.
+         * \return A vector of strings, where each string is the filename of a newly generated texture file.
+         */
+        std::vector<std::string> generateTexturesFromColormap(const std::string &texturefile, const std::vector<RGBcolor> &colormap_data);
+
+        //! Generates a colormap with a specified number of colors based on the selected colormap type
+        /**
+         * \param[in] colormap The name of the colormap to generate (e.g., "hot", "cool", "lava", etc.).
+         * \param[in] Ncolors The desired number of colors in the output colormap.
+         * \return A vector of RGBcolor objects representing the generated colormap.
+         */
+        std::vector<RGBcolor> generateColormap(const std::string &colormap, uint Ncolors);
+
+        //! Generates a colormap of interpolated colors based on input color table and fractions.
+        /**
+         * \param[in] ctable A vector of RGB colors defining the input color points for interpolation.
+         * \param[in] cfrac A vector of fractional values corresponding to each color in the color table, must match the size of ctable.
+         * \param[in] Ncolors Desired number of output colors in the generated colormap. Must be greater than 0.
+         * \return A vector of RGB colors representing the generated colormap.
+         * \note The input vectors ctable and cfrac must have the same size, and neither can be empty. If the requested Ncolors exceeds the internal limit, it will be truncated to 9999, with a warning issued.
+         */
+        std::vector<RGBcolor> generateColormap(const std::vector<helios::RGBcolor> &ctable, const std::vector<float> &cfrac, uint Ncolors);
+
     };
 
 } // namespace helios

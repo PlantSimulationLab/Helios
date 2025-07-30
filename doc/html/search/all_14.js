@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['julian2calendar_0',['Julian2Calendar',['../group__vectors.html#gad744b2f0b25c66570a13cba4ace0455b',1,'helios']]],
-  ['julianday_1',['JulianDay',['../structhelios_1_1_date.html#abf3a401379adb23851174683a9191efc',1,'helios::Date::JulianDay()'],['../global_8h.html#a7a889dd38f803c031f3e2ce6936b1cdc',1,'helios::JulianDay(int day, int month, int year)'],['../group__functions.html#ga4e5ae2905291ff8a5ed97bc93e7fe71d',1,'helios::JulianDay(const Date &amp;date)']]]
+  ['known_20issues_0',['Known Issues',['../_aerial_li_d_a_r_doc.html#AerialLiDARissues',1,'Known Issues'],['../_b_l_conductance_doc.html#BLCissues',1,'Known Issues'],['../_energy_balance_doc.html#EBissues',1,'Known Issues'],['../_li_d_a_r_doc.html#LiDARissues',1,'Known Issues'],['../_parameter_optimization_doc.html#POissues',1,'Known Issues'],['../_plant_hydraulics_doc.html#PHissues',1,'Known Issues'],['../_project_builder_doc.html#ProjectBuilderIssues',1,'Known Issues'],['../_visualizer_doc.html#VisIssues',1,'Known Issues'],['../_voxel_intersection_doc.html#VoxelIssues',1,'Known Issues'],['../_weber_penn_doc.html#WPTissues',1,'Known Issues']]]
 ];

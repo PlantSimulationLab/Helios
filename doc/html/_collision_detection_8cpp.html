@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.41</span>
+       <span id="projectnumber">&#160;v1.3.42</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -154,35 +154,19 @@ $(function(){initNavTree('_collision_detection_8cpp.html',''); initResizable(tru
 </div>
 
 <div class="header">
-  <div class="summary">
-<a href="#nested-classes">Data Structures</a> &#124;
-<a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">CollisionDetection.cpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><code>#include &quot;<a class="el" href="_collision_detection_8h_source.html">CollisionDetection.h</a>&quot;</code><br />
 <code>#include &lt;algorithm&gt;</code><br />
-<code>#include &lt;numeric&gt;</code><br />
 <code>#include &lt;cmath&gt;</code><br />
 <code>#include &lt;iostream&gt;</code><br />
-<code>#include &lt;cuda_runtime.h&gt;</code><br />
+<code>#include &lt;limits&gt;</code><br />
+<code>#include &lt;numeric&gt;</code><br />
+<code>#include &lt;queue&gt;</code><br />
+<code>#include &lt;random&gt;</code><br />
 </div>
 <p><a href="_collision_detection_8cpp_source.html">Go to the source code of this file.</a></p>
-<table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
-Data Structures</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_g_p_u_b_v_h_node.html">GPUBVHNode</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">GPU-friendly BVH node structure.  <a href="struct_g_p_u_b_v_h_node.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
-Functions</h2></td></tr>
-<tr class="memitem:a9613831fda0fbaf95b71961b83be82a9" id="r_a9613831fda0fbaf95b71961b83be82a9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9613831fda0fbaf95b71961b83be82a9">launchBVHTraversal</a> (void *h_nodes, int node_count, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_query_aabb_min, float *h_query_aabb_max, int num_queries, unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_query)</td></tr>
-<tr class="memdesc:a9613831fda0fbaf95b71961b83be82a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Launch BVH traversal kernel from C++ code.  <br /></td></tr>
-<tr class="separator:a9613831fda0fbaf95b71961b83be82a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afadb33d1e2bee156b6dc8baf22ba6c8a" id="r_afadb33d1e2bee156b6dc8baf22ba6c8a"><td class="memItemLeft" align="right" valign="top">float3&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afadb33d1e2bee156b6dc8baf22ba6c8a">heliosVecToFloat3</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;v)</td></tr>
-<tr class="separator:afadb33d1e2bee156b6dc8baf22ba6c8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Source file for collision detection plugin</p>
 <p>Copyright (C) 2016-2025 Brian Bailey</p>
@@ -190,126 +174,7 @@ Functions</h2></td></tr>
 <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. </p>
 
 <p class="definition">Definition in file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
-</div><h2 class="groupheader">Function Documentation</h2>
-<a id="afadb33d1e2bee156b6dc8baf22ba6c8a" name="afadb33d1e2bee156b6dc8baf22ba6c8a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afadb33d1e2bee156b6dc8baf22ba6c8a">&#9670;&#160;</a></span>heliosVecToFloat3()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">float3 heliosVecToFloat3 </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>v</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00044">44</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a9613831fda0fbaf95b71961b83be82a9" name="a9613831fda0fbaf95b71961b83be82a9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9613831fda0fbaf95b71961b83be82a9">&#9670;&#160;</a></span>launchBVHTraversal()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void launchBVHTraversal </td>
-          <td>(</td>
-          <td class="paramtype">void *</td>          <td class="paramname"><span class="paramname"><em>h_nodes</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>node_count</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">unsigned int *</td>          <td class="paramname"><span class="paramname"><em>h_primitive_indices</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>primitive_count</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float *</td>          <td class="paramname"><span class="paramname"><em>h_primitive_aabb_min</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float *</td>          <td class="paramname"><span class="paramname"><em>h_primitive_aabb_max</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float *</td>          <td class="paramname"><span class="paramname"><em>h_query_aabb_min</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float *</td>          <td class="paramname"><span class="paramname"><em>h_query_aabb_max</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>num_queries</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">unsigned int *</td>          <td class="paramname"><span class="paramname"><em>h_results</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">unsigned int *</td>          <td class="paramname"><span class="paramname"><em>h_result_counts</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>max_results_per_query</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Launch BVH traversal kernel from C++ code. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">h_nodes</td><td>Host array of BVH nodes </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">node_count</td><td>Number of BVH nodes </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">h_primitive_indices</td><td>Host array of primitive indices <br  />
- </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">primitive_count</td><td>Number of primitive indices </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">h_query_aabb_min</td><td>Host array of query AABB minimum corners </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">h_query_aabb_max</td><td>Host array of query AABB maximum corners </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">num_queries</td><td>Number of queries </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">h_results</td><td>Host array for results </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">h_result_counts</td><td>Host array for result counts </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">max_results_per_query</td><td>Maximum results per query </td></tr>
-  </table>
-  </dd>
-</dl>
-
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cu_source.html#l00251">251</a> of file <a class="el" href="_collision_detection_8cu_source.html">CollisionDetection.cu</a>.</p>
-
-</div>
-</div>
-</div><!-- contents -->
+</div></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->

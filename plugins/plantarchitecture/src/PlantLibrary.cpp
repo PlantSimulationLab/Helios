@@ -2876,7 +2876,7 @@ void PlantArchitecture::initializeCherryTomatoShoots() {
 
     PhytomerParameters phytomer_parameters(context_ptr->getRandomGenerator());
 
-    phytomer_parameters.internode.pitch = 10;
+    phytomer_parameters.internode.pitch = 5;
     phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(14, 220);
     phytomer_parameters.internode.radius_initial = 0.001;
     phytomer_parameters.internode.color = make_RGBcolor(0.217, 0.275, 0.0571);

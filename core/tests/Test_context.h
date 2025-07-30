@@ -1161,30 +1161,30 @@ TEST_CASE("Global data") {
 TEST_CASE("Voxel Management") {
     SUBCASE("addVoxel and voxel properties") {
         Context ctx;
-        
+
         vec3 center = make_vec3(1, 2, 3);
         vec3 size = make_vec3(2, 4, 6);
         float rotation = 0.5f * PI_F;
-        
+
         uint vox1 = ctx.addVoxel(center, size);
         DOCTEST_CHECK(ctx.getPrimitiveType(vox1) == PRIMITIVE_TYPE_VOXEL);
         DOCTEST_CHECK(ctx.getVoxelCenter(vox1) == center);
         DOCTEST_CHECK(ctx.getVoxelSize(vox1) == size);
-        
+
         uint vox2 = ctx.addVoxel(center, size, rotation);
         DOCTEST_CHECK(ctx.getVoxelCenter(vox2) == center);
         DOCTEST_CHECK(ctx.getVoxelSize(vox2) == size);
 
         uint vox3 = ctx.addVoxel(center, size, rotation, RGB::red);
         DOCTEST_CHECK(ctx.getPrimitiveColor(vox3) == RGB::red);
-        
+
         uint vox4 = ctx.addVoxel(center, size, rotation, RGBA::red);
         RGBAcolor color_rgba = ctx.getPrimitiveColorRGBA(vox4);
         DOCTEST_CHECK(color_rgba.r == RGBA::red.r);
         DOCTEST_CHECK(color_rgba.a == RGBA::red.a);
-        
+
         DOCTEST_CHECK(ctx.getPrimitiveCount() >= 4);
-        
+
         float area = ctx.getPrimitiveArea(vox1);
         DOCTEST_CHECK(area == doctest::Approx(2.f * (size.x * size.y + size.y * size.z + size.x * size.z)));
     }
@@ -1193,12 +1193,12 @@ TEST_CASE("Voxel Management") {
 TEST_CASE("Texture Management") {
     SUBCASE("texture validation and properties") {
         Context ctx;
-        
+
         uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/solid.jpg");
         ctx.setPrimitiveTextureFile(patch, "lib/images/solid.jpg");
         DOCTEST_CHECK(ctx.getPrimitiveTextureFile(patch) == "lib/images/solid.jpg");
         DOCTEST_CHECK(!ctx.primitiveTextureHasTransparencyChannel(patch));
-        
+
         Texture tex("lib/images/solid.jpg");
         std::vector<vec2> uv = {{0, 0}, {1, 0}, {1, 1}};
         float solid_frac = tex.getSolidFraction(uv);
@@ -1213,12 +1213,12 @@ TEST_CASE("Triangle Management") {
         vec3 v1 = make_vec3(1, 0, 0);
         vec3 v2 = make_vec3(0, 1, 0);
         uint tri = ctx.addTriangle(v0, v1, v2);
-        
+
         vec3 new_v0 = make_vec3(1, 1, 1);
         vec3 new_v1 = make_vec3(2, 1, 1);
         vec3 new_v2 = make_vec3(1, 2, 1);
         ctx.setTriangleVertices(tri, new_v0, new_v1, new_v2);
-        
+
         std::vector<vec3> vertices = ctx.getPrimitiveVertices(tri);
         DOCTEST_CHECK(vertices[0] == new_v0);
         DOCTEST_CHECK(vertices[1] == new_v1);
@@ -1232,53 +1232,53 @@ TEST_CASE("UUID and Object Management") {
         uint p1 = ctx.addPatch();
         uint p2 = ctx.addPatch();
         uint p3 = ctx.addPatch();
-        
+
         std::vector<uint> all_uuids = ctx.getAllUUIDs();
         DOCTEST_CHECK(all_uuids.size() == 3);
         DOCTEST_CHECK(std::find(all_uuids.begin(), all_uuids.end(), p1) != all_uuids.end());
-        
+
         ctx.deletePrimitive(p2);
         std::vector<uint> uuids_with_deleted = {p1, p2, p3};
         ctx.cleanDeletedUUIDs(uuids_with_deleted);
         DOCTEST_CHECK(uuids_with_deleted.size() == 2);
         DOCTEST_CHECK(std::find(uuids_with_deleted.begin(), uuids_with_deleted.end(), p2) == uuids_with_deleted.end());
-        
+
         std::vector<std::vector<uint>> nested_uuids = {{p1, p2}, {p3, p2}};
         ctx.cleanDeletedUUIDs(nested_uuids);
         DOCTEST_CHECK(nested_uuids[0].size() == 1);
         DOCTEST_CHECK(nested_uuids[1].size() == 1);
-        
+
         std::vector<std::vector<std::vector<uint>>> triple_nested = {{{p1, p2, p3}}};
         ctx.cleanDeletedUUIDs(triple_nested);
         DOCTEST_CHECK(triple_nested[0][0].size() == 2);
     }
-    
+
     SUBCASE("object management utilities") {
         Context ctx;
         uint obj = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
-        
+
         DOCTEST_CHECK(ctx.areObjectPrimitivesComplete(obj));
-        
+
         std::vector<uint> obj_ids = {obj, 999};
         ctx.cleanDeletedObjectIDs(obj_ids);
         DOCTEST_CHECK(obj_ids.size() == 1);
         DOCTEST_CHECK(obj_ids[0] == obj);
-        
+
         std::vector<std::vector<uint>> nested_obj_ids = {{obj, 999}, {obj}};
         ctx.cleanDeletedObjectIDs(nested_obj_ids);
         DOCTEST_CHECK(nested_obj_ids[0].size() == 1);
         DOCTEST_CHECK(nested_obj_ids[1].size() == 1);
-        
+
         std::vector<std::vector<std::vector<uint>>> triple_nested_obj = {{{obj, 999}}};
         ctx.cleanDeletedObjectIDs(triple_nested_obj);
         DOCTEST_CHECK(triple_nested_obj[0][0].size() == 1);
-        
-        Box* box_ptr = ctx.getBoxObjectPointer(obj);
+
+        Box *box_ptr = ctx.getBoxObjectPointer(obj);
         DOCTEST_CHECK(box_ptr != nullptr);
-        
+
         vec3 new_origin = make_vec3(5, 5, 5);
         ctx.setObjectOrigin(obj, new_origin);
-        
+
         vec3 new_normal = make_vec3(0, 1, 0);
         ctx.setObjectAverageNormal(obj, make_vec3(0, 0, 0), new_normal);
     }
@@ -1288,12 +1288,12 @@ TEST_CASE("Tile Object Advanced Features") {
     SUBCASE("tile object subdivision management") {
         Context ctx;
         uint tile = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(4, 4), nullrotation, make_int2(2, 2));
-        
+
         float area_ratio = ctx.getTileObjectAreaRatio(tile);
         DOCTEST_CHECK(area_ratio > 0.f);
-        
+
         ctx.setTileObjectSubdivisionCount({tile}, make_int2(4, 4));
-        
+
         ctx.setTileObjectSubdivisionCount({tile}, 0.5f);
     }
 }
@@ -1307,7 +1307,7 @@ TEST_CASE("Pseudocolor Visualization") {
             ctx.setPrimitiveData(p, "value", float(i));
             patches.push_back(p);
         }
-        
+
         DOCTEST_CHECK_NOTHROW(ctx.colorPrimitiveByDataPseudocolor(patches, "value", "hot", 10));
         DOCTEST_CHECK_NOTHROW(ctx.colorPrimitiveByDataPseudocolor(patches, "value", "rainbow", 5, 0.f, 4.f));
     }
@@ -1331,7 +1331,7 @@ TEST_CASE("Tube Object Management") {
         std::vector<vec3> nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1)};
         std::vector<float> radii = {0.2f, 0.1f};
         uint tube = ctx.addTubeObject(10, nodes, radii);
-        
+
         ctx.appendTubeSegment(tube, make_vec3(0, 0, 2), 0.05f, "lib/images/solid.jpg", make_vec2(0.5f, 1.0f));
         DOCTEST_CHECK(ctx.getTubeObjectNodeCount(tube) == 3);
     }
@@ -1342,16 +1342,16 @@ TEST_CASE("Edge Cases and Additional Coverage") {
         Context ctx;
         ctx.setDate(1, 1, 2025);
         DOCTEST_CHECK(ctx.getJulianDate() == 1);
-        
+
         ctx.setDate(31, 12, 2025);
         DOCTEST_CHECK(ctx.getJulianDate() == 365);
-        
+
         ctx.setDate(100, 2025);
         Date d = ctx.getDate();
         DOCTEST_CHECK(d.day == 10);
         DOCTEST_CHECK(d.month == 4);
     }
-    
+
     SUBCASE("time edge cases") {
         Context ctx;
         ctx.setTime(0, 0, 0);
@@ -1359,157 +1359,157 @@ TEST_CASE("Edge Cases and Additional Coverage") {
         DOCTEST_CHECK(t.hour == 0);
         DOCTEST_CHECK(t.minute == 0);
         DOCTEST_CHECK(t.second == 0);
-        
+
         ctx.setTime(59, 59, 23);
         t = ctx.getTime();
         DOCTEST_CHECK(t.hour == 23);
         DOCTEST_CHECK(t.minute == 59);
         DOCTEST_CHECK(t.second == 59);
     }
-    
+
     SUBCASE("random number edge cases") {
         Context ctx;
         ctx.seedRandomGenerator(0);
-        
+
         float r1 = ctx.randu(5.f, 5.f);
         DOCTEST_CHECK(r1 == doctest::Approx(5.f));
-        
+
         int ri = ctx.randu(10, 10);
         DOCTEST_CHECK(ri == 10);
-        
+
         float rn = ctx.randn(0.f, 0.f);
         DOCTEST_CHECK(rn == doctest::Approx(0.f));
     }
-    
+
     SUBCASE("texture edge cases") {
         Context ctx;
         uint patch = ctx.addPatch();
-        
+
         ctx.overridePrimitiveTextureColor(patch);
         ctx.usePrimitiveTextureColor(patch);
-        
+
         std::vector<uint> patches = {patch};
         ctx.overridePrimitiveTextureColor(patches);
         ctx.usePrimitiveTextureColor(patches);
-        
+
         DOCTEST_CHECK(!ctx.isPrimitiveTextureColorOverridden(patch));
     }
-    
+
     SUBCASE("primitive existence checks") {
         Context ctx;
         uint p1 = ctx.addPatch();
         uint p2 = ctx.addPatch();
-        
+
         DOCTEST_CHECK(ctx.doesPrimitiveExist(p1));
         DOCTEST_CHECK(ctx.doesPrimitiveExist({p1, p2}));
-        
+
         ctx.deletePrimitive(p1);
         DOCTEST_CHECK(!ctx.doesPrimitiveExist(p1));
         DOCTEST_CHECK(!ctx.doesPrimitiveExist({p1, p2}));
         DOCTEST_CHECK(ctx.doesPrimitiveExist(std::vector<uint>{p2}));
     }
-    
+
     SUBCASE("object containment checks") {
         Context ctx;
         uint obj = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
         std::vector<uint> prims = ctx.getObjectPrimitiveUUIDs(obj);
-        
+
         DOCTEST_CHECK(ctx.doesObjectContainPrimitive(obj, prims[0]));
-        
+
         uint independent_patch = ctx.addPatch();
         DOCTEST_CHECK(!ctx.doesObjectContainPrimitive(obj, independent_patch));
     }
-    
+
     SUBCASE("transformation matrix operations") {
         Context ctx;
         uint p = ctx.addPatch();
-        
-        float identity[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
+
+        float identity[16] = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
         ctx.setPrimitiveTransformationMatrix(p, identity);
-        
+
         std::vector<uint> patches = {p};
         ctx.setPrimitiveTransformationMatrix(patches, identity);
-        
+
         uint obj = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
         ctx.setObjectTransformationMatrix(obj, identity);
-        
+
         std::vector<uint> objs = {obj};
         ctx.setObjectTransformationMatrix(objs, identity);
-        
+
         float retrieved[16];
         ctx.getObjectTransformationMatrix(obj, retrieved);
         for (int i = 0; i < 16; i++) {
             DOCTEST_CHECK(retrieved[i] == doctest::Approx(identity[i]));
         }
     }
-    
+
     SUBCASE("object type and texture checks") {
         Context ctx;
         uint obj = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
-        
+
         DOCTEST_CHECK(!ctx.objectHasTexture(obj));
-        
+
         uint textured_obj = ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2), "lib/images/solid.jpg");
         DOCTEST_CHECK(ctx.objectHasTexture(textured_obj));
     }
-    
+
     SUBCASE("tube object segment operations") {
         Context ctx;
         std::vector<vec3> nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1), make_vec3(0, 0, 2)};
         std::vector<float> radii = {0.2f, 0.15f, 0.1f};
         uint tube = ctx.addTubeObject(10, nodes, radii);
-        
+
         float seg_volume = ctx.getTubeObjectSegmentVolume(tube, 0);
         DOCTEST_CHECK(seg_volume > 0.f);
-        
+
         seg_volume = ctx.getTubeObjectSegmentVolume(tube, 1);
         DOCTEST_CHECK(seg_volume > 0.f);
     }
-    
+
     SUBCASE("cone object advanced properties") {
         Context ctx;
         uint cone = ctx.addConeObject(10, make_vec3(0, 0, 0), make_vec3(0, 0, 2), 1.f, 0.5f);
-        
+
         float radius0 = ctx.getConeObjectNodeRadius(cone, 0);
         DOCTEST_CHECK(radius0 == doctest::Approx(1.f));
-        
+
         float radius1 = ctx.getConeObjectNodeRadius(cone, 1);
         DOCTEST_CHECK(radius1 == doctest::Approx(0.5f));
-        
+
         float length = ctx.getConeObjectLength(cone);
         DOCTEST_CHECK(length == doctest::Approx(2.f));
-        
+
         DOCTEST_CHECK(ctx.getConeObjectSubdivisionCount(cone) == 10);
     }
-    
+
     SUBCASE("primitive color operations") {
         Context ctx;
         uint p = ctx.addPatch();
-        
+
         ctx.setPrimitiveColor(p, RGB::blue);
         DOCTEST_CHECK(ctx.getPrimitiveColor(p) == RGB::blue);
-        
+
         ctx.setPrimitiveColor(p, RGBA::green);
         RGBAcolor rgba = ctx.getPrimitiveColorRGBA(p);
         DOCTEST_CHECK(rgba.r == RGBA::green.r);
         DOCTEST_CHECK(rgba.a == RGBA::green.a);
-        
+
         std::vector<uint> patches = {p};
         ctx.setPrimitiveColor(patches, RGB::red);
         DOCTEST_CHECK(ctx.getPrimitiveColor(p) == RGB::red);
-        
+
         ctx.setPrimitiveColor(patches, RGBA::yellow);
         rgba = ctx.getPrimitiveColorRGBA(p);
         DOCTEST_CHECK(rgba.r == RGBA::yellow.r);
     }
-    
+
     SUBCASE("object color operations") {
         Context ctx;
         uint obj = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
-        
+
         ctx.setObjectColor(obj, RGB::cyan);
         ctx.setObjectColor(obj, RGBA::magenta);
-        
+
         std::vector<uint> objs = {obj};
         ctx.setObjectColor(objs, RGB::white);
         ctx.setObjectColor(objs, RGBA::black);
@@ -1521,7 +1521,7 @@ TEST_CASE("Print and Information Functions") {
         Context ctx;
         uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
         uint obj = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
-        
+
         // These functions print to stdout, so we just test they don't crash
         DOCTEST_CHECK_NOTHROW(ctx.printPrimitiveInfo(patch));
         DOCTEST_CHECK_NOTHROW(ctx.printObjectInfo(obj));
@@ -1531,32 +1531,32 @@ TEST_CASE("Print and Information Functions") {
 TEST_CASE("Object Pointer Access") {
     SUBCASE("getObjectPointer functions") {
         Context ctx;
-        
+
         uint box = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
-        Box* box_ptr = ctx.getBoxObjectPointer(box);
+        Box *box_ptr = ctx.getBoxObjectPointer(box);
         DOCTEST_CHECK(box_ptr != nullptr);
-        
+
         uint disk = ctx.addDiskObject(10, make_vec3(0, 0, 0), make_vec2(1, 1));
-        Disk* disk_ptr = ctx.getDiskObjectPointer(disk);
+        Disk *disk_ptr = ctx.getDiskObjectPointer(disk);
         DOCTEST_CHECK(disk_ptr != nullptr);
-        
+
         uint sphere = ctx.addSphereObject(10, make_vec3(0, 0, 0), 1.f);
-        Sphere* sphere_ptr = ctx.getSphereObjectPointer(sphere);
+        Sphere *sphere_ptr = ctx.getSphereObjectPointer(sphere);
         DOCTEST_CHECK(sphere_ptr != nullptr);
-        
+
         std::vector<vec3> nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1)};
         std::vector<float> radii = {0.2f, 0.1f};
         uint tube = ctx.addTubeObject(10, nodes, radii);
-        Tube* tube_ptr = ctx.getTubeObjectPointer(tube);
+        Tube *tube_ptr = ctx.getTubeObjectPointer(tube);
         DOCTEST_CHECK(tube_ptr != nullptr);
-        
+
         uint cone = ctx.addConeObject(10, make_vec3(0, 0, 0), make_vec3(0, 0, 1), 0.5f, 0.3f);
-        Cone* cone_ptr = ctx.getConeObjectPointer(cone);
+        Cone *cone_ptr = ctx.getConeObjectPointer(cone);
         DOCTEST_CHECK(cone_ptr != nullptr);
-        
+
         std::vector<uint> prim_uuids = {ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0))};
         uint polymesh = ctx.addPolymeshObject(prim_uuids);
-        Polymesh* polymesh_ptr = ctx.getPolymeshObjectPointer(polymesh);
+        Polymesh *polymesh_ptr = ctx.getPolymeshObjectPointer(polymesh);
         DOCTEST_CHECK(polymesh_ptr != nullptr);
     }
 }
@@ -1566,13 +1566,13 @@ TEST_CASE("Advanced Primitive Operations") {
         Context ctx;
         uint p1 = ctx.addPatch();
         uint p2 = ctx.addPatch();
-        
+
         // Test hiding/showing primitives
         ctx.hidePrimitive(p1);
         DOCTEST_CHECK(ctx.isPrimitiveHidden(p1));
         ctx.showPrimitive(p1);
         DOCTEST_CHECK(!ctx.isPrimitiveHidden(p1));
-        
+
         std::vector<uint> patches = {p1, p2};
         ctx.hidePrimitive(patches);
         DOCTEST_CHECK(ctx.isPrimitiveHidden(p1));
@@ -1581,23 +1581,23 @@ TEST_CASE("Advanced Primitive Operations") {
         DOCTEST_CHECK(!ctx.isPrimitiveHidden(p1));
         DOCTEST_CHECK(!ctx.isPrimitiveHidden(p2));
     }
-    
+
     SUBCASE("primitive counts by type") {
         Context ctx;
         uint initial_patch_count = ctx.getPatchCount();
         uint initial_triangle_count = ctx.getTriangleCount();
-        
+
         uint p1 = ctx.addPatch();
         uint p2 = ctx.addPatch();
         uint tri = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0));
-        
+
         DOCTEST_CHECK(ctx.getPatchCount() == initial_patch_count + 2);
         DOCTEST_CHECK(ctx.getTriangleCount() == initial_triangle_count + 1);
-        
+
         // Test with hidden primitives
         ctx.hidePrimitive(p1);
-        DOCTEST_CHECK(ctx.getPatchCount(false) == initial_patch_count + 1);  // exclude hidden
-        DOCTEST_CHECK(ctx.getPatchCount(true) == initial_patch_count + 2);   // include hidden
+        DOCTEST_CHECK(ctx.getPatchCount(false) == initial_patch_count + 1); // exclude hidden
+        DOCTEST_CHECK(ctx.getPatchCount(true) == initial_patch_count + 2); // include hidden
     }
 }
 
@@ -1605,18 +1605,18 @@ TEST_CASE("Data Type and Size Functions") {
     SUBCASE("primitive data type operations") {
         Context ctx;
         uint p = ctx.addPatch();
-        
+
         ctx.setPrimitiveData(p, "test_int", 42);
         ctx.setPrimitiveData(p, "test_float", 3.14f);
         ctx.setPrimitiveData(p, "test_vec3", make_vec3(1, 2, 3));
-        
+
         DOCTEST_CHECK(ctx.getPrimitiveDataType(p, "test_int") == HELIOS_TYPE_INT);
         DOCTEST_CHECK(ctx.getPrimitiveDataType(p, "test_float") == HELIOS_TYPE_FLOAT);
         DOCTEST_CHECK(ctx.getPrimitiveDataType(p, "test_vec3") == HELIOS_TYPE_VEC3);
-        
+
         DOCTEST_CHECK(ctx.getPrimitiveDataSize(p, "test_int") == 1);
         DOCTEST_CHECK(ctx.getPrimitiveDataSize(p, "test_vec3") == 1);
-        
+
         std::vector<float> vec_data = {1.0f, 2.0f, 3.0f};
         ctx.setPrimitiveData(p, "test_vector", vec_data);
         DOCTEST_CHECK(ctx.getPrimitiveDataSize(p, "test_vector") == 3);
@@ -1628,11 +1628,11 @@ TEST_CASE("Additional Missing Coverage") {
         Context ctx;
         uint p1 = ctx.addPatch();
         uint p2 = ctx.addPatch();
-        
+
         ctx.markGeometryClean();
         std::vector<uint> dirty_uuids = ctx.getDirtyUUIDs();
         DOCTEST_CHECK(dirty_uuids.empty());
-        
+
         ctx.markPrimitiveDirty(p1);
         dirty_uuids = ctx.getDirtyUUIDs();
         DOCTEST_CHECK(dirty_uuids.size() == 1);
@@ -1644,26 +1644,26 @@ TEST_CASE("Advanced Object Operations") {
     SUBCASE("object primitive count and area calculations") {
         Context ctx;
         uint obj = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(2, 3, 4), make_int3(1, 1, 1));
-        
-        DOCTEST_CHECK(ctx.getObjectPrimitiveCount(obj) == 6);  // 6 faces of a box
-        
+
+        DOCTEST_CHECK(ctx.getObjectPrimitiveCount(obj) == 6); // 6 faces of a box
+
         float area = ctx.getObjectArea(obj);
-        float expected_area = 2 * (2*3 + 3*4 + 2*4);  // surface area of box
+        float expected_area = 2 * (2 * 3 + 3 * 4 + 2 * 4); // surface area of box
         DOCTEST_CHECK(area == doctest::Approx(expected_area).epsilon(0.01));
     }
-    
+
     SUBCASE("object bounding box operations") {
         Context ctx;
         uint obj = ctx.addBoxObject(make_vec3(1, 2, 3), make_vec3(2, 4, 6), make_int3(1, 1, 1));
-        
+
         vec3 min_corner, max_corner;
         ctx.getObjectBoundingBox(obj, min_corner, max_corner);
-        
+
         DOCTEST_CHECK(min_corner.x == doctest::Approx(0.f).epsilon(0.01));
         DOCTEST_CHECK(max_corner.x == doctest::Approx(2.f).epsilon(0.01));
         DOCTEST_CHECK(min_corner.y == doctest::Approx(0.f).epsilon(0.01));
         DOCTEST_CHECK(max_corner.y == doctest::Approx(4.f).epsilon(0.01));
-        
+
         std::vector<uint> objs = {obj};
         ctx.getObjectBoundingBox(objs, min_corner, max_corner);
         DOCTEST_CHECK(min_corner.x == doctest::Approx(0.f).epsilon(0.01));
@@ -1676,19 +1676,19 @@ TEST_CASE("Additional Object Features") {
         Context ctx;
         uint obj1 = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
         uint obj2 = ctx.addSphereObject(10, make_vec3(0, 0, 0), 1.f);
-        
+
         std::vector<uint> all_ids = ctx.getAllObjectIDs();
         DOCTEST_CHECK(all_ids.size() >= 2);
         DOCTEST_CHECK(std::find(all_ids.begin(), all_ids.end(), obj1) != all_ids.end());
         DOCTEST_CHECK(std::find(all_ids.begin(), all_ids.end(), obj2) != all_ids.end());
     }
-    
+
     SUBCASE("object type checks") {
         Context ctx;
         uint box = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
         uint sphere = ctx.addSphereObject(10, make_vec3(0, 0, 0), 1.f);
         uint disk = ctx.addDiskObject(10, make_vec3(0, 0, 0), make_vec2(1, 1));
-        
+
         DOCTEST_CHECK(ctx.getObjectType(box) == OBJECT_TYPE_BOX);
         DOCTEST_CHECK(ctx.getObjectType(sphere) == OBJECT_TYPE_SPHERE);
         DOCTEST_CHECK(ctx.getObjectType(disk) == OBJECT_TYPE_DISK);
@@ -1701,29 +1701,29 @@ TEST_CASE("Comprehensive Object Property Tests") {
         std::vector<uint> objs;
         objs.push_back(ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1)));
         objs.push_back(ctx.addBoxObject(make_vec3(1, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1)));
-        
+
         DOCTEST_CHECK_NOTHROW(ctx.rotateObject(objs, 0.5f * PI_F, "z"));
         DOCTEST_CHECK_NOTHROW(ctx.rotateObject(objs, 0.5f * PI_F, make_vec3(0, 0, 1)));
         DOCTEST_CHECK_NOTHROW(ctx.rotateObject(objs, 0.5f * PI_F, make_vec3(0, 0, 0), make_vec3(0, 0, 1)));
         DOCTEST_CHECK_NOTHROW(ctx.rotateObjectAboutOrigin(objs, 0.5f * PI_F, make_vec3(0, 0, 1)));
     }
-    
+
     SUBCASE("scaling operations on objects") {
         Context ctx;
         std::vector<uint> objs;
         objs.push_back(ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1)));
-        
+
         DOCTEST_CHECK_NOTHROW(ctx.scaleObject(objs, make_vec3(2, 2, 2)));
         DOCTEST_CHECK_NOTHROW(ctx.scaleObjectAboutCenter(objs, make_vec3(0.5f, 0.5f, 0.5f)));
         DOCTEST_CHECK_NOTHROW(ctx.scaleObjectAboutPoint(objs, make_vec3(2, 2, 2), make_vec3(0, 0, 0)));
         DOCTEST_CHECK_NOTHROW(ctx.scaleObjectAboutOrigin(objs, make_vec3(0.5f, 0.5f, 0.5f)));
     }
-    
+
     SUBCASE("translation operations on objects") {
         Context ctx;
         std::vector<uint> objs;
         objs.push_back(ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1)));
-        
+
         DOCTEST_CHECK_NOTHROW(ctx.translateObject(objs, make_vec3(1, 2, 3)));
     }
 }
@@ -1733,7 +1733,7 @@ TEST_CASE("Domain and Bounding Operations") {
         Context ctx;
         ctx.addPatch(make_vec3(-2, 0, 0), make_vec2(1, 1));
         ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
-        
+
         vec3 center;
         float radius;
         ctx.getDomainBoundingSphere(center, radius);
@@ -1747,21 +1747,21 @@ TEST_CASE("Missing Data and State Functions") {
         Context ctx;
         Date date = make_Date(1, 1, 2025);
         Time time = make_Time(0, 0, 12);
-        
+
         ctx.addTimeseriesData("temp", 25.5f, date, time);
         ctx.addTimeseriesData("humidity", 60.0f, date, time);
-        
+
         std::vector<std::string> vars = ctx.listTimeseriesVariables();
         DOCTEST_CHECK(vars.size() >= 2);
         DOCTEST_CHECK(std::find(vars.begin(), vars.end(), "temp") != vars.end());
         DOCTEST_CHECK(std::find(vars.begin(), vars.end(), "humidity") != vars.end());
     }
-    
+
     SUBCASE("getUniquePrimitiveParentObjectIDs") {
         Context ctx;
         uint obj1 = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
         uint obj2 = ctx.addSphereObject(10, make_vec3(0, 0, 0), 1.f);
-        
+
         std::vector<uint> all_prims = ctx.getAllUUIDs();
         std::vector<uint> obj_ids = ctx.getUniquePrimitiveParentObjectIDs(all_prims);
         DOCTEST_CHECK(obj_ids.size() >= 2);
@@ -1776,28 +1776,28 @@ TEST_CASE("Comprehensive Coverage Tests") {
         std::vector<uint> obj_ids;
         obj_ids.push_back(ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1)));
         obj_ids.push_back(ctx.addBoxObject(make_vec3(2, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1)));
-        
+
         std::vector<uint> all_uuids = ctx.getObjectPrimitiveUUIDs(obj_ids);
         DOCTEST_CHECK(all_uuids.size() == 12); // 6 faces per box * 2 boxes
-        
+
         std::vector<std::vector<uint>> nested_obj_ids = {{obj_ids[0]}, {obj_ids[1]}};
         std::vector<uint> nested_uuids = ctx.getObjectPrimitiveUUIDs(nested_obj_ids);
         DOCTEST_CHECK(nested_uuids.size() == 12);
-        
+
         ctx.hideObject(obj_ids);
         DOCTEST_CHECK(ctx.isObjectHidden(obj_ids[0]));
         DOCTEST_CHECK(ctx.isObjectHidden(obj_ids[1]));
-        
+
         ctx.showObject(obj_ids);
         DOCTEST_CHECK(!ctx.isObjectHidden(obj_ids[0]));
         DOCTEST_CHECK(!ctx.isObjectHidden(obj_ids[1]));
     }
-    
+
     SUBCASE("object texture color overrides") {
         Context ctx;
         std::vector<uint> obj_ids;
         obj_ids.push_back(ctx.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, make_int2(2, 2), "lib/images/solid.jpg"));
-        
+
         ctx.overrideObjectTextureColor(obj_ids);
         ctx.useObjectTextureColor(obj_ids);
     }

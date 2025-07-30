@@ -894,20 +894,20 @@ void StomatalConductanceModel::printDefaultValueReport(const std::vector<uint> &
 }
 
 void StomatalConductanceModel::setModelCoefficients(const std::vector<BMFcoefficients> &coeffs, const std::vector<uint> &UUIDs) {
-    
-    if(coeffs.size() != UUIDs.size()) {
+
+    if (coeffs.size() != UUIDs.size()) {
         helios_runtime_error("ERROR (StomatalConductanceModel::setModelCoefficients): The number of coefficient sets (" + std::to_string(coeffs.size()) + ") does not match the number of UUIDs provided (" + std::to_string(UUIDs.size()) + ").");
     }
 
     model = "BMF";
 
-    for( size_t i=0; i<UUIDs.size(); i++ ){
+    for (size_t i = 0; i < UUIDs.size(); i++) {
 
-        if( context->doesPrimitiveDataExist( UUIDs.at(i), "twoway_stomatal_conductance_flag") ){
+        if (context->doesPrimitiveDataExist(UUIDs.at(i), "twoway_stomatal_conductance_flag")) {
             std::cerr << "WARNING (StomatalConductanceModel::setModelCoefficients): Stomatal conductance model coefficients for UUID " << UUIDs.at(i) << " are being overwritten." << std::endl;
         }
 
         BMFmodel_coefficients[UUIDs.at(i)] = coeffs.at(i);
-        context->setPrimitiveData( UUIDs.at(i), "twoway_stomatal_conductance_flag", 1 );
+        context->setPrimitiveData(UUIDs.at(i), "twoway_stomatal_conductance_flag", 1);
     }
 }

@@ -18,6 +18,7 @@
 
 #include "CameraCalibration.h"
 #include "Context.h"
+#include "json.hpp"
 
 // NVIDIA OptiX Includes
 #include <optix.h>
@@ -1127,6 +1128,45 @@ public:
     void writeImageBoundingBoxes_ObjectData(const std::string &cameralabel, const std::string &object_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path = "./", bool append_label_file = false,
                                             int frame = -1);
 
+    //! Write segmentation masks for primitive data in COCO JSON format. Primitive data must have type of 'uint' or 'int'.
+    /**
+     * \param[in] cameralabel Label of target camera
+     * \param[in] primitive_data_label Name of the primitive data label. Primitive data must have type of 'uint' or 'int'.
+     * \param[in] object_class_ID Object class ID to write for the labels in this group.
+     * \param[in] imagefile_base Name for base of output files (will also include the camera label and a frame number in the file name)
+     * \param[in] image_path [optional] Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] append_file [optional] If true, the data will be appended to the existing COCO JSON file. If false, a new file will be created. By default, it is false.
+     * \param[in] frame [optional] A frame count number to be appended to the output file (e.g., camera_segmentation_00001.json). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     */
+    void writeImageSegmentationMasks(const std::string &cameralabel, const std::string &primitive_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path = "./", bool append_file = false, int frame = -1);
+
+    //! Write segmentation masks for object data in COCO JSON format. Object data must have type of 'uint' or 'int'.
+    /**
+     * \param[in] cameralabel Label of target camera
+     * \param[in] object_data_label Name of the object data label. Object data must have type of 'uint' or 'int'.
+     * \param[in] object_class_ID Object class ID to write for the labels in this group.
+     * \param[in] imagefile_base Name for base of output files (will also include the camera label and a frame number in the file name)
+     * \param[in] image_path [optional] Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] append_file [optional] If true, the data will be appended to the existing COCO JSON file. If false, a new file will be created. By default, it is false.
+     * \param[in] frame [optional] A frame count number to be appended to the output file (e.g., camera_segmentation_00001.json). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     */
+    void writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::string &object_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path = "./", bool append_file = false,
+                                                int frame = -1);
+
+private:
+    // Helper functions for COCO JSON handling
+    nlohmann::json initializeCOCOJson(const std::string &filename, bool append_file, const std::string &cameralabel, const helios::int2 &camera_resolution);
+    void addCategoryToCOCO(nlohmann::json &coco_json, uint object_class_ID, const std::string &category_name);
+    void writeCOCOJson(const nlohmann::json &coco_json, const std::string &filename);
+
+    // Helper functions for mask generation and boundary tracing
+    std::map<int, std::vector<std::vector<bool>>> generateLabelMasks(const std::string &cameralabel, const std::string &data_label, bool use_object_data);
+    std::pair<int, int> findStartingBoundaryPixel(const std::vector<std::vector<bool>> &mask, const helios::int2 &camera_resolution);
+    std::vector<std::pair<int, int>> traceBoundaryMoore(const std::vector<std::vector<bool>> &mask, int start_x, int start_y, const helios::int2 &camera_resolution);
+    std::vector<std::pair<int, int>> traceBoundarySimple(const std::vector<std::vector<bool>> &mask, int start_x, int start_y, const helios::int2 &camera_resolution);
+    std::vector<std::map<std::string, std::vector<float>>> generateAnnotationsFromMasks(const std::map<int, std::vector<std::vector<bool>>> &label_masks, uint object_class_ID, const helios::int2 &camera_resolution);
+
+public:
     //! Set padding value for pixels do not have valid values
     /**
      * \param[in] cameralabel Label of target camera

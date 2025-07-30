@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.41</span>
+       <span id="projectnumber">&#160;v1.3.42</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -155,6 +155,7 @@ $(function(){initNavTree('class_collision_detection.html',''); initResizable(tru
 
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Data Structures</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-static-methods">Static Public Member Functions</a>  </div>
   <div class="headertitle"><div class="title">CollisionDetection Class Reference</div></div>
@@ -166,6 +167,15 @@ $(function(){initNavTree('class_collision_detection.html',''); initResizable(tru
 
 <p><code>#include &lt;<a class="el" href="_collision_detection_8h_source.html">CollisionDetection.h</a>&gt;</code></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Data Structures</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_collision_detection_1_1_cone.html">Cone</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Structure representing a cone for collision detection.  <a href="struct_collision_detection_1_1_cone.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_collision_detection_1_1_optimal_path_result.html">OptimalPathResult</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Structure representing the result of optimal cone path detection.  <a href="struct_collision_detection_1_1_optimal_path_result.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:afc69a18532505279599bb9b6e2886d07" id="r_afc69a18532505279599bb9b6e2886d07"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afc69a18532505279599bb9b6e2886d07">CollisionDetection</a> (<a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context)</td></tr>
@@ -186,12 +196,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a6d0a4780ad097156f1f3c2e260114663" id="r_a6d0a4780ad097156f1f3c2e260114663"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6d0a4780ad097156f1f3c2e260114663">findCollisions</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;query_UUIDs, const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;query_object_IDs, const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;target_UUIDs, const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;target_object_IDs)</td></tr>
 <tr class="memdesc:a6d0a4780ad097156f1f3c2e260114663"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find collisions restricting both query and target geometry.  <br /></td></tr>
 <tr class="separator:a6d0a4780ad097156f1f3c2e260114663"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0695cece6427b40c1fdcba21496f949e" id="r_a0695cece6427b40c1fdcba21496f949e"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0695cece6427b40c1fdcba21496f949e">coneIntersection</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;origin, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;direction, float cone_angle, float max_distance=-1)</td></tr>
-<tr class="memdesc:a0695cece6427b40c1fdcba21496f949e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find all primitives/objects intersecting a cone from a point.  <br /></td></tr>
-<tr class="separator:a0695cece6427b40c1fdcba21496f949e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae9fe90c69f608c66db99ed57a9e4490c" id="r_ae9fe90c69f608c66db99ed57a9e4490c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae9fe90c69f608c66db99ed57a9e4490c">coneIntersection</a> (const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;origins, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;directions, const std::vector&lt; float &gt; &amp;cone_angles, const std::vector&lt; float &gt; &amp;max_distances)</td></tr>
-<tr class="memdesc:ae9fe90c69f608c66db99ed57a9e4490c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Batch cone intersection queries.  <br /></td></tr>
-<tr class="separator:ae9fe90c69f608c66db99ed57a9e4490c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae74c6dfcd3285830f4e53c786e47d97d" id="r_ae74c6dfcd3285830f4e53c786e47d97d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_collision_detection_1_1_optimal_path_result.html">OptimalPathResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae74c6dfcd3285830f4e53c786e47d97d">findOptimalConePath</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;apex, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;centralAxis, float half_angle, float height=0.0f, int initialSamples=256)</td></tr>
+<tr class="memdesc:ae74c6dfcd3285830f4e53c786e47d97d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find the radial direction through a cone toward the largest gap.  <br /></td></tr>
+<tr class="separator:ae74c6dfcd3285830f4e53c786e47d97d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a23b6eb8cf59b7cd16df52c555ba6fca7" id="r_a23b6eb8cf59b7cd16df52c555ba6fca7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a23b6eb8cf59b7cd16df52c555ba6fca7">calculateGridIntersection</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;grid_center, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;grid_size, const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;grid_divisions, const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs={})</td></tr>
 <tr class="memdesc:a23b6eb8cf59b7cd16df52c555ba6fca7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate which primitives fall within a 3D grid.  <br /></td></tr>
 <tr class="separator:a23b6eb8cf59b7cd16df52c555ba6fca7"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -250,7 +257,7 @@ Static Public Member Functions</h2></td></tr>
 <li>Layout optimization to minimize collisions </li>
 </ol>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8h_source.html#l00032">32</a> of file <a class="el" href="_collision_detection_8h_source.html">CollisionDetection.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8h_source.html#l00031">31</a> of file <a class="el" href="_collision_detection_8h_source.html">CollisionDetection.h</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="afc69a18532505279599bb9b6e2886d07" name="afc69a18532505279599bb9b6e2886d07"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#afc69a18532505279599bb9b6e2886d07">&#9670;&#160;</a></span>CollisionDetection()</h2>
@@ -283,7 +290,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00048">48</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00052">52</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -304,7 +311,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Destructor for CollisionDetection class. </p>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00073">73</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00086">86</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -332,7 +339,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00265">265</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00275">275</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -376,97 +383,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00871">871</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
-
-</div>
-</div>
-<a id="a0695cece6427b40c1fdcba21496f949e" name="a0695cece6427b40c1fdcba21496f949e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0695cece6427b40c1fdcba21496f949e">&#9670;&#160;</a></span>coneIntersection() <span class="overload">[1/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; CollisionDetection::coneIntersection </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>origin</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>direction</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>cone_angle</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>max_distance</em></span><span class="paramdefsep"> = </span><span class="paramdefval">-1</span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Find all primitives/objects intersecting a cone from a point. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">origin</td><td>Starting point of the cone </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">direction</td><td>Direction vector of the cone axis (will be normalized) </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">cone_angle</td><td>Half-angle of the cone in radians </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">max_distance</td><td>Maximum distance to search (-1 for unlimited) </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs that intersect the cone </dd></dl>
-
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00853">853</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
-
-</div>
-</div>
-<a id="ae9fe90c69f608c66db99ed57a9e4490c" name="ae9fe90c69f608c66db99ed57a9e4490c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae9fe90c69f608c66db99ed57a9e4490c">&#9670;&#160;</a></span>coneIntersection() <span class="overload">[2/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &gt; CollisionDetection::coneIntersection </td>
-          <td>(</td>
-          <td class="paramtype">const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>origins</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>directions</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>cone_angles</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const std::vector&lt; float &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>max_distances</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Batch cone intersection queries. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">origins</td><td>Vector of cone origin points </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">directions</td><td>Vector of cone direction vectors </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">cone_angles</td><td>Vector of cone half-angles in radians </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">max_distances</td><td>Vector of maximum distances (-1 for unlimited) </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>Vector of vectors, each containing UUIDs for the corresponding cone </dd></dl>
-
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00861">861</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01044">1044</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -487,7 +404,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Disable GPU acceleration (use CPU-only algorithms) </p>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00435">435</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00449">449</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -508,7 +425,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Disable console output messages. </p>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00444">444</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00458">458</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -529,7 +446,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Enable GPU acceleration for collision detection. </p>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00428">428</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00442">442</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -550,7 +467,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Enable console output messages. </p>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00448">448</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00462">462</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -583,7 +500,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs that intersect </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00141">141</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00154">154</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -620,8 +537,7 @@ Static Public Member Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">query_UUIDs</td><td>Vector of primitive UUIDs to test for collisions </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">query_object_IDs</td><td>Vector of object IDs to test for collisions <br  />
- </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">query_object_IDs</td><td>Vector of object IDs to test for collisions </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">target_UUIDs</td><td>Vector of primitive UUIDs to test against (empty = all primitives) </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">target_object_IDs</td><td>Vector of object IDs to test against (empty = all objects) </td></tr>
   </table>
@@ -629,7 +545,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs from the target set that intersect with any query primitive </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00166">166</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00178">178</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -657,7 +573,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs that intersect with any of the query primitives </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00081">81</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00094">94</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -685,7 +601,58 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs that intersect with the query primitive </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00077">77</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00090">90</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae74c6dfcd3285830f4e53c786e47d97d" name="ae74c6dfcd3285830f4e53c786e47d97d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae74c6dfcd3285830f4e53c786e47d97d">&#9670;&#160;</a></span>findOptimalConePath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_collision_detection_1_1_optimal_path_result.html">CollisionDetection::OptimalPathResult</a> CollisionDetection::findOptimalConePath </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>apex</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>centralAxis</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>half_angle</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>height</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.0f</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>initialSamples</em></span><span class="paramdefsep"> = </span><span class="paramdefval">256</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Find the radial direction through a cone toward the largest gap. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">apex</td><td>Cone apex position </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">centralAxis</td><td>Central axis of the cone </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">half_angle</td><td>Half-angle of cone in radians </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">height</td><td>Height of cone (0 = infinite) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">initialSamples</td><td>Number of initial uniform samples (default: 256) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>OptimalPathResult containing the optimal direction and collision count </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01221">1221</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -723,7 +690,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00456">456</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00470">470</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -745,7 +712,7 @@ Static Public Member Functions</h2></td></tr>
 <p>Get all grid cells and their contained primitives. </p>
 <dl class="section return"><dt>Returns</dt><dd>3D vector indexed as [i][j][k] containing UUIDs in each cell </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00878">878</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01050">1050</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -777,15 +744,14 @@ Static Public Member Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">i</td><td>Grid cell index in x-dimension </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">j</td><td>Grid cell index in y-dimension <br  />
- </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">j</td><td>Grid cell index in y-dimension </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">k</td><td>Grid cell index in z-dimension </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs in the specified grid cell </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00885">885</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01057">1057</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -794,6 +760,9 @@ Static Public Member Functions</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">size_t CollisionDetection::getPrimitiveCount </td>
@@ -802,12 +771,17 @@ Static Public Member Functions</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Get the number of primitives in the BVH. </p>
 <dl class="section return"><dt>Returns</dt><dd>Number of primitives </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00452">452</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00466">466</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -816,6 +790,9 @@ Static Public Member Functions</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">bool CollisionDetection::isBVHValid </td>
@@ -824,12 +801,17 @@ Static Public Member Functions</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Check if BVH is valid and up-to-date. </p>
 <dl class="section return"><dt>Returns</dt><dd>True if BVH is valid, false otherwise </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00402">402</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00411">411</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -838,6 +820,9 @@ Static Public Member Functions</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">bool CollisionDetection::isGPUAccelerationEnabled </td>
@@ -846,12 +831,17 @@ Static Public Member Functions</h2></td></tr>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Check if GPU acceleration is enabled. </p>
 <dl class="section return"><dt>Returns</dt><dd>True if GPU acceleration is enabled </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00440">440</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00454">454</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -890,7 +880,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Final collision count after optimization </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00892">892</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01064">1064</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -911,7 +901,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Force a complete rebuild of the BVH. </p>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00345">345</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00354">354</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -941,7 +931,7 @@ Static Public Member Functions</h2></td></tr>
 <p>Self-test routine to verify plugin functionality. </p>
 <dl class="section return"><dt>Returns</dt><dd>0 if all tests pass, non-zero otherwise </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00024">24</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00025">25</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>

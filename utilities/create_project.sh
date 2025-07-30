@@ -25,8 +25,8 @@ if [ ! -e "build" ]; then
     mkdir build;
 fi
 
-PLUGINS=("energybalance" "lidar" "aeriallidar" "photosynthesis" "radiation" "solarposition" "stomatalconductance" "topography" "visualizer" "voxelintersection" "weberpenntree" "canopygenerator" "boundarylayerconductance" "leafoptics" "syntheticannotation" "plantarchitecture" "projectbuilder" "planthydraulics" "parameteroptimization")
-HEADERS=("EnergyBalanceModel.h" "LiDAR.h" "AerialLiDAR.h" "PhotosynthesisModel.h" "RadiationModel.h" "SolarPosition.h" "StomatalConductanceModel.h" "Topography.h" "Visualizer.h" "VoxelIntersection.h" "WeberPennTree.h" "CanopyGenerator.h" "BoundaryLayerConductanceModel.h" "LeafOptics.h" "SyntheticAnnotation.h" "PlantArchitecture.h" "ProjectBuilder.h" "PlantHydraulicsModel.h" "ParameterOptimization.h")
+PLUGINS=("energybalance" "lidar" "aeriallidar" "photosynthesis" "radiation" "solarposition" "stomatalconductance" "topography" "visualizer" "voxelintersection" "weberpenntree" "canopygenerator" "boundarylayerconductance" "leafoptics" "syntheticannotation" "plantarchitecture" "projectbuilder" "planthydraulics" "parameteroptimization" "collisiondetection")
+HEADERS=("EnergyBalanceModel.h" "LiDAR.h" "AerialLiDAR.h" "PhotosynthesisModel.h" "RadiationModel.h" "SolarPosition.h" "StomatalConductanceModel.h" "Topography.h" "Visualizer.h" "VoxelIntersection.h" "WeberPennTree.h" "CanopyGenerator.h" "BoundaryLayerConductanceModel.h" "LeafOptics.h" "SyntheticAnnotation.h" "PlantArchitecture.h" "ProjectBuilder.h" "PlantHydraulicsModel.h" "ParameterOptimization.h" "CollisionDetection.h")
 
 FILEBASE=`basename $DIRPATH`
 

@@ -1,11 +1,11 @@
 var class_collision_detection =
 [
+    [ "Cone", "struct_collision_detection_1_1_cone.html", "struct_collision_detection_1_1_cone" ],
+    [ "OptimalPathResult", "struct_collision_detection_1_1_optimal_path_result.html", "struct_collision_detection_1_1_optimal_path_result" ],
     [ "CollisionDetection", "class_collision_detection.html#afc69a18532505279599bb9b6e2886d07", null ],
     [ "~CollisionDetection", "class_collision_detection.html#a02163f314ae4c76cfda1a3e214ff9b68", null ],
     [ "buildBVH", "class_collision_detection.html#a885abe5c3788b02384e72329f1b41935", null ],
     [ "calculateGridIntersection", "class_collision_detection.html#a23b6eb8cf59b7cd16df52c555ba6fca7", null ],
-    [ "coneIntersection", "class_collision_detection.html#a0695cece6427b40c1fdcba21496f949e", null ],
-    [ "coneIntersection", "class_collision_detection.html#ae9fe90c69f608c66db99ed57a9e4490c", null ],
     [ "disableGPUAcceleration", "class_collision_detection.html#ae610cdd891b08640834a9a331e91143f", null ],
     [ "disableMessages", "class_collision_detection.html#a0296524f1adc7cbf1765878ec507ee6d", null ],
     [ "enableGPUAcceleration", "class_collision_detection.html#a4195dcf176205b2bdd80299c21d63f6d", null ],
@@ -14,6 +14,7 @@ var class_collision_detection =
     [ "findCollisions", "class_collision_detection.html#a6d0a4780ad097156f1f3c2e260114663", null ],
     [ "findCollisions", "class_collision_detection.html#ae3c95a5b4e08587b019e3570e7955917", null ],
     [ "findCollisions", "class_collision_detection.html#a2512277b35d3c68fee5191a63b69cd42", null ],
+    [ "findOptimalConePath", "class_collision_detection.html#ae74c6dfcd3285830f4e53c786e47d97d", null ],
     [ "getBVHStatistics", "class_collision_detection.html#a608a5a71e8e08f3772492f68988fd146", null ],
     [ "getGridCells", "class_collision_detection.html#a2a39883f95eb1dc9307120c7a8556592", null ],
     [ "getGridIntersections", "class_collision_detection.html#ab9c8e00e93165b59d5ae2bad87f453d0", null ],

@@ -32,13 +32,25 @@ run_command() {
     fi
 }
 
-SAMPLES=("context_selftest" "visualizer_selftest" "radiation_selftest" "energybalance_selftest" "leafoptics_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "lidar_selftest" "aeriallidar_selftest" "voxelintersection_selftest" "canopygenerator_selftest" "boundarylayerconductance_selftest" "syntheticannotation_selftest" "plantarchitecture_selftest" "projectbuilder_selftest" "planthydraulics_selftest" "parameteroptimization_selftest" "tutorial0" "tutorial1" "tutorial2" "tutorial5" )
-SAMPLES_NOGPU=("context_selftest" "visualizer_selftest" "leafoptics_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "canopygenerator_selftest" "boundarylayerconductance_selftest" "syntheticannotation_selftest" "plantarchitecture_selftest" "projectbuilder_selftest" "planthydraulics_selftest" "parameteroptimization_selftest" "tutorial0" "tutorial1" "tutorial2" "tutorial5")
+SAMPLES=("context_selftest" "visualizer_selftest" "radiation_selftest" "energybalance_selftest" "leafoptics_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "lidar_selftest" "aeriallidar_selftest" "voxelintersection_selftest" "canopygenerator_selftest" "boundarylayerconductance_selftest" "syntheticannotation_selftest" "plantarchitecture_selftest" "projectbuilder_selftest" "planthydraulics_selftest" "parameteroptimization_selftest" "collisiondetection_selftest" "tutorial0" "tutorial1" "tutorial2" "tutorial5" )
+SAMPLES_NOGPU=("context_selftest" "visualizer_selftest" "leafoptics_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "canopygenerator_selftest" "boundarylayerconductance_selftest" "syntheticannotation_selftest" "plantarchitecture_selftest" "projectbuilder_selftest" "planthydraulics_selftest" "parameteroptimization_selftest" "collisiondetection_selftest" "tutorial0" "tutorial1" "tutorial2" "tutorial5")
 
-TEST_PLUGINS="energybalance lidar aeriallidar photosynthesis radiation leafoptics solarposition stomatalconductance visualizer voxelintersection weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture projectbuilder planthydraulics parameteroptimization"
-TEST_PLUGINS_NOGPU="leafoptics photosynthesis solarposition stomatalconductance visualizer weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture projectbuilder planthydraulics parameteroptimization"
+TEST_PLUGINS="energybalance lidar aeriallidar photosynthesis radiation leafoptics solarposition stomatalconductance visualizer voxelintersection weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture projectbuilder planthydraulics parameteroptimization collisiondetection"
+TEST_PLUGINS_NOGPU="leafoptics photosynthesis solarposition stomatalconductance visualizer weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture projectbuilder planthydraulics parameteroptimization collisiondetection"
 
 BUILD_TYPE="Release"
+
+# Detect number of processors for parallel compilation
+if command -v nproc >/dev/null 2>&1; then
+    NPROC=$(nproc)
+elif [[ "${OSTYPE}" == "darwin"* ]]; then
+    NPROC=$(sysctl -n hw.ncpu)
+elif [[ "${OSTYPE}" == "msys"* ]] || [[ "${OSTYPE}" == "cygwin"* ]] || [[ -n "${NUMBER_OF_PROCESSORS}" ]]; then
+    # Windows environment (Git Bash, MSYS2, Cygwin, or GitHub Actions)
+    NPROC=${NUMBER_OF_PROCESSORS:-$(nproc 2>/dev/null || echo "1")}
+else
+    NPROC=1
+fi
 
 cd ../samples || exit 1
 
@@ -181,7 +193,7 @@ else
 
     echo -ne "Compiling project creation script test..."
 
-    run_command cmake --build ./ --target temp
+    run_command cmake --build ./ --target temp -j "${NPROC}"
 
     if (($? == 0)); then
       if [ -e "temp" ]; then
@@ -212,6 +224,7 @@ else
 
     cd ../..
 
+    chmod -R 755 temp 2>/dev/null || true
     rm -rf temp
 
   fi
@@ -248,7 +261,7 @@ for i in "${SAMPLES[@]}"; do
 
   echo -ne "Compiling sample ${i}..."
 
-  run_command cmake --build ./ --target "${i}" --config "${BUILD_TYPE}"
+  run_command cmake --build ./ --target "${i}" --config "${BUILD_TYPE}" -j "${NPROC}"
 
   if (($? == 0)); then
     if [ -e "${i}" ]; then
@@ -324,6 +337,7 @@ for i in "${SAMPLES[@]}"; do
 
   fi
 
+  chmod -R 755 ./* 2>/dev/null || true
   rm -rf ./*
 
   cd ../..

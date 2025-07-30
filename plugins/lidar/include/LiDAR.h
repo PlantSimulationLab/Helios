@@ -290,14 +290,6 @@ private:
 
     // -------- I/O --------- //
 
-    //! Load point cloud data from a tabular ASCII text file
-    /**
-     * \param[inout]  scandata  Metadata for point cloud data contained in the ASCII text file.
-     * \param[in] scanID  ID of the scan to which the point cloud data should be added.
-     * \return Number of points loaded from the file.
-     */
-    size_t loadASCIIFile(uint scanID, ScanMetadata &scandata);
-
     // -------- RECONSTRUCTION --------- //
 
     // first index: leaf group, second index: triangle #
@@ -330,6 +322,17 @@ private:
      * \param[in] fillAnalytic  If true the analytic solution using mean dr will be used when the inversion fails. If false, LAD will be set as 999.
      */
     std::vector<float> LAD_inversion(std::vector<float> &P, std::vector<float> &Gtheta, std::vector<std::vector<float>> &dr_array, bool fillAnalytic);
+
+    //! Helper method for loading TreeQSM cylinder files with different coloring strategies
+    /**
+     * \param[in] context Pointer to the Helios context where tube objects will be added.
+     * \param[in] filename Path to the TreeQSM cylinder text file.
+     * \param[in] radial_subdivisions Number of radial subdivisions for the tube objects.
+     * \param[in] use_colormap If true, use colormap coloring; if false, use texture or solid color.
+     * \param[in] colormap_or_texture Either colormap name (if use_colormap=true) or texture file path (if use_colormap=false).
+     * \return Vector of tube object UUIDs that were created.
+     */
+    std::vector<uint> loadTreeQSM_impl(helios::Context *context, const std::string &filename, uint radial_subdivisions, bool use_colormap, const std::string &colormap_or_texture);
 
 public:
     //! LiDAR point cloud constructor
@@ -600,6 +603,14 @@ public:
      */
     void loadXML(const char *filename, bool load_grid_only);
 
+    //! Load point cloud data from a tabular ASCII text file into an existing scan
+    /**
+     * \param[in] scanID  ID of the scan to which the point cloud data should be added.
+     * \param[in]  ASCII_data_file  Metadata for point cloud data contained in the ASCII text file.
+     * \return Number of points loaded from the file.
+     */
+    size_t loadASCIIFile(uint scanID, const std::string &ASCII_data_file);
+
     //! Export to file the normal vectors (nx,ny,nz) for all triangles formed
     /**
      * \param[in] filename Name of file
@@ -690,11 +701,19 @@ public:
      */
     void addHitsToVisualizer(Visualizer *visualizer, uint pointsize) const;
 
+    //! Add all hit points to the visualizer plug-in, and color them by a specified r-g-b color
+    /**
+     * \param[in] visualizer Pointer to the Visualizer plugin object.
+     * \param[in] pointsize Size of scan point in font points.
+     * \param[in] point_color r-g-b color of the hit points.
+     */
+    void addHitsToVisualizer(Visualizer *visualizer, uint pointsize, const helios::RGBcolor &point_color) const;
+
     //! Add all hit points to the visualizer plug-in, and color them by a hit scalar data value
     /**
      * \param[in] visualizer Pointer to the Visualizer plugin object.
      * \param[in] pointsize Size of scan point in font points.
-     * \param[in] color_value Label for scalar hit data.
+     * \param[in] color_value Label for scalar hit data value to be used for coloring the points based on a pseudocolor mapping (e.g., "reflectance"). If the label does not exist, the function will print a warning and use the default color.
      */
     void addHitsToVisualizer(Visualizer *visualizer, uint pointsize, const char *color_value) const;
 
@@ -707,8 +726,9 @@ public:
     //! Add wire frame of the grid to the visualizer plug-in
     /**
      * \param[in] visualizer Pointer to the Visualizer plug-in object.
+     * \param[in] linewidth_pixels Width of the wire frame lines in pixels (default = 1.0).
      */
-    void addGridWireFrametoVisualizer(Visualizer *visualizer) const;
+    void addGridWireFrametoVisualizer(Visualizer *visualizer, float linewidth_pixels = 1.0f) const;
 
     //! Add a grid to point cloud instead of reading in from an xml file
     /**
@@ -967,12 +987,29 @@ public:
 
     //! Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns only one laser hit per pulse)
     /**
+     * \param[in] context Pointer to the Helios context
+     * \param[in] append If true, new hit points are appended to existing data. If false, existing hit points are cleared before adding new ones.
+     */
+    void syntheticScan(helios::Context *context, bool append);
+
+    //! Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns only one laser hit per pulse)
+    /**
      * \param[in] context Pointer to the Helios context.
      * \param[in] scan_grid_only If true, only record hit points for rays that intersect the voxel grid.
      * \param[in] record_misses If true, "miss" points (i.e., beam did not hit any primitives) are recorded in the scan.
      * \note Calling syntheticScan() with scan_grid_only=true can save substantial memory for contexts with large domains.
      */
     void syntheticScan(helios::Context *context, bool scan_grid_only, bool record_misses);
+
+    //! Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns only one laser hit per pulse)
+    /**
+     * \param[in] context Pointer to the Helios context.
+     * \param[in] scan_grid_only If true, only record hit points for rays that intersect the voxel grid.
+     * \param[in] record_misses If true, "miss" points (i.e., beam did not hit any primitives) are recorded in the scan.
+     * \param[in] append If true, new hit points are appended to existing data. If false, existing hit points are cleared before adding new ones.
+     * \note Calling syntheticScan() with scan_grid_only=true can save substantial memory for contexts with large domains.
+     */
+    void syntheticScan(helios::Context *context, bool scan_grid_only, bool record_misses, bool append);
 
     //! Run a full-waveform synthetic LiDAR scan based on scan parameters given in an XML file (returns multiple laser hits per pulse)
     /**
@@ -988,11 +1025,33 @@ public:
      * \param[in] context Pointer to the Helios context.
      * \param[in] rays_per_pulse Number of ray launches per laser pulse direction.
      * \param[in] pulse_distance_threshold Threshold distance for determining laser hit locations. Hits within pulse_distance_threshold of each other will be grouped into a single hit.
+     * \param[in] append If true, new hit points are appended to existing data. If false, existing hit points are cleared before adding new ones.
+     * \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a discrete return synthetic scan.
+     */
+    void syntheticScan(helios::Context *context, int rays_per_pulse, float pulse_distance_threshold, bool append);
+
+    //! Run a full-waveform synthetic LiDAR scan based on scan parameters given in an XML file (returns multiple laser hits per pulse)
+    /**
+     * \param[in] context Pointer to the Helios context.
+     * \param[in] rays_per_pulse Number of ray launches per laser pulse direction.
+     * \param[in] pulse_distance_threshold Threshold distance for determining laser hit locations. Hits within pulse_distance_threshold of each other will be grouped into a single hit.
      * \param[in] scan_grid_only If true, only considers context geometry within the scan grid. scan_grid_only=true can save substantial memory for contexts with large domains.
      * \param[in] record_misses If true, "miss" points (i.e., beam did not hit any primitives) are recorded in the scan.
      * \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a discrete return synthetic scan.
      */
     void syntheticScan(helios::Context *context, int rays_per_pulse, float pulse_distance_threshold, bool scan_grid_only, bool record_misses);
+
+    //! Run a full-waveform synthetic LiDAR scan based on scan parameters given in an XML file (returns multiple laser hits per pulse)
+    /**
+     * \param[in] context Pointer to the Helios context.
+     * \param[in] rays_per_pulse Number of ray launches per laser pulse direction.
+     * \param[in] pulse_distance_threshold Threshold distance for determining laser hit locations. Hits within pulse_distance_threshold of each other will be grouped into a single hit.
+     * \param[in] scan_grid_only If true, only considers context geometry within the scan grid. scan_grid_only=true can save substantial memory for contexts with large domains.
+     * \param[in] record_misses If true, "miss" points (i.e., beam did not hit any primitives) are recorded in the scan.
+     * \param[in] append If true, new hit points are appended to existing data. If false, existing hit points are cleared before adding new ones.
+     * \note Calling syntheticScan() with rays_per_pulse=1 will effectively run a discrete return synthetic scan.
+     */
+    void syntheticScan(helios::Context *context, int rays_per_pulse, float pulse_distance_threshold, bool scan_grid_only, bool record_misses, bool append);
 
     //! Calculate the surface area of all primitives in the context
     /**
@@ -1136,6 +1195,27 @@ public:
      * \param[in] max_aspect_ratio Maximum allowable aspect ratio of triangles (see also triangulateHitPoints())
      */
     void trunkReconstruction(const helios::vec3 &box_center, const helios::vec3 &box_size, float Lmax, float max_aspect_ratio);
+
+    //! Read a TreeQSM cylinder file and add tube objects to the context for each branch
+    /**
+     * \param[in] context Pointer to the Helios context where tube objects will be added.
+     * \param[in] filename Path to the TreeQSM cylinder text file.
+     * \param[in] radial_subdivisions Number of radial subdivisions for the tube objects.
+     * \param[in] texture_file Optional path to texture image file for the tube objects. If empty, tubes will be colored red.
+     * \return Vector of tube object IDs that were created.
+     */
+    std::vector<uint> loadTreeQSM(helios::Context *context, const std::string &filename, uint radial_subdivisions, const std::string &texture_file = "");
+
+    //! Read a TreeQSM cylinder file and add tube objects to the context for each branch with colormap-based coloring
+    /**
+     * \param[in] context Pointer to the Helios context where tube objects will be added.
+     * \param[in] filename Path to the TreeQSM cylinder text file.
+     * \param[in] radial_subdivisions Number of radial subdivisions for the tube objects.
+     * \param[in] colormap_name Name of the Helios colormap to use for coloring branches (e.g., "hot", "cool", "rainbow").
+     * \return Vector of tube object UUIDs that were created.
+     * \note Each branch will be colored with a color randomly sampled from the colormap based on the branch ID.
+     */
+    std::vector<uint> loadTreeQSMColormap(helios::Context *context, const std::string &filename, uint radial_subdivisions, const std::string &colormap_name);
 
     //! Delete hitpoints that do not pass through / intersect the voxel grid
     /**

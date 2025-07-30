@@ -358,10 +358,11 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   A leaf-by-leaf reconstruction can be performed for the plant of interest using the method described in <a href="https://www.sciencedirect.com/science/article/pii/S0034425718300191?via%3Dihub">Bailey and Ochoa (2018)</a>. The reconstruction utilizes the triangulation and leaf area computations to ensure the correct leaf angle and area distributions on average, and thus requires that these routines have been run before performing the reconstruction.
 
-  There are two types of available reconstructions. One is a triangular reconstruction that directly uses triangles resulting from the triangulation to produce the reconstruction. The advantage is that it does not require any assumption about the shape of the leaf and can give a more direct reconstruction in some cases, however this reconstruction is typically not recommended as it often results in many small triangle groups that don't necessarily resemble actual leaves. This reconstruction is performed using the \ref LiDARcloud::addReconstructedTriangleGroupsToContext(helios::Context*) const function, whose arguments are thresholds for the minimum and maximum area of reconstructed triangular leaf groups.
+  There are three types of available reconstructions. One is a triangular reconstruction that directly uses triangles resulting from the triangulation to produce the reconstruction. The advantage is that it does not require any assumption about the shape of the leaf and can give a more direct reconstruction in some cases, however this reconstruction is typically not recommended as it often results in many small triangle groups that don't necessarily resemble actual leaves. This reconstruction is performed using the \ref LiDARcloud::addReconstructedTriangleGroupsToContext(helios::Context*) const function, whose arguments are thresholds for the minimum and maximum area of reconstructed triangular leaf groups.
 
   The other type of reconstruction is the "Alpha Mask" reconstruction, which replaces the triangle groups with a "prototype" leaf (which is an alpha mask). This ensures that all reconstructed leaves are representative of an actual leaf in terms of shape and size. This reconstruction is performed using the \ref LiDARcloud::leafReconstructionAlphaMask( float, float, float, const char*) function. This function's arguments, in addition to area thresholds, are the aspect ratio of the prototype leaf (length along midrib divided by width perpendicular to midrib) and the path to a PNG image file to be used for the leaf alpha mask.
 
+  A third type of reconstruction is the "TreeQSM-based" reconstruction, which uses Quantitative Structure Models (QSM) from TreeQSM to guide leaf placement. This method positions leaves near actual branch structures rather than using floodfill segmentation. This reconstruction is performed using the \ref LiDARcloud::leafReconstructionTreeQSM( helios::Context*, const std::vector<uint>&, const helios::vec2&, float, const char*) function. The function's arguments are a pointer to the Helios context, a vector of TreeQSM tube object IDs, leaf size as (width, height), proximity distance for branch detection, and the path to a PNG alpha mask file. This method is particularly useful when accurate branch structure data is available from TreeQSM processing.
 
   There is a function that can automatically add all reconstructed elements (triangles or alpha masks) to the Helios Context, which is \ref LiDARcloud::addLeafReconstructionToContext().
   
@@ -386,6 +387,39 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
      Context context; //Initialize the Context
 
      pointcloud.addLeafReconstructionToContext( &context );
+      
+  }
+  ~~~~~~
+
+  Below is an example of performing a TreeQSM-based reconstruction using branch structure data.
+
+  ~~~~~~{.cpp}
+  #include "LiDAR.h"
+  using namespace helios;
+
+  int main(){
+
+     LiDARcloud pointcloud; //Initialize the LiDAR point cloud
+     Context context; //Initialize the Context
+
+     pointcloud.loadXML("/path/to/scans.xml");  //Load LiDAR scan data
+
+     // Load TreeQSM cylinder data with branch structure
+     std::vector<uint> QSM_UUIDs = pointcloud.loadTreeQSM(&context, "/path/to/treeqsm.txt");
+
+     // Set up voxel grid for leaf area calculation  
+     vec3 grid_center(0, 0, 1.4);
+     vec3 grid_size(1.7, 1.7, 1.5);
+     int3 grid_resolution(4, 4, 8);
+     pointcloud.addGrid(grid_center, grid_size, grid_resolution, 0);
+
+     pointcloud.triangulateHitPoints( 0.03, 5 ); //Perform triangulation
+     pointcloud.calculateLeafAreaGPU(); //Calculate leaf area for each grid cell
+
+     // Perform TreeQSM-based reconstruction with leaves positioned near branches
+     vec2 leaf_size = make_vec2(0.1, 0.05); // leaf width=10cm, height=5cm  
+     float proximity_distance = 0.5; // search within 50cm of branches
+     std::vector<uint> leaf_IDs = pointcloud.leafReconstructionTreeQSM(&context, QSM_UUIDs, leaf_size, proximity_distance, "plugins/plantarchitecture/assets/textures/AppleLeaf.png");
       
   }
   ~~~~~~
@@ -513,11 +547,13 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
   Results can be visualized using the Visualizer plug-in for Helios.  There are two possible means for doing so.  First, is to add the relevant geometry to the Context, then visualize primitives in the Context using the Visualizer.  This works for the triangulation and plant reconstructions, but cannot be used to visualize just the point cloud since there is no "point" primitive in the Context. The next section describes how to accomplish this.
 
   The second option is to add any geometry directly to the Visualizer.  There are several functions build in to the LiDAR plug-in that can to this automatically, which are listed below.
+  
+  \note The Visualizer now includes automatic culling optimization for large point clouds (tens of millions of points), making it suitable for visualizing even very large LiDAR datasets with interactive performance.
 
  <table>
  <tr><th>Function</th><th>Description</th></tr>
  <tr><td>\ref LiDARcloud::addHitsToVisualizer</td><td>Add all hits in the point cloud to the visualizer.</td></tr>
- <tr><td>ef LiDARcloud::addGridToVisualizer(Visualizer*) const</td><td>Add all grid cells to the visualizer, which are displayed as translucent voxels.</td></tr>
+ <tr><td>\ref LiDARcloud::addGridToVisualizer(Visualizer*) const</td><td>Add all grid cells to the visualizer, which are displayed as translucent voxels.</td></tr>
  <tr><td>\ref LiDARcloud::addTrianglesToVisualizer</td><td>Add all triangles to the visualizer, which are colored by the r-g-b color value.</td></tr>
  <tr><td>\ref LiDARcloud::addTrianglesToVisualizer</td><td>Add triangles from a specified grid cell to the visualizer, which are colored by the r-g-b color value.</td></tr>
  </table>

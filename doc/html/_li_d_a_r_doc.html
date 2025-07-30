@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.41</span>
+       <span id="projectnumber">&#160;v1.3.42</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -506,8 +506,9 @@ Calculating leaf area for each grid cell</h2>
 </div><!-- fragment --><h2><a class="anchor" id="LiDARresonstruction"></a>
 Plant reconstruction</h2>
 <p>A leaf-by-leaf reconstruction can be performed for the plant of interest using the method described in <a href="https://www.sciencedirect.com/science/article/pii/S0034425718300191?via%3Dihub">Bailey and Ochoa (2018)</a>. The reconstruction utilizes the triangulation and leaf area computations to ensure the correct leaf angle and area distributions on average, and thus requires that these routines have been run before performing the reconstruction.</p>
-<p>There are two types of available reconstructions. One is a triangular reconstruction that directly uses triangles resulting from the triangulation to produce the reconstruction. The advantage is that it does not require any assumption about the shape of the leaf and can give a more direct reconstruction in some cases, however this reconstruction is typically not recommended as it often results in many small triangle groups that don't necessarily resemble actual leaves. This reconstruction is performed using the <a class="el" href="class_li_d_a_rcloud.html#a503c74fc549e5c3b25a5f5bf2d6a8955">LiDARcloud::addReconstructedTriangleGroupsToContext(helios::Context*) const</a> function, whose arguments are thresholds for the minimum and maximum area of reconstructed triangular leaf groups.</p>
+<p>There are three types of available reconstructions. One is a triangular reconstruction that directly uses triangles resulting from the triangulation to produce the reconstruction. The advantage is that it does not require any assumption about the shape of the leaf and can give a more direct reconstruction in some cases, however this reconstruction is typically not recommended as it often results in many small triangle groups that don't necessarily resemble actual leaves. This reconstruction is performed using the <a class="el" href="class_li_d_a_rcloud.html#a503c74fc549e5c3b25a5f5bf2d6a8955">LiDARcloud::addReconstructedTriangleGroupsToContext(helios::Context*) const</a> function, whose arguments are thresholds for the minimum and maximum area of reconstructed triangular leaf groups.</p>
 <p>The other type of reconstruction is the "Alpha Mask" reconstruction, which replaces the triangle groups with a "prototype" leaf (which is an alpha mask). This ensures that all reconstructed leaves are representative of an actual leaf in terms of shape and size. This reconstruction is performed using the <a class="el" href="class_li_d_a_rcloud.html#aba102c6c5036ffb99b105fb2b4850935">LiDARcloud::leafReconstructionAlphaMask( float, float, float, const char*)</a> function. This function's arguments, in addition to area thresholds, are the aspect ratio of the prototype leaf (length along midrib divided by width perpendicular to midrib) and the path to a PNG image file to be used for the leaf alpha mask.</p>
+<p>A third type of reconstruction is the "TreeQSM-based" reconstruction, which uses Quantitative Structure Models (QSM) from TreeQSM to guide leaf placement. This method positions leaves near actual branch structures rather than using floodfill segmentation. This reconstruction is performed using the LiDARcloud::leafReconstructionTreeQSM( helios::Context*, const std::vector&lt;uint&gt;&amp;, const helios::vec2&amp;, float, const char*) function. The function's arguments are a pointer to the Helios context, a vector of TreeQSM tube object IDs, leaf size as (width, height), proximity distance for branch detection, and the path to a PNG alpha mask file. This method is particularly useful when accurate branch structure data is available from TreeQSM processing.</p>
 <p>There is a function that can automatically add all reconstructed elements (triangles or alpha masks) to the Helios Context, which is <a class="el" href="class_li_d_a_rcloud.html#aeca8578d8b5ecbc92fa669c612196f8c">LiDARcloud::addLeafReconstructionToContext()</a>.</p>
 <p>Below is an example of performing a reconstruction using alpha masks and adding the alpha masks to the Context.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_li_d_a_r_8h.html">LiDAR.h</a>&quot;</span></div>
@@ -528,6 +529,35 @@ Plant reconstruction</h2>
 <div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context; <span class="comment">//Initialize the Context</span></div>
 <div class="line"> </div>
 <div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aeca8578d8b5ecbc92fa669c612196f8c" title="Add reconstructed leaves (texture-masked patches) to the Context.">addLeafReconstructionToContext</a>( &amp;context );</div>
+<div class="line">    </div>
+<div class="line">}</div>
+</div><!-- fragment --><p>Below is an example of performing a TreeQSM-based reconstruction using branch structure data.</p>
+<div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_li_d_a_r_8h.html">LiDAR.h</a>&quot;</span></div>
+<div class="line"><span class="keyword">using namespace </span>helios;</div>
+<div class="line"> </div>
+<div class="line"><span class="keywordtype">int</span> main(){</div>
+<div class="line"> </div>
+<div class="line">   <a class="code hl_class" href="class_li_d_a_rcloud.html" title="Primary class for terrestrial LiDAR scan.">LiDARcloud</a> pointcloud; <span class="comment">//Initialize the LiDAR point cloud</span></div>
+<div class="line">   <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context; <span class="comment">//Initialize the Context</span></div>
+<div class="line"> </div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a6bd7e1839d1a6ecb738233b20b93f1f7" title="Read an XML file containing scan information.">loadXML</a>(<span class="stringliteral">&quot;/path/to/scans.xml&quot;</span>);  <span class="comment">//Load LiDAR scan data</span></div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">// Load TreeQSM cylinder data with branch structure</span></div>
+<div class="line">   std::vector&lt;uint&gt; QSM_UUIDs = pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac7423ecdb3010725255326db1f49af89" title="Read a TreeQSM cylinder file and add tube objects to the context for each branch.">loadTreeQSM</a>(&amp;context, <span class="stringliteral">&quot;/path/to/treeqsm.txt&quot;</span>);</div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">// Set up voxel grid for leaf area calculation  </span></div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> grid_center(0, 0, 1.4);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> grid_size(1.7, 1.7, 1.5);</div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1int3.html" title="Vector of three elements of type &#39;int&#39;.">int3</a> grid_resolution(4, 4, 8);</div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#a755ab5b665c80e30a49450ccfa1592d1" title="Add a grid to point cloud instead of reading in from an xml file.">addGrid</a>(grid_center, grid_size, grid_resolution, 0);</div>
+<div class="line"> </div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#ac495385c9dc7cc7773819ce77175242a" title="Perform triangulation on all hit points in point cloud.">triangulateHitPoints</a>( 0.03, 5 ); <span class="comment">//Perform triangulation</span></div>
+<div class="line">   pointcloud.<a class="code hl_function" href="class_li_d_a_rcloud.html#aff9aeedaa500516d1c227e5161fb599a" title="Calculate the leaf area for each grid volume.">calculateLeafAreaGPU</a>(); <span class="comment">//Calculate leaf area for each grid cell</span></div>
+<div class="line"> </div>
+<div class="line">   <span class="comment">// Perform TreeQSM-based reconstruction with leaves positioned near branches</span></div>
+<div class="line">   <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> leaf_size = <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(0.1, 0.05); <span class="comment">// leaf width=10cm, height=5cm  </span></div>
+<div class="line">   <span class="keywordtype">float</span> proximity_distance = 0.5; <span class="comment">// search within 50cm of branches</span></div>
+<div class="line">   std::vector&lt;uint&gt; leaf_IDs = pointcloud.leafReconstructionTreeQSM(&amp;context, QSM_UUIDs, leaf_size, proximity_distance, <span class="stringliteral">&quot;plugins/plantarchitecture/assets/textures/AppleLeaf.png&quot;</span>);</div>
 <div class="line">    </div>
 <div class="line">}</div>
 </div><!-- fragment --><h1><a class="anchor" id="LiDARsynthetic"></a>
@@ -624,13 +654,14 @@ Synthetic waveform data</h2>
 Visualizing results</h1>
 <p>Results can be visualized using the Visualizer plug-in for Helios. There are two possible means for doing so. First, is to add the relevant geometry to the Context, then visualize primitives in the Context using the Visualizer. This works for the triangulation and plant reconstructions, but cannot be used to visualize just the point cloud since there is no "point" primitive in the Context. The next section describes how to accomplish this.</p>
 <p>The second option is to add any geometry directly to the Visualizer. There are several functions build in to the LiDAR plug-in that can to this automatically, which are listed below.</p>
+<dl class="section note"><dt>Note</dt><dd>The Visualizer now includes automatic culling optimization for large point clouds (tens of millions of points), making it suitable for visualizing even very large LiDAR datasets with interactive performance.</dd></dl>
 <table class="doxtable">
 <tr>
 <th>Function</th><th>Description </th></tr>
 <tr>
 <td><a class="el" href="class_li_d_a_rcloud.html#a2102dd4711658414cca10fd40a66af18">LiDARcloud::addHitsToVisualizer</a></td><td>Add all hits in the point cloud to the visualizer. </td></tr>
 <tr>
-<td>ef LiDARcloud::addGridToVisualizer(Visualizer*) const</td><td>Add all grid cells to the visualizer, which are displayed as translucent voxels. </td></tr>
+<td><a class="el" href="class_li_d_a_rcloud.html#a2b7b76c26d6dd976bf37c0595b761507">LiDARcloud::addGridToVisualizer(Visualizer*) const</a></td><td>Add all grid cells to the visualizer, which are displayed as translucent voxels. </td></tr>
 <tr>
 <td><a class="el" href="class_li_d_a_rcloud.html#a11d8d20197aa909080d70954c97395e6">LiDARcloud::addTrianglesToVisualizer</a></td><td>Add all triangles to the visualizer, which are colored by the r-g-b color value. </td></tr>
 <tr>

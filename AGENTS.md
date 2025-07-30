@@ -8,6 +8,7 @@
 - Standard C++ library include headers are listed in the file `core/include/global.h`. Check these includes to make sure you do not add unnecessary includes.
 - Prefer descriptive variable names that 'self-document' the code.
 - Prefer clearer code over clever optimized code that provides only marginal performance improvements.
+- When implementing new function/method definitions, be aware of the organization of the source file. Don't just automatically add them at the end of the file, but keep them grouped with similar definitions if possible.
 
 ## Code Structure
 - The code is organized into a core library and plugins. The core library contains the main functionality, while plugins provide additional features.
@@ -39,6 +40,7 @@
 2. **Running Tests**: 
    - For core tests: `./context_tests` (from context_selftest/build/)
    - For plugin tests: `./{plugin_name}_selftest` or `./{plugin_name}_tests`
+   - If you need to run custom test code from a new .cpp file, add it to the `CMakeLists.txt` in the appropriate sample directory and rebuild.
 
 3. **Common Build Issues**:
    - Always check compilation errors carefully for missing includes or function signature mismatches
