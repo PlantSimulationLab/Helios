@@ -1,0 +1,114 @@
+/*! \page radiation_basics_tutorial Tutorial 10: Radiation model basics - tree light interception
+
+ This tutorial will illustrate how to simulate and calculate photosynthetically active radiation (PAR) interception of a tree canopy using the radiation model plug-in.
+
+ \section Tutorial10_geom 1. Model geometry creation
+
+ The first step is to declare the Context class in the usual way, then add some geometry to the Context. In this case, we'll load in a 3D model of a tree from a <a href="https://en.wikipedia.org/wiki/PLY_(file_format)">PLY file</a>. This file is located in the "PLY" directory found in the base Helios code directory. It is important to either give an absolute path to this file, or a path relative to the build directory. Since this tutorial is build in the directory "Helios/samples/tutorial10/build", the relative path to the PLY file is "../../../PLY/Tree.ply".
+
+ We can then use the \ref helios::Context::loadPLY() function to load the model. In addition to the relative file path, we need to specify the base (x,y,z) position to place the model, the height to which we want to scale the model, a spherical rotation (if applicable) and the default color of the model primitives. In the example below, we'll place the model at the position (0,0,0), scale it to a height of 5, apply no rotation, and assign a default color of black. Note that if you specify a scaling factor of 0, no scaling will be applied. This function returns a vector of UUIDs, one for each primitive loaded in the model.
+
+ Next, we'll add a ground surface consisting of tiled patches. The ground will be centered at the point (0,0,0), and be divided into 50x50 patch tiles with total size of plant_spacing x row_spacing. The \ref helios::Context::addTile() function returns a vector of UUIDs, one UUID for each patch primitive in the tile.
+
+\section Tutorial10_rad 2. Radiation model set-up
+
+ We can then declare and initialize the \ref RadiationModel class. It's constructor takes a pointer to the \ref helios::Context as an argument, so that it can get model geometry and data, and write calculated values to primitive data.
+
+ We'll then add a "sun sphere" radiation source in the model using \ref RadiationModel::addSunSphereRadiationSource(). This creates a spherical radiation source with size and distance of the sun, and thus includes penumbral effects. This function with no arguments sets the sun position as vertical, but we'll pass it a \ref helios::SphericalCoord that sets the sun elevation at 60 degrees and azimuth at 45 degrees. The function returns a uint value that gives an ID of the source that we'll use to reference it later.
+
+ The \ref RadiationModel::addRadiationBand() function is then used to add a radiation band called "PAR". We can call the band anything we want, this is simply a label we'll use to refer to it later. We want to disable primitive emission for this band, since terrestrial objects don't emit radiation in the PAR band. We then set the flux of the radiation source (sun) to a value of 500 W/m<sup>2</sup>, and set the diffuse (ambient) flux to be 50 W/m<sup>2</sup>. By default, it is assume that diffuse radiation is isotropic, but this can be changed using the \ref RadiationModel::setDiffuseRadiationExtinctionCoeff() function (see \ref RadiationDoc "documentation" for details). For this exercise, we will assume that leaves and branches absorb all incoming PAR (default behavior), so we don't need to turn on scattering.
+
+ By default, primitives absorb and emit radiation from both sides. This is the behavior we want for leaves, but for the ground, we don't want it to receive diffuse radiation from below. We can set the primitive data "twosided_flag" to a value of 0 to disable radiation absorption and emission from the back face. Note that "twosided_flag" needs to have a type of uint, as specified in the \ref RadiationDoc "radiation model documentation".
+
+ A periodic lateral boundary will allow for simulation of an infinitely repeating canopy of trees. This is enabled using the \ref RadiationModel::enforcePeriodicBoundary() with the argument "xy". This function will determine a bounding box for all primitives, and create a periodic boundary at the box face(s). If the domain has a ground surface, it is very important that no primitives extend past the ground. Otherwise, the domain bounding box will extend past the ground surface, and there will effectively be a gap between the ground and the periodic boundary. If there is a chance that you might have primitives extending past the ground, you can use the \ref helios::Context::cropDomain() function to crop the lateral domain extent to that of the ground surface. Example code for doing this is provided in the radiation model documentation (see \ref RadPeriodic).
+
+ The final step before running the model is always to update geometry in the radiation model based on geometry currently in the Context. The \ref RadiationModel::updateGeometry() function should be called any time the Context geometry or primitive data relevant to the radiation model are changed.
+
+ \section Tutorial10_run 3. Run the model and calculate PAR interception
+
+ Radiation model calculations are performed when the \ref RadiationModel::runBand() function is called. This function should be called for every radiation band that was created. Absorbed radiation fluxes for each primitive and each band are calculated and written to the primitive data "radiation_flux_[*]", where [*] is the name of the radiation band that you chose.
+
+ To calculate the fraction of PAR intercepted by the canopy, we can sum the total energy absorbed by the canopy and divide it by the sum of the total energy absorbed by the canopy and ground. The radiation model calculates radiative fluxes in W/m<sup>2</sup>, so we need to multiply by the primitive surface area to get energy rate in Watts (i.e., the sum of absorbed fluxes should be area-weighted). There are a number of functions in the Context for aggregating primitive data values, including the \ref helios::Context::calculatePrimitiveDataAreaWeightedSum(). The arguments to this function are a vector of UUIDs for primitives to include in the sum, the label of primitive data, and the variable in which to store the result. The type of the result variable should match the type of the primitive data.
+
+ The fraction of PAR intercepted by the canopy is the area-weighted sum of PAR fluxes for the canopy divided by the area-weighted sum of ground plus canopy fluxes. We then print the result to the standard output.
+
+ ~~~~~~{.cpp}
+ #include "Visualizer.h"
+ #include "RadiationModel.h"
+
+ using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+
+ int main(){
+
+   // *** 1. Model geometry creation *** //
+
+   float row_spacing = 5;    //spacing between tree rows
+   float plant_spacing = 3;  //spacing between trees within a row
+
+   Context context;   //Declare the "Context" class
+
+   // Load 3D model "Tree.ply" with a base position of (0,0,0) and scaled to a height of 5
+   std::vector<uint> UUIDs_tree = context.loadPLY( "../../../PLY/Tree.ply", make_vec3(0,0,0), 5, nullrotation, RGB::black );
+
+   // Add a ground surface with a center position of (0,0,0) and size of row_spacing x plant_spacing
+   std::vector<uint> UUIDs_ground = context.addTile(make_vec3(0, 0, 0), make_vec2(row_spacing, plant_spacing), nullrotation, make_int2(50, 50));
+
+   // *** 2. Radiation model set-up *** //
+
+   // Declare and initialize the radiation model class
+   RadiationModel radiation(&context);
+
+   // Add a sun radiation source with elevation angle of 60 degrees and an azimuth of 45 degrees (note that we need to convert to radians)
+   uint sourceID = radiation.addSunSphereRadiationSource( make_SphericalCoord( deg2rad(60), deg2rad(45) ));
+
+   // Add a shortwave radiation band called "PAR" (you can call it anything you want, just be consistent)
+   radiation.addRadiationBand("PAR");
+   radiation.disableEmission("PAR");   //turn off emission, no emission of primitives in solar bands
+   radiation.setSourceFlux( sourceID, "PAR", 500.f );   //set solar flux perpendicular to sun direction of 500 W/m^2
+   radiation.setDiffuseRadiationFlux("PAR", 50.f);   //set diffuse (ambient) solar radiation flux of 50 W/m^2
+
+   // We only want the ground to absorb radiation from the top. If we left the default "twosided_flag=1", our ground would absorb diffuse radiation from below
+   context.setPrimitiveData(UUIDs_ground, "twosided_flag", uint(0));
+
+   radiation.enforcePeriodicBoundary("xy");  //Use periodic lateral boundaries so we have repeating trees
+
+   radiation.updateGeometry(); //tell the radiation model to load all the geometry in the Context
+
+   // *** 3. Run the model and calculate PAR interception *** //
+
+   radiation.runBand("PAR"); //run the radiation calculations for this band
+
+   // Calculate PAR interception
+   float PAR_tree;
+   context.calculatePrimitiveDataAreaWeightedSum( UUIDs_tree, "radiation_flux_PAR", PAR_tree ); //sum up absorbed PAR flux for each tree primitive and weight by primitive surface area.
+   float PAR_ground;
+   context.calculatePrimitiveDataAreaWeightedSum( UUIDs_ground, "radiation_flux_PAR", PAR_ground );  //sum up absorbed PAR flux for each ground primitive and weight by primitive surface area.
+
+   float fPAR = PAR_tree/(PAR_tree+PAR_ground);
+
+   std::cout << "Fraction of intercepted PAR is " << fPAR << std::endl;
+
+   return 0;
+ }
+ ~~~~~~
+
+ It is generally a good idea to visualize the result to verify that the distribution of values generally makes sense. Code is provided below that can be added to this sample code to visualize the absorbed PAR flux distribution.
+
+ ~~~~~~{.cpp}
+ Visualizer visualizer(800);
+
+ visualizer.buildContextGeometry(&context);
+
+ visualizer.colorContextPrimitivesByData( "radiation_flux_PAR" ); //color primitives based on a pseudocolor mapping of primitive data "radiation_flux_PAR" (this is the output primitive data from the radiation model)
+
+ visualizer.setColorbarTitle("PAR flux [W/m^2]" ); //give our colorbar a title
+
+ visualizer.plotInteractive();
+ ~~~~~~
+
+ <br>
+
+ \image html Tutorial10_treePAR.png
+
+*/
+

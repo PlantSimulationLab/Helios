@@ -1228,6 +1228,40 @@ public:
      * \param[in] signal the signal we want to detect peaks in
      */
     std::vector<uint> peakFinder(std::vector<float> signal);
+
+    // --- QSM Declarations --- //
+
+    //! Build a distance graph using TreeGraph-inspired approach with Dijkstra's algorithm
+    /**
+     * \param[in] points Vector of 3D points to build the graph from
+     * \param[in] base_point Reference point from which distances are calculated
+     * \return Vector of distances from the base point to each point in the graph
+     * \note This function implements a graph-based shortest path calculation using adaptive k-NN connectivity and handles unreachable points with Euclidean distance fallback
+     */
+    std::vector<float> buildDistanceGraph(const std::vector<helios::vec3>& points, const helios::vec3& base_point);
+
+    //! Reconstruct a Quantitative Structure Model (QSM) from LiDAR point cloud data
+    /**
+     * \param[in] context Pointer to the Helios context where tube objects will be created
+     * \param[in] filename Path to output QSM file in TreeQSM format
+     * \param[in] radial_subdivisions Number of radial subdivisions for the tube visualization objects
+     * \return Vector of tube object IDs that were created for visualization
+     * \note This function implements a TreeGraph-inspired approach using graph-based distance calculation, DBSCAN clustering for branch detection, and hierarchical skeleton connectivity. The output file follows TreeQSM format with tab-separated columns including radius, length, start_point, axis_direction, parent, extension, branch, branch_order, position_in_branch, mad, SurfCov, added, and UnmodRadius.
+     */
+    std::vector<uint> reconstructQSM(helios::Context *context, const std::string &filename, uint radial_subdivisions);
+
+    //! Perform TreeQSM-based leaf reconstruction using branch proximity for leaf placement
+    /**
+     * \param[in] context Pointer to the Helios context containing the tube objects from TreeQSM
+     * \param[in] tube_object_IDs Vector of object IDs corresponding to tube objects from a TreeQSM model (from loadTreeQSM)
+     * \param[in] leaf_size Size of each leaf as (width, length) in meters
+     * \param[in] proximity_distance Maximum distance from branch for leaf placement (in meters)
+     * \param[in] mask_file Path to PNG image file to be used with Alpha Mask
+     * \return Vector of object IDs for all reconstructed leaf objects
+     * \note This method requires that loadTreeQSM(), triangulateHitPoints(), and calculateLeafAreaGPU() have been called previously
+     */
+     std::vector<uint> leafReconstructionTreeQSM(helios::Context *context, const std::vector<uint> &tube_object_IDs, const helios::vec2 &leaf_size, float proximity_distance, const char *mask_file);
+
 };
 
 bool sortcol0(const std::vector<double> &v0, const std::vector<double> &v1);

@@ -1,0 +1,156 @@
+/*! \page lidar_synthetic_tutorial Tutorial 12: Generating synthetic LiDAR data from plant architecture models
+
+This tutorial demonstrates how to generate synthetic LiDAR point clouds from plant models created using the PlantArchitecture plug-in. This is useful for testing LiDAR processing algorithms and understanding how LiDAR data relates to actual plant structure.
+
+\section lidar_synth_plugins 1. Loading Plug-ins
+
+This tutorial uses both the PlantArchitecture and LiDAR plug-ins. Make sure that both "plantarchitecture" and "lidar" are included in your CMakeLists.txt file:
+
+~~~~~~{.cmake}
+set( PLUGINS "plantarchitecture;lidar" )
+~~~~~~
+
+\section lidar_synth_includes 2. Include Headers
+
+Include the necessary header files for both plug-ins:
+
+~~~~~~{.cpp}
+#include "Context.h"
+#include "PlantArchitecture.h"
+#include "LiDAR.h"
+using namespace helios;
+~~~~~~
+
+\section lidar_synth_plant 3. Creating a Plant Model
+
+First, we'll create a simple plant using the PlantArchitecture plug-in. This will serve as our target for synthetic LiDAR scanning:
+
+~~~~~~{.cpp}
+Context context;
+PlantArchitecture plantarch(&context);
+
+// Set up plant parameters
+uint plant_ID = plantarch.buildPlantArchitecture("test_plant");
+
+// Add a simple canopy structure
+PlantSpecies species;
+species.max_height = 2.0;
+species.a_k = 0.3;
+species.leaf_length.uniformDistribution(0.02, 0.06);
+species.leaf_width.uniformDistribution(0.01, 0.03);
+
+plantarch.setPlantSpecies(plant_ID, species);
+plantarch.growPlant(plant_ID, 30); // grow for 30 days
+~~~~~~
+
+\section lidar_synth_scan 4. Setting Up the LiDAR Scan
+
+Now we'll configure and perform a synthetic LiDAR scan of our plant:
+
+~~~~~~{.cpp}
+LiDARcloud pointcloud;
+
+// Create scan XML configuration
+std::string xml_config = R\"(
+<helios>
+  <scan>
+    <origin>0 0 1.5</origin>
+    <size>100 200</size>
+    <thetaMin>30</thetaMin>
+    <thetaMax>130</thetaMax>
+    <phiMin>0</phiMin>
+    <phiMax>360</phiMax>
+    <ASCII_format>x y z r255 g255 b255 object_label</ASCII_format>
+  </scan>
+</helios>
+)\";
+
+// Write XML to file
+std::ofstream xmlfile("synthetic_scan.xml");
+xmlfile << xml_config;
+xmlfile.close();
+
+// Load scan parameters
+pointcloud.loadXML("synthetic_scan.xml");
+
+// Perform synthetic scan
+pointcloud.syntheticScan(&context);
+
+// Export point cloud for analysis
+pointcloud.exportPointCloud("synthetic_plant_scan.xyz");
+~~~~~~
+
+\section lidar_synth_analysis 5. Basic Analysis
+
+We can perform some basic analysis of the synthetic point cloud:
+
+~~~~~~{.cpp}
+std::cout << "Total hit points: " << pointcloud.getHitCount() << std::endl;
+std::cout << "Number of scans: " << pointcloud.getScanCount() << std::endl;
+
+// Get some statistics
+float min_range, max_range;
+pointcloud.getHitRangeStatistics(min_range, max_range);
+std::cout << "Range: " << min_range << " to " << max_range << std::endl;
+~~~~~~
+
+\section lidar_synth_complete 6. Complete Program
+
+~~~~~~{.cpp}
+#include "Context.h"
+#include "PlantArchitecture.h"
+#include "LiDAR.h"
+#include <fstream>
+using namespace helios;
+
+int main(){
+    
+    Context context;
+    PlantArchitecture plantarch(&context);
+    
+    // Create plant model
+    uint plant_ID = plantarch.buildPlantArchitecture("test_plant");
+    
+    PlantSpecies species;
+    species.max_height = 2.0;
+    species.a_k = 0.3;
+    species.leaf_length.uniformDistribution(0.02, 0.06);
+    species.leaf_width.uniformDistribution(0.01, 0.03);
+    
+    plantarch.setPlantSpecies(plant_ID, species);
+    plantarch.growPlant(plant_ID, 30);
+    
+    // Set up LiDAR scan
+    LiDARcloud pointcloud;
+    
+    std::string xml_config = R\"(
+    <helios>
+      <scan>
+        <origin>0 0 1.5</origin>
+        <size>100 200</size>
+        <thetaMin>30</thetaMin>
+        <thetaMax>130</thetaMax>
+        <phiMin>0</phiMin>
+        <phiMax>360</phiMax>
+        <ASCII_format>x y z r255 g255 b255 object_label</ASCII_format>
+      </scan>
+    </helios>
+    )\";
+    
+    std::ofstream xmlfile("synthetic_scan.xml");
+    xmlfile << xml_config;
+    xmlfile.close();
+    
+    pointcloud.loadXML("synthetic_scan.xml");
+    pointcloud.syntheticScan(&context);
+    pointcloud.exportPointCloud("synthetic_plant_scan.xyz");
+    
+    std::cout << "Synthetic LiDAR scan complete!" << std::endl;
+    std::cout << "Total hit points: " << pointcloud.getHitCount() << std::endl;
+    
+    return 0;
+}
+~~~~~~
+
+*/
+

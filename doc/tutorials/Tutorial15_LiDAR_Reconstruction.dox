@@ -1,0 +1,267 @@
+/*! \page lidar_reconstruction_tutorial Tutorial 15: Plant reconstruction using alpha mask methods
+
+This tutorial demonstrates how to perform plant reconstruction from LiDAR point clouds using alpha mask methods, and visually compare the reconstruction with the original PlantArchitecture model.
+
+\section lidar_recon_intro 1. Introduction
+
+Plant reconstruction from LiDAR point clouds allows us to create 3D plant models that can be used for further analysis. The alpha mask method uses prototype leaf shapes to replace triangulated surfaces, creating more realistic-looking reconstructions.
+
+\section lidar_recon_setup 2. Setup and Dependencies
+
+This tutorial requires the Visualizer plug-in for visual comparison:
+
+~~~~~~{.cmake}
+set( PLUGINS "plantarchitecture;lidar;visualizer" )
+~~~~~~
+
+~~~~~~{.cpp}
+#include "Context.h"
+#include "PlantArchitecture.h"
+#include "LiDAR.h"
+#include "Visualizer.h"
+using namespace helios;
+~~~~~~
+
+\section lidar_recon_plant 3. Create Original Plant Model
+
+Create a plant model that we'll reconstruct from synthetic LiDAR:
+
+~~~~~~{.cpp}
+Context original_context;
+PlantArchitecture plantarch(&original_context);
+
+// Create a plant with distinct leaf characteristics
+uint plant_ID = plantarch.buildPlantArchitecture("recon_test_plant");
+
+PlantSpecies species;
+species.max_height = 2.0;
+species.a_k = 0.4;
+species.leaf_length.uniformDistribution(0.04, 0.07);
+species.leaf_width.uniformDistribution(0.02, 0.035);
+species.leaflet_count = 3;
+species.leaf_angle_distribution = "erectophile";
+
+plantarch.setPlantSpecies(plant_ID, species);
+plantarch.growPlant(plant_ID, 35);
+
+// Add some color variation for visualization
+std::vector<uint> UUIDs = original_context.getAllUUIDs();
+for(uint UUID : UUIDs){
+    if(original_context.getPrimitiveType(UUID) == PRIMITIVE_TYPE_PATCH){
+        original_context.setPrimitiveColor(UUID, RGB::green);
+    }
+}
+
+std::cout << "Original plant has " << original_context.getPrimitiveCount() 
+          << " primitives" << std::endl;
+~~~~~~
+
+\section lidar_recon_scan 4. Generate High-Quality Synthetic LiDAR Data
+
+~~~~~~{.cpp}
+LiDARcloud pointcloud;
+
+// High-resolution scan for good reconstruction
+std::string scan_xml = R\"(
+<helios>
+  <scan>
+    <origin>0 0 1.8</origin>
+    <size>300 500</size>
+    <thetaMin>15</thetaMin>
+    <thetaMax>145</thetaMax>
+    <phiMin>0</phiMin>
+    <phiMax>360</phiMax>
+    <ASCII_format>x y z r255 g255 b255</ASCII_format>
+  </scan>
+</helios>
+)\";
+
+std::ofstream scanfile("recon_scan.xml");
+scanfile << scan_xml;
+scanfile.close();
+
+pointcloud.loadXML("recon_scan.xml");
+pointcloud.syntheticScan(&original_context);
+
+std::cout << "Generated " << pointcloud.getHitCount() << " LiDAR points" << std::endl;
+~~~~~~
+
+\section lidar_recon_grid 5. Setup Reconstruction Grid
+
+~~~~~~{.cpp}
+std::string grid_xml = R\"(
+<helios>
+  <grid>
+    <center>0 0 1.0</center>
+    <size>2.5 2.5 2.0</size>
+    <Nx>5</Nx>
+    <Ny>5</Ny>
+    <Nz>4</Nz>
+  </grid>
+</helios>
+)\";
+
+std::ofstream gridfile("recon_grid.xml");
+gridfile << grid_xml;
+gridfile.close();
+
+pointcloud.loadXML("recon_grid.xml");
+~~~~~~
+
+\section lidar_recon_process 6. Point Cloud Processing
+
+~~~~~~{.cpp}
+// Fill gaps and triangulate
+pointcloud.gapfillMisses();
+
+float Lmax = 0.03; // Fine triangulation for good reconstruction
+float max_aspect_ratio = 6.0;
+pointcloud.triangulateHitPoints(Lmax, max_aspect_ratio);
+
+// Calculate leaf area (required for reconstruction)
+pointcloud.calculateLeafAreaGPU();
+
+std::cout << "Created " << pointcloud.getTriangleCount() << " triangles" << std::endl;
+~~~~~~
+
+\section lidar_recon_alphamask 7. Alpha Mask Reconstruction
+
+~~~~~~{.cpp}
+// Perform alpha mask reconstruction
+float min_leaf_area = 0.0005; // Minimum area threshold for reconstruction
+float max_leaf_area = 0.01;   // Maximum area threshold
+float leaf_aspect_ratio = 2.0; // Length/width ratio of prototype leaf
+const char* mask_file = "plugins/visualizer/textures/SoybeanLeaf.png"; // Alpha mask texture
+
+pointcloud.leafReconstructionAlphaMask(min_leaf_area, max_leaf_area, 
+                                       leaf_aspect_ratio, mask_file);
+
+std::cout << "Alpha mask reconstruction completed" << std::endl;
+~~~~~~
+
+\section lidar_recon_context 8. Add Reconstruction to Context
+
+~~~~~~{.cpp}
+// Create new context for reconstructed plant
+Context reconstructed_context;
+
+// Add reconstructed elements to context
+pointcloud.addLeafReconstructionToContext(&reconstructed_context);
+
+std::cout << "Reconstructed plant has " << reconstructed_context.getPrimitiveCount() 
+          << \" primitives" << std::endl;
+
+// Color the reconstructed leaves differently for comparison
+std::vector<uint> recon_UUIDs = reconstructed_context.getAllUUIDs();
+for(uint UUID : recon_UUIDs){
+    reconstructed_context.setPrimitiveColor(UUID, RGB::red);
+}
+~~~~~~
+
+\section lidar_recon_visualize 9. Visual Comparison
+
+~~~~~~{.cpp}
+// Create visualizer for comparison
+Visualizer vis(1200);
+
+// Add both original and reconstructed plants to visualizer
+// Original plant (green)
+std::vector<uint> orig_UUIDs = original_context.getAllUUIDs();
+for(uint UUID : orig_UUIDs){
+    if(original_context.getPrimitiveType(UUID) == PRIMITIVE_TYPE_PATCH){
+        std::vector<vec3> vertices = original_context.getPrimitiveVertices(UUID);
+        RGBcolor color = original_context.getPrimitiveColor(UUID);
+        vis.addTriangle(vertices[0], vertices[1], vertices[2], color, 0.7);
+    }
+}
+
+// Reconstructed plant (red, slightly offset for comparison)
+vec3 offset(0.5, 0, 0); // Offset for side-by-side comparison
+for(uint UUID : recon_UUIDs){
+    if(reconstructed_context.getPrimitiveType(UUID) == PRIMITIVE_TYPE_PATCH){
+        std::vector<vec3> vertices = reconstructed_context.getPrimitiveVertices(UUID);
+        RGBcolor color = reconstructed_context.getPrimitiveColor(UUID);
+        
+        // Apply offset
+        for(vec3& v : vertices){
+            v = v + offset;
+        }
+        
+        vis.addTriangle(vertices[0], vertices[1], vertices[2], color, 0.7);
+    }
+}
+
+// Add LiDAR points for reference
+pointcloud.addHitsToVisualizer(&vis, 2); // Size 2 points
+
+// Add coordinate axes
+vis.addCoordinateAxes();
+
+// Launch interactive visualization
+vis.plotInteractive();
+~~~~~~
+
+\section lidar_recon_analysis 10. Quantitative Comparison
+
+~~~~~~{.cpp}
+// Compare total leaf areas
+float original_total_area = 0;
+for(uint UUID : orig_UUIDs){
+    if(original_context.getPrimitiveType(UUID) == PRIMITIVE_TYPE_PATCH){
+        original_total_area += original_context.getPrimitiveArea(UUID);
+    }
+}
+
+float reconstructed_total_area = 0;
+for(uint UUID : recon_UUIDs){
+    if(reconstructed_context.getPrimitiveType(UUID) == PRIMITIVE_TYPE_PATCH){
+        reconstructed_total_area += reconstructed_context.getPrimitiveArea(UUID);
+    }
+}
+
+std::cout << "\\n=== Reconstruction Comparison ===" << std::endl;
+std::cout << "Original total leaf area: " << original_total_area << \" m²" << std::endl;
+std::cout << "Reconstructed total area: " << reconstructed_total_area << \" m²" << std::endl;
+std::cout << "Reconstruction efficiency: \" 
+          << (reconstructed_total_area/original_total_area*100) << \" %" << std::endl;
+
+// Compare leaf count
+std::cout << "Original leaf count: " << orig_UUIDs.size() << std::endl;
+std::cout << "Reconstructed leaf count: " << recon_UUIDs.size() << std::endl;
+~~~~~~
+
+\section lidar_recon_export 11. Export Results
+
+~~~~~~{.cpp}
+// Export reconstructed model
+reconstructed_context.writeOBJ("reconstructed_plant.obj");
+
+// Export point cloud
+pointcloud.exportPointCloud("reconstruction_pointcloud.xyz");
+
+// Export original model for comparison
+original_context.writeOBJ("original_plant.obj");
+
+// Export reconstruction statistics
+std::ofstream stats("reconstruction_stats.txt");
+stats << "Metric\\tOriginal\\tReconstructed\\tRatio\\n";
+stats << "Total_Area\\t" << original_total_area << "\\t" 
+      << reconstructed_total_area << "\\t" 
+      << (reconstructed_total_area/original_total_area) << "\\n";
+stats << "Leaf_Count\\t" << orig_UUIDs.size() << "\\t" 
+      << recon_UUIDs.size() << "\\t" 
+      << (float(recon_UUIDs.size())/float(orig_UUIDs.size())) << "\\n";
+stats << "LiDAR_Points\\t" << pointcloud.getHitCount() << "\\t" 
+      << pointcloud.getHitCount() << "\\t1.0\\n";
+stats << "Triangles\\t" << pointcloud.getTriangleCount() << "\\t" 
+      << pointcloud.getTriangleCount() << "\\t1.0\\n";
+stats.close();
+
+std::cout << "\\nReconstruction complete! Check the exported files:\\n";
+std::cout << "- reconstructed_plant.obj (3D model)\\n";
+std::cout << "- original_plant.obj (reference model)\\n";
+std::cout << "- reconstruction_stats.txt (comparison metrics)\\n";
+~~~~~~
+
+*/
+

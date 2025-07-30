@@ -1,0 +1,179 @@
+/*! \page lidar_leafangles_tutorial Tutorial 13: Leaf angle distribution analysis from LiDAR point clouds
+
+This tutorial demonstrates how to calculate leaf angle distributions from LiDAR point clouds using triangulation methods, and compare these results with the known angle distribution from a PlantArchitecture model.
+
+\section lidar_angles_setup 1. Setup and Data Preparation
+
+We'll start with a synthetic LiDAR scan generated from a plant architecture model, similar to Tutorial 12:
+
+~~~~~~{.cpp}
+#include "Context.h"
+#include "PlantArchitecture.h"
+#include "LiDAR.h"
+using namespace helios;
+
+Context context;
+PlantArchitecture plantarch(&context);
+LiDARcloud pointcloud;
+
+// Create plant with known leaf angle distribution
+uint plant_ID = plantarch.buildPlantArchitecture("angle_test_plant");
+PlantSpecies species;
+species.leaf_angle_distribution = "spherical"; // or "erectophile", "planophile", etc.
+plantarch.setPlantSpecies(plant_ID, species);
+plantarch.growPlant(plant_ID, 30);
+
+// Generate synthetic LiDAR data
+pointcloud.loadXML("scan_config.xml");
+pointcloud.syntheticScan(&context);
+~~~~~~
+
+\section lidar_angles_grid 2. Setting Up Grid Cells
+
+Define grid cells for analysis. The grid should encompass the plant canopy:
+
+~~~~~~{.cpp}
+// Add grid cells for analysis
+std::string grid_xml = R\"(
+<helios>
+  <grid>
+    <center>0 0 1.0</center>
+    <size>2.0 2.0 2.0</size>
+    <Nx>4</Nx>
+    <Ny>4</Ny>
+    <Nz>4</Nz>
+  </grid>
+</helios>
+)\";
+
+std::ofstream gridfile("grid_config.xml");
+gridfile << grid_xml;
+gridfile.close();
+
+pointcloud.loadXML("grid_config.xml");
+~~~~~~
+
+\section lidar_angles_triangulate 3. Triangulation
+
+Perform triangulation to create surface normals that represent leaf orientations:
+
+~~~~~~{.cpp}
+// Perform triangulation
+float Lmax = 0.05; // Maximum triangle side length
+float max_aspect_ratio = 5.0;
+pointcloud.triangulateHitPoints(Lmax, max_aspect_ratio);
+
+// Calculate leaf area and angles
+pointcloud.calculateLeafAreaGPU();
+~~~~~~
+
+\section lidar_angles_extract 4. Extract Angle Distributions
+
+Extract the calculated leaf angle distributions from each grid cell:
+
+~~~~~~{.cpp}
+uint Ncells = pointcloud.getGridCellCount();
+
+std::vector<float> mean_angles(Ncells);
+std::vector<float> gtheta_values(Ncells);
+
+for(uint i = 0; i < Ncells; i++){
+    // Get G(theta) values for each cell
+    gtheta_values[i] = pointcloud.getCellGtheta(i);
+    
+    // Calculate mean leaf angle from triangulation
+    std::vector<float> triangle_normals;
+    pointcloud.getCellLeafAngleDistribution(i, triangle_normals);
+    
+    if(!triangle_normals.empty()){
+        float sum = 0;
+        for(float angle : triangle_normals){
+            sum += angle;
+        }
+        mean_angles[i] = sum / triangle_normals.size();
+    }
+}
+~~~~~~
+
+\section lidar_angles_exact 5. Calculate Exact Angles from Plant Model
+
+Compare with the true leaf angles from the original plant architecture:
+
+~~~~~~{.cpp}
+// Get exact leaf angles from plant architecture
+std::vector<float> exact_angles(Ncells, 0.0);
+std::vector<uint> leaf_count(Ncells, 0);
+
+std::vector<uint> UUIDs = context.getAllUUIDs();
+for(uint UUID : UUIDs){
+    if(context.getPrimitiveType(UUID) == PRIMITIVE_TYPE_PATCH){
+        // Get the grid cell this leaf belongs to
+        vec3 center = context.getPrimitiveCentroid(UUID);
+        int cell_ID = pointcloud.getCellIDFromCoordinate(center);
+        
+        if(cell_ID >= 0 && cell_ID < Ncells){
+            // Calculate leaf angle
+            vec3 normal = context.getPrimitiveNormal(UUID);
+            float angle = acos(fabs(normal.z)) * 180.0/M_PI; // angle from horizontal
+            
+            exact_angles[cell_ID] += angle;
+            leaf_count[cell_ID]++;
+        }
+    }
+}
+
+// Average angles for each cell
+for(uint i = 0; i < Ncells; i++){
+    if(leaf_count[i] > 0){
+        exact_angles[i] /= leaf_count[i];
+    }
+}
+~~~~~~
+
+\section lidar_angles_compare 6. Compare Results
+
+~~~~~~{.cpp}
+// Compare LiDAR-derived vs exact angles
+float rmse = 0;
+uint valid_cells = 0;
+
+for(uint i = 0; i < Ncells; i++){
+    if(leaf_count[i] > 0 && !std::isnan(mean_angles[i])){
+        float error = mean_angles[i] - exact_angles[i];
+        rmse += error * error;
+        valid_cells++;
+        
+        std::cout << "Cell " << i << ": LiDAR angle = " << mean_angles[i] 
+                  << "°, Exact angle = " << exact_angles[i] 
+                  << "°, Error = " << error << "°" << std::endl;
+    }
+}
+
+if(valid_cells > 0){
+    rmse = sqrt(rmse / valid_cells);
+    std::cout << "\\nRMSE in leaf angle estimation: " << rmse << "°" << std::endl;
+}
+~~~~~~
+
+\section lidar_angles_output 7. Export Results
+
+~~~~~~{.cpp}
+// Export triangle normal vectors for further analysis
+pointcloud.exportTriangleNormals("triangle_normals.txt");
+
+// Export leaf angle statistics
+std::ofstream outfile("angle_comparison.txt");
+outfile << "Cell_ID\\tLiDAR_Angle\\tExact_Angle\\tError\\tG_theta\\n";
+for(uint i = 0; i < Ncells; i++){
+    if(leaf_count[i] > 0 && !std::isnan(mean_angles[i])){
+        outfile << i << "\\t" << mean_angles[i] << "\\t" 
+                << exact_angles[i] << "\\t" 
+                << (mean_angles[i] - exact_angles[i]) << "\\t"
+                << gtheta_values[i] << "\\n";
+    }
+}
+outfile.close();
+~~~~~~
+
+*/
+

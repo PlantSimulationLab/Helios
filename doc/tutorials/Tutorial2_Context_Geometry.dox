@@ -1,0 +1,89 @@
+/*! \page context_primitives_tutorial Tutorial 2: Working with Context Geometry
+
+\section context_primitives_overview Overview
+
+ In this tutorial, you will gain experience working with model geometry or "primitives". There are several types of geometric elements, which can be used to make up virtually any shape/object. Available primitives are given in the table below.
+
+ <table>
+   <tr>	<th>Primitive</th><th>Description</th></tr>
+   <tr> <td>Patch</td> <td>Rectangular polygon with coplanar vertices.  A patch is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x- and y-directions.  The default orientation of a patch is horizontal (i.e., it's normal is in the +z direction).</td> </tr>
+   <tr>	<td>Triangle</td> <td>Triangular polygon specified by its three vertices.</td> </tr>
+   <tr>	<td>Voxel</td> <td>Parallelpiped or rectangular prism.  A voxel is specified by the (x,y,z) coordinate of its center and by the lengths of its sides in the x-, y-, and z-directions.  The default orientation of a voxel is axis-aligned.</td> </tr>
+ </table> 
+
+ There are functions to add each of these primitive types defined in the Context. For example, a Patch can be added via the `Context::addPatch()` function. Note that these functions to add primitives are usually <a href="http://www.cplusplus.com/doc/tutorial/functions2/">"overloaded"</a>, which means there are multiple definitions of the functions.
+
+ \section AddPatch Adding a Patch to the Context
+    
+ Let's write a program that adds a Patch to the Context. We will begin with a blank program that includes the Context.h header (provides context definitions), and declares the Context. We then want to write the code to add a Patch.
+
+  ~~~~~~{.cpp}
+  #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(){
+
+     Context context; //Declare the "Context" class
+
+     //Write code here to add a Patch to the Context
+
+  }
+  ~~~~~~
+
+  We will then call the `Context::addPatch()` function to add a patch to the Context. Note that member functions (e.g., addPatch) of a class (e.g., Context) are called using a ".". We will pass two arguments to the function: the (x,y,z) position of the Patch center point, and the length and width (size) of the Patch. The position argument is a \ref helios::vec3 "vec3", and the size argument is a \ref helios::vec2 "vec2". We will create variables "position" and "size" with types of vec3 and vec2, respectively.  We will initialize position with the coordinate (0,0,0) and size with (1,1). There are other optional arguments to the addPatch command such as arguments that specify a Patch rotation or color, but we'll worry about that later. Example code is given below. Note that we have added a few lines of code in order to be able to visualize the results using the Visualizer plug-in. Use of the visualizer will be explained in more depth in a later tutorial.
+
+  ~~~~~~{.cpp}
+  #include "Visualizer.h" //don't need to include Context.h because it's included in Visualizer.h
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(){
+
+     Context context;  //Declare the "Context" class
+
+     vec3 position(0,0,0); //(x,y,z) position of patch center
+     vec2 size(1,1); //length and width of patch
+
+     context.addPatch( position, size );
+
+     //Visualizer code
+     Visualizer vis(800); //our Visualizer window will be 800 pixels wide
+     vis.buildContextGeometry(&context);
+     vis.plotInteractive();
+
+  }
+  ~~~~~~
+
+ \section AddPatch_UUIDs Unique Universal Identifiers (UUIDs)
+
+ The addPatch function and other functions to add primitives return a "Unique Universal Identifier" or UUID for that particular primitive. In the example above, we ignored the returned UUID, but in this example we will assign the UUID to a variable and use it to modify attributes of the primitive.
+
+ UUIDs are of type "unsigned int" or "uint" for short, which is the return type for addPatch, addTriangle, etc. Functions that add multiple primitives at once return a vector of UUIDs (uints). The code below does the same thing as the previous example, except that it stores the UUID for the Patch.
+
+  ~~~~~~{.cpp}
+  #include "Visualizer.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(){
+
+     Context context;  //Declare the "Context" class
+
+     vec3 position(0,0,0); //(x,y,z) position of patch center
+     vec2 size(1,1); //length and width of patch
+
+     uint UUID; //declare the UUID variable
+     
+     UUID = context.addPatch( position, size ); //this will assign the UUID for this patch to the UUID variable
+
+     //Visualizer code
+     Visualizer vis(800); //our Visualizer window will be 800 pixels wide
+     vis.buildContextGeometry(&context);
+     vis.plotInteractive();
+
+  }
+  ~~~~~~
+
+*/
+

@@ -40,7 +40,11 @@
       <tab type="user" visible="yes" url="@ref visualizer_custom_tutorial" title="Tutorial 9: Visualizer configuration"/>
       <tab type="user" visible="yes" url="@ref radiation_basics_tutorial" title="Tutorial 10: Tree light interception"/>
       <tab type="user" visible="yes" url="@ref radiation_BeersLaw_tutorial" title="Tutorial 11: Light interception for a homogeneous canopy"/>
-      <tab type="user" visible="yes" url="@ref canopy_WUE_tutorial" title="Tutorial 12: Water-use efficiency for a canopy of spherical crowns"/>
+      <tab type="user" visible="yes" url="@ref lidar_synthetic_tutorial" title="Tutorial 12: Synthetic LiDAR from plant architecture"/>
+      <tab type="user" visible="yes" url="@ref lidar_leafangles_tutorial" title="Tutorial 13: Leaf angle distribution analysis"/>
+      <tab type="user" visible="yes" url="@ref lidar_leafarea_tutorial" title="Tutorial 14: Leaf area estimation from LiDAR"/>
+      <tab type="user" visible="yes" url="@ref lidar_reconstruction_tutorial" title="Tutorial 15: Plant reconstruction using alpha masks"/>
+      <tab type="user" visible="yes" url="@ref canopy_WUE_tutorial" title="Tutorial 16: Water-use efficiency for a canopy of spherical crowns"/>
     </tab>
     <tab type="usergroup" visible="yes" url="@ref Benchmarks" title="Benchmarks">
       <tab type="user" visible="yes" url="@ref RadCanopyBenchmark" title="Homogeneous Canopy Radiation"/>

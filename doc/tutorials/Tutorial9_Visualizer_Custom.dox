@@ -1,0 +1,41 @@
+/*! \page visualizer_custom_tutorial Tutorial 9: Customizing visualizations
+
+ The Visualizer offers many options for tailoring how results are displayed.
+  In this tutorial we start from a Context that already contains geometry
+  and data.  We will adjust lighting, map primitive data to a colorbar and
+  add a text annotation.
+
+ ~~~~~~{.cpp}
+ Context context;
+ // assume geometry and data have been added
+ Visualizer vis(800);
+ vis.buildContextGeometry(&context);
+
+ vis.setLightingModel(Visualizer::LIGHTING_PHONG);
+ vis.setLightIntensityFactor(1.2f);
+
+ vis.colorContextPrimitivesByData("height");
+ vis.setColormap(Visualizer::COLORMAP_PARULA);
+ vis.enableColorbar();
+ vis.setColorbarTitle("Height (m)");
+ vis.setColorbarRange(0.f, 2.f);
+
+ vis.addTextboxByCenter("Demo", make_vec3(0.5,0.9,0), nullrotation,
+                       RGB::black, 16, "Arial",
+                       Visualizer::COORDINATES_WINDOW_NORMALIZED);
+
+ vis.plotInteractive();
+ ~~~~~~
+
+ The first two commands call \ref Visualizer::setLightingModel() and
+ \ref Visualizer::setLightIntensityFactor() to control shading.
+ We then color primitives by the primitive data label "height" using
+ \ref Visualizer::colorContextPrimitivesByData() and select the
+ \ref Visualizer::setColormap() "Parula" colormap.  Calling
+ \ref Visualizer::enableColorbar() adds a scale bar that we title
+ "Height (m)" and restrict to a range of 0--2 meters.  Finally, a short
+ text label is placed near the top of the window using
+ \ref Visualizer::addTextboxByCenter().
+
+*/
+

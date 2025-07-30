@@ -1,0 +1,36 @@
+/*! \page context_fileio_tutorial Tutorial 4: File I/O
+
+ Helios can read and write several common file formats.  In this
+  tutorial we demonstrate how to import geometry from disk and how to
+  save results for later use.
+
+  <b>OBJ files</b> are loaded with \ref helios::Context::loadOBJ() "loadOBJ()" and
+  written with \ref helios::Context::writeOBJ() "writeOBJ()". Geometry can be
+  scaled and rotated on import.
+
+ ~~~~~~{.cpp}
+ Context context;
+ context.loadOBJ("../models/tree.obj", make_vec3(0,0,0), 5, nullrotation, RGB::green);
+ context.writeOBJ("tree_out.obj");
+ ~~~~~~
+
+  <b>XML files</b> store complete scene information, including geometry and
+  timeseries data. Use \ref helios::Context::loadXML() "loadXML()" and
+  \ref helios::Context::writeXML() "writeXML()" to read or write XML files.
+
+ ~~~~~~{.cpp}
+ context.loadXML("scene.xml");
+ context.writeXML("scene_copy.xml");
+ ~~~~~~
+
+  <b>Text files</b> are useful for exporting primitive data. The
+  \ref helios::Context::writePrimitiveData() "writePrimitiveData()" function writes
+  selected primitive data columns to a tab-delimited file.
+
+ ~~~~~~{.cpp}
+ std::vector<std::string> cols = {"primitive_ID", "temperature"};
+ context.writePrimitiveData("primitive_data.txt", cols, true);
+ ~~~~~~
+
+*/
+

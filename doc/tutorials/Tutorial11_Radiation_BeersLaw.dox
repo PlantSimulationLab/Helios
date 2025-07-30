@@ -1,0 +1,250 @@
+/*! \page radiation_BeersLaw_tutorial Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy
+
+ In this tutorial, we will consider radiation transfer in a homogeneous, horizontally infinite canopy. This canonical canopy case will allow for comparison against theoretical values computed from Beer's law. Our goal will be to simulate the fraction of photosynthetically active radiation (PAR) absorbed by the canopy and the fraction of sunlit/shaded leaf area, and compare the 3D simulated values against Beer's law. This tutorial will integrate the \ref CanopyGeneratorDoc "Canopy Generator" plug-in to create the canopy geometry, and the \ref VoxelIntersectionDoc "Voxel Intersection" plug-in to slice leaves that lie on the canopy boundary.
+
+ \section tutorial11_theory 0. Theory
+
+ Beer's law describes the probability that a collimated bean of radiation propagating through a homogeneous medium of particulates is intercepted. For a canopy of leaves, Beer's law can be written as
+
+ \f[\dfrac{R}{R_0}=\left[1-\mathrm{exp}\left(-\dfrac{G\,LAI}{\mathrm{cos}\,\theta_s}\right)\right],\f]
+
+ where \f$R\f$ is the average radiation flux absorbed by the canopy, \f$R_0\f$ is the above-canopy radiation flux on a horizontal surface, \f$R/R_0\f$ is the fraction of absorbed radiation, \f$G\f$ is the fraction of leaf area projected in the direction of the sun, \f$LAI\f$ is the one-sided canopy leaf area per unit ground area, and \f$\theta_s\f$ is the solar zenith angle. The following are the assumptions used to derive this equation: 1) the leaf dimension is "much" smaller than the depth of the canopy layer, 2) the leaf angle distribution is azimuthally isotropic, 3) leaf position is spatially uniform, 4) the canopy extends infinitely in the lateral directions, 5) solar radiation is collimated (i.e., beams are parallel), and 6) leaves absorb all incident radiation.
+
+ Operating under similar assumptions, Beer's law can be integrated to determine the fraction of sunlit leaf area
+
+ \f[f_{sun}=\dfrac{\mathrm{cos}\,\theta_s}{G\,LAI}\left[1-\mathrm{exp}\left(-\dfrac{G\,LAI}{\mathrm{cos}\,\theta_s}\right)\right].\f]
+
+ \section tutorial11_geom 1. Model geometry creation
+
+ We will use the \ref CanopyGeneratorDoc "Canopy Generator" plug-in to create a canopy that matches the assumptions inherent in Beer's law described above. This will be a homogeneous canopy with azimuthally isotropic leaf angle distribution that extends infinitely in the horizontal (via applying periodic boundary conditions).
+
+ We start by defining a few variables that will be used later, including parameters specifying the canopy geometry. We'll use a spherical leaf angle distribution, although others are available (also uniform, planophile, erectophile, plagiophile, extremophile). The canopy has an LAI of 1.5 and a height of 1 m. The canopy extends 3x3 m<sup>2</sup> in the horizontal (but will be infinitely extended through periodic boundaries).
+
+ The Context is declared in the usual way. The \ref CanopyGenerator class is then declared and initialized by passing a pointer to the Context. It's job is to add canopy geometry to the Context. The CanopyGenerator::HomogeneousCanopyParameters structure is declared, which is what is used to set the canopy variables. The leaf_angle_distribution, canopy_extent, canopy_height, and leaf_area_index are straight-forward and set based on the variables we declared above (reference the \ref CGenHomogeneous "canopy generator documentation" for the list and meaning of all possible variables).
+
+ The variables "buffer" and "leaf_subdivisions" are both important and less intuitive. We don't want the canopy to extend further than the horizontal extent we've specified (or the ground). This can be dealt with in two ways. One is to add a "buffer" of a half leaf width from the canopy boundaries such that no leaves lie on the boundaries. This is not ideal because it will result in a canopy that is not perfectly periodic. Alternatively, we could add no buffer and crop the canopy exactly to the canopy boundaries, which is what we'll do below. In that case, specify the buffer as "none".
+
+ The "leaf_subdivisions" variable specifies how many sub-patches (rectangles) should be used to represent each leaf. This does not matter much for computing total canopy absorbed radiation, but it is important to have adequate leaf sub-patch resolution to accurately compute the fraction of sunlit leaf area since we need to resolve shadows on leaves. See the references <a href="https://doi.org/10.1029/2020JG005796">Kent and Bailey (2021)</a> and <a href="https://doi.org/10.1093/insilicoplants/diab023">Bailey and Kent (2021)</a> for a detailed investigation. We'll use 5x5=25 sub-patches as a compromise.
+
+ The canopy is built using the \ref CanopyGenerator::buildCanopy() function, which takes the parameter structure we created earlier. UUIDs of leaf primitives in the canopy can be queried using the \ref CanopyGenerator::getLeafUUIDs() function, which we'll store for use in the next step.
+
+ \section tutorial11_slice 2. Slicing and cropping primitives on the boundaries
+
+ As introduced above, we have not applied a "buffer" at the canopy boundaries, and thus we have some primitives that extend beyond the intended boundaries. We'll use the \ref VoxelIntersectionDoc "Voxel Intersection" plug-in to crop leaves to the exact location of the boundary, and then use the \ref helios::Context::cropDomain() function to remove remaining leaf segments beyond the boundaries.
+
+ The VoxelIntersection class is declared and initialized in a similar way as other plug-ins by passing a pointer to the Context. It's job will be to slice any primitives lying on the canopy boundaries, which creates two or more triangle primitives with a break along the slicing plane. Two variables are defined that give the (x,y,z) coordinates of the canopy center location and the width of the canopy in the x-, y-, and z-directions:
+
+ ~~~~~~{.cpp}
+ vec3 slice_box_center(0,0,0.5f*canopy_height);
+ vec3 slice_box_size(canopy_extent.x,canopy_extent.y,canopy_height);
+ ~~~~~~
+
+ By default, the canopy is centered at the location (0, 0, 0.5*canopy_height), and as we specified before the dimensions of the canopy are (canopy_extent.x, canopy_extent.y, canopy_height).
+
+ The slicing is performed using the function \ref VoxelIntersection::slicePrimitivesUsingGrid(). This function has the potential to slice based on a sub-divided voxelized grid, but since we only want to slice on the boundaries we'll specify the grid subdivisions as (1, 1, 1) (i.e., not subdivided).
+
+ The \ref helios::Context::cropDomain() function is then used to crop the domain to the canopy boundaries, which will remove leaf segments outside of the specified boundaries. Some of the primitives the Canopy Generator created may no longer exist if the were sliced and/or cropped, and thus the "UUIDs_leaves" contains UUIDs referencing primitives that no longer exist. We can use the helios::Context::getAllUUIDs() function to get all the UUIDs currently in the Context, which at this point only contains leaves.
+
+ Finally, we add a ground surface using the helios::Context::addTile() function. For this particular tutorial, a ground is not explicitly needed because we have no diffuse/scattered radiation that could emanate from below.
+
+ \section tutorial11_rad 3. Radiation model set-up
+
+ The set-up of the radiation model is very similar to the \ref radiation_basics_tutorial "previous tutorial", except for two main differences: 1) we add a collimated radiation source rather than a "sun sphere" to match the assumptions of Beer's law, 2) the solar flux is set to a normalize value of 1.0 since we only compute absorption fractions. A variable defining the sun direction was defined at the beginning of the main() function, which is used to set the direction of the collimated source. It is important to note that the solar flux value of 1.0 that we set for the source is the flux perpendicular to the sun direction, and needs to be multiplied by the cosine of the solar zenith angle to get the flux on a horizontal surface.
+
+ \section tutorial11_run 4. Run model and process results
+
+ Radiation model calculations are performed when the \ref RadiationModel::runBand() function is called.
+
+ \subsection tutorial11_G 4a. Calculate G(theta)
+
+ In order to apply Beer's law, we need to calculate the G-function (fraction of leaf area projected in the direction of the sun). In this example, we used a spherical leaf angle distribution, in which case G = 0.5 regardless of sun direction. However, if a different leaf angle distribution was used, G would vary with sun angle. Either way, it is a good exercise to calculate this important parameter.
+
+ The G-function is simply the average dot product (absolute value) between the leaf normal and the sun direction. In this example, each leaf element has the same area, but in general this may not be the case, and the average should be area-weighted to avoid biasing toward small primitives. Functions are available to perform each of the necessary operations: a) the \ref helios::Context::getPrimitiveNormal() function returns a unit vector pointing in the direction of the primitive normal, b) the \ref helios::Context::getPrimitiveArea() function returns the primitive surface area, and c) the '*' operator when applied to two vec3's will calculate the dot product.
+
+ Calculation of the G-function based on the 3D geometry can be written as
+
+ \f[G = \sum\limits_i |\vec{n}_i \cdot \vec{n}_s |A_i/\sum\limits_i A_i,\f]
+
+ where \f$\vec{n}_i\f$ is the normal of the i<sup>th</sup> leaf primitive (unit length), \f$\vec{n}_s\f$ is a unit vector pointing in the direction of the sun, and \f$A_i\f$ is the area of the i<sup>th</sup> leaf primitive.
+
+ \subsection tutorial11_abs 4b. Calculate radiation flux absorbed by the canopy on a ground area basis
+
+ Beer's law gives the radiation flux absorbed by the canopy on a ground area basis, so we will need to calculate this flux based on the 3D model result. It is important to note that the 3D model gives fluxes on a leaf area basis, which can be converted to ground area basis by multiplying the LAI.
+
+ The flux absorbed by the canopy \f$R\f$ is simply the area-weighted average leaf PAR flux multiplied by the LAI, which can be written as
+
+ \f[R = LAI\sum\limits_i R_i A_i / \sum\limits_i A_i,\f]
+
+ where \f$R_i\f$ is the absorbed PAR flux of the i<sup>th</sup> leaf primitive. The \ref helios::Context::calculatePrimitiveDataAreaWeightedMean() function can be used to easily calculate the area-weighted average of the primitive data "radiation_flux_PAR".
+
+ \subsection tutorial11_absBeer 4c. Calculate the theoretical absorbed PAR flux using Beer's law
+
+ The theoretical absorbed PAR flux can be calculated by substituting appropriate values into the equation for Beer's law given above. One important thing to remember is that the radiation flux specified in Helios is the flux on the surface perpendicular to the sun direction, whereas the source flux specified in Beer's law is the flux on a horizontal surface. Thus, the source flux specified in Helios needs to be multiplied by \f$\mathrm{cos}\,\theta_s\f$ to get the flux on a horizontal surface. The \ref helios::cart2sphere() function is used to convert our Cartesian vector specifying the sun direction into a spherical coordinate, from which we can get the zenith angle.
+
+ \subsection tutorial11_fsun 4d. Calculate the sunlit leaf area fraction from the simulation
+
+ In order to calculate the fraction of sunlit leaf area for the canopy, we need to determine whether each leaf element is sunlit or shaded. This is tricky because 1) the fully sunlit PAR flux for a given leaf depends on its angle relative to the sun, and 2) many leaves will neither be 100% sunlit or 100% shaded, but somewhere in between. To deal with the first issue, we first calculate what the fully sunlit flux should be for each leaf based on its angle, which is
+
+ \f[R_{sun} = R_{source}|\vec{n} \cdot \vec{n}_s|,\f]
+
+ where \f$R_{source}\f$ is the PAR flux on a plane perpendicular to the sun, and other symbols are as defined above. We then define a "sunlit" leaf as a leaf whose actual absorbed flux is greater than 50% of \f$R_{sun}\f$. We then identify which leaves are "sunlit" according to this definition, and sum their areas. The fraction of sunlit leaf area is then the area of sunlit leaves divided by the total leaf area.
+
+ \subsection tutorial11_fsunBeer 4e. Calculate the theoretical sunlit area fraction
+
+ Calculation of the theoretical fraction of sunlit leaf area is simply a matter of plugging values into the equation for \f$f_{sun}\f$ above.
+
+  ~~~~~~{.cpp}
+  #include "RadiationModel.h"
+  #include "CanopyGenerator.h"
+  #include "VoxelIntersection.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+
+  int main(){
+
+     // !!!!!!!!! Inputs for this example study !!!!!!!!! //
+
+     vec3 sun_direction(1,0,1);                              //Cartesian unit vector pointing in the direction of (toward) the sun
+     sun_direction.normalize();
+
+     std::string leaf_angle_dist = "spherical";              //name of leaf angle distribution for the canopy - (spherical, uniform, planophile, erectophile, plagiophile, extremophile)
+
+     float LAI = 1.5f;                                       //one-sided leaf area index of the canopy
+
+     vec2 canopy_extent(3,3);                                //dimension of the canopy in the x- and y-directions (horizontal)
+     float canopy_height = 1.f;                              //vertical dimension of the canopy
+
+     // *** 1. Model geometry creation *** //
+
+     Context context;                                        //declare the Context class
+
+     CanopyGenerator cgen(&context);                        //declare the Canopy Generator class and pass it the Context so it can add geometry
+
+     HomogeneousCanopyParameters params;                    //structure containing parameters for homogeneous canopy
+     params.buffer = "none";                                 //no buffer on the canopy edges - we will slice along border
+     params.leaf_angle_distribution = leaf_angle_dist;       //set the leaf angle distribution based on the variable we set above
+     params.canopy_extent = canopy_extent;                   //set the lateral canopy extent based on the variable we set above
+     params.canopy_height = canopy_height;                   //set the canopy height based on the variable we set above
+     params.leaf_area_index = LAI;                           //set the canopy LAI based on the variable we set above
+
+     params.leaf_subdivisions = make_int2(5,5);              //set the number of subdivisions per leaf to be 5x5=25 primitives
+
+     cgen.buildCanopy(params);                               //build the homogeneous canopy
+
+     std::vector<uint> UUIDs_leaves = cgen.getLeafUUIDs();   //get UUIDs for all leaves in the canopy
+
+     // *** 2. Slicing and cropping primitives on the boundaries *** //
+
+     // slice and primitives that lie on the canopy boundaries (imagine taking a knife and perfectly cutting along the edges of the canopy)
+     VoxelIntersection vslice(&context);
+
+     // define variables that give the center (x,y,z) coordinate of the canopy and the overall canopy dimensions
+     vec3 slice_box_center(0,0,0.5f*canopy_height);
+     vec3 slice_box_size(canopy_extent.x,canopy_extent.y,canopy_height);
+
+     // do the slicing
+     vslice.slicePrimitivesUsingGrid( UUIDs_leaves, slice_box_center, slice_box_size, make_int3(1,1,1) );
+
+     // delete any leaf slices that fall outside of the slicing volume
+     context.cropDomain( make_vec2(-0.5f*canopy_extent.x,0.5f*canopy_extent.x), make_vec2(-0.5f*canopy_extent.y,0.5f*canopy_extent.y), make_vec2(0,canopy_height) );
+
+     // our UUID vector now contains some primitives that have been deleted. We can just get all the primitives currently in the Context and store them in a vector
+     UUIDs_leaves = context.getAllUUIDs();
+
+     //make a ground
+     std::vector<uint> UUIDs_ground = context.addTile(make_vec3(0, 0, 0), canopy_extent, nullrotation,make_int2(10, 10));
+
+     // *** 3. Radiation model set-up *** //
+
+     RadiationModel radiation(&context);                      //declare and initialize the radiation model class
+
+     // add a sun source. We'll assume collimated radiation since that is what is assumed in Beer's law
+     uint sourceID = radiation.addCollimatedRadiationSource( sun_direction );
+
+     // set up the PAR band. We'll use separate direct and diffuse bands to keep them separate for post-processing (normally you would combine them)
+     radiation.addRadiationBand("PAR");
+     radiation.disableEmission("PAR");
+     radiation.setSourceFlux(sourceID, "PAR", 1.f);  //set a flux of 1.0 W/m^2 to simplify calculations
+     radiation.setDiffuseRadiationFlux("PAR", 0.f);      //no diffuse radiation this band
+
+     radiation.enforcePeriodicBoundary("xy");      //use periodic boundary conditions in the horizontal to simulate an infinite canopy
+
+     context.setPrimitiveData(UUIDs_ground, "twosided_flag",uint(0)); //only want ground to intercept/emit radiation from the top
+
+     radiation.updateGeometry();                            //update the geometry in the radiation model
+
+     // 4. Run model and process results //
+
+     //Run the radiation model calculations
+     radiation.runBand("PAR");
+
+     // 4a. Calculate G(theta)
+     float Gtheta = 0;
+     float area_total = 0;
+     for( auto UUID : UUIDs_leaves ){
+       vec3 normal = context.getPrimitiveNormal(UUID);
+       float area = context.getPrimitiveArea(UUID);
+       Gtheta += std::abs( sun_direction*normal )*area;
+       area_total += area;
+     }
+     Gtheta = Gtheta/area_total;  //normalize
+
+     std::cout << "G(theta) = " << Gtheta << std::endl;
+
+     // 4b. Calculate radiation flux absorbed by the canopy on a ground area basis - this will end up just being the area-weighted average PAR flux multiplied by LAI.
+
+     float PAR_abs_dir;
+     context.calculatePrimitiveDataAreaWeightedMean( UUIDs_leaves, "radiation_flux_PAR", PAR_abs_dir ); //recall that the output primitive data from the radiation model has the form "radiation_flux_[*band_name*]"
+     PAR_abs_dir = PAR_abs_dir*LAI; //converts between leaf area basis to ground area basis
+
+     // 4c. Calculate the theoretical absorbed PAR flux using Beer's law
+
+     float theta_s = cart2sphere(sun_direction).zenith;  //calculate the solar zenith angle
+
+     float R0 = cos(theta_s); //PAR flux on horizontal surface
+     float intercepted_theoretical_direct = R0*(1.f-exp(-Gtheta*LAI/cos(theta_s)));  //Beer's law
+
+     std::cout << "Calculated interception: " << PAR_abs_dir << std::endl;
+     std::cout << "Theoretical interception: " << intercepted_theoretical_direct << std::endl;
+     std::cout << "Error of interception: " << std::abs(PAR_abs_dir-intercepted_theoretical_direct)/intercepted_theoretical_direct*100.f << " %" << std::endl;
+
+     // 4d. Calculate the sunlit leaf area fraction from the simulation
+
+     float sunlit_area = 0;
+     float total_area = 0;
+     for( auto UUID : UUIDs_leaves ){ //looping over all leaf elements
+
+       vec3 normal = context.getPrimitiveNormal(UUID);
+
+       float PARmax = std::abs( normal*sun_direction );  //this is the PAR flux of a leaf with the same normal that is fully sunlit
+
+       float PAR;
+       context.getPrimitiveData( UUID, "radiation_flux_PAR", PAR ); //get this leaf's PAR flux
+
+       float fsun_leaf = PAR/PARmax;  //PAR flux as a fraction of the fully sunlit flux
+
+       float area = context.getPrimitiveArea(UUID);
+
+       if( fsun_leaf>0.5 ){ //if fsun is greater than 0.5, we'll call this leaf "sunlit"
+         sunlit_area += area;
+       }
+       total_area += area;
+
+     }
+
+     float fsun = sunlit_area/total_area;
+
+     // 4e. Calculate the theoretical sunlit area fraction
+
+     float fsun_theoretical = cos(theta_s)/(Gtheta*LAI)*(1-exp(-Gtheta*LAI/cos(theta_s)));
+
+     std::cout << "Calculated sunlit fraction: " << fsun << std::endl;
+     std::cout << "Theoretical sunlit fraction: " << fsun_theoretical << std::endl;
+     std::cout << "Error of sunlit fraction: " << std::abs(fsun-fsun_theoretical)/fsun_theoretical*100.f << " %" << std::endl;
+
+     return 0;
+  }
+  ~~~~~~
+
+*/
+

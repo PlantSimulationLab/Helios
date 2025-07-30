@@ -1,0 +1,228 @@
+/*! \page lidar_leafarea_tutorial Tutorial 14: Leaf area estimation from LiDAR triangulation
+
+This tutorial shows how to estimate leaf area distributions using LiDAR point cloud triangulation and compare the results with exact leaf areas from a PlantArchitecture model.
+
+\section lidar_area_intro 1. Introduction
+
+Leaf area estimation from LiDAR is a fundamental application in plant phenotyping and canopy analysis. This tutorial demonstrates the complete workflow from point cloud processing to area calculation and validation.
+
+\section lidar_area_setup 2. Setup and Plant Creation
+
+~~~~~~{.cpp}
+#include "Context.h"
+#include "PlantArchitecture.h"
+#include "LiDAR.h"
+using namespace helios;
+
+Context context;
+PlantArchitecture plantarch(&context);
+LiDARcloud pointcloud;
+
+// Create plant with known leaf areas
+uint plant_ID = plantarch.buildPlantArchitecture("area_test_plant");
+
+PlantSpecies species;
+species.max_height = 2.5;
+species.leaf_length.uniformDistribution(0.03, 0.08);
+species.leaf_width.uniformDistribution(0.015, 0.04);
+species.leaflet_count = 5;
+
+plantarch.setPlantSpecies(plant_ID, species);
+plantarch.growPlant(plant_ID, 40);
+~~~~~~
+
+\section lidar_area_scan 3. Synthetic LiDAR Scanning
+
+Generate high-resolution synthetic LiDAR data:
+
+~~~~~~{.cpp}
+std::string scan_xml = R\"(
+<helios>
+  <scan>
+    <origin>0 0 2.0</origin>
+    <size>200 400</size>
+    <thetaMin>20</thetaMin>
+    <thetaMax>140</thetaMax>
+    <phiMin>0</phiMin>
+    <phiMax>360</phiMax>
+    <ASCII_format>x y z</ASCII_format>
+  </scan>
+</helios>
+)\";
+
+std::ofstream scanfile("area_scan.xml");
+scanfile << scan_xml;
+scanfile.close();
+
+pointcloud.loadXML("area_scan.xml");
+pointcloud.syntheticScan(&context);
+~~~~~~
+
+\section lidar_area_grid 4. Define Analysis Grid
+
+Set up a 3D grid for spatial analysis:
+
+~~~~~~{.cpp}
+std::string grid_xml = R\"(
+<helios>
+  <grid>
+    <center>0 0 1.2</center>
+    <size>3.0 3.0 2.4</size>
+    <Nx>6</Nx>
+    <Ny>6</Ny>
+    <Nz>6</Nz>
+  </grid>
+</helios>
+)\";
+
+std::ofstream gridfile("area_grid.xml");
+gridfile << grid_xml;
+gridfile.close();
+
+pointcloud.loadXML("area_grid.xml");
+~~~~~~
+
+\section lidar_area_process 5. Point Cloud Processing
+
+Process the point cloud through triangulation and area calculation:
+
+~~~~~~{.cpp}
+// Gap-fill any missed points (important for area calculations)
+pointcloud.gapfillMisses();
+
+// Triangulate hit points
+float Lmax = 0.04; // Smaller for better area estimation
+float max_aspect_ratio = 8.0;
+pointcloud.triangulateHitPoints(Lmax, max_aspect_ratio);
+
+// Calculate leaf area for each grid cell
+pointcloud.calculateLeafAreaGPU();
+
+std::cout << "Triangulation created " << pointcloud.getTriangleCount() 
+          << " triangles" << std::endl;
+~~~~~~
+
+\section lidar_area_extract 6. Extract LiDAR-Estimated Areas
+
+~~~~~~{.cpp}
+uint Ncells = pointcloud.getGridCellCount();
+std::vector<float> lidar_areas(Ncells);
+std::vector<float> lidar_densities(Ncells);
+
+for(uint i = 0; i < Ncells; i++){
+    lidar_areas[i] = pointcloud.getCellLeafArea(i);
+    lidar_densities[i] = pointcloud.getCellLeafAreaDensity(i);
+    
+    vec3 cell_center = pointcloud.getCellCenter(i);
+    vec3 cell_size = pointcloud.getCellSize(i);
+    
+    std::cout << "Cell " << i << " (center: " << cell_center.x << "," 
+              << cell_center.y << "," << cell_center.z << "): "
+              << "Area = " << lidar_areas[i] << " m²" << std::endl;
+}
+~~~~~~
+
+\section lidar_area_exact 7. Calculate Exact Areas from Plant Model
+
+~~~~~~{.cpp}
+// Calculate exact leaf areas in each grid cell
+std::vector<float> exact_areas(Ncells, 0.0);
+std::vector<float> exact_densities(Ncells, 0.0);
+
+std::vector<uint> UUIDs = context.getAllUUIDs();
+for(uint UUID : UUIDs){
+    if(context.getPrimitiveType(UUID) == PRIMITIVE_TYPE_PATCH){
+        vec3 center = context.getPrimitiveCentroid(UUID);
+        
+        // Find which grid cell this leaf belongs to
+        for(uint i = 0; i < Ncells; i++){
+            vec3 cell_center = pointcloud.getCellCenter(i);
+            vec3 cell_size = pointcloud.getCellSize(i);
+            
+            // Check if leaf center is within cell bounds
+            if(fabs(center.x - cell_center.x) <= cell_size.x/2.0 &&
+               fabs(center.y - cell_center.y) <= cell_size.y/2.0 &&
+               fabs(center.z - cell_center.z) <= cell_size.z/2.0){
+                
+                float leaf_area = context.getPrimitiveArea(UUID);
+                exact_areas[i] += leaf_area;
+                
+                float cell_volume = cell_size.x * cell_size.y * cell_size.z;
+                exact_densities[i] += leaf_area / cell_volume;
+                break;
+            }
+        }
+    }
+}
+~~~~~~
+
+\section lidar_area_validate 8. Validation and Statistics
+
+~~~~~~{.cpp}
+// Calculate statistics
+float total_exact_area = 0, total_lidar_area = 0;
+float rmse_area = 0, rmse_density = 0;
+uint valid_cells = 0;
+
+std::cout << "\\n=== Leaf Area Comparison ===" << std::endl;
+std::cout << "Cell\\tExact Area\\tLiDAR Area\\tError\\tExact LAD\\tLiDAR LAD" << std::endl;
+
+for(uint i = 0; i < Ncells; i++){
+    if(exact_areas[i] > 0.001){ // Only consider cells with significant leaf area
+        float area_error = lidar_areas[i] - exact_areas[i];
+        float density_error = lidar_densities[i] - exact_densities[i];
+        
+        rmse_area += area_error * area_error;
+        rmse_density += density_error * density_error;
+        valid_cells++;
+        
+        total_exact_area += exact_areas[i];
+        total_lidar_area += lidar_areas[i];
+        
+        std::cout << i << "\\t" << exact_areas[i] << "\\t" 
+                  << lidar_areas[i] << "\\t" << area_error << "\\t"
+                  << exact_densities[i] << "\\t" << lidar_densities[i] << std::endl;
+    }
+}
+
+if(valid_cells > 0){
+    rmse_area = sqrt(rmse_area / valid_cells);
+    rmse_density = sqrt(rmse_density / valid_cells);
+    
+    float relative_error = (total_lidar_area - total_exact_area) / total_exact_area * 100;
+    
+    std::cout << "\\n=== Summary Statistics ===" << std::endl;
+    std::cout << "Total exact leaf area: " << total_exact_area << " m²" << std::endl;
+    std::cout << "Total LiDAR estimated area: " << total_lidar_area << " m²" << std::endl;
+    std::cout << "Relative error: " << relative_error << " %" << std::endl;
+    std::cout << "RMSE (area): " << rmse_area << " m²" << std::endl;
+    std::cout << "RMSE (density): " << rmse_density << " m²/m³" << std::endl;
+}
+~~~~~~
+
+\section lidar_area_export 9. Export Results
+
+~~~~~~{.cpp}
+// Export detailed results
+pointcloud.exportLeafAreas("lidar_leaf_areas.txt");
+pointcloud.exportLeafAreaDensities("lidar_leaf_densities.txt");
+pointcloud.exportTriangleAreas("triangle_areas.txt");
+
+// Export comparison data
+std::ofstream comparison("area_comparison.txt");
+comparison << "Cell_ID\\tExact_Area\\tLiDAR_Area\\tArea_Error\\tExact_LAD\\tLiDAR_LAD\\tLAD_Error\\n";
+for(uint i = 0; i < Ncells; i++){
+    if(exact_areas[i] > 0.001){
+        comparison << i << "\\t" << exact_areas[i] << "\\t" << lidar_areas[i] << "\\t"
+                   << (lidar_areas[i] - exact_areas[i]) << "\\t"
+                   << exact_densities[i] << "\\t" << lidar_densities[i] << "\\t"
+                   << (lidar_densities[i] - exact_densities[i]) << "\\n";
+    }
+}
+comparison.close();
+
+std::cout << "Results exported to area_comparison.txt" << std::endl;
+~~~~~~
+
+*/
+

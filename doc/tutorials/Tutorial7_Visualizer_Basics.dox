@@ -1,0 +1,102 @@
+/*! \page visualizer_basics_tutorial Tutorial 7: %Visualizer Basics
+
+ In this tutorial, we will explain in more depth the use of the Visualizer plug-in functions that were shown in previous tutorials. Users are strongly encouraged to read through the detailed \ref VisualizerDoc.
+
+ Using the Visualizer typically consists of four steps:
+
+ 1. Declare and initialize the %Visualizer class.
+ 2. Add geometry to the %Visualizer.
+ 3. Modify %Visualizer options.
+ 4. Plot the result.
+
+ Each of these steps will be detailed in depth below. The purpose of the Visualizer is to provide a graphical representation of geometry and associated data.
+
+ \section vis_step1 Step 1. Declare and initialize the Visualizer class
+
+ To begin using the Visualizer, we must first declare the \ref Visualizer class. Note that the "Visualizer.h" header file must be included in our program, and the "PLUGINS" variable in our project's CMakeLists.txt file must include "visualizer".
+
+ The Visualizer constructor takes one or two arguments that specifies the size of the graphics window in pixels. If only one argument is provided (see \ref Visualizer( uint Wdisplay )), the argument is an integer that specifies the width of the diplay window in pixels, with the hight of the window specified according to the default aspect ratio. If two arguments are provided (see \ref Visualizer( uint Wdisplay, uint Hdisplay )), the two arguments correspond respectively to the width and height of the display window in pixels. Example code is given below.
+
+  ~~~~~~{.cpp}
+  #include "Visualizer.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(){
+     
+     Visualizer vis(800); //creates a display window 800 pixels wide
+
+  }
+  ~~~~~~
+
+
+ \section vis_step2 Step 2. Add geometry to the Visualizer
+
+ There are a variety of ways to add geometry to the Visualizer. Primitives can be manually added to the Visualizer in a similar manner as primitives are added to the Context, with several notable differences. First, there are additional primitive types available in the Visualizer such as lines and points. Second, there are additional arguments that must be specified when adding primitives to the Visualizer, namely the graphics layer associated with the primitive (see Layer) and the coordinate system to be used (see coordinate system).
+
+ Most commonly, we do not wish to manually add geometry to the Visualizer, but rather we simply want to visualize geometry in the Context. There is a simple command that will automatically add all geometry in the Context to the Visualizer: \ref Visualizer::buildContextGeometry(). This function takes a pointer to the Context, which is used to import all geometry. There are other variations on the buildContextGeometry() command that allow for the placement of Context geometry on any layer or to add only a subset of the geometry in the Context (see \ref ContextGeom). In the example below, we add all geometry in the Context to the default layer (layer 0).
+
+  ~~~~~~{.cpp}
+  #include "Visualizer.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(){
+
+     Context context;  //Declare the "Context" class
+
+     vec3 position(0,0,0); //(x,y,z) position of patch center
+     vec2 size(1,1); //length and width of patch
+
+     context.addPatch( position, size ); //add the patch to Context
+
+     Visualizer vis(800); //creates a display window 800 pixels wide
+
+     vis.buildContextGeometry( &context ); //add all geometry in the context to the visualizer
+
+  }
+  ~~~~~~
+
+ Note that in the above example, we've given our Visualizer class the name of "vis", which is the name that should be used to reference it.
+ 
+ \section vis_step3 Step 3. Modify Visualizer options
+
+ Additional options for the Visualizer are set by calling the appropriate member functions in the Visualizer class. Various options may be changing the lighting model, changing the default camera view configuration, changing data used to color primitives, etc.
+ Consult the \ref VisualizerDoc for more details on available options. In this tutorial, we'll just use the default options (by not setting any options explicitly).
+ 
+ \section vis_step4 Step 4. Plot the result
+
+ Finally, we'll want to actually plot the result to the graphics window. There are two primary functions to do so.  One is \ref Visualizer::plotInteractive(), which generates an interactive plot in which the user can interactively modify the camera configuation via keystrokes. In this case, the graphics window will stay open until the user closes it, and the program will pause until the window is closed.
+
+ Another method is to simply update the graphics window and move on with the program using the function \ref Visualizer::plotUpdate(). This is typically used when the graphics window is to be printed to file using the Visualizer::printWindow() function.
+
+ In the example below, we'll first update the window, move on in the program where we'll print the graphics window to an image file, then we'll open an interactive plot window. Note that all file paths in Helios should either be absolute paths, or relative to the build directory where the executable file is being run. So in the example below, the image file will be located in the build directory.
+
+  ~~~~~~{.cpp}
+  #include "Visualizer.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(){
+
+     Context context;  //Declare the "Context" class
+
+     vec3 position(0,0,0); //(x,y,z) position of patch center
+     vec2 size(1,1); //length and width of patch
+
+     context.addPatch( position, size ); //add the patch to Context
+
+     Visualizer vis(800); //creates a display window 800 pixels wide
+
+     vis.buildContextGeometry( &context ); //add all geometry in the context to the visualizer
+
+     vis.plotUpdate(); //update the graphics window and move on
+     vis.printWindow( "patch.jpeg" ); //print window to JPEG file
+     
+     vis.plotInteractive(); //open an interactive graphics window
+   
+  }
+  ~~~~~~
+
+*/
+

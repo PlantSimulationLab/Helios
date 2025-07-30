@@ -1,0 +1,69 @@
+/*! \page context_globaldata_tutorial Tutorial 6: Global Data
+
+ \section context_globaldata_intro Introduction to Global Data
+
+ Using global data is very similar to using primitive data (see \ref context_primdata_tutorial), with the only notable difference being that global data is not defined for every primitive, but rather there exists only one instance of particular global data.
+
+ A graphical depiction of global data (right box) and primitive data (green boxes) is given in the figure below.
+
+ \image html images/Context_sketch.png 
+ 
+ \section context_globaldata_scalar Creating Global Data (Scalars)
+
+ Adding global data that is a single (scalar) value is essentially the same as adding scalar primitive data except that we do not pass the function a UUID (since global data does not correspond to any given primitive). To add/set global data, we use the \ref helios::Context::setGlobalData() "setGlobalData()" function. We simply need to pass this function the name for this piece of data which the user can choose, and a piece of data with type float, double, int, uint, vec2, vec3, vec4, int2, int3, int4, or string. An example is given below where we add some global data called "my_data".
+
+  ~~~~~~{.cpp}
+  #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(){
+
+     Context context;  //Declare the "Context" class
+
+     context.setGlobalData("my_data",10.0); //add global data called my_data with a value of 10
+	 
+ }
+ ~~~~~~
+
+ \section context_globaldata_arrays Creating Global Data (Arrays)
+ 
+ Adding global data that has length greater than one (array) requires a little extra information, namely the type of the data to be added and the length of the data array. The type is specified by one of the enumerations given in the table below.
+
+ <table>
+   <tr>	<th>Data type</th> <th>Enumeration (HeliosDataType)</th> </tr>
+   <tr>	<td>int</td><td>\ref helios::HELIOS_TYPE_INT "HELIOS_TYPE_INT"</td></tr>
+   <tr>	<td>uint</td> <td>\ref helios::HELIOS_TYPE_UINT "HELIOS_TYPE_UINT"</td></tr>
+   <tr>	<td>float</td> <td>\ref helios::HELIOS_TYPE_FLOAT "HELIOS_TYPE_FLOAT"</td> </tr>
+   <tr>	<td>double</td><td>\ref helios::HELIOS_TYPE_DOUBLE "HELIOS_TYPE_DOUBLE"</td> </tr>
+   <tr>	<td>vec2</td><td>\ref helios::HELIOS_TYPE_VEC2 "HELIOS_TYPE_VEC2"</td></tr>
+   <tr>	<td>vec3</td><td>\ref helios::HELIOS_TYPE_VEC3 "HELIOS_TYPE_VEC3"</td></tr>
+   <tr>	<td>vec4</td> <td>\ref helios::HELIOS_TYPE_VEC4 "HELIOS_TYPE_VEC4"</td></tr>
+   <tr>	<td>int2</td> <td>\ref helios::HELIOS_TYPE_INT2 "HELIOS_TYPE_INT2"</td> </tr>
+   <tr>	<td>int3</td> <td>\ref helios::HELIOS_TYPE_INT3 "HELIOS_TYPE_INT3"</td></tr>
+   <tr>	<td>int4</td><td>\ref helios::HELIOS_TYPE_INT4 "HELIOS_TYPE_INT4"</td></tr>
+   <tr>	<td>std::string</td><td>\ref helios::HELIOS_TYPE_STRING "HELIOS_TYPE_STRING"</td></tr>
+ </table>
+
+  ~~~~~~{.cpp}
+  #include "Context.h"
+
+  using namespace helios; //note that we are using the helios namespace so we can omit 'helios::' before names
+     
+  int main(){
+
+     Context context;  //Declare the "Context" class
+
+     float data[5] = {10, 11, 12, 13, 14};
+
+     context.setGlobalData("my_data",HELIOS_TYPE_FLOAT,5,&data); //add global data called my_data to only the first primitive
+
+     std::vector<float> data_new;
+
+     context.getGlobalData("my_data",data_new); //get the global data and assign it to 'data_new'
+	 
+ }
+ ~~~~~~
+
+*/
+
