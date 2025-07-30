@@ -210,7 +210,7 @@ DOCTEST_TEST_CASE("Missing parameters and zero inputs") {
     blc.setBoundaryLayerModel(UUID, "InclinedPlate");
     DOCTEST_CHECK_NOTHROW(blc.run());
     DOCTEST_CHECK_NOTHROW(context.getPrimitiveData(UUID, "boundarylayer_conductance", gH));
-    DOCTEST_CHECK( gH > 0 );
+    DOCTEST_CHECK(gH > 0);
 
     blc.setBoundaryLayerModel(UUID, "Sphere");
     DOCTEST_CHECK_NOTHROW(blc.run());

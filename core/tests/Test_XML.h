@@ -138,34 +138,34 @@ TEST_CASE("XMLoad functions") {
 TEST_CASE("Context XML I/O Functions") {
     SUBCASE("writeXML and loadXML") {
         Context ctx;
-        
+
         // Create some test data
         uint patch = ctx.addPatch(make_vec3(1, 2, 3), make_vec2(2, 4), nullrotation, RGB::red);
         uint triangle = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0), RGB::blue);
         uint box = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
-        
+
         // Add some data
         ctx.setPrimitiveData(patch, "test_data", 42.0f);
         ctx.setObjectData(box, "object_data", "test_string");
         ctx.setGlobalData("global_test", 123);
-        
+
         // Write to XML
-        const char* test_file = "/tmp/helios_test.xml";
+        const char *test_file = "/tmp/helios_test.xml";
         DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file));
-        
+
         // Create new context and load
         Context ctx2;
         std::vector<uint> loaded_uuids;
         DOCTEST_CHECK_NOTHROW(loaded_uuids = ctx2.loadXML(test_file));
         DOCTEST_CHECK(loaded_uuids.size() >= 2);
-        
+
         // Verify loaded data
         DOCTEST_CHECK(ctx2.getPrimitiveCount() >= 2);
         DOCTEST_CHECK(ctx2.getObjectCount() >= 1);
-        
+
         // Check primitive data was loaded
         bool found_data = false;
-        for (uint uuid : loaded_uuids) {
+        for (uint uuid: loaded_uuids) {
             if (ctx2.doesPrimitiveDataExist(uuid, "test_data")) {
                 float data;
                 ctx2.getPrimitiveData(uuid, "test_data", data);
@@ -175,76 +175,76 @@ TEST_CASE("Context XML I/O Functions") {
             }
         }
         DOCTEST_CHECK(found_data);
-        
+
         // Check global data
         int global_val;
         ctx2.getGlobalData("global_test", global_val);
         DOCTEST_CHECK(global_val == 123);
-        
+
         // Clean up
         std::remove(test_file);
     }
-    
+
     SUBCASE("writeXML_byobject") {
         Context ctx;
         uint box1 = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
         uint box2 = ctx.addBoxObject(make_vec3(2, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
-        
+
         std::vector<uint> selected_objects = {box1};
-        const char* test_file = "/tmp/helios_partial_test.xml";
-        
+        const char *test_file = "/tmp/helios_partial_test.xml";
+
         DOCTEST_CHECK_NOTHROW(ctx.writeXML_byobject(test_file, selected_objects));
-        
+
         Context ctx2;
         std::vector<uint> loaded_uuids = ctx2.loadXML(test_file);
-        
+
         // Should only have primitives from one box (6 faces)
         DOCTEST_CHECK(loaded_uuids.size() == 6);
         DOCTEST_CHECK(ctx2.getObjectCount() == 1);
-        
+
         std::remove(test_file);
     }
-    
+
     SUBCASE("writeXML with specific UUIDs") {
         Context ctx;
         uint p1 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
         uint p2 = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
         uint p3 = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
-        
+
         std::vector<uint> selected_uuids = {p1, p3};
-        const char* test_file = "/tmp/helios_uuid_test.xml";
-        
+        const char *test_file = "/tmp/helios_uuid_test.xml";
+
         DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, selected_uuids));
-        
+
         Context ctx2;
         std::vector<uint> loaded_uuids = ctx2.loadXML(test_file);
-        
+
         DOCTEST_CHECK(loaded_uuids.size() == 2);
-        
+
         std::remove(test_file);
     }
-    
+
     SUBCASE("getLoadedXMLFiles") {
         Context ctx;
-        
+
         // Initially should be empty
         std::vector<std::string> files = ctx.getLoadedXMLFiles();
         size_t initial_count = files.size();
-        
+
         // Create and load a test file
         uint patch = ctx.addPatch();
-        const char* test_file = "/tmp/helios_loaded_files_test.xml";
+        const char *test_file = "/tmp/helios_loaded_files_test.xml";
         ctx.writeXML(test_file);
-        
+
         Context ctx2;
         ctx2.loadXML(test_file);
-        
+
         std::vector<std::string> loaded_files = ctx2.getLoadedXMLFiles();
         DOCTEST_CHECK(loaded_files.size() == initial_count + 1);
         DOCTEST_CHECK(std::find(loaded_files.begin(), loaded_files.end(), test_file) != loaded_files.end());
-        
+
         std::remove(test_file);
     }
-    
+
     // Note: scanXMLForTag testing removed due to complex XML tag structure requirements
 }

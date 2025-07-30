@@ -112,7 +112,7 @@ public:
      * \param[in] treename Name of a tree loaded in the library (\sa WeberPennTree::loadXML).
      * \param[in] origin (x,y,z) location to place tree.  Note that this position is the location of the center of the trunk base.
      * \return Identifier for tree.
-    */
+     */
     uint buildTree(const char *treename, helios::vec3 origin);
 
     //! Construct a Weber-Penn tree using a tree already in the library
@@ -121,7 +121,7 @@ public:
      * \param[in] origin (x,y,z) location to place tree.  Note that this position is the location of the center of the trunk base.
      * \param[in] scale Scaling factor to apply to entire tree. Default scale is 1 or 100%, and scale<1 makes tree smaller, scale>1 makes tree bigger.
      * \return Identifier for tree.
-    */
+     */
     uint buildTree(const char *treename, helios::vec3 origin, float scale);
 
     //! Get the unique universal identifiers (UUIDs) for the primitives that make up the tree trunk
@@ -152,14 +152,14 @@ public:
     /**
      * Very small branches may add a lot of unnecessary triangles. This function limits the number of recursive branch levels to generate primitives. The default is to generate primitives for recursion levels 0-2.
      * \param[in] level Branch recursion levels for which primitives should be generated. For example, level=1 would generate primitives for the trunk (level 0), and the first branching level (level 1).
-    */
+     */
     void setBranchRecursionLevel(const uint level);
 
     //! Set the radial triangle subdivisions for trunks.
     /**
      * For example, if trunk_segs = 3 the trunk would be a triangular prism, if trunk_segs=4 the trunk would be a rectangular prism, if trunk_segs=5 the trunk cross-section would be a pentagon, and so on. Note that trunk_segs must be greater than 2.
      * \param[in] trunk_segs Number of radial triangle subdivisions for the trunk.
-    */
+     */
     void setTrunkSegmentResolution(const uint trunk_segs);
 
     //! Set the radial triangle subdivisions for branches.
@@ -167,7 +167,7 @@ public:
      * For example, if branch_segs = 3 the branches would be a triangular prism, if branch_segs=4 the branches would be a rectangular prism, if branch_segs=5 the branch cross-section would be a pentagon, and so on. Note that branch_segs must be
      * greater than 2.
      * \param[in] branch_segs Number of radial triangle subdivisions for branches.
-    */
+     */
     void setBranchSegmentResolution(const uint branch_segs);
 
     //! Set the number of sub-patch divisions for leaves.
@@ -232,7 +232,7 @@ private:
      * \param[in] leaf_template UUID of the leaf primitive prototype that is copied to form leaves
      * \param[in] base_size Base size computed (with the configured variance) for this specific tree instance
      * \param[in] base_splits Number of base splits computed (with the configured variance) for this specific tree instance
-    */
+     */
     void recursiveBranch(WeberPennTreeParameters parameters, uint n, uint seg_start, helios::vec3 base_position, helios::vec3 parent_normal, helios::SphericalCoord child_rotation, float length_parent, float radius_parent, float offset_child,
                          helios::vec3 origin, float scale, const uint leaf_template, float base_size, uint base_splits);
 

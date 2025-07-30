@@ -20,6 +20,9 @@
 
 // GLM Libraries (math-related functions for graphics)
 #define GLM_FORCE_RADIANS
+#ifndef APIENTRY
+#define APIENTRY
+#endif
 #include <GLFW/glfw3.h>
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -208,6 +211,61 @@ private:
     float minval, maxval;
 };
 
+//! Reads a JPEG file and extracts its pixel data.
+/**
+ * This function reads a JPEG file from the specified path, decodes it into RGB pixel data,
+ * and populates the provided texture vector with RGBA (Red, Green, Blue, Alpha) values.
+ * Each pixel in the texture is represented as four unsigned bytes, with the alpha channel
+ * always set to 255 (opaque). The function also outputs the height and width of the image.
+ *
+ * \param[in] filename The path to the JPEG file to read.
+ * \param[out] texture Vector that will be populated with the decoded RGBA pixel data.
+ * \param[out] height Reference to store the height of the read image.
+ * \param[out] width Reference to store the width of the read image.
+ * \return Always returns 0 upon completion.
+ */
+int read_JPEG_file(const char *filename, std::vector<unsigned char> &texture, uint &height, uint &width);
+
+//! Writes an image to a JPEG file.
+/**
+ * This function captures the current framebuffer content, converts it into a JPEG-compatible
+ * data structure, and writes it to the specified file.
+ *
+ * \param[in] filename The path to the output JPEG file.
+ * \param[in] width The width of the image to be written.
+ * \param[in] height The height of the image to be written.
+ * \param[in] print_messages [optional] If true, outputs status messages to the console. Defaults to false.
+ * \return An integer indicating success (1) or failure (0) of the writing operation.
+ */
+int write_JPEG_file(const char *filename, uint width, uint height, bool print_messages);
+
+//! Writes image data to a JPEG file.
+/**
+ * This function saves the given image data as a JPEG file to the specified filename,
+ * with the provided width and height. Optionally, it can print status messages
+ * to the console during the process.
+ *
+ * \param[in] filename The name of the file where the image will be saved.
+ * \param[in] width The width of the image in pixels.
+ * \param[in] height The height of the image in pixels.
+ * \param[in] data A vector containing the RGB color data for the image.
+ * \param[in] print_messages [optional] Whether to print status messages to the console. Defaults to false.
+ * \return Returns 1 if the file was successfully written.
+ */
+int write_JPEG_file(const char *filename, uint width, uint height, const std::vector<helios::RGBcolor> &data, bool print_messages);
+
+//! Reads a PNG file and extracts its pixel data.
+/**
+ * This function loads a PNG file and processes its pixel data into a texture format.
+ * It also retrieves the dimensions of the image.
+ *
+ * \param[in] filename Path to the PNG file to be read.
+ * \param[out] texture Vector to store the extracted RGBA pixel data as unsigned char values.
+ * \param[out] height Variable to store the height (in pixels) of the loaded image.
+ * \param[out] width Variable to store the width (in pixels) of the loaded image.
+ */
+void read_png_file(const char *filename, std::vector<unsigned char> &texture, uint &height, uint &width);
+
 //! Class for visualization of simulation results
 class Visualizer {
 public:
@@ -217,26 +275,23 @@ public:
     //! Visualizer constructor
     /**
      * \param[in] Wdisplay Width of the display window in pixels, and assumes default window aspect ratio of 1.25
-     * \param[in] headless [optional] If true, initializes the visualizer without opening a window.
      */
-    explicit Visualizer(uint Wdisplay, bool headless = false);
+    explicit Visualizer(uint Wdisplay);
 
     //! Visualizer constructor
     /**
      * \param[in] Wdisplay Width of the display window in pixels
      * \param[in] Hdisplay Height of the display window in pixels
-     * \param[in] headless [optional] If true, initializes the visualizer without opening a window.
      */
-    Visualizer(uint Wdisplay, uint Hdisplay, bool headless = false);
+    Visualizer(uint Wdisplay, uint Hdisplay);
 
     //! Constructs a Visualizer object with the specified display dimensions and anti-aliasing settings.
     /**
      * \param[in] Wdisplay Width of the display in pixels.
      * \param[in] Hdisplay Height of the display in pixels.
      * \param[in] aliasing_samples Number of anti-aliasing samples to use.
-     * \param[in] headless [optional] If true, initializes the visualizer without opening a window.
      */
-    Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool headless = false);
+    Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples);
 
     //! Visualizer constructor with option to remove window decorations (e.g., header bar, trim). This is a workaround for an error that occurs on Linux systems when printing the window to a JPEG image (printWindow). Once a fix is found, this
     //! function will likely be removed
@@ -245,9 +300,9 @@ public:
      * \param[in] Hdisplay Height of the display in pixels.
      * \param[in] aliasing_samples Number of anti-aliasing samples to use.
      * \param[in] window_decorations Flag to remove window decorations.
-     * \param[in] headless [optional] If true, initializes the visualizer without opening a window.
+     * \param[in] headless If true, initializes the visualizer without opening a window.
      */
-    Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations, bool headless = false);
+    Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations, bool headless);
 
     //! Visualizer destructor
     ~Visualizer();
@@ -553,6 +608,26 @@ public:
      * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
      */
     size_t addLine(const helios::vec3 &start, const helios::vec3 &end, const helios::RGBAcolor &color, CoordinateSystem coordFlag);
+
+    //! Add Lines by giving the coordinates of points along the Lines with custom line width
+    /**
+     * \param[in] start (x,y,z) coordinates of line starting position
+     * \param[in] end (x,y,z) coordinates of line ending position
+     * \param[in] color R-G-B color of the line
+     * \param[in] line_width Width of the line in pixels
+     * \param[in] coordinate_system Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+     */
+    size_t addLine(const helios::vec3 &start, const helios::vec3 &end, const helios::RGBcolor &color, float line_width, CoordinateSystem coordinate_system);
+
+    //! Add Lines by giving the coordinates of points along the Lines with custom line width
+    /**
+     * \param[in] start (x,y,z) coordinates of line starting position
+     * \param[in] end (x,y,z) coordinates of line ending position
+     * \param[in] color R-G-B-A color of the line
+     * \param[in] line_width Width of the line in pixels
+     * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+     */
+    size_t addLine(const helios::vec3 &start, const helios::vec3 &end, const helios::RGBAcolor &color, float line_width, CoordinateSystem coordFlag);
 
     //! Add a point by giving its coordinates and size
     /**
@@ -923,6 +998,39 @@ public:
      */
     [[nodiscard]] glm::mat4 getPerspectiveTransformationMatrix() const;
 
+    //! Point cloud culling configuration methods
+    /**
+     * \brief Enable or disable point cloud culling optimization
+     * \param[in] enabled True to enable culling, false to disable
+     */
+    void setPointCullingEnabled(bool enabled);
+
+    /**
+     * \brief Set the minimum number of points required to trigger culling
+     * \param[in] threshold Point count threshold for enabling culling
+     */
+    void setPointCullingThreshold(size_t threshold);
+
+    /**
+     * \brief Set the maximum rendering distance for points
+     * \param[in] distance Maximum distance in world units (0 = auto-calculate)
+     */
+    void setPointMaxRenderDistance(float distance);
+
+    /**
+     * \brief Set the level-of-detail factor for distance-based culling
+     * \param[in] factor LOD factor (higher values = more aggressive culling)
+     */
+    void setPointLODFactor(float factor);
+
+    /**
+     * \brief Get point cloud rendering performance metrics
+     * \param[out] total_points Total number of points in the scene
+     * \param[out] rendered_points Number of points actually rendered after culling
+     * \param[out] culling_time_ms Time spent on culling in milliseconds
+     */
+    void getPointRenderingMetrics(size_t &total_points, size_t &rendered_points, float &culling_time_ms) const;
+
 private:
     /**
      * \brief Retrieves the size of the framebuffer.
@@ -1148,6 +1256,17 @@ private:
     //! Width of points (if applicable) in pixels
     float point_width;
 
+    //! Point cloud culling settings
+    bool point_culling_enabled;
+    size_t point_culling_threshold;
+    float point_max_render_distance;
+    float point_lod_factor;
+
+    //! Point cloud performance metrics
+    mutable size_t points_total_count;
+    mutable size_t points_rendered_count;
+    mutable float last_culling_time_ms;
+
     //! Color of colorbar text
     helios::RGBcolor colorbar_fontcolor;
 
@@ -1183,6 +1302,12 @@ private:
     [[nodiscard]] glm::mat4 computeShadowDepthMVP() const;
 
     void updatePerspectiveTransformation(bool shadow);
+
+    //! Point cloud culling methods for performance optimization
+    void cullPointsByFrustum();
+    void cullPointsByDistance(float maxDistance, float lodFactor);
+    void updatePointCulling();
+    std::vector<glm::vec4> extractFrustumPlanes() const;
 
     glm::mat4 perspectiveTransformationMatrix;
 

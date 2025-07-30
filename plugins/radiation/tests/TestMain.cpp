@@ -1,7 +1,7 @@
-#include "PlantHydraulics.h"
+#include "RadiationModel.h"
 
 using namespace helios;
 
 int main() {
-    return PlantHydraulics::selfTest();
+    return RadiationModel::selfTest();
 }

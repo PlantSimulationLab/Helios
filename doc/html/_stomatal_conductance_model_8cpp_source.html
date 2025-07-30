@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.41</span>
+       <span id="projectnumber">&#160;v1.3.42</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -1091,21 +1091,21 @@ $(function(){initNavTree('_stomatal_conductance_model_8cpp_source.html',''); ini
 <div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span> </div>
 <div class="foldopen" id="foldopen00896" data-start="{" data-end="}">
 <div class="line"><a id="l00896" name="l00896"></a><span class="lineno"><a class="line" href="class_stomatal_conductance_model.html#a5939354a840f4a2199ad6610b22e4d89">  896</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="class_stomatal_conductance_model.html#afbbb0af7d8b3c7966058dbb1289dca13" title="Set the model coefficient values for all primitives - Ball, Woodrow, Berry model.">StomatalConductanceModel::setModelCoefficients</a>(<span class="keyword">const</span> std::vector&lt;BMFcoefficients&gt; &amp;coeffs, <span class="keyword">const</span> std::vector&lt;uint&gt; &amp;UUIDs) {</div>
-<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>    </div>
-<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>    <span class="keywordflow">if</span>(coeffs.size() != UUIDs.size()) {</div>
+<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span> </div>
+<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>    <span class="keywordflow">if</span> (coeffs.size() != UUIDs.size()) {</div>
 <div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (StomatalConductanceModel::setModelCoefficients): The number of coefficient sets (&quot;</span> + std::to_string(coeffs.size()) + <span class="stringliteral">&quot;) does not match the number of UUIDs provided (&quot;</span> + std::to_string(UUIDs.size()) + <span class="stringliteral">&quot;).&quot;</span>);</div>
 <div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>    }</div>
 <div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span> </div>
 <div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span>    model = <span class="stringliteral">&quot;BMF&quot;</span>;</div>
 <div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span> </div>
-<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>    <span class="keywordflow">for</span>( <span class="keywordtype">size_t</span> i=0; i&lt;UUIDs.size(); i++ ){</div>
+<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; UUIDs.size(); i++) {</div>
 <div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span> </div>
-<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span>        <span class="keywordflow">if</span>( context-&gt;doesPrimitiveDataExist( UUIDs.at(i), <span class="stringliteral">&quot;twoway_stomatal_conductance_flag&quot;</span>) ){</div>
+<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span>        <span class="keywordflow">if</span> (context-&gt;doesPrimitiveDataExist(UUIDs.at(i), <span class="stringliteral">&quot;twoway_stomatal_conductance_flag&quot;</span>)) {</div>
 <div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span>            std::cerr &lt;&lt; <span class="stringliteral">&quot;WARNING (StomatalConductanceModel::setModelCoefficients): Stomatal conductance model coefficients for UUID &quot;</span> &lt;&lt; UUIDs.at(i) &lt;&lt; <span class="stringliteral">&quot; are being overwritten.&quot;</span> &lt;&lt; std::endl;</div>
 <div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>        }</div>
 <div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span> </div>
 <div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span>        BMFmodel_coefficients[UUIDs.at(i)] = coeffs.at(i);</div>
-<div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span>        context-&gt;setPrimitiveData( UUIDs.at(i), <span class="stringliteral">&quot;twoway_stomatal_conductance_flag&quot;</span>, 1 );</div>
+<div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span>        context-&gt;setPrimitiveData(UUIDs.at(i), <span class="stringliteral">&quot;twoway_stomatal_conductance_flag&quot;</span>, 1);</div>
 <div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span>    }</div>
 <div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span>}</div>
 </div>

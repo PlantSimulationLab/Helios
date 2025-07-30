@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.41</span>
+       <span id="projectnumber">&#160;v1.3.42</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -271,55 +271,55 @@ $(function(){initNavTree('_test__data_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>    }</div>
 <div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span> </div>
 <div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>    SUBCASE(<span class="stringliteral">&quot;Global data error handling and all types&quot;</span>) {</div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>            Context ctx;</div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>            capture_cerr cerr_buffer;</div>
-<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>            DOCTEST_CHECK_THROWS(ctx.getGlobalDataType(<span class="stringliteral">&quot;non_existent&quot;</span>));</div>
-<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>            DOCTEST_CHECK_THROWS(ctx.getGlobalDataSize(<span class="stringliteral">&quot;non_existent&quot;</span>));</div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>            DOCTEST_CHECK_THROWS(ctx.renameGlobalData(<span class="stringliteral">&quot;non_existent&quot;</span>, <span class="stringliteral">&quot;new&quot;</span>));</div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>            DOCTEST_CHECK_THROWS(ctx.duplicateGlobalData(<span class="stringliteral">&quot;non_existent&quot;</span>, <span class="stringliteral">&quot;new&quot;</span>));</div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>            DOCTEST_CHECK_THROWS(ctx.incrementGlobalData(<span class="stringliteral">&quot;non_existent&quot;</span>, 1));</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>        Context ctx;</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>        capture_cerr cerr_buffer;</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>        DOCTEST_CHECK_THROWS(ctx.getGlobalDataType(<span class="stringliteral">&quot;non_existent&quot;</span>));</div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>        DOCTEST_CHECK_THROWS(ctx.getGlobalDataSize(<span class="stringliteral">&quot;non_existent&quot;</span>));</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>        DOCTEST_CHECK_THROWS(ctx.renameGlobalData(<span class="stringliteral">&quot;non_existent&quot;</span>, <span class="stringliteral">&quot;new&quot;</span>));</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>        DOCTEST_CHECK_THROWS(ctx.duplicateGlobalData(<span class="stringliteral">&quot;non_existent&quot;</span>, <span class="stringliteral">&quot;new&quot;</span>));</div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>        DOCTEST_CHECK_THROWS(ctx.incrementGlobalData(<span class="stringliteral">&quot;non_existent&quot;</span>, 1));</div>
 <div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span> </div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>            ctx.setGlobalData(<span class="stringliteral">&quot;g_uint&quot;</span>, std::vector&lt;uint&gt;{1});</div>
-<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>            ctx.setGlobalData(<span class="stringliteral">&quot;g_float&quot;</span>, std::vector&lt;float&gt;{1.f});</div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>            ctx.setGlobalData(<span class="stringliteral">&quot;g_double&quot;</span>, std::vector&lt;double&gt;{1.0});</div>
-<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>            ctx.setGlobalData(<span class="stringliteral">&quot;g_vec2&quot;</span>, std::vector&lt;vec2&gt;{<a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 1)});</div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>            ctx.setGlobalData(<span class="stringliteral">&quot;g_vec3&quot;</span>, std::vector&lt;vec3&gt;{<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 1, 1)});</div>
-<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>            ctx.setGlobalData(<span class="stringliteral">&quot;g_vec4&quot;</span>, std::vector&lt;vec4&gt;{<a class="code hl_function" href="helios__vector__types_8h.html#aff3dc2aab916d45e0b9e1752192db22c" title="Make a vec4 from three floats.">make_vec4</a>(1, 1, 1, 1)});</div>
-<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>            ctx.setGlobalData(<span class="stringliteral">&quot;g_int2&quot;</span>, std::vector&lt;int2&gt;{<a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(1, 1)});</div>
-<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>            ctx.setGlobalData(<span class="stringliteral">&quot;g_int3&quot;</span>, std::vector&lt;int3&gt;{<a class="code hl_function" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149" title="Make an int3 vector from three ints.">make_int3</a>(1, 1, 1)});</div>
-<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>            ctx.setGlobalData(<span class="stringliteral">&quot;g_int4&quot;</span>, std::vector&lt;int4&gt;{<a class="code hl_function" href="helios__vector__types_8h.html#ae958687268831dd88785688bc93254e6" title="Make an int4 vector from three ints.">make_int4</a>(1, 1, 1, 1)});</div>
-<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>            ctx.setGlobalData(<span class="stringliteral">&quot;g_string&quot;</span>, std::vector&lt;std::string&gt;{<span class="stringliteral">&quot;hello&quot;</span>});</div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>        ctx.setGlobalData(<span class="stringliteral">&quot;g_uint&quot;</span>, std::vector&lt;uint&gt;{1});</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>        ctx.setGlobalData(<span class="stringliteral">&quot;g_float&quot;</span>, std::vector&lt;float&gt;{1.f});</div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>        ctx.setGlobalData(<span class="stringliteral">&quot;g_double&quot;</span>, std::vector&lt;double&gt;{1.0});</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>        ctx.setGlobalData(<span class="stringliteral">&quot;g_vec2&quot;</span>, std::vector&lt;vec2&gt;{<a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 1)});</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>        ctx.setGlobalData(<span class="stringliteral">&quot;g_vec3&quot;</span>, std::vector&lt;vec3&gt;{<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 1, 1)});</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>        ctx.setGlobalData(<span class="stringliteral">&quot;g_vec4&quot;</span>, std::vector&lt;vec4&gt;{<a class="code hl_function" href="helios__vector__types_8h.html#aff3dc2aab916d45e0b9e1752192db22c" title="Make a vec4 from three floats.">make_vec4</a>(1, 1, 1, 1)});</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>        ctx.setGlobalData(<span class="stringliteral">&quot;g_int2&quot;</span>, std::vector&lt;int2&gt;{<a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(1, 1)});</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>        ctx.setGlobalData(<span class="stringliteral">&quot;g_int3&quot;</span>, std::vector&lt;int3&gt;{<a class="code hl_function" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149" title="Make an int3 vector from three ints.">make_int3</a>(1, 1, 1)});</div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>        ctx.setGlobalData(<span class="stringliteral">&quot;g_int4&quot;</span>, std::vector&lt;int4&gt;{<a class="code hl_function" href="helios__vector__types_8h.html#ae958687268831dd88785688bc93254e6" title="Make an int4 vector from three ints.">make_int4</a>(1, 1, 1, 1)});</div>
+<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>        ctx.setGlobalData(<span class="stringliteral">&quot;g_string&quot;</span>, std::vector&lt;std::string&gt;{<span class="stringliteral">&quot;hello&quot;</span>});</div>
 <div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span> </div>
-<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>            ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_uint&quot;</span>, <span class="stringliteral">&quot;g_uint_copy&quot;</span>);</div>
-<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>            ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_float&quot;</span>, <span class="stringliteral">&quot;g_float_copy&quot;</span>);</div>
-<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>            ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_double&quot;</span>, <span class="stringliteral">&quot;g_double_copy&quot;</span>);</div>
-<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>            ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_vec2&quot;</span>, <span class="stringliteral">&quot;g_vec2_copy&quot;</span>);</div>
-<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>            ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_vec3&quot;</span>, <span class="stringliteral">&quot;g_vec3_copy&quot;</span>);</div>
-<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>            ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_vec4&quot;</span>, <span class="stringliteral">&quot;g_vec4_copy&quot;</span>);</div>
-<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>            ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_int2&quot;</span>, <span class="stringliteral">&quot;g_int2_copy&quot;</span>);</div>
-<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>            ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_int3&quot;</span>, <span class="stringliteral">&quot;g_int3_copy&quot;</span>);</div>
-<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>            ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_int4&quot;</span>, <span class="stringliteral">&quot;g_int4_copy&quot;</span>);</div>
-<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>            ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_string&quot;</span>, <span class="stringliteral">&quot;g_string_copy&quot;</span>);</div>
+<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>        ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_uint&quot;</span>, <span class="stringliteral">&quot;g_uint_copy&quot;</span>);</div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>        ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_float&quot;</span>, <span class="stringliteral">&quot;g_float_copy&quot;</span>);</div>
+<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>        ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_double&quot;</span>, <span class="stringliteral">&quot;g_double_copy&quot;</span>);</div>
+<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>        ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_vec2&quot;</span>, <span class="stringliteral">&quot;g_vec2_copy&quot;</span>);</div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>        ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_vec3&quot;</span>, <span class="stringliteral">&quot;g_vec3_copy&quot;</span>);</div>
+<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>        ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_vec4&quot;</span>, <span class="stringliteral">&quot;g_vec4_copy&quot;</span>);</div>
+<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>        ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_int2&quot;</span>, <span class="stringliteral">&quot;g_int2_copy&quot;</span>);</div>
+<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>        ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_int3&quot;</span>, <span class="stringliteral">&quot;g_int3_copy&quot;</span>);</div>
+<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>        ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_int4&quot;</span>, <span class="stringliteral">&quot;g_int4_copy&quot;</span>);</div>
+<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>        ctx.duplicateGlobalData(<span class="stringliteral">&quot;g_string&quot;</span>, <span class="stringliteral">&quot;g_string_copy&quot;</span>);</div>
 <div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span> </div>
-<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>            DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_uint_copy&quot;</span>));</div>
-<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>            DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_float_copy&quot;</span>));</div>
-<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>            DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_double_copy&quot;</span>));</div>
-<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>            DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_vec2_copy&quot;</span>));</div>
-<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>            DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_vec3_copy&quot;</span>));</div>
-<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>            DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_vec4_copy&quot;</span>));</div>
-<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>            DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_int2_copy&quot;</span>));</div>
-<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>            DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_int3_copy&quot;</span>));</div>
-<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>            DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_int4_copy&quot;</span>));</div>
-<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>            DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_string_copy&quot;</span>));</div>
+<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>        DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_uint_copy&quot;</span>));</div>
+<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>        DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_float_copy&quot;</span>));</div>
+<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>        DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_double_copy&quot;</span>));</div>
+<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>        DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_vec2_copy&quot;</span>));</div>
+<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>        DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_vec3_copy&quot;</span>));</div>
+<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>        DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_vec4_copy&quot;</span>));</div>
+<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>        DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_int2_copy&quot;</span>));</div>
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>        DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_int3_copy&quot;</span>));</div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>        DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_int4_copy&quot;</span>));</div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>        DOCTEST_CHECK(ctx.doesGlobalDataExist(<span class="stringliteral">&quot;g_string_copy&quot;</span>));</div>
 <div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span> </div>
-<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>            ctx.incrementGlobalData(<span class="stringliteral">&quot;g_uint&quot;</span>, (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>) 1);</div>
-<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>            ctx.incrementGlobalData(<span class="stringliteral">&quot;g_float&quot;</span>, 1.f);</div>
-<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>            ctx.incrementGlobalData(<span class="stringliteral">&quot;g_double&quot;</span>, 1.0);</div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>        ctx.incrementGlobalData(<span class="stringliteral">&quot;g_uint&quot;</span>, (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>) 1);</div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>        ctx.incrementGlobalData(<span class="stringliteral">&quot;g_float&quot;</span>, 1.f);</div>
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>        ctx.incrementGlobalData(<span class="stringliteral">&quot;g_double&quot;</span>, 1.0);</div>
 <div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span> </div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>            std::vector&lt;uint&gt; g_uint;</div>
-<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>            ctx.getGlobalData(<span class="stringliteral">&quot;g_uint&quot;</span>, g_uint);</div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>            DOCTEST_CHECK(g_uint[0] == 2);</div>
-<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>        }</div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>        std::vector&lt;uint&gt; g_uint;</div>
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>        ctx.getGlobalData(<span class="stringliteral">&quot;g_uint&quot;</span>, g_uint);</div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>        DOCTEST_CHECK(g_uint[0] == 2);</div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>    }</div>
 <div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>}</div>
 <div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span> </div>
 <div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>TEST_CASE(<span class="stringliteral">&quot;Object Data&quot;</span>) {</div>
@@ -875,66 +875,66 @@ $(function(){initNavTree('_test__data_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> o1 = ctx.addBoxObject(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 1, 1), <a class="code hl_function" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149" title="Make an int3 vector from three ints.">make_int3</a>(1, 1, 1));</div>
 <div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> o2 = ctx.addTileObject(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(2, 2), nullrotation, <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(1, 1));</div>
 <div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> o3 = ctx.addConeObject(5, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(2, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(2, 0, 2), 1.0f, 2.0f);</div>
-<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>    </div>
+<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span> </div>
 <div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>    SUBCASE(<span class="stringliteral">&quot;filterObjectsByData for all types&quot;</span>) {</div>
 <div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>        <span class="comment">// Set up test data</span></div>
 <div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>        ctx.setObjectData(o1, <span class="stringliteral">&quot;float_val&quot;</span>, 1.5f);</div>
 <div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>        ctx.setObjectData(o2, <span class="stringliteral">&quot;float_val&quot;</span>, 2.5f);</div>
 <div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>        ctx.setObjectData(o3, <span class="stringliteral">&quot;float_val&quot;</span>, 0.5f);</div>
-<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>        </div>
+<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span> </div>
 <div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>        ctx.setObjectData(o1, <span class="stringliteral">&quot;double_val&quot;</span>, 1.5);</div>
 <div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>        ctx.setObjectData(o2, <span class="stringliteral">&quot;double_val&quot;</span>, 2.5);</div>
 <div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>        ctx.setObjectData(o3, <span class="stringliteral">&quot;double_val&quot;</span>, 0.5);</div>
-<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>        </div>
+<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span> </div>
 <div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>        ctx.setObjectData(o1, <span class="stringliteral">&quot;int_val&quot;</span>, 1);</div>
 <div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>        ctx.setObjectData(o2, <span class="stringliteral">&quot;int_val&quot;</span>, 2);</div>
 <div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>        ctx.setObjectData(o3, <span class="stringliteral">&quot;int_val&quot;</span>, 0);</div>
-<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>        </div>
-<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>        ctx.setObjectData(o1, <span class="stringliteral">&quot;uint_val&quot;</span>, (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>)1);</div>
-<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>        ctx.setObjectData(o2, <span class="stringliteral">&quot;uint_val&quot;</span>, (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>)2);</div>
-<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>        ctx.setObjectData(o3, <span class="stringliteral">&quot;uint_val&quot;</span>, (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>)0);</div>
-<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>        </div>
+<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span> </div>
+<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>        ctx.setObjectData(o1, <span class="stringliteral">&quot;uint_val&quot;</span>, (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>) 1);</div>
+<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>        ctx.setObjectData(o2, <span class="stringliteral">&quot;uint_val&quot;</span>, (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>) 2);</div>
+<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>        ctx.setObjectData(o3, <span class="stringliteral">&quot;uint_val&quot;</span>, (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>) 0);</div>
+<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span> </div>
 <div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>        ctx.setObjectData(o1, <span class="stringliteral">&quot;string_val&quot;</span>, std::string(<span class="stringliteral">&quot;apple&quot;</span>));</div>
 <div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>        ctx.setObjectData(o2, <span class="stringliteral">&quot;string_val&quot;</span>, std::string(<span class="stringliteral">&quot;banana&quot;</span>));</div>
 <div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span>        ctx.setObjectData(o3, <span class="stringliteral">&quot;string_val&quot;</span>, std::string(<span class="stringliteral">&quot;cherry&quot;</span>));</div>
-<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>        </div>
+<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span> </div>
 <div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>        std::vector&lt;uint&gt; all_objects = {o1, o2, o3};</div>
-<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span>        </div>
+<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span> </div>
 <div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span>        <span class="comment">// Test float filtering - use std::string for parameter names to avoid ambiguity</span></div>
 <div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span>        <span class="keyword">auto</span> filtered_f = ctx.filterObjectsByData(all_objects, std::string(<span class="stringliteral">&quot;float_val&quot;</span>), 1.0f, std::string(<span class="stringliteral">&quot;&gt;&quot;</span>));</div>
 <div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span>        DOCTEST_CHECK(filtered_f.size() == 2);</div>
 <div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>        DOCTEST_CHECK(std::find(filtered_f.begin(), filtered_f.end(), o1) != filtered_f.end());</div>
 <div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>        DOCTEST_CHECK(std::find(filtered_f.begin(), filtered_f.end(), o2) != filtered_f.end());</div>
-<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>        </div>
+<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span> </div>
 <div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>        filtered_f = ctx.filterObjectsByData(all_objects, std::string(<span class="stringliteral">&quot;float_val&quot;</span>), 2.5f, std::string(<span class="stringliteral">&quot;==&quot;</span>));</div>
 <div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>        DOCTEST_CHECK(filtered_f.size() == 1);</div>
 <div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span>        DOCTEST_CHECK(filtered_f[0] == o2);</div>
-<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span>        </div>
+<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span> </div>
 <div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>        <span class="comment">// Test double filtering</span></div>
 <div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>        <span class="keyword">auto</span> filtered_d = ctx.filterObjectsByData(all_objects, std::string(<span class="stringliteral">&quot;double_val&quot;</span>), 1.0, std::string(<span class="stringliteral">&quot;&gt;=&quot;</span>));</div>
 <div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>        DOCTEST_CHECK(filtered_d.size() == 2);</div>
-<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>        </div>
+<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span> </div>
 <div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>        <span class="comment">// Test int filtering</span></div>
 <div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>        <span class="keyword">auto</span> filtered_i = ctx.filterObjectsByData(all_objects, std::string(<span class="stringliteral">&quot;int_val&quot;</span>), 1, std::string(<span class="stringliteral">&quot;&lt;&quot;</span>));</div>
 <div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span>        DOCTEST_CHECK(filtered_i.size() == 1);</div>
 <div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>        DOCTEST_CHECK(filtered_i[0] == o3);</div>
-<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span>        </div>
+<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span> </div>
 <div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>        <span class="comment">// Test uint filtering</span></div>
-<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span>        <span class="keyword">auto</span> filtered_u = ctx.filterObjectsByData(all_objects, std::string(<span class="stringliteral">&quot;uint_val&quot;</span>), (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>)0, std::string(<span class="stringliteral">&quot;&gt;&quot;</span>));</div>
+<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span>        <span class="keyword">auto</span> filtered_u = ctx.filterObjectsByData(all_objects, std::string(<span class="stringliteral">&quot;uint_val&quot;</span>), (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a>) 0, std::string(<span class="stringliteral">&quot;&gt;&quot;</span>));</div>
 <div class="line"><a id="l00765" name="l00765"></a><span class="lineno">  765</span>        DOCTEST_CHECK(filtered_u.size() == 2);</div>
-<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span>        </div>
+<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span> </div>
 <div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span>        <span class="comment">// Note: String filtering may not be supported by all filterObjectsByData overloads</span></div>
 <div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span>        <span class="comment">// Test with string data but focus on supported data types</span></div>
 <div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>    }</div>
-<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>    </div>
+<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span> </div>
 <div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span>    SUBCASE(<span class="stringliteral">&quot;filterObjectsByData error handling&quot;</span>) {</div>
 <div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span>        std::vector&lt;uint&gt; objects = {o1};</div>
 <div class="line"><a id="l00773" name="l00773"></a><span class="lineno">  773</span>        capture_cerr cerr_buffer;</div>
-<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>        </div>
+<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span> </div>
 <div class="line"><a id="l00775" name="l00775"></a><span class="lineno">  775</span>        <span class="comment">// Test invalid comparison operator</span></div>
 <div class="line"><a id="l00776" name="l00776"></a><span class="lineno">  776</span>        std::vector&lt;uint&gt; filtered_f;</div>
-<div class="line"><a id="l00777" name="l00777"></a><span class="lineno">  777</span>        DOCTEST_CHECK_THROWS_AS(filtered_f=ctx.filterObjectsByData(objects, std::string(<span class="stringliteral">&quot;non_existent&quot;</span>), 1.0f, std::string(<span class="stringliteral">&quot;!!&quot;</span>)), std::runtime_error);</div>
-<div class="line"><a id="l00778" name="l00778"></a><span class="lineno">  778</span>        </div>
+<div class="line"><a id="l00777" name="l00777"></a><span class="lineno">  777</span>        DOCTEST_CHECK_THROWS_AS(filtered_f = ctx.filterObjectsByData(objects, std::string(<span class="stringliteral">&quot;non_existent&quot;</span>), 1.0f, std::string(<span class="stringliteral">&quot;!!&quot;</span>)), std::runtime_error);</div>
+<div class="line"><a id="l00778" name="l00778"></a><span class="lineno">  778</span> </div>
 <div class="line"><a id="l00779" name="l00779"></a><span class="lineno">  779</span>        <span class="comment">// Test non-existent data</span></div>
 <div class="line"><a id="l00780" name="l00780"></a><span class="lineno">  780</span>        <span class="keyword">auto</span> empty_result = ctx.filterObjectsByData(objects, std::string(<span class="stringliteral">&quot;non_existent&quot;</span>), 1.0f, std::string(<span class="stringliteral">&quot;&gt;&quot;</span>));</div>
 <div class="line"><a id="l00781" name="l00781"></a><span class="lineno">  781</span>        DOCTEST_CHECK(empty_result.empty());</div>
@@ -943,25 +943,25 @@ $(function(){initNavTree('_test__data_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span> </div>
 <div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span>TEST_CASE(<span class="stringliteral">&quot;Surface Area Calculations&quot;</span>) {</div>
 <div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span>    Context ctx;</div>
-<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span>    </div>
+<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span> </div>
 <div class="line"><a id="l00788" name="l00788"></a><span class="lineno">  788</span>    SUBCASE(<span class="stringliteral">&quot;sumPrimitiveSurfaceArea&quot;</span>) {</div>
 <div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p1 = ctx.addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(2, 3)); <span class="comment">// Area = 6</span></div>
 <div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p2 = ctx.addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 4)); <span class="comment">// Area = 4</span></div>
 <div class="line"><a id="l00791" name="l00791"></a><span class="lineno">  791</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> t1 = ctx.addTriangle(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(2, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 2, 0)); <span class="comment">// Area = 2</span></div>
-<div class="line"><a id="l00792" name="l00792"></a><span class="lineno">  792</span>        </div>
+<div class="line"><a id="l00792" name="l00792"></a><span class="lineno">  792</span> </div>
 <div class="line"><a id="l00793" name="l00793"></a><span class="lineno">  793</span>        std::vector&lt;uint&gt; patches = {p1, p2};</div>
 <div class="line"><a id="l00794" name="l00794"></a><span class="lineno">  794</span>        std::vector&lt;uint&gt; triangles = {t1};</div>
 <div class="line"><a id="l00795" name="l00795"></a><span class="lineno">  795</span>        std::vector&lt;uint&gt; all_prims = {p1, p2, t1};</div>
-<div class="line"><a id="l00796" name="l00796"></a><span class="lineno">  796</span>        </div>
+<div class="line"><a id="l00796" name="l00796"></a><span class="lineno">  796</span> </div>
 <div class="line"><a id="l00797" name="l00797"></a><span class="lineno">  797</span>        <span class="keywordtype">float</span> patch_area = ctx.sumPrimitiveSurfaceArea(patches);</div>
 <div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span>        DOCTEST_CHECK(patch_area == doctest::Approx(10.0f));</div>
-<div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span>        </div>
+<div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span> </div>
 <div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span>        <span class="keywordtype">float</span> triangle_area = ctx.sumPrimitiveSurfaceArea(triangles);</div>
 <div class="line"><a id="l00801" name="l00801"></a><span class="lineno">  801</span>        DOCTEST_CHECK(triangle_area == doctest::Approx(2.0f));</div>
-<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span>        </div>
+<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span> </div>
 <div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span>        <span class="keywordtype">float</span> total_area = ctx.sumPrimitiveSurfaceArea(all_prims);</div>
 <div class="line"><a id="l00804" name="l00804"></a><span class="lineno">  804</span>        DOCTEST_CHECK(total_area == doctest::Approx(12.0f));</div>
-<div class="line"><a id="l00805" name="l00805"></a><span class="lineno">  805</span>        </div>
+<div class="line"><a id="l00805" name="l00805"></a><span class="lineno">  805</span> </div>
 <div class="line"><a id="l00806" name="l00806"></a><span class="lineno">  806</span>        <span class="comment">// Test empty list</span></div>
 <div class="line"><a id="l00807" name="l00807"></a><span class="lineno">  807</span>        std::vector&lt;uint&gt; empty_list;</div>
 <div class="line"><a id="l00808" name="l00808"></a><span class="lineno">  808</span>        <span class="keywordtype">float</span> zero_area = ctx.sumPrimitiveSurfaceArea(empty_list);</div>
@@ -971,38 +971,38 @@ $(function(){initNavTree('_test__data_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00812" name="l00812"></a><span class="lineno">  812</span> </div>
 <div class="line"><a id="l00813" name="l00813"></a><span class="lineno">  813</span>TEST_CASE(<span class="stringliteral">&quot;Advanced Area-Weighted Calculations&quot;</span>) {</div>
 <div class="line"><a id="l00814" name="l00814"></a><span class="lineno">  814</span>    Context ctx;</div>
-<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span>    </div>
+<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span> </div>
 <div class="line"><a id="l00816" name="l00816"></a><span class="lineno">  816</span>    SUBCASE(<span class="stringliteral">&quot;calculatePrimitiveDataAreaWeightedMean comprehensive&quot;</span>) {</div>
 <div class="line"><a id="l00817" name="l00817"></a><span class="lineno">  817</span>        <span class="comment">// Create primitives with different areas</span></div>
 <div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p1 = ctx.addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 1)); <span class="comment">// Area = 1</span></div>
 <div class="line"><a id="l00819" name="l00819"></a><span class="lineno">  819</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p2 = ctx.addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(2, 2)); <span class="comment">// Area = 4</span></div>
 <div class="line"><a id="l00820" name="l00820"></a><span class="lineno">  820</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p3 = ctx.addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(2, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(3, 1)); <span class="comment">// Area = 3</span></div>
-<div class="line"><a id="l00821" name="l00821"></a><span class="lineno">  821</span>        </div>
+<div class="line"><a id="l00821" name="l00821"></a><span class="lineno">  821</span> </div>
 <div class="line"><a id="l00822" name="l00822"></a><span class="lineno">  822</span>        <span class="comment">// Set data for different types</span></div>
 <div class="line"><a id="l00823" name="l00823"></a><span class="lineno">  823</span>        ctx.setPrimitiveData(p1, <span class="stringliteral">&quot;double_val&quot;</span>, 10.0);</div>
 <div class="line"><a id="l00824" name="l00824"></a><span class="lineno">  824</span>        ctx.setPrimitiveData(p2, <span class="stringliteral">&quot;double_val&quot;</span>, 20.0);</div>
 <div class="line"><a id="l00825" name="l00825"></a><span class="lineno">  825</span>        ctx.setPrimitiveData(p3, <span class="stringliteral">&quot;double_val&quot;</span>, 30.0);</div>
-<div class="line"><a id="l00826" name="l00826"></a><span class="lineno">  826</span>        </div>
+<div class="line"><a id="l00826" name="l00826"></a><span class="lineno">  826</span> </div>
 <div class="line"><a id="l00827" name="l00827"></a><span class="lineno">  827</span>        ctx.setPrimitiveData(p1, <span class="stringliteral">&quot;vec2_val&quot;</span>, <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 2));</div>
 <div class="line"><a id="l00828" name="l00828"></a><span class="lineno">  828</span>        ctx.setPrimitiveData(p2, <span class="stringliteral">&quot;vec2_val&quot;</span>, <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(3, 4));</div>
 <div class="line"><a id="l00829" name="l00829"></a><span class="lineno">  829</span>        ctx.setPrimitiveData(p3, <span class="stringliteral">&quot;vec2_val&quot;</span>, <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(5, 6));</div>
-<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span>        </div>
+<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span> </div>
 <div class="line"><a id="l00831" name="l00831"></a><span class="lineno">  831</span>        ctx.setPrimitiveData(p1, <span class="stringliteral">&quot;vec3_val&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 2, 3));</div>
 <div class="line"><a id="l00832" name="l00832"></a><span class="lineno">  832</span>        ctx.setPrimitiveData(p2, <span class="stringliteral">&quot;vec3_val&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(4, 5, 6));</div>
 <div class="line"><a id="l00833" name="l00833"></a><span class="lineno">  833</span>        ctx.setPrimitiveData(p3, <span class="stringliteral">&quot;vec3_val&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(7, 8, 9));</div>
-<div class="line"><a id="l00834" name="l00834"></a><span class="lineno">  834</span>        </div>
+<div class="line"><a id="l00834" name="l00834"></a><span class="lineno">  834</span> </div>
 <div class="line"><a id="l00835" name="l00835"></a><span class="lineno">  835</span>        ctx.setPrimitiveData(p1, <span class="stringliteral">&quot;vec4_val&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#aff3dc2aab916d45e0b9e1752192db22c" title="Make a vec4 from three floats.">make_vec4</a>(1, 2, 3, 4));</div>
 <div class="line"><a id="l00836" name="l00836"></a><span class="lineno">  836</span>        ctx.setPrimitiveData(p2, <span class="stringliteral">&quot;vec4_val&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#aff3dc2aab916d45e0b9e1752192db22c" title="Make a vec4 from three floats.">make_vec4</a>(5, 6, 7, 8));</div>
 <div class="line"><a id="l00837" name="l00837"></a><span class="lineno">  837</span>        ctx.setPrimitiveData(p3, <span class="stringliteral">&quot;vec4_val&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#aff3dc2aab916d45e0b9e1752192db22c" title="Make a vec4 from three floats.">make_vec4</a>(9, 10, 11, 12));</div>
-<div class="line"><a id="l00838" name="l00838"></a><span class="lineno">  838</span>        </div>
+<div class="line"><a id="l00838" name="l00838"></a><span class="lineno">  838</span> </div>
 <div class="line"><a id="l00839" name="l00839"></a><span class="lineno">  839</span>        std::vector&lt;uint&gt; uuids = {p1, p2, p3};</div>
-<div class="line"><a id="l00840" name="l00840"></a><span class="lineno">  840</span>        </div>
+<div class="line"><a id="l00840" name="l00840"></a><span class="lineno">  840</span> </div>
 <div class="line"><a id="l00841" name="l00841"></a><span class="lineno">  841</span>        <span class="comment">// Test double area-weighted mean</span></div>
 <div class="line"><a id="l00842" name="l00842"></a><span class="lineno">  842</span>        <span class="comment">// Expected: (10*1 + 20*4 + 30*3) / (1+4+3) = 180/8 = 22.5</span></div>
 <div class="line"><a id="l00843" name="l00843"></a><span class="lineno">  843</span>        <span class="keywordtype">double</span> d_mean;</div>
 <div class="line"><a id="l00844" name="l00844"></a><span class="lineno">  844</span>        ctx.calculatePrimitiveDataAreaWeightedMean(uuids, <span class="stringliteral">&quot;double_val&quot;</span>, d_mean);</div>
 <div class="line"><a id="l00845" name="l00845"></a><span class="lineno">  845</span>        DOCTEST_CHECK(d_mean == doctest::Approx(22.5));</div>
-<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span>        </div>
+<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span> </div>
 <div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>        <span class="comment">// Test vec2 area-weighted mean</span></div>
 <div class="line"><a id="l00848" name="l00848"></a><span class="lineno">  848</span>        <span class="comment">// Expected x: (1*1 + 3*4 + 5*3) / 8 = 28/8 = 3.5</span></div>
 <div class="line"><a id="l00849" name="l00849"></a><span class="lineno">  849</span>        <span class="comment">// Expected y: (2*1 + 4*4 + 6*3) / 8 = 36/8 = 4.5</span></div>
@@ -1010,14 +1010,14 @@ $(function(){initNavTree('_test__data_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00851" name="l00851"></a><span class="lineno">  851</span>        ctx.calculatePrimitiveDataAreaWeightedMean(uuids, <span class="stringliteral">&quot;vec2_val&quot;</span>, v2_mean);</div>
 <div class="line"><a id="l00852" name="l00852"></a><span class="lineno">  852</span>        DOCTEST_CHECK(v2_mean.x == doctest::Approx(3.5f));</div>
 <div class="line"><a id="l00853" name="l00853"></a><span class="lineno">  853</span>        DOCTEST_CHECK(v2_mean.y == doctest::Approx(4.5f));</div>
-<div class="line"><a id="l00854" name="l00854"></a><span class="lineno">  854</span>        </div>
+<div class="line"><a id="l00854" name="l00854"></a><span class="lineno">  854</span> </div>
 <div class="line"><a id="l00855" name="l00855"></a><span class="lineno">  855</span>        <span class="comment">// Test vec3 area-weighted mean</span></div>
 <div class="line"><a id="l00856" name="l00856"></a><span class="lineno">  856</span>        vec3 v3_mean;</div>
 <div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span>        ctx.calculatePrimitiveDataAreaWeightedMean(uuids, <span class="stringliteral">&quot;vec3_val&quot;</span>, v3_mean);</div>
 <div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span>        DOCTEST_CHECK(v3_mean.x == doctest::Approx(4.75f)); <span class="comment">// (1*1 + 4*4 + 7*3) / 8 = 38/8 = 4.75</span></div>
 <div class="line"><a id="l00859" name="l00859"></a><span class="lineno">  859</span>        DOCTEST_CHECK(v3_mean.y == doctest::Approx(5.75f)); <span class="comment">// (2*1 + 5*4 + 8*3) / 8 = 46/8 = 5.75</span></div>
 <div class="line"><a id="l00860" name="l00860"></a><span class="lineno">  860</span>        DOCTEST_CHECK(v3_mean.z == doctest::Approx(6.75f)); <span class="comment">// (3*1 + 6*4 + 9*3) / 8 = 54/8 = 6.75</span></div>
-<div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span>        </div>
+<div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span> </div>
 <div class="line"><a id="l00862" name="l00862"></a><span class="lineno">  862</span>        <span class="comment">// Test vec4 area-weighted mean</span></div>
 <div class="line"><a id="l00863" name="l00863"></a><span class="lineno">  863</span>        vec4 v4_mean;</div>
 <div class="line"><a id="l00864" name="l00864"></a><span class="lineno">  864</span>        ctx.calculatePrimitiveDataAreaWeightedMean(uuids, <span class="stringliteral">&quot;vec4_val&quot;</span>, v4_mean);</div>
@@ -1026,43 +1026,43 @@ $(function(){initNavTree('_test__data_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00867" name="l00867"></a><span class="lineno">  867</span>        DOCTEST_CHECK(v4_mean.z == doctest::Approx(8.0f)); <span class="comment">// (3*1 + 7*4 + 11*3) / 8 = 64/8 = 8.0</span></div>
 <div class="line"><a id="l00868" name="l00868"></a><span class="lineno">  868</span>        DOCTEST_CHECK(v4_mean.w == doctest::Approx(9.0f)); <span class="comment">// (4*1 + 8*4 + 12*3) / 8 = 72/8 = 9.0</span></div>
 <div class="line"><a id="l00869" name="l00869"></a><span class="lineno">  869</span>    }</div>
-<div class="line"><a id="l00870" name="l00870"></a><span class="lineno">  870</span>    </div>
+<div class="line"><a id="l00870" name="l00870"></a><span class="lineno">  870</span> </div>
 <div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span>    SUBCASE(<span class="stringliteral">&quot;calculatePrimitiveDataAreaWeightedSum comprehensive&quot;</span>) {</div>
 <div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p1 = ctx.addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(2, 1)); <span class="comment">// Area = 2</span></div>
 <div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p2 = ctx.addPatch(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 0, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 3)); <span class="comment">// Area = 3</span></div>
-<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span>        </div>
+<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span> </div>
 <div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span>        ctx.setPrimitiveData(p1, <span class="stringliteral">&quot;double_val&quot;</span>, 5.0);</div>
 <div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span>        ctx.setPrimitiveData(p2, <span class="stringliteral">&quot;double_val&quot;</span>, 10.0);</div>
-<div class="line"><a id="l00877" name="l00877"></a><span class="lineno">  877</span>        </div>
+<div class="line"><a id="l00877" name="l00877"></a><span class="lineno">  877</span> </div>
 <div class="line"><a id="l00878" name="l00878"></a><span class="lineno">  878</span>        ctx.setPrimitiveData(p1, <span class="stringliteral">&quot;vec2_val&quot;</span>, <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(1, 2));</div>
 <div class="line"><a id="l00879" name="l00879"></a><span class="lineno">  879</span>        ctx.setPrimitiveData(p2, <span class="stringliteral">&quot;vec2_val&quot;</span>, <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(3, 4));</div>
-<div class="line"><a id="l00880" name="l00880"></a><span class="lineno">  880</span>        </div>
+<div class="line"><a id="l00880" name="l00880"></a><span class="lineno">  880</span> </div>
 <div class="line"><a id="l00881" name="l00881"></a><span class="lineno">  881</span>        ctx.setPrimitiveData(p1, <span class="stringliteral">&quot;vec3_val&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 2, 3));</div>
 <div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>        ctx.setPrimitiveData(p2, <span class="stringliteral">&quot;vec3_val&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(4, 5, 6));</div>
-<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span>        </div>
+<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span> </div>
 <div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span>        ctx.setPrimitiveData(p1, <span class="stringliteral">&quot;vec4_val&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#aff3dc2aab916d45e0b9e1752192db22c" title="Make a vec4 from three floats.">make_vec4</a>(1, 2, 3, 4));</div>
 <div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>        ctx.setPrimitiveData(p2, <span class="stringliteral">&quot;vec4_val&quot;</span>, <a class="code hl_function" href="helios__vector__types_8h.html#aff3dc2aab916d45e0b9e1752192db22c" title="Make a vec4 from three floats.">make_vec4</a>(5, 6, 7, 8));</div>
-<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span>        </div>
+<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span> </div>
 <div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span>        std::vector&lt;uint&gt; uuids = {p1, p2};</div>
-<div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span>        </div>
+<div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span> </div>
 <div class="line"><a id="l00889" name="l00889"></a><span class="lineno">  889</span>        <span class="comment">// Test double area-weighted sum: 5*2 + 10*3 = 40</span></div>
 <div class="line"><a id="l00890" name="l00890"></a><span class="lineno">  890</span>        <span class="keywordtype">double</span> d_sum;</div>
 <div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span>        ctx.calculatePrimitiveDataAreaWeightedSum(uuids, <span class="stringliteral">&quot;double_val&quot;</span>, d_sum);</div>
 <div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>        DOCTEST_CHECK(d_sum == doctest::Approx(40.0));</div>
-<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>        </div>
+<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span> </div>
 <div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span>        <span class="comment">// Test vec2 area-weighted sum</span></div>
 <div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>        vec2 v2_sum;</div>
 <div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span>        ctx.calculatePrimitiveDataAreaWeightedSum(uuids, <span class="stringliteral">&quot;vec2_val&quot;</span>, v2_sum);</div>
 <div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>        DOCTEST_CHECK(v2_sum.x == doctest::Approx(11.0f)); <span class="comment">// 1*2 + 3*3 = 11</span></div>
 <div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>        DOCTEST_CHECK(v2_sum.y == doctest::Approx(16.0f)); <span class="comment">// 2*2 + 4*3 = 16</span></div>
-<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span>        </div>
+<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span> </div>
 <div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>        <span class="comment">// Test vec3 area-weighted sum</span></div>
 <div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span>        vec3 v3_sum;</div>
 <div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span>        ctx.calculatePrimitiveDataAreaWeightedSum(uuids, <span class="stringliteral">&quot;vec3_val&quot;</span>, v3_sum);</div>
 <div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>        DOCTEST_CHECK(v3_sum.x == doctest::Approx(14.0f)); <span class="comment">// 1*2 + 4*3 = 14</span></div>
 <div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>        DOCTEST_CHECK(v3_sum.y == doctest::Approx(19.0f)); <span class="comment">// 2*2 + 5*3 = 19</span></div>
 <div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>        DOCTEST_CHECK(v3_sum.z == doctest::Approx(24.0f)); <span class="comment">// 3*2 + 6*3 = 24</span></div>
-<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span>        </div>
+<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span> </div>
 <div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span>        <span class="comment">// Test vec4 area-weighted sum</span></div>
 <div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>        vec4 v4_sum;</div>
 <div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span>        ctx.calculatePrimitiveDataAreaWeightedSum(uuids, <span class="stringliteral">&quot;vec4_val&quot;</span>, v4_sum);</div>
@@ -1075,31 +1075,31 @@ $(function(){initNavTree('_test__data_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span> </div>
 <div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span>TEST_CASE(<span class="stringliteral">&quot;Global Data Scaling&quot;</span>) {</div>
 <div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span>    Context ctx;</div>
-<div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span>    </div>
+<div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span> </div>
 <div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span>    SUBCASE(<span class="stringliteral">&quot;scalePrimitiveData with label&quot;</span>) {</div>
 <div class="line"><a id="l00921" name="l00921"></a><span class="lineno">  921</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p1 = ctx.addPatch();</div>
 <div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p2 = ctx.addPatch();</div>
 <div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p3 = ctx.addPatch();</div>
-<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span>        </div>
+<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span> </div>
 <div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span>        <span class="comment">// Set data on primitives</span></div>
 <div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span>        ctx.setPrimitiveData(p1, <span class="stringliteral">&quot;scale_me&quot;</span>, 10.0f);</div>
 <div class="line"><a id="l00927" name="l00927"></a><span class="lineno">  927</span>        ctx.setPrimitiveData(p2, <span class="stringliteral">&quot;scale_me&quot;</span>, 20.0f);</div>
 <div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span>        ctx.setPrimitiveData(p3, <span class="stringliteral">&quot;other_data&quot;</span>, 5.0f);</div>
-<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span>        </div>
+<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span> </div>
 <div class="line"><a id="l00930" name="l00930"></a><span class="lineno">  930</span>        <span class="comment">// Scale all primitives with &quot;scale_me&quot; label</span></div>
 <div class="line"><a id="l00931" name="l00931"></a><span class="lineno">  931</span>        capture_cerr cerr_buffer;</div>
 <div class="line"><a id="l00932" name="l00932"></a><span class="lineno">  932</span>        ctx.scalePrimitiveData(<span class="stringliteral">&quot;scale_me&quot;</span>, 2.0f);</div>
-<div class="line"><a id="l00933" name="l00933"></a><span class="lineno">  933</span>        </div>
+<div class="line"><a id="l00933" name="l00933"></a><span class="lineno">  933</span> </div>
 <div class="line"><a id="l00934" name="l00934"></a><span class="lineno">  934</span>        <span class="comment">// Check scaled values</span></div>
 <div class="line"><a id="l00935" name="l00935"></a><span class="lineno">  935</span>        <span class="keywordtype">float</span> val1, val2, val3;</div>
 <div class="line"><a id="l00936" name="l00936"></a><span class="lineno">  936</span>        ctx.getPrimitiveData(p1, <span class="stringliteral">&quot;scale_me&quot;</span>, val1);</div>
 <div class="line"><a id="l00937" name="l00937"></a><span class="lineno">  937</span>        ctx.getPrimitiveData(p2, <span class="stringliteral">&quot;scale_me&quot;</span>, val2);</div>
 <div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span>        ctx.getPrimitiveData(p3, <span class="stringliteral">&quot;other_data&quot;</span>, val3);</div>
-<div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span>        </div>
+<div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span> </div>
 <div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span>        DOCTEST_CHECK(val1 == doctest::Approx(20.0f));</div>
 <div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span>        DOCTEST_CHECK(val2 == doctest::Approx(40.0f));</div>
 <div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span>        DOCTEST_CHECK(val3 == doctest::Approx(5.0f)); <span class="comment">// Should be unchanged</span></div>
-<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>        </div>
+<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span> </div>
 <div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span>        <span class="comment">// Test with non-existent label</span></div>
 <div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>        ctx.scalePrimitiveData(<span class="stringliteral">&quot;non_existent&quot;</span>, 3.0f);</div>
 <div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span>        DOCTEST_CHECK(cerr_buffer.has_output());</div>
@@ -1108,42 +1108,42 @@ $(function(){initNavTree('_test__data_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span> </div>
 <div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span>TEST_CASE(<span class="stringliteral">&quot;Aggregate Function Edge Cases&quot;</span>) {</div>
 <div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span>    Context ctx;</div>
-<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span>    </div>
+<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span> </div>
 <div class="line"><a id="l00953" name="l00953"></a><span class="lineno">  953</span>    SUBCASE(<span class="stringliteral">&quot;aggregatePrimitiveDataProduct edge cases&quot;</span>) {</div>
 <div class="line"><a id="l00954" name="l00954"></a><span class="lineno">  954</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p1 = ctx.addPatch();</div>
 <div class="line"><a id="l00955" name="l00955"></a><span class="lineno">  955</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p2 = ctx.addPatch();</div>
 <div class="line"><a id="l00956" name="l00956"></a><span class="lineno">  956</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p3 = ctx.addPatch();</div>
-<div class="line"><a id="l00957" name="l00957"></a><span class="lineno">  957</span>        </div>
+<div class="line"><a id="l00957" name="l00957"></a><span class="lineno">  957</span> </div>
 <div class="line"><a id="l00958" name="l00958"></a><span class="lineno">  958</span>        <span class="comment">// Test with zeros</span></div>
 <div class="line"><a id="l00959" name="l00959"></a><span class="lineno">  959</span>        ctx.setPrimitiveData(p1, <span class="stringliteral">&quot;zero_test&quot;</span>, 0.0f);</div>
 <div class="line"><a id="l00960" name="l00960"></a><span class="lineno">  960</span>        ctx.setPrimitiveData(p1, <span class="stringliteral">&quot;normal&quot;</span>, 5.0f);</div>
 <div class="line"><a id="l00961" name="l00961"></a><span class="lineno">  961</span>        ctx.setPrimitiveData(p2, <span class="stringliteral">&quot;zero_test&quot;</span>, 10.0f);</div>
 <div class="line"><a id="l00962" name="l00962"></a><span class="lineno">  962</span>        ctx.setPrimitiveData(p2, <span class="stringliteral">&quot;normal&quot;</span>, 2.0f);</div>
-<div class="line"><a id="l00963" name="l00963"></a><span class="lineno">  963</span>        </div>
+<div class="line"><a id="l00963" name="l00963"></a><span class="lineno">  963</span> </div>
 <div class="line"><a id="l00964" name="l00964"></a><span class="lineno">  964</span>        std::vector&lt;uint&gt; uuids = {p1, p2};</div>
 <div class="line"><a id="l00965" name="l00965"></a><span class="lineno">  965</span>        std::vector&lt;std::string&gt; labels = {<span class="stringliteral">&quot;zero_test&quot;</span>, <span class="stringliteral">&quot;normal&quot;</span>};</div>
-<div class="line"><a id="l00966" name="l00966"></a><span class="lineno">  966</span>        </div>
+<div class="line"><a id="l00966" name="l00966"></a><span class="lineno">  966</span> </div>
 <div class="line"><a id="l00967" name="l00967"></a><span class="lineno">  967</span>        ctx.aggregatePrimitiveDataProduct(uuids, labels, <span class="stringliteral">&quot;product_result&quot;</span>);</div>
-<div class="line"><a id="l00968" name="l00968"></a><span class="lineno">  968</span>        </div>
+<div class="line"><a id="l00968" name="l00968"></a><span class="lineno">  968</span> </div>
 <div class="line"><a id="l00969" name="l00969"></a><span class="lineno">  969</span>        <span class="keywordtype">float</span> result;</div>
 <div class="line"><a id="l00970" name="l00970"></a><span class="lineno">  970</span>        ctx.getPrimitiveData(p1, <span class="stringliteral">&quot;product_result&quot;</span>, result);</div>
 <div class="line"><a id="l00971" name="l00971"></a><span class="lineno">  971</span>        DOCTEST_CHECK(result == doctest::Approx(0.0f)); <span class="comment">// 0 * 5 = 0</span></div>
-<div class="line"><a id="l00972" name="l00972"></a><span class="lineno">  972</span>        </div>
+<div class="line"><a id="l00972" name="l00972"></a><span class="lineno">  972</span> </div>
 <div class="line"><a id="l00973" name="l00973"></a><span class="lineno">  973</span>        ctx.getPrimitiveData(p2, <span class="stringliteral">&quot;product_result&quot;</span>, result);</div>
 <div class="line"><a id="l00974" name="l00974"></a><span class="lineno">  974</span>        DOCTEST_CHECK(result == doctest::Approx(20.0f)); <span class="comment">// 10 * 2 = 20</span></div>
-<div class="line"><a id="l00975" name="l00975"></a><span class="lineno">  975</span>        </div>
+<div class="line"><a id="l00975" name="l00975"></a><span class="lineno">  975</span> </div>
 <div class="line"><a id="l00976" name="l00976"></a><span class="lineno">  976</span>        <span class="comment">// Test with negative values</span></div>
 <div class="line"><a id="l00977" name="l00977"></a><span class="lineno">  977</span>        ctx.setPrimitiveData(p1, <span class="stringliteral">&quot;neg1&quot;</span>, -2.0f);</div>
 <div class="line"><a id="l00978" name="l00978"></a><span class="lineno">  978</span>        ctx.setPrimitiveData(p1, <span class="stringliteral">&quot;neg2&quot;</span>, -3.0f);</div>
 <div class="line"><a id="l00979" name="l00979"></a><span class="lineno">  979</span>        ctx.setPrimitiveData(p2, <span class="stringliteral">&quot;neg1&quot;</span>, 4.0f);</div>
 <div class="line"><a id="l00980" name="l00980"></a><span class="lineno">  980</span>        ctx.setPrimitiveData(p2, <span class="stringliteral">&quot;neg2&quot;</span>, -1.0f);</div>
-<div class="line"><a id="l00981" name="l00981"></a><span class="lineno">  981</span>        </div>
+<div class="line"><a id="l00981" name="l00981"></a><span class="lineno">  981</span> </div>
 <div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span>        std::vector&lt;std::string&gt; neg_labels = {<span class="stringliteral">&quot;neg1&quot;</span>, <span class="stringliteral">&quot;neg2&quot;</span>};</div>
 <div class="line"><a id="l00983" name="l00983"></a><span class="lineno">  983</span>        ctx.aggregatePrimitiveDataProduct(uuids, neg_labels, <span class="stringliteral">&quot;neg_product&quot;</span>);</div>
-<div class="line"><a id="l00984" name="l00984"></a><span class="lineno">  984</span>        </div>
+<div class="line"><a id="l00984" name="l00984"></a><span class="lineno">  984</span> </div>
 <div class="line"><a id="l00985" name="l00985"></a><span class="lineno">  985</span>        ctx.getPrimitiveData(p1, <span class="stringliteral">&quot;neg_product&quot;</span>, result);</div>
 <div class="line"><a id="l00986" name="l00986"></a><span class="lineno">  986</span>        DOCTEST_CHECK(result == doctest::Approx(6.0f)); <span class="comment">// (-2) * (-3) = 6</span></div>
-<div class="line"><a id="l00987" name="l00987"></a><span class="lineno">  987</span>        </div>
+<div class="line"><a id="l00987" name="l00987"></a><span class="lineno">  987</span> </div>
 <div class="line"><a id="l00988" name="l00988"></a><span class="lineno">  988</span>        ctx.getPrimitiveData(p2, <span class="stringliteral">&quot;neg_product&quot;</span>, result);</div>
 <div class="line"><a id="l00989" name="l00989"></a><span class="lineno">  989</span>        DOCTEST_CHECK(result == doctest::Approx(-4.0f)); <span class="comment">// 4 * (-1) = -4</span></div>
 <div class="line"><a id="l00990" name="l00990"></a><span class="lineno">  990</span>    }</div>
@@ -1151,36 +1151,36 @@ $(function(){initNavTree('_test__data_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00992" name="l00992"></a><span class="lineno">  992</span> </div>
 <div class="line"><a id="l00993" name="l00993"></a><span class="lineno">  993</span>TEST_CASE(<span class="stringliteral">&quot;Data Type Coverage Extensions&quot;</span>) {</div>
 <div class="line"><a id="l00994" name="l00994"></a><span class="lineno">  994</span>    Context ctx;</div>
-<div class="line"><a id="l00995" name="l00995"></a><span class="lineno">  995</span>    </div>
+<div class="line"><a id="l00995" name="l00995"></a><span class="lineno">  995</span> </div>
 <div class="line"><a id="l00996" name="l00996"></a><span class="lineno">  996</span>    SUBCASE(<span class="stringliteral">&quot;Primitive data with int2, int3, int4 vectors&quot;</span>) {</div>
 <div class="line"><a id="l00997" name="l00997"></a><span class="lineno">  997</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p = ctx.addPatch();</div>
-<div class="line"><a id="l00998" name="l00998"></a><span class="lineno">  998</span>        </div>
+<div class="line"><a id="l00998" name="l00998"></a><span class="lineno">  998</span> </div>
 <div class="line"><a id="l00999" name="l00999"></a><span class="lineno">  999</span>        <span class="comment">// Test vector of int2, int3, int4</span></div>
 <div class="line"><a id="l01000" name="l01000"></a><span class="lineno"> 1000</span>        std::vector&lt;int2&gt; v_i2 = {<a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(1, 2), <a class="code hl_function" href="group__vectors.html#ga70f2d62c3dfc6bbff6581cbc0f8bacee" title="Make an int2 vector from two ints.">make_int2</a>(3, 4)};</div>
 <div class="line"><a id="l01001" name="l01001"></a><span class="lineno"> 1001</span>        std::vector&lt;int3&gt; v_i3 = {<a class="code hl_function" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149" title="Make an int3 vector from three ints.">make_int3</a>(1, 2, 3), <a class="code hl_function" href="helios__vector__types_8h.html#a55971d7a623ad5c10a74e7eda37c2149" title="Make an int3 vector from three ints.">make_int3</a>(4, 5, 6)};</div>
 <div class="line"><a id="l01002" name="l01002"></a><span class="lineno"> 1002</span>        std::vector&lt;int4&gt; v_i4 = {<a class="code hl_function" href="helios__vector__types_8h.html#ae958687268831dd88785688bc93254e6" title="Make an int4 vector from three ints.">make_int4</a>(1, 2, 3, 4), <a class="code hl_function" href="helios__vector__types_8h.html#ae958687268831dd88785688bc93254e6" title="Make an int4 vector from three ints.">make_int4</a>(5, 6, 7, 8)};</div>
-<div class="line"><a id="l01003" name="l01003"></a><span class="lineno"> 1003</span>        </div>
+<div class="line"><a id="l01003" name="l01003"></a><span class="lineno"> 1003</span> </div>
 <div class="line"><a id="l01004" name="l01004"></a><span class="lineno"> 1004</span>        ctx.setPrimitiveData(p, <span class="stringliteral">&quot;vec_int2&quot;</span>, v_i2);</div>
 <div class="line"><a id="l01005" name="l01005"></a><span class="lineno"> 1005</span>        ctx.setPrimitiveData(p, <span class="stringliteral">&quot;vec_int3&quot;</span>, v_i3);</div>
 <div class="line"><a id="l01006" name="l01006"></a><span class="lineno"> 1006</span>        ctx.setPrimitiveData(p, <span class="stringliteral">&quot;vec_int4&quot;</span>, v_i4);</div>
-<div class="line"><a id="l01007" name="l01007"></a><span class="lineno"> 1007</span>        </div>
+<div class="line"><a id="l01007" name="l01007"></a><span class="lineno"> 1007</span> </div>
 <div class="line"><a id="l01008" name="l01008"></a><span class="lineno"> 1008</span>        DOCTEST_CHECK(ctx.getPrimitiveDataType(p, <span class="stringliteral">&quot;vec_int2&quot;</span>) == HELIOS_TYPE_INT2);</div>
 <div class="line"><a id="l01009" name="l01009"></a><span class="lineno"> 1009</span>        DOCTEST_CHECK(ctx.getPrimitiveDataType(p, <span class="stringliteral">&quot;vec_int3&quot;</span>) == HELIOS_TYPE_INT3);</div>
 <div class="line"><a id="l01010" name="l01010"></a><span class="lineno"> 1010</span>        DOCTEST_CHECK(ctx.getPrimitiveDataType(p, <span class="stringliteral">&quot;vec_int4&quot;</span>) == HELIOS_TYPE_INT4);</div>
-<div class="line"><a id="l01011" name="l01011"></a><span class="lineno"> 1011</span>        </div>
+<div class="line"><a id="l01011" name="l01011"></a><span class="lineno"> 1011</span> </div>
 <div class="line"><a id="l01012" name="l01012"></a><span class="lineno"> 1012</span>        DOCTEST_CHECK(ctx.getPrimitiveDataSize(p, <span class="stringliteral">&quot;vec_int2&quot;</span>) == 2);</div>
 <div class="line"><a id="l01013" name="l01013"></a><span class="lineno"> 1013</span>        DOCTEST_CHECK(ctx.getPrimitiveDataSize(p, <span class="stringliteral">&quot;vec_int3&quot;</span>) == 2);</div>
 <div class="line"><a id="l01014" name="l01014"></a><span class="lineno"> 1014</span>        DOCTEST_CHECK(ctx.getPrimitiveDataSize(p, <span class="stringliteral">&quot;vec_int4&quot;</span>) == 2);</div>
-<div class="line"><a id="l01015" name="l01015"></a><span class="lineno"> 1015</span>        </div>
+<div class="line"><a id="l01015" name="l01015"></a><span class="lineno"> 1015</span> </div>
 <div class="line"><a id="l01016" name="l01016"></a><span class="lineno"> 1016</span>        <span class="comment">// Test retrieval</span></div>
 <div class="line"><a id="l01017" name="l01017"></a><span class="lineno"> 1017</span>        std::vector&lt;int2&gt; r_i2;</div>
 <div class="line"><a id="l01018" name="l01018"></a><span class="lineno"> 1018</span>        std::vector&lt;int3&gt; r_i3;</div>
 <div class="line"><a id="l01019" name="l01019"></a><span class="lineno"> 1019</span>        std::vector&lt;int4&gt; r_i4;</div>
-<div class="line"><a id="l01020" name="l01020"></a><span class="lineno"> 1020</span>        </div>
+<div class="line"><a id="l01020" name="l01020"></a><span class="lineno"> 1020</span> </div>
 <div class="line"><a id="l01021" name="l01021"></a><span class="lineno"> 1021</span>        ctx.getPrimitiveData(p, <span class="stringliteral">&quot;vec_int2&quot;</span>, r_i2);</div>
 <div class="line"><a id="l01022" name="l01022"></a><span class="lineno"> 1022</span>        ctx.getPrimitiveData(p, <span class="stringliteral">&quot;vec_int3&quot;</span>, r_i3);</div>
 <div class="line"><a id="l01023" name="l01023"></a><span class="lineno"> 1023</span>        ctx.getPrimitiveData(p, <span class="stringliteral">&quot;vec_int4&quot;</span>, r_i4);</div>
-<div class="line"><a id="l01024" name="l01024"></a><span class="lineno"> 1024</span>        </div>
+<div class="line"><a id="l01024" name="l01024"></a><span class="lineno"> 1024</span> </div>
 <div class="line"><a id="l01025" name="l01025"></a><span class="lineno"> 1025</span>        DOCTEST_CHECK(r_i2 == v_i2);</div>
 <div class="line"><a id="l01026" name="l01026"></a><span class="lineno"> 1026</span>        DOCTEST_CHECK(r_i3 == v_i3);</div>
 <div class="line"><a id="l01027" name="l01027"></a><span class="lineno"> 1027</span>        DOCTEST_CHECK(r_i4 == v_i4);</div>
@@ -1189,47 +1189,47 @@ $(function(){initNavTree('_test__data_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l01030" name="l01030"></a><span class="lineno"> 1030</span> </div>
 <div class="line"><a id="l01031" name="l01031"></a><span class="lineno"> 1031</span>TEST_CASE(<span class="stringliteral">&quot;Error Handling Edge Cases&quot;</span>) {</div>
 <div class="line"><a id="l01032" name="l01032"></a><span class="lineno"> 1032</span>    Context ctx;</div>
-<div class="line"><a id="l01033" name="l01033"></a><span class="lineno"> 1033</span>    </div>
+<div class="line"><a id="l01033" name="l01033"></a><span class="lineno"> 1033</span> </div>
 <div class="line"><a id="l01034" name="l01034"></a><span class="lineno"> 1034</span>    SUBCASE(<span class="stringliteral">&quot;Data operations with mixed primitive types&quot;</span>) {</div>
 <div class="line"><a id="l01035" name="l01035"></a><span class="lineno"> 1035</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> patch = ctx.addPatch();</div>
 <div class="line"><a id="l01036" name="l01036"></a><span class="lineno"> 1036</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> triangle = ctx.addTriangle(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 1, 0));</div>
 <div class="line"><a id="l01037" name="l01037"></a><span class="lineno"> 1037</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> voxel = ctx.addVoxel(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 1, 1));</div>
-<div class="line"><a id="l01038" name="l01038"></a><span class="lineno"> 1038</span>        </div>
+<div class="line"><a id="l01038" name="l01038"></a><span class="lineno"> 1038</span> </div>
 <div class="line"><a id="l01039" name="l01039"></a><span class="lineno"> 1039</span>        <span class="comment">// Set data on different primitive types</span></div>
 <div class="line"><a id="l01040" name="l01040"></a><span class="lineno"> 1040</span>        ctx.setPrimitiveData(patch, <span class="stringliteral">&quot;mixed_data&quot;</span>, 1.0f);</div>
 <div class="line"><a id="l01041" name="l01041"></a><span class="lineno"> 1041</span>        ctx.setPrimitiveData(triangle, <span class="stringliteral">&quot;mixed_data&quot;</span>, 2.0f);</div>
 <div class="line"><a id="l01042" name="l01042"></a><span class="lineno"> 1042</span>        ctx.setPrimitiveData(voxel, <span class="stringliteral">&quot;mixed_data&quot;</span>, 3.0f);</div>
-<div class="line"><a id="l01043" name="l01043"></a><span class="lineno"> 1043</span>        </div>
+<div class="line"><a id="l01043" name="l01043"></a><span class="lineno"> 1043</span> </div>
 <div class="line"><a id="l01044" name="l01044"></a><span class="lineno"> 1044</span>        std::vector&lt;uint&gt; mixed_prims = {patch, triangle, voxel};</div>
-<div class="line"><a id="l01045" name="l01045"></a><span class="lineno"> 1045</span>        </div>
+<div class="line"><a id="l01045" name="l01045"></a><span class="lineno"> 1045</span> </div>
 <div class="line"><a id="l01046" name="l01046"></a><span class="lineno"> 1046</span>        <span class="comment">// Test calculations work with mixed primitive types</span></div>
 <div class="line"><a id="l01047" name="l01047"></a><span class="lineno"> 1047</span>        <span class="keywordtype">float</span> mean_val;</div>
 <div class="line"><a id="l01048" name="l01048"></a><span class="lineno"> 1048</span>        ctx.calculatePrimitiveDataMean(mixed_prims, <span class="stringliteral">&quot;mixed_data&quot;</span>, mean_val);</div>
 <div class="line"><a id="l01049" name="l01049"></a><span class="lineno"> 1049</span>        DOCTEST_CHECK(mean_val == doctest::Approx(2.0f));</div>
-<div class="line"><a id="l01050" name="l01050"></a><span class="lineno"> 1050</span>        </div>
+<div class="line"><a id="l01050" name="l01050"></a><span class="lineno"> 1050</span> </div>
 <div class="line"><a id="l01051" name="l01051"></a><span class="lineno"> 1051</span>        <span class="keywordtype">float</span> sum_val;</div>
 <div class="line"><a id="l01052" name="l01052"></a><span class="lineno"> 1052</span>        ctx.calculatePrimitiveDataSum(mixed_prims, <span class="stringliteral">&quot;mixed_data&quot;</span>, sum_val);</div>
 <div class="line"><a id="l01053" name="l01053"></a><span class="lineno"> 1053</span>        DOCTEST_CHECK(sum_val == doctest::Approx(6.0f));</div>
 <div class="line"><a id="l01054" name="l01054"></a><span class="lineno"> 1054</span>    }</div>
-<div class="line"><a id="l01055" name="l01055"></a><span class="lineno"> 1055</span>    </div>
+<div class="line"><a id="l01055" name="l01055"></a><span class="lineno"> 1055</span> </div>
 <div class="line"><a id="l01056" name="l01056"></a><span class="lineno"> 1056</span>    SUBCASE(<span class="stringliteral">&quot;Large dataset stress test&quot;</span>) {</div>
 <div class="line"><a id="l01057" name="l01057"></a><span class="lineno"> 1057</span>        std::vector&lt;uint&gt; large_dataset;</div>
-<div class="line"><a id="l01058" name="l01058"></a><span class="lineno"> 1058</span>        </div>
+<div class="line"><a id="l01058" name="l01058"></a><span class="lineno"> 1058</span> </div>
 <div class="line"><a id="l01059" name="l01059"></a><span class="lineno"> 1059</span>        <span class="comment">// Create many primitives with data</span></div>
 <div class="line"><a id="l01060" name="l01060"></a><span class="lineno"> 1060</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; 1000; ++i) {</div>
 <div class="line"><a id="l01061" name="l01061"></a><span class="lineno"> 1061</span>            <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p = ctx.addPatch();</div>
-<div class="line"><a id="l01062" name="l01062"></a><span class="lineno"> 1062</span>            ctx.setPrimitiveData(p, <span class="stringliteral">&quot;stress_data&quot;</span>, (<span class="keywordtype">float</span>)i);</div>
+<div class="line"><a id="l01062" name="l01062"></a><span class="lineno"> 1062</span>            ctx.setPrimitiveData(p, <span class="stringliteral">&quot;stress_data&quot;</span>, (<span class="keywordtype">float</span>) i);</div>
 <div class="line"><a id="l01063" name="l01063"></a><span class="lineno"> 1063</span>            large_dataset.push_back(p);</div>
 <div class="line"><a id="l01064" name="l01064"></a><span class="lineno"> 1064</span>        }</div>
-<div class="line"><a id="l01065" name="l01065"></a><span class="lineno"> 1065</span>        </div>
+<div class="line"><a id="l01065" name="l01065"></a><span class="lineno"> 1065</span> </div>
 <div class="line"><a id="l01066" name="l01066"></a><span class="lineno"> 1066</span>        <span class="comment">// Test operations on large dataset</span></div>
 <div class="line"><a id="l01067" name="l01067"></a><span class="lineno"> 1067</span>        <span class="keywordtype">float</span> mean_val, sum_val;</div>
 <div class="line"><a id="l01068" name="l01068"></a><span class="lineno"> 1068</span>        ctx.calculatePrimitiveDataMean(large_dataset, <span class="stringliteral">&quot;stress_data&quot;</span>, mean_val);</div>
 <div class="line"><a id="l01069" name="l01069"></a><span class="lineno"> 1069</span>        ctx.calculatePrimitiveDataSum(large_dataset, <span class="stringliteral">&quot;stress_data&quot;</span>, sum_val);</div>
-<div class="line"><a id="l01070" name="l01070"></a><span class="lineno"> 1070</span>        </div>
+<div class="line"><a id="l01070" name="l01070"></a><span class="lineno"> 1070</span> </div>
 <div class="line"><a id="l01071" name="l01071"></a><span class="lineno"> 1071</span>        DOCTEST_CHECK(mean_val == doctest::Approx(499.5f)); <span class="comment">// Mean of 0-999</span></div>
 <div class="line"><a id="l01072" name="l01072"></a><span class="lineno"> 1072</span>        DOCTEST_CHECK(sum_val == doctest::Approx(499500.0f)); <span class="comment">// Sum of 0-999</span></div>
-<div class="line"><a id="l01073" name="l01073"></a><span class="lineno"> 1073</span>        </div>
+<div class="line"><a id="l01073" name="l01073"></a><span class="lineno"> 1073</span> </div>
 <div class="line"><a id="l01074" name="l01074"></a><span class="lineno"> 1074</span>        <span class="comment">// Test filtering on large dataset</span></div>
 <div class="line"><a id="l01075" name="l01075"></a><span class="lineno"> 1075</span>        <span class="keyword">auto</span> filtered = ctx.filterPrimitivesByData(large_dataset, <span class="stringliteral">&quot;stress_data&quot;</span>, 500.0f, <span class="stringliteral">&quot;&gt;&quot;</span>);</div>
 <div class="line"><a id="l01076" name="l01076"></a><span class="lineno"> 1076</span>        DOCTEST_CHECK(filtered.size() == 499); <span class="comment">// Values 501-999</span></div>

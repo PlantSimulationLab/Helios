@@ -11,7 +11,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-*/
+ */
 
 #ifndef HELIOS_GLOBAL
 #define HELIOS_GLOBAL
@@ -1161,6 +1161,48 @@ namespace helios {
             return captured_stream.str().size();
         }
     };
+
+    //! A utility struct to capture and store what is written to `std::cout`.
+    /**
+     * This struct redirects the `std::cout` stream to an internal string stream
+     * while an instance of the struct exists. When the struct is destroyed,
+     * it restores the original `std::cout` output stream. The captured output
+     * can be queried and cleared as needed.
+     */
+    struct capture_cout {
+        std::streambuf *old_buf;
+        std::ostringstream captured_stream;
+
+        capture_cout() {
+            old_buf = std::cout.rdbuf(captured_stream.rdbuf());
+        }
+
+        ~capture_cout() {
+            std::cout.rdbuf(old_buf);
+        }
+
+        //! Get the captured cout output as a string
+        std::string get_captured_output() const {
+            return captured_stream.str();
+        }
+
+        //! Check if any output has been captured
+        bool has_output() const {
+            return !captured_stream.str().empty();
+        }
+
+        //! Clear the captured output
+        void clear() {
+            captured_stream.str("");
+            captured_stream.clear();
+        }
+
+        //! Get the number of characters captured
+        size_t size() const {
+            return captured_stream.str().size();
+        }
+    };
+
 
     //! Default null SphericalCoord that applies no rotation
     extern SphericalCoord nullrotation;

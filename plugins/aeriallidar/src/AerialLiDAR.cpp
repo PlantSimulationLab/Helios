@@ -18,7 +18,9 @@
 using namespace std;
 using namespace helios;
 
-AerialScanMetadata::AerialScanMetadata(const helios::vec3 &center, const helios::vec2 &extent, float coneangle, float scandensity, float exitDiameter, float beamDivergence) : center(center), extent(extent), coneangle(coneangle), scandensity(scandensity), exitDiameter(exitDiameter), beamDivergence(beamDivergence) {}
+AerialScanMetadata::AerialScanMetadata(const helios::vec3 &center, const helios::vec2 &extent, float coneangle, float scandensity, float exitDiameter, float beamDivergence) :
+    center(center), extent(extent), coneangle(coneangle), scandensity(scandensity), exitDiameter(exitDiameter), beamDivergence(beamDivergence) {
+}
 
 AerialLiDARcloud::AerialLiDARcloud() {
 

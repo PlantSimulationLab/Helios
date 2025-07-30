@@ -19,12 +19,14 @@ var class_plant_architecture =
     [ "deletePlantInstance", "class_plant_architecture.html#afda177f49619fda164fd0ad6cfe512e9", null ],
     [ "deletePlantInstance", "class_plant_architecture.html#a892ccc80c958b43d7528fa07006117e7", null ],
     [ "disableCarbohydrateModel", "class_plant_architecture.html#a86a69f57256b04bd4c57e3c5c505b1c4", null ],
+    [ "disableCollisionDetection", "class_plant_architecture.html#a345a6b52ce7cb5bb620d1ac7213f2b9b", null ],
     [ "disableInternodeContextBuild", "class_plant_architecture.html#af66af0968daf0fef4135b4434c61dc60", null ],
     [ "disablePeduncleContextBuild", "class_plant_architecture.html#a71918ef58e5257e4a8a338dba4f9b328", null ],
     [ "disablePetioleContextBuild", "class_plant_architecture.html#ab4ae495e7aebc365826f2a2f02a24338", null ],
     [ "disablePlantPhenology", "class_plant_architecture.html#a37ae59bcc114490ffc5d6949c3ef1bbf", null ],
     [ "duplicatePlantInstance", "class_plant_architecture.html#acd6de0d13dbc534992b94a203a16b76d", null ],
     [ "enableCarbohydrateModel", "class_plant_architecture.html#ac2a3cf42376ca5267756fb42ad203fec", null ],
+    [ "enableCollisionDetection", "class_plant_architecture.html#a8c85ebd2cd2e41a01fe4dd5b7925425d", null ],
     [ "enableEpicormicChildShoots", "class_plant_architecture.html#a8fc29c4a5b44430a34fc780180a01e8b", null ],
     [ "enableGroundClipping", "class_plant_architecture.html#a27dd2c46b6bb9f5c922d18acb6d9ba69", null ],
     [ "generatePlantFromString", "class_plant_architecture.html#a50b01e22e1498730bdb9e761a11a03df", null ],
@@ -80,6 +82,7 @@ var class_plant_architecture =
     [ "readPlantStructureXML", "class_plant_architecture.html#ada5eb2649ac0b6e8d3524ded8cb9d908", null ],
     [ "removePlantLeaves", "class_plant_architecture.html#a7021c3a862c4f16edf6d0d37b7fcb40f", null ],
     [ "removeShootLeaves", "class_plant_architecture.html#a647777da6c67e777c21c89e9dbda587d", null ],
+    [ "setCollisionAvoidanceParameters", "class_plant_architecture.html#a50da03e636d8689a8410fd8e031b50e6", null ],
     [ "setPhytomerLeafScale", "class_plant_architecture.html#a6189b27104d5ea921f4227d7c1a4ad03", null ],
     [ "setPlantAge", "class_plant_architecture.html#ad4ceb9b5ef2fa7e84369c0f68071e50c", null ],
     [ "setPlantBasePosition", "class_plant_architecture.html#abb7f8edb984a769640d2615f146da8e1", null ],
@@ -96,5 +99,6 @@ var class_plant_architecture =
     [ "updateCurrentShootParameters", "class_plant_architecture.html#a4539115c4ba145fa10277d3dcfa63685", null ],
     [ "updateCurrentShootParameters", "class_plant_architecture.html#a2074dfe285a623833dd07b4aa0b93a7c", null ],
     [ "writePlantMeshVertices", "class_plant_architecture.html#a1314accedeb4c376ee8283aa05c811c5", null ],
-    [ "writePlantStructureXML", "class_plant_architecture.html#ac979100d2972a70a51a1ef0b1c2acf98", null ]
+    [ "writePlantStructureXML", "class_plant_architecture.html#ac979100d2972a70a51a1ef0b1c2acf98", null ],
+    [ "writeQSMCylinderFile", "class_plant_architecture.html#a1b63ab94865f5c7eb016c9fccec0f670", null ]
 ];

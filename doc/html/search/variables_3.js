@@ -10,5 +10,6 @@ var searchData=
   ['diffuseflux_7',['diffuseFlux',['../struct_radiation_band.html#a8eab113387b2e1435640b0e5eb7cc0ce',1,'RadiationBand']]],
   ['diffusepeakdir_8',['diffusePeakDir',['../struct_radiation_band.html#a640846a7f7b0b525ff33ea0d8143e866',1,'RadiationBand']]],
   ['diffuseraycount_9',['diffuseRayCount',['../struct_radiation_band.html#ad96ca3a5bd5aa77844ac2c9fe16e042d',1,'RadiationBand']]],
-  ['directraycount_10',['directRayCount',['../struct_radiation_band.html#aff62997df11af06fad82b946b298ee90',1,'RadiationBand']]]
+  ['direction_10',['direction',['../struct_collision_detection_1_1_optimal_path_result.html#a7a5d6c6c36f4eebec6042a983d7187d6',1,'CollisionDetection::OptimalPathResult']]],
+  ['directraycount_11',['directRayCount',['../struct_radiation_band.html#aff62997df11af06fad82b946b298ee90',1,'RadiationBand']]]
 ];

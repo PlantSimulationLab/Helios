@@ -11,7 +11,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-*/
+ */
 
 #include "Context.h"
 
@@ -23,11 +23,11 @@ using namespace helios;
 
 double errtol = 1e-6;
 
-#include "Test_utilities.h"
-#include "Test_functions.h"
 #include "Test_XML.h"
 #include "Test_context.h"
 #include "Test_data.h"
+#include "Test_functions.h"
+#include "Test_utilities.h"
 
 int Context::selfTest() {
 

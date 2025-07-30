@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.41</span>
+       <span id="projectnumber">&#160;v1.3.42</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -2067,7 +2067,7 @@ $(function(){initNavTree('global_8cpp_source.html',''); initResizable(true); });
 <div class="line"><a id="l01767" name="l01767"></a><span class="lineno"> 1767</span>    JSAMPARRAY buffer;</div>
 <div class="line"><a id="l01768" name="l01768"></a><span class="lineno"> 1768</span>    <span class="keywordtype">int</span> row_stride;</div>
 <div class="line"><a id="l01769" name="l01769"></a><span class="lineno"> 1769</span> </div>
-<div class="line"><a id="l01770" name="l01770"></a><span class="lineno"> 1770</span>    std::unique_ptr&lt;FILE, <span class="keyword">decltype</span>(&amp;fclose)&gt; infile(fopen(filename.c_str(), <span class="stringliteral">&quot;rb&quot;</span>), fclose);</div>
+<div class="line"><a id="l01770" name="l01770"></a><span class="lineno"> 1770</span>    std::unique_ptr&lt;FILE, int (*)(FILE *)&gt; infile(fopen(filename.c_str(), <span class="stringliteral">&quot;rb&quot;</span>), fclose);</div>
 <div class="line"><a id="l01771" name="l01771"></a><span class="lineno"> 1771</span>    <span class="keywordflow">if</span> (!infile) {</div>
 <div class="line"><a id="l01772" name="l01772"></a><span class="lineno"> 1772</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (Context::readJPEG): File &quot;</span> + filename + <span class="stringliteral">&quot; could not be opened. Check that the file exists and that you have permission to read it.&quot;</span>);</div>
 <div class="line"><a id="l01773" name="l01773"></a><span class="lineno"> 1773</span>    }</div>
@@ -2130,7 +2130,7 @@ $(function(){initNavTree('global_8cpp_source.html',''); initResizable(true); });
 <div class="line"><a id="l01828" name="l01828"></a><span class="lineno"> 1828</span>    jpeg_decompress_struct cinfo{};</div>
 <div class="line"><a id="l01829" name="l01829"></a><span class="lineno"> 1829</span> </div>
 <div class="line"><a id="l01830" name="l01830"></a><span class="lineno"> 1830</span>    jpeg_error_mgr jerr{};</div>
-<div class="line"><a id="l01831" name="l01831"></a><span class="lineno"> 1831</span>    std::unique_ptr&lt;FILE, <span class="keyword">decltype</span>(&amp;fclose)&gt; infile(fopen(filename.c_str(), <span class="stringliteral">&quot;rb&quot;</span>), fclose);</div>
+<div class="line"><a id="l01831" name="l01831"></a><span class="lineno"> 1831</span>    std::unique_ptr&lt;FILE, int (*)(FILE *)&gt; infile(fopen(filename.c_str(), <span class="stringliteral">&quot;rb&quot;</span>), fclose);</div>
 <div class="line"><a id="l01832" name="l01832"></a><span class="lineno"> 1832</span>    <span class="keywordflow">if</span> (!infile) {</div>
 <div class="line"><a id="l01833" name="l01833"></a><span class="lineno"> 1833</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (Context::getImageResolutionJPEG): File &quot;</span> + filename + <span class="stringliteral">&quot; could not be opened. Check that the file exists and that you have permission to read it.&quot;</span>);</div>
 <div class="line"><a id="l01834" name="l01834"></a><span class="lineno"> 1834</span>    }</div>
@@ -2188,7 +2188,7 @@ $(function(){initNavTree('global_8cpp_source.html',''); initResizable(true); });
 <div class="line"><a id="l01884" name="l01884"></a><span class="lineno"> 1884</span>    JSAMPROW row_pointer;</div>
 <div class="line"><a id="l01885" name="l01885"></a><span class="lineno"> 1885</span>    <span class="keywordtype">int</span> row_stride;</div>
 <div class="line"><a id="l01886" name="l01886"></a><span class="lineno"> 1886</span> </div>
-<div class="line"><a id="l01887" name="l01887"></a><span class="lineno"> 1887</span>    std::unique_ptr&lt;FILE, <span class="keyword">decltype</span>(&amp;fclose)&gt; outfile(fopen(filename.c_str(), <span class="stringliteral">&quot;wb&quot;</span>), fclose);</div>
+<div class="line"><a id="l01887" name="l01887"></a><span class="lineno"> 1887</span>    std::unique_ptr&lt;FILE, int (*)(FILE *)&gt; outfile(fopen(filename.c_str(), <span class="stringliteral">&quot;wb&quot;</span>), fclose);</div>
 <div class="line"><a id="l01888" name="l01888"></a><span class="lineno"> 1888</span>    <span class="keywordflow">if</span> (!outfile) {</div>
 <div class="line"><a id="l01889" name="l01889"></a><span class="lineno"> 1889</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (Context::writeJPEG): File &quot;</span> + filename + <span class="stringliteral">&quot; could not be opened. Check that the file path is correct you have permission to write to it.&quot;</span>);</div>
 <div class="line"><a id="l01890" name="l01890"></a><span class="lineno"> 1890</span>    }</div>

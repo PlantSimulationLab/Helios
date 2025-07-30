@@ -3,6 +3,7 @@ var global_8h =
     [ "helios::PixelUVKey", "structhelios_1_1_pixel_u_v_key.html", null ],
     [ "helios::PixelUVKeyHash", "structhelios_1_1_pixel_u_v_key_hash.html", null ],
     [ "helios::capture_cerr", "structhelios_1_1capture__cerr.html", "structhelios_1_1capture__cerr" ],
+    [ "helios::capture_cout", "structhelios_1_1capture__cout.html", "structhelios_1_1capture__cout" ],
     [ "DEPRECATED", "global_8h.html#aaf225a2b96038de3a42d61a1fa63654b", null ],
     [ "M_PI", "global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3", null ],
     [ "uint", "global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14", null ],

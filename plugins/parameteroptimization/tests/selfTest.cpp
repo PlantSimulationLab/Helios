@@ -36,15 +36,12 @@ int ParameterOptimization::selfTest() {
 // Test 1: ParameterOptimization Simple Quadratic Optimization
 // simple quadratic fitness function f(x) = (x-3)^2 + (y+1)^2
 DOCTEST_TEST_CASE("ParameterOptimization quadratic") {
-    ParametersToOptimize params = {
-        {"x",{0.f,-5.f,5.f}},
-        {"y",{0.f,-5.f,5.f}}
-    };
+    ParametersToOptimize params = {{"x", {0.f, -5.f, 5.f}}, {"y", {0.f, -5.f, 5.f}}};
 
-    auto sim = [](const ParametersToOptimize& p){
+    auto sim = [](const ParametersToOptimize &p) {
         float x = p.at("x").value;
         float y = p.at("y").value;
-        return (x-3.f)*(x-3.f) + (y+1.f)*(y+1.f);
+        return (x - 3.f) * (x - 3.f) + (y + 1.f) * (y + 1.f);
     };
 
     OptimizationSettings settings;
@@ -55,8 +52,7 @@ DOCTEST_TEST_CASE("ParameterOptimization quadratic") {
     ParameterOptimization::Result result;
     DOCTEST_CHECK_NOTHROW(result = popt.run(sim, params, settings));
 
-    DOCTEST_CHECK( result.fitness < 1e-2 );
-
+    DOCTEST_CHECK(result.fitness < 1e-2);
 }
 
 // Test 2: ParameterOptimization Simple Quadratic Optimization With Primitive Data Access
@@ -90,13 +86,12 @@ DOCTEST_TEST_CASE("ParameterOptimization quadratic with primitive data access") 
     float tol = 1e-1f;
     DOCTEST_CHECK(result.parameters.at("x").value == doctest::Approx(3.f).epsilon(tol));
     DOCTEST_CHECK(result.parameters.at("y").value == doctest::Approx(-1.f).epsilon(tol));
-
 }
 
-//Test 3
+// Test 3
 DOCTEST_TEST_CASE("ParameterOptimization model parameter search") {
 
-    auto sim = [&](const ParametersToOptimize& p) {
+    auto sim = [&](const ParametersToOptimize &p) {
         float error = 0.0f;
 
         error += powi(p.at("Em_BMF").value - 5.f, 2);
@@ -108,11 +103,7 @@ DOCTEST_TEST_CASE("ParameterOptimization model parameter search") {
     };
 
     ParameterOptimization popt;
-    ParametersToOptimize params =
-        {{"Em_BMF", {10, 0, 100}},
-        {"i0_BMF", {10, 0, 1000}},
-        {"k_BMF", {1e5, 0, 20000}},
-        {"b_BMF", {0.5, 0, 100}}};
+    ParametersToOptimize params = {{"Em_BMF", {10, 0, 100}}, {"i0_BMF", {10, 0, 1000}}, {"k_BMF", {1e5, 0, 20000}}, {"b_BMF", {0.5, 0, 100}}};
     OptimizationSettings settings;
     settings.population_size = 100;
     settings.generations = 100;
@@ -120,8 +111,7 @@ DOCTEST_TEST_CASE("ParameterOptimization model parameter search") {
     settings.mutation_rate = 0.1;
 
     ParameterOptimization::Result result;
-    DOCTEST_CHECK_NOTHROW(result = popt.run(sim,params,settings));
+    DOCTEST_CHECK_NOTHROW(result = popt.run(sim, params, settings));
 
     DOCTEST_CHECK(result.fitness < 1e-3f);
-
 }

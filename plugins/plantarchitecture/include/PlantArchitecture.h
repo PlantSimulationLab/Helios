@@ -16,16 +16,17 @@
 #ifndef PLANT_ARCHITECTURE
 #define PLANT_ARCHITECTURE
 
+#include <functional>
 #include <utility>
 #include "Context.h"
 #include "Hungarian.h"
-#include <functional>
 
 // Constants
 constexpr float C_molecular_wt = 12.01; // g C mol^-1
 
 // forward declarations of classes/structs
 class PlantArchitecture;
+class CollisionDetection;
 struct Shoot;
 struct Phytomer;
 
@@ -1212,6 +1213,35 @@ public:
      */
     void deletePhytomer();
 
+private:
+    /**
+     * \brief Calculates optimal collision avoidance direction for internode growth.
+     *
+     * This method performs collision detection analysis to find an optimal growth direction
+     * that avoids obstacles. It builds a BVH with target geometry and uses cone-based
+     * path optimization to determine the best collision-free direction.
+     *
+     * \param[in] internode_base_origin Starting position for collision detection cone
+     * \param[in] internode_axis Current growth direction before collision avoidance
+     * \param collision_detection_active
+     */
+    helios::vec3 calculateCollisionAvoidanceDirection(const helios::vec3 &internode_base_origin, const helios::vec3 &internode_axis, bool &collision_detection_active) const;
+
+    /**
+     * \brief Calculates optimal collision avoidance direction for petiole growth.
+     *
+     * This method performs collision detection analysis to find an optimal petiole direction
+     * that avoids obstacles. It uses the petiole base position as the cone apex and the
+     * proposed petiole direction as the central axis to find gaps in the environment.
+     *
+     * \param[in] petiole_base_origin Starting position for petiole collision detection cone
+     * \param[in] proposed_petiole_axis Proposed petiole direction before collision avoidance
+     * \param[out] collision_detection_active Flag indicating if collision detection was applied
+     * \return Optimal petiole direction toward largest detected gap
+     */
+    helios::vec3 calculatePetioleCollisionAvoidanceDirection(const helios::vec3 &petiole_base_origin, const helios::vec3 &proposed_petiole_axis, bool &collision_detection_active) const;
+
+public:
     // ---- phytomer data ---- //
 
     //! Coordinates of internode tube segments. Index is tube segment within internode
@@ -1830,6 +1860,28 @@ public:
      */
     void enableGroundClipping(float ground_height = 0.f);
 
+    // -- collision detection methods -- //
+
+    //! Enable collision detection for plant growth avoidance
+    /**
+     * \param[in] collision_detection_ptr Pointer to a CollisionDetection instance
+     * \param[in] target_object_UUIDs [optional] Vector of specific UUIDs to avoid (empty = avoid all geometry)
+     * \param[in] target_object_IDs [optional] Vector of specific object IDs to avoid (empty = avoid all objects)
+     */
+    void enableCollisionDetection(CollisionDetection *collision_detection_ptr, const std::vector<uint> &target_object_UUIDs = {}, const std::vector<uint> &target_object_IDs = {});
+
+    //! Disable collision detection for plant growth
+    void disableCollisionDetection();
+
+    //! Set collision avoidance parameters
+    /**
+     * \param[in] view_half_angle_deg Half-angle of the collision detection view cone in degrees (default = 80)
+     * \param[in] look_ahead_distance How far ahead collisions will be considered in meters (default = 0.1)
+     * \param[in] sample_count Number of directional samples within the cone (default = 256)
+     * \param[in] inertia_weight Weight factor for directional inertia vs collision avoidance (0.0 = use optimal direction, 1.0 = ignore collision avoidance) (default = 0.4)
+     */
+    void setCollisionAvoidanceParameters(float view_half_angle_deg, float look_ahead_distance, int sample_count, float inertia_weight);
+
     // -- methods for modifying the current plant state -- //
 
     /**
@@ -2321,6 +2373,20 @@ public:
      */
     void writePlantStructureXML(uint plantID, const std::string &filename) const;
 
+    //! Writes plant structure to TreeQSM cylinder format.
+    /**
+     * Writes the plant structure as a series of cylinders in the TreeQSM format.
+     * Each row represents one cylinder with columns for radius, length, start position,
+     * axis direction, parent ID, extension ID, branch ID, branch order, position in branch,
+     * mean absolute distance, surface coverage, added flag, and unmodified radius.
+     *
+     * \param[in] plantID Identifier of the plant to export.
+     * \param[in] filename Path to the output file (typically .txt extension).
+     * \throws helios::runtime_error Throws an error if the plant ID does not exist or if the file cannot be opened.
+     * \note The output follows the TreeQSM format (Raumonen et al., 2013) with tab-separated values.
+     */
+    void writeQSMCylinderFile(uint plantID, const std::string &filename) const;
+
     /**
      * \brief Reads plant structure data from an XML file.
      *
@@ -2348,7 +2414,7 @@ protected:
 
     // Function pointer maps for plant model registration
     std::map<std::string, std::function<void()>> shoot_initializers;
-    std::map<std::string, std::function<uint(const helios::vec3&)>> plant_builders;
+    std::map<std::string, std::function<uint(const helios::vec3 &)>> plant_builders;
 
     std::map<uint, PlantInstance> plant_instances;
 
@@ -2376,9 +2442,7 @@ protected:
     void validateShootTypes(ShootParameters &shoot_parameters) const;
 
     //! Register a plant model with its initialization and build functions
-    void registerPlantModel(const std::string& name, 
-                           std::function<void()> shoot_init,
-                           std::function<uint(const helios::vec3&)> plant_build);
+    void registerPlantModel(const std::string &name, std::function<void()> shoot_init, std::function<uint(const helios::vec3 &)> plant_build);
 
     //! Initialize all plant model registrations
     void initializePlantModelRegistrations();
@@ -2427,6 +2491,35 @@ protected:
     void checkCarbonPool_transferCarbon(float dt);
 
     bool carbon_model_enabled = false;
+
+    // --- Collision Detection --- //
+
+    //! Pointer to collision detection plugin
+    CollisionDetection *collision_detection_ptr = nullptr;
+
+    //! Flag indicating if collision detection is enabled
+    bool collision_detection_enabled = false;
+
+    //! Target UUIDs to avoid during growth
+    std::vector<uint> collision_target_UUIDs;
+
+    //! Target object IDs to avoid during growth
+    std::vector<uint> collision_target_object_IDs;
+
+    //! Collision detection cone half-angle in radians
+    float collision_cone_half_angle_rad = 80.f * M_PI / 180.f;
+
+    //! Collision detection cone height in meters
+    float collision_cone_height = 0.1f;
+
+    //! Number of directional samples within collision detection cone
+    int collision_sample_count = 256;
+
+    //! Inertia weight for balancing directional preference vs collision avoidance
+    float collision_inertia_weight = 0.4f;
+
+    //! Flag to enable/disable console output messages
+    bool printmessages = true;
 
     // --- Plant Library --- //
 

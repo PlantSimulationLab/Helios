@@ -19,6 +19,19 @@
 using namespace helios;
 using namespace std;
 
+// Helper function to ensure output directory exists
+void ensureOutputDirectoryExists(const char *filename) {
+    std::filesystem::path file_path(filename);
+    std::filesystem::path dir_path = file_path.parent_path();
+
+    if (!dir_path.empty() && !std::filesystem::exists(dir_path)) {
+        std::error_code ec;
+        if (!std::filesystem::create_directories(dir_path, ec)) {
+            helios_runtime_error("ERROR: Could not create output directory '" + dir_path.string() + "': " + ec.message());
+        }
+    }
+}
+
 void LiDARcloud::loadXML(const char *filename) {
     loadXML(filename, false);
 }
@@ -248,7 +261,7 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
 
                 // add hit points to scan if data file was given
 
-                total_hits += loadASCIIFile(scanID, scan);
+                total_hits += loadASCIIFile(scanID, scan.data_file);
 
                 if (translation.magnitude() > 0.f) {
                     coordinateShift(scanID, translation);
@@ -383,13 +396,18 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
     }
 }
 
-size_t LiDARcloud::loadASCIIFile(uint scanID, ScanMetadata &scandata) {
+size_t LiDARcloud::loadASCIIFile(uint scanID, const std::string &ASCII_data_file) {
 
-    ifstream datafile(scandata.data_file); // open the file
+    ifstream datafile(ASCII_data_file); // open the file
 
     if (!datafile.is_open()) { // check that file exists
-        throw(std::runtime_error("ERROR (LiDARcloud::loadASCIIFile): ASCII data file '" + scandata.data_file + "' does not exist."));
+        helios_runtime_error("ERROR (LiDARcloud::loadASCIIFile): ASCII data file '" + ASCII_data_file + "' does not exist.");
     }
+
+    if (scanID >= getScanCount()) {
+        helios_runtime_error("ERROR (LiDARcloud::loadASCIIFile): Scan #" + std::to_string(scanID) + " does not exist.");
+    }
+    const ScanMetadata &scan_data = scans.at(scanID);
 
     vec3 temp_xyz;
     float temp_zenith, temp_azimuth;
@@ -409,51 +427,51 @@ size_t LiDARcloud::loadASCIIFile(uint scanID, ScanMetadata &scandata) {
         temp_zenith = -9999;
         temp_azimuth = -9999;
 
-        for (uint i = 0; i < scandata.columnFormat.size(); i++) {
-            if (scandata.columnFormat.at(i) == "row") {
+        for (uint i = 0; i < scan_data.columnFormat.size(); i++) {
+            if (scan_data.columnFormat.at(i) == "row") {
                 datafile >> temp_row;
-            } else if (scandata.columnFormat.at(i) == "column") {
+            } else if (scan_data.columnFormat.at(i) == "column") {
                 datafile >> temp_column;
-            } else if (scandata.columnFormat.at(i) == "zenith") {
+            } else if (scan_data.columnFormat.at(i) == "zenith") {
                 datafile >> temp_zenith;
                 temp_zenith = deg2rad(temp_zenith);
-            } else if (scandata.columnFormat.at(i) == "azimuth") {
+            } else if (scan_data.columnFormat.at(i) == "azimuth") {
                 datafile >> temp_azimuth;
                 temp_azimuth = deg2rad(temp_azimuth);
-            } else if (scandata.columnFormat.at(i) == "zenith_rad") {
+            } else if (scan_data.columnFormat.at(i) == "zenith_rad") {
                 datafile >> temp_zenith;
-            } else if (scandata.columnFormat.at(i) == "azimuth_rad") {
+            } else if (scan_data.columnFormat.at(i) == "azimuth_rad") {
                 datafile >> temp_azimuth;
-            } else if (scandata.columnFormat.at(i) == "x") {
+            } else if (scan_data.columnFormat.at(i) == "x") {
                 datafile >> temp_xyz.x;
-            } else if (scandata.columnFormat.at(i) == "y") {
+            } else if (scan_data.columnFormat.at(i) == "y") {
                 datafile >> temp_xyz.y;
-            } else if (scandata.columnFormat.at(i) == "z") {
+            } else if (scan_data.columnFormat.at(i) == "z") {
                 datafile >> temp_xyz.z;
-            } else if (scandata.columnFormat.at(i) == "r") {
+            } else if (scan_data.columnFormat.at(i) == "r") {
                 datafile >> temp_rgb.r;
-            } else if (scandata.columnFormat.at(i) == "g") {
+            } else if (scan_data.columnFormat.at(i) == "g") {
                 datafile >> temp_rgb.g;
-            } else if (scandata.columnFormat.at(i) == "b") {
+            } else if (scan_data.columnFormat.at(i) == "b") {
                 datafile >> temp_rgb.b;
-            } else if (scandata.columnFormat.at(i) == "r255") {
+            } else if (scan_data.columnFormat.at(i) == "r255") {
                 datafile >> temp_rgb.r;
                 temp_rgb.r /= 255.f;
-            } else if (scandata.columnFormat.at(i) == "g255") {
+            } else if (scan_data.columnFormat.at(i) == "g255") {
                 datafile >> temp_rgb.g;
                 temp_rgb.g /= 255.f;
-            } else if (scandata.columnFormat.at(i) == "b255") {
+            } else if (scan_data.columnFormat.at(i) == "b255") {
                 datafile >> temp_rgb.b;
                 temp_rgb.b /= 255.f;
             } else { // assume that rest is data
                 datafile >> temp_data;
-                data[scandata.columnFormat.at(i)] = temp_data;
+                data[scan_data.columnFormat.at(i)] = temp_data;
             }
         }
 
         if (!datafile.good()) { // if the whole line was not read successfully, stop
             if (hit_count == 0) {
-                std::cerr << "WARNING: Something is likely wrong with the data file " << scandata.data_file << ". Check that the format is consistent with that specified in the XML metadata file." << std::endl;
+                std::cerr << "WARNING: Something is likely wrong with the data file " << ASCII_data_file << ". Check that the format is consistent with that specified in the XML metadata file." << std::endl;
             }
             break;
         }
@@ -462,17 +480,17 @@ size_t LiDARcloud::loadASCIIFile(uint scanID, ScanMetadata &scandata) {
 
         // hit point
         if (temp_xyz.x == -9999) {
-            throw(std::runtime_error("ERROR (LiDARcloud::loadASCIIFile): x-coordinate not specified for hit point #" + std::to_string(hit_count) + " of scan #" + std::to_string(scanID)));
+            helios_runtime_error("ERROR (LiDARcloud::loadASCIIFile): x-coordinate not specified for hit point #" + std::to_string(hit_count) + " of scan #" + std::to_string(scanID));
         } else if (temp_xyz.y == -9999) {
-            throw(std::runtime_error("ERROR (LiDARcloud::loadASCIIFile): y-coordinate not specified for hit point #" + std::to_string(hit_count) + " of scan #" + std::to_string(scanID)));
+            helios_runtime_error("ERROR (LiDARcloud::loadASCIIFile): y-coordinate not specified for hit point #" + std::to_string(hit_count) + " of scan #" + std::to_string(scanID));
         } else if (temp_xyz.z == -9999) {
-            throw(std::runtime_error("ERROR (LiDARcloud::loadASCIIFile): z-coordinate not specified for hit point #" + std::to_string(hit_count) + " of scan #" + std::to_string(scanID)));
+            helios_runtime_error("ERROR (LiDARcloud::loadASCIIFile): z-coordinate not specified for hit point #" + std::to_string(hit_count) + " of scan #" + std::to_string(scanID));
         }
 
         // direction
         SphericalCoord temp_direction(1.f, 0.5f * M_PI - temp_zenith, temp_azimuth);
         if (temp_direction.elevation == -9999 || temp_direction.azimuth == -9999) {
-            temp_direction = cart2sphere(temp_xyz - scandata.origin);
+            temp_direction = cart2sphere(temp_xyz - scan_data.origin);
         }
 
         // add hit point to the scan
@@ -488,12 +506,14 @@ size_t LiDARcloud::loadASCIIFile(uint scanID, ScanMetadata &scandata) {
 
 void LiDARcloud::exportTriangleNormals(const char *filename) {
 
+    ensureOutputDirectoryExists(filename);
+
     ofstream file;
 
     file.open(filename);
 
     if (!file.is_open()) {
-        throw(std::runtime_error("ERROR (LiDARcloud::exportTriangleNormals): Could not open file '" + std::string(filename) + "' for writing."));
+        helios_runtime_error("ERROR (LiDARcloud::exportTriangleNormals): Could not open file '" + std::string(filename) + "' for writing.");
     }
 
     for (std::size_t t = 0; t < triangles.size(); t++) {
@@ -515,12 +535,14 @@ void LiDARcloud::exportTriangleNormals(const char *filename) {
 
 void LiDARcloud::exportTriangleNormals(const char *filename, int gridcell) {
 
+    ensureOutputDirectoryExists(filename);
+
     ofstream file;
 
     file.open(filename);
 
     if (!file.is_open()) {
-        throw(std::runtime_error("ERROR (LiDARcloud::exportTriangleNormals): Could not open file '" + std::string(filename) + "' for writing."));
+        helios_runtime_error("ERROR (LiDARcloud::exportTriangleNormals): Could not open file '" + std::string(filename) + "' for writing.");
     }
 
     for (std::size_t t = 0; t < triangles.size(); t++) {
@@ -545,12 +567,14 @@ void LiDARcloud::exportTriangleNormals(const char *filename, int gridcell) {
 
 void LiDARcloud::exportTriangleAreas(const char *filename) {
 
+    ensureOutputDirectoryExists(filename);
+
     ofstream file;
 
     file.open(filename);
 
     if (!file.is_open()) {
-        throw(std::runtime_error("ERROR (LiDARcloud::exportTriangleAreas): Could not open file '" + std::string(filename) + "' for writing."));
+        helios_runtime_error("ERROR (LiDARcloud::exportTriangleAreas): Could not open file '" + std::string(filename) + "' for writing.");
     }
 
     for (std::size_t t = 0; t < triangles.size(); t++) {
@@ -565,12 +589,14 @@ void LiDARcloud::exportTriangleAreas(const char *filename) {
 
 void LiDARcloud::exportTriangleAreas(const char *filename, int gridcell) {
 
+    ensureOutputDirectoryExists(filename);
+
     ofstream file;
 
     file.open(filename);
 
     if (!file.is_open()) {
-        throw(std::runtime_error("ERROR (LiDARcloud::exportTriangleAreas): Could not open file '" + std::string(filename) + "' for writing."));
+        helios_runtime_error("ERROR (LiDARcloud::exportTriangleAreas): Could not open file '" + std::string(filename) + "' for writing.");
     }
 
     for (std::size_t t = 0; t < triangles.size(); t++) {
@@ -587,6 +613,8 @@ void LiDARcloud::exportTriangleAreas(const char *filename, int gridcell) {
 }
 
 void LiDARcloud::exportTriangleInclinationDistribution(const char *filename, uint Nbins) {
+
+    ensureOutputDirectoryExists(filename);
 
     std::vector<std::vector<float>> inclinations(getGridCellCount());
     for (int i = 0; i < getGridCellCount(); i++) {
@@ -632,7 +660,7 @@ void LiDARcloud::exportTriangleInclinationDistribution(const char *filename, uin
     file.open(filename);
 
     if (!file.is_open()) {
-        throw(std::runtime_error("ERROR (LiDARcloud::exportTriangleInclinationDistribution): Could not open file '" + std::string(filename) + "' for writing."));
+        helios_runtime_error("ERROR (LiDARcloud::exportTriangleInclinationDistribution): Could not open file '" + std::string(filename) + "' for writing.");
     }
 
     for (int cell = 0; cell < getGridCellCount(); cell++) {
@@ -646,6 +674,8 @@ void LiDARcloud::exportTriangleInclinationDistribution(const char *filename, uin
 }
 
 void LiDARcloud::exportTriangleAzimuthDistribution(const char *filename, uint Nbins) {
+
+    ensureOutputDirectoryExists(filename);
 
     std::vector<std::vector<float>> azimuths(getGridCellCount());
     for (int i = 0; i < getGridCellCount(); i++) {
@@ -699,7 +729,7 @@ void LiDARcloud::exportTriangleAzimuthDistribution(const char *filename, uint Nb
     file.open(filename);
 
     if (!file.is_open()) {
-        throw(std::runtime_error("ERROR (LiDARcloud::exportTriangleAzimuthDistribution): Could not open file '" + std::string(filename) + "' for writing."));
+        helios_runtime_error("ERROR (LiDARcloud::exportTriangleAzimuthDistribution): Could not open file '" + std::string(filename) + "' for writing.");
     }
 
     for (int cell = 0; cell < getGridCellCount(); cell++) {
@@ -714,12 +744,14 @@ void LiDARcloud::exportTriangleAzimuthDistribution(const char *filename, uint Nb
 
 void LiDARcloud::exportLeafAreas(const char *filename) {
 
+    ensureOutputDirectoryExists(filename);
+
     ofstream file;
 
     file.open(filename);
 
     if (!file.is_open()) {
-        throw(std::runtime_error("ERROR (LiDARcloud::exportLeafAreas): Could not open file '" + std::string(filename) + "' for writing."));
+        helios_runtime_error("ERROR (LiDARcloud::exportLeafAreas): Could not open file '" + std::string(filename) + "' for writing.");
     }
 
     for (uint i = 0; i < getGridCellCount(); i++) {
@@ -732,12 +764,14 @@ void LiDARcloud::exportLeafAreas(const char *filename) {
 
 void LiDARcloud::exportLeafAreaDensities(const char *filename) {
 
+    ensureOutputDirectoryExists(filename);
+
     ofstream file;
 
     file.open(filename);
 
     if (!file.is_open()) {
-        throw(std::runtime_error("ERROR (LiDARcloud::exportLeafAreaDensities): Could not open file '" + std::string(filename) + "' for writing."));
+        helios_runtime_error("ERROR (LiDARcloud::exportLeafAreaDensities): Could not open file '" + std::string(filename) + "' for writing.");
     }
 
     for (uint i = 0; i < getGridCellCount(); i++) {
@@ -750,12 +784,14 @@ void LiDARcloud::exportLeafAreaDensities(const char *filename) {
 
 void LiDARcloud::exportGtheta(const char *filename) {
 
+    ensureOutputDirectoryExists(filename);
+
     ofstream file;
 
     file.open(filename);
 
     if (!file.is_open()) {
-        throw(std::runtime_error("ERROR (LiDARcloud::exportGtheta): Could not open file '" + std::string(filename) + "' for writing."));
+        helios_runtime_error("ERROR (LiDARcloud::exportGtheta): Could not open file '" + std::string(filename) + "' for writing.");
     }
 
     for (uint i = 0; i < getGridCellCount(); i++) {
@@ -794,6 +830,8 @@ void LiDARcloud::exportPointCloud(const char *filename) {
 
 void LiDARcloud::exportPointCloud(const char *filename, uint scanID) {
 
+    ensureOutputDirectoryExists(filename);
+
     if (scanID > getScanCount()) {
         std::cerr << "ERROR (LiDARcloud::exportPointCloud): Cannot export scan " << scanID << " because this scan does not exist." << std::endl;
         throw 1;
@@ -804,7 +842,7 @@ void LiDARcloud::exportPointCloud(const char *filename, uint scanID) {
     file.open(filename);
 
     if (!file.is_open()) {
-        throw(std::runtime_error("ERROR (LiDARcloud::exportPointCloud): Could not open file '" + std::string(filename) + "' for writing."));
+        helios_runtime_error("ERROR (LiDARcloud::exportPointCloud): Could not open file '" + std::string(filename) + "' for writing.");
     }
 
     std::vector<std::string> hit_data;
@@ -878,6 +916,8 @@ void LiDARcloud::exportPointCloud(const char *filename, uint scanID) {
 
 void LiDARcloud::exportPointCloudPTX(const char *filename, uint scanID) {
 
+    ensureOutputDirectoryExists(filename);
+
     if (scanID > getScanCount()) {
         std::cerr << "ERROR (LiDARcloud::exportPointCloudPTX): Cannot export scan " << scanID << " because this scan does not exist." << std::endl;
         throw 1;
@@ -888,7 +928,7 @@ void LiDARcloud::exportPointCloudPTX(const char *filename, uint scanID) {
     file.open(filename);
 
     if (!file.is_open()) {
-        throw(std::runtime_error("ERROR (LiDARcloud::exportPointCloudPTX): Could not open file '" + std::string(filename) + "' for writing."));
+        helios_runtime_error("ERROR (LiDARcloud::exportPointCloudPTX): Could not open file '" + std::string(filename) + "' for writing.");
     }
 
     std::vector<std::string> ASCII_format = getScanColumnFormat(scanID);
@@ -950,4 +990,199 @@ void LiDARcloud::exportPointCloudPTX(const char *filename, uint scanID) {
     }
 
     file.close();
+}
+
+std::vector<uint> LiDARcloud::loadTreeQSM(helios::Context *context, const std::string &filename, uint radial_subdivisions, const std::string &texture_file) {
+    return loadTreeQSM_impl(context, filename, radial_subdivisions, false, texture_file);
+}
+
+std::vector<uint> LiDARcloud::loadTreeQSMColormap(helios::Context *context, const std::string &filename, uint radial_subdivisions, const std::string &colormap_name) {
+    return loadTreeQSM_impl(context, filename, radial_subdivisions, true, colormap_name);
+}
+
+std::vector<uint> LiDARcloud::loadTreeQSM_impl(helios::Context *context, const std::string &filename, uint radial_subdivisions, bool use_colormap, const std::string &colormap_or_texture) {
+
+    if (printmessages) {
+        if (use_colormap) {
+            std::cout << "Loading TreeQSM cylinder file with colormap: " << filename << " (colormap: " << colormap_or_texture << ")" << std::endl;
+        } else {
+            std::cout << "Loading TreeQSM cylinder file: " << filename << std::endl;
+        }
+    }
+
+    std::vector<uint> tube_UUIDs;
+
+    // Open the file
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        helios_runtime_error("ERROR (LiDARcloud::loadTreeQSM): Could not open TreeQSM file: " + filename);
+    }
+
+    // Structure to hold cylinder data
+    struct CylinderData {
+        float radius;
+        float length;
+        helios::vec3 start_point;
+        helios::vec3 axis_direction;
+        int parent;
+        int extension;
+        int branch_id;
+        int branch_order;
+        int position_in_branch;
+        float mad;
+        float surf_cov;
+        int added;
+        float unmod_radius;
+    };
+
+    std::vector<CylinderData> cylinders;
+    std::string line;
+
+    // Skip the header line
+    if (!std::getline(file, line)) {
+        helios_runtime_error("ERROR (LiDARcloud::loadTreeQSM): Empty file or failed to read header: " + filename);
+    }
+
+    // Read cylinder data
+    while (std::getline(file, line)) {
+        if (line.empty())
+            continue;
+
+        std::istringstream iss(line);
+        CylinderData cylinder;
+
+        // Parse the tab-separated values
+        if (!(iss >> cylinder.radius >> cylinder.length >> cylinder.start_point.x >> cylinder.start_point.y >> cylinder.start_point.z >> cylinder.axis_direction.x >> cylinder.axis_direction.y >> cylinder.axis_direction.z >> cylinder.parent >>
+              cylinder.extension >> cylinder.branch_id >> cylinder.branch_order >> cylinder.position_in_branch >> cylinder.mad >> cylinder.surf_cov >> cylinder.added >> cylinder.unmod_radius)) {
+            std::cerr << "WARNING (LiDARcloud::loadTreeQSM): Failed to parse line: " << line << std::endl;
+            continue;
+        }
+
+        cylinders.push_back(cylinder);
+    }
+
+    file.close();
+
+    if (printmessages) {
+        std::cout << "Read " << cylinders.size() << " cylinders from TreeQSM file" << std::endl;
+    }
+
+    // Group cylinders by branch ID
+    std::map<int, std::vector<CylinderData>> branches;
+    for (const auto &cylinder: cylinders) {
+        branches[cylinder.branch_id].push_back(cylinder);
+    }
+
+    if (printmessages) {
+        std::cout << "Found " << branches.size() << " branches" << std::endl;
+    }
+
+    // Generate the colormap if needed
+    std::vector<helios::RGBcolor> colormap;
+    if (use_colormap) {
+        uint num_colors = std::max(static_cast<uint>(branches.size()), 10u); // At least 10 colors for variety
+        try {
+            colormap = context->generateColormap(colormap_or_texture, num_colors);
+        } catch (const std::exception &e) {
+            helios_runtime_error("ERROR (LiDARcloud::loadTreeQSM): Invalid colormap name '" + colormap_or_texture + "'. Valid options are: hot, cool, rainbow, lava, parula, gray, green");
+        }
+    }
+
+    // Create tube objects for each branch
+    for (const auto &branch_pair: branches) {
+        int branch_id = branch_pair.first;
+        const auto &branch_cylinders = branch_pair.second;
+
+        if (branch_cylinders.empty())
+            continue;
+
+        // Sort cylinders by position in branch
+        std::vector<CylinderData> sorted_cylinders = branch_cylinders;
+        std::sort(sorted_cylinders.begin(), sorted_cylinders.end(), [](const CylinderData &a, const CylinderData &b) { return a.position_in_branch < b.position_in_branch; });
+
+        // Create nodes and radii for the tube
+        std::vector<helios::vec3> nodes;
+        std::vector<float> radii;
+
+        for (const auto &cylinder: sorted_cylinders) {
+            // Add start point
+            nodes.push_back(cylinder.start_point);
+            radii.push_back(cylinder.radius);
+
+            // Add end point (start + length * axis_direction)
+            helios::vec3 end_point = cylinder.start_point + cylinder.length * cylinder.axis_direction;
+            nodes.push_back(end_point);
+            radii.push_back(cylinder.radius);
+        }
+
+        // Remove duplicate consecutive nodes (where end of one cylinder = start of next)
+        std::vector<helios::vec3> final_nodes;
+        std::vector<float> final_radii;
+
+        if (!nodes.empty()) {
+            final_nodes.push_back(nodes[0]);
+            final_radii.push_back(radii[0]);
+
+            for (size_t i = 1; i < nodes.size(); i++) {
+                // Check if this node is significantly different from the previous
+                if ((nodes[i] - final_nodes.back()).magnitude() > 1e-6) {
+                    final_nodes.push_back(nodes[i]);
+                    final_radii.push_back(radii[i]);
+                }
+            }
+        }
+
+        // Create the tube object
+        if (final_nodes.size() >= 2) {
+            uint tube_UUID;
+
+            if (use_colormap) {
+                // Sample color from colormap based on branch ID
+                // Use branch_id as seed for consistent but pseudo-random color selection
+                std::srand(static_cast<unsigned int>(std::abs(branch_id)));
+                int color_index = std::rand() % colormap.size();
+                helios::RGBcolor branch_color = colormap[color_index];
+
+                // Create a color vector for all nodes in this branch
+                std::vector<helios::RGBcolor> tube_colors(final_nodes.size(), branch_color);
+                tube_UUID = context->addTubeObject(radial_subdivisions, final_nodes, final_radii, tube_colors);
+
+                // if( printmessages ){
+                //     std::cout << "Created tube for branch " << branch_id << " with " << final_nodes.size()
+                //              << " nodes, branch_order " << sorted_cylinders[0].branch_order << ", color RGB("
+                //              << branch_color.r << "," << branch_color.g << "," << branch_color.b << ")" << std::endl;
+                // }
+            } else {
+                // Use texture file or solid color
+                if (colormap_or_texture.empty()) {
+                    // Create a color vector for the tube (red color for all nodes)
+                    std::vector<helios::RGBcolor> tube_colors(final_nodes.size(), helios::RGB::red);
+                    tube_UUID = context->addTubeObject(radial_subdivisions, final_nodes, final_radii, tube_colors);
+                } else {
+                    tube_UUID = context->addTubeObject(radial_subdivisions, final_nodes, final_radii, colormap_or_texture.c_str());
+                }
+
+                if (printmessages) {
+                    std::cout << "Created tube for branch " << branch_id << " with " << final_nodes.size() << " nodes, branch_order " << sorted_cylinders[0].branch_order << std::endl;
+                }
+            }
+
+            // Add object data for branch rank (branch_order)
+            int branch_order = sorted_cylinders[0].branch_order; // All cylinders in a branch should have same order
+            context->setObjectData(tube_UUID, "branch_order", branch_order);
+            context->setObjectData(tube_UUID, "branch_id", branch_id);
+
+            tube_UUIDs.push_back(tube_UUID);
+        }
+    }
+
+    if (printmessages) {
+        if (use_colormap) {
+            std::cout << "Successfully created " << tube_UUIDs.size() << " tube objects from TreeQSM file using colormap" << std::endl;
+        } else {
+            std::cout << "Successfully created " << tube_UUIDs.size() << " tube objects from TreeQSM file" << std::endl;
+        }
+    }
+
+    return tube_UUIDs;
 }

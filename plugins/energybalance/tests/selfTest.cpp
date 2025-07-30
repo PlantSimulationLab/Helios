@@ -269,7 +269,7 @@ DOCTEST_TEST_CASE("EnergyBalanceModel Optional Output Primitive Data") {
     EnergyBalanceModel testModel(&context_output);
 
     DOCTEST_CHECK_NOTHROW(testModel.optionalOutputPrimitiveData("boundarylayer_conductance_out"));
-    
+
     capture_cerr cerr_buffer;
     DOCTEST_CHECK_NOTHROW(testModel.optionalOutputPrimitiveData("invalid_label")); // Should print warning
     DOCTEST_CHECK(cerr_buffer.has_output());

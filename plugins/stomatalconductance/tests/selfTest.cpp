@@ -5,7 +5,7 @@ using namespace std;
 using namespace helios;
 
 int StomatalConductanceModel::selfTest() {
-    
+
     std::cout << "Running stomatal conductance model self-test..." << std::endl;
 
     doctest::Context context;
@@ -14,13 +14,13 @@ int StomatalConductanceModel::selfTest() {
     context.setOption("silence", true);
 
     int result = context.run();
-    
-    if(result == 0) {
+
+    if (result == 0) {
         std::cout << "Stomatal conductance model self-test PASSED." << std::endl;
     } else {
         std::cout << "Stomatal conductance model self-test FAILED." << std::endl;
     }
-    
+
     return result;
 }
 
@@ -111,7 +111,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - BWB Model with UUID Subset") {
 
     uint UUID1 = context.addPatch();
     uint UUID2 = context.addPatch();
-    
+
     BWBcoefficients coeffs;
     coeffs.gs0 = 0.05f;
     coeffs.a1 = 10.0f;
@@ -127,7 +127,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - BBL Model") {
     gsm.disableMessages();
 
     uint UUID = context.addPatch();
-    
+
     BBLcoefficients coeffs;
     coeffs.gs0 = 0.08f;
     coeffs.a1 = 5.0f;
@@ -147,7 +147,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - MOPT Model") {
     gsm.disableMessages();
 
     uint UUID = context.addPatch();
-    
+
     MOPTcoefficients coeffs;
     coeffs.gs0 = 0.09f;
     coeffs.g1 = 3.0f;
@@ -166,7 +166,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - BMF Model") {
     gsm.disableMessages();
 
     uint UUID = context.addPatch();
-    
+
     BMFcoefficients coeffs;
     coeffs.Em = 300.0f;
     coeffs.i0 = 40.0f;
@@ -187,7 +187,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - BB Model") {
     gsm.disableMessages();
 
     uint UUID = context.addPatch();
-    
+
     BBcoefficients coeffs;
     coeffs.pi_0 = 1.2f;
     coeffs.pi_m = 1.8f;
@@ -210,13 +210,13 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Multiple BMF Coefficients") {
 
     uint UUID1 = context.addPatch();
     uint UUID2 = context.addPatch();
-    
+
     BMFcoefficients coeffs1;
     coeffs1.Em = 300.0f;
     coeffs1.i0 = 40.0f;
     coeffs1.k = 250000.0f;
     coeffs1.b = 600.0f;
-    
+
     BMFcoefficients coeffs2;
     coeffs2.Em = 280.0f;
     coeffs2.i0 = 35.0f;
@@ -225,7 +225,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Multiple BMF Coefficients") {
 
     std::vector<BMFcoefficients> coeffs = {coeffs1, coeffs2};
     std::vector<uint> UUIDs = {UUID1, UUID2};
-    
+
     DOCTEST_CHECK_NOTHROW(gsm.setModelCoefficients(coeffs, UUIDs));
     DOCTEST_CHECK_NOTHROW(gsm.run(UUIDs));
 }
@@ -237,7 +237,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Dynamic Time Constants") {
 
     uint UUID1 = context.addPatch();
     uint UUID2 = context.addPatch();
-    
+
     float tau_open = 120.0f;
     float tau_close = 300.0f;
 
@@ -289,18 +289,18 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Input Validation") {
     gsm.disableMessages();
 
     uint UUID = context.addPatch();
-    
+
     context.setPrimitiveData(UUID, "temperature", 200.0f);
     context.setPrimitiveData(UUID, "air_temperature", 200.0f);
     context.setPrimitiveData(UUID, "air_pressure", 30000.0f);
     context.setPrimitiveData(UUID, "air_humidity", 1.5f);
     context.setPrimitiveData(UUID, "boundarylayer_conductance", -0.5f);
-    
+
     BMFcoefficients coeffs;
     gsm.setModelCoefficients(coeffs);
-    
+
     DOCTEST_CHECK_NOTHROW(gsm.run());
-    
+
     std::vector<uint> UUIDs = {UUID};
     DOCTEST_CHECK_NOTHROW(gsm.run(UUIDs));
 }
@@ -309,7 +309,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Unknown Species") {
     Context context;
     StomatalConductanceModel gsm(&context);
     gsm.disableMessages();
-    
+
     BMFcoefficients coeffs;
     DOCTEST_CHECK_NOTHROW(coeffs = gsm.getBMFCoefficientsFromLibrary("UnknownSpecies"));
     DOCTEST_CHECK(coeffs.Em == doctest::Approx(865.52f).epsilon(0.01));
@@ -321,10 +321,10 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Dynamic Model Error Conditions") {
     gsm.disableMessages();
 
     uint UUID = context.addPatch();
-    
+
     std::vector<uint> UUIDs_test2 = {UUID};
     DOCTEST_CHECK_NOTHROW(gsm.run(UUIDs_test2, 60.0f));
-    
+
     gsm.setDynamicTimeConstants(30.0f, 30.0f);
     context.setPrimitiveData(UUID, "moisture_conductance", 0.1f);
     std::vector<uint> UUIDs_test3 = {UUID};
@@ -338,11 +338,11 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Coefficient Size Mismatch") {
 
     uint UUID1 = context.addPatch();
     uint UUID2 = context.addPatch();
-    
+
     BMFcoefficients coeff1;
     std::vector<BMFcoefficients> coeffs = {coeff1};
     std::vector<uint> UUIDs = {UUID1, UUID2};
-    
+
     DOCTEST_CHECK_THROWS(gsm.setModelCoefficients(coeffs, UUIDs));
 }
 
@@ -350,7 +350,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Optional Output Data") {
     Context context;
     StomatalConductanceModel gsm(&context);
     gsm.disableMessages();
-    
+
     DOCTEST_CHECK_NOTHROW(gsm.optionalOutputPrimitiveData("invalid_label"));
     DOCTEST_CHECK_NOTHROW(gsm.optionalOutputPrimitiveData("model_parameters"));
     DOCTEST_CHECK_NOTHROW(gsm.optionalOutputPrimitiveData("vapor_pressure_deficit"));
@@ -362,9 +362,9 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Alternative Boundary Layer Data") 
     gsm.disableMessages();
 
     uint UUID = context.addPatch();
-    
+
     context.setPrimitiveData(UUID, "boundarylayer_conductance_out", 2.0f);
-    
+
     BMFcoefficients coeffs;
     gsm.setModelCoefficients(coeffs);
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
@@ -376,7 +376,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Non-existent Primitive") {
     gsm.disableMessages();
 
     std::vector<uint> UUIDs = {999};
-    
+
     BMFcoefficients coeffs;
     gsm.setModelCoefficients(coeffs);
     DOCTEST_CHECK_NOTHROW(gsm.run(UUIDs));
@@ -388,7 +388,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Missing Photosynthesis Data") {
     gsm.disableMessages();
 
     uint UUID = context.addPatch();
-    
+
     BWBcoefficients coeffs;
     gsm.setModelCoefficients(coeffs);
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
@@ -400,7 +400,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Edge Cases and Error Conditions") 
     gsm.disableMessages();
 
     uint UUID = context.addPatch();
-    
+
     context.setPrimitiveData(UUID, "radiation_flux_PAR", -10.0f);
     context.setPrimitiveData(UUID, "net_photosynthesis", -5.0f);
     context.setPrimitiveData(UUID, "temperature", 100.0f);
@@ -408,23 +408,23 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Edge Cases and Error Conditions") 
     context.setPrimitiveData(UUID, "air_CO2", -100.0f);
     context.setPrimitiveData(UUID, "air_humidity", 2.0f);
     context.setPrimitiveData(UUID, "air_pressure", 10000.0f);
-    
+
     BWBcoefficients bwb_coeffs;
     gsm.setModelCoefficients(bwb_coeffs);
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
-    
+
     BBLcoefficients bbl_coeffs;
     gsm.setModelCoefficients(bbl_coeffs);
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
-    
+
     MOPTcoefficients mopt_coeffs;
     gsm.setModelCoefficients(mopt_coeffs);
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
-    
+
     BMFcoefficients bmf_coeffs;
     gsm.setModelCoefficients(bmf_coeffs);
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
-    
+
     BBcoefficients bb_coeffs;
     gsm.setModelCoefficients(bb_coeffs);
     context.setPrimitiveData(UUID, "xylem_water_potential", -2.0f);
@@ -433,9 +433,9 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Edge Cases and Error Conditions") 
 
 DOCTEST_TEST_CASE("StomatalConductanceModel - Constructor Edge Cases") {
     Context context;
-    
+
     DOCTEST_CHECK_NOTHROW(StomatalConductanceModel gsm(&context));
-    
+
     StomatalConductanceModel gsm(&context);
     gsm.disableMessages();
     gsm.enableMessages();
@@ -448,10 +448,10 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Coefficient Overwriting") {
     gsm.disableMessages();
 
     uint UUID = context.addPatch();
-    
+
     BWBcoefficients coeffs1;
     gsm.setModelCoefficients(coeffs1, {UUID});
-    
+
     BWBcoefficients coeffs2;
     coeffs2.gs0 = 0.1f;
     coeffs2.a1 = 15.0f;
@@ -464,7 +464,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Additional Coverage Tests") {
     gsm.disableMessages();
 
     uint UUID = context.addPatch();
-    
+
     // Test all model coefficient types with specific data conditions
     context.setPrimitiveData(UUID, "radiation_flux_PAR", 500.0f);
     context.setPrimitiveData(UUID, "net_photosynthesis", 20.0f);
@@ -475,14 +475,14 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Additional Coverage Tests") {
     context.setPrimitiveData(UUID, "air_pressure", 101325.0f);
     context.setPrimitiveData(UUID, "boundarylayer_conductance", 1.5f);
     context.setPrimitiveData(UUID, "Gamma_CO2", 45.0f);
-    
+
     // Test BWB model with full data
     BWBcoefficients bwb;
     bwb.gs0 = 0.08f;
     bwb.a1 = 9.0f;
     gsm.setModelCoefficients(bwb);
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
-    
+
     // Test BBL model with full data
     BBLcoefficients bbl;
     bbl.gs0 = 0.075f;
@@ -490,14 +490,14 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Additional Coverage Tests") {
     bbl.D0 = 15000.0f;
     gsm.setModelCoefficients(bbl);
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
-    
+
     // Test MOPT model with full data
     MOPTcoefficients mopt;
     mopt.gs0 = 0.085f;
     mopt.g1 = 2.8f;
     gsm.setModelCoefficients(mopt);
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
-    
+
     // Test BMF model with PAR data
     context.setPrimitiveData(UUID, "radiation_flux_PAR", 100.0f);
     BMFcoefficients bmf;
@@ -507,7 +507,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Additional Coverage Tests") {
     bmf.b = 580.0f;
     gsm.setModelCoefficients(bmf);
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
-    
+
     // Test BB model with xylem potential
     context.setPrimitiveData(UUID, "xylem_water_potential", -1.5f);
     BBcoefficients bb;
@@ -526,7 +526,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Dynamic Model Comprehensive") {
     gsm.disableMessages();
 
     uint UUID = context.addPatch();
-    
+
     // Set up initial conditions for dynamic model
     context.setPrimitiveData(UUID, "moisture_conductance", 0.15f);
     context.setPrimitiveData(UUID, "radiation_flux_PAR", 200.0f);
@@ -536,22 +536,22 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Dynamic Model Comprehensive") {
     context.setPrimitiveData(UUID, "air_CO2", 380.0f);
     context.setPrimitiveData(UUID, "air_humidity", 0.65f);
     context.setPrimitiveData(UUID, "Gamma_CO2", 42.0f);
-    
+
     BWBcoefficients coeffs;
     gsm.setModelCoefficients(coeffs);
-    
+
     // Set dynamic time constants
     gsm.setDynamicTimeConstants(60.0f, 180.0f);
-    
+
     // Test dynamic model with different time steps
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}, 30.0f));
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}, 90.0f));
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}, 200.0f));
-    
+
     // Test with different moisture conductance values to trigger different branches
     context.setPrimitiveData(UUID, "moisture_conductance", 0.05f);
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}, 45.0f));
-    
+
     context.setPrimitiveData(UUID, "moisture_conductance", 0.25f);
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}, 45.0f));
 }
@@ -562,21 +562,21 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Species Library Coverage") {
     gsm.disableMessages();
 
     uint UUID = context.addPatch();
-    
+
     // Test multiple species
     DOCTEST_CHECK_NOTHROW(gsm.setBMFCoefficientsFromLibrary("Apple"));
     DOCTEST_CHECK_NOTHROW(gsm.setBMFCoefficientsFromLibrary("Almond"));
     DOCTEST_CHECK_NOTHROW(gsm.setBMFCoefficientsFromLibrary("Apple", std::vector<uint>{UUID}));
-    
+
     // Test getting coefficients for different species
     BMFcoefficients apple_coeffs;
     DOCTEST_CHECK_NOTHROW(apple_coeffs = gsm.getBMFCoefficientsFromLibrary("Apple"));
     DOCTEST_CHECK(apple_coeffs.Em > 0.0f);
-    
+
     BMFcoefficients almond_coeffs;
     DOCTEST_CHECK_NOTHROW(almond_coeffs = gsm.getBMFCoefficientsFromLibrary("Almond"));
     DOCTEST_CHECK(almond_coeffs.Em > 0.0f);
-    
+
     // They should be different
     DOCTEST_CHECK(apple_coeffs.Em != almond_coeffs.Em);
 }
@@ -584,24 +584,24 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Species Library Coverage") {
 DOCTEST_TEST_CASE("StomatalConductanceModel - Message Control and Output") {
     Context context;
     StomatalConductanceModel gsm(&context);
-    
+
     uint UUID = context.addPatch();
-    
+
     // Test message control
     gsm.enableMessages();
     gsm.disableMessages();
     gsm.enableMessages();
-    
+
     // Test optional output with various labels
     DOCTEST_CHECK_NOTHROW(gsm.optionalOutputPrimitiveData("gs"));
     DOCTEST_CHECK_NOTHROW(gsm.optionalOutputPrimitiveData("ci"));
     DOCTEST_CHECK_NOTHROW(gsm.optionalOutputPrimitiveData("vpd"));
     DOCTEST_CHECK_NOTHROW(gsm.optionalOutputPrimitiveData("unknown_label"));
-    
+
     // Test report functions
     DOCTEST_CHECK_NOTHROW(gsm.printDefaultValueReport());
     DOCTEST_CHECK_NOTHROW(gsm.printDefaultValueReport(std::vector<uint>{UUID}));
-    
+
     // Test with models set up
     BMFcoefficients coeffs;
     gsm.setModelCoefficients(coeffs);

@@ -5,7 +5,11 @@ project(helios)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
 set( VISUALIZER_SOURCES
-	"src/Visualizer.cpp"
+	#"src/Visualizer.cpp"
+	"src/VisualizerCore.cpp"
+	"src/VisualizerGeometry.cpp"
+	"src/VisualizerRendering.cpp"
+	"src/VisualizerContext.cpp"
 	"src/GeometryHandler.cpp"
 	"tests/selfTest.cpp"
 )
@@ -75,6 +79,7 @@ add_custom_command(
 		DEPENDS ${SHADER_FILES}
 )
 add_custom_target(copy_shaders DEPENDS "${CMAKE_BINARY_DIR}/plugins/visualizer/shader_assets.stamp")
+set_target_properties(copy_shaders PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 add_custom_command(
 		OUTPUT "${CMAKE_BINARY_DIR}/plugins/visualizer/texture_assets.stamp"
@@ -86,6 +91,7 @@ add_custom_command(
 		DEPENDS ${TEXTURE_FILES}
 )
 add_custom_target(copy_textures DEPENDS "${CMAKE_BINARY_DIR}/plugins/visualizer/texture_assets.stamp")
+set_target_properties(copy_textures PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 add_dependencies(visualizer copy_shaders copy_textures)
 

@@ -29,6 +29,7 @@ void GeometryHandler::allocateBufferSize(size_t primitive_count, VisualizerGeome
     coordinate_flag_data[geometry_type].reserve(coordinate_flag_data[geometry_type].size() + primitive_count);
     delete_flag_data[geometry_type].reserve(delete_flag_data[geometry_type].size() + primitive_count);
     context_geometry_flag_data[geometry_type].reserve(context_geometry_flag_data[geometry_type].size() + primitive_count);
+    size_data[geometry_type].reserve(size_data[geometry_type].size() + primitive_count);
 }
 
 void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geometry_type, const std::vector<helios::vec3> &vertices, const helios::RGBAcolor &color, const std::vector<helios::vec2> &uvs, int textureID, bool override_texture_color,
@@ -172,6 +173,8 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
         delete_flag_data[geometry_type].push_back(false);
 
         context_geometry_flag_data[geometry_type].push_back(iscontextgeometry);
+
+        size_data[geometry_type].push_back(static_cast<float>(size));
     } else {
         normal_data[geometry_type].at(normal_index) = normal.x;
         normal_data[geometry_type].at(normal_index + 1) = normal.y;
@@ -590,6 +593,41 @@ const std::vector<int> *GeometryHandler::getCoordinateFlagData_ptr(VisualizerGeo
     return &coordinate_flag_data.at(geometry_type);
 }
 
+void GeometryHandler::setSize(size_t UUID, float size) {
+
+#ifdef HELIOS_DEBUG
+    assert(UUID_map.find(UUID) != UUID_map.end());
+#endif
+
+    const PrimitiveIndexMap &index_map = UUID_map.at(UUID);
+
+    const size_t size_ind = index_map.size_index;
+
+    size_data[index_map.geometry_type].at(size_ind) = size;
+
+    markDirty(UUID);
+}
+
+float GeometryHandler::getSize(size_t UUID) const {
+
+#ifdef HELIOS_DEBUG
+    assert(UUID_map.find(UUID) != UUID_map.end());
+#endif
+
+    const PrimitiveIndexMap &index_map = UUID_map.at(UUID);
+
+    const size_t size_ind = index_map.size_index;
+
+    return size_data.at(index_map.geometry_type).at(size_ind);
+}
+
+const std::vector<float> *GeometryHandler::getSizeData_ptr(VisualizerGeometryType geometry_type) const {
+#ifdef HELIOS_DEBUG
+    assert(size_data.find(geometry_type) != size_data.end());
+#endif
+    return &size_data.at(geometry_type);
+}
+
 bool GeometryHandler::getDeleteFlag(size_t UUID) const {
 #ifdef HELIOS_DEBUG
     assert(UUID_map.find(UUID) != UUID_map.end());
@@ -646,6 +684,7 @@ void GeometryHandler::clearAllGeometry() {
         visible_flag_data.at(geometry_type).clear();
         context_geometry_flag_data.at(geometry_type).clear();
         delete_flag_data.at(geometry_type).clear();
+        size_data.at(geometry_type).clear();
     }
 
     UUID_map.clear();
@@ -764,10 +803,11 @@ void GeometryHandler::defragmentBuffers() {
         auto &oldVisible = visible_flag_data.at(geometry_type);
         auto &oldContextFlag = context_geometry_flag_data.at(geometry_type);
         auto &oldDeleteFlag = delete_flag_data.at(geometry_type);
+        auto &oldSize = size_data.at(geometry_type);
 
         // New buffers
         std::vector<VisualizerGeometryType> newType;
-        std::vector<float> newVertex, newNormal, newUV, newColor;
+        std::vector<float> newVertex, newNormal, newUV, newColor, newSize;
         std::vector<int> newFace, newTexFlag, newTexID, newCoordFlag;
         std::vector<bool> newDeleteFlag, newContextFlag;
         std::vector<char> newVisible;
@@ -804,6 +844,7 @@ void GeometryHandler::defragmentBuffers() {
             const size_t vi2 = newVisible.size();
             const size_t cfi2 = newContextFlag.size();
             const size_t dfi = newDeleteFlag.size();
+            const size_t si = newSize.size();
 
             // Copy raw data
             newFace.insert(newFace.end(), vcount, scast<int>(newVisible.size())); // the new face index should be the new index not just copying the previous value. Note that we take the size of newVisible, but could be any per-face array size.
@@ -822,6 +863,7 @@ void GeometryHandler::defragmentBuffers() {
             newVisible.push_back(oldVisible[prim.visible_index]);
             newContextFlag.push_back(oldContextFlag[prim.context_geometry_flag_index]);
             newDeleteFlag.push_back(oldDeleteFlag[prim.delete_flag_index]);
+            newSize.push_back(oldSize[prim.size_index]);
 
             // Update the map entry to point at the new positions
             prim.face_index_index = fi;
@@ -835,6 +877,7 @@ void GeometryHandler::defragmentBuffers() {
             prim.visible_index = vi2;
             prim.context_geometry_flag_index = cfi2;
             prim.delete_flag_index = dfi;
+            prim.size_index = si;
         }
 
         // Erase deleted UUIDs
@@ -854,6 +897,7 @@ void GeometryHandler::defragmentBuffers() {
         oldVisible.swap(newVisible);
         oldContextFlag.swap(newContextFlag);
         oldDeleteFlag.swap(newDeleteFlag);
+        oldSize.swap(newSize);
     }
 
     // Reset deleted count
@@ -873,7 +917,8 @@ void GeometryHandler::registerUUID(size_t UUID, const VisualizerGeometryType &ge
                       coordinate_flag_data.at(geometry_type).size(),
                       visible_flag_data.at(geometry_type).size(),
                       context_geometry_flag_data.at(geometry_type).size(),
-                      delete_flag_data.at(geometry_type).size()};
+                      delete_flag_data.at(geometry_type).size(),
+                      size_data.at(geometry_type).size()};
 }
 
 char GeometryHandler::getVertexCount(const VisualizerGeometryType &geometry_type) {

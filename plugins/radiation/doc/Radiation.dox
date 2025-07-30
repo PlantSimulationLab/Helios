@@ -826,6 +826,34 @@ The above example assumes that we have already added some geometry to the Contex
 
  JPEG images are written either as a grayscale image (1 spectral band) or and RGB image (3 spectral bands) using the \ref RadiationModel::writeCameraImage() method. This method takes three required arguments and two optional arguments: 1) a string denoting the label of a camera that was added through the \ref RadiationModel::addRadiationCamera() method, 2) a vector of strings denoting the label(s) of radiation bands to be written to the image(s), which must contain exactly 1 element (grayscale image) or 3 elements (RGB image), and 3) a string denoting the base of the image filename, which may be appended with information like a radiation band label or frame count. The two optional arguments are: 1) the relative path to the directory where the images should be stored, and 2) a numerical integer identifier to be appended to the image file name (e.g., "camera_thermal_00001.jpeg"). Note that this value must be less than or equal to 99,9999. By default, images are stored in the directory where the executable is being run (usually the build directory), and the numerical identifier is omitted unless a value is provided.
 
+ \subsubsection RadCamSegmentation Writing Camera Image Segmentation Masks
+
+ In addition to regular camera images, the radiation model can generate segmentation masks in COCO JSON format for machine learning applications. Segmentation masks identify and outline objects within camera images, providing pixel-level annotations that can be used for training object detection and segmentation models.
+
+ Two methods are available for writing segmentation masks:
+
+ 1\. \ref RadiationModel::writeImageSegmentationMasks() - Creates segmentation masks based on primitive data labels.
+
+ 2\. \ref RadiationModel::writeImageSegmentationMasks_ObjectData() - Creates segmentation masks based on object data labels.
+
+ Both methods take the following arguments: 1) a string denoting the camera label, 2) a string denoting the primitive/object data label to use for segmentation, 3) an integer object class ID for COCO annotations, 4) a string denoting the base filename for the JSON output, 5) an optional string specifying the output directory path (defaults to current directory), 6) an optional boolean flag to append to existing JSON files (defaults to false for new files), and 7) an optional frame number for time series data.
+
+ The segmentation masks are generated using boundary tracing algorithms that identify connected regions of pixels with the same data label values. Each unique label value becomes a separate annotation in the COCO JSON output, with precise polygon boundaries traced around the object regions.
+
+ When the append flag is set to true, new annotations are added to existing JSON files, allowing multiple primitive/object types to be combined into a single segmentation dataset. This is useful for creating comprehensive annotations that include both foreground objects and background elements like ground surfaces.
+
+ ~~~~~~{.cpp}
+ // Write segmentation masks for bunny objects (primitive data approach)
+ radiationmodel.writeImageSegmentationMasks("visible", "bunny", 1, "bunny_masks", "./");
+
+ // Write segmentation masks for ground surfaces  
+ radiationmodel.writeImageSegmentationMasks("visible", "ground", 0, "ground_masks", "./");
+
+ // Append both to create combined annotations
+ radiationmodel.writeImageSegmentationMasks("visible", "ground", 0, "combined_masks", "./", false);
+ radiationmodel.writeImageSegmentationMasks("visible", "bunny", 1, "combined_masks", "./", true);
+ ~~~~~~
+
  Below is example code of writing an RGB image (3 spectral bands).
 
  ~~~~~~{.cpp}

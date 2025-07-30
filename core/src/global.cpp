@@ -11,7 +11,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-*/
+ */
 
 #include "global.h"
 
@@ -1767,7 +1767,7 @@ void helios::readJPEG(const std::string &filename, uint &width, uint &height, st
     JSAMPARRAY buffer;
     int row_stride;
 
-    std::unique_ptr<FILE, int(*)(FILE*)> infile(fopen(filename.c_str(), "rb"), fclose);
+    std::unique_ptr<FILE, int (*)(FILE *)> infile(fopen(filename.c_str(), "rb"), fclose);
     if (!infile) {
         helios_runtime_error("ERROR (Context::readJPEG): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it.");
     }
@@ -1828,7 +1828,7 @@ helios::int2 helios::getImageResolutionJPEG(const std::string &filename) {
     jpeg_decompress_struct cinfo{};
 
     jpeg_error_mgr jerr{};
-    std::unique_ptr<FILE, int(*)(FILE*)> infile(fopen(filename.c_str(), "rb"), fclose);
+    std::unique_ptr<FILE, int (*)(FILE *)> infile(fopen(filename.c_str(), "rb"), fclose);
     if (!infile) {
         helios_runtime_error("ERROR (Context::getImageResolutionJPEG): File " + filename + " could not be opened. Check that the file exists and that you have permission to read it.");
     }
@@ -1884,7 +1884,7 @@ void helios::writeJPEG(const std::string &a_filename, uint width, uint height, c
     JSAMPROW row_pointer;
     int row_stride;
 
-    std::unique_ptr<FILE, int(*)(FILE*)> outfile(fopen(filename.c_str(), "wb"), fclose);
+    std::unique_ptr<FILE, int (*)(FILE *)> outfile(fopen(filename.c_str(), "wb"), fclose);
     if (!outfile) {
         helios_runtime_error("ERROR (Context::writeJPEG): File " + filename + " could not be opened. Check that the file path is correct you have permission to write to it.");
     }
