@@ -13,56 +13,105 @@
 
 */
 
-#ifndef IRRIGATIONMODEL
-#define IRRIGATIONMODEL
+#ifndef IRRIGATIONMODEL_H
+#define IRRIGATIONMODEL_H
 
-#include "Context.h"
 #include <vector>
-#include <cmath>
 #include <string>
-
-
-#include <map>
 #include <unordered_map>
+#include <cmath>
+#include <stdexcept>  // For std::runtime_error
+
+class SprinklerSystem;
 
 struct Position {
-    double x, y;
+    double x;
+    double y;
+
+    // Add distance calculation
+    double distanceTo(const Position& other) const {
+        return std::hypot(x - other.x, y - other.y);
+    }
 };
 
-// Using std::map with node IDs
+
+
+
 struct Node {
     int id;
-    std::string type; //junction, barb, emitter
+    std::string type;
     Position position;
     double pressure;
     bool is_fixed;
+    std::vector<int> neighbors; // <-- This must exist!
 };
 
 struct Link {
     int from;
     int to;
-    double length;
     double diameter;
-    std::string type; //lateral, submain, main, barbToemitter
-    //double resistance;
+    double length;
+    std::string type;
+
+    // Helper method
+    std::string toString() const {
+        return type + " from " + std::to_string(from) +
+               " to " + std::to_string(to) +
+               " (L=" + std::to_string(length) + "m)";
+    }
 };
+
+struct HydraulicResults {
+    std::vector<double> nodalPressures;
+    std::vector<double> flowRates;
+};
+
+
 
 class IrrigationModel {
 public:
-    std::unordered_map<int, Node> nodes;  // NodeID -> Node
-    std::vector<Link> links;              // Pipe connections
+    std::unordered_map<int, Node> nodes;
+    std::vector<Link> links;
 
-    // Create a sprinkler system
-    void createSprinklerSystem(double Pw, double fieldLength, double fieldWidth,
-                             double sprinklerSpacing, double lineSpacing,
-                             const std::string& connectionType);
+    // Main system creation
+    void createCompleteSystem(double Pw, double fieldLength, double fieldWidth,
+                           double sprinklerSpacing, double lineSpacing,
+                           const std::string& connectionType);
 
-    // Helper functions
-    double calculateEmitterFlow(double Pw) const;
+    int getWaterSourceId() const { return waterSourceId; }
+    int getNextNodeId() const;
+    // Print network in visualization format
     void printNetwork() const;
+    HydraulicResults calculateHydraulics(const std::string& nozzleType, double Qspecified, double Pw);
+
+    // New: Get system summary as string
+    std::string getSystemSummary() const;
 
 private:
     static constexpr double INCH_TO_METER = 0.0254;
+    static constexpr double FEET_TO_METER = 0.3048;
+    int waterSourceId = -1;  // Tracks water source node ID
+
+    // Helper methods
+    void validateParameters(double fieldLength, double fieldWidth,
+                          double sprinklerSpacing, double lineSpacing) const;
+
+    void createSprinklerSystem(double fieldLength, double fieldWidth,
+                             double sprinklerSpacing, double lineSpacing,
+                             const std::string& connectionType);
+
+    Position calculateWaterSourcePosition(double fieldLength, double fieldWidth,
+                                        const std::string& lateralDirection) const;
+
+    void addSubmainAndWaterSource(double fieldLength, double fieldWidth,
+                                             const std::string& lateralDirection);
+
+    double calculateEmitterFlow(double Pw) const;
+
+    void buildNeighborLists();
+    double calculateResistance(double Re, double Wbar, const Link& link, int iter);
+    double calculateEmitterFlow(const std::string& nozzleType, double pressure);
+
 };
 
 /*

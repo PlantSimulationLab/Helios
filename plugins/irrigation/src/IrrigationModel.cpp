@@ -14,93 +14,256 @@
 */
 
 #include "IrrigationModel.h"
-#include <cmath>
 #include <iostream>
+#include <algorithm>
+#include <cmath>
+#include <Eigen/Dense>  // For matrix operations
+#include <algorithm>    // For std::find
 
-using namespace helios;
+// Add parameter validation
+void IrrigationModel::validateParameters(double fieldLength, double fieldWidth,
+                                       double sprinklerSpacing, double lineSpacing) const {
+    if (fieldLength <= 0 || fieldWidth <= 0) {
+        throw std::runtime_error("Field dimensions must be positive");
+    }
+    if (sprinklerSpacing <= 0 || lineSpacing <= 0) {
+        throw std::runtime_error("Spacing values must be positive");
+    }
+    if (sprinklerSpacing > fieldLength || lineSpacing > fieldWidth) {
+        throw std::runtime_error("Spacing values cannot exceed field dimensions");
+    }
+}
 
-void IrrigationModel::createSprinklerSystem(double Pw, double fieldLength, double fieldWidth,
-                                          double sprinklerSpacing, double lineSpacing,
-                                          const std::string& connectionType) {
+// Add system summary method
+std::string IrrigationModel::getSystemSummary() const {
+    std::string summary;
+    summary += "\nSystem Summary:\n";
+    summary += "========================\n";
+    summary += "Total nodes: " + std::to_string(nodes.size()) + "\n";
+    summary += "Total links: " + std::to_string(links.size()) + "\n";
+
+    // Node type counts
+    std::unordered_map<std::string, int> nodeCounts;
+    for (const auto& [id, node] : nodes) {
+        nodeCounts[node.type]++;
+    }
+
+    summary += "\nNode Types:\n";
+    for (const auto& [type, count] : nodeCounts) {
+        summary += "- " + type + ": " + std::to_string(count) + "\n";
+    }
+
+    // Link type counts
+    std::unordered_map<std::string, int> linkCounts;
+    for (const auto& link : links) {
+        linkCounts[link.type]++;
+    }
+
+    summary += "\nPipe Types:\n";
+    for (const auto& [type, count] : linkCounts) {
+        summary += "- " + type + ": " + std::to_string(count) + "\n";
+    }
+
+    summary += "========================\n";
+    return summary;
+}
+
+// Modify createCompleteSystem to include validation
+
+void IrrigationModel::createCompleteSystem(double Pw, double fieldLength, double fieldWidth,
+                                         double sprinklerSpacing, double lineSpacing,
+                                         const std::string& connectionType) {
     nodes.clear();
     links.clear();
 
+    createSprinklerSystem(fieldLength, fieldWidth, sprinklerSpacing, lineSpacing, connectionType);
+    addSubmainAndWaterSource(fieldLength, fieldWidth, connectionType);
+
+    // Set fixed pressure at water source
+    if (waterSourceId != -1) {
+        nodes[waterSourceId].pressure = Pw;
+        nodes[waterSourceId].is_fixed = true;
+    }
+}
+
+
+Position IrrigationModel::calculateWaterSourcePosition(double fieldLength, double fieldWidth,
+                                                     const std::string& lateralDirection) const {
+    if (lateralDirection == "vertical") {
+        return {
+            fieldLength / 3.0 + 5.0,  // x
+            fieldWidth - fieldWidth / 3.0 - 0.5  // y
+        };
+    } else {
+        return {
+            fieldLength / 2.0,  // x
+            0.0  // y
+        };
+    }
+}
+
+void IrrigationModel::createSprinklerSystem(double fieldLength, double fieldWidth,
+                                          double sprinklerSpacing, double lineSpacing,
+                                          const std::string& connectionType) {
     int num_laterals = static_cast<int>(std::ceil(fieldLength / sprinklerSpacing)) + 1;
     int num_sprinklers_perline = static_cast<int>(std::ceil(fieldWidth / lineSpacing)) + 1;
 
-    double Q_specified = calculateEmitterFlow(Pw);
-
     int nodeId = 1;
-    int linkId = 1;
+    const double barbOffset = 0.3; // Distance from lateral to barb (meters)
+    const double emitterOffset = 0.5; // Distance from barb to emitter (meters)
 
+    for (int i = 0; i < num_laterals; ++i) {
+        for (int j = 0; j < num_sprinklers_perline; ++j) {
+            double x = i * sprinklerSpacing;
+            double y = j * lineSpacing;
 
-    for (int i = 1; i <= num_laterals; ++i) {
-        for (int j = 1; j <= num_sprinklers_perline; ++j) {
-            double x = (i - 1) * sprinklerSpacing;
-            double y = (j - 1) * lineSpacing;
+            // Create junction node for sprinkler assembly connection
+            nodes[nodeId] = {nodeId, "lateral_sprinkler_jn", {x, y}, 0.0, false};
+            int junctionId = nodeId++;
 
-            // Create junction node (green)
-            nodes[nodeId] = {
-                nodeId,
-                "lateral_sprinkler_jn",
-                {x, y},
-                0.0,
-                false
-            };
-            nodeId++;
+            // Calculate 45 degree offset position for barb
+            double barbX = x + barbOffset * cos(M_PI/4);
+            double barbY = y + barbOffset * sin(M_PI/4);
 
-            // Create barb node (magenta)
-            nodes[nodeId] = {
-                nodeId,
-                "barb",
-                {x, y},
-                0.0,
-                false
-            };
-            int barbId = nodeId;
-            nodeId++;
+            // Create barb node
+            nodes[nodeId] = {nodeId, "barb", {barbX, barbY}, 0.0, false};
+            int barbId = nodeId++;
 
-            // Create emitter node (red) - offset slightly
-            nodes[nodeId] = {
-                nodeId,
-                "emitter",
-                {x + 0.2, y + 0.2},
-                0.0,
-                false
-            };
-            int emitterId = nodeId;
-            nodeId++;
+            // Calculate position for emitter (continuing 45° from barb)
+            double emitterX = barbX + emitterOffset * cos(M_PI/4);
+            double emitterY = barbY + emitterOffset * sin(M_PI/4);
 
-            // Create link between barb and emitter
+            // Create emitter node
+            nodes[nodeId] = {nodeId, "emitter", {emitterX, emitterY}, 0.0, false};
+            int emitterId = nodeId++;
+
+            // Connect barb to emitter
             links.push_back({
-                barbId,
-                emitterId,
-                0.154 * INCH_TO_METER,
-                30 * INCH_TO_METER,
+                barbId, emitterId,
+                0.154 * INCH_TO_METER, // ~6mm diameter
+                emitterOffset,         // Actual physical length
                 "barbToemitter"
             });
 
-            // Create lateral pipes
-            if (connectionType == "vertical" && j < num_sprinklers_perline) {
+            // Connect junction to barb
+            links.push_back({
+                junctionId, barbId,
+                0.25 * INCH_TO_METER, // ~10mm diameter
+                barbOffset,          // Actual physical length
+                "lateralTobarb"
+            });
+
+            // Connect laterals (if not last in row/column)
+            if (connectionType == "vertical" && j < num_sprinklers_perline - 1) {
                 links.push_back({
-                    barbId - 2,
-                    barbId + 1,
-                    0.67 * INCH_TO_METER,
-                    sprinklerSpacing,
+                    junctionId, junctionId + 3,
+                    0.67 * INCH_TO_METER, // ~17mm diameter
+                    lineSpacing,         // Full spacing distance
                     "lateral"
                 });
             }
-            else if (connectionType == "horizontal" && i < num_laterals) {
+            else if (connectionType == "horizontal" && i < num_laterals - 1) {
                 links.push_back({
-                    barbId,
-                    barbId + num_sprinklers_perline * 3,
-                    0.67 * INCH_TO_METER,
-                    sprinklerSpacing,
+                    junctionId, junctionId + num_sprinklers_perline * 3,
+                    0.67 * INCH_TO_METER, // ~17mm diameter
+                    sprinklerSpacing,    // Full spacing distance
                     "lateral"
                 });
             }
         }
     }
+}
+
+int IrrigationModel::getNextNodeId() const {
+    if (nodes.empty()) return 1;
+    return std::max_element(nodes.begin(), nodes.end(),
+        [](const auto& a, const auto& b) { return a.first < b.first; })->first + 1;
+}
+
+void IrrigationModel::addSubmainAndWaterSource(double fieldLength, double fieldWidth,
+                                             const std::string& lateralDirection) {
+    // Create submain line position
+    double submainY = (lateralDirection == "vertical") ?
+        fieldWidth - fieldWidth/3.0 - 0.5 : 0.0;
+
+    // Find all lateral junctions that connect to submain
+    std::vector<int> junctionNodes;
+    for (const auto& [id, node] : nodes) {
+        if (node.type == "lateral_sprinkler_jn") {
+            if ((lateralDirection == "vertical" && std::abs(node.position.y - submainY) < 0.1) ||
+                (lateralDirection == "horizontal" && std::abs(node.position.x) < 0.1)) {
+                junctionNodes.push_back(id);
+            }
+        }
+    }
+
+    if (junctionNodes.empty()) {
+        int defaultJnId = getNextNodeId();
+        nodes[defaultJnId] = {defaultJnId, "lateral_sprinkler_jn", {0.0, submainY}, 0.0, false};
+        junctionNodes.push_back(defaultJnId);
+    }
+
+    // Create submain nodes and connection junctions
+    int submainStartId = getNextNodeId();
+    std::sort(junctionNodes.begin(), junctionNodes.end(), [this](int a, int b) {
+        return nodes[a].position.x < nodes[b].position.x;
+    });
+
+    for (size_t i = 0; i < junctionNodes.size(); ++i) {
+        Position pos = nodes[junctionNodes[i]].position;
+        pos.y = submainY;
+
+        // Create submain connection junction
+        int submainJnId = submainStartId + i*2;
+        nodes[submainJnId] = {submainJnId, "lateral_sub_jn", pos, 0.0, false};
+
+        // Create submain node (offset from junction)
+        int submainId = submainStartId + i*2 + 1;
+        Position submainPos = pos;
+        submainPos.x += 0.5;
+        nodes[submainId] = {submainId, "submain", submainPos, 0.0, false};
+
+        // Connect lateral junction to submain junction
+        links.push_back({
+            junctionNodes[i], submainJnId,
+            0.67 * INCH_TO_METER,
+            0.5,
+            "lateralToSubmain"
+        });
+
+        // Connect submain junction to submain node
+        links.push_back({
+            submainJnId, submainId,
+            0.67 * INCH_TO_METER,
+            0.5,
+            "submainConnection"
+        });
+
+        // Connect submain nodes in sequence
+        if (i > 0) {
+            links.push_back({
+                submainId - 2, submainId,
+                4.0 * INCH_TO_METER,
+                nodes[submainId].position.distanceTo(nodes[submainId-2].position),
+                "submain"
+            });
+        }
+    }
+
+    // Create water source node
+    waterSourceId = getNextNodeId();
+    Position waterPos = nodes[submainStartId].position;
+    waterPos.x -= 5.0;
+
+    nodes[waterSourceId] = {waterSourceId, "waterSource", waterPos, 0.0, true};
+
+    // Connect water source to first submain junction
+    links.push_back({
+        waterSourceId, submainStartId,
+        2.0 * INCH_TO_METER,
+        nodes[waterSourceId].position.distanceTo(nodes[submainStartId].position),
+        "mainline"
+    });
 }
 
 double IrrigationModel::calculateEmitterFlow(double Pw) const {
@@ -127,6 +290,234 @@ void IrrigationModel::printNetwork() const {
                   << link.type << "\n";
     }
     std::cout << "LINKS_END\n";
+}
+
+
+//hydraulic results: pressure and flow rate
+
+HydraulicResults IrrigationModel::calculateHydraulics(const std::string& nozzleType,
+                                                     double Qspecified, double Pw) {
+    // Constants
+    const double rho = 997.0;     // kg/m^3
+    const double mu = 8.90e-04;   // Pa·s
+    const double err_max = 1e-3;
+    const int max_iter = 5;
+
+    // Initialize data structures
+    buildNeighborLists();
+
+    const int numNodes = nodes.size();
+    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(numNodes, numNodes);
+    Eigen::VectorXd RHS = Eigen::VectorXd::Zero(numNodes);
+    Eigen::VectorXd nodalPressure = Eigen::VectorXd::Zero(numNodes);
+    Eigen::VectorXd nodalPressure_old = Eigen::VectorXd::Zero(numNodes);
+
+    // Set fixed pressure at water source
+    A(numNodes-1, numNodes-1) = 1.0;
+    RHS(numNodes-1) = Pw * 6894.76;  // Convert psi to Pa
+
+    // Initialize current sources (emitters)
+    std::vector<double> currentSources(numNodes, 0.0);
+    for (const auto& [id, node] : nodes) {
+        if (node.type == "emitter") {
+            currentSources[id-1] = Qspecified; // Using 0-based index for Eigen
+        }
+    }
+
+    // Initialize flow variables
+    std::unordered_map<int, std::vector<double>> Re;
+    std::unordered_map<int, std::vector<double>> W_bar;
+    std::unordered_map<int, std::vector<double>> vol_rate;
+    std::unordered_map<int, std::vector<double>> R;
+    std::unordered_map<int, std::vector<double>> delta_P;
+
+    for (const auto& [id, node] : nodes) {
+        Re[id] = std::vector<double>(node.neighbors.size(), 0.0);
+        W_bar[id] = std::vector<double>(node.neighbors.size(), 0.0);
+        vol_rate[id] = std::vector<double>(node.neighbors.size(), 0.0);
+        R[id] = std::vector<double>(node.neighbors.size(), 0.0);
+        delta_P[id] = std::vector<double>(node.neighbors.size(), 0.0);
+    }
+
+    // Iterative solution
+    double err = 1e6;
+    int iter = 0;
+
+    while (std::abs(err) > err_max && iter < max_iter) {
+        // Build matrix A
+        for (const auto& [id, node] : nodes) {
+            if (id == waterSourceId) continue; // Skip fixed pressure node
+
+            int i = id - 1; // Convert to 0-based index
+            A(i, i) = 0.0;
+
+            for (size_t j = 0; j < node.neighbors.size(); ++j) {
+                int neighborId = node.neighbors[j];
+
+                // Find the link between node and neighbor
+                const Link* link = nullptr;
+                for (const auto& l : links) {
+                    if ((l.from == id && l.to == neighborId) ||
+                        (l.to == id && l.from == neighborId)) {
+                        link = &l;
+                        break;
+                    }
+                }
+
+                if (!link) continue;
+
+                // Calculate resistance
+                R[id][j] = calculateResistance(Re[id][j], W_bar[id][j], *link, iter);
+
+                // Update matrix coefficients
+                A(i, i) -= 1.0 / R[id][j];
+                int neighborIdx = neighborId - 1;
+                A(i, neighborIdx) = 1.0 / R[id][j];
+            }
+        }
+
+        // Update RHS with current sources
+        for (int i = 0; i < numNodes-1; ++i) {
+            RHS(i) = currentSources[i];
+        }
+
+        // Solve linear system
+        nodalPressure = A.colPivHouseholderQr().solve(RHS);
+
+        // Update flow variables
+        bool isAllLaminar = true;
+        for (const auto& [id, node] : nodes) {
+            for (size_t j = 0; j < node.neighbors.size(); ++j) {
+                int neighborId = node.neighbors[j];
+
+                // Find the link
+                const Link* link = nullptr;
+                for (const auto& l : links) {
+                    if ((l.from == id && l.to == neighborId) ||
+                        (l.to == id && l.from == neighborId)) {
+                        link = &l;
+                        break;
+                    }
+                }
+
+                if (!link) continue;
+
+                int idx = id - 1;
+                int neighborIdx = neighborId - 1;
+
+                delta_P[id][j] = nodalPressure(idx) - nodalPressure(neighborIdx);
+                W_bar[id][j] = std::abs(delta_P[id][j]) /
+                              (R[id][j] * (M_PI/4.0) * pow(link->diameter, 2));
+
+                vol_rate[id][j] = W_bar[id][j] * (M_PI/4.0) * pow(link->diameter, 2);
+                Re[id][j] = std::abs(W_bar[id][j]) * link->diameter * rho / mu;
+
+                if (Re[id][j] > 2000) {
+                    isAllLaminar = false;
+                }
+            }
+        }
+
+        // Update emitter flows based on current pressure
+        for (auto& [id, node] : nodes) {
+            if (node.type == "emitter") {
+                currentSources[id-1] = calculateEmitterFlow(nozzleType, nodalPressure(id-1));
+            }
+        }
+
+        // Calculate error
+        if (iter == 0) {
+            err = 1e6; // Initial error
+        } else {
+            err = (nodalPressure - nodalPressure_old).norm() / nodalPressure_old.norm();
+        }
+
+        nodalPressure_old = nodalPressure;
+        iter++;
+    }
+
+    // Prepare results
+    HydraulicResults results;
+    results.nodalPressures.resize(numNodes);
+    results.flowRates.resize(links.size());
+
+    // Convert nodal pressures from Pa to psi
+    for (int i = 0; i < numNodes; ++i) {
+        results.nodalPressures[i] = nodalPressure(i) / 6894.76;
+    }
+
+    // Store flow rates for each link
+    for (size_t i = 0; i < links.size(); ++i) {
+        const auto& link = links[i];
+        int from = link.from;
+        int to = link.to;
+
+        // Find the index of the neighbor
+        auto it = std::find(nodes[from].neighbors.begin(), nodes[from].neighbors.end(), to);
+        if (it != nodes[from].neighbors.end()) {
+            size_t idx = std::distance(nodes[from].neighbors.begin(), it);
+            results.flowRates[i] = vol_rate[from][idx];
+        } else {
+            results.flowRates[i] = 0.0;
+        }
+    }
+
+    return results;
+}
+
+void IrrigationModel::buildNeighborLists() {
+    // Clear existing neighbors
+    for (auto& [id, node] : nodes) {
+        node.neighbors.clear();
+    }
+
+    // Build neighbor lists
+    for (const auto& link : links) {
+        nodes[link.from].neighbors.push_back(link.to);
+        nodes[link.to].neighbors.push_back(link.from);
+    }
+}
+
+double IrrigationModel::calculateResistance(double Re, double Wbar, const Link& link, int iter) {
+    const double rho = 997.0; // kg/m^3
+    const double mu = 8.90e-04; // Pa·s
+    double R = 0.0;
+
+    if (Re < 2000 || iter == 1) {
+        // Laminar flow
+        R = mu * link.length * 128.0 / (M_PI * pow(link.diameter, 4));
+    }
+    else if (Re >= 2000 && Re < 1e5) {
+        // Transitional flow
+        R = 0.6328 * pow(Wbar, 0.75) * pow(mu, 0.25) * link.length * pow(rho, 0.75) /
+            (M_PI * pow(link.diameter, 3.25));
+    }
+    else {
+        // Turbulent flow
+        R = 0.6328 * pow(Wbar, 0.75) * pow(mu, 0.25) * link.length * pow(rho, 0.75) /
+            (M_PI * pow(link.diameter, 3.25));
+    }
+
+    return R;
+}
+
+double IrrigationModel::calculateEmitterFlow(const std::string& nozzleType, double pressure) {
+    // Convert pressure from Pa to psi
+    double pressure_psi = pressure / 6894.76;
+
+    if (nozzleType == "PC") {
+        // Linear relationship for PC nozzle (GPH to m³/s)
+        return std::max(0.0, std::min(1.052e-6, (0.9 * pressure_psi * 1.052e-6)));
+    }
+    else if (nozzleType == "NPC") {
+        // Non-linear relationship for NPC nozzle
+        const double x = 0.477;
+        const double k = 3.317;
+        return k * pow(pressure_psi, x) * 1.052e-6;
+    }
+    else {
+        throw std::invalid_argument("Unknown nozzle type: " + nozzleType);
+    }
 }
 
 

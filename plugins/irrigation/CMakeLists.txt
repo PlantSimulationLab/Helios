@@ -3,6 +3,7 @@ project(helios)
 
 include_directories(include)
 include_directories(../../core/include)
+include_directories(/usr/include/eigen3)
 
 add_library( irrigation STATIC "src/IrrigationModel.cpp" )
 
