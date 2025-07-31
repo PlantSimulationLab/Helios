@@ -1240,6 +1240,29 @@ public:
      */
     std::vector<float> buildDistanceGraph(const std::vector<helios::vec3>& points, const helios::vec3& base_point);
 
+    //! Perform spectral clustering for improved branch point detection
+    /**
+     * \param[in] points Full point cloud
+     * \param[in] point_indices Indices of points to cluster
+     * \param[in] eps Clustering radius parameter
+     * \param[out] cluster_labels Cluster assignment for each point
+     */
+    void performSpectralClustering(const std::vector<helios::vec3>& points, 
+                                  const std::vector<size_t>& point_indices,
+                                  float eps,
+                                  std::vector<int>& cluster_labels);
+
+    //! Refine cylinder radius using local point cloud fitting
+    /**
+     * \param[in] start Cylinder start point
+     * \param[in] end Cylinder end point
+     * \param[in] axis Cylinder axis direction
+     * \param[in] points Point cloud for fitting
+     * \return Refined radius or -1.0f if fitting failed
+     */
+    float refineRadiusFromPointCloud(const helios::vec3& start, const helios::vec3& end, 
+                                   const helios::vec3& axis, const std::vector<helios::vec3>& points);
+
     //! Reconstruct a Quantitative Structure Model (QSM) from LiDAR point cloud data
     /**
      * \param[in] context Pointer to the Helios context where tube objects will be created

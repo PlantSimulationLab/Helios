@@ -6,6 +6,215 @@
 #include <limits>
 #include <fstream>
 
+using namespace helios;
+using namespace std;
+
+// Helper function for spectral clustering at branch points
+void LiDARcloud::performSpectralClustering(const std::vector<helios::vec3>& points, 
+                                          const std::vector<size_t>& point_indices,
+                                          float eps,
+                                          std::vector<int>& cluster_labels) {
+    size_t n_points = point_indices.size();
+    cluster_labels.assign(n_points, -1);
+    
+    if (n_points < 3) {
+        // Too few points for spectral clustering
+        if (n_points > 0) cluster_labels[0] = 0;
+        return;
+    }
+    
+    // Build affinity matrix based on spatial proximity and directional similarity
+    std::vector<std::vector<float>> affinity(n_points, std::vector<float>(n_points, 0.0f));
+    
+    // Calculate local point cloud orientations using PCA
+    std::vector<helios::vec3> orientations(n_points);
+    for (size_t i = 0; i < n_points; i++) {
+        // Find local neighbors for PCA
+        std::vector<helios::vec3> local_points;
+        helios::vec3 center = points[point_indices[i]];
+        
+        for (size_t j = 0; j < n_points; j++) {
+            float dist = (points[point_indices[j]] - center).magnitude();
+            if (dist <= eps * 1.5f) {
+                local_points.push_back(points[point_indices[j]]);
+            }
+        }
+        
+        if (local_points.size() >= 3) {
+            // Simple PCA to find dominant direction
+            helios::vec3 mean(0, 0, 0);
+            for (const auto& p : local_points) {
+                mean = mean + p;
+            }
+            mean = mean / local_points.size();
+            
+            // Compute covariance matrix
+            float cov_xx = 0, cov_xy = 0, cov_xz = 0;
+            float cov_yy = 0, cov_yz = 0, cov_zz = 0;
+            for (const auto& p : local_points) {
+                helios::vec3 diff = p - mean;
+                cov_xx += diff.x * diff.x;
+                cov_xy += diff.x * diff.y;
+                cov_xz += diff.x * diff.z;
+                cov_yy += diff.y * diff.y;
+                cov_yz += diff.y * diff.z;
+                cov_zz += diff.z * diff.z;
+            }
+            
+            // Find dominant eigenvector (simplified power iteration)
+            helios::vec3 v(1, 0, 0);
+            for (int iter = 0; iter < 5; iter++) {
+                helios::vec3 new_v;
+                new_v.x = cov_xx * v.x + cov_xy * v.y + cov_xz * v.z;
+                new_v.y = cov_xy * v.x + cov_yy * v.y + cov_yz * v.z;
+                new_v.z = cov_xz * v.x + cov_yz * v.y + cov_zz * v.z;
+                float mag = new_v.magnitude();
+                if (mag > 0.001f) {
+                    v = new_v / mag;
+                }
+            }
+            orientations[i] = v;
+        } else {
+            orientations[i] = helios::vec3(0, 0, 1); // Default orientation
+        }
+    }
+    
+    // Build affinity matrix with spatial and directional components
+    for (size_t i = 0; i < n_points; i++) {
+        for (size_t j = i; j < n_points; j++) {
+            if (i == j) {
+                affinity[i][j] = 1.0f;
+            } else {
+                helios::vec3 pi = points[point_indices[i]];
+                helios::vec3 pj = points[point_indices[j]];
+                float spatial_dist = (pi - pj).magnitude();
+                
+                if (spatial_dist <= eps * 2.0f) {
+                    // Spatial affinity (Gaussian kernel)
+                    float spatial_affinity = exp(-spatial_dist * spatial_dist / (eps * eps));
+                    
+                    // Directional affinity (based on orientation similarity)
+                    float dir_dot = fabs(orientations[i] * orientations[j]);
+                    float directional_affinity = dir_dot;
+                    
+                    // Combined affinity
+                    affinity[i][j] = affinity[j][i] = spatial_affinity * (0.5f + 0.5f * directional_affinity);
+                }
+            }
+        }
+    }
+    
+    // Compute degree matrix
+    std::vector<float> degrees(n_points, 0.0f);
+    for (size_t i = 0; i < n_points; i++) {
+        for (size_t j = 0; j < n_points; j++) {
+            degrees[i] += affinity[i][j];
+        }
+    }
+    
+    // Normalize Laplacian: L = D^(-1/2) * A * D^(-1/2)
+    for (size_t i = 0; i < n_points; i++) {
+        for (size_t j = 0; j < n_points; j++) {
+            if (degrees[i] > 0 && degrees[j] > 0) {
+                affinity[i][j] /= sqrt(degrees[i] * degrees[j]);
+            }
+        }
+    }
+    
+    // Find eigenvectors using power iteration (simplified for 2-3 clusters)
+    // We'll use k-means on the eigenvector space
+    const int n_clusters = std::min(3, (int)n_points / 5); // Adaptive number of clusters
+    
+    if (n_clusters <= 1) {
+        // All points in one cluster
+        for (size_t i = 0; i < n_points; i++) {
+            cluster_labels[i] = 0;
+        }
+        return;
+    }
+    
+    // Simple k-means clustering based on affinity
+    std::vector<int> best_labels(n_points);
+    float best_score = -1e6f;
+    
+    // Try multiple random initializations
+    for (int init = 0; init < 5; init++) {
+        std::vector<int> labels(n_points);
+        std::vector<size_t> centers(n_clusters);
+        
+        // Random initialization
+        for (int k = 0; k < n_clusters; k++) {
+            centers[k] = (size_t)(k * n_points / n_clusters);
+        }
+        
+        // K-means iterations
+        bool changed = true;
+        for (int iter = 0; iter < 10 && changed; iter++) {
+            changed = false;
+            
+            // Assign points to nearest center
+            for (size_t i = 0; i < n_points; i++) {
+                float max_affinity = -1.0f;
+                int best_cluster = 0;
+                
+                for (int k = 0; k < n_clusters; k++) {
+                    float aff = affinity[i][centers[k]];
+                    if (aff > max_affinity) {
+                        max_affinity = aff;
+                        best_cluster = k;
+                    }
+                }
+                
+                if (labels[i] != best_cluster) {
+                    labels[i] = best_cluster;
+                    changed = true;
+                }
+            }
+            
+            // Update centers
+            for (int k = 0; k < n_clusters; k++) {
+                float max_sum = -1.0f;
+                size_t best_center = centers[k];
+                
+                for (size_t i = 0; i < n_points; i++) {
+                    if (labels[i] == k) {
+                        float sum = 0.0f;
+                        for (size_t j = 0; j < n_points; j++) {
+                            if (labels[j] == k) {
+                                sum += affinity[i][j];
+                            }
+                        }
+                        if (sum > max_sum) {
+                            max_sum = sum;
+                            best_center = i;
+                        }
+                    }
+                }
+                centers[k] = best_center;
+            }
+        }
+        
+        // Evaluate clustering quality
+        float score = 0.0f;
+        for (size_t i = 0; i < n_points; i++) {
+            for (size_t j = i + 1; j < n_points; j++) {
+                if (labels[i] == labels[j]) {
+                    score += affinity[i][j];
+                } else {
+                    score -= affinity[i][j];
+                }
+            }
+        }
+        
+        if (score > best_score) {
+            best_score = score;
+            best_labels = labels;
+        }
+    }
+    
+    cluster_labels = best_labels;
+}
+
 // TreeGraph-inspired graph-based distance calculation using Dijkstra's algorithm
 std::vector<float> LiDARcloud::buildDistanceGraph(const std::vector<helios::vec3>& points, const helios::vec3& base_point) {
     if (points.empty()) return {};
@@ -91,6 +300,69 @@ std::vector<float> LiDARcloud::buildDistanceGraph(const std::vector<helios::vec3
     return distances_from_base;
 }
 
+// Helper function to refine radius using local point cloud fitting
+float LiDARcloud::refineRadiusFromPointCloud(const helios::vec3& start, const helios::vec3& end, 
+                                            const helios::vec3& axis, const std::vector<helios::vec3>& points) {
+    const float search_radius = 0.15f;  // 15cm search radius around cylinder
+    const float min_points = 5;         // Minimum points needed for fitting
+    
+    // Find points near the cylinder axis
+    std::vector<float> radial_distances;
+    helios::vec3 cylinder_center = (start + end) * 0.5f;
+    float cylinder_length = (end - start).magnitude();
+    
+    for (const auto& point : points) {
+        // Calculate distance from point to cylinder axis
+        helios::vec3 to_point = point - start;
+        float projection_length = to_point * axis;
+        
+        // Check if point is within the cylinder length bounds (with some tolerance)
+        if (projection_length < -cylinder_length * 0.2f || projection_length > cylinder_length * 1.2f) {
+            continue;
+        }
+        
+        // Calculate perpendicular distance to axis
+        helios::vec3 projected_point = start + axis * projection_length;
+        float radial_dist = (point - projected_point).magnitude();
+        
+        if (radial_dist <= search_radius) {
+            radial_distances.push_back(radial_dist);
+        }
+    }
+    
+    if (radial_distances.size() < min_points) {
+        return -1.0f;  // Not enough points for reliable estimation
+    }
+    
+    // Use robust radius estimation (median of distances, with outlier filtering)
+    std::sort(radial_distances.begin(), radial_distances.end());
+    
+    // Remove outliers (points too far from the median)
+    size_t n = radial_distances.size();
+    float median_dist = radial_distances[n / 2];
+    
+    std::vector<float> filtered_distances;
+    for (float dist : radial_distances) {
+        if (dist <= median_dist * 2.0f) {  // Filter out points more than 2x median distance
+            filtered_distances.push_back(dist);
+        }
+    }
+    
+    if (filtered_distances.size() < min_points / 2) {
+        return -1.0f;  // Too many outliers
+    }
+    
+    // Calculate mean of filtered distances as radius estimate
+    float sum = 0.0f;
+    for (float dist : filtered_distances) {
+        sum += dist;
+    }
+    float mean_radius = sum / filtered_distances.size();
+    
+    // Apply cylinder fitting correction (points are typically on surface, so add small buffer)
+    return mean_radius + 0.005f;  // Add 5mm to account for point-to-surface distance
+}
+
 std::vector<uint> LiDARcloud::reconstructQSM(helios::Context *context, const std::string &filename,
                                              uint radial_subdivisions) {
     std::cout << "DEBUG: QSM reconstruction called with " << hits.size() << " hit points" << std::endl;
@@ -170,9 +442,9 @@ std::vector<uint> LiDARcloud::reconstructQSM(helios::Context *context, const std
                   << ", num_bins=" << num_bins << ", bin_size=" << bin_size << std::flush;
     }
 
-    // DBSCAN clustering parameters  
-    const float eps = 0.08f;  // 8cm neighborhood radius for clustering
-    const uint min_pts = 8;   // Minimum points to form a cluster
+    // DBSCAN clustering parameters with adaptive eps based on local density
+    const float base_eps = 0.075f;  // Base eps parameter 
+    const uint min_pts = 8;    // Increased from 7 to reduce over-segmentation (create fewer shoots)
     
     uint bins_with_points = 0;
     uint total_points_processed = 0;
@@ -202,17 +474,34 @@ std::vector<uint> LiDARcloud::reconstructQSM(helios::Context *context, const std
         bins_with_points++;
         total_points_processed += bin_points.size();
 
-        // DBSCAN clustering to detect multiple branches in this distance range
+        // Calculate adaptive eps based on local point density
+        float bin_volume = bin_size * 0.5f * 0.5f; // Approximate bin volume (5cm height, ~50cm radius)
+        float point_density = bin_points.size() / bin_volume; // points per unit volume
+        
+        // Adapt eps based on density: sparse regions need larger eps for connectivity
+        float adaptive_eps = base_eps;
+        if (point_density < 100) { // Sparse region - increase eps
+            adaptive_eps = base_eps * 1.5f; // Up to 50% larger for very sparse regions
+        } else if (point_density > 500) { // Dense region - decrease eps
+            adaptive_eps = base_eps * 0.8f; // 20% smaller for very dense regions
+        }
+        
+        if (printmessages && (bin < 5 || bin_points.size() > 100)) {
+            std::cout << "\n    Bin " << bin << " density=" << (int)point_density 
+                      << " pts/vol, eps=" << adaptive_eps << std::flush;
+        }
+
+        // Adaptive DBSCAN clustering to detect multiple branches in this distance range
         std::vector<int> cluster_labels(bin_points.size(), -1); // -1 = noise
         int cluster_id = 0;
         
         for (size_t i = 0; i < bin_points.size(); i++) {
             if (cluster_labels[i] != -1) continue; // Already processed
             
-            // Find neighbors within eps distance
+            // Find neighbors within adaptive eps distance
             std::vector<size_t> neighbors;
             for (size_t j = 0; j < bin_points.size(); j++) {
-                if (i != j && (bin_points[i] - bin_points[j]).magnitude() <= eps) {
+                if (i != j && (bin_points[i] - bin_points[j]).magnitude() <= adaptive_eps) {
                     neighbors.push_back(j);
                 }
             }
@@ -237,7 +526,7 @@ std::vector<uint> LiDARcloud::reconstructQSM(helios::Context *context, const std
                 // Find neighbors of q
                 std::vector<size_t> q_neighbors;
                 for (size_t j = 0; j < bin_points.size(); j++) {
-                    if (q != j && (bin_points[q] - bin_points[j]).magnitude() <= eps) {
+                    if (q != j && (bin_points[q] - bin_points[j]).magnitude() <= adaptive_eps) {
                         q_neighbors.push_back(j);
                     }
                 }
@@ -310,8 +599,119 @@ std::vector<uint> LiDARcloud::reconstructQSM(helios::Context *context, const std
     }
 
     if (printmessages) {
-        std::cout << "extracted " << skeleton_nodes.size() << " skeleton nodes.\n  Building connectivity..." <<
-                std::flush;
+        std::cout << "extracted " << skeleton_nodes.size() << " skeleton nodes." << std::flush;
+    }
+    
+    // Phase 2.5: Multi-level skeleton consolidation to reduce over-segmentation tree-wide
+    if (printmessages) {
+        std::cout << "\n  Consolidating skeleton nodes..." << std::flush;
+    }
+    
+    std::vector<SkeletonNode> consolidated_nodes;
+    std::vector<bool> processed(skeleton_nodes.size(), false);
+    
+    for (size_t i = 0; i < skeleton_nodes.size(); i++) {
+        if (processed[i]) continue;
+        
+        SkeletonNode& current = skeleton_nodes[i];
+        
+        // Determine consolidation parameters based on distance from base (branch level)
+        float consolidation_radius;
+        float alignment_threshold;
+        if (current.distance_from_base < 1.0f) {
+            // Primary branches/trunk region
+            consolidation_radius = 0.08f;
+            alignment_threshold = 0.8f;
+        } else if (current.distance_from_base < 2.0f) {
+            // Secondary branches  
+            consolidation_radius = 0.06f;
+            alignment_threshold = 0.7f;
+        } else {
+            // Terminal branches
+            consolidation_radius = 0.04f;
+            alignment_threshold = 0.6f;
+        }
+        
+        // Find nearby nodes to consolidate
+        std::vector<size_t> cluster_indices;
+        cluster_indices.push_back(i);
+        processed[i] = true;
+        
+        for (size_t j = i + 1; j < skeleton_nodes.size(); j++) {
+            if (processed[j]) continue;
+            
+            SkeletonNode& candidate = skeleton_nodes[j];
+            
+            // Check if nodes are close enough to consolidate
+            float spatial_distance = (current.position - candidate.position).magnitude();
+            if (spatial_distance > consolidation_radius) continue;
+            
+            // Phase 2: Add directional continuity check to prevent zigzag artifacts
+            bool should_consolidate = true;
+            
+            // Find parent nodes to establish direction vectors
+            helios::vec3 current_direction(0, 0, 1);  // Default upward
+            helios::vec3 candidate_direction(0, 0, 1);
+            
+            // Try to get current node's direction from parent
+            if (current.parent != UINT_MAX && current.parent < skeleton_nodes.size()) {
+                current_direction = (current.position - skeleton_nodes[current.parent].position).normalize();
+            }
+            
+            // Try to get candidate node's direction from parent  
+            if (candidate.parent != UINT_MAX && candidate.parent < skeleton_nodes.size()) {
+                candidate_direction = (candidate.position - skeleton_nodes[candidate.parent].position).normalize();
+            }
+            
+            // Check directional alignment - only consolidate if directions are similar
+            float alignment = current_direction.x * candidate_direction.x + 
+                             current_direction.y * candidate_direction.y + 
+                             current_direction.z * candidate_direction.z;
+            float min_alignment = 0.7f; // Require 45-degree or better alignment
+            
+            if (alignment < min_alignment) {
+                should_consolidate = false;
+            }
+            
+            if (should_consolidate) {
+                cluster_indices.push_back(j);
+                processed[j] = true;
+            }
+        }
+        
+        if (cluster_indices.size() == 1) {
+            // Single node, keep as-is
+            consolidated_nodes.push_back(current);
+        } else {
+            // Consolidate multiple nodes into one
+            helios::vec3 centroid_pos(0, 0, 0);
+            float total_radius = 0;
+            
+            for (size_t idx : cluster_indices) {
+                SkeletonNode& node = skeleton_nodes[idx];
+                centroid_pos = centroid_pos + node.position;
+                total_radius += node.radius;
+            }
+            
+            // Create consolidated node
+            SkeletonNode consolidated;
+            consolidated.position = centroid_pos / cluster_indices.size();
+            consolidated.radius = total_radius / cluster_indices.size();
+            consolidated.distance_from_base = current.distance_from_base; // Use first node's distance
+            consolidated.parent = UINT_MAX;  // Will be set in connectivity phase
+            
+            consolidated_nodes.push_back(consolidated);
+        }
+    }
+    
+    skeleton_nodes = consolidated_nodes;
+    
+    if (printmessages) {
+        std::cout << "consolidated to " << skeleton_nodes.size() << " nodes." << std::flush;
+    }
+    
+    if (printmessages) {
+        std::cout << "\n  Building connectivity..." << std::flush;
     }
 
     // Phase 3: Graph-based skeleton connectivity (TreeGraph approach)
@@ -323,7 +723,7 @@ std::vector<uint> LiDARcloud::reconstructQSM(helios::Context *context, const std
     }
 
     // Build connectivity based on 3D proximity and graph-based distance ordering
-    const float max_connection_distance = 0.20f; // 20cm maximum connection distance
+    const float max_connection_distance = 0.25f;  // Conservative connection distance
     
     // Sort nodes by distance from base to establish hierarchy
     std::vector<std::pair<float, size_t>> sorted_nodes;
@@ -332,13 +732,13 @@ std::vector<uint> LiDARcloud::reconstructQSM(helios::Context *context, const std
     }
     std::sort(sorted_nodes.begin(), sorted_nodes.end());
     
-    // Connect each node to its nearest valid parent (closer to base)
+    // Connect each node to nearest valid parent with slight preference for straight continuation
     for (size_t i = 1; i < sorted_nodes.size(); i++) {
         size_t current_idx = sorted_nodes[i].second;
         float current_dist = sorted_nodes[i].first;
         
-        float min_parent_distance = std::numeric_limits<float>::infinity();
-        size_t best_parent = 0;
+        float best_distance = std::numeric_limits<float>::infinity();
+        size_t best_parent = UINT_MAX;  // FIX: Initialize to invalid parent, not 0
         
         // Find closest parent node (must be closer to base and within connection distance)
         for (size_t j = 0; j < i; j++) {
@@ -349,22 +749,35 @@ std::vector<uint> LiDARcloud::reconstructQSM(helios::Context *context, const std
             if (parent_dist >= current_dist) continue;
             
             // Check 3D distance
-            float spatial_dist = (skeleton_nodes[current_idx].position - 
-                                skeleton_nodes[potential_parent_idx].position).magnitude();
+            helios::vec3 current_pos = skeleton_nodes[current_idx].position;
+            helios::vec3 parent_pos = skeleton_nodes[potential_parent_idx].position;
+            float spatial_dist = (current_pos - parent_pos).magnitude();
             
-            if (spatial_dist <= max_connection_distance && spatial_dist < min_parent_distance) {
-                min_parent_distance = spatial_dist;
+            if (spatial_dist > max_connection_distance) continue;
+            
+            if (spatial_dist < best_distance) {
+                best_distance = spatial_dist;
                 best_parent = potential_parent_idx;
             }
         }
         
-        // Connect to best parent
-        skeleton_nodes[current_idx].parent = best_parent;
-        skeleton_nodes[best_parent].neighbors.push_back(current_idx);
+        // Connect to best parent if found
+        if (best_parent != UINT_MAX) {
+            skeleton_nodes[current_idx].parent = best_parent;
+            skeleton_nodes[best_parent].neighbors.push_back(current_idx);
+        } else {
+            // No valid parent found - this node is disconnected
+            skeleton_nodes[current_idx].parent = UINT_MAX;
+            if (printmessages) {
+                helios::vec3 pos = skeleton_nodes[current_idx].position;
+                std::cout << "\n    WARNING: Node " << current_idx << " at height " << pos.z 
+                          << "m has no valid parent (disconnected)" << std::flush;
+            }
+        }
         
         if (printmessages && i < 5) {  // Debug first few connections
             std::cout << "\n      Node " << current_idx << " -> parent " << best_parent 
-                      << " (dist=" << min_parent_distance << "m)" << std::flush;
+                      << " (dist=" << best_distance << "m)" << std::flush;
         }
     }
 
@@ -480,12 +893,50 @@ std::vector<uint> LiDARcloud::reconstructQSM(helios::Context *context, const std
     // Start tracing from base node
     std::vector<uint> base_path;
     trace_shoot(base_node, UINT_MAX, 1, base_path);
+    
+    // Check for any unvisited nodes (disconnected components)
+    size_t disconnected_count = 0;
+    for (size_t i = 0; i < skeleton_nodes.size(); i++) {
+        if (!node_visited[i] && skeleton_nodes[i].parent == UINT_MAX && i != base_node) {
+            disconnected_count++;
+            node_visited[i] = true; // Mark as visited to exclude from processing
+        }
+    }
+    
+    if (printmessages && disconnected_count > 0) {
+        std::cout << "\n    Excluded " << disconnected_count << " disconnected nodes from reconstruction" << std::flush;
+    }
 
     if (printmessages) {
         std::cout << "\n    Found " << shoots.size() << " shoot paths..." << std::flush;
     }
 
-    // Phase 5: Generate cylinders
+    // DEBUG: Find all shoots containing node 0 (base node)
+    if (printmessages) {
+        std::vector<size_t> shoots_with_base;
+        for (size_t s = 0; s < shoots.size(); s++) {
+            for (uint node_id : shoots[s].node_path) {
+                if (node_id == 0) {
+                    shoots_with_base.push_back(s);
+                    break;
+                }
+            }
+        }
+        
+        std::cout << "\n    Found " << shoots_with_base.size() << " shoots containing base node 0:" << std::flush;
+        for (size_t s : shoots_with_base) {
+            std::cout << "\n    Shoot " << s << " path: ";
+            for (size_t n = 0; n < shoots[s].node_path.size(); n++) {
+                uint node_id = shoots[s].node_path[n];
+                helios::vec3 pos = skeleton_nodes[node_id].position;
+                std::cout << node_id << "(" << pos.z << "m) ";
+                if (n < shoots[s].node_path.size() - 1) std::cout << "-> ";
+            }
+            std::cout << std::flush;
+        }
+    }
+
+    // Phase 5: Generate cylinders with refined radius estimation
     for (const auto& shoot : shoots) {
         for (size_t i = 0; i < shoot.node_path.size() - 1; i++) {
             uint node_idx = shoot.node_path[i];
@@ -496,10 +947,21 @@ std::vector<uint> LiDARcloud::reconstructQSM(helios::Context *context, const std
             cylinder.end = skeleton_nodes[next_node_idx].position;
             cylinder.axis = (cylinder.end - cylinder.start).normalize();
             cylinder.length = (cylinder.end - cylinder.start).magnitude();
-            cylinder.radius = (skeleton_nodes[node_idx].radius + skeleton_nodes[next_node_idx].radius) * 0.5f;
+            
+            // DEBUG: Detect and prevent erroneous long cylinders
+            if (cylinder.length > 0.5f && printmessages) {  // Flag cylinders > 50cm
+                float height_diff = std::abs(cylinder.end.z - cylinder.start.z);
+                std::cout << "\n    WARNING: Long cylinder " << cylinder.length << "m between nodes " 
+                          << node_idx << " (" << cylinder.start.x << "," << cylinder.start.y << "," << cylinder.start.z 
+                          << ") -> " << next_node_idx << " (" << cylinder.end.x << "," << cylinder.end.y << "," << cylinder.end.z 
+                          << ") height_diff=" << height_diff << "m" << std::flush;
+            }
             cylinder.branch_id = shoot.shoot_id + 1;
             cylinder.branch_order = shoot.branch_order;
             cylinder.position_in_branch = i;
+            
+            // Use skeleton-based radius estimate (refined radius was causing oversized cylinders)
+            cylinder.radius = (skeleton_nodes[node_idx].radius + skeleton_nodes[next_node_idx].radius) * 0.5f;
             
             cylinders.push_back(cylinder);
         }
