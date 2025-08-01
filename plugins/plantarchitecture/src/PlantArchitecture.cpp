@@ -3385,6 +3385,210 @@ float PlantArchitecture::getShootTaper(uint plantID, uint shootID) const {
     return taper;
 }
 
+std::vector<std::vector<uint>> PlantArchitecture::getShootIDsByRank(uint plantID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getShootIDsByRank): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    const auto& shoot_tree = plant_instances.at(plantID).shoot_tree;
+    std::vector<std::vector<uint>> shoots_by_rank;
+
+    // Find the maximum rank to size the vector appropriately
+    uint max_rank = 0;
+    for (uint i = 0; i < shoot_tree.size(); ++i) {
+        if (shoot_tree[i]->rank > max_rank) {
+            max_rank = shoot_tree[i]->rank;
+        }
+    }
+
+    // Resize vector to accommodate all ranks
+    shoots_by_rank.resize(max_rank + 1);
+
+    // Group shoots by rank
+    for (uint i = 0; i < shoot_tree.size(); ++i) {
+        shoots_by_rank[shoot_tree[i]->rank].push_back(i);
+    }
+
+    return shoots_by_rank;
+}
+
+std::map<uint, std::vector<uint>> PlantArchitecture::getShootHierarchyMap(uint plantID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getShootHierarchyMap): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    const auto& shoot_tree = plant_instances.at(plantID).shoot_tree;
+    std::map<uint, std::vector<uint>> hierarchy_map;
+
+    // Build parent-to-children mapping
+    for (uint i = 0; i < shoot_tree.size(); ++i) {
+        const auto& shoot = shoot_tree[i];
+        
+        // Collect all children from all node positions
+        for (const auto& node_children : shoot->childIDs) {
+            for (uint child_id : node_children.second) {
+                hierarchy_map[i].push_back(child_id);
+            }
+        }
+    }
+
+    return hierarchy_map;
+}
+
+std::vector<uint> PlantArchitecture::getAllDescendantShootIDs(uint plantID, uint shootID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getAllDescendantShootIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    if (plant_instances.at(plantID).shoot_tree.size() <= shootID) {
+        helios_runtime_error("ERROR (PlantArchitecture::getAllDescendantShootIDs): Shoot ID is out of range.");
+    }
+
+    std::vector<uint> descendants;
+    std::vector<uint> to_process = {shootID};
+
+    while (!to_process.empty()) {
+        uint current_shoot = to_process.back();
+        to_process.pop_back();
+
+        const auto& shoot = plant_instances.at(plantID).shoot_tree[current_shoot];
+        
+        // Add all children to descendants and processing queue
+        for (const auto& node_children : shoot->childIDs) {
+            for (uint child_id : node_children.second) {
+                descendants.push_back(child_id);
+                to_process.push_back(child_id);
+            }
+        }
+    }
+
+    return descendants;
+}
+
+std::vector<uint> PlantArchitecture::getChildShootIDs(uint plantID, uint shootID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getChildShootIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    if (plant_instances.at(plantID).shoot_tree.size() <= shootID) {
+        helios_runtime_error("ERROR (PlantArchitecture::getChildShootIDs): Shoot ID is out of range.");
+    }
+
+    const auto& shoot = plant_instances.at(plantID).shoot_tree[shootID];
+    std::vector<uint> children;
+
+    // Collect all children from all node positions
+    for (const auto& node_children : shoot->childIDs) {
+        for (uint child_id : node_children.second) {
+            children.push_back(child_id);
+        }
+    }
+
+    return children;
+}
+
+int PlantArchitecture::getParentShootID(uint plantID, uint shootID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getParentShootID): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    if (plant_instances.at(plantID).shoot_tree.size() <= shootID) {
+        helios_runtime_error("ERROR (PlantArchitecture::getParentShootID): Shoot ID is out of range.");
+    }
+
+    return plant_instances.at(plantID).shoot_tree[shootID]->parent_shoot_ID;
+}
+
+uint PlantArchitecture::getShootRank(uint plantID, uint shootID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getShootRank): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    if (plant_instances.at(plantID).shoot_tree.size() <= shootID) {
+        helios_runtime_error("ERROR (PlantArchitecture::getShootRank): Shoot ID is out of range.");
+    }
+
+    return plant_instances.at(plantID).shoot_tree[shootID]->rank;
+}
+
+std::vector<uint> PlantArchitecture::getAllShootIDs(uint plantID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getAllShootIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    const auto& shoot_tree = plant_instances.at(plantID).shoot_tree;
+    std::vector<uint> shoot_ids;
+    shoot_ids.reserve(shoot_tree.size());
+
+    for (uint i = 0; i < shoot_tree.size(); ++i) {
+        shoot_ids.push_back(i);
+    }
+
+    return shoot_ids;
+}
+
+std::vector<uint> PlantArchitecture::getTerminalShootIDs(uint plantID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getTerminalShootIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    const auto& shoot_tree = plant_instances.at(plantID).shoot_tree;
+    std::vector<uint> terminal_shoots;
+
+    for (uint i = 0; i < shoot_tree.size(); ++i) {
+        const auto& shoot = shoot_tree[i];
+        
+        // Check if shoot has any children
+        bool has_children = false;
+        for (const auto& node_children : shoot->childIDs) {
+            if (!node_children.second.empty()) {
+                has_children = true;
+                break;
+            }
+        }
+        
+        if (!has_children) {
+            terminal_shoots.push_back(i);
+        }
+    }
+
+    return terminal_shoots;
+}
+
+uint PlantArchitecture::getShootDepth(uint plantID, uint shootID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getShootDepth): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    if (plant_instances.at(plantID).shoot_tree.size() <= shootID) {
+        helios_runtime_error("ERROR (PlantArchitecture::getShootDepth): Shoot ID is out of range.");
+    }
+
+    // The depth is the same as rank in this system
+    return plant_instances.at(plantID).shoot_tree[shootID]->rank;
+}
+
+std::vector<uint> PlantArchitecture::getPathToRoot(uint plantID, uint shootID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPathToRoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+    if (plant_instances.at(plantID).shoot_tree.size() <= shootID) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPathToRoot): Shoot ID is out of range.");
+    }
+
+    std::vector<uint> path;
+    uint current_shoot = shootID;
+
+    // Traverse up the hierarchy to the root
+    while (current_shoot != static_cast<uint>(-1)) {
+        path.push_back(current_shoot);
+        int parent_id = plant_instances.at(plantID).shoot_tree[current_shoot]->parent_shoot_ID;
+        
+        if (parent_id == -1) {
+            break;  // Reached root
+        }
+        
+        current_shoot = static_cast<uint>(parent_id);
+    }
+
+    return path;
+}
+
 std::vector<uint> PlantArchitecture::getAllPlantIDs() const {
     std::vector<uint> objIDs;
     objIDs.reserve(plant_instances.size());
