@@ -191,6 +191,7 @@ struct bandGroup{
  std::vector<std::string> bands;
  bool grayscale;
  bool norm;
+ bool hdr;
 };
 
 //! Canopy struct
@@ -213,6 +214,7 @@ struct canopy {
 //! Object struct
 struct object{
  int index;
+ int objID;
  std::string name;
  std::string file;
  std::string data_group;
@@ -398,6 +400,15 @@ private:
     std::map<std::string, bool> bounding_boxes = {{"plantID", false}, {"leafID", false}, {"peduncleID", false},
                                                   {"closedflowerID", false}, {"openflowerID", false}, {"fruitID", false},
                                                   {"rank", false}, {"age", false}, {"carbohydrate_concentration", false}};
+
+    //! Default bounding box objects
+    std::set<std::string> bounding_boxes_default = {"plantID", "leafID", "peduncleID", "closedflowerID", "openflowerID", "fruitID",  "rank"};
+
+    //! Bounding box objects associated with a primitive type
+    std::set<std::string> bounding_boxes_primitive;
+
+    //! Bounding box objects associated with an object type
+    std::set<std::string> bounding_boxes_object;
 
     //! Bounding boxes map
     std::map<std::string, int> bounding_boxes_map;
@@ -1246,6 +1257,36 @@ private:
 
     //! Number of tiles
     helios::int2 num_tiles{5, 5};
+
+    //! Calculation type
+    std::string calculation_type = "primitive";
+
+    //! Calculation types
+    std::vector<std::string> calculation_types{"primitive", "object", "data group"};
+
+    //! Calculation selection
+    std::map<std::string, bool> calculation_selection_datagroup{{"All", false}};
+
+    //! Calculation selection primitive
+    std::map<std::string, bool> calculation_selection_primitive{{"All", false}};
+
+    //! Calculation labels
+    std::set<std::string> calculation_labels_primitive;
+
+    //! Calculation label
+    std::string calculation_label;
+
+    //! Operation Choices
+    std::set<std::string> operation_choices = {"Mean", "Sum", "Area Weighted Mean", "Area Weighted Sum"};
+
+    //! Current operation
+    std::string curr_operation = "Mean";
+
+    //! Calculation Result
+    float calculation_result = 0.0f;
+
+    //! Refresh list of possible objects for bounding boxes
+    void refreshBoundingBoxObjectList();
 
 public:
     //! Context
