@@ -850,7 +850,7 @@ void Shoot::updateShootNodes(bool update_context_geometry) {
     }
 
     // update petiole/leaf positions
-    for (int p = 0; p < phytomers.size(); p++) {
+    for (int p = 0; p < phytomers.size() && p < shoot_internode_vertices.size(); p++) {
         vec3 petiole_base = shoot_internode_vertices.at(p).back();
         if (parent_shoot_ID >= 0) {
             // shift petiole base outward by the parent internode radius
@@ -2052,6 +2052,8 @@ void Phytomer::removeLeaf() {
 }
 
 void Phytomer::deletePhytomer() {
+    // std::cout << "DEBUG: deletePhytomer() called. shoot_index.x=" << shoot_index.x << ", shoot_index.y=" << shoot_index.y << ", phytomers.size()=" << parent_shoot_ptr->phytomers.size() << std::endl;
+    
     // prune the internode tube in the Context
     if (context_ptr->doesObjectExist(parent_shoot_ptr->internode_tube_objID)) {
         uint tube_nodes = context_ptr->getTubeObjectNodeCount(parent_shoot_ptr->internode_tube_objID);
@@ -2068,8 +2070,17 @@ void Phytomer::deletePhytomer() {
         parent_shoot_ptr->terminateApicalBud();
     }
 
-    for (uint node = this->shoot_index.x; node < shoot_index.y; node++) {
-        auto &phytomer = parent_shoot_ptr->phytomers.at(node);
+    // Process phytomers in reverse order to avoid issues with container modification during iteration
+    std::vector<std::shared_ptr<Phytomer>> phytomers_to_process;
+    for (uint node = this->shoot_index.x; node < shoot_index.y && node < parent_shoot_ptr->phytomers.size(); node++) {
+        phytomers_to_process.push_back(parent_shoot_ptr->phytomers.at(node));
+    }
+    
+    for (int i = phytomers_to_process.size() - 1; i >= 0; i--) {
+        auto &phytomer = phytomers_to_process[i];
+        uint node = phytomer->shoot_index.x;
+        
+        // std::cout << "DEBUG: Processing phytomer at node=" << node << std::endl;
 
         // leaves
         phytomer->removeLeaf();
@@ -3078,6 +3089,12 @@ void PlantArchitecture::pruneBranch(uint plantID, uint shootID, uint node_index)
 
     auto &shoot = plant_instances.at(plantID).shoot_tree.at(shootID);
 
+    // Check if we're trying to prune the entire base shoot (shootID 0, node 0)
+    if (shootID == 0 && node_index == 0) {
+        std::cout << "WARNING (PlantArchitecture::pruneBranch): Cannot prune entire base shoot from node 0. This would kill the plant." << std::endl;
+        return;
+    }
+
     shoot->phytomers.at(node_index)->deletePhytomer();
 
     if (plant_instances.at(plantID).shoot_tree.empty()) {
@@ -3852,6 +3869,11 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
         for (int i = 0; i < shoot_count; i++) {
             auto shoot = shoot_tree->at(i);
 
+            // Skip shoots with no phytomers (they were pruned)
+            if (shoot->phytomers.empty()) {
+                continue;
+            }
+
             for (auto &phytomer: shoot->phytomers) {
                 phytomer->age += dt_max_days;
 
@@ -4121,7 +4143,9 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
     }
 
     // update Context geometry
-    shoot_tree->front()->updateShootNodes(true);
+    if (!shoot_tree->front()->phytomers.empty()) {
+        shoot_tree->front()->updateShootNodes(true);
+    }
 
     // *** ground collision detection *** //
     if (ground_clipping_height != -99999) {
@@ -4130,6 +4154,10 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
 
     // Assign current volume as old volume for your next timestep
     for (auto &shoot: *shoot_tree) {
+        // Skip shoots with no phytomers (they were pruned)
+        if (shoot->phytomers.empty()) {
+            continue;
+        }
         float shoot_volume = plant_instances.at(plantID).shoot_tree.at(shoot->ID)->calculateShootInternodeVolume();
         // Find current volume for each shoot in the plant
         shoot->old_shoot_volume = shoot_volume; // Set old volume to the current volume for the next timestep
