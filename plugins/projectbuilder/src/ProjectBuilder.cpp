@@ -5,6 +5,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <commdlg.h>
+#include <thread>
 #elif defined(__APPLE__)
 #ifdef ENABLE_HELIOS_VISUALIZER
 #include <nfd.h>
@@ -508,6 +509,7 @@ void ProjectBuilder::updatePrimitiveTypes() {
 
 
 void ProjectBuilder::updateDataGroups() {
+    context->listAllPrimitiveDataLabels();
     data_groups_set.clear();
     data_groups_set.insert("All");
     std::vector<uint> all_objIDs = context->getAllObjectIDs();
@@ -778,7 +780,7 @@ void ProjectBuilder::record() {
                         if (std::find(curr_band_group.bands.begin(), curr_band_group.bands.end(), "red") != curr_band_group.bands.end() &&
                             std::find(curr_band_group.bands.begin(), curr_band_group.bands.end(), "green") != curr_band_group.bands.end() &&
                             std::find(curr_band_group.bands.begin(), curr_band_group.bands.end(), "blue") != curr_band_group.bands.end()) {
-                            radiation->applyImageProcessingPipeline(rig_camera_label, "red", "green", "blue", curr_band_group.hdr);
+                            radiation->applyImageProcessingPipeline(cameralabel, "red", "green", "blue", curr_band_group.hdr);
                         }
                         std::vector<std::string> band_group_vec;
                         if (!curr_band_group.grayscale) {
@@ -2292,6 +2294,8 @@ void ProjectBuilder::visualize() {
                 updateSpectra();
                 updateCameras(); // TODO: figure out why this causes an error
                 record();
+                // std::thread t1(&ProjectBuilder::record, this);
+                // t1.detach();
                 visualizer->clearGeometry();
                 visualizer->buildContextGeometry(context);
                 visualizer->plotUpdate();
@@ -2607,6 +2611,132 @@ void ProjectBuilder::visualize() {
                     num_tiles.x = temp[0];
                     num_tiles.y = temp[1];
                 }
+
+                ImGui::EndTabItem();
+            }
+            // Calculation Tab
+            if (ImGui::BeginTabItem("Calculation")) {
+                current_tab = "Calculation";
+                // prim
+                for(auto &prim_name : primitive_names_set) {
+                    if (calculation_selection_primitive.find(prim_name) == calculation_selection_primitive.end()) {
+                        calculation_selection_primitive[prim_name] = false;
+                    }
+                }
+                std::vector<std::string> primitive_labels = context->listAllPrimitiveDataLabels();
+                for (auto &label : primitive_labels) {
+                    calculation_labels_primitive.insert(label);
+                }
+                // data group
+                for (auto &data_group : data_groups_set) {
+                    if (calculation_selection_datagroup.find(data_group) == calculation_selection_datagroup.end()) {
+                        calculation_selection_datagroup[data_group] = false;
+                    }
+                }
+                // data group popup
+                if (ImGui::BeginPopup("calculation_select_popup_datagroup")) {
+                    for (auto &calculation_pair: calculation_selection_datagroup) {
+                        ImGui::Selectable(calculation_pair.first.c_str(), &calculation_pair.second, ImGuiSelectableFlags_DontClosePopups);
+                    }
+                    ImGui::EndPopup();
+                }
+                if (ImGui::Button("Select Data Groups")) {
+                    ImGui::OpenPopup("calculation_select_popup_datagroup");
+                }
+                ImGui::SameLine();
+                ImGui::Text("Data Groups:");
+                int idx = 0;
+                if (calculation_selection_datagroup["All"]) {
+                    ImGui::SameLine();
+                    ImGui::Text("All");
+                } else {
+                    for (auto &calculation_pair: calculation_selection_datagroup) {
+                        if (calculation_pair.second) {
+                            ImGui::SameLine(), ImGui::Text("%i. %s", idx, calculation_pair.first.c_str());
+                            idx++;
+                        }
+                    }
+                }
+
+                // prim popup
+                if (ImGui::BeginPopup("calculation_select_popup_prim")) {
+                    for (auto &calculation_pair: calculation_selection_primitive) {
+                        ImGui::Selectable(calculation_pair.first.c_str(), &calculation_pair.second, ImGuiSelectableFlags_DontClosePopups);
+                    }
+                    ImGui::EndPopup();
+                }
+                if (ImGui::Button("Select Primitives")) {
+                    ImGui::OpenPopup("calculation_select_popup_prim");
+                }
+                ImGui::SameLine();
+                ImGui::Text("Primitive Types:");
+                idx = 0;
+                if (calculation_selection_primitive["All"]) {
+                    ImGui::SameLine();
+                    ImGui::Text("All");
+                } else {
+                    for (auto &calculation_pair: calculation_selection_primitive) {
+                        if (calculation_pair.second) {
+                            ImGui::SameLine(), ImGui::Text("%i. %s", idx, calculation_pair.first.c_str());
+                            idx++;
+                        }
+                    }
+                }
+
+                ImGui::SetNextItemWidth(150);
+                dropDown("Label", calculation_label, calculation_labels_primitive);
+                ImGui::SetNextItemWidth(150);
+                dropDown("Operation", curr_operation, operation_choices);
+
+                if (ImGui::Button("Calculate Result:")) {
+                    // Get all relevant primitives
+                    std::vector<uint> relevant_UUIDs{};
+                    if (calculation_selection_datagroup["All"]) {
+                        for (auto &prim_pair : primitive_UUIDs) {
+                            if (calculation_selection_primitive[prim_pair.first] || calculation_selection_primitive["All"]) {
+                                relevant_UUIDs.insert(relevant_UUIDs.end(), prim_pair.second.begin(), prim_pair.second.end());
+                            }
+                        }
+                    } else {
+                        for (auto &obj : objects_dict) {
+                            if (calculation_selection_datagroup[obj.second.data_group]) {
+                                for (auto &prim_pair : calculation_selection_primitive) {
+                                    if (prim_pair.second || calculation_selection_primitive["All"]) {
+                                        std::vector<uint> new_UUIDs = context->filterPrimitivesByData(obj.second.UUIDs, "object_label", prim_pair.first);
+                                        relevant_UUIDs.insert(relevant_UUIDs.end(), new_UUIDs.begin(), new_UUIDs.end());
+                                    }
+                                }
+                            }
+                        }
+                        for (auto &canopy : canopy_dict) {
+                            if (calculation_selection_datagroup[canopy.second.data_group]) {
+                                std::vector<uint> canopy_UUIDs;
+                                for (auto &plant_id : canopy.second.IDs) {
+                                    std::vector<uint> plant_UUIDs =context->getObjectPrimitiveUUIDs( plantarchitecture->getAllPlantObjectIDs(plant_id) );
+                                    canopy_UUIDs.insert(canopy_UUIDs.end(), plant_UUIDs.begin(), plant_UUIDs.end());
+                                }
+                                for (auto &prim_pair : calculation_selection_primitive) {
+                                    if (prim_pair.second || calculation_selection_primitive["All"]) {
+                                        std::vector<uint> new_UUIDs = context->filterPrimitivesByData(canopy_UUIDs, "object_label", prim_pair.first);
+                                        relevant_UUIDs.insert(relevant_UUIDs.end(), new_UUIDs.begin(), new_UUIDs.end());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // Perform calculation
+                    if (curr_operation == "Mean") {
+                        context->calculatePrimitiveDataMean(relevant_UUIDs, calculation_label, calculation_result);
+                    } else if (curr_operation == "Sum") {
+                        context->calculatePrimitiveDataSum(relevant_UUIDs, calculation_label, calculation_result);
+                    } else if (curr_operation == "Area Weighted Mean") {
+                        context->calculatePrimitiveDataAreaWeightedMean(relevant_UUIDs, calculation_label, calculation_result);
+                    } else if (curr_operation == "Area Weighted Sum") {
+                        context->calculatePrimitiveDataAreaWeightedSum(relevant_UUIDs, calculation_label, calculation_result);
+                    }
+                }
+                ImGui::SameLine();
+                ImGui::Text(std::to_string(calculation_result).c_str());
 
                 ImGui::EndTabItem();
             }
@@ -5697,13 +5827,12 @@ void ProjectBuilder::outputConsole() {
     std::streambuf *prev_buf = std::cout.rdbuf();
     std::string buffer = captured_cout.str();
     std::size_t buffer_size = buffer.size();
-    if (ImGui::BeginChild("##console", ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 5), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar)) {
-        ImGui::TextUnformatted(buffer.c_str());
-        if (buffer_size != last_console_size) {
-            ImGui::SetScrollHereY(1.0f);
-        }
-        ImGui::EndChild();
+    ImGui::BeginChild("##console", ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 5), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar);
+    ImGui::TextUnformatted(buffer.c_str());
+    if (buffer_size != last_console_size) {
+        ImGui::SetScrollHereY(1.0f);
     }
+    ImGui::EndChild();
     last_console_size = buffer_size;
     std::cout.rdbuf(prev_buf);
 }
@@ -6192,7 +6321,7 @@ void ProjectBuilder::refreshBoundingBoxObjectList() {
     for (auto &primitive_UUID : context->getAllUUIDs()) {
         for (std::string data : context->listPrimitiveData(primitive_UUID)) {
             if ( context->getPrimitiveDataType( primitive_UUID, data.c_str() ) == HELIOS_TYPE_INT ||
-                 context->getPrimitiveDataType( primitive_UUID, data.c_str() ) == HELIOS_TYPE_UINT ) {
+                context->getPrimitiveDataType( primitive_UUID, data.c_str() ) == HELIOS_TYPE_UINT ) {
                 if ( bounding_boxes.find( data ) == bounding_boxes.end() ) {
                     bounding_boxes.insert({data, false});
                     bounding_boxes_primitive.insert(data);
@@ -6203,7 +6332,7 @@ void ProjectBuilder::refreshBoundingBoxObjectList() {
     for (auto &object_UUID : context->getAllObjectIDs()) {
         for (std::string data : context->listObjectData(object_UUID)) {
             if ( context->getObjectDataType( object_UUID, data.c_str() ) == HELIOS_TYPE_INT ||
-                 context->getObjectDataType( object_UUID, data.c_str() ) == HELIOS_TYPE_UINT ) {
+                context->getObjectDataType( object_UUID, data.c_str() ) == HELIOS_TYPE_UINT ) {
                 if ( bounding_boxes.find( data ) == bounding_boxes.end() ) {
                     bounding_boxes.insert({data, false});
                     bounding_boxes_object.insert(data);
