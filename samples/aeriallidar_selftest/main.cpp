@@ -3,9 +3,7 @@
 
 using namespace helios;
 
-int main() {
-
+int main(int argc, char** argv) {
     AerialLiDARcloud aeriallidar;
-
-    return aeriallidar.selfTest();
+    return aeriallidar.selfTest(argc, argv);
 }

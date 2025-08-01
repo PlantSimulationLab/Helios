@@ -2339,7 +2339,7 @@ uint PlantArchitecture::appendShoot(uint plantID, int parent_shoot_ID, uint curr
     // accumulate all the values that will be passed to Shoot constructor
     int appended_shootID = int(shoot_tree_ptr->size());
     uint parent_node = shoot_tree_ptr->at(parent_shoot_ID)->current_node_number - 1;
-    uint rank = shoot_tree_ptr->at(parent_shoot_ID)->rank;
+    uint rank = shoot_tree_ptr->at(parent_shoot_ID)->rank + 1;
     vec3 base_position = interpolateTube(shoot_tree_ptr->at(parent_shoot_ID)->phytomers.back()->getInternodeNodePositions(), 0.9f);
 
     // Create the new shoot

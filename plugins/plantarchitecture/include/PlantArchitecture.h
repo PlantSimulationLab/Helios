@@ -1556,7 +1556,7 @@ public:
     explicit PlantArchitecture(helios::Context *context_ptr);
 
     //! Unit test routines
-    static int selfTest();
+    static int selfTest(int argc = 0, char** argv = nullptr);
 
     //! Add optional output object data values to the Context
     /**

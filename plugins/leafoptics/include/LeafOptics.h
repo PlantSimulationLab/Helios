@@ -52,7 +52,7 @@ public:
     /**
      * \return 0 if test was successful, 1 if test failed
      */
-    static int selfTest();
+    static int selfTest(int argc = 0, char** argv = nullptr);
 
     //! Run the LeafOptics model to generate reflectivity and transmissivity spectra, create associated global data, and assign to specified primitives.
     /**

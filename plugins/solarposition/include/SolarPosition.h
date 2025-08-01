@@ -36,7 +36,7 @@ public:
     SolarPosition(float UTC_hrs, float latitude_deg, float longitude_deg, helios::Context *context_ptr);
 
     //! Function to perform a self-test of model functions
-    static int selfTest();
+    static int selfTest(int argc = 0, char** argv = nullptr);
 
     //! Get the approximate time of sunrise at the current location
     [[nodiscard]] helios::Time getSunriseTime() const;

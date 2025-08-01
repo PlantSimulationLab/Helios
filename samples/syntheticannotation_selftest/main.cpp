@@ -2,11 +2,8 @@
 
 using namespace helios;
 
-int main() {
-
+int main(int argc, char** argv) {
     Context context;
-
     SyntheticAnnotation syntheticannotation(&context);
-
-    return syntheticannotation.selfTest();
+    return syntheticannotation.selfTest(argc, argv);
 }
