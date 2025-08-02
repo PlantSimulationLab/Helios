@@ -1241,6 +1241,7 @@ private:
      */
     helios::vec3 calculatePetioleCollisionAvoidanceDirection(const helios::vec3 &petiole_base_origin, const helios::vec3 &proposed_petiole_axis, bool &collision_detection_active) const;
 
+
 public:
     // ---- phytomer data ---- //
 
@@ -1903,6 +1904,22 @@ public:
      */
     [[nodiscard]] CollisionDetection* getCollisionDetection() const;
 
+    //! Set which organ types should participate in collision detection
+    /**
+     * \param[in] include_internodes Include internode segments in collision detection (default: true)
+     * \param[in] include_leaves Include leaf surfaces in collision detection (default: true)
+     * \param[in] include_petioles Include petiole segments in collision detection (default: false for trees, true for small plants)
+     * \param[in] include_flowers Include flower geometry in collision detection (default: false)
+     * \param[in] include_fruit Include fruit geometry in collision detection (default: false)
+     */
+    void setCollisionRelevantOrgans(bool include_internodes = true, bool include_leaves = true, bool include_petioles = false, bool include_flowers = false, bool include_fruit = false);
+
+    //! Enable or disable petiole collision detection
+    /**
+     * \param[in] enabled Enable petiole collision detection (useful for small plants like tomatoes, not needed for trees)
+     */
+    void enablePetioleCollisionDetection(bool enabled);
+
     //! Clear BVH cache (called at start of each growth cycle)
     void clearBVHCache() const;
 
@@ -2560,6 +2577,16 @@ protected:
     
     //! Force Context geometry update when collision avoidance is triggered
     bool force_update_on_collision = true;
+
+    //! Organ filtering configuration for collision detection
+    bool collision_include_internodes = true;
+    bool collision_include_leaves = true;
+    bool collision_include_petioles = false;  // Default false for tree models
+    bool collision_include_flowers = false;   // Flowers typically not collision obstacles
+    bool collision_include_fruit = false;     // Fruit typically not collision obstacles
+    
+    //! Enable petiole collision detection (separate from general petiole inclusion)
+    bool petiole_collision_detection_enabled = false;
     
     //! Counter to track timesteps for geometry update scheduling
     int geometry_update_counter = 0;

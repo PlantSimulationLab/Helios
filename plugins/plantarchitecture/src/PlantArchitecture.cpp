@@ -1283,12 +1283,14 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             petiole_rotation_axis_actual = rotatePointAboutLine(petiole_rotation_axis_actual, nullorigin, internode_axis, budrot);
         }
 
-        // Apply collision avoidance for petiole direction
+        // Apply collision avoidance for petiole direction (if enabled)
         vec3 collision_optimal_petiole_direction;
         bool petiole_collision_active = false;
 
-        collision_optimal_petiole_direction = calculatePetioleCollisionAvoidanceDirection(phytomer_internode_vertices.back(), // petiole base position
-                                                                                          petiole_axis_actual, petiole_collision_active);
+        if (plantarchitecture_ptr->petiole_collision_detection_enabled) {
+            collision_optimal_petiole_direction = calculatePetioleCollisionAvoidanceDirection(phytomer_internode_vertices.back(), // petiole base position
+                                                                                              petiole_axis_actual, petiole_collision_active);
+        }
 
         if (petiole_collision_active) {
             float inertia_weight = plantarchitecture_ptr->collision_inertia_weight;
@@ -4384,6 +4386,33 @@ CollisionDetection* PlantArchitecture::getCollisionDetection() const {
     return collision_detection_ptr;
 }
 
+void PlantArchitecture::setCollisionRelevantOrgans(bool include_internodes, bool include_leaves, bool include_petioles, bool include_flowers, bool include_fruit) {
+    collision_include_internodes = include_internodes;
+    collision_include_leaves = include_leaves;
+    collision_include_petioles = include_petioles;
+    collision_include_flowers = include_flowers;
+    collision_include_fruit = include_fruit;
+    
+    // Clear BVH cache to force rebuild with new organ filtering
+    clearBVHCache();
+    
+    if (printmessages) {
+        std::cout << "Set collision-relevant organs: internodes=" << (include_internodes ? "yes" : "no")
+                  << ", leaves=" << (include_leaves ? "yes" : "no")
+                  << ", petioles=" << (include_petioles ? "yes" : "no")
+                  << ", flowers=" << (include_flowers ? "yes" : "no")
+                  << ", fruit=" << (include_fruit ? "yes" : "no") << std::endl;
+    }
+}
+
+void PlantArchitecture::enablePetioleCollisionDetection(bool enabled) {
+    petiole_collision_detection_enabled = enabled;
+    
+    if (printmessages) {
+        std::cout << "Petiole collision detection " << (enabled ? "enabled" : "disabled") << std::endl;
+    }
+}
+
 void PlantArchitecture::clearBVHCache() const {
     bvh_cached_for_current_growth = false;
     cached_target_geometry.clear();
@@ -4393,6 +4422,7 @@ void PlantArchitecture::clearBVHCache() const {
         std::cout << "Cleared BVH cache for new growth cycle" << std::endl;
     }
 }
+
 
 void PlantArchitecture::rebuildBVHForTimestep() {
     if (!collision_detection_enabled || collision_detection_ptr == nullptr) {
@@ -4419,14 +4449,68 @@ void PlantArchitecture::rebuildBVHForTimestep() {
             }
         }
     } else {
-        // Use ALL geometry - both obstacles AND existing plant parts
-        // The hierarchical BVH will separate them into static vs dynamic BVHs for efficiency
-        target_geometry = context_ptr->getAllUUIDs();
+        // Use filtered plant geometry based on organ settings + external obstacles
+        target_geometry.clear();
+        
+        // Add collision-relevant plant organs based on filtering settings (with safety checks)
+        try {
+            if (collision_include_internodes) {
+                std::vector<uint> internode_uuids = getAllInternodeUUIDs();
+                target_geometry.insert(target_geometry.end(), internode_uuids.begin(), internode_uuids.end());
+            }
+            if (collision_include_leaves) {
+                std::vector<uint> leaf_uuids = getAllLeafUUIDs();
+                target_geometry.insert(target_geometry.end(), leaf_uuids.begin(), leaf_uuids.end());
+            }
+            if (collision_include_petioles) {
+                std::vector<uint> petiole_uuids = getAllPetioleUUIDs(); 
+                target_geometry.insert(target_geometry.end(), petiole_uuids.begin(), petiole_uuids.end());
+            }
+            if (collision_include_flowers) {
+                std::vector<uint> flower_uuids = getAllFlowerUUIDs();
+                target_geometry.insert(target_geometry.end(), flower_uuids.begin(), flower_uuids.end());
+            }
+            if (collision_include_fruit) {
+                std::vector<uint> fruit_uuids = getAllFruitUUIDs();
+                target_geometry.insert(target_geometry.end(), fruit_uuids.begin(), fruit_uuids.end());
+            }
+        } catch (const std::exception& e) {
+            if (printmessages) {
+                std::cout << "Warning: Exception in organ filtering, falling back to all geometry: " << e.what() << std::endl;
+            }
+            target_geometry = context_ptr->getAllUUIDs();
+        }
+        
+        // Add any external obstacles from Context (non-plant geometry)
+        std::vector<uint> all_context_geometry = context_ptr->getAllUUIDs();
+        std::set<uint> all_plant_geometry_set;
+        try {
+            std::vector<uint> all_plant = getAllUUIDs();
+            all_plant_geometry_set.insert(all_plant.begin(), all_plant.end());
+        } catch (const std::exception& e) {
+            if (printmessages) {
+                std::cout << "Warning: Could not get plant geometry for external obstacle filtering: " << e.what() << std::endl;
+            }
+        }
+        
+        for (uint uuid : all_context_geometry) {
+            if (all_plant_geometry_set.find(uuid) == all_plant_geometry_set.end()) {
+                target_geometry.push_back(uuid);  // Add external obstacles
+            }
+        }
     }
     
     if (!target_geometry.empty()) {
         // Separate static obstacles from plant geometry for hierarchical BVH
-        std::vector<uint> plant_geometry = getAllUUIDs();
+        std::vector<uint> plant_geometry;
+        try {
+            plant_geometry = getAllUUIDs();
+        } catch (const std::exception& e) {
+            if (printmessages) {
+                std::cout << "Warning: Could not get plant geometry for hierarchical BVH: " << e.what() << std::endl;
+            }
+            plant_geometry.clear();
+        }
         std::set<uint> plant_set(plant_geometry.begin(), plant_geometry.end());
         
         std::vector<uint> static_obstacles;

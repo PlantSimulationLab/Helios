@@ -17,6 +17,7 @@
 #define COLLISION_DETECTION_H
 
 #include <set>
+#include <unordered_set>
 #include "Context.h"
 
 /**
@@ -316,6 +317,9 @@ private:
 
     //! Cached primitive bounding boxes (optimization for BVH construction)
     std::unordered_map<uint, std::pair<helios::vec3, helios::vec3>> primitive_aabbs_cache;
+    
+    //! OPTIMIZATION: Cache validity tracking to avoid rebuilding unchanged primitive AABBs
+    std::unordered_set<uint> dirty_primitive_cache;
 
     //! Grid intersection results [i][j][k] = vector of UUIDs
     std::vector<std::vector<std::vector<std::vector<uint>>>> grid_cells;

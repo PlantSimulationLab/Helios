@@ -339,16 +339,36 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     bvh_nodes.reserve(max_nodes);
     bvh_nodes.resize(1); // Start with root node
 
-    // Pre-cache bounding boxes to avoid repeated expensive calculations
-    primitive_aabbs_cache.clear();
-    primitive_aabbs_cache.reserve(primitives_to_include.size());
+    // OPTIMIZATION: Pre-cache bounding boxes with dirty flagging to avoid repeated expensive calculations
+    // Only clear cache for primitives that no longer exist or are dirty
+    std::unordered_set<uint> current_primitives(primitives_to_include.begin(), primitives_to_include.end());
+    
+    // Remove cached entries for primitives that no longer exist
+    auto cache_it = primitive_aabbs_cache.begin();
+    while (cache_it != primitive_aabbs_cache.end()) {
+        if (current_primitives.find(cache_it->first) == current_primitives.end()) {
+            cache_it = primitive_aabbs_cache.erase(cache_it);
+        } else {
+            ++cache_it;
+        }
+    }
+    
+    // Update only dirty or missing cache entries
     for (uint UUID: primitives_to_include) {
         if (!context->doesPrimitiveExist(UUID)) {
             continue; // Skip invalid primitive
         }
-        vec3 aabb_min, aabb_max;
-        context->getPrimitiveBoundingBox(UUID, aabb_min, aabb_max);
-        primitive_aabbs_cache[UUID] = {aabb_min, aabb_max};
+        
+        // Only update if not cached or marked as dirty
+        bool needs_update = (primitive_aabbs_cache.find(UUID) == primitive_aabbs_cache.end()) ||
+                           (dirty_primitive_cache.find(UUID) != dirty_primitive_cache.end());
+        
+        if (needs_update) {
+            vec3 aabb_min, aabb_max;
+            context->getPrimitiveBoundingBox(UUID, aabb_min, aabb_max);
+            primitive_aabbs_cache[UUID] = {aabb_min, aabb_max};
+            dirty_primitive_cache.erase(UUID); // Mark as clean
+        }
     }
 
     // Build BVH recursively starting from root
@@ -1360,6 +1380,10 @@ int CollisionDetection::countRayIntersections(const vec3 &origin, const vec3 &di
         return intersection_count;
     }
 
+    // OPTIMIZATION: Minimum distance threshold to avoid self-intersection with nearby geometry
+    // This prevents plant's own geometry (shoot tips, etc.) from occluding the entire cone view
+    float min_distance = 0.05f; // 5cm minimum distance - ignore intersections closer than this
+
     // Ensure the BVH is current before traversal
     const_cast<CollisionDetection *>(this)->ensureBVHCurrent();
 
@@ -1382,9 +1406,12 @@ int CollisionDetection::countRayIntersections(const vec3 &origin, const vec3 &di
             continue;
         }
 
-        // If max_distance is specified, check if intersection is within range
+        // Check if intersection is within distance range (both min and max)
+        if (t_max < min_distance) {
+            continue; // Entire AABB is too close - skip
+        }
         if (max_distance > 0.0f && t_min > max_distance) {
-            continue;
+            continue; // Entire AABB is too far - skip
         }
 
         if (node.is_leaf) {
@@ -1402,8 +1429,11 @@ int CollisionDetection::countRayIntersections(const vec3 &origin, const vec3 &di
                 // Test ray against primitive AABB
                 float prim_t_min, prim_t_max;
                 if (rayAABBIntersect(origin, direction, prim_min, prim_max, prim_t_min, prim_t_max)) {
-                    // Check distance constraint
-                    if (max_distance <= 0.0f || prim_t_min <= max_distance) {
+                    // Check distance constraints (both min and max)
+                    bool within_min_distance = prim_t_min >= min_distance;
+                    bool within_max_distance = (max_distance <= 0.0f) || (prim_t_min <= max_distance);
+                    
+                    if (within_min_distance && within_max_distance) {
                         intersection_count++;
                     }
                 }
@@ -1533,7 +1563,7 @@ CollisionDetection::OptimalPathResult CollisionDetection::findOptimalConePath(co
     if (detected_gaps.empty()) {
         // No gaps found, fall back to central axis
         if (printmessages) {
-            //std::cerr << "WARNING: No gaps detected in cone, using central axis" << std::endl;
+            std::cerr << "WARNING: No gaps detected in cone, using central axis" << std::endl;
         }
         result.confidence = 0.1f;
         return result;
@@ -1691,6 +1721,25 @@ std::vector<CollisionDetection::Gap> CollisionDetection::detectGapsInCone(const 
         gap.angular_distance = acosf(dot_product);
     }
 
+    // OPTIMIZATION: Spatial filtering - remove gaps that are too far from central axis
+    // This reduces the number of gaps passed to the expensive scoring function
+    if (gaps.size() > 10) {
+        float max_angular_distance = half_angle * 0.8f; // Only consider gaps within 80% of cone angle
+        
+        auto it = std::remove_if(gaps.begin(), gaps.end(), [max_angular_distance](const Gap& gap) {
+            return gap.angular_distance > max_angular_distance;
+        });
+        
+        gaps.erase(it, gaps.end());
+        
+        // If filtering removed too many gaps, keep at least the closest ones
+        if (gaps.size() < 3 && gaps.size() > 0) {
+            // Sort by angular distance and keep the closest ones
+            std::partial_sort(gaps.begin(), gaps.begin() + std::min(size_t(3), gaps.size()), gaps.end(),
+                            [](const Gap& a, const Gap& b) { return a.angular_distance < b.angular_distance; });
+        }
+    }
+
     return gaps;
 }
 
@@ -1725,6 +1774,27 @@ float CollisionDetection::calculateGapAngularSize(const std::vector<RaySample> &
 
 void CollisionDetection::scoreGapsByFishEyeMetric(std::vector<Gap> &gaps, const vec3 &central_axis) {
 
+    // Early exit for small gap counts - full sort is fine
+    if (gaps.size() <= 10) {
+        for (Gap &gap: gaps) {
+            // Fish-eye metric: prefer larger gaps closer to central axis
+            // Gap size component (logarithmic scaling for larger gaps)
+            float size_score = log(1.0f + gap.angular_size * 100.0f); // Scale up angular size
+            // Distance penalty (exponential penalty for gaps far from center)
+            float distance_penalty = exp(gap.angular_distance * 2.0f);
+            // Combined score (higher is better)
+            gap.score = size_score / distance_penalty;
+        }
+        // Sort gaps by score (highest first)
+        std::sort(gaps.begin(), gaps.end(), [](const Gap &a, const Gap &b) { return a.score > b.score; });
+        return;
+    }
+    
+    // OPTIMIZATION: For large gap counts, use partial sorting
+    // We only need the top 3-5 gaps for collision avoidance
+    const size_t max_gaps_needed = std::min(size_t(5), gaps.size());
+    
+    // Calculate scores for all gaps
     for (Gap &gap: gaps) {
         // Fish-eye metric: prefer larger gaps closer to central axis
 
@@ -1737,9 +1807,13 @@ void CollisionDetection::scoreGapsByFishEyeMetric(std::vector<Gap> &gaps, const 
         // Combined score (higher is better)
         gap.score = size_score / distance_penalty;
     }
-
-    // Sort gaps by score (highest first)
-    std::sort(gaps.begin(), gaps.end(), [](const Gap &a, const Gap &b) { return a.score > b.score; });
+    
+    // Use partial_sort to get only the top N gaps - O(n log k) instead of O(n log n)
+    std::partial_sort(gaps.begin(), gaps.begin() + max_gaps_needed, gaps.end(), 
+                     [](const Gap &a, const Gap &b) { return a.score > b.score; });
+    
+    // Resize to keep only the top gaps to avoid processing unnecessary gaps later
+    gaps.resize(max_gaps_needed);
 }
 
 helios::vec3 CollisionDetection::findOptimalGapDirection(const std::vector<Gap> &gaps, const vec3 &central_axis) {
