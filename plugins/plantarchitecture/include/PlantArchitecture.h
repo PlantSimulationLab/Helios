@@ -1554,6 +1554,9 @@ public:
      * \param[in] context_ptr Pointer to the Helios context.
      */
     explicit PlantArchitecture(helios::Context *context_ptr);
+    
+    //! Destructor - cleans up internal CollisionDetection instance if owned
+    ~PlantArchitecture();
 
     //! Unit test routines
     static int selfTest();
@@ -1862,15 +1865,14 @@ public:
 
     // -- collision detection methods -- //
 
-    //! Enable collision detection for plant growth avoidance
+    //! Enable collision detection for plant growth avoidance (creates internal CollisionDetection instance)
     /**
-     * \param[in] collision_detection_ptr Pointer to a CollisionDetection instance
      * \param[in] target_object_UUIDs [optional] Vector of specific UUIDs to avoid (empty = avoid all geometry)
      * \param[in] target_object_IDs [optional] Vector of specific object IDs to avoid (empty = avoid all objects)
      */
-    void enableCollisionDetection(CollisionDetection *collision_detection_ptr, const std::vector<uint> &target_object_UUIDs = {}, const std::vector<uint> &target_object_IDs = {});
+    void enableCollisionDetection(const std::vector<uint> &target_object_UUIDs = {}, const std::vector<uint> &target_object_IDs = {});
 
-    //! Disable collision detection for plant growth
+    //! Disable collision detection for plant growth and clean up internal CollisionDetection instance
     void disableCollisionDetection();
 
     //! Set collision avoidance parameters
@@ -1881,6 +1883,38 @@ public:
      * \param[in] inertia_weight Weight factor for directional inertia vs collision avoidance (0.0 = use optimal direction, 1.0 = ignore collision avoidance) (default = 0.4)
      */
     void setCollisionAvoidanceParameters(float view_half_angle_deg, float look_ahead_distance, int sample_count, float inertia_weight);
+
+    //! Mark specific geometry as static for collision detection efficiency
+    /**
+     * \param[in] target_UUIDs Vector of primitive UUIDs representing static obstacles (buildings, fixed structures, etc.)
+     */
+    void setStaticObstacles(const std::vector<uint> &target_UUIDs);
+
+    //! Configure spatial optimization for collision detection
+    /**
+     * \param[in] max_collision_distance Maximum distance to consider for collision detection (meters)
+     * \param[in] enable_spatial_filtering Enable distance-based filtering to improve performance
+     */
+    void setSpatialOptimization(float max_collision_distance, bool enable_spatial_filtering = true);
+
+    //! Get access to the internal CollisionDetection instance (for advanced usage)
+    /**
+     * \return Pointer to internal CollisionDetection instance, or nullptr if not enabled
+     */
+    [[nodiscard]] CollisionDetection* getCollisionDetection() const;
+
+    //! Clear BVH cache (called at start of each growth cycle)
+    void clearBVHCache() const;
+
+    //! Rebuild BVH once per timestep with current target geometry
+    void rebuildBVHForTimestep();
+
+    //! Configure Context geometry update scheduling for efficiency
+    /**
+     * \param[in] update_frequency How often to update Context geometry (1=every timestep, 2=every 2 timesteps, etc.)
+     * \param[in] force_update_on_collision Force Context update when collision avoidance is triggered
+     */
+    void setGeometryUpdateScheduling(int update_frequency = 3, bool force_update_on_collision = true);
 
     // -- methods for modifying the current plant state -- //
 
@@ -2494,8 +2528,11 @@ protected:
 
     // --- Collision Detection --- //
 
-    //! Pointer to collision detection plugin
+    //! Internal collision detection instance (owned by PlantArchitecture)
     CollisionDetection *collision_detection_ptr = nullptr;
+    
+    //! Flag to track if we own the CollisionDetection instance (for cleanup)
+    bool owns_collision_detection = false;
 
     //! Flag indicating if collision detection is enabled
     bool collision_detection_enabled = false;
@@ -2517,6 +2554,29 @@ protected:
 
     //! Inertia weight for balancing directional preference vs collision avoidance
     float collision_inertia_weight = 0.4f;
+
+    //! Frequency of Context geometry updates (1=every timestep, 2=every 2 timesteps, etc.)
+    int geometry_update_frequency = 3;
+    
+    //! Force Context geometry update when collision avoidance is triggered
+    bool force_update_on_collision = true;
+    
+    //! Counter to track timesteps for geometry update scheduling
+    int geometry_update_counter = 0;
+    
+    //! Flag to track if collision avoidance was applied in current timestep
+    mutable bool collision_avoidance_applied = false;
+
+    //! Enable spatial filtering for collision detection performance
+    bool spatial_filtering_enabled = false;
+
+    //! Maximum distance for collision detection queries (meters)
+    float spatial_max_distance = 5.0f;
+
+    //! BVH caching for within-timestep efficiency
+    mutable bool bvh_cached_for_current_growth = false;
+    mutable std::vector<uint> cached_target_geometry;
+    mutable std::vector<uint> cached_filtered_geometry;
 
     //! Flag to enable/disable console output messages
     bool printmessages = true;

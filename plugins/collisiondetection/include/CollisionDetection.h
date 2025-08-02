@@ -146,6 +146,38 @@ public:
      */
     int optimizeLayout(const std::vector<uint> &UUIDs, float learning_rate = 0.01f, int max_iterations = 1000);
 
+    // -------- SPATIAL OPTIMIZATION --------
+
+    /**
+     * \brief Find collisions within a specified distance threshold
+     * \param[in] query_UUIDs Vector of primitive UUIDs to test for collisions
+     * \param[in] target_UUIDs Vector of primitive UUIDs to test against
+     * \param[in] max_distance Maximum distance for collision consideration
+     * \return Vector of collision pairs within distance threshold
+     */
+    std::vector<std::pair<uint, uint>> findCollisionsWithinDistance(const std::vector<uint> &query_UUIDs, const std::vector<uint> &target_UUIDs, float max_distance);
+
+    /**
+     * \brief Set maximum distance for collision detection queries
+     * \param[in] distance Maximum distance threshold (meters)
+     */
+    void setMaxCollisionDistance(float distance);
+
+    /**
+     * \brief Get current maximum collision distance
+     * \return Current maximum distance threshold
+     */
+    [[nodiscard]] float getMaxCollisionDistance() const;
+
+    /**
+     * \brief Filter geometry by spatial proximity for efficient collision detection
+     * \param[in] query_center Center point for spatial filtering
+     * \param[in] max_radius Maximum radius for including geometry
+     * \param[in] candidate_UUIDs Optional list of candidate UUIDs (empty = all geometry)
+     * \return Vector of UUIDs within the specified radius
+     */
+    std::vector<uint> filterGeometryByDistance(const helios::vec3 &query_center, float max_radius, const std::vector<uint> &candidate_UUIDs = {});
+
     // -------- BVH MANAGEMENT --------
 
     /**
@@ -155,9 +187,42 @@ public:
     void buildBVH(const std::vector<uint> &UUIDs = {});
 
     /**
+     * \brief Efficiently update BVH with new geometry (avoids full rebuild when possible)
+     * \param[in] UUIDs Vector of UUIDs to include in BVH
+     * \param[in] force_rebuild Force complete rebuild even if geometry hasn't changed significantly
+     */
+    void updateBVH(const std::vector<uint> &UUIDs, bool force_rebuild = false);
+
+    /**
+     * \brief Mark specific geometry as static (will be cached for efficiency)
+     * \param[in] UUIDs Vector of primitive UUIDs that represent static obstacles
+     */
+    void setStaticGeometry(const std::vector<uint> &UUIDs);
+
+    /**
      * \brief Force a complete rebuild of the BVH
      */
     void rebuildBVH();
+
+    /**
+     * \brief Disable automatic BVH rebuilds (caller must manually manage rebuilds)
+     */
+    void disableAutomaticBVHRebuilds();
+
+    /**
+     * \brief Enable automatic BVH rebuilds (default behavior)
+     */
+    void enableAutomaticBVHRebuilds();
+    
+    /**
+     * \brief Enable hierarchical BVH with separate static and dynamic geometry
+     */
+    void enableHierarchicalBVH();
+    
+    /**
+     * \brief Disable hierarchical BVH (use single unified BVH)
+     */
+    void disableHierarchicalBVH();
 
     /**
      * \brief Check if BVH is valid and up-to-date
@@ -260,6 +325,14 @@ private:
     helios::vec3 grid_size;
     helios::int3 grid_divisions;
 
+    // -------- SPATIAL OPTIMIZATION DATA --------
+
+    //! Maximum distance for collision detection queries (meters)
+    float max_collision_distance;
+
+    //! Spatial partitioning hash for fast proximity queries
+    std::unordered_map<uint, helios::vec3> primitive_centroids_cache;
+
     // -------- GPU MEMORY POINTERS --------
 
     //! GPU memory for BVH nodes
@@ -276,6 +349,41 @@ private:
 
     //! Internal tracking of deleted UUIDs that we've already handled
     std::set<uint> last_processed_deleted_uuids;
+
+    //! Cache for static geometry (obstacles, fixed structures)
+    std::set<uint> static_geometry_cache;
+
+    //! Last built BVH geometry set (for cache validation)
+    std::set<uint> last_bvh_geometry;
+
+    //! Flag to track if BVH needs rebuilding
+    bool bvh_dirty;
+
+    //! Flag to control automatic BVH rebuilds (default: true)
+    bool automatic_bvh_rebuilds;
+
+    // -------- HIERARCHICAL BVH DATA STRUCTURES --------
+    
+    //! Flag to enable hierarchical BVH (separate static/dynamic BVHs)
+    bool hierarchical_bvh_enabled;
+    
+    //! Static BVH nodes (persistent obstacles like ground, buildings)
+    std::vector<BVHNode> static_bvh_nodes;
+    
+    //! Static BVH primitives
+    std::vector<uint> static_bvh_primitives;
+    
+    //! Flag indicating if static BVH is built and valid
+    bool static_bvh_valid;
+    
+    //! Last geometry set used for static BVH
+    std::set<uint> last_static_bvh_geometry;
+    
+    //! Helper method for hierarchical BVH updates
+    void updateHierarchicalBVH(const std::set<uint> &requested_geometry, bool force_rebuild);
+    
+    //! Build static BVH from static geometry cache
+    void buildStaticBVH();
 
     // -------- GAP DETECTION DATA STRUCTURES --------
 
@@ -458,6 +566,14 @@ private:
      * \brief Mark BVH as dirty (needs rebuilding)
      */
     void markBVHDirty();
+
+    /**
+     * \brief Perform incremental BVH update for small geometry changes
+     * \param[in] added_geometry Set of primitive UUIDs to add
+     * \param[in] removed_geometry Set of primitive UUIDs to remove  
+     * \param[in] final_geometry Final set of all geometry after changes
+     */
+    void incrementalUpdateBVH(const std::set<uint> &added_geometry, const std::set<uint> &removed_geometry, const std::set<uint> &final_geometry);
 
     /**
      * \brief Validate that all required primitives exist in context

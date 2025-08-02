@@ -65,10 +65,21 @@ CollisionDetection::CollisionDetection(helios::Context *a_context) {
     d_primitive_indices = nullptr;
     gpu_memory_allocated = false;
 
+    // Initialize BVH caching variables
+    bvh_dirty = true;
+    automatic_bvh_rebuilds = true; // Default: allow automatic rebuilds
+    
+    // Initialize hierarchical BVH variables
+    hierarchical_bvh_enabled = false;
+    static_bvh_valid = false;
+
     // Initialize grid parameters
     grid_center = make_vec3(0, 0, 0);
     grid_size = make_vec3(1, 1, 1);
     grid_divisions = helios::make_int3(1, 1, 1);
+
+    // Initialize spatial optimization parameters
+    max_collision_distance = 10.0f; // Default 10 meter maximum distance
 
     if (printmessages) {
 #ifdef HELIOS_CUDA_AVAILABLE
@@ -96,9 +107,21 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &UU
         return {};
     }
 
-    // Validate UUIDs
-    if (!validateUUIDs(UUIDs)) {
-        helios_runtime_error("ERROR (CollisionDetection::findCollisions): One or more invalid UUIDs provided");
+    // Filter and validate UUIDs
+    std::vector<uint> valid_UUIDs;
+    for (uint uuid : UUIDs) {
+        if (context->doesPrimitiveExist(uuid)) {
+            valid_UUIDs.push_back(uuid);
+        } else if (printmessages) {
+            std::cerr << "WARNING (CollisionDetection::findCollisions): Skipping invalid UUID " << uuid << std::endl;
+        }
+    }
+    
+    if (valid_UUIDs.empty()) {
+        if (printmessages) {
+            std::cerr << "WARNING (CollisionDetection::findCollisions): No valid UUIDs found after filtering" << std::endl;
+        }
+        return {};
     }
 
     // Automatically rebuild BVH if geometry has changed or BVH is empty
@@ -106,18 +129,12 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &UU
 
     std::vector<uint> all_collisions;
 
-    // Print traversal mode message once per call
-    if (printmessages) {
-        if (gpu_acceleration_enabled && gpu_memory_allocated) {
-            std::cout << "Using GPU acceleration for collision detection." << std::endl;
-        } else {
-            std::cout << "Using CPU traversal for collision detection." << std::endl;
-        }
-    }
-
-    for (uint UUID: UUIDs) {
+    for (uint UUID: valid_UUIDs) {
 
         // Get bounding box for query primitive
+        if (!context->doesPrimitiveExist(UUID)) {
+            continue; // Skip invalid primitive
+        }
         vec3 aabb_min, aabb_max;
         context->getPrimitiveBoundingBox(UUID, aabb_min, aabb_max);
 
@@ -239,6 +256,9 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &qu
     for (uint UUID: all_query_UUIDs) {
 
         // Get bounding box for query primitive
+        if (!context->doesPrimitiveExist(UUID)) {
+            continue; // Skip invalid primitive
+        }
         vec3 aabb_min, aabb_max;
         context->getPrimitiveBoundingBox(UUID, aabb_min, aabb_max);
 
@@ -278,6 +298,7 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     } else {
         primitives_to_include = UUIDs;
     }
+    
 
     if (primitives_to_include.empty()) {
         if (printmessages) {
@@ -286,14 +307,24 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
         return;
     }
 
-    // Validate UUIDs
-    if (!validateUUIDs(primitives_to_include)) {
-        helios_runtime_error("ERROR (CollisionDetection::buildBVH): One or more invalid UUIDs provided");
+    // Filter out invalid UUIDs
+    std::vector<uint> valid_primitives;
+    for (uint uuid : primitives_to_include) {
+        if (context->doesPrimitiveExist(uuid)) {
+            valid_primitives.push_back(uuid);
+        } else if (printmessages) {
+            std::cerr << "WARNING (CollisionDetection::buildBVH): Skipping invalid UUID " << uuid << std::endl;
+        }
     }
-
-    if (printmessages) {
-        std::cout << "Building BVH with " << primitives_to_include.size() << " primitives..." << std::endl;
+    
+    if (valid_primitives.empty()) {
+        if (printmessages) {
+            std::cerr << "WARNING (CollisionDetection::buildBVH): No valid primitives found after filtering" << std::endl;
+        }
+        return;
     }
+    
+    primitives_to_include = valid_primitives;
 
     // Clear existing BVH
     bvh_nodes.clear();
@@ -312,6 +343,9 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     primitive_aabbs_cache.clear();
     primitive_aabbs_cache.reserve(primitives_to_include.size());
     for (uint UUID: primitives_to_include) {
+        if (!context->doesPrimitiveExist(UUID)) {
+            continue; // Skip invalid primitive
+        }
         vec3 aabb_min, aabb_max;
         context->getPrimitiveBoundingBox(UUID, aabb_min, aabb_max);
         primitive_aabbs_cache[UUID] = {aabb_min, aabb_max};
@@ -340,11 +374,11 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     last_processed_deleted_uuids.clear();
     last_processed_deleted_uuids.insert(context_deleted_uuids.begin(), context_deleted_uuids.end());
 
-    if (printmessages) {
-        size_t node_count, leaf_count, max_depth;
-        getBVHStatistics(node_count, leaf_count, max_depth);
-        std::cout << "BVH built successfully: " << node_count << " nodes, " << leaf_count << " leaves, max depth " << std::endl;
-    }
+    // Update BVH geometry tracking for caching
+    last_bvh_geometry.clear();
+    last_bvh_geometry.insert(primitives_to_include.begin(), primitives_to_include.end());
+    bvh_dirty = false;
+
 }
 
 void CollisionDetection::rebuildBVH() {
@@ -352,7 +386,185 @@ void CollisionDetection::rebuildBVH() {
     buildBVH();
 }
 
+void CollisionDetection::disableAutomaticBVHRebuilds() {
+    automatic_bvh_rebuilds = false;
+    if (printmessages) {
+        std::cout << "Disabled automatic BVH rebuilds - caller must manually manage rebuilds" << std::endl;
+    }
+}
+
+void CollisionDetection::enableAutomaticBVHRebuilds() {
+    automatic_bvh_rebuilds = true;
+    if (printmessages) {
+        std::cout << "Enabled automatic BVH rebuilds (default behavior)" << std::endl;
+    }
+}
+
+void CollisionDetection::enableHierarchicalBVH() {
+    hierarchical_bvh_enabled = true;
+    static_bvh_valid = false; // Force rebuild of static BVH
+    if (printmessages) {
+        std::cout << "Enabled hierarchical BVH (separate static/dynamic geometry)" << std::endl;
+    }
+}
+
+void CollisionDetection::disableHierarchicalBVH() {
+    hierarchical_bvh_enabled = false;
+    // Clear static BVH data
+    static_bvh_nodes.clear();
+    static_bvh_primitives.clear();
+    static_bvh_valid = false;
+    last_static_bvh_geometry.clear();
+    if (printmessages) {
+        std::cout << "Disabled hierarchical BVH (using single unified BVH)" << std::endl;
+    }
+}
+
+void CollisionDetection::updateHierarchicalBVH(const std::set<uint> &requested_geometry, bool force_rebuild) {
+    
+    // Step 1: Build/update static BVH if needed
+    if (!static_bvh_valid || force_rebuild || static_geometry_cache != last_static_bvh_geometry) {
+        buildStaticBVH();
+    }
+    
+    // Step 2: Separate dynamic geometry (not in static cache)
+    std::vector<uint> dynamic_geometry;
+    for (uint uuid : requested_geometry) {
+        if (static_geometry_cache.find(uuid) == static_geometry_cache.end()) {
+            dynamic_geometry.push_back(uuid);
+        }
+    }
+    
+    
+    // Step 3: Build dynamic BVH with remaining geometry (this is smaller and faster)
+    if (!dynamic_geometry.empty()) {
+        buildBVH(dynamic_geometry);  // Use existing buildBVH for dynamic part
+    } else {
+        // No dynamic geometry - just clear the dynamic BVH
+        bvh_nodes.clear();
+        primitive_indices.clear();
+    }
+    
+    // Update cache
+    last_bvh_geometry = requested_geometry;
+    bvh_dirty = false;
+}
+
+void CollisionDetection::buildStaticBVH() {
+    if (static_geometry_cache.empty()) {
+        static_bvh_nodes.clear();
+        static_bvh_primitives.clear();
+        static_bvh_valid = false;
+        if (printmessages) {
+            std::cout << "[STATIC BVH] No static geometry defined - cleared static BVH" << std::endl;
+        }
+        return;
+    }
+    
+    std::vector<uint> static_primitives(static_geometry_cache.begin(), static_geometry_cache.end());
+    
+    
+    // Build BVH for static geometry (reuse existing GPU BVH building logic)
+    // For now, we'll store it in the static BVH structures but use same building method
+    std::vector<BVHNode> temp_nodes;
+    std::vector<uint> temp_primitives;
+    
+    // Temporarily swap in static storage
+    std::swap(bvh_nodes, temp_nodes);
+    std::swap(primitive_indices, temp_primitives);
+    
+    // Build BVH using existing method
+    buildBVH(static_primitives);
+    
+    // Store result in static BVH and restore dynamic BVH
+    static_bvh_nodes = bvh_nodes;
+    static_bvh_primitives = primitive_indices;
+    std::swap(bvh_nodes, temp_nodes);
+    std::swap(primitive_indices, temp_primitives);
+    
+    static_bvh_valid = true;
+    last_static_bvh_geometry = static_geometry_cache;
+    
+}
+
+void CollisionDetection::updateBVH(const std::vector<uint> &UUIDs, bool force_rebuild) {
+    // Convert input to set for efficient comparison
+    std::set<uint> requested_geometry(UUIDs.begin(), UUIDs.end());
+    
+    // Check if geometry has changed significantly
+    bool geometry_changed = (requested_geometry != last_bvh_geometry) || bvh_dirty;
+    
+    if (printmessages) {
+        std::cout << "BVH update: " << UUIDs.size() << " primitives" << std::endl;
+    }
+    
+    if (!geometry_changed && !force_rebuild) {
+        return;
+    }
+    
+    // Use hierarchical BVH approach if enabled
+    if (hierarchical_bvh_enabled) {
+        updateHierarchicalBVH(requested_geometry, force_rebuild);
+        return;
+    }
+    
+    // Determine if we need a full rebuild or can do incremental update
+    if (force_rebuild || bvh_nodes.empty()) {
+        // Full rebuild required
+        buildBVH(UUIDs);
+    } else {
+        // Check how much geometry has changed
+        std::set<uint> added_geometry, removed_geometry;
+        
+        // Find added geometry (in requested but not in last_bvh_geometry)
+        std::set_difference(requested_geometry.begin(), requested_geometry.end(),
+                           last_bvh_geometry.begin(), last_bvh_geometry.end(),
+                           std::inserter(added_geometry, added_geometry.begin()));
+        
+        // Find removed geometry (in last_bvh_geometry but not in requested)
+        std::set_difference(last_bvh_geometry.begin(), last_bvh_geometry.end(),
+                           requested_geometry.begin(), requested_geometry.end(),
+                           std::inserter(removed_geometry, removed_geometry.begin()));
+        
+        // If more than 20% of geometry changed, do full rebuild, otherwise incremental
+        size_t total_change = added_geometry.size() + removed_geometry.size();
+        size_t current_size = std::max(last_bvh_geometry.size(), requested_geometry.size());
+        
+        if (current_size == 0 || (float(total_change) / float(current_size)) > 0.2f) {
+            if (printmessages) {
+                std::cout << "Significant geometry change detected, performing full rebuild" << std::endl;
+            }
+            buildBVH(UUIDs);
+        } else {
+            if (printmessages) {
+                std::cout << "Minor geometry change detected, performing incremental update (" 
+                         << added_geometry.size() << " added, " << removed_geometry.size() << " removed)" << std::endl;
+            }
+            // Implement incremental update by selective insertion/removal
+            incrementalUpdateBVH(added_geometry, removed_geometry, requested_geometry);
+        }
+    }
+    
+    // Update tracking
+    last_bvh_geometry = requested_geometry;
+    bvh_dirty = false;
+}
+
+void CollisionDetection::setStaticGeometry(const std::vector<uint> &UUIDs) {
+    static_geometry_cache.clear();
+    static_geometry_cache.insert(UUIDs.begin(), UUIDs.end());
+    
+    if (printmessages) {
+        std::cout << "Marked " << UUIDs.size() << " primitives as static geometry" << std::endl;
+    }
+}
+
 void CollisionDetection::ensureBVHCurrent() {
+    // If automatic rebuilds are disabled, skip all automatic updates
+    if (!automatic_bvh_rebuilds) {
+        return;
+    }
+    
     // If BVH is completely empty, build it with all geometry
     if (bvh_nodes.empty()) {
         if (printmessages) {
@@ -502,11 +714,26 @@ void CollisionDetection::calculateAABB(const std::vector<uint> &primitives, vec3
         return;
     }
 
-    // Initialize with first primitive's bounding box
-    context->getPrimitiveBoundingBox(primitives[0], aabb_min, aabb_max);
+    // Find first valid primitive for initialization
+    size_t first_valid = 0;
+    while (first_valid < primitives.size() && !context->doesPrimitiveExist(primitives[first_valid])) {
+        first_valid++;
+    }
+    if (first_valid >= primitives.size()) {
+        // No valid primitives found
+        aabb_min = make_vec3(0, 0, 0);
+        aabb_max = make_vec3(0, 0, 0);
+        return;
+    }
 
-    // Expand to include all primitives
-    for (size_t i = 1; i < primitives.size(); i++) {
+    // Initialize with first valid primitive's bounding box
+    context->getPrimitiveBoundingBox(primitives[first_valid], aabb_min, aabb_max);
+
+    // Expand to include all remaining valid primitives
+    for (size_t i = first_valid + 1; i < primitives.size(); i++) {
+        if (!context->doesPrimitiveExist(primitives[i])) {
+            continue; // Skip invalid primitive
+        }
         vec3 prim_min, prim_max;
         context->getPrimitiveBoundingBox(primitives[i], prim_min, prim_max);
 
@@ -536,14 +763,25 @@ void CollisionDetection::buildBVHRecursive(uint node_index, size_t primitive_sta
     } else {
         // Initialize with first primitive's cached AABB
         uint first_uuid = primitive_indices[primitive_start];
-        const auto &first_cached_aabb = primitive_aabbs_cache.at(first_uuid);
+        auto it = primitive_aabbs_cache.find(first_uuid);
+        if (it == primitive_aabbs_cache.end()) {
+            // Handle missing primitive - use zero bounds
+            node.aabb_min = make_vec3(0, 0, 0);
+            node.aabb_max = make_vec3(0, 0, 0);
+            return;
+        }
+        const auto &first_cached_aabb = it->second;
         node.aabb_min = first_cached_aabb.first;
         node.aabb_max = first_cached_aabb.second;
 
         // Expand to include all primitives in this node
         for (size_t i = 1; i < primitive_count; i++) {
             uint uuid = primitive_indices[primitive_start + i];
-            const auto &cached_aabb = primitive_aabbs_cache.at(uuid);
+            auto it = primitive_aabbs_cache.find(uuid);
+            if (it == primitive_aabbs_cache.end()) {
+                continue; // Skip missing primitive
+            }
+            const auto &cached_aabb = it->second;
             node.aabb_min.x = std::min(node.aabb_min.x, cached_aabb.first.x);
             node.aabb_min.y = std::min(node.aabb_min.y, cached_aabb.first.y);
             node.aabb_min.z = std::min(node.aabb_min.z, cached_aabb.first.z);
@@ -578,8 +816,13 @@ void CollisionDetection::buildBVHRecursive(uint node_index, size_t primitive_sta
 
     // Sort primitives along split axis by their centroid using cached AABBs
     std::sort(primitive_indices.begin() + primitive_start, primitive_indices.begin() + primitive_start + primitive_count, [&](uint a, uint b) {
-        const auto &cached_aabb_a = primitive_aabbs_cache.at(a);
-        const auto &cached_aabb_b = primitive_aabbs_cache.at(b);
+        auto it_a = primitive_aabbs_cache.find(a);
+        auto it_b = primitive_aabbs_cache.find(b);
+        if (it_a == primitive_aabbs_cache.end() || it_b == primitive_aabbs_cache.end()) {
+            return false; // Can't compare missing primitives
+        }
+        const auto &cached_aabb_a = it_a->second;
+        const auto &cached_aabb_b = it_b->second;
         vec3 centroid_a = 0.5f * (cached_aabb_a.first + cached_aabb_a.second);
         vec3 centroid_b = 0.5f * (cached_aabb_b.first + cached_aabb_b.second);
         float a_coord = (split_axis == 0) ? centroid_a.x : (split_axis == 1) ? centroid_a.y : centroid_a.z;
@@ -638,6 +881,9 @@ std::vector<uint> CollisionDetection::traverseBVH_CPU(const vec3 &query_aabb_min
                 uint primitive_id = primitive_indices[node.primitive_start + i];
 
                 // Get this primitive's AABB
+                if (!context->doesPrimitiveExist(primitive_id)) {
+                    continue; // Skip invalid primitive
+                }
                 vec3 prim_min, prim_max;
                 context->getPrimitiveBoundingBox(primitive_id, prim_min, prim_max);
 
@@ -679,7 +925,11 @@ std::vector<uint> CollisionDetection::traverseBVH_GPU(const vec3 &query_aabb_min
 
     for (size_t i = 0; i < primitive_indices.size(); i++) {
         uint uuid = primitive_indices[i];
-        const auto &cached_aabb = primitive_aabbs_cache.at(uuid);
+        auto it = primitive_aabbs_cache.find(uuid);
+        if (it == primitive_aabbs_cache.end()) {
+            continue; // Skip missing primitive
+        }
+        const auto &cached_aabb = it->second;
 
         primitive_min_array[i * 3] = cached_aabb.first.x;
         primitive_min_array[i * 3 + 1] = cached_aabb.first.y;
@@ -1021,20 +1271,58 @@ void CollisionDetection::markBVHDirty() {
     // Clear internal tracking so BVH will be rebuilt on next access
     last_processed_uuids.clear();
     last_processed_deleted_uuids.clear();
+    last_bvh_geometry.clear();
+    bvh_dirty = true;
     // Free GPU memory since BVH will be rebuilt
     freeGPUMemory();
 }
 
+void CollisionDetection::incrementalUpdateBVH(const std::set<uint> &added_geometry, const std::set<uint> &removed_geometry, const std::set<uint> &final_geometry) {
+    if (printmessages) {
+        std::cout << "Performing incremental BVH update: +" << added_geometry.size() << " -" << removed_geometry.size() << " primitives" << std::endl;
+    }
+    
+    // For small changes, it's actually more efficient to do a targeted rebuild than complex tree restructuring
+    // True incremental BVH updates require complex rebalancing algorithms
+    
+    // Convert final geometry to vector for buildBVH
+    std::vector<uint> final_primitives(final_geometry.begin(), final_geometry.end());
+    
+    // Validate new geometries exist
+    for (uint uuid : added_geometry) {
+        if (!context->doesPrimitiveExist(uuid)) {
+            if (printmessages) {
+                std::cout << "Warning: Added primitive " << uuid << " does not exist, falling back to full rebuild" << std::endl;
+            }
+            buildBVH(final_primitives);
+            return;
+        }
+    }
+    
+    // For now, use optimized rebuild for incremental updates
+    // This is still faster than full geometry traversal since we're limiting to specific primitives
+    if (printmessages) {
+        std::cout << "Performing targeted rebuild with " << final_primitives.size() << " primitives" << std::endl;
+    }
+    
+    buildBVH(final_primitives);
+    
+    // Update tracking
+    last_bvh_geometry = final_geometry;
+    bvh_dirty = false;
+}
+
 bool CollisionDetection::validateUUIDs(const std::vector<uint> &UUIDs) const {
+    bool all_valid = true;
     for (uint UUID: UUIDs) {
         if (!context->doesPrimitiveExist(UUID)) {
             if (printmessages) {
-                helios_runtime_error("ERROR (CollisionDetection::validateUUIDs): Primitive UUID " + std::to_string(UUID) + " does not exist");
+                std::cerr << "WARNING (CollisionDetection::validateUUIDs): Primitive UUID " + std::to_string(UUID) + " does not exist - skipping" << std::endl;
             }
-            return false;
+            all_valid = false;
         }
     }
-    return true;
+    return all_valid;
 }
 
 void CollisionDetection::calculateGridIntersection(const vec3 &grid_center, const vec3 &grid_size, const helios::int3 &grid_divisions, const std::vector<uint> &UUIDs) {
@@ -1105,6 +1393,9 @@ int CollisionDetection::countRayIntersections(const vec3 &origin, const vec3 &di
                 uint primitive_id = primitive_indices[node.primitive_start + i];
 
                 // Get this primitive's AABB
+                if (!context->doesPrimitiveExist(primitive_id)) {
+                    continue; // Skip invalid primitive
+                }
                 vec3 prim_min, prim_max;
                 context->getPrimitiveBoundingBox(primitive_id, prim_min, prim_max);
 
@@ -1242,7 +1533,7 @@ CollisionDetection::OptimalPathResult CollisionDetection::findOptimalConePath(co
     if (detected_gaps.empty()) {
         // No gaps found, fall back to central axis
         if (printmessages) {
-            std::cerr << "WARNING: No gaps detected in cone, using central axis" << std::endl;
+            //std::cerr << "WARNING: No gaps detected in cone, using central axis" << std::endl;
         }
         result.confidence = 0.1f;
         return result;
@@ -1263,10 +1554,6 @@ CollisionDetection::OptimalPathResult CollisionDetection::findOptimalConePath(co
         // Higher confidence for larger, well-defined gaps
         const Gap &best_gap = detected_gaps[0]; // Assuming first is best after sorting
         result.confidence = std::min(1.0f, best_gap.angular_size * 10.0f); // Scale angular size to confidence
-    }
-
-    if (printmessages) {
-        std::cout << "Optimal gap path found: " << detected_gaps.size() << " gaps detected, " << result.collisionCount << " collisions, confidence " << result.confidence << std::endl;
     }
 
     return result;
@@ -1310,50 +1597,72 @@ std::vector<CollisionDetection::Gap> CollisionDetection::detectGapsInCone(const 
         ray_samples.push_back(sample);
     }
 
-    // Cluster adjacent free samples into gaps
-    std::vector<bool> processed(ray_samples.size(), false);
+    // Debug: Count free vs blocked samples
+    int free_count = 0, blocked_count = 0;
+    for (const auto& sample : ray_samples) {
+        if (sample.is_free) free_count++;
+        else blocked_count++;
+    }
 
+    // Use a more sophisticated gap detection approach based on contiguous free regions
+    // First, sort samples by angular position relative to central axis to identify contiguous regions
+    std::vector<std::pair<float, size_t>> angular_positions;
     for (size_t i = 0; i < ray_samples.size(); ++i) {
-        if (processed[i] || !ray_samples[i].is_free) {
-            continue;
+        if (ray_samples[i].is_free) {
+            // Calculate angular position in cone-relative coordinates
+            float dot_product = ray_samples[i].direction * central_axis;
+            dot_product = std::max(-1.0f, std::min(1.0f, dot_product));
+            float angular_from_center = acosf(dot_product);
+            angular_positions.push_back({angular_from_center, i});
         }
+    }
 
-        // Start a new gap
+    if (angular_positions.empty()) {
+        return gaps; // No free samples
+    }
+
+    // Sort by angular position
+    std::sort(angular_positions.begin(), angular_positions.end());
+
+    // Find contiguous free regions (gaps) with minimum size threshold
+    std::vector<bool> processed(ray_samples.size(), false);
+    float min_gap_angular_size = half_angle * 0.05f; // 5% of cone angle minimum gap size
+    
+    for (size_t start = 0; start < angular_positions.size(); ++start) {
+        size_t start_idx = angular_positions[start].second;
+        if (processed[start_idx]) continue;
+
         Gap new_gap;
-        new_gap.sample_indices.push_back(i);
-        processed[i] = true;
+        new_gap.sample_indices.push_back(start_idx);
+        processed[start_idx] = true;
 
-        // Find all adjacent free samples (simple clustering)
-        std::queue<size_t> to_process;
-        to_process.push(i);
-
-        while (!to_process.empty()) {
-            size_t current_idx = to_process.front();
-            to_process.pop();
-
-            // Check neighboring samples (angular neighbors)
-            for (size_t j = 0; j < ray_samples.size(); ++j) {
-                if (processed[j] || !ray_samples[j].is_free) {
-                    continue;
-                }
-
-                // Calculate angular distance between samples
-                float dot_product = ray_samples[current_idx].direction * ray_samples[j].direction;
+        // Extend gap by finding nearby free samples using k-nearest neighbor approach
+        std::vector<float> distances_to_start;
+        for (size_t j = 0; j < ray_samples.size(); ++j) {
+            if (j != start_idx && ray_samples[j].is_free && !processed[j]) {
+                float dot_product = ray_samples[start_idx].direction * ray_samples[j].direction;
                 dot_product = std::max(-1.0f, std::min(1.0f, dot_product));
                 float angular_distance = acosf(dot_product);
-
-                // If samples are close enough, add to gap
-                float clustering_threshold = half_angle * 0.2f; // 20% of cone half-angle
-                if (angular_distance < clustering_threshold) {
-                    new_gap.sample_indices.push_back(j);
-                    processed[j] = true;
-                    to_process.push(j);
-                }
+                distances_to_start.push_back(angular_distance);
+            } else {
+                distances_to_start.push_back(999.0f); // Large value for excluded samples
             }
         }
 
-        // Only keep gaps with multiple samples
-        if (new_gap.sample_indices.size() >= 3) {
+        // Add nearby samples to gap using adaptive threshold
+        float sample_density = 2.0f * half_angle / sqrtf((float)num_samples);
+        float adaptive_threshold = sample_density * 3.0f; // 3x sample spacing for connection
+        
+        for (size_t j = 0; j < ray_samples.size(); ++j) {
+            if (j != start_idx && ray_samples[j].is_free && !processed[j] && 
+                distances_to_start[j] < adaptive_threshold) {
+                new_gap.sample_indices.push_back(j);
+                processed[j] = true;
+            }
+        }
+
+        // Only keep gaps that meet minimum size requirements
+        if (new_gap.sample_indices.size() >= 5) { // Require at least 5 samples for a valid gap
             gaps.push_back(new_gap);
         }
     }
@@ -1445,4 +1754,141 @@ helios::vec3 CollisionDetection::findOptimalGapDirection(const std::vector<Gap> 
     // Return direction toward the highest-scoring gap
     const Gap &best_gap = gaps[0];
     return best_gap.center_direction;
+}
+
+// -------- SPATIAL OPTIMIZATION METHODS --------
+
+std::vector<std::pair<uint, uint>> CollisionDetection::findCollisionsWithinDistance(const std::vector<uint> &query_UUIDs, const std::vector<uint> &target_UUIDs, float max_distance) {
+    
+    std::vector<std::pair<uint, uint>> collision_pairs;
+
+    
+    // Update primitive centroids cache for target geometry
+    for (uint target_id : target_UUIDs) {
+        if (primitive_centroids_cache.find(target_id) == primitive_centroids_cache.end()) {
+            // Calculate and cache centroid for this primitive
+            std::vector<vec3> vertices = context->getPrimitiveVertices(target_id);
+            if (!vertices.empty()) {
+                vec3 centroid = make_vec3(0, 0, 0);
+                for (const vec3& vertex : vertices) {
+                    centroid = centroid + vertex;
+                }
+                centroid = centroid / float(vertices.size());
+                primitive_centroids_cache[target_id] = centroid;
+            }
+        }
+    }
+    
+    // For each query primitive, find nearby targets within distance
+    for (uint query_id : query_UUIDs) {
+        // Get query centroid
+        std::vector<vec3> query_vertices = context->getPrimitiveVertices(query_id);
+        if (query_vertices.empty()) continue;
+        
+        vec3 query_centroid = make_vec3(0, 0, 0);
+        for (const vec3& vertex : query_vertices) {
+            query_centroid = query_centroid + vertex;
+        }
+        query_centroid = query_centroid / float(query_vertices.size());
+        
+        // Check distance to each target
+        for (uint target_id : target_UUIDs) {
+            if (query_id == target_id) continue; // Skip self-collision
+            
+            auto target_centroid_it = primitive_centroids_cache.find(target_id);
+            if (target_centroid_it != primitive_centroids_cache.end()) {
+                vec3 target_centroid = target_centroid_it->second;
+                float distance = (query_centroid - target_centroid).magnitude();
+                
+                if (distance <= max_distance) {
+                    // Within distance threshold, check for actual collision
+                    std::vector<uint> single_query = {query_id};
+                    std::vector<uint> single_target = {target_id};
+                    std::vector<uint> empty_objects;
+                    
+                    std::vector<uint> collisions = findCollisions(single_query, empty_objects, single_target, empty_objects);
+                    if (!collisions.empty()) {
+                        collision_pairs.push_back(std::make_pair(query_id, target_id));
+                    }
+                }
+            }
+        }
+    }
+    
+    if (printmessages) {
+        std::cout << "Found " << collision_pairs.size() << " collision pairs within distance threshold" << std::endl;
+    }
+    
+    return collision_pairs;
+}
+
+void CollisionDetection::setMaxCollisionDistance(float distance) {
+    if (distance <= 0.0f) {
+        helios_runtime_error("ERROR (CollisionDetection::setMaxCollisionDistance): Distance must be positive");
+    }
+    
+    max_collision_distance = distance;
+    
+    if (printmessages) {
+        std::cout << "Set maximum collision distance to " << distance << " meters" << std::endl;
+    }
+}
+
+float CollisionDetection::getMaxCollisionDistance() const {
+    return max_collision_distance;
+}
+
+std::vector<uint> CollisionDetection::filterGeometryByDistance(const helios::vec3 &query_center, float max_radius, const std::vector<uint> &candidate_UUIDs) {
+    
+    std::vector<uint> filtered_UUIDs;
+    
+    if (printmessages) {
+        //std::cout << "Filtering geometry within radius " << max_radius << " of center " << query_center << std::endl;
+    }
+    
+    // Get list of candidates (either provided or all primitives)
+    std::vector<uint> candidates;
+    if (candidate_UUIDs.empty()) {
+        candidates = context->getAllUUIDs();
+    } else {
+        candidates = candidate_UUIDs;
+    }
+    
+    // Filter candidates by distance
+    for (uint candidate_id : candidates) {
+        // Skip if primitive doesn't exist
+        if (!context->doesPrimitiveExist(candidate_id)) {
+            continue;
+        }
+        
+        // Get primitive centroid (calculate if not cached)
+        vec3 centroid;
+        auto cache_it = primitive_centroids_cache.find(candidate_id);
+        if (cache_it != primitive_centroids_cache.end()) {
+            centroid = cache_it->second;
+        } else {
+            // Calculate and cache centroid
+            std::vector<vec3> vertices = context->getPrimitiveVertices(candidate_id);
+            if (vertices.empty()) continue;
+            
+            centroid = make_vec3(0, 0, 0);
+            for (const vec3& vertex : vertices) {
+                centroid = centroid + vertex;
+            }
+            centroid = centroid / float(vertices.size());
+            primitive_centroids_cache[candidate_id] = centroid;
+        }
+        
+        // Check distance from query center
+        float distance = (query_center - centroid).magnitude();
+        if (distance <= max_radius) {
+            filtered_UUIDs.push_back(candidate_id);
+        }
+    }
+    
+    if (printmessages) {
+        //std::cout << "Filtered " << candidates.size() << " candidates to " << filtered_UUIDs.size() << " within radius" << std::endl;
+    }
+    
+    return filtered_UUIDs;
 }
