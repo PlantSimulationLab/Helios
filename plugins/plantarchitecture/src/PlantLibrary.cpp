@@ -417,7 +417,7 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     shoot_parameters_proleptic.max_nodes_per_season = 20;
     shoot_parameters_proleptic.phyllochron_min = 2.0;
     shoot_parameters_proleptic.elongation_rate_max = 0.15;
-    shoot_parameters_proleptic.girth_area_factor = 5.f;
+    shoot_parameters_proleptic.girth_area_factor = 7.f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.1;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.4;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
@@ -428,7 +428,7 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     shoot_parameters_proleptic.internode_length_max = 0.04;
     shoot_parameters_proleptic.internode_length_min = 0.01;
     shoot_parameters_proleptic.internode_length_decay_rate = 0.004;
-    shoot_parameters_proleptic.fruit_set_probability = 0.4;
+    shoot_parameters_proleptic.fruit_set_probability = 0.3;
     shoot_parameters_proleptic.flower_bud_break_probability = 0.3;
     shoot_parameters_proleptic.max_terminal_floral_buds = 1;
     shoot_parameters_proleptic.flowers_require_dormancy = true;
@@ -464,7 +464,7 @@ uint PlantArchitecture::buildAppleTree(const helios::vec3 &base_position) {
     uint Nscaffolds = 4; // context_ptr->randu(4,5);
 
     for (int i = 0; i < Nscaffolds; i++) {
-        float pitch = context_ptr->randu(deg2rad(55), deg2rad(65));
+        float pitch = context_ptr->randu(deg2rad(35), deg2rad(45));
         uint uID_shoot = addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - i - 1, context_ptr->randu(7, 9), make_AxisRotation(pitch, (float(i) + context_ptr->randu(-0.2f, 0.2f)) / float(Nscaffolds) * 2 * M_PI, 0), 0.005, 0.04,
                                        1.f, 1.f, 0.5, "proleptic", 0);
     }

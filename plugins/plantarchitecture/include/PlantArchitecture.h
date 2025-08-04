@@ -1560,7 +1560,7 @@ public:
     ~PlantArchitecture();
 
     //! Unit test routines
-    static int selfTest();
+    static int selfTest(int argc, char **argv);
 
     //! Add optional output object data values to the Context
     /**
@@ -1737,6 +1737,13 @@ public:
      * \param[in] time_step_days Time interval in days.
      */
     void advanceTime(uint plantID, float time_step_days);
+
+    //! Advance plant growth by a specified time interval for a specified set of plants
+    /**
+     * \param[in] plantIDs IDs of the plant instances.
+     * \param[in] time_step_days Time interval in days.
+     */
+    void advanceTime(const std::vector<uint> &plantIDs, float time_step_days);
 
     //! Accumulates hourly net photosynthesis for each leaf in the plant architecture
     /**
@@ -1924,9 +1931,8 @@ public:
      * 
      * \param[in] obstacle_UUIDs Vector of primitive UUIDs that represent solid obstacles
      * \param[in] avoidance_distance Distance at which obstacle avoidance begins (meters)
-     * \param[in] minimum_distance Minimum distance to maintain from obstacle surface (meters)
      */
-    void enableSolidObstacleAvoidance(const std::vector<uint> &obstacle_UUIDs, float avoidance_distance = 0.5f, float minimum_distance = 0.05f);
+    void enableSolidObstacleAvoidance(const std::vector<uint> &obstacle_UUIDs, float avoidance_distance = 0.5f);
 
     //! Enable or disable petiole collision detection
     /**

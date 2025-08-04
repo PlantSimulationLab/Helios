@@ -235,8 +235,8 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &qu
             helios_runtime_error("ERROR (CollisionDetection::findCollisions): One or more invalid target UUIDs provided");
         }
 
-        // Build BVH with only the target geometry
-        buildBVH(all_target_UUIDs);
+        // Build BVH with only the target geometry (with caching)
+        updateBVH(all_target_UUIDs, false); // Use caching logic instead of direct rebuild
     }
 
     // Perform collision detection using the same logic as the standard findCollisions
@@ -867,19 +867,23 @@ void CollisionDetection::buildBVHRecursive(uint node_index, size_t primitive_sta
     size_t split_index = primitive_count / 2;
 
     // Create child nodes by allocating next two available indices
-    node.left_child = bvh_nodes.size();
-    node.right_child = bvh_nodes.size() + 1;
+    uint left_child_index = bvh_nodes.size();
+    uint right_child_index = bvh_nodes.size() + 1;
 
     // Resize to accommodate both children at once (more efficient than incremental resizing)
     bvh_nodes.resize(bvh_nodes.size() + 2);
 
-    node.is_leaf = false;
-    node.primitive_start = 0;
-    node.primitive_count = 0;
+    // Re-get the node reference after potential reallocation
+    BVHNode &updated_node = bvh_nodes[node_index];
+    updated_node.left_child = left_child_index;
+    updated_node.right_child = right_child_index;
+    updated_node.is_leaf = false;
+    updated_node.primitive_start = 0;
+    updated_node.primitive_count = 0;
 
     // Recursively build child nodes
-    buildBVHRecursive(node.left_child, primitive_start, split_index, depth + 1);
-    buildBVHRecursive(node.right_child, primitive_start + split_index, primitive_count - split_index, depth + 1);
+    buildBVHRecursive(left_child_index, primitive_start, split_index, depth + 1);
+    buildBVHRecursive(right_child_index, primitive_start + split_index, primitive_count - split_index, depth + 1);
 }
 
 std::vector<uint> CollisionDetection::traverseBVH_CPU(const vec3 &query_aabb_min, const vec3 &query_aabb_max) {
@@ -1827,6 +1831,11 @@ bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const 
     
     // Ensure BVH is current
     ensureBVHCurrent();
+    
+    // Check if BVH is empty
+    if (bvh_nodes.empty()) {
+        return false; // No geometry to collide with
+    }
     
     // Convert candidate UUIDs to set for efficient lookup
     std::set<uint> candidate_set(candidate_UUIDs.begin(), candidate_UUIDs.end());
