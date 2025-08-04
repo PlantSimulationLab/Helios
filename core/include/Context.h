@@ -17,6 +17,8 @@
 #define HELIOS_CONTEXT
 
 #include <utility>
+#include <set>
+#include <unordered_set>
 
 #include "global.h"
 
@@ -63,6 +65,8 @@ namespace helios {
         HELIOS_TYPE_STRING = 10,
         //! bool data type
         HELIOS_TYPE_BOOL = 11,
+        //! unknown/uninitialized data type (used for registry queries)
+        HELIOS_TYPE_UNKNOWN = 12,
     };
 
     //! Texture map data structure
@@ -2115,11 +2119,21 @@ namespace helios {
          */
         [[nodiscard]] Cone *getConeObjectPointer_private(uint ObjID) const;
 
+        //! Invalidate the getAllUUIDs cache when primitives are added/removed/hidden/shown
+        void invalidateAllUUIDsCache() const {
+            all_uuids_cache_valid = false;
+        }
+
         //! Map containing a pointer to each primitive
         /**
          * \note A Primitive's index (key) in this map is its UUID
          */
         std::unordered_map<uint, Primitive *> primitives;
+
+        //! Cache for getAllUUIDs() result to avoid repeated expensive iteration
+        mutable std::vector<uint> cached_all_uuids;
+        //! Flag indicating whether the getAllUUIDs cache is valid
+        mutable bool all_uuids_cache_valid = false;
 
         //! List of primitives that have been modified since geometry was last set as clean
         std::vector<uint> dirty_deleted_primitives;
@@ -2151,6 +2165,30 @@ namespace helios {
         std::unordered_map<std::string, size_t> primitive_data_label_counts;
         std::unordered_map<std::string, size_t> object_data_label_counts;
 
+        //----------- DATA TYPE CONSISTENCY REGISTRIES -------------//
+        
+        //! Registry to track the expected data type for each primitive data label across all primitives
+        std::unordered_map<std::string, HeliosDataType> primitive_data_type_registry;
+        
+        //! Registry to track the expected data type for each object data label across all objects
+        std::unordered_map<std::string, HeliosDataType> object_data_type_registry;
+
+        //----------- VALUE-LEVEL CACHING REGISTRIES -------------//
+        
+        //! Generic value registries for primitive data - maps data_label -> {value -> reference_count}
+        std::unordered_map<std::string, std::unordered_map<std::string, size_t>> primitive_string_value_registry;
+        std::unordered_map<std::string, std::unordered_map<int, size_t>> primitive_int_value_registry;
+        std::unordered_map<std::string, std::unordered_map<uint, size_t>> primitive_uint_value_registry;
+        
+        //! Generic value registries for object data - maps data_label -> {value -> reference_count}
+        std::unordered_map<std::string, std::unordered_map<std::string, size_t>> object_string_value_registry;
+        std::unordered_map<std::string, std::unordered_map<int, size_t>> object_int_value_registry;
+        std::unordered_map<std::string, std::unordered_map<uint, size_t>> object_uint_value_registry;
+        
+        //! Sets to track which data labels have value-level caching enabled
+        std::unordered_set<std::string> cached_primitive_data_labels;
+        std::unordered_set<std::string> cached_object_data_labels;
+
         //! Increments the count associated with a given primitive data label.
         /**
          * \param[in] primitive_data_label The label of the primitive data whose count is to be incremented.
@@ -2163,6 +2201,8 @@ namespace helios {
          */
         void decrementPrimitiveDataLabelCounter(const std::string &primitive_data_label);
 
+        
+
         //! Increments the count associated with a given object data label.
         /**
          * \param[in] object_data_label The label of the object data whose count is to be incremented.
@@ -2174,6 +2214,12 @@ namespace helios {
          * \param[in] object_data_label The label of the object data whose count is to be decremented.
          */
         void decrementObjectDataLabelCounter(const std::string &object_data_label);
+
+        //! Helper function to convert data type enum to string
+        std::string dataTypeToString(HeliosDataType type) const;
+        
+        //! Helper function to check if type casting is supported between two types
+        bool isTypeCastingSupported(HeliosDataType from_type, HeliosDataType to_type) const;
 
         //---------- CONTEXT PRIVATE MEMBER VARIABLES ---------//
 
@@ -2263,9 +2309,11 @@ namespace helios {
 
         //! Run a self-test of the Context. The Context self-test runs through validation checks of Context-related methods to ensure they are working properly.
         /**
+         * \param[in] argc Number of command line arguments
+         * \param[in] argv Array of command line argument strings
          * \return 0 if test was successful, 1 if test failed.
          */
-        static int selfTest();
+        static int selfTest(int argc, char** argv);
 
         //! Set seed for random generator
         /**
@@ -2829,9 +2877,127 @@ namespace helios {
                 helios_runtime_error("ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
             }
 #endif
+            // Check if this primitive already has cached data for registry maintenance
+            std::string label_str = std::string(label);
+            bool had_cached_value = false;
+            
+            // Handle caching only for supported types, and avoid character arrays
+            if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                if (isPrimitiveDataValueCachingEnabled(label_str) && primitives.at(UUID)->doesPrimitiveDataExist(label)) {
+                    T old_cached_value{};
+                    primitives.at(UUID)->getPrimitiveData(label, old_cached_value);
+                    decrementPrimitiveValueRegistry(label_str, old_cached_value);
+                    had_cached_value = true;
+                }
+            } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                if (isPrimitiveDataValueCachingEnabled(label_str) && primitives.at(UUID)->doesPrimitiveDataExist(label)) {
+                    std::string old_cached_value;
+                    primitives.at(UUID)->getPrimitiveData(label, old_cached_value);
+                    decrementPrimitiveValueRegistry(label_str, old_cached_value);
+                    had_cached_value = true;
+                }
+            }
+            
             if (!primitives.at(UUID)->doesPrimitiveDataExist(label)) {
                 incrementPrimitiveDataLabelCounter(label);
             }
+            
+            // Validate data type consistency and register/validate type
+            HeliosDataType data_type;
+            if constexpr (std::is_same_v<T, int>) {
+                data_type = HELIOS_TYPE_INT;
+            } else if constexpr (std::is_same_v<T, uint>) {
+                data_type = HELIOS_TYPE_UINT;
+            } else if constexpr (std::is_same_v<T, float>) {
+                data_type = HELIOS_TYPE_FLOAT;
+            } else if constexpr (std::is_same_v<T, double>) {
+                data_type = HELIOS_TYPE_DOUBLE;
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                data_type = HELIOS_TYPE_VEC2;
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                data_type = HELIOS_TYPE_VEC3;
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                data_type = HELIOS_TYPE_VEC4;
+            } else if constexpr (std::is_same_v<T, int2>) {
+                data_type = HELIOS_TYPE_INT2;
+            } else if constexpr (std::is_same_v<T, int3>) {
+                data_type = HELIOS_TYPE_INT3;
+            } else if constexpr (std::is_same_v<T, int4>) {
+                data_type = HELIOS_TYPE_INT4;
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                data_type = HELIOS_TYPE_STRING;
+            }
+            HeliosDataType target_type = registerOrValidatePrimitiveDataType<T>(label, data_type);
+            
+            // Store data with type casting if needed
+            if (target_type != data_type && isTypeCastingSupported(data_type, target_type)) {
+                storeDataWithTypeCasting(UUID, label, data, target_type);
+            } else {
+                primitives.at(UUID)->setPrimitiveData(label, data);
+            }
+            
+            // Update value registry if caching is enabled for this label (only for new data)
+            if (isPrimitiveDataValueCachingEnabled(label_str) && !had_cached_value) {
+                if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                    incrementPrimitiveValueRegistry(label_str, data);
+                } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    incrementPrimitiveValueRegistry(label_str, std::string(data));
+                }
+            } else if (isPrimitiveDataValueCachingEnabled(label_str) && had_cached_value) {
+                // For updates, just add the new value (old value was already decremented)
+                if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                    incrementPrimitiveValueRegistry(label_str, data);
+                } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    incrementPrimitiveValueRegistry(label_str, std::string(data));
+                }
+            }
+        }
+
+        //! Add vector data value associated with a primitive element
+        /**
+         * \tparam T Primitive data type
+         * \param[in] UUID Unique universal identifier of Primitive element
+         * \param[in] label Name/label associated with data
+         * \param[in] data Primitive data value (vector)
+         */
+        template<typename T>
+        void setPrimitiveData(uint UUID, const char *label, const std::vector<T> &data) {
+#ifdef HELIOS_DEBUG
+            if (primitives.find(UUID) == primitives.end()) {
+                helios_runtime_error("ERROR (Context::setPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
+            }
+#endif
+            if (!primitives.at(UUID)->doesPrimitiveDataExist(label)) {
+                incrementPrimitiveDataLabelCounter(label);
+            }
+            
+            // For vector data, register the base type (not vector type)
+            HeliosDataType data_type;
+            if constexpr (std::is_same_v<T, int>) {
+                data_type = HELIOS_TYPE_INT;
+            } else if constexpr (std::is_same_v<T, uint>) {
+                data_type = HELIOS_TYPE_UINT;
+            } else if constexpr (std::is_same_v<T, float>) {
+                data_type = HELIOS_TYPE_FLOAT;
+            } else if constexpr (std::is_same_v<T, double>) {
+                data_type = HELIOS_TYPE_DOUBLE;
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                data_type = HELIOS_TYPE_VEC2;
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                data_type = HELIOS_TYPE_VEC3;
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                data_type = HELIOS_TYPE_VEC4;
+            } else if constexpr (std::is_same_v<T, int2>) {
+                data_type = HELIOS_TYPE_INT2;
+            } else if constexpr (std::is_same_v<T, int3>) {
+                data_type = HELIOS_TYPE_INT3;
+            } else if constexpr (std::is_same_v<T, int4>) {
+                data_type = HELIOS_TYPE_INT4;
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                data_type = HELIOS_TYPE_STRING;
+            }
+            registerOrValidatePrimitiveDataType<T>(label, data_type);
+            
             primitives.at(UUID)->setPrimitiveData(label, data);
         }
 
@@ -2850,6 +3016,36 @@ namespace helios {
                 helios_runtime_error("ERROR (Context::setPrimitiveData): UUIDs and data vectors must be the same size.");
             }
 #endif
+
+            // Validate data type consistency and register/validate type (only once for all elements)
+            HeliosDataType target_type = HELIOS_TYPE_UNKNOWN;
+            if (!UUIDs.empty()) {
+                HeliosDataType data_type;
+                if constexpr (std::is_same_v<T, int>) {
+                    data_type = HELIOS_TYPE_INT;
+                } else if constexpr (std::is_same_v<T, uint>) {
+                    data_type = HELIOS_TYPE_UINT;
+                } else if constexpr (std::is_same_v<T, float>) {
+                    data_type = HELIOS_TYPE_FLOAT;
+                } else if constexpr (std::is_same_v<T, double>) {
+                    data_type = HELIOS_TYPE_DOUBLE;
+                } else if constexpr (std::is_same_v<T, vec2>) {
+                    data_type = HELIOS_TYPE_VEC2;
+                } else if constexpr (std::is_same_v<T, vec3>) {
+                    data_type = HELIOS_TYPE_VEC3;
+                } else if constexpr (std::is_same_v<T, vec4>) {
+                    data_type = HELIOS_TYPE_VEC4;
+                } else if constexpr (std::is_same_v<T, int2>) {
+                    data_type = HELIOS_TYPE_INT2;
+                } else if constexpr (std::is_same_v<T, int3>) {
+                    data_type = HELIOS_TYPE_INT3;
+                } else if constexpr (std::is_same_v<T, int4>) {
+                    data_type = HELIOS_TYPE_INT4;
+                } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    data_type = HELIOS_TYPE_STRING;
+                }
+                target_type = registerOrValidatePrimitiveDataType<T>(label, data_type);
+            }
 
             for (uint UUID: UUIDs) {
 #ifdef HELIOS_DEBUG
@@ -2879,6 +3075,35 @@ namespace helios {
          */
         template<typename T>
         void setPrimitiveData(const std::vector<uint> &UUIDs, const char *label, const T &data) {
+
+            // Validate data type consistency and register/validate type
+            if (!UUIDs.empty()) {
+                HeliosDataType data_type;
+                if constexpr (std::is_same_v<T, int>) {
+                    data_type = HELIOS_TYPE_INT;
+                } else if constexpr (std::is_same_v<T, uint>) {
+                    data_type = HELIOS_TYPE_UINT;
+                } else if constexpr (std::is_same_v<T, float>) {
+                    data_type = HELIOS_TYPE_FLOAT;
+                } else if constexpr (std::is_same_v<T, double>) {
+                    data_type = HELIOS_TYPE_DOUBLE;
+                } else if constexpr (std::is_same_v<T, vec2>) {
+                    data_type = HELIOS_TYPE_VEC2;
+                } else if constexpr (std::is_same_v<T, vec3>) {
+                    data_type = HELIOS_TYPE_VEC3;
+                } else if constexpr (std::is_same_v<T, vec4>) {
+                    data_type = HELIOS_TYPE_VEC4;
+                } else if constexpr (std::is_same_v<T, int2>) {
+                    data_type = HELIOS_TYPE_INT2;
+                } else if constexpr (std::is_same_v<T, int3>) {
+                    data_type = HELIOS_TYPE_INT3;
+                } else if constexpr (std::is_same_v<T, int4>) {
+                    data_type = HELIOS_TYPE_INT4;
+                } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    data_type = HELIOS_TYPE_STRING;
+                }
+                registerOrValidatePrimitiveDataType<T>(label, data_type);
+            }
 
             for (uint UUID: UUIDs) {
 #ifdef HELIOS_DEBUG
@@ -2943,6 +3168,15 @@ namespace helios {
          */
         HeliosDataType getPrimitiveDataType(uint UUID, const char *label) const;
 
+        //! Get the expected data type for a primitive data label (cached lookup)
+        /**
+         * \param[in] label Name/label associated with primitive data
+         * \return Helios data type that all primitives with this label should have
+         * \sa HeliosDataType
+         * \note Returns HELIOS_TYPE_UNKNOWN if label doesn't exist in registry
+         */
+        HeliosDataType getPrimitiveDataType(const char *label) const;
+
         //! Get the size/length of primitive data
         /**
          * \param[in] UUID Unique universal identifier of Primitive element
@@ -2978,6 +3212,50 @@ namespace helios {
          * \return A vector of strings containing the labels of all primitive data.
          */
         [[nodiscard]] std::vector<std::string> listAllPrimitiveDataLabels() const;
+
+
+        //----------- VALUE-LEVEL CACHING CONFIGURATION ----------//
+        
+        //! Enable value-level caching for a primitive data label
+        /**
+         * \param[in] label The primitive data label to enable caching for. Must have string, int, or uint type.
+         */
+        void enablePrimitiveDataValueCaching(const std::string &label);
+        
+        //! Disable value-level caching for a primitive data label
+        /**
+         * \param[in] label The primitive data label to disable caching for.
+         */
+        void disablePrimitiveDataValueCaching(const std::string &label);
+        
+        //! Check if value-level caching is enabled for a primitive data label
+        /**
+         * \param[in] label The primitive data label to check.
+         * \return True if caching is enabled, false otherwise.
+         */
+        [[nodiscard]] bool isPrimitiveDataValueCachingEnabled(const std::string &label) const;
+        
+        //! Enable value-level caching for an object data label
+        /**
+         * \param[in] label The object data label to enable caching for. Must have string, int, or uint type.
+         */
+        void enableObjectDataValueCaching(const std::string &label);
+        
+        //! Disable value-level caching for an object data label
+        /**
+         * \param[in] label The object data label to disable caching for.
+         */
+        void disableObjectDataValueCaching(const std::string &label);
+        
+        //! Check if value-level caching is enabled for an object data label
+        /**
+         * \param[in] label The object data label to check.
+         * \return True if caching is enabled, false otherwise.
+         */
+        [[nodiscard]] bool isObjectDataValueCachingEnabled(const std::string &label) const;
+
+        //----------- UNIQUE VALUE QUERY METHODS ----------//
+        
 
         //! Method to get the Primitive type
         /**
@@ -3426,10 +3704,75 @@ namespace helios {
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
+            
+            // Validate data type consistency and register/validate type
+            HeliosDataType data_type;
+            if constexpr (std::is_same_v<T, int>) {
+                data_type = HELIOS_TYPE_INT;
+            } else if constexpr (std::is_same_v<T, uint>) {
+                data_type = HELIOS_TYPE_UINT;
+            } else if constexpr (std::is_same_v<T, float>) {
+                data_type = HELIOS_TYPE_FLOAT;
+            } else if constexpr (std::is_same_v<T, double>) {
+                data_type = HELIOS_TYPE_DOUBLE;
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                data_type = HELIOS_TYPE_VEC2;
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                data_type = HELIOS_TYPE_VEC3;
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                data_type = HELIOS_TYPE_VEC4;
+            } else if constexpr (std::is_same_v<T, int2>) {
+                data_type = HELIOS_TYPE_INT2;
+            } else if constexpr (std::is_same_v<T, int3>) {
+                data_type = HELIOS_TYPE_INT3;
+            } else if constexpr (std::is_same_v<T, int4>) {
+                data_type = HELIOS_TYPE_INT4;
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                data_type = HELIOS_TYPE_STRING;
+            }
+            registerOrValidateObjectDataType<T>(label, data_type);
+            
+            // Check if this object already has cached data for registry maintenance
+            std::string label_str = std::string(label);
+            bool had_cached_value = false;
+            
+            // Handle caching only for supported types, and avoid character arrays
+            if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                if (isObjectDataValueCachingEnabled(label_str) && objects.at(objID)->doesObjectDataExist(label)) {
+                    T old_cached_value{};
+                    objects.at(objID)->getObjectData(label, old_cached_value);
+                    decrementObjectValueRegistry(label_str, old_cached_value);
+                    had_cached_value = true;
+                }
+            } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                if (isObjectDataValueCachingEnabled(label_str) && objects.at(objID)->doesObjectDataExist(label)) {
+                    std::string old_cached_value;
+                    objects.at(objID)->getObjectData(label, old_cached_value);
+                    decrementObjectValueRegistry(label_str, old_cached_value);
+                    had_cached_value = true;
+                }
+            }
+            
             if (!objects.at(objID)->doesObjectDataExist(label)) {
                 incrementObjectDataLabelCounter(label);
             }
             objects.at(objID)->setObjectData(label, data);
+            
+            // Update value registry if caching is enabled for this label (only for new data)
+            if (isObjectDataValueCachingEnabled(label_str) && !had_cached_value) {
+                if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                    incrementObjectValueRegistry(label_str, data);
+                } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    incrementObjectValueRegistry(label_str, std::string(data));
+                }
+            } else if (isObjectDataValueCachingEnabled(label_str) && had_cached_value) {
+                // For updates, just add the new value (old value was already decremented)
+                if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                    incrementObjectValueRegistry(label_str, data);
+                } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    incrementObjectValueRegistry(label_str, std::string(data));
+                }
+            }
         }
 
         //! Add scalar data to multiple compound objects
@@ -3444,6 +3787,35 @@ namespace helios {
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
+
+            // Validate data type consistency and register/validate type
+            if (!objIDs.empty()) {
+                HeliosDataType data_type;
+                if constexpr (std::is_same_v<T, int>) {
+                    data_type = HELIOS_TYPE_INT;
+                } else if constexpr (std::is_same_v<T, uint>) {
+                    data_type = HELIOS_TYPE_UINT;
+                } else if constexpr (std::is_same_v<T, float>) {
+                    data_type = HELIOS_TYPE_FLOAT;
+                } else if constexpr (std::is_same_v<T, double>) {
+                    data_type = HELIOS_TYPE_DOUBLE;
+                } else if constexpr (std::is_same_v<T, vec2>) {
+                    data_type = HELIOS_TYPE_VEC2;
+                } else if constexpr (std::is_same_v<T, vec3>) {
+                    data_type = HELIOS_TYPE_VEC3;
+                } else if constexpr (std::is_same_v<T, vec4>) {
+                    data_type = HELIOS_TYPE_VEC4;
+                } else if constexpr (std::is_same_v<T, int2>) {
+                    data_type = HELIOS_TYPE_INT2;
+                } else if constexpr (std::is_same_v<T, int3>) {
+                    data_type = HELIOS_TYPE_INT3;
+                } else if constexpr (std::is_same_v<T, int4>) {
+                    data_type = HELIOS_TYPE_INT4;
+                } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    data_type = HELIOS_TYPE_STRING;
+                }
+                registerOrValidateObjectDataType<T>(label, data_type);
+            }
 
             for (uint objID: objIDs) {
                 if (!objects.at(objID)->doesObjectDataExist(label)) {
@@ -3471,6 +3843,35 @@ namespace helios {
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
+
+            // Validate data type consistency and register/validate type
+            if (!objIDs.empty() && !objIDs[0].empty()) {
+                HeliosDataType data_type;
+                if constexpr (std::is_same_v<T, int>) {
+                    data_type = HELIOS_TYPE_INT;
+                } else if constexpr (std::is_same_v<T, uint>) {
+                    data_type = HELIOS_TYPE_UINT;
+                } else if constexpr (std::is_same_v<T, float>) {
+                    data_type = HELIOS_TYPE_FLOAT;
+                } else if constexpr (std::is_same_v<T, double>) {
+                    data_type = HELIOS_TYPE_DOUBLE;
+                } else if constexpr (std::is_same_v<T, vec2>) {
+                    data_type = HELIOS_TYPE_VEC2;
+                } else if constexpr (std::is_same_v<T, vec3>) {
+                    data_type = HELIOS_TYPE_VEC3;
+                } else if constexpr (std::is_same_v<T, vec4>) {
+                    data_type = HELIOS_TYPE_VEC4;
+                } else if constexpr (std::is_same_v<T, int2>) {
+                    data_type = HELIOS_TYPE_INT2;
+                } else if constexpr (std::is_same_v<T, int3>) {
+                    data_type = HELIOS_TYPE_INT3;
+                } else if constexpr (std::is_same_v<T, int4>) {
+                    data_type = HELIOS_TYPE_INT4;
+                } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    data_type = HELIOS_TYPE_STRING;
+                }
+                registerOrValidateObjectDataType<T>(label, data_type);
+            }
 
             for (const auto &j: objIDs) {
                 for (uint objID: j) {
@@ -3502,6 +3903,35 @@ namespace helios {
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
+
+            // Validate data type consistency and register/validate type
+            if (!objIDs.empty() && !objIDs[0].empty() && !objIDs[0][0].empty()) {
+                HeliosDataType data_type;
+                if constexpr (std::is_same_v<T, int>) {
+                    data_type = HELIOS_TYPE_INT;
+                } else if constexpr (std::is_same_v<T, uint>) {
+                    data_type = HELIOS_TYPE_UINT;
+                } else if constexpr (std::is_same_v<T, float>) {
+                    data_type = HELIOS_TYPE_FLOAT;
+                } else if constexpr (std::is_same_v<T, double>) {
+                    data_type = HELIOS_TYPE_DOUBLE;
+                } else if constexpr (std::is_same_v<T, vec2>) {
+                    data_type = HELIOS_TYPE_VEC2;
+                } else if constexpr (std::is_same_v<T, vec3>) {
+                    data_type = HELIOS_TYPE_VEC3;
+                } else if constexpr (std::is_same_v<T, vec4>) {
+                    data_type = HELIOS_TYPE_VEC4;
+                } else if constexpr (std::is_same_v<T, int2>) {
+                    data_type = HELIOS_TYPE_INT2;
+                } else if constexpr (std::is_same_v<T, int3>) {
+                    data_type = HELIOS_TYPE_INT3;
+                } else if constexpr (std::is_same_v<T, int4>) {
+                    data_type = HELIOS_TYPE_INT4;
+                } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    data_type = HELIOS_TYPE_STRING;
+                }
+                registerOrValidateObjectDataType<T>(label, data_type);
+            }
 
             for (const auto &k: objIDs) {
                 for (const auto &j: k) {
@@ -3544,6 +3974,34 @@ namespace helios {
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
+            
+            // Validate data type consistency and register/validate type
+            HeliosDataType data_type;
+            if constexpr (std::is_same_v<T, int>) {
+                data_type = HELIOS_TYPE_INT;
+            } else if constexpr (std::is_same_v<T, uint>) {
+                data_type = HELIOS_TYPE_UINT;
+            } else if constexpr (std::is_same_v<T, float>) {
+                data_type = HELIOS_TYPE_FLOAT;
+            } else if constexpr (std::is_same_v<T, double>) {
+                data_type = HELIOS_TYPE_DOUBLE;
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                data_type = HELIOS_TYPE_VEC2;
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                data_type = HELIOS_TYPE_VEC3;
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                data_type = HELIOS_TYPE_VEC4;
+            } else if constexpr (std::is_same_v<T, int2>) {
+                data_type = HELIOS_TYPE_INT2;
+            } else if constexpr (std::is_same_v<T, int3>) {
+                data_type = HELIOS_TYPE_INT3;
+            } else if constexpr (std::is_same_v<T, int4>) {
+                data_type = HELIOS_TYPE_INT4;
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                data_type = HELIOS_TYPE_STRING;
+            }
+            registerOrValidateObjectDataType<T>(label, data_type);
+            
             objects.at(objID)->setObjectData(label, data);
         }
 
@@ -3565,6 +4023,35 @@ namespace helios {
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
+
+            // Validate data type consistency and register/validate type
+            if (!objIDs.empty()) {
+                HeliosDataType data_type;
+                if constexpr (std::is_same_v<T, int>) {
+                    data_type = HELIOS_TYPE_INT;
+                } else if constexpr (std::is_same_v<T, uint>) {
+                    data_type = HELIOS_TYPE_UINT;
+                } else if constexpr (std::is_same_v<T, float>) {
+                    data_type = HELIOS_TYPE_FLOAT;
+                } else if constexpr (std::is_same_v<T, double>) {
+                    data_type = HELIOS_TYPE_DOUBLE;
+                } else if constexpr (std::is_same_v<T, vec2>) {
+                    data_type = HELIOS_TYPE_VEC2;
+                } else if constexpr (std::is_same_v<T, vec3>) {
+                    data_type = HELIOS_TYPE_VEC3;
+                } else if constexpr (std::is_same_v<T, vec4>) {
+                    data_type = HELIOS_TYPE_VEC4;
+                } else if constexpr (std::is_same_v<T, int2>) {
+                    data_type = HELIOS_TYPE_INT2;
+                } else if constexpr (std::is_same_v<T, int3>) {
+                    data_type = HELIOS_TYPE_INT3;
+                } else if constexpr (std::is_same_v<T, int4>) {
+                    data_type = HELIOS_TYPE_INT4;
+                } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    data_type = HELIOS_TYPE_STRING;
+                }
+                registerOrValidateObjectDataType<T>(label, data_type);
+            }
 
             for (uint objID: objIDs) {
                 if (!objects.at(objID)->doesObjectDataExist(label)) {
@@ -3629,6 +4116,15 @@ namespace helios {
          * \sa HeliosDataType
          */
         HeliosDataType getObjectDataType(uint objID, const char *label) const;
+
+        //! Get the expected data type for an object data label (cached lookup)
+        /**
+         * \param[in] label Name/label associated with object data
+         * \return Helios data type that all objects with this label should have
+         * \sa HeliosDataType
+         * \note Returns HELIOS_TYPE_UNKNOWN if label doesn't exist in registry
+         */
+        HeliosDataType getObjectDataType(const char *label) const;
 
         //! Get the size/length of primitive data
         /**
@@ -6213,6 +6709,333 @@ namespace helios {
          * \note The input vectors ctable and cfrac must have the same size, and neither can be empty. If the requested Ncolors exceeds the internal limit, it will be truncated to 9999, with a warning issued.
          */
         std::vector<RGBcolor> generateColormap(const std::vector<helios::RGBcolor> &ctable, const std::vector<float> &cfrac, uint Ncolors);
+
+        // ---------- Template method implementations for data type consistency ---------- //
+        
+        template<typename T>
+        void storeDataWithTypeCasting(uint UUID, const char *label, const T &data, HeliosDataType target_type) {
+            // Only cast between numeric scalar types
+            if constexpr (std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double>) {
+                if (target_type == HELIOS_TYPE_INT) {
+                    primitives.at(UUID)->setPrimitiveData(label, static_cast<int>(data));
+                } else if (target_type == HELIOS_TYPE_UINT) {
+                    primitives.at(UUID)->setPrimitiveData(label, static_cast<uint>(data));
+                } else if (target_type == HELIOS_TYPE_FLOAT) {
+                    primitives.at(UUID)->setPrimitiveData(label, static_cast<float>(data));
+                } else if (target_type == HELIOS_TYPE_DOUBLE) {
+                    primitives.at(UUID)->setPrimitiveData(label, static_cast<double>(data));
+                } else {
+                    // Fallback: store as original type
+                    primitives.at(UUID)->setPrimitiveData(label, data);
+                }
+            } else {
+                // For non-numeric types, store as-is
+                primitives.at(UUID)->setPrimitiveData(label, data);
+            }
+        }
+        
+        template<typename T>
+        void storeObjectDataWithTypeCasting(uint objID, const char *label, const T &data, HeliosDataType target_type) {
+            // Only cast between numeric scalar types
+            if constexpr (std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double>) {
+                if (target_type == HELIOS_TYPE_INT) {
+                    objects.at(objID)->setObjectData(label, static_cast<int>(data));
+                } else if (target_type == HELIOS_TYPE_UINT) {
+                    objects.at(objID)->setObjectData(label, static_cast<uint>(data));
+                } else if (target_type == HELIOS_TYPE_FLOAT) {
+                    objects.at(objID)->setObjectData(label, static_cast<float>(data));
+                } else if (target_type == HELIOS_TYPE_DOUBLE) {
+                    objects.at(objID)->setObjectData(label, static_cast<double>(data));
+                } else {
+                    // Fallback: store as original type
+                    objects.at(objID)->setObjectData(label, data);
+                }
+            } else {
+                // For non-numeric types, store as-is
+                objects.at(objID)->setObjectData(label, data);
+            }
+        }
+
+        template<typename T>
+        HeliosDataType registerOrValidatePrimitiveDataType(const std::string &label, HeliosDataType data_type) {
+            auto it = primitive_data_type_registry.find(label);
+            if (it == primitive_data_type_registry.end()) {
+                // First time this label is used - register the type
+                primitive_data_type_registry[label] = data_type;
+                return data_type;
+            } else {
+                // Label exists - check for type consistency
+                HeliosDataType expected_type = it->second;
+                if (expected_type != data_type) {
+                    // Types don't match - check if casting is possible
+                    if (!isTypeCastingSupported(data_type, expected_type)) {
+                        helios_runtime_error("ERROR (Context::registerOrValidatePrimitiveDataType): Data type mismatch for label '" + label + "'. Expected " + 
+                                           dataTypeToString(expected_type) + " but got " + dataTypeToString(data_type) + 
+                                           ". Type casting between these types is not supported.");
+                    } else {
+                        std::cerr << "WARNING (Context::registerOrValidatePrimitiveDataType): Type casting from " + dataTypeToString(data_type) + 
+                                     " to " + dataTypeToString(expected_type) + " for label '" + label + "'. Consider using consistent types." << std::endl;
+                    }
+                }
+                return expected_type;
+            }
+        }
+
+        template<typename T>  
+        HeliosDataType registerOrValidateObjectDataType(const std::string &label, HeliosDataType data_type) {
+            auto it = object_data_type_registry.find(label);
+            if (it == object_data_type_registry.end()) {
+                // First time this label is used - register the type
+                object_data_type_registry[label] = data_type;
+                return data_type;
+            } else {
+                // Label exists - check for type consistency
+                HeliosDataType expected_type = it->second;
+                if (expected_type != data_type) {
+                    // Types don't match - check if casting is possible
+                    if (!isTypeCastingSupported(data_type, expected_type)) {
+                        helios_runtime_error("ERROR (Context::registerOrValidateObjectDataType): Data type mismatch for label '" + label + "'. Expected " + 
+                                           dataTypeToString(expected_type) + " but got " + dataTypeToString(data_type) + 
+                                           ". Type casting between these types is not supported.");
+                    } else {
+                        std::cerr << "WARNING (Context::registerOrValidateObjectDataType): Type casting from " + dataTypeToString(data_type) + 
+                                     " to " + dataTypeToString(expected_type) + " for label '" + label + "'. Consider using consistent types." << std::endl;
+                    }
+                }
+                return expected_type;
+            }
+        }
+
+        //----------- TEMPLATE METHOD IMPLEMENTATIONS FOR VALUE REGISTRY ----------//
+        
+        //! Template implementation for incrementing primitive value registry
+        template<typename T>
+        void incrementPrimitiveValueRegistry(const std::string &label, const T &value) {
+            if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                std::string string_value = (std::is_same_v<T, std::string>) ? value : std::string(value);
+                primitive_string_value_registry[label][string_value]++;
+            } else if constexpr (std::is_same_v<T, int>) {
+                primitive_int_value_registry[label][value]++;
+            } else if constexpr (std::is_same_v<T, uint>) {
+                primitive_uint_value_registry[label][value]++;
+            }
+        }
+        
+        //! Template implementation for decrementing primitive value registry
+        template<typename T>
+        void decrementPrimitiveValueRegistry(const std::string &label, const T &value) {
+            if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                std::string string_value = (std::is_same_v<T, std::string>) ? value : std::string(value);
+                auto label_it = primitive_string_value_registry.find(label);
+                if (label_it != primitive_string_value_registry.end()) {
+                    auto value_it = label_it->second.find(string_value);
+                    if (value_it != label_it->second.end() && value_it->second > 0) {
+                        value_it->second--;
+                        if (value_it->second == 0) {
+                            label_it->second.erase(value_it);
+                            if (label_it->second.empty()) {
+                                primitive_string_value_registry.erase(label_it);
+                            }
+                        }
+                    }
+                }
+            } else if constexpr (std::is_same_v<T, int>) {
+                auto label_it = primitive_int_value_registry.find(label);
+                if (label_it != primitive_int_value_registry.end()) {
+                    auto value_it = label_it->second.find(value);
+                    if (value_it != label_it->second.end() && value_it->second > 0) {
+                        value_it->second--;
+                        if (value_it->second == 0) {
+                            label_it->second.erase(value_it);
+                            if (label_it->second.empty()) {
+                                primitive_int_value_registry.erase(label_it);
+                            }
+                        }
+                    }
+                }
+            } else if constexpr (std::is_same_v<T, uint>) {
+                auto label_it = primitive_uint_value_registry.find(label);
+                if (label_it != primitive_uint_value_registry.end()) {
+                    auto value_it = label_it->second.find(value);
+                    if (value_it != label_it->second.end() && value_it->second > 0) {
+                        value_it->second--;
+                        if (value_it->second == 0) {
+                            label_it->second.erase(value_it);
+                            if (label_it->second.empty()) {
+                                primitive_uint_value_registry.erase(label_it);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        //! Template implementation for incrementing object value registry
+        template<typename T>
+        void incrementObjectValueRegistry(const std::string &label, const T &value) {
+            if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                std::string string_value = (std::is_same_v<T, std::string>) ? value : std::string(value);
+                object_string_value_registry[label][string_value]++;
+            } else if constexpr (std::is_same_v<T, int>) {
+                object_int_value_registry[label][value]++;
+            } else if constexpr (std::is_same_v<T, uint>) {
+                object_uint_value_registry[label][value]++;
+            }
+        }
+        
+        //! Template implementation for decrementing object value registry
+        template<typename T>
+        void decrementObjectValueRegistry(const std::string &label, const T &value) {
+            if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                std::string string_value = (std::is_same_v<T, std::string>) ? value : std::string(value);
+                auto label_it = object_string_value_registry.find(label);
+                if (label_it != object_string_value_registry.end()) {
+                    auto value_it = label_it->second.find(string_value);
+                    if (value_it != label_it->second.end() && value_it->second > 0) {
+                        value_it->second--;
+                        if (value_it->second == 0) {
+                            label_it->second.erase(value_it);
+                            if (label_it->second.empty()) {
+                                object_string_value_registry.erase(label_it);
+                            }
+                        }
+                    }
+                }
+            } else if constexpr (std::is_same_v<T, int>) {
+                auto label_it = object_int_value_registry.find(label);
+                if (label_it != object_int_value_registry.end()) {
+                    auto value_it = label_it->second.find(value);
+                    if (value_it != label_it->second.end() && value_it->second > 0) {
+                        value_it->second--;
+                        if (value_it->second == 0) {
+                            label_it->second.erase(value_it);
+                            if (label_it->second.empty()) {
+                                object_int_value_registry.erase(label_it);
+                            }
+                        }
+                    }
+                }
+            } else if constexpr (std::is_same_v<T, uint>) {
+                auto label_it = object_uint_value_registry.find(label);
+                if (label_it != object_uint_value_registry.end()) {
+                    auto value_it = label_it->second.find(value);
+                    if (value_it != label_it->second.end() && value_it->second > 0) {
+                        value_it->second--;
+                        if (value_it->second == 0) {
+                            label_it->second.erase(value_it);
+                            if (label_it->second.empty()) {
+                                object_uint_value_registry.erase(label_it);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        //----------- UNIQUE VALUE QUERY METHODS ----------//
+        
+        //! Get all unique values for a primitive data label (requires caching to be enabled)
+        /**
+         * \tparam T Data type (std::string, int, or uint)
+         * \param[in] label The primitive data label to query.
+         * \param[out] values Vector to store the unique values.
+         * \note Throws helios_runtime_error if caching is not enabled for the label.
+         */
+        template<typename T>
+        void getUniquePrimitiveDataValues(const std::string &label, std::vector<T> &values) const {
+            static_assert(std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>,
+                         "getUniquePrimitiveDataValues() only supports std::string, int, and uint types.");
+            
+            if (!isPrimitiveDataValueCachingEnabled(label)) {
+                helios_runtime_error("ERROR (Context::getUniquePrimitiveDataValues): Value-level caching is not enabled for primitive data label '" + label + "'. Use enablePrimitiveDataValueCaching() first.");
+            }
+            
+            values.clear();
+            
+            if constexpr (std::is_same_v<T, std::string>) {
+                auto it = primitive_string_value_registry.find(label);
+                if (it != primitive_string_value_registry.end()) {
+                    values.reserve(it->second.size());
+                    for (const auto &[value, count] : it->second) {
+                        if (count > 0) {
+                            values.push_back(value);
+                        }
+                    }
+                }
+            } else if constexpr (std::is_same_v<T, int>) {
+                auto it = primitive_int_value_registry.find(label);
+                if (it != primitive_int_value_registry.end()) {
+                    values.reserve(it->second.size());
+                    for (const auto &[value, count] : it->second) {
+                        if (count > 0) {
+                            values.push_back(value);
+                        }
+                    }
+                }
+            } else if constexpr (std::is_same_v<T, uint>) {
+                auto it = primitive_uint_value_registry.find(label);
+                if (it != primitive_uint_value_registry.end()) {
+                    values.reserve(it->second.size());
+                    for (const auto &[value, count] : it->second) {
+                        if (count > 0) {
+                            values.push_back(value);
+                        }
+                    }
+                }
+            }
+        }
+        
+        //! Get all unique values for an object data label (requires caching to be enabled)
+        /**
+         * \tparam T Data type (std::string, int, or uint)
+         * \param[in] label The object data label to query.
+         * \param[out] values Vector to store the unique values.
+         * \note Throws helios_runtime_error if caching is not enabled for the label.
+         */
+        template<typename T>
+        void getUniqueObjectDataValues(const std::string &label, std::vector<T> &values) const {
+            static_assert(std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>,
+                         "getUniqueObjectDataValues() only supports std::string, int, and uint types.");
+            
+            if (!isObjectDataValueCachingEnabled(label)) {
+                helios_runtime_error("ERROR (Context::getUniqueObjectDataValues): Value-level caching is not enabled for object data label '" + label + "'. Use enableObjectDataValueCaching() first.");
+            }
+            
+            values.clear();
+            
+            if constexpr (std::is_same_v<T, std::string>) {
+                auto it = object_string_value_registry.find(label);
+                if (it != object_string_value_registry.end()) {
+                    values.reserve(it->second.size());
+                    for (const auto &[value, count] : it->second) {
+                        if (count > 0) {
+                            values.push_back(value);
+                        }
+                    }
+                }
+            } else if constexpr (std::is_same_v<T, int>) {
+                auto it = object_int_value_registry.find(label);
+                if (it != object_int_value_registry.end()) {
+                    values.reserve(it->second.size());
+                    for (const auto &[value, count] : it->second) {
+                        if (count > 0) {
+                            values.push_back(value);
+                        }
+                    }
+                }
+            } else if constexpr (std::is_same_v<T, uint>) {
+                auto it = object_uint_value_registry.find(label);
+                if (it != object_uint_value_registry.end()) {
+                    values.reserve(it->second.size());
+                    for (const auto &[value, count] : it->second) {
+                        if (count > 0) {
+                            values.push_back(value);
+                        }
+                    }
+                }
+            }
+        }
+
 
     };
 

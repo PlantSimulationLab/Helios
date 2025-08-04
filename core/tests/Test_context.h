@@ -1803,6 +1803,136 @@ TEST_CASE("Comprehensive Coverage Tests") {
     }
 }
 
+TEST_CASE("getAllUUIDs Cache Performance") {
+    SUBCASE("Cache invalidation on primitive add/delete") {
+        Context ctx;
+        
+        // Initial empty state
+        std::vector<uint> empty_uuids = ctx.getAllUUIDs();
+        DOCTEST_CHECK(empty_uuids.empty());
+        
+        // Add primitives and test cache invalidation
+        uint p1 = ctx.addPatch();
+        std::vector<uint> one_uuid = ctx.getAllUUIDs();
+        DOCTEST_CHECK(one_uuid.size() == 1);
+        DOCTEST_CHECK(one_uuid[0] == p1);
+        
+        // Test cache consistency - repeated calls should return same result
+        std::vector<uint> same_uuid = ctx.getAllUUIDs();
+        DOCTEST_CHECK(same_uuid.size() == 1);
+        DOCTEST_CHECK(same_uuid[0] == p1);
+        
+        // Add more primitives
+        uint t1 = ctx.addTriangle(make_vec3(0,0,0), make_vec3(1,0,0), make_vec3(0,1,0));
+        uint v1 = ctx.addVoxel(make_vec3(0,0,0), make_vec3(1,1,1));
+        
+        std::vector<uint> three_uuids = ctx.getAllUUIDs();
+        DOCTEST_CHECK(three_uuids.size() == 3);
+        DOCTEST_CHECK(std::find(three_uuids.begin(), three_uuids.end(), p1) != three_uuids.end());
+        DOCTEST_CHECK(std::find(three_uuids.begin(), three_uuids.end(), t1) != three_uuids.end());
+        DOCTEST_CHECK(std::find(three_uuids.begin(), three_uuids.end(), v1) != three_uuids.end());
+        
+        // Test delete invalidation
+        ctx.deletePrimitive(t1);
+        std::vector<uint> two_uuids = ctx.getAllUUIDs();
+        DOCTEST_CHECK(two_uuids.size() == 2);
+        DOCTEST_CHECK(std::find(two_uuids.begin(), two_uuids.end(), t1) == two_uuids.end());
+        DOCTEST_CHECK(std::find(two_uuids.begin(), two_uuids.end(), p1) != two_uuids.end());
+        DOCTEST_CHECK(std::find(two_uuids.begin(), two_uuids.end(), v1) != two_uuids.end());
+    }
+    
+    SUBCASE("Cache invalidation on hide/show primitives") {
+        Context ctx;
+        uint p1 = ctx.addPatch();
+        uint p2 = ctx.addPatch();
+        uint p3 = ctx.addPatch();
+        
+        // All visible initially
+        std::vector<uint> all_visible = ctx.getAllUUIDs();
+        DOCTEST_CHECK(all_visible.size() == 3);
+        
+        // Hide one primitive
+        ctx.hidePrimitive(p2);
+        std::vector<uint> two_visible = ctx.getAllUUIDs();
+        DOCTEST_CHECK(two_visible.size() == 2);
+        DOCTEST_CHECK(std::find(two_visible.begin(), two_visible.end(), p2) == two_visible.end());
+        DOCTEST_CHECK(std::find(two_visible.begin(), two_visible.end(), p1) != two_visible.end());
+        DOCTEST_CHECK(std::find(two_visible.begin(), two_visible.end(), p3) != two_visible.end());
+        
+        // Hide multiple primitives
+        std::vector<uint> to_hide = {p1, p3};
+        ctx.hidePrimitive(to_hide);
+        std::vector<uint> none_visible = ctx.getAllUUIDs();
+        DOCTEST_CHECK(none_visible.empty());
+        
+        // Show one primitive back
+        ctx.showPrimitive(p1);
+        std::vector<uint> one_visible = ctx.getAllUUIDs();
+        DOCTEST_CHECK(one_visible.size() == 1);
+        DOCTEST_CHECK(one_visible[0] == p1);
+        
+        // Show all primitives back
+        std::vector<uint> to_show = {p2, p3};
+        ctx.showPrimitive(to_show);
+        std::vector<uint> all_back = ctx.getAllUUIDs();
+        DOCTEST_CHECK(all_back.size() == 3);
+    }
+    
+    SUBCASE("Cache invalidation on copy primitives") {
+        Context ctx;
+        uint original = ctx.addPatch();
+        
+        std::vector<uint> before_copy = ctx.getAllUUIDs();
+        DOCTEST_CHECK(before_copy.size() == 1);
+        
+        uint copied = ctx.copyPrimitive(original);
+        std::vector<uint> after_copy = ctx.getAllUUIDs();
+        DOCTEST_CHECK(after_copy.size() == 2);
+        DOCTEST_CHECK(std::find(after_copy.begin(), after_copy.end(), original) != after_copy.end());
+        DOCTEST_CHECK(std::find(after_copy.begin(), after_copy.end(), copied) != after_copy.end());
+        
+        // Test multiple copy
+        std::vector<uint> originals = {original, copied};
+        std::vector<uint> copies = ctx.copyPrimitive(originals);
+        std::vector<uint> after_multi_copy = ctx.getAllUUIDs();
+        DOCTEST_CHECK(after_multi_copy.size() == 4);
+        for (uint copy_id : copies) {
+            DOCTEST_CHECK(std::find(after_multi_copy.begin(), after_multi_copy.end(), copy_id) != after_multi_copy.end());
+        }
+    }
+    
+    SUBCASE("Cache consistency across mixed operations") {
+        Context ctx;
+        
+        // Complex sequence of operations
+        uint p1 = ctx.addPatch();
+        uint p2 = ctx.addTriangle(make_vec3(0,0,0), make_vec3(1,0,0), make_vec3(0,1,0));
+        
+        std::vector<uint> step1 = ctx.getAllUUIDs();
+        DOCTEST_CHECK(step1.size() == 2);
+        
+        ctx.hidePrimitive(p1);
+        std::vector<uint> step2 = ctx.getAllUUIDs();
+        DOCTEST_CHECK(step2.size() == 1);
+        DOCTEST_CHECK(step2[0] == p2);
+        
+        uint p3 = ctx.addVoxel(make_vec3(0,0,0), make_vec3(1,1,1));
+        std::vector<uint> step3 = ctx.getAllUUIDs();
+        DOCTEST_CHECK(step3.size() == 2);
+        
+        ctx.showPrimitive(p1);
+        std::vector<uint> step4 = ctx.getAllUUIDs();
+        DOCTEST_CHECK(step4.size() == 3);
+        
+        ctx.deletePrimitive(p2);
+        std::vector<uint> step5 = ctx.getAllUUIDs();
+        DOCTEST_CHECK(step5.size() == 2);
+        DOCTEST_CHECK(std::find(step5.begin(), step5.end(), p2) == step5.end());
+        DOCTEST_CHECK(std::find(step5.begin(), step5.end(), p1) != step5.end());
+        DOCTEST_CHECK(std::find(step5.begin(), step5.end(), p3) != step5.end());
+    }
+}
+
 TEST_CASE("Error Handling") {
     SUBCASE("Context error handling") {
         Context context_test;

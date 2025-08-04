@@ -19,19 +19,12 @@
 #include <doctest.h>
 #include <iostream>
 #include "global.h"
+#include "doctest_utils.h"
 
 using namespace helios;
 
-int CollisionDetection::selfTest() {
-    // Run all the tests
-    doctest::Context context;
-    int res = context.run();
-
-    if (context.shouldExit()) {
-        return res;
-    }
-
-    return res;
+int CollisionDetection::selfTest(int argc, char** argv) {
+    return helios::runDoctestWithValidation(argc, argv);
 }
 
 namespace CollisionTests {

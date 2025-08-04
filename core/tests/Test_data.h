@@ -709,6 +709,176 @@ TEST_CASE("Primitive Data") {
         DOCTEST_CHECK(ctx.doesPrimitiveDataExist(p, "int4_copy"));
         DOCTEST_CHECK(ctx.doesPrimitiveDataExist(p, "string_copy"));
     }
+
+
+    SUBCASE("Generic Value-Level Caching System") {
+        Context ctx_test;
+        
+        // Test error handling - should throw when caching not enabled
+        std::vector<std::string> test_values;
+        bool threw_error = false;
+        try {
+            ctx_test.getUniquePrimitiveDataValues("uncached_label", test_values);
+        } catch (const std::runtime_error &e) {
+            threw_error = true;
+            DOCTEST_CHECK(std::string(e.what()).find("Value-level caching is not enabled") != std::string::npos);
+        }
+        DOCTEST_CHECK(threw_error);
+        
+        threw_error = false;
+        try {
+            ctx_test.getUniqueObjectDataValues("uncached_label", test_values);
+        } catch (const std::runtime_error &e) {
+            threw_error = true;
+            DOCTEST_CHECK(std::string(e.what()).find("Value-level caching is not enabled") != std::string::npos);
+        }
+        DOCTEST_CHECK(threw_error);
+        
+        // Test cache configuration
+        DOCTEST_CHECK(!ctx_test.isPrimitiveDataValueCachingEnabled("test_string"));
+        DOCTEST_CHECK(!ctx_test.isObjectDataValueCachingEnabled("test_string"));
+        
+        ctx_test.enablePrimitiveDataValueCaching("test_string");
+        ctx_test.enablePrimitiveDataValueCaching("test_int");
+        ctx_test.enablePrimitiveDataValueCaching("test_uint");
+        ctx_test.enableObjectDataValueCaching("obj_string");
+        ctx_test.enableObjectDataValueCaching("obj_int");
+        ctx_test.enableObjectDataValueCaching("obj_uint");
+        
+        DOCTEST_CHECK(ctx_test.isPrimitiveDataValueCachingEnabled("test_string"));
+        DOCTEST_CHECK(ctx_test.isPrimitiveDataValueCachingEnabled("test_int"));
+        DOCTEST_CHECK(ctx_test.isPrimitiveDataValueCachingEnabled("test_uint"));
+        DOCTEST_CHECK(ctx_test.isObjectDataValueCachingEnabled("obj_string"));
+        DOCTEST_CHECK(ctx_test.isObjectDataValueCachingEnabled("obj_int"));
+        DOCTEST_CHECK(ctx_test.isObjectDataValueCachingEnabled("obj_uint"));
+        
+        // Create test primitives and objects
+        uint patch1 = ctx_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint patch2 = ctx_test.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+        uint patch3 = ctx_test.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+        uint obj1 = ctx_test.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
+        uint obj2 = ctx_test.addTileObject(make_vec3(1, 0, 0), make_vec2(1, 1), nullrotation, make_int2(1, 1));
+        
+        // Test primitive string value caching
+        ctx_test.setPrimitiveData(patch1, "test_string", std::string("apple"));
+        ctx_test.setPrimitiveData(patch2, "test_string", std::string("banana"));
+        ctx_test.setPrimitiveData(patch3, "test_string", std::string("apple"));
+        
+        std::vector<std::string> string_values;
+        ctx_test.getUniquePrimitiveDataValues("test_string", string_values);
+        DOCTEST_CHECK(string_values.size() == 2);
+        std::sort(string_values.begin(), string_values.end());
+        DOCTEST_CHECK(string_values[0] == "apple");
+        DOCTEST_CHECK(string_values[1] == "banana");
+        
+        // Test primitive int value caching
+        ctx_test.setPrimitiveData(patch1, "test_int", 10);
+        ctx_test.setPrimitiveData(patch2, "test_int", 20);
+        ctx_test.setPrimitiveData(patch3, "test_int", 10);
+        
+        std::vector<int> int_values;
+        ctx_test.getUniquePrimitiveDataValues("test_int", int_values);
+        DOCTEST_CHECK(int_values.size() == 2);
+        std::sort(int_values.begin(), int_values.end());
+        DOCTEST_CHECK(int_values[0] == 10);
+        DOCTEST_CHECK(int_values[1] == 20);
+        
+        // Test primitive uint value caching
+        ctx_test.setPrimitiveData(patch1, "test_uint", 100u);
+        ctx_test.setPrimitiveData(patch2, "test_uint", 200u);
+        ctx_test.setPrimitiveData(patch3, "test_uint", 100u);
+        
+        std::vector<uint> uint_values;
+        ctx_test.getUniquePrimitiveDataValues("test_uint", uint_values);
+        DOCTEST_CHECK(uint_values.size() == 2);
+        std::sort(uint_values.begin(), uint_values.end());
+        DOCTEST_CHECK(uint_values[0] == 100u);
+        DOCTEST_CHECK(uint_values[1] == 200u);
+        
+        // Test object string value caching
+        ctx_test.setObjectData(obj1, "obj_string", std::string("circle"));
+        ctx_test.setObjectData(obj2, "obj_string", std::string("square"));
+        
+        std::vector<std::string> obj_string_values;
+        ctx_test.getUniqueObjectDataValues("obj_string", obj_string_values);
+        DOCTEST_CHECK(obj_string_values.size() == 2);
+        std::sort(obj_string_values.begin(), obj_string_values.end());
+        DOCTEST_CHECK(obj_string_values[0] == "circle");
+        DOCTEST_CHECK(obj_string_values[1] == "square");
+        
+        // Test object int value caching
+        ctx_test.setObjectData(obj1, "obj_int", 5);
+        ctx_test.setObjectData(obj2, "obj_int", 15);
+        
+        std::vector<int> obj_int_values;
+        ctx_test.getUniqueObjectDataValues("obj_int", obj_int_values);
+        DOCTEST_CHECK(obj_int_values.size() == 2);
+        std::sort(obj_int_values.begin(), obj_int_values.end());
+        DOCTEST_CHECK(obj_int_values[0] == 5);
+        DOCTEST_CHECK(obj_int_values[1] == 15);
+        
+        // Test object uint value caching
+        ctx_test.setObjectData(obj1, "obj_uint", 50u);
+        ctx_test.setObjectData(obj2, "obj_uint", 150u);
+        
+        std::vector<uint> obj_uint_values;
+        ctx_test.getUniqueObjectDataValues("obj_uint", obj_uint_values);
+        DOCTEST_CHECK(obj_uint_values.size() == 2);
+        std::sort(obj_uint_values.begin(), obj_uint_values.end());
+        DOCTEST_CHECK(obj_uint_values[0] == 50u);
+        DOCTEST_CHECK(obj_uint_values[1] == 150u);
+        
+        // Test value update (cache maintenance)
+        ctx_test.setPrimitiveData(patch1, "test_string", std::string("cherry"));
+        ctx_test.getUniquePrimitiveDataValues("test_string", string_values);
+        DOCTEST_CHECK(string_values.size() == 3);
+        std::sort(string_values.begin(), string_values.end());
+        DOCTEST_CHECK(string_values[0] == "apple");
+        DOCTEST_CHECK(string_values[1] == "banana");
+        DOCTEST_CHECK(string_values[2] == "cherry");
+        
+        // Test clearing data (cache maintenance)
+        ctx_test.clearPrimitiveData(patch2, "test_string");
+        ctx_test.getUniquePrimitiveDataValues("test_string", string_values);
+        DOCTEST_CHECK(string_values.size() == 2);
+        std::sort(string_values.begin(), string_values.end());
+        DOCTEST_CHECK(string_values[0] == "apple");
+        DOCTEST_CHECK(string_values[1] == "cherry");
+        
+        ctx_test.clearObjectData(obj1, "obj_string");
+        ctx_test.getUniqueObjectDataValues("obj_string", obj_string_values);
+        DOCTEST_CHECK(obj_string_values.size() == 1);
+        DOCTEST_CHECK(obj_string_values[0] == "square");
+        
+        // Test disabling cache - should throw error after disabling
+        ctx_test.disablePrimitiveDataValueCaching("test_string");
+        DOCTEST_CHECK(!ctx_test.isPrimitiveDataValueCachingEnabled("test_string"));
+        
+        threw_error = false;
+        try {
+            ctx_test.getUniquePrimitiveDataValues("test_string", string_values);
+        } catch (const std::runtime_error &e) {
+            threw_error = true;
+        }
+        DOCTEST_CHECK(threw_error);
+        
+        ctx_test.disableObjectDataValueCaching("obj_string");
+        DOCTEST_CHECK(!ctx_test.isObjectDataValueCachingEnabled("obj_string"));
+        
+        threw_error = false;
+        try {
+            ctx_test.getUniqueObjectDataValues("obj_string", obj_string_values);
+        } catch (const std::runtime_error &e) {
+            threw_error = true;
+        }
+        DOCTEST_CHECK(threw_error);
+        
+        // Test empty results when no data exists (but caching is enabled)
+        ctx_test.enablePrimitiveDataValueCaching("empty_label");
+        std::vector<std::string> empty_values;
+        ctx_test.getUniquePrimitiveDataValues("empty_label", empty_values);
+        DOCTEST_CHECK(empty_values.empty());
+    }
 }
 
 TEST_CASE("Object Data Filtering") {
@@ -1089,4 +1259,162 @@ TEST_CASE("General Error Handling") {
     uint vox = ctx.addVoxel(make_vec3(0, 0, 0), make_vec3(1, 1, 1));
     std::vector<uint> vlist{vox};
     DOCTEST_CHECK_THROWS_AS(ctx.rotatePrimitive(vlist, PI_F / 4.f, "a"), std::runtime_error);
+}
+
+TEST_CASE("Data Type Consistency and Caching") {
+    Context ctx;
+
+    SUBCASE("Primitive data type caching") {
+        // Initially, registry should be empty
+        DOCTEST_CHECK_THROWS(ctx.getPrimitiveDataType("test_label"));
+        
+        // Create some primitives and set data
+        uint patch1 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint patch2 = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+        
+        // Set data with consistent type
+        ctx.setPrimitiveData(patch1, "temperature", 25.5f);
+        ctx.setPrimitiveData(patch2, "temperature", 30.2f);
+        
+        // Check cached type lookup
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("temperature") == HELIOS_TYPE_FLOAT);
+        
+        // Set data with different label
+        ctx.setPrimitiveData(patch1, "leaf_id", 123);
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("leaf_id") == HELIOS_TYPE_INT);
+        
+        // Non-existent label should throw an exception
+        DOCTEST_CHECK_THROWS(ctx.getPrimitiveDataType("nonexistent"));
+    }
+
+    SUBCASE("Object data type caching") {
+        // Initially, registry should be empty
+        DOCTEST_CHECK_THROWS(ctx.getObjectDataType("test_obj_label"));
+        
+        // Create objects and set data
+        uint box1 = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
+        uint box2 = ctx.addBoxObject(make_vec3(2, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
+        
+        // Set data with consistent type
+        ctx.setObjectData(box1, "volume", 1.0);
+        ctx.setObjectData(box2, "volume", 2.5);
+        
+        // Check cached type lookup
+        DOCTEST_CHECK(ctx.getObjectDataType("volume") == HELIOS_TYPE_DOUBLE);
+        
+        // Set data with different label
+        ctx.setObjectData(box1, "material_id", static_cast<uint>(42));
+        DOCTEST_CHECK(ctx.getObjectDataType("material_id") == HELIOS_TYPE_UINT);
+        
+        // Non-existent label should throw an exception
+        DOCTEST_CHECK_THROWS(ctx.getObjectDataType("nonexistent"));
+    }
+
+    SUBCASE("Type consistency enforcement - compatible numeric casting") {
+        uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        
+        // Set initial data as float
+        ctx.setPrimitiveData(patch, "value", 10.5f);
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("value") == HELIOS_TYPE_FLOAT);
+        
+        // Create another primitive and try to set compatible numeric type
+        uint patch2 = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+        
+        // This should generate a warning but work for compatible numeric types
+        capture_cerr cerr_buffer;
+        ctx.setPrimitiveData(patch2, "value", 20); // int to float should work with warning
+        
+        // Check that both primitives have the data and it's stored correctly
+        float val1, val2;
+        ctx.getPrimitiveData(patch, "value", val1);
+        ctx.getPrimitiveData(patch2, "value", val2);
+        DOCTEST_CHECK(val1 == doctest::Approx(10.5f));
+        DOCTEST_CHECK(val2 == doctest::Approx(20.0f));
+        
+        // Should have generated a warning about type casting (captured by cerr_buffer)
+        DOCTEST_CHECK(cerr_buffer.get_captured_output().find("WARNING") != std::string::npos);
+        DOCTEST_CHECK(cerr_buffer.get_captured_output().find("Type casting") != std::string::npos);
+    }
+
+    SUBCASE("Type consistency enforcement - incompatible types") {
+        uint box = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
+        
+        // Set initial data as string
+        ctx.setObjectData(box, "material", std::string("wood"));
+        DOCTEST_CHECK(ctx.getObjectDataType("material") == HELIOS_TYPE_STRING);
+        
+        // Create another object and try to set incompatible type
+        uint box2 = ctx.addBoxObject(make_vec3(2, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
+        
+        // This should throw an error because string and float are incompatible
+        DOCTEST_CHECK_THROWS_AS(ctx.setObjectData(box2, "material", 3.14f), std::runtime_error);
+    }
+
+    SUBCASE("Multiple data labels per primitive/object") {
+        uint tri = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0));
+        
+        // Set multiple different data types
+        ctx.setPrimitiveData(tri, "temperature", 25.0f);
+        ctx.setPrimitiveData(tri, "id", 100);
+        ctx.setPrimitiveData(tri, "name", std::string("leaf1"));
+        ctx.setPrimitiveData(tri, "position", make_vec3(0.5f, 0.5f, 0.0f));
+        
+        // Check all types are correctly cached
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("temperature") == HELIOS_TYPE_FLOAT);
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("id") == HELIOS_TYPE_INT);
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("name") == HELIOS_TYPE_STRING);
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("position") == HELIOS_TYPE_VEC3);
+        
+        // Add another primitive with the same labels - should maintain consistency
+        uint tri2 = ctx.addTriangle(make_vec3(1, 0, 0), make_vec3(2, 0, 0), make_vec3(1, 1, 0));
+        ctx.setPrimitiveData(tri2, "temperature", 30.0f);
+        ctx.setPrimitiveData(tri2, "id", 101);
+        ctx.setPrimitiveData(tri2, "name", std::string("leaf2"));
+        ctx.setPrimitiveData(tri2, "position", make_vec3(1.5f, 0.5f, 0.0f));
+        
+        // Verify data can be retrieved correctly
+        float temp;
+        int id;
+        std::string name;
+        vec3 pos;
+        
+        ctx.getPrimitiveData(tri2, "temperature", temp);
+        ctx.getPrimitiveData(tri2, "id", id);
+        ctx.getPrimitiveData(tri2, "name", name);
+        ctx.getPrimitiveData(tri2, "position", pos);
+        
+        DOCTEST_CHECK(temp == doctest::Approx(30.0f));
+        DOCTEST_CHECK(id == 101);
+        DOCTEST_CHECK(name == "leaf2");
+        DOCTEST_CHECK(pos.x == doctest::Approx(1.5f));
+    }
+
+    SUBCASE("Cross-contamination prevention") {
+        // Primitive and object data registries should be separate
+        uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint sphere = ctx.addSphereObject(10, make_vec3(0, 0, 0), 1.0f);
+        
+        // Set same label with different types on primitive vs object
+        ctx.setPrimitiveData(patch, "value", 42);        // int
+        ctx.setObjectData(sphere, "value", 3.14f);       // float
+        
+        // Registries should track them separately
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("value") == HELIOS_TYPE_INT);
+        DOCTEST_CHECK(ctx.getObjectDataType("value") == HELIOS_TYPE_FLOAT);
+    }
+
+    SUBCASE("Vector data type consistency") {
+        uint vox1 = ctx.addVoxel(make_vec3(0, 0, 0), make_vec3(1, 1, 1));
+        uint vox2 = ctx.addVoxel(make_vec3(1, 0, 0), make_vec3(1, 1, 1));
+        
+        // Set vector data
+        std::vector<float> temps1 = {20.0f, 25.0f, 30.0f};
+        std::vector<float> temps2 = {22.0f, 27.0f, 32.0f};
+        
+        ctx.setPrimitiveData(vox1, "temperature_profile", temps1);
+        ctx.setPrimitiveData(vox2, "temperature_profile", temps2);
+        
+        // Should register as HELIOS_TYPE_FLOAT (vector types use base type)
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("temperature_profile") == HELIOS_TYPE_FLOAT);
+    }
 }

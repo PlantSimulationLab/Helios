@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.42</span>
+       <span id="projectnumber">&#160;v1.3.43</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -1962,21 +1962,151 @@ $(function(){initNavTree('_test__context_8h_source.html',''); initResizable(true
 <div class="line"><a id="l01803" name="l01803"></a><span class="lineno"> 1803</span>    }</div>
 <div class="line"><a id="l01804" name="l01804"></a><span class="lineno"> 1804</span>}</div>
 <div class="line"><a id="l01805" name="l01805"></a><span class="lineno"> 1805</span> </div>
-<div class="line"><a id="l01806" name="l01806"></a><span class="lineno"> 1806</span>TEST_CASE(<span class="stringliteral">&quot;Error Handling&quot;</span>) {</div>
-<div class="line"><a id="l01807" name="l01807"></a><span class="lineno"> 1807</span>    SUBCASE(<span class="stringliteral">&quot;Context error handling&quot;</span>) {</div>
-<div class="line"><a id="l01808" name="l01808"></a><span class="lineno"> 1808</span>        Context context_test;</div>
-<div class="line"><a id="l01809" name="l01809"></a><span class="lineno"> 1809</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> tri = context_test.addTriangle(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 1, 0), RGB::green);</div>
-<div class="line"><a id="l01810" name="l01810"></a><span class="lineno"> 1810</span>        capture_cerr cerr_buffer;</div>
-<div class="line"><a id="l01811" name="l01811"></a><span class="lineno"> 1811</span>        vec3 center;</div>
-<div class="line"><a id="l01812" name="l01812"></a><span class="lineno"> 1812</span><span class="preprocessor">#ifdef HELIOS_DEBUG</span></div>
-<div class="line"><a id="l01813" name="l01813"></a><span class="lineno"> 1813</span>        DOCTEST_CHECK_THROWS_AS(center = context_test.getPatchCenter(tri), std::runtime_error);</div>
-<div class="line"><a id="l01814" name="l01814"></a><span class="lineno"> 1814</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l01815" name="l01815"></a><span class="lineno"> 1815</span> </div>
-<div class="line"><a id="l01816" name="l01816"></a><span class="lineno"> 1816</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> vox = context_test.addVoxel(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 1, 1));</div>
-<div class="line"><a id="l01817" name="l01817"></a><span class="lineno"> 1817</span>        std::vector&lt;uint&gt; vlist{vox};</div>
-<div class="line"><a id="l01818" name="l01818"></a><span class="lineno"> 1818</span>        DOCTEST_CHECK_THROWS_AS(context_test.rotatePrimitive(vlist, <a class="code hl_variable" href="global_8h.html#a2d6b12d3f019b61b427ec3c63270143d" title="Pi constant as a float.">PI_F</a> / 4.f, <span class="stringliteral">&quot;a&quot;</span>), std::runtime_error);</div>
-<div class="line"><a id="l01819" name="l01819"></a><span class="lineno"> 1819</span>    }</div>
-<div class="line"><a id="l01820" name="l01820"></a><span class="lineno"> 1820</span>}</div>
+<div class="line"><a id="l01806" name="l01806"></a><span class="lineno"> 1806</span>TEST_CASE(<span class="stringliteral">&quot;getAllUUIDs Cache Performance&quot;</span>) {</div>
+<div class="line"><a id="l01807" name="l01807"></a><span class="lineno"> 1807</span>    SUBCASE(<span class="stringliteral">&quot;Cache invalidation on primitive add/delete&quot;</span>) {</div>
+<div class="line"><a id="l01808" name="l01808"></a><span class="lineno"> 1808</span>        Context ctx;</div>
+<div class="line"><a id="l01809" name="l01809"></a><span class="lineno"> 1809</span>        </div>
+<div class="line"><a id="l01810" name="l01810"></a><span class="lineno"> 1810</span>        <span class="comment">// Initial empty state</span></div>
+<div class="line"><a id="l01811" name="l01811"></a><span class="lineno"> 1811</span>        std::vector&lt;uint&gt; empty_uuids = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01812" name="l01812"></a><span class="lineno"> 1812</span>        DOCTEST_CHECK(empty_uuids.empty());</div>
+<div class="line"><a id="l01813" name="l01813"></a><span class="lineno"> 1813</span>        </div>
+<div class="line"><a id="l01814" name="l01814"></a><span class="lineno"> 1814</span>        <span class="comment">// Add primitives and test cache invalidation</span></div>
+<div class="line"><a id="l01815" name="l01815"></a><span class="lineno"> 1815</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p1 = ctx.addPatch();</div>
+<div class="line"><a id="l01816" name="l01816"></a><span class="lineno"> 1816</span>        std::vector&lt;uint&gt; one_uuid = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01817" name="l01817"></a><span class="lineno"> 1817</span>        DOCTEST_CHECK(one_uuid.size() == 1);</div>
+<div class="line"><a id="l01818" name="l01818"></a><span class="lineno"> 1818</span>        DOCTEST_CHECK(one_uuid[0] == p1);</div>
+<div class="line"><a id="l01819" name="l01819"></a><span class="lineno"> 1819</span>        </div>
+<div class="line"><a id="l01820" name="l01820"></a><span class="lineno"> 1820</span>        <span class="comment">// Test cache consistency - repeated calls should return same result</span></div>
+<div class="line"><a id="l01821" name="l01821"></a><span class="lineno"> 1821</span>        std::vector&lt;uint&gt; same_uuid = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01822" name="l01822"></a><span class="lineno"> 1822</span>        DOCTEST_CHECK(same_uuid.size() == 1);</div>
+<div class="line"><a id="l01823" name="l01823"></a><span class="lineno"> 1823</span>        DOCTEST_CHECK(same_uuid[0] == p1);</div>
+<div class="line"><a id="l01824" name="l01824"></a><span class="lineno"> 1824</span>        </div>
+<div class="line"><a id="l01825" name="l01825"></a><span class="lineno"> 1825</span>        <span class="comment">// Add more primitives</span></div>
+<div class="line"><a id="l01826" name="l01826"></a><span class="lineno"> 1826</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> t1 = ctx.addTriangle(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1,0,0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,1,0));</div>
+<div class="line"><a id="l01827" name="l01827"></a><span class="lineno"> 1827</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> v1 = ctx.addVoxel(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1,1,1));</div>
+<div class="line"><a id="l01828" name="l01828"></a><span class="lineno"> 1828</span>        </div>
+<div class="line"><a id="l01829" name="l01829"></a><span class="lineno"> 1829</span>        std::vector&lt;uint&gt; three_uuids = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01830" name="l01830"></a><span class="lineno"> 1830</span>        DOCTEST_CHECK(three_uuids.size() == 3);</div>
+<div class="line"><a id="l01831" name="l01831"></a><span class="lineno"> 1831</span>        DOCTEST_CHECK(std::find(three_uuids.begin(), three_uuids.end(), p1) != three_uuids.end());</div>
+<div class="line"><a id="l01832" name="l01832"></a><span class="lineno"> 1832</span>        DOCTEST_CHECK(std::find(three_uuids.begin(), three_uuids.end(), t1) != three_uuids.end());</div>
+<div class="line"><a id="l01833" name="l01833"></a><span class="lineno"> 1833</span>        DOCTEST_CHECK(std::find(three_uuids.begin(), three_uuids.end(), v1) != three_uuids.end());</div>
+<div class="line"><a id="l01834" name="l01834"></a><span class="lineno"> 1834</span>        </div>
+<div class="line"><a id="l01835" name="l01835"></a><span class="lineno"> 1835</span>        <span class="comment">// Test delete invalidation</span></div>
+<div class="line"><a id="l01836" name="l01836"></a><span class="lineno"> 1836</span>        ctx.deletePrimitive(t1);</div>
+<div class="line"><a id="l01837" name="l01837"></a><span class="lineno"> 1837</span>        std::vector&lt;uint&gt; two_uuids = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01838" name="l01838"></a><span class="lineno"> 1838</span>        DOCTEST_CHECK(two_uuids.size() == 2);</div>
+<div class="line"><a id="l01839" name="l01839"></a><span class="lineno"> 1839</span>        DOCTEST_CHECK(std::find(two_uuids.begin(), two_uuids.end(), t1) == two_uuids.end());</div>
+<div class="line"><a id="l01840" name="l01840"></a><span class="lineno"> 1840</span>        DOCTEST_CHECK(std::find(two_uuids.begin(), two_uuids.end(), p1) != two_uuids.end());</div>
+<div class="line"><a id="l01841" name="l01841"></a><span class="lineno"> 1841</span>        DOCTEST_CHECK(std::find(two_uuids.begin(), two_uuids.end(), v1) != two_uuids.end());</div>
+<div class="line"><a id="l01842" name="l01842"></a><span class="lineno"> 1842</span>    }</div>
+<div class="line"><a id="l01843" name="l01843"></a><span class="lineno"> 1843</span>    </div>
+<div class="line"><a id="l01844" name="l01844"></a><span class="lineno"> 1844</span>    SUBCASE(<span class="stringliteral">&quot;Cache invalidation on hide/show primitives&quot;</span>) {</div>
+<div class="line"><a id="l01845" name="l01845"></a><span class="lineno"> 1845</span>        Context ctx;</div>
+<div class="line"><a id="l01846" name="l01846"></a><span class="lineno"> 1846</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p1 = ctx.addPatch();</div>
+<div class="line"><a id="l01847" name="l01847"></a><span class="lineno"> 1847</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p2 = ctx.addPatch();</div>
+<div class="line"><a id="l01848" name="l01848"></a><span class="lineno"> 1848</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p3 = ctx.addPatch();</div>
+<div class="line"><a id="l01849" name="l01849"></a><span class="lineno"> 1849</span>        </div>
+<div class="line"><a id="l01850" name="l01850"></a><span class="lineno"> 1850</span>        <span class="comment">// All visible initially</span></div>
+<div class="line"><a id="l01851" name="l01851"></a><span class="lineno"> 1851</span>        std::vector&lt;uint&gt; all_visible = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01852" name="l01852"></a><span class="lineno"> 1852</span>        DOCTEST_CHECK(all_visible.size() == 3);</div>
+<div class="line"><a id="l01853" name="l01853"></a><span class="lineno"> 1853</span>        </div>
+<div class="line"><a id="l01854" name="l01854"></a><span class="lineno"> 1854</span>        <span class="comment">// Hide one primitive</span></div>
+<div class="line"><a id="l01855" name="l01855"></a><span class="lineno"> 1855</span>        ctx.hidePrimitive(p2);</div>
+<div class="line"><a id="l01856" name="l01856"></a><span class="lineno"> 1856</span>        std::vector&lt;uint&gt; two_visible = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01857" name="l01857"></a><span class="lineno"> 1857</span>        DOCTEST_CHECK(two_visible.size() == 2);</div>
+<div class="line"><a id="l01858" name="l01858"></a><span class="lineno"> 1858</span>        DOCTEST_CHECK(std::find(two_visible.begin(), two_visible.end(), p2) == two_visible.end());</div>
+<div class="line"><a id="l01859" name="l01859"></a><span class="lineno"> 1859</span>        DOCTEST_CHECK(std::find(two_visible.begin(), two_visible.end(), p1) != two_visible.end());</div>
+<div class="line"><a id="l01860" name="l01860"></a><span class="lineno"> 1860</span>        DOCTEST_CHECK(std::find(two_visible.begin(), two_visible.end(), p3) != two_visible.end());</div>
+<div class="line"><a id="l01861" name="l01861"></a><span class="lineno"> 1861</span>        </div>
+<div class="line"><a id="l01862" name="l01862"></a><span class="lineno"> 1862</span>        <span class="comment">// Hide multiple primitives</span></div>
+<div class="line"><a id="l01863" name="l01863"></a><span class="lineno"> 1863</span>        std::vector&lt;uint&gt; to_hide = {p1, p3};</div>
+<div class="line"><a id="l01864" name="l01864"></a><span class="lineno"> 1864</span>        ctx.hidePrimitive(to_hide);</div>
+<div class="line"><a id="l01865" name="l01865"></a><span class="lineno"> 1865</span>        std::vector&lt;uint&gt; none_visible = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01866" name="l01866"></a><span class="lineno"> 1866</span>        DOCTEST_CHECK(none_visible.empty());</div>
+<div class="line"><a id="l01867" name="l01867"></a><span class="lineno"> 1867</span>        </div>
+<div class="line"><a id="l01868" name="l01868"></a><span class="lineno"> 1868</span>        <span class="comment">// Show one primitive back</span></div>
+<div class="line"><a id="l01869" name="l01869"></a><span class="lineno"> 1869</span>        ctx.showPrimitive(p1);</div>
+<div class="line"><a id="l01870" name="l01870"></a><span class="lineno"> 1870</span>        std::vector&lt;uint&gt; one_visible = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01871" name="l01871"></a><span class="lineno"> 1871</span>        DOCTEST_CHECK(one_visible.size() == 1);</div>
+<div class="line"><a id="l01872" name="l01872"></a><span class="lineno"> 1872</span>        DOCTEST_CHECK(one_visible[0] == p1);</div>
+<div class="line"><a id="l01873" name="l01873"></a><span class="lineno"> 1873</span>        </div>
+<div class="line"><a id="l01874" name="l01874"></a><span class="lineno"> 1874</span>        <span class="comment">// Show all primitives back</span></div>
+<div class="line"><a id="l01875" name="l01875"></a><span class="lineno"> 1875</span>        std::vector&lt;uint&gt; to_show = {p2, p3};</div>
+<div class="line"><a id="l01876" name="l01876"></a><span class="lineno"> 1876</span>        ctx.showPrimitive(to_show);</div>
+<div class="line"><a id="l01877" name="l01877"></a><span class="lineno"> 1877</span>        std::vector&lt;uint&gt; all_back = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01878" name="l01878"></a><span class="lineno"> 1878</span>        DOCTEST_CHECK(all_back.size() == 3);</div>
+<div class="line"><a id="l01879" name="l01879"></a><span class="lineno"> 1879</span>    }</div>
+<div class="line"><a id="l01880" name="l01880"></a><span class="lineno"> 1880</span>    </div>
+<div class="line"><a id="l01881" name="l01881"></a><span class="lineno"> 1881</span>    SUBCASE(<span class="stringliteral">&quot;Cache invalidation on copy primitives&quot;</span>) {</div>
+<div class="line"><a id="l01882" name="l01882"></a><span class="lineno"> 1882</span>        Context ctx;</div>
+<div class="line"><a id="l01883" name="l01883"></a><span class="lineno"> 1883</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> original = ctx.addPatch();</div>
+<div class="line"><a id="l01884" name="l01884"></a><span class="lineno"> 1884</span>        </div>
+<div class="line"><a id="l01885" name="l01885"></a><span class="lineno"> 1885</span>        std::vector&lt;uint&gt; before_copy = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01886" name="l01886"></a><span class="lineno"> 1886</span>        DOCTEST_CHECK(before_copy.size() == 1);</div>
+<div class="line"><a id="l01887" name="l01887"></a><span class="lineno"> 1887</span>        </div>
+<div class="line"><a id="l01888" name="l01888"></a><span class="lineno"> 1888</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> copied = ctx.copyPrimitive(original);</div>
+<div class="line"><a id="l01889" name="l01889"></a><span class="lineno"> 1889</span>        std::vector&lt;uint&gt; after_copy = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01890" name="l01890"></a><span class="lineno"> 1890</span>        DOCTEST_CHECK(after_copy.size() == 2);</div>
+<div class="line"><a id="l01891" name="l01891"></a><span class="lineno"> 1891</span>        DOCTEST_CHECK(std::find(after_copy.begin(), after_copy.end(), original) != after_copy.end());</div>
+<div class="line"><a id="l01892" name="l01892"></a><span class="lineno"> 1892</span>        DOCTEST_CHECK(std::find(after_copy.begin(), after_copy.end(), copied) != after_copy.end());</div>
+<div class="line"><a id="l01893" name="l01893"></a><span class="lineno"> 1893</span>        </div>
+<div class="line"><a id="l01894" name="l01894"></a><span class="lineno"> 1894</span>        <span class="comment">// Test multiple copy</span></div>
+<div class="line"><a id="l01895" name="l01895"></a><span class="lineno"> 1895</span>        std::vector&lt;uint&gt; originals = {original, copied};</div>
+<div class="line"><a id="l01896" name="l01896"></a><span class="lineno"> 1896</span>        std::vector&lt;uint&gt; copies = ctx.copyPrimitive(originals);</div>
+<div class="line"><a id="l01897" name="l01897"></a><span class="lineno"> 1897</span>        std::vector&lt;uint&gt; after_multi_copy = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01898" name="l01898"></a><span class="lineno"> 1898</span>        DOCTEST_CHECK(after_multi_copy.size() == 4);</div>
+<div class="line"><a id="l01899" name="l01899"></a><span class="lineno"> 1899</span>        <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> copy_id : copies) {</div>
+<div class="line"><a id="l01900" name="l01900"></a><span class="lineno"> 1900</span>            DOCTEST_CHECK(std::find(after_multi_copy.begin(), after_multi_copy.end(), copy_id) != after_multi_copy.end());</div>
+<div class="line"><a id="l01901" name="l01901"></a><span class="lineno"> 1901</span>        }</div>
+<div class="line"><a id="l01902" name="l01902"></a><span class="lineno"> 1902</span>    }</div>
+<div class="line"><a id="l01903" name="l01903"></a><span class="lineno"> 1903</span>    </div>
+<div class="line"><a id="l01904" name="l01904"></a><span class="lineno"> 1904</span>    SUBCASE(<span class="stringliteral">&quot;Cache consistency across mixed operations&quot;</span>) {</div>
+<div class="line"><a id="l01905" name="l01905"></a><span class="lineno"> 1905</span>        Context ctx;</div>
+<div class="line"><a id="l01906" name="l01906"></a><span class="lineno"> 1906</span>        </div>
+<div class="line"><a id="l01907" name="l01907"></a><span class="lineno"> 1907</span>        <span class="comment">// Complex sequence of operations</span></div>
+<div class="line"><a id="l01908" name="l01908"></a><span class="lineno"> 1908</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p1 = ctx.addPatch();</div>
+<div class="line"><a id="l01909" name="l01909"></a><span class="lineno"> 1909</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p2 = ctx.addTriangle(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1,0,0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,1,0));</div>
+<div class="line"><a id="l01910" name="l01910"></a><span class="lineno"> 1910</span>        </div>
+<div class="line"><a id="l01911" name="l01911"></a><span class="lineno"> 1911</span>        std::vector&lt;uint&gt; step1 = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01912" name="l01912"></a><span class="lineno"> 1912</span>        DOCTEST_CHECK(step1.size() == 2);</div>
+<div class="line"><a id="l01913" name="l01913"></a><span class="lineno"> 1913</span>        </div>
+<div class="line"><a id="l01914" name="l01914"></a><span class="lineno"> 1914</span>        ctx.hidePrimitive(p1);</div>
+<div class="line"><a id="l01915" name="l01915"></a><span class="lineno"> 1915</span>        std::vector&lt;uint&gt; step2 = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01916" name="l01916"></a><span class="lineno"> 1916</span>        DOCTEST_CHECK(step2.size() == 1);</div>
+<div class="line"><a id="l01917" name="l01917"></a><span class="lineno"> 1917</span>        DOCTEST_CHECK(step2[0] == p2);</div>
+<div class="line"><a id="l01918" name="l01918"></a><span class="lineno"> 1918</span>        </div>
+<div class="line"><a id="l01919" name="l01919"></a><span class="lineno"> 1919</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p3 = ctx.addVoxel(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0,0,0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1,1,1));</div>
+<div class="line"><a id="l01920" name="l01920"></a><span class="lineno"> 1920</span>        std::vector&lt;uint&gt; step3 = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01921" name="l01921"></a><span class="lineno"> 1921</span>        DOCTEST_CHECK(step3.size() == 2);</div>
+<div class="line"><a id="l01922" name="l01922"></a><span class="lineno"> 1922</span>        </div>
+<div class="line"><a id="l01923" name="l01923"></a><span class="lineno"> 1923</span>        ctx.showPrimitive(p1);</div>
+<div class="line"><a id="l01924" name="l01924"></a><span class="lineno"> 1924</span>        std::vector&lt;uint&gt; step4 = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01925" name="l01925"></a><span class="lineno"> 1925</span>        DOCTEST_CHECK(step4.size() == 3);</div>
+<div class="line"><a id="l01926" name="l01926"></a><span class="lineno"> 1926</span>        </div>
+<div class="line"><a id="l01927" name="l01927"></a><span class="lineno"> 1927</span>        ctx.deletePrimitive(p2);</div>
+<div class="line"><a id="l01928" name="l01928"></a><span class="lineno"> 1928</span>        std::vector&lt;uint&gt; step5 = ctx.getAllUUIDs();</div>
+<div class="line"><a id="l01929" name="l01929"></a><span class="lineno"> 1929</span>        DOCTEST_CHECK(step5.size() == 2);</div>
+<div class="line"><a id="l01930" name="l01930"></a><span class="lineno"> 1930</span>        DOCTEST_CHECK(std::find(step5.begin(), step5.end(), p2) == step5.end());</div>
+<div class="line"><a id="l01931" name="l01931"></a><span class="lineno"> 1931</span>        DOCTEST_CHECK(std::find(step5.begin(), step5.end(), p1) != step5.end());</div>
+<div class="line"><a id="l01932" name="l01932"></a><span class="lineno"> 1932</span>        DOCTEST_CHECK(std::find(step5.begin(), step5.end(), p3) != step5.end());</div>
+<div class="line"><a id="l01933" name="l01933"></a><span class="lineno"> 1933</span>    }</div>
+<div class="line"><a id="l01934" name="l01934"></a><span class="lineno"> 1934</span>}</div>
+<div class="line"><a id="l01935" name="l01935"></a><span class="lineno"> 1935</span> </div>
+<div class="line"><a id="l01936" name="l01936"></a><span class="lineno"> 1936</span>TEST_CASE(<span class="stringliteral">&quot;Error Handling&quot;</span>) {</div>
+<div class="line"><a id="l01937" name="l01937"></a><span class="lineno"> 1937</span>    SUBCASE(<span class="stringliteral">&quot;Context error handling&quot;</span>) {</div>
+<div class="line"><a id="l01938" name="l01938"></a><span class="lineno"> 1938</span>        Context context_test;</div>
+<div class="line"><a id="l01939" name="l01939"></a><span class="lineno"> 1939</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> tri = context_test.addTriangle(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 1, 0), RGB::green);</div>
+<div class="line"><a id="l01940" name="l01940"></a><span class="lineno"> 1940</span>        capture_cerr cerr_buffer;</div>
+<div class="line"><a id="l01941" name="l01941"></a><span class="lineno"> 1941</span>        vec3 center;</div>
+<div class="line"><a id="l01942" name="l01942"></a><span class="lineno"> 1942</span><span class="preprocessor">#ifdef HELIOS_DEBUG</span></div>
+<div class="line"><a id="l01943" name="l01943"></a><span class="lineno"> 1943</span>        DOCTEST_CHECK_THROWS_AS(center = context_test.getPatchCenter(tri), std::runtime_error);</div>
+<div class="line"><a id="l01944" name="l01944"></a><span class="lineno"> 1944</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l01945" name="l01945"></a><span class="lineno"> 1945</span> </div>
+<div class="line"><a id="l01946" name="l01946"></a><span class="lineno"> 1946</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> vox = context_test.addVoxel(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 1, 1));</div>
+<div class="line"><a id="l01947" name="l01947"></a><span class="lineno"> 1947</span>        std::vector&lt;uint&gt; vlist{vox};</div>
+<div class="line"><a id="l01948" name="l01948"></a><span class="lineno"> 1948</span>        DOCTEST_CHECK_THROWS_AS(context_test.rotatePrimitive(vlist, <a class="code hl_variable" href="global_8h.html#a2d6b12d3f019b61b427ec3c63270143d" title="Pi constant as a float.">PI_F</a> / 4.f, <span class="stringliteral">&quot;a&quot;</span>), std::runtime_error);</div>
+<div class="line"><a id="l01949" name="l01949"></a><span class="lineno"> 1949</span>    }</div>
+<div class="line"><a id="l01950" name="l01950"></a><span class="lineno"> 1950</span>}</div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

@@ -1,27 +1,12 @@
 #include "StomatalConductanceModel.h"
 #include "doctest.h"
+#include "doctest_utils.h"
 
 using namespace std;
 using namespace helios;
 
-int StomatalConductanceModel::selfTest() {
-
-    std::cout << "Running stomatal conductance model self-test..." << std::endl;
-
-    doctest::Context context;
-    context.setOption("no-version", true);
-    context.setOption("no-time-in-output", true);
-    context.setOption("silence", true);
-
-    int result = context.run();
-
-    if (result == 0) {
-        std::cout << "Stomatal conductance model self-test PASSED." << std::endl;
-    } else {
-        std::cout << "Stomatal conductance model self-test FAILED." << std::endl;
-    }
-
-    return result;
+int StomatalConductanceModel::selfTest(int argc, char** argv) {
+    return helios::runDoctestWithValidation(argc, argv);
 }
 
 DOCTEST_TEST_CASE("StomatalConductanceModel - Original selfTest") {

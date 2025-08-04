@@ -17,6 +17,7 @@ GNU General Public License for more details.
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
+#include "doctest_utils.h"
 
 using namespace std;
 using namespace helios;
@@ -193,21 +194,6 @@ DOCTEST_TEST_CASE("PlantHydraulicsModel - Documentation Example 2") {
     }
 }
 
-int PlantHydraulicsModel::selfTest() {
-    std::cout << "Running Plant Hydraulics Model self-test..." << std::endl;
-
-    doctest::Context context;
-    context.setOption("no-version", true);
-    context.setOption("no-time-in-output", true);
-    context.setOption("silence", true);
-
-    int result = context.run();
-
-    if (result == 0) {
-        std::cout << "Plant Hydraulics Model self-test PASSED." << std::endl;
-    } else {
-        std::cout << "Plant Hydraulics Model self-test FAILED." << std::endl;
-    }
-
-    return result;
+int PlantHydraulicsModel::selfTest(int argc, char** argv) {
+    return helios::runDoctestWithValidation(argc, argv);
 }

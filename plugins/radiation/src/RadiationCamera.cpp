@@ -1782,9 +1782,6 @@ void RadiationModel::applyImageProcessingPipeline(const std::string &cameralabel
         helios_runtime_error("ERROR (RadiationModel::applyImageProcessingPipeline): Camera '" + cameralabel + "' does not exist.");
     }
     RadiationCamera &camera = cameras.at(cameralabel);
-    if (camera.pixel_data.size() != 3) {
-        helios_runtime_error("ERROR (RadiationModel::applyImageProcessingPipeline): Image data must have 3 channels (RGB). This camera has " + std::to_string(camera.pixel_data.size()) + " channels.");
-    }
     if (camera.pixel_data.find(red_band_label) == camera.pixel_data.end() || camera.pixel_data.find(green_band_label) == camera.pixel_data.end() || camera.pixel_data.find(blue_band_label) == camera.pixel_data.end()) {
         helios_runtime_error("ERROR (RadiationModel::applyImageProcessingPipeline): One or more specified band labels do not exist for the camera pixel data.");
     }
@@ -2011,7 +2008,9 @@ void RadiationCamera::globalHistogramEqualization(const std::string &red_band_la
     std::vector<int> hist(B, 0);
     for (float v: lum) {
         int b = int(std::clamp(v, 0.0f, 1.0f - eps) * B);
-        hist[b]++;
+        if ( b >= 0 && b < 2048 ) {
+            hist[b]++;
+        }
     }
     std::vector<float> cdf(B);
     int acc = 0;
@@ -2023,6 +2022,10 @@ void RadiationCamera::globalHistogramEqualization(const std::string &red_band_la
     /* remap */
     for (size_t i = 0; i < N; ++i) {
         int b = int(std::clamp(lum[i], 0.0f, 1.0f - eps) * B);
+
+        if ( b < 0 || b >= 2048 ) {
+            continue;
+        }
 
         constexpr float k = 0.2f; // how far to pull towards equalised value  (0.2–0.3 OK)
         constexpr float cs = 0.2f; // S-curve strength   (0.4–0.7 recommended)

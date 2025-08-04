@@ -442,15 +442,22 @@ float Context::randn(float mean, float stddev) {
 
 
 std::vector<uint> Context::getAllUUIDs() const {
-    std::vector<uint> UUIDs;
-    UUIDs.reserve(primitives.size());
+    // Use cached result if valid
+    if (all_uuids_cache_valid) {
+        return cached_all_uuids;
+    }
+    
+    // Rebuild cache
+    cached_all_uuids.clear();
+    cached_all_uuids.reserve(primitives.size());
     for (const auto &[UUID, primitive]: primitives) {
         if (primitive->ishidden) {
             continue;
         }
-        UUIDs.push_back(UUID);
+        cached_all_uuids.push_back(UUID);
     }
-    return UUIDs;
+    all_uuids_cache_valid = true;
+    return cached_all_uuids;
 }
 
 std::vector<uint> Context::getDirtyUUIDs(bool include_deleted_UUIDs) const {
@@ -484,6 +491,7 @@ void Context::hidePrimitive(uint UUID) const {
     }
 #endif
     primitives.at(UUID)->ishidden = true;
+    invalidateAllUUIDsCache();
 }
 
 void Context::hidePrimitive(const std::vector<uint> &UUIDs) const {
@@ -499,6 +507,7 @@ void Context::showPrimitive(uint UUID) const {
     }
 #endif
     primitives.at(UUID)->ishidden = false;
+    invalidateAllUUIDsCache();
 }
 
 void Context::showPrimitive(const std::vector<uint> &UUIDs) const {

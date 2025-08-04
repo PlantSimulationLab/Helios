@@ -2,6 +2,7 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
+#include "doctest_utils.h"
 
 using namespace helios;
 
@@ -180,14 +181,6 @@ DOCTEST_TEST_CASE("CanopyGenerator Primitive Deletion Test") {
     context_test.deletePrimitive(context_test.getAllUUIDs());
 }
 
-int CanopyGenerator::selfTest() {
-    // Run all the tests
-    doctest::Context context;
-    int res = context.run();
-
-    if (context.shouldExit()) {
-        return res;
-    }
-
-    return res;
+int CanopyGenerator::selfTest(int argc, char** argv) {
+    return helios::runDoctestWithValidation(argc, argv);
 }
