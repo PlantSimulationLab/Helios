@@ -4,6 +4,6 @@
 
 using namespace helios;
 
-int main() {
-    return Context::selfTest();
+int main(int argc, char **argv) {
+    return Context::selfTest(argc, argv);
 }

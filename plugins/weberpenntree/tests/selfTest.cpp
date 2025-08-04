@@ -2,6 +2,7 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
+#include "doctest_utils.h"
 
 using namespace helios;
 
@@ -152,14 +153,6 @@ DOCTEST_TEST_CASE("WeberPennTree Scaled Trees") {
     std::cout.rdbuf(old);
 }
 
-int WeberPennTree::selfTest() {
-    // Run all the tests
-    doctest::Context context;
-    int res = context.run();
-
-    if (context.shouldExit()) {
-        return res;
-    }
-
-    return res;
+int WeberPennTree::selfTest(int argc, char** argv) {
+    return helios::runDoctestWithValidation(argc, argv);
 }

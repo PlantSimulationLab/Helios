@@ -2,6 +2,6 @@
 
 using namespace helios;
 
-int main() {
-    return CanopyGenerator::selfTest();
+int main(int argc, char** argv) {
+    return CanopyGenerator::selfTest(argc, argv);
 }

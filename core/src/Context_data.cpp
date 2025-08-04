@@ -31,6 +31,41 @@ void Context::decrementPrimitiveDataLabelCounter(const std::string &primitive_da
     }
 }
 
+//----------- VALUE-LEVEL CACHING CONFIGURATION ----------//
+
+void Context::enablePrimitiveDataValueCaching(const std::string &label) {
+    cached_primitive_data_labels.insert(label);
+}
+
+void Context::disablePrimitiveDataValueCaching(const std::string &label) {
+    cached_primitive_data_labels.erase(label);
+    // Clear cached values for this label
+    primitive_string_value_registry.erase(label);
+    primitive_int_value_registry.erase(label);
+    primitive_uint_value_registry.erase(label);
+}
+
+bool Context::isPrimitiveDataValueCachingEnabled(const std::string &label) const {
+    return cached_primitive_data_labels.find(label) != cached_primitive_data_labels.end();
+}
+
+void Context::enableObjectDataValueCaching(const std::string &label) {
+    cached_object_data_labels.insert(label);
+}
+
+void Context::disableObjectDataValueCaching(const std::string &label) {
+    cached_object_data_labels.erase(label);
+    // Clear cached values for this label
+    object_string_value_registry.erase(label);
+    object_int_value_registry.erase(label);
+    object_uint_value_registry.erase(label);
+}
+
+bool Context::isObjectDataValueCachingEnabled(const std::string &label) const {
+    return cached_object_data_labels.find(label) != cached_object_data_labels.end();
+}
+
+
 void Context::incrementObjectDataLabelCounter(const std::string &object_data_label) {
     object_data_label_counts[object_data_label]++;
 }
@@ -56,6 +91,15 @@ HeliosDataType Primitive::getPrimitiveDataType(const char *label) const {
 #endif
 
     return primitive_data_types.at(label);
+}
+
+HeliosDataType Context::getPrimitiveDataType(const char *label) const {
+    const auto it = primitive_data_type_registry.find(label);
+    if (it != primitive_data_type_registry.end()) {
+        return it->second;
+    }
+    helios_runtime_error("ERROR (Context::getPrimitiveDataType): Primitive data " + std::string(label) + " does not exist.");
+    return HELIOS_TYPE_UNKNOWN; // Should never reach here, but added to avoid compiler warning
 }
 
 uint Primitive::getPrimitiveDataSize(const char *label) const {
@@ -196,6 +240,25 @@ void Context::clearPrimitiveData(uint UUID, const char *label) {
         helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
     }
 #endif
+    // Handle value registry before clearing if caching is enabled
+    std::string label_str = std::string(label);
+    if (isPrimitiveDataValueCachingEnabled(label_str) && primitives.at(UUID)->doesPrimitiveDataExist(label)) {
+        HeliosDataType data_type = primitives.at(UUID)->getPrimitiveDataType(label);
+        if (data_type == HELIOS_TYPE_STRING) {
+            std::string cached_value;
+            primitives.at(UUID)->getPrimitiveData(label, cached_value);
+            decrementPrimitiveValueRegistry(label_str, cached_value);
+        } else if (data_type == HELIOS_TYPE_INT) {
+            int cached_value;
+            primitives.at(UUID)->getPrimitiveData(label, cached_value);
+            decrementPrimitiveValueRegistry(label_str, cached_value);
+        } else if (data_type == HELIOS_TYPE_UINT) {
+            uint cached_value;
+            primitives.at(UUID)->getPrimitiveData(label, cached_value);
+            decrementPrimitiveValueRegistry(label_str, cached_value);
+        }
+    }
+    
     if (primitives.at(UUID)->doesPrimitiveDataExist(label)) {
         decrementPrimitiveDataLabelCounter(label);
     }
@@ -209,6 +272,25 @@ void Context::clearPrimitiveData(const std::vector<uint> &UUIDs, const char *lab
             helios_runtime_error("ERROR (Context::getPrimitiveData): UUID of " + std::to_string(UUID) + " does not exist in the Context.");
         }
 #endif
+        // Handle value registry before clearing if caching is enabled
+        std::string label_str = std::string(label);
+        if (isPrimitiveDataValueCachingEnabled(label_str) && primitives.at(UUID)->doesPrimitiveDataExist(label)) {
+            HeliosDataType data_type = primitives.at(UUID)->getPrimitiveDataType(label);
+            if (data_type == HELIOS_TYPE_STRING) {
+                std::string cached_value;
+                primitives.at(UUID)->getPrimitiveData(label, cached_value);
+                decrementPrimitiveValueRegistry(label_str, cached_value);
+            } else if (data_type == HELIOS_TYPE_INT) {
+                int cached_value;
+                primitives.at(UUID)->getPrimitiveData(label, cached_value);
+                decrementPrimitiveValueRegistry(label_str, cached_value);
+            } else if (data_type == HELIOS_TYPE_UINT) {
+                uint cached_value;
+                primitives.at(UUID)->getPrimitiveData(label, cached_value);
+                decrementPrimitiveValueRegistry(label_str, cached_value);
+            }
+        }
+        
         if (primitives.at(UUID)->doesPrimitiveDataExist(label)) {
             decrementPrimitiveDataLabelCounter(label);
         }
@@ -1493,6 +1575,15 @@ HeliosDataType Context::getObjectDataType(uint objID, const char *label) const {
     return objects.at(objID)->getObjectDataType(label);
 }
 
+HeliosDataType Context::getObjectDataType(const char *label) const {
+    const auto it = object_data_type_registry.find(label);
+    if (it != object_data_type_registry.end()) {
+        return it->second;
+    }
+    helios_runtime_error("ERROR (Context::getObjectDataType): Object data " + std::string(label) + " does not exist.");
+    return HELIOS_TYPE_UNKNOWN; // This line will never be reached, but is needed to avoid compiler warnings.
+}
+
 uint Context::getObjectDataSize(uint objID, const char *label) const {
 #ifdef HELIOS_DEBUG
     if (objects.find(objID) == objects.end()) {
@@ -1609,6 +1700,25 @@ void Context::clearObjectData(uint objID, const char *label) {
         helios_runtime_error("ERROR (Context::clearObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
     }
 #endif
+    // Handle value registry before clearing if caching is enabled
+    std::string label_str = std::string(label);
+    if (isObjectDataValueCachingEnabled(label_str) && objects.at(objID)->doesObjectDataExist(label)) {
+        HeliosDataType data_type = objects.at(objID)->getObjectDataType(label);
+        if (data_type == HELIOS_TYPE_STRING) {
+            std::string cached_value;
+            objects.at(objID)->getObjectData(label, cached_value);
+            decrementObjectValueRegistry(label_str, cached_value);
+        } else if (data_type == HELIOS_TYPE_INT) {
+            int cached_value;
+            objects.at(objID)->getObjectData(label, cached_value);
+            decrementObjectValueRegistry(label_str, cached_value);
+        } else if (data_type == HELIOS_TYPE_UINT) {
+            uint cached_value;
+            objects.at(objID)->getObjectData(label, cached_value);
+            decrementObjectValueRegistry(label_str, cached_value);
+        }
+    }
+    
     if (objects.at(objID)->doesObjectDataExist(label)) {
         decrementObjectDataLabelCounter(label);
     }
@@ -1616,12 +1726,31 @@ void Context::clearObjectData(uint objID, const char *label) {
 }
 
 void Context::clearObjectData(const std::vector<uint> &objIDs, const char *label) {
+    std::string label_str = std::string(label);
     for (uint objID: objIDs) {
 #ifdef HELIOS_DEBUG
         if (objects.find(objID) == objects.end()) {
             helios_runtime_error("ERROR (Context::clearObjectData): objID of " + std::to_string(objID) + " does not exist in the Context.");
         }
 #endif
+        // Handle value registry before clearing if caching is enabled
+        if (isObjectDataValueCachingEnabled(label_str) && objects.at(objID)->doesObjectDataExist(label)) {
+            HeliosDataType data_type = objects.at(objID)->getObjectDataType(label);
+            if (data_type == HELIOS_TYPE_STRING) {
+                std::string cached_value;
+                objects.at(objID)->getObjectData(label, cached_value);
+                decrementObjectValueRegistry(label_str, cached_value);
+            } else if (data_type == HELIOS_TYPE_INT) {
+                int cached_value;
+                objects.at(objID)->getObjectData(label, cached_value);
+                decrementObjectValueRegistry(label_str, cached_value);
+            } else if (data_type == HELIOS_TYPE_UINT) {
+                uint cached_value;
+                objects.at(objID)->getObjectData(label, cached_value);
+                decrementObjectValueRegistry(label_str, cached_value);
+            }
+        }
+        
         if (objects.at(objID)->doesObjectDataExist(label)) {
             decrementObjectDataLabelCounter(label);
         }
@@ -2027,6 +2156,7 @@ std::vector<std::string> Context::listAllPrimitiveDataLabels() const {
     return labels;
 }
 
+
 std::vector<std::string> Context::listAllObjectDataLabels() const {
     std::vector<std::string> labels;
     labels.reserve(object_data_label_counts.size());
@@ -2108,4 +2238,32 @@ void Context::incrementGlobalData(const char *label, double increment) {
     } else {
         std::cerr << "WARNING (Context::incrementGlobalData): Attempted to increment global data for type double, but data '" << label << "' does not have type double." << std::endl;
     }
+}
+
+std::string Context::dataTypeToString(HeliosDataType type) const {
+    switch (type) {
+        case HELIOS_TYPE_INT: return "int";
+        case HELIOS_TYPE_UINT: return "uint";
+        case HELIOS_TYPE_FLOAT: return "float";
+        case HELIOS_TYPE_DOUBLE: return "double";
+        case HELIOS_TYPE_VEC2: return "vec2";
+        case HELIOS_TYPE_VEC3: return "vec3";
+        case HELIOS_TYPE_VEC4: return "vec4";
+        case HELIOS_TYPE_INT2: return "int2";
+        case HELIOS_TYPE_INT3: return "int3";
+        case HELIOS_TYPE_INT4: return "int4";
+        case HELIOS_TYPE_STRING: return "string";
+        case HELIOS_TYPE_BOOL: return "bool";
+        case HELIOS_TYPE_UNKNOWN: return "unknown";
+        default: return "undefined";
+    }
+}
+
+bool Context::isTypeCastingSupported(HeliosDataType from_type, HeliosDataType to_type) const {
+    // Support casting between numeric types only
+    const std::set<HeliosDataType> numeric_types = {
+        HELIOS_TYPE_INT, HELIOS_TYPE_UINT, HELIOS_TYPE_FLOAT, HELIOS_TYPE_DOUBLE
+    };
+    
+    return (numeric_types.count(from_type) > 0 && numeric_types.count(to_type) > 0);
 }

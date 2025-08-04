@@ -2,6 +2,6 @@
 
 using namespace helios;
 
-int main() {
-    return ProjectBuilder::selfTest();
+int main(int argc, char** argv) {
+    return ProjectBuilder::selfTest(argc, argv);
 }

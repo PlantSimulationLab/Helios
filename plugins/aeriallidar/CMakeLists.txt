@@ -58,7 +58,7 @@ else()
 	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
 endif()
 
-add_library(aeriallidar STATIC "src/AerialLiDAR.cu" "src/AerialLiDAR.cpp" "src/fileIO.cpp" "src/selfTest.cpp" "../../core/lib/pugixml/pugixml.cpp")
+add_library(aeriallidar STATIC "src/AerialLiDAR.cu" "src/AerialLiDAR.cpp" "src/fileIO.cpp" "tests/selfTest.cpp" "../../core/lib/pugixml/pugixml.cpp")
 
 # Set CUDA properties for the target
 set_target_properties(aeriallidar PROPERTIES CUDA_RUNTIME_LIBRARY Static CUDA_RESOLVE_DEVICE_SYMBOLS ON)

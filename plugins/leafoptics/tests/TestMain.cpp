@@ -2,6 +2,6 @@
 
 using namespace helios;
 
-int main() {
-    return LeafOptics::selfTest();
+int main(int argc, char** argv) {
+    return LeafOptics::selfTest(argc, argv);
 }

@@ -49,7 +49,7 @@ public:
     /**
      * \return 0 if test was successful, 1 if test failed.
      */
-    static int selfTest();
+    static int selfTest(int argc = 0, char** argv = nullptr);
 
     //! Enable standard output from this plug-in (default)
     void enableMessages();

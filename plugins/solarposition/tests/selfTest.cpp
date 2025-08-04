@@ -2,6 +2,7 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
+#include "doctest_utils.h"
 
 using namespace helios;
 
@@ -228,15 +229,6 @@ TEST_CASE("SolarPosition turbidity calculation") {
     DOCTEST_CHECK_THROWS_AS(turbidity = sp.calibrateTurbidityFromTimeseries("non_existent_timeseries"), std::runtime_error);
 }
 
-int SolarPosition::selfTest() {
-
-    // Run all the tests
-    doctest::Context context;
-    int res = context.run();
-
-    if (context.shouldExit()) {
-        return res;
-    }
-
-    return res;
+int SolarPosition::selfTest(int argc, char** argv) {
+    return helios::runDoctestWithValidation(argc, argv);
 }

@@ -47,7 +47,7 @@ struct CameraProperties {
     //! Camera horizontal field of view in degrees
     float HFOV;
 
-    //! Physical dimensions of the pixel array sensor in the horizontal (.x) and vertical (.y) directions
+    //! Ratio of camera horizontal field of view to vertical field of view (HFOV/VFOV)
     float FOV_aspect_ratio;
 
     CameraProperties() {
@@ -363,7 +363,7 @@ public:
     /**
      * \return 0 if test was successful, 1 if test failed
      */
-    static int selfTest();
+    static int selfTest(int argc = 0, char** argv = nullptr);
 
     //! Disable/silence status messages
     /**

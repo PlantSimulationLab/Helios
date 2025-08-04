@@ -24,7 +24,8 @@ var _context_8h =
       [ "helios::HELIOS_TYPE_INT3", "_context_8h.html#a935eb2a4249411a8f376a27820c70de3a28e69c60e380496c8c35892e76ee4ad3", null ],
       [ "helios::HELIOS_TYPE_INT4", "_context_8h.html#a935eb2a4249411a8f376a27820c70de3aa6e12ea3a9160f59a1208f7cbb6c1ce7", null ],
       [ "helios::HELIOS_TYPE_STRING", "_context_8h.html#a935eb2a4249411a8f376a27820c70de3a7c1f526f519f173e5931fd73b78ccbb3", null ],
-      [ "helios::HELIOS_TYPE_BOOL", "_context_8h.html#a935eb2a4249411a8f376a27820c70de3adcc9d5a554768c77f6b2e4a14a7991c5", null ]
+      [ "helios::HELIOS_TYPE_BOOL", "_context_8h.html#a935eb2a4249411a8f376a27820c70de3adcc9d5a554768c77f6b2e4a14a7991c5", null ],
+      [ "helios::HELIOS_TYPE_UNKNOWN", "_context_8h.html#a935eb2a4249411a8f376a27820c70de3a19cf5a4dfc840d6e23eda5c4dd69112f", null ]
     ] ],
     [ "helios::ObjectType", "_context_8h.html#ad0894682f41916c84c2026b3cb8ac682", [
       [ "helios::OBJECT_TYPE_TILE", "_context_8h.html#ad0894682f41916c84c2026b3cb8ac682aed347b5fb08bc5551b61310a964f0bde", null ],

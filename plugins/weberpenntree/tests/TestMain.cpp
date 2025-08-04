@@ -2,6 +2,6 @@
 
 using namespace helios;
 
-int main() {
-    return WeberPennTree::selfTest();
+int main(int argc, char** argv) {
+    return WeberPennTree::selfTest(argc, argv);
 }

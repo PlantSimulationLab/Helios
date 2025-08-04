@@ -2,11 +2,8 @@
 
 using namespace helios;
 
-int main() {
-
+int main(int argc, char** argv) {
     Context context;
-
     EnergyBalanceModel energybalance(&context);
-
-    return energybalance.selfTest();
+    return energybalance.selfTest(argc, argv);
 }

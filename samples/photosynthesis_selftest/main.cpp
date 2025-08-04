@@ -2,10 +2,8 @@
 
 using namespace helios;
 
-int main() {
+int main(int argc, char** argv) {
     Context context;
-
     PhotosynthesisModel photo(&context);
-
-    return photo.selfTest();
+    return photo.selfTest(argc, argv);
 }

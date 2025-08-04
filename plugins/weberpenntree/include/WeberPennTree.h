@@ -99,7 +99,7 @@ public:
     WeberPennTree(helios::Context *context);
 
     //! Unit testing routine
-    static int selfTest();
+    static int selfTest(int argc = 0, char** argv = nullptr);
 
     //! Load tree library from an XML file
     /**

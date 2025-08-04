@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.42</span>
+       <span id="projectnumber">&#160;v1.3.43</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -161,196 +161,189 @@ $(function(){initNavTree('plugins_2canopygenerator_2tests_2self_test_8cpp_source
 <div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span> </div>
 <div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="preprocessor">#define DOCTEST_CONFIG_IMPLEMENT</span></div>
 <div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &lt;doctest.h&gt;</span></div>
-<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span> </div>
-<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="keyword">using namespace </span>helios;</div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span> </div>
-<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Homogeneous Canopy Generation&quot;</span>) {</div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_0(&amp;context_test);</div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span>    canopygenerator_0.disableMessages();</div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span> </div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>    <a class="code hl_struct" href="struct_homogeneous_canopy_parameters.html" title="Parameters defining the homogeneous canopy.">HomogeneousCanopyParameters</a> params_0;</div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_0.buildCanopy(params_0));</div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span> </div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span>    <span class="comment">// Verify canopy was created</span></div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>}</div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Spherical Crowns Canopy Generation&quot;</span>) {</div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_1(&amp;context_test);</div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    canopygenerator_1.disableMessages();</div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span> </div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    <a class="code hl_struct" href="struct_spherical_crowns_canopy_parameters.html" title="Parameters defining the canopy with spherical crowns.">SphericalCrownsCanopyParameters</a> params_1;</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_1.buildCanopy(params_1));</div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span> </div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    <span class="comment">// Verify canopy was created</span></div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>}</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator VSP Grapevine Canopy Generation&quot;</span>) {</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_2(&amp;context_test);</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    canopygenerator_2.disableMessages();</div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span> </div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    <a class="code hl_struct" href="struct_v_s_p_grapevine_parameters.html" title="Parameters defining the grapevine canopy with vertical shoot positioned (VSP) trellis.">VSPGrapevineParameters</a> params_2;</div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    params_2.<a class="code hl_variable" href="struct_base_grape_vine_parameters.html#afa20674518acbb9fdfaafc893f362e01" title="Radius of grape berries.">grape_radius</a> = 0;</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_2.buildCanopy(params_2));</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    <span class="comment">// Verify canopy was created</span></div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>}</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span> </div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Split Trellis Grapevine Canopy Generation&quot;</span>) {</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_3(&amp;context_test);</div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    canopygenerator_3.disableMessages();</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span> </div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    <a class="code hl_struct" href="struct_split_grapevine_parameters.html" title="Parameters defining the grapevine canopy with a split (quad) trellis.">SplitGrapevineParameters</a> params_3;</div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    params_3.<a class="code hl_variable" href="struct_base_grape_vine_parameters.html#afa20674518acbb9fdfaafc893f362e01" title="Radius of grape berries.">grape_radius</a> = 0;</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_3.buildCanopy(params_3));</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span> </div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    <span class="comment">// Verify canopy was created</span></div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span> </div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>}</div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span> </div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Unilateral Trellis Grapevine Canopy Generation&quot;</span>) {</div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_4(&amp;context_test);</div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    canopygenerator_4.disableMessages();</div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span> </div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    <a class="code hl_struct" href="struct_unilateral_grapevine_parameters.html" title="Parameters defining the grapevine canopy with unilateral trellis.">UnilateralGrapevineParameters</a> params_4;</div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    params_4.<a class="code hl_variable" href="struct_base_grape_vine_parameters.html#afa20674518acbb9fdfaafc893f362e01" title="Radius of grape berries.">grape_radius</a> = 0;</div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_4.buildCanopy(params_4));</div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span> </div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    <span class="comment">// Verify canopy was created</span></div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span> </div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>}</div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span> </div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Goblet Trellis Grapevine Canopy Generation&quot;</span>) {</div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
-<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_5(&amp;context_test);</div>
-<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    canopygenerator_5.disableMessages();</div>
-<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span> </div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>    <a class="code hl_struct" href="struct_goblet_grapevine_parameters.html" title="Parameters defining the grapevine canopy with goblet (vent a taille) trellis.">GobletGrapevineParameters</a> params_5;</div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>    params_5.<a class="code hl_variable" href="struct_base_grape_vine_parameters.html#afa20674518acbb9fdfaafc893f362e01" title="Radius of grape berries.">grape_radius</a> = 0;</div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_5.buildCanopy(params_5));</div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span> </div>
-<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    <span class="comment">// Verify canopy was created</span></div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span> </div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>}</div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span> </div>
-<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Strawberry Canopy Generation&quot;</span>) {</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_7(&amp;context_test);</div>
-<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    canopygenerator_7.disableMessages();</div>
-<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span> </div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    <a class="code hl_struct" href="struct_strawberry_parameters.html" title="Parameters defining the strawberry plant canopy.">StrawberryParameters</a> params_7;</div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_7.buildCanopy(params_7));</div>
-<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span> </div>
-<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    <span class="comment">// Verify canopy was created</span></div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
-<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span> </div>
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>}</div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span> </div>
-<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Walnut Tree Canopy Generation&quot;</span>) {</div>
-<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_8(&amp;context_test);</div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    canopygenerator_8.disableMessages();</div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span> </div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>    <a class="code hl_struct" href="struct_walnut_canopy_parameters.html" title="Parameters defining the walnut tree canopy.">WalnutCanopyParameters</a> params_8;</div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>    params_8.<a class="code hl_variable" href="struct_walnut_canopy_parameters.html#a620fceb81c9e7cdc0d350f51183f9b8e" title="Radius of walnuts.">fruit_radius</a> = 0.f;</div>
-<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_8.buildCanopy(params_8));</div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span> </div>
-<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>    <span class="comment">// Verify canopy was created</span></div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
-<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
-<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span> </div>
-<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
-<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>}</div>
-<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span> </div>
-<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Sorghum Plant Canopy Generation&quot;</span>) {</div>
-<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
-<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_9(&amp;context_test);</div>
-<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>    canopygenerator_9.disableMessages();</div>
-<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span> </div>
-<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>    <a class="code hl_struct" href="struct_sorghum_canopy_parameters.html" title="Parameters defining Sorghum plant canopy.">SorghumCanopyParameters</a> params_9;</div>
-<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_9.buildCanopy(params_9));</div>
-<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span> </div>
-<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>    <span class="comment">// Verify canopy was created</span></div>
-<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
-<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
-<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span> </div>
-<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
-<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>}</div>
-<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span> </div>
-<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Primitive Deletion Test&quot;</span>) {</div>
-<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
-<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_6(&amp;context_test);</div>
-<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>    canopygenerator_6.disableMessages();</div>
-<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span> </div>
-<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>    <a class="code hl_struct" href="struct_homogeneous_canopy_parameters.html" title="Parameters defining the homogeneous canopy.">HomogeneousCanopyParameters</a> params_6;</div>
-<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_6.buildCanopy(params_6));</div>
-<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span> </div>
-<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>    std::vector&lt;uint&gt; UUIDs_leaves = <a class="code hl_function" href="group__functions.html#ga475421ec394da63f3964f56bb5a81335" title="Template function to flatten a 2D vector into a 1D vector.">flatten</a>(canopygenerator_6.getLeafUUIDs(0));</div>
-<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>    DOCTEST_CHECK(UUIDs_leaves.size() &gt; 23);</div>
-<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span> </div>
-<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    <span class="comment">// Delete some primitives</span></div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>    DOCTEST_CHECK_NOTHROW(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(UUIDs_leaves.at(0)));</div>
-<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>    DOCTEST_CHECK_NOTHROW(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(UUIDs_leaves.at(11)));</div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>    DOCTEST_CHECK_NOTHROW(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(UUIDs_leaves.at(23)));</div>
-<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>    DOCTEST_CHECK_NOTHROW(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(UUIDs_leaves.back()));</div>
-<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span> </div>
-<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>    <span class="comment">// Update UUIDs after deletion</span></div>
-<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>    UUIDs_leaves = <a class="code hl_function" href="group__functions.html#ga475421ec394da63f3964f56bb5a81335" title="Template function to flatten a 2D vector into a 1D vector.">flatten</a>(canopygenerator_6.getLeafUUIDs(0));</div>
-<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span> </div>
-<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>    <span class="comment">// Verify all remaining UUIDs exist</span></div>
-<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID: UUIDs_leaves) {</div>
-<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>        DOCTEST_CHECK(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#acf4a7fa9ba97f03d0a9218e5c4b7bc66" title="Check if primitive exists for a given UUID.">doesPrimitiveExist</a>(UUID));</div>
-<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>    }</div>
-<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span> </div>
-<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>    std::vector&lt;uint&gt; UUIDs_all = canopygenerator_6.getAllUUIDs(0);</div>
-<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span> </div>
-<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>    <span class="comment">// Verify all remaining primitives exist</span></div>
-<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p: UUIDs_all) {</div>
-<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>        DOCTEST_CHECK(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#acf4a7fa9ba97f03d0a9218e5c4b7bc66" title="Check if primitive exists for a given UUID.">doesPrimitiveExist</a>(p));</div>
-<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>    }</div>
-<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span> </div>
-<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
-<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>}</div>
-<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span> </div>
-<div class="foldopen" id="foldopen00183" data-start="{" data-end="}">
-<div class="line"><a id="l00183" name="l00183"></a><span class="lineno"><a class="line" href="class_canopy_generator.html#af7f6d2ec2ee512af381cfaf5c414b505">  183</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="class_canopy_generator.html#af7f6d2ec2ee512af381cfaf5c414b505" title="Unit testing routine.">CanopyGenerator::selfTest</a>() {</div>
-<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>    <span class="comment">// Run all the tests</span></div>
-<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>    doctest::Context context;</div>
-<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>    <span class="keywordtype">int</span> res = context.run();</div>
-<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span> </div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>    <span class="keywordflow">if</span> (context.shouldExit()) {</div>
-<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>        <span class="keywordflow">return</span> res;</div>
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>    }</div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span> </div>
-<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>    <span class="keywordflow">return</span> res;</div>
-<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>}</div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="preprocessor">#include &quot;doctest_utils.h&quot;</span></div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span> </div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="keyword">using namespace </span>helios;</div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span> </div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Homogeneous Canopy Generation&quot;</span>) {</div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_0(&amp;context_test);</div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>    canopygenerator_0.disableMessages();</div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>    <a class="code hl_struct" href="struct_homogeneous_canopy_parameters.html" title="Parameters defining the homogeneous canopy.">HomogeneousCanopyParameters</a> params_0;</div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_0.buildCanopy(params_0));</div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>    <span class="comment">// Verify canopy was created</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>}</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Spherical Crowns Canopy Generation&quot;</span>) {</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_1(&amp;context_test);</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    canopygenerator_1.disableMessages();</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    <a class="code hl_struct" href="struct_spherical_crowns_canopy_parameters.html" title="Parameters defining the canopy with spherical crowns.">SphericalCrownsCanopyParameters</a> params_1;</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_1.buildCanopy(params_1));</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    <span class="comment">// Verify canopy was created</span></div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>}</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span> </div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator VSP Grapevine Canopy Generation&quot;</span>) {</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_2(&amp;context_test);</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    canopygenerator_2.disableMessages();</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span> </div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    <a class="code hl_struct" href="struct_v_s_p_grapevine_parameters.html" title="Parameters defining the grapevine canopy with vertical shoot positioned (VSP) trellis.">VSPGrapevineParameters</a> params_2;</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    params_2.<a class="code hl_variable" href="struct_base_grape_vine_parameters.html#afa20674518acbb9fdfaafc893f362e01" title="Radius of grape berries.">grape_radius</a> = 0;</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_2.buildCanopy(params_2));</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <span class="comment">// Verify canopy was created</span></div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> </div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>}</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span> </div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Split Trellis Grapevine Canopy Generation&quot;</span>) {</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_3(&amp;context_test);</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    canopygenerator_3.disableMessages();</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span> </div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    <a class="code hl_struct" href="struct_split_grapevine_parameters.html" title="Parameters defining the grapevine canopy with a split (quad) trellis.">SplitGrapevineParameters</a> params_3;</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    params_3.<a class="code hl_variable" href="struct_base_grape_vine_parameters.html#afa20674518acbb9fdfaafc893f362e01" title="Radius of grape berries.">grape_radius</a> = 0;</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_3.buildCanopy(params_3));</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span> </div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    <span class="comment">// Verify canopy was created</span></div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span> </div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>}</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span> </div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Unilateral Trellis Grapevine Canopy Generation&quot;</span>) {</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_4(&amp;context_test);</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    canopygenerator_4.disableMessages();</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span> </div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    <a class="code hl_struct" href="struct_unilateral_grapevine_parameters.html" title="Parameters defining the grapevine canopy with unilateral trellis.">UnilateralGrapevineParameters</a> params_4;</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    params_4.<a class="code hl_variable" href="struct_base_grape_vine_parameters.html#afa20674518acbb9fdfaafc893f362e01" title="Radius of grape berries.">grape_radius</a> = 0;</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_4.buildCanopy(params_4));</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span> </div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    <span class="comment">// Verify canopy was created</span></div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span> </div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>}</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span> </div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Goblet Trellis Grapevine Canopy Generation&quot;</span>) {</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_5(&amp;context_test);</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    canopygenerator_5.disableMessages();</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span> </div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>    <a class="code hl_struct" href="struct_goblet_grapevine_parameters.html" title="Parameters defining the grapevine canopy with goblet (vent a taille) trellis.">GobletGrapevineParameters</a> params_5;</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    params_5.<a class="code hl_variable" href="struct_base_grape_vine_parameters.html#afa20674518acbb9fdfaafc893f362e01" title="Radius of grape berries.">grape_radius</a> = 0;</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_5.buildCanopy(params_5));</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span> </div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    <span class="comment">// Verify canopy was created</span></div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span> </div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>}</div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span> </div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Strawberry Canopy Generation&quot;</span>) {</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_7(&amp;context_test);</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>    canopygenerator_7.disableMessages();</div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span> </div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>    <a class="code hl_struct" href="struct_strawberry_parameters.html" title="Parameters defining the strawberry plant canopy.">StrawberryParameters</a> params_7;</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_7.buildCanopy(params_7));</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span> </div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>    <span class="comment">// Verify canopy was created</span></div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span> </div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>}</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span> </div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Walnut Tree Canopy Generation&quot;</span>) {</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_8(&amp;context_test);</div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>    canopygenerator_8.disableMessages();</div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span> </div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>    <a class="code hl_struct" href="struct_walnut_canopy_parameters.html" title="Parameters defining the walnut tree canopy.">WalnutCanopyParameters</a> params_8;</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>    params_8.<a class="code hl_variable" href="struct_walnut_canopy_parameters.html#a620fceb81c9e7cdc0d350f51183f9b8e" title="Radius of walnuts.">fruit_radius</a> = 0.f;</div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_8.buildCanopy(params_8));</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span> </div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>    <span class="comment">// Verify canopy was created</span></div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span> </div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
+<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>}</div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span> </div>
+<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Sorghum Plant Canopy Generation&quot;</span>) {</div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
+<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_9(&amp;context_test);</div>
+<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>    canopygenerator_9.disableMessages();</div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span> </div>
+<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>    <a class="code hl_struct" href="struct_sorghum_canopy_parameters.html" title="Parameters defining Sorghum plant canopy.">SorghumCanopyParameters</a> params_9;</div>
+<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_9.buildCanopy(params_9));</div>
+<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span> </div>
+<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>    <span class="comment">// Verify canopy was created</span></div>
+<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>    std::vector&lt;uint&gt; all_UUIDs = context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>();</div>
+<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span>    DOCTEST_CHECK(!all_UUIDs.empty());</div>
+<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span> </div>
+<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
+<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>}</div>
+<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span> </div>
+<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>DOCTEST_TEST_CASE(<span class="stringliteral">&quot;CanopyGenerator Primitive Deletion Test&quot;</span>) {</div>
+<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>    <a class="code hl_class" href="classhelios_1_1_context.html" title="Stores the state associated with simulation.">Context</a> context_test;</div>
+<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>    <a class="code hl_class" href="class_canopy_generator.html">CanopyGenerator</a> canopygenerator_6(&amp;context_test);</div>
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>    canopygenerator_6.disableMessages();</div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span> </div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>    <a class="code hl_struct" href="struct_homogeneous_canopy_parameters.html" title="Parameters defining the homogeneous canopy.">HomogeneousCanopyParameters</a> params_6;</div>
+<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>    DOCTEST_CHECK_NOTHROW(canopygenerator_6.buildCanopy(params_6));</div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span> </div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>    std::vector&lt;uint&gt; UUIDs_leaves = <a class="code hl_function" href="group__functions.html#ga475421ec394da63f3964f56bb5a81335" title="Template function to flatten a 2D vector into a 1D vector.">flatten</a>(canopygenerator_6.getLeafUUIDs(0));</div>
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>    DOCTEST_CHECK(UUIDs_leaves.size() &gt; 23);</div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span> </div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>    <span class="comment">// Delete some primitives</span></div>
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>    DOCTEST_CHECK_NOTHROW(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(UUIDs_leaves.at(0)));</div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>    DOCTEST_CHECK_NOTHROW(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(UUIDs_leaves.at(11)));</div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>    DOCTEST_CHECK_NOTHROW(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(UUIDs_leaves.at(23)));</div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>    DOCTEST_CHECK_NOTHROW(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(UUIDs_leaves.back()));</div>
+<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span> </div>
+<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>    <span class="comment">// Update UUIDs after deletion</span></div>
+<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>    UUIDs_leaves = <a class="code hl_function" href="group__functions.html#ga475421ec394da63f3964f56bb5a81335" title="Template function to flatten a 2D vector into a 1D vector.">flatten</a>(canopygenerator_6.getLeafUUIDs(0));</div>
+<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span> </div>
+<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>    <span class="comment">// Verify all remaining UUIDs exist</span></div>
+<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID: UUIDs_leaves) {</div>
+<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>        DOCTEST_CHECK(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#acf4a7fa9ba97f03d0a9218e5c4b7bc66" title="Check if primitive exists for a given UUID.">doesPrimitiveExist</a>(UUID));</div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>    }</div>
+<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span> </div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>    std::vector&lt;uint&gt; UUIDs_all = canopygenerator_6.getAllUUIDs(0);</div>
+<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span> </div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>    <span class="comment">// Verify all remaining primitives exist</span></div>
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>    <span class="keywordflow">for</span> (<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> p: UUIDs_all) {</div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>        DOCTEST_CHECK(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#acf4a7fa9ba97f03d0a9218e5c4b7bc66" title="Check if primitive exists for a given UUID.">doesPrimitiveExist</a>(p));</div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>    }</div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span> </div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>    context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a24324ccb5318cb103846a71d44dda23e" title="Delete a single primitive from the context.">deletePrimitive</a>(context_test.<a class="code hl_function" href="classhelios_1_1_context.html#a98516632daccf958cca6b5b6582310bb" title="Get all primitive UUIDs currently in the Context.">getAllUUIDs</a>());</div>
+<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>}</div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span> </div>
+<div class="foldopen" id="foldopen00184" data-start="{" data-end="}">
+<div class="line"><a id="l00184" name="l00184"></a><span class="lineno"><a class="line" href="class_canopy_generator.html#ae75b8ffe086dd8a53e642e79bb37622c">  184</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="class_canopy_generator.html#ae75b8ffe086dd8a53e642e79bb37622c" title="Unit testing routine.">CanopyGenerator::selfTest</a>(<span class="keywordtype">int</span> argc, <span class="keywordtype">char</span>** argv) {</div>
+<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>    <span class="keywordflow">return</span> helios::runDoctestWithValidation(argc, argv);</div>
+<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>}</div>
 </div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->

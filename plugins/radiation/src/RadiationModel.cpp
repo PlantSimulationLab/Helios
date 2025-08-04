@@ -1681,7 +1681,9 @@ void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
 
         const std::vector<uint> &primitive_UUIDs = context->getObjectPrimitiveUUIDs(objID);
         for (uint p: primitive_UUIDs) {
-            if (context->doesPrimitiveExist(p)) {
+            // Only add if primitive exists AND was not filtered out for zero area
+            if (context->doesPrimitiveExist(p) && 
+                std::find(context_UUIDs.begin(), context_UUIDs.end(), p) != context_UUIDs.end()) {
                 primitive_UUIDs_ordered.push_back(p);
             }
         }
@@ -2233,7 +2235,7 @@ void RadiationModel::updateRadiativeProperties() {
 
                     if (!context->doesGlobalDataExist(camera_response.c_str())) {
                         if (camera_response != "uniform") {
-                            std::cerr << "WARNING (RadiationModel::updateRadiativeProperties): Camera spectral response \"" << camera_response << "\" does not exist. Assuming a uniform spectral response..." << std::flush;
+                            std::cerr << "WARNING (RadiationModel::updateRadiativeProperties): Camera spectral response \"" << camera_response << "\" does not exist. Assuming a uniform spectral response..." << std::endl;
                         }
                     } else if (context->getGlobalDataType(camera_response.c_str()) == helios::HELIOS_TYPE_VEC2) {
 
@@ -2243,7 +2245,7 @@ void RadiationModel::updateRadiativeProperties() {
 
                     } else if (context->getGlobalDataType(camera_response.c_str()) != helios::HELIOS_TYPE_VEC2 && context->getGlobalDataType(camera_response.c_str()) != helios::HELIOS_TYPE_STRING) {
                         camera_response.clear();
-                        std::cout << "WARNING (RadiationModel::runBand): Camera spectral response \"" << camera_response << "\" is not of type HELIOS_TYPE_VEC2 or HELIOS_TYPE_STRING. Assuming a uniform spectral response..." << std::flush;
+                        std::cout << "WARNING (RadiationModel::runBand): Camera spectral response \"" << camera_response << "\" is not of type HELIOS_TYPE_VEC2 or HELIOS_TYPE_STRING. Assuming a uniform spectral response..." << std::endl;
                     }
                 }
             }
@@ -3225,7 +3227,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         }
     }
 
-    if (scatteringenabled) {
+    if (scatteringenabled && (emissionenabled || diffuseenabled || rundirect) ) {
 
         for (auto b = 0; b < Nbands_launch; b++) {
             diffuse_flux.at(b) = 0.f;
@@ -3309,97 +3311,113 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     }
 
     // **** CAMERA RAY TRACE **** //
-    if (Ncameras > 0) {
+    if (Ncameras > 0 ) {
 
-        // re-set outgoing radiation buffers
-        copyBuffer1D(scatter_buff_top_cam_RTbuffer, radiation_out_top_RTbuffer);
-        copyBuffer1D(scatter_buff_bottom_cam_RTbuffer, radiation_out_bottom_RTbuffer);
+        if ( scatteringenabled && (emissionenabled || diffuseenabled || rundirect) ) {
+            // re-set outgoing radiation buffers
+            copyBuffer1D(scatter_buff_top_cam_RTbuffer, radiation_out_top_RTbuffer);
+            copyBuffer1D(scatter_buff_bottom_cam_RTbuffer, radiation_out_bottom_RTbuffer);
 
-        // re-set diffuse radiation fluxes
-        if (diffuseenabled) {
-            for (auto b = 0; b < Nbands_launch; b++) {
-                diffuse_flux.at(b) = getDiffuseFlux(band_labels.at(b));
-            }
-            initializeBuffer1Df(diffuse_flux_RTbuffer, diffuse_flux);
-        }
-
-
-        size_t n = ceil(sqrt(double(diffuseRayCount)));
-
-        uint cam = 0;
-        for (auto &camera: cameras) {
-
-            // set variable values
-            RT_CHECK_ERROR(rtVariableSet3f(camera_position_RTvariable, camera.second.position.x, camera.second.position.y, camera.second.position.z));
-            helios::SphericalCoord dir = cart2sphere(camera.second.lookat - camera.second.position);
-            RT_CHECK_ERROR(rtVariableSet2f(camera_direction_RTvariable, dir.zenith, dir.azimuth));
-            RT_CHECK_ERROR(rtVariableSet1f(camera_lens_diameter_RTvariable, camera.second.lens_diameter));
-            RT_CHECK_ERROR(rtVariableSet1f(FOV_aspect_RTvariable, camera.second.FOV_aspect_ratio));
-            RT_CHECK_ERROR(rtVariableSet1f(camera_focal_length_RTvariable, camera.second.focal_length));
-            RT_CHECK_ERROR(rtVariableSet1f(camera_viewplane_length_RTvariable, 0.5f / tanf(0.5f * camera.second.HFOV_degrees * M_PI / 180.f)));
-            RT_CHECK_ERROR(rtVariableSet1ui(camera_ID_RTvariable, cam));
-
-            zeroBuffer1D(radiation_in_camera_RTbuffer, camera.second.resolution.x * camera.second.resolution.y * Nbands_launch);
-
-            optix::int3 launch_dim_camera = optix::make_int3(camera.second.antialiasing_samples, camera.second.resolution.x, camera.second.resolution.y);
-
-            if (message_flag) {
-                std::cout << "Performing scattering radiation camera ray trace for camera " << camera.second.label << "..." << std::flush;
-            }
-            RT_CHECK_ERROR(rtContextLaunch3D(OptiX_Context, RAYTYPE_CAMERA, launch_dim_camera.x, launch_dim_camera.y, launch_dim_camera.z));
-            if (message_flag) {
-                std::cout << "done." << std::endl;
+            // re-set diffuse radiation fluxes
+            if (diffuseenabled) {
+                for (auto b = 0; b < Nbands_launch; b++) {
+                    diffuse_flux.at(b) = getDiffuseFlux(band_labels.at(b));
+                }
+                initializeBuffer1Df(diffuse_flux_RTbuffer, diffuse_flux);
             }
 
-            std::vector<float> radiation_camera = getOptiXbufferData(radiation_in_camera_RTbuffer);
 
-            std::string camera_label = camera.second.label;
+            size_t n = ceil(sqrt(double(diffuseRayCount)));
 
-            for (auto b = 0; b < Nbands_launch; b++) {
+            uint cam = 0;
+            for (auto &camera: cameras) {
 
-                camera.second.pixel_data[band_labels.at(b)].resize(camera.second.resolution.x * camera.second.resolution.y);
+                // set variable values
+                RT_CHECK_ERROR(rtVariableSet3f(camera_position_RTvariable, camera.second.position.x, camera.second.position.y, camera.second.position.z));
+                helios::SphericalCoord dir = cart2sphere(camera.second.lookat - camera.second.position);
+                RT_CHECK_ERROR(rtVariableSet2f(camera_direction_RTvariable, dir.zenith, dir.azimuth));
+                RT_CHECK_ERROR(rtVariableSet1f(camera_lens_diameter_RTvariable, camera.second.lens_diameter));
+                RT_CHECK_ERROR(rtVariableSet1f(FOV_aspect_RTvariable, camera.second.FOV_aspect_ratio));
+                RT_CHECK_ERROR(rtVariableSet1f(camera_focal_length_RTvariable, camera.second.focal_length));
+                RT_CHECK_ERROR(rtVariableSet1f(camera_viewplane_length_RTvariable, 0.5f / tanf(0.5f * camera.second.HFOV_degrees * M_PI / 180.f)));
+                RT_CHECK_ERROR(rtVariableSet1ui(camera_ID_RTvariable, cam));
 
-                std::string data_label = "camera_" + camera_label + "_" + band_labels.at(b);
+                zeroBuffer1D(radiation_in_camera_RTbuffer, camera.second.resolution.x * camera.second.resolution.y * Nbands_launch);
 
-                for (auto p = 0; p < camera.second.resolution.x * camera.second.resolution.y; p++) {
-                    camera.second.pixel_data.at(band_labels.at(b)).at(p) = radiation_camera.at(p * Nbands_launch + b);
+                optix::int3 launch_dim_camera = optix::make_int3(camera.second.antialiasing_samples, camera.second.resolution.x, camera.second.resolution.y);
+
+                if (message_flag) {
+                    std::cout << "Performing scattering radiation camera ray trace for camera " << camera.second.label << "..." << std::flush;
+                }
+                RT_CHECK_ERROR(rtContextLaunch3D(OptiX_Context, RAYTYPE_CAMERA, launch_dim_camera.x, launch_dim_camera.y, launch_dim_camera.z));
+                if (message_flag) {
+                    std::cout << "done." << std::endl;
                 }
 
-                context->setGlobalData(data_label.c_str(), camera.second.pixel_data.at(band_labels.at(b)));
+                std::vector<float> radiation_camera = getOptiXbufferData(radiation_in_camera_RTbuffer);
+
+                std::string camera_label = camera.second.label;
+
+                for (auto b = 0; b < Nbands_launch; b++) {
+
+                    camera.second.pixel_data[band_labels.at(b)].resize(camera.second.resolution.x * camera.second.resolution.y);
+
+                    std::string data_label = "camera_" + camera_label + "_" + band_labels.at(b);
+
+                    for (auto p = 0; p < camera.second.resolution.x * camera.second.resolution.y; p++) {
+                        camera.second.pixel_data.at(band_labels.at(b)).at(p) = radiation_camera.at(p * Nbands_launch + b);
+                    }
+
+                    context->setGlobalData(data_label.c_str(), camera.second.pixel_data.at(band_labels.at(b)));
+                }
+
+                //--- Pixel Labeling Trace ---//
+
+                zeroBuffer1D(camera_pixel_label_RTbuffer, camera.second.resolution.x * camera.second.resolution.y);
+                zeroBuffer1D(camera_pixel_depth_RTbuffer, camera.second.resolution.x * camera.second.resolution.y);
+
+                if (message_flag) {
+                    std::cout << "Performing camera pixel labeling ray trace for camera " << camera.second.label << "..." << std::flush;
+                }
+                RT_CHECK_ERROR(rtContextLaunch3D(OptiX_Context, RAYTYPE_PIXEL_LABEL, 1, launch_dim_camera.y, launch_dim_camera.z));
+                if (message_flag) {
+                    std::cout << "done." << std::endl;
+                }
+
+                camera.second.pixel_label_UUID = getOptiXbufferData_ui(camera_pixel_label_RTbuffer);
+                camera.second.pixel_depth = getOptiXbufferData(camera_pixel_depth_RTbuffer);
+
+                // the IDs from the ray trace do not necessarily correspond to the actual primitive UUIDs, so look them up.
+                for (uint ID = 0; ID < camera.second.pixel_label_UUID.size(); ID++) {
+                    if (camera.second.pixel_label_UUID.at(ID) > 0) {
+                        camera.second.pixel_label_UUID.at(ID) = context_UUIDs.at(camera.second.pixel_label_UUID.at(ID) - 1) + 1;
+                    }
+                }
+
+                std::string data_label = "camera_" + camera_label + "_pixel_UUID";
+
+                context->setGlobalData(data_label.c_str(), camera.second.pixel_label_UUID);
+
+                data_label = "camera_" + camera_label + "_pixel_depth";
+
+                context->setGlobalData(data_label.c_str(), camera.second.pixel_depth);
+
+                cam++;
             }
+        }else {
+            // if scattering is not enabled or all sources have zero flux, we still need to zero the camera buffers
+            for (auto &camera: cameras) {
+                for (auto b = 0; b < Nbands_launch; b++) {
+                    camera.second.pixel_data[band_labels.at(b)].resize(camera.second.resolution.x * camera.second.resolution.y);
 
-            //--- Pixel Labeling Trace ---//
+                    std::string data_label = "camera_" + camera.second.label + "_" + band_labels.at(b);
 
-            zeroBuffer1D(camera_pixel_label_RTbuffer, camera.second.resolution.x * camera.second.resolution.y);
-            zeroBuffer1D(camera_pixel_depth_RTbuffer, camera.second.resolution.x * camera.second.resolution.y);
-
-            if (message_flag) {
-                std::cout << "Performing camera pixel labeling ray trace for camera " << camera.second.label << "..." << std::flush;
-            }
-            RT_CHECK_ERROR(rtContextLaunch3D(OptiX_Context, RAYTYPE_PIXEL_LABEL, 1, launch_dim_camera.y, launch_dim_camera.z));
-            if (message_flag) {
-                std::cout << "done." << std::endl;
-            }
-
-            camera.second.pixel_label_UUID = getOptiXbufferData_ui(camera_pixel_label_RTbuffer);
-            camera.second.pixel_depth = getOptiXbufferData(camera_pixel_depth_RTbuffer);
-
-            // the IDs from the ray trace do not necessarily correspond to the actual primitive UUIDs, so look them up.
-            for (uint ID = 0; ID < camera.second.pixel_label_UUID.size(); ID++) {
-                if (camera.second.pixel_label_UUID.at(ID) > 0) {
-                    camera.second.pixel_label_UUID.at(ID) = context_UUIDs.at(camera.second.pixel_label_UUID.at(ID) - 1) + 1;
+                    for (auto p = 0; p < camera.second.resolution.x * camera.second.resolution.y; p++) {
+                        camera.second.pixel_data.at(band_labels.at(b)).at(p) = 0.f;
+                    }
+                    context->setGlobalData(data_label.c_str(), camera.second.pixel_data.at(band_labels.at(b)));
                 }
             }
-
-            std::string data_label = "camera_" + camera_label + "_pixel_UUID";
-
-            context->setGlobalData(data_label.c_str(), camera.second.pixel_label_UUID);
-
-            data_label = "camera_" + camera_label + "_pixel_depth";
-
-            context->setGlobalData(data_label.c_str(), camera.second.pixel_depth);
-
-            cam++;
         }
     }
 

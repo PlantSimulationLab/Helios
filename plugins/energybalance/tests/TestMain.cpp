@@ -2,6 +2,6 @@
 
 using namespace helios;
 
-int main() {
-    return EnergyBalanceModel::selfTest();
+int main(int argc, char** argv) {
+    return EnergyBalanceModel::selfTest(argc, argv);
 }

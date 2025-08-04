@@ -2,6 +2,6 @@
 
 using namespace helios;
 
-int main() {
-    return Visualizer::selfTest();
+int main(int argc, char** argv) {
+    return Visualizer::selfTest(argc, argv);
 }

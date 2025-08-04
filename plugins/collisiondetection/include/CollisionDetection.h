@@ -213,7 +213,7 @@ public:
      * \brief Self-test routine to verify plugin functionality
      * \return 0 if all tests pass, non-zero otherwise
      */
-    static int selfTest();
+    static int selfTest(int argc = 0, char** argv = nullptr);
 
 private:
     //! Pointer to the Helios context

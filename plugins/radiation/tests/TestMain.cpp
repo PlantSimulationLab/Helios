@@ -2,6 +2,6 @@
 
 using namespace helios;
 
-int main() {
-    return RadiationModel::selfTest();
+int main(int argc, char** argv) {
+    return RadiationModel::selfTest(argc, argv);
 }

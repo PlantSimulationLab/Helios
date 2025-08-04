@@ -2,8 +2,7 @@
 
 using namespace helios;
 
-int main() {
-
-    // Run the self-test
-    return LeafOptics::selfTest();
+int main(int argc, char** argv) {
+    // Run the self-test with command line arguments
+    return LeafOptics::selfTest(argc, argv);
 }

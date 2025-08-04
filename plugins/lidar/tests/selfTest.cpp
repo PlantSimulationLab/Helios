@@ -2,22 +2,15 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
+#include "doctest_utils.h"
 
 using namespace std;
 using namespace helios;
 
 float err_tol = 1e-3;
 
-int LiDARcloud::selfTest() {
-    // Run all the tests
-    doctest::Context context;
-    int res = context.run();
-
-    if (context.shouldExit()) {
-        return res;
-    }
-
-    return res;
+int LiDARcloud::selfTest(int argc, char** argv) {
+    return helios::runDoctestWithValidation(argc, argv);
 }
 
 DOCTEST_TEST_CASE("LiDAR Single Voxel Sphere Test") {

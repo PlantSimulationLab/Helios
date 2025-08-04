@@ -2,19 +2,12 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
+#include "doctest_utils.h"
 
 using namespace helios;
 
-int RadiationModel::selfTest() {
-    // Run all the tests
-    doctest::Context context;
-    int res = context.run();
-
-    if (context.shouldExit()) {
-        return res;
-    }
-
-    return res;
+int RadiationModel::selfTest(int argc, char** argv) {
+    return helios::runDoctestWithValidation(argc, argv);
 }
 
 DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Squares") {

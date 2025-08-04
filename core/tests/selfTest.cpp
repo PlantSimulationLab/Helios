@@ -18,6 +18,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 #define DOCTEST_CONFIG_DISABLE_AUTOMATIC_DISCOVERY
 #include "doctest.h"
+#include "doctest_utils.h"
 
 using namespace helios;
 
@@ -29,15 +30,6 @@ double errtol = 1e-6;
 #include "Test_functions.h"
 #include "Test_utilities.h"
 
-int Context::selfTest() {
-
-    // Run all the tests
-    doctest::Context context;
-    int res = context.run();
-
-    if (context.shouldExit()) { // important - query flags (and --exit) rely on this
-        return res; // propagate the result of the tests
-    }
-
-    return res;
+int Context::selfTest(int argc, char** argv) {
+    return helios::runDoctestWithValidation(argc, argv);
 }

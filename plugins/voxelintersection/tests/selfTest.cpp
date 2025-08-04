@@ -2,6 +2,7 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
+#include "doctest_utils.h"
 
 using namespace helios;
 
@@ -192,14 +193,6 @@ DOCTEST_TEST_CASE("VoxelIntersection - Basic functionality test") {
     DOCTEST_CHECK(sliced_UUIDs.size() >= 1);
 }
 
-int VoxelIntersection::selfTest() {
-    // Run all the tests
-    doctest::Context context;
-    int res = context.run();
-
-    if (context.shouldExit()) {
-        return res;
-    }
-
-    return res;
+int VoxelIntersection::selfTest(int argc, char** argv) {
+    return helios::runDoctestWithValidation(argc, argv);
 }

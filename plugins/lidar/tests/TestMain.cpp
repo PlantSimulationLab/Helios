@@ -2,6 +2,6 @@
 
 using namespace helios;
 
-int main() {
-    return LiDARcloud::selfTest();
+int main(int argc, char** argv) {
+    return LiDARcloud::selfTest(argc, argv);
 }

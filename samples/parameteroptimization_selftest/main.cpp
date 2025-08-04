@@ -2,6 +2,6 @@
 
 using namespace helios;
 
-int main() {
-    return ParameterOptimization::selfTest();
+int main(int argc, char** argv) {
+    return ParameterOptimization::selfTest(argc, argv);
 }

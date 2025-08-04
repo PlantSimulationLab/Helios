@@ -2,6 +2,6 @@
 
 using namespace helios;
 
-int main() {
-    return PhotosynthesisModel::selfTest();
+int main(int argc, char** argv) {
+    return PhotosynthesisModel::selfTest(argc, argv);
 }

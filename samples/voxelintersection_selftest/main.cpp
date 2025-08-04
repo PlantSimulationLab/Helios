@@ -2,10 +2,8 @@
 
 using namespace helios;
 
-int main() {
-
+int main(int argc, char** argv) {
     Context context;
     VoxelIntersection voxelintersection(&context);
-
-    return voxelintersection.selfTest();
+    return voxelintersection.selfTest(argc, argv);
 }

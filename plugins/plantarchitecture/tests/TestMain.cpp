@@ -2,6 +2,6 @@
 
 using namespace helios;
 
-int main() {
-    return PlantArchitecture::selfTest();
+int main(int argc, char** argv) {
+    return PlantArchitecture::selfTest(argc, argv);
 }

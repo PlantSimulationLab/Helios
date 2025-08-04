@@ -1556,7 +1556,7 @@ public:
     explicit PlantArchitecture(helios::Context *context_ptr);
 
     //! Unit test routines
-    static int selfTest();
+    static int selfTest(int argc = 0, char** argv = nullptr);
 
     //! Add optional output object data values to the Context
     /**
@@ -2096,6 +2096,95 @@ public:
      * \return The taper of the shoot as a float value, constrained between 0 and 1.
      */
     [[nodiscard]] float getShootTaper(uint plantID, uint shootID) const;
+
+    // -- methods for querying shoot hierarchy -- //
+
+    /**
+     * \brief Retrieves all shoot IDs organized by branching rank/order.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \return Vector of vectors where index represents rank and values are shoot IDs at that rank.
+     * \note result[0] contains base shoots (rank 0), result[1] contains primary branches (rank 1), etc.
+     */
+    [[nodiscard]] std::vector<std::vector<uint>> getShootIDsByRank(uint plantID) const;
+
+    /**
+     * \brief Retrieves a hierarchical mapping of parent shoot IDs to their children.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \return Map where keys are parent shoot IDs and values are vectors of child shoot IDs.
+     */
+    [[nodiscard]] std::map<uint, std::vector<uint>> getShootHierarchyMap(uint plantID) const;
+
+    /**
+     * \brief Retrieves all descendant shoot IDs of a given shoot recursively.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \param[in] shootID The unique identifier of the parent shoot.
+     * \return Vector containing all descendant shoot IDs in depth-first order.
+     */
+    [[nodiscard]] std::vector<uint> getAllDescendantShootIDs(uint plantID, uint shootID) const;
+
+    /**
+     * \brief Retrieves direct child shoot IDs of a given shoot.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \param[in] shootID The unique identifier of the parent shoot.
+     * \return Vector containing direct child shoot IDs.
+     */
+    [[nodiscard]] std::vector<uint> getChildShootIDs(uint plantID, uint shootID) const;
+
+    /**
+     * \brief Retrieves the parent shoot ID of a given shoot.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \param[in] shootID The unique identifier of the shoot.
+     * \return Parent shoot ID, or -1 if the shoot is a base shoot (no parent).
+     */
+    [[nodiscard]] int getParentShootID(uint plantID, uint shootID) const;
+
+    /**
+     * \brief Retrieves the branching rank/order of a given shoot.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \param[in] shootID The unique identifier of the shoot.
+     * \return The rank of the shoot (0 for base shoots, 1 for primary branches, etc.).
+     */
+    [[nodiscard]] uint getShootRank(uint plantID, uint shootID) const;
+
+    /**
+     * \brief Retrieves all shoot IDs for a given plant.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \return Vector containing all shoot IDs in the plant.
+     */
+    [[nodiscard]] std::vector<uint> getAllShootIDs(uint plantID) const;
+
+    /**
+     * \brief Retrieves shoot IDs that have no children (terminal/leaf shoots).
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \return Vector containing shoot IDs of terminal shoots.
+     */
+    [[nodiscard]] std::vector<uint> getTerminalShootIDs(uint plantID) const;
+
+    /**
+     * \brief Retrieves the hierarchy depth of a given shoot.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \param[in] shootID The unique identifier of the shoot.
+     * \return The depth of the shoot in the hierarchy (0 for base shoots).
+     */
+    [[nodiscard]] uint getShootDepth(uint plantID, uint shootID) const;
+
+    /**
+     * \brief Retrieves the path from a given shoot to the root shoot.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \param[in] shootID The unique identifier of the shoot.
+     * \return Vector containing shoot IDs from the given shoot to the root, in ascending order.
+     */
+    [[nodiscard]] std::vector<uint> getPathToRoot(uint plantID, uint shootID) const;
 
     /**
      * \brief Retrieves the base position of the specified plant.

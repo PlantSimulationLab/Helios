@@ -57,6 +57,7 @@ uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoor
 
     primitives[currentUUID] = patch_new;
     currentUUID++;
+    invalidateAllUUIDsCache();
     return currentUUID - 1;
 }
 
@@ -86,6 +87,7 @@ uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoor
 
     primitives[currentUUID] = patch_new;
     currentUUID++;
+    invalidateAllUUIDsCache();
     return currentUUID - 1;
 }
 
@@ -123,6 +125,7 @@ uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoor
 
     primitives[currentUUID] = patch_new;
     currentUUID++;
+    invalidateAllUUIDsCache();
     return currentUUID - 1;
 }
 
@@ -143,6 +146,7 @@ uint Context::addTriangle(const vec3 &vertex0, const vec3 &vertex1, const vec3 &
 
     primitives[currentUUID] = tri_new;
     currentUUID++;
+    invalidateAllUUIDsCache();
     return currentUUID - 1;
 }
 
@@ -159,6 +163,7 @@ uint Context::addTriangle(const helios::vec3 &vertex0, const helios::vec3 &verte
 
     primitives[currentUUID] = tri_new;
     currentUUID++;
+    invalidateAllUUIDsCache();
     return currentUUID - 1;
 }
 
@@ -191,6 +196,7 @@ uint Context::addVoxel(const vec3 &center, const vec3 &size, const float &rotati
 
     primitives[currentUUID] = voxel_new;
     currentUUID++;
+    invalidateAllUUIDsCache();
     return currentUUID - 1;
 }
 
@@ -466,6 +472,7 @@ void Context::deletePrimitive(uint UUID) {
     delete prim;
     primitives.erase(UUID);
     dirty_deleted_primitives.push_back(UUID);
+    invalidateAllUUIDsCache();
 }
 
 std::vector<uint> Context::copyPrimitive(const std::vector<uint> &UUIDs) {
@@ -548,6 +555,7 @@ uint Context::copyPrimitive(uint UUID) {
     }
 
     currentUUID++;
+    invalidateAllUUIDsCache();
     return currentUUID - 1;
 }
 

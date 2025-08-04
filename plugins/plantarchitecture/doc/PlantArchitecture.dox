@@ -737,6 +737,69 @@ void PlantArchitecture::initializePlantModelRegistrations() {
 }
 ~~~~~~
 
+\section PlantArchPruning Shoot Pruning and Hierarchical Management
+
+The PlantArchitecture plugin provides comprehensive methods for querying shoot hierarchy and performing pruning operations. These methods enable systematic management of plant structure based on branching patterns, shoot ranks, and topological relationships.
+
+\subsection PlantArchPruningHierarchy Querying Shoot Hierarchy
+
+Several methods are available to query the hierarchical structure of shoots within a plant:
+
+<table>
+    <tr><th>Method</th><th>Description</th></tr>
+    <tr><td>\\ref PlantArchitecture::getShootIDsByRank()</td><td>Returns shoots organized by branching rank/order in a vector of vectors.</td></tr>
+    <tr><td>\\ref PlantArchitecture::getShootHierarchyMap()</td><td>Returns a map of parent shoot IDs to their direct children.</td></tr>
+    <tr><td>\\ref PlantArchitecture::getAllDescendantShootIDs()</td><td>Returns all descendant shoots of a given shoot recursively.</td></tr>
+    <tr><td>\\ref PlantArchitecture::getChildShootIDs()</td><td>Returns direct child shoots of a given shoot.</td></tr>
+    <tr><td>\\ref PlantArchitecture::getParentShootID()</td><td>Returns the parent shoot ID (-1 for base shoots).</td></tr>
+    <tr><td>\\ref PlantArchitecture::getShootRank()</td><td>Returns the branching rank/order of a shoot.</td></tr>
+    <tr><td>\\ref PlantArchitecture::getAllShootIDs()</td><td>Returns all shoot IDs for a plant.</td></tr>
+    <tr><td>\\ref PlantArchitecture::getTerminalShootIDs()</td><td>Returns shoot IDs that have no children (terminal shoots).</td></tr>
+    <tr><td>\\ref PlantArchitecture::getShootDepth()</td><td>Returns the hierarchy depth of a shoot.</td></tr>
+    <tr><td>\\ref PlantArchitecture::getPathToRoot()</td><td>Returns the path from a shoot to the root shoot.</td></tr>
+</table>
+
+\subsection PlantArchPruningExamples Pruning Examples
+
+The hierarchical query methods enable various pruning strategies:
+
+**Pruning by Branching Order:**
+~~~~~~
+// Get shoots organized by rank
+auto shoots_by_rank = plantarchitecture.getShootIDsByRank(plantID);
+
+// Prune all shoots above rank 2 (remove higher-order branches)
+for (size_t rank = 3; rank < shoots_by_rank.size(); ++rank) {
+    for (uint shootID : shoots_by_rank[rank]) {
+        plantarchitecture.pruneBranch(plantID, shootID, 0);
+    }
+}
+~~~~~~
+
+**Terminal Shoot Thinning:**
+~~~~~~
+// Get terminal shoots for selective thinning
+auto terminal_shoots = plantarchitecture.getTerminalShootIDs(plantID);
+
+// Prune every other terminal shoot
+for (size_t i = 0; i < terminal_shoots.size(); i += 2) {
+    plantarchitecture.pruneBranch(plantID, terminal_shoots[i], 0);
+}
+~~~~~~
+
+**Pruning Entire Branch Systems:**
+~~~~~~
+// Remove all descendants of a specific shoot
+uint target_shoot = 5;
+auto descendants = plantarchitecture.getAllDescendantShootIDs(plantID, target_shoot);
+
+for (uint descendant : descendants) {
+    plantarchitecture.pruneBranch(plantID, descendant, 0);
+}
+~~~~~~
+
+The \\ref PlantArchitecture::getShootIDsByRank() method is particularly useful as it organizes shoots into a vector of vectors where the index represents the branching rank, making it easy to implement systematic pruning based on plant architecture principles.
+
 \section PlantArchQuery Retrieving Information from the Model
 
 \subsection PlantArchQueryobjIDs Getting Object IDs and Primitive UUIDs of Model Geometry

@@ -531,8 +531,10 @@ RT_PROGRAM void camera_raygen() {
     float Ry = rnd(prd.seed);
 
     // Map sample to pixel
-    float half_HFOV_radians = atanf(0.5f / camera_viewplane_length);
-    float multiplier = tanf(half_HFOV_radians / FOV_aspect_ratio) / tanf(half_HFOV_radians);
+    // Calculate VFOV scaling factor directly from aspect ratio
+    // Since FOV_aspect_ratio = HFOV/VFOV, then tan(half_VFOV) = tan(half_HFOV)/FOV_aspect_ratio
+    // The multiplier = tan(half_VFOV)/tan(half_HFOV) = 1/FOV_aspect_ratio
+    float multiplier = 1.0f / FOV_aspect_ratio;
     sp.y = (-0.5f * PPointsRatioy + (ii + Rx) / float(camera_resolution.x));
     sp.z = (0.5f * PPointsRatiox - (jj + Ry) / float(camera_resolution.y)) * multiplier;
     sp.x = camera_viewplane_length;
@@ -601,8 +603,10 @@ RT_PROGRAM void pixel_label_raygen() {
     size_t origin_ID = jj * launch_dim.y + ii; // global pixel index
 
     // Map sample to center of pixel
-    float half_HFOV_radians = atanf(0.5f / camera_viewplane_length);
-    float multiplier = tanf(half_HFOV_radians / FOV_aspect_ratio) / tanf(half_HFOV_radians);
+    // Calculate VFOV scaling factor directly from aspect ratio
+    // Since FOV_aspect_ratio = HFOV/VFOV, then tan(half_VFOV) = tan(half_HFOV)/FOV_aspect_ratio
+    // The multiplier = tan(half_VFOV)/tan(half_HFOV) = 1/FOV_aspect_ratio
+    float multiplier = 1.0f / FOV_aspect_ratio;
     sp.y = (-0.5f + (ii + 0.5f) / float(camera_resolution.x));
     sp.z = (0.5f - (jj + 0.5f) / float(camera_resolution.y)) * multiplier;
     sp.x = camera_viewplane_length;

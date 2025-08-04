@@ -2,6 +2,6 @@
 
 using namespace helios;
 
-int main() {
-    return SolarPosition::selfTest();
+int main(int argc, char** argv) {
+    return SolarPosition::selfTest(argc, argv);
 }

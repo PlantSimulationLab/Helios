@@ -144,7 +144,7 @@ public:
     ~AerialLiDARcloud();
 
     //! Self-test (unit test) function
-    static int selfTest();
+    static int selfTest(int argc = 0, char** argv = nullptr);
 
     //! Disable all print messages to the screen except for fatal error messages
     void disableMessages();
