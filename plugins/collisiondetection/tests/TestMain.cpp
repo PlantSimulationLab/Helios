@@ -2,6 +2,6 @@
 
 using namespace helios;
 
-int main() {
-    return CollisionDetection::selfTest();
+int main(int argc, char** argv) {
+    return CollisionDetection::selfTest(argc, argv);
 }

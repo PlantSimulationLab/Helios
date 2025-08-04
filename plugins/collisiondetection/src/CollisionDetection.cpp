@@ -1452,6 +1452,246 @@ int CollisionDetection::countRayIntersections(const vec3 &origin, const vec3 &di
     return intersection_count;
 }
 
+bool CollisionDetection::findNearestRayIntersection(const vec3 &origin, const vec3 &direction, const std::set<uint> &candidate_UUIDs, float &nearest_distance, float max_distance) {
+    
+    nearest_distance = std::numeric_limits<float>::max();
+    bool found_intersection = false;
+    
+    // Check if we need to traverse both static and dynamic BVHs
+    bool check_static_bvh = hierarchical_bvh_enabled && static_bvh_valid && !static_bvh_nodes.empty();
+    bool check_dynamic_bvh = !bvh_nodes.empty();
+    
+    if (!check_static_bvh && !check_dynamic_bvh) {
+        return false;
+    }
+    
+    // Debug tracking
+    static int ray_call_count = 0;
+    ray_call_count++;
+    bool should_debug = (ray_call_count % 50) == 1;
+    int nodes_visited = 0;
+    int primitives_checked = 0;
+    int candidates_found_in_bvh = 0;
+    
+    // Ensure the BVH is current before traversal
+    const_cast<CollisionDetection *>(this)->ensureBVHCurrent();
+    
+    // Lambda function to traverse a BVH and find ray intersections
+    auto traverseBVH = [&](const std::vector<BVHNode>& nodes, const std::vector<uint>& primitives, const char* bvh_name) {
+        if (nodes.empty()) return;
+        
+        // Stack-based traversal to avoid recursion
+        std::vector<uint> node_stack;
+        node_stack.push_back(0); // Start with root node
+        
+        while (!node_stack.empty()) {
+            uint node_idx = node_stack.back();
+            node_stack.pop_back();
+            
+            if (node_idx >= nodes.size()) {
+                continue;
+            }
+            
+            const BVHNode &node = nodes[node_idx];
+            nodes_visited++;
+        
+        // Test if ray intersects node AABB
+        float t_min, t_max;
+        if (!rayAABBIntersect(origin, direction, node.aabb_min, node.aabb_max, t_min, t_max)) {
+            continue;
+        }
+        
+        // Check if intersection is within distance range
+        if (max_distance > 0.0f && t_min > max_distance) {
+            continue; // Entire AABB is too far - skip
+        }
+        
+        // If we've already found a closer intersection than this AABB, skip it
+        if (t_min > nearest_distance) {
+            continue;
+        }
+        
+        if (node.is_leaf) {
+            // Check each primitive in this leaf for ray intersection
+            for (uint i = 0; i < node.primitive_count; i++) {
+                uint primitive_id = primitives[node.primitive_start + i];
+                
+                primitives_checked++;
+                
+                // Skip if this primitive is not in the candidate set (unless candidate set is empty)
+                if (!candidate_UUIDs.empty() && candidate_UUIDs.find(primitive_id) == candidate_UUIDs.end()) {
+                    continue;
+                }
+                
+                candidates_found_in_bvh++;
+                
+                // Get this primitive's AABB
+                if (!context->doesPrimitiveExist(primitive_id)) {
+                    continue; // Skip invalid primitive
+                }
+                
+                vec3 prim_min, prim_max;
+                context->getPrimitiveBoundingBox(primitive_id, prim_min, prim_max);
+                
+                // Test ray against primitive AABB
+                float prim_t_min, prim_t_max;
+                if (rayAABBIntersect(origin, direction, prim_min, prim_max, prim_t_min, prim_t_max)) {
+                    // Check distance constraints
+                    bool within_max_distance = (max_distance <= 0.0f) || (prim_t_min <= max_distance);
+                    
+                    if (within_max_distance && prim_t_min > 0.0f && prim_t_min < nearest_distance) {
+                        // For now, we use AABB intersection distance as an approximation
+                        // A more accurate implementation would perform exact ray-primitive intersection
+                        nearest_distance = prim_t_min;
+                        found_intersection = true;
+                    }
+                }
+            }
+        } else {
+            // Add child nodes to stack for further traversal
+            if (node.left_child != 0xFFFFFFFF) {
+                node_stack.push_back(node.left_child);
+            }
+            if (node.right_child != 0xFFFFFFFF) {
+                node_stack.push_back(node.right_child);
+            }
+        }
+        }  // End of while loop
+    };  // End of lambda
+    
+    // First, traverse the static BVH if hierarchical BVH is enabled
+    if (check_static_bvh) {
+        if (should_debug && printmessages) {
+            std::cout << "DEBUG: Traversing static BVH..." << std::endl;
+        }
+        traverseBVH(static_bvh_nodes, static_bvh_primitives, "static");
+    }
+    
+    // Then, traverse the dynamic BVH
+    if (check_dynamic_bvh) {
+        if (should_debug && printmessages) {
+            std::cout << "DEBUG: Traversing dynamic BVH..." << std::endl;
+        }
+        traverseBVH(bvh_nodes, primitive_indices, "dynamic");
+    }
+    
+    if (should_debug && printmessages) {
+        std::cout << "DEBUG findNearestRayIntersection: visited " << nodes_visited << " nodes, checked " 
+                  << primitives_checked << " primitives, found " << candidates_found_in_bvh 
+                  << " candidates in BVH, intersection found: " << (found_intersection ? "YES" : "NO") << std::endl;
+    }
+    
+    return found_intersection;
+}
+
+bool CollisionDetection::findNearestPrimitiveDistance(const vec3 &origin, const vec3 &direction, const std::vector<uint> &candidate_UUIDs, float &distance, vec3 &obstacle_direction) {
+    
+    if (candidate_UUIDs.empty()) {
+        if (printmessages) {
+            std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): No candidate UUIDs provided" << std::endl;
+        }
+        return false;
+    }
+    
+    // Validate that direction is normalized
+    float dir_magnitude = direction.magnitude();
+    if (std::abs(dir_magnitude - 1.0f) > 1e-6f) {
+        if (printmessages) {
+            std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): Direction vector is not normalized (magnitude = " 
+                      << dir_magnitude << ")" << std::endl;
+        }
+        return false;
+    }
+    
+    // Debug output
+    static int debug_call_count = 0;
+    debug_call_count++;
+    bool should_debug = (debug_call_count % 50) == 1;
+    
+    // Filter out invalid UUIDs
+    std::vector<uint> valid_candidates;
+    for (uint uuid : candidate_UUIDs) {
+        if (context->doesPrimitiveExist(uuid)) {
+            valid_candidates.push_back(uuid);
+        } else if (printmessages) {
+            std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): Skipping invalid UUID " << uuid << std::endl;
+        }
+    }
+    
+    if (should_debug && printmessages) {
+        std::cout << "DEBUG findNearestPrimitiveDistance: Checking " << valid_candidates.size() 
+                  << " valid candidates from " << candidate_UUIDs.size() << " requested" << std::endl;
+    }
+    
+    if (valid_candidates.empty()) {
+        if (printmessages) {
+            std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): No valid candidate UUIDs after filtering" << std::endl;
+        }
+        return false;
+    }
+    
+    float nearest_distance_found = std::numeric_limits<float>::max();
+    vec3 nearest_obstacle_direction;
+    bool found_forward_surface = false;
+    
+    // Check each candidate primitive to find the nearest "forward-facing" surface
+    for (uint primitive_id : valid_candidates) {
+        // Get primitive normal and a point on the surface using Context methods
+        vec3 surface_normal = context->getPrimitiveNormal(primitive_id);
+        std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_id);
+        
+        if (vertices.empty()) {
+            continue; // Skip if no vertices
+        }
+        
+        // Use first vertex as a point on the plane
+        vec3 point_on_plane = vertices[0];
+        
+        // Calculate distance from origin to the plane
+        vec3 to_origin = origin - point_on_plane;
+        float distance_to_plane = to_origin * surface_normal;
+        
+        // Distance is the absolute value
+        float surface_distance = std::abs(distance_to_plane);
+        
+        // The direction from origin to closest point on surface
+        vec3 surface_direction;
+        if (distance_to_plane > 0) {
+            // Origin is on the positive side of the normal - direction to surface is -normal
+            surface_direction = -surface_normal;
+        } else {
+            // Origin is on the negative side of the normal - direction to surface is +normal  
+            surface_direction = surface_normal;
+        }
+        
+        // Check if this surface is "in front" using dot product
+        float dot_product = surface_direction * direction;
+        
+        if (dot_product > 0.0f) { // Surface is in front of origin
+            if (surface_distance < nearest_distance_found) {
+                nearest_distance_found = surface_distance;
+                nearest_obstacle_direction = surface_direction;
+                found_forward_surface = true;
+            }
+        }
+    }
+    
+    if (found_forward_surface) {
+        distance = nearest_distance_found;
+        obstacle_direction = nearest_obstacle_direction;
+        if (should_debug && printmessages) {
+            std::cout << "DEBUG: Found nearest forward-facing primitive at distance " << distance << " meters in direction " << obstacle_direction << std::endl;
+        }
+        return true;
+    }
+    
+    if (should_debug && printmessages) {
+        std::cout << "DEBUG: No forward-facing primitives found (all surfaces behind growth direction)" << std::endl;
+    }
+    
+    return false;
+}
+
 std::vector<helios::vec3> CollisionDetection::sampleDirectionsInCone(const vec3 &apex, const vec3 &central_axis, float half_angle, int num_samples) {
 
     std::vector<vec3> directions;

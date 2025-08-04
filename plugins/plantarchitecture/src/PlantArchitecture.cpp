@@ -482,7 +482,7 @@ helios::vec3 Phytomer::calculateCollisionAvoidanceDirection(const helios::vec3 &
     collision_detection_active = false;
 
     if (plantarchitecture_ptr->collision_detection_enabled && plantarchitecture_ptr->collision_detection_ptr != nullptr) {
-        
+
         // BVH should already be built at timestep level - just use it
         if (!plantarchitecture_ptr->bvh_cached_for_current_growth) {
             if (plantarchitecture_ptr->printmessages) {
@@ -490,27 +490,23 @@ helios::vec3 Phytomer::calculateCollisionAvoidanceDirection(const helios::vec3 &
             }
             return collision_optimal_direction; // Skip collision avoidance if BVH not ready
         }
-        
+
         // Apply cone-aware culling based on actual collision detection geometry
         std::vector<uint> filtered_geometry;
-        
+
         // Calculate spherical sector culling distance
         // The "cone" is actually a spherical sector with radius = look-ahead distance
         float look_ahead_distance = plantarchitecture_ptr->collision_cone_height;
-        
+
         // Only obstacles within the look-ahead distance can be detected by collision rays
         // Add small buffer for obstacles at sector boundary
-        float max_relevant_distance = look_ahead_distance * 1.1f;  // 10% buffer
-        
-        
+        float max_relevant_distance = look_ahead_distance * 1.1f; // 10% buffer
+
+
         // Always apply cone-aware culling for performance (no arbitrary thresholds)
-        filtered_geometry = plantarchitecture_ptr->collision_detection_ptr->filterGeometryByDistance(
-            internode_base_origin, 
-            max_relevant_distance, 
-            plantarchitecture_ptr->cached_target_geometry
-        );
-        
-        
+        filtered_geometry = plantarchitecture_ptr->collision_detection_ptr->filterGeometryByDistance(internode_base_origin, max_relevant_distance, plantarchitecture_ptr->cached_target_geometry);
+
+
         // Update cached filtered geometry for this specific collision check
         plantarchitecture_ptr->cached_filtered_geometry = filtered_geometry;
 
@@ -1154,10 +1150,12 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     // Store collision detection parameters for later use (after all natural rotations)
     vec3 collision_optimal_direction;
     bool collision_detection_active = false;
+    bool obstacle_found = false;
 
     // Calculate collision avoidance direction if collision detection is enabled
     collision_optimal_direction = calculateCollisionAvoidanceDirection(internode_base_origin, internode_axis, collision_detection_active);
 
+    // Solid obstacle avoidance is now handled inside the segment creation loop
 
     // create internode tube
     for (int inode_segment = 1; inode_segment <= Ndiv_internode_length; inode_segment++) {
@@ -1181,8 +1179,91 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             internode_axis = rotatePointAboutLine(internode_axis, nullorigin, make_vec3(0, 0, 1), yaw_angle);
         }
 
+        // Apply solid obstacle avoidance after natural rotations but before soft collision avoidance
+        if (plantarchitecture_ptr->solid_obstacle_avoidance_enabled && !plantarchitecture_ptr->solid_obstacle_UUIDs.empty()) {
+            vec3 current_position = phytomer_internode_vertices.at(inode_segment - 1);
+            vec3 growth_direction = internode_axis;
+            growth_direction.normalize();
+
+            // Check for obstacles using the improved collision detection method
+            float nearest_obstacle_distance;
+            vec3 nearest_obstacle_direction;
+
+            if (plantarchitecture_ptr->collision_detection_ptr != nullptr &&
+                plantarchitecture_ptr->collision_detection_ptr->findNearestPrimitiveDistance(current_position, growth_direction, plantarchitecture_ptr->solid_obstacle_UUIDs, nearest_obstacle_distance, nearest_obstacle_direction)) {
+                obstacle_found = true;
+                //nearest_obstacle_direction = make_vec3(0,0,1);
+                //nearest_obstacle_direction = -nearest_obstacle_direction;
+
+                // Obstacle detected - apply strong curvature based on distance
+                if (inode_segment == 1 || nearest_obstacle_distance < 0.3f) { // Only print debug for first segment or when very close
+                    std::cout << "DEBUG: Nearest obstacle at distance " << nearest_obstacle_distance << " meters in direction " << nearest_obstacle_direction << std::endl;
+                }
+
+                if (nearest_obstacle_distance < plantarchitecture_ptr->solid_obstacle_avoidance_distance) {
+
+                    // Calculate rotation needed to make growth perpendicular to obstacle direction
+                    
+                    // Calculate the angle between growth direction and obstacle direction
+                    float dot_with_obstacle = normalize(growth_direction) * normalize(nearest_obstacle_direction);
+                    float angle_deficit = asin_safe(fabs(dot_with_obstacle));
+                    
+                    if (angle_deficit > 0.01f) { // Only rotate if we need significant adjustment
+
+                        vec3 rotation_axis;
+                        rotation_axis = cross(growth_direction, -nearest_obstacle_direction);
+                        if (rotation_axis.magnitude() > 0.001f) {
+                            rotation_axis.normalize();
+                        } else {
+                            angle_deficit = 0.f;
+                        }
+
+                        if (rotation_axis.magnitude() > 0.001f) {
+                            
+                            // Calculate fraction of total rotation to apply this timestep
+                            // Fraction increases as we get closer to the obstacle
+                            float rotation_fraction;
+                            if (nearest_obstacle_distance < 0.05f) {
+                                rotation_fraction = 1.f; // Very aggressive when extremely close
+                            } else if (nearest_obstacle_distance < 0.15f) {
+                                rotation_fraction = 0.7f; // Aggressive when very close
+                            } else if (nearest_obstacle_distance < 0.3f) {
+                                rotation_fraction = 0.3f; // Moderate when close
+                            } else if (nearest_obstacle_distance < 0.5f) {
+                                rotation_fraction = 0.2f; // Gentle when moderate distance
+                            } else {
+                                rotation_fraction = 0.1f; // Very gentle when far
+                            }
+                            
+                            // Scale by repulsion strength
+                            // rotation_fraction *= repulsion_strength;
+                            
+                            // Apply fraction of the total angle deficit
+                            float rotation_this_step = angle_deficit * rotation_fraction;
+                            
+                            // Apply the rotation
+                            internode_axis = rotatePointAboutLine(internode_axis, nullorigin, rotation_axis, rotation_this_step);
+                            internode_axis.normalize();
+                            
+                            if (inode_segment == 1 || nearest_obstacle_distance < 0.3f) {
+                                std::cout << "DEBUG: Rotating by " << rad2deg(rotation_this_step) 
+                                          << " degrees (fraction " << rotation_fraction 
+                                          << "), remaining angle deficit: " << rad2deg(angle_deficit - rotation_this_step) << std::endl;
+                            }
+                        }
+                    }
+                    if (inode_segment == 1 || nearest_obstacle_distance < 0.3f) {
+                        std::cout << "DEBUG: Applied avoidance - new direction: " << internode_axis << std::endl;
+                    }
+                }
+            } else if (inode_segment == 1) {
+                std::cout << "DEBUG: No obstacle detected from position " << current_position << std::endl;
+            }
+        }
+
         // Apply collision avoidance blending after all natural rotations are complete
-        if (collision_detection_active) {
+        // Only apply soft collision avoidance if hard boundary avoidance was not already applied
+        if (collision_detection_active && !obstacle_found) {
             vec3 natural_direction = internode_axis;
             float inertia_weight = plantarchitecture_ptr->collision_inertia_weight;
 
@@ -1191,8 +1272,11 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             // inertia = 0.0: use optimal direction (full collision avoidance)
             internode_axis = inertia_weight * natural_direction + (1.0f - inertia_weight) * collision_optimal_direction;
             internode_axis.normalize();
-            
+
             // Mark that collision avoidance was applied this timestep
+            plantarchitecture_ptr->collision_avoidance_applied = true;
+        } else if (obstacle_found) {
+            // Hard boundary avoidance takes precedence - mark that collision avoidance was applied
             plantarchitecture_ptr->collision_avoidance_applied = true;
         }
 
@@ -3821,7 +3905,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
 
     // Clear BVH cache at start of plant growth operation
     clearBVHCache();
-    
+
     // Rebuild BVH once at the start if collision detection is enabled
     if (collision_detection_enabled && collision_detection_ptr != nullptr) {
         if (printmessages) {
@@ -3875,7 +3959,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
             }
             rebuildBVHForTimestep();
         }
-        
+
         if (timestep == Nsteps - 1 && remainder_time != 0.f) {
             dt_max_days = remainder_time;
         }
@@ -4179,10 +4263,10 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
     // Update Context geometry based on scheduling configuration
     geometry_update_counter++;
     bool should_update_context = (geometry_update_counter >= geometry_update_frequency);
-    
+
     // Force Context update if collision avoidance was applied and force_update_on_collision is enabled
     bool force_update = collision_avoidance_applied && force_update_on_collision;
-    
+
     if (should_update_context || force_update) {
         if (printmessages) {
             if (force_update) {
@@ -4192,7 +4276,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
             }
         }
         shoot_tree->front()->updateShootNodes(true);
-        geometry_update_counter = 0;  // Reset counter
+        geometry_update_counter = 0; // Reset counter
     } else {
         // Update plant structure but not Context geometry
         if (printmessages) {
@@ -4200,7 +4284,7 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
         }
         shoot_tree->front()->updateShootNodes(false);
     }
-    
+
     // Reset collision avoidance flag for next timestep
     collision_avoidance_applied = false;
 
@@ -4297,32 +4381,31 @@ void PlantArchitecture::enableCollisionDetection(const std::vector<uint> &target
 
         // Disable automatic BVH rebuilds - PlantArchitecture will control rebuilds manually
         collision_detection_ptr->disableAutomaticBVHRebuilds();
-        
+
         // Enable hierarchical BVH for better performance with large plants
         collision_detection_ptr->enableHierarchicalBVH();
-        
+
         // Cone-aware culling is now handled automatically based on collision cone geometry
-        
-        setGeometryUpdateScheduling(3, true);  // Update every 3 timesteps, force on collision
-        
+
+        setGeometryUpdateScheduling(3, true); // Update every 3 timesteps, force on collision
+
         if (printmessages) {
-            std::cout << "Created internal CollisionDetection instance and enabled collision detection for plant growth with " 
-                      << target_object_UUIDs.size() << " target UUIDs and " << target_object_IDs.size() << " target object IDs" << std::endl;
+            std::cout << "Created internal CollisionDetection instance and enabled collision detection for plant growth with " << target_object_UUIDs.size() << " target UUIDs and " << target_object_IDs.size() << " target object IDs" << std::endl;
         }
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         helios_runtime_error("ERROR (PlantArchitecture::enableCollisionDetection): Failed to create CollisionDetection instance: " + std::string(e.what()));
     }
 }
 
 void PlantArchitecture::disableCollisionDetection() {
     collision_detection_enabled = false;
-    
+
     // Clean up owned CollisionDetection instance
     if (collision_detection_ptr != nullptr && owns_collision_detection) {
         delete collision_detection_ptr;
         owns_collision_detection = false;
     }
-    
+
     collision_detection_ptr = nullptr;
     collision_target_UUIDs.clear();
     collision_target_object_IDs.clear();
@@ -4353,9 +4436,9 @@ void PlantArchitecture::setStaticObstacles(const std::vector<uint> &target_UUIDs
     if (collision_detection_ptr == nullptr) {
         helios_runtime_error("ERROR (PlantArchitecture::setStaticObstacles): Collision detection must be enabled before setting static obstacles.");
     }
-    
+
     collision_detection_ptr->setStaticGeometry(target_UUIDs);
-    
+
     if (printmessages) {
         std::cout << "Marked " << target_UUIDs.size() << " primitives as static obstacles for collision detection" << std::endl;
     }
@@ -4365,24 +4448,23 @@ void PlantArchitecture::setSpatialOptimization(float max_collision_distance, boo
     if (collision_detection_ptr == nullptr) {
         helios_runtime_error("ERROR (PlantArchitecture::setSpatialOptimization): Collision detection must be enabled before configuring spatial optimization.");
     }
-    
+
     if (max_collision_distance <= 0.0f) {
         helios_runtime_error("ERROR (PlantArchitecture::setSpatialOptimization): max_collision_distance must be positive.");
     }
-    
+
     spatial_max_distance = max_collision_distance;
     spatial_filtering_enabled = enable_spatial_filtering;
-    
+
     // Configure the CollisionDetection plugin with the new distance
     collision_detection_ptr->setMaxCollisionDistance(max_collision_distance);
-    
+
     if (printmessages) {
-        std::cout << "Set spatial optimization: max_distance=" << max_collision_distance 
-                  << " meters, filtering=" << (enable_spatial_filtering ? "enabled" : "disabled") << std::endl;
+        std::cout << "Set spatial optimization: max_distance=" << max_collision_distance << " meters, filtering=" << (enable_spatial_filtering ? "enabled" : "disabled") << std::endl;
     }
 }
 
-CollisionDetection* PlantArchitecture::getCollisionDetection() const {
+CollisionDetection *PlantArchitecture::getCollisionDetection() const {
     return collision_detection_ptr;
 }
 
@@ -4392,32 +4474,43 @@ void PlantArchitecture::setCollisionRelevantOrgans(bool include_internodes, bool
     collision_include_petioles = include_petioles;
     collision_include_flowers = include_flowers;
     collision_include_fruit = include_fruit;
-    
+
     // Clear BVH cache to force rebuild with new organ filtering
     clearBVHCache();
-    
+
     if (printmessages) {
-        std::cout << "Set collision-relevant organs: internodes=" << (include_internodes ? "yes" : "no")
-                  << ", leaves=" << (include_leaves ? "yes" : "no")
-                  << ", petioles=" << (include_petioles ? "yes" : "no")
-                  << ", flowers=" << (include_flowers ? "yes" : "no")
-                  << ", fruit=" << (include_fruit ? "yes" : "no") << std::endl;
+        std::cout << "Set collision-relevant organs: internodes=" << (include_internodes ? "yes" : "no") << ", leaves=" << (include_leaves ? "yes" : "no") << ", petioles=" << (include_petioles ? "yes" : "no")
+                  << ", flowers=" << (include_flowers ? "yes" : "no") << ", fruit=" << (include_fruit ? "yes" : "no") << std::endl;
     }
 }
 
 void PlantArchitecture::enablePetioleCollisionDetection(bool enabled) {
     petiole_collision_detection_enabled = enabled;
-    
+
     if (printmessages) {
         std::cout << "Petiole collision detection " << (enabled ? "enabled" : "disabled") << std::endl;
     }
+}
+
+void PlantArchitecture::enableSolidObstacleAvoidance(const std::vector<uint> &obstacle_UUIDs, float avoidance_distance, float minimum_distance) {
+    solid_obstacle_avoidance_enabled = true;
+    solid_obstacle_UUIDs = obstacle_UUIDs;
+    solid_obstacle_avoidance_distance = avoidance_distance;
+    solid_obstacle_minimum_distance = minimum_distance;
+
+    if (printmessages) {
+        std::cout << "Enabled solid obstacle avoidance for " << obstacle_UUIDs.size() << " primitives (avoidance distance: " << avoidance_distance << "m, minimum distance: " << minimum_distance << "m)" << std::endl;
+    }
+
+    // The BVH will be built/updated during rebuildBVHForTimestep to include both
+    // plant geometry and solid obstacles together
 }
 
 void PlantArchitecture::clearBVHCache() const {
     bvh_cached_for_current_growth = false;
     cached_target_geometry.clear();
     cached_filtered_geometry.clear();
-    
+
     if (printmessages) {
         std::cout << "Cleared BVH cache for new growth cycle" << std::endl;
     }
@@ -4428,21 +4521,27 @@ void PlantArchitecture::rebuildBVHForTimestep() {
     if (!collision_detection_enabled || collision_detection_ptr == nullptr) {
         return;
     }
-    
-    
+
+
     // Determine target geometry for BVH
     std::vector<uint> target_geometry;
+
+    // Always include solid obstacles if enabled
+    if (solid_obstacle_avoidance_enabled && !solid_obstacle_UUIDs.empty()) {
+        target_geometry.insert(target_geometry.end(), solid_obstacle_UUIDs.begin(), solid_obstacle_UUIDs.end());
+    }
+
     if (!collision_target_UUIDs.empty()) {
         // Validate that all target UUIDs still exist
         std::vector<uint> valid_targets;
-        for (uint uuid : collision_target_UUIDs) {
+        for (uint uuid: collision_target_UUIDs) {
             if (context_ptr->doesPrimitiveExist(uuid)) {
                 valid_targets.push_back(uuid);
             }
         }
         target_geometry = valid_targets;
     } else if (!collision_target_object_IDs.empty()) {
-        for (uint objID : collision_target_object_IDs) {
+        for (uint objID: collision_target_object_IDs) {
             if (context_ptr->doesObjectExist(objID)) {
                 std::vector<uint> obj_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
                 target_geometry.insert(target_geometry.end(), obj_primitives.begin(), obj_primitives.end());
@@ -4450,8 +4549,10 @@ void PlantArchitecture::rebuildBVHForTimestep() {
         }
     } else {
         // Use filtered plant geometry based on organ settings + external obstacles
+        // Preserve solid obstacles that were already added
+        std::vector<uint> preserved_solid_obstacles = target_geometry;
         target_geometry.clear();
-        
+
         // Add collision-relevant plant organs based on filtering settings (with safety checks)
         try {
             if (collision_include_internodes) {
@@ -4463,7 +4564,7 @@ void PlantArchitecture::rebuildBVHForTimestep() {
                 target_geometry.insert(target_geometry.end(), leaf_uuids.begin(), leaf_uuids.end());
             }
             if (collision_include_petioles) {
-                std::vector<uint> petiole_uuids = getAllPetioleUUIDs(); 
+                std::vector<uint> petiole_uuids = getAllPetioleUUIDs();
                 target_geometry.insert(target_geometry.end(), petiole_uuids.begin(), petiole_uuids.end());
             }
             if (collision_include_flowers) {
@@ -4474,62 +4575,77 @@ void PlantArchitecture::rebuildBVHForTimestep() {
                 std::vector<uint> fruit_uuids = getAllFruitUUIDs();
                 target_geometry.insert(target_geometry.end(), fruit_uuids.begin(), fruit_uuids.end());
             }
-        } catch (const std::exception& e) {
+        } catch (const std::exception &e) {
             if (printmessages) {
                 std::cout << "Warning: Exception in organ filtering, falling back to all geometry: " << e.what() << std::endl;
             }
             target_geometry = context_ptr->getAllUUIDs();
         }
-        
+
+        // Re-add the preserved solid obstacles
+        target_geometry.insert(target_geometry.end(), preserved_solid_obstacles.begin(), preserved_solid_obstacles.end());
+
         // Add any external obstacles from Context (non-plant geometry)
         std::vector<uint> all_context_geometry = context_ptr->getAllUUIDs();
         std::set<uint> all_plant_geometry_set;
         try {
             std::vector<uint> all_plant = getAllUUIDs();
             all_plant_geometry_set.insert(all_plant.begin(), all_plant.end());
-        } catch (const std::exception& e) {
+        } catch (const std::exception &e) {
             if (printmessages) {
                 std::cout << "Warning: Could not get plant geometry for external obstacle filtering: " << e.what() << std::endl;
             }
         }
-        
-        for (uint uuid : all_context_geometry) {
+
+        for (uint uuid: all_context_geometry) {
             if (all_plant_geometry_set.find(uuid) == all_plant_geometry_set.end()) {
-                target_geometry.push_back(uuid);  // Add external obstacles
+                target_geometry.push_back(uuid); // Add external obstacles
             }
         }
     }
-    
+
     if (!target_geometry.empty()) {
         // Separate static obstacles from plant geometry for hierarchical BVH
         std::vector<uint> plant_geometry;
         try {
             plant_geometry = getAllUUIDs();
-        } catch (const std::exception& e) {
+        } catch (const std::exception &e) {
             if (printmessages) {
                 std::cout << "Warning: Could not get plant geometry for hierarchical BVH: " << e.what() << std::endl;
             }
             plant_geometry.clear();
         }
         std::set<uint> plant_set(plant_geometry.begin(), plant_geometry.end());
-        
+
         std::vector<uint> static_obstacles;
-        for (uint uuid : target_geometry) {
+        for (uint uuid: target_geometry) {
             if (plant_set.find(uuid) == plant_set.end()) {
-                static_obstacles.push_back(uuid);  // Not plant geometry = static obstacle
+                static_obstacles.push_back(uuid); // Not plant geometry = static obstacle
             }
         }
-        
+
         collision_detection_ptr->setStaticGeometry(static_obstacles);
-        
+
         // Build BVH once per timestep
+        if (printmessages) {
+            std::cout << "Building BVH with " << target_geometry.size() << " primitives";
+            if (solid_obstacle_avoidance_enabled) {
+                int obstacle_count = 0;
+                for (uint uuid: target_geometry) {
+                    if (std::find(solid_obstacle_UUIDs.begin(), solid_obstacle_UUIDs.end(), uuid) != solid_obstacle_UUIDs.end()) {
+                        obstacle_count++;
+                    }
+                }
+                std::cout << " (including " << obstacle_count << " solid obstacles)";
+            }
+            std::cout << std::endl;
+        }
         collision_detection_ptr->updateBVH(target_geometry, true); // Force rebuild
-        
+
         // Cache the geometry for this growth cycle
         cached_target_geometry = target_geometry;
         cached_filtered_geometry = target_geometry; // No filtering at timestep level
         bvh_cached_for_current_growth = true;
-        
     }
 }
 
@@ -4537,13 +4653,12 @@ void PlantArchitecture::setGeometryUpdateScheduling(int update_frequency, bool f
     if (update_frequency < 1) {
         helios_runtime_error("ERROR (PlantArchitecture::setGeometryUpdateScheduling): update_frequency must be at least 1.");
     }
-    
+
     geometry_update_frequency = update_frequency;
     force_update_on_collision = force_update_on_collision;
-    geometry_update_counter = 0;  // Reset counter
-    
+    geometry_update_counter = 0; // Reset counter
+
     if (printmessages) {
-        std::cout << "Set geometry update scheduling: frequency=" << update_frequency 
-                  << ", force_on_collision=" << (force_update_on_collision ? "true" : "false") << std::endl;
+        std::cout << "Set geometry update scheduling: frequency=" << update_frequency << ", force_on_collision=" << (force_update_on_collision ? "true" : "false") << std::endl;
     }
 }

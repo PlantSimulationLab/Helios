@@ -1913,6 +1913,20 @@ public:
      * \param[in] include_fruit Include fruit geometry in collision detection (default: false)
      */
     void setCollisionRelevantOrgans(bool include_internodes = true, bool include_leaves = true, bool include_petioles = false, bool include_flowers = false, bool include_fruit = false);
+    
+    //! Enable solid obstacle avoidance for plant growth
+    /**
+     * \brief Designates certain primitives as solid obstacles that plant growth must avoid.
+     * 
+     * When enabled, plant growth will gradually redirect as it approaches these obstacles,
+     * with increasingly strong curvature as distance decreases. The plant will eventually
+     * grow parallel to the obstacle surface at a marginal distance.
+     * 
+     * \param[in] obstacle_UUIDs Vector of primitive UUIDs that represent solid obstacles
+     * \param[in] avoidance_distance Distance at which obstacle avoidance begins (meters)
+     * \param[in] minimum_distance Minimum distance to maintain from obstacle surface (meters)
+     */
+    void enableSolidObstacleAvoidance(const std::vector<uint> &obstacle_UUIDs, float avoidance_distance = 0.5f, float minimum_distance = 0.05f);
 
     //! Enable or disable petiole collision detection
     /**
@@ -2604,6 +2618,12 @@ protected:
     mutable bool bvh_cached_for_current_growth = false;
     mutable std::vector<uint> cached_target_geometry;
     mutable std::vector<uint> cached_filtered_geometry;
+    
+    //! Solid obstacle avoidance parameters
+    bool solid_obstacle_avoidance_enabled = false;
+    std::vector<uint> solid_obstacle_UUIDs;
+    float solid_obstacle_avoidance_distance = 0.5f;
+    float solid_obstacle_minimum_distance = 0.05f;
 
     //! Flag to enable/disable console output messages
     bool printmessages = true;

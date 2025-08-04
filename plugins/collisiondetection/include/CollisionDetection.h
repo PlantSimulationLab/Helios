@@ -179,6 +179,22 @@ public:
      */
     std::vector<uint> filterGeometryByDistance(const helios::vec3 &query_center, float max_radius, const std::vector<uint> &candidate_UUIDs = {});
 
+    /**
+     * \brief Determine the distance to the nearest primitive in any direction, filtered by direction component
+     * \param[in] origin Origin location from which to search
+     * \param[in] direction Unit direction vector to filter "forward" surfaces (dot product > 0)
+     * \param[in] candidate_UUIDs Vector of primitive UUIDs to consider for intersection
+     * \param[out] distance Distance to the nearest primitive (only valid if return is true)
+     * \param[out] obstacle_direction Direction from origin to nearest obstacle (only valid if return is true)
+     * \return True if a primitive is found that is "in front" of the direction vector, false otherwise
+     * 
+     * This method finds the nearest solid surface in any direction from the origin point, but only
+     * considers surfaces that are "in front" of the growth direction. A surface is considered "in front"
+     * if the vector from origin to the closest point on the surface has a positive dot product with
+     * the input direction vector.
+     */
+    bool findNearestPrimitiveDistance(const helios::vec3 &origin, const helios::vec3 &direction, const std::vector<uint> &candidate_UUIDs, float &distance, helios::vec3 &obstacle_direction);
+
     // -------- BVH MANAGEMENT --------
 
     /**
@@ -279,7 +295,7 @@ public:
      * \brief Self-test routine to verify plugin functionality
      * \return 0 if all tests pass, non-zero otherwise
      */
-    static int selfTest();
+    static int selfTest( int argc, char **argv);
 
 private:
     //! Pointer to the Helios context
@@ -504,6 +520,17 @@ private:
      * \return Number of primitive intersections along the ray
      */
     int countRayIntersections(const helios::vec3 &origin, const helios::vec3 &direction, float max_distance = -1.0f);
+
+    /**
+     * \brief Find nearest primitive intersection along a ray using BVH traversal
+     * \param[in] origin Starting point of the ray
+     * \param[in] direction Direction vector of the ray (normalized)
+     * \param[in] candidate_UUIDs Set of primitive UUIDs to consider (empty = all primitives)
+     * \param[out] nearest_distance Distance to nearest intersection (only valid if return is true)
+     * \param[in] max_distance Maximum distance to test (negative = infinite)
+     * \return True if any intersection found, false otherwise
+     */
+    bool findNearestRayIntersection(const helios::vec3 &origin, const helios::vec3 &direction, const std::set<uint> &candidate_UUIDs, float &nearest_distance, float max_distance = -1.0f);
 
     /**
      * \brief Generate uniform sample directions within a cone

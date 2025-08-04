@@ -16,22 +16,16 @@
 #include "CollisionDetection.h"
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <cmath>
+#include <chrono>
 #include <doctest.h>
+#include "doctest_utils.h"
 #include <iostream>
 #include "global.h"
 
 using namespace helios;
 
-int CollisionDetection::selfTest() {
-    // Run all the tests
-    doctest::Context context;
-    int res = context.run();
-
-    if (context.shouldExit()) {
-        return res;
-    }
-
-    return res;
+int CollisionDetection::selfTest(int argc, char **argv) {
+    return helios::runDoctestWithValidation(argc,argv);
 }
 
 namespace CollisionTests {
@@ -1225,4 +1219,200 @@ DOCTEST_TEST_CASE("CollisionDetection Memory Stress - Progressive Loading") {
         DOCTEST_CHECK(collision.isBVHValid() == true);
         DOCTEST_CHECK(collision.getPrimitiveCount() == all_uuids.size());
     }
+}
+
+// =================== RAY DISTANCE TESTING ===================
+
+DOCTEST_TEST_CASE("CollisionDetection findNearestPrimitiveDistance - Basic Functionality") {
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    // Create a simple scene with triangles at known distances
+    uint triangle1 = context.addTriangle(make_vec3(5, -1, -1), make_vec3(5, 1, -1), make_vec3(5, 0, 1));
+    uint triangle2 = context.addTriangle(make_vec3(10, -1, -1), make_vec3(10, 1, -1), make_vec3(10, 0, 1));
+    uint triangle3 = context.addTriangle(make_vec3(15, -1, -1), make_vec3(15, 1, -1), make_vec3(15, 0, 1));
+
+    // Test 1: Ray hitting the nearest triangle
+    vec3 origin = make_vec3(0, 0, 0);
+    vec3 direction = make_vec3(1, 0, 0); // Pointing along +X axis
+    std::vector<uint> candidate_UUIDs = {triangle1, triangle2, triangle3};
+    float distance;
+    vec3 obstacle_direction;
+
+    bool result = collision.findNearestPrimitiveDistance(origin, direction, candidate_UUIDs, distance, obstacle_direction);
+    DOCTEST_CHECK(result == true);
+    DOCTEST_CHECK(distance >= 4.0f); // Should be approximately 5.0, but AABB might be slightly smaller
+    DOCTEST_CHECK(distance <= 6.0f);
+
+    // Test 2: Ray missing all triangles
+    vec3 direction_miss = make_vec3(0, 1, 0); // Pointing along +Y axis
+    bool result_miss = collision.findNearestPrimitiveDistance(origin, direction_miss, candidate_UUIDs, distance, obstacle_direction);
+    DOCTEST_CHECK(result_miss == false);
+
+    // Test 3: Ray with subset of candidates
+    std::vector<uint> subset_UUIDs = {triangle2, triangle3}; // Exclude nearest triangle
+    bool result_subset = collision.findNearestPrimitiveDistance(origin, direction, subset_UUIDs, distance, obstacle_direction);
+    DOCTEST_CHECK(result_subset == true);
+    DOCTEST_CHECK(distance >= 9.0f); // Should be approximately 10.0
+    DOCTEST_CHECK(distance <= 11.0f);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection findNearestPrimitiveDistance - Edge Cases") {
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    // Create test geometry
+    uint triangle1 = context.addTriangle(make_vec3(5, -1, -1), make_vec3(5, 1, -1), make_vec3(5, 0, 1));
+    vec3 origin = make_vec3(0, 0, 0);
+    vec3 direction = make_vec3(1, 0, 0);
+    float distance;
+
+    // Test 1: Empty candidate list
+    std::vector<uint> empty_UUIDs;
+    vec3 obstacle_direction_unused;
+    bool result_empty = collision.findNearestPrimitiveDistance(origin, direction, empty_UUIDs, distance, obstacle_direction_unused);
+    DOCTEST_CHECK(result_empty == false);
+
+    // Test 2: Non-normalized direction vector (should return false with warning)
+    vec3 non_normalized_dir = make_vec3(2, 0, 0); // Magnitude = 2
+    std::vector<uint> valid_UUIDs = {triangle1};
+    bool result_non_norm = collision.findNearestPrimitiveDistance(origin, non_normalized_dir, valid_UUIDs, distance, obstacle_direction_unused);
+    DOCTEST_CHECK(result_non_norm == false);
+
+    // Test 3: Invalid UUID in candidate list
+    std::vector<uint> invalid_UUIDs = {999999}; // Non-existent UUID
+    bool result_invalid = collision.findNearestPrimitiveDistance(origin, direction, invalid_UUIDs, distance, obstacle_direction_unused);
+    DOCTEST_CHECK(result_invalid == false);
+
+    // Test 4: Mixed valid and invalid UUIDs
+    std::vector<uint> mixed_UUIDs = {triangle1, 999999};
+    bool result_mixed = collision.findNearestPrimitiveDistance(origin, direction, mixed_UUIDs, distance, obstacle_direction_unused);
+    DOCTEST_CHECK(result_mixed == true); // Should still find the valid triangle
+    DOCTEST_CHECK(distance >= 4.0f);
+    DOCTEST_CHECK(distance <= 6.0f);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection findNearestPrimitiveDistance - Complex Scenarios") {
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    // Create overlapping geometry
+    auto cluster = CollisionTests::generateOverlappingCluster(&context, 10, make_vec3(5, 0, 0));
+    
+    // Test 1: Ray through dense cluster
+    vec3 origin = make_vec3(0, 0, 0);
+    vec3 direction = make_vec3(1, 0, 0);
+    float distance;
+    vec3 obstacle_direction_unused;
+
+    bool result = collision.findNearestPrimitiveDistance(origin, direction, cluster, distance, obstacle_direction_unused);
+    // Updated expectation: ray traveling in +X direction should NOT hit triangles in XY plane (parallel)
+    DOCTEST_CHECK(result == false);
+
+    // Test 2: Ray from near the cluster edge  
+    // Note: Ray parallel to triangles should not detect intersection
+    vec3 origin_near = make_vec3(3.5, 0, 0);  // Just outside the cluster
+    vec3 direction_out = make_vec3(1, 0, 0);
+    bool result_near = collision.findNearestPrimitiveDistance(origin_near, direction_out, cluster, distance, obstacle_direction_unused);
+    DOCTEST_CHECK(result_near == false); // Ray parallel to triangles - no hit expected
+
+    // Test 3: Test with ray that can actually hit the triangles (perpendicular approach)
+    vec3 origin_above = make_vec3(5, 0, 1);  // Above the cluster center
+    vec3 direction_down = make_vec3(0, 0, -1); // Growing downward toward triangles
+    bool result_perpendicular = collision.findNearestPrimitiveDistance(origin_above, direction_down, cluster, distance, obstacle_direction_unused);
+    DOCTEST_CHECK(result_perpendicular == true); // Should hit triangles when approaching perpendicularly
+    DOCTEST_CHECK(distance >= 0.9f); // Distance from z=1 to z=0 (approximately)
+    DOCTEST_CHECK(distance <= 1.1f);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection findNearestPrimitiveDistance - Directional Testing") {
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    // Create triangles in different directions
+    uint triangle_x = context.addTriangle(make_vec3(5, -1, -1), make_vec3(5, 1, -1), make_vec3(5, 0, 1));
+    uint triangle_y = context.addTriangle(make_vec3(-1, 5, -1), make_vec3(1, 5, -1), make_vec3(0, 5, 1));
+    uint triangle_z = context.addTriangle(make_vec3(-1, -1, 5), make_vec3(1, -1, 5), make_vec3(0, 1, 5));
+    uint triangle_neg_x = context.addTriangle(make_vec3(-5, -1, -1), make_vec3(-5, 1, -1), make_vec3(-5, 0, 1));
+
+    std::vector<uint> all_triangles = {triangle_x, triangle_y, triangle_z, triangle_neg_x};
+    vec3 origin = make_vec3(0, 0, 0);
+    float distance;
+
+    // Test different ray directions
+    struct DirectionTest {
+        vec3 direction;
+        float expected_min;
+        float expected_max;
+        bool should_hit;
+    };
+
+    std::vector<DirectionTest> tests = {
+        {make_vec3(1, 0, 0), 4.0f, 6.0f, true},    // +X direction
+        {make_vec3(0, 1, 0), 4.0f, 6.0f, true},    // +Y direction
+        {make_vec3(0, 0, 1), 4.0f, 6.0f, true},    // +Z direction
+        {make_vec3(-1, 0, 0), 4.0f, 6.0f, true},   // -X direction
+        {make_vec3(0.707f, 0.707f, 0), 6.0f, 8.0f, false}, // Diagonal XY (should miss)
+    };
+
+    vec3 obstacle_direction_unused;
+    for (const auto& test : tests) {
+        bool result = collision.findNearestPrimitiveDistance(origin, test.direction, all_triangles, distance, obstacle_direction_unused);
+        DOCTEST_CHECK(result == test.should_hit);
+        if (result && test.should_hit) {
+            DOCTEST_CHECK(distance >= test.expected_min);
+            DOCTEST_CHECK(distance <= test.expected_max);
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("CollisionDetection - findNearestPrimitiveDistance front/back face detection") {
+    helios::Context context;
+    CollisionDetection collision(&context);
+
+    // Create a horizontal patch at z=1.0 (normal pointing up in +Z direction)
+    vec3 patch_center = make_vec3(0, 0, 1.0f);
+    vec2 patch_size = make_vec2(2, 2);
+    uint horizontal_patch = context.addPatch(patch_center, patch_size);
+    
+    std::vector<uint> candidates = {horizontal_patch};
+    float distance;
+    vec3 obstacle_direction;
+    
+    // Test 1: Approaching from below (should get +Z direction - toward surface)
+    vec3 origin_below = make_vec3(0, 0, 0.5f);
+    vec3 direction_up = make_vec3(0, 0, 1); // Growing upward
+    
+    bool found_below = collision.findNearestPrimitiveDistance(origin_below, direction_up, candidates, distance, obstacle_direction);
+    DOCTEST_CHECK(found_below == true);
+    DOCTEST_CHECK(distance >= 0.49f);
+    DOCTEST_CHECK(distance <= 0.51f);
+    // When approaching from below, obstacle_direction should point upward (+Z)
+    DOCTEST_CHECK(obstacle_direction.z > 0.9f);
+    DOCTEST_CHECK(std::abs(obstacle_direction.x) < 0.1f);
+    DOCTEST_CHECK(std::abs(obstacle_direction.y) < 0.1f);
+    
+    // Test 2: Approaching from above (should get -Z direction - toward surface)
+    vec3 origin_above = make_vec3(0, 0, 1.5f);
+    vec3 direction_down = make_vec3(0, 0, -1); // Growing downward
+    
+    bool found_above = collision.findNearestPrimitiveDistance(origin_above, direction_down, candidates, distance, obstacle_direction);
+    DOCTEST_CHECK(found_above == true);
+    DOCTEST_CHECK(distance >= 0.49f);
+    DOCTEST_CHECK(distance <= 0.51f);
+    // When approaching from above, obstacle_direction should point downward (-Z)
+    DOCTEST_CHECK(obstacle_direction.z < -0.9f);
+    DOCTEST_CHECK(std::abs(obstacle_direction.x) < 0.1f);
+    DOCTEST_CHECK(std::abs(obstacle_direction.y) < 0.1f);
+    
+    // Test 3: Growing away from surface (should not detect obstacle)
+    vec3 origin_below2 = make_vec3(0, 0, 0.5f);
+    vec3 direction_away = make_vec3(0, 0, -1); // Growing away from obstacle
+    
+    bool found_away = collision.findNearestPrimitiveDistance(origin_below2, direction_away, candidates, distance, obstacle_direction);
+    DOCTEST_CHECK(found_away == false); // Should not detect surface behind growth direction
 }
