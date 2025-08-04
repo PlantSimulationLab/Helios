@@ -195,6 +195,24 @@ public:
      */
     bool findNearestPrimitiveDistance(const helios::vec3 &origin, const helios::vec3 &direction, const std::vector<uint> &candidate_UUIDs, float &distance, helios::vec3 &obstacle_direction);
 
+    /**
+     * \brief Find the nearest solid obstacle within a cone using ray casting
+     * \param[in] apex Cone apex position
+     * \param[in] axis Central axis of the cone (normalized)
+     * \param[in] half_angle Half-angle of cone in radians
+     * \param[in] height Maximum detection distance (cone height)
+     * \param[in] candidate_UUIDs Vector of primitive UUIDs to consider as solid obstacles
+     * \param[out] distance Distance to nearest obstacle (only valid if return is true)
+     * \param[out] obstacle_direction Direction from apex to nearest obstacle (only valid if return is true)
+     * \param[in] num_rays Number of rays to cast for detection (default: 64)
+     * \return True if a solid obstacle is found within the cone, false otherwise
+     * 
+     * This method casts rays within a cone to find the nearest solid obstacle. Unlike the soft
+     * collision avoidance, this uses a smaller cone angle and returns the exact distance to the
+     * nearest primitive surface using accurate ray-primitive intersection tests.
+     */
+    bool findNearestSolidObstacleInCone(const helios::vec3 &apex, const helios::vec3 &axis, float half_angle, float height, const std::vector<uint> &candidate_UUIDs, float &distance, helios::vec3 &obstacle_direction, int num_rays = 64);
+
     // -------- BVH MANAGEMENT --------
 
     /**
@@ -612,6 +630,16 @@ private:
      * \return True if all UUIDs are valid
      */
     bool validateUUIDs(const std::vector<uint> &UUIDs) const;
+
+    /**
+     * \brief Test ray-primitive intersection and compute exact intersection distance
+     * \param[in] origin Ray origin point
+     * \param[in] direction Ray direction vector (normalized)
+     * \param[in] primitive_UUID UUID of the primitive to test
+     * \param[out] distance Distance to intersection point (only valid if return is true)
+     * \return True if ray intersects primitive, false otherwise
+     */
+    bool rayPrimitiveIntersection(const helios::vec3 &origin, const helios::vec3 &direction, uint primitive_UUID, float &distance) const;
 };
 
 #endif

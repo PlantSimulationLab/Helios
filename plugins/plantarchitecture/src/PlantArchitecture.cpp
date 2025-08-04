@@ -1185,76 +1185,60 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             vec3 growth_direction = internode_axis;
             growth_direction.normalize();
 
-            // Check for obstacles using the improved collision detection method
+            // Check for obstacles using cone-based detection
             float nearest_obstacle_distance;
             vec3 nearest_obstacle_direction;
 
-            if (plantarchitecture_ptr->collision_detection_ptr != nullptr &&
-                plantarchitecture_ptr->collision_detection_ptr->findNearestPrimitiveDistance(current_position, growth_direction, plantarchitecture_ptr->solid_obstacle_UUIDs, nearest_obstacle_distance, nearest_obstacle_direction)) {
-                obstacle_found = true;
-                //nearest_obstacle_direction = make_vec3(0,0,1);
-                //nearest_obstacle_direction = -nearest_obstacle_direction;
+            // Use smaller cone angle for hard obstacle detection (30 degrees vs 80 degrees for soft avoidance)
+            float hard_detection_cone_angle = deg2rad(30.0f);
+            float detection_distance = plantarchitecture_ptr->solid_obstacle_avoidance_distance;
 
-                // Obstacle detected - apply strong curvature based on distance
-                if (inode_segment == 1 || nearest_obstacle_distance < 0.3f) { // Only print debug for first segment or when very close
-                    std::cout << "DEBUG: Nearest obstacle at distance " << nearest_obstacle_distance << " meters in direction " << nearest_obstacle_direction << std::endl;
+            std::cout << "DEBUG: checking solid obstacle cone intersection from position " << current_position << " looking in direction " << growth_direction << std::endl;
+            std::cout << "DEBUG: using CollisionDetection instance " << plantarchitecture_ptr->collision_detection_ptr << std::endl;
+            if (plantarchitecture_ptr->collision_detection_ptr != nullptr &&
+                plantarchitecture_ptr->collision_detection_ptr->findNearestSolidObstacleInCone(current_position, growth_direction, hard_detection_cone_angle, detection_distance, plantarchitecture_ptr->solid_obstacle_UUIDs, nearest_obstacle_distance,
+                                                                                               nearest_obstacle_direction)) {
+                obstacle_found = true;
+
+                // Calculate rotation needed to avoid the obstacle
+                // Since nearest_obstacle_direction points toward the obstacle, we want to rotate away from it
+
+                // Calculate the angle between growth direction and obstacle direction
+                float dot_with_obstacle = normalize(growth_direction) * normalize(nearest_obstacle_direction);
+                float angle_deficit = asin_safe(fabs(dot_with_obstacle));
+
+                // Calculate perpendicular direction to avoid obstacle
+                vec3 rotation_axis = cross(growth_direction, -nearest_obstacle_direction);
+
+                if (rotation_axis.magnitude() > 0.001f) {
+                    rotation_axis.normalize();
+                } else {
+                    angle_deficit = 0.f;
                 }
 
-                if (nearest_obstacle_distance < plantarchitecture_ptr->solid_obstacle_avoidance_distance) {
+                if (rotation_axis.magnitude() > 0.001f) {
 
-                    // Calculate rotation needed to make growth perpendicular to obstacle direction
-                    
-                    // Calculate the angle between growth direction and obstacle direction
-                    float dot_with_obstacle = normalize(growth_direction) * normalize(nearest_obstacle_direction);
-                    float angle_deficit = asin_safe(fabs(dot_with_obstacle));
-                    
-                    if (angle_deficit > 0.01f) { // Only rotate if we need significant adjustment
-
-                        vec3 rotation_axis;
-                        rotation_axis = cross(growth_direction, -nearest_obstacle_direction);
-                        if (rotation_axis.magnitude() > 0.001f) {
-                            rotation_axis.normalize();
-                        } else {
-                            angle_deficit = 0.f;
-                        }
-
-                        if (rotation_axis.magnitude() > 0.001f) {
-                            
-                            // Calculate fraction of total rotation to apply this timestep
-                            // Fraction increases as we get closer to the obstacle
-                            float rotation_fraction;
-                            if (nearest_obstacle_distance < 0.05f) {
-                                rotation_fraction = 1.f; // Very aggressive when extremely close
-                            } else if (nearest_obstacle_distance < 0.15f) {
-                                rotation_fraction = 0.7f; // Aggressive when very close
-                            } else if (nearest_obstacle_distance < 0.3f) {
-                                rotation_fraction = 0.3f; // Moderate when close
-                            } else if (nearest_obstacle_distance < 0.5f) {
-                                rotation_fraction = 0.2f; // Gentle when moderate distance
-                            } else {
-                                rotation_fraction = 0.1f; // Very gentle when far
-                            }
-                            
-                            // Scale by repulsion strength
-                            // rotation_fraction *= repulsion_strength;
-                            
-                            // Apply fraction of the total angle deficit
-                            float rotation_this_step = angle_deficit * rotation_fraction;
-                            
-                            // Apply the rotation
-                            internode_axis = rotatePointAboutLine(internode_axis, nullorigin, rotation_axis, rotation_this_step);
-                            internode_axis.normalize();
-                            
-                            if (inode_segment == 1 || nearest_obstacle_distance < 0.3f) {
-                                std::cout << "DEBUG: Rotating by " << rad2deg(rotation_this_step) 
-                                          << " degrees (fraction " << rotation_fraction 
-                                          << "), remaining angle deficit: " << rad2deg(angle_deficit - rotation_this_step) << std::endl;
-                            }
-                        }
+                    // Calculate fraction of total rotation to apply this timestep
+                    // Fraction increases as we get closer to the obstacle
+                    float rotation_fraction;
+                    if (nearest_obstacle_distance < 0.05f) {
+                        rotation_fraction = 1.f; // Very aggressive when extremely close
+                    } else if (nearest_obstacle_distance < 0.15f) {
+                        rotation_fraction = 0.7f; // Aggressive when very close
+                    } else if (nearest_obstacle_distance < 0.3f) {
+                        rotation_fraction = 0.3f; // Moderate when close
+                    } else if (nearest_obstacle_distance < 0.5f) {
+                        rotation_fraction = 0.2f; // Gentle when moderate distance
+                    } else {
+                        rotation_fraction = 0.1f; // Very gentle when far
                     }
-                    if (inode_segment == 1 || nearest_obstacle_distance < 0.3f) {
-                        std::cout << "DEBUG: Applied avoidance - new direction: " << internode_axis << std::endl;
-                    }
+
+                    // Apply fraction of the total angle deficit
+                    float rotation_this_step = angle_deficit * rotation_fraction;
+
+                    // Apply the rotation
+                    internode_axis = rotatePointAboutLine(internode_axis, nullorigin, rotation_axis, rotation_this_step);
+                    internode_axis.normalize();
                 }
             } else if (inode_segment == 1) {
                 std::cout << "DEBUG: No obstacle detected from position " << current_position << std::endl;
@@ -3908,9 +3892,6 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
 
     // Rebuild BVH once at the start if collision detection is enabled
     if (collision_detection_enabled && collision_detection_ptr != nullptr) {
-        if (printmessages) {
-            std::cout << "BVH rebuild for timestep" << std::endl;
-        }
         rebuildBVHForTimestep();
     }
 
@@ -3954,9 +3935,6 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
     for (int timestep = 0; timestep < Nsteps; timestep++) {
         // Rebuild BVH periodically (every 10 timesteps) for balance between accuracy and performance
         if (collision_detection_enabled && collision_detection_ptr != nullptr && timestep % 10 == 0) {
-            if (printmessages) {
-                std::cout << "BVH rebuild for timestep " << timestep << std::endl;
-            }
             rebuildBVHForTimestep();
         }
 
@@ -4374,6 +4352,7 @@ void PlantArchitecture::enableCollisionDetection(const std::vector<uint> &target
     // Create new CollisionDetection instance
     try {
         collision_detection_ptr = new CollisionDetection(context_ptr);
+        collision_detection_ptr->enableMessages(); // Enable debug output for debugging
         owns_collision_detection = true;
         collision_detection_enabled = true;
         collision_target_UUIDs = target_object_UUIDs;
@@ -4382,8 +4361,8 @@ void PlantArchitecture::enableCollisionDetection(const std::vector<uint> &target
         // Disable automatic BVH rebuilds - PlantArchitecture will control rebuilds manually
         collision_detection_ptr->disableAutomaticBVHRebuilds();
 
-        // Enable hierarchical BVH for better performance with large plants
-        collision_detection_ptr->enableHierarchicalBVH();
+        // Disable hierarchical BVH to ensure cone detection can access all geometry in main BVH
+        // collision_detection_ptr->enableHierarchicalBVH();
 
         // Cone-aware culling is now handled automatically based on collision cone geometry
 
@@ -4539,8 +4518,10 @@ void PlantArchitecture::rebuildBVHForTimestep() {
                 valid_targets.push_back(uuid);
             }
         }
-        target_geometry = valid_targets;
+        // Add valid collision targets to existing target_geometry (which may include solid obstacles)
+        target_geometry.insert(target_geometry.end(), valid_targets.begin(), valid_targets.end());
     } else if (!collision_target_object_IDs.empty()) {
+        // Add object primitives to existing target_geometry (which may include solid obstacles)
         for (uint objID: collision_target_object_IDs) {
             if (context_ptr->doesObjectExist(objID)) {
                 std::vector<uint> obj_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
@@ -4627,20 +4608,8 @@ void PlantArchitecture::rebuildBVHForTimestep() {
         collision_detection_ptr->setStaticGeometry(static_obstacles);
 
         // Build BVH once per timestep
-        if (printmessages) {
-            std::cout << "Building BVH with " << target_geometry.size() << " primitives";
-            if (solid_obstacle_avoidance_enabled) {
-                int obstacle_count = 0;
-                for (uint uuid: target_geometry) {
-                    if (std::find(solid_obstacle_UUIDs.begin(), solid_obstacle_UUIDs.end(), uuid) != solid_obstacle_UUIDs.end()) {
-                        obstacle_count++;
-                    }
-                }
-                std::cout << " (including " << obstacle_count << " solid obstacles)";
-            }
-            std::cout << std::endl;
-        }
         collision_detection_ptr->updateBVH(target_geometry, true); // Force rebuild
+
 
         // Cache the geometry for this growth cycle
         cached_target_geometry = target_geometry;

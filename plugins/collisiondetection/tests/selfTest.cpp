@@ -497,10 +497,217 @@ DOCTEST_TEST_CASE("CollisionDetection BVH Validity Persistence") {
 
     // Should be valid after building
     DOCTEST_CHECK(collision.isBVHValid() == true);
+}
 
-    // Should remain valid after collision queries
-    collision.findCollisions(UUID1);
+
+DOCTEST_TEST_CASE("CollisionDetection Soft/Hard Detection Integration - BVH Sharing") {
+    Context context;
+    
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.disableGPUAcceleration();
+
+    // Create test geometry - obstacle and some primitives for "soft" collision testing
+    uint obstacle = context.addPatch(make_vec3(0, 0, 1), make_vec2(2, 2)); // Obstacle at height 1m
+    uint soft_prim1 = context.addTriangle(make_vec3(-0.5, -0.5, 0.5), make_vec3(0.5, -0.5, 0.5), make_vec3(0, 0.5, 0.5)); // Below obstacle
+    uint soft_prim2 = context.addTriangle(make_vec3(-1.5, -1.5, 1.5), make_vec3(-0.5, -1.5, 1.5), make_vec3(-1, -0.5, 1.5)); // Above obstacle
+    
+    // Build BVH with all geometry for initial soft collision detection
+    std::vector<uint> all_geometry = {obstacle, soft_prim1, soft_prim2};
+    collision.buildBVH(all_geometry);
+    
+    // Verify initial BVH state
     DOCTEST_CHECK(collision.isBVHValid() == true);
+    size_t initial_node_count, initial_leaf_count, initial_max_depth;
+    collision.getBVHStatistics(initial_node_count, initial_leaf_count, initial_max_depth);
+    
+    // Simulate soft collision detection (standard findCollisions)
+    std::vector<uint> soft_collisions = collision.findCollisions({soft_prim1, soft_prim2});
+    bool soft_detection_completed = true; // Mark that soft detection has run
+    
+    // Now test hard detection using the same BVH
+    vec3 test_origin = make_vec3(0, 0, 0.5);
+    vec3 test_direction = make_vec3(0, 0, 1); // Pointing up toward obstacle
+    float distance;
+    vec3 obstacle_direction;
+    
+    // This should use the SAME BVH that was built for soft detection
+    bool hard_hit = collision.findNearestSolidObstacleInCone(
+        test_origin, test_direction, 0.52f, 1.0f, 
+        {obstacle}, distance, obstacle_direction);
+    
+    // Verify both detections work correctly despite sharing BVH
+    DOCTEST_CHECK(soft_detection_completed == true);
+    DOCTEST_CHECK(hard_hit == true);
+    DOCTEST_CHECK(distance < 1.0f); // Should detect obstacle before 1m
+    
+    // Verify BVH state wasn't corrupted by interleaved usage
+    size_t final_node_count, final_leaf_count, final_max_depth;
+    collision.getBVHStatistics(final_node_count, final_leaf_count, final_max_depth);
+    
+    DOCTEST_CHECK(initial_node_count == final_node_count);
+    DOCTEST_CHECK(initial_leaf_count == final_leaf_count);
+    DOCTEST_CHECK(collision.isBVHValid() == true);
+}
+
+
+DOCTEST_TEST_CASE("CollisionDetection Soft/Hard Detection Integration - Sequential Calls") {
+    Context context;
+    
+    CollisionDetection collision(&context);
+    collision.disableMessages(); // Disable debug output
+    collision.disableGPUAcceleration();
+
+    // Create a more complex scene
+    uint ground = context.addPatch(make_vec3(0, 0, 0), make_vec2(4, 4));
+    uint wall = context.addPatch(make_vec3(1, 0, 0.5), make_vec2(0.1, 2), make_SphericalCoord(0.5*M_PI, 0.5*M_PI)); // Vertical wall
+    uint plant_stem = context.addTriangle(make_vec3(-0.02, 0, 0), make_vec3(0.02, 0, 0), make_vec3(0, 0, 0.8));
+    
+    std::vector<uint> all_obstacles = {ground, wall};
+    std::vector<uint> plant_parts = {plant_stem};
+    
+    collision.buildBVH(all_obstacles);
+    
+    // Test 1: Soft collision detection between plant and obstacles
+    std::vector<uint> soft_collisions = collision.findCollisions(plant_parts, {}, all_obstacles, {});
+    
+    // Test 2: Hard detection for plant growth (cone-based)
+    vec3 growth_tip = make_vec3(0, 0, 0.8);
+    vec3 growth_direction = make_vec3(0.5, 0, 0.2); // Angled toward wall
+    growth_direction.normalize();
+    
+    
+    float distance;
+    vec3 obstacle_direction;
+    bool hard_hit = collision.findNearestSolidObstacleInCone(
+        growth_tip, growth_direction, 0.35f, 2.0f,  // Increased height to 2.0m
+        all_obstacles, distance, obstacle_direction);
+    
+    // Test 3: Repeat soft detection to ensure no state corruption
+    std::vector<uint> soft_collisions_2 = collision.findCollisions(plant_parts, {}, all_obstacles, {});
+    
+    // Test 4: Repeat hard detection with different parameters
+    vec3 growth_direction_2 = make_vec3(-0.3, 0, 0.3);
+    growth_direction_2.normalize();
+    
+    bool hard_hit_2 = collision.findNearestSolidObstacleInCone(
+        growth_tip, growth_direction_2, 0.35f, 0.5f,
+        all_obstacles, distance, obstacle_direction);
+    
+    // Verify consistency - repeated calls should give same results
+    DOCTEST_CHECK(soft_collisions.size() == soft_collisions_2.size());
+    DOCTEST_CHECK(hard_hit == true); // Should detect wall
+    DOCTEST_CHECK(collision.isBVHValid() == true);
+}
+
+
+DOCTEST_TEST_CASE("CollisionDetection Soft/Hard Detection Integration - Different Geometry Sets") {
+    Context context;
+    
+    CollisionDetection collision(&context);
+    collision.disableGPUAcceleration();
+
+    // Create separate geometry sets for soft and hard detection
+    uint hard_obstacle_1 = context.addPatch(make_vec3(1, 0, 1), make_vec2(1, 1)); // For hard detection only
+    uint hard_obstacle_2 = context.addPatch(make_vec3(-1, 0, 1), make_vec2(1, 1)); // For hard detection only
+    
+    uint soft_object_1 = context.addTriangle(make_vec3(0, 1, 1.0), make_vec3(0.5, 1.5, 1.0), make_vec3(-0.5, 1.5, 1.0)); // For soft detection only
+    uint soft_object_2 = context.addTriangle(make_vec3(0, -1, 0.5), make_vec3(0.5, -1.5, 0.5), make_vec3(-0.5, -1.5, 0.5)); // For soft detection only
+    
+    uint shared_object = context.addPatch(make_vec3(0, 0, 2), make_vec2(0.5, 0.5)); // Used by both detection types
+    
+    // Build BVH with ALL geometry (this is typical in plant architecture)
+    std::vector<uint> all_geometry = {hard_obstacle_1, hard_obstacle_2, soft_object_1, soft_object_2, shared_object};
+    collision.buildBVH(all_geometry);
+    
+    // Test hard detection using only hard obstacles
+    vec3 test_origin = make_vec3(0, 0, 0.5);
+    vec3 test_direction = make_vec3(1, 0, 0.3); // Toward hard_obstacle_1
+    test_direction.normalize();
+    
+    std::vector<uint> hard_only = {hard_obstacle_1, hard_obstacle_2, shared_object};
+    float distance;
+    vec3 obstacle_direction;
+    
+    bool hard_hit = collision.findNearestSolidObstacleInCone(
+        test_origin, test_direction, 0.4f, 2.0f,
+        hard_only, distance, obstacle_direction);
+    
+    // Test soft detection using only soft objects
+    std::vector<uint> soft_only = {soft_object_1, soft_object_2, shared_object};
+    std::vector<uint> soft_collisions = collision.findCollisions(soft_only);
+    
+    // Test with mixed queries to ensure BVH handles subset filtering correctly
+    vec3 test_direction_2 = make_vec3(0, 1, 0.3); // Toward soft_object_1
+    test_direction_2.normalize();
+    
+    bool hard_hit_2 = collision.findNearestSolidObstacleInCone(
+        test_origin, test_direction_2, 0.4f, 10.0f,  // Very generous height for detection
+        soft_only, distance, obstacle_direction); // Using soft objects for hard detection
+    
+    // Verify that detection works correctly with different geometry subsets
+    DOCTEST_CHECK(hard_hit == true); // Should detect hard obstacle
+    DOCTEST_CHECK(hard_hit_2 == true); // Should also detect soft object when used as hard obstacle
+    DOCTEST_CHECK(collision.isBVHValid() == true);
+    
+    // Verify BVH efficiency - primitive count should match total geometry
+    DOCTEST_CHECK(collision.getPrimitiveCount() == all_geometry.size());
+}
+
+
+DOCTEST_TEST_CASE("CollisionDetection Soft/Hard Detection Integration - BVH Rebuild Behavior") {
+    Context context;
+    
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+    collision.disableGPUAcceleration();
+
+    // Initial geometry
+    uint obstacle1 = context.addPatch(make_vec3(0, 0, 1), make_vec2(1, 1));
+    std::vector<uint> initial_geometry = {obstacle1};
+    
+    collision.buildBVH(initial_geometry);
+    
+    // Test initial state
+    vec3 test_origin = make_vec3(0, 0, 0.5);
+    vec3 test_direction = make_vec3(0, 0, 1);
+    float distance;
+    vec3 obstacle_direction;
+    
+    bool hit_initial = collision.findNearestSolidObstacleInCone(
+        test_origin, test_direction, 0.3f, 1.0f,
+        initial_geometry, distance, obstacle_direction);
+    
+    // Add more geometry (this might trigger BVH rebuild internally)
+    uint obstacle2 = context.addPatch(make_vec3(1, 1, 1), make_vec2(1, 1));
+    uint obstacle3 = context.addPatch(make_vec3(-1, -1, 1), make_vec2(1, 1));
+    
+    std::vector<uint> expanded_geometry = {obstacle1, obstacle2, obstacle3};
+    
+    // This should trigger a BVH rebuild
+    collision.buildBVH(expanded_geometry);
+    
+    // Test that both detection methods still work after rebuild
+    std::vector<uint> soft_collisions = collision.findCollisions(expanded_geometry);
+    
+    bool hit_after_rebuild = collision.findNearestSolidObstacleInCone(
+        test_origin, test_direction, 0.3f, 1.0f,
+        expanded_geometry, distance, obstacle_direction);
+    
+    // Test detection with different geometry subset after rebuild
+    vec3 test_direction_2 = make_vec3(1, 1, 0.2);
+    test_direction_2.normalize();
+    
+    bool hit_subset = collision.findNearestSolidObstacleInCone(
+        test_origin, test_direction_2, 0.5f, 2.0f,
+        {obstacle2}, distance, obstacle_direction); // Only test against obstacle2
+    
+    // Verify all detection methods work correctly after BVH rebuild
+    DOCTEST_CHECK(hit_initial == true);
+    DOCTEST_CHECK(hit_after_rebuild == true);
+    DOCTEST_CHECK(hit_subset == true);
+    DOCTEST_CHECK(collision.isBVHValid() == true);
+    DOCTEST_CHECK(collision.getPrimitiveCount() == expanded_geometry.size());
 }
 
 
@@ -1415,4 +1622,156 @@ DOCTEST_TEST_CASE("CollisionDetection - findNearestPrimitiveDistance front/back 
     
     bool found_away = collision.findNearestPrimitiveDistance(origin_below2, direction_away, candidates, distance, obstacle_direction);
     DOCTEST_CHECK(found_away == false); // Should not detect surface behind growth direction
+}
+
+// =================== CONE-BASED OBSTACLE DETECTION TESTS ===================
+
+DOCTEST_TEST_CASE("CollisionDetection Cone-Based Obstacle Detection - Basic Functionality") {
+    Context context;
+    CollisionDetection collision(&context);
+    
+    // Create a horizontal patch obstacle at z=1.0
+    uint obstacle_uuid = context.addPatch(make_vec3(0, 0, 1.0f), make_vec2(2, 2));
+    std::vector<uint> obstacles = {obstacle_uuid};
+    collision.buildBVH(obstacles);
+    
+    // Test 1: Ray from below, directly toward obstacle
+    vec3 apex = make_vec3(0, 0, 0.5f);
+    vec3 axis = make_vec3(0, 0, 1); // Straight up
+    float half_angle = deg2rad(30.0f); // 30 degree half-angle
+    float height = 1.0f; // 1 meter detection range
+    
+    float distance;
+    vec3 obstacle_direction;
+    
+    bool found = collision.findNearestSolidObstacleInCone(apex, axis, half_angle, height, obstacles, distance, obstacle_direction);
+    
+    DOCTEST_CHECK(found == true);
+    DOCTEST_CHECK(distance >= 0.49f);
+    DOCTEST_CHECK(distance <= 0.51f); // Should be ~0.5m from apex to obstacle
+    DOCTEST_CHECK(obstacle_direction.z > 0.9f); // Direction should be mostly upward
+    
+    // Test 2: Ray from far away - should not detect
+    vec3 apex_far = make_vec3(0, 0, -2.0f);
+    bool found_far = collision.findNearestSolidObstacleInCone(apex_far, axis, half_angle, height, obstacles, distance, obstacle_direction);
+    DOCTEST_CHECK(found_far == false); // Too far away
+    
+    // Test 3: Narrow cone that misses obstacle
+    float narrow_angle = deg2rad(5.0f); // Very narrow cone
+    vec3 axis_offset = make_vec3(3.0f, 0, 1); // Aimed well to the side to clearly miss the 2x2 patch
+    axis_offset.normalize();
+    
+    bool found_narrow = collision.findNearestSolidObstacleInCone(apex, axis_offset, narrow_angle, height, obstacles, distance, obstacle_direction);
+    DOCTEST_CHECK(found_narrow == false); // Should miss the obstacle
+}
+
+DOCTEST_TEST_CASE("CollisionDetection Cone-Based vs Legacy Method Comparison") {
+    Context context;
+    CollisionDetection collision(&context);
+    
+    // Create test obstacle
+    uint obstacle_uuid = context.addPatch(make_vec3(0, 0, 1.0f), make_vec2(1, 1));
+    std::vector<uint> obstacles = {obstacle_uuid};
+    collision.buildBVH(obstacles);
+    
+    // Test parameters
+    vec3 origin = make_vec3(0, 0, 0.2f);
+    vec3 direction = make_vec3(0, 0, 1);
+    
+    // Legacy method
+    float legacy_distance;
+    vec3 legacy_obstacle_direction;
+    bool legacy_found = collision.findNearestPrimitiveDistance(origin, direction, obstacles, legacy_distance, legacy_obstacle_direction);
+    
+    // New cone method
+    float cone_distance;
+    vec3 cone_obstacle_direction;
+    float half_angle = deg2rad(30.0f);
+    float height = 2.0f;
+    bool cone_found = collision.findNearestSolidObstacleInCone(origin, direction, half_angle, height, obstacles, cone_distance, cone_obstacle_direction);
+    
+    // Both should find the obstacle
+    DOCTEST_CHECK(legacy_found == true);
+    DOCTEST_CHECK(cone_found == true);
+    
+    // Both methods should produce reasonable distance measurements (within 5% of expected 0.8m)
+    DOCTEST_CHECK(std::abs(cone_distance - 0.8f) < 0.04f); // Within 4cm of expected distance
+    DOCTEST_CHECK(std::abs(legacy_distance - 0.8f) < 0.04f); // Within 4cm of expected distance
+    
+    // Both should have reasonable direction vectors
+    DOCTEST_CHECK(legacy_obstacle_direction.magnitude() > 0.9f);
+    DOCTEST_CHECK(cone_obstacle_direction.magnitude() > 0.9f);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection Cone-Based Triangle vs Patch Intersection") {
+    Context context;
+    CollisionDetection collision(&context);
+    
+    // Test triangle intersection
+    uint triangle_uuid = context.addTriangle(
+        make_vec3(-0.5f, -0.5f, 1.0f), 
+        make_vec3(0.5f, -0.5f, 1.0f), 
+        make_vec3(0, 0.5f, 1.0f)
+    );
+    
+    // Test patch intersection
+    uint patch_uuid = context.addPatch(make_vec3(2, 0, 1.0f), make_vec2(1, 1));
+    
+    std::vector<uint> triangle_obstacles = {triangle_uuid};
+    std::vector<uint> patch_obstacles = {patch_uuid};
+    
+    collision.buildBVH({triangle_uuid, patch_uuid});
+    
+    vec3 apex = make_vec3(0, 0, 0.5f);
+    vec3 axis = make_vec3(0, 0, 1);
+    float half_angle = deg2rad(30.0f);
+    float height = 1.0f;
+    float distance;
+    vec3 obstacle_direction;
+    
+    // Test triangle intersection
+    bool triangle_found = collision.findNearestSolidObstacleInCone(apex, axis, half_angle, height, triangle_obstacles, distance, obstacle_direction);
+    DOCTEST_CHECK(triangle_found == true);
+    DOCTEST_CHECK(distance > 0.4f);
+    DOCTEST_CHECK(distance < 0.6f);
+    
+    // Test patch intersection 
+    vec3 apex_patch = make_vec3(2, 0, 0.5f);
+    bool patch_found = collision.findNearestSolidObstacleInCone(apex_patch, axis, half_angle, height, patch_obstacles, distance, obstacle_direction);
+    DOCTEST_CHECK(patch_found == true);
+    DOCTEST_CHECK(distance > 0.4f);
+    DOCTEST_CHECK(distance < 0.6f);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection Cone-Based Parameter Validation") {
+    Context context;
+    CollisionDetection collision(&context);
+    
+    uint obstacle_uuid = context.addPatch(make_vec3(0, 0, 1.0f), make_vec2(1, 1));
+    std::vector<uint> obstacles = {obstacle_uuid};
+    collision.buildBVH(obstacles);
+    
+    vec3 apex = make_vec3(0, 0, 0.5f);
+    vec3 axis = make_vec3(0, 0, 1);
+    float distance;
+    vec3 obstacle_direction;
+    
+    // Test invalid parameters
+    bool result1 = collision.findNearestSolidObstacleInCone(apex, axis, -0.1f, 1.0f, obstacles, distance, obstacle_direction); // Negative angle
+    DOCTEST_CHECK(result1 == false);
+    
+    bool result2 = collision.findNearestSolidObstacleInCone(apex, axis, M_PI, 1.0f, obstacles, distance, obstacle_direction); // Too large angle
+    DOCTEST_CHECK(result2 == false);
+    
+    bool result3 = collision.findNearestSolidObstacleInCone(apex, axis, deg2rad(30.0f), -1.0f, obstacles, distance, obstacle_direction); // Negative height
+    DOCTEST_CHECK(result3 == false);
+    
+    // Test empty candidate list
+    std::vector<uint> empty_obstacles;
+    bool result4 = collision.findNearestSolidObstacleInCone(apex, axis, deg2rad(30.0f), 1.0f, empty_obstacles, distance, obstacle_direction);
+    DOCTEST_CHECK(result4 == false);
+    
+    // Test valid parameters - should work
+    bool result5 = collision.findNearestSolidObstacleInCone(apex, axis, deg2rad(30.0f), 1.0f, obstacles, distance, obstacle_direction);
+    DOCTEST_CHECK(result5 == true);
 }

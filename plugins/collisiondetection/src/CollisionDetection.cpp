@@ -17,6 +17,8 @@
 #include <limits>
 #include <functional>
 #include <queue>
+#include <stack>
+#include <algorithm>
 
 #ifdef HELIOS_CUDA_AVAILABLE
 #include <cuda_runtime.h>
@@ -107,21 +109,17 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &UU
         return {};
     }
 
-    // Filter and validate UUIDs
+    // Validate UUIDs - throw exception if any are invalid
     std::vector<uint> valid_UUIDs;
     for (uint uuid : UUIDs) {
         if (context->doesPrimitiveExist(uuid)) {
             valid_UUIDs.push_back(uuid);
-        } else if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findCollisions): Skipping invalid UUID " << uuid << std::endl;
+        } else {
+            if (printmessages) {
+                std::cerr << "ERROR (CollisionDetection::findCollisions): Invalid UUID " << uuid << std::endl;
+            }
+            helios_runtime_error("ERROR (CollisionDetection::findCollisions): Invalid UUID " + std::to_string(uuid) + " provided");
         }
-    }
-    
-    if (valid_UUIDs.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findCollisions): No valid UUIDs found after filtering" << std::endl;
-        }
-        return {};
     }
 
     // Automatically rebuild BVH if geometry has changed or BVH is empty
@@ -307,21 +305,36 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
         return;
     }
 
-    // Filter out invalid UUIDs
+    // Validate UUIDs - throw exception if any are invalid (only when specific UUIDs are provided)
     std::vector<uint> valid_primitives;
-    for (uint uuid : primitives_to_include) {
-        if (context->doesPrimitiveExist(uuid)) {
-            valid_primitives.push_back(uuid);
-        } else if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::buildBVH): Skipping invalid UUID " << uuid << std::endl;
+    if (!UUIDs.empty()) {
+        // When specific UUIDs are provided, they must all be valid
+        for (uint uuid : primitives_to_include) {
+            if (context->doesPrimitiveExist(uuid)) {
+                valid_primitives.push_back(uuid);
+            } else {
+                if (printmessages) {
+                    std::cerr << "ERROR (CollisionDetection::buildBVH): Invalid UUID " << uuid << std::endl;
+                }
+                helios_runtime_error("ERROR (CollisionDetection::buildBVH): Invalid UUID " + std::to_string(uuid) + " provided");
+            }
         }
-    }
-    
-    if (valid_primitives.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::buildBVH): No valid primitives found after filtering" << std::endl;
+    } else {
+        // When no specific UUIDs provided (use all), filter out invalid ones
+        for (uint uuid : primitives_to_include) {
+            if (context->doesPrimitiveExist(uuid)) {
+                valid_primitives.push_back(uuid);
+            } else if (printmessages) {
+                std::cerr << "WARNING (CollisionDetection::buildBVH): Skipping invalid UUID " << uuid << std::endl;
+            }
         }
-        return;
+        
+        if (valid_primitives.empty()) {
+            if (printmessages) {
+                std::cerr << "WARNING (CollisionDetection::buildBVH): No valid primitives found after filtering" << std::endl;
+            }
+            return;
+        }
     }
     
     primitives_to_include = valid_primitives;
@@ -1345,6 +1358,112 @@ bool CollisionDetection::validateUUIDs(const std::vector<uint> &UUIDs) const {
     return all_valid;
 }
 
+bool CollisionDetection::rayPrimitiveIntersection(const vec3 &origin, const vec3 &direction, uint primitive_UUID, float &distance) const {
+    // Get primitive type and vertices
+    PrimitiveType type = context->getPrimitiveType(primitive_UUID);
+    std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_UUID);
+    
+    if (vertices.empty()) {
+        return false;
+    }
+    
+    
+    bool hit = false;
+    float min_distance = std::numeric_limits<float>::max();
+    
+    if (type == PRIMITIVE_TYPE_TRIANGLE) {
+        // Triangle intersection using radiation model algorithm (proven to work)
+        if (vertices.size() >= 3) {
+            const vec3 &v0 = vertices[0];
+            const vec3 &v1 = vertices[1];
+            const vec3 &v2 = vertices[2];
+            
+            // Use the same algorithm as radiation model's triangle_intersect
+            float a = v0.x - v1.x, b = v0.x - v2.x, c = direction.x, d = v0.x - origin.x;
+            float e = v0.y - v1.y, f = v0.y - v2.y, g = direction.y, h = v0.y - origin.y;
+            float i = v0.z - v1.z, j = v0.z - v2.z, k = direction.z, l = v0.z - origin.z;
+
+            float m = f * k - g * j, n = h * k - g * l, p = f * l - h * j;
+            float q = g * i - e * k, s = e * j - f * i;
+
+            float denom = a * m + b * q + c * s;
+            if (std::abs(denom) < 1e-8f) {
+                return false; // Ray is parallel to triangle
+            }
+            
+            float inv_denom = 1.0f / denom;
+
+            float e1 = d * m - b * n - c * p;
+            float beta = e1 * inv_denom;
+
+            if (beta > 0.0f) {
+                float r = e * l - h * i;
+                float e2 = a * n + d * q + c * r;
+                float gamma = e2 * inv_denom;
+
+                if (gamma > 0.0f && beta + gamma < 1.0f) {
+                    float e3 = a * p - b * r + d * s;
+                    float t = e3 * inv_denom;
+
+                    if (t > 1e-8f && t < min_distance) {
+                        min_distance = t;
+                        hit = true;
+                    }
+                }
+            }
+        }
+    } else if (type == PRIMITIVE_TYPE_PATCH) {
+        // Patch (quadrilateral) intersection using radiation model algorithm
+        if (vertices.size() >= 4) {
+            const vec3 &v0 = vertices[0];
+            const vec3 &v1 = vertices[1];
+            const vec3 &v2 = vertices[2];
+            const vec3 &v3 = vertices[3];
+            
+            // Calculate patch vectors and normal (same as radiation model)
+            vec3 anchor = v0;
+            vec3 normal = cross(v1 - v0, v2 - v0);
+            normal.normalize();
+            
+            vec3 a = v1 - v0; // First edge vector
+            vec3 b = v3 - v0; // Second edge vector
+            
+            // Ray-plane intersection
+            float denom = direction * normal;
+            if (std::abs(denom) > 1e-8f) { // Not parallel to plane
+                float t = (anchor - origin) * normal / denom;
+                
+                if (t > 1e-8f && t < 1e8f) { // Valid intersection distance
+                    // Find intersection point
+                    vec3 p = origin + direction * t;
+                    vec3 d = p - anchor;
+                    
+                    // Project onto patch coordinate system
+                    float ddota = d * a;
+                    float ddotb = d * b;
+                    
+                    // Check if point is within patch bounds
+                    if (ddota >= 0.0f && ddota <= (a * a) && 
+                        ddotb >= 0.0f && ddotb <= (b * b)) {
+                        
+                        if (t < min_distance) {
+                            min_distance = t;
+                            hit = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    if (hit) {
+        distance = min_distance;
+        return true;
+    }
+    
+    return false;
+}
+
 void CollisionDetection::calculateGridIntersection(const vec3 &grid_center, const vec3 &grid_size, const helios::int3 &grid_divisions, const std::vector<uint> &UUIDs) {
     if (printmessages) {
         std::cerr << "WARNING: calculateGridIntersection not yet implemented" << std::endl;
@@ -1618,10 +1737,6 @@ bool CollisionDetection::findNearestPrimitiveDistance(const vec3 &origin, const 
         }
     }
     
-    if (should_debug && printmessages) {
-        std::cout << "DEBUG findNearestPrimitiveDistance: Checking " << valid_candidates.size() 
-                  << " valid candidates from " << candidate_UUIDs.size() << " requested" << std::endl;
-    }
     
     if (valid_candidates.empty()) {
         if (printmessages) {
@@ -1679,14 +1794,163 @@ bool CollisionDetection::findNearestPrimitiveDistance(const vec3 &origin, const 
     if (found_forward_surface) {
         distance = nearest_distance_found;
         obstacle_direction = nearest_obstacle_direction;
-        if (should_debug && printmessages) {
-            std::cout << "DEBUG: Found nearest forward-facing primitive at distance " << distance << " meters in direction " << obstacle_direction << std::endl;
-        }
         return true;
     }
     
-    if (should_debug && printmessages) {
-        std::cout << "DEBUG: No forward-facing primitives found (all surfaces behind growth direction)" << std::endl;
+    
+    return false;
+}
+
+bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const vec3 &axis, float half_angle, float height, const std::vector<uint> &candidate_UUIDs, float &distance, vec3 &obstacle_direction, int num_rays) {
+    
+    if (candidate_UUIDs.empty()) {
+        if (printmessages) {
+            std::cerr << "WARNING (CollisionDetection::findNearestSolidObstacleInCone): No candidate UUIDs provided" << std::endl;
+        }
+        return false;
+    }
+    
+    // Validate input parameters
+    if (half_angle <= 0.0f || half_angle > M_PI/2.0f) {
+        if (printmessages) {
+            std::cerr << "WARNING (CollisionDetection::findNearestSolidObstacleInCone): Invalid half_angle " << half_angle << std::endl;
+        }
+        return false;
+    }
+    
+    if (height <= 0.0f) {
+        if (printmessages) {
+            std::cerr << "WARNING (CollisionDetection::findNearestSolidObstacleInCone): Invalid height " << height << std::endl;
+        }
+        return false;
+    }
+    
+    // Ensure BVH is current
+    ensureBVHCurrent();
+    
+    // Convert candidate UUIDs to set for efficient lookup
+    std::set<uint> candidate_set(candidate_UUIDs.begin(), candidate_UUIDs.end());
+    
+    // Generate ray directions within the cone
+    std::vector<vec3> ray_directions = sampleDirectionsInCone(apex, axis, half_angle, num_rays);
+    
+    
+    float nearest_distance = std::numeric_limits<float>::max();
+    vec3 nearest_direction;
+    bool found_obstacle = false;
+    
+    // Cast rays and find nearest intersection
+    for (const vec3 &ray_dir : ray_directions) {
+        // Traverse BVH to find potential intersections along this ray
+        // First, create a ray segment AABB for broad phase
+        vec3 ray_end = apex + ray_dir * height;
+        vec3 ray_aabb_min = make_vec3(
+            std::min(apex.x, ray_end.x),
+            std::min(apex.y, ray_end.y),
+            std::min(apex.z, ray_end.z)
+        );
+        vec3 ray_aabb_max = make_vec3(
+            std::max(apex.x, ray_end.x),
+            std::max(apex.y, ray_end.y),
+            std::max(apex.z, ray_end.z)
+        );
+        
+        // Add small epsilon to avoid zero-sized AABBs
+        vec3 epsilon(1e-6f, 1e-6f, 1e-6f);
+        ray_aabb_min = ray_aabb_min - epsilon;
+        ray_aabb_max = ray_aabb_max + epsilon;
+        
+        // Traverse BVH to find primitives that might intersect this ray
+        std::vector<uint> potential_primitives;
+        std::stack<uint> node_stack;
+        node_stack.push(0); // Start from root
+        
+        if (false && printmessages) { // Disable verbose BVH debug for performance
+            std::cout << "Starting BVH traversal for ray " << ray_dir << " from " << apex << " (height: " << height << ")" << std::endl;
+            std::cout << "BVH has " << bvh_nodes.size() << " nodes" << std::endl;
+        }
+        
+        while (!node_stack.empty()) {
+            uint node_index = node_stack.top();
+            node_stack.pop();
+            
+            if (node_index >= bvh_nodes.size()) {
+                if (printmessages) {
+                    std::cout << "WARNING: Invalid node index " << node_index << " >= " << bvh_nodes.size() << std::endl;
+                }
+                continue;
+            }
+            
+            const BVHNode &node = bvh_nodes[node_index];
+            
+            if (false && printmessages) { // Disable verbose node debug
+                std::cout << "Checking node " << node_index << " AABB: min=" << node.aabb_min << ", max=" << node.aabb_max << std::endl;
+            }
+            
+            // Check if ray AABB intersects node AABB
+            if (!aabbIntersect(ray_aabb_min, ray_aabb_max, node.aabb_min, node.aabb_max)) {
+                if (false && printmessages) { // Disable verbose AABB debug
+                    std::cout << "Ray AABB [" << ray_aabb_min << " to " << ray_aabb_max << "] does not intersect node AABB" << std::endl;
+                }
+                continue;
+            }
+            
+            // Also check if ray actually intersects the node's AABB (more precise test)
+            float t_min, t_max;
+            if (!rayAABBIntersect(apex, ray_dir, node.aabb_min, node.aabb_max, t_min, t_max)) {
+                continue;
+            }
+            
+            // Check if intersection is within cone height
+            if (t_min > height) {
+                continue;
+            }
+            
+            if (node.is_leaf) {
+                // Add primitives from this leaf node
+                for (uint i = 0; i < node.primitive_count; ++i) {
+                    uint prim_idx = primitive_indices[node.primitive_start + i];
+                    if (candidate_set.find(prim_idx) != candidate_set.end()) {
+                        potential_primitives.push_back(prim_idx);
+                    }
+                }
+            } else {
+                // Add child nodes to stack
+                if (node.left_child != 0xFFFFFFFF) {
+                    node_stack.push(node.left_child);
+                }
+                if (node.right_child != 0xFFFFFFFF) {
+                    node_stack.push(node.right_child);
+                }
+            }
+        }
+        
+        // Test ray against each potential primitive
+        
+        for (uint prim_uuid : potential_primitives) {
+            // Check if this primitive is in our candidate set
+            bool is_candidate = candidate_set.find(prim_uuid) != candidate_set.end();
+            
+            
+            if (is_candidate) {
+                float intersection_distance;
+                if (rayPrimitiveIntersection(apex, ray_dir, prim_uuid, intersection_distance)) {
+                    // Check if intersection is within cone height
+                    if (intersection_distance <= height && intersection_distance < nearest_distance) {
+                        nearest_distance = intersection_distance;
+                        nearest_direction = ray_dir;
+                        found_obstacle = true;
+                    }
+                }
+            }
+        }
+        
+    }
+    
+    if (found_obstacle) {
+        distance = nearest_distance;
+        obstacle_direction = nearest_direction;
+        return true;
     }
     
     return false;
