@@ -1228,6 +1228,19 @@ private:
     helios::vec3 calculateCollisionAvoidanceDirection(const helios::vec3 &internode_base_origin, const helios::vec3 &internode_axis, bool &collision_detection_active) const;
 
     /**
+     * \brief Applies hard obstacle avoidance to internode growth direction.
+     *
+     * This method checks for solid obstacles in the growth path and calculates rotation
+     * needed to avoid them. Uses cone-based detection with a smaller angle than soft
+     * collision avoidance for more precise obstacle detection.
+     *
+     * \param[in] current_position Current position of the growing internode
+     * \param[in,out] internode_axis Current growth direction that will be modified if obstacle found
+     * \return true if obstacle was found and avoidance was applied, false otherwise
+     */
+    bool applySolidObstacleAvoidance(const helios::vec3 &current_position, helios::vec3 &internode_axis) const;
+
+    /**
      * \brief Calculates optimal collision avoidance direction for petiole growth.
      *
      * This method performs collision detection analysis to find an optimal petiole direction
@@ -1240,6 +1253,15 @@ private:
      * \return Optimal petiole direction toward largest detected gap
      */
     helios::vec3 calculatePetioleCollisionAvoidanceDirection(const helios::vec3 &petiole_base_origin, const helios::vec3 &proposed_petiole_axis, bool &collision_detection_active) const;
+
+    //! Calculate optimal fruit direction to avoid collisions using cone-based gap detection
+    /**
+     * \param[in] fruit_base_origin Starting position for fruit collision detection cone
+     * \param[in] proposed_fruit_axis Proposed fruit direction before collision avoidance
+     * \param[out] collision_detection_active Flag indicating if collision detection was applied
+     * \return Optimal fruit direction toward largest detected gap
+     */
+    helios::vec3 calculateFruitCollisionAvoidanceDirection(const helios::vec3 &fruit_base_origin, const helios::vec3 &proposed_fruit_axis, bool &collision_detection_active) const;
 
 
 public:
@@ -1940,6 +1962,12 @@ public:
      */
     void enablePetioleCollisionDetection(bool enabled);
 
+    //! Enable or disable fruit collision detection
+    /**
+     * \param[in] enabled Enable fruit collision detection (useful for plants with large fruit that may collide with ground or other obstacles)
+     */
+    void enableFruitCollisionDetection(bool enabled);
+
     //! Clear BVH cache (called at start of each growth cycle)
     void clearBVHCache() const;
 
@@ -2607,6 +2635,9 @@ protected:
     
     //! Enable petiole collision detection (separate from general petiole inclusion)
     bool petiole_collision_detection_enabled = false;
+    
+    //! Enable fruit collision detection (separate from general fruit inclusion)
+    bool fruit_collision_detection_enabled = false;
     
     //! Counter to track timesteps for geometry update scheduling
     int geometry_update_counter = 0;

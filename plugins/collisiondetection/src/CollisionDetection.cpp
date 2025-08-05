@@ -242,15 +242,6 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &qu
     // Perform collision detection using the same logic as the standard findCollisions
     std::vector<uint> all_collisions;
 
-    // Print traversal mode message once per call
-    if (printmessages) {
-        if (gpu_acceleration_enabled && gpu_memory_allocated) {
-            std::cout << "Using GPU acceleration for collision detection." << std::endl;
-        } else {
-            std::cout << "Using CPU traversal for collision detection." << std::endl;
-        }
-    }
-
     for (uint UUID: all_query_UUIDs) {
 
         // Get bounding box for query primitive
@@ -278,10 +269,6 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &qu
     // Remove duplicates
     std::sort(all_collisions.begin(), all_collisions.end());
     all_collisions.erase(std::unique(all_collisions.begin(), all_collisions.end()), all_collisions.end());
-
-    if (printmessages) {
-        std::cout << "Found " << all_collisions.size() << " colliding primitives." << std::endl;
-    }
 
     return all_collisions;
 }
@@ -527,12 +514,12 @@ void CollisionDetection::updateBVH(const std::vector<uint> &UUIDs, bool force_re
     // Check if geometry has changed significantly
     bool geometry_changed = (requested_geometry != last_bvh_geometry) || bvh_dirty;
     
-    if (printmessages) {
-        std::cout << "BVH update: " << UUIDs.size() << " primitives" << std::endl;
-    }
-    
     if (!geometry_changed && !force_rebuild) {
         return;
+    }
+    
+    if (printmessages) {
+        std::cout << "BVH update: " << UUIDs.size() << " primitives" << std::endl;
     }
     
     // Use hierarchical BVH approach if enabled

@@ -580,6 +580,132 @@ helios::vec3 Phytomer::calculatePetioleCollisionAvoidanceDirection(const helios:
     return collision_optimal_direction;
 }
 
+helios::vec3 Phytomer::calculateFruitCollisionAvoidanceDirection(const helios::vec3 &fruit_base_origin, const helios::vec3 &proposed_fruit_axis, bool &collision_detection_active) const {
+    vec3 collision_optimal_direction;
+    collision_detection_active = false;
+
+
+    if (plantarchitecture_ptr->collision_detection_enabled && plantarchitecture_ptr->collision_detection_ptr != nullptr) {
+        // Build restricted BVH with target geometry only
+        std::vector<uint> target_geometry;
+        if (!plantarchitecture_ptr->collision_target_UUIDs.empty()) {
+            target_geometry = plantarchitecture_ptr->collision_target_UUIDs;
+        } else if (!plantarchitecture_ptr->collision_target_object_IDs.empty()) {
+            for (uint objID: plantarchitecture_ptr->collision_target_object_IDs) {
+                std::vector<uint> obj_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                target_geometry.insert(target_geometry.end(), obj_primitives.begin(), obj_primitives.end());
+            }
+        } else {
+            // If no specific targets provided, use ALL geometry in Context for collision avoidance
+            target_geometry = context_ptr->getAllUUIDs();
+        }
+
+        // Use cached BVH if available (same cache as internode collision avoidance)
+        if (plantarchitecture_ptr->bvh_cached_for_current_growth && !plantarchitecture_ptr->cached_filtered_geometry.empty()) {
+            // Set up cone parameters for optimal path finding using fruit-specific parameters
+            vec3 apex = fruit_base_origin;
+            vec3 central_axis = proposed_fruit_axis;
+            central_axis.normalize();
+            float height = plantarchitecture_ptr->collision_cone_height;
+            float half_angle = plantarchitecture_ptr->collision_cone_half_angle_rad;
+            int samples = plantarchitecture_ptr->collision_sample_count;
+
+            // Find optimal cone path using gap detection for fruit direction
+            auto optimal_result = plantarchitecture_ptr->collision_detection_ptr->findOptimalConePath(apex, central_axis, half_angle, height, samples);
+
+            // Store the optimal direction for later blending
+            if (optimal_result.confidence > 0.0f) {
+                collision_optimal_direction = optimal_result.direction;
+                collision_optimal_direction.normalize();
+                collision_detection_active = true;
+            }
+            
+            // Debug: track when collision detection doesn't find anything
+            static int no_collision_count = 0;
+            if (optimal_result.confidence <= 0.0f) {
+                no_collision_count++;
+                if (no_collision_count <= 5 || no_collision_count % 1000 == 0) {
+                    std::cout << "No collision detected (#" << no_collision_count << ") for fruit at " << fruit_base_origin << " with axis " << proposed_fruit_axis << std::endl;
+                }
+            }
+        } else {
+            static int no_bvh_count = 0;
+            no_bvh_count++;
+            if (no_bvh_count <= 5) {
+                std::cout << "No BVH cached (#" << no_bvh_count << ") - bvh_cached=" << plantarchitecture_ptr->bvh_cached_for_current_growth << ", geometry_size=" << plantarchitecture_ptr->cached_filtered_geometry.size() << std::endl;
+            }
+        }
+    }
+    return collision_optimal_direction;
+}
+
+bool Phytomer::applySolidObstacleAvoidance(const helios::vec3 &current_position, helios::vec3 &internode_axis) const {
+    if (!plantarchitecture_ptr->solid_obstacle_avoidance_enabled || plantarchitecture_ptr->solid_obstacle_UUIDs.empty()) {
+        return false;
+    }
+
+    vec3 growth_direction = internode_axis;
+    growth_direction.normalize();
+
+    // Check for obstacles using cone-based detection
+    float nearest_obstacle_distance;
+    vec3 nearest_obstacle_direction;
+
+    // Use smaller cone angle for hard obstacle detection (30 degrees vs 80 degrees for soft avoidance)
+    float hard_detection_cone_angle = deg2rad(30.0f);
+    float detection_distance = plantarchitecture_ptr->solid_obstacle_avoidance_distance;
+
+    if (plantarchitecture_ptr->collision_detection_ptr != nullptr &&
+        plantarchitecture_ptr->collision_detection_ptr->findNearestSolidObstacleInCone(current_position, growth_direction, hard_detection_cone_angle, detection_distance, plantarchitecture_ptr->solid_obstacle_UUIDs, nearest_obstacle_distance,
+                                                                                       nearest_obstacle_direction)) {
+
+        // Calculate rotation needed to avoid the obstacle
+        // Since nearest_obstacle_direction points toward the obstacle, we want to rotate away from it
+
+        // Calculate the angle between growth direction and obstacle direction
+        float dot_with_obstacle = normalize(growth_direction) * normalize(nearest_obstacle_direction);
+        float angle_deficit = asin_safe(fabs(dot_with_obstacle));
+
+        // Calculate perpendicular direction to avoid obstacle
+        vec3 rotation_axis = cross(growth_direction, -nearest_obstacle_direction);
+
+        if (rotation_axis.magnitude() > 0.001f) {
+            rotation_axis.normalize();
+        } else {
+            angle_deficit = 0.f;
+        }
+
+        if (rotation_axis.magnitude() > 0.001f) {
+
+            // Calculate fraction of total rotation to apply this timestep
+            // Fraction increases as we get closer to the obstacle
+            float rotation_fraction;
+            if (nearest_obstacle_distance < 0.05f) {
+                rotation_fraction = 1.f; // Very aggressive when extremely close
+            } else if (nearest_obstacle_distance < 0.15f) {
+                rotation_fraction = 0.7f; // Aggressive when very close
+            } else if (nearest_obstacle_distance < 0.3f) {
+                rotation_fraction = 0.3f; // Moderate when close
+            } else if (nearest_obstacle_distance < 0.5f) {
+                rotation_fraction = 0.2f; // Gentle when moderate distance
+            } else {
+                rotation_fraction = 0.1f; // Very gentle when far
+            }
+
+            // Apply fraction of the total angle deficit
+            float rotation_this_step = angle_deficit * rotation_fraction;
+
+            // Apply the rotation
+            internode_axis = rotatePointAboutLine(internode_axis, nullorigin, rotation_axis, rotation_this_step);
+            internode_axis.normalize();
+        }
+
+        return true; // Obstacle found and avoidance applied
+    }
+
+    return false; // No obstacle found
+}
+
 int Shoot::appendPhytomer(float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const PhytomerParameters &phytomer_parameters) {
     auto shoot_tree_ptr = &plantarchitecture_ptr->plant_instances.at(plantID).shoot_tree;
 
@@ -1184,66 +1310,8 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         }
 
         // Apply solid obstacle avoidance after natural rotations but before soft collision avoidance
-        if (plantarchitecture_ptr->solid_obstacle_avoidance_enabled && !plantarchitecture_ptr->solid_obstacle_UUIDs.empty()) {
-            vec3 current_position = phytomer_internode_vertices.at(inode_segment - 1);
-            vec3 growth_direction = internode_axis;
-            growth_direction.normalize();
-
-            // Check for obstacles using cone-based detection
-            float nearest_obstacle_distance;
-            vec3 nearest_obstacle_direction;
-
-            // Use smaller cone angle for hard obstacle detection (30 degrees vs 80 degrees for soft avoidance)
-            float hard_detection_cone_angle = deg2rad(30.0f);
-            float detection_distance = plantarchitecture_ptr->solid_obstacle_avoidance_distance;
-
-            if (plantarchitecture_ptr->collision_detection_ptr != nullptr &&
-                plantarchitecture_ptr->collision_detection_ptr->findNearestSolidObstacleInCone(current_position, growth_direction, hard_detection_cone_angle, detection_distance, plantarchitecture_ptr->solid_obstacle_UUIDs, nearest_obstacle_distance,
-                                                                                               nearest_obstacle_direction)) {
-                obstacle_found = true;
-
-                // Calculate rotation needed to avoid the obstacle
-                // Since nearest_obstacle_direction points toward the obstacle, we want to rotate away from it
-
-                // Calculate the angle between growth direction and obstacle direction
-                float dot_with_obstacle = normalize(growth_direction) * normalize(nearest_obstacle_direction);
-                float angle_deficit = asin_safe(fabs(dot_with_obstacle));
-
-                // Calculate perpendicular direction to avoid obstacle
-                vec3 rotation_axis = cross(growth_direction, -nearest_obstacle_direction);
-
-                if (rotation_axis.magnitude() > 0.001f) {
-                    rotation_axis.normalize();
-                } else {
-                    angle_deficit = 0.f;
-                }
-
-                if (rotation_axis.magnitude() > 0.001f) {
-
-                    // Calculate fraction of total rotation to apply this timestep
-                    // Fraction increases as we get closer to the obstacle
-                    float rotation_fraction;
-                    if (nearest_obstacle_distance < 0.05f) {
-                        rotation_fraction = 1.f; // Very aggressive when extremely close
-                    } else if (nearest_obstacle_distance < 0.15f) {
-                        rotation_fraction = 0.7f; // Aggressive when very close
-                    } else if (nearest_obstacle_distance < 0.3f) {
-                        rotation_fraction = 0.3f; // Moderate when close
-                    } else if (nearest_obstacle_distance < 0.5f) {
-                        rotation_fraction = 0.2f; // Gentle when moderate distance
-                    } else {
-                        rotation_fraction = 0.1f; // Very gentle when far
-                    }
-
-                    // Apply fraction of the total angle deficit
-                    float rotation_this_step = angle_deficit * rotation_fraction;
-
-                    // Apply the rotation
-                    internode_axis = rotatePointAboutLine(internode_axis, nullorigin, rotation_axis, rotation_this_step);
-                    internode_axis.normalize();
-                }
-            }
-        }
+        vec3 current_position = phytomer_internode_vertices.at(inode_segment - 1);
+        obstacle_found = applySolidObstacleAvoidance(current_position, internode_axis);
 
         // Apply collision avoidance blending after all natural rotations are complete
         // Only apply soft collision avoidance if hard boundary avoidance was not already applied
@@ -1638,6 +1706,26 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
 
     float theta_base = fabs(cart2sphere(peduncle_axis).zenith);
 
+    // Apply collision avoidance for peduncle direction (if enabled) - following petiole pattern
+    vec3 collision_optimal_peduncle_direction;
+    bool peduncle_collision_active = false;
+
+    if (plantarchitecture_ptr->fruit_collision_detection_enabled) {
+        collision_optimal_peduncle_direction = calculateFruitCollisionAvoidanceDirection(fbud.base_position, // peduncle base position
+                                                                                          peduncle_axis, peduncle_collision_active);
+    }
+
+    if (peduncle_collision_active) {
+        float inertia_weight = plantarchitecture_ptr->collision_inertia_weight;
+        vec3 natural_peduncle_direction = peduncle_axis;
+
+        // Blend natural peduncle direction with optimal direction
+        // inertia = 1.0: use natural direction (no collision avoidance)
+        // inertia = 0.0: use optimal direction (full collision avoidance)
+        peduncle_axis = inertia_weight * natural_peduncle_direction + (1.0f - inertia_weight) * collision_optimal_peduncle_direction;
+        peduncle_axis.normalize();
+    }
+
     for (int i = 1; i <= phytomer_parameters.peduncle.length_segments; i++) {
         if (phytomer_parameters.peduncle.curvature.val() != 0.f) {
             float theta_curvature = -deg2rad(phytomer_parameters.peduncle.curvature.val() * dr_peduncle);
@@ -1787,6 +1875,8 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
             // gravity effect for fruit
             pitch_inflorescence = pitch_inflorescence + phytomer_parameters.inflorescence.fruit_gravity_factor_fraction.val() * (0.5f * PI_F - pitch_inflorescence);
         }
+
+
         context_ptr->rotateObject(objID_fruit, pitch_inflorescence, "y");
         fruit_axis = rotatePointAboutLine(fruit_axis, nullorigin, make_vec3(1, 0, 0), pitch_inflorescence);
 
@@ -1804,6 +1894,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
             fruit_axis = rotatePointAboutLine(fruit_axis, nullorigin, peduncle_axis, deg2rad(phytomer_parameters.peduncle.roll.val()) + compound_rotation);
         }
         phytomer_parameters.inflorescence.fruit_gravity_factor_fraction.resample();
+
 
         fbud.inflorescence_bases.push_back(fruit_base);
 
@@ -3890,8 +3981,6 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
         }
     }
 
-    std::cout << "Starting advance time" << std::endl;
-
     // Clear BVH cache at start of plant growth operation
     clearBVHCache();
 
@@ -4496,6 +4585,14 @@ void PlantArchitecture::enablePetioleCollisionDetection(bool enabled) {
 
     if (printmessages) {
         std::cout << "Petiole collision detection " << (enabled ? "enabled" : "disabled") << std::endl;
+    }
+}
+
+void PlantArchitecture::enableFruitCollisionDetection(bool enabled) {
+    fruit_collision_detection_enabled = enabled;
+
+    if (printmessages) {
+        std::cout << "Fruit collision detection " << (enabled ? "enabled" : "disabled") << std::endl;
     }
 }
 

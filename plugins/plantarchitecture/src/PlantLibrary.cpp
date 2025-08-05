@@ -2551,7 +2551,7 @@ void PlantArchitecture::initializeStrawberryShoots() {
     leaf_prototype.longitudinal_curvature = 0.15f;
     leaf_prototype.lateral_curvature = 0.4f;
     leaf_prototype.wave_period = 0.3f;
-    leaf_prototype.wave_amplitude = 0.01f;
+    leaf_prototype.wave_amplitude = 0.05f;
     leaf_prototype.subdivisions = 6;
     leaf_prototype.unique_prototypes = 10;
 
@@ -2570,13 +2570,13 @@ void PlantArchitecture::initializeStrawberryShoots() {
     phytomer_parameters.petiole.radius = 0.0025;
     phytomer_parameters.petiole.length.uniformDistribution(0.15, 0.25);
     phytomer_parameters.petiole.taper = 0.5;
-    phytomer_parameters.petiole.curvature.uniformDistribution(-300, 100);
+    phytomer_parameters.petiole.curvature.uniformDistribution(-300, -100);
     phytomer_parameters.petiole.color = make_RGBcolor(0.18, 0.23, 0.1);
     phytomer_parameters.petiole.length_segments = 5;
 
     phytomer_parameters.leaf.leaves_per_petiole = 3;
-    phytomer_parameters.leaf.pitch.uniformDistribution(-30, 10);
-    phytomer_parameters.leaf.yaw = 20;
+    phytomer_parameters.leaf.pitch.uniformDistribution(-35, 0);
+    phytomer_parameters.leaf.yaw = -30;
     phytomer_parameters.leaf.roll = -30;
     phytomer_parameters.leaf.leaflet_offset = 0.01;
     phytomer_parameters.leaf.leaflet_scale = 1.0;
@@ -2587,7 +2587,7 @@ void PlantArchitecture::initializeStrawberryShoots() {
     phytomer_parameters.peduncle.radius = 0.00075;
     phytomer_parameters.peduncle.pitch = 35;
     phytomer_parameters.peduncle.roll = 0;
-    phytomer_parameters.peduncle.curvature = -200;
+    phytomer_parameters.peduncle.curvature = -150;
     phytomer_parameters.peduncle.length_segments = 5;
     phytomer_parameters.peduncle.radial_subdivisions = 6;
     phytomer_parameters.peduncle.color = phytomer_parameters.petiole.color;
@@ -2622,8 +2622,8 @@ void PlantArchitecture::initializeStrawberryShoots() {
     shoot_parameters.elongation_rate_max = 0.1;
     shoot_parameters.girth_area_factor = 2.f;
     shoot_parameters.vegetative_bud_break_time = 15;
-    shoot_parameters.vegetative_bud_break_probability_min = 0.1;
-    shoot_parameters.vegetative_bud_break_probability_decay_rate = -0.4;
+    shoot_parameters.vegetative_bud_break_probability_min = 0.;
+    shoot_parameters.vegetative_bud_break_probability_decay_rate = -0.5;
     shoot_parameters.flower_bud_break_probability = 1;
     shoot_parameters.fruit_set_probability = 0.5;
     shoot_parameters.flowers_require_dormancy = false;
