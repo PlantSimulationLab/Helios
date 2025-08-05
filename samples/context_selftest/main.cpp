@@ -2,8 +2,7 @@
 
 using namespace helios;
 
-int main() {
-
+int main(int argc, char** argv) {
     // Run the self-test
-    return Context::selfTest();
+    return Context::selfTest(argc, argv);
 }

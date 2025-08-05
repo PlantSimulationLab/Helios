@@ -342,7 +342,7 @@ public:
     ~LiDARcloud();
 
     //! Self-test (unit test) function
-    static int selfTest();
+    static int selfTest(int argc = 0, char** argv = nullptr);
 
     void validateRayDirections();
 

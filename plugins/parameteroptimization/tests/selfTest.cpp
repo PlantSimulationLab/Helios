@@ -17,20 +17,12 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest.h"
+#include "doctest_utils.h"
 
 using namespace helios;
 
-int ParameterOptimization::selfTest() {
-
-    // Run all the tests
-    doctest::Context context;
-    int res = context.run();
-
-    if (context.shouldExit()) { // important - query flags (and --exit) rely on this
-        return res; // propagate the result of the tests
-    }
-
-    return res;
+int ParameterOptimization::selfTest(int argc, char** argv) {
+    return helios::runDoctestWithValidation(argc, argv);
 }
 
 // Test 1: ParameterOptimization Simple Quadratic Optimization

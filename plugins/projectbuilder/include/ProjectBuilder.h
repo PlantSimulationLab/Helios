@@ -1286,7 +1286,7 @@ public:
     CameraProperties *cameraproperties = nullptr;
 
     //! Method to run through automated tests
-    static int selfTest();
+    static int selfTest(int argc = 0, char** argv = nullptr);
 
     //! Function to update spectra based on saved information
     void updateSpectra();

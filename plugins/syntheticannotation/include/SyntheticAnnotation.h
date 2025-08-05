@@ -28,7 +28,7 @@ public:
     explicit SyntheticAnnotation(helios::Context *context);
 
     //! Function to perform a self-test of plug-in functions
-    static int selfTest();
+    static int selfTest(int argc, char** argv);
 
     void labelPrimitives(const char *label);
 

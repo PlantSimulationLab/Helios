@@ -2,6 +2,6 @@
 
 using namespace helios;
 
-int main() {
-    return PlantHydraulicsModel::selfTest();
+int main(int argc, char** argv) {
+    return PlantHydraulicsModel::selfTest(argc, argv);
 }
