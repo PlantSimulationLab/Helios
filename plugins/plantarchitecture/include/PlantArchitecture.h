@@ -983,6 +983,16 @@ public:
     [[nodiscard]] helios::vec3 getPetioleAxisVector(float stem_fraction, uint petiole_index) const;
 
     /**
+     * \brief Retrieves the peduncle axis vector for a given stem fraction, petiole index, and floral bud index.
+     *
+     * \param[in] stem_fraction Fraction along the peduncle (value between 0.0 and 1.0) for which the axis vector is computed.
+     * \param[in] petiole_index Index of the petiole containing the floral bud.
+     * \param[in] bud_index Index of the floral bud within the petiole.
+     * \return The axis vector of the specified peduncle as a helios::vec3.
+     */
+    [[nodiscard]] helios::vec3 getPeduncleAxisVector(float stem_fraction, uint petiole_index, uint bud_index) const;
+
+    /**
      * \brief Computes the normalized vector direction along the axis at a given fraction of the stem.
      *
      * \param[in] stem_fraction Fraction along the stem (value between 0.0 and 1.0) for which the axis vector is computed.
@@ -1270,6 +1280,7 @@ public:
     //! Coordinates of internode tube segments. Index is tube segment within internode
     std::vector<std::vector<helios::vec3>> petiole_vertices; // first index is petiole within internode, second index is tube segment within petiole tube
     std::vector<std::vector<helios::vec3>> leaf_bases; // first index is petiole within internode, second index is leaf within petiole
+    std::vector<std::vector<std::vector<helios::vec3>>> peduncle_vertices; // first index is petiole within internode, second index is floral bud within petiole, third index is tube segment within peduncle
     float internode_pitch, internode_phyllotactic_angle;
 
     std::vector<std::vector<float>> petiole_radii; // first index is petiole within internode, second index is segment within petiole tube
@@ -1766,6 +1777,16 @@ public:
      * \param[in] time_step_days Time interval in days.
      */
     void advanceTime(const std::vector<uint> &plantIDs, float time_step_days);
+    
+    //! Adjust fruit objects to prevent collision with solid obstacles via rotation
+    /**
+     * This method checks all fruit in the plant architecture for collisions with solid obstacles
+     * and rotates them about their base position to prevent intersection. The rotation is applied
+     * in the opposite direction of the original pitch to simulate natural fruit lifting.
+     * 
+     * \note This method should be called after all plant growth updates are complete.
+     */
+    void adjustFruitForObstacleCollision();
 
     //! Accumulates hourly net photosynthesis for each leaf in the plant architecture
     /**
@@ -1953,8 +1974,9 @@ public:
      * 
      * \param[in] obstacle_UUIDs Vector of primitive UUIDs that represent solid obstacles
      * \param[in] avoidance_distance Distance at which obstacle avoidance begins (meters)
+     * \param[in] enable_fruit_adjustment Enable automatic fruit rotation adjustment to avoid obstacles (default: true)
      */
-    void enableSolidObstacleAvoidance(const std::vector<uint> &obstacle_UUIDs, float avoidance_distance = 0.5f);
+    void enableSolidObstacleAvoidance(const std::vector<uint> &obstacle_UUIDs, float avoidance_distance = 0.5f, bool enable_fruit_adjustment = true);
 
     //! Enable or disable petiole collision detection
     /**
@@ -2578,6 +2600,8 @@ protected:
 
     void pruneGroundCollisions(uint plantID);
 
+    void pruneSolidBoundaryCollisions();
+
     // --- Carbohydrate Model --- //
 
     void accumulateShootPhotosynthesis() const;
@@ -2661,6 +2685,7 @@ protected:
     std::vector<uint> solid_obstacle_UUIDs;
     float solid_obstacle_avoidance_distance = 0.5f;
     float solid_obstacle_minimum_distance = 0.05f;
+    bool solid_obstacle_fruit_adjustment_enabled = true;
 
     //! Flag to enable/disable console output messages
     bool printmessages = true;

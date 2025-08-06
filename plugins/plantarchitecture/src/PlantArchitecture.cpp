@@ -319,6 +319,16 @@ helios::vec3 Phytomer::getPetioleAxisVector(const float stem_fraction, const uin
     return getAxisVector(stem_fraction, this->petiole_vertices.at(petiole_index));
 }
 
+helios::vec3 Phytomer::getPeduncleAxisVector(const float stem_fraction, const uint petiole_index, const uint bud_index) const {
+    if (petiole_index >= this->peduncle_vertices.size()) {
+        helios_runtime_error("ERROR (Phytomer::getPeduncleAxisVector): Petiole index out of range.");
+    }
+    if (bud_index >= this->peduncle_vertices.at(petiole_index).size()) {
+        helios_runtime_error("ERROR (Phytomer::getPeduncleAxisVector): Floral bud index out of range.");
+    }
+    return getAxisVector(stem_fraction, this->peduncle_vertices.at(petiole_index).at(bud_index));
+}
+
 helios::vec3 Phytomer::getAxisVector(const float stem_fraction, const std::vector<helios::vec3> &axis_vertices) {
     assert(stem_fraction >= 0 && stem_fraction <= 1);
 
@@ -642,6 +652,12 @@ helios::vec3 Phytomer::calculateFruitCollisionAvoidanceDirection(const helios::v
 bool Phytomer::applySolidObstacleAvoidance(const helios::vec3 &current_position, helios::vec3 &internode_axis) const {
     if (!plantarchitecture_ptr->solid_obstacle_avoidance_enabled || plantarchitecture_ptr->solid_obstacle_UUIDs.empty()) {
         return false;
+    }
+
+    // Ignore solid obstacles for the first several nodes of the base stem to prevent U-turn growth
+    // when plants start slightly below ground surface
+    if (shoot_index.x == 0 && (rank < 3 || parent_shoot_ptr->calculateShootLength() < 0.05f)) {
+        return false;  // Skip solid obstacle avoidance for first 3 nodes OR if shoot length < 5cm
     }
 
     vec3 growth_direction = internode_axis;
@@ -1175,6 +1191,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     petiole_length.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_vertices.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_radii.resize(phytomer_parameters.petiole.petioles_per_internode);
+    
+    // initialize peduncle vertices storage (will be resized when floral buds are added)
+    peduncle_vertices.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_pitch.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_curvature.resize(phytomer_parameters.petiole.petioles_per_internode);
     std::vector<float> dr_petiole(phytomer_parameters.petiole.petioles_per_internode);
@@ -1747,6 +1766,18 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     if (build_context_geometry_peduncle) {
         fbud.peduncle_objIDs.push_back(context_ptr->addTubeObject(Ndiv_peduncle_radius, peduncle_vertices, peduncle_radii, peduncle_colors));
         context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(fbud.peduncle_objIDs.back()), "object_label", "peduncle");
+    }
+    
+    // Store peduncle vertices for later axis vector calculations
+    // Use the parent_index to determine which petiole this floral bud belongs to
+    uint petiole_idx = fbud.parent_index;
+    
+    // Ensure the peduncle_vertices storage has the right size for this floral bud
+    if (petiole_idx < this->peduncle_vertices.size()) {
+        if (this->peduncle_vertices.at(petiole_idx).size() <= fbud.bud_index) {
+            this->peduncle_vertices.at(petiole_idx).resize(fbud.bud_index + 1);
+        }
+        this->peduncle_vertices.at(petiole_idx).at(fbud.bud_index) = peduncle_vertices;
     }
 
     // Create unique inflorescence prototypes for each shoot type so we can simply copy them for each leaf
@@ -4394,6 +4425,530 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
         geometry_update_counter++;
     }
+    
+    // Adjust fruit positions to avoid solid obstacle collisions
+    adjustFruitForObstacleCollision();
+    
+    // Fallback collision detection: prune any objects that still intersect solid boundaries
+    pruneSolidBoundaryCollisions();
+}
+
+void PlantArchitecture::adjustFruitForObstacleCollision() {
+    if (!solid_obstacle_avoidance_enabled || solid_obstacle_UUIDs.empty() || !solid_obstacle_fruit_adjustment_enabled) {
+        return; // No obstacles to check or fruit adjustment disabled
+    }
+    
+    if (collision_detection_ptr == nullptr) {
+        return; // No collision detection available
+    }
+    
+    // Debug counter to limit output
+    int debug_failures_shown = 0;
+    const int max_debug_failures = 0; // Disable debugging for performance
+    
+    // Process each plant instance
+    for (const auto &plant_instance : plant_instances) {
+        uint plantID = plant_instance.first;
+        
+        // Get all fruit object IDs for this plant
+        std::vector<uint> fruit_objIDs = getPlantFruitObjectIDs(plantID);
+        
+        if (fruit_objIDs.empty()) {
+            continue; // No fruit to process
+        }
+        
+        // Check each fruit for collision
+        for (uint fruit_objID : fruit_objIDs) {
+            // Get fruit primitives
+            std::vector<uint> fruit_UUIDs = context_ptr->getObjectPrimitiveUUIDs(fruit_objID);
+            
+            if (fruit_UUIDs.empty()) {
+                continue;
+            }
+            
+            // Check if fruit collides with any solid obstacle
+            std::vector<uint> collisions = collision_detection_ptr->findCollisions(fruit_UUIDs, {}, solid_obstacle_UUIDs, {});
+            
+            if (!collisions.empty()) {
+                // Fruit is colliding - need to rotate it up
+                
+                // Get fruit bounding box to estimate rotation needed
+                vec3 bbox_min, bbox_max;
+                context_ptr->getObjectBoundingBox(fruit_objID, bbox_min, bbox_max);
+                
+                // Find the fruit base position and peduncle info from the shoot tree
+                vec3 fruit_base;
+                vec3 peduncle_axis;
+                const Phytomer* fruit_phytomer = nullptr;
+                uint fruit_petiole_index = 0;
+                uint fruit_bud_index = 0;
+                bool found_base = false;
+                
+                // Search through shoot tree to find this fruit's base position
+                for (const auto &shoot : plant_instance.second.shoot_tree) {
+                    for (const auto &phytomer : shoot->phytomers) {
+                        uint petiole_idx = 0;
+                        for (const auto &petiole : phytomer->floral_buds) {
+                            for (const auto &fbud : petiole) {
+                                // Check if this floral bud contains our fruit
+                                for (size_t idx = 0; idx < fbud.inflorescence_objIDs.size(); idx++) {
+                                    if (fbud.inflorescence_objIDs[idx] == fruit_objID && idx < fbud.inflorescence_bases.size()) {
+                                        // Found it! Use the correct index to get the base position
+                                        fruit_base = fbud.inflorescence_bases[idx];
+                                        fruit_phytomer = phytomer.get();
+                                        fruit_petiole_index = petiole_idx;
+                                        fruit_bud_index = fbud.bud_index;
+                                        
+                                        // Get actual peduncle axis using stored vertices
+                                        try {
+                                            peduncle_axis = phytomer->getPeduncleAxisVector(1.0f, petiole_idx, fbud.bud_index);
+                                        } catch (const std::exception& e) {
+                                            // Fallback if peduncle vertices not available
+                                            peduncle_axis = make_vec3(0, 0, 1);
+                                        }
+                                        
+                                        found_base = true;
+                                        break;
+                                    }
+                                }
+                                if (found_base) break;
+                            }
+                            if (found_base) break;
+                            petiole_idx++;
+                        }
+                        if (found_base) break;
+                    }
+                    if (found_base) break;
+                }
+                
+                if (!found_base) {
+                    continue; // Couldn't find fruit base position
+                }
+                
+                // Calculate initial rotation estimate
+                // Estimate fruit "radius" as distance from base to furthest point
+                float fruit_radius = 0;
+                fruit_radius = std::max(fruit_radius, (bbox_max - fruit_base).magnitude());
+                fruit_radius = std::max(fruit_radius, (bbox_min - fruit_base).magnitude());
+                fruit_radius = std::max(fruit_radius, (make_vec3(bbox_min.x, bbox_min.y, bbox_max.z) - fruit_base).magnitude());
+                fruit_radius = std::max(fruit_radius, (make_vec3(bbox_min.x, bbox_max.y, bbox_min.z) - fruit_base).magnitude());
+                fruit_radius = std::max(fruit_radius, (make_vec3(bbox_max.x, bbox_min.y, bbox_min.z) - fruit_base).magnitude());
+                fruit_radius = std::max(fruit_radius, (make_vec3(bbox_min.x, bbox_max.y, bbox_max.z) - fruit_base).magnitude());
+                fruit_radius = std::max(fruit_radius, (make_vec3(bbox_max.x, bbox_min.y, bbox_max.z) - fruit_base).magnitude());
+                fruit_radius = std::max(fruit_radius, (make_vec3(bbox_max.x, bbox_max.y, bbox_min.z) - fruit_base).magnitude());
+                
+                // Calculate penetration depth more accurately
+                // Use the lowest point of the fruit bounding box vs ground level (z=0)
+                float penetration_depth = std::max(0.0f, -bbox_min.z);
+                
+                // Calculate initial rotation guess
+                float initial_rotation = 0;
+                if (fruit_radius > 0 && penetration_depth > 0) {
+                    // Use arc sine to estimate rotation needed
+                    float angle_estimate = std::asin(std::min(1.0f, penetration_depth / fruit_radius));
+                    // Multiply by 1.5 to account for fruit shape complexity (less aggressive than before)
+                    initial_rotation = std::min(deg2rad(35.0f), angle_estimate * 1.5f);
+                } else {
+                    // Default rotation for partially submerged cases
+                    initial_rotation = deg2rad(10.0f);
+                }
+                
+                // Ensure minimum rotation for any collision case
+                initial_rotation = std::max(initial_rotation, deg2rad(8.0f)); // Slightly smaller minimum
+                
+                // Calculate the proper rotation axis based on peduncle orientation
+                vec3 rotation_axis;
+                
+                // Ensure peduncle axis is normalized
+                if (peduncle_axis.magnitude() < 1e-6f) {
+                    // Fallback if peduncle axis is not available
+                    peduncle_axis = make_vec3(0, 0, 1);
+                } else {
+                    peduncle_axis.normalize();
+                }
+                
+                // Get vector from fruit base to fruit center
+                vec3 bbox_center = 0.5f * (bbox_min + bbox_max);
+                vec3 to_fruit_center = bbox_center - fruit_base;
+                if (to_fruit_center.magnitude() > 1e-6f) {
+                    to_fruit_center.normalize();
+                } else {
+                    // If fruit center is at base, use peduncle direction
+                    to_fruit_center = peduncle_axis;
+                }
+                
+                // Rotation axis is perpendicular to both peduncle axis and to_fruit_center
+                // This gives us the pitch rotation axis used for the original fruit positioning
+                rotation_axis = cross(peduncle_axis, to_fruit_center);
+                if (rotation_axis.magnitude() < 1e-6f) {
+                    // Peduncle and fruit are aligned, use perpendicular to peduncle
+                    if (std::abs(peduncle_axis.z) < 0.9f) {
+                        rotation_axis = cross(peduncle_axis, make_vec3(0, 0, 1));
+                    } else {
+                        rotation_axis = cross(peduncle_axis, make_vec3(1, 0, 0));
+                    }
+                }
+                rotation_axis.normalize();
+                
+                // Iteratively rotate fruit until no collision
+                float rotation_step = initial_rotation;
+                float total_rotation = 0;
+                const float max_rotation = deg2rad(120.0f); // Allow more rotation
+                const int max_iterations = 25; // More iterations
+                
+                // Debug info for this fruit (only show first few)
+                bool debug_this_fruit = (debug_failures_shown < max_debug_failures);
+                if (debug_this_fruit && printmessages) {
+                    std::cout << "\n=== DEBUG: Fruit " << fruit_objID << " collision adjustment ===" << std::endl;
+                    std::cout << "Fruit base: " << fruit_base << std::endl;
+                    std::cout << "Fruit bbox: " << bbox_min << " to " << bbox_max << std::endl;
+                    std::cout << "Fruit radius: " << fruit_radius << std::endl;
+                    std::cout << "Penetration depth: " << penetration_depth << std::endl;
+                    std::cout << "Peduncle axis: " << peduncle_axis << std::endl;
+                    std::cout << "Rotation axis: " << rotation_axis << std::endl;
+                    std::cout << "Initial rotation: " << rad2deg(initial_rotation) << " degrees" << std::endl;
+                    std::cout << "Initial collisions: " << collisions.size() << std::endl;
+                }
+                
+                for (int iter = 0; iter < max_iterations && total_rotation < max_rotation; iter++) {
+                    // Apply rotation about fruit base
+                    // Negative rotation to lift fruit up (opposite of gravity)
+                    context_ptr->rotateObject(fruit_objID, -rotation_step, fruit_base, rotation_axis);
+                    total_rotation += rotation_step;
+                    
+                    // Check if still colliding
+                    fruit_UUIDs = context_ptr->getObjectPrimitiveUUIDs(fruit_objID);
+                    collisions = collision_detection_ptr->findCollisions(fruit_UUIDs, {}, solid_obstacle_UUIDs, {});
+                    
+                    if (debug_this_fruit && printmessages) {
+                        std::cout << "Iter " << iter << ": rotated " << rad2deg(rotation_step) 
+                                 << " deg (total " << rad2deg(total_rotation) << "), collisions: " 
+                                 << collisions.size() << std::endl;
+                    }
+                    
+                    if (collisions.empty()) {
+                        // No longer colliding - now try to fine-tune by rotating back down slightly
+                        // to get as close to the ground as possible
+                        float fine_tune_step = deg2rad(3.0f); // Slightly larger steps for efficiency
+                        float fine_tune_attempts = 5; // Fewer attempts to speed up
+                        float original_total = total_rotation;
+                        
+                        if (debug_this_fruit && printmessages) {
+                            std::cout << "Fine-tuning: trying to rotate back down from " << rad2deg(total_rotation) << " degrees" << std::endl;
+                        }
+                        
+                        for (int fine_iter = 0; fine_iter < fine_tune_attempts; fine_iter++) {
+                            // Try rotating back towards ground (positive rotation)
+                            context_ptr->rotateObject(fruit_objID, fine_tune_step, fruit_base, rotation_axis);
+                            
+                            // Check if still collision-free
+                            fruit_UUIDs = context_ptr->getObjectPrimitiveUUIDs(fruit_objID);
+                            std::vector<uint> test_collisions = collision_detection_ptr->findCollisions(fruit_UUIDs, {}, solid_obstacle_UUIDs, {});
+                            
+                            if (!test_collisions.empty()) {
+                                // Collision detected - rotate back up and stop fine-tuning
+                                context_ptr->rotateObject(fruit_objID, -fine_tune_step, fruit_base, rotation_axis);
+                                break;
+                            } else {
+                                // Still collision-free, reduce total rotation count
+                                total_rotation -= fine_tune_step;
+                            }
+                        }
+                        
+                        if (printmessages) {
+                            if (debug_this_fruit) {
+                                std::cout << "Fine-tuning result: " << rad2deg(original_total) << " -> " << rad2deg(total_rotation) 
+                                         << " degrees (saved " << rad2deg(original_total - total_rotation) << " degrees)" << std::endl;
+                            }
+                            std::cout << "Fruit " << fruit_objID << " rotated " << rad2deg(total_rotation) 
+                                     << " degrees (fine-tuned) to avoid obstacle collision." << std::endl;
+                        }
+                        break;
+                    }
+                    
+                    // Adaptive step size - reduce for fine tuning, but not too aggressively
+                    if (iter > 8) {
+                        rotation_step *= 0.7f; // Less aggressive reduction
+                    }
+                }
+                
+                if (!collisions.empty()) {
+                    if (debug_this_fruit && printmessages) {
+                        std::cout << "FAILED: Fruit " << fruit_objID << " still colliding after " 
+                                 << rad2deg(total_rotation) << " degrees rotation (" << max_iterations 
+                                 << " iterations)" << std::endl;
+                        
+                        // Get final bounding box to see where it ended up
+                        vec3 final_bbox_min, final_bbox_max;
+                        context_ptr->getObjectBoundingBox(fruit_objID, final_bbox_min, final_bbox_max);
+                        std::cout << "Final bbox: " << final_bbox_min << " to " << final_bbox_max << std::endl;
+                        std::cout << "Lowest point: " << final_bbox_min.z << std::endl;
+                        
+                        debug_failures_shown++;
+                    } else if (printmessages) {
+                        std::cout << "Warning: Fruit " << fruit_objID << " still colliding after maximum rotation." << std::endl;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void PlantArchitecture::pruneSolidBoundaryCollisions() {
+    if (!solid_obstacle_avoidance_enabled || solid_obstacle_UUIDs.empty()) {
+        return; // No solid boundaries defined
+    }
+    
+    if (collision_detection_ptr == nullptr) {
+        return; // No collision detection available
+    }
+
+    if (printmessages) {
+        std::cout << "Performing fallback collision detection for solid boundaries..." << std::endl;
+    }
+
+    // The BVH should already be current from advanceTime() - we're called at the very end
+    // Collect all plant primitives and do one batch collision detection call for efficiency
+    std::vector<uint> all_plant_primitives;
+    
+    // First pass: collect all plant primitives
+    for (auto &plant_instance : plant_instances) {
+        for (auto &shoot: plant_instance.second.shoot_tree) {
+            // Collect ALL internode primitives (protection applied during pruning, not collection)
+            for (auto &phytomer: shoot->phytomers) {
+                if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
+                    std::vector<uint> internode_primitives = context_ptr->getObjectPrimitiveUUIDs(shoot->internode_tube_objID);
+                    all_plant_primitives.insert(all_plant_primitives.end(), internode_primitives.begin(), internode_primitives.end());
+                }
+                
+                // Collect leaf primitives
+                for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size(); petiole++) {
+                    for (uint objID : phytomer->leaf_objIDs.at(petiole)) {
+                        if (context_ptr->doesObjectExist(objID)) {
+                            std::vector<uint> leaf_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                            all_plant_primitives.insert(all_plant_primitives.end(), leaf_primitives.begin(), leaf_primitives.end());
+                        }
+                    }
+                }
+
+                // Collect petiole primitives
+                for (uint petiole = 0; petiole < phytomer->petiole_objIDs.size(); petiole++) {
+                    for (uint objID : phytomer->petiole_objIDs.at(petiole)) {
+                        if (context_ptr->doesObjectExist(objID)) {
+                            std::vector<uint> petiole_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                            all_plant_primitives.insert(all_plant_primitives.end(), petiole_primitives.begin(), petiole_primitives.end());
+                        }
+                    }
+                }
+
+                // Collect inflorescence primitives
+                for (auto &petiole: phytomer->floral_buds) {
+                    for (auto &fbud: petiole) {
+                        for (uint objID : fbud.peduncle_objIDs) {
+                            if (context_ptr->doesObjectExist(objID)) {
+                                std::vector<uint> peduncle_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                                all_plant_primitives.insert(all_plant_primitives.end(), peduncle_primitives.begin(), peduncle_primitives.end());
+                            }
+                        }
+                        for (uint objID : fbud.inflorescence_objIDs) {
+                            if (context_ptr->doesObjectExist(objID)) {
+                                std::vector<uint> inflorescence_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                                all_plant_primitives.insert(all_plant_primitives.end(), inflorescence_primitives.begin(), inflorescence_primitives.end());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (all_plant_primitives.empty()) {
+        return; // No primitives to check
+    }
+
+    // Note: PlantArchitecture already disables automatic BVH rebuilds in enableCollisionDetection()
+    // So we don't need to modify that setting here - just do batch collision detection
+    
+    // Single collision detection call - this should only trigger one BVH operation
+    std::vector<uint> intersecting_primitives = collision_detection_ptr->findCollisions(solid_obstacle_UUIDs, {}, all_plant_primitives, {});
+    
+    if (intersecting_primitives.empty()) {
+        return; // No collisions detected
+    }
+
+    // Create a set for fast lookup of intersecting primitives
+    std::unordered_set<uint> intersecting_set(intersecting_primitives.begin(), intersecting_primitives.end());
+
+    uint total_pruned_objects = 0;
+    std::vector<uint> objects_to_delete; // Collect objects for deferred deletion
+
+    // Second pass: check organs against the intersecting set and prune efficiently
+    for (auto &plant_instance : plant_instances) {
+        for (auto &shoot: plant_instance.second.shoot_tree) {
+            for (auto &phytomer: shoot->phytomers) {
+                // Check internode collision (protect main stem base like pruneGroundCollisions)
+                if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
+                    std::vector<uint> internode_primitives = context_ptr->getObjectPrimitiveUUIDs(shoot->internode_tube_objID);
+                    
+                    // Check if any internode primitive intersects
+                    bool has_collision = false;
+                    for (uint primitive : internode_primitives) {
+                        if (intersecting_set.find(primitive) != intersecting_set.end()) {
+                            has_collision = true;
+                            break;
+                        }
+                    }
+                    
+                    if (has_collision) {
+                        // Protect main stem base from pruning (like pruneGroundCollisions)
+                        if (!(phytomer->shoot_index.x == 0 && phytomer->rank == 0)) {
+                            objects_to_delete.push_back(shoot->internode_tube_objID);
+                            shoot->terminateApicalBud();
+                            total_pruned_objects++;
+                        }
+                    }
+                }
+            
+                // Check leaves/petioles collision (combine since removeLeaf() removes both)
+                bool leaf_collision = false;
+                for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size() && !leaf_collision; petiole++) {
+                    for (uint objID : phytomer->leaf_objIDs.at(petiole)) {
+                        if (context_ptr->doesObjectExist(objID)) {
+                            std::vector<uint> leaf_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                            for (uint primitive : leaf_primitives) {
+                                if (intersecting_set.find(primitive) != intersecting_set.end()) {
+                                    leaf_collision = true;
+                                    break;
+                                }
+                            }
+                            if (leaf_collision) break;
+                        }
+                    }
+                }
+
+                // Check petioles if leaves didn't already have collision
+                if (!leaf_collision) {
+                    for (uint petiole = 0; petiole < phytomer->petiole_objIDs.size() && !leaf_collision; petiole++) {
+                        for (uint objID : phytomer->petiole_objIDs.at(petiole)) {
+                            if (context_ptr->doesObjectExist(objID)) {
+                                std::vector<uint> petiole_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                                for (uint primitive : petiole_primitives) {
+                                    if (intersecting_set.find(primitive) != intersecting_set.end()) {
+                                        leaf_collision = true;
+                                        break;
+                                    }
+                                }
+                                if (leaf_collision) break;
+                            }
+                        }
+                    }
+                }
+
+                if (leaf_collision) {
+                    // Add leaf and petiole objects to deferred deletion instead of calling removeLeaf()
+                    // which would delete immediately
+                    std::vector<uint> flat_leaf_objIDs = flatten(phytomer->leaf_objIDs);
+                    objects_to_delete.insert(objects_to_delete.end(), flat_leaf_objIDs.begin(), flat_leaf_objIDs.end());
+                    
+                    if (phytomer->build_context_geometry_petiole) {
+                        std::vector<uint> flat_petiole_objIDs = flatten(phytomer->petiole_objIDs);
+                        objects_to_delete.insert(objects_to_delete.end(), flat_petiole_objIDs.begin(), flat_petiole_objIDs.end());
+                    }
+                    
+                    // Clear the phytomer data structures like removeLeaf() does (but without immediate deletion)
+                    phytomer->petiole_radii.resize(0);
+                    phytomer->petiole_colors.resize(0);
+                    phytomer->petiole_length.resize(0);
+                    phytomer->leaf_size_max.resize(0);
+                    phytomer->leaf_rotation.resize(0);
+                    phytomer->leaf_bases.resize(0);
+                    phytomer->leaf_objIDs.clear();
+                    phytomer->leaf_bases.clear();
+                    if (phytomer->build_context_geometry_petiole) {
+                        phytomer->petiole_objIDs.resize(0);
+                    }
+                    
+                    total_pruned_objects++;
+                }
+
+                // Check inflorescence collision (fruits/flowers)
+                for (auto &petiole: phytomer->floral_buds) {
+                    for (auto &fbud: petiole) {
+                        // Check peduncle collision first
+                        bool peduncle_collision = false;
+                        for (uint objID : fbud.peduncle_objIDs) {
+                            if (context_ptr->doesObjectExist(objID)) {
+                                std::vector<uint> peduncle_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                                for (uint primitive : peduncle_primitives) {
+                                    if (intersecting_set.find(primitive) != intersecting_set.end()) {
+                                        peduncle_collision = true;
+                                        break;
+                                    }
+                                }
+                                if (peduncle_collision) break;
+                            }
+                        }
+                        
+                        if (peduncle_collision) {
+                            // Peduncle collision - add all associated objects to deletion list
+                            objects_to_delete.insert(objects_to_delete.end(), fbud.peduncle_objIDs.begin(), fbud.peduncle_objIDs.end());
+                            objects_to_delete.insert(objects_to_delete.end(), fbud.inflorescence_objIDs.begin(), fbud.inflorescence_objIDs.end());
+                            fbud.peduncle_objIDs.clear();
+                            fbud.inflorescence_objIDs.clear();
+                            fbud.inflorescence_bases.clear();
+                            total_pruned_objects++;
+                        } else {
+                            // Check individual inflorescence objects - use backwards iteration like original code
+                            for (int p = fbud.inflorescence_objIDs.size() - 1; p >= 0; p--) {
+                                uint objID = fbud.inflorescence_objIDs.at(p);
+                                if (context_ptr->doesObjectExist(objID)) {
+                                    std::vector<uint> inflorescence_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                                    
+                                    bool obj_collision = false;
+                                    for (uint primitive : inflorescence_primitives) {
+                                        if (intersecting_set.find(primitive) != intersecting_set.end()) {
+                                            obj_collision = true;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if (obj_collision) {
+                                        objects_to_delete.push_back(objID);
+                                        fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
+                                        fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
+                                        total_pruned_objects++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Execute all deletions at once to minimize BVH rebuilds
+    if (!objects_to_delete.empty()) {
+        // Remove duplicates and invalid object IDs to prevent deletion errors
+        std::sort(objects_to_delete.begin(), objects_to_delete.end());
+        objects_to_delete.erase(std::unique(objects_to_delete.begin(), objects_to_delete.end()), objects_to_delete.end());
+        
+        // Filter out objects that don't exist
+        std::vector<uint> valid_objects;
+        for (uint objID : objects_to_delete) {
+            if (context_ptr->doesObjectExist(objID)) {
+                valid_objects.push_back(objID);
+            }
+        }
+        
+        if (!valid_objects.empty()) {
+            context_ptr->deleteObject(valid_objects);
+        }
+    }
+    
+    if (printmessages && total_pruned_objects > 0) {
+        std::cout << "Pruned " << total_pruned_objects << " plant objects due to solid boundary collisions." << std::endl;
+    }
 }
 
 std::vector<uint> makeTubeFromCones(uint radial_subdivisions, const std::vector<helios::vec3> &vertices, const std::vector<float> &radii, const std::vector<helios::RGBcolor> &colors, helios::Context *context_ptr) {
@@ -4596,13 +5151,14 @@ void PlantArchitecture::enableFruitCollisionDetection(bool enabled) {
     }
 }
 
-void PlantArchitecture::enableSolidObstacleAvoidance(const std::vector<uint> &obstacle_UUIDs, float avoidance_distance) {
+void PlantArchitecture::enableSolidObstacleAvoidance(const std::vector<uint> &obstacle_UUIDs, float avoidance_distance, bool enable_fruit_adjustment) {
     solid_obstacle_avoidance_enabled = true;
     solid_obstacle_UUIDs = obstacle_UUIDs;
     solid_obstacle_avoidance_distance = avoidance_distance;
+    solid_obstacle_fruit_adjustment_enabled = enable_fruit_adjustment;
 
     if (printmessages) {
-        std::cout << "Enabled solid obstacle avoidance for " << obstacle_UUIDs.size() << " primitives (avoidance distance: " << avoidance_distance << "m)" << std::endl;
+        std::cout << "Enabled solid obstacle avoidance for " << obstacle_UUIDs.size() << " primitives (avoidance distance: " << avoidance_distance << "m, fruit adjustment: " << (enable_fruit_adjustment ? "enabled" : "disabled") << ")" << std::endl;
     }
 
     // The BVH will be built/updated during rebuildBVHForTimestep to include both
