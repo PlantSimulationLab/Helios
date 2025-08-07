@@ -1422,9 +1422,9 @@ void PlantArchitecture::initializeGroundCherryWeedShoots() {
 
     shoot_parameters.phyllochron_min = 1;
     shoot_parameters.elongation_rate_max = 0.1;
-    shoot_parameters.girth_area_factor = 3.f;
-    shoot_parameters.vegetative_bud_break_time = 7;
-    shoot_parameters.vegetative_bud_break_probability_min = 0.2;
+    shoot_parameters.girth_area_factor = 2.f;
+    shoot_parameters.vegetative_bud_break_time = 10;
+    shoot_parameters.vegetative_bud_break_probability_min = 0.1;
     shoot_parameters.vegetative_bud_break_probability_decay_rate = -0.5;
     shoot_parameters.flower_bud_break_probability = 0.25;
     shoot_parameters.fruit_set_probability = 0.5;
@@ -1453,7 +1453,7 @@ uint PlantArchitecture::buildGroundCherryWeedPlant(const helios::vec3 &base_posi
 
     setPlantPhenologicalThresholds(plantID, 0, 20, -1, 20, 30, 1000, false);
 
-    plant_instances.at(plantID).max_age = 50;
+    plant_instances.at(plantID).max_age = 80;
 
     return plantID;
 }
