@@ -81,7 +81,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
    <tr>
      <td>temperature</td>
      <td>Kelvin</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
      <td>Primitive surface temperature. <b>NOTE: Only needed if performing emission calculations.</b></td>
      <td>Can be computed by \ref EnergyBalanceModel plug-in</td>
      <td>300 K</td>
@@ -89,7 +89,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
    <tr>
      <td>reflectivity\_*</td>
      <td>unitless</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
      <td>Primitive reflectivity for band * (i.e., reflectivity for band 'PAR' would be 'reflectivity_PAR').</td>
      <td>N/A</td>
      <td>0</td>
@@ -97,7 +97,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
    <tr>
      <td>transmissivity\_*</td>
      <td>unitless</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
      <td>Primitive transmissivity for band * (i.e., transmissivity for band 'PAR' would be 'transmissivity_PAR').</td>
      <td>N/A</td>
      <td>0</td>
@@ -105,7 +105,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
    <tr>
      <td>emissivity\_*</td>
      <td>unitless</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
      <td>Primitive emissivity for band * (i.e., emissivity for band 'PAR' would be 'emissivity_PAR'). <b>NOTE: Only needed if performing emission calculations.</b></td>
      <td>N/A</td>
      <td>1.0</td>
@@ -113,7 +113,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
    <tr>
      <td>twosided\_flag</td>
      <td>N/A</td>
-     <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly</td>
      <td>Flag to determine whether a primitive should be treated as two-sided (=1) or single-sided (=0). See Sect. \ref RadTwoSided below for more information.</td>
      <td>N/A</td>
      <td>1</td>
@@ -121,7 +121,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
    <tr>
      <td>specular\_exponent</td>
      <td>N/A</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
      <td>Value controlling the spread of specular reflection distribution in simulated camera images.</td>
      <td>N/A</td>
      <td>-1 (specular reflection disabled)</td>
@@ -129,7 +129,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
    <tr>
      <td>specular\_scale</td>
      <td>N/A</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
      <td>Value that scales the strength of specular reflection in simulated camera images.</td>
      <td>N/A</td>
      <td>1.0</td>
@@ -148,7 +148,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
    <tr>	
      <td>radiation\_flux\_*</td>
      <td>W/m<sup>2</sup></td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
      <td>Absorbed radiation flux for band * (i.e., the flux for band 'PAR' would be 'radiation_flux_PAR').</td>
    </tr>
  </table>
@@ -165,7 +165,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \subsection RadTwoSided Area Basis for Calculating Fluxes
 
- The ultimate outputs of the radiation model are absorbed radiative fluxes, which is the rate of radiative energy transfer per unit surface area. <b>All flux calculations are on a per unit one-sided surface area basis.</b> For planar primitive elements (patches and triangles), this means that the flux will be the rate of radiative energy absorption on both sides of the primitive, divided by the one-sided surface area of the primitive (i.e., that returned by the \ref helios::Primitive::getArea() function).
+ The ultimate outputs of the radiation model are absorbed radiative fluxes, which is the rate of radiative energy transfer per unit surface area. <b>All flux calculations are on a per unit one-sided surface area basis.</b> For planar primitive elements (patches and triangles), this means that the flux will be the rate of radiative energy absorption on both sides of the primitive, divided by the one-sided surface area of the primitive (i.e., that returned by the \ref helios::Context::getPrimitiveArea(uint) const function).
 
  By default, a planar primitive will emit and absorb radiation from/to both faces. For primitives that only emit and absorb from/to one face (e.g., ground primitives), this default behavior should be modified. Single-sided emission can be achieved by setting primitive data for the particular primitive with a name of "twosided_flag" to a value of 0 (where '0' is defined as an unsigned integer):
 
@@ -516,17 +516,17 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
    </tr>
    <tr>
      <td>camera_position</td>
-     <td>\htmlonly<font face="courier" color="green">vec3</font>\endhtmlonly</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">vec3</span>\endhtmlonly</td>
      <td>Cartesian (x,y,z) position of the center of the camera lens.</td>
    </tr>
    <tr>
      <td>camera_lookat</td>
-     <td>\htmlonly<font face="courier" color="green">vec3</font>\endhtmlonly</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">vec3</span>\endhtmlonly</td>
      <td>Cartesian (x,y,z) position that the camera is looking directly at (i.e., a line perpendicular to the lens will pass through camera_position and camera_lookat).</td>
    </tr>
    <tr>
      <td>antialiasing_samples</td>
-     <td>\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly</td>
      <td>Number of ray samples launched per camera pixel.</td>
    </tr>
  </table>
@@ -536,27 +536,27 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  <table>
    <tr>
      <td>lens_diameter</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
      <td>Physical diameter of the camera lens.</td>
    </tr>
    <tr>
      <td>focal_plane_distance</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
      <td>Distance from the camera lens to the focal plane (at this distance from the camera, all objects will be in focus).</td>
    </tr>
    <tr>
      <td>HFOV</td>
-     <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
      <td>Angle of the horizontal camera field of view in degrees.</td>
    </tr>
    <tr>
       <td>FOV_aspect_ratio</td>
-      <td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td>
+      <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
       <td>Ratio of horizontal to vertical camera field of view.</td>
    </tr>
    <tr>
      <td>camera_resolution</td>
-     <td>\htmlonly<font face="courier" color="green">int2</font>\endhtmlonly</td>
+     <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int2</span>\endhtmlonly</td>
      <td>Number of camera pixels in the horizontal and vertical directions.</td>
    </tr>
  </table>
@@ -650,7 +650,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  3\. Set up the scene in Helios based on the geometry, radiative conditions, and camera(s) that will be present in the simulations. You must specify the spectral distribution of any radiation sources using \ref RadiationModel::setSourceSpectrum(), and specify an initial guess for the camera channel spectral distribution(s) using \ref RadiationModel::setCameraSpectralResponse().
 
- 4\. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method \ref CameraCalibration::addDefaultColorboard(), or a custom color board \ref helios::CameraCalibration::addCustomColorboard().
+ 4\. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method ef CameraCalibration::addDefaultColorboard(), or a custom color board ef CameraCalibration::addColorboard().
 
  \subsection RadRun Running Simulations
 
@@ -825,6 +825,34 @@ The above example assumes that we have already added some geometry to the Contex
  Simulated camera data can be written to file as a JPEG image, or the raw pixel data can be queried from the Context.
 
  JPEG images are written either as a grayscale image (1 spectral band) or and RGB image (3 spectral bands) using the \ref RadiationModel::writeCameraImage() method. This method takes three required arguments and two optional arguments: 1) a string denoting the label of a camera that was added through the \ref RadiationModel::addRadiationCamera() method, 2) a vector of strings denoting the label(s) of radiation bands to be written to the image(s), which must contain exactly 1 element (grayscale image) or 3 elements (RGB image), and 3) a string denoting the base of the image filename, which may be appended with information like a radiation band label or frame count. The two optional arguments are: 1) the relative path to the directory where the images should be stored, and 2) a numerical integer identifier to be appended to the image file name (e.g., "camera_thermal_00001.jpeg"). Note that this value must be less than or equal to 99,9999. By default, images are stored in the directory where the executable is being run (usually the build directory), and the numerical identifier is omitted unless a value is provided.
+
+ \subsubsection RadCamSegmentation Writing Camera Image Segmentation Masks
+
+ In addition to regular camera images, the radiation model can generate segmentation masks in COCO JSON format for machine learning applications. Segmentation masks identify and outline objects within camera images, providing pixel-level annotations that can be used for training object detection and segmentation models.
+
+ Two methods are available for writing segmentation masks:
+
+ 1\. \ref RadiationModel::writeImageSegmentationMasks() - Creates segmentation masks based on primitive data labels.
+
+ 2\. \ref RadiationModel::writeImageSegmentationMasks_ObjectData() - Creates segmentation masks based on object data labels.
+
+ Both methods take the following arguments: 1) a string denoting the camera label, 2) a string denoting the primitive/object data label to use for segmentation, 3) an integer object class ID for COCO annotations, 4) a string denoting the base filename for the JSON output, 5) an optional string specifying the output directory path (defaults to current directory), 6) an optional boolean flag to append to existing JSON files (defaults to false for new files), and 7) an optional frame number for time series data.
+
+ The segmentation masks are generated using boundary tracing algorithms that identify connected regions of pixels with the same data label values. Each unique label value becomes a separate annotation in the COCO JSON output, with precise polygon boundaries traced around the object regions.
+
+ When the append flag is set to true, new annotations are added to existing JSON files, allowing multiple primitive/object types to be combined into a single segmentation dataset. This is useful for creating comprehensive annotations that include both foreground objects and background elements like ground surfaces.
+
+ ~~~~~~{.cpp}
+ // Write segmentation masks for bunny objects (primitive data approach)
+ radiationmodel.writeImageSegmentationMasks("visible", "bunny", 1, "bunny_masks", "./");
+
+ // Write segmentation masks for ground surfaces  
+ radiationmodel.writeImageSegmentationMasks("visible", "ground", 0, "ground_masks", "./");
+
+ // Append both to create combined annotations
+ radiationmodel.writeImageSegmentationMasks("visible", "ground", 0, "combined_masks", "./", false);
+ radiationmodel.writeImageSegmentationMasks("visible", "bunny", 1, "combined_masks", "./", true);
+ ~~~~~~
 
  Below is example code of writing an RGB image (3 spectral bands).
 

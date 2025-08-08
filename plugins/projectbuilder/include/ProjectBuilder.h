@@ -16,7 +16,7 @@ Copyright (C) 2016-2025 Brian Bailey
 #ifndef PROJECT_BUILDER
 #define PROJECT_BUILDER
 
-//#pragma once
+// #pragma once
 
 #include <set>
 
@@ -32,78 +32,78 @@ class Visualizer;
 class CameraProperties;
 class CanopyGenerator;
 void BuildGeometry(const std::string &xml_input_file, PlantArchitecture *plant_architecture_ptr, helios::Context *context_ptr);
-void InitializeRadiation(const std::string &xml_input_file, SolarPosition *solarposition_ptr, RadiationModel *radiation_ptr, helios::Context *context_ptr );
+void InitializeRadiation(const std::string &xml_input_file, SolarPosition *solarposition_ptr, RadiationModel *radiation_ptr, helios::Context *context_ptr);
 void InitializeEnergyBalance(const std::string &xml_input_file, BLConductanceModel *boundarylayerconductancemodel, EnergyBalanceModel *energybalancemodel, helios::Context *context_ptr);
-void InitializeSimulation(const std::string &xml_input_file, helios::Context *context_ptr );
+void InitializeSimulation(const std::string &xml_input_file, helios::Context *context_ptr);
 
 
 #ifdef ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
-    #include "BoundaryLayerConductanceModel.h"
-#endif //BOUNDARYLAYERCONDUCTANCEMODEL
+#include "BoundaryLayerConductanceModel.h"
+#endif // BOUNDARYLAYERCONDUCTANCEMODEL
 
 #ifdef ENABLE_ENERGYBALANCEMODEL
-    #include "EnergyBalanceModel.h"
-#endif //ENERGYBALANCEMODEL
+#include "EnergyBalanceModel.h"
+#endif // ENERGYBALANCEMODEL
 
 #if defined(ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL) && defined(ENABLE_ENERGYBALANCEMODEL)
-    #include "InitializeEnergyBalance.h"
-#endif //BOUNDARYLAYERCONDUCTANCEMODEL && ENERGYBALANCEMODEL
+#include "InitializeEnergyBalance.h"
+#endif // BOUNDARYLAYERCONDUCTANCEMODEL && ENERGYBALANCEMODEL
 
 #ifdef ENABLE_PLANT_ARCHITECTURE
-    #include "PlantArchitecture.h"
-    #include "BuildGeometry.h"
-#endif //PLANT_ARCHITECTURE
+#include "BuildGeometry.h"
+#include "PlantArchitecture.h"
+#endif // PLANT_ARCHITECTURE
 
 #ifdef ENABLE_CANOPY_GENERATOR
-    #include "CanopyGenerator.h"
-#endif //CANOPY_GENERATOR
+#include "CanopyGenerator.h"
+#endif // CANOPY_GENERATOR
 
 #ifdef ENABLE_RADIATION_MODEL
-    #include "RadiationModel.h"
-    #include "InitializeRadiation.h"
-#endif //RADIATION_MODEL
+#include "InitializeRadiation.h"
+#include "RadiationModel.h"
+#endif // RADIATION_MODEL
 
 #ifdef ENABLE_SOLARPOSITION
-    #include "SolarPosition.h"
-#endif //SOLARPOSITION
+#include "SolarPosition.h"
+#endif // SOLARPOSITION
 
 #ifdef ENABLE_HELIOS_VISUALIZER
-    #include "glew.h"
-    #include "Visualizer.h"
-    // IMGUI
-    #include "imgui.h"
-    #include "imgui_internal.h"
-    #include "backends/imgui_impl_glfw.h"
-    #include "backends/imgui_impl_opengl3.h"
-    #include "misc/cpp/imgui_stdlib.h"
-    #include "GLFW/glfw3.h"
-#endif //HELIOS_VISUALIZER
+#include "glew.h"
+#include "Visualizer.h"
+// IMGUI
+#include "GLFW/glfw3.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
+#include "imgui.h"
+#include "imgui_internal.h"
+#include "misc/cpp/imgui_stdlib.h"
+#endif // HELIOS_VISUALIZER
 
 
 //! Function to convert vector to string
 /**
  * \param[in] v Vector input
-*/
-std::string vec_to_string(const helios::vec2& v);
+ */
+std::string vec_to_string(const helios::vec2 &v);
 
 //! Function to convert vector to string
 /**
  * \param[in] v Vector input
-*/
-std::string vec_to_string(const helios::vec3& v);
+ */
+std::string vec_to_string(const helios::vec3 &v);
 
 //! Function to convert vector to string
 /**
  * \param[in] v Vector input
-*/
-std::string vec_to_string(const helios::int2& v);
+ */
+std::string vec_to_string(const helios::int2 &v);
 
 //! Function to linearly space between two vectors
 /**
  * \param[in] a Start point coordinates
  * \param[in] b End point coordinates
  * \param[in] num_points Total number of points (including a & b)
-*/
+ */
 [[nodiscard]] std::vector<helios::vec3> linspace(const helios::vec3 &a, const helios::vec3 &b, int num_points);
 
 //! Function to return interpolated vector based on keypoints
@@ -111,15 +111,15 @@ std::string vec_to_string(const helios::int2& v);
  * \param[in] keypoints Vector of keypoints
  * \param[in] positions Vector of position vectors
  * \param[in] num_points Total number of points (including points in positions)
-*/
+ */
 [[nodiscard]] std::vector<helios::vec3> interpolate(const std::vector<int> &keypoints, const std::vector<helios::vec3> &positions, int num_points);
 
 //! ImGUI toggle button function
 /**
  * \param[in] str_id String ID
  * \param[in] v Boolean representing on or off
-*/
-void toggle_button(const char* str_id, bool* v);
+ */
+void toggle_button(const char *str_id, bool *v);
 
 //! Function to open file dialog
 std::string file_dialog();
@@ -127,7 +127,7 @@ std::string file_dialog();
 //! Function to open save as file dialog
 /**
  * \param[in] extensions List of possible extensions
-*/
+ */
 std::string save_as_file_dialog(std::vector<std::string> extensions);
 
 //! Function to get node labels for a given set of nodes
@@ -135,150 +135,150 @@ std::string save_as_file_dialog(std::vector<std::string> extensions);
  * \param[in] xml_file Path to the XML file
  * \param[in] label_name Name of the label
  * \param[in] node_name Name of the XML nodes to get labels from
-*/
-[[nodiscard]] std::vector<std::string> get_xml_node_values(const std::string &xml_file, const std::string& label_name, const std::string& node_name);
+ */
+[[nodiscard]] std::vector<std::string> get_xml_node_values(const std::string &xml_file, const std::string &label_name, const std::string &node_name);
 
 //! Digit pointer object; union of int* and float*.
-union digitPtr{
-  int* i;
-  float* f;
+union digitPtr {
+    int *i;
+    float *f;
 };
 
 //! Struct to represent an object or canopy
-struct obj{
-  int idx;
-  bool isCanopy;
+struct obj {
+    int idx;
+    bool isCanopy;
 };
 
 //! Struct to combine int* and float* objects. Also contains a bool* which is used to indicate that the associated object needs to be updated.
-struct taggedPtr{
-  digitPtr ptr;
-  bool isInt;
-  bool *dirty;
+struct taggedPtr {
+    digitPtr ptr;
+    bool isInt;
+    bool *dirty;
 };
 
 //! Function to create a tagged pointer object from an int pointer
 /**
  * \param[in] ptr Int pointer
  * \param[in] dirty Bool used to determine if associated object needs update
-*/
-[[nodiscard]] taggedPtr createTaggedPtr(int* ptr, bool* dirty);
+ */
+[[nodiscard]] taggedPtr createTaggedPtr(int *ptr, bool *dirty);
 
 //! Function to create a tagged pointer object from a float pointer
 /**
  * \param[in] ptr Float pointer
  * \param[in] dirty Bool used to determine if associated object needs update
-*/
-[[nodiscard]] taggedPtr createTaggedPtr(float* ptr, bool* dirty);
+ */
+[[nodiscard]] taggedPtr createTaggedPtr(float *ptr, bool *dirty);
 
 //! Function to create a tagged pointer object from an int pointer
 /**
  * \param[in] ptr Int pointer
-*/
-[[nodiscard]] taggedPtr createTaggedPtr(int* ptr);
+ */
+[[nodiscard]] taggedPtr createTaggedPtr(int *ptr);
 
 //! Function to create a tagged pointer object from a float pointer
 /**
  * \param[in] ptr Float pointer
-*/
-[[nodiscard]] taggedPtr createTaggedPtr(float* ptr);
+ */
+[[nodiscard]] taggedPtr createTaggedPtr(float *ptr);
 
 //! Distribution union object; union of normal_distribution, uniform_real_distribution, and weibull_distribution
-union distUnion{
- std::normal_distribution<float> *normal;
- std::uniform_real_distribution<float> *uniform;
- std::weibull_distribution<float> *weibull;
+union distUnion {
+    std::normal_distribution<float> *normal;
+    std::uniform_real_distribution<float> *uniform;
+    std::weibull_distribution<float> *weibull;
 };
 
 //! Struct to combine distribution objects (flag: -1 = N/A, 0 = normal, 1 = uniform, 2 = weibull) (repeat: false = randomize once per recording, true = randomize for every image)
-struct distribution{
- distUnion dist;
- int flag;
- bool repeat;
+struct distribution {
+    distUnion dist;
+    int flag;
+    bool repeat;
 };
 
 //! Band group struct
-struct bandGroup{
- std::vector<std::string> bands;
- bool grayscale;
- bool norm;
+struct bandGroup {
+    std::vector<std::string> bands;
+    bool grayscale;
+    bool norm;
 };
 
 //! Canopy struct
-struct canopy{
- int idx;
- float age;
- float ground_clipping_height;
- std::string label;
- std::string library_name;
- std::string library_name_verbose;
- std::vector<uint> IDs;
- std::vector<helios::vec3> individual_plant_locations;
- helios::vec2 plant_spacing;
- helios::int2 plant_count;
- helios::vec3 origin;
- std::string data_group;
- bool is_dirty;
+struct canopy {
+    int idx;
+    float age;
+    float ground_clipping_height;
+    std::string label;
+    std::string library_name;
+    std::string library_name_verbose;
+    std::vector<uint> IDs;
+    std::vector<helios::vec3> individual_plant_locations;
+    helios::vec2 plant_spacing;
+    helios::int2 plant_count;
+    helios::vec3 origin;
+    std::string data_group;
+    bool is_dirty;
 };
 
 //! Object struct
-struct object{
- int index;
- std::string name;
- std::string file;
- std::string data_group;
- std::vector<uint> UUIDs;
- helios::vec3 position;
- helios::vec3 prev_position;
- helios::vec3 orientation;
- helios::vec3 prev_orientation;
- helios::vec3 scale;
- helios::vec3 prev_scale;
- helios::RGBcolor color;
- helios::RGBcolor prev_color;
- bool use_texture_file;
- bool is_dirty;
+struct object {
+    int index;
+    std::string name;
+    std::string file;
+    std::string data_group;
+    std::vector<uint> UUIDs;
+    helios::vec3 position;
+    helios::vec3 prev_position;
+    helios::vec3 orientation;
+    helios::vec3 prev_orientation;
+    helios::vec3 scale;
+    helios::vec3 prev_scale;
+    helios::RGBcolor color;
+    helios::RGBcolor prev_color;
+    bool use_texture_file;
+    bool is_dirty;
 };
 
 //! Rig struct
-struct rig{
- std::string label;
- std::vector<distribution> position_noise;
- helios::RGBcolor color;
- helios::vec3 position;
- helios::vec3 lookat;
- std::set<std::string> camera_labels;
- std::set<std::string> light_labels;
- bool write_depth;
- bool write_norm_depth;
+struct rig {
+    std::string label;
+    std::vector<distribution> position_noise;
+    helios::RGBcolor color;
+    helios::vec3 position;
+    helios::vec3 lookat;
+    std::set<std::string> camera_labels;
+    std::set<std::string> light_labels;
+    bool write_depth;
+    bool write_norm_depth;
 };
 
-bool parse_distribution( const std::string &input_string, distribution &converted_distribution );
+bool parse_distribution(const std::string &input_string, distribution &converted_distribution);
 
 //! Function to create a distribution struct from a normal distribution
 /**
  ** \param[in] dist Distribution
  ** \param[in] randomize_repeat If true, randomize for every image.
-*/
+ */
 distribution createDistribution(const std::normal_distribution<float> &dist, bool randomize_repeat);
 
 //! Function to create a distribution struct from a uniform real distribution
 /**
  ** \param[in] dist Distribution
  ** \param[in] randomize_repeat If true, randomize for every image.
-*/
+ */
 distribution createDistribution(const std::uniform_real_distribution<float> &dist, bool randomize_repeat);
 
 //! Function to create a distribution struct from a weibull distribution
 /**
  ** \param[in] dist Distribution
  ** \param[in] randomize_repeat If true, randomize for every image.
-*/
+ */
 distribution createDistribution(const std::weibull_distribution<float> &dist, bool randomize_repeat);
 
 
 class ProjectBuilder {
-  private:
+private:
     //! XML Document
     pugi::xml_document xmldoc;
 
@@ -403,23 +403,20 @@ class ProjectBuilder {
     std::vector<uint> fruit_UUIDs;
 
     //! Primitive names vector
-    std::vector<std::string> primitive_names = {"All", "ground", "leaf", "petiolule", "petiole", "internode",
-                                                "peduncle", "petal", "pedicel", "fruit"};
+    std::vector<std::string> primitive_names = {"All", "ground", "leaf", "petiolule", "petiole", "internode", "peduncle", "petal", "pedicel", "fruit"};
 
     //! Bounding boxes
-    std::map<std::string, bool> bounding_boxes = {{"plantID", false}, {"leafID", false}, {"peduncleID", false},
-                                                  {"closedflowerID", false}, {"openflowerID", false}, {"fruitID", false},
-                                                  {"rank", false}, {"age", false}, {"carbohydrate_concentration", false}};
+    std::map<std::string, bool> bounding_boxes = {
+            {"plantID", false}, {"leafID", false}, {"peduncleID", false}, {"closedflowerID", false}, {"openflowerID", false}, {"fruitID", false}, {"rank", false}, {"age", false}, {"carbohydrate_concentration", false}};
 
     //! Bounding boxes map
     std::map<std::string, int> bounding_boxes_map;
 
     //! Primitive names set
-    std::set<std::string> primitive_names_set = {"All", "ground", "leaf", "petiolule", "petiole", "internode",
-                                                 "peduncle", "petal", "pedicel", "fruit"};
+    std::set<std::string> primitive_names_set = {"All", "ground", "leaf", "petiolule", "petiole", "internode", "peduncle", "petal", "pedicel", "fruit"};
 
     //! Map keyed by primitive names that returns the address of a vector of UUIDs corresponding to the primitive name
-    std::map<std::string, std::vector<uint>*> primitive_addresses;
+    std::map<std::string, std::vector<uint> *> primitive_addresses;
 
     //! Map keyed by primitive names that returns a vector of UUIDs corresponding to the primitive name
     std::map<std::string, std::vector<uint>> primitive_UUIDs;
@@ -524,7 +521,7 @@ class ProjectBuilder {
     std::vector<bool> write_norm_depth;
 
     //! Rig position
-    helios::vec3 camera_position = {0,0,0};
+    helios::vec3 camera_position = {0, 0, 0};
 
     //! Vector of keypoint frames for every rig
     std::vector<std::vector<int>> keypoint_frames;
@@ -536,7 +533,7 @@ class ProjectBuilder {
     std::vector<std::vector<helios::vec3>> camera_lookat_vec;
 
     //! Rig lookat
-    helios::vec3 camera_lookat = {0,0,0};
+    helios::vec3 camera_lookat = {0, 0, 0};
 
     //! Camera label
     std::string camera_label = "RGB";
@@ -574,10 +571,10 @@ class ProjectBuilder {
     //! Set of camera labels for every rig
     std::vector<std::set<std::string>> rig_camera_labels;
 
-     //! Vector of light names.
+    //! Vector of light names.
     std::vector<std::string> light_names;
 
-     //! Set of light names.
+    //! Set of light names.
     std::set<std::string> light_names_set;
 
     //! Vector of light types (e.g. sphere, rectangle, etc.).
@@ -645,13 +642,13 @@ class ProjectBuilder {
     bool is_weather_file_csv = true;
 
     //! Domain origin
-    helios::vec3 domain_origin = {0,0,0};
+    helios::vec3 domain_origin = {0, 0, 0};
 
     //! Domain extent
-    helios::vec2 domain_extent = {10,10};
+    helios::vec2 domain_extent = {10, 10};
 
     //! Ground resolution
-    helios::int2 ground_resolution = {1,1};
+    helios::int2 ground_resolution = {1, 1};
 
     //! Ground texture file
     std::string ground_texture_file = "plugins/visualizer/textures/dirt.jpg";
@@ -662,7 +659,7 @@ class ProjectBuilder {
     bool use_ground_texture = true;
 
     //! Ground color
-    float ground_color[3] = { 0.0, 0.0, 0.0 };
+    float ground_color[3] = {0.0, 0.0, 0.0};
 
     //! Ground model file
     std::string ground_model_file;
@@ -677,19 +674,19 @@ class ProjectBuilder {
     std::vector<std::string> canopy_data_groups;
 
     //! Canopy origin
-    helios::vec3 canopy_origin = {0,0,0};
+    helios::vec3 canopy_origin = {0, 0, 0};
 
     //! Vector of canopy origins for every canopy
     std::vector<helios::vec3> canopy_origins;
 
     //! Plant count
-    helios::int2 plant_count = {1,1};
+    helios::int2 plant_count = {1, 1};
 
     //! Vector of plant counts for every canopy
     std::vector<helios::int2> plant_counts;
 
     //! Plant spacing
-    helios::vec2 plant_spacing = {0.5,0.5};
+    helios::vec2 plant_spacing = {0.5, 0.5};
 
     //! Vector of plant spacings for every canopy
     std::vector<helios::vec2> plant_spacings;
@@ -710,46 +707,45 @@ class ProjectBuilder {
     std::vector<std::string> plant_library_names_verbose;
 
     //! All available plant types
-    std::set<std::string> plant_types = {"almond", "apple", "bindweed", "butterlettuce", "cheeseweed", "bean",
-                                           "cowpea", "easternredbud", "grapevine_VSP", "maize", "olive", "pistachio",
-                                          "puncturevine", "rice", "sorghum", "soybean", "sugarbeet", "tomato",
-                                          "walnut", "wheat"};
+    std::set<std::string> plant_types = {"almond", "apple",     "bindweed",     "butterlettuce", "cheeseweed", "bean",    "cowpea",    "easternredbud", "grapevine_VSP", "maize",
+                                         "olive",  "pistachio", "puncturevine", "rice",          "sorghum",    "soybean", "sugarbeet", "tomato",        "walnut",        "wheat"};
 
     //! Long names for each plant type
-    std::set<std::string> plant_types_verbose = {"Almond Tree (Prunus dulcis)", "Apple Tree (Malus pumila)",
-                                                 "Bindweed (Convolvulus arvensis)", "Butter Lettuce (Lactuca sativa)",
-                                                  "Cheeseweed (Malva neglecta)", "Common Bean (Phaseolus vulgaris)",
-                                                  "Cowpea (Vigna unguiculata)", "Eastern Redbud (Cercis canadensis)",
-                                                "Grapevine (Vitis vinifera)", "Maize (Zea mays)",
-                                                "Olive Tree (Olea europaea)", "Pistachio Tree (Pistachia vera)",
-                                                "Puncturevine (Tribulus terrestris)", "Rice (Oryza sativa)",
-                                                 "Sorghum (Sorghum bicolor)", "Soybean (Glycine max)", "Sugar Beet (Beta vulgaris)",
-                                                 "Tomato (Solanum lycopersicum)", "Walnut Tree (Juglans regia)", "Wheat (Triticum aestivum)"};
+    std::set<std::string> plant_types_verbose = {"Almond Tree (Prunus dulcis)",        "Apple Tree (Malus pumila)",
+                                                 "Bindweed (Convolvulus arvensis)",    "Butter Lettuce (Lactuca sativa)",
+                                                 "Cheeseweed (Malva neglecta)",        "Common Bean (Phaseolus vulgaris)",
+                                                 "Cowpea (Vigna unguiculata)",         "Eastern Redbud (Cercis canadensis)",
+                                                 "Grapevine (Vitis vinifera)",         "Maize (Zea mays)",
+                                                 "Olive Tree (Olea europaea)",         "Pistachio Tree (Pistachia vera)",
+                                                 "Puncturevine (Tribulus terrestris)", "Rice (Oryza sativa)",
+                                                 "Sorghum (Sorghum bicolor)",          "Soybean (Glycine max)",
+                                                 "Sugar Beet (Beta vulgaris)",         "Tomato (Solanum lycopersicum)",
+                                                 "Walnut Tree (Juglans regia)",        "Wheat (Triticum aestivum)"};
 
     //! Map keyed by long plant type names that returns the plant type string argument for the plant architecture library
-    std::map<std::string, std:: string> plant_type_lookup = {{"Almond Tree (Prunus dulcis)", "almond"},
-                                                           {"Apple Tree (Malus pumila)", "apple"},
-                                                           {"Bindweed (Convolvulus arvensis)", "bindweed"},
-                                                           {"Butter Lettuce (Lactuca sativa)", "butterlettuce"},
-                                                           {"Cheeseweed (Malva neglecta)", "cheeseweed"},
-                                                           {"Common Bean (Phaseolus vulgaris)", "bean"},
-                                                           {"Cowpea (Vigna unguiculata)", "cowpea"},
-                                                           {"Eastern Redbud (Cercis canadensis)", "easternredbud"},
-                                                           {"Grapevine (Vitis vinifera)", "grapevine_VSP"},
-                                                           {"Maize (Zea mays)", "maize"},
-                                                           {"Olive Tree (Olea europaea)", "olive"},
-                                                           {"Pistachio Tree (Pistachia vera)", "pistachio"},
-                                                           {"Puncturevine (Tribulus terrestris)", "puncturevine"},
-                                                           {"Rice (Oryza sativa)", "rice"},
-                                                           {"Sorghum (Sorghum bicolor)", "sorghum"},
-                                                           {"Soybean (Glycine max)", "soybean"},
-                                                           {"Sugar Beet (Beta vulgaris)", "sugarbeet"},
-                                                           {"Tomato (Solanum lycopersicum)", "tomato"},
-                                                           {"Walnut Tree (Juglans regia)", "walnut"},
-                                                           {"Wheat (Triticum aestivum)", "wheat"}};
+    std::map<std::string, std::string> plant_type_lookup = {{"Almond Tree (Prunus dulcis)", "almond"},
+                                                            {"Apple Tree (Malus pumila)", "apple"},
+                                                            {"Bindweed (Convolvulus arvensis)", "bindweed"},
+                                                            {"Butter Lettuce (Lactuca sativa)", "butterlettuce"},
+                                                            {"Cheeseweed (Malva neglecta)", "cheeseweed"},
+                                                            {"Common Bean (Phaseolus vulgaris)", "bean"},
+                                                            {"Cowpea (Vigna unguiculata)", "cowpea"},
+                                                            {"Eastern Redbud (Cercis canadensis)", "easternredbud"},
+                                                            {"Grapevine (Vitis vinifera)", "grapevine_VSP"},
+                                                            {"Maize (Zea mays)", "maize"},
+                                                            {"Olive Tree (Olea europaea)", "olive"},
+                                                            {"Pistachio Tree (Pistachia vera)", "pistachio"},
+                                                            {"Puncturevine (Tribulus terrestris)", "puncturevine"},
+                                                            {"Rice (Oryza sativa)", "rice"},
+                                                            {"Sorghum (Sorghum bicolor)", "sorghum"},
+                                                            {"Soybean (Glycine max)", "soybean"},
+                                                            {"Sugar Beet (Beta vulgaris)", "sugarbeet"},
+                                                            {"Tomato (Solanum lycopersicum)", "tomato"},
+                                                            {"Walnut Tree (Juglans regia)", "walnut"},
+                                                            {"Wheat (Triticum aestivum)", "wheat"}};
 
     //! Map keyed by plant type string argument that returns the corresponding long plant name
- std::map<std::string, std:: string> plant_type_verbose_lookup = {{"almond", "Almond Tree (Prunus dulcis)"},
+    std::map<std::string, std::string> plant_type_verbose_lookup = {{"almond", "Almond Tree (Prunus dulcis)"},
                                                                     {"apple", "Apple Tree (Malus pumila)"},
                                                                     {"bindweed", "Bindweed (Convolvulus arvensis)"},
                                                                     {"butterlettuce", "Butter Lettuce (Lactuca sativa)"},
@@ -843,8 +839,7 @@ class ProjectBuilder {
     std::vector<helios::RGBcolor> obj_colors;
 
     //! XML spectral library files
-    std::set<std::string> xml_library_files = {"plugins/radiation/spectral_data/leaf_surface_spectral_library.xml",
-                                               "plugins/radiation/spectral_data/soil_surface_spectral_library.xml"};
+    std::set<std::string> xml_library_files = {"plugins/radiation/spectral_data/leaf_surface_spectral_library.xml", "plugins/radiation/spectral_data/soil_surface_spectral_library.xml"};
 
     //! Possible spectra vector from spectral library files
     std::set<std::string> possible_spectra;
@@ -1110,19 +1105,19 @@ class ProjectBuilder {
     //! Function to delete the selected canopy
     /**
      * \param[in] canopy Canopy name to delete
-    */
+     */
     void deleteCanopy(const std::string &canopy);
 
     //! Function to delete the selected object
     /**
      * \param[in] obj Object name to delete
-    */
+     */
     void deleteObject(const std::string &obj);
 
     //! Function to update the selected canopy
     /**
      * \param[in] canopy Canopy to update
-    */
+     */
     void updateCanopy(const std::string &canopy);
 
     //! Function to add a new canopy
@@ -1219,10 +1214,12 @@ class ProjectBuilder {
     bool randomize_repeatedly = false;
 
     //!
-    std::streambuf* old_cout_stream_buf = std::cout.rdbuf();
+    std::streambuf *old_cout_stream_buf = std::cout.rdbuf();
 
     //! Stdout
     std::stringstream captured_cout;
+
+    std::size_t last_console_size = 0;
 
     //! Number of recordings
     int num_recordings = 1;
@@ -1258,9 +1255,9 @@ class ProjectBuilder {
     float light_intensity = 1.0;
 
     //! Number of tiles
-    helios::int2 num_tiles{5,5};
+    helios::int2 num_tiles{5, 5};
 
-  public:
+public:
     //! Context
     helios::Context *context = nullptr;
 
@@ -1289,7 +1286,7 @@ class ProjectBuilder {
     CameraProperties *cameraproperties = nullptr;
 
     //! Method to run through automated tests
-    static int selfTest();
+    static int selfTest(int argc = 0, char** argv = nullptr);
 
     //! Function to update spectra based on saved information
     void updateSpectra();
@@ -1306,7 +1303,7 @@ class ProjectBuilder {
     //! Function to build context from XML
     /**
      * \param[in] xml_input_file Name of XML input file
-    */
+     */
     void buildFromXML(std::string xml_input_file);
 
     //! Function to visualize XML plot
@@ -1318,7 +1315,7 @@ class ProjectBuilder {
     //! Function to build and visualize XML simulation
     /**
      * \param[in] xml_input_file Name of XML input file
-    */
+     */
     void buildAndVisualize(std::string xml_input_file);
 
     //! Function to set all values in GUI from XML
@@ -1327,7 +1324,7 @@ class ProjectBuilder {
     //! Function to set all values in GUI from XML
     /**
      * \param[in] xml_path Name of XML input file
-    */
+     */
     void xmlSetValues(std::string xml_path);
 
     //! Function to get all values from current XML
@@ -1336,7 +1333,7 @@ class ProjectBuilder {
     //! Function to get all values from current XML
     /**
      * \param[in] xml_input_file Name of XML input file
-    */
+     */
     void xmlGetValues(std::string xml_input_file);
 
     //! Function to get node labels for a given set of nodes
@@ -1344,224 +1341,223 @@ class ProjectBuilder {
      * \param[in] label_name Name of the label
      * \param[in] node_name Name of the XML nodes to get labels from
      * \param[out] labels_vec Vector of labels of XML "parent" nodes
-    */
-    std::map<std::string, int> getNodeLabels(const std::string& label_name, const std::string& node_name,
-                                               std::vector<std::string>& labels_vec);
+     */
+    std::map<std::string, int> getNodeLabels(const std::string &label_name, const std::string &node_name, std::vector<std::string> &labels_vec);
 
     //! Function to get keypoints for every rig
     /**
      * \param[in] name Name of the label (e.g. name="keypoint")
      * \param[in] field Name of the XML fields to get labels from (e.g. field="camera_position")
      * \param[out] keypoints Vector of keypoint (int) vectors
-    */
-    void getKeypoints(const std::string& name, const std::string& field, std::vector<std::vector<int>>& keypoints);
+     */
+    void getKeypoints(const std::string &name, const std::string &field, std::vector<std::vector<int>> &keypoints);
 
     //! Function to set keypoints for every rig
     /**
      * \param[in] name Name of the label (e.g. name="keypoint")
      * \param[in] field Name of the XML fields to get labels from (e.g. field="camera_position")
      * \param[out] keypoints Vector of keypoint (int) vectors
-    */
-    void setKeypoints(const std::string& name, const std::string& field, std::vector<std::vector<int>>& keypoints);
+     */
+    void setKeypoints(const std::string &name, const std::string &field, std::vector<std::vector<int>> &keypoints);
 
     //! Function to get value of an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value if one exists
-    */
-    void xmlGetValue(const std::string& name, const std::string& parent, int& default_value);
+     */
+    void xmlGetValue(const std::string &name, const std::string &parent, int &default_value);
 
     //! Function to get value of an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value if one exists
-    */
-    void xmlGetValue(const std::string& name, const std::string& parent, float& default_value);
+     */
+    void xmlGetValue(const std::string &name, const std::string &parent, float &default_value);
 
     //! Function to get value of an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value if one exists
-    */
-    void xmlGetValue(const std::string& name, const std::string& parent, std::string& default_value);
+     */
+    void xmlGetValue(const std::string &name, const std::string &parent, std::string &default_value);
 
     //! Function to get value of an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value if one exists
-    */
-    void xmlGetValue(const std::string& name, const std::string& parent, helios::vec2& default_value);
+     */
+    void xmlGetValue(const std::string &name, const std::string &parent, helios::vec2 &default_value);
 
     //! Function to get value of an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value if one exists
-    */
-    void xmlGetValue(const std::string& name, const std::string& parent, helios::vec3& default_value);
+     */
+    void xmlGetValue(const std::string &name, const std::string &parent, helios::vec3 &default_value);
 
     //! Function to get value of an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value if one exists
-    */
-    void xmlGetValue(const std::string& name, const std::string& parent, helios::int2& default_value);
+     */
+    void xmlGetValue(const std::string &name, const std::string &parent, helios::int2 &default_value);
 
     //! Function to get distribution from an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML node
      * \param[out] distribution Distribution if one is provided for name in the XML file
-    */
-    void xmlGetDistribution(const std::string& name, const std::string& parent, distribution& distribution);
+     */
+    void xmlGetDistribution(const std::string &name, const std::string &parent, distribution &distribution);
 
     //! Function to set distribution from an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML node
      * \param[out] distribution Distribution if one is provided for name in the XML file
-    */
-    void xmlSetDistribution(const std::string& name, const std::string& parent, distribution& distribution);
+     */
+    void xmlSetDistribution(const std::string &name, const std::string &parent, distribution &distribution);
 
     //! Function to get values of an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes
-    */
-    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<helios::vec2>& default_vec);
+     */
+    void xmlGetValues(const std::string &name, const std::string &parent, std::vector<helios::vec2> &default_vec);
 
     //! Function to get values of an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes
-    */
-    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<helios::vec3>& default_vec);
-
-     //! Function to get values of an XML field
-    /**
-     * \param[in] name Name of the XML field
-     * \param[in] parent Name of the parent XML nodes
-     * \param[out] default_vec Vector of field values for all parent nodes
-    */
-    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<helios::int2>& default_vec);
+     */
+    void xmlGetValues(const std::string &name, const std::string &parent, std::vector<helios::vec3> &default_vec);
 
     //! Function to get values of an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes
-    */
-    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<std::string>& default_vec);
+     */
+    void xmlGetValues(const std::string &name, const std::string &parent, std::vector<helios::int2> &default_vec);
 
     //! Function to get values of an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes
-    */
-    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<float>& default_vec);
+     */
+    void xmlGetValues(const std::string &name, const std::string &parent, std::vector<std::string> &default_vec);
 
     //! Function to get values of an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes
-    */
-    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<int>& default_vec);
+     */
+    void xmlGetValues(const std::string &name, const std::string &parent, std::vector<float> &default_vec);
 
     //! Function to get values of an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes
-    */
-    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<helios::RGBcolor>& default_vec);
+     */
+    void xmlGetValues(const std::string &name, const std::string &parent, std::vector<int> &default_vec);
 
     //! Function to get values of an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes
-    */
-    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<std::vector<helios::vec3>>& default_vec);
+     */
+    void xmlGetValues(const std::string &name, const std::string &parent, std::vector<helios::RGBcolor> &default_vec);
 
     //! Function to get values of an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_vec Vector of field values for all parent nodes
-    */
-    void xmlGetValues(const std::string& name, const std::string& parent, std::vector<std::set<std::string>>& default_vec);
+     */
+    void xmlGetValues(const std::string &name, const std::string &parent, std::vector<std::vector<helios::vec3>> &default_vec);
+
+    //! Function to get values of an XML field
+    /**
+     * \param[in] name Name of the XML field
+     * \param[in] parent Name of the parent XML nodes
+     * \param[out] default_vec Vector of field values for all parent nodes
+     */
+    void xmlGetValues(const std::string &name, const std::string &parent, std::vector<std::set<std::string>> &default_vec);
 
     //! Function to get values of an XML field
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML nodes
      * \param[out] default_set Set of field values for all parent nodes
-    */
-    void xmlGetValues(const std::string& name, const std::string& parent, std::set<std::string>& default_set);
+     */
+    void xmlGetValues(const std::string &name, const std::string &parent, std::set<std::string> &default_set);
 
     //! Function to remove XML field in the XML file
     /**
      * \param[in] name Name of the XML field to be removed
      * \param[in] parent Name of the parent XML node
-    */
-    void xmlRemoveField(const std::string& name, const std::string& parent);
+     */
+    void xmlRemoveField(const std::string &name, const std::string &parent);
 
     //! Function to set value of an XML field in the XML file
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value to set
-    */
-    void xmlSetValue(const std::string& name, const std::string& parent, int& default_value);
+     */
+    void xmlSetValue(const std::string &name, const std::string &parent, int &default_value);
 
     //! Function to set value of an XML field in the XML file
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value to set
-    */
-    void xmlSetValue(const std::string& name, const std::string& parent, float& default_value);
+     */
+    void xmlSetValue(const std::string &name, const std::string &parent, float &default_value);
 
     //! Function to set value of an XML field in the XML file
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value to set
-    */
-    void xmlSetValue(const std::string& name, const std::string& parent, std::string& default_value);
+     */
+    void xmlSetValue(const std::string &name, const std::string &parent, std::string &default_value);
 
     //! Function to set value of an XML field in the XML file
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value to set
-    */
-    void xmlSetValue(const std::string& name, const std::string& parent, helios::vec2& default_value);
+     */
+    void xmlSetValue(const std::string &name, const std::string &parent, helios::vec2 &default_value);
 
     //! Function to set value of an XML field in the XML file
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value to set
-    */
-    void xmlSetValue(const std::string& name, const std::string& parent, helios::vec3& default_value);
+     */
+    void xmlSetValue(const std::string &name, const std::string &parent, helios::vec3 &default_value);
 
     //! Function to set value of an XML field in the XML file
     /**
      * \param[in] name Name of the XML field
      * \param[in] parent Name of the parent XML node
      * \param[out] default_value Field value to set
-    */
-    void xmlSetValue(const std::string& name, const std::string& parent, helios::int2& default_value);
+     */
+    void xmlSetValue(const std::string &name, const std::string &parent, helios::int2 &default_value);
 
     //! Function to set values to an XML field
     /**
@@ -1569,8 +1565,8 @@ class ProjectBuilder {
      * \param[in] node_name Name of the parent XML nodes
      * \param[in] values_vec Vector of field values for all parent nodes to set
      * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
-    */
-    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<helios::vec2>& values_vec, std::map<std::string, int>& node_map);
+     */
+    void xmlSetValues(const std::string &field_name, const std::string &node_name, std::vector<helios::vec2> &values_vec, std::map<std::string, int> &node_map);
 
     //! Function to set values to an XML field
     /**
@@ -1578,8 +1574,8 @@ class ProjectBuilder {
      * \param[in] node_name Name of the parent XML nodes
      * \param[in] values_vec Vector of field values for all parent nodes to set
      * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
-    */
-    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<helios::vec3>& values_vec, std::map<std::string, int>& node_map);
+     */
+    void xmlSetValues(const std::string &field_name, const std::string &node_name, std::vector<helios::vec3> &values_vec, std::map<std::string, int> &node_map);
 
     //! Function to set values to an XML field
     /**
@@ -1587,8 +1583,8 @@ class ProjectBuilder {
      * \param[in] node_name Name of the parent XML nodes
      * \param[in] values_vec Vector of field values for all parent nodes to set
      * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
-    */
-    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<helios::int2>& values_vec, std::map<std::string, int>& node_map);
+     */
+    void xmlSetValues(const std::string &field_name, const std::string &node_name, std::vector<helios::int2> &values_vec, std::map<std::string, int> &node_map);
 
     //! Function to set values to an XML field
     /**
@@ -1596,8 +1592,8 @@ class ProjectBuilder {
      * \param[in] node_name Name of the parent XML nodes
      * \param[in] values_vec Vector of field values for all parent nodes to set
      * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
-    */
-    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<std::string>& values_vec, std::map<std::string, int>& node_map);
+     */
+    void xmlSetValues(const std::string &field_name, const std::string &node_name, std::vector<std::string> &values_vec, std::map<std::string, int> &node_map);
 
     //! Function to set values to an XML field
     /**
@@ -1605,8 +1601,8 @@ class ProjectBuilder {
      * \param[in] node_name Name of the parent XML nodes
      * \param[in] values_vec Vector of field values for all parent nodes to set
      * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
-    */
-    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<int>& values_vec, std::map<std::string, int>& node_map);
+     */
+    void xmlSetValues(const std::string &field_name, const std::string &node_name, std::vector<int> &values_vec, std::map<std::string, int> &node_map);
 
     //! Function to set values to an XML field
     /**
@@ -1614,8 +1610,8 @@ class ProjectBuilder {
      * \param[in] node_name Name of the parent XML nodes
      * \param[in] values_vec Vector of field values for all parent nodes to set
      * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
-    */
-    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<float>& values_vec, std::map<std::string, int>& node_map);
+     */
+    void xmlSetValues(const std::string &field_name, const std::string &node_name, std::vector<float> &values_vec, std::map<std::string, int> &node_map);
 
     //! Function to set values to an XML field
     /**
@@ -1623,8 +1619,8 @@ class ProjectBuilder {
      * \param[in] node_name Name of the parent XML nodes
      * \param[in] values_vec Vector of field values for all parent nodes to set
      * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
-    */
-    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<helios::RGBcolor>& values_vec, std::map<std::string, int>& node_map);
+     */
+    void xmlSetValues(const std::string &field_name, const std::string &node_name, std::vector<helios::RGBcolor> &values_vec, std::map<std::string, int> &node_map);
 
     //! Function to set values to an XML field
     /**
@@ -1632,8 +1628,8 @@ class ProjectBuilder {
      * \param[in] node_name Name of the parent XML nodes
      * \param[in] values_vec Vector of field values for all parent nodes to set
      * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
-    */
-    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<std::vector<helios::vec3>>& values_vec, std::map<std::string, int>& node_map);
+     */
+    void xmlSetValues(const std::string &field_name, const std::string &node_name, std::vector<std::vector<helios::vec3>> &values_vec, std::map<std::string, int> &node_map);
 
     //! Function to set values to an XML field
     /**
@@ -1641,44 +1637,44 @@ class ProjectBuilder {
      * \param[in] node_name Name of the parent XML nodes
      * \param[in] values_vec Vector of field values for all parent nodes to set
      * \param[in] node_map Map keyed by node_name that returns corresponding index of the value in values_vec
-    */
-    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::vector<std::set<std::string>>& values_vec, std::map<std::string, int>& node_map);
+     */
+    void xmlSetValues(const std::string &field_name, const std::string &node_name, std::vector<std::set<std::string>> &values_vec, std::map<std::string, int> &node_map);
 
     //! Function to set values to an XML field
     /**
      * \param[in] field_name Name of the XML field
      * \param[in] node_name Name of the parent XML nodes
      * \param[in] values_set Vector of field values for all parent nodes to set
-    */
-    void xmlSetValues(const std::string& field_name, const std::string& node_name, std::set<std::string>& values_set);
+     */
+    void xmlSetValues(const std::string &field_name, const std::string &node_name, std::set<std::string> &values_set);
 
     //! Function to set node labels for a given set of nodes
     /**
      * \param[in] label_name Name of the label
      * \param[in] node_name Name of the XML nodes to get labels from
      * \param[out] labels_set Set of labels of XML "parent" nodes to set
-    */
-    void setNodeLabels(const std::string& label_name, const std::string& node_name, std::set<std::string>& labels_set);
+     */
+    void setNodeLabels(const std::string &label_name, const std::string &node_name, std::set<std::string> &labels_set);
 
     //! Function to create an ImGui Popup for randomizing a variable
     /**
      * \param[in] popup_name Name of the parameter being randomized
      * \param[in] ptr Pointer to the variable to be randomized
-    */
+     */
     void randomizePopup(std::string popup_name, taggedPtr ptr);
 
     //! Function to create an ImGui Popup for adding random noise to a variable
     /**
      * \param[in] popup_name Name of the parameter being randomized
      * \param[in] dist_vec Vector of noise distributions to be applied
-    */
-    void noisePopup(std::string popup_name,std::vector<distribution>& dist_vec);
+     */
+    void noisePopup(std::string popup_name, std::vector<distribution> &dist_vec);
 
     //! Function to apply random distribution to a variable
     /**
      * \param[in] var_name Name of the variable being randomized
      * \param[in] ptr Pointer to the variable to be randomized
-    */
+     */
     void applyDistribution(std::string var_name, taggedPtr ptr);
 
     //! Function to apply random distribution to a variable
@@ -1686,25 +1682,25 @@ class ProjectBuilder {
      * \param[in] var_name Name of the variable being randomized
      * \param[in] dist Distribution to be applied
      * \param[in] ptr Pointer to the variable to be randomized
-    */
+     */
     void applyDistribution(std::string var_name, distribution dist, taggedPtr ptr);
 
     //! Function to randomize variables that have assigned distributions
     /**
      * \param[in] randomize_all If true, randomize all variables. Else, only randomize those with selection "randomize for every image".
-    */
+     */
     void randomize(bool randomize_all);
 
     //! Get current randomization parameters for the given variable
     /**
      * \param[in] var_name Name of the variable being randomized
-    */
+     */
     void randomizerParams(std::string var_name);
 
     //! Set value of variable with random sample from respective distribution
     /**
      * \param[in] var_name Variable to generate a random variable for
-    */
+     */
     void sample(std::string var_name);
 
     //! Set value of all variables using random samples from their respective distributions
@@ -1718,13 +1714,13 @@ class ProjectBuilder {
      * \param[in] curr_obj Object to update the color of
      * \param[in] obj_type Object type (options: object, rig, arrow, or camera)
      * \param[in] new_color New color represented by float[3]
-    */
-    void updateColor(std::string curr_obj, std::string obj_type, float* new_color);
+     */
+    void updateColor(std::string curr_obj, std::string obj_type, float *new_color);
 
     //! Update object in visualizer (e.g. position, orientation, scale, color, etc.)
     /**
      * \param[in] curr_obj Object to update
-    */
+     */
     void updateObject(std::string curr_obj);
 
     //! Update rig in visualizer (e.g. rig position, arrow count, arrow color, arrow direction, etc.)
@@ -1733,7 +1729,7 @@ class ProjectBuilder {
     //! Delete rig
     /**
      * \param[in] curr_rig Rig to be deleted
-    */
+     */
     void deleteRig(std::string curr_rig);
 
     //! Create dropdown widget
@@ -1741,16 +1737,16 @@ class ProjectBuilder {
      * \param[in] widget_name Name of dropdown widget (must be unique)
      * \param[in] selected Selected option
      * \param[in] choices Possible selection options
-    */
-    void dropDown(std::string widget_name, std::string& selected, std::vector<std::string> choices);
+     */
+    void dropDown(std::string widget_name, std::string &selected, std::vector<std::string> choices);
 
     //! Create dropdown widget
     /**
      * \param[in] widget_name Name of dropdown widget (must be unique)
      * \param[in] selected Selected option
      * \param[in] choices Possible selection options
-    */
-    void dropDown(std::string widget_name, std::string& selected, std::set<std::string> choices);
+     */
+    void dropDown(std::string widget_name, std::string &selected, std::set<std::string> choices);
 
     //! Refresh visualizer context and display loading text
     void refreshVisualization();
@@ -1776,7 +1772,7 @@ class ProjectBuilder {
     //! Shorten absolute path to file name
     /**
      * \param[in] path_name Absolute path to be shortened
-    */
+     */
     std::string shortenPath(std::string path_name);
 
     //! Set object_number primitive data for
@@ -1790,8 +1786,8 @@ class ProjectBuilder {
      * \param[in] texture_subpatches Number of sub-divisions of each texture tile into sub-patches in the x- and y-directions.
      * \param[in] ground_texture_file Path to file used for tile texture mapping.
      * \param[in] ground_rotation Azimuthal rotation angle of ground in radians.
-    */
-    void buildTiledGround(const helios::vec3 &ground_origin, const helios::vec2 &ground_extent, const helios::int2 &texture_subtiles, const helios::int2 &texture_subpatches, const char* ground_texture_file, float ground_rotation);
+     */
+    void buildTiledGround(const helios::vec3 &ground_origin, const helios::vec2 &ground_extent, const helios::int2 &texture_subtiles, const helios::int2 &texture_subpatches, const char *ground_texture_file, float ground_rotation);
 
     //! Build a ground with azimuthal rotation consisting of texture sub-tiles and sub-patches, which can be different sizes (from `buildGround` Canopy Generator plugin)
     /**
@@ -1801,40 +1797,37 @@ class ProjectBuilder {
      * \param[in] texture_subpatches Number of sub-divisions of each texture tile into sub-patches in the x- and y-directions.
      * \param[in] ground_color Ground color.
      * \param[in] ground_rotation Azimuthal rotation angle of ground in radians.
-    */
+     */
     void buildTiledGround(const helios::vec3 &ground_origin, const helios::vec2 &ground_extent, const helios::int2 &texture_subtiles, const helios::int2 &texture_subpatches, helios::RGBcolor ground_color, float ground_rotation);
 
     //! Constructor
-    ProjectBuilder(){
-      std::cout.rdbuf(captured_cout.rdbuf());
-      primitive_UUIDs = {{"ground", ground_UUIDs}, {"leaf", leaf_UUIDs}, {"petiolule", petiolule_UUIDs},
-                          {"petiole", petiole_UUIDs}, {"internode", internode_UUIDs}, {"peduncle", peduncle_UUIDs},
-                          {"petal", petal_UUIDs}, {"pedicel", pedicel_UUIDs}, {"fruit", fruit_UUIDs}};
-      primitive_continuous = {{"All", {false, false, false}}, {"ground", {false, false, false}}, {"leaf", {false, false, false}},
-                                {"petiolule", {false, false, false}}, {"petiole", {false, false, false}}, {"internode", {false, false, false}},
-                                {"peduncle", {false, false, false}}, {"petal", {false, false, false}},
-                                {"pedicel", {false, false, false}}, {"fruit", {false, false, false}}};
-      bandlabels = {"red", "green", "blue", "PAR", "NIR", "LW"};
-      bandlabels_set = {"All", "red", "green", "blue", "PAR", "NIR", "LW"};
-      bandlabels_set_emissivity = {"red", "green", "blue", "PAR", "NIR", "LW"};
-      // bandlabels = {"red", "green", "blue"};
-      // bandlabels_set = {"All", "red", "green", "blue"};
-      for (std::string band : bandlabels){
-           primitive_values[band] = {{"All", {reflectivity, transmissivity, emissivity}},
-                                       {"ground", {ground_reflectivity, ground_transmissivity, ground_emissivity}},
-                                       {"leaf", {leaf_reflectivity, leaf_transmissivity, leaf_emissivity}},
-                                       {"petiolule", {petiolule_reflectivity, petiolule_transmissivity, petiolule_emissivity}},
-                                       {"petiole", {petiole_reflectivity, petiole_transmissivity, petiole_emissivity}},
-                                       {"internode", {internode_reflectivity, internode_transmissivity, internode_emissivity}},
-                                       {"peduncle", {peduncle_reflectivity, peduncle_transmissivity, peduncle_emissivity}},
-                                       {"petal", {petal_reflectivity, petal_transmissivity, petal_emissivity}},
-                                       {"pedicel", {pedicel_reflectivity, pedicel_transmissivity, pedicel_emissivity}},
-                                       {"fruit", {fruit_reflectivity, fruit_transmissivity, fruit_emissivity}}};
-           direct_ray_count_dict[band] = direct_ray_count; // direct ray counts per band
-           diffuse_ray_count_dict[band] = diffuse_ray_count; // diffuse ray counts per band
-           scattering_depth_dict[band] = scattering_depth; // scattering depth per band
-      }
-      primitive_spectra = {{"All", {reflectivity_spectrum, transmissivity_spectrum, emissivity_spectrum}},
+    ProjectBuilder() {
+        std::cout.rdbuf(captured_cout.rdbuf());
+        primitive_UUIDs = {{"ground", ground_UUIDs},     {"leaf", leaf_UUIDs},   {"petiolule", petiolule_UUIDs}, {"petiole", petiole_UUIDs}, {"internode", internode_UUIDs},
+                           {"peduncle", peduncle_UUIDs}, {"petal", petal_UUIDs}, {"pedicel", pedicel_UUIDs},     {"fruit", fruit_UUIDs}};
+        primitive_continuous = {{"All", {false, false, false}},       {"ground", {false, false, false}},   {"leaf", {false, false, false}},  {"petiolule", {false, false, false}}, {"petiole", {false, false, false}},
+                                {"internode", {false, false, false}}, {"peduncle", {false, false, false}}, {"petal", {false, false, false}}, {"pedicel", {false, false, false}},   {"fruit", {false, false, false}}};
+        bandlabels = {"red", "green", "blue", "PAR", "NIR", "LW"};
+        bandlabels_set = {"All", "red", "green", "blue", "PAR", "NIR", "LW"};
+        bandlabels_set_emissivity = {"red", "green", "blue", "PAR", "NIR", "LW"};
+        // bandlabels = {"red", "green", "blue"};
+        // bandlabels_set = {"All", "red", "green", "blue"};
+        for (std::string band: bandlabels) {
+            primitive_values[band] = {{"All", {reflectivity, transmissivity, emissivity}},
+                                      {"ground", {ground_reflectivity, ground_transmissivity, ground_emissivity}},
+                                      {"leaf", {leaf_reflectivity, leaf_transmissivity, leaf_emissivity}},
+                                      {"petiolule", {petiolule_reflectivity, petiolule_transmissivity, petiolule_emissivity}},
+                                      {"petiole", {petiole_reflectivity, petiole_transmissivity, petiole_emissivity}},
+                                      {"internode", {internode_reflectivity, internode_transmissivity, internode_emissivity}},
+                                      {"peduncle", {peduncle_reflectivity, peduncle_transmissivity, peduncle_emissivity}},
+                                      {"petal", {petal_reflectivity, petal_transmissivity, petal_emissivity}},
+                                      {"pedicel", {pedicel_reflectivity, pedicel_transmissivity, pedicel_emissivity}},
+                                      {"fruit", {fruit_reflectivity, fruit_transmissivity, fruit_emissivity}}};
+            direct_ray_count_dict[band] = direct_ray_count; // direct ray counts per band
+            diffuse_ray_count_dict[band] = diffuse_ray_count; // diffuse ray counts per band
+            scattering_depth_dict[band] = scattering_depth; // scattering depth per band
+        }
+        primitive_spectra = {{"All", {reflectivity_spectrum, transmissivity_spectrum, emissivity_spectrum}},
                              {"ground", {ground_reflectivity_spectrum, ground_transmissivity_spectrum, ground_emissivity_spectrum}},
                              {"leaf", {leaf_reflectivity_spectrum, leaf_transmissivity_spectrum, leaf_emissivity_spectrum}},
                              {"petiolule", {petiolule_reflectivity_spectrum, petiolule_transmissivity_spectrum, petiolule_emissivity_spectrum}},
@@ -1847,35 +1840,35 @@ class ProjectBuilder {
     }
 
     //! Destructor
-    ~ProjectBuilder(){
-      std::cout.rdbuf(old_cout_stream_buf);
+    ~ProjectBuilder() {
+        std::cout.rdbuf(old_cout_stream_buf);
 
-      delete context;
+        delete context;
 
-      #ifdef HELIOS_VISUALIZER
-          delete visualizer;
-      #endif //HELIOS_VISUALIZER
+#ifdef HELIOS_VISUALIZER
+        delete visualizer;
+#endif // HELIOS_VISUALIZER
 
-      #ifdef PLANT_ARCHITECTURE
-          delete plantarchitecture;
-      #endif //PLANT_ARCHITECTURE
+#ifdef PLANT_ARCHITECTURE
+        delete plantarchitecture;
+#endif // PLANT_ARCHITECTURE
 
-      #ifdef RADIATION_MODEL
-          delete radiation;
-          delete cameraproperties;
-      #endif //RADIATION_MODEL
+#ifdef RADIATION_MODEL
+        delete radiation;
+        delete cameraproperties;
+#endif // RADIATION_MODEL
 
-      #ifdef SOLARPOSITION
-          delete solarposition;
-      #endif //SOLARPOSITION
+#ifdef SOLARPOSITION
+        delete solarposition;
+#endif // SOLARPOSITION
 
-      #ifdef ENERGYBALANCEMODEL
-          delete energybalancemodel;
-      #endif //ENERGYBALANCEMODEL
+#ifdef ENERGYBALANCEMODEL
+        delete energybalancemodel;
+#endif // ENERGYBALANCEMODEL
 
-      #ifdef BOUNDARYLAYERCONDUCTANCEMODEL
-          delete boundarylayerconductance;
-      #endif //BOUNDARYLAYERCONDUCTANCEMODEL
+#ifdef BOUNDARYLAYERCONDUCTANCEMODEL
+        delete boundarylayerconductance;
+#endif // BOUNDARYLAYERCONDUCTANCEMODEL
     }
 };
 

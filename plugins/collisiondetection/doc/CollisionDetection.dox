@@ -1,0 +1,571 @@
+/*! \page "CollisionDetectionDoc" Collision Detection Plugin Documentation
+
+ \tableofcontents
+
+ <p> <br><br> </p>
+
+ <table>
+   <tr>	
+      <th>Dependencies</th>
+      <td>NVIDIA CUDA 9.0+ (optional)</td>
+   </tr>
+   <tr>	
+     <th>CMakeLists.txt</th>
+     <td>set( PLUGINS "collisiondetection" )</td>
+   </tr>
+   <tr>	
+     <th>Header File</th>
+     <td>#include "CollisionDetection.h"</td>
+   </tr>
+   <tr>	
+     <th>Class</th>
+     <td>\ref CollisionDetection</td>
+   </tr>
+ </table>
+
+\section CDDepends Dependencies
+
+<table>
+    <tr>
+        <th>Package</th>
+        <td>\image html apple-logo.png</td>
+        <td>\image html unix-logo.png</td>
+        <td>\image html windows-logo.png</td>
+    </tr>
+    <tr>
+        <td>NVIDIA CUDA 9.0+ (optional)</td>
+        <td>Mac OSX: Not available</td>
+        <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
+        <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
+    </tr>
+</table>
+
+For help choosing the correct CUDA toolkit version and accompanying OptiX version for your system, consult this page: \ref ChoosingCUDA
+
+Useful OS-specific information for installing CUDA can be found here: \ref DependentSoftware
+
+If you are using a PC, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: \ref PCGPUTimeout
+
+<b>Note:</b> CUDA is optional for this plugin. The collision detection system will work on CPU-only systems, but GPU acceleration provides significant performance improvements for large scenes.
+
+ \section CDIntro Introduction
+
+ This plugin provides fast collision detection capabilities for arbitrary 3D geometry using GPU-accelerated spatial data structures. The system uses a Bounding Volume Hierarchy (BVH) to efficiently query which primitives intersect with a given primitive or spatial region. This is useful for applications such as growth simulation, physics-based modeling, procedural content generation, and spatial analysis.
+
+ The collision detection system supports both CPU and GPU acceleration. When GPU acceleration is available, the plugin automatically uses CUDA kernels to perform parallel collision queries, providing significant speedup for large scenes. The system gracefully falls back to CPU computation when GPU resources are unavailable.
+
+ Key features include:
+ - High-performance BVH construction using Surface Area Heuristic (SAH)
+ - GPU-accelerated collision queries with automatic CPU fallback
+ - Support for primitive-to-primitive and primitive-to-object collision detection
+ - Efficient memory management with automatic cleanup
+ - Integration with Helios primitive and object systems
+ - Automatic BVH management (no manual rebuild required)
+ - Restricted geometry collision detection for targeted queries
+ - **Optimal cone path detection** for directional obstacle avoidance
+
+ \section CDConstructor CollisionDetection Class Constructor
+
+ <table>
+   <tr>	
+      <th>Constructors</th>
+   </tr>
+   <tr>	
+     <td>\ref CollisionDetection( helios::Context* context )</td>
+   </tr>
+ </table>
+
+ The \ref CollisionDetection class is initialized by passing a pointer to the Helios context as an argument to the constructor. This gives the class the ability to automatically query model geometry and read/write data from/to the context.
+
+ ~~~~~~{.cpp}
+ CollisionDetection collision(&context); //declare the collision detection system
+ ~~~~~~
+
+ \section CDVarsAndProps Input/Output Primitive Data
+
+ \subsection CDInputData Input Primitive Data
+
+ The CollisionDetection plugin primarily works with the geometric properties of primitives that are automatically available in the Helios Context. No additional primitive data needs to be set by the user in most cases.
+
+ <table>
+   <tr>	
+     <th>Primitive Data</th>
+     <th>Units</th>
+     <th>Data Type</th>
+     <th>Description</th>
+     <th>Default Value</th>
+   </tr>
+   <tr>
+     <td>N/A</td>
+     <td>N/A</td>
+     <td>N/A</td>
+     <td>Plugin uses primitive bounding boxes and UUIDs automatically from Context</td>
+     <td>N/A</td>
+   </tr>
+ </table>	
+
+ \subsection CDOutputData Output Primitive Data
+
+ The CollisionDetection plugin does not automatically write output data to primitives. Collision results are returned as vectors of UUIDs that can be processed by the user application as needed.
+
+ <table>
+   <tr>	
+     <th>Primitive Data</th>
+     <th>Units</th>
+     <th>Data Type</th>
+     <th>Description</th>
+   </tr>
+   <tr>	
+     <td>N/A</td>
+     <td>N/A</td>
+     <td>N/A</td>
+     <td>Collision results returned directly as vectors of UUIDs</td>
+   </tr>
+ </table>
+
+ \section CDUse Using the Collision Detection Plugin
+
+ \subsection CDConst Model Class Constructor
+
+ The collision detection class contains functions and data associated with spatial queries. To begin, declare an instance of the CollisionDetection class. The class constructor takes one argument - a pointer to the Helios context. It uses this pointer to access model geometry and perform collision queries.
+
+ ~~~~~~{.cpp}
+ CollisionDetection collision(&context); //declare the collision detection system
+ ~~~~~~
+
+ \subsection CDBasicUsage Basic Usage Workflow
+
+ The collision detection system now features **automatic BVH management**, so users no longer need to manually build or rebuild the BVH. The typical workflow is:
+
+ 1. **Query for collisions** using \ref CollisionDetection::findCollisions()
+ 2. **Process the results** as needed by your application
+
+ ~~~~~~{.cpp}
+ // The BVH is built automatically when needed - no manual buildBVH() required!
+ 
+ // Find all primitives that collide with a specific primitive
+ uint target_UUID = some_primitive_UUID;
+ std::vector<uint> colliding_UUIDs = collision.findCollisions(target_UUID);
+
+ // Process the collision results
+ for( uint UUID : colliding_UUIDs ){
+     std::cout << "Primitive " << target_UUID << " collides with primitive " << UUID << std::endl;
+ }
+ ~~~~~~
+
+ \subsubsection CDManualBVH Manual BVH Management (Optional)
+ 
+ While automatic BVH management handles most use cases, manual control is still available:
+
+ ~~~~~~{.cpp}
+ // Manual BVH building (optional - only needed for special cases)
+ collision.buildBVH();
+ 
+ // Force a complete rebuild
+ collision.rebuildBVH();
+ ~~~~~~
+
+ \subsection CDBVH Bounding Volume Hierarchy (BVH)
+
+ The collision detection system uses a Bounding Volume Hierarchy (BVH) to efficiently organize primitives in 3D space. The BVH is a binary tree where each node contains an axis-aligned bounding box (AABB), and leaf nodes contain references to actual primitives.
+
+ \subsubsection CDBVHConstruction BVH Construction
+
+ The BVH is constructed using the Surface Area Heuristic (SAH) to minimize the expected cost of collision queries. The construction algorithm:
+
+ - Recursively partitions primitives based on the longest axis
+ - Uses median splitting for simplicity and reliability
+ - Stops recursion when reaching ≤8 primitives per leaf or depth ≥20
+ - Optimizes memory layout for GPU cache efficiency
+
+ ~~~~~~{.cpp}
+ // Build BVH for all primitives in the context
+ collision.buildBVH();
+
+ // Or build BVH for a specific set of primitives
+ std::vector<uint> specific_UUIDs = {UUID1, UUID2, UUID3};
+ collision.buildBVH(specific_UUIDs);
+ ~~~~~~
+
+ \subsubsection CDBVHStats BVH Statistics and Validation
+
+ You can query statistics about the constructed BVH to understand its structure and validate proper construction:
+
+ ~~~~~~{.cpp}
+ if( collision.isBVHValid() ){
+     size_t node_count, leaf_count, max_depth;
+     collision.getBVHStatistics(node_count, leaf_count, max_depth);
+     
+     std::cout << "BVH contains " << node_count << " total nodes" << std::endl;
+     std::cout << "BVH contains " << leaf_count << " leaf nodes" << std::endl;
+     std::cout << "BVH maximum depth: " << max_depth << std::endl;
+     std::cout << "Primitive count: " << collision.getPrimitiveCount() << std::endl;
+ }
+ ~~~~~~
+
+ \subsection CDCollisionQueries Collision Queries
+
+ The plugin supports several types of collision queries:
+
+ \subsubsection CDSinglePrimitive Single Primitive Collision
+
+ Find all primitives that have overlapping bounding boxes with a target primitive:
+
+ ~~~~~~{.cpp}
+ uint target_UUID = some_primitive_UUID;
+ std::vector<uint> collisions = collision.findCollisions(target_UUID);
+ ~~~~~~
+
+ \subsubsection CDMultiplePrimitives Multiple Primitive Collision
+
+ Find all primitives that collide with any primitive in a set:
+
+ ~~~~~~{.cpp}
+ std::vector<uint> query_UUIDs = {UUID1, UUID2, UUID3};
+ std::vector<uint> collisions = collision.findCollisions(query_UUIDs);
+ ~~~~~~
+
+ \subsubsection CDObjectCollision Object-Based Collision
+
+ Find collisions between primitives and compound objects:
+
+ ~~~~~~{.cpp}
+ std::vector<uint> primitive_UUIDs = {UUID1, UUID2};
+ std::vector<uint> object_IDs = {objID1, objID2};
+ std::vector<uint> collisions = collision.findCollisions(primitive_UUIDs, object_IDs);
+ ~~~~~~
+
+ \subsubsection CDRestrictedCollision Restricted Geometry Collision Detection (NEW)
+
+ The plugin now supports restricting collision detection to specific target geometry, improving performance and providing more precise control:
+
+ ~~~~~~{.cpp}
+ // Restrict collision detection to specific target UUIDs only
+ std::vector<uint> query_UUIDs = {UUID1, UUID2};    // Primitives to test for collisions
+ std::vector<uint> query_objects = {};              // Objects to test for collisions  
+ std::vector<uint> target_UUIDs = {UUID3, UUID4};   // Only test against these primitives
+ std::vector<uint> target_objects = {};             // Only test against these objects
+
+ std::vector<uint> restricted_collisions = collision.findCollisions(query_UUIDs, query_objects, 
+                                                                    target_UUIDs, target_objects);
+
+ // Mixed UUID/Object ID restrictions
+ std::vector<uint> mixed_query_UUIDs = {UUID1};
+ std::vector<uint> mixed_query_objects = {objID1};
+ std::vector<uint> mixed_target_UUIDs = {UUID2, UUID3};
+ std::vector<uint> mixed_target_objects = {objID2};
+
+ std::vector<uint> mixed_collisions = collision.findCollisions(mixed_query_UUIDs, mixed_query_objects,
+                                                              mixed_target_UUIDs, mixed_target_objects);
+
+ // Empty target lists default to all geometry in context (same as unrestricted collision detection)
+ std::vector<uint> empty_targets = {};
+ std::vector<uint> unrestricted_collisions = collision.findCollisions(query_UUIDs, query_objects, 
+                                                                      empty_targets, empty_targets);
+ ~~~~~~
+
+ This feature is particularly useful for:
+ - **Performance optimization**: Only test collisions against relevant geometry
+ - **Selective collision queries**: Ignore certain objects during collision detection  
+ - **Spatial filtering**: Restrict collision testing to specific regions or object types
+
+ \subsection CDConeCollision Optimal Cone Path Detection
+
+ The plugin provides advanced cone-based optimal path detection with inertia weighting for directional obstacle avoidance applications:
+
+ \subsubsection CDConeStructure Cone Data Structure
+
+ ~~~~~~{.cpp}
+ // Cone structure for collision queries
+ struct Cone {
+     helios::vec3 apex;        // Cone apex/tip position
+     helios::vec3 axis;        // Normalized axis direction (apex to base)
+     float half_angle;         // Half-angle of cone in radians
+     float height;             // Height of cone (0 = infinite)
+ };
+ ~~~~~~
+
+ \subsubsection CDOptimalPath Optimal Cone Path Detection
+
+ Find the optimal direction through a cone for directional obstacle avoidance:
+
+ ~~~~~~{.cpp}
+ // Basic optimal path detection
+ helios::vec3 apex = make_vec3(0, 0, 0);
+ helios::vec3 central_axis = make_vec3(0, 0, 1);
+ float half_angle = M_PI / 6.0f;  // 30 degrees
+ float height = 50.0f;            // Finite cone (0 = infinite)
+ int samples = 64;                // Number of sample directions
+ 
+ CollisionDetection::OptimalPathResult result = collision.findOptimalConePath(
+     apex, central_axis, half_angle, height, samples);
+
+ std::cout << "Optimal direction: " << result.direction << std::endl;
+ std::cout << "Collision count: " << result.collisionCount << std::endl;
+ std::cout << "Confidence: " << result.confidence << std::endl;
+ ~~~~~~
+
+ \subsubsection CDOptimalPathApplications Applications
+
+ The optimal cone path detection is perfect for applications like:
+
+ ~~~~~~{.cpp}
+  // Example: Plant growth with obstacle avoidance
+helios::vec3 current_tip = make_vec3(0, 0, 0);
+helios::vec3 growth_direction = make_vec3(0, 0, 1);
+float perception_angle = M_PI / 4.0f;  // 45-degree perception
+float segment_length = 1.0f;
+
+auto result = collision.findOptimalConePath(current_tip, growth_direction, 
+                                           perception_angle, segment_length, 128);
+
+ // Grow in the optimal direction
+ helios::vec3 new_tip = current_tip + result.direction * segment_length;
+ ~~~~~~
+
+ 
+ \subsubsection CDConeIntersection Additional Cone Methods (Future)
+
+ The following methods are planned for future releases:
+
+ ~~~~~~{.cpp}
+ // Single cone intersection query (planned)
+ std::vector<uint> cone_collisions = collision.coneIntersection(origin, direction, 
+                                                                cone_angle, max_distance);
+
+ // Batch cone intersection queries (planned)
+ std::vector<std::vector<uint>> batch_results = collision.coneIntersection(origins, directions,
+                                                                          cone_angles, max_distances);
+ ~~~~~~
+
+ \subsection CDGPU GPU Acceleration
+
+ \subsubsection CDGPUEnable Enabling/Disabling GPU Acceleration
+
+ By default, GPU acceleration is enabled if CUDA is available. You can control GPU usage:
+
+ ~~~~~~{.cpp}
+ // Check if GPU acceleration is currently enabled
+ if( collision.isGPUAccelerationEnabled() ){
+     std::cout << "GPU acceleration is active" << std::endl;
+ }
+
+ // Disable GPU acceleration (force CPU mode)
+ collision.disableGPUAcceleration();
+
+ // Re-enable GPU acceleration
+ collision.enableGPUAcceleration();
+ ~~~~~~
+
+ \subsubsection CDGPUMessages GPU/CPU Traversal Messages (NEW)
+
+ The plugin now automatically displays which traversal mode is being used during collision detection:
+
+ ~~~~~~{.cpp}
+ // With messages enabled (default), collision detection will display:
+ collision.enableMessages();
+ collision.findCollisions(UUID1);
+ // Output: "Using GPU acceleration for collision detection." 
+ //     or: "Using CPU traversal for collision detection."
+
+ // Messages are properly suppressed when disabled
+ collision.disableMessages();
+ collision.findCollisions(UUID1);  // No traversal messages displayed
+
+ // Messages respect the current GPU/CPU state
+ collision.enableMessages();
+ collision.disableGPUAcceleration();
+ collision.findCollisions(UUID1);  // Output: "Using CPU traversal for collision detection."
+ 
+ collision.enableGPUAcceleration();
+ collision.findCollisions(UUID1);  // Output: "Using GPU acceleration for collision detection." (if GPU available)
+ ~~~~~~
+
+ This feature helps users understand performance characteristics and troubleshoot GPU availability issues.
+
+ \subsubsection CDGPUPerformance GPU Performance Considerations
+
+ GPU acceleration provides the most benefit for:
+ - Large scenes with >1000 primitives
+ - Complex collision queries involving many primitives
+ - Repeated collision queries on the same BVH
+
+ For small scenes (<100 primitives), CPU computation may be faster due to GPU kernel launch overhead.
+
+ \subsubsection CDGPUMemory GPU Memory Management
+
+ The plugin automatically manages GPU memory:
+ - GPU memory is allocated when the BVH is built with GPU acceleration enabled
+ - Memory is automatically freed when the BVH is rebuilt or the object is destroyed
+ - The system gracefully handles GPU memory allocation failures by falling back to CPU
+
+ ~~~~~~{.cpp}
+ // Force a rebuild of the BVH (will clean up and reallocate GPU memory)
+ collision.rebuildBVH();
+ ~~~~~~
+
+ \subsection CDAdvanced Advanced Features
+
+ \subsubsection CDMessageControl Message Control
+
+ You can control diagnostic message output:
+
+ ~~~~~~{.cpp}
+ collision.disableMessages(); // Suppress diagnostic output
+ collision.enableMessages();  // Enable diagnostic output (default)
+ ~~~~~~
+
+ \subsubsection CDErrorHandling Error Handling
+
+ The plugin uses exceptions for error handling. Common errors include:
+
+ ~~~~~~{.cpp}
+ try {
+     // This will throw an exception if UUID doesn't exist
+     std::vector<uint> collisions = collision.findCollisions(invalid_UUID);
+ } catch( const std::runtime_error& e ) {
+     std::cout << "Collision detection error: " << e.what() << std::endl;
+ }
+ ~~~~~~
+
+ \subsubsection CDDynamic Dynamic Scenes
+
+ For dynamic scenes where geometry changes frequently:
+
+ ~~~~~~{.cpp}
+ // Add or modify geometry in the context
+ context.addTriangle( make_vec3(0,0,0), make_vec3(1,0,0), make_vec3(0.5,1,0) );
+
+ // Rebuild the BVH to include new/modified geometry
+ collision.rebuildBVH();
+
+ // Collision queries now include the updated geometry
+ std::vector<uint> collisions = collision.findCollisions(target_UUID);
+ ~~~~~~
+
+ \subsection CDPerformance Performance Guidelines
+
+ For optimal performance:
+
+ 1. **Build BVH once**: Avoid rebuilding the BVH unnecessarily as construction can be expensive
+ 2. **Batch queries**: When possible, query multiple primitives at once rather than individual queries
+ 3. **Use GPU acceleration**: For large scenes, GPU acceleration can provide 5-20x speedup
+ 4. **Monitor memory**: Large BVHs can consume significant GPU memory
+
+ ~~~~~~{.cpp}
+ // Good: Build BVH once, perform many queries
+ collision.buildBVH();
+ for( uint UUID : many_UUIDs ){
+     auto collisions = collision.findCollisions(UUID);
+     // Process results...
+ }
+
+ // Better: Batch query many UUIDs at once
+ collision.buildBVH();
+ auto all_collisions = collision.findCollisions(many_UUIDs);
+ ~~~~~~
+
+ \section CDExamples Example Applications
+
+ \subsection CDGrowthSim Plant Growth Simulation with Optimal Path Detection
+
+ Advanced plant growth simulation using cone-based optimal path detection:
+
+ ~~~~~~{.cpp}
+ // During growth simulation
+ CollisionDetection collision(&context);
+
+ // Simulate a growing plant shoot
+ helios::vec3 shoot_tip = make_vec3(0, 0, 0);
+ helios::vec3 current_direction = make_vec3(0, 0, 1);  // Currently growing upward
+ float perception_angle = M_PI / 4.0f;  // 45-degree perception cone
+ float segment_length = 0.5f;
+ 
+ // Find optimal growth direction
+ auto result = collision.findOptimalConePath(shoot_tip, current_direction, 
+                                            perception_angle, segment_length, 64);
+
+ // Grow in the optimal direction
+ helios::vec3 new_tip = shoot_tip + result.direction * segment_length;
+ uint new_segment = context.addCylinder( shoot_tip, new_tip, 0.05f );
+
+ std::cout << "Growth direction chosen with " << result.collisionCount 
+           << " collisions, confidence: " << result.confidence << std::endl;
+ ~~~~~~
+
+ \subsection CDBasicCollision Basic Collision Detection
+
+ Traditional collision detection for overlapping geometry:
+
+ ~~~~~~{.cpp}
+ // Basic collision detection
+ CollisionDetection collision(&context);
+
+ // Before placing a new leaf
+ uint new_leaf_UUID = context.addPatch( leaf_position, leaf_size, leaf_rotation );
+ std::vector<uint> collisions = collision.findCollisions(new_leaf_UUID);
+
+ if( !collisions.empty() ){
+     // Collision detected - adjust leaf position or size
+     context.deletePrimitive(new_leaf_UUID);
+     // ... implement collision avoidance logic ...
+ }
+ ~~~~~~
+
+ \subsection CDSpatialAnalysis Spatial Analysis
+
+ Find all primitives within a specific region:
+
+ ~~~~~~{.cpp}
+ // Create a query region
+ uint query_region = context.addBox( region_center, region_size );
+ 
+ // Find all primitives that intersect this region
+ std::vector<uint> intersecting_primitives = collision.findCollisions(query_region);
+ 
+ // Clean up query primitive
+ context.deletePrimitive(query_region);
+ 
+ // Process primitives within the region
+ for( uint UUID : intersecting_primitives ){
+     // ... analyze spatial distribution ...
+ }
+ ~~~~~~
+
+ \section CDTroubleshooting Troubleshooting
+
+ \subsection CDCommonIssues Common Issues
+
+ **Issue**: Collision detection returns unexpected results
+ - **Solution**: Ensure the BVH is built after all geometry modifications using \ref CollisionDetection::buildBVH() or \ref CollisionDetection::rebuildBVH()
+
+ **Issue**: GPU acceleration not working
+ - **Solution**: Check that CUDA is properly installed and the GPU has sufficient memory. The system will automatically fall back to CPU if GPU resources are unavailable.
+
+ **Issue**: Performance is slower than expected
+ - **Solution**: For small scenes, try disabling GPU acceleration. For large scenes, ensure GPU acceleration is enabled and consider batching collision queries.
+
+ **Issue**: Memory usage is high
+ - **Solution**: The BVH requires additional memory proportional to the number of primitives. Consider using fewer primitives or rebuilding the BVH only when necessary.
+
+ \subsection CDDebugging Debugging
+
+ Use the diagnostic functions to understand system behavior:
+
+ ~~~~~~{.cpp}
+ collision.enableMessages(); // Enable diagnostic output
+
+ // Check BVH status
+ if( !collision.isBVHValid() ){
+     std::cout << "BVH is not valid - call buildBVH() first" << std::endl;
+ }
+
+ // Check system capabilities  
+ if( collision.isGPUAccelerationEnabled() ){
+     std::cout << "GPU acceleration is enabled" << std::endl;
+ } else {
+     std::cout << "Using CPU-only collision detection" << std::endl;
+ }
+ ~~~~~~
+
+*/

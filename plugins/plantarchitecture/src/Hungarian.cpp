@@ -1,9 +1,6 @@
 #include "Hungarian.h"
 
-double HungarianAlgorithm::Solve(
-    const std::vector<std::vector<double>>& DistMatrix,
-    std::vector<int>& Assignment
-) {
+double HungarianAlgorithm::Solve(const std::vector<std::vector<double>> &DistMatrix, std::vector<int> &Assignment) {
     int n = static_cast<int>(DistMatrix.size());
     if (n == 0) {
         Assignment.clear();
@@ -22,15 +19,15 @@ double HungarianAlgorithm::Solve(
     }
 
     // u, v are the dual potentials; p, way are the matching helpers
-    std::vector<double> u(dim+1, 0.0), v2(dim+1, 0.0);
-    std::vector<int> p(dim+1, 0), way(dim+1, 0);
+    std::vector<double> u(dim + 1, 0.0), v2(dim + 1, 0.0);
+    std::vector<int> p(dim + 1, 0), way(dim + 1, 0);
 
     // Main loop: one row per iteration
     for (int i = 1; i <= dim; ++i) {
         p[0] = i;
         int j0 = 0;
-        std::vector<double> minv(dim+1, (std::numeric_limits<double>::max)());
-        std::vector<bool> used(dim+1, false);
+        std::vector<double> minv(dim + 1, (std::numeric_limits<double>::max)());
+        std::vector<bool> used(dim + 1, false);
 
         do {
             used[j0] = true;
@@ -39,8 +36,9 @@ double HungarianAlgorithm::Solve(
 
             // Try to improve the matching by looking at all free columns
             for (int j = 1; j <= dim; ++j) {
-                if (used[j]) continue;
-                double cur = a[i0-1][j-1] - u[i0] - v2[j];
+                if (used[j])
+                    continue;
+                double cur = a[i0 - 1][j - 1] - u[i0] - v2[j];
                 if (cur < minv[j]) {
                     minv[j] = cur;
                     way[j] = j0;
@@ -55,7 +53,7 @@ double HungarianAlgorithm::Solve(
             for (int j = 0; j <= dim; ++j) {
                 if (used[j]) {
                     u[p[j]] += delta;
-                    v2[j]    -= delta;
+                    v2[j] -= delta;
                 } else {
                     minv[j] -= delta;
                 }
@@ -76,7 +74,7 @@ double HungarianAlgorithm::Solve(
     Assignment.assign(n, -1);
     for (int j = 1; j <= dim; ++j) {
         if (p[j] <= n && j <= m) {
-            Assignment[p[j]-1] = j-1;
+            Assignment[p[j] - 1] = j - 1;
         }
     }
 

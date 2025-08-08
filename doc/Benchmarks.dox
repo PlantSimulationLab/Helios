@@ -1,0 +1,68 @@
+/*! \page Benchmarks Performance Benchmarks
+
+This page provides a collection of benchmarks for the various components of the model. The benchmarks are designed to assess the performance of different algorithms and implementations.
+
+\section RadCanopyBenchmark Homogeneous Canopy Radiation Interception Benchmark
+
+\subsection RadCanopyBenchmarkDescription Description
+
+This benchmark consists of a homogeneous canopy with LAI of 1.0 (5x5 cm<sup>2</sup> leaves) and lateral extent of 20x20 m<sup>2</sup> (laterally periodic boundary conditions) and height of 3 m. The canopy is irradiated by direct and diffuse sunlight.
+
+\subsection RadCanopyBenchmarkResults Results
+
+<b>v1.3.39</b>
+
+\image html doc/images/benchmarks/radiation_homogeneous_canopy_v1.3.39.png
+
+| benchmark                    | GPU                            | build   |   threads | section                   |   runtime |
+|:-----------------------------|:-------------------------------|:--------|----------:|:--------------------------|----------:|
+| radiation_homogeneous_canopy | NVIDIA RTX 6000 Ada Generation | Debug   |         1 | Geometry Creation         |     6.622 |
+| radiation_homogeneous_canopy | NVIDIA RTX 6000 Ada Generation | Debug   |         1 | Radiation geometry update |     3.310 |
+| radiation_homogeneous_canopy | NVIDIA RTX 6000 Ada Generation | Debug   |         1 | Direct ray trace          |     5.050 |
+| radiation_homogeneous_canopy | NVIDIA RTX 6000 Ada Generation | Debug   |         1 | Diffuse ray trace         |     2.349 |
+| radiation_homogeneous_canopy | NVIDIA RTX 6000 Ada Generation | Release |         1 | Geometry Creation         |     0.939 |
+| radiation_homogeneous_canopy | NVIDIA RTX 6000 Ada Generation | Release |         1 | Radiation geometry update |     0.513 |
+| radiation_homogeneous_canopy | NVIDIA RTX 6000 Ada Generation | Release |         1 | Direct ray trace          |     1.054 |
+| radiation_homogeneous_canopy | NVIDIA RTX 6000 Ada Generation | Release |         1 | Diffuse ray trace         |     1.910 |
+| radiation_homogeneous_canopy | Tesla V100-PCIE-16GB           | Debug   |         1 | Geometry Creation         |    18.690 |
+| radiation_homogeneous_canopy | Tesla V100-PCIE-16GB           | Debug   |         1 | Radiation geometry update |    11.638 |
+| radiation_homogeneous_canopy | Tesla V100-PCIE-16GB           | Debug   |         1 | Direct ray trace          |    19.292 |
+| radiation_homogeneous_canopy | Tesla V100-PCIE-16GB           | Debug   |         1 | Diffuse ray trace         |    22.240 |
+| radiation_homogeneous_canopy | Tesla V100-PCIE-16GB           | Release |         1 | Geometry Creation         |     2.835 |
+| radiation_homogeneous_canopy | Tesla V100-PCIE-16GB           | Release |         1 | Radiation geometry update |     1.806 |
+| radiation_homogeneous_canopy | Tesla V100-PCIE-16GB           | Release |         1 | Direct ray trace          |     5.927 |
+| radiation_homogeneous_canopy | Tesla V100-PCIE-16GB           | Release |         1 | Diffuse ray trace         |    20.176 |
+| radiation_homogeneous_canopy | NVIDIA RTX A5500               | Debug   |         1 | Geometry Creation         |     9.118 |
+| radiation_homogeneous_canopy | NVIDIA RTX A5500               | Debug   |         1 | Radiation geometry update |     4.665 |
+| radiation_homogeneous_canopy | NVIDIA RTX A5500               | Debug   |         1 | Direct ray trace          |     7.858 |
+| radiation_homogeneous_canopy | NVIDIA RTX A5500               | Debug   |         1 | Diffuse ray trace         |     6.672 |
+| radiation_homogeneous_canopy | NVIDIA RTX A5500               | Release |         1 | Geometry Creation         |     1.287 |
+| radiation_homogeneous_canopy | NVIDIA RTX A5500               | Release |         1 | Radiation geometry update |     1.063 |
+| radiation_homogeneous_canopy | NVIDIA RTX A5500               | Release |         1 | Direct ray trace          |     2.024 |
+| radiation_homogeneous_canopy | NVIDIA RTX A5500               | Release |         1 | Diffuse ray trace         |     5.308 |
+| radiation_homogeneous_canopy | NVIDIA A100 80GB PCIe          | Debug   |         1 | Geometry Creation         |     6.964 |
+| radiation_homogeneous_canopy | NVIDIA A100 80GB PCIe          | Debug   |         1 | Radiation geometry update |     3.708 |
+| radiation_homogeneous_canopy | NVIDIA A100 80GB PCIe          | Debug   |         1 | Direct ray trace          |     5.821 |
+| radiation_homogeneous_canopy | NVIDIA A100 80GB PCIe          | Debug   |         1 | Diffuse ray trace         |    15.786 |
+| radiation_homogeneous_canopy | NVIDIA A100 80GB PCIe          | Release |         1 | Geometry Creation         |     0.918 |
+| radiation_homogeneous_canopy | NVIDIA A100 80GB PCIe          | Release |         1 | Radiation geometry update |     0.494 |
+| radiation_homogeneous_canopy | NVIDIA A100 80GB PCIe          | Release |         1 | Direct ray trace          |     1.727 |
+| radiation_homogeneous_canopy | NVIDIA A100 80GB PCIe          | Release |         1 | Diffuse ray trace         |    14.186 |
+| radiation_homogeneous_canopy | NVIDIA GeForce RTX 3090        | Debug   |         1 | Geometry Creation         |    11.478 |
+| radiation_homogeneous_canopy | NVIDIA GeForce RTX 3090        | Debug   |         1 | Radiation geometry update |     6.849 |
+| radiation_homogeneous_canopy | NVIDIA GeForce RTX 3090        | Debug   |         1 | Direct ray trace          |    12.848 |
+| radiation_homogeneous_canopy | NVIDIA GeForce RTX 3090        | Debug   |         1 | Diffuse ray trace         |     6.724 |
+| radiation_homogeneous_canopy | NVIDIA GeForce RTX 3090        | Release |         1 | Geometry Creation         |     1.512 |
+| radiation_homogeneous_canopy | NVIDIA GeForce RTX 3090        | Release |         1 | Radiation geometry update |     1.266 |
+| radiation_homogeneous_canopy | NVIDIA GeForce RTX 3090        | Release |         1 | Direct ray trace          |     2.069 |
+| radiation_homogeneous_canopy | NVIDIA GeForce RTX 3090        | Release |         1 | Diffuse ray trace         |     5.516 |
+| radiation_homogeneous_canopy | NVIDIA L40S                    | Debug   |         1 | Geometry Creation         |     6.674 |
+| radiation_homogeneous_canopy | NVIDIA L40S                    | Debug   |         1 | Radiation geometry update |     3.533 |
+| radiation_homogeneous_canopy | NVIDIA L40S                    | Debug   |         1 | Direct ray trace          |     7.679 |
+| radiation_homogeneous_canopy | NVIDIA L40S                    | Debug   |         1 | Diffuse ray trace         |     2.807 |
+| radiation_homogeneous_canopy | NVIDIA L40S                    | Release |         1 | Geometry Creation         |     0.809 |
+| radiation_homogeneous_canopy | NVIDIA L40S                    | Release |         1 | Radiation geometry update |     0.489 |
+| radiation_homogeneous_canopy | NVIDIA L40S                    | Release |         1 | Direct ray trace          |     0.950 |
+| radiation_homogeneous_canopy | NVIDIA L40S                    | Release |         1 | Diffuse ray trace         |     1.821 |
+
+*/

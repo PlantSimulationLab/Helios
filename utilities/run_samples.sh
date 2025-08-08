@@ -11,18 +11,46 @@ usage() {
     echo "  --memcheck       Enable memory checking tools (requires leaks on macOS or valgrind on Linux)"
     echo "  --debugbuild     Build with Debug configuration"
     echo "  --verbose        Show full build/compile output"
+    echo "  --log-file <file>  Redirect all output to a specified log file"
     echo
     exit 1
 }
 
-SAMPLES=("context_selftest" "visualizer_selftest" "radiation_selftest" "energybalance_selftest" "leafoptics_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "lidar_selftest" "aeriallidar_selftest" "voxelintersection_selftest" "canopygenerator_selftest" "boundarylayerconductance_selftest" "syntheticannotation_selftest" "plantarchitecture_selftest" "projectbuilder_selftest" "tutorial0" "tutorial1" "tutorial2" "tutorial5" )
-SAMPLES_NOGPU=("context_selftest" "visualizer_selftest" "leafoptics_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "canopygenerator_selftest" "boundarylayerconductance_selftest" "syntheticannotation_selftest" "plantarchitecture_selftest" "projectbuilder_selftest" "tutorial0" "tutorial1" "tutorial2" "tutorial5")
+# Function to run commands with proper redirection (compatible with all bash versions)
+run_command() {
+    if [ -n "$LOG_FILE" ]; then
+        if [ "$VERBOSE" == "ON" ]; then
+            "$@" 2>&1 | tee -a "$LOG_FILE"
+            return ${PIPESTATUS[0]}
+        else
+            "$@" >> "$LOG_FILE" 2>&1
+        fi
+    elif [ "$VERBOSE" == "ON" ]; then
+        "$@"
+    else
+        "$@" >/dev/null 2>&1
+    fi
+}
 
-TEST_PLUGINS="energybalance lidar aeriallidar photosynthesis radiation leafoptics solarposition stomatalconductance visualizer voxelintersection weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture projectbuilder"
-TEST_PLUGINS_NOGPU="leafoptics photosynthesis solarposition stomatalconductance visualizer weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture projectbuilder"
+SAMPLES=("context_selftest" "visualizer_selftest" "radiation_selftest" "energybalance_selftest" "leafoptics_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "lidar_selftest" "aeriallidar_selftest" "voxelintersection_selftest" "canopygenerator_selftest" "boundarylayerconductance_selftest" "syntheticannotation_selftest" "plantarchitecture_selftest" "projectbuilder_selftest" "planthydraulics_selftest" "parameteroptimization_selftest" "collisiondetection_selftest" "tutorial0" "tutorial1" "tutorial2" "tutorial5" )
+SAMPLES_NOGPU=("context_selftest" "visualizer_selftest" "leafoptics_selftest" "solarposition_selftest" "stomatalconductance_selftest" "photosynthesis_selftest" "weberpenntree_selftest" "canopygenerator_selftest" "boundarylayerconductance_selftest" "syntheticannotation_selftest" "plantarchitecture_selftest" "projectbuilder_selftest" "planthydraulics_selftest" "parameteroptimization_selftest" "collisiondetection_selftest" "tutorial0" "tutorial1" "tutorial2" "tutorial5")
+
+TEST_PLUGINS="energybalance lidar aeriallidar photosynthesis radiation leafoptics solarposition stomatalconductance visualizer voxelintersection weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture projectbuilder planthydraulics parameteroptimization collisiondetection"
+TEST_PLUGINS_NOGPU="leafoptics photosynthesis solarposition stomatalconductance visualizer weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture projectbuilder planthydraulics parameteroptimization collisiondetection"
 
 BUILD_TYPE="Release"
-OUTPUT_REDIRECT=" &>/dev/null"
+
+# Detect number of processors for parallel compilation
+if command -v nproc >/dev/null 2>&1; then
+    NPROC=$(nproc)
+elif [[ "${OSTYPE}" == "darwin"* ]]; then
+    NPROC=$(sysctl -n hw.ncpu)
+elif [[ "${OSTYPE}" == "msys"* ]] || [[ "${OSTYPE}" == "cygwin"* ]] || [[ -n "${NUMBER_OF_PROCESSORS}" ]]; then
+    # Windows environment (Git Bash, MSYS2, Cygwin, or GitHub Actions)
+    NPROC=${NUMBER_OF_PROCESSORS:-$(nproc 2>/dev/null || echo "1")}
+else
+    NPROC=1
+fi
 
 cd ../samples || exit 1
 
@@ -34,11 +62,12 @@ fi
 while [ $# -gt 0 ]; do
   case $1 in
   --checkout)
+    CHECKOUT_MODE="ON"
     cd /tmp || exit 1
 
     if [ -e "./helios_test" ]; then
       chmod -R 777 ./helios_test
-      rm -r ./helios_test
+      rm -rf ./helios_test
     fi
 
     git clone https://www.github.com/PlantSimulationLab/Helios ./helios_test
@@ -63,7 +92,6 @@ while [ $# -gt 0 ]; do
 
   --memcheck)
     MEMCHECK="ON"
-    #export MallocStackLogging=1
     ;;
 
   --debugbuild)
@@ -71,8 +99,23 @@ while [ $# -gt 0 ]; do
     ;;
 
   --verbose)
-      unset OUTPUT_REDIRECT
-      ;;
+    VERBOSE="ON"
+    ;;
+
+  --log-file)
+    if [ -z "$2" ]; then
+      echo "Error: --log-file requires a file path."
+      usage
+    fi
+    # Use an absolute path for the log file so subsequent
+    # directory changes do not affect where output is written
+    if [[ "$2" = /* ]]; then
+      LOG_FILE="$2"
+    else
+      LOG_FILE="$(pwd)/$2"
+    fi
+    shift
+    ;;
 
   --help|-h)
     usage
@@ -85,6 +128,10 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+
+if [ -n "$LOG_FILE" ]; then
+  > "$LOG_FILE"  # Clear the log file
+fi
 
 if [ "${MEMCHECK}" == "ON" ];then
   if [[ "${OSTYPE}" == "darwin"* ]];then
@@ -101,7 +148,7 @@ if [ "${MEMCHECK}" == "ON" ];then
 fi
 
 # Check if cmake command is available
-if ! command -v cmake &>/dev/null; then
+if ! command -v cmake >/dev/null 2>&1; then
   echo "ERROR: cmake command not found. Please install cmake and make sure it's in your PATH."
   exit 1
 fi
@@ -113,10 +160,9 @@ fi
 ERROR_COUNT=0
 
 if [ -e "temp" ]; then
-  rm -rf temp/*
-else
-  mkdir temp
+  rm -rf temp
 fi
+mkdir temp
 
 if [ ! -e "../utilities/create_project.sh" ]; then
   echo -e "\r\x1B[31mProject creation script create_project.sh does not exist...failed.\x1B[39m"
@@ -136,7 +182,7 @@ else
 
     echo -ne "Building project creation script test..."
 
-    eval cmake .. -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" ${OUTPUT_REDIRECT}
+    run_command cmake .. -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"
 
     if (($? == 0)); then
       echo -e "\r\x1B[32mBuilding project creation script test...done.\x1B[39m"
@@ -147,7 +193,7 @@ else
 
     echo -ne "Compiling project creation script test..."
 
-    eval cmake --build ./ --target temp ${OUTPUT_REDIRECT}
+    run_command cmake --build ./ --target temp -j "${NPROC}"
 
     if (($? == 0)); then
       if [ -e "temp" ]; then
@@ -164,9 +210,9 @@ else
     echo -ne "Running project creation script test..."
 
     if [[ "${OSTYPE}" == "msys"* ]];then
-      eval ./temp.exe ${OUTPUT_REDIRECT}
+      run_command ./temp.exe
     else
-      eval ./temp ${OUTPUT_REDIRECT}
+      run_command ./temp
     fi
 
     if (($? == 0)); then
@@ -178,6 +224,7 @@ else
 
     cd ../..
 
+    chmod -R 755 temp 2>/dev/null || true
     rm -rf temp
 
   fi
@@ -196,25 +243,25 @@ for i in "${SAMPLES[@]}"; do
 
   cd "$i"/build || exit 1
 
-  rm -rf *
+  rm -rf ./*
 
   echo -ne "Building sample ${i}..."
 
-  eval cmake .. -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" ${OUTPUT_REDIRECT}
+  run_command cmake .. -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"
 
   if (($? == 0)); then
     echo -e "\r\x1B[32mBuilding sample ${i}...done.\x1B[39m"
   else
     echo -e "\r\x1B[31mBuilding sample ${i}...failed.\x1B[39m"
     ERROR_COUNT=$((ERROR_COUNT + 1))
-    rm -rf "$i"/build/*
+    rm -rf ./*
     cd ../..
     continue
   fi
 
   echo -ne "Compiling sample ${i}..."
 
-  eval cmake --build ./ --target "${i}" --config "${BUILD_TYPE}" ${OUTPUT_REDIRECT}
+  run_command cmake --build ./ --target "${i}" --config "${BUILD_TYPE}" -j "${NPROC}"
 
   if (($? == 0)); then
     if [ -e "${i}" ]; then
@@ -222,14 +269,14 @@ for i in "${SAMPLES[@]}"; do
     else
       echo -e "\r\x1B[31mCompiling sample ${i}...failed.\x1B[39m"
       ERROR_COUNT=$((ERROR_COUNT + 1))
-      rm -rf "$i"/build/*
+      rm -rf ./*glob*
       cd ../..
       continue
     fi
   else
     echo -e "\r\x1B[31mCompiling sample ${i}...failed.\x1B[39m"
     ERROR_COUNT=$((ERROR_COUNT + 1))
-    rm -rf "$i"/build/*
+    rm -rf ./*
     cd ../..
     continue
   fi
@@ -245,9 +292,9 @@ for i in "${SAMPLES[@]}"; do
   echo -ne "Running sample ${i}..."
 
   if [[ "${OSTYPE}" == "msys"* ]];then
-    eval "./${i}.exe" ${OUTPUT_REDIRECT}
+    run_command "./${i}.exe"
   else
-    eval "./${i}" ${OUTPUT_REDIRECT}
+    run_command "./${i}"
   fi
 
   if (($? == 0)); then
@@ -255,7 +302,7 @@ for i in "${SAMPLES[@]}"; do
   else
     echo -e "\r\x1B[31mRunning sample ${i}...failed.\x1B[39m"
     ERROR_COUNT=$((ERROR_COUNT + 1))
-    rm -rf "$i"/build/*
+    rm -rf ./*
     cd ../..
     continue
   fi
@@ -273,9 +320,9 @@ for i in "${SAMPLES[@]}"; do
     echo -ne "Running memcheck for sample ${i}..."
 
     if [[ "${OSTYPE}" == "darwin"* ]];then
-      eval leaks --atExit -- "./${i}" ${OUTPUT_REDIRECT}
+      run_command leaks --atExit -- "./${i}"
     else
-      eval valgrind --leak-check=full --error-exitcode=1 "./${i}" ${OUTPUT_REDIRECT}
+      run_command valgrind --leak-check=full --error-exitcode=1 "./${i}"
     fi
 
     if (($? == 0)); then
@@ -283,22 +330,22 @@ for i in "${SAMPLES[@]}"; do
     else
       echo -e "\r\x1B[31mRunning memcheck for sample ${i}...failed.\x1B[39m"
       ERROR_COUNT=$((ERROR_COUNT + 1))
-      rm -rf "$i"/build/*
+      rm -rf ./*
       cd ../..
       continue
     fi
 
   fi
 
+  chmod -R 755 ./* 2>/dev/null || true
   rm -rf ./*
 
   cd ../..
 
 done
-
-if [ "$1" == "-checkout" ]; then
+if [ "$CHECKOUT_MODE" == "ON" ]; then
   cd ../..
-  rm -r ./helios_test
+  rm -rf ./helios_test
 fi
 
 if ((ERROR_COUNT == 0)); then

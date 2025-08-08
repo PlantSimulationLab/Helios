@@ -20,36 +20,35 @@
 #include "Context.h"
 #include "Visualizer.h"
 
-class SyntheticAnnotation{
+class SyntheticAnnotation {
 public:
-
     //! Synthetic image annotation plug-in default constructor
     /** \param[in] context Pointer to the Helios context
-    */
-    explicit SyntheticAnnotation( helios::Context* context );
+     */
+    explicit SyntheticAnnotation(helios::Context *context);
 
     //! Function to perform a self-test of plug-in functions
-    int selfTest( ) const;
+    static int selfTest(int argc, char** argv);
 
-    void labelPrimitives( const char* label );
+    void labelPrimitives(const char *label);
 
-    void labelPrimitives( uint UUIDs, const char* label );
+    void labelPrimitives(uint UUIDs, const char *label);
 
-    void labelPrimitives( std::vector<uint> UUIDs, const char* label );
+    void labelPrimitives(std::vector<uint> UUIDs, const char *label);
 
-    void labelPrimitives( std::vector<std::vector<uint> > UUIDs, const char* label );
+    void labelPrimitives(std::vector<std::vector<uint>> UUIDs, const char *label);
 
-    void labelUnlabeledPrimitives( const char* label );
+    void labelUnlabeledPrimitives(const char *label);
 
-    void setBackgroundColor( const helios::RGBcolor &color );
+    void setBackgroundColor(const helios::RGBcolor &color);
 
-    void addSkyDome( const char* filename );
+    void addSkyDome(const char *filename);
 
-    void setWindowSize( uint window_width, uint window_height );
+    void setWindowSize(uint window_width, uint window_height);
 
-    void setCameraPosition( const helios::vec3 &camera_position, const helios::vec3 &camera_lookat );
+    void setCameraPosition(const helios::vec3 &camera_position, const helios::vec3 &camera_lookat);
 
-    void setCameraPosition( const std::vector<helios::vec3> &camera_position, const std::vector<helios::vec3> &camera_lookat );
+    void setCameraPosition(const std::vector<helios::vec3> &camera_position, const std::vector<helios::vec3> &camera_lookat);
 
     //! Enable calculation and writing of rectangular bounding boxes for object detection when render() function is called
     void enableObjectDetection();
@@ -72,11 +71,10 @@ public:
     //! Render RGB image and generate annotations
     /* \param[in] "outputdir" Base directory to save output files.
      */
-    void render( const char* outputdir );
+    void render(const char *outputdir);
 
 private:
-
-    helios::Context* context;
+    helios::Context *context;
 
     bool printmessages;
 
@@ -96,20 +94,19 @@ private:
 
     uint currentLabelID;
 
-    std::map< std::string, std::vector<std::vector<uint> > > labelUUIDs;
+    std::map<std::string, std::vector<std::vector<uint>>> labelUUIDs;
 
-    std::map< std::string, std::vector<uint> > labelIDs;
+    std::map<std::string, std::vector<uint>> labelIDs;
 
-    helios::RGBcolor int2rgb( int ID ) const;
+    helios::RGBcolor int2rgb(int ID) const;
 
-    int rgb2int( helios::RGBcolor color ) const;
+    int rgb2int(helios::RGBcolor color) const;
 
-    uint getGroupRectangularBBox( uint ID, const std::vector<uint>& pixels, uint framebuffer_width, uint framebuffer_height, helios::int4& bbox ) const;
+    uint getGroupRectangularBBox(uint ID, const std::vector<uint> &pixels, uint framebuffer_width, uint framebuffer_height, helios::int4 &bbox) const;
 
-    //void getGroupPolygonMask( const std::vector<uint>& pixels, const uint framebuffer_width, const uint framebuffer_height ) const;
+    // void getGroupPolygonMask( const std::vector<uint>& pixels, const uint framebuffer_width, const uint framebuffer_height ) const;
 
-    void writePixelID( const char* filename, int labelminpixels, Visualizer* vis ) const;
-
+    void writePixelID(const char *filename, int labelminpixels, Visualizer *vis) const;
 };
 
 #endif

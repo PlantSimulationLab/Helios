@@ -1,12 +1,23 @@
-cmake_minimum_required(VERSION 2.0)
+cmake_minimum_required(VERSION 3.15)
 
 project(helios)  
 
-include_directories(include)
-include_directories(../../core/include)
+add_library( canopygenerator STATIC 
+        "src/CanopyGenerator.cpp"
+        "src/grapevine.cpp"
+        "src/whitespruce.cpp"
+        "src/tomato.cpp"
+        "src/strawberry.cpp"
+        "src/walnut.cpp"
+        "src/sorghum.cpp"
+        "src/bean.cpp"
+        "tests/selfTest.cpp"
+)
 
-add_library( canopygenerator STATIC "src/CanopyGenerator.cpp;src/grapevine.cpp;src/whitespruce.cpp;src/tomato.cpp;src/strawberry.cpp;src/walnut.cpp;src/sorghum.cpp;src/bean.cpp")
+target_include_directories(canopygenerator PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" )
 
-set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
+file( COPY textures DESTINATION "${CMAKE_BINARY_DIR}/plugins/canopygenerator/" )
 
-file( COPY textures DESTINATION ${CMAKE_BINARY_DIR}/plugins/canopygenerator/ )
+add_executable( canopygenerator_tests "tests/TestMain.cpp" )
+target_link_libraries( canopygenerator_tests PRIVATE canopygenerator )
+add_test( NAME canopygenerator_tests COMMAND canopygenerator_tests )

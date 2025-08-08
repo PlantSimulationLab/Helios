@@ -9,22 +9,32 @@ endif()
 # Defining Helios Context source files to be built
 set(HELIOS_SOURCES
         src/Context.cpp
+        src/Context_primitive.cpp
+        src/Context_object.cpp
         src/Context_fileIO.cpp
         src/Context_data.cpp
         src/global.cpp
-        src/selfTest.cpp
-        src/pugixml.cpp
+        tests/selfTest.cpp
+        lib/pugixml/pugixml.cpp
 )
+
 add_library(helios STATIC ${HELIOS_SOURCES})
 
 # Defining Helios Context include files
 target_include_directories(helios
         PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/pugixml>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/doctest>
         $<INSTALL_INTERFACE:include>
+        $<INSTALL_INTERFACE:lib/pugixml>
+        $<INSTALL_INTERFACE:lib/doctest>
 )
 
 # External libraries
+set(SAVED_LOG_LEVEL ${CMAKE_MESSAGE_LOG_LEVEL})
+set(CMAKE_MESSAGE_LOG_LEVEL WARNING)
+
 include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/lib/zlib")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/zlib"     "${CMAKE_BINARY_DIR}/lib/zlib")
 
@@ -37,8 +47,12 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/libjpeg-9a" "${CMAKE_BINARY_DI
 
 target_link_libraries( helios PRIVATE png_static  jpeg ) #note that zlib is already linked by libpng
 
+set(CMAKE_MESSAGE_LOG_LEVEL ${SAVED_LOG_LEVEL})
+
 file( COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/images" DESTINATION "${CMAKE_BINARY_DIR}/lib/" )
 file( COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/models" DESTINATION "${CMAKE_BINARY_DIR}/lib/" )
 file( COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/testdata" DESTINATION "${CMAKE_BINARY_DIR}/lib/" )
 
-set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;" PARENT_SCOPE )
+add_executable( context_tests tests/TestMain.cpp )
+target_link_libraries( context_tests PRIVATE helios )
+add_test( NAME context_tests COMMAND context_tests )

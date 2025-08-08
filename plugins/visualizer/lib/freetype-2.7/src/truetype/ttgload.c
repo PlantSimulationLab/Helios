@@ -17,6 +17,7 @@
 
 
 #include <ft2build.h>
+#include <stdint.h>
 #include FT_INTERNAL_DEBUG_H
 #include FT_INTERNAL_CALC_H
 #include FT_INTERNAL_STREAM_H
@@ -1687,11 +1688,11 @@
       /* clear the nodes filled by sibling chains */
       node = ft_list_get_node_at( &loader->composites, recurse_count );
       for ( node2 = node; node2; node2 = node2->next )
-        node2->data = (void*)ULONG_MAX;
+        node2->data = (void*)(uintptr_t)ULONG_MAX;
 
       /* check whether we already have a composite glyph with this index */
       if ( FT_List_Find( &loader->composites,
-                         (void*)(unsigned long)glyph_index ) )
+                         (void*)(uintptr_t)glyph_index ) )
       {
         FT_TRACE1(( "TT_Load_Composite_Glyph:"
                     " infinite recursion detected\n" ));
@@ -1700,13 +1701,13 @@
       }
 
       else if ( node )
-        node->data = (void*)(unsigned long)glyph_index;
+        node->data = (void*)(uintptr_t)glyph_index;
 
       else
       {
         if ( FT_NEW( node ) )
           goto Exit;
-        node->data = (void*)(unsigned long)glyph_index;
+        node->data = (void*)(uintptr_t)glyph_index;
         FT_List_Add( &loader->composites, node );
       }
 

@@ -7,7 +7,7 @@ void InitializeEnergyBalance(const std::string &xml_input_file, BLConductanceMod
     pugi::xml_document xmldoc;
 
     std::string xml_error_string;
-    if( !open_xml_file(xml_input_file, xmldoc, xml_error_string) ) {
+    if (!open_xml_file(xml_input_file, xmldoc, xml_error_string)) {
         helios_runtime_error(xml_error_string);
     }
 
@@ -25,39 +25,36 @@ void InitializeEnergyBalance(const std::string &xml_input_file, BLConductanceMod
             break;
         }
 
-//        int direct_ray_count = 100;
-//        node = energybalance_block.child("direct_ray_count");
-//        if (node.empty()) {
-//            direct_ray_count = 0;
-//        } else {
-//
-//            const char *direct_ray_count_str = node.child_value();
-//            if (!parse_int(direct_ray_count_str, direct_ray_count)) {
-//                helios_runtime_error("ERROR: Value given for 'direct_ray_count' could not be parsed.");
-//            } else if (direct_ray_count < 0) {
-//                helios_runtime_error("ERROR: Value given for 'direct_ray_count' must be greater than or equal to 0.");
-//            }
-//
-//        }
-
+        //        int direct_ray_count = 100;
+        //        node = energybalance_block.child("direct_ray_count");
+        //        if (node.empty()) {
+        //            direct_ray_count = 0;
+        //        } else {
+        //
+        //            const char *direct_ray_count_str = node.child_value();
+        //            if (!parse_int(direct_ray_count_str, direct_ray_count)) {
+        //                helios_runtime_error("ERROR: Value given for 'direct_ray_count' could not be parsed.");
+        //            } else if (direct_ray_count < 0) {
+        //                helios_runtime_error("ERROR: Value given for 'direct_ray_count' must be greater than or equal to 0.");
+        //            }
+        //
+        //        }
     }
 
-    energybalancemodel->addRadiationBand( {"PAR", "NIR", "LW"} );
+    energybalancemodel->addRadiationBand({"PAR", "NIR", "LW"});
 
     std::vector<uint> ground_UUIDs;
-    try{
-//        assert( context_ptr->doesGlobalDataExist( "ground_UUIDs" ) );
-        context_ptr->getGlobalData( "ground_UUIDs", ground_UUIDs );
-        boundarylayerconductancemodel->setBoundaryLayerModel( ground_UUIDs, "Ground" );
-    }catch(...){
+    try {
+        //        assert( context_ptr->doesGlobalDataExist( "ground_UUIDs" ) );
+        context_ptr->getGlobalData("ground_UUIDs", ground_UUIDs);
+        boundarylayerconductancemodel->setBoundaryLayerModel(ground_UUIDs, "Ground");
+    } catch (...) {
         std::cout << "WARNING: No ground UUIDs found" << std::endl;
     }
 
-    if( energybalance_block_count==0 ){
-        context_ptr->setGlobalData( "energybalance_enabled", false );
-    }else{
-        context_ptr->setGlobalData( "energybalance_enabled", true );
+    if (energybalance_block_count == 0) {
+        context_ptr->setGlobalData("energybalance_enabled", false);
+    } else {
+        context_ptr->setGlobalData("energybalance_enabled", true);
     }
-
-
 }

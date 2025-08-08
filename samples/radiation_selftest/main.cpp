@@ -2,13 +2,8 @@
 
 using namespace helios;
 
-int main()
-{
-  
-  Context context;
-
-  RadiationModel radiationmodel(&context);
-
-  return radiationmodel.selfTest();
-
+int main(int argc, char** argv) {
+    Context context;
+    RadiationModel radiationmodel(&context);
+    return radiationmodel.selfTest(argc, argv);
 }
