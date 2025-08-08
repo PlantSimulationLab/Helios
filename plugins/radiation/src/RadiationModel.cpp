@@ -14,6 +14,7 @@
 */
 
 #include "RadiationModel.h"
+#include <unordered_set>
 
 using namespace helios;
 
@@ -1677,13 +1678,16 @@ void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
     std::vector<uint> primitive_UUIDs_ordered;
     primitive_UUIDs_ordered.reserve(Nprimitives);
 
+    // Create unordered_set for O(1) lookup instead of O(n) std::find
+    std::unordered_set<uint> context_UUIDs_set(context_UUIDs.begin(), context_UUIDs.end());
+
     for (uint objID: objID_all) {
 
         const std::vector<uint> &primitive_UUIDs = context->getObjectPrimitiveUUIDs(objID);
         for (uint p: primitive_UUIDs) {
             // Only add if primitive exists AND was not filtered out for zero area
             if (context->doesPrimitiveExist(p) && 
-                std::find(context_UUIDs.begin(), context_UUIDs.end(), p) != context_UUIDs.end()) {
+                context_UUIDs_set.find(p) != context_UUIDs_set.end()) {
                 primitive_UUIDs_ordered.push_back(p);
             }
         }
