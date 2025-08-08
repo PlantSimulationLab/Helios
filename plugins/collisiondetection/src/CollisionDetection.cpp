@@ -1952,6 +1952,84 @@ bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const 
     return false;
 }
 
+bool CollisionDetection::detectAttractionPoints(const vec3 &vertex, const vec3 &look_direction, float look_ahead_distance, float half_angle_degrees, const std::vector<vec3> &attraction_points, vec3 &direction_to_closest) {
+    
+    // Validate input parameters
+    if (attraction_points.empty()) {
+        return false;
+    }
+    
+    if (look_ahead_distance <= 0.0f) {
+        if (printmessages) {
+            std::cerr << "WARNING (CollisionDetection::detectAttractionPoints): Invalid look-ahead distance (<= 0)" << std::endl;
+        }
+        return false;
+    }
+    
+    if (half_angle_degrees <= 0.0f || half_angle_degrees >= 180.0f) {
+        if (printmessages) {
+            std::cerr << "WARNING (CollisionDetection::detectAttractionPoints): Invalid half-angle (must be in range (0, 180) degrees)" << std::endl;
+        }
+        return false;
+    }
+    
+    // Convert half-angle to radians
+    float half_angle_rad = half_angle_degrees * M_PI / 180.0f;
+    
+    // Normalize look direction
+    vec3 axis = look_direction;
+    axis.normalize();
+    
+    // Variables to track the closest attraction point
+    bool found_any = false;
+    float min_angular_distance = std::numeric_limits<float>::max();
+    vec3 closest_point;
+    
+    // Check each attraction point
+    for (const vec3 &point : attraction_points) {
+        // Calculate vector from vertex to attraction point
+        vec3 to_point = point - vertex;
+        float distance_to_point = to_point.magnitude();
+        
+        // Skip if point is at the vertex or beyond look-ahead distance
+        if (distance_to_point < 1e-6f || distance_to_point > look_ahead_distance) {
+            continue;
+        }
+        
+        // Normalize the direction to the point
+        vec3 direction_to_point = to_point;
+        direction_to_point.normalize();
+        
+        // Calculate angle between look direction and direction to point
+        float cos_angle = axis * direction_to_point;
+        
+        // Clamp to handle numerical precision issues
+        cos_angle = std::max(-1.0f, std::min(1.0f, cos_angle));
+        
+        float angle = std::acos(cos_angle);
+        
+        // Check if point is within the perception cone
+        if (angle <= half_angle_rad) {
+            found_any = true;
+            
+            // Check if this is the closest to the centerline
+            if (angle < min_angular_distance) {
+                min_angular_distance = angle;
+                closest_point = point;
+            }
+        }
+    }
+    
+    // If we found any attraction points, calculate the direction to the closest one
+    if (found_any) {
+        direction_to_closest = closest_point - vertex;
+        direction_to_closest.normalize();
+        return true;
+    }
+    
+    return false;
+}
+
 std::vector<helios::vec3> CollisionDetection::sampleDirectionsInCone(const vec3 &apex, const vec3 &central_axis, float half_angle, int num_samples) {
 
     std::vector<vec3> directions;

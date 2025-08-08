@@ -1251,6 +1251,20 @@ private:
     bool applySolidObstacleAvoidance(const helios::vec3 &current_position, helios::vec3 &internode_axis) const;
 
     /**
+     * \brief Calculates attraction point direction for internode growth.
+     *
+     * This method uses the CollisionDetection plugin to determine if any attraction points
+     * lie within the plant's perception cone. If found, returns the direction toward the
+     * closest attraction point for growth guidance.
+     *
+     * \param[in] internode_base_origin Current position of the growing internode
+     * \param[in] internode_axis Current natural growth direction
+     * \param[out] attraction_active Set to true if attraction points were found, false otherwise
+     * \return Unit vector pointing toward the closest attraction point (if any found)
+     */
+    helios::vec3 calculateAttractionPointDirection(const helios::vec3 &internode_base_origin, const helios::vec3 &internode_axis, bool &attraction_active) const;
+
+    /**
      * \brief Calculates optimal collision avoidance direction for petiole growth.
      *
      * This method performs collision detection analysis to find an optimal petiole direction
@@ -2003,6 +2017,35 @@ public:
      */
     void setGeometryUpdateScheduling(int update_frequency = 3, bool force_update_on_collision = true);
 
+    // -- attraction points methods -- //
+    
+    //! Enable attraction points to guide plant growth toward specific targets
+    /**
+     * \param[in] attraction_points Vector of 3D positions that plants should grow toward
+     * \param[in] view_half_angle_deg Half-angle of the attraction detection view cone in degrees (default = 80)
+     * \param[in] look_ahead_distance How far ahead attraction points will be considered in meters (default = 0.1)
+     * \param[in] attraction_weight Weight factor for attraction vs natural growth (0.0 = ignore attraction, 1.0 = full attraction) (default = 0.6)
+     */
+    void enableAttractionPoints(const std::vector<helios::vec3> &attraction_points, float view_half_angle_deg = 80.0f, float look_ahead_distance = 0.1f, float attraction_weight = 0.6f);
+    
+    //! Disable attraction points and revert to natural growth
+    void disableAttractionPoints();
+    
+    //! Update attraction points positions (for dynamic attraction points)
+    /**
+     * \param[in] attraction_points Updated vector of 3D positions that plants should grow toward
+     */
+    void updateAttractionPoints(const std::vector<helios::vec3> &attraction_points);
+    
+    //! Set attraction parameters
+    /**
+     * \param[in] view_half_angle_deg Half-angle of the attraction detection view cone in degrees
+     * \param[in] look_ahead_distance How far ahead attraction points will be considered in meters
+     * \param[in] attraction_weight Weight factor for attraction vs natural growth (0.0 = ignore attraction, 1.0 = full attraction)
+     * \param[in] obstacle_reduction_factor Reduction factor for attraction when hard obstacles are present (default = 0.75)
+     */
+    void setAttractionParameters(float view_half_angle_deg, float look_ahead_distance, float attraction_weight, float obstacle_reduction_factor = 0.75f);
+
     // -- methods for modifying the current plant state -- //
 
     /**
@@ -2686,6 +2729,26 @@ protected:
     float solid_obstacle_avoidance_distance = 0.5f;
     float solid_obstacle_minimum_distance = 0.05f;
     bool solid_obstacle_fruit_adjustment_enabled = true;
+
+    // --- Attraction Points --- //
+    
+    //! Flag indicating if attraction points are enabled
+    bool attraction_points_enabled = false;
+    
+    //! Vector of attraction point positions
+    std::vector<helios::vec3> attraction_points;
+    
+    //! Attraction detection cone half-angle in radians
+    float attraction_cone_half_angle_rad = 80.f * M_PI / 180.f;
+    
+    //! Attraction detection cone height in meters
+    float attraction_cone_height = 0.1f;
+    
+    //! Weight factor for attraction vs natural growth (0.0 = ignore attraction, 1.0 = full attraction)
+    float attraction_weight = 0.6f;
+    
+    //! Reduction factor for attraction weight when hard obstacles are present (0.0 = no attraction, 1.0 = full attraction)
+    float attraction_obstacle_reduction_factor = 0.5f;
 
     //! Flag to enable/disable console output messages
     bool printmessages = true;

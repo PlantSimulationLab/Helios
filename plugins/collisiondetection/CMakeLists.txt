@@ -51,6 +51,9 @@ if(CUDAToolkit_FOUND)
     	# Non-Windows platforms use full flags
     	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --use_fast_math -Wno-deprecated-gpu-targets")
     	
+    	# Add position independent code flag for Linux (needed for static libraries)
+    	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -fPIC")
+    	
     	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++${CMAKE_CXX_STANDARD}")
     endif()
     

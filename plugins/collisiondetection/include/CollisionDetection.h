@@ -213,6 +213,22 @@ public:
      */
     bool findNearestSolidObstacleInCone(const helios::vec3 &apex, const helios::vec3 &axis, float half_angle, float height, const std::vector<uint> &candidate_UUIDs, float &distance, helios::vec3 &obstacle_direction, int num_rays = 64);
 
+    /**
+     * \brief Detect attraction points within a perception cone and find optimal direction
+     * \param[in] vertex Vertex location of the perception cone 
+     * \param[in] look_direction Central axis direction of the perception cone (normalized)
+     * \param[in] look_ahead_distance Maximum distance to search for attraction points (cone height)
+     * \param[in] half_angle_degrees Half-angle of perception cone in degrees
+     * \param[in] attraction_points Vector of attraction point positions to evaluate
+     * \param[out] direction_to_closest Unit direction vector from vertex to closest attraction point (only valid if return is true)
+     * \return True if one or more attraction points are found within the cone, false otherwise
+     * 
+     * This method determines all attraction points that lie within a perception cone and returns
+     * the direction to the attraction point that is closest to the cone's centerline axis. The
+     * closeness is measured by angular distance from the centerline.
+     */
+    bool detectAttractionPoints(const helios::vec3 &vertex, const helios::vec3 &look_direction, float look_ahead_distance, float half_angle_degrees, const std::vector<helios::vec3> &attraction_points, helios::vec3 &direction_to_closest);
+
     // -------- BVH MANAGEMENT --------
 
     /**

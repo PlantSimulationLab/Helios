@@ -79,6 +79,22 @@ message( STATUS "[Helios] Last configured Helios Git commit hash: ${HELIOS_PREVI
 
 if(NOT HELIOS_PREVIOUS_COMMIT STREQUAL GIT_COMMIT_HASH)
   message(STATUS "[Helios] Git commit version change detected, automatically re-configuring...")
+  
+  # Clean CUDA object files to prevent linking issues with stale objects
+  find_package(CUDAToolkit QUIET)
+  if(CUDAToolkit_FOUND)
+    message(STATUS "[Helios] Cleaning CUDA object files due to version change...")
+    file(GLOB_RECURSE CUDA_OBJECTS 
+      "${CMAKE_BINARY_DIR}/**/*.cu.o"
+      "${CMAKE_BINARY_DIR}/**/*.cudafe*"
+      "${CMAKE_BINARY_DIR}/**/cmake_device_link.o"
+    )
+    if(CUDA_OBJECTS)
+      file(REMOVE ${CUDA_OBJECTS})
+      message(STATUS "[Helios] Removed ${CMAKE_CURRENT_LIST_SIZE} CUDA object files")
+    endif()
+  endif()
+  
   # update cache for next time
   set(HELIOS_PREVIOUS_COMMIT "${GIT_COMMIT_HASH}" CACHE STRING "Last configured Helios Git commit" FORCE)
 endif()

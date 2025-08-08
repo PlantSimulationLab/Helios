@@ -675,51 +675,112 @@ bool Phytomer::applySolidObstacleAvoidance(const helios::vec3 &current_position,
         plantarchitecture_ptr->collision_detection_ptr->findNearestSolidObstacleInCone(current_position, growth_direction, hard_detection_cone_angle, detection_distance, plantarchitecture_ptr->solid_obstacle_UUIDs, nearest_obstacle_distance,
                                                                                        nearest_obstacle_direction)) {
 
-        // Calculate rotation needed to avoid the obstacle
-        // Since nearest_obstacle_direction points toward the obstacle, we want to rotate away from it
-
-        // Calculate the angle between growth direction and obstacle direction
-        float dot_with_obstacle = normalize(growth_direction) * normalize(nearest_obstacle_direction);
-        float angle_deficit = asin_safe(fabs(dot_with_obstacle));
-
-        // Calculate perpendicular direction to avoid obstacle
-        vec3 rotation_axis = cross(growth_direction, -nearest_obstacle_direction);
-
-        if (rotation_axis.magnitude() > 0.001f) {
-            rotation_axis.normalize();
+        // Define buffer distance as 5% of detection distance (cone length)
+        float buffer_distance = detection_distance * 0.05f;
+        
+        // Normalize distance by detection distance for smooth calculations
+        float normalized_distance = nearest_obstacle_distance / detection_distance;
+        float buffer_threshold = buffer_distance / detection_distance;  // Normalized buffer threshold
+        
+        vec3 avoidance_direction;
+        float rotation_fraction;
+        
+        if (nearest_obstacle_distance <= buffer_distance) {
+            // CRITICAL: Within buffer zone - use strong directional avoidance
+            // Calculate direction that points directly away from the obstacle surface
+            avoidance_direction = current_position - (current_position + nearest_obstacle_direction * nearest_obstacle_distance);
+            if (avoidance_direction.magnitude() < 0.001f) {
+                // Fallback if we can't determine clear avoidance direction
+                avoidance_direction = cross(growth_direction, nearest_obstacle_direction);
+                if (avoidance_direction.magnitude() < 0.001f) {
+                    avoidance_direction = make_vec3(0, 0, 1);  // Fallback to upward growth
+                }
+            }
+            avoidance_direction.normalize();
+            
+            // Strong avoidance when in buffer zone
+            rotation_fraction = 1.0f;
+            
+            // Blend growth direction away from obstacle to maintain buffer
+            float buffer_blend_factor = 0.8f;  // Strong influence to get out of buffer
+            internode_axis = (1.0f - buffer_blend_factor) * growth_direction + buffer_blend_factor * avoidance_direction;
+            internode_axis.normalize();
+            
         } else {
-            angle_deficit = 0.f;
-        }
+            // NORMAL: Outside buffer zone - use smooth rotational avoidance
+            
+            // Calculate the angle between growth direction and obstacle direction
+            float dot_with_obstacle = normalize(growth_direction) * normalize(nearest_obstacle_direction);
+            float angle_deficit = asin_safe(fabs(dot_with_obstacle));
 
-        if (rotation_axis.magnitude() > 0.001f) {
+            // Calculate perpendicular direction to avoid obstacle
+            vec3 rotation_axis = cross(growth_direction, -nearest_obstacle_direction);
 
-            // Calculate fraction of total rotation to apply this timestep
-            // Fraction increases as we get closer to the obstacle
-            float rotation_fraction;
-            if (nearest_obstacle_distance < 0.05f) {
-                rotation_fraction = 1.f; // Very aggressive when extremely close
-            } else if (nearest_obstacle_distance < 0.15f) {
-                rotation_fraction = 0.7f; // Aggressive when very close
-            } else if (nearest_obstacle_distance < 0.3f) {
-                rotation_fraction = 0.3f; // Moderate when close
-            } else if (nearest_obstacle_distance < 0.5f) {
-                rotation_fraction = 0.2f; // Gentle when moderate distance
+            if (rotation_axis.magnitude() > 0.001f) {
+                rotation_axis.normalize();
             } else {
-                rotation_fraction = 0.1f; // Very gentle when far
+                angle_deficit = 0.f;
             }
 
-            // Apply fraction of the total angle deficit
-            float rotation_this_step = angle_deficit * rotation_fraction;
+            if (rotation_axis.magnitude() > 0.001f) {
 
-            // Apply the rotation
-            internode_axis = rotatePointAboutLine(internode_axis, nullorigin, rotation_axis, rotation_this_step);
-            internode_axis.normalize();
+                // Use smooth, normalized distance-based approach
+                // Use increasing function that reaches 1.0 at 20% of the surface distance
+                float surface_threshold_fraction = 0.2f;  // Function reaches max strength at 20% of detection distance
+                
+                if (normalized_distance <= surface_threshold_fraction) {
+                    // Maximum avoidance strength (1.0) when very close to surface
+                    rotation_fraction = 1.0f;
+                } else {
+                    // Smooth decay from 1.0 to minimum strength as distance increases
+                    float remaining_distance = normalized_distance - surface_threshold_fraction;
+                    float max_remaining_distance = 1.0f - surface_threshold_fraction;
+                    
+                    // Exponential decay for smoother transitions
+                    float distance_factor = remaining_distance / max_remaining_distance;  // 0.0 to 1.0
+                    float min_rotation_fraction = 0.05f;  // Minimum background avoidance strength
+                    
+                    // Exponential decay: strong avoidance close to threshold, gentle far away
+                    rotation_fraction = min_rotation_fraction + (1.0f - min_rotation_fraction) * exp(-3.0f * distance_factor);
+                }
+
+                // Apply fraction of the total angle deficit
+                float rotation_this_step = angle_deficit * rotation_fraction;
+
+                // Apply the rotation
+                internode_axis = rotatePointAboutLine(internode_axis, nullorigin, rotation_axis, rotation_this_step);
+                internode_axis.normalize();
+            }
         }
 
         return true; // Obstacle found and avoidance applied
     }
 
     return false; // No obstacle found
+}
+
+helios::vec3 Phytomer::calculateAttractionPointDirection(const helios::vec3 &internode_base_origin, const helios::vec3 &internode_axis, bool &attraction_active) const {
+    vec3 attraction_direction;
+    attraction_active = false;
+
+    if (!plantarchitecture_ptr->attraction_points_enabled || plantarchitecture_ptr->attraction_points.empty() || plantarchitecture_ptr->collision_detection_ptr == nullptr) {
+        return attraction_direction;
+    }
+
+    // Use the attraction points detection method from CollisionDetection
+    vec3 look_direction = internode_axis;
+    look_direction.normalize();
+    float half_angle_degrees = rad2deg(plantarchitecture_ptr->attraction_cone_half_angle_rad);
+    float look_ahead_distance = plantarchitecture_ptr->attraction_cone_height;
+
+    vec3 direction_to_closest;
+    if (plantarchitecture_ptr->collision_detection_ptr->detectAttractionPoints(internode_base_origin, look_direction, look_ahead_distance, half_angle_degrees, plantarchitecture_ptr->attraction_points, direction_to_closest)) {
+        attraction_direction = direction_to_closest;
+        attraction_direction.normalize();
+        attraction_active = true;
+    }
+
+    return attraction_direction;
 }
 
 int Shoot::appendPhytomer(float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const PhytomerParameters &phytomer_parameters) {
@@ -1296,13 +1357,18 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         shoot_bending_axis = make_vec3(0, 1, 0);
     }
 
-    // Store collision detection parameters for later use (after all natural rotations)
+    // Store collision detection and attraction points parameters for later use (after all natural rotations)
     vec3 collision_optimal_direction;
     bool collision_detection_active = false;
+    vec3 attraction_direction;
+    bool attraction_active = false;
     bool obstacle_found = false;
 
     // Calculate collision avoidance direction if collision detection is enabled
     collision_optimal_direction = calculateCollisionAvoidanceDirection(internode_base_origin, internode_axis, collision_detection_active);
+
+    // Calculate attraction point direction if attraction points are enabled
+    attraction_direction = calculateAttractionPointDirection(internode_base_origin, internode_axis, attraction_active);
 
     // Solid obstacle avoidance is now handled inside the segment creation loop
 
@@ -1332,24 +1398,47 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         vec3 current_position = phytomer_internode_vertices.at(inode_segment - 1);
         obstacle_found = applySolidObstacleAvoidance(current_position, internode_axis);
 
-        // Apply collision avoidance blending after all natural rotations are complete
-        // Only apply soft collision avoidance if hard boundary avoidance was not already applied
-        if (collision_detection_active && !obstacle_found) {
-            vec3 natural_direction = internode_axis;
+        // Apply direction guidance after all natural rotations are complete
+        // New approach: Blend hard obstacle avoidance with attraction to maintain surface attraction
+        
+        vec3 final_direction = internode_axis;  // Start with current direction (includes hard obstacle avoidance if applied)
+        
+        if (attraction_active) {
+            // Always apply attraction points if they're found
+            float attraction_weight = plantarchitecture_ptr->attraction_weight;
+            
+            if (obstacle_found) {
+                // When hard obstacles are present, reduce attraction influence to allow obstacle avoidance
+                // but maintain some attraction to keep plant near surface
+                attraction_weight *= plantarchitecture_ptr->attraction_obstacle_reduction_factor;  // Reduce attraction when avoiding hard obstacles
+            }
+            
+            // Blend current direction (which may include obstacle avoidance) with attraction direction
+            final_direction = (1.0f - attraction_weight) * final_direction + attraction_weight * attraction_direction;
+            final_direction.normalize();
+            
+            // Mark that attraction guidance was applied
+            plantarchitecture_ptr->collision_avoidance_applied = true;
+            
+        } else if (collision_detection_active && !obstacle_found) {
+            // No attraction points found and no hard obstacles - fall back to soft collision avoidance
             float inertia_weight = plantarchitecture_ptr->collision_inertia_weight;
-
-            // Blend natural direction with optimal direction based on inertia
-            // inertia = 1.0: use natural direction (no collision avoidance)
-            // inertia = 0.0: use optimal direction (full collision avoidance)
-            internode_axis = inertia_weight * natural_direction + (1.0f - inertia_weight) * collision_optimal_direction;
-            internode_axis.normalize();
-
+            
+            // Blend natural direction with optimal collision avoidance direction
+            final_direction = inertia_weight * final_direction + (1.0f - inertia_weight) * collision_optimal_direction;
+            final_direction.normalize();
+            
             // Mark that collision avoidance was applied this timestep
             plantarchitecture_ptr->collision_avoidance_applied = true;
-        } else if (obstacle_found) {
-            // Hard boundary avoidance takes precedence - mark that collision avoidance was applied
+        }
+        
+        if (obstacle_found) {
+            // Mark that hard obstacle avoidance was applied
             plantarchitecture_ptr->collision_avoidance_applied = true;
         }
+        
+        // Update the internode axis with the final blended direction
+        internode_axis = final_direction;
 
         phytomer_internode_vertices.at(inode_segment) = phytomer_internode_vertices.at(inode_segment - 1) + dr_internode * internode_axis;
 
@@ -4087,8 +4176,6 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 continue;
             }
 
-            std::cout << "Timestep " << timestep << " of " << Nsteps << " with dt_max_days = " << dt_max_days << std::endl;
-
             if (plant_instance.current_age <= plant_instance.max_age && plant_instance.current_age + dt_max_days > plant_instance.max_age) {
                 std::cout << "PlantArchitecture::advanceTime: Plant has reached its maximum supported age. No further growth will occur." << std::endl;
             } else if (plant_instance.current_age >= plant_instance.max_age) {
@@ -4381,13 +4468,6 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
             bool force_update = collision_avoidance_applied && force_update_on_collision;
 
             if (should_update_context || force_update) {
-                if (printmessages) {
-                    if (force_update) {
-                        std::cout << "Updating Context geometry (forced update due to collision avoidance)" << std::endl;
-                    } else {
-                        std::cout << "Updating Context geometry (scheduled update after " << geometry_update_counter << " timesteps)" << std::endl;
-                    }
-                }
                 shoot_tree->front()->updateShootNodes(true);
                 geometry_update_counter = 0; // Reset counter
             } else {
@@ -4430,7 +4510,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
     adjustFruitForObstacleCollision();
     
     // Fallback collision detection: prune any objects that still intersect solid boundaries
-    pruneSolidBoundaryCollisions();
+    //pruneSolidBoundaryCollisions();
 }
 
 void PlantArchitecture::adjustFruitForObstacleCollision() {
@@ -5309,5 +5389,86 @@ void PlantArchitecture::setGeometryUpdateScheduling(int update_frequency, bool f
 
     if (printmessages) {
         std::cout << "Set geometry update scheduling: frequency=" << update_frequency << ", force_on_collision=" << (force_update_on_collision ? "true" : "false") << std::endl;
+    }
+}
+
+// ----- Attraction Points Methods ----- //
+
+void PlantArchitecture::enableAttractionPoints(const std::vector<helios::vec3> &attraction_points_input, float view_half_angle_deg, float look_ahead_distance, float attraction_weight_input) {
+    if (view_half_angle_deg <= 0.0f || view_half_angle_deg > 180.f) {
+        helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): view_half_angle_deg must be between 0 and 180 degrees.");
+    }
+    if (look_ahead_distance <= 0.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): look_ahead_distance must be positive.");
+    }
+    if (attraction_weight_input < 0.0f || attraction_weight_input > 1.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): attraction_weight must be between 0.0 and 1.0.");
+    }
+    if (attraction_points_input.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): attraction_points cannot be empty.");
+    }
+
+    // Ensure collision detection is available for attraction points functionality
+    if (collision_detection_ptr == nullptr) {
+        helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): Collision detection must be enabled before using attraction points.");
+    }
+
+    attraction_points_enabled = true;
+    attraction_points = attraction_points_input;
+    attraction_cone_half_angle_rad = deg2rad(view_half_angle_deg);
+    attraction_cone_height = look_ahead_distance;
+    attraction_weight = attraction_weight_input;
+
+    if (printmessages) {
+        std::cout << "Enabled attraction points with " << attraction_points.size() << " target positions" << std::endl;
+        std::cout << "Attraction parameters: cone_angle=" << view_half_angle_deg << "°, look_ahead=" << look_ahead_distance << "m, weight=" << attraction_weight_input << std::endl;
+    }
+}
+
+void PlantArchitecture::disableAttractionPoints() {
+    attraction_points_enabled = false;
+    attraction_points.clear();
+
+    if (printmessages) {
+        std::cout << "Disabled attraction points - plants will use natural growth patterns" << std::endl;
+    }
+}
+
+void PlantArchitecture::updateAttractionPoints(const std::vector<helios::vec3> &attraction_points_input) {
+    if (!attraction_points_enabled) {
+        helios_runtime_error("ERROR (PlantArchitecture::updateAttractionPoints): Attraction points must be enabled before updating positions.");
+    }
+    if (attraction_points_input.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::updateAttractionPoints): attraction_points cannot be empty.");
+    }
+
+    attraction_points = attraction_points_input;
+
+    if (printmessages) {
+        std::cout << "Updated attraction points with " << attraction_points.size() << " target positions" << std::endl;
+    }
+}
+
+void PlantArchitecture::setAttractionParameters(float view_half_angle_deg, float look_ahead_distance, float attraction_weight_input, float obstacle_reduction_factor) {
+    if (view_half_angle_deg <= 0.0f || view_half_angle_deg > 180.f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setAttractionParameters): view_half_angle_deg must be between 0 and 180 degrees.");
+    }
+    if (look_ahead_distance <= 0.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setAttractionParameters): look_ahead_distance must be positive.");
+    }
+    if (attraction_weight_input < 0.0f || attraction_weight_input > 1.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setAttractionParameters): attraction_weight must be between 0.0 and 1.0.");
+    }
+    if (obstacle_reduction_factor < 0.0f || obstacle_reduction_factor > 1.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setAttractionParameters): obstacle_reduction_factor must be between 0.0 and 1.0.");
+    }
+
+    attraction_cone_half_angle_rad = deg2rad(view_half_angle_deg);
+    attraction_cone_height = look_ahead_distance;
+    attraction_weight = attraction_weight_input;
+    attraction_obstacle_reduction_factor = obstacle_reduction_factor;
+
+    if (printmessages) {
+        std::cout << "Updated attraction parameters: cone_angle=" << view_half_angle_deg << "°, look_ahead=" << look_ahead_distance << "m, weight=" << attraction_weight_input << ", obstacle_reduction=" << obstacle_reduction_factor << std::endl;
     }
 }
