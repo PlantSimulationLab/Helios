@@ -118,8 +118,21 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
             vec3 v2 = vertices.at(j + 1).at(i + 1);
             vec3 v3 = vertices.at(j + 1).at(i);
 
-            UUIDs.push_back(context_ptr->addTriangle(v0, v1, v2, leaf_texture.c_str(), uv0, uv1, uv2));
-            UUIDs.push_back(context_ptr->addTriangle(v0, v2, v3, leaf_texture.c_str(), uv0, uv2, uv3));
+            // Add triangle 1 and check if it has effective area (including texture transparency)
+            uint uuid1 = context_ptr->addTriangle(v0, v1, v2, leaf_texture.c_str(), uv0, uv1, uv2);
+            if (context_ptr->getPrimitiveArea(uuid1) > 0) {
+                UUIDs.push_back(uuid1);
+            } else {
+                context_ptr->deletePrimitive(uuid1);
+            }
+
+            // Add triangle 2 and check if it has effective area (including texture transparency)
+            uint uuid2 = context_ptr->addTriangle(v0, v2, v3, leaf_texture.c_str(), uv0, uv2, uv3);
+            if (context_ptr->getPrimitiveArea(uuid2) > 0) {
+                UUIDs.push_back(uuid2);
+            } else {
+                context_ptr->deletePrimitive(uuid2);
+            }
         }
     }
 

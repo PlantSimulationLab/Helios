@@ -197,12 +197,9 @@ vec3 helios::rotatePointAboutLine(const vec3 &point, const vec3 &line_base, cons
 }
 
 float helios::calculateTriangleArea(const vec3 &v0, const vec3 &v1, const vec3 &v2) {
-    const float a = (v1 - v0).magnitude();
-    const float b = (v2 - v0).magnitude();
-    const float c = (v2 - v1).magnitude();
-
-    const float s = 0.5f * (a + b + c);
-    return sqrtf(s * (s - a) * (s - b) * (s - c));
+    vec3 edge1 = v1 - v0;
+    vec3 edge2 = v2 - v0;
+    return 0.5f * cross(edge1, edge2).magnitude();
 }
 
 int helios::Date::JulianDay() const {
