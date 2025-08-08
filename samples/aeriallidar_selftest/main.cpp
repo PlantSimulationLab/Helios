@@ -1,12 +1,7 @@
-#include "Context.h"
 #include "AerialLiDAR.h"
 
 using namespace helios;
 
-int main(){
-
-  AerialLiDARcloud aeriallidar;
-
-  return aeriallidar.selfTest();
-
+int main(int argc, char** argv) {
+    return AerialLiDARcloud::selfTest(argc, argv);
 }

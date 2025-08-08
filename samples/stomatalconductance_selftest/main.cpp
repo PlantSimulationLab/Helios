@@ -2,13 +2,8 @@
 
 using namespace helios;
 
-int main()
-{
-
+int main(int argc, char** argv) {
     Context context;
-
     StomatalConductanceModel gs(&context);
-
-    return gs.selfTest();
-
+    return gs.selfTest(argc, argv);
 }

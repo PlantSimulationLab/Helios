@@ -17,79 +17,78 @@ GNU General Public License for more details.
 
 using namespace helios;
 
-std::string PlantArchitecture::makeShootString(const std::string &current_string, const std::shared_ptr<Shoot> &shoot, const std::vector<std::shared_ptr<Shoot>> & shoot_tree) const{
+std::string PlantArchitecture::makeShootString(const std::string &current_string, const std::shared_ptr<Shoot> &shoot, const std::vector<std::shared_ptr<Shoot>> &shoot_tree) const {
 
     std::string outstring = current_string;
 
-    if(shoot->parent_shoot_ID != -1 ) {
+    if (shoot->parent_shoot_ID != -1) {
         outstring += "[";
     }
 
-    outstring += "{" + std::to_string(rad2deg(shoot->base_rotation.pitch)) + "," + std::to_string(rad2deg(shoot->base_rotation.yaw)) + "," + std::to_string(rad2deg(shoot->base_rotation.roll)) + "," + std::to_string(shoot->shoot_parameters.gravitropic_curvature.val() /*\todo */) + "," + shoot->shoot_type_label + "}";
+    outstring += "{" + std::to_string(rad2deg(shoot->base_rotation.pitch)) + "," + std::to_string(rad2deg(shoot->base_rotation.yaw)) + "," + std::to_string(rad2deg(shoot->base_rotation.roll)) + "," +
+                 std::to_string(shoot->shoot_parameters.gravitropic_curvature.val() /*\todo */) + "," + shoot->shoot_type_label + "}";
 
     uint node_number = 0;
-    for( auto &phytomer: shoot->phytomers ){
+    for (auto &phytomer: shoot->phytomers) {
 
         float length = phytomer->getInternodeLength();
         float radius = phytomer->getInternodeRadius();
 
-        outstring += "Internode(" + std::to_string(length) + "," + std::to_string(radius) + "," + std::to_string( rad2deg(phytomer->internode_pitch) ) + "," + std::to_string( rad2deg(phytomer->internode_phyllotactic_angle) ) + ")";
+        outstring += "Internode(" + std::to_string(length) + "," + std::to_string(radius) + "," + std::to_string(rad2deg(phytomer->internode_pitch)) + "," + std::to_string(rad2deg(phytomer->internode_phyllotactic_angle)) + ")";
 
-        for( uint petiole=0; petiole<phytomer->petiole_length.size(); petiole++ ){
+        for (uint petiole = 0; petiole < phytomer->petiole_length.size(); petiole++) {
 
-            outstring += "Petiole(" + std::to_string( phytomer->petiole_length.at(petiole) ) + "," + std::to_string( phytomer->petiole_radii.at(petiole).front() ) + "," + std::to_string( rad2deg(phytomer->petiole_pitch.at(petiole)) ) + ")";
+            outstring += "Petiole(" + std::to_string(phytomer->petiole_length.at(petiole)) + "," + std::to_string(phytomer->petiole_radii.at(petiole).front()) + "," + std::to_string(rad2deg(phytomer->petiole_pitch.at(petiole))) + ")";
 
             //\todo If leaf is compound, just using rotation for the first leaf for now rather than adding multiple 'Leaf()' strings for each leaflet.
-            outstring += "Leaf(" + std::to_string(phytomer->leaf_size_max.at(petiole).front()*phytomer->current_leaf_scale_factor.at(petiole) ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().pitch) ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().yaw) ) + "," + std::to_string( rad2deg(phytomer->leaf_rotation.at(petiole).front().roll) ) + ")";
+            outstring += "Leaf(" + std::to_string(phytomer->leaf_size_max.at(petiole).front() * phytomer->current_leaf_scale_factor.at(petiole)) + "," + std::to_string(rad2deg(phytomer->leaf_rotation.at(petiole).front().pitch)) + "," +
+                         std::to_string(rad2deg(phytomer->leaf_rotation.at(petiole).front().yaw)) + "," + std::to_string(rad2deg(phytomer->leaf_rotation.at(petiole).front().roll)) + ")";
 
-            if( shoot->childIDs.find(node_number)!=shoot->childIDs.end() ){
-                for( int childID: shoot->childIDs.at(node_number) ) {
+            if (shoot->childIDs.find(node_number) != shoot->childIDs.end()) {
+                for (int childID: shoot->childIDs.at(node_number)) {
                     outstring = makeShootString(outstring, shoot_tree.at(childID), shoot_tree);
                 }
             }
-
         }
 
         node_number++;
     }
 
-    if(shoot->parent_shoot_ID != -1 ) {
+    if (shoot->parent_shoot_ID != -1) {
         outstring += "]";
     }
 
     return outstring;
-
 }
 
-std::string PlantArchitecture::getPlantString(uint plantID) const{
+std::string PlantArchitecture::getPlantString(uint plantID) const {
 
     auto plant_shoot_tree = &plant_instances.at(plantID).shoot_tree;
 
     std::string out_string;
 
-    for( auto &shoot: *plant_shoot_tree ){
-        out_string = makeShootString(out_string, shoot, *plant_shoot_tree );
+    for (auto &shoot: *plant_shoot_tree) {
+        out_string = makeShootString(out_string, shoot, *plant_shoot_tree);
     }
 
     return out_string;
-
 }
 
 void PlantArchitecture::parseShootArgument(const std::string &shoot_argument, const std::map<std::string, PhytomerParameters> &phytomer_parameters, ShootParameters &shoot_parameters, AxisRotation &base_rotation, std::string &phytomer_label) {
 
-    //shoot argument order {}:
-    // 1. shoot base pitch/insertion angle (degrees)
-    // 2. shoot base yaw angle (degrees)
-    // 3. shoot roll angle (degrees)
-    // 4. gravitropic curvature (degrees/meter)
-    // 5. [optional] phytomer parameters string
+    // shoot argument order {}:
+    //  1. shoot base pitch/insertion angle (degrees)
+    //  2. shoot base yaw angle (degrees)
+    //  3. shoot roll angle (degrees)
+    //  4. gravitropic curvature (degrees/meter)
+    //  5. [optional] phytomer parameters string
 
     size_t pos_shoot_start = 0;
 
     std::string s_argument = shoot_argument;
 
     pos_shoot_start = s_argument.find(',');
-    if( pos_shoot_start == std::string::npos ){
+    if (pos_shoot_start == std::string::npos) {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): Shoot brackets '{}' does not have the correct number of values given.");
     }
     float insertion_angle = std::stof(s_argument.substr(0, pos_shoot_start));
@@ -97,7 +96,7 @@ void PlantArchitecture::parseShootArgument(const std::string &shoot_argument, co
     base_rotation.pitch = deg2rad(insertion_angle);
 
     pos_shoot_start = s_argument.find(',');
-    if( pos_shoot_start == std::string::npos ){
+    if (pos_shoot_start == std::string::npos) {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): Shoot brackets '{}' does not have the correct number of values given.");
     }
     float shoot_yaw = std::stof(s_argument.substr(0, pos_shoot_start));
@@ -105,7 +104,7 @@ void PlantArchitecture::parseShootArgument(const std::string &shoot_argument, co
     base_rotation.yaw = deg2rad(shoot_yaw);
 
     pos_shoot_start = s_argument.find(',');
-    if( pos_shoot_start == std::string::npos ){
+    if (pos_shoot_start == std::string::npos) {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): Shoot brackets '{}' does not have the correct number of values given.");
     }
     float shoot_roll = std::stof(s_argument.substr(0, pos_shoot_start));
@@ -113,14 +112,14 @@ void PlantArchitecture::parseShootArgument(const std::string &shoot_argument, co
     base_rotation.roll = deg2rad(shoot_roll);
 
     pos_shoot_start = s_argument.find(',');
-    if( pos_shoot_start == std::string::npos ){
+    if (pos_shoot_start == std::string::npos) {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): Shoot brackets '{}' does not have the correct number of values given.");
     }
     float shoot_curvature = std::stof(s_argument.substr(0, pos_shoot_start));
     s_argument.erase(0, pos_shoot_start + 1);
     shoot_parameters.gravitropic_curvature = shoot_curvature;
 
-    if( pos_shoot_start != std::string::npos ) { //shoot type argument was given
+    if (pos_shoot_start != std::string::npos) { // shoot type argument was given
         pos_shoot_start = s_argument.find(',');
         phytomer_label = s_argument.substr(0, pos_shoot_start);
         s_argument.erase(0, pos_shoot_start + 1);
@@ -128,41 +127,40 @@ void PlantArchitecture::parseShootArgument(const std::string &shoot_argument, co
             helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): Phytomer parameters with label " + phytomer_label + " was not provided to PlantArchitecture::generatePlantFromString().");
         }
         shoot_parameters.phytomer_parameters = phytomer_parameters.at(phytomer_label);
-    }else{ //shoot type argument not given - use first phytomer parameters in the map
+    } else { // shoot type argument not given - use first phytomer parameters in the map
         phytomer_label = phytomer_parameters.begin()->first;
         shoot_parameters.phytomer_parameters = phytomer_parameters.begin()->second;
     }
-
 }
 
 void PlantArchitecture::parseInternodeArgument(const std::string &internode_argument, float &internode_radius, float &internode_length, PhytomerParameters &phytomer_parameters) {
 
-    //internode argument order Internode():
-    // 1. internode length (m)
-    // 2. internode radius (m)
-    // 3. internode pitch (degrees)
-    // 4. phyllotactic angle (degrees)
+    // internode argument order Internode():
+    //  1. internode length (m)
+    //  2. internode radius (m)
+    //  3. internode pitch (degrees)
+    //  4. phyllotactic angle (degrees)
 
     size_t pos_inode_start = 0;
 
     std::string inode_argument = internode_argument;
 
     pos_inode_start = inode_argument.find(',');
-    if( pos_inode_start == std::string::npos ){
+    if (pos_inode_start == std::string::npos) {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): 'Internode()' does not have the correct number of values given.");
     }
     internode_length = std::stof(inode_argument.substr(0, pos_inode_start));
     inode_argument.erase(0, pos_inode_start + 1);
 
     pos_inode_start = inode_argument.find(',');
-    if( pos_inode_start == std::string::npos ){
+    if (pos_inode_start == std::string::npos) {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): 'Internode()' does not have the correct number of values given.");
     }
     internode_radius = std::stof(inode_argument.substr(0, pos_inode_start));
     inode_argument.erase(0, pos_inode_start + 1);
 
     pos_inode_start = inode_argument.find(',');
-    if( pos_inode_start == std::string::npos ){
+    if (pos_inode_start == std::string::npos) {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): 'Internode()' does not have the correct number of values given.");
     }
     float internode_pitch = std::stof(inode_argument.substr(0, pos_inode_start));
@@ -170,23 +168,22 @@ void PlantArchitecture::parseInternodeArgument(const std::string &internode_argu
     phytomer_parameters.internode.pitch = internode_pitch;
 
     pos_inode_start = inode_argument.find(',');
-    if( pos_inode_start != std::string::npos ){
+    if (pos_inode_start != std::string::npos) {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): 'Internode()' does not have the correct number of values given.");
     }
     float internode_phyllotaxis = std::stof(inode_argument.substr(0, pos_inode_start));
     inode_argument.erase(0, pos_inode_start + 1);
     phytomer_parameters.internode.phyllotactic_angle = internode_phyllotaxis;
-
 }
 
-void PlantArchitecture::parsePetioleArgument(const std::string& petiole_argument, PhytomerParameters &phytomer_parameters ){
+void PlantArchitecture::parsePetioleArgument(const std::string &petiole_argument, PhytomerParameters &phytomer_parameters) {
 
-    //petiole argument order Petiole():
-    // 1. petiole length (m)
-    // 2. petiole radius (m)
-    // 3. petiole pitch (degrees)
+    // petiole argument order Petiole():
+    //  1. petiole length (m)
+    //  2. petiole radius (m)
+    //  3. petiole pitch (degrees)
 
-    if( petiole_argument.empty() ){
+    if (petiole_argument.empty()) {
         phytomer_parameters.petiole.length = 0;
         return;
     }
@@ -196,7 +193,7 @@ void PlantArchitecture::parsePetioleArgument(const std::string& petiole_argument
     std::string pet_argument = petiole_argument;
 
     pos_petiole_start = pet_argument.find(',');
-    if( pos_petiole_start == std::string::npos ){
+    if (pos_petiole_start == std::string::npos) {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): 'Petiole()' does not have the correct number of values given.");
     }
     float petiole_length = std::stof(pet_argument.substr(0, pos_petiole_start));
@@ -204,7 +201,7 @@ void PlantArchitecture::parsePetioleArgument(const std::string& petiole_argument
     phytomer_parameters.petiole.length = petiole_length;
 
     pos_petiole_start = pet_argument.find(',');
-    if( pos_petiole_start == std::string::npos ){
+    if (pos_petiole_start == std::string::npos) {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): 'Petiole()' does not have the correct number of values given.");
     }
     float petiole_radius = std::stof(pet_argument.substr(0, pos_petiole_start));
@@ -212,24 +209,23 @@ void PlantArchitecture::parsePetioleArgument(const std::string& petiole_argument
     phytomer_parameters.petiole.radius = petiole_radius;
 
     pos_petiole_start = pet_argument.find(',');
-    if( pos_petiole_start != std::string::npos ){
+    if (pos_petiole_start != std::string::npos) {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): 'Petiole()' does not have the correct number of values given.");
     }
     float petiole_pitch = std::stof(pet_argument.substr(0, pos_petiole_start));
     pet_argument.erase(0, pos_petiole_start + 1);
     phytomer_parameters.petiole.pitch = petiole_pitch;
-
 }
 
-void PlantArchitecture::parseLeafArgument(const std::string& leaf_argument, PhytomerParameters &phytomer_parameters ){
+void PlantArchitecture::parseLeafArgument(const std::string &leaf_argument, PhytomerParameters &phytomer_parameters) {
 
-    //leaf argument order Leaf():
-    // 1. leaf scale factor
-    // 2. leaf pitch (degrees)
-    // 3. leaf yaw (degrees)
-    // 4. leaf roll (degrees)
+    // leaf argument order Leaf():
+    //  1. leaf scale factor
+    //  2. leaf pitch (degrees)
+    //  3. leaf yaw (degrees)
+    //  4. leaf roll (degrees)
 
-    if( leaf_argument.empty() ){
+    if (leaf_argument.empty()) {
         phytomer_parameters.leaf.prototype_scale = 0;
         return;
     }
@@ -239,7 +235,7 @@ void PlantArchitecture::parseLeafArgument(const std::string& leaf_argument, Phyt
     std::string l_argument = leaf_argument;
 
     pos_leaf_start = l_argument.find(',');
-    if( pos_leaf_start == std::string::npos ){
+    if (pos_leaf_start == std::string::npos) {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): 'Leaf()' does not have the correct number of values given.");
     }
     float leaf_scale = std::stof(l_argument.substr(0, pos_leaf_start));
@@ -247,7 +243,7 @@ void PlantArchitecture::parseLeafArgument(const std::string& leaf_argument, Phyt
     phytomer_parameters.leaf.prototype_scale = leaf_scale;
 
     pos_leaf_start = l_argument.find(',');
-    if( pos_leaf_start == std::string::npos ){
+    if (pos_leaf_start == std::string::npos) {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): 'Leaf()' does not have the correct number of values given.");
     }
     float leaf_pitch = std::stof(l_argument.substr(0, pos_leaf_start));
@@ -255,7 +251,7 @@ void PlantArchitecture::parseLeafArgument(const std::string& leaf_argument, Phyt
     phytomer_parameters.leaf.pitch = leaf_pitch;
 
     pos_leaf_start = l_argument.find(',');
-    if( pos_leaf_start == std::string::npos ){
+    if (pos_leaf_start == std::string::npos) {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): 'Leaf()' does not have the correct number of values given.");
     }
     float leaf_yaw = std::stof(l_argument.substr(0, pos_leaf_start));
@@ -263,13 +259,12 @@ void PlantArchitecture::parseLeafArgument(const std::string& leaf_argument, Phyt
     phytomer_parameters.leaf.yaw = leaf_yaw;
 
     pos_leaf_start = l_argument.find(',');
-    if( pos_leaf_start != std::string::npos ){
+    if (pos_leaf_start != std::string::npos) {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): 'Leaf()' does not have the correct number of values given.");
     }
     float leaf_roll = std::stof(l_argument.substr(0, pos_leaf_start));
     l_argument.erase(0, pos_leaf_start + 1);
     phytomer_parameters.leaf.roll = leaf_roll;
-
 }
 
 size_t findShootClosingBracket(const std::string &lstring) {
@@ -311,8 +306,8 @@ void PlantArchitecture::parseStringShoot(const std::string &LString_shoot, uint 
     uint baseID;
     AxisRotation shoot_base_rotation;
 
-    //parse shoot arguments
-    if( LString_shoot.front() != '{' ){
+    // parse shoot arguments
+    if (LString_shoot.front() != '{') {
         helios_runtime_error("ERROR (PlantArchitecture::parseStringShoot): Shoot string is not formatted correctly. All shoots should start with a curly bracket containing two arguments {X,Y}.");
     }
     size_t pos_shoot_end = lstring_tobeparsed.find('}');
@@ -324,7 +319,7 @@ void PlantArchitecture::parseStringShoot(const std::string &LString_shoot, uint 
     uint shoot_node_count = 0;
     while ((pos_inode_start = lstring_tobeparsed.find(inode_delimiter)) != std::string::npos) {
 
-        if( pos_inode_start!=0 ){
+        if (pos_inode_start != 0) {
             helios_runtime_error("ERROR (PlantArchitecture::parseStringShoot): Shoot string is not formatted correctly.");
         }
 
@@ -338,74 +333,73 @@ void PlantArchitecture::parseStringShoot(const std::string &LString_shoot, uint 
         size_t pos_petiole_start = lstring_tobeparsed.find(petiole_delimiter);
         size_t pos_petiole_end = lstring_tobeparsed.find(')');
         std::string petiole_argument;
-        if( pos_petiole_start==0 ){
+        if (pos_petiole_start == 0) {
             petiole_argument = lstring_tobeparsed.substr(pos_petiole_start + petiole_delimiter.length(), pos_petiole_end - pos_petiole_start - petiole_delimiter.length());
-        }else{
+        } else {
             petiole_argument = "";
         }
         parsePetioleArgument(petiole_argument, shoot_parameters.phytomer_parameters);
-        if( pos_petiole_start==0 ) {
+        if (pos_petiole_start == 0) {
             lstring_tobeparsed.erase(0, pos_petiole_end + 1);
         }
 
         size_t pos_leaf_start = lstring_tobeparsed.find(leaf_delimiter);
         size_t pos_leaf_end = lstring_tobeparsed.find(')');
         std::string leaf_argument;
-        if( pos_leaf_start==0 ){
+        if (pos_leaf_start == 0) {
             leaf_argument = lstring_tobeparsed.substr(pos_leaf_start + leaf_delimiter.length(), pos_leaf_end - pos_leaf_start - leaf_delimiter.length());
-        }else{
+        } else {
             leaf_argument = "";
         }
         parseLeafArgument(leaf_argument, shoot_parameters.phytomer_parameters);
-        if( pos_leaf_start==0 ) {
+        if (pos_leaf_start == 0) {
             lstring_tobeparsed.erase(0, pos_leaf_end + 1);
         }
 
-        //override phytomer creation function
+        // override phytomer creation function
         shoot_parameters.phytomer_parameters.phytomer_creation_function = nullptr;
 
-        if( base_shoot ){ //this is the first phytomer of the shoot
-//            defineShootType("shoot_"+phytomer_label, shoot_parameters);
+        if (base_shoot) { // this is the first phytomer of the shoot
+            //            defineShootType("shoot_"+phytomer_label, shoot_parameters);
             defineShootType(phytomer_label, shoot_parameters); //*testing*
 
-            if( parentID<0 ) { //this is the first shoot of the plant
-//                baseID = addBaseStemShoot(plantID, 1, shoot_base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, "shoot_" + phytomer_label);
+            if (parentID < 0) { // this is the first shoot of the plant
+                //                baseID = addBaseStemShoot(plantID, 1, shoot_base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, "shoot_" + phytomer_label);
                 baseID = addBaseStemShoot(plantID, 1, shoot_base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, phytomer_label); //*testing*
-            }else{ //this is a child of an existing shoot
-//                baseID = addChildShoot(plantID, parentID, parent_node, 1, shoot_base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, "shoot_" + phytomer_label, 0);
+            } else { // this is a child of an existing shoot
+                //                baseID = addChildShoot(plantID, parentID, parent_node, 1, shoot_base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, "shoot_" + phytomer_label, 0);
                 baseID = addChildShoot(plantID, parentID, parent_node, 1, shoot_base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, phytomer_label, 0); //*testing*
             }
 
             base_shoot = false;
-        }else{
+        } else {
             appendPhytomerToShoot(plantID, baseID, shoot_parameters.phytomer_parameters, internode_radius, internode_length, 1, 1);
         }
 
-        while( !lstring_tobeparsed.empty() && lstring_tobeparsed.substr(0,1) == "[" ){
+        while (!lstring_tobeparsed.empty() && lstring_tobeparsed.substr(0, 1) == "[") {
             size_t pos_shoot_bracket_end = findShootClosingBracket(lstring_tobeparsed);
-            if( pos_shoot_bracket_end == std::string::npos ){
+            if (pos_shoot_bracket_end == std::string::npos) {
                 helios_runtime_error("ERROR (PlantArchitecture::parseStringShoot): Shoot string is not formatted correctly. Shoots must be closed with a ']'.");
             }
-            std::string lstring_child = lstring_tobeparsed.substr(1, pos_shoot_bracket_end-1 );
+            std::string lstring_child = lstring_tobeparsed.substr(1, pos_shoot_bracket_end - 1);
             parseStringShoot(lstring_child, plantID, (int) baseID, shoot_node_count, phytomer_parameters, shoot_parameters);
             lstring_tobeparsed.erase(0, pos_shoot_bracket_end + 1);
         }
 
         shoot_node_count++;
     }
-
 }
 
 uint PlantArchitecture::generatePlantFromString(const std::string &generation_string, const PhytomerParameters &phytomer_parameters) {
-    std::map<std::string,PhytomerParameters> phytomer_parameters_map;
+    std::map<std::string, PhytomerParameters> phytomer_parameters_map;
     phytomer_parameters_map["default"] = phytomer_parameters;
     return generatePlantFromString(generation_string, phytomer_parameters_map);
 }
 
-uint PlantArchitecture::generatePlantFromString(const std::string &generation_string, const std::map<std::string,PhytomerParameters> &phytomer_parameters) {
+uint PlantArchitecture::generatePlantFromString(const std::string &generation_string, const std::map<std::string, PhytomerParameters> &phytomer_parameters) {
 
-    //check that first characters are 'Internode'
-    if(generation_string.front() != '{'){
+    // check that first characters are 'Internode'
+    if (generation_string.front() != '{') {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): First character of string must be '{'");
     }
 
@@ -415,8 +409,8 @@ uint PlantArchitecture::generatePlantFromString(const std::string &generation_st
     shoot_parameters.vegetative_bud_break_time = 0;
     shoot_parameters.phyllochron_min = 0;
 
-    //assign default phytomer parameters. This can be changed later if the optional phytomer parameters label is provided in the shoot argument '{}'.
-    if( phytomer_parameters.empty() ){
+    // assign default phytomer parameters. This can be changed later if the optional phytomer parameters label is provided in the shoot argument '{}'.
+    if (phytomer_parameters.empty()) {
         helios_runtime_error("ERROR (PlantArchitecture::generatePlantFromString): Phytomer parameters must be provided.");
     }
 
@@ -426,7 +420,7 @@ uint PlantArchitecture::generatePlantFromString(const std::string &generation_st
 
     size_t pos_first_child_shoot = generation_string.find('[');
 
-    if( pos_first_child_shoot==std::string::npos ) {
+    if (pos_first_child_shoot == std::string::npos) {
         pos_first_child_shoot = generation_string.length();
     }
 
@@ -434,25 +428,24 @@ uint PlantArchitecture::generatePlantFromString(const std::string &generation_st
 
 
     return plantID;
-
 }
 
-void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &filename) const{
+void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &filename) const {
 
-    if( plant_instances.find(plantID)==plant_instances.end() ){
+    if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureXML): Plant ID " + std::to_string(plantID) + " does not exist.");
     }
 
     std::string output_file = filename;
-    if( !validateOutputPath(output_file,{".xml",".XML"}) ){
+    if (!validateOutputPath(output_file, {".xml", ".XML"})) {
         helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureXML): Could not open file " + filename + " for writing. Make sure the directory exists and is writable.");
-    }else if( getFileName(output_file).empty()){
+    } else if (getFileName(output_file).empty()) {
         helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureXML): The output file given was a directory. This argument should be the path to a file not to a directory.");
     }
 
     std::ofstream output_xml(filename);
 
-    if( !output_xml.is_open() ){
+    if (!output_xml.is_open()) {
         helios_runtime_error("ERROR (PlantArchitecture::writePlantStructureXML): Could not open file " + filename + " for writing. Make sure the directory exists and is writable.");
     }
 
@@ -463,7 +456,7 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
     output_xml << "\t\t<base_position> " << plant_instances.at(plantID).base_position.x << " " << plant_instances.at(plantID).base_position.y << " " << plant_instances.at(plantID).base_position.z << " </base_position>" << std::endl;
     output_xml << "\t\t<plant_age> " << plant_instances.at(plantID).current_age << " </plant_age>" << std::endl;
 
-    for( auto& shoot : plant_instances.at(plantID).shoot_tree ) {
+    for (auto &shoot: plant_instances.at(plantID).shoot_tree) {
 
         output_xml << "\t\t<shoot ID=\"" << shoot->ID << "\">" << std::endl;
         output_xml << "\t\t\t<shoot_type_label> " << shoot->shoot_type_label << " </shoot_type_label>" << std::endl;
@@ -488,16 +481,16 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
                 output_xml << "\t\t\t\t\t\t<petiole_radius>" << phytomer->petiole_radii.at(petiole).front() << "</petiole_radius>" << std::endl;
                 output_xml << "\t\t\t\t\t\t<petiole_pitch>" << rad2deg(phytomer->petiole_pitch.at(petiole)) << "</petiole_pitch>" << std::endl;
                 output_xml << "\t\t\t\t\t\t<petiole_curvature>" << phytomer->petiole_curvature.at(petiole) << "</petiole_curvature>" << std::endl;
-                if( phytomer->leaf_rotation.at(petiole).size()==1 ){ //not compound leaf
+                if (phytomer->leaf_rotation.at(petiole).size() == 1) { // not compound leaf
                     output_xml << "\t\t\t\t\t\t<leaflet_scale>" << 1.0 << "</leaflet_scale>" << std::endl;
-                }else {
+                } else {
                     float tip_ind = floor(float(phytomer->leaf_rotation.at(petiole).size() - 1) / 2.f);
-                    output_xml << "\t\t\t\t\t\t<leaflet_scale>" << phytomer->leaf_size_max.at(petiole).at(int(tip_ind-1)) / max(phytomer->leaf_size_max.at(petiole)) << "</leaflet_scale>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t<leaflet_scale>" << phytomer->leaf_size_max.at(petiole).at(int(tip_ind - 1)) / max(phytomer->leaf_size_max.at(petiole)) << "</leaflet_scale>" << std::endl;
                 }
 
-                for( uint leaf=0; leaf < phytomer->leaf_rotation.at(petiole).size(); leaf++ ){
+                for (uint leaf = 0; leaf < phytomer->leaf_rotation.at(petiole).size(); leaf++) {
                     output_xml << "\t\t\t\t\t\t<leaf>" << std::endl;
-                    output_xml << "\t\t\t\t\t\t\t<leaf_scale>" << phytomer->leaf_size_max.at(petiole).at(leaf)*phytomer->current_leaf_scale_factor.at(petiole) << "</leaf_scale>" << std::endl;
+                    output_xml << "\t\t\t\t\t\t\t<leaf_scale>" << phytomer->leaf_size_max.at(petiole).at(leaf) * phytomer->current_leaf_scale_factor.at(petiole) << "</leaf_scale>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t<leaf_pitch>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).pitch) << "</leaf_pitch>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t<leaf_yaw>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).yaw) << "</leaf_yaw>" << std::endl;
                     output_xml << "\t\t\t\t\t\t\t<leaf_roll>" << rad2deg(phytomer->leaf_rotation.at(petiole).at(leaf).roll) << "</leaf_roll>" << std::endl;
@@ -514,19 +507,202 @@ void PlantArchitecture::writePlantStructureXML(uint plantID, const std::string &
     output_xml << "\t</plant_instance>" << std::endl;
     output_xml << "</helios>" << std::endl;
     output_xml.close();
-
-
 }
 
-std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &filename, bool quiet){
+void PlantArchitecture::writeQSMCylinderFile(uint plantID, const std::string &filename) const {
 
-    if( !quiet ) {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::writeQSMCylinderFile): Plant ID " + std::to_string(plantID) + " does not exist.");
+    }
+
+    std::string output_file = filename;
+    if (!validateOutputPath(output_file, {".txt", ".TXT"})) {
+        helios_runtime_error("ERROR (PlantArchitecture::writeQSMCylinderFile): Could not open file " + filename + " for writing. Make sure the directory exists and is writable.");
+    } else if (getFileName(output_file).empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::writeQSMCylinderFile): The output file given was a directory. This argument should be the path to a file not to a directory.");
+    }
+
+    std::ofstream output_qsm(filename);
+
+    if (!output_qsm.is_open()) {
+        helios_runtime_error("ERROR (PlantArchitecture::writeQSMCylinderFile): Could not open file " + filename + " for writing. Make sure the directory exists and is writable.");
+    }
+
+    // Write header line
+    output_qsm << "radius (m)\tlength (m)\tstart_point\taxis_direction\tparent\textension\tbranch\tbranch_order\tposition_in_branch\tmad\tSurfCov\tadded\tUnmodRadius (m)" << std::endl;
+
+    const auto &plant = plant_instances.at(plantID);
+
+    // Cylinder ID counter (row number = cylinder ID in TreeQSM format)
+    uint cylinder_id = 1;
+
+    // Maps to track relationships between shoots and cylinders
+    std::map<int, std::vector<uint>> shoot_cylinder_ids; // shoot ID -> cylinder IDs
+    std::map<int, uint> shoot_branch_id; // shoot ID -> branch ID
+    std::map<int, uint> shoot_branch_order; // shoot ID -> branch order
+
+    // Assign branch IDs and orders to shoots
+    uint branch_id_counter = 1;
+    for (const auto &shoot: plant.shoot_tree) {
+        shoot_branch_id[shoot->ID] = branch_id_counter++;
+
+        // Determine branch order based on parent
+        if (shoot->parent_shoot_ID == -1) {
+            // Base shoot is order 0 (trunk)
+            shoot_branch_order[shoot->ID] = 0;
+        } else {
+            // Child shoot has order = parent order + 1
+            shoot_branch_order[shoot->ID] = shoot_branch_order[shoot->parent_shoot_ID] + 1;
+        }
+    }
+
+    // Process each shoot
+    for (const auto &shoot: plant.shoot_tree) {
+
+        // Get shoot properties
+        uint branch_id = shoot_branch_id[shoot->ID];
+        uint branch_order = shoot_branch_order[shoot->ID];
+        uint position_in_branch = 1;
+        // Track the last vertex position for vertex sharing between phytomers
+        helios::vec3 last_vertex_position;
+        bool has_last_vertex = false;
+
+        // Process each phytomer in the shoot
+        for (uint phytomer_idx = 0; phytomer_idx < shoot->phytomers.size(); phytomer_idx++) {
+
+            const auto &vertices = shoot->shoot_internode_vertices[phytomer_idx];
+            const auto &radii = shoot->shoot_internode_radii[phytomer_idx];
+
+            // Handle vertex sharing for single-segment phytomer tubes
+            if (vertices.size() == 1 && has_last_vertex) {
+                // This phytomer has only one vertex - use the last vertex from previous phytomer as start
+                helios::vec3 start = last_vertex_position;
+                helios::vec3 current_end = vertices[0];
+                float current_radius = radii[0];
+
+                // Calculate initial length
+                helios::vec3 axis = current_end - start;
+                float length = axis.magnitude();
+
+                axis = axis / length; // Normalize axis
+
+                // Process this as a single cylinder
+                // Determine parent cylinder ID
+                uint parent_id = 0;
+                if (cylinder_id > 1) {
+                    parent_id = cylinder_id - 1; // Parent is previous cylinder
+                }
+
+                // Extension cylinder (next cylinder in same branch) - will be updated later if needed
+                uint extension_id = 0;
+
+                // Write cylinder data
+                output_qsm << std::fixed << std::setprecision(4);
+                output_qsm << current_radius << "\t";
+                output_qsm << length << "\t";
+                output_qsm << start.x << "\t" << start.y << "\t" << start.z << "\t";
+                output_qsm << axis.x << "\t" << axis.y << "\t" << axis.z << "\t";
+                output_qsm << parent_id << "\t";
+                output_qsm << extension_id << "\t";
+                output_qsm << branch_id << "\t";
+                output_qsm << branch_order << "\t";
+                output_qsm << position_in_branch << "\t";
+                output_qsm << "0.0002" << "\t"; // mad (using default value)
+                output_qsm << "1" << "\t"; // SurfCov (using default value)
+                output_qsm << "0" << "\t"; // added flag
+                output_qsm << current_radius << std::endl; // UnmodRadius
+
+                // Store cylinder ID for this shoot
+                shoot_cylinder_ids[shoot->ID].push_back(cylinder_id);
+
+                cylinder_id++;
+                position_in_branch++;
+
+                // Update last vertex for next phytomer
+                last_vertex_position = current_end;
+
+            } else {
+                // Normal processing for phytomers with multiple vertices
+                for (int seg = 0; seg < vertices.size() - 1; seg++) {
+
+                    // Start with the current segment
+                    helios::vec3 start = vertices[seg];
+                    helios::vec3 current_end = vertices[seg + 1];
+                    float current_radius = radii[seg];
+
+                    // Calculate initial length
+                    helios::vec3 axis = current_end - start;
+                    float length = axis.magnitude();
+
+                    axis = axis / length; // Normalize axis
+
+                    // Determine parent cylinder ID
+                    uint parent_id = 0;
+                    if (cylinder_id > 1) {
+                        if (seg == 0 && phytomer_idx == 0 && shoot->parent_shoot_ID != -1) {
+                            // First cylinder of child shoot - parent is last cylinder of connection point
+                            // For simplicity, using previous cylinder as parent
+                            parent_id = cylinder_id - 1;
+                        } else if (seg == 0 && phytomer_idx > 0) {
+                            // First segment of new phytomer - parent is last segment of previous phytomer
+                            parent_id = cylinder_id - 1;
+                        } else {
+                            // Continuation within phytomer - parent is previous segment
+                            parent_id = cylinder_id - 1;
+                        }
+                    }
+
+                    // Extension cylinder (next cylinder in same branch) - will be updated later if needed
+                    uint extension_id = 0;
+
+                    // Write cylinder data
+                    output_qsm << std::fixed << std::setprecision(4);
+                    output_qsm << current_radius << "\t";
+                    output_qsm << length << "\t";
+                    output_qsm << start.x << "\t" << start.y << "\t" << start.z << "\t";
+                    output_qsm << axis.x << "\t" << axis.y << "\t" << axis.z << "\t";
+                    output_qsm << parent_id << "\t";
+                    output_qsm << extension_id << "\t";
+                    output_qsm << branch_id << "\t";
+                    output_qsm << branch_order << "\t";
+                    output_qsm << position_in_branch << "\t";
+                    output_qsm << "0.0002" << "\t"; // mad (using default value)
+                    output_qsm << "1" << "\t"; // SurfCov (using default value)
+                    output_qsm << "0" << "\t"; // added flag
+                    output_qsm << current_radius << std::endl; // UnmodRadius
+
+                    // Store cylinder ID for this shoot
+                    shoot_cylinder_ids[shoot->ID].push_back(cylinder_id);
+
+                    cylinder_id++;
+                    position_in_branch++;
+                }
+
+                // Update last vertex position for vertex sharing
+                if (vertices.size() >= 2) {
+                    last_vertex_position = vertices.back();
+                    has_last_vertex = true;
+                } else if (vertices.size() == 1) {
+                    // This shouldn't happen in normal processing, but handle it for completeness
+                    last_vertex_position = vertices[0];
+                    has_last_vertex = true;
+                }
+            }
+        }
+    }
+
+    output_qsm.close();
+}
+
+std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &filename, bool quiet) {
+
+    if (!quiet) {
         std::cout << "Loading plant architecture XML file: " << filename << "..." << std::flush;
     }
 
     std::string fn = filename;
     std::string ext = getFileExtension(filename);
-    if( ext != ".xml" && ext != ".XML" ) {
+    if (ext != ".xml" && ext != ".XML") {
         helios_runtime_error("failed.\n File " + fn + " is not XML format.");
     }
 
@@ -535,12 +711,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
     // Using "pugixml" parser.  See pugixml.org
     pugi::xml_document xmldoc;
 
-    //load file
+    // load file
     pugi::xml_parse_result load_result = xmldoc.load_file(filename.c_str());
 
-    //error checking
-    if (!load_result){
-        helios_runtime_error("ERROR (Context::readPlantStructureXML): Could not parse " + std::string(filename) + ":\nError description: " + load_result.description() );
+    // error checking
+    if (!load_result) {
+        helios_runtime_error("ERROR (Context::readPlantStructureXML): Could not parse " + std::string(filename) + ":\nError description: " + load_result.description());
     }
 
     pugi::xml_node helios = xmldoc.child("helios");
@@ -548,8 +724,8 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
     pugi::xml_node node;
     std::string node_string;
 
-    if( helios.empty() ){
-        if( !quiet ) {
+    if (helios.empty()) {
+        if (!quiet) {
             std::cout << "failed." << std::endl;
         }
         helios_runtime_error("ERROR (Context::readPlantStructureXML): XML file must have tag '<helios> ... </helios>' bounding all other tags.");
@@ -557,7 +733,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
 
     size_t phytomer_count = 0;
 
-    std::map<int,int> shoot_ID_mapping;
+    std::map<int, int> shoot_ID_mapping;
 
     for (pugi::xml_node plant = helios.child("plant_instance"); plant; plant = plant.next_sibling("plant_instance")) {
 
@@ -627,7 +803,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
                 float petiole_pitch;
                 float petiole_curvature;
                 float leaflet_scale;
-                std::vector<std::vector<float>> leaf_scale; //first index is petiole within internode; second index is leaf within petiole
+                std::vector<std::vector<float>> leaf_scale; // first index is petiole within internode; second index is leaf within petiole
                 std::vector<std::vector<float>> leaf_pitch;
                 std::vector<std::vector<float>> leaf_yaw;
                 std::vector<std::vector<float>> leaf_roll;
@@ -661,24 +837,23 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
 
                         // leaf scale factor
                         node_string = "leaf_scale";
-                        leaf_scale.back().push_back( parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML") );
+                        leaf_scale.back().push_back(parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML"));
 
                         // leaf pitch
                         node_string = "leaf_pitch";
-                        leaf_pitch.back().push_back( parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML") );
+                        leaf_pitch.back().push_back(parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML"));
 
                         // leaf yaw
                         node_string = "leaf_yaw";
-                        leaf_yaw.back().push_back( parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML") );
+                        leaf_yaw.back().push_back(parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML"));
 
                         // leaf roll
                         node_string = "leaf_roll";
-                        leaf_roll.back().push_back( parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML") );
-
+                        leaf_roll.back().push_back(parse_xml_tag_float(leaf.child(node_string.c_str()), node_string, "PlantArchitecture::readPlantStructureXML"));
                     }
-                } //petioles
+                } // petioles
 
-                if( shoot_types.find(shoot_type_label)==shoot_types.end() ){
+                if (shoot_types.find(shoot_type_label) == shoot_types.end()) {
                     helios_runtime_error("ERROR (PlantArchitecture::readPlantStructureXML): Shoot type " + shoot_type_label + " not found in shoot types.");
                 }
 
@@ -695,56 +870,54 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML( const std::string &f
                 shoot_parameters.phytomer_parameters.petiole.pitch = petiole_pitch;
                 shoot_parameters.phytomer_parameters.petiole.curvature = petiole_curvature;
 
-                shoot_parameters.phytomer_parameters.leaf.prototype_scale = 1.f;//leaf_scale.front().at(tip_ind);
+                shoot_parameters.phytomer_parameters.leaf.prototype_scale = 1.f; // leaf_scale.front().at(tip_ind);
                 shoot_parameters.phytomer_parameters.leaf.pitch = 0;
                 shoot_parameters.phytomer_parameters.leaf.yaw = 0;
                 shoot_parameters.phytomer_parameters.leaf.roll = 0;
                 shoot_parameters.phytomer_parameters.leaf.leaflet_scale = leaflet_scale;
 
                 std::string shoot_label = "shoot_" + std::to_string(phytomer_count);
-                defineShootType( shoot_label, shoot_parameters);
+                defineShootType(shoot_label, shoot_parameters);
 
-                if( base_shoot ){
+                if (base_shoot) {
 
-                    if( parent_shoot_ID<0 ) { //this is the first shoot of the plant
+                    if (parent_shoot_ID < 0) { // this is the first shoot of the plant
                         current_shoot_ID = addBaseStemShoot(plantID, 1, base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, shoot_label);
                         shoot_ID_mapping[shootID] = current_shoot_ID;
-                    }else{ //this is a child of an existing shoot
+                    } else { // this is a child of an existing shoot
                         current_shoot_ID = addChildShoot(plantID, shoot_ID_mapping.at(parent_shoot_ID), parent_node_index, 1, base_rotation, internode_radius, internode_length, 1.f, 1.f, 0, shoot_label, parent_petiole_index);
                         shoot_ID_mapping[shootID] = current_shoot_ID;
                     }
 
                     base_shoot = false;
-                }else{
+                } else {
                     appendPhytomerToShoot(plantID, current_shoot_ID, shoot_parameters.phytomer_parameters, internode_radius, internode_length, 1, 1);
                 }
 
-                //rotate and scale leaves
-                assert( leaf_scale.size() == leaf_pitch.size() );
+                // rotate and scale leaves
+                assert(leaf_scale.size() == leaf_pitch.size());
                 auto phytomer_ptr = plant_instances.at(plantID).shoot_tree.at(current_shoot_ID)->phytomers.back();
-                for( int petiole = 0; petiole<leaf_scale.size(); petiole++ ){
+                for (int petiole = 0; petiole < leaf_scale.size(); petiole++) {
 
                     float tip_ind = floor(float(leaf_scale.at(petiole).size() - 1) / 2.f);
-                    phytomer_ptr->setLeafPrototypeScale( petiole, leaf_scale.at(petiole).at(tip_ind) );
+                    phytomer_ptr->setLeafPrototypeScale(petiole, leaf_scale.at(petiole).at(tip_ind));
 
-                    phytomer_ptr->scaleLeafPrototypeScale( petiole, 5);
+                    phytomer_ptr->scaleLeafPrototypeScale(petiole, 5);
 
-                    for( int leaf=0; leaf<phytomer_ptr->leaf_rotation.at(petiole).size(); leaf++ ){
-                        std::cout << "Rotating leaf " << leaf << " by pitch: " << leaf_pitch.at(petiole).at(leaf) << ", yaw: " << leaf_yaw.at(petiole).at(leaf) << ", roll: " << leaf_roll.at(petiole).at(leaf) << std::endl;
+                    for (int leaf = 0; leaf < phytomer_ptr->leaf_rotation.at(petiole).size(); leaf++) {
                         phytomer_ptr->rotateLeaf(petiole, leaf, make_AxisRotation(deg2rad(leaf_pitch.at(petiole).at(leaf)), deg2rad(leaf_yaw.at(petiole).at(leaf)), deg2rad(-leaf_roll.at(petiole).at(leaf))));
                     }
                 }
 
                 phytomer_count++;
-        } //phytomers
+            } // phytomers
 
-        } //shoots
+        } // shoots
 
-    } //plant instances
+    } // plant instances
 
-    if( !quiet ) {
+    if (!quiet) {
         std::cout << "done." << std::endl;
     }
     return plantIDs;
-
 }

@@ -16,26 +16,28 @@
 #ifndef PLANT_ARCHITECTURE
 #define PLANT_ARCHITECTURE
 
-#include "Context.h"
+#include <functional>
 #include <utility>
+#include "Context.h"
 #include "Hungarian.h"
 
-//Constants
-constexpr float C_molecular_wt = 12.01; //g C mol^-1
+// Constants
+constexpr float C_molecular_wt = 12.01; // g C mol^-1
 
-//forward declarations of classes/structs
+// forward declarations of classes/structs
 class PlantArchitecture;
+class CollisionDetection;
 struct Shoot;
 struct Phytomer;
 
+//! Random architecture model parameter value of type float.
 struct RandomParameter_float {
 public:
-
     //! Constructor initializing to a constant default value of 0.
     /**
      * In order to make this a randomly varying parameter, the initialize() method must be called to set the random number generator.
      */
-    explicit RandomParameter_float(){
+    explicit RandomParameter_float() {
         constval = 0.f;
         distribution = "constant";
         generator = nullptr;
@@ -46,7 +48,7 @@ public:
     /**
      * In order to make this a randomly varying parameter, the initialize() method must be called to set the random number generator.
      */
-    explicit RandomParameter_float( float val ){
+    explicit RandomParameter_float(float val) {
         constval = val;
         distribution = "constant";
         generator = nullptr;
@@ -57,76 +59,76 @@ public:
     /**
      * \param[in] rand_generator Pointer to a random number generator. Note: it is recommended to use the random number generator from the Context, which can be retrieved using the getContextRandomGenerator() method.
      */
-    explicit RandomParameter_float( std::minstd_rand0 *rand_generator ){
+    explicit RandomParameter_float(std::minstd_rand0 *rand_generator) {
         constval = 0.f;
         distribution = "constant";
         generator = rand_generator;
         sampled = false;
     }
 
-    void initialize( float a_val, std::minstd_rand0 *rand_generator){
+    void initialize(float a_val, std::minstd_rand0 *rand_generator) {
         constval = a_val;
         distribution = "constant";
         generator = rand_generator;
         sampled = false;
     }
 
-    void initialize( std::minstd_rand0 *rand_generator){
+    void initialize(std::minstd_rand0 *rand_generator) {
         constval = 1.f;
         distribution = "constant";
         generator = rand_generator;
         sampled = false;
     }
 
-    RandomParameter_float& operator=(float a){
+    RandomParameter_float &operator=(float a) {
         this->distribution = "constant";
         this->constval = a;
         this->sampled = false;
         return *this;
     }
 
-    void uniformDistribution( float minval, float maxval ){
-        if( minval>maxval ){
-            throw (std::runtime_error("ERROR (PlantArchitecture): RandomParameter_float::uniformDistribution() - minval must be less than or equal to maxval."));
+    void uniformDistribution(float minval, float maxval) {
+        if (minval > maxval) {
+            throw(std::runtime_error("ERROR (PlantArchitecture): RandomParameter_float::uniformDistribution() - minval must be less than or equal to maxval."));
         }
         distribution = "uniform";
         distribution_parameters = {minval, maxval};
         sampled = false;
     }
 
-    void normalDistribution( float mean, float std_dev ){
+    void normalDistribution(float mean, float std_dev) {
         distribution = "normal";
         distribution_parameters = {mean, std_dev};
         sampled = false;
     }
 
-    void weibullDistribution( float shape, float scale ){
+    void weibullDistribution(float shape, float scale) {
         distribution = "weibull";
         distribution_parameters = {shape, scale};
         sampled = false;
     }
 
-    float val(){
-        if( !sampled ){
+    float val() {
+        if (!sampled) {
             constval = resample();
         }
         return constval;
     }
 
-    float resample(){
+    float resample() {
         sampled = true;
-        if( distribution!="constant" ) {
+        if (distribution != "constant") {
             if (generator == nullptr) {
-                throw (std::runtime_error("ERROR (PlantArchitecture): Random parameter was not properly initialized with random number generator."));
+                throw(std::runtime_error("ERROR (PlantArchitecture): Random parameter was not properly initialized with random number generator."));
             }
             if (distribution == "uniform") {
                 std::uniform_real_distribution<float> unif_distribution;
                 constval = distribution_parameters.at(0) + unif_distribution(*generator) * (distribution_parameters.at(1) - distribution_parameters.at(0));
             } else if (distribution == "normal") {
-                std::normal_distribution<float> norm_distribution(distribution_parameters.at(0),distribution_parameters.at(1));
+                std::normal_distribution<float> norm_distribution(distribution_parameters.at(0), distribution_parameters.at(1));
                 constval = norm_distribution(*generator);
             } else if (distribution == "weibull") {
-                std::weibull_distribution<float> wbull_distribution(distribution_parameters.at(0),distribution_parameters.at(1));
+                std::weibull_distribution<float> wbull_distribution(distribution_parameters.at(0), distribution_parameters.at(1));
                 constval = wbull_distribution(*generator);
             }
         }
@@ -144,70 +146,70 @@ private:
     std::minstd_rand0 *generator;
 };
 
+//! Random architecture model parameter value of type int.
 struct RandomParameter_int {
 public:
-
-    explicit RandomParameter_int(){
+    explicit RandomParameter_int() {
         constval = 1;
         distribution = "constant";
         generator = nullptr;
         sampled = false;
     }
 
-    void initialize(int a_val, std::minstd_rand0 *rand_generator){
+    void initialize(int a_val, std::minstd_rand0 *rand_generator) {
         constval = a_val;
         distribution = "constant";
         generator = rand_generator;
         sampled = false;
     }
 
-    void initialize( std::minstd_rand0 *rand_generator){
+    void initialize(std::minstd_rand0 *rand_generator) {
         constval = 1;
         distribution = "constant";
         generator = rand_generator;
         sampled = false;
     }
 
-    RandomParameter_int& operator=(int a){
+    RandomParameter_int &operator=(int a) {
         this->distribution = "constant";
         this->constval = a;
         this->sampled = false;
         return *this;
     }
 
-    void uniformDistribution( int minval, int maxval ){
-        if( minval>maxval ){
-            throw (std::runtime_error("ERROR (PlantArchitecture): RandomParameter_int::uniformDistribution() - minval must be less than or equal to maxval."));
+    void uniformDistribution(int minval, int maxval) {
+        if (minval > maxval) {
+            throw(std::runtime_error("ERROR (PlantArchitecture): RandomParameter_int::uniformDistribution() - minval must be less than or equal to maxval."));
         }
         distribution = "uniform";
         distribution_parameters = {minval, maxval};
         sampled = false;
     }
 
-    void discreteValues( const std::vector<int> &values ){
+    void discreteValues(const std::vector<int> &values) {
         distribution = "discretevalues";
         distribution_parameters = values;
         sampled = false;
     }
 
-    int val(){
-        if( !sampled ){
+    int val() {
+        if (!sampled) {
             constval = resample();
         }
         return constval;
     }
 
-    int resample(){
+    int resample() {
         sampled = true;
-        if( distribution!="constant" ) {
+        if (distribution != "constant") {
             if (generator == nullptr) {
-                throw (std::runtime_error("ERROR (PlantArchitecture): Random parameter was not properly initialized with random number generator."));
+                throw(std::runtime_error("ERROR (PlantArchitecture): Random parameter was not properly initialized with random number generator."));
             }
             if (distribution == "uniform") {
-                std::uniform_int_distribution<> unif_distribution(distribution_parameters.at(0),distribution_parameters.at(1));
+                std::uniform_int_distribution<> unif_distribution(distribution_parameters.at(0), distribution_parameters.at(1));
                 constval = unif_distribution(*generator);
-            }else if (distribution == "discretevalues") {
-                std::uniform_int_distribution<> unif_distribution(0,distribution_parameters.size()-1);
+            } else if (distribution == "discretevalues") {
+                std::uniform_int_distribution<> unif_distribution(0, distribution_parameters.size() - 1);
                 constval = distribution_parameters.at(unif_distribution(*generator));
             }
         }
@@ -222,16 +224,15 @@ private:
     std::minstd_rand0 *generator;
 };
 
-struct AxisRotation{
+struct AxisRotation {
 public:
-
-    AxisRotation(){
+    AxisRotation() {
         pitch = 0;
         yaw = 0;
         roll = 0;
     }
 
-    AxisRotation( float a_pitch, float a_yaw, float a_roll ){
+    AxisRotation(float a_pitch, float a_yaw, float a_roll) {
         pitch = a_pitch;
         yaw = a_yaw;
         roll = a_roll;
@@ -241,35 +242,27 @@ public:
     float yaw;
     float roll;
 
-    AxisRotation operator+(const AxisRotation& a) const;
-    AxisRotation operator-(const AxisRotation& a) const;
+    AxisRotation operator+(const AxisRotation &a) const;
+    AxisRotation operator-(const AxisRotation &a) const;
 
     friend std::ostream &operator<<(std::ostream &os, const AxisRotation &rot) {
         return os << "AxisRotation<" << rot.pitch << ", " << rot.yaw << ", " << rot.roll << ">";
     }
-
 };
 
-inline AxisRotation make_AxisRotation( float a_pitch, float a_yaw, float a_roll ) {
-    return {a_pitch,a_yaw,a_roll};
+inline AxisRotation make_AxisRotation(float a_pitch, float a_yaw, float a_roll) {
+    return {a_pitch, a_yaw, a_roll};
 }
 
-inline AxisRotation AxisRotation::operator+(const AxisRotation& a) const{
-    return {a.pitch+pitch, a.yaw+yaw, a.roll+roll};
+inline AxisRotation AxisRotation::operator+(const AxisRotation &a) const {
+    return {a.pitch + pitch, a.yaw + yaw, a.roll + roll};
 }
 
-inline AxisRotation AxisRotation::operator-(const AxisRotation& a) const{
-    return {a.pitch-pitch, a.yaw-yaw, a.roll-roll};
+inline AxisRotation AxisRotation::operator-(const AxisRotation &a) const {
+    return {a.pitch - pitch, a.yaw - yaw, a.roll - roll};
 }
 
-enum BudState{
-    BUD_DORMANT = 0,
-    BUD_ACTIVE = 1,
-    BUD_FLOWER_CLOSED = 2,
-    BUD_FLOWER_OPEN = 3,
-    BUD_FRUITING = 4,
-    BUD_DEAD = 5
-};
+enum BudState { BUD_DORMANT = 0, BUD_ACTIVE = 1, BUD_FLOWER_CLOSED = 2, BUD_FLOWER_OPEN = 3, BUD_FRUITING = 4, BUD_DEAD = 5 };
 
 struct CarbohydrateParameters {
 
@@ -331,8 +324,8 @@ struct CarbohydrateParameters {
     // -- Carbon Transfer Parameters -- //
     //! carbohydrate concentration threshold to transfer carbon to child shoots as a fraction of g C/ g DW in the stem
     float carbohydrate_transfer_threshold = 0.05;
-    float carbon_conductance_down = 0.9;//<= 1.0
-    float carbon_conductance_up = carbon_conductance_down/5; //Conductance of carbon from parent to child shoots << conductance from child to parent
+    float carbon_conductance_down = 0.9; //<= 1.0
+    float carbon_conductance_up = carbon_conductance_down / 5; // Conductance of carbon from parent to child shoots << conductance from child to parent
 };
 
 //! Add geometry to the Context consisting of a series of Cone objects to form a tube-like shape
@@ -346,34 +339,32 @@ struct CarbohydrateParameters {
  */
 std::vector<uint> makeTubeFromCones(uint radial_subdivisions, const std::vector<helios::vec3> &vertices, const std::vector<float> &radii, const std::vector<helios::RGBcolor> &colors, helios::Context *context_ptr);
 
-struct VegetativeBud{
+struct VegetativeBud {
 
-    //state of the bud
+    // state of the bud
     BudState state = BUD_DORMANT;
-    //label of the shoot type that will be produced if the bud breaks into a shoot
+    // label of the shoot type that will be produced if the bud breaks into a shoot
     std::string shoot_type_label;
-    //ID of the shoot that the bud will produce if it breaks into a shoot
+    // ID of the shoot that the bud will produce if it breaks into a shoot
     uint shoot_ID = -1;
-
 };
 
-struct FloralBud{
+struct FloralBud {
 
-    //state of the bud
+    // state of the bud
     BudState state = BUD_DORMANT;
-    //amount of time since the bud flowered (=0 if it has not yet flowered)
+    // amount of time since the bud flowered (=0 if it has not yet flowered)
     float time_counter = 0;
     //=0 for axillary buds, =1 for terminal buds
     bool isterminal = false;
-    //For axillary buds: index of the petiole within the internode that this floral bud originates from
-    //For terminal buds: index of the phytomer within the shoot that this floral bud originates from
+    // For axillary buds: index of the petiole within the internode that this floral bud originates from
+    // For terminal buds: index of the phytomer within the shoot that this floral bud originates from
     uint parent_index = 0;
-    //Index of the bud within the petiole that this floral bud originates from
+    // Index of the bud within the petiole that this floral bud originates from
     uint bud_index = 0;
-    //Scaling factor fraction of the fruit (if present), ranging from 0 to 1
+    // Scaling factor fraction of the fruit (if present), ranging from 0 to 1
     float current_fruit_scale_factor = 1;
     float previous_fruit_scale_factor = 0;
-
 
 
     helios::vec3 base_position;
@@ -387,15 +378,14 @@ struct FloralBud{
 
 struct LeafPrototype {
 public:
-
     //! Constructor - sets random number generator
-    explicit LeafPrototype( std::minstd_rand0 *generator );
+    explicit LeafPrototype(std::minstd_rand0 *generator);
 
     //! Constructor - does not set random number generator
-    LeafPrototype( )= default;
+    LeafPrototype() = default;
 
     //! Custom prototype function for creating leaf prototypes
-    uint (*prototype_function)(helios::Context *, LeafPrototype* prototype_parameters, int compound_leaf_index) = nullptr;
+    uint (*prototype_function)(helios::Context *, LeafPrototype *prototype_parameters, int compound_leaf_index) = nullptr;
 
     //! OBJ model file to load for the leaf
     /**
@@ -407,7 +397,7 @@ public:
     /**
      *\note Key is the index of the compound leaf (=0 is the tip leaf, <0 increases down left side of the leaflet, >0 increases down the right side of the leaflet), value is the texture file.
      */
-    std::map<int,std::string> leaf_texture_file;
+    std::map<int, std::string> leaf_texture_file;
 
     // Ratio of leaf width to leaf length
     RandomParameter_float leaf_aspect_ratio;
@@ -450,7 +440,7 @@ public:
 
     uint unique_prototype_identifier = 0;
 
-    void duplicate( const LeafPrototype &a){
+    void duplicate(const LeafPrototype &a) {
         this->leaf_texture_file = a.leaf_texture_file;
         this->OBJ_model_file = a.OBJ_model_file;
         this->leaf_aspect_ratio = a.leaf_aspect_ratio;
@@ -472,7 +462,7 @@ public:
     }
 
     //! Assignment operator
-    LeafPrototype& operator=(const LeafPrototype &a){
+    LeafPrototype &operator=(const LeafPrototype &a) {
         if (this != &a) {
             this->leaf_texture_file = a.leaf_texture_file;
             this->OBJ_model_file = a.OBJ_model_file;
@@ -501,7 +491,7 @@ public:
             this->build_petiolule = a.build_petiolule;
             this->prototype_function = a.prototype_function;
             this->generator = a.generator;
-            if ( this->generator != nullptr ){
+            if (this->generator != nullptr) {
                 this->sampleIdentifier();
             }
         }
@@ -509,21 +499,18 @@ public:
     }
 
     void sampleIdentifier() {
-        assert(generator!=nullptr);
+        assert(generator != nullptr);
         std::uniform_int_distribution<uint> unif_distribution;
         this->unique_prototype_identifier = unif_distribution(*generator);
     }
 
 private:
-
     std::minstd_rand0 *generator{};
-
 };
 
-struct PhytomerParameters{
+struct PhytomerParameters {
 private:
-
-    struct InternodeParameters{
+    struct InternodeParameters {
 
         //! Angular deviation (in degrees) of this internode’s axis relative to the previous internode along the shoot.  Values other than 0° make the stem zig-zag.
         RandomParameter_float pitch;
@@ -544,7 +531,7 @@ private:
         //! Number of radial subdivisions around the internode circumference  (4 = square, 5 = pentagon, ≥ 8 ≈ circular).
         uint radial_subdivisions;
 
-        InternodeParameters& operator=(const InternodeParameters &a){
+        InternodeParameters &operator=(const InternodeParameters &a) {
             if (this != &a) {
                 this->pitch = a.pitch;
                 this->pitch.resample();
@@ -565,7 +552,7 @@ private:
         }
     };
 
-    struct PetioleParameters{
+    struct PetioleParameters {
 
         //! Number of petioles emerging from a single internode (e.g., 2 for an opposite pattern)
         uint petioles_per_internode;
@@ -586,7 +573,7 @@ private:
         //! Number of radial subdivisions around the petiole circumference (4 = square, 5 = pentagon, etc.)
         uint radial_subdivisions;
 
-        PetioleParameters& operator=(const PetioleParameters &a){
+        PetioleParameters &operator=(const PetioleParameters &a) {
             if (this != &a) {
                 this->petioles_per_internode = a.petioles_per_internode;
                 this->pitch = a.pitch;
@@ -607,7 +594,7 @@ private:
         }
     };
 
-    struct LeafParameters{
+    struct LeafParameters {
         //! Number of leaves attached to each petiole; values greater than 1 create a compound leaf
         RandomParameter_int leaves_per_petiole;
         //! Angle in degrees of the leaf axis relative to its parent petiole axis
@@ -625,7 +612,7 @@ private:
         //! Prototype definition holding geometric and texture information used to instantiate individual leaves
         LeafPrototype prototype;
 
-        LeafParameters& operator=(const LeafParameters &a){
+        LeafParameters &operator=(const LeafParameters &a) {
             if (this != &a) {
                 this->leaves_per_petiole = a.leaves_per_petiole;
                 this->leaves_per_petiole.resample();
@@ -777,7 +764,7 @@ public:
      */
     InflorescenceParameters inflorescence;
 
-    //Custom user-defined function that is called when a phytomer is created
+    // Custom user-defined function that is called when a phytomer is created
     /**
      * \param[in] phytomer_ptr Pointer to the phytomer to which the function will be applied
      * \param[in] shoot_node_index Index of the phytomer within the shoot starting from 0 at the shoot base
@@ -787,7 +774,7 @@ public:
      */
     void (*phytomer_creation_function)(std::shared_ptr<Phytomer> phytomer_ptr, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) = nullptr;
 
-    //Custom user-defined function that is called for each phytomer on every time step
+    // Custom user-defined function that is called for each phytomer on every time step
     /**
      * \param[in] phytomer_ptr Pointer to the phytomer to which the function will be applied
      */
@@ -798,21 +785,20 @@ public:
     PhytomerParameters();
 
     //! Constructor - sets random number generator
-    explicit PhytomerParameters( std::minstd_rand0 *generator );
+    explicit PhytomerParameters(std::minstd_rand0 *generator);
 
     friend class PlantArchitecture;
     friend struct Phytomer;
     friend struct Shoot;
-
 };
 
-struct ShootParameters{
+struct ShootParameters {
 
     //! Default constructor - does not set random number generator
     ShootParameters();
 
     //! Constructor - sets random number generator
-    explicit ShootParameters( std::minstd_rand0 *generator );
+    explicit ShootParameters(std::minstd_rand0 *generator);
 
     /**
      * \brief Stores parameters related to a phytomer in the shoot.
@@ -883,9 +869,9 @@ struct ShootParameters{
      *
      * \note The sizes of the input vectors must match, and neither input vector can be empty.
      */
-    void defineChildShootTypes( const std::vector<std::string> &child_shoot_type_labels, const std::vector<float> &child_shoot_type_probabilities );
+    void defineChildShootTypes(const std::vector<std::string> &child_shoot_type_labels, const std::vector<float> &child_shoot_type_probabilities);
 
-    ShootParameters& operator=(const ShootParameters &a) {
+    ShootParameters &operator=(const ShootParameters &a) {
         this->phytomer_parameters = a.phytomer_parameters;
         this->max_nodes = a.max_nodes;
         this->max_nodes.resample();
@@ -945,19 +931,15 @@ struct ShootParameters{
     friend struct Shoot;
 
 protected:
-
     std::vector<std::string> child_shoot_type_labels;
     std::vector<float> child_shoot_type_probabilities;
-
 };
 
 struct Phytomer {
 public:
-
     //! Constructor
-    Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, helios::vec3 internode_base_origin,
-             const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, uint rank, PlantArchitecture *plantarchitecture_ptr,
-             helios::Context *context_ptr);
+    Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint phytomer_index, const helios::vec3 &parent_internode_axis, const helios::vec3 &parent_petiole_axis, helios::vec3 internode_base_origin, const AxisRotation &shoot_base_rotation,
+             float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, uint rank, PlantArchitecture *plantarchitecture_ptr, helios::Context *context_ptr);
 
     // ---- query info about the phytomer ---- //
 
@@ -1007,7 +989,7 @@ public:
      * \param[in] axis_vertices A list of 3D points defining the vertices of the axis.
      * \return A normalized vector direction at the given fraction along the axis.
      */
-    [[nodiscard]] static helios::vec3 getAxisVector(float stem_fraction, const std::vector<helios::vec3> &axis_vertices) ;
+    [[nodiscard]] static helios::vec3 getAxisVector(float stem_fraction, const std::vector<helios::vec3> &axis_vertices);
 
     /**
      * \brief Computes the total length of the internode.
@@ -1093,7 +1075,7 @@ public:
     /**
      * \param[in] internode_radius_max_new Maximum radius of the internode
      */
-    void setInternodeMaxRadius( float internode_radius_max_new );
+    void setInternodeMaxRadius(float internode_radius_max_new);
 
     //! Set the leaf scale as a fraction of its total fully-elongated scale factor. Value is uniformly applied for all leaves/leaflets in the petiole.
     /**
@@ -1151,7 +1133,7 @@ public:
      *
      * \param[in] base_position New base position for the petiole
      */
-    void setPetioleBase( const helios::vec3 &base_position );
+    void setPetioleBase(const helios::vec3 &base_position);
 
     /**
      * \brief Rotates a specified leaf around its base using the given rotation parameters.
@@ -1163,14 +1145,14 @@ public:
      * \param[in] leaf_index Index of the specific leaf within the petiole
      * \param[in] rotation AxisRotation object containing pitch, roll, and yaw values for the rotation
      */
-    void rotateLeaf( uint petiole_index, uint leaf_index, const AxisRotation &rotation );
+    void rotateLeaf(uint petiole_index, uint leaf_index, const AxisRotation &rotation);
 
     /**
      * \brief Sets the vegetative bud state for all axillary vegetative buds in the phytomer.
      *
      * \param[in] state The new state to apply to the vegetative buds.
      */
-    void setVegetativeBudState( BudState state );
+    void setVegetativeBudState(BudState state);
 
     /**
      * \brief Sets the state of a vegetative bud at the specified petiole and bud indices.
@@ -1187,14 +1169,14 @@ public:
      * \param[in] state The desired state to set for the vegetative bud.
      * \param[in,out] vbud Reference to the vegetative bud whose state will be modified.
      */
-    static void setVegetativeBudState( BudState state, VegetativeBud &vbud ) ;
+    static void setVegetativeBudState(BudState state, VegetativeBud &vbud);
 
     /**
      * \brief Sets the floral bud state for all non-terminal buds.
      *
      * \param[in] state New BudState to apply to all non-terminal buds.
      */
-    void setFloralBudState(BudState state );
+    void setFloralBudState(BudState state);
 
     /**
      * \brief Sets the state of a specific floral bud.
@@ -1231,25 +1213,54 @@ public:
      */
     void deletePhytomer();
 
+private:
+    /**
+     * \brief Calculates optimal collision avoidance direction for internode growth.
+     *
+     * This method performs collision detection analysis to find an optimal growth direction
+     * that avoids obstacles. It builds a BVH with target geometry and uses cone-based
+     * path optimization to determine the best collision-free direction.
+     *
+     * \param[in] internode_base_origin Starting position for collision detection cone
+     * \param[in] internode_axis Current growth direction before collision avoidance
+     * \param collision_detection_active
+     */
+    helios::vec3 calculateCollisionAvoidanceDirection(const helios::vec3 &internode_base_origin, const helios::vec3 &internode_axis, bool &collision_detection_active) const;
+
+    /**
+     * \brief Calculates optimal collision avoidance direction for petiole growth.
+     *
+     * This method performs collision detection analysis to find an optimal petiole direction
+     * that avoids obstacles. It uses the petiole base position as the cone apex and the
+     * proposed petiole direction as the central axis to find gaps in the environment.
+     *
+     * \param[in] petiole_base_origin Starting position for petiole collision detection cone
+     * \param[in] proposed_petiole_axis Proposed petiole direction before collision avoidance
+     * \param[out] collision_detection_active Flag indicating if collision detection was applied
+     * \return Optimal petiole direction toward largest detected gap
+     */
+    helios::vec3 calculatePetioleCollisionAvoidanceDirection(const helios::vec3 &petiole_base_origin, const helios::vec3 &proposed_petiole_axis, bool &collision_detection_active) const;
+
+public:
     // ---- phytomer data ---- //
 
     //! Coordinates of internode tube segments. Index is tube segment within internode
-    std::vector<std::vector<helios::vec3>> petiole_vertices; //first index is petiole within internode, second index is tube segment within petiole tube
-    std::vector<std::vector<helios::vec3>> leaf_bases; //first index is petiole within internode, second index is leaf within petiole
+    std::vector<std::vector<helios::vec3>> petiole_vertices; // first index is petiole within internode, second index is tube segment within petiole tube
+    std::vector<std::vector<helios::vec3>> leaf_bases; // first index is petiole within internode, second index is leaf within petiole
     float internode_pitch, internode_phyllotactic_angle;
 
-    std::vector<std::vector<float>> petiole_radii; //first index is petiole within internode, second index is segment within petiole tube
-    std::vector<float> petiole_length; //index is petiole within internode
-    std::vector<float> petiole_pitch; //index is petiole within internode
-    std::vector<float> petiole_curvature; //index is petiole within internode
-    std::vector<std::vector<float>> leaf_size_max; //first index is petiole within internode, second index is leaf within petiole
-    std::vector<std::vector<AxisRotation>> leaf_rotation; //first index is petiole within internode, second index is leaf within petiole
+    std::vector<std::vector<float>> petiole_radii; // first index is petiole within internode, second index is segment within petiole tube
+    std::vector<float> petiole_length; // index is petiole within internode
+    std::vector<float> petiole_pitch; // index is petiole within internode
+    std::vector<float> petiole_curvature; // index is petiole within internode
+    std::vector<std::vector<float>> leaf_size_max; // first index is petiole within internode, second index is leaf within petiole
+    std::vector<std::vector<AxisRotation>> leaf_rotation; // first index is petiole within internode, second index is leaf within petiole
 
-    std::vector<helios::RGBcolor> internode_colors; //index is segment within internode tube
-    std::vector<helios::RGBcolor> petiole_colors; //index is segment within petiole tube
+    std::vector<helios::RGBcolor> internode_colors; // index is segment within internode tube
+    std::vector<helios::RGBcolor> petiole_colors; // index is segment within petiole tube
 
-    std::vector<std::vector<uint> > petiole_objIDs; //first index is petiole within internode, second index is segment within petiole tube
-    std::vector<std::vector<uint>> leaf_objIDs; //first index is petiole within internode, second index is leaf within petiole tube
+    std::vector<std::vector<uint>> petiole_objIDs; // first index is petiole within internode, second index is segment within petiole tube
+    std::vector<std::vector<uint>> leaf_objIDs; // first index is petiole within internode, second index is leaf within petiole tube
 
     PhytomerParameters phytomer_parameters;
 
@@ -1266,14 +1277,14 @@ public:
     bool isdormant = false;
 
     float current_internode_scale_factor = 1;
-    std::vector<float> current_leaf_scale_factor; //index is petiole within internode
+    std::vector<float> current_leaf_scale_factor; // index is petiole within internode
 
     float old_phytomer_volume = 0;
 
     float downstream_leaf_area = 0;
 
-    std::vector<std::vector<VegetativeBud>> axillary_vegetative_buds; //first index is petiole within internode, second index is bud within petiole
-    std::vector<std::vector<FloralBud>> floral_buds; //first index is petiole within internode, second index is bud within petiole
+    std::vector<std::vector<VegetativeBud>> axillary_vegetative_buds; // first index is petiole within internode, second index is bud within petiole
+    std::vector<std::vector<FloralBud>> floral_buds; // first index is petiole within internode, second index is bud within petiole
 
     float internode_radius_initial;
     float internode_radius_max;
@@ -1283,7 +1294,6 @@ public:
     bool build_context_geometry_peduncle = true;
 
 protected:
-
     helios::vec3 inflorescence_bending_axis;
 
     helios::Context *context_ptr;
@@ -1296,7 +1306,7 @@ protected:
      * Calculate the total carbon cost (mol C) required for the construction of a phytomer's total leaf area.
      * Carbon construction cost is calculated per area basis using the leaf carbon percentage and specific leaf area (SLA) of the plant instance.
      * \return The total carbon construction cost of the phytomer's leaf area (mol C).
-    */
+     */
     [[nodiscard]] float calculatePhytomerConstructionCosts() const;
 
     /**
@@ -1305,7 +1315,7 @@ protected:
      *
      * \param[in] fbud References a FloralBud object that contains inflorescence object IDs.
      * \return The total flower carbon construction cost (mol C).
-    */
+     */
     [[nodiscard]] float calculateFlowerConstructionCosts(const FloralBud &fbud) const;
 
     /**
@@ -1317,7 +1327,6 @@ protected:
 
     friend struct Shoot;
     friend class PlantArchitecture;
-
 };
 
 struct Shoot {
@@ -1357,9 +1366,9 @@ struct Shoot {
      * \param[in] node_index Index of the node along the shoot
      * \return True if the vegetative bud should break into a new shoot
      */
-    [[nodiscard]] bool sampleVegetativeBudBreak( uint node_index ) const;
+    [[nodiscard]] bool sampleVegetativeBudBreak(uint node_index) const;
 
-    [[nodiscard]] bool sampleVegetativeBudBreak_carb( uint node_index ) const;
+    [[nodiscard]] bool sampleVegetativeBudBreak_carb(uint node_index) const;
 
     //! Randomly sample whether the shoot should produce an epicormic shoot (water sprout) over timestep
     /**
@@ -1367,7 +1376,7 @@ struct Shoot {
      * \param[out] epicormic_positions_fraction Vector of fractions of the shoot's length where epicormic shoots will be produced
      * \return Number of epicormic shoots to be produced; position of the epicormic shoot as a fraction of the shoot's length
      */
-    uint sampleEpicormicShoot( float dt, std::vector<float> &epicormic_positions_fraction ) const;
+    uint sampleEpicormicShoot(float dt, std::vector<float> &epicormic_positions_fraction) const;
 
     /**
      * \brief Terminates the apical bud of the shoot.
@@ -1411,7 +1420,7 @@ struct Shoot {
      * \return A vec3 representing the direction vector of the shoot axis for the computed position.
      * \note The shoot_fraction parameter is clamped within the range of 0 to 1, with 0 corresponding to the base and 1 to the tip of the shoot. The function uses the closest phytomer's internode axis vector for calculation.
      */
-    [[nodiscard]] helios::vec3 getShootAxisVector( float shoot_fraction ) const;
+    [[nodiscard]] helios::vec3 getShootAxisVector(float shoot_fraction) const;
 
     /**
      * \brief Calculates the total leaf area of a shoot starting from a given node index.
@@ -1420,7 +1429,7 @@ struct Shoot {
      * \return Total leaf area of the shoot and its child shoots starting from the given node.
      * \note Throws an error if the start_node_index is out of range.
      */
-    [[nodiscard]] float sumShootLeafArea( uint start_node_index = 0 ) const;
+    [[nodiscard]] float sumShootLeafArea(uint start_node_index = 0) const;
 
     /**
      * \brief Calculates the total volume of all child shoots starting from a specified node index.
@@ -1428,7 +1437,7 @@ struct Shoot {
      * \return The total volume of all child shoots starting from the given node index.
      * \note Throws an error if start_node_index is out of range.
      */
-    [[nodiscard]] float sumChildVolume( uint start_node_index = 0) const;
+    [[nodiscard]] float sumChildVolume(uint start_node_index = 0) const;
 
     /**
      * \brief Propagates the given leaf area downstream through the specified shoot.
@@ -1437,13 +1446,13 @@ struct Shoot {
      * \param[in] node_index Index of the node to start propagation from
      * \param[in] leaf_area Leaf area to add downstream
      */
-    void propagateDownstreamLeafArea(const Shoot* shoot, uint node_index, float leaf_area);
+    void propagateDownstreamLeafArea(const Shoot *shoot, uint node_index, float leaf_area);
 
     /**
      * \brief Updates the shoot node positions and their associated geometries.
      * \param[in] update_context_geometry Indicates whether the geometry context should be updated for the shoot nodes.
      */
-    void updateShootNodes(bool update_context_geometry = true );
+    void updateShootNodes(bool update_context_geometry = true);
 
     uint current_node_number = 0;
     uint nodes_this_season = 0;
@@ -1459,7 +1468,7 @@ struct Shoot {
     const uint rank;
     const uint parent_petiole_index;
 
-    float carbohydrate_pool_molC = 0;  // mol C
+    float carbohydrate_pool_molC = 0; // mol C
     float old_shoot_volume = 0;
 
     float phyllochron_increase = 5;
@@ -1488,13 +1497,13 @@ struct Shoot {
 
     uint internode_tube_objID = 4294967294;
 
-    std::vector<std::vector<helios::vec3>> shoot_internode_vertices; //first index is phytomer within shoot, second index is segment within phytomer internode tube
-    std::vector<std::vector<float>> shoot_internode_radii; //first index is phytomer within shoot, second index is segment within phytomer internode tube
+    std::vector<std::vector<helios::vec3>> shoot_internode_vertices; // first index is phytomer within shoot, second index is segment within phytomer internode tube
+    std::vector<std::vector<float>> shoot_internode_radii; // first index is phytomer within shoot, second index is segment within phytomer internode tube
 
     bool build_context_geometry_internode = true;
 
-    //map of node number (key) to IDs of shoot children (value)
-    std::map<int,std::vector<int> > childIDs;
+    // map of node number (key) to IDs of shoot children (value)
+    std::map<int, std::vector<int>> childIDs;
 
     ShootParameters shoot_parameters;
 
@@ -1503,26 +1512,27 @@ struct Shoot {
     float phyllochron_instantaneous;
     float elongation_rate_instantaneous;
 
-    std::vector<std::shared_ptr<Phytomer> > phytomers;
+    std::vector<std::shared_ptr<Phytomer>> phytomers;
 
-    PlantArchitecture* plantarchitecture_ptr;
+    PlantArchitecture *plantarchitecture_ptr;
 
     helios::Context *context_ptr;
-
 };
 
-struct PlantInstance{
+struct PlantInstance {
 
-    PlantInstance(const helios::vec3 &a_base_position, float a_current_age, const std::string &a_plant_name, helios::Context *a_context_ptr) : base_position(a_base_position), current_age(a_current_age), plant_name(a_plant_name), context_ptr(a_context_ptr) {}
-    std::vector<std::shared_ptr<Shoot> > shoot_tree;
+    PlantInstance(const helios::vec3 &a_base_position, float a_current_age, const std::string &a_plant_name, helios::Context *a_context_ptr) :
+        base_position(a_base_position), current_age(a_current_age), plant_name(a_plant_name), context_ptr(a_context_ptr) {
+    }
+    std::vector<std::shared_ptr<Shoot>> shoot_tree;
     helios::vec3 base_position;
     float current_age;
     float time_since_dormancy = 0;
     helios::Context *context_ptr;
     std::string plant_name;
-    std::pair<std::string,float> epicormic_shoot_probability_perlength_per_day; //.first is the epicormic shoot label string, .second is the probability
+    std::pair<std::string, float> epicormic_shoot_probability_perlength_per_day; //.first is the epicormic shoot label string, .second is the probability
 
-    //Phenological thresholds
+    // Phenological thresholds
     float dd_to_dormancy_break = 0;
     float dd_to_flower_initiation = 0;
     float dd_to_flower_opening = 0;
@@ -1535,32 +1545,30 @@ struct PlantInstance{
     float max_age = 999;
 
     CarbohydrateParameters carb_parameters;
-
 };
 
-class PlantArchitecture{
+class PlantArchitecture {
 public:
-
     //! Main architectural model class constructor
     /**
      * \param[in] context_ptr Pointer to the Helios context.
      */
-    explicit PlantArchitecture( helios::Context* context_ptr );
+    explicit PlantArchitecture(helios::Context *context_ptr);
 
     //! Unit test routines
-    static int selfTest();
+    static int selfTest(int argc = 0, char** argv = nullptr);
 
     //! Add optional output object data values to the Context
     /**
      * \param[in] object_data_label Name of object data (e.g., "age", "rank")
-    */
-    void optionalOutputObjectData( const std::string &object_data_label );
+     */
+    void optionalOutputObjectData(const std::string &object_data_label);
 
     //! Add optional output object data values to the Context
     /**
      * \param[in] object_data_labels Vector of names of object data (e.g., {"age", "rank"})
-    */
-    void optionalOutputObjectData( const std::vector<std::string> &object_data_labels );
+     */
+    void optionalOutputObjectData(const std::vector<std::string> &object_data_labels);
 
     // ********* Methods for Building Plants from Existing Library ********* //
 
@@ -1568,7 +1576,10 @@ public:
     /**
      * \param[in] plant_label User-defined label for the plant model to be loaded.
      */
-    void loadPlantModelFromLibrary( const std::string &plant_label );
+    void loadPlantModelFromLibrary(const std::string &plant_label);
+
+    //! Get list of all available plant models in the library
+    [[nodiscard]] std::vector<std::string> getAvailablePlantModels() const;
 
     //! Build a plant instance based on the model currently loaded from the library
     /**
@@ -1576,7 +1587,7 @@ public:
      * \param[in] age Age of the plant in days.
      * \return ID of the plant instance.
      */
-    uint buildPlantInstanceFromLibrary( const helios::vec3 &base_position, float age );
+    uint buildPlantInstanceFromLibrary(const helios::vec3 &base_position, float age);
 
     //! Build a canopy of regularly spaced plants based on the model currently loaded from the library
     /**
@@ -1598,25 +1609,26 @@ public:
      * \return Vector of plant instance IDs.
      */
     std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &canopy_extent_xy, uint plant_count, float age);
-    
+
     //! Get the shoot parameters structure for a specific shoot type in the current plant model
     /**
      * \param[in] shoot_type_label User-defined label for the shoot type.
      * \return ShootParameters structure for the specified shoot type.
      */
-    ShootParameters getCurrentShootParameters( const std::string &shoot_type_label );
+    ShootParameters getCurrentShootParameters(const std::string &shoot_type_label);
 
     //! Get the shoot parameters structure for all shoot types in the current plant model
     /**
      * \return Map of shoot type labels to ShootParameters structures for all shoot types in the current plant model. The key is the user-defined label string for the shoot type, and the value is the corresponding ShootParameters structure.
      */
-    std::map<std::string, ShootParameters> getCurrentShootParameters( );
+    std::map<std::string, ShootParameters> getCurrentShootParameters();
 
     //! Get the phytomer parameters structure for all shoot types in the current plant model
     /**
-     * \return Map of phytomer parameters for all type labels to ShootParameters structures for all shoot types in the current plant model. The key is the user-defined label string for the shoot type, and the value is the corresponding PhytomerParameters structure.
+     * \return Map of phytomer parameters for all type labels to ShootParameters structures for all shoot types in the current plant model. The key is the user-defined label string for the shoot type, and the value is the corresponding
+     * PhytomerParameters structure.
      */
-    std::map<std::string, PhytomerParameters> getCurrentPhytomerParameters( );
+    std::map<std::string, PhytomerParameters> getCurrentPhytomerParameters();
 
     //! Update the parameters of a single shoot type in the current plant model
     /**
@@ -1624,14 +1636,14 @@ public:
      * \param[in] params Updated parameters structure for the shoot type.
      * \note This will overwrite any existing shoot parameter definitions.
      */
-    void updateCurrentShootParameters( const std::string &shoot_type_label, const ShootParameters &params );
+    void updateCurrentShootParameters(const std::string &shoot_type_label, const ShootParameters &params);
 
     //! Update the parameters of all shoot types in the current plant model
     /**
      * \param[in] params Updated parameters structure for the shoot type.
      * \note This will overwrite any existing shoot parameter definitions.
      */
-    void updateCurrentShootParameters( const std::map<std::string, ShootParameters> &params );
+    void updateCurrentShootParameters(const std::map<std::string, ShootParameters> &params);
 
     // ********* Methods for Building Custom Plant Geometry from Scratch ********* //
 
@@ -1663,7 +1675,7 @@ public:
     /**
      * \param[in] plantIDs IDs of the plant instances to be deleted.
      */
-    void deletePlantInstance( const std::vector<uint> &plantIDs );
+    void deletePlantInstance(const std::vector<uint> &plantIDs);
 
     //! Specify the threshold values for plant phenological stages. All time values have units of days.
     /**
@@ -1678,28 +1690,29 @@ public:
      * \param[in] is_evergreen [optional] True if the plant is evergreen (i.e., does not lose all leaves during senescence).
      * \note Any phenological stage can be skipped by specifying a negative threshold value. In this case, the stage will be skipped and the threshold for the next stage will be relative to the previous stage.
      */
-    void setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_dormancy, float max_leaf_lifespan = 1e6, bool is_evergreen= false);
+    void setPlantPhenologicalThresholds(uint plantID, float time_to_dormancy_break, float time_to_flower_initiation, float time_to_flower_opening, float time_to_fruit_set, float time_to_fruit_maturity, float time_to_dormancy,
+                                        float max_leaf_lifespan = 1e6, bool is_evergreen = false);
 
     //! Sets the carbohydrate model parameters for a specific plant.
     /**
      * \param[in] plantID Identifier for the plant whose parameters are being set.
      * \param[in] carb_parameters Reference to the carbohydrate parameters to assign to the plant.
      */
-    void setPlantCarbohydrateModelParameters( uint plantID, const CarbohydrateParameters &carb_parameters );
+    void setPlantCarbohydrateModelParameters(uint plantID, const CarbohydrateParameters &carb_parameters);
 
     //! Sets carbohydrate model parameters for specified plants.
     /**
      * \param[in] plantIDs A vector of plant IDs for which the parameters will be set.
      * \param[in] carb_parameters The carbohydrate model parameters to apply.
      */
-    void setPlantCarbohydrateModelParameters( const std::vector<uint> &plantIDs, const CarbohydrateParameters &carb_parameters );
+    void setPlantCarbohydrateModelParameters(const std::vector<uint> &plantIDs, const CarbohydrateParameters &carb_parameters);
 
     /**
      * \brief Disables the phenological progression of a specified plant instance.
      *
      * \param[in] plantID Identifier of the plant whose phenology is to be disabled.
      */
-    void disablePlantPhenology( uint plantID );
+    void disablePlantPhenology(uint plantID);
 
     //! Advance plant growth by a specified time interval for all plants
     /**
@@ -1738,7 +1751,7 @@ public:
      * \param[in] shoot_type_label User-defined label for the new shoot type. This string is used later to reference this type of shoot.
      * \param[in] shoot_params Parameters structure for the new shoot type.
      */
-    void defineShootType( const std::string &shoot_type_label, const ShootParameters &shoot_params );
+    void defineShootType(const std::string &shoot_type_label, const ShootParameters &shoot_params);
 
     //! Define the stem/trunk shoot (base of plant) to start a new plant. This requires a plant instance has already been created using the addPlantInstance() method.
     /**
@@ -1789,8 +1802,8 @@ public:
      * \param[in] petiole_index [optional] Index of the petiole within the internode to which the new shoot will be attached (when there are multiple petioles per internode)
      * \return ID of the newly generated shoot.
      */
-    uint addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node_index, uint current_node_number, const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max,
-                       float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label, uint petiole_index = 0);
+    uint addChildShoot(uint plantID, int parent_shoot_ID, uint parent_node_index, uint current_node_number, const AxisRotation &shoot_base_rotation, float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction,
+                       float leaf_scale_factor_fraction, float radius_taper, const std::string &shoot_type_label, uint petiole_index = 0);
 
     //! Manually add a child epicormic shoot (water sprout) at an arbitrary position along the shoot
     /**
@@ -1845,7 +1858,29 @@ public:
     /**
      * \param[in] ground_height [optional] Height of the ground plane (default = 0).
      */
-    void enableGroundClipping( float ground_height = 0.f );
+    void enableGroundClipping(float ground_height = 0.f);
+
+    // -- collision detection methods -- //
+
+    //! Enable collision detection for plant growth avoidance
+    /**
+     * \param[in] collision_detection_ptr Pointer to a CollisionDetection instance
+     * \param[in] target_object_UUIDs [optional] Vector of specific UUIDs to avoid (empty = avoid all geometry)
+     * \param[in] target_object_IDs [optional] Vector of specific object IDs to avoid (empty = avoid all objects)
+     */
+    void enableCollisionDetection(CollisionDetection *collision_detection_ptr, const std::vector<uint> &target_object_UUIDs = {}, const std::vector<uint> &target_object_IDs = {});
+
+    //! Disable collision detection for plant growth
+    void disableCollisionDetection();
+
+    //! Set collision avoidance parameters
+    /**
+     * \param[in] view_half_angle_deg Half-angle of the collision detection view cone in degrees (default = 80)
+     * \param[in] look_ahead_distance How far ahead collisions will be considered in meters (default = 0.1)
+     * \param[in] sample_count Number of directional samples within the cone (default = 256)
+     * \param[in] inertia_weight Weight factor for directional inertia vs collision avoidance (0.0 = use optimal direction, 1.0 = ignore collision avoidance) (default = 0.4)
+     */
+    void setCollisionAvoidanceParameters(float view_half_angle_deg, float look_ahead_distance, int sample_count, float inertia_weight);
 
     // -- methods for modifying the current plant state -- //
 
@@ -1861,7 +1896,7 @@ public:
      * \param[in] carbohydrate_concentration_molC_m3 Initial carbohydrate concentration in moles of carbon per cubic meter.
      * \note The plant with the specified ID must exist, and the carbohydrate concentration must be non-negative.
      */
-    void initializePlantCarbohydratePool(uint plantID, float carbohydrate_concentration_molC_m3 );
+    void initializePlantCarbohydratePool(uint plantID, float carbohydrate_concentration_molC_m3);
 
     /**
      * \brief Initializes the carbohydrate pool for a specific shoot of a plant.
@@ -1871,7 +1906,7 @@ public:
      * \param[in] carbohydrate_concentration_molC_m3 Carbohydrate concentration in moles of carbon per cubic meter; must be non-negative.
      * \note Throws an error if the plant or shoot ID does not exist, or if the carbohydrate concentration is negative.
      */
-    void initializeShootCarbohydratePool(uint plantID, uint shootID, float carbohydrate_concentration_molC_m3 );
+    void initializeShootCarbohydratePool(uint plantID, uint shootID, float carbohydrate_concentration_molC_m3);
 
     /**
      * \brief Adjusts the leaf scaling factor (length as a fraction of its maximal length) for a specific phytomer on a plant shoot.
@@ -2001,21 +2036,21 @@ public:
      *
      * \param[in] plantID The unique identifier of the plant whose leaves are to be removed.
      */
-    void removePlantLeaves(uint plantID );
+    void removePlantLeaves(uint plantID);
 
     /**
      * \brief Makes the specified plant enter a dormant state.
      *
      * \param[in] plantID ID of the plant to be made dormant.
      */
-    void makePlantDormant( uint plantID );
+    void makePlantDormant(uint plantID);
 
     /**
      * \brief Breaks the dormancy of all shoots in the specified plant.
      *
      * \param[in] plantID Identifier of the plant whose shoots' dormancy should be broken.
      */
-    void breakPlantDormancy( uint plantID );
+    void breakPlantDormancy(uint plantID);
 
     /**
      * \brief Prunes a branch from a specific plant at a designated node index.
@@ -2051,7 +2086,7 @@ public:
      * \param[in] shootID The index of the shoot within the plant.
      * \return The current number of nodes in the specified shoot.
      */
-    [[nodiscard]] uint getShootNodeCount( uint plantID, uint shootID ) const;
+    [[nodiscard]] uint getShootNodeCount(uint plantID, uint shootID) const;
 
     /**
      * \brief Retrieves the taper of a shoot based on its radius measurements.
@@ -2060,7 +2095,96 @@ public:
      * \param[in] shootID The unique identifier of the shoot within the specified plant.
      * \return The taper of the shoot as a float value, constrained between 0 and 1.
      */
-    [[nodiscard]] float getShootTaper( uint plantID, uint shootID ) const;
+    [[nodiscard]] float getShootTaper(uint plantID, uint shootID) const;
+
+    // -- methods for querying shoot hierarchy -- //
+
+    /**
+     * \brief Retrieves all shoot IDs organized by branching rank/order.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \return Vector of vectors where index represents rank and values are shoot IDs at that rank.
+     * \note result[0] contains base shoots (rank 0), result[1] contains primary branches (rank 1), etc.
+     */
+    [[nodiscard]] std::vector<std::vector<uint>> getShootIDsByRank(uint plantID) const;
+
+    /**
+     * \brief Retrieves a hierarchical mapping of parent shoot IDs to their children.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \return Map where keys are parent shoot IDs and values are vectors of child shoot IDs.
+     */
+    [[nodiscard]] std::map<uint, std::vector<uint>> getShootHierarchyMap(uint plantID) const;
+
+    /**
+     * \brief Retrieves all descendant shoot IDs of a given shoot recursively.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \param[in] shootID The unique identifier of the parent shoot.
+     * \return Vector containing all descendant shoot IDs in depth-first order.
+     */
+    [[nodiscard]] std::vector<uint> getAllDescendantShootIDs(uint plantID, uint shootID) const;
+
+    /**
+     * \brief Retrieves direct child shoot IDs of a given shoot.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \param[in] shootID The unique identifier of the parent shoot.
+     * \return Vector containing direct child shoot IDs.
+     */
+    [[nodiscard]] std::vector<uint> getChildShootIDs(uint plantID, uint shootID) const;
+
+    /**
+     * \brief Retrieves the parent shoot ID of a given shoot.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \param[in] shootID The unique identifier of the shoot.
+     * \return Parent shoot ID, or -1 if the shoot is a base shoot (no parent).
+     */
+    [[nodiscard]] int getParentShootID(uint plantID, uint shootID) const;
+
+    /**
+     * \brief Retrieves the branching rank/order of a given shoot.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \param[in] shootID The unique identifier of the shoot.
+     * \return The rank of the shoot (0 for base shoots, 1 for primary branches, etc.).
+     */
+    [[nodiscard]] uint getShootRank(uint plantID, uint shootID) const;
+
+    /**
+     * \brief Retrieves all shoot IDs for a given plant.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \return Vector containing all shoot IDs in the plant.
+     */
+    [[nodiscard]] std::vector<uint> getAllShootIDs(uint plantID) const;
+
+    /**
+     * \brief Retrieves shoot IDs that have no children (terminal/leaf shoots).
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \return Vector containing shoot IDs of terminal shoots.
+     */
+    [[nodiscard]] std::vector<uint> getTerminalShootIDs(uint plantID) const;
+
+    /**
+     * \brief Retrieves the hierarchy depth of a given shoot.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \param[in] shootID The unique identifier of the shoot.
+     * \return The depth of the shoot in the hierarchy (0 for base shoots).
+     */
+    [[nodiscard]] uint getShootDepth(uint plantID, uint shootID) const;
+
+    /**
+     * \brief Retrieves the path from a given shoot to the root shoot.
+     *
+     * \param[in] plantID The unique identifier of the plant.
+     * \param[in] shootID The unique identifier of the shoot.
+     * \return Vector containing shoot IDs from the given shoot to the root, in ascending order.
+     */
+    [[nodiscard]] std::vector<uint> getPathToRoot(uint plantID, uint shootID) const;
 
     /**
      * \brief Retrieves the base position of the specified plant.
@@ -2161,7 +2285,7 @@ public:
      * \param[in] plantID The ID of the plant to check.
      * \return True if all shoots on the plant are dormant, false otherwise.
      */
-    [[nodiscard]] bool isPlantDormant( uint plantID ) const;
+    [[nodiscard]] bool isPlantDormant(uint plantID) const;
 
     //! Write all vertices in the plant to a file for external processing (e.g., bounding volume, convex hull)
     /**
@@ -2326,7 +2450,7 @@ public:
      * \return A unique identifier for the generated plant.
      * \note The input string must begin with '{', and valid phytomer parameters must be provided.
      */
-    uint generatePlantFromString(const std::string &generation_string, const std::map<std::string,PhytomerParameters> &phytomer_parameters);
+    uint generatePlantFromString(const std::string &generation_string, const std::map<std::string, PhytomerParameters> &phytomer_parameters);
 
     /**
      * \brief Writes the structure of a plant instance to an XML file.
@@ -2337,6 +2461,20 @@ public:
      * is valid and writable. Errors related to invalid plant ID or file issues will throw exceptions.
      */
     void writePlantStructureXML(uint plantID, const std::string &filename) const;
+
+    //! Writes plant structure to TreeQSM cylinder format.
+    /**
+     * Writes the plant structure as a series of cylinders in the TreeQSM format.
+     * Each row represents one cylinder with columns for radius, length, start position,
+     * axis direction, parent ID, extension ID, branch ID, branch order, position in branch,
+     * mean absolute distance, surface coverage, added flag, and unmodified radius.
+     *
+     * \param[in] plantID Identifier of the plant to export.
+     * \param[in] filename Path to the output file (typically .txt extension).
+     * \throws helios::runtime_error Throws an error if the plant ID does not exist or if the file cannot be opened.
+     * \note The output follows the TreeQSM format (Raumonen et al., 2013) with tab-separated values.
+     */
+    void writeQSMCylinderFile(uint plantID, const std::string &filename) const;
 
     /**
      * \brief Reads plant structure data from an XML file.
@@ -2349,14 +2487,13 @@ public:
      * \return A vector of unsigned integers representing the plant IDs parsed from the XML file.
      * \note Throws an exception if the file cannot be parsed or is missing required tags.
      */
-    std::vector<uint> readPlantStructureXML( const std::string &filename, bool quiet = false);
+    std::vector<uint> readPlantStructureXML(const std::string &filename, bool quiet = false);
 
     friend struct Phytomer;
     friend struct Shoot;
 
 protected:
-
-    helios::Context* context_ptr;
+    helios::Context *context_ptr;
 
     std::minstd_rand0 *generator = nullptr;
 
@@ -2364,22 +2501,26 @@ protected:
 
     std::string current_plant_model;
 
-    std::map<uint,PlantInstance> plant_instances;
+    // Function pointer maps for plant model registration
+    std::map<std::string, std::function<void()>> shoot_initializers;
+    std::map<std::string, std::function<uint(const helios::vec3 &)>> plant_builders;
 
-    [[nodiscard]] std::string makeShootString(const std::string &current_string, const std::shared_ptr<Shoot> &shoot, const std::vector<std::shared_ptr<Shoot>> & shoot_tree) const;
+    std::map<uint, PlantInstance> plant_instances;
 
-    std::map<std::string,ShootParameters> shoot_types;
+    [[nodiscard]] std::string makeShootString(const std::string &current_string, const std::shared_ptr<Shoot> &shoot, const std::vector<std::shared_ptr<Shoot>> &shoot_tree) const;
+
+    std::map<std::string, ShootParameters> shoot_types;
 
     // Key is the prototype function pointer; value first index is the unique leaf prototype, second index is the leaflet along a compound leaf (if applicable)
     // std::map<uint(*)(helios::Context* context_ptr, LeafPrototype* prototype_parameters, int compound_leaf_index),std::vector<std::vector<uint>> > unique_leaf_prototype_objIDs;
-    std::map<uint,std::vector<std::vector<uint>> > unique_leaf_prototype_objIDs;
+    std::map<uint, std::vector<std::vector<uint>>> unique_leaf_prototype_objIDs;
 
     // Key is the prototype function pointer; value index is the unique flower prototype
-    std::map<uint(*)(helios::Context* context_ptr, uint subdivisions, bool flower_is_open),std::vector<uint> > unique_open_flower_prototype_objIDs;
+    std::map<uint (*)(helios::Context *context_ptr, uint subdivisions, bool flower_is_open), std::vector<uint>> unique_open_flower_prototype_objIDs;
     // Key is the prototype function pointer; value index is the unique flower prototype
-    std::map<uint(*)(helios::Context* context_ptr, uint subdivisions, bool flower_is_open),std::vector<uint> > unique_closed_flower_prototype_objIDs;
+    std::map<uint (*)(helios::Context *context_ptr, uint subdivisions, bool flower_is_open), std::vector<uint>> unique_closed_flower_prototype_objIDs;
     // Key is the prototype function pointer; value index is the unique fruit prototype
-    std::map<uint(*)(helios::Context* context_ptr, uint subdivisions),std::vector<uint> > unique_fruit_prototype_objIDs;
+    std::map<uint (*)(helios::Context *context_ptr, uint subdivisions), std::vector<uint>> unique_fruit_prototype_objIDs;
 
     bool build_context_geometry_internode = true;
     bool build_context_geometry_petiole = true;
@@ -2387,7 +2528,13 @@ protected:
 
     float ground_clipping_height = -99999;
 
-    void validateShootTypes( ShootParameters &shoot_parameters ) const;
+    void validateShootTypes(ShootParameters &shoot_parameters) const;
+
+    //! Register a plant model with its initialization and build functions
+    void registerPlantModel(const std::string &name, std::function<void()> shoot_init, std::function<uint(const helios::vec3 &)> plant_build);
+
+    //! Initialize all plant model registrations
+    void initializePlantModelRegistrations();
 
     void parseStringShoot(const std::string &LString_shoot, uint plantID, int parentID, uint parent_node, const std::map<std::string, PhytomerParameters> &phytomer_parameters, ShootParameters &shoot_parameters);
 
@@ -2395,38 +2542,37 @@ protected:
 
     void parseInternodeArgument(const std::string &internode_argument, float &internode_radius, float &internode_length, PhytomerParameters &phytomer_parameters);
 
-    void parsePetioleArgument(const std::string& petiole_argument, PhytomerParameters &phytomer_parameters );
+    void parsePetioleArgument(const std::string &petiole_argument, PhytomerParameters &phytomer_parameters);
 
-    void parseLeafArgument(const std::string& leaf_argument, PhytomerParameters &phytomer_parameters );
+    void parseLeafArgument(const std::string &leaf_argument, PhytomerParameters &phytomer_parameters);
 
-    void initializeDefaultShoots( const std::string &plant_label );
+    void initializeDefaultShoots(const std::string &plant_label);
 
     [[nodiscard]] bool detectGroundCollision(uint objID);
 
     [[nodiscard]] bool detectGroundCollision(const std::vector<uint> &objID) const;
 
-    void setPlantLeafAngleDistribution_private(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity_azimuth, float
-                                               ellipse_rotation_azimuth_degrees, bool set_elevation, bool set_azimuth) const;
+    void setPlantLeafAngleDistribution_private(const std::vector<uint> &plantIDs, float Beta_mu_inclination, float Beta_nu_inclination, float eccentricity_azimuth, float ellipse_rotation_azimuth_degrees, bool set_elevation, bool set_azimuth) const;
 
     static float interpolateTube(const std::vector<float> &P, float frac);
 
     static helios::vec3 interpolateTube(const std::vector<helios::vec3> &P, float frac);
 
     //! Names of additional object data to add to the Context
-    std::map<std::string,bool> output_object_data;
+    std::map<std::string, bool> output_object_data;
 
     // --- Plant Growth --- //
 
     void incrementPhytomerInternodeGirth(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry);
     void incrementPhytomerInternodeGirth_carb(uint plantID, uint shootID, uint node_number, float dt, bool update_context_geometry);
 
-    void pruneGroundCollisions( uint plantID );
+    void pruneGroundCollisions(uint plantID);
 
     // --- Carbohydrate Model --- //
 
     void accumulateShootPhotosynthesis() const;
 
-    void subtractShootMaintenanceCarbon(float dt ) const;
+    void subtractShootMaintenanceCarbon(float dt) const;
     void subtractShootGrowthCarbon();
 
     void checkCarbonPool_abortOrgans(float dt);
@@ -2435,111 +2581,138 @@ protected:
 
     bool carbon_model_enabled = false;
 
+    // --- Collision Detection --- //
+
+    //! Pointer to collision detection plugin
+    CollisionDetection *collision_detection_ptr = nullptr;
+
+    //! Flag indicating if collision detection is enabled
+    bool collision_detection_enabled = false;
+
+    //! Target UUIDs to avoid during growth
+    std::vector<uint> collision_target_UUIDs;
+
+    //! Target object IDs to avoid during growth
+    std::vector<uint> collision_target_object_IDs;
+
+    //! Collision detection cone half-angle in radians
+    float collision_cone_half_angle_rad = 80.f * M_PI / 180.f;
+
+    //! Collision detection cone height in meters
+    float collision_cone_height = 0.1f;
+
+    //! Number of directional samples within collision detection cone
+    int collision_sample_count = 256;
+
+    //! Inertia weight for balancing directional preference vs collision avoidance
+    float collision_inertia_weight = 0.4f;
+
+    //! Flag to enable/disable console output messages
+    bool printmessages = true;
+
     // --- Plant Library --- //
 
     void initializeAlmondTreeShoots();
 
-    uint buildAlmondTree( const helios::vec3 &base_position );
+    uint buildAlmondTree(const helios::vec3 &base_position);
 
     void initializeAppleTreeShoots();
 
-    uint buildAppleTree( const helios::vec3 &base_position );
+    uint buildAppleTree(const helios::vec3 &base_position);
 
     void initializeAsparagusShoots();
 
-    uint buildAsparagusPlant( const helios::vec3 &base_position );
+    uint buildAsparagusPlant(const helios::vec3 &base_position);
 
     void initializeBindweedShoots();
 
-    uint buildBindweedPlant( const helios::vec3 &base_position );
+    uint buildBindweedPlant(const helios::vec3 &base_position);
 
     void initializeBeanShoots();
 
-    uint buildBeanPlant( const helios::vec3 &base_position );
+    uint buildBeanPlant(const helios::vec3 &base_position);
 
     void initializeCapsicumShoots();
 
-    uint buildCapsicumPlant( const helios::vec3 &base_position );
+    uint buildCapsicumPlant(const helios::vec3 &base_position);
 
     void initializeCheeseweedShoots();
 
-    uint buildCheeseweedPlant( const helios::vec3 &base_position );
+    uint buildCheeseweedPlant(const helios::vec3 &base_position);
 
     void initializeCowpeaShoots();
 
-    uint buildCowpeaPlant( const helios::vec3 &base_position );
+    uint buildCowpeaPlant(const helios::vec3 &base_position);
 
     void initializeGrapevineVSPShoots();
 
-    uint buildGrapevineVSP( const helios::vec3 &base_position );
+    uint buildGrapevineVSP(const helios::vec3 &base_position);
 
     void initializeGroundCherryWeedShoots();
 
-    uint buildGroundCherryWeedPlant( const helios::vec3 &base_position );
+    uint buildGroundCherryWeedPlant(const helios::vec3 &base_position);
 
     void initializeMaizeShoots();
 
-    uint buildMaizePlant( const helios::vec3 &base_position );
+    uint buildMaizePlant(const helios::vec3 &base_position);
 
     void initializeOliveTreeShoots();
 
-    uint buildOliveTree( const helios::vec3 &base_position );
+    uint buildOliveTree(const helios::vec3 &base_position);
 
     void initializePistachioTreeShoots();
 
-    uint buildPistachioTree( const helios::vec3 &base_position );
+    uint buildPistachioTree(const helios::vec3 &base_position);
 
     void initializePuncturevineShoots();
 
-    uint buildPuncturevinePlant( const helios::vec3 &base_position );
+    uint buildPuncturevinePlant(const helios::vec3 &base_position);
 
     void initializeEasternRedbudShoots();
 
-    uint buildEasternRedbudPlant( const helios::vec3 &base_position );
+    uint buildEasternRedbudPlant(const helios::vec3 &base_position);
 
     void initializeRiceShoots();
 
-    uint buildRicePlant( const helios::vec3 &base_position );
+    uint buildRicePlant(const helios::vec3 &base_position);
 
     void initializeButterLettuceShoots();
 
-    uint buildButterLettucePlant(const helios::vec3 &base_position );
+    uint buildButterLettucePlant(const helios::vec3 &base_position);
 
     void initializeSoybeanShoots();
 
-    uint buildSoybeanPlant( const helios::vec3 &base_position );
+    uint buildSoybeanPlant(const helios::vec3 &base_position);
 
     void initializeSorghumShoots();
 
-    uint buildSorghumPlant( const helios::vec3 &base_position );
+    uint buildSorghumPlant(const helios::vec3 &base_position);
 
     void initializeStrawberryShoots();
 
-    uint buildStrawberryPlant( const helios::vec3 &base_position );
+    uint buildStrawberryPlant(const helios::vec3 &base_position);
 
     void initializeSugarbeetShoots();
 
-    uint buildSugarbeetPlant( const helios::vec3 &base_position );
+    uint buildSugarbeetPlant(const helios::vec3 &base_position);
 
     void initializeTomatoShoots();
 
-    uint buildTomatoPlant( const helios::vec3 &base_position );
+    uint buildTomatoPlant(const helios::vec3 &base_position);
 
     void initializeCherryTomatoShoots();
 
-    uint buildCherryTomatoPlant( const helios::vec3 &base_position );
+    uint buildCherryTomatoPlant(const helios::vec3 &base_position);
 
     void initializeWalnutTreeShoots();
 
-    uint buildWalnutTree( const helios::vec3 &base_position );
+    uint buildWalnutTree(const helios::vec3 &base_position);
 
     void initializeWheatShoots();
 
-    uint buildWheatPlant( const helios::vec3 &base_position );
-
-
+    uint buildWheatPlant(const helios::vec3 &base_position);
 };
 
 #include "Assets.h"
 
-#endif //PLANT_ARCHITECTURE
+#endif // PLANT_ARCHITECTURE

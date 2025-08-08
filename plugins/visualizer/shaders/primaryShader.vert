@@ -12,6 +12,7 @@ uniform mat4 DepthBiasMVP;
 out vec4 ShadowCoord;
 
 out vec2 texcoord;
+out vec2 uv_scale;
 
 flat out int faceID;
 
@@ -35,7 +36,8 @@ void main(){
   }
 
   vec4 scale = texelFetch(uv_rescale, textureID);
-  texcoord = vec2(uv.x*scale.r, uv.y*scale.g);
+  texcoord = uv;            // pass original texture coordinates
+  uv_scale = scale.rg;      // scale factors for this texture layer
 
   ShadowCoord = DepthBiasMVP*v;
 

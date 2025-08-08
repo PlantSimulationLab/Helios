@@ -6,6 +6,7 @@ AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
 AlignOperands: true
 AlignTrailingComments: false
+AllowShortFunctionsOnASingleLine: None
 AlwaysBreakTemplateDeclarations: Yes
 BraceWrapping: 
   AfterCaseLabel: false
@@ -28,6 +29,8 @@ BreakBeforeBraces: Custom
 BreakConstructorInitializers: AfterColon
 BreakConstructorInitializersBeforeComma: false
 ColumnLimit: 250
+PenaltyBreakString: 1000
+BreakStringLiterals: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 ContinuationIndentWidth: 8
 IncludeCategories: 

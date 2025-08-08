@@ -2,8 +2,9 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <commdlg.h>
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <commdlg.h>
 #elif defined(__APPLE__)
 #ifdef ENABLE_HELIOS_VISUALIZER
 #include <nfd.h>
@@ -101,7 +102,7 @@ std::vector<vec3> interpolate(const std::vector<int> &keypoints, const std::vect
     }
     if (keypoints_sorted[keypoints_sorted.size() - 1] != num_points - 1) {
         keypoints_sorted.push_back(num_points - 1);
-        keypoints_loc.insert({num_points - 1, keypoints.size()});
+        keypoints_loc.insert({num_points - 1, static_cast<int>(keypoints.size())});
         pos.push_back(pos[pos.size() - 1]);
     }
     for (int i = 0; i < keypoints_sorted.size() - 1; i++) {
@@ -1890,7 +1891,6 @@ void ProjectBuilder::visualize() {
     io.Fonts->Build();
     // ImGui::PushFont(arial);
     io.FontDefault = arial;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
 
     // void* window;
@@ -2200,8 +2200,6 @@ void ProjectBuilder::visualize() {
                         } else {
                             visualizer->colorContextPrimitivesByObjectData(visualization_type.c_str());
                         }
-                        visualizer->clearColor();
-
                     } else {
                         visualizer->clearColor();
                     }
@@ -2277,10 +2275,10 @@ void ProjectBuilder::visualize() {
         recordPopup();
         ImGui::OpenPopupOnItemClick("repeat_record", ImGuiPopupFlags_MouseButtonRight);
 #endif // RADIATION_MODEL
-        // ####### RESULTS ####### //
-        // ImGui::Text("Absorbed PAR: %f W/m^2", PAR_absorbed);
-        // ImGui::Text("Absorbed NIR: %f W/m^2", NIR_absorbed);
-        // ImGui::Text("Absorbed  LW: %f W/m^2", LW_absorbed);
+       // ####### RESULTS ####### //
+       // ImGui::Text("Absorbed PAR: %f W/m^2", PAR_absorbed);
+       // ImGui::Text("Absorbed NIR: %f W/m^2", NIR_absorbed);
+       // ImGui::Text("Absorbed  LW: %f W/m^2", LW_absorbed);
         ImGui::Text("Console:");
         outputConsole();
         if (ImGui::BeginTabBar("Settings#left_tabs_bar")) {
@@ -2786,11 +2784,13 @@ void ProjectBuilder::visualize() {
                         ImGui::OpenPopupOnItemClick(("randomize_obj_orientation_z_" + std::to_string(objects_dict[current_obj].index)).c_str(), ImGuiPopupFlags_MouseButtonRight);
                         ImGui::SameLine();
                         ImGui::Text("Object Orientation");
-                    }
-                    if (objects_dict[current_obj].position != objects_dict[current_obj].prev_position || objects_dict[current_obj].orientation != objects_dict[current_obj].prev_orientation ||
-                        objects_dict[current_obj].scale != objects_dict[current_obj].prev_scale || objects_dict[current_obj].color != objects_dict[current_obj].prev_color) {
-                        // objects_dict[current_obj].is_dirty = true;
-                        updateObject(current_obj);
+                        if (objects_dict[current_obj].position != objects_dict[current_obj].prev_position || objects_dict[current_obj].orientation != objects_dict[current_obj].prev_orientation ||
+                            objects_dict[current_obj].scale != objects_dict[current_obj].prev_scale || objects_dict[current_obj].color != objects_dict[current_obj].prev_color) {
+                            objects_dict[current_obj].is_dirty = true;
+                        }
+                        if (objects_dict[current_obj].is_dirty && !ImGui::IsAnyItemActive() && !ImGui::IsAnyItemFocused()) {
+                            updateObject(current_obj);
+                        }
                     }
                 }
                 ImGui::EndTabItem();
@@ -3625,7 +3625,7 @@ void ProjectBuilder::visualize() {
                             count++;
                             new_rig_label = default_rig_label + "_" + std::to_string(count);
                         }
-                        rig_dict.insert({new_rig_label, rig_labels.size()});
+                        rig_dict.insert({new_rig_label, scast<int>(rig_labels.size())});
                         camera_positions.push_back(camera_position);
                         camera_lookats.push_back(camera_lookat);
                         camera_labels.push_back(camera_label);
@@ -3979,7 +3979,7 @@ void ProjectBuilder::visualize() {
                             count++;
                             new_cam_name = default_cam_name + "_" + std::to_string(count);
                         }
-                        camera_dict.insert({new_cam_name, camera_names.size()});
+                        camera_dict.insert({new_cam_name, scast<int>(camera_names.size())});
                         camera_resolutions.push_back(camera_resolution);
                         camera_calibrations.push_back(camera_calibrations[camera_dict[current_cam]]);
                         focal_plane_distances.push_back(focal_plane_distance);
@@ -4109,7 +4109,7 @@ void ProjectBuilder::visualize() {
                             count++;
                             new_light_name = default_light_name + "_" + std::to_string(count);
                         }
-                        light_dict.insert({new_light_name, light_names.size()});
+                        light_dict.insert({new_light_name, scast<int>(light_names.size())});
                         light_spectra.push_back(light_spectra[light_dict[current_light]]);
                         light_types.push_back(light_types[light_dict[current_light]]);
                         light_direction_vec.push_back(light_direction_vec[light_dict[current_light]]);
@@ -5660,7 +5660,15 @@ void ProjectBuilder::outputConsole() {
     // original buffer at program exit.
     std::streambuf *prev_buf = std::cout.rdbuf();
     std::string buffer = captured_cout.str();
-    ImGui::InputTextMultiline("##console", &buffer[0], buffer.size() + 1, ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 5), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AllowTabInput);
+    std::size_t buffer_size = buffer.size();
+    if (ImGui::BeginChild("##console", ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 5), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar)) {
+        ImGui::TextUnformatted(buffer.c_str());
+        if (buffer_size != last_console_size) {
+            ImGui::SetScrollHereY(1.0f);
+        }
+        ImGui::EndChild();
+    }
+    last_console_size = buffer_size;
     std::cout.rdbuf(prev_buf);
 }
 
@@ -6000,7 +6008,7 @@ void ProjectBuilder::updateGround() {
     ground_UUIDs.clear();
     ground_UUIDs = context->getObjectPrimitiveUUIDs(ground_objID);
     context->cleanDeletedUUIDs(ground_UUIDs);
-    context->setGlobalData("ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data());
+    context->setGlobalData("ground_UUIDs", ground_UUIDs);
     context->setPrimitiveData(ground_UUIDs, "twosided_flag", uint(0));
     context->setPrimitiveData(ground_UUIDs, "object_label", "ground");
     primitive_UUIDs["ground"] = ground_UUIDs;
@@ -6106,7 +6114,7 @@ void ProjectBuilder::buildTiledGround(const vec3 &ground_origin, const vec2 &gro
     context->cleanDeletedUUIDs(ground_UUIDs);
 
     context->setPrimitiveData(ground_UUIDs, "twosided_flag", uint(0));
-    context->setGlobalData("ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data());
+    context->setGlobalData("ground_UUIDs", ground_UUIDs);
     context->setPrimitiveData(ground_UUIDs, "object_label", "ground");
     primitive_UUIDs["ground"] = ground_UUIDs;
 }
@@ -6141,7 +6149,7 @@ void ProjectBuilder::buildTiledGround(const vec3 &ground_origin, const vec2 &gro
     context->cleanDeletedUUIDs(ground_UUIDs);
 
     context->setPrimitiveData(ground_UUIDs, "twosided_flag", uint(0));
-    context->setGlobalData("ground_UUIDs", HELIOS_TYPE_UINT, ground_UUIDs.size(), ground_UUIDs.data());
+    context->setGlobalData("ground_UUIDs", ground_UUIDs);
     context->setPrimitiveData(ground_UUIDs, "object_label", "ground");
     primitive_UUIDs["ground"] = ground_UUIDs;
 }

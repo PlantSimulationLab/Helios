@@ -1,11 +1,11 @@
 var searchData=
 [
-  ['file_20formats_20to_20ply_20using_20blender_0',['Converting polygon file formats to .ply using Blender',['../_convert_p_l_y.html',1,'']]],
-  ['file_20i_20o_1',['Tutorial 4: File I/O',['../context_fileio_tutorial.html',1,'Tutorials']]],
-  ['file_20input_20output_2',['File Input/Output',['../_i_o.html',1,'']]],
-  ['files_20with_20transparency_20using_20gimp_3',['Making texture mask files with transparency using GIMP',['../_making_masks.html',1,'']]],
-  ['for_20a_20canopy_20of_20spherical_20crowns_4',['Tutorial 12: Water-use efficiency (photosyntheses per unit transpiration) for a canopy of spherical crowns',['../canopy__w_u_e_tutorial.html',1,'context_timeseries_tutorial']]],
-  ['for_20a_20homogeneous_20canopy_5',['Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy',['../radiation__beers_law_tutorial.html',1,'Tutorials']]],
-  ['formats_20to_20ply_20using_20blender_6',['Converting polygon file formats to .ply using Blender',['../_convert_p_l_y.html',1,'']]],
-  ['fraction_20of_20sunlit_20shaded_20leaf_20area_20for_20a_20homogeneous_20canopy_7',['Tutorial 11: Light interception and fraction of sunlit/shaded leaf area for a homogeneous canopy',['../radiation__beers_law_tutorial.html',1,'Tutorials']]]
+  ['texture_20mask_20files_20with_20transparency_20using_20gimp_0',['Making texture mask files with transparency using GIMP',['../_making_masks.html',1,'']]],
+  ['the_20clion_20ide_20with_20helios_1',['Using the CLion IDE with Helios',['../_c_lion_i_d_e.html',1,'']]],
+  ['the_20right_20cuda_20and_20optix_20version_2',['Choosing the right CUDA and OptiX version',['../_choosing_c_u_d_a.html',1,'']]],
+  ['timeout_3',['Increasing graphics driver timeout',['../_p_c_g_p_u_timeout.html',1,'']]],
+  ['to_20ply_20using_20blender_4',['Converting polygon file formats to .ply using Blender',['../_convert_p_l_y.html',1,'']]],
+  ['transparency_20using_20gimp_5',['Making texture mask files with transparency using GIMP',['../_making_masks.html',1,'']]],
+  ['tree_20plugin_20documentation_6',['Weber-Penn Tree Plugin Documentation',['../_weber_penn_doc.html',1,'PlugIns']]],
+  ['tutorials_7',['Tutorials',['../_tutorials.html',1,'']]]
 ];

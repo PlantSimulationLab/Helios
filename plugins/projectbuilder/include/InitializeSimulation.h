@@ -3,6 +3,6 @@
 
 #include "Context.h"
 
-void InitializeSimulation(const std::string &xml_input_file, helios::Context *context_ptr );
+void InitializeSimulation(const std::string &xml_input_file, helios::Context *context_ptr);
 
-#endif //HELIOS_INITIALIZESIMULATION_H
+#endif // HELIOS_INITIALIZESIMULATION_H

@@ -1,11 +1,11 @@
-cmake_minimum_required(VERSION 2.0)
+cmake_minimum_required(VERSION 3.15)
 
 project(helios)  
 
-include_directories(include)
-include_directories(../../core/include)
+add_library( boundarylayerconductance STATIC "src/BoundaryLayerConductanceModel.cpp" "tests/selfTest.cpp" )
 
-add_library( boundarylayerconductance STATIC "src/BoundaryLayerConductanceModel.cpp" )
+target_include_directories(boundarylayerconductance PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" )
 
-set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
-
+add_executable( boundarylayerconductance_tests "tests/TestMain.cpp" )
+target_link_libraries( boundarylayerconductance_tests PRIVATE boundarylayerconductance )
+add_test( NAME boundarylayerconductance_tests COMMAND boundarylayerconductance_tests )

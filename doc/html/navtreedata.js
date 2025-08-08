@@ -46,22 +46,28 @@ var NAVTREE =
       [ "Plant Architecture", "_plant_architecture_doc.html#PlantArchitectureDoc", null ],
       [ "Canopy Generator", "_canopy_generator_doc.html#CanopyGeneratorDoc", null ],
       [ "Weber-Penn Tree", "_weber_penn_doc.html#WeberPennDoc", null ],
+      [ "Plant Hydraulics Model", "_plant_hydraulics_doc.html#PlantHydraulicsDoc", null ],
+      [ "Model Parameter Optimization Utility", "_parameter_optimization_doc.html#ParameterOptimizationDoc", null ],
+      [ "Leaf Optics Model", "_leaf_optics_doc.html#LeafOpticsDoc", null ],
       [ "Project Builder", "_project_builder_doc.html#ProjectBuilderDoc", null ]
     ] ],
     [ "Tutorials", "_tutorials.html", [
-      [ "Tutorial 0: Context Self-Test", "context_selftest_tutorial.html#context_selftest_tutorial", null ],
-      [ "Tutorial 1: Helios Vector Types", "context_vectors_tutorial.html#context_vectors_tutorial", null ],
-      [ "Tutorial 2: Working with Context Geometry", "context_primitives_tutorial.html#context_primitives_tutorial", null ],
-      [ "Tutorial 3: Data Timeseries", "context_timeseries_tutorial.html#context_timeseries_tutorial", null ],
-      [ "Tutorial 4: File I/O", "context_fileio_tutorial.html#context_fileio_tutorial", null ],
-      [ "Tutorial 5: Primitive Data", "context_primdata_tutorial.html#context_primdata_tutorial", null ],
-      [ "Tutorial 6: Global Data", "context_globaldata_tutorial.html#context_globaldata_tutorial", null ],
-      [ "Tutorial 7: Visualizer Basics", "visualizer_basics_tutorial.html#visualizer_basics_tutorial", null ],
-      [ "Tutorial 8: Visualizing Variable and Primitive Data", "visualizer_pdata_tutorial.html#visualizer_pdata_tutorial", null ],
-      [ "Tutorial 9: Visualizer configuration", "visualizer_custom_tutorial.html#visualizer_custom_tutorial", null ],
-      [ "Tutorial 10: Tree light interception", "radiation_basics_tutorial.html#radiation_basics_tutorial", null ],
-      [ "Tutorial 11: Light interception for a homogeneous canopy", "radiation__beers_law_tutorial.html#radiation_BeersLaw_tutorial", null ],
-      [ "Tutorial 12: Water-use efficiency for a canopy of spherical crowns", "canopy__w_u_e_tutorial.html#canopy_WUE_tutorial", null ]
+      [ "Tutorial 0: Context Self-Test", "@ref context_selftest_tutorial", null ],
+      [ "Tutorial 1: Helios Vector Types", "@ref context_vectors_tutorial", null ],
+      [ "Tutorial 2: Working with Context Geometry", "@ref context_primitives_tutorial", null ],
+      [ "Tutorial 3: Data Timeseries", "@ref context_timeseries_tutorial", null ],
+      [ "Tutorial 4: File I/O", "@ref context_fileio_tutorial", null ],
+      [ "Tutorial 5: Primitive Data", "@ref context_primdata_tutorial", null ],
+      [ "Tutorial 6: Global Data", "@ref context_globaldata_tutorial", null ],
+      [ "Tutorial 7: Visualizer Basics", "@ref visualizer_basics_tutorial", null ],
+      [ "Tutorial 8: Visualizing Variable and Primitive Data", "@ref visualizer_pdata_tutorial", null ],
+      [ "Tutorial 9: Visualizer configuration", "@ref visualizer_custom_tutorial", null ],
+      [ "Tutorial 10: Tree light interception", "@ref radiation_basics_tutorial", null ],
+      [ "Tutorial 11: Light interception for a homogeneous canopy", "@ref radiation_BeersLaw_tutorial", null ],
+      [ "Tutorial 12: Water-use efficiency for a canopy of spherical crowns", "@ref canopy_WUE_tutorial", null ]
+    ] ],
+    [ "Benchmarks", "_benchmarks.html", [
+      [ "Homogeneous Canopy Radiation", "_benchmarks.html#RadCanopyBenchmark", null ]
     ] ],
     [ "Files", "files.html", [
       [ "File List", "files.html", "files_dup" ],
@@ -69,7 +75,9 @@ var NAVTREE =
         [ "All", "globals.html", null ],
         [ "Functions", "globals_func.html", null ],
         [ "Variables", "globals_vars.html", null ],
-        [ "Enumerations", "globals_enum.html", null ]
+        [ "Typedefs", "globals_type.html", null ],
+        [ "Enumerations", "globals_enum.html", null ],
+        [ "Macros", "globals_defs.html", null ]
       ] ]
     ] ]
   ] ]
@@ -77,8 +85,8 @@ var NAVTREE =
 
 var NAVTREEINDEX =
 [
-"_a_p_i.html",
-"dir_f54e10c7807847345da870f7da42cdf0.html"
+"@ref canopy_WUE_tutorial",
+"bean_8cpp_source.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

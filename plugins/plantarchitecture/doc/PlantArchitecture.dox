@@ -40,15 +40,15 @@
 
 <table>
     <tr><th>Object Data Label</th><th>Data Type</th><th>Description</th></tr>
-    <tr><td>plantID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Object ID of plant the primitive belongs to (used for image labeling).</td></tr>
-    <tr><td>leafID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Object ID of leaf the primitive belongs to (used for image labeling).</td></tr>
-    <tr><td>peduncleID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Object ID of peduncle the primitive belongs to (used for image labeling). Not defined if there are no peduncles.</td></tr>
-    <tr><td>closedflowerID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Object ID of flower (closed) the primitive belongs to (used for image labeling). Not defined if there are no closed flowers.</td></tr>
-    <tr><td>openflowerID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Object ID of flower (open) the primitive belongs to (used for image labeling). Not defined if there are no open flowers.</td></tr>
-    <tr><td>fruitID</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Object ID of fruit the primitive belongs to (used for image labeling). Not defined if there are no fruits.</td></tr>
-    <tr><td>rank</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Rank of shoot object belongs to.</td></tr>
-    <tr><td>age</td><td>\htmlonly<font face="courier" color="green">float</font>\endhtmlonly</td><td>Age of the organ that the object belongs to (e.g., a leaf).</td></tr>
-    <tr><td>carbohydrate_concentration</td><td>\htmlonly<font face="courier" color="green">int</font>\endhtmlonly</td><td>Concentration of carbohydrates in the shoot. Value is constant along the shoot, and zero for non-internode organs.</td></tr>
+    <tr><td>plantID</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Object ID of plant the primitive belongs to (used for image labeling).</td></tr>
+    <tr><td>leafID</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Object ID of leaf the primitive belongs to (used for image labeling).</td></tr>
+    <tr><td>peduncleID</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Object ID of peduncle the primitive belongs to (used for image labeling). Not defined if there are no peduncles.</td></tr>
+    <tr><td>closedflowerID</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Object ID of flower (closed) the primitive belongs to (used for image labeling). Not defined if there are no closed flowers.</td></tr>
+    <tr><td>openflowerID</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Object ID of flower (open) the primitive belongs to (used for image labeling). Not defined if there are no open flowers.</td></tr>
+    <tr><td>fruitID</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Object ID of fruit the primitive belongs to (used for image labeling). Not defined if there are no fruits.</td></tr>
+    <tr><td>rank</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Rank of shoot object belongs to.</td></tr>
+    <tr><td>age</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Age of the organ that the object belongs to (e.g., a leaf).</td></tr>
+    <tr><td>carbohydrate_concentration</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Concentration of carbohydrates in the shoot. Value is constant along the shoot, and zero for non-internode organs.</td></tr>
 </table>
 
 To enable optional output object data, use:
@@ -71,28 +71,32 @@ The next section provides information on how to load existing models from the li
 
 A number of plant models are available in the plant architecture library, which can be created based on default parameters, or parameters modified by the user. Plant models available in the library are given in the table below.
 
-| Plant Type/Species | Variety/Variation | Plant type string argument | %Shoot types |
-| ------| ------ | ------ | ------ |
-| Almond Tree (*Prunus dulcis*) | Nonpareil | "almond" | trunk, scaffold, proleptic |
-| Apple Tree (*Malus pumila*) | Fuji | "apple" | trunk, proleptic |
-| Bindweed (*Convolvulus arvensis*) | generic | "bindweed" | base, offshoots, children |
-| Butter Lettuce (*Lactuca sativa*) | generic | "butterlettuce" | mainstem |
-| Cheeseweed (*Malva neglecta*) | generic | "cheeseweed" | mainstem |
-| Common Bean (*Phaseolus vulgaris*) | upright growth habit (determinate) | "bean" | unifoliate, trifoliate |
-| Cowpea (*Vigna unguiculata*) | upright growth habit (determinate) | "cowpea" | unifoliate, trifoliate |
-| Eastern Redbud (*Cercis canadensis*) | generic | "easternredbud" | eastern_redubud_trunk, eastern_redbud_shoot |
-| Grapevine (*Vitis vinifera*) | VSP trellis | "grapevine_VSP" | grapevine_trunk, grapevine_cane, grapevine_shoot |
-| Maize (*Zea mays*) | generic | "maize" | mainstem |
-| Olive Tree (*Olea europaea*) | generic | "olive" | trunk, scaffold, proleptic |
-| Pistachio Tree (*Pistachia vera*) | generic | "pistachio" | trunk, proleptic |
-| Puncturevine (*Tribulus terrestris*) | generic | "puncturevine" | base, offshoots, children |
-| Rice (*Oryza sativa*) | generic | "rice" | mainstem |
-| Sorghum (*Sorghum bicolor*) | grain sorghum | "sorghum" | mainstem |
-| Soybean (*Glycine max*) | upright growth habit (determinate) | "soybean" | unifoliate, trifoliate |
-| Sugar Beet (*Beta vulgaris*) | generic | "sugarbeet" | mainstem |
-| Tomato (*Solanum lycopersicum*) | determinate growth | "tomato" | mainstem |
-| Walnut Tree (*Juglans regia*) | generic | "walnut" | trunk, scaffold, proleptic |
-| Wheat (*Triticum aestivum*) | generic | "wheat" | mainstem |
+| Plant Type/Species                       | Variety/Variation                  | Plant type string argument | %Shoot types                                     |
+|------------------------------------------|------------------------------------|----------------------------|--------------------------------------------------|
+| Almond Tree (*Prunus dulcis*)            | Nonpareil                          | "almond"                   | trunk, scaffold, proleptic                       |
+| Apple Tree (*Malus pumila*)              | Fuji                               | "apple"                    | trunk, proleptic                                 |
+| Bindweed (*Convolvulus arvensis*)        | generic                            | "bindweed"                 | base, offshoots, children                        |
+| Butter Lettuce (*Lactuca sativa*)        | generic                            | "butterlettuce"            | mainstem                                         |
+| Capsicum Pepper (*Capsicum annuum*)      | generic                            | "capsicum"                 | mainstem                                         |
+| Cheeseweed (*Malva neglecta*)            | generic                            | "cheeseweed"               | mainstem                                         |
+| Common Bean (*Phaseolus vulgaris*)       | upright growth habit (determinate) | "bean"                     | unifoliate, trifoliate                           |
+| Cowpea (*Vigna unguiculata*)             | upright growth habit (determinate) | "cowpea"                   | unifoliate, trifoliate                           |
+| Eastern Redbud (*Cercis canadensis*)     | generic                            | "easternredbud"            | eastern_redubud_trunk, eastern_redbud_shoot      |
+| Grapevine (*Vitis vinifera*)             | VSP trellis                        | "grapevine_VSP"            | grapevine_trunk, grapevine_cane, grapevine_shoot |
+| Ground Cherry (*Physalis philadelphica*) | generic                            | "groundcherryweed"         | mainstem                                         |
+| Maize (*Zea mays*)                       | generic                            | "maize"                    | mainstem                                         |
+| Olive Tree (*Olea europaea*)             | generic                            | "olive"                    | trunk, scaffold, proleptic                       |
+| Pistachio Tree (*Pistachia vera*)        | generic                            | "pistachio"                | trunk, proleptic                                 |
+| Puncturevine (*Tribulus terrestris*)     | generic                            | "puncturevine"             | base, offshoots, children                        |
+| Rice (*Oryza sativa*)                    | generic                            | "rice"                     | mainstem                                         |
+| Sorghum (*Sorghum bicolor*)              | grain sorghum                      | "sorghum"                  | mainstem                                         |
+| Soybean (*Glycine max*)                  | upright growth habit (determinate) | "soybean"                  | unifoliate, trifoliate                           |
+| Strawberry (*Fragaria × ananassa*)       | generic                            | "strawberry"               | mainstem                                         |
+| Sugar Beet (*Beta vulgaris*)             | generic                            | "sugarbeet"                | mainstem                                         |
+| Tomato (*Solanum lycopersicum*)          | determinate growth                 | "tomato"                   | mainstem                                         |
+| Cherry Tomato (*Solanum lycopersicum*)   | upright trained                    | "cherrytomato"             | mainstem                                         |
+| Walnut Tree (*Juglans regia*)            | generic                            | "walnut"                   | trunk, scaffold, proleptic                       |
+| Wheat (*Triticum aestivum*)              | generic                            | "wheat"                    | mainstem                                         |
 
 \subsection PlantArchBuild_default Loading a Plant from the Library with Default Parameters
 
@@ -172,7 +176,7 @@ As the plant grows over time, it will transition to different phenological stage
 
 Default values for each species in the plant library are given in the table below. Values are in units of days.
 
-The phenological cycle starts when the plant enters dormancy, and thus a period of \htmlonly<font face="courier" color="blue">time_to_dormancy_break</font>\endhtmlonly must pass before the plant starts to actively grow.
+The phenological cycle starts when the plant enters dormancy, and thus a period of \htmlonly<span style="font-family: Courier, monospace; color: blue;">time_to_dormancy_break</span>\endhtmlonly must pass before the plant starts to actively grow.
 
 Plant type string argument | time_to_dormancy_break | time_to_flower_initiation | time_to_flower_opening | time_to_fruit_set | time_to_fruit_maturity | time_to_senescence | Age at time = 0 | Maximum age |
 | ------| ------ | ------ | ------ | ------ | ------ | ------ | ------ | ------ |
@@ -257,7 +261,7 @@ The coordinate system of plant organs is defined with respect to it's parent ele
 
 Nearly all parameters in the architectural model can either be specified as a constant value, or as a random variable following several pre-defined distributions.
 
-Parameters that can be randomized have type of \ref RandomParameter_float or \ref RandomParameter_int depending on the parameter value type. If the parameters are assigned a constant value, they are set the same as a regular float or int. The \ref RandomParameter_float::val() "val()" method is used to get the value of the parameter.
+Parameters that can be randomized have type of ef RandomParameter_float or ef RandomParameter_int depending on the parameter value type. If the parameters are assigned a constant value, they are set the same as a regular float or int. The ef RandomParameter_float::val() "val()" method is used to get the value of the parameter.
 
 ~~~~~~
 // Assign a constant value
@@ -281,16 +285,17 @@ Available distributions for \ref RandomParameter_float are listed below
 
 | Distribution | Method | Parameters |
 | ------| ------ | ------ |
-| Uniform | \ref RandomParameter_float::uniformDistribution() "uniformDistribution()" | minimum value, maximum value |
-| Normal | \ref RandomParameter_float::normalDistribution() "normalDistribution()" | mean, standard deviation |
-| Weibull | \ref RandomParameter_float::weibullDistribution() "weibullDistribution()" | shape parameter, scale parameter |
+| Uniform | \ref RandomParameter_float::uniformDistribution(float minval, float maxval) | minimum value, maximum value |
+| Normal | \ref RandomParameter_float::normalDistribution(float mean, float std_dev) | mean, standard deviation |
+| Weibull | \ref RandomParameter_float::weibullDistribution(float shape, float scale) | shape parameter, scale parameter |
 
 and for \ref RandomParameter_int are:
 
 | Distribution | Method | Parameters |
 | ------| ------ | ------ |
-| Uniform | \ref RandomParameter_float::uniformDistribution() "uniformDistribution()" | minimum value, maximum value |
-| Discrete Values | \ref RandomParameter_int::discreteValues() "discreteValues()" | vector of discrete int values that will be randomly chosen |
+| Uniform | \ref RandomParameter_int::uniformDistribution( int minval, int maxval ) | minimum value, maximum value |
+| Discrete Values | \ref RandomParameter_int::discreteValues | vector of discrete int values that will be randomly chosen |
+
 
 \section PlantArchPhytomerParams Defining the Phytomer and its Parameters
 
@@ -307,21 +312,21 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | max_vegetative_buds_per_petiole | RandomParameter_int | - | Maximum number of possible vegetative nodes per petiole. Some of these buds may not break depending on the vegetative bud break probability. |
 | max_floral_buds_per_petiole | RandomParameter_int | - | Maximum number of possible floral nodes per petiole. Some of these buds may not break depending on the flower bud break probability. |
 | color | helios::RGBcolor | - | Diffuse color of the internode tube. |
-| image_texture | \htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly | - | Image texture to map to the internode tube (overrides RGB color). |
-| length_segments | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of longitudinal segment subdivisions of the internode tube. |
-| radial_subdivisions | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of radial subdivisions segments of the internode tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
+| image_texture | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::string</span>\endhtmlonly | - | Image texture to map to the internode tube (overrides RGB color). |
+| length_segments | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of longitudinal segment subdivisions of the internode tube. |
+| radial_subdivisions | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of radial subdivisions segments of the internode tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
 | --- **petiole** --- ||||
-| petioles_per_internode | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of petioles emanating from a single internode (e.g., for an 'opposite' growth pattern, = 2) |
+| petioles_per_internode | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of petioles emanating from a single internode (e.g., for an 'opposite' growth pattern, = 2) |
 | pitch | RandomParameter_float | degrees | Angle of the petiole base axis with respect to its parent phytomer axis. |
 | radius | RandomParameter_float | meters | Radius of petiole cross-section. (radius = 0 does not create any petiole) |
 | length | RandomParameter_float | meters | Length of the petiole tube. (length = 0 does not create any petiole) |
 | curvature | RandomParameter_float | degrees/meter | Curvature angle of the petiole per unit length of petiole. If curvature is positive, petiole curves upward toward vertical. If negative, curvature is downward. |
 | taper | RandomParameter_float | - | Ratio between the petiole radius at the tip to the radius at the base (e.g., =1 has no taper, =0 comes to a point at the tip). |
 | color | helios::RGBcolor | - | Diffuse color of the petiole tube. |
-| length_segments | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of longitudinal segment subdivisions of the petiole tube. |
-| radial_subdivisions | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of radial subdivisions segments of the petiole tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
+| length_segments | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of longitudinal segment subdivisions of the petiole tube. |
+| radial_subdivisions | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of radial subdivisions segments of the petiole tube (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
 | --- **leaf** --- ||||
-| leaves_per_petiole | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of leaves on each petiole. >1 creates a compound leaf. |
+| leaves_per_petiole | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of leaves on each petiole. >1 creates a compound leaf. |
 | pitch | RandomParameter_float | degrees | Angle of the leaf axis with respect to its parent petiole axis. |
 | yaw | RandomParameter_float | degrees | Rotation angle of the leaf about its base along the plane of its lamina. |
 | roll | RandomParameter_float | degrees | Rotation angle of the leaf about it's own axis (midrib). |
@@ -336,8 +341,8 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | roll | RandomParameter_float | degrees | Rotation angle of the peduncle about it's own axis. |
 | curvature | RandomParameter_float | degrees/meter | Curvature angle of the peduncle per unit length of peduncle. If curvature is positive, peduncle curves upward toward vertical. If negative, curvature is downward. |
 | color | helios::RGBcolor | - | Diffuse color of the peduncle tube. |
-| length_segments | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of longitudinal segment subdivisions of the inflorescence supporting structure. |
-| radial_subdivisions | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of radial subdivisions segments of the inflorescence supporting structure (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
+| length_segments | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of longitudinal segment subdivisions of the inflorescence supporting structure. |
+| radial_subdivisions | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of radial subdivisions segments of the inflorescence supporting structure (e.g., =4 gives a square cross-section; =5 gives a pentagonal cross-section, etc.) |
 | --- **inflorescence** --- ||||
 | flowers_per_peduncle | RandomParameter_int | - | Number of flowers per peduncle (rachis). |
 | flower_offset | RandomParameter_float | - | If peduncle has multiple flowers/fruit (flowers_per_peduncle>1), this sets the spacing between adjacent flowers/fruit along the peduncle as a fraction of the peduncle length. |
@@ -347,7 +352,7 @@ The table below lists the parameters that define the geometry of the phytomer, a
 | flower_prototype_function | function pointer | - | Pointer to a function that generates the flower prototype model. Function takes arguments ( helios::Context*, uint subdivisions, bool flower_is_open ) and returns an object ID (uint). |
 | fruit_prototype_scale | RandomParameter_float | - | Scaling factor applied to the fruit prototype. Usually the prototype has unit length, so this sets the physical length of the fruit. |
 | fruit_prototype_function | function pointer | - | Pointer to a function that generates the fruit prototype model. Function takes arguments ( helios::Context*, uint subdivisions, float time_since_fruit_set ) and returns an object ID (uint). |
-| unique_prototypes | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | - | Number of unique flower/fruit prototypes to generate per shoot type. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model. |
+| unique_prototypes | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | - | Number of unique flower/fruit prototypes to generate per shoot type. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model. |
 
 <!--
 
@@ -396,29 +401,29 @@ The built-in function for procedural leaf generation generates leaf geometries b
 | Parameter | Type | Default | Description |
 | ------| ------ | ------ | ------ |
 | --- **parameters for procedural parametric leaf generation** --- ||||
-| leaf_texture_file | \htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly | Must be specified | Path to the leaf texture image file. |
-| leaf_aspect_ratio | \htmlonly<font face="courier" color="green">float</font>\endhtmlonly | 1.0 | Ratio of leaf width to leaf length. |
-| midrib_fold_fraction | \htmlonly<font face="courier" color="green">float</font>\endhtmlonly | 0.0 | Fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half). |
-| longitudinal_curvature | \htmlonly<font face="courier" color="green">float</font>\endhtmlonly | 0.0 | Curvature factor along x-direction (lengthwise). (+curves upward, -curved downward) |
-| lateral_curvature | \htmlonly<font face="courier" color="green">float</font>\endhtmlonly | 0.0 | Curvature factor along y-direction (widthwise). (+curves upward, -curved downward) |
-| wave_period | \htmlonly<font face="courier" color="green">float</font>\endhtmlonly | 0.0 | Period factor of leaf waves/wrinkles. |
-| wave_amplitude | \htmlonly<font face="courier" color="green">float</font>\endhtmlonly | 0.0 | Amplitude of leaf waves/wrinkles. |
-| leaf_buckle_length | \htmlonly<font face="courier" color="green">float</font>\endhtmlonly | 0.0 | Length along the leaf where it buckles due to its weight (as fraction of overall leaf length). |
-| leaf_buckle_angle | \htmlonly<font face="courier" color="green">float</font>\endhtmlonly | 0.0 | Angle (degrees) formed by the leaf buckling. |
-| unique_prototypes | \htmlonly<font face="courier" color="green">uint</font>\endhtmlonly | 0 | Number of unique leaf prototypes to generate. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model. |
-| leaf_offset | \htmlonly<font face="courier" color="green">helios::vec3</font>\endhtmlonly | (0,0,0) | Offset/translation applied to the leaf prototype. |
-| petiole_roll | \htmlonly<font face="courier" color="green">float</font>\endhtmlonly | 0.0 | Creates a roll of the leaf near its base to more smoothly meet the petiole. |
-| build_petiolule | \htmlonly<font face="courier" color="green">bool</font>\endhtmlonly | false | Flag to build a petiolule (small petiole at leaflet base) connecting the leaf to the petiole. |
+| leaf_texture_file | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::string</span>\endhtmlonly | Must be specified | Path to the leaf texture image file. |
+| leaf_aspect_ratio | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 1.0 | Ratio of leaf width to leaf length. |
+| midrib_fold_fraction | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Fraction of folding along midrib (=0 leaf is flat, =1 leaf is completely folded in half). |
+| longitudinal_curvature | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Curvature factor along x-direction (lengthwise). (+curves upward, -curved downward) |
+| lateral_curvature | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Curvature factor along y-direction (widthwise). (+curves upward, -curved downward) |
+| wave_period | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Period factor of leaf waves/wrinkles. |
+| wave_amplitude | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Amplitude of leaf waves/wrinkles. |
+| leaf_buckle_length | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Length along the leaf where it buckles due to its weight (as fraction of overall leaf length). |
+| leaf_buckle_angle | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Angle (degrees) formed by the leaf buckling. |
+| unique_prototypes | \htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly | 0 | Number of unique leaf prototypes to generate. If = 0, every leaf will be unique. Increasing this value gives more variability across the plant, but it will take longer to initially generate the plant model. |
+| leaf_offset | \htmlonly<span style="font-family: Courier, monospace; color: green;">helios::vec3</span>\endhtmlonly | (0,0,0) | Offset/translation applied to the leaf prototype. |
+| petiole_roll | \htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly | 0.0 | Creates a roll of the leaf near its base to more smoothly meet the petiole. |
+| build_petiolule | \htmlonly<span style="font-family: Courier, monospace; color: green;">bool</span>\endhtmlonly | false | Flag to build a petiolule (small petiole at leaflet base) connecting the leaf to the petiole. |
 | --- **building leaf from OBJ model** --- ||||
-| OBJ_model_file | \htmlonly<font face="courier" color="green">std::string</font>\endhtmlonly | empty | Path to the OBJ file containing the leaf model. |
+| OBJ_model_file | \htmlonly<span style="font-family: Courier, monospace; color: green;">std::string</span>\endhtmlonly | empty | Path to the OBJ file containing the leaf model. |
 | --- **building leaf from custom prototype function** --- ||||
 | prototype_function | function pointer | null | Pointer to a function that generates the leaf prototype model. Function takes arguments ( helios::Context*, LeafPrototype*, int compound_leaf_index ) and returns an object ID (uint). |
 
-If the value of \htmlonly<font face="courier" color="blue">OBJ_model_file</font>\endhtmlonly is not empty, the leaf prototype function will load the leaf model from the specified OBJ file and ignore all other parameters. If the value of \htmlonly<font face="courier" color="blue">prototype_function</font>\endhtmlonly is not null, the leaf prototype function will call the user-defined function to generate the leaf model. Otherwise, the model will use the default procedural leaf generation method based on the parameters given (note that the leaf texture file must be specified).
+If the value of \htmlonly<span style="font-family: Courier, monospace; color: blue;">OBJ_model_file</span>\endhtmlonly is not empty, the leaf prototype function will load the leaf model from the specified OBJ file and ignore all other parameters. If the value of \htmlonly<span style="font-family: Courier, monospace; color: blue;">prototype_function</span>\endhtmlonly is not null, the leaf prototype function will call the user-defined function to generate the leaf model. Otherwise, the model will use the default procedural leaf generation method based on the parameters given (note that the leaf texture file must be specified).
 
 \subsubsection FlowerPrototypes Flower Prototypes
 
-Flower geometry is generated within the model by calling a user-defined function that generates the flower prototype. The function must return an object ID (\htmlonly<font face="courier" color="green">uint</font>\endhtmlonly) corresponding to the compound object created in the function. Arguments to the prototype function are as follows:
+Flower geometry is generated within the model by calling a user-defined function that generates the flower prototype. The function must return an object ID (\htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly) corresponding to the compound object created in the function. Arguments to the prototype function are as follows:
 
 ~~~~~~
 uint(*prototype_function)( helios::Context*, uint subdivisions, bool flower_is_open )
@@ -426,7 +431,7 @@ uint(*prototype_function)( helios::Context*, uint subdivisions, bool flower_is_o
 
 Usually, the prototype function simply load an OBJ model from file.
 
-The arguments do not necessarily need to be used inside the prototype function, but are always passed to the function in case they are needed. The \htmlonly<font face="courier" color="green">subdivisions</font>\endhtmlonly argument can be used to specify the level of detail of the flower model. The \htmlonly<font face="courier" color="blue">flower_is_open argument</font>\endhtmlonly is a boolean that allows for generation of open and closed flower models.
+The arguments do not necessarily need to be used inside the prototype function, but are always passed to the function in case they are needed. The \htmlonly<span style="font-family: Courier, monospace; color: green;">subdivisions</span>\endhtmlonly argument can be used to specify the level of detail of the flower model. The \htmlonly<span style="font-family: Courier, monospace; color: blue;">flower_is_open argument</span>\endhtmlonly is a boolean that allows for generation of open and closed flower models.
 
 \subsubsection FruitPrototypes Fruit Prototypes
 
@@ -438,7 +443,7 @@ uint(*prototype_function)( helios::Context*, uint subdivisions )
 
 \subsection PlantArch_compound Compound Leaves
 
-Compound leaves consist of a single petiole with multiple leaves (leaflets) attached. The number of leaflets is specified by the parameter \htmlonly<font face="courier" color="blue">leaves_per_petiole</font>\endhtmlonly in the \ref PhytomerParameters structure (if \htmlonly<font face="courier" color="blue">leaves_per_petiole</font>\endhtmlonly = 1, it is not a compound leaf). The compound leaf is formed by making a copy of the leaf prototype, and scaling, rotating, and translating it based on the position along the petiole. If there is an even number of leaflets, there will be two leaves attached to the tip of the leaf at an angle of 60 degrees from each other, whereas if the number of leaflets is even there will be a single leaf attached to the tip. The size of these tip leaves is set by the parameter \htmlonly<font face="courier" color="blue">leaf_prototype_scale</font>\endhtmlonly. If the number of leaflets is greater than 2, additional leaflets are added running down the petiole in an opposite pattern. The spacing between adjacent leaflets is specified as a fraction of the petiole length by the parameter \htmlonly<font face="courier" color="blue">leaflet_offset</font>\endhtmlonly, and the scaling factor of the leaflet moving down the petiole with respect to the previous leaflet is specified by the parameter \htmlonly<font face="courier" color="blue">leaflet_offset</font>\endhtmlonly. The leaflets along the petiole can either get bigger or smaller than the tip leaf/(leaves) according to the parameter \htmlonly<font face="courier" color="blue">leaflet_scale</font>\endhtmlonly (<1 gets smaller, >1 gets bigger).
+Compound leaves consist of a single petiole with multiple leaves (leaflets) attached. The number of leaflets is specified by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaves_per_petiole</span>\endhtmlonly in the \ref PhytomerParameters structure (if \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaves_per_petiole</span>\endhtmlonly = 1, it is not a compound leaf). The compound leaf is formed by making a copy of the leaf prototype, and scaling, rotating, and translating it based on the position along the petiole. If there is an even number of leaflets, there will be two leaves attached to the tip of the leaf at an angle of 60 degrees from each other, whereas if the number of leaflets is even there will be a single leaf attached to the tip. The size of these tip leaves is set by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaf_prototype_scale</span>\endhtmlonly. If the number of leaflets is greater than 2, additional leaflets are added running down the petiole in an opposite pattern. The spacing between adjacent leaflets is specified as a fraction of the petiole length by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaflet_offset</span>\endhtmlonly, and the scaling factor of the leaflet moving down the petiole with respect to the previous leaflet is specified by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaflet_offset</span>\endhtmlonly. The leaflets along the petiole can either get bigger or smaller than the tip leaf/(leaves) according to the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">leaflet_scale</span>\endhtmlonly (<1 gets smaller, >1 gets bigger).
 
 \image html compound_leaf_schematic.jpeg "Schematic illustration of varying compound leaves and their parameters. (a) A compound leaf with 7 leaflets. (b) A compound leaf with an even number of leaflets (6). (c) A compound leaf with a leaflet offset of 0."
 
@@ -448,7 +453,7 @@ Alternatively, a compound leaf could be created by adding a single "leaf prototy
 
 The term 'inflorescence' used to denote the peduncle and flowers together. The peduncle is the supporting structure that connects the internode to the flowers. In this model, we do not distinguish between the peduncle (part between the internode and first flower) and the rachis (part that connects adjacent flowers when there are multiple flowers per inflorescence) - this is all considered the peduncle for simplicity.
 
-If \htmlonly<font face="courier" color="blue">flowers_per_peduncle</font>\endhtmlonly is greater than 1, the flowers are arranged along the peduncle in a pattern specified by the parameter \htmlonly<font face="courier" color="blue">flower_arrangement_pattern</font>\endhtmlonly (the two options are "alternate" and "opposite"). The \htmlonly<font face="courier" color="blue">flower_offset</font>\endhtmlonly parameter specifies the spacing between adjacent flowers along the peduncle.
+If \htmlonly<span style="font-family: Courier, monospace; color: blue;">flowers_per_peduncle</span>\endhtmlonly is greater than 1, the flowers are arranged along the peduncle in a pattern specified by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">flower_arrangement_pattern</span>\endhtmlonly (the two options are "alternate" and "opposite"). The \htmlonly<span style="font-family: Courier, monospace; color: blue;">flower_offset</span>\endhtmlonly parameter specifies the spacing between adjacent flowers along the peduncle.
 
 The sketch below shows an example of one parameter set for the infloresence.
 
@@ -481,25 +486,25 @@ Parameters defining the geometry and growth of the shoot are given in the \ref S
 | elongation_rate_max | RandomParameter_float | 0.2 | meter/meter/day | Maximum relative rate of elongation of the internode of the shoot. Units are meters of elongation per meter of maximum internode length per day. The actual elongation rate can be reduced dynamically if the carbohydrate model is enabled. |
 | girth_area_factor | RandomParameter_float | 0 | cm^2 branch area / m^2 downstream leaf area | Cross-sectional area of internode (girth), determined by the amount of downstream leaf area. The girth will only increase and does not decrease if leaves are lost. Set this factor to 0 to prevent girth scaling. |
 | vegetative_bud_break_time | RandomParameter_float | 5 | days | Amount of time after the bud is created or after dormancy is broken for the vegetative bud to break. |
-| vegetative_bud_break_probability_decay_rate | RandomParameter_float | 0 | 1/nodes | Rate at which the probability a bud produces a shoot changes along the shoot. If >0, probability is 1 at the shoot base and decreases to a value of \htmlonly<font face="courier" color="blue">vegetative_bud_break_probability_min</font>\endhtmlonly. If <0, the probability is 1 at the shoot tip and decreases backward. |
+| vegetative_bud_break_probability_decay_rate | RandomParameter_float | 0 | 1/nodes | Rate at which the probability a bud produces a shoot changes along the shoot. If >0, probability is 1 at the shoot base and decreases to a value of \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_min</span>\endhtmlonly. If <0, the probability is 1 at the shoot tip and decreases backward. |
 | vegetative_bud_break_probability_min | RandomParameter_float | 0 | - | Probability of a bud breaking dormancy and emerging as a shoot. |
 | flower_bud_break_probability | RandomParameter_float | 0 | - | Probability of a flower bud emerging as a flower. |
 | fruit_set_probability | RandomParameter_float | 0 | - | Probability of a flower becoming a fruit. |
-| growth_requires_dormancy | \htmlonly<font face="courier" color="green">bool</font>\endhtmlonly | \htmlonly<font face="courier" color="orange">false</font>\endhtmlonly | - | Flag indicating whether or not the vegetative buds require a winter dormancy period to break into a shoot. If true, the shoot will emerge in the same growing season as the parent shoot. If false, the shoot will emerge from a bud that requires a winter dormancy period. |
-| flowers_require_dormancy | \htmlonly<font face="courier" color="green">bool</font>\endhtmlonly | \htmlonly<font face="courier" color="orange">false</font>\endhtmlonly | - | Flag indicating whether or not the flower buds require a winter dormancy period to emerge. If true, the flowers will emerge in the same growing season as the parent shoot. If false, the flowers will emerge from a bud that requires a winter dormancy period. |
-| determinate_shoot_growth | \htmlonly<font face="courier" color="green">bool</font>\endhtmlonly | \htmlonly<font face="courier" color="orange">true</font>\endhtmlonly | - | Flag indicating whether or not shoot growth is determinate. If true, shoot growth will stop once flowering occurs, and the apical bud will become dormant. If false, the shoot will continue growing after flowering.  |
+| growth_requires_dormancy | \htmlonly<span style="font-family: Courier, monospace; color: green;">bool</span>\endhtmlonly | \htmlonly<span style="font-family: Courier, monospace; color: orange;">false</span>\endhtmlonly | - | Flag indicating whether or not the vegetative buds require a winter dormancy period to break into a shoot. If true, the shoot will emerge in the same growing season as the parent shoot. If false, the shoot will emerge from a bud that requires a winter dormancy period. |
+| flowers_require_dormancy | \htmlonly<span style="font-family: Courier, monospace; color: green;">bool</span>\endhtmlonly | \htmlonly<span style="font-family: Courier, monospace; color: orange;">false</span>\endhtmlonly | - | Flag indicating whether or not the flower buds require a winter dormancy period to emerge. If true, the flowers will emerge in the same growing season as the parent shoot. If false, the flowers will emerge from a bud that requires a winter dormancy period. |
+| determinate_shoot_growth | \htmlonly<span style="font-family: Courier, monospace; color: green;">bool</span>\endhtmlonly | \htmlonly<span style="font-family: Courier, monospace; color: orange;">true</span>\endhtmlonly | - | Flag indicating whether or not shoot growth is determinate. If true, shoot growth will stop once flowering occurs, and the apical bud will become dormant. If false, the shoot will continue growing after flowering.  |
 
 \subsection ShootParametersGeom Geometric Parameters of the Shoot
 
 \subsubsection ShootParam_max_nodes max_nodes and max_nodes_per_season
 
-\htmlonly<font face="courier" color="blue">max_nodes</font>\endhtmlonly is the maximum number of phytomers that a single shoot can grow to have. Leaves will continue to emerge from the terminal bud according to the phyllochron until \htmlonly<font face="courier" color="blue">max_nodes</font>\endhtmlonly is reached.
+\htmlonly<span style="font-family: Courier, monospace; color: blue;">max_nodes</span>\endhtmlonly is the maximum number of phytomers that a single shoot can grow to have. Leaves will continue to emerge from the terminal bud according to the phyllochron until \htmlonly<span style="font-family: Courier, monospace; color: blue;">max_nodes</span>\endhtmlonly is reached.
 
-\htmlonly<font face="courier" color="blue">max_nodes_per_season</font>\endhtmlonly is the maximum number of phytomers that a shoot can produce in a single growing season, and should be less than or equal to \htmlonly<font face="courier" color="blue">max_nodes</font>\endhtmlonly. This parameter is used to limit the number of phytomers that a shoot can produce in a single growing season such that it eventually stops growing for the season, but can still put on additional phytomers in following seasons.
+\htmlonly<span style="font-family: Courier, monospace; color: blue;">max_nodes_per_season</span>\endhtmlonly is the maximum number of phytomers that a shoot can produce in a single growing season, and should be less than or equal to \htmlonly<span style="font-family: Courier, monospace; color: blue;">max_nodes</span>\endhtmlonly. This parameter is used to limit the number of phytomers that a shoot can produce in a single growing season such that it eventually stops growing for the season, but can still put on additional phytomers in following seasons.
 
 \subsubsection ShootParam_base_roll base_roll
 
-\htmlonly<font face="courier" color="blue">base_roll</font>\endhtmlonly is the roll angle of the first phytomer of the shoot about the shoot axis relative to vertical. If \htmlonly<font face="courier" color="blue">base_roll</font>\endhtmlonly = 0, the first petiole along the shoot will be vertical (or as vertical as is possible given the shoot direction and the specified angle of the petiole relative to the internode). This parameter is used to set the initial orientation of the shoot. For example, if \htmlonly<font face="courier" color="blue">base_roll</font>\endhtmlonly = 0, the first phytomer of the shoot will be oriented vertically. If \htmlonly<font face="courier" color="blue">base_roll</font>\endhtmlonly = 30, the first phytomer of the shoot will be oriented 30 degrees from vertical.
+\htmlonly<span style="font-family: Courier, monospace; color: blue;">base_roll</span>\endhtmlonly is the roll angle of the first phytomer of the shoot about the shoot axis relative to vertical. If \htmlonly<span style="font-family: Courier, monospace; color: blue;">base_roll</span>\endhtmlonly = 0, the first petiole along the shoot will be vertical (or as vertical as is possible given the shoot direction and the specified angle of the petiole relative to the internode). This parameter is used to set the initial orientation of the shoot. For example, if \htmlonly<span style="font-family: Courier, monospace; color: blue;">base_roll</span>\endhtmlonly = 0, the first phytomer of the shoot will be oriented vertically. If \htmlonly<span style="font-family: Courier, monospace; color: blue;">base_roll</span>\endhtmlonly = 30, the first phytomer of the shoot will be oriented 30 degrees from vertical.
 
 \subsubsection ShootParam_insertion insertion_angle_tip and insertion_angle_decay_rate
 
@@ -507,40 +512,40 @@ The insertion angle of child shoots is the angle that a child shoot makes with i
 
 The methodology for determining the insertion angle of a child shoot differs depending on whether the shoot emerges from a bud that requires a winter dormancy period (proleptic shoot), or whether the shoot emerges in the same growing season. This behavior is set based on the parameter \ref ShootParameters::growth_requires_dormancy (more information on this parameter below).
 
-<b>For buds NOT requiring dormancy</b> (\ref ShootParameters::growth_requires_dormancy = false), the insertion angle of the child shoot is simply given by the parameter \htmlonly<font face="courier" color="blue">insertion_angle_tip</font>\endhtmlonly (degrees). (In this case, the parameter \htmlonly<font face="courier" color="blue">insertion_angle_decay_rate</font>\endhtmlonly is not used.)
+<b>For buds NOT requiring dormancy</b> (\ref ShootParameters::growth_requires_dormancy = false), the insertion angle of the child shoot is simply given by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">insertion_angle_tip</span>\endhtmlonly (degrees). (In this case, the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">insertion_angle_decay_rate</span>\endhtmlonly is not used.)
 
 <b>For buds requiring dormancy</b> (proleptic; \ref ShootParameters::growth_requires_dormancy = true), the insertion angle of the child shoot is the smallest at the tip of the shoot (at the time dormancy is broken) and increases moving down the shoot toward and angle of 90 degrees.
 
-As shown in the figure below, the insertion angle at the shoot tip is given by the parameter \htmlonly<font face="courier" color="blue">insertion_angle_tip</font>\endhtmlonly (degrees). The angle increases linearly at a rate of \htmlonly<font face="courier" color="blue">insertion_angle_decay_rate</font>\endhtmlonly (units of degrees per node) until it reaches a maximum insertion angle of 90 degrees. For example, if \htmlonly<font face="courier" color="blue">insertion_angle_tip</font>\endhtmlonly = 20 degrees and \htmlonly<font face="courier" color="blue">insertion_angle_decay_rate</font>\endhtmlonly = 20 degrees/node, the insertion angle at the second node from the tip would be 40 degrees, 60 degrees at the third node, 80 degrees at the fourth node, and 90 degrees at all subsequent nodes, up until reaching the previous year's growth.
+As shown in the figure below, the insertion angle at the shoot tip is given by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">insertion_angle_tip</span>\endhtmlonly (degrees). The angle increases linearly at a rate of \htmlonly<span style="font-family: Courier, monospace; color: blue;">insertion_angle_decay_rate</span>\endhtmlonly (units of degrees per node) until it reaches a maximum insertion angle of 90 degrees. For example, if \htmlonly<span style="font-family: Courier, monospace; color: blue;">insertion_angle_tip</span>\endhtmlonly = 20 degrees and \htmlonly<span style="font-family: Courier, monospace; color: blue;">insertion_angle_decay_rate</span>\endhtmlonly = 20 degrees/node, the insertion angle at the second node from the tip would be 40 degrees, 60 degrees at the third node, 80 degrees at the fourth node, and 90 degrees at all subsequent nodes, up until reaching the previous year's growth.
 
 \image html insertion_angle_schematic.jpeg
 
 \subsubsection ShootParam_length internode_length_max, internode_length_min, and internode_length_decay_rate
 
-The "potential" or fully elongated internode length is specified for a shoot, and is constant along the length of the shoot. When a phytomer emerges from a bud (either apical or lateral along a parent shoot) it's internode is scaled to some short initial size, and elongates over time according to the \htmlonly<font face="courier" color="blue">elongation rate</font>\endhtmlonly parameter (see below).
+The "potential" or fully elongated internode length is specified for a shoot, and is constant along the length of the shoot. When a phytomer emerges from a bud (either apical or lateral along a parent shoot) it's internode is scaled to some short initial size, and elongates over time according to the \htmlonly<span style="font-family: Courier, monospace; color: blue;">elongation rate</span>\endhtmlonly parameter (see below).
 
 Similar to determination of the child insertion angle, the methodology for determination of the fully elongated internode length of a child shoot depends on whether or not the child shoot is emerging from a dormant bud.
 
-<b>For buds NOT requiring dormancy</b> (\ref ShootParameters::growth_requires_dormancy = false), the potential length of internodes along a shoot is determined according to the value of the \htmlonly<font face="courier" color="blue">internode_length_max</font>\endhtmlonly parameter.
+<b>For buds NOT requiring dormancy</b> (\ref ShootParameters::growth_requires_dormancy = false), the potential length of internodes along a shoot is determined according to the value of the \htmlonly<span style="font-family: Courier, monospace; color: blue;">internode_length_max</span>\endhtmlonly parameter.
 
-<b>For buds requiring dormancy</b> (proleptic; \ref ShootParameters::growth_requires_dormancy = true), the potential length of a shoot's internodes is maximum at the tip of the shoot (at the time dormancy is broken) and decreases moving down the shoot. The potential length of the internode at the tip of the shoot is given by the parameter \htmlonly<font face="courier" color="blue">internode_length_max</font>\endhtmlonly. The length decreases linearly at a rate of \htmlonly<font face="courier" color="blue">internode_length_decay_rate</font>\endhtmlonly (units of meters per node) until it reaches a minimum length given by the parameter \htmlonly<font face="courier" color="blue">internode_length_min</font>\endhtmlonly. For example, if \htmlonly<font face="courier" color="blue">internode_length_max</font>\endhtmlonly = 0.1 m, \htmlonly<font face="courier" color="blue">internode_length_min</font>\endhtmlonly = 0.01 m, and \htmlonly<font face="courier" color="blue">internode_length_decay_rate</font>\endhtmlonly = 0.03 m/node, the potential length of the internode at the second node from the tip would be 0.07 m, 0.04 m at the third node, 0.01 m at the fourth node, and 0.01 m at all subsequent nodes, up until reaching the previous year's growth.
+<b>For buds requiring dormancy</b> (proleptic; \ref ShootParameters::growth_requires_dormancy = true), the potential length of a shoot's internodes is maximum at the tip of the shoot (at the time dormancy is broken) and decreases moving down the shoot. The potential length of the internode at the tip of the shoot is given by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">internode_length_max</span>\endhtmlonly. The length decreases linearly at a rate of \htmlonly<span style="font-family: Courier, monospace; color: blue;">internode_length_decay_rate</span>\endhtmlonly (units of meters per node) until it reaches a minimum length given by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">internode_length_min</span>\endhtmlonly. For example, if \htmlonly<span style="font-family: Courier, monospace; color: blue;">internode_length_max</span>\endhtmlonly = 0.1 m, \htmlonly<span style="font-family: Courier, monospace; color: blue;">internode_length_min</span>\endhtmlonly = 0.01 m, and \htmlonly<span style="font-family: Courier, monospace; color: blue;">internode_length_decay_rate</span>\endhtmlonly = 0.03 m/node, the potential length of the internode at the second node from the tip would be 0.07 m, 0.04 m at the third node, 0.01 m at the fourth node, and 0.01 m at all subsequent nodes, up until reaching the previous year's growth.
 
  \image html internode_length_schematic.jpeg
 
 \subsubsection ShootParam_vegetative_prob vegetative_bud_break_probability_min and vegetative_bud_break_probability_decay_rate
 
-The probability that a vegetative bud will break and produce a new shoot can vary along the shoot and is controlled by the parameters \htmlonly<font face="courier" color="blue">vegetative_bud_break_probability_min</font>\endhtmlonly and \htmlonly<font face="courier" color="blue">vegetative_bud_break_probability_decay_rate</font>\endhtmlonly. If \htmlonly<font face="courier" color="blue">vegetative_bud_break_probability_decay_rate</font>\endhtmlonly<0, the probability that the first bud on the shoot will break is 100%, and the probability decreases by \htmlonly<font face="courier" color="blue">vegetative_bud_break_probability_decay_rate</font>\endhtmlonly at each node until it reaches a value of \htmlonly<font face="courier" color="blue">vegetative_bud_break_probability_min</font>\endhtmlonly. If \htmlonly<font face="courier" color="blue">vegetative_bud_break_probability_decay_rate</font>\endhtmlonly>0 (and \htmlonly<font face="courier" color="blue">growth_requires_dormancy</font>\endhtmlonly is true), the probability that the last (apical) bud on the shoot at the time dormancy is broken will break is 100% and the probability decreases moving down the shoot.
+The probability that a vegetative bud will break and produce a new shoot can vary along the shoot and is controlled by the parameters \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_min</span>\endhtmlonly and \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_decay_rate</span>\endhtmlonly. If \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_decay_rate</span>\endhtmlonly<0, the probability that the first bud on the shoot will break is 100%, and the probability decreases by \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_decay_rate</span>\endhtmlonly at each node until it reaches a value of \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_min</span>\endhtmlonly. If \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_decay_rate</span>\endhtmlonly>0 (and \htmlonly<span style="font-family: Courier, monospace; color: blue;">growth_requires_dormancy</span>\endhtmlonly is true), the probability that the last (apical) bud on the shoot at the time dormancy is broken will break is 100% and the probability decreases moving down the shoot.
 
-Special Cases: If \htmlonly<font face="courier" color="blue">vegetative_bud_break_probability_decay_rate</font>\endhtmlonly=0, the probability of bud break is always 100% along the shoot. If \htmlonly<font face="courier" color="blue">vegetative_bud_break_probability_decay_rate</font>\endhtmlonly>0 and \htmlonly<font face="courier" color="blue">growth_requires_dormancy</font>\endhtmlonly is false, the probability of bud break is always equal to \htmlonly<font face="courier" color="blue">vegetative_bud_break_probability_min</font>\endhtmlonly.
+Special Cases: If \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_decay_rate</span>\endhtmlonly=0, the probability of bud break is always 100% along the shoot. If \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_decay_rate</span>\endhtmlonly>0 and \htmlonly<span style="font-family: Courier, monospace; color: blue;">growth_requires_dormancy</span>\endhtmlonly is false, the probability of bud break is always equal to \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_min</span>\endhtmlonly.
 
 \image html vegetative_bud_break_schematic.jpeg
 
 \subsubsection ShootParam_gravitropic gravitropic_curvature
 
-The tendency of shoots to grow toward vertical is given by the parameter \htmlonly<font face="courier" color="blue">gravitropic_curvature</font>\endhtmlonly. This parameter is the curvature angle of the shoot per unit length of shoot. If curvature is positive, the shoot curves upward toward vertical. If negative, the shoot curves downward. Once the shoot has reached vertical, it will continue to grow vertically. For example, a shoot that emerges from the bud growing horizontally with \htmlonly<font face="courier" color="blue">gravitropic_curvature</font>\endhtmlonly = 90 degrees/meter will curve upward such that it will be growing upward after the first meter of growth.
+The tendency of shoots to grow toward vertical is given by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">gravitropic_curvature</span>\endhtmlonly. This parameter is the curvature angle of the shoot per unit length of shoot. If curvature is positive, the shoot curves upward toward vertical. If negative, the shoot curves downward. Once the shoot has reached vertical, it will continue to grow vertically. For example, a shoot that emerges from the bud growing horizontally with \htmlonly<span style="font-family: Courier, monospace; color: blue;">gravitropic_curvature</span>\endhtmlonly = 90 degrees/meter will curve upward such that it will be growing upward after the first meter of growth.
 \subsubsection ShootParam_tortuosity tortuosity
 
-Random "wiggle" can be added to shoot growth using the \htmlonly<font face="courier" color="blue">tortuosity</font>\endhtmlonly parameter. Each time a phytomer is added to the shoot, some constant amount of differential curvature is added according to the parameter \htmlonly<font face="courier" color="blue">gravitropic_curvature</font>\endhtmlonly. To introduce random variation, an additional amount of noise is added to the curvature based on a <a href="https://en.wikipedia.org/wiki/Langevin_equation">Langevin</a>-like equation (Brownian motion):
+Random "wiggle" can be added to shoot growth using the \htmlonly<span style="font-family: Courier, monospace; color: blue;">tortuosity</span>\endhtmlonly parameter. Each time a phytomer is added to the shoot, some constant amount of differential curvature is added according to the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">gravitropic_curvature</span>\endhtmlonly. To introduce random variation, an additional amount of noise is added to the curvature based on a <a href="https://en.wikipedia.org/wiki/Langevin_equation">Langevin</a>-like equation (Brownian motion):
 
 \f[
     d\theta = -\frac{1}{2}\left(\theta\right)dL + T\xi(dL)
@@ -552,17 +557,17 @@ where \f$d\theta\f$ is the change in curvature angle of the current phytomer int
 
 \subsubsection ShootParam_phyllochron phyllochron_min
 
-The \htmlonly<font face="courier" color="blue">phyllochron_min</font>\endhtmlonly parameter is the time between the emergence of successive phytomers from the shoot terminal bud. Note that if the number of nodes/phytomers along the shoot reaches \htmlonly<font face="courier" color="blue">gravitropic_curvature</font>\endhtmlonly, the terminal bud will die and cease producing new phytomers.
+The \htmlonly<span style="font-family: Courier, monospace; color: blue;">phyllochron_min</span>\endhtmlonly parameter is the time between the emergence of successive phytomers from the shoot terminal bud. Note that if the number of nodes/phytomers along the shoot reaches \htmlonly<span style="font-family: Courier, monospace; color: blue;">gravitropic_curvature</span>\endhtmlonly, the terminal bud will die and cease producing new phytomers.
 
 Note that this is called the "minimum" phyllochron because the phyllochron can be increased based on carbohydrate availability if the carbohydrate model is enabled. Thus, this is value corresponds to the maximum rate of growth.
 
 \subsubsection ShootParam_elongation_rate elongation_rate
 
-The \htmlonly<font face="courier" color="blue">elongation_rate</font>\endhtmlonly parameter is the rate of axial elongation of the internode of the shoot. When the phytomer is created the internode is small, and will elongate over time according to \htmlonly<font face="courier" color="blue">elongation_rate</font>\endhtmlonly until it reaches its potential or maximum internode length as determined by the methodology described above. The elongation rate has units of length added to the internode per day.
+The \htmlonly<span style="font-family: Courier, monospace; color: blue;">elongation_rate</span>\endhtmlonly parameter is the rate of axial elongation of the internode of the shoot. When the phytomer is created the internode is small, and will elongate over time according to \htmlonly<span style="font-family: Courier, monospace; color: blue;">elongation_rate</span>\endhtmlonly until it reaches its potential or maximum internode length as determined by the methodology described above. The elongation rate has units of length added to the internode per day.
 
 \subsubsection ShootParam_girth_area_factor girth_area_factor
 
-When the shoot is created, the internode radius is set to the value of the phytomer parameter \htmlonly<font face="courier" color="blue">internode.radius_initial</font>\endhtmlonly. The girth of the internode will increase over time based on the amount of leaf area downstream of the internode. The girth of the internode is determined by the parameter \htmlonly<font face="courier" color="blue">girth_area_factor</font>\endhtmlonly, which is the cross-sectional area of the internode (girth) in cm^2 per m^2 of downstream leaf area. The girth will only increase and does not decrease if leaves are lost. Set this factor to 0 to prevent girth scaling.
+When the shoot is created, the internode radius is set to the value of the phytomer parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">internode.radius_initial</span>\endhtmlonly. The girth of the internode will increase over time based on the amount of leaf area downstream of the internode. The girth of the internode is determined by the parameter \htmlonly<span style="font-family: Courier, monospace; color: blue;">girth_area_factor</span>\endhtmlonly, which is the cross-sectional area of the internode (girth) in cm^2 per m^2 of downstream leaf area. The girth will only increase and does not decrease if leaves are lost. Set this factor to 0 to prevent girth scaling.
 
 \subsubsection PlantArchBuild_custom Modifying Parameters of a Plant from the Library
 
@@ -613,6 +618,187 @@ uint plantID = plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );
 
 plantarchitecture.setPlantPhenologicalThresholds( plantID, 0, 20, 10, 10, 5, 70 );
 ~~~~~~
+
+\section PlantArchAddingModels Adding New Plant Models to the Library
+
+The PlantArchitecture plugin includes a streamlined system for adding new plant species to the built-in library. This section describes the workflow for implementing a new plant model.
+
+\subsection PlantArchAddWorkflow General Workflow
+
+Adding a new plant model to the library involves the following steps:
+
+1. **Create assets (if needed)** - Prepare texture images, OBJ models, or other visual assets if needed.
+2. **Implement the plant-specific methods** - Create the `initialize[*]Shoots()` and `build[*]()` methods that define the plant's architecture and parameters in \ref PlantLibrary.cpp. You can find many examples in this file for existing plants.
+3. **Register the plant model** - Add a single registration line to \ref initializePlantModelRegistrations() in \ref PlantLibrary.cpp to make the model available in the library. This can be found at the top of \ref PlantLibrary.cpp, with examples for existing plants.
+
+A good approach is to start with an existing plant model that is similar to the new plant, and copy paste its code `initialize[*]Shoots()` and `build[*]()` for your new plant. You can then tweak parameters to achieve your desired result.
+
+\subsubsection PlantArchAddStep1 Step 1: Create Assets (if needed)
+
+Most plant models require visual assets located in `plugins/plantarchitecture/assets/`. You can either create your own, or copy existing assets from other plants if they are similar enough.
+
+<b>Texture Images (`assets/textures/`):</b>
+- **Leaf textures** - PNG images for leaf appearance (e.g., `NewPlantLeaf.png`)
+- **Bark textures** - JPG images for stem/trunk appearance (e.g., `NewPlantBark.jpg`)
+- **Flower/fruit textures** - Images for reproductive organs if applicable
+
+<b>3D Models (`assets/obj/`):</b>
+- **Leaf OBJ files** - For complex leaf shapes that can't be created procedurally
+- **Flower OBJ files** - 3D models for flowers (if the plant produces flowers)
+- **Fruit OBJ files** - 3D models for fruits (if applicable)
+
+<b>Asset Guidelines:</b>
+- Use PNG format for textures with transparency (leaves)
+- Use JPG format for opaque textures (bark, fruit)
+- Follow existing naming conventions: `[PlantName][OrganType].[ext]`
+- Ensure OBJ models follow the prototype coordinate system (see \ref PlantArchOrgans)
+
+\subsubsection PlantArchAddStep2 Step 2: Implement Plant-Specific Methods
+
+For a new plant called "newplant", you need to implement two methods in the PlantArchitecture class:
+
+**Method Declarations (add to \ref PlantArchitecture.h):**
+~~~~~~
+void initializeNewPlantShoots();
+uint buildNewPlant(const helios::vec3 &base_position);
+~~~~~~
+
+**Method Implementations (add to PlantLibrary.cpp):**
+
+The `initialize*Shoots()` method defines all shoot types and their parameters:
+~~~~~~{cpp}
+void PlantArchitecture::initializeNewPlantShoots() {
+    
+    // ---- Leaf Prototype ---- //
+    LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
+    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/NewPlantLeaf.png";
+    leaf_prototype.leaf_aspect_ratio = 1.2f;
+    // ... set other leaf parameters
+    
+    // ---- Phytomer Parameters ---- //
+    PhytomerParameters phytomer_parameters(context_ptr->getRandomGenerator());
+    phytomer_parameters.internode.pitch = 0.f;
+    phytomer_parameters.internode.phyllotactic_angle = 137.5f;
+    phytomer_parameters.internode.color = RGB::brown;
+    phytomer_parameters.internode.image_texture = "plugins/plantarchitecture/assets/textures/NewPlantBark.jpg";
+    // ... set other internode parameters
+    
+    phytomer_parameters.petiole.radius = 0.002f;
+    phytomer_parameters.petiole.length = 0.05f;
+    // ... set other petiole parameters
+    
+    phytomer_parameters.leaf.prototype = leaf_prototype;
+    phytomer_parameters.leaf.pitch = 20.f;
+    // ... set other leaf parameters
+    
+    // ---- Shoot Parameters ---- //
+    ShootParameters shoot_parameters(context_ptr->getRandomGenerator());
+    shoot_parameters.phytomer_parameters = phytomer_parameters;
+    shoot_parameters.max_nodes = 20;
+    shoot_parameters.internode_length_max = 0.04f;
+    shoot_parameters.phyllochron_min = 3.f;
+    // ... set other shoot parameters
+    
+    // Register the shoot type
+    shoot_types["mainstem"] = shoot_parameters;
+}
+~~~~~~
+
+The `build*()` method creates the actual plant instance:
+~~~~~~{cpp}
+uint PlantArchitecture::buildNewPlant(const helios::vec3 &base_position) {
+    
+    if (shoot_types.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::buildNewPlant): shoot types have not been initialized. You must initialize shoot types first.");
+    }
+    
+    uint plantID = addPlantInstance(base_position, 0);
+    
+    // Build the main stem
+    uint shootID = addBaseStemShoot(plantID, 1, base_position, 0.001f, 0.06f, 1.f, 1.f, "mainstem");
+    
+    // Set phenology thresholds (in days)
+    setPlantPhenologicalThresholds(plantID, 0, -1, -1, -1, -1, 9999); 
+    
+    return plantID;
+}
+~~~~~~
+
+\subsubsection PlantArchAddStep3 Step 3: Register the Plant Model
+
+Add a single registration line to the `initializePlantModelRegistrations()` method in \ref PlantLibrary.cpp:
+~~~~~~{cpp}
+void PlantArchitecture::initializePlantModelRegistrations() {
+    // ... existing registrations ...
+    
+    registerPlantModel("newplant", 
+        [this](){ initializeNewPlantShoots(); },
+        [this](const helios::vec3& pos){ return buildNewPlant(pos); });
+}
+~~~~~~
+
+\section PlantArchPruning Shoot Pruning and Hierarchical Management
+
+The PlantArchitecture plugin provides comprehensive methods for querying shoot hierarchy and performing pruning operations. These methods enable systematic management of plant structure based on branching patterns, shoot ranks, and topological relationships.
+
+\subsection PlantArchPruningHierarchy Querying Shoot Hierarchy
+
+Several methods are available to query the hierarchical structure of shoots within a plant:
+
+<table>
+    <tr><th>Method</th><th>Description</th></tr>
+    <tr><td>\\ref PlantArchitecture::getShootIDsByRank()</td><td>Returns shoots organized by branching rank/order in a vector of vectors.</td></tr>
+    <tr><td>\\ref PlantArchitecture::getShootHierarchyMap()</td><td>Returns a map of parent shoot IDs to their direct children.</td></tr>
+    <tr><td>\\ref PlantArchitecture::getAllDescendantShootIDs()</td><td>Returns all descendant shoots of a given shoot recursively.</td></tr>
+    <tr><td>\\ref PlantArchitecture::getChildShootIDs()</td><td>Returns direct child shoots of a given shoot.</td></tr>
+    <tr><td>\\ref PlantArchitecture::getParentShootID()</td><td>Returns the parent shoot ID (-1 for base shoots).</td></tr>
+    <tr><td>\\ref PlantArchitecture::getShootRank()</td><td>Returns the branching rank/order of a shoot.</td></tr>
+    <tr><td>\\ref PlantArchitecture::getAllShootIDs()</td><td>Returns all shoot IDs for a plant.</td></tr>
+    <tr><td>\\ref PlantArchitecture::getTerminalShootIDs()</td><td>Returns shoot IDs that have no children (terminal shoots).</td></tr>
+    <tr><td>\\ref PlantArchitecture::getShootDepth()</td><td>Returns the hierarchy depth of a shoot.</td></tr>
+    <tr><td>\\ref PlantArchitecture::getPathToRoot()</td><td>Returns the path from a shoot to the root shoot.</td></tr>
+</table>
+
+\subsection PlantArchPruningExamples Pruning Examples
+
+The hierarchical query methods enable various pruning strategies:
+
+**Pruning by Branching Order:**
+~~~~~~
+// Get shoots organized by rank
+auto shoots_by_rank = plantarchitecture.getShootIDsByRank(plantID);
+
+// Prune all shoots above rank 2 (remove higher-order branches)
+for (size_t rank = 3; rank < shoots_by_rank.size(); ++rank) {
+    for (uint shootID : shoots_by_rank[rank]) {
+        plantarchitecture.pruneBranch(plantID, shootID, 0);
+    }
+}
+~~~~~~
+
+**Terminal Shoot Thinning:**
+~~~~~~
+// Get terminal shoots for selective thinning
+auto terminal_shoots = plantarchitecture.getTerminalShootIDs(plantID);
+
+// Prune every other terminal shoot
+for (size_t i = 0; i < terminal_shoots.size(); i += 2) {
+    plantarchitecture.pruneBranch(plantID, terminal_shoots[i], 0);
+}
+~~~~~~
+
+**Pruning Entire Branch Systems:**
+~~~~~~
+// Remove all descendants of a specific shoot
+uint target_shoot = 5;
+auto descendants = plantarchitecture.getAllDescendantShootIDs(plantID, target_shoot);
+
+for (uint descendant : descendants) {
+    plantarchitecture.pruneBranch(plantID, descendant, 0);
+}
+~~~~~~
+
+The \\ref PlantArchitecture::getShootIDsByRank() method is particularly useful as it organizes shoots into a vector of vectors where the index represents the branching rank, making it easy to implement systematic pruning based on plant architecture principles.
 
 \section PlantArchQuery Retrieving Information from the Model
 

@@ -2,12 +2,8 @@
 
 using namespace helios;
 
-int main(){
-  
-  Context context;
-
-  WeberPennTree wpt(&context);
-
-  return wpt.selfTest();
-
+int main(int argc, char** argv) {
+    Context context;
+    WeberPennTree wpt(&context);
+    return wpt.selfTest(argc, argv);
 }

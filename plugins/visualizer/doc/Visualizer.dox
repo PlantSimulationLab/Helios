@@ -43,7 +43,7 @@
  
  \section VisIssues Known Issues
 
- - The visualizer does not work well for visualizing very large point clouds, as it will be very slow to respond.
+ - None currently known. Large point clouds are supported with automatic culling optimization.
 
  \section VisIntro Introduction
 
@@ -196,6 +196,20 @@
        <td><ul>
 	  <li>\ref Visualizer::addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
 	  <li>\ref Visualizer::addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBAcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBcolor &color, float linewidth, Visualizer::CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addLine( const helios::vec3 &start, const helios::vec3 &end, const helios::RGBAcolor &color, float linewidth, Visualizer::CoordinateSystem coordFlag )</li>
+	</ul>
+      </td>
+   </tr>
+   
+   <tr>	
+      <td>Point</td>
+      <td>Single point in 3D space with configurable size.</td>
+      <td><ul>
+	  <li>\ref Visualizer::addPoint( const helios::vec3 &position, const helios::RGBcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addPoint( const helios::vec3 &position, const helios::RGBAcolor &color, Visualizer::CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addPoint( const helios::vec3 &position, const helios::RGBcolor &color, float pointsize, Visualizer::CoordinateSystem coordFlag )</li>
+	  <li>\ref Visualizer::addPoint( const helios::vec3 &position, const helios::RGBAcolor &color, float pointsize, Visualizer::CoordinateSystem coordFlag )</li>
 	</ul>
       </td>
    </tr>
@@ -264,6 +278,77 @@
       Visualizer vis( 1200 );
 
       vis.buildContextGeometry(&context);
+   }
+  ~~~~~~
+
+  \subsection PointCloudPerf Point Cloud Performance Optimization
+
+  For large point clouds (tens of millions of points), the visualizer includes automatic culling optimization to maintain interactive performance. This feature is enabled by default when the number of points exceeds a configurable threshold.
+
+  \subsubsection PointCulling Point Culling Methods
+
+  The visualizer supports two types of automatic culling:
+
+  <ul>
+    <li><b>View Frustum Culling</b> - Points outside the camera's field of view are automatically excluded from rendering</li>
+    <li><b>Distance-based Culling</b> - Distant points are culled with level-of-detail scaling and adaptive sizing to maintain visual coverage</li>
+  </ul>
+
+  \subsubsection PointCullingConfig Point Culling Configuration
+
+  Point cloud culling can be configured using the following functions:
+
+ <table>
+   <tr>
+      <th>Function</th>
+      <th>Description</th>
+   </tr>
+   <tr>
+      <td>\ref Visualizer::setPointCullingEnabled( bool enabled ) "setPointCullingEnabled( bool enabled )"</td>
+      <td>Enable or disable automatic point culling.</td>
+   </tr>
+   <tr>
+      <td>\ref Visualizer::setPointCullingThreshold( size_t threshold ) "setPointCullingThreshold( size_t threshold )"</td>
+      <td>Set the minimum number of points required to trigger culling optimization.</td>
+   </tr>
+   <tr>
+      <td>\ref Visualizer::setPointMaxRenderDistance( float distance ) "setPointMaxRenderDistance( float distance )"</td>
+      <td>Set the maximum distance for point rendering in distance-based culling.</td>
+   </tr>
+   <tr>
+      <td>\ref Visualizer::setPointLODFactor( float factor ) "setPointLODFactor( float factor )"</td>
+      <td>Set the level-of-detail scaling factor for distant points.</td>
+   </tr>
+   <tr>
+      <td>\ref Visualizer::getPointRenderingMetrics( size_t &total_points, size_t &rendered_points, float &culling_time_ms ) "getPointRenderingMetrics(...)"</td>
+      <td>Retrieve real-time performance metrics including total points, rendered points, and culling computation time.</td>
+   </tr>
+ </table>
+
+  Example code showing how to configure point cloud culling:
+
+  ~~~~~~{.cpp}
+   #include "Visualizer.h"
+	
+   int main(){
+      Visualizer vis( 1200 );
+	
+      // Configure culling for large point clouds
+      vis.setPointCullingEnabled(true);
+      vis.setPointCullingThreshold(1000000); // Enable for point clouds > 1M points
+      vis.setPointMaxRenderDistance(500.0f); // Cull points beyond 500 units
+      vis.setPointLODFactor(10.0f); // Aggressive LOD scaling
+      
+      // Add large point cloud...
+      for(int i = 0; i < 10000000; ++i) {
+          vis.addPoint(make_vec3(random_x, random_y, random_z), RGB::red, 1.0f, Visualizer::COORDINATES_CARTESIAN);
+      }
+      
+      // Check performance metrics
+      size_t total, rendered;
+      float culling_time;
+      vis.getPointRenderingMetrics(total, rendered, culling_time);
+      std::cout << "Rendering " << rendered << "/" << total << " points in " << culling_time << "ms" << std::endl;
    }
   ~~~~~~
 
@@ -440,7 +525,7 @@
    </tr>
  </table>
 
- The colormap to be used is set using the following command \ref Visualizer::setColormap( Ctable colormap_name ) "setColormap( Ctable colormap_name )", where `colormap_name' is one of the enumerations in the table above.  For example, to set the `hot' colormap one would use:
+ The colormap to be used is set using the following command \ref Visualizer::setColormap( Visualizer::Ctable ) "setColormap( Ctable colormap_name )", where `colormap_name' is one of the enumerations in the table above.  For example, to set the `hot' colormap one would use:
 
   ~~~~~~{.cpp}
    vis.setColormap( Visualizer::COLORMAP_HOT );

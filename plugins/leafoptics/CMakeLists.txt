@@ -1,13 +1,14 @@
-cmake_minimum_required(VERSION 2.0)
+cmake_minimum_required(VERSION 3.15)
 
 project(helios)  
 
-include_directories(include)
-include_directories(../../core/include)
+add_library( leafoptics STATIC "src/LeafOptics.cpp" "tests/selfTest.cpp" )
 
-add_library( leafoptics STATIC "src/LeafOptics.cpp" )
-
-set( PLUGIN_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/include;${PLUGIN_INCLUDE_PATHS}" PARENT_SCOPE )
+target_include_directories(leafoptics PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include )
 
 file( COPY spectral_data DESTINATION ${CMAKE_BINARY_DIR}/plugins/leafoptics/ )
+
+add_executable(leafoptics_tests "tests/TestMain.cpp")
+target_link_libraries(leafoptics_tests PRIVATE leafoptics)
+add_test(NAME leafoptics_tests COMMAND leafoptics_tests)
 

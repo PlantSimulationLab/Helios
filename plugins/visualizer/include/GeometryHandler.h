@@ -16,27 +16,24 @@ Copyright (C) 2016-2025 Brian Bailey
 #ifndef VISUALIZER_GEOMETRY_HANDLER_H
 #define VISUALIZER_GEOMETRY_HANDLER_H
 
+#include <unordered_set>
 #include "global.h"
 
 class GeometryHandler {
+private:
+    struct PrimitiveIndexMap;
 
 public:
-
     //! Enum representing different types of visualizer geometry.
     /**
      * This enumeration is used to define the geometry types
      * that can be handled by the visualizer.
-    */
-    enum VisualizerGeometryType {
-        GEOMETRY_TYPE_RECTANGLE = 1,
-        GEOMETRY_TYPE_TRIANGLE = 2,
-        GEOMETRY_TYPE_POINT = 3,
-        GEOMETRY_TYPE_LINE = 4
-    };
+     */
+    enum VisualizerGeometryType { GEOMETRY_TYPE_RECTANGLE = 1, GEOMETRY_TYPE_TRIANGLE = 2, GEOMETRY_TYPE_POINT = 3, GEOMETRY_TYPE_LINE = 4 };
 
     //! Constructor for the GeometryHandler class.
     GeometryHandler() : random_generator(std::random_device{}()) {
-        for ( const auto &geometry_type : all_geometry_types ) {
+        for (const auto &geometry_type: all_geometry_types) {
             face_index_data[geometry_type] = {};
             vertex_data[geometry_type] = {};
             normal_data[geometry_type] = {};
@@ -48,8 +45,8 @@ public:
             visible_flag_data[geometry_type] = {};
             context_geometry_flag_data[geometry_type] = {};
             delete_flag_data[geometry_type] = {};
+            size_data[geometry_type] = {};
         }
-
     }
 
     //! Pre-allocate space in geometry buffers for known number of patches and triangles
@@ -90,14 +87,23 @@ public:
      * \param[in] iscontextgeometry True if geometry is from the Context, false if geometry is added manually through the visualizer
      * \param[in] size [optional] Size of the point or line in pixel units. This is ignored for GEOMETRY_TYPE_PATCH and GEOMETRY_TYPE_TRIANGLE.
      */
-    void addGeometry(size_t UUID, const VisualizerGeometryType &geometry_type, const std::vector<helios::vec3> &vertices, const helios::RGBAcolor &color,
-                     const std::vector<helios::vec2> &uvs, int textureID, bool override_texture_color, bool has_glyph_texture, uint coordinate_system, bool visible_flag, bool iscontextgeometry, int size = 0);
+    void addGeometry(size_t UUID, const VisualizerGeometryType &geometry_type, const std::vector<helios::vec3> &vertices, const helios::RGBAcolor &color, const std::vector<helios::vec2> &uvs, int textureID, bool override_texture_color,
+                     bool has_glyph_texture, uint coordinate_system, bool visible_flag, bool iscontextgeometry, int size = 0);
+
+    //! Mark a geometry primitive as modified
+    void markDirty(size_t UUID);
+
+    //! Retrieve the set of modified primitives
+    [[nodiscard]] const std::unordered_set<size_t> &getDirtyUUIDs() const;
+
+    //! Clear the list of modified primitives
+    void clearDirtyUUIDs();
 
     [[nodiscard]] bool doesGeometryExist(size_t UUID) const;
 
     [[nodiscard]] std::vector<size_t> getAllGeometryIDs() const;
 
-    [[nodiscard]] size_t getPrimitiveCount( bool include_deleted = true ) const;
+    [[nodiscard]] size_t getPrimitiveCount(bool include_deleted = true) const;
 
     /**
      * \brief Retrieves the count of rectangles in the geometry handler.
@@ -105,7 +111,7 @@ public:
      * \param[in] include_deleted [optional] If true, includes rectangles marked as deleted in the count.
      * \return The number of rectangles, optionally including those marked as deleted.
      */
-    [[nodiscard]] size_t getRectangleCount( bool include_deleted = true ) const;
+    [[nodiscard]] size_t getRectangleCount(bool include_deleted = true) const;
 
     /**
      * \brief Retrieves the number of triangles in the geometry.
@@ -113,7 +119,7 @@ public:
      * \param[in] include_deleted [optional] If true, includes triangles marked as deleted in the count.
      * \return The total number of triangles, optionally including those marked as deleted.
      */
-    [[nodiscard]] size_t getTriangleCount( bool include_deleted = true ) const;
+    [[nodiscard]] size_t getTriangleCount(bool include_deleted = true) const;
 
     /**
      * \brief Retrieves the count of points in the geometry.
@@ -121,7 +127,7 @@ public:
      * \param[in] include_deleted [optional] If true, includes points marked as deleted in the count. Otherwise, only non-deleted points are counted.
      * \return Total number of points, optionally including deleted points.
      */
-    [[nodiscard]] size_t getPointCount( bool include_deleted = true ) const;
+    [[nodiscard]] size_t getPointCount(bool include_deleted = true) const;
 
     /**
      * \brief Retrieves the count of line geometries.
@@ -129,7 +135,7 @@ public:
      * \param[in] include_deleted [optional] If true, includes geometries marked as deleted in the count. Defaults to false.
      * \return The total number of line geometries, including or excluding deleted ones based on the parameter.
      */
-    [[nodiscard]] size_t getLineCount( bool include_deleted = true ) const;
+    [[nodiscard]] size_t getLineCount(bool include_deleted = true) const;
 
     /**
      * \brief Retrieves a pointer to the face index data.
@@ -137,7 +143,7 @@ public:
      * \param[in] geometry_type The type of visualizer geometry for which the face index data is requested.
      * \return Constant pointer to the vector containing face index data.
      */
-    [[nodiscard]] const std::vector<int>* getFaceIndexData_ptr(VisualizerGeometryType geometry_type) const;
+    [[nodiscard]] const std::vector<int> *getFaceIndexData_ptr(VisualizerGeometryType geometry_type) const;
 
     /**
      * \brief Sets the vertices for a geometry element identified by a unique UUID.
@@ -157,7 +163,7 @@ public:
      * \param[in] UUID Unique identifier representing the geometry whose vertices need to be fetched.
      * \return A vector containing the vertices as helios::vec3 objects.
      */
-    [[nodiscard]] std::vector<helios::vec3> getVertices( size_t UUID ) const;
+    [[nodiscard]] std::vector<helios::vec3> getVertices(size_t UUID) const;
 
     /**
      * \brief Returns the vertex count for a given geometry type.
@@ -165,7 +171,7 @@ public:
      * \param[in] geometry_type The type of visualizer geometry for which the vertex count is required.
      * \return The vertex count corresponding to the specified geometry type.
      * \note Returns 0 for unsupported or invalid geometry types.
-    */
+     */
     static char getVertexCount(const VisualizerGeometryType &geometry_type);
 
     /**
@@ -174,7 +180,7 @@ public:
      * \param[in] geometry_type The type of visualizer geometry for which the vertex data is requested.
      * \return Constant pointer to the vector containing vertex data.
      */
-    [[nodiscard]] const std::vector<float>* getVertexData_ptr(VisualizerGeometryType geometry_type) const;
+    [[nodiscard]] const std::vector<float> *getVertexData_ptr(VisualizerGeometryType geometry_type) const;
 
     /**
      * \brief Retrieves the normal vector associated with the geometry of a given UUID.
@@ -182,7 +188,7 @@ public:
      * \param[in] UUID Unique identifier representing the geometry whose normal needs to be fetched.
      * \return Normal vector as helios::vec3 object.
      */
-    [[nodiscard]] helios::vec3 getNormal( size_t UUID ) const;
+    [[nodiscard]] helios::vec3 getNormal(size_t UUID) const;
 
     /**
      * \brief Retrieves a pointer to the normal data.
@@ -190,7 +196,7 @@ public:
      * \param[in] geometry_type The type of visualizer geometry for which the normal data is requested.
      * \return Constant pointer to the vector containing normal data.
      */
-    [[nodiscard]] const std::vector<float>* getNormalData_ptr(VisualizerGeometryType geometry_type) const;
+    [[nodiscard]] const std::vector<float> *getNormalData_ptr(VisualizerGeometryType geometry_type) const;
 
     /**
      * \brief Sets the color for the geometry identified by a specific UUID.
@@ -206,7 +212,7 @@ public:
      * \param[in] UUID Unique identifier of the geometry whose color is to be retrieved.
      * \return The RGBAcolor corresponding to the specified UUID.
      */
-    [[nodiscard]] helios::RGBAcolor getColor( size_t UUID ) const;
+    [[nodiscard]] helios::RGBAcolor getColor(size_t UUID) const;
 
     /**
      * \brief Retrieves a pointer to the color data.
@@ -214,7 +220,7 @@ public:
      * \param[in] geometry_type The type of visualizer geometry for which the color data is requested.
      * \return Pointer to the vector containing color data.
      */
-    [[nodiscard]] const std::vector<float>* getColorData_ptr(VisualizerGeometryType geometry_type) const;
+    [[nodiscard]] const std::vector<float> *getColorData_ptr(VisualizerGeometryType geometry_type) const;
 
     /**
      * \brief Assigns UV coordinates to the specified geometry by UUID.
@@ -232,7 +238,7 @@ public:
      * \param[in] UUID A unique identifier representing the geometry whose UV coordinates are to be fetched.
      * \return A vector containing the UV coordinates as vec2 objects.
      */
-    [[nodiscard]] std::vector<helios::vec2> getUVs( size_t UUID ) const;
+    [[nodiscard]] std::vector<helios::vec2> getUVs(size_t UUID) const;
 
     /**
      * \brief Retrieves a pointer to the UV data.
@@ -240,7 +246,7 @@ public:
      * \param[in] geometry_type The type of visualizer geometry for which the UV data is requested.
      * \return Pointer to a vector containing the UV data.
      */
-    [[nodiscard]] const std::vector<float>* getUVData_ptr(VisualizerGeometryType geometry_type) const;
+    [[nodiscard]] const std::vector<float> *getUVData_ptr(VisualizerGeometryType geometry_type) const;
 
     /**
      * \brief Sets the texture ID for the given geometry identified by its UUID.
@@ -256,7 +262,7 @@ public:
      * \param[in] UUID Unique identifier for the geometry object.
      * \return The texture ID linked to the specified UUID.
      */
-    [[nodiscard]] int getTextureID( size_t UUID ) const;
+    [[nodiscard]] int getTextureID(size_t UUID) const;
 
     /**
      * \brief Retrieves a pointer to the texture ID data.
@@ -264,7 +270,7 @@ public:
      * \param[in] geometry_type The type of visualizer geometry for which the texture ID data is requested.
      * \return Pointer to the vector containing texture ID data.
      */
-    [[nodiscard]] const std::vector<int>* getTextureIDData_ptr(VisualizerGeometryType geometry_type) const;
+    [[nodiscard]] const std::vector<int> *getTextureIDData_ptr(VisualizerGeometryType geometry_type) const;
 
     /**
      * \brief Overrides the texture color attribute for a given geometry primitive.
@@ -286,7 +292,7 @@ public:
      * \param[in] geometry_type The type of visualizer geometry for which the texture flag data is requested.
      * \return Pointer to the vector containing texture flag data.
      */
-    [[nodiscard]] const std::vector<int>* getTextureFlagData_ptr(VisualizerGeometryType geometry_type) const;
+    [[nodiscard]] const std::vector<int> *getTextureFlagData_ptr(VisualizerGeometryType geometry_type) const;
 
     /**
      * \brief Sets the visibility state for a given geometry component.
@@ -302,7 +308,7 @@ public:
      * \param[in] UUID The unique identifier of the primitive to check.
      * \return True if the primitive is visible, otherwise false.
      */
-    [[nodiscard]] bool isPrimitiveVisible( size_t UUID ) const;
+    [[nodiscard]] bool isPrimitiveVisible(size_t UUID) const;
 
     /**
      * \brief Retrieves a pointer to the vector containing visibility flag data.
@@ -318,9 +324,33 @@ public:
      * \param[in] geometry_type The type of visualizer geometry for which the coordinate flag data is requested.
      * \return A constant pointer to a vector of integers representing the coordinate flag data for the given geometry type.
      */
-    [[nodiscard]] const std::vector<int>* getCoordinateFlagData_ptr(VisualizerGeometryType geometry_type) const;
+    [[nodiscard]] const std::vector<int> *getCoordinateFlagData_ptr(VisualizerGeometryType geometry_type) const;
 
-    [[nodiscard]] bool getDeleteFlag( size_t UUID ) const;
+    /**
+     * \brief Sets the size for a geometry element identified by its UUID.
+     *
+     * \param[in] UUID The unique identifier of the geometry element.
+     * \param[in] size The size value to set for the geometry element.
+     */
+    void setSize(size_t UUID, float size);
+
+    /**
+     * \brief Retrieves the size value associated with a specific UUID.
+     *
+     * \param[in] UUID Unique identifier of the geometry whose size is to be retrieved.
+     * \return The size value corresponding to the specified UUID.
+     */
+    [[nodiscard]] float getSize(size_t UUID) const;
+
+    /**
+     * \brief Retrieves a pointer to the size data associated with the specified geometry type.
+     *
+     * \param[in] geometry_type The type of visualizer geometry for which the size data is requested.
+     * \return A constant pointer to a vector of floats representing the size data for the given geometry type.
+     */
+    [[nodiscard]] const std::vector<float> *getSizeData_ptr(VisualizerGeometryType geometry_type) const;
+
+    [[nodiscard]] bool getDeleteFlag(size_t UUID) const;
 
     /**
      * \brief Marks a geometry resource identified by its unique UUID for deletion.
@@ -359,7 +389,7 @@ public:
      * \param[out] ybounds Outputs the minimum and maximum y-coordinates in the domain.
      * \param[out] zbounds Outputs the minimum and maximum z-coordinates in the domain.
      */
-    void getDomainBoundingBox( helios::vec2& xbounds, helios::vec2& ybounds, helios::vec2& zbounds ) const;
+    void getDomainBoundingBox(helios::vec2 &xbounds, helios::vec2 &ybounds, helios::vec2 &zbounds) const;
 
     /**
      * \brief Computes the bounding sphere of the domain.
@@ -367,7 +397,7 @@ public:
      * \param[out] center The computed center of the bounding sphere.
      * \param[out] radius The computed radius of the bounding sphere.
      */
-    void getDomainBoundingSphere(helios::vec3& center, helios::vec3 &radius) const;
+    void getDomainBoundingSphere(helios::vec3 &center, helios::vec3 &radius) const;
 
     /**
      * \brief Generates and returns a random unique identifier value as a size_t.
@@ -376,15 +406,12 @@ public:
      */
     size_t sampleUUID();
 
-    constexpr static std::array<VisualizerGeometryType,4> all_geometry_types = {
-        GEOMETRY_TYPE_RECTANGLE,
-        GEOMETRY_TYPE_TRIANGLE,
-        GEOMETRY_TYPE_POINT,
-        GEOMETRY_TYPE_LINE
-    };
+    //! Retrieve internal buffer indices for a primitive
+    [[nodiscard]] const PrimitiveIndexMap &getIndexMap(size_t UUID) const;
+
+    constexpr static std::array<VisualizerGeometryType, 4> all_geometry_types = {GEOMETRY_TYPE_RECTANGLE, GEOMETRY_TYPE_TRIANGLE, GEOMETRY_TYPE_POINT, GEOMETRY_TYPE_LINE};
 
 private:
-
     struct PrimitiveIndexMap {
         VisualizerGeometryType geometry_type;
         size_t face_index_index;
@@ -398,23 +425,27 @@ private:
         size_t visible_index;
         size_t context_geometry_flag_index;
         size_t delete_flag_index;
+        size_t size_index;
     };
 
     std::mt19937_64 random_generator;
 
     std::unordered_map<size_t, PrimitiveIndexMap> UUID_map;
 
-    std::unordered_map< VisualizerGeometryType, std::vector<int> > face_index_data;
-    std::unordered_map< VisualizerGeometryType, std::vector<float> > vertex_data;
-    std::unordered_map< VisualizerGeometryType, std::vector<float> > normal_data;
-    std::unordered_map< VisualizerGeometryType, std::vector<float> > uv_data;
-    std::unordered_map< VisualizerGeometryType, std::vector<float> > color_data;
-    std::unordered_map< VisualizerGeometryType, std::vector<int> > texture_flag_data;
-    std::unordered_map< VisualizerGeometryType, std::vector<int> > texture_ID_data;
-    std::unordered_map< VisualizerGeometryType, std::vector<int> > coordinate_flag_data;
-    std::unordered_map< VisualizerGeometryType, std::vector<char> > visible_flag_data;
-    std::unordered_map< VisualizerGeometryType, std::vector<bool> > context_geometry_flag_data;
-    std::unordered_map< VisualizerGeometryType, std::vector<bool> > delete_flag_data;
+    std::unordered_map<VisualizerGeometryType, std::vector<int>> face_index_data;
+    std::unordered_map<VisualizerGeometryType, std::vector<float>> vertex_data;
+    std::unordered_map<VisualizerGeometryType, std::vector<float>> normal_data;
+    std::unordered_map<VisualizerGeometryType, std::vector<float>> uv_data;
+    std::unordered_map<VisualizerGeometryType, std::vector<float>> color_data;
+    std::unordered_map<VisualizerGeometryType, std::vector<int>> texture_flag_data;
+    std::unordered_map<VisualizerGeometryType, std::vector<int>> texture_ID_data;
+    std::unordered_map<VisualizerGeometryType, std::vector<int>> coordinate_flag_data;
+    std::unordered_map<VisualizerGeometryType, std::vector<char>> visible_flag_data;
+    std::unordered_map<VisualizerGeometryType, std::vector<bool>> context_geometry_flag_data;
+    std::unordered_map<VisualizerGeometryType, std::vector<bool>> delete_flag_data;
+    std::unordered_map<VisualizerGeometryType, std::vector<float>> size_data;
+
+    std::unordered_set<size_t> dirty_UUIDs;
 
     size_t deleted_primitive_count = 0;
 
@@ -434,7 +465,6 @@ private:
      * \param[in] geometry_type The type of visualizer geometry associated with the UUID.
      */
     void registerUUID(size_t UUID, const VisualizerGeometryType &geometry_type);
-
 };
 
 #endif
