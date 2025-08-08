@@ -3166,7 +3166,7 @@ namespace helios {
          * \return Helios data type of primitive data
          * \sa HeliosDataType
          */
-        HeliosDataType getPrimitiveDataType(uint UUID, const char *label) const;
+        DEPRECATED( HeliosDataType getPrimitiveDataType(uint UUID, const char *label) const, "Use Context::getPrimitiveDataType(const char *label) instead, as it is not necessary to pass a UUID to this method - the same type will be returned for all primitives" );
 
         //! Get the expected data type for a primitive data label (cached lookup)
         /**
@@ -4115,7 +4115,7 @@ namespace helios {
          * \return Helios data type of primitive data
          * \sa HeliosDataType
          */
-        HeliosDataType getObjectDataType(uint objID, const char *label) const;
+        DEPRECATED( HeliosDataType getObjectDataType(uint objID, const char *label) const, "Use Context::getObjectDataType(const char *label) instead, as it is not necessary to pass an Object ID to this method - the same type will be returned for all objects");
 
         //! Get the expected data type for an object data label (cached lookup)
         /**

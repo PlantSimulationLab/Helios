@@ -252,6 +252,8 @@ endif()
 
 file( COPY inputs DESTINATION ${CMAKE_BINARY_DIR}/plugins/projectbuilder/ )
 
-add_executable(projectbuilder_tests "tests/TestMain.cpp")
-target_link_libraries(projectbuilder_tests PRIVATE projectbuilder)
-add_test(NAME projectbuilder_tests COMMAND projectbuilder_tests)
+if(BUILD_TESTS)
+    add_executable(projectbuilder_tests "tests/TestMain.cpp")
+    target_link_libraries(projectbuilder_tests PRIVATE projectbuilder)
+    add_test(NAME projectbuilder_tests COMMAND projectbuilder_tests)
+endif()

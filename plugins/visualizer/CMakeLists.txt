@@ -95,6 +95,8 @@ set_target_properties(copy_textures PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 add_dependencies(visualizer copy_shaders copy_textures)
 
-add_executable( visualizer_tests "tests/TestMain.cpp" )
-target_link_libraries( visualizer_tests PRIVATE visualizer )
-add_test( NAME visualizer_tests COMMAND visualizer_tests )
+if(BUILD_TESTS)
+    add_executable( visualizer_tests "tests/TestMain.cpp" )
+    target_link_libraries( visualizer_tests PRIVATE visualizer )
+    add_test( NAME visualizer_tests COMMAND visualizer_tests )
+endif()

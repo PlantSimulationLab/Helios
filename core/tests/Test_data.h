@@ -186,7 +186,7 @@ TEST_CASE("Object Data") {
         DOCTEST_CHECK(v_r.size() == 2);
         DOCTEST_CHECK(v_r[1].y == doctest::Approx(5.0));
 
-        DOCTEST_CHECK(ctx.getObjectDataType(o1, "test_uint") == HELIOS_TYPE_UINT);
+        DOCTEST_CHECK(ctx.getObjectDataType("test_uint") == HELIOS_TYPE_UINT);
         DOCTEST_CHECK(ctx.getObjectDataSize(o1, "test_vec3_vec") == 2);
 
         std::vector<std::string> labels = ctx.listObjectData(o1);
@@ -219,7 +219,7 @@ TEST_CASE("Object Data") {
         Context ctx;
         capture_cerr cerr_buffer;
         uint bad_oid = 999;
-        DOCTEST_CHECK_THROWS(ctx.getObjectDataType(bad_oid, "test"));
+        DOCTEST_CHECK_THROWS(ctx.getObjectDataType("test"));
         DOCTEST_CHECK_THROWS(ctx.getObjectDataSize(bad_oid, "test"));
         DOCTEST_CHECK_THROWS(ctx.doesObjectDataExist(bad_oid, "test"));
         DOCTEST_CHECK_THROWS(ctx.clearObjectData(bad_oid, "test"));
@@ -569,7 +569,7 @@ TEST_CASE("Primitive Data") {
     SUBCASE("Error Handling") {
         capture_cerr cerr_buffer;
         uint bad_uuid = 999;
-        DOCTEST_CHECK_THROWS(ctx.getPrimitiveDataType(bad_uuid, "test"));
+        DOCTEST_CHECK_THROWS(ctx.getPrimitiveDataType("test"));
         DOCTEST_CHECK_THROWS(ctx.getPrimitiveDataSize(bad_uuid, "test"));
         DOCTEST_CHECK_THROWS(ctx.doesPrimitiveDataExist(bad_uuid, "test"));
         DOCTEST_CHECK_THROWS(ctx.clearPrimitiveData(bad_uuid, "test"));
@@ -654,7 +654,7 @@ TEST_CASE("Primitive Data") {
         Context ctx;
         capture_cerr cerr_buffer;
         uint bad_uuid = 999;
-        DOCTEST_CHECK_THROWS(ctx.getPrimitiveDataType(bad_uuid, "test"));
+        DOCTEST_CHECK_THROWS(ctx.getPrimitiveDataType("test"));
         DOCTEST_CHECK_THROWS(ctx.getPrimitiveDataSize(bad_uuid, "test"));
         DOCTEST_CHECK_THROWS(ctx.doesPrimitiveDataExist(bad_uuid, "test"));
         DOCTEST_CHECK_THROWS(ctx.clearPrimitiveData(bad_uuid, "test"));
@@ -1175,9 +1175,9 @@ TEST_CASE("Data Type Coverage Extensions") {
         ctx.setPrimitiveData(p, "vec_int3", v_i3);
         ctx.setPrimitiveData(p, "vec_int4", v_i4);
 
-        DOCTEST_CHECK(ctx.getPrimitiveDataType(p, "vec_int2") == HELIOS_TYPE_INT2);
-        DOCTEST_CHECK(ctx.getPrimitiveDataType(p, "vec_int3") == HELIOS_TYPE_INT3);
-        DOCTEST_CHECK(ctx.getPrimitiveDataType(p, "vec_int4") == HELIOS_TYPE_INT4);
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("vec_int2") == HELIOS_TYPE_INT2);
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("vec_int3") == HELIOS_TYPE_INT3);
+        DOCTEST_CHECK(ctx.getPrimitiveDataType("vec_int4") == HELIOS_TYPE_INT4);
 
         DOCTEST_CHECK(ctx.getPrimitiveDataSize(p, "vec_int2") == 2);
         DOCTEST_CHECK(ctx.getPrimitiveDataSize(p, "vec_int3") == 2);

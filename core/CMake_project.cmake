@@ -1,4 +1,5 @@
 option(ENABLE_OPENMP "Enable building with OpenMP" OFF)
+option(BUILD_TESTS "Build test executables" OFF)
 
 # Set CMake policies to avoid warnings on newer CMake versions
 if(POLICY CMP0074)

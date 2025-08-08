@@ -16,15 +16,31 @@
 #ifndef HELIOS_GLOBAL
 #define HELIOS_GLOBAL
 
-//! Macro for marking functions as deprecated.
+//! Macro for marking functions as deprecated with optional custom message.
 #ifdef __GNUC__
-#define DEPRECATED(func) func __attribute__((deprecated))
+#define DEPRECATED_MSG(func, msg) func __attribute__((deprecated(msg)))
+#define DEPRECATED_NOMSG(func) func __attribute__((deprecated))
 #elif defined(_MSC_VER)
-#define DEPRECATED(func) __declspec(deprecated) func
+#define DEPRECATED_MSG(func, msg) __declspec(deprecated(msg)) func
+#define DEPRECATED_NOMSG(func) __declspec(deprecated) func
 #else
 #pragma message("WARNING: You need to implement DEPRECATED for this compiler")
-#define DEPRECATED(func) func
+#define DEPRECATED_MSG(func, msg) func
+#define DEPRECATED_NOMSG(func) func
 #endif
+
+// Helper macro to count arguments
+#define GET_ARG_COUNT(...) GET_ARG_COUNT_IMPL(__VA_ARGS__, 2, 1)
+#define GET_ARG_COUNT_IMPL(_1, _2, N, ...) N
+
+// Main DEPRECATED macro that dispatches based on argument count
+#define DEPRECATED(...) GET_DEPRECATED_MACRO(__VA_ARGS__)(__VA_ARGS__)
+#define GET_DEPRECATED_MACRO(...) GET_DEPRECATED_MACRO_IMPL(GET_ARG_COUNT(__VA_ARGS__))
+#define GET_DEPRECATED_MACRO_IMPL(count) GET_DEPRECATED_MACRO_IMPL2(count)
+#define GET_DEPRECATED_MACRO_IMPL2(count) DEPRECATED_##count##_ARGS
+
+#define DEPRECATED_1_ARGS(func) DEPRECATED_NOMSG(func)
+#define DEPRECATED_2_ARGS(func, msg) DEPRECATED_MSG(func, msg)
 
 //! Pi constant.
 #ifndef M_PI
@@ -995,6 +1011,46 @@ namespace helios {
      * \return distance between p1 and p2 in three dimensions
      */
     [[nodiscard]] float point_distance(const helios::vec3 &p1, const helios::vec3 &p2);
+
+    //! Generate linearly spaced values between two endpoints
+    /**
+     * \param[in] start Starting value
+     * \param[in] end Ending value
+     * \param[in] num Number of uniformly spaced points to generate
+     * \return Vector of linearly spaced float values
+     * \ingroup functions
+     */
+    [[nodiscard]] std::vector<float> linspace(float start, float end, int num);
+
+    //! Generate linearly spaced vec2 values between two endpoints
+    /**
+     * \param[in] start Starting vec2 value
+     * \param[in] end Ending vec2 value
+     * \param[in] num Number of uniformly spaced points to generate
+     * \return Vector of linearly spaced vec2 values
+     * \ingroup functions
+     */
+    [[nodiscard]] std::vector<vec2> linspace(const vec2 &start, const vec2 &end, int num);
+
+    //! Generate linearly spaced vec3 values between two endpoints
+    /**
+     * \param[in] start Starting vec3 value
+     * \param[in] end Ending vec3 value
+     * \param[in] num Number of uniformly spaced points to generate
+     * \return Vector of linearly spaced vec3 values
+     * \ingroup functions
+     */
+    [[nodiscard]] std::vector<vec3> linspace(const vec3 &start, const vec3 &end, int num);
+
+    //! Generate linearly spaced vec4 values between two endpoints
+    /**
+     * \param[in] start Starting vec4 value
+     * \param[in] end Ending vec4 value
+     * \param[in] num Number of uniformly spaced points to generate
+     * \return Vector of linearly spaced vec4 values
+     * \ingroup functions
+     */
+    [[nodiscard]] std::vector<vec4> linspace(const vec4 &start, const vec4 &end, int num);
 
     //! Parse a file string to get the extension
     /**

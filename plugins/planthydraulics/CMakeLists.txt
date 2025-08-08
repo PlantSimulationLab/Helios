@@ -6,6 +6,8 @@ add_library(planthydraulics STATIC "src/PlantHydraulicsModel.cpp" "tests/selfTes
 
 target_include_directories(planthydraulics PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" )
 
-add_executable( planthydraulics_tests "tests/TestMain.cpp" )
-target_link_libraries( planthydraulics_tests PRIVATE planthydraulics )
-add_test( NAME planthydraulics_tests COMMAND planthydraulics_tests )
+if(BUILD_TESTS)
+    add_executable( planthydraulics_tests "tests/TestMain.cpp" )
+    target_link_libraries( planthydraulics_tests PRIVATE planthydraulics )
+    add_test( NAME planthydraulics_tests COMMAND planthydraulics_tests )
+endif()

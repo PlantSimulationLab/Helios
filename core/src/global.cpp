@@ -197,12 +197,9 @@ vec3 helios::rotatePointAboutLine(const vec3 &point, const vec3 &line_base, cons
 }
 
 float helios::calculateTriangleArea(const vec3 &v0, const vec3 &v1, const vec3 &v2) {
-    const float a = (v1 - v0).magnitude();
-    const float b = (v2 - v0).magnitude();
-    const float c = (v2 - v1).magnitude();
-
-    const float s = 0.5f * (a + b + c);
-    return sqrtf(s * (s - a) * (s - b) * (s - c));
+    vec3 edge1 = v1 - v0;
+    vec3 edge2 = v2 - v0;
+    return 0.5f * cross(edge1, edge2).magnitude();
 }
 
 int helios::Date::JulianDay() const {
@@ -2414,6 +2411,90 @@ float helios::sample_ellipsoidal_azimuth(float e, float phi0_degrees, std::minst
         phi -= 2.f * PI_F;
 
     return phi;
+}
+
+std::vector<float> helios::linspace(float start, float end, int num) {
+    if (num <= 0) {
+        helios_runtime_error("ERROR (linspace): Number of points must be greater than 0.");
+    }
+    
+    if (num == 1) {
+        return {start};
+    }
+    
+    std::vector<float> result(num);
+    float step = (end - start) / (num - 1);
+    
+    for (int i = 0; i < num; ++i) {
+        result[i] = start + i * step;
+    }
+    
+    result[num - 1] = end;
+    
+    return result;
+}
+
+std::vector<vec2> helios::linspace(const vec2 &start, const vec2 &end, int num) {
+    if (num <= 0) {
+        helios_runtime_error("ERROR (linspace): Number of points must be greater than 0.");
+    }
+    
+    if (num == 1) {
+        return {start};
+    }
+    
+    std::vector<vec2> result(num);
+    vec2 step = (end - start) / float(num - 1);
+    
+    for (int i = 0; i < num; ++i) {
+        result[i] = start + step * float(i);
+    }
+    
+    result[num - 1] = end;
+    
+    return result;
+}
+
+std::vector<vec3> helios::linspace(const vec3 &start, const vec3 &end, int num) {
+    if (num <= 0) {
+        helios_runtime_error("ERROR (linspace): Number of points must be greater than 0.");
+    }
+    
+    if (num == 1) {
+        return {start};
+    }
+    
+    std::vector<vec3> result(num);
+    vec3 step = (end - start) / float(num - 1);
+    
+    for (int i = 0; i < num; ++i) {
+        result[i] = start + step * float(i);
+    }
+    
+    result[num - 1] = end;
+    
+    return result;
+}
+
+std::vector<vec4> helios::linspace(const vec4 &start, const vec4 &end, int num) {
+    if (num <= 0) {
+        helios_runtime_error("ERROR (linspace): Number of points must be greater than 0.");
+    }
+    
+    if (num == 1) {
+        return {start};
+    }
+    
+    std::vector<vec4> result(num);
+    vec4 step = (end - start) / float(num - 1);
+    
+    for (int i = 0; i < num; ++i) {
+        result[i] = start + step * float(i);
+    }
+    
+    result[num - 1] = end;
+    
+    return result;
 }
 
 // float helios::sample_ellipsoidal_azimuth(

@@ -53,6 +53,8 @@ file( COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/images" DESTINATION "${CMAKE_BINARY_
 file( COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/models" DESTINATION "${CMAKE_BINARY_DIR}/lib/" )
 file( COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/testdata" DESTINATION "${CMAKE_BINARY_DIR}/lib/" )
 
-add_executable( context_tests tests/TestMain.cpp )
-target_link_libraries( context_tests PRIVATE helios )
-add_test( NAME context_tests COMMAND context_tests )
+if(BUILD_TESTS)
+    add_executable( context_tests tests/TestMain.cpp )
+    target_link_libraries( context_tests PRIVATE helios )
+    add_test( NAME context_tests COMMAND context_tests )
+endif()

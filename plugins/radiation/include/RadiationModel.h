@@ -119,7 +119,7 @@ struct RadiationCamera {
      */
     void scaleToGreyTarget(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float target = 0.18f);
 
-    //! Apply auto-white balancing to image data based on Minkowski mean
+    //! Apply auto-white balancing to image data based on Gray World assumption using Minkowski mean
     /**
      * \param[in] red_band_label Label for red channel band
      * \param[in] green_band_label Label for green channel band
@@ -127,6 +127,48 @@ struct RadiationCamera {
      * \param[in] p [optional] Minkowski mean parameter. Default is 5.0.
      */
     void whiteBalance(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float p = 5.0);
+    
+    //! Apply Gray Edge white balancing algorithm
+    /**
+     * Uses edge information to estimate illuminant, assuming edge differences are achromatic on average.
+     * Works better than Gray World for vegetation and textured scenes.
+     * \param[in] red_band_label Label for red channel band
+     * \param[in] green_band_label Label for green channel band
+     * \param[in] blue_band_label Label for blue channel band
+     * \param[in] derivative_order [optional] Order of derivative (1 or 2). Default is 1.
+     * \param[in] p [optional] Minkowski norm parameter. Default is 5.0.
+     */
+    void whiteBalanceGrayEdge(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, int derivative_order = 1, float p = 5.0);
+    
+    //! Apply White Patch white balancing algorithm  
+    /**
+     * Assumes brightest pixels in the scene represent white objects under the illuminant.
+     * \param[in] red_band_label Label for red channel band
+     * \param[in] green_band_label Label for green channel band
+     * \param[in] blue_band_label Label for blue channel band
+     * \param[in] percentile [optional] Percentile of brightest pixels to use. Default is 0.99 (top 1%).
+     */
+    void whiteBalanceWhitePatch(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float percentile = 0.99f);
+    
+    //! Automatically select and apply best white balance algorithm based on scene analysis
+    /**
+     * Analyzes scene characteristics and applies the most appropriate white balance method.
+     * \param[in] red_band_label Label for red channel band
+     * \param[in] green_band_label Label for green channel band
+     * \param[in] blue_band_label Label for blue channel band
+     */
+    void whiteBalanceAuto(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label);
+    
+    //! Apply camera spectral response pre-correction to compensate for known sensor bias
+    /**
+     * Computes correction factors based on camera spectral response curves to neutralize
+     * the inherent spectral bias of the camera sensor before white balance.
+     * \param[in] red_band_label Label for red channel band
+     * \param[in] green_band_label Label for green channel band  
+     * \param[in] blue_band_label Label for blue channel band
+     * \param[in] context Pointer to Helios context for accessing spectral data
+     */
+    void applyCameraSpectralCorrection(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, helios::Context *context);
 
     //! Apply Reinhard tone mapping curve to image data
     /**
@@ -198,11 +240,13 @@ private:
 
     //! Converts a value to the sRGB color space.
     /**
-     * \param[in] x Input value to be converted, expected in the range [0.0, 1.0].
-     * \return Corresponding value in the sRGB color space.
+     * \param[in] x Input value to be converted. Values > 1.0 are clipped to white (1.0).
+     * \return Corresponding value in the sRGB color space, clamped to [0.0, 1.0].
      */
     static float lin_to_srgb(float x) noexcept {
-        x = std::fminf(std::fmaxf(x, 0.0f), 1.0f);
+        // Clamp negative values to 0, bright values > 1.0 to white (1.0)
+        if (x <= 0.0f) return 0.0f;
+        if (x >= 1.0f) return 1.0f;  // Bright pixels clipped to white
         return (x <= 0.0031308f) ? 12.92f * x : 1.055f * std::pow(x, 1.0f / 2.4f) - 0.055f;
     }
 

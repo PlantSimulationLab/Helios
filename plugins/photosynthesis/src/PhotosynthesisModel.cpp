@@ -224,7 +224,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
     for (uint UUID: lUUIDs) {
 
         float i_PAR;
-        if (context->doesPrimitiveDataExist(UUID, "radiation_flux_PAR") && context->getPrimitiveDataType(UUID, "radiation_flux_PAR") == HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(UUID, "radiation_flux_PAR") && context->getPrimitiveDataType("radiation_flux_PAR") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "radiation_flux_PAR", i_PAR);
             i_PAR = i_PAR * 4.57f; // umol/m^2-s (ref https://www.controlledenvironments.org/wp-content/uploads/sites/6/2017/06/Ch01.pdf)
             if (i_PAR < 0) {
@@ -238,7 +238,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
         }
 
         float TL;
-        if (context->doesPrimitiveDataExist(UUID, "temperature") && context->getPrimitiveDataType(UUID, "temperature") == HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(UUID, "temperature") && context->getPrimitiveDataType("temperature") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "temperature", TL);
             if (TL < 200) {
                 if (message_flag) {
@@ -251,7 +251,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
         }
 
         float CO2;
-        if (context->doesPrimitiveDataExist(UUID, "air_CO2") && context->getPrimitiveDataType(UUID, "air_CO2") == HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(UUID, "air_CO2") && context->getPrimitiveDataType("air_CO2") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "air_CO2", CO2);
             if (CO2 < 0) {
                 CO2 = 0;
@@ -264,7 +264,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
         }
 
         float gM;
-        if (context->doesPrimitiveDataExist(UUID, "moisture_conductance") && context->getPrimitiveDataType(UUID, "moisture_conductance") == HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(UUID, "moisture_conductance") && context->getPrimitiveDataType("moisture_conductance") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "moisture_conductance", gM);
             if (gM < 0) {
                 gM = 0;
@@ -278,7 +278,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
 
         // Number of sides
         uint Nsides = 2; // default is 2
-        if (context->doesPrimitiveDataExist(UUID, "twosided_flag") && context->getPrimitiveDataType(UUID, "twosided_flag") == HELIOS_TYPE_UINT) {
+        if (context->doesPrimitiveDataExist(UUID, "twosided_flag") && context->getPrimitiveDataType("twosided_flag") == HELIOS_TYPE_UINT) {
             uint flag;
             context->getPrimitiveData(UUID, "twosided_flag", flag);
             if (flag == 0) {
@@ -287,14 +287,14 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
         }
 
         float stomatal_sidedness = 0.f; // default all stomata on one side (hypostomatous)
-        if (Nsides == 2 && context->doesPrimitiveDataExist(UUID, "stomatal_sidedness") && context->getPrimitiveDataType(UUID, "stomatal_sidedness") == HELIOS_TYPE_FLOAT) {
+        if (Nsides == 2 && context->doesPrimitiveDataExist(UUID, "stomatal_sidedness") && context->getPrimitiveDataType("stomatal_sidedness") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "stomatal_sidedness", stomatal_sidedness);
         }
 
         float gH;
-        if (context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance") && context->getPrimitiveDataType(UUID, "boundarylayer_conductance") == HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance") && context->getPrimitiveDataType("boundarylayer_conductance") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "boundarylayer_conductance", gH);
-        } else if (context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_out") && context->getPrimitiveDataType(UUID, "boundarylayer_conductance_out") == HELIOS_TYPE_FLOAT) {
+        } else if (context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_out") && context->getPrimitiveDataType("boundarylayer_conductance_out") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "boundarylayer_conductance_out", gH);
         } else {
             gH = gH_default;
@@ -629,28 +629,28 @@ void PhotosynthesisModel::printDefaultValueReport(const std::vector<uint> &UUIDs
 
     for (uint UUID: UUIDs) {
 
-        if (!context->doesPrimitiveDataExist(UUID, "radiation_flux_PAR") || context->getPrimitiveDataType(UUID, "radiation_flux_PAR") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "radiation_flux_PAR") || context->getPrimitiveDataType("radiation_flux_PAR") != HELIOS_TYPE_FLOAT) {
             assumed_default_i++;
         }
 
         // surface temperature (K)
-        if (!context->doesPrimitiveDataExist(UUID, "temperature") || context->getPrimitiveDataType(UUID, "temperature") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "temperature") || context->getPrimitiveDataType("temperature") != HELIOS_TYPE_FLOAT) {
             assumed_default_TL++;
         }
 
         // boundary-layer conductance to heat
-        if ((!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance") || context->getPrimitiveDataType(UUID, "boundarylayer_conductance") != HELIOS_TYPE_FLOAT) &&
-            (!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_out") || context->getPrimitiveDataType(UUID, "boundarylayer_conductance_out") != HELIOS_TYPE_FLOAT)) {
+        if ((!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance") || context->getPrimitiveDataType("boundarylayer_conductance") != HELIOS_TYPE_FLOAT) &&
+            (!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance_out") || context->getPrimitiveDataType("boundarylayer_conductance_out") != HELIOS_TYPE_FLOAT)) {
             assumed_default_gH++;
         }
 
         // stomatal conductance
-        if (!context->doesPrimitiveDataExist(UUID, "moisture_conductance") || context->getPrimitiveDataType(UUID, "moisture_conductance") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "moisture_conductance") || context->getPrimitiveDataType("moisture_conductance") != HELIOS_TYPE_FLOAT) {
             assumed_default_gM++;
         }
 
         // ambient air CO2
-        if (!context->doesPrimitiveDataExist(UUID, "air_CO2") || context->getPrimitiveDataType(UUID, "air_CO2") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "air_CO2") || context->getPrimitiveDataType("air_CO2") != HELIOS_TYPE_FLOAT) {
             assumed_default_CO2++;
         }
     }

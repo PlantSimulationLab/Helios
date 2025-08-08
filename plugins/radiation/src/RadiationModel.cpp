@@ -2263,7 +2263,7 @@ void RadiationModel::updateRadiativeProperties() {
         uint UUID = context_UUIDs.at(u);
 
         if (context->doesPrimitiveDataExist(UUID, "reflectivity_spectrum")) {
-            if (context->getPrimitiveDataType(UUID, "reflectivity_spectrum") == HELIOS_TYPE_STRING) {
+            if (context->getPrimitiveDataType("reflectivity_spectrum") == HELIOS_TYPE_STRING) {
                 std::string spectrum_label;
                 context->getPrimitiveData(UUID, "reflectivity_spectrum", spectrum_label);
 
@@ -2289,7 +2289,7 @@ void RadiationModel::updateRadiativeProperties() {
         }
 
         if (context->doesPrimitiveDataExist(UUID, "transmissivity_spectrum")) {
-            if (context->getPrimitiveDataType(UUID, "transmissivity_spectrum") == HELIOS_TYPE_STRING) {
+            if (context->getPrimitiveDataType("transmissivity_spectrum") == HELIOS_TYPE_STRING) {
                 std::string spectrum_label;
                 context->getPrimitiveData(UUID, "transmissivity_spectrum", spectrum_label);
 
@@ -2520,7 +2520,7 @@ void RadiationModel::updateRadiativeProperties() {
             // check for primitive data of form "reflectivity_spectrum" that can be used to calculate reflectivity
             std::string spectrum_label;
             if (context->doesPrimitiveDataExist(UUID, "reflectivity_spectrum")) {
-                if (context->getPrimitiveDataType(UUID, "reflectivity_spectrum") == HELIOS_TYPE_STRING) {
+                if (context->getPrimitiveDataType("reflectivity_spectrum") == HELIOS_TYPE_STRING) {
                     context->getPrimitiveData(UUID, "reflectivity_spectrum", spectrum_label);
                 }
             }
@@ -2587,7 +2587,7 @@ void RadiationModel::updateRadiativeProperties() {
             // check for primitive data of form "transmissivity_spectrum" that can be used to calculate transmissivity
             spectrum_label.resize(0);
             if (context->doesPrimitiveDataExist(UUID, "transmissivity_spectrum")) {
-                if (context->getPrimitiveDataType(UUID, "transmissivity_spectrum") == HELIOS_TYPE_STRING) {
+                if (context->getPrimitiveDataType("transmissivity_spectrum") == HELIOS_TYPE_STRING) {
                     context->getPrimitiveData(UUID, "transmissivity_spectrum", spectrum_label);
                 }
             }
@@ -2717,14 +2717,14 @@ void RadiationModel::updateRadiativeProperties() {
 
         uint UUID = context_UUIDs.at(u);
 
-        if (context->doesPrimitiveDataExist(UUID, "specular_exponent") && context->getPrimitiveDataType(UUID, "specular_exponent") == HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(UUID, "specular_exponent") && context->getPrimitiveDataType("specular_exponent") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "specular_exponent", specular_exponent.at(u));
             specular_exponent_specified = true;
         } else {
             specular_exponent.at(u) = -1.f;
         }
 
-        if (context->doesPrimitiveDataExist(UUID, "specular_scale") && context->getPrimitiveDataType(UUID, "specular_scale") == HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(UUID, "specular_scale") && context->getPrimitiveDataType("specular_scale") == HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(UUID, "specular_scale", specular_scale.at(u));
             specular_scale_specified = true;
         } else {

@@ -1,5 +1,26 @@
 # Changelog
 
+# [1.3.44] 2025-XX-XX
+
+* Added `BUILD_TESTS` CMake option to conditionally build test executables instead of building them by default
+
+## Context
+- Added automatic filtering of zero-area primitives in addSphere(), addTube(), and other geometric construction methods
+- Improved tube generation robustness by handling degenerate cross products when axis vectors are parallel or near-vertical
+- Added minimum size validation (1e-6) for patch primitives to prevent numerical precision issues
+- Added debug warnings for malformed triangles with near-zero area
+- Deprecated `Context::getPrimitiveDataType(uint, const char*)` and `Context::getObjectDataType(uint, const char*)` in favor of `Context::getPrimitiveDataType(const char*)` and `Context::getObjectDataType(const char*)`
+
+## Plant Architecture
+- Fixed leaf prototype scale validation to ensure minimum positive values
+- Updated petiole handling to preserve intended leaf generation
+
+## Radiation
+- Enhanced camera image processing pipeline with spectral correction and improved white balance workflow
+- Added Gray Edge white balance algorithm implementation for color constancy
+- Fixed gamma compression application in image processing pipeline
+- Improved gain adjustment and histogram equalization for better image quality
+
 # [1.3.43] 2025-08-04
 
 - Added `doctest_utils.h` to help with parsing test command-line arguments.
