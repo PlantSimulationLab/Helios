@@ -1,4 +1,4 @@
-option(ENABLE_OPENMP "Enable building with OpenMP" OFF)
+option(ENABLE_OPENMP "Enable building with OpenMP" ON)
 
 # Set CMake policies to avoid warnings on newer CMake versions
 if(POLICY CMP0074)
