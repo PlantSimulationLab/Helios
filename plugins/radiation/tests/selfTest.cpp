@@ -1263,9 +1263,9 @@ DOCTEST_TEST_CASE("RadiationModel Disk Radiation Source Above Circular Element")
 }
 
 DOCTEST_TEST_CASE("RadiationModel Rectangular Radiation Source Above Patch") {
-    float error_threshold = 0.005;
+    float error_threshold = 0.01;
 
-    uint Ndirect_16 = 10000;
+    uint Ndirect_16 = 50000;
 
     float a_16 = 1; // width of patch/source
     float b_16 = 2; // length of patch/source
@@ -1299,7 +1299,7 @@ DOCTEST_TEST_CASE("RadiationModel Rectangular Radiation Source Above Patch") {
                          (logf(std::sqrt((1.f + X2_16) * (1.f + Y2_16) / (1.f + X2_16 + Y2_16))) + X_16 * std::sqrt(1.f + Y2_16) * atanf(X_16 / std::sqrt(1.f + Y2_16)) + Y_16 * std::sqrt(1.f + X2_16) * atanf(Y_16 / std::sqrt(1.f + X2_16)) -
                           X_16 * atanf(X_16) - Y_16 * atanf(Y_16));
 
-    DOCTEST_CHECK(fabs(F12_16 - F12_exact_16) <= 2.f * error_threshold);
+    DOCTEST_CHECK(fabs(F12_16 - F12_exact_16) <= error_threshold);
 }
 
 DOCTEST_TEST_CASE("RadiationModel ROMC Camera Test Verification") {
@@ -1678,7 +1678,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
             function_completed = false;
         }
         // Should either handle gracefully or throw appropriate error
-        DOCTEST_CHECK(true); // Test passes if we reach here without crash
+        DOCTEST_CHECK(function_completed); // Test passes if we reach here without crash
     }
     
     // Test 5: Extrapolation beyond spectrum bounds

@@ -143,7 +143,7 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance(const std::vector<uint> &U
             sprintf(str, "radiation_flux_%s", radiation_bands.at(b).c_str());
             if (!context->doesPrimitiveDataExist(p, str)) {
                 helios::helios_runtime_error("ERROR (EnergyBalanceModel::run): No radiation was found in the context for band " + std::string(radiation_bands.at(b)) + ". Did you run the radiation model for this band?");
-            } else if (context->getPrimitiveDataType(p, str) != helios::HELIOS_TYPE_FLOAT) {
+            } else if (context->getPrimitiveDataType(str) != helios::HELIOS_TYPE_FLOAT) {
                 helios::helios_runtime_error("ERROR (EnergyBalanceModel::run): Radiation primitive data for band " + std::string(radiation_bands.at(b)) + " does not have the correct type of ''float'");
             }
             float R;
@@ -151,7 +151,7 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance(const std::vector<uint> &U
             Rn.at(u) += R;
 
             sprintf(str, "emissivity_%s", radiation_bands.at(b).c_str());
-            if (context->doesPrimitiveDataExist(p, str) && context->getPrimitiveDataType(p, str) == helios::HELIOS_TYPE_FLOAT) {
+            if (context->doesPrimitiveDataExist(p, str) && context->getPrimitiveDataType(str) == helios::HELIOS_TYPE_FLOAT) {
                 context->getPrimitiveData(p, str, emissivity.at(u));
             }
         }

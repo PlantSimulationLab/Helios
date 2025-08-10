@@ -3593,13 +3593,13 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
 
                     color = context->getPrimitiveColor(uint(UUID));
 
-                    if (context->doesPrimitiveDataExist(uint(UUID), "object_label") && context->getPrimitiveDataType(uint(UUID), "object_label") == helios::HELIOS_TYPE_INT) {
+                    if (context->doesPrimitiveDataExist(uint(UUID), "object_label") && context->getPrimitiveDataType( "object_label") == helios::HELIOS_TYPE_INT) {
                         int label;
                         context->getPrimitiveData(uint(UUID), "object_label", label);
                         data["object_label"] = double(label);
                     }
 
-                    if (context->doesPrimitiveDataExist(uint(UUID), "reflectivity_lidar") && context->getPrimitiveDataType(uint(UUID), "reflectivity_lidar") == helios::HELIOS_TYPE_FLOAT) {
+                    if (context->doesPrimitiveDataExist(uint(UUID), "reflectivity_lidar") && context->getPrimitiveDataType("reflectivity_lidar") == helios::HELIOS_TYPE_FLOAT) {
                         float rho;
                         context->getPrimitiveData(uint(UUID), "reflectivity_lidar", rho);
                         data.at("intensity") *= rho;
