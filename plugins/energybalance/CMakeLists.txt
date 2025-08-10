@@ -76,6 +76,8 @@ target_link_libraries(energybalance PUBLIC CUDA::cudart_static)
 
 target_include_directories(energybalance PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-add_executable(energybalance_tests "tests/TestMain.cpp")
-target_link_libraries(energybalance_tests PRIVATE energybalance)
-add_test(NAME energybalance_tests COMMAND energybalance_tests)
+if(BUILD_TESTS)
+    add_executable(energybalance_tests "tests/TestMain.cpp")
+    target_link_libraries(energybalance_tests PRIVATE energybalance)
+    add_test(NAME energybalance_tests COMMAND energybalance_tests)
+endif()

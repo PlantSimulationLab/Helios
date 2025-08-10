@@ -161,7 +161,10 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Invalid Input Handling") {
     DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "temperature", 150.0f)); // Should be replaced with 300K default
     DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "air_CO2", -10.0f)); // Should be clipped to 0
 
+    // Disable messages to avoid warning output about invalid inputs
+    photomodel.disableMessages();
     DOCTEST_CHECK_NOTHROW(photomodel.run());
+    photomodel.enableMessages();
 
     float A_invalid;
     DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "net_photosynthesis", A_invalid));
@@ -205,8 +208,20 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Print Default Value Report") {
     Context context_test;
     PhotosynthesisModel photomodel(&context_test);
 
-    // This should not throw and should execute successfully
+    // Disable messages to avoid verbose output
+    photomodel.disableMessages();
+    
+    // Capture stdout from default value report
+    capture_cout cout_buffer;
     DOCTEST_CHECK_NOTHROW(photomodel.printDefaultValueReport());
+    
+    // Verify the report was generated
+    std::string report_output = cout_buffer.get_captured_output();
+    DOCTEST_CHECK_MESSAGE(report_output.find("Photosynthesis Model Default Value Report") != std::string::npos,
+                          "Default value report should be generated");
+    
+    // Re-enable messages
+    photomodel.enableMessages();
 }
 
 DOCTEST_TEST_CASE("PhotosynthesisModel Empirical Model Type Setting") {
@@ -230,8 +245,14 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Vector Coefficients with Size Mismatch") 
     std::vector<FarquharModelCoefficients> coeffs_vector(2);
     std::vector<uint> UUIDs = {UUID1}; // Only one UUID, but 2 coefficients
 
+    // Disable messages to avoid warning output
+    photomodel.disableMessages();
+    
     // This should print a warning and return without setting coefficients
     DOCTEST_CHECK_NOTHROW(photomodel.setModelCoefficients(coeffs_vector, UUIDs));
+    
+    // Re-enable messages
+    photomodel.enableMessages();
 }
 
 DOCTEST_TEST_CASE("PhotosynthesisModel Vector Coefficients Matching Size") {
@@ -258,6 +279,9 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Library Species") {
     uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
     PhotosynthesisModel photomodel(&context_test);
 
+    // Disable messages to avoid verbose output about setting coefficients
+    photomodel.disableMessages();
+
     // Test getting coefficients from library
     DOCTEST_CHECK_NOTHROW(photomodel.getFarquharCoefficientsFromLibrary("Almond"));
 
@@ -267,6 +291,9 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Library Species") {
     // Test setting coefficients from library for specific UUIDs
     std::vector<uint> UUIDs = {UUID};
     DOCTEST_CHECK_NOTHROW(photomodel.setFarquharCoefficientsFromLibrary("Apple", UUIDs));
+
+    // Re-enable messages
+    photomodel.enableMessages();
 
     // Verify coefficients were set correctly
     FarquharModelCoefficients almond_coeffs = photomodel.getFarquharModelCoefficients(UUID);
@@ -288,12 +315,26 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Default Value Reports") {
     uint UUID2 = context_test.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
     PhotosynthesisModel photomodel(&context_test);
 
-    // Test printing default value report for all primitives
-    DOCTEST_CHECK_NOTHROW(photomodel.printDefaultValueReport());
+    // Disable messages to avoid verbose output
+    photomodel.disableMessages();
 
-    // Test printing default value report for specific UUIDs
+    // Capture stdout from default value report for all primitives
+    capture_cout cout_buffer_all;
+    DOCTEST_CHECK_NOTHROW(photomodel.printDefaultValueReport());
+    std::string report_all = cout_buffer_all.get_captured_output();
+    DOCTEST_CHECK_MESSAGE(report_all.find("Photosynthesis Model Default Value Report") != std::string::npos,
+                          "Default value report should be generated for all primitives");
+
+    // Capture stdout from default value report for specific UUIDs
+    capture_cout cout_buffer_subset;
     std::vector<uint> UUIDs = {UUID1, UUID2};
     DOCTEST_CHECK_NOTHROW(photomodel.printDefaultValueReport(UUIDs));
+    std::string report_subset = cout_buffer_subset.get_captured_output();
+    DOCTEST_CHECK_MESSAGE(report_subset.find("Photosynthesis Model Default Value Report") != std::string::npos,
+                          "Default value report should be generated for specific UUIDs");
+
+    // Re-enable messages
+    photomodel.enableMessages();
 }
 
 DOCTEST_TEST_CASE("PhotosynthesisModel Run with Specific UUIDs") {
@@ -306,6 +347,9 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Run with Specific UUIDs") {
     context_test.setPrimitiveData(UUID1, "radiation_flux_PAR", 500.0f);
     context_test.setPrimitiveData(UUID2, "radiation_flux_PAR", 600.0f);
 
+    // Disable messages to avoid default value reports
+    photomodel.disableMessages();
+
     // Test running model on specific UUIDs
     std::vector<uint> UUIDs = {UUID1};
     DOCTEST_CHECK_NOTHROW(photomodel.run(UUIDs));
@@ -316,6 +360,9 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Run with Specific UUIDs") {
     // UUID2 shouldn't have been processed by run(UUIDs), but run() without arguments processes all
     DOCTEST_CHECK_NOTHROW(photomodel.run());
     DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID2, "net_photosynthesis", A2));
+
+    // Re-enable messages
+    photomodel.enableMessages();
 
     DOCTEST_CHECK(A1 != 0.0f);
     DOCTEST_CHECK(A2 != 0.0f);
@@ -451,6 +498,9 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Edge Cases and Error Conditions") {
     uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
     PhotosynthesisModel photomodel(&context_test);
 
+    // Disable messages to avoid warning output
+    photomodel.disableMessages();
+
     // Test with unknown optional output primitive data
     DOCTEST_CHECK_NOTHROW(photomodel.optionalOutputPrimitiveData("unknown_primitive"));
 
@@ -465,14 +515,24 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Edge Cases and Error Conditions") {
     FarquharModelCoefficients farq_default = photomodel.getFarquharModelCoefficients(UUID);
     DOCTEST_CHECK(farq_default.Vcmax == doctest::Approx(-1.0f).epsilon(err_tol)); // Uninitialized value
 
-    // Test with extreme input values that trigger warnings
+    // Test with extreme input values that trigger warnings - capture stderr
     context_test.setPrimitiveData(UUID, "radiation_flux_PAR", -100.0f); // Negative PAR
     context_test.setPrimitiveData(UUID, "temperature", 150.0f); // Very low temperature
     context_test.setPrimitiveData(UUID, "air_CO2", -50.0f); // Negative CO2
     context_test.setPrimitiveData(UUID, "moisture_conductance", -0.1f); // Negative moisture conductance
     context_test.setPrimitiveData(UUID, "boundarylayer_conductance", -1.0f); // Negative boundary layer conductance
 
+    // Capture warnings from extreme conditions (expected behavior)
+    capture_cerr cerr_buffer;
     DOCTEST_CHECK_NOTHROW(photomodel.run());
+    
+    // Verify we captured convergence warnings (expected for these extreme conditions)
+    std::string captured_warnings = cerr_buffer.get_captured_output();
+    DOCTEST_CHECK_MESSAGE(captured_warnings.find("Photosynthesis model failed to converge") != std::string::npos, 
+                          "Extreme conditions should produce convergence warnings");
+
+    // Re-enable messages
+    photomodel.enableMessages();
 
     // Verify the model still produces reasonable output despite bad inputs
     float A;

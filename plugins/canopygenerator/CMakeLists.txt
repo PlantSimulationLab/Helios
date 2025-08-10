@@ -18,6 +18,8 @@ target_include_directories(canopygenerator PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/i
 
 file( COPY textures DESTINATION "${CMAKE_BINARY_DIR}/plugins/canopygenerator/" )
 
-add_executable( canopygenerator_tests "tests/TestMain.cpp" )
-target_link_libraries( canopygenerator_tests PRIVATE canopygenerator )
-add_test( NAME canopygenerator_tests COMMAND canopygenerator_tests )
+if(BUILD_TESTS)
+    add_executable( canopygenerator_tests "tests/TestMain.cpp" )
+    target_link_libraries( canopygenerator_tests PRIVATE canopygenerator )
+    add_test( NAME canopygenerator_tests COMMAND canopygenerator_tests )
+endif()

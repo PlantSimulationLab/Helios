@@ -98,14 +98,6 @@ std::string vec_to_string(const helios::vec3 &v);
  */
 std::string vec_to_string(const helios::int2 &v);
 
-//! Function to linearly space between two vectors
-/**
- * \param[in] a Start point coordinates
- * \param[in] b End point coordinates
- * \param[in] num_points Total number of points (including a & b)
- */
-[[nodiscard]] std::vector<helios::vec3> linspace(const helios::vec3 &a, const helios::vec3 &b, int num_points);
-
 //! Function to return interpolated vector based on keypoints
 /**
  * \param[in] keypoints Vector of keypoints

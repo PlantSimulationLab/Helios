@@ -1163,6 +1163,20 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             internode_axis.normalize();
         }
 
+        // vec3 displacement = dr_internode * internode_axis;
+        // // Ensure minimum coordinate-wise displacement to avoid floating-point precision issues
+        // if (fabs(displacement.x) < 1e-5f && fabs(displacement.y) < 1e-5f) {
+        //     // If both x and y displacements are tiny, add small perturbation to avoid degenerate geometry
+        //     if (fabs(internode_axis.z) > 0.9f) {
+        //         // Nearly vertical - add horizontal perturbation
+        //         displacement.x = (internode_axis.x >= 0) ? 1e-5f : -1e-5f;
+        //     } else {
+        //         // Not vertical - add z perturbation
+        //         displacement.z = (internode_axis.z >= 0) ? 1e-5f : -1e-5f;
+        //     }
+        // }
+        // phytomer_internode_vertices.at(inode_segment) = phytomer_internode_vertices.at(inode_segment - 1) + displacement;
+
         phytomer_internode_vertices.at(inode_segment) = phytomer_internode_vertices.at(inode_segment - 1) + dr_internode * internode_axis;
 
         phytomer_internode_radii.at(inode_segment) = internode_radius;

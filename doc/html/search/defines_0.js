@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['deprecated_0',['DEPRECATED',['../global_8h.html#aaf225a2b96038de3a42d61a1fa63654b',1,'global.h']]]
+  ['deprecated_5fmsg_0',['DEPRECATED_MSG',['../global_8h.html#a7dc23f2c55106e846926af3a9a2251ae',1,'global.h']]]
 ];

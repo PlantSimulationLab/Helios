@@ -113,7 +113,7 @@ void PlantArchitecture::accumulateHourlyLeafPhotosynthesis() const {
                         for (uint UUID: context_ptr->getObjectPrimitiveUUIDs(leaf_objID)) {
                             float lUUID_area = context_ptr->getPrimitiveArea(UUID);
                             float leaf_A = 0.f;
-                            if (context_ptr->doesPrimitiveDataExist(UUID, "net_photosynthesis") && context_ptr->getPrimitiveDataType(UUID, "net_photosynthesis") == HELIOS_TYPE_FLOAT) {
+                            if (context_ptr->doesPrimitiveDataExist(UUID, "net_photosynthesis") && context_ptr->getPrimitiveDataType("net_photosynthesis") == HELIOS_TYPE_FLOAT) {
                                 context_ptr->getPrimitiveData(UUID, "net_photosynthesis", leaf_A);
                             }
 
@@ -121,7 +121,7 @@ void PlantArchitecture::accumulateHourlyLeafPhotosynthesis() const {
                             ; // hourly net photosynthesis (mol C) from umol CO2 m-2 sec-1
                             // std::cout<< "hourly photosynthesis mol C: "<< new_hourly_photo<<std::endl;
                             float current_net_photo = 0.f;
-                            if (context_ptr->doesPrimitiveDataExist(UUID, "cumulative_net_photosynthesis") && context_ptr->getPrimitiveDataType(UUID, "cumulative_net_photosynthesis") == HELIOS_TYPE_FLOAT) {
+                            if (context_ptr->doesPrimitiveDataExist(UUID, "cumulative_net_photosynthesis") && context_ptr->getPrimitiveDataType("cumulative_net_photosynthesis") == HELIOS_TYPE_FLOAT) {
                                 context_ptr->getPrimitiveData(UUID, "cumulative_net_photosynthesis", current_net_photo);
                             }
                             current_net_photo += new_hourly_photo;
@@ -159,7 +159,7 @@ void PlantArchitecture::accumulateShootPhotosynthesis() const {
                 for (const auto &phytomer: shoot->phytomers) {
                     for (const auto &leaf_objID: flatten(phytomer->leaf_objIDs)) {
                         for (uint UUID: context_ptr->getObjectPrimitiveUUIDs(leaf_objID)) {
-                            if (context_ptr->doesPrimitiveDataExist(UUID, "cumulative_net_photosynthesis") && context_ptr->getPrimitiveDataType(UUID, "cumulative_net_photosynthesis") == HELIOS_TYPE_FLOAT) {
+                            if (context_ptr->doesPrimitiveDataExist(UUID, "cumulative_net_photosynthesis") && context_ptr->getPrimitiveDataType("cumulative_net_photosynthesis") == HELIOS_TYPE_FLOAT) {
                                 float A;
                                 context_ptr->getPrimitiveData(UUID, "cumulative_net_photosynthesis", A);
                                 net_photosynthesis += A;

@@ -151,7 +151,12 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius
             uv2.x = 1;
         }
 
-        UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
+        uint triangle_uuid = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+        if (getPrimitiveArea(triangle_uuid) > 0) {
+            UUID.push_back(triangle_uuid);
+        } else {
+            deletePrimitive(triangle_uuid);
+        }
     }
 
     // top cap
@@ -179,7 +184,12 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius
             uv2.x = 1;
         }
 
-        UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
+        uint triangle_uuid = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+        if (getPrimitiveArea(triangle_uuid) > 0) {
+            UUID.push_back(triangle_uuid);
+        } else {
+            deletePrimitive(triangle_uuid);
+        }
     }
 
     // middle
@@ -213,8 +223,19 @@ uint Context::addSphereObject(uint Ndivs, const vec3 &center, const vec3 &radius
                 uv3.x = 1;
             }
 
-            UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
-            UUID.push_back(addTriangle(v0, v2, v3, texturefile, uv0, uv2, uv3));
+            uint triangle_uuid1 = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+            if (getPrimitiveArea(triangle_uuid1) > 0) {
+                UUID.push_back(triangle_uuid1);
+            } else {
+                deletePrimitive(triangle_uuid1);
+            }
+            
+            uint triangle_uuid2 = addTriangle(v0, v2, v3, texturefile, uv0, uv2, uv3);
+            if (getPrimitiveArea(triangle_uuid2) > 0) {
+                UUID.push_back(triangle_uuid2);
+            } else {
+                deletePrimitive(triangle_uuid2);
+            }
         }
     }
 
@@ -479,8 +500,12 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
             } else {
                 axial_vector = axial_vector / mag;
             }
-            if (fabs(axial_vector * initial_radial) > 0.99f) {
+            if (fabs(axial_vector * initial_radial) > 0.95f) {
                 initial_radial = vec3(0.0f, 1.0f, 0.0f); // Avoid parallel vectors
+            }
+            // Also handle nearly vertical axes
+            if (fabs(axial_vector.z) > 0.95f) {
+                initial_radial = vec3(1.0f, 0.0f, 0.0f); // Use horizontal radial for vertical axes
             }
             previous_radial_dir = cross(axial_vector, initial_radial).normalize();
         } else {
@@ -498,9 +523,19 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
 
             // Calculate radial direction using parallel transport
             vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
-            if (rotation_axis.magnitude() > 1e-6) {
+            if (rotation_axis.magnitude() > 1e-5) { // More conservative threshold
                 float angle = acos(std::clamp(previous_axial_vector * axial_vector, -1.0f, 1.0f));
                 previous_radial_dir = rotatePointAboutLine(previous_radial_dir, nullorigin, rotation_axis, angle);
+            } else {
+                // Vectors are nearly parallel, use robust fallback
+                vec3 fallback_radial = vec3(1.0f, 0.0f, 0.0f);
+                if (fabs(axial_vector * fallback_radial) > 0.95f) {
+                    fallback_radial = vec3(0.0f, 1.0f, 0.0f);
+                }
+                if (fabs(axial_vector.z) > 0.95f) {
+                    fallback_radial = vec3(1.0f, 0.0f, 0.0f);
+                }
+                previous_radial_dir = cross(axial_vector, fallback_radial).normalize();
             }
         }
 
@@ -612,8 +647,12 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
             } else {
                 axial_vector = axial_vector / mag;
             }
-            if (fabs(axial_vector * initial_radial) > 0.99f) {
+            if (fabs(axial_vector * initial_radial) > 0.95f) {
                 initial_radial = vec3(0.0f, 1.0f, 0.0f); // Avoid parallel vectors
+            }
+            // Also handle nearly vertical axes
+            if (fabs(axial_vector.z) > 0.95f) {
+                initial_radial = vec3(1.0f, 0.0f, 0.0f); // Use horizontal radial for vertical axes
             }
             previous_radial_dir = cross(axial_vector, initial_radial).normalize();
         } else {
@@ -631,9 +670,19 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
 
             // Calculate radial direction using parallel transport
             vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
-            if (rotation_axis.magnitude() > 1e-6) {
+            if (rotation_axis.magnitude() > 1e-5) {
                 float angle = acos(std::clamp(previous_axial_vector * axial_vector, -1.0f, 1.0f));
                 previous_radial_dir = rotatePointAboutLine(previous_radial_dir, nullorigin, rotation_axis, angle);
+            } else {
+                // Vectors are nearly parallel, use robust fallback
+                vec3 fallback_radial = vec3(1.0f, 0.0f, 0.0f);
+                if (fabs(axial_vector * fallback_radial) > 0.95f) {
+                    fallback_radial = vec3(0.0f, 1.0f, 0.0f);
+                }
+                if (fabs(axial_vector.z) > 0.95f) {
+                    fallback_radial = vec3(1.0f, 0.0f, 0.0f);
+                }
+                previous_radial_dir = cross(axial_vector, fallback_radial).normalize();
             }
         }
 
@@ -652,11 +701,10 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
         }
     }
 
-    std::vector<uint> UUIDs(2 * (node_count - 1) * radial_subdivisions);
+    std::vector<uint> UUIDs;
+    UUIDs.reserve(2 * (node_count - 1) * radial_subdivisions); // Reserve expected capacity
     vec3 v0, v1, v2;
     vec2 uv0, uv1, uv2;
-
-    int ii = 0;
     for (int j = 0; j < radial_subdivisions; j++) {
         for (int i = 0; i < node_count - 1; i++) {
             v0 = triangle_vertices[i][j];
@@ -667,7 +715,12 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
             uv1 = uv[i + 1][j + 1];
             uv2 = uv[i][j + 1];
 
-            UUIDs.at(ii) = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+            uint triangle_uuid = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+            if (getPrimitiveArea(triangle_uuid) > 0) {
+                UUIDs.push_back(triangle_uuid);
+            } else {
+                deletePrimitive(triangle_uuid);
+            }
 
             v0 = triangle_vertices[i][j];
             v1 = triangle_vertices[i + 1][j];
@@ -677,9 +730,12 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
             uv1 = uv[i + 1][j];
             uv2 = uv[i + 1][j + 1];
 
-            UUIDs.at(ii + 1) = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
-
-            ii += 2;
+            uint triangle_uuid2 = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+            if (getPrimitiveArea(triangle_uuid2) > 0) {
+                UUIDs.push_back(triangle_uuid2);
+            } else {
+                deletePrimitive(triangle_uuid2);
+            }
         }
     }
 
@@ -1036,8 +1092,8 @@ uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &s
         helios_runtime_error("ERROR (Context::addDiskObject): Texture file " + std::string(texturefile) + " does not exist.");
     }
 
-    std::vector<uint> UUID(Ndivs.x + Ndivs.x * (Ndivs.y - 1) * 2);
-    int i = 0;
+    std::vector<uint> UUID;
+    UUID.reserve(Ndivs.x + Ndivs.x * (Ndivs.y - 1) * 2); // Reserve expected capacity
     for (int r = 0; r < Ndivs.y; r++) {
         for (int t = 0; t < Ndivs.x; t++) {
             float dtheta = 2.f * PI_F / float(Ndivs.x);
@@ -1050,23 +1106,42 @@ uint Context::addDiskObject(const int2 &Ndivs, const vec3 &center, const vec2 &s
             float ry_plus = size.y / float(Ndivs.y) * float(r + 1);
 
             if (r == 0) {
-                UUID.at(i) = addTriangle(make_vec3(0, 0, 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texturefile, make_vec2(0.5, 0.5),
+                uint triangle_uuid = addTriangle(make_vec3(0, 0, 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texturefile, make_vec2(0.5, 0.5),
                                          make_vec2(0.5f * (1.f + cosf(theta) * rx_plus / size.x), 0.5f * (1.f + sinf(theta) * ry_plus / size.y)),
                                          make_vec2(0.5f * (1.f + cosf(theta_plus) * rx_plus / size.x), 0.5f * (1.f + sinf(theta_plus) * ry_plus / size.y)));
+                if (getPrimitiveArea(triangle_uuid) > 0) {
+                    UUID.push_back(triangle_uuid);
+                } else {
+                    deletePrimitive(triangle_uuid);
+                    continue;
+                }
             } else {
-                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx * cosf(theta), ry * sinf(theta), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), texturefile,
+                uint triangle_uuid1 = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx * cosf(theta), ry * sinf(theta), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), texturefile,
                                          make_vec2(0.5f * (1.f + cosf(theta_plus) * rx / size.x), 0.5f * (1.f + sinf(theta_plus) * ry / size.y)), make_vec2(0.5f * (1.f + cosf(theta) * rx / size.x), 0.5f * (1.f + sinf(theta) * ry / size.y)),
                                          make_vec2(0.5f * (1.f + cosf(theta) * rx_plus / size.x), 0.5f * (1.f + sinf(theta) * ry_plus / size.y)));
-                i++;
-                UUID.at(i) = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texturefile,
+                if (getPrimitiveArea(triangle_uuid1) > 0) {
+                    UUID.push_back(triangle_uuid1);
+                } else {
+                    deletePrimitive(triangle_uuid1);
+                }
+                
+                uint triangle_uuid2 = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texturefile,
                                          make_vec2(0.5f * (1.f + cosf(theta_plus) * rx / size.x), 0.5f * (1.f + sinf(theta_plus) * ry / size.y)), make_vec2(0.5f * (1.f + cosf(theta) * rx_plus / size.x), 0.5f * (1.f + sinf(theta) * ry_plus / size.y)),
                                          make_vec2(0.5f * (1.f + cosf(theta_plus) * rx_plus / size.x), 0.5f * (1.f + sinf(theta_plus) * ry_plus / size.y)));
+                if (getPrimitiveArea(triangle_uuid2) > 0) {
+                    UUID.push_back(triangle_uuid2);
+                } else {
+                    deletePrimitive(triangle_uuid2);
+                    continue;
+                }
             }
-            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.elevation, "y");
-            getPrimitivePointer_private(UUID.at(i))->rotate(rotation.azimuth, "z");
-            getPrimitivePointer_private(UUID.at(i))->translate(center);
-
-            i++;
+            // Apply transformations to all valid triangles added in this iteration
+            size_t start_idx = UUID.size() - (r == 0 ? 1 : 2);
+            for (size_t uuid_idx = start_idx; uuid_idx < UUID.size(); uuid_idx++) {
+                getPrimitivePointer_private(UUID.at(uuid_idx))->rotate(rotation.elevation, "y");
+                getPrimitivePointer_private(UUID.at(uuid_idx))->rotate(rotation.azimuth, "z");
+                getPrimitivePointer_private(UUID.at(uuid_idx))->translate(center);
+            }
         }
     }
 
@@ -1340,7 +1415,12 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
             uv2 = uv[j + 1][i];
 
             if ((v1 - v0).magnitude() > 1e-6 && (v2 - v0).magnitude() > 1e-6 && (v2 - v1).magnitude() > 1e-6) {
-                UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
+                uint triangle_uuid = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+                if (getPrimitiveArea(triangle_uuid) > 0) {
+                    UUID.push_back(triangle_uuid);
+                } else {
+                    deletePrimitive(triangle_uuid);
+                }
             }
 
             v0 = xyz[j][i];
@@ -1352,7 +1432,12 @@ uint Context::addConeObject(uint Ndivs, const vec3 &node0, const vec3 &node1, fl
             uv2 = uv[j + 1][i + 1];
 
             if ((v1 - v0).magnitude() > 1e-6 && (v2 - v0).magnitude() > 1e-6 && (v2 - v1).magnitude() > 1e-6) {
-                UUID.push_back(addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2));
+                uint triangle_uuid = addTriangle(v0, v1, v2, texturefile, uv0, uv1, uv2);
+                if (getPrimitiveArea(triangle_uuid) > 0) {
+                    UUID.push_back(triangle_uuid);
+                } else {
+                    deletePrimitive(triangle_uuid);
+                }
             }
         }
     }
@@ -1935,8 +2020,12 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
             } else {
                 axial_vector = axial_vector / mag;
             }
-            if (fabs(axial_vector * initial_radial) > 0.99f) {
+            if (fabs(axial_vector * initial_radial) > 0.95f) {
                 initial_radial = vec3(0.0f, 1.0f, 0.0f); // Avoid parallel vectors
+            }
+            // Also handle nearly vertical axes
+            if (fabs(axial_vector.z) > 0.95f) {
+                initial_radial = vec3(1.0f, 0.0f, 0.0f); // Use horizontal radial for vertical axes
             }
             previous_radial_dir = cross(axial_vector, initial_radial).normalize();
         } else {
@@ -1954,9 +2043,19 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
 
             // Calculate radial direction using parallel transport
             vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
-            if (rotation_axis.magnitude() > 1e-6) {
+            if (rotation_axis.magnitude() > 1e-5) { // More conservative threshold
                 float angle = acos(std::clamp(previous_axial_vector * axial_vector, -1.0f, 1.0f));
                 previous_radial_dir = rotatePointAboutLine(previous_radial_dir, nullorigin, rotation_axis, angle);
+            } else {
+                // Vectors are nearly parallel, use robust fallback
+                vec3 fallback_radial = vec3(1.0f, 0.0f, 0.0f);
+                if (fabs(axial_vector * fallback_radial) > 0.95f) {
+                    fallback_radial = vec3(0.0f, 1.0f, 0.0f);
+                }
+                if (fabs(axial_vector.z) > 0.95f) {
+                    fallback_radial = vec3(1.0f, 0.0f, 0.0f);
+                }
+                previous_radial_dir = cross(axial_vector, fallback_radial).normalize();
             }
             //            else {
             //                // Handle the case of nearly parallel vectors
@@ -2058,8 +2157,12 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
             } else {
                 axial_vector = axial_vector / mag;
             }
-            if (fabs(axial_vector * initial_radial) > 0.99f) {
+            if (fabs(axial_vector * initial_radial) > 0.95f) {
                 initial_radial = vec3(0.0f, 1.0f, 0.0f); // Avoid parallel vectors
+            }
+            // Also handle nearly vertical axes
+            if (fabs(axial_vector.z) > 0.95f) {
+                initial_radial = vec3(1.0f, 0.0f, 0.0f); // Use horizontal radial for vertical axes
             }
             previous_radial_dir = cross(axial_vector, initial_radial).normalize();
         } else {
@@ -2077,9 +2180,19 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
 
             // Calculate radial direction using parallel transport
             vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
-            if (rotation_axis.magnitude() > 1e-6) {
+            if (rotation_axis.magnitude() > 1e-5) { // More conservative threshold
                 float angle = acos(std::clamp(previous_axial_vector * axial_vector, -1.0f, 1.0f));
                 previous_radial_dir = rotatePointAboutLine(previous_radial_dir, nullorigin, rotation_axis, angle);
+            } else {
+                // Vectors are nearly parallel, use robust fallback
+                vec3 fallback_radial = vec3(1.0f, 0.0f, 0.0f);
+                if (fabs(axial_vector * fallback_radial) > 0.95f) {
+                    fallback_radial = vec3(0.0f, 1.0f, 0.0f);
+                }
+                if (fabs(axial_vector.z) > 0.95f) {
+                    fallback_radial = vec3(1.0f, 0.0f, 0.0f);
+                }
+                previous_radial_dir = cross(axial_vector, fallback_radial).normalize();
             }
         }
 

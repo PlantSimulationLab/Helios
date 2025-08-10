@@ -34,8 +34,8 @@ uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoor
 }
 
 uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const RGBAcolor &color) {
-    if (size.x == 0 || size.y == 0) {
-        helios_runtime_error("ERROR (Context::addPatch): Size of patch must be greater than 0.");
+    if (size.x < 1e-6f || size.y < 1e-6f) {
+        helios_runtime_error("ERROR (Context::addPatch): Size of patch must be greater than 1e-6 to avoid numerical precision issues.");
     }
 
     auto *patch_new = (new Patch(color, 0, currentUUID));
@@ -92,8 +92,8 @@ uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoor
 }
 
 uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoord &rotation, const char *texture_file, const helios::vec2 &uv_center, const helios::vec2 &uv_size) {
-    if (size.x == 0 || size.y == 0) {
-        helios_runtime_error("ERROR (Context::addPatch): Size of patch must be greater than 0.");
+    if (size.x < 1e-6f || size.y < 1e-6f) {
+        helios_runtime_error("ERROR (Context::addPatch): Size of patch must be greater than 1e-6 to avoid numerical precision issues.");
     }
 
     if (uv_center.x - 0.5 * uv_size.x < -1e-3 || uv_center.y - 0.5 * uv_size.y < -1e-3 || uv_center.x + 0.5 * uv_size.x - 1.f > 1e-3 || uv_center.y + 0.5 * uv_size.y - 1.f > 1e-3) {
@@ -140,9 +140,11 @@ uint Context::addTriangle(const vec3 &vertex0, const vec3 &vertex1, const vec3 &
 uint Context::addTriangle(const vec3 &vertex0, const vec3 &vertex1, const vec3 &vertex2, const RGBAcolor &color) {
     auto *tri_new = (new Triangle(vertex0, vertex1, vertex2, color, 0, currentUUID));
 
-    //    if( tri_new->getArea()==0 ){
-    //        helios_runtime_error("ERROR (Context::addTriangle): Triangle has area of zero.");
-    //    }
+#ifdef HELIOS_DEBUG
+    if ( calculateTriangleArea(vertex0, vertex1, vertex2) < 1e-10 ) {
+        std::cerr << "WARNING (Context::addTriangle): Triangle is malformed and has near-zero surface area." << std::endl;
+    }
+#endif
 
     primitives[currentUUID] = tri_new;
     currentUUID++;
@@ -157,9 +159,11 @@ uint Context::addTriangle(const helios::vec3 &vertex0, const helios::vec3 &verte
 
     auto *tri_new = (new Triangle(vertex0, vertex1, vertex2, texture_file, uv, textures, 0, currentUUID));
 
-    //    if( tri_new->getArea()==0 ){
-    //        helios_runtime_error("ERROR (Context::addTriangle): Triangle has area of zero.");
-    //    }
+#ifdef HELIOS_DEBUG
+    if ( calculateTriangleArea(vertex0, vertex1, vertex2) < 1e-10 ) {
+        std::cerr << "WARNING (Context::addTriangle): Triangle is malformed and has near-zero surface area." << std::endl;
+    }
+#endif
 
     primitives[currentUUID] = tri_new;
     currentUUID++;

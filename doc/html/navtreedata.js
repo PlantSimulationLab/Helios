@@ -86,7 +86,7 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "@ref canopy_WUE_tutorial",
-"bean_8cpp_source.html"
+"build_2_c_make_files_23_831_86_2_compiler_id_c_x_x_2_c_make_c_x_x_compiler_id_8cpp_source.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';
