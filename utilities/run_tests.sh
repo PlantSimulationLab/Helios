@@ -26,7 +26,7 @@ run_command() {
     if [ -n "$LOG_FILE" ]; then
         if [ "$VERBOSE" == "ON" ]; then
             "$@" 2>&1 | tee -a "$LOG_FILE"
-            return ${PIPESTATUS[0]}
+            return "${PIPESTATUS[0]}"
         else
             "$@" >> "$LOG_FILE" 2>&1
         fi
@@ -177,7 +177,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ -n "$LOG_FILE" ]; then
-  > "$LOG_FILE"  # Clear the log file
+  true > "$LOG_FILE"  # Clear the log file
 fi
 
 if [ "${MEMCHECK}" == "ON" ];then
@@ -336,7 +336,6 @@ else
     echo "Building ${#BUILD_TARGETS[@]} test target(s): ${BUILD_TARGETS[*]}"
     
     # Validate that all requested test targets exist
-    echo "Validating test targets..."
     
     # Get list of available targets from CMake
     AVAILABLE_TARGETS_RAW=$(cmake --build ./ --target help 2>/dev/null | grep -E "^\.\.\. " | sed 's/^\.\.\. //' || echo "")
@@ -353,7 +352,7 @@ else
       echo
       echo "Available test targets:"
       echo "$AVAILABLE_TARGETS_RAW" | grep "_tests$" | sort | sed 's/^/  /'
-      if [ $(echo "$AVAILABLE_TARGETS_RAW" | grep "_tests$" | wc -l) -eq 0 ]; then
+      if [ "$(echo "$AVAILABLE_TARGETS_RAW" | grep "_tests$" | wc -l)" -eq 0 ]; then
         echo "  No test targets found. Make sure BUILD_TESTS=ON was used."
       fi
       echo
@@ -380,7 +379,6 @@ else
     echo -e "\r\x1B[32mCompiling test targets...done.\x1B[39m"
     
     # Discover available test executables after compilation
-    echo "Verifying test executables..."
     
     TEST_EXECUTABLES=()
     for target in "${BUILD_TARGETS[@]}"; do
@@ -493,10 +491,10 @@ else
         fi
         
       fi
-      
+
     done
 
-    cd "$TEMP_BASE"
+    cd "$TEMP_BASE" || cleanup
 
   fi
 fi

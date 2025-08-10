@@ -2322,8 +2322,47 @@ float helios::interp1(const std::vector<helios::vec2> &points, float x) {
         return points[0].y;
     }
 
-    // Validate input: ensure x values are monotonic (either increasing or decreasing) and unique
+    // Fast path: check first if data is increasing (most common case)
+    // This avoids full validation for performance-critical applications
     constexpr float EPSILON = 1.0E-5f;
+    bool is_likely_increasing = points.size() < 2 || points[1].x > points[0].x;
+    
+    if (is_likely_increasing) {
+        // Quick verification for increasing sequence
+        bool is_valid_increasing = true;
+        for (size_t i = 1; i < points.size() && is_valid_increasing; ++i) {
+            float deltaX = points[i].x - points[i - 1].x;
+            if (deltaX <= EPSILON) {
+                is_valid_increasing = false;
+            }
+        }
+        
+        if (is_valid_increasing) {
+            // Handle extrapolation cases
+            if (x <= points.front().x) {
+                return points.front().y;
+            }
+            if (x >= points.back().x) {
+                return points.back().y;
+            }
+            
+            // Optimized binary search for increasing sequence
+            auto it = std::lower_bound(points.begin(), points.end(), x, 
+                [](const vec2 &point, float value) { return point.x < value; });
+            
+            size_t upper_idx = std::distance(points.begin(), it);
+            size_t lower_idx = upper_idx - 1;
+            
+            const vec2 &p1 = points[lower_idx];
+            const vec2 &p2 = points[upper_idx];
+            
+            // Linear interpolation
+            float t = (x - p1.x) / (p2.x - p1.x);
+            return p1.y + t * (p2.y - p1.y);
+        }
+    }
+    
+    // Fallback: full validation for decreasing or invalid sequences
     bool is_increasing = true;
     bool is_decreasing = true;
 
@@ -2346,50 +2385,33 @@ float helios::interp1(const std::vector<helios::vec2> &points, float x) {
     }
 
     // Handle extrapolation cases
-    if (is_increasing) {
-        if (x <= points.front().x) {
-            return points.front().y; // Extrapolate to first point
-        }
-        if (x >= points.back().x) {
-            return points.back().y; // Extrapolate to last point
-        }
-    } else { // is_decreasing
+    if (is_decreasing) {
         if (x >= points.front().x) {
-            return points.front().y; // Extrapolate to first point
+            return points.front().y;
         }
         if (x <= points.back().x) {
-            return points.back().y; // Extrapolate to last point
+            return points.back().y;
         }
+        
+        // Optimized binary search for decreasing sequence
+        auto it = std::lower_bound(points.begin(), points.end(), x, 
+            [](const vec2 &point, float value) { return point.x > value; });
+        
+        size_t upper_idx = std::distance(points.begin(), it);
+        if (upper_idx == 0) upper_idx = 1;
+        size_t lower_idx = upper_idx - 1;
+        
+        const vec2 &p1 = points[lower_idx];
+        const vec2 &p2 = points[upper_idx];
+        
+        // Linear interpolation
+        float t = (x - p1.x) / (p2.x - p1.x);
+        return p1.y + t * (p2.y - p1.y);
     }
 
-    // Find the interpolation interval
-    size_t lower_idx = 0;
-    size_t upper_idx = 1;
-
-    if (is_increasing) {
-        // Use binary search for increasing sequence
-        auto it = std::lower_bound(points.begin(), points.end(), x, [](const vec2 &point, float value) { return point.x < value; });
-
-        upper_idx = std::distance(points.begin(), it);
-        lower_idx = upper_idx - 1;
-    } else {
-        // At this point, it points to the first element with x >= target x
-        // For decreasing sequence, find the interval manually
-        for (size_t i = 1; i < points.size(); ++i) {
-            if (points[i].x <= x && x <= points[i - 1].x) {
-                lower_idx = i - 1;
-                upper_idx = i;
-                break;
-            }
-        }
-    }
-
-    const vec2 &p1 = points[lower_idx]; // Lower bound
-    const vec2 &p2 = points[upper_idx]; // Upper bound
-
-    // Linear interpolation
-    float t = (x - p1.x) / (p2.x - p1.x);
-    return p1.y + t * (p2.y - p1.y);
+    // This should never be reached due to earlier validation
+    helios_runtime_error("ERROR (interp1): Unexpected interpolation state.");
+    return 0.0f; // Suppress compiler warning (never reached)
 }
 
 std::string helios::getFileExtension(const std::string &filepath) {

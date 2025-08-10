@@ -6,6 +6,7 @@
 * Test file renamed to `run_tests.sh`, and now runs tests without needing any of the sample projects (`samples/`)
 * Deleted most of the `samples/[*]_selftest` directories, as they are no longer needed for testing. `context_selftest`, `energybalance_selftest`, and `radiation_selftest` were left because they are referenced in YouTube tutorials
 * Added compiler warning suppression for third-party libraries (zlib, libpng, libjpeg) to reduce build noise
+* Helios now builds with OpenMP parallelization enabled by default if available
 
 ## Context
 - Added automatic filtering of zero-area primitives in addSphere(), addTube(), addDisk(), addCone(), and other geometric construction methods
@@ -26,6 +27,19 @@
 - Added Gray Edge white balance algorithm implementation for color constancy
 - Fixed gamma compression application in image processing pipeline
 - Improved gain adjustment and histogram equalization for better image quality
+- Substantially refactored `RadiationModel::updateGeometry()` and `RadiationModel::updateRadiativeProperties()` methods for improved efficiency:
+  - Replaced O(n) std::find operations with O(1) unordered_set lookups in geometry updates
+  - Added spectral integration caching to avoid redundant computations
+  - Implemented OpenMP parallelization for radiative property calculations
+  - Optimized map access patterns and reduced memory allocations
+
+## Photosynthesis
+- Improved temporal continuity in Farquhar model by initializing Ci with previous timestep values
+- Enhanced convergence behavior with better initial guesses for intercellular CO2 concentration
+
+## Stomatal Conductance
+- Enhanced Ball-Woodrow-Berry model convergence with improved initial surface vapor pressure estimates
+- Increased numerical solver tolerance and iteration limits for better stability in vapor pressure calculations
 
 ## Project Builder
 - Removed `linspace` function from `ProjectBuilder.cpp` since it is now available in the Helios core
