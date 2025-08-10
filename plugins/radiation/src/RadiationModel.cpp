@@ -1678,7 +1678,6 @@ void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
     std::vector<uint> primitive_UUIDs_ordered;
     primitive_UUIDs_ordered.reserve(Nprimitives);
 
-    // Create unordered_set for O(1) lookup instead of O(n) std::find
     std::unordered_set<uint> context_UUIDs_set(context_UUIDs.begin(), context_UUIDs.end());
 
     for (uint objID: objID_all) {
@@ -2585,10 +2584,6 @@ void RadiationModel::updateRadiativeProperties() {
         }
     }
 
-#ifdef USE_OPENMP
-    // No need to merge caches - already using shared cache with critical sections
-#endif
-
     // Convert tau spectra to vector for OpenMP indexing
     std::vector<std::pair<std::string, std::vector<helios::vec2>>> spectra_tau_vector(surface_spectra_tau.begin(), surface_spectra_tau.end());
 
@@ -2689,10 +2684,6 @@ void RadiationModel::updateRadiativeProperties() {
             }
         }
     }
-
-#ifdef USE_OPENMP
-    // No need to merge caches - already using shared cache with critical sections
-#endif
 
     for (size_t u = 0; u < Nprimitives; u++) {
 

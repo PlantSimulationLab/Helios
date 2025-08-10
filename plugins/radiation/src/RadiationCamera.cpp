@@ -645,7 +645,7 @@ void RadiationModel::writePrimitiveDataLabelMap(const std::string &cameralabel, 
             uint ii = camera_resolution.x - i - 1;
             uint UUID = pixel_UUIDs.at(j * camera_resolution.x + ii) - 1;
             if (context->doesPrimitiveExist(UUID) && context->doesPrimitiveDataExist(UUID, primitive_data_label.c_str())) {
-                HeliosDataType datatype = context->getPrimitiveDataType(UUID, primitive_data_label.c_str());
+                HeliosDataType datatype = context->getPrimitiveDataType(primitive_data_label.c_str());
                 if (datatype == HELIOS_TYPE_FLOAT) {
                     float labeldata;
                     context->getPrimitiveData(UUID, primitive_data_label.c_str(), labeldata);
@@ -737,7 +737,7 @@ void RadiationModel::writeObjectDataLabelMap(const std::string &cameralabel, con
             }
             uint objID = context->getPrimitiveParentObjectID(UUID);
             if (context->doesObjectExist(objID) && context->doesObjectDataExist(objID, object_data_label.c_str())) {
-                HeliosDataType datatype = context->getObjectDataType(objID, object_data_label.c_str());
+                HeliosDataType datatype = context->getObjectDataType(object_data_label.c_str());
                 if (datatype == HELIOS_TYPE_FLOAT) {
                     float labeldata;
                     context->getObjectData(objID, object_data_label.c_str(), labeldata);
@@ -958,7 +958,7 @@ void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, con
 
                 uint labeldata;
 
-                HeliosDataType datatype = context->getPrimitiveDataType(UUID, primitive_data_label.c_str());
+                HeliosDataType datatype = context->getPrimitiveDataType(primitive_data_label.c_str());
                 if (datatype == HELIOS_TYPE_UINT) {
                     uint labeldata_ui;
                     context->getPrimitiveData(UUID, primitive_data_label.c_str(), labeldata_ui);
@@ -1071,7 +1071,7 @@ void RadiationModel::writeImageBoundingBoxes_ObjectData(const std::string &camer
 
             uint labeldata;
 
-            HeliosDataType datatype = context->getObjectDataType(objID, object_data_label.c_str());
+            HeliosDataType datatype = context->getObjectDataType(object_data_label.c_str());
             if (datatype == HELIOS_TYPE_UINT) {
                 uint labeldata_ui;
                 context->getObjectData(objID, object_data_label.c_str(), labeldata_ui);
@@ -1205,7 +1205,7 @@ std::map<int, std::vector<std::vector<bool>>> RadiationModel::generateLabelMasks
                     // Object data version
                     uint objID = context->getPrimitiveParentObjectID(UUID);
                     if (objID != 0 && context->doesObjectDataExist(objID, data_label.c_str())) {
-                        HeliosDataType datatype = context->getObjectDataType(objID, data_label.c_str());
+                        HeliosDataType datatype = context->getObjectDataType(data_label.c_str());
                         if (datatype == HELIOS_TYPE_UINT) {
                             uint labeldata_ui;
                             context->getObjectData(objID, data_label.c_str(), labeldata_ui);
@@ -1221,7 +1221,7 @@ std::map<int, std::vector<std::vector<bool>>> RadiationModel::generateLabelMasks
                 } else {
                     // Primitive data version
                     if (context->doesPrimitiveDataExist(UUID, data_label.c_str())) {
-                        HeliosDataType datatype = context->getPrimitiveDataType(UUID, data_label.c_str());
+                        HeliosDataType datatype = context->getPrimitiveDataType(data_label.c_str());
                         if (datatype == HELIOS_TYPE_UINT) {
                             uint labeldata_ui;
                             context->getPrimitiveData(UUID, data_label.c_str(), labeldata_ui);
