@@ -2362,14 +2362,14 @@ void RadiationModel::updateRadiativeProperties() {
 
     // Cached version of integrateSpectrum with source and camera spectra
     auto cachedIntegrateSpectrumWithSourceAndCamera = [&](uint source_ID, const std::vector<helios::vec2>& object_spectrum,
-                                                          const std::vector<helios::vec2>& camera_spectrum, const std::string& object_spectrum_id) -> float {
+                                                          const std::vector<helios::vec2>& camera_spectrum, uint camera_index, uint band_index, const std::string& object_spectrum_id) -> float {
         if (source_ID >= radiation_sources.size() || object_spectrum.size() < 2) {
             return 0.0f;
         }
 
         std::vector<helios::vec2> source_spectrum = radiation_sources.at(source_ID).source_spectrum;
         std::string source_id = "source_" + std::to_string(source_ID);
-        std::string camera_id = "camera_" + std::to_string(camera_spectrum.size()); // Simple camera ID based on size
+        std::string camera_id = "camera_" + std::to_string(camera_index) + "_band_" + std::to_string(band_index); // Include band for unique cache key per band
 
         float E = 0;
         float Etot = 0;
@@ -2488,6 +2488,14 @@ void RadiationModel::updateRadiativeProperties() {
     // Convert maps to vectors for OpenMP indexing
     std::vector<std::pair<std::string, std::vector<helios::vec2>>> spectra_rho_vector(surface_spectra_rho.begin(), surface_spectra_rho.end());
 
+    // Pre-initialize all map entries before parallel processing to avoid race conditions
+    for (const auto &spectrum : spectra_rho_vector) {
+        rho_unique[spectrum.first] = empty;
+        if (Ncameras > 0) {
+            rho_cam_unique[spectrum.first] = empty_cam;
+        }
+    }
+
     // Process reflectivity spectra with OpenMP parallelization
 #ifdef USE_OPENMP
     #pragma omp parallel for schedule(dynamic)
@@ -2495,32 +2503,24 @@ void RadiationModel::updateRadiativeProperties() {
     for (size_t spectrum_idx = 0; spectrum_idx < spectra_rho_vector.size(); spectrum_idx++) {
         const auto &spectrum = spectra_rho_vector[spectrum_idx];
 
-        // Initialize unique spectrum storage (thread-safe emplace)
-        #pragma omp critical
-        {
-            rho_unique.emplace(spectrum.first, empty);
-            if (Ncameras > 0) {
-                rho_cam_unique.emplace(spectrum.first, empty_cam);
-            }
-        }
-
         for (uint b = 0; b < Nbands; b++) {
             std::string band = band_labels.at(b);
 
             for (uint s = 0; s < Nsources; s++) {
 
                 // integrate with caching
-                if (radiation_bands.at(band).wavebandBounds.x != 0 && radiation_bands.at(band).wavebandBounds.y != 0 && !spectrum.second.empty()) {
+                auto band_it = radiation_bands.find(band);
+                if (band_it != radiation_bands.end() && band_it->second.wavebandBounds.x != 0 && band_it->second.wavebandBounds.y != 0 && !spectrum.second.empty()) {
                     if (!radiation_sources.at(s).source_spectrum.empty()) {
                         std::string cache_key = createCacheKey(spectrum.first, s, b, 0, "rho_source");
                         bool found;
                         float cached_result = getCachedValue(cache_key, found);
                         if (found) {
-                            rho_unique.at(spectrum.first).at(b).at(s) = cached_result;
+                            rho_unique[spectrum.first][b][s] = cached_result;
                         } else {
-                            float result = cachedIntegrateSpectrumWithSource(s, spectrum.second, radiation_bands.at(band).wavebandBounds.x, radiation_bands.at(band).wavebandBounds.y, spectrum.first);
+                            float result = cachedIntegrateSpectrumWithSource(s, spectrum.second, band_it->second.wavebandBounds.x, band_it->second.wavebandBounds.y, spectrum.first);
                             setCachedValue(cache_key, result);
-                            rho_unique.at(spectrum.first).at(b).at(s) = result;
+                            rho_unique[spectrum.first][b][s] = result;
                         }
                     } else {
                         // source spectrum not provided, assume source intensity is constant over the band
@@ -2528,15 +2528,15 @@ void RadiationModel::updateRadiativeProperties() {
                         bool found;
                         float cached_result = getCachedValue(cache_key, found);
                         if (found) {
-                            rho_unique.at(spectrum.first).at(b).at(s) = cached_result;
+                            rho_unique[spectrum.first][b][s] = cached_result;
                         } else {
-                            float result = integrateSpectrum(spectrum.second, radiation_bands.at(band).wavebandBounds.x, radiation_bands.at(band).wavebandBounds.y) / (radiation_bands.at(band).wavebandBounds.y - radiation_bands.at(band).wavebandBounds.x);
+                            float result = integrateSpectrum(spectrum.second, band_it->second.wavebandBounds.x, band_it->second.wavebandBounds.y) / (band_it->second.wavebandBounds.y - band_it->second.wavebandBounds.x);
                             setCachedValue(cache_key, result);
-                            rho_unique.at(spectrum.first).at(b).at(s) = result;
+                            rho_unique[spectrum.first][b][s] = result;
                         }
                     }
                 } else {
-                    rho_unique.at(spectrum.first).at(b).at(s) = rho_default;
+                    rho_unique[spectrum.first][b][s] = rho_default;
                 }
 
                 // cameras
@@ -2545,7 +2545,7 @@ void RadiationModel::updateRadiativeProperties() {
                     for (const auto &camera: cameras) {
 
                         if (camera_response_unique.at(cam).at(b).empty()) {
-                            rho_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = rho_unique.at(spectrum.first).at(b).at(s);
+                            rho_cam_unique[spectrum.first][b][s][cam] = rho_unique[spectrum.first][b][s];
                         } else {
 
                             // integrate with caching
@@ -2557,7 +2557,7 @@ void RadiationModel::updateRadiativeProperties() {
                                     if (found) {
                                         rho_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = cached_result;
                                     } else {
-                                        float result = cachedIntegrateSpectrumWithSourceAndCamera(s, spectrum.second, camera_response_unique.at(cam).at(b), spectrum.first);
+                                        float result = cachedIntegrateSpectrumWithSourceAndCamera(s, spectrum.second, camera_response_unique.at(cam).at(b), cam, b, spectrum.first);
                                         setCachedValue(cache_key, result);
                                         rho_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = result;
                                     }
@@ -2592,6 +2592,14 @@ void RadiationModel::updateRadiativeProperties() {
     // Convert tau spectra to vector for OpenMP indexing
     std::vector<std::pair<std::string, std::vector<helios::vec2>>> spectra_tau_vector(surface_spectra_tau.begin(), surface_spectra_tau.end());
 
+    // Pre-initialize all map entries before parallel processing to avoid race conditions
+    for (const auto &spectrum : spectra_tau_vector) {
+        tau_unique[spectrum.first] = empty;
+        if (Ncameras > 0) {
+            tau_cam_unique[spectrum.first] = empty_cam;
+        }
+    }
+
     // Process transmissivity spectra with OpenMP parallelization
 #ifdef USE_OPENMP
     #pragma omp parallel for schedule(dynamic)
@@ -2599,47 +2607,39 @@ void RadiationModel::updateRadiativeProperties() {
     for (size_t spectrum_idx = 0; spectrum_idx < spectra_tau_vector.size(); spectrum_idx++) {
         const auto &spectrum = spectra_tau_vector[spectrum_idx];
 
-        // Initialize unique spectrum storage (thread-safe emplace)
-        #pragma omp critical
-        {
-            tau_unique.emplace(spectrum.first, empty);
-            if (Ncameras > 0) {
-                tau_cam_unique.emplace(spectrum.first, empty_cam);
-            }
-        }
-
         for (uint b = 0; b < Nbands; b++) {
             std::string band = band_labels.at(b);
 
             for (uint s = 0; s < Nsources; s++) {
 
                 // integrate with caching
-                if (radiation_bands.at(band).wavebandBounds.x != 0 && radiation_bands.at(band).wavebandBounds.y != 0 && !spectrum.second.empty()) {
+                auto band_it = radiation_bands.find(band);
+                if (band_it != radiation_bands.end() && band_it->second.wavebandBounds.x != 0 && band_it->second.wavebandBounds.y != 0 && !spectrum.second.empty()) {
                     if (!radiation_sources.at(s).source_spectrum.empty()) {
                         std::string cache_key = createCacheKey(spectrum.first, s, b, 0, "tau_source");
                         bool found;
                         float cached_result = getCachedValue(cache_key, found);
                         if (found) {
-                            tau_unique.at(spectrum.first).at(b).at(s) = cached_result;
+                            tau_unique[spectrum.first][b][s] = cached_result;
                         } else {
-                            float result = cachedIntegrateSpectrumWithSource(s, spectrum.second, radiation_bands.at(band).wavebandBounds.x, radiation_bands.at(band).wavebandBounds.y, spectrum.first);
+                            float result = cachedIntegrateSpectrumWithSource(s, spectrum.second, band_it->second.wavebandBounds.x, band_it->second.wavebandBounds.y, spectrum.first);
                             setCachedValue(cache_key, result);
-                            tau_unique.at(spectrum.first).at(b).at(s) = result;
+                            tau_unique[spectrum.first][b][s] = result;
                         }
                     } else {
                         std::string cache_key = createCacheKey(spectrum.first, s, b, 0, "tau_no_source");
                         bool found;
                         float cached_result = getCachedValue(cache_key, found);
                         if (found) {
-                            tau_unique.at(spectrum.first).at(b).at(s) = cached_result;
+                            tau_unique[spectrum.first][b][s] = cached_result;
                         } else {
-                            float result = integrateSpectrum(spectrum.second, radiation_bands.at(band).wavebandBounds.x, radiation_bands.at(band).wavebandBounds.y) / (radiation_bands.at(band).wavebandBounds.y - radiation_bands.at(band).wavebandBounds.x);
+                            float result = integrateSpectrum(spectrum.second, band_it->second.wavebandBounds.x, band_it->second.wavebandBounds.y) / (band_it->second.wavebandBounds.y - band_it->second.wavebandBounds.x);
                             setCachedValue(cache_key, result);
-                            tau_unique.at(spectrum.first).at(b).at(s) = result;
+                            tau_unique[spectrum.first][b][s] = result;
                         }
                     }
                 } else {
-                    tau_unique.at(spectrum.first).at(b).at(s) = tau_default;
+                    tau_unique[spectrum.first][b][s] = tau_default;
                 }
 
                 // cameras
@@ -2649,7 +2649,7 @@ void RadiationModel::updateRadiativeProperties() {
 
                         if (camera_response_unique.at(cam).at(b).empty()) {
 
-                            tau_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = tau_unique.at(spectrum.first).at(b).at(s);
+                            tau_cam_unique[spectrum.first][b][s][cam] = tau_unique[spectrum.first][b][s];
 
                         } else {
 
@@ -2662,7 +2662,7 @@ void RadiationModel::updateRadiativeProperties() {
                                     if (found) {
                                         tau_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = cached_result;
                                     } else {
-                                        float result = cachedIntegrateSpectrumWithSourceAndCamera(s, spectrum.second, camera_response_unique.at(cam).at(b), spectrum.first);
+                                        float result = cachedIntegrateSpectrumWithSourceAndCamera(s, spectrum.second, camera_response_unique.at(cam).at(b), cam, b, spectrum.first);
                                         setCachedValue(cache_key, result);
                                         tau_cam_unique.at(spectrum.first).at(b).at(s).at(cam) = result;
                                     }
@@ -2784,7 +2784,7 @@ void RadiationModel::updateRadiativeProperties() {
 
                 for (uint s = 0; s < Nsources; s++) {
                     // if reflectivity was manually set, or a spectrum was given and the global data exists
-                    if (rho_s != rho_default || spectrum_label.empty() || !context->doesGlobalDataExist(spectrum_label.c_str())) {
+                    if (rho_s != rho_default || spectrum_label.empty() || !context->doesGlobalDataExist(spectrum_label.c_str()) || rho_unique.find(spectrum_label) == rho_unique.end()) {
 
                         rho.at(s).at(u).at(b) = rho_s;
 
@@ -2851,7 +2851,7 @@ void RadiationModel::updateRadiativeProperties() {
 
                 for (uint s = 0; s < Nsources; s++) {
                     // if transmissivity was manually set, or a spectrum was given and the global data exists
-                    if (tau_s != tau_default || spectrum_label.empty() || !context->doesGlobalDataExist(spectrum_label.c_str())) {
+                    if (tau_s != tau_default || spectrum_label.empty() || !context->doesGlobalDataExist(spectrum_label.c_str()) || tau_unique.find(spectrum_label) == tau_unique.end()) {
 
                         tau.at(s).at(u).at(b) = tau_s;
 

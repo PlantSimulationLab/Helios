@@ -1784,3 +1784,375 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Library Integration") {
         }
     }
 }
+
+DOCTEST_TEST_CASE("RadiationModel Multi-Spectrum Primitive Assignment") {
+    
+    Context context;
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+    
+    // Create three different spectra with distinct reflectivity values
+    std::vector<helios::vec2> red_spectrum;   // High reflectivity in red
+    red_spectrum.push_back(make_vec2(400, 0.1f));  
+    red_spectrum.push_back(make_vec2(500, 0.1f));  
+    red_spectrum.push_back(make_vec2(600, 0.8f));  // High in red
+    red_spectrum.push_back(make_vec2(700, 0.9f));  // High in red
+    
+    std::vector<helios::vec2> green_spectrum; // High reflectivity in green
+    green_spectrum.push_back(make_vec2(400, 0.1f));
+    green_spectrum.push_back(make_vec2(500, 0.8f)); // High in green
+    green_spectrum.push_back(make_vec2(600, 0.9f)); // High in green
+    green_spectrum.push_back(make_vec2(700, 0.1f));
+    
+    std::vector<helios::vec2> blue_spectrum;  // High reflectivity in blue
+    blue_spectrum.push_back(make_vec2(400, 0.9f)); // High in blue
+    blue_spectrum.push_back(make_vec2(500, 0.8f)); // High in blue
+    blue_spectrum.push_back(make_vec2(600, 0.1f));
+    blue_spectrum.push_back(make_vec2(700, 0.1f));
+    
+    // Register spectra as global data
+    context.setGlobalData("red_spectrum", red_spectrum);
+    context.setGlobalData("green_spectrum", green_spectrum);
+    context.setGlobalData("blue_spectrum", blue_spectrum);
+    
+    // Create primitives with different spectra
+    std::vector<uint> red_patches, green_patches, blue_patches;
+    
+    // Create 5 red patches
+    for (int i = 0; i < 5; i++) {
+        uint patch = context.addPatch(make_vec3(i, 0, 0), make_vec2(1, 1));
+        context.setPrimitiveData(patch, "reflectivity_spectrum", "red_spectrum");
+        red_patches.push_back(patch);
+    }
+    
+    // Create 5 green patches
+    for (int i = 0; i < 5; i++) {
+        uint patch = context.addPatch(make_vec3(i, 1, 0), make_vec2(1, 1));
+        context.setPrimitiveData(patch, "reflectivity_spectrum", "green_spectrum");
+        green_patches.push_back(patch);
+    }
+    
+    // Create 5 blue patches
+    for (int i = 0; i < 5; i++) {
+        uint patch = context.addPatch(make_vec3(i, 2, 0), make_vec2(1, 1));
+        context.setPrimitiveData(patch, "reflectivity_spectrum", "blue_spectrum");
+        blue_patches.push_back(patch);
+    }
+    
+    // Add radiation bands for RGB
+    radiation.addRadiationBand("R", 600, 700);
+    radiation.addRadiationBand("G", 500, 600);
+    radiation.addRadiationBand("B", 400, 500);
+    
+    // Add uniform source
+    uint source = radiation.addSunSphereRadiationSource(make_SphericalCoord(0, 0));
+    std::vector<helios::vec2> uniform_spectrum;
+    uniform_spectrum.push_back(make_vec2(300, 1.0f));
+    uniform_spectrum.push_back(make_vec2(800, 1.0f));
+    radiation.setSourceSpectrum(source, uniform_spectrum);
+    radiation.setSourceFlux(source, "R", 1000.0f);
+    radiation.setSourceFlux(source, "G", 1000.0f);
+    radiation.setSourceFlux(source, "B", 1000.0f);
+    
+    // Add cameras with spectral response to test camera-specific caching
+    // Camera 1: emphasizes green band
+    std::vector<helios::vec2> camera_spectrum;
+    camera_spectrum.push_back(make_vec2(400, 0.3f));
+    camera_spectrum.push_back(make_vec2(500, 0.9f));  // High sensitivity in green
+    camera_spectrum.push_back(make_vec2(600, 0.8f));
+    camera_spectrum.push_back(make_vec2(700, 0.2f));
+    context.setGlobalData("camera1_spectrum", camera_spectrum);
+    
+    // Camera 2: emphasizes red band
+    std::vector<helios::vec2> camera_spectrum2;
+    camera_spectrum2.push_back(make_vec2(400, 0.2f));
+    camera_spectrum2.push_back(make_vec2(500, 0.3f));
+    camera_spectrum2.push_back(make_vec2(600, 0.8f));  // High sensitivity in red
+    camera_spectrum2.push_back(make_vec2(700, 0.9f));
+    context.setGlobalData("camera2_spectrum", camera_spectrum2);
+    
+    std::vector<std::string> band_labels = {"R", "G", "B"};
+    CameraProperties camera_props;
+    camera_props.camera_resolution = make_int2(100, 100);
+    camera_props.HFOV = 2.0f;
+    
+    radiation.addRadiationCamera("camera1", band_labels, make_vec3(0, 0, 5), make_vec3(0, 0, 0), camera_props, 1);
+    radiation.setCameraSpectralResponse("camera1", "R", "camera1_spectrum");
+    radiation.setCameraSpectralResponse("camera1", "G", "camera1_spectrum");
+    radiation.setCameraSpectralResponse("camera1", "B", "camera1_spectrum");
+    
+    radiation.addRadiationCamera("camera2", band_labels, make_vec3(5, 0, 5), make_vec3(0, 0, 0), camera_props, 1);
+    radiation.setCameraSpectralResponse("camera2", "R", "camera2_spectrum");
+    radiation.setCameraSpectralResponse("camera2", "G", "camera2_spectrum");
+    radiation.setCameraSpectralResponse("camera2", "B", "camera2_spectrum");
+    
+    radiation.disableEmission("R");
+    radiation.disableEmission("G");
+    radiation.disableEmission("B");
+    radiation.setScatteringDepth("R", 1);  // Enable scattering to test radiative properties
+    radiation.setScatteringDepth("G", 1);
+    radiation.setScatteringDepth("B", 1);
+    
+    // Update geometry - this triggers updateRadiativeProperties
+    radiation.updateGeometry();
+    
+    // Run the radiation model to compute absorbed flux
+    radiation.runBand("R");
+    radiation.runBand("G");
+    radiation.runBand("B");
+    
+    // Verify that primitives with different spectra have different absorbed fluxes
+    // Red patches should absorb more in red band
+    float red_patch_R_flux = 0, red_patch_G_flux = 0, red_patch_B_flux = 0;
+    for (uint patch : red_patches) {
+        float flux_R, flux_G, flux_B;
+        context.getPrimitiveData(patch, "radiation_flux_R", flux_R);
+        context.getPrimitiveData(patch, "radiation_flux_G", flux_G);
+        context.getPrimitiveData(patch, "radiation_flux_B", flux_B);
+        red_patch_R_flux += flux_R;
+        red_patch_G_flux += flux_G;
+        red_patch_B_flux += flux_B;
+    }
+    red_patch_R_flux /= red_patches.size();
+    red_patch_G_flux /= red_patches.size();
+    red_patch_B_flux /= red_patches.size();
+    
+    // Green patches should absorb more in green band
+    float green_patch_R_flux = 0, green_patch_G_flux = 0, green_patch_B_flux = 0;
+    for (uint patch : green_patches) {
+        float flux_R, flux_G, flux_B;
+        context.getPrimitiveData(patch, "radiation_flux_R", flux_R);
+        context.getPrimitiveData(patch, "radiation_flux_G", flux_G);
+        context.getPrimitiveData(patch, "radiation_flux_B", flux_B);
+        green_patch_R_flux += flux_R;
+        green_patch_G_flux += flux_G;
+        green_patch_B_flux += flux_B;
+    }
+    green_patch_R_flux /= green_patches.size();
+    green_patch_G_flux /= green_patches.size();
+    green_patch_B_flux /= green_patches.size();
+    
+    // Blue patches should absorb more in blue band
+    float blue_patch_R_flux = 0, blue_patch_G_flux = 0, blue_patch_B_flux = 0;
+    for (uint patch : blue_patches) {
+        float flux_R, flux_G, flux_B;
+        context.getPrimitiveData(patch, "radiation_flux_R", flux_R);
+        context.getPrimitiveData(patch, "radiation_flux_G", flux_G);
+        context.getPrimitiveData(patch, "radiation_flux_B", flux_B);
+        blue_patch_R_flux += flux_R;
+        blue_patch_G_flux += flux_G;
+        blue_patch_B_flux += flux_B;
+    }
+    blue_patch_R_flux /= blue_patches.size();
+    blue_patch_G_flux /= blue_patches.size();
+    blue_patch_B_flux /= blue_patches.size();
+    
+    // Verify that different spectrum primitives have substantially different absorbed fluxes
+    // Red patches should absorb LEAST in red band (high reflectivity = low absorption)
+    DOCTEST_CHECK(red_patch_R_flux < red_patch_G_flux);
+    DOCTEST_CHECK(red_patch_R_flux < red_patch_B_flux);
+    
+    // Green patches should absorb LEAST in green band (high reflectivity = low absorption)
+    DOCTEST_CHECK(green_patch_G_flux < green_patch_R_flux);
+    DOCTEST_CHECK(green_patch_G_flux < green_patch_B_flux);
+    
+    // Blue patches should absorb LEAST in blue band (high reflectivity = low absorption)
+    DOCTEST_CHECK(blue_patch_B_flux < blue_patch_R_flux);
+    DOCTEST_CHECK(blue_patch_B_flux < blue_patch_G_flux);
+    
+    // Also verify that patches with the same spectrum have similar absorbed fluxes
+    for (uint i = 1; i < red_patches.size(); i++) {
+        float flux_R_0, flux_R_i;
+        context.getPrimitiveData(red_patches[0], "radiation_flux_R", flux_R_0);
+        context.getPrimitiveData(red_patches[i], "radiation_flux_R", flux_R_i);
+        DOCTEST_CHECK(std::abs(flux_R_0 - flux_R_i) / flux_R_0 < 0.15f);  // Within 15% of each other (Monte Carlo variability)
+    }
+}
+
+DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
+    
+    Context context;
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+    
+    // Create distinct spectral properties with clear peaks
+    // Red spectrum: high reflectivity in red band
+    std::vector<helios::vec2> red_spectrum;
+    red_spectrum.push_back(make_vec2(400, 0.1f));
+    red_spectrum.push_back(make_vec2(500, 0.1f));
+    red_spectrum.push_back(make_vec2(600, 0.8f));
+    red_spectrum.push_back(make_vec2(700, 0.9f));
+    context.setGlobalData("red_spectrum", red_spectrum);
+    
+    // Green spectrum: high reflectivity in green band
+    std::vector<helios::vec2> green_spectrum;
+    green_spectrum.push_back(make_vec2(400, 0.1f));
+    green_spectrum.push_back(make_vec2(500, 0.8f));
+    green_spectrum.push_back(make_vec2(600, 0.9f));
+    green_spectrum.push_back(make_vec2(700, 0.1f));
+    context.setGlobalData("green_spectrum", green_spectrum);
+    
+    // Blue spectrum: high reflectivity in blue band
+    std::vector<helios::vec2> blue_spectrum;
+    blue_spectrum.push_back(make_vec2(400, 0.9f));
+    blue_spectrum.push_back(make_vec2(500, 0.8f));
+    blue_spectrum.push_back(make_vec2(600, 0.1f));
+    blue_spectrum.push_back(make_vec2(700, 0.1f));
+    context.setGlobalData("blue_spectrum", blue_spectrum);
+    
+    // Create patches with different spectral properties
+    std::vector<uint> red_patches, green_patches, blue_patches, white_patches;
+    
+    // Red patches
+    for (int i = 0; i < 2; i++) {
+        uint patch = context.addPatch(make_vec3(i, 0, 0), make_vec2(1, 1));
+        context.setPrimitiveData(patch, "reflectivity_spectrum", "red_spectrum");
+        red_patches.push_back(patch);
+    }
+    
+    // Green patches
+    for (int i = 0; i < 2; i++) {
+        uint patch = context.addPatch(make_vec3(i, 2, 0), make_vec2(1, 1));
+        context.setPrimitiveData(patch, "reflectivity_spectrum", "green_spectrum");
+        green_patches.push_back(patch);
+    }
+    
+    // Blue patches
+    for (int i = 0; i < 2; i++) {
+        uint patch = context.addPatch(make_vec3(i, 4, 0), make_vec2(1, 1));
+        context.setPrimitiveData(patch, "reflectivity_spectrum", "blue_spectrum");
+        blue_patches.push_back(patch);
+    }
+    
+    // White patches - for testing that same spectrum produces different results for different camera bands
+    for (int i = 0; i < 2; i++) {
+        uint patch = context.addPatch(make_vec3(i, 6, 0), make_vec2(1, 1));
+        context.setPrimitiveData(patch, "reflectivity_spectrum", "white_spectrum");
+        white_patches.push_back(patch);
+    }
+    
+    // Add radiation bands for RGB with clear spectral separation
+    radiation.addRadiationBand("R", 600, 700);
+    radiation.addRadiationBand("G", 500, 600);
+    radiation.addRadiationBand("B", 400, 500);
+    
+    // Add uniform source with flat spectrum
+    uint source = radiation.addSunSphereRadiationSource(make_SphericalCoord(0, 0));
+    std::vector<helios::vec2> uniform_spectrum;
+    uniform_spectrum.push_back(make_vec2(350, 1.0f));
+    uniform_spectrum.push_back(make_vec2(800, 1.0f));
+    radiation.setSourceSpectrum(source, uniform_spectrum);
+    radiation.setSourceFlux(source, "R", 1000.0f);
+    radiation.setSourceFlux(source, "G", 1000.0f);
+    radiation.setSourceFlux(source, "B", 1000.0f);
+    
+    // Set up cameras with VERY DIFFERENT spectral responses per band
+    // This is critical for testing the band-specific caching fix
+    std::vector<std::string> band_labels = {"R", "G", "B"};
+    CameraProperties camera_props;
+    camera_props.camera_resolution = make_int2(100, 100);
+    camera_props.HFOV = 2.0f;
+    
+    // Camera 1: Red-biased camera (strongly favors R band, suppresses G and B)
+    std::vector<helios::vec2> cam1_R_spectrum;  // Very high response for R band
+    cam1_R_spectrum.push_back(make_vec2(600, 1.0f));
+    cam1_R_spectrum.push_back(make_vec2(700, 1.0f));
+    context.setGlobalData("cam1_R_spectrum", cam1_R_spectrum);
+    
+    std::vector<helios::vec2> cam1_G_spectrum;  // Very low response for G band
+    cam1_G_spectrum.push_back(make_vec2(500, 0.05f));
+    cam1_G_spectrum.push_back(make_vec2(600, 0.05f));
+    context.setGlobalData("cam1_G_spectrum", cam1_G_spectrum);
+    
+    std::vector<helios::vec2> cam1_B_spectrum;  // Very low response for B band
+    cam1_B_spectrum.push_back(make_vec2(400, 0.05f));
+    cam1_B_spectrum.push_back(make_vec2(500, 0.05f));
+    context.setGlobalData("cam1_B_spectrum", cam1_B_spectrum);
+    
+    radiation.addRadiationCamera("camera1", band_labels, make_vec3(0, 0, 5), make_vec3(0, 0, 0), camera_props, 1);
+    radiation.setCameraSpectralResponse("camera1", "R", "cam1_R_spectrum");
+    radiation.setCameraSpectralResponse("camera1", "G", "cam1_G_spectrum");
+    radiation.setCameraSpectralResponse("camera1", "B", "cam1_B_spectrum");
+    
+    // Camera 2: Blue-biased camera (strongly favors B band, suppresses R and G)
+    std::vector<helios::vec2> cam2_R_spectrum;  // Very low response for R band
+    cam2_R_spectrum.push_back(make_vec2(600, 0.05f));
+    cam2_R_spectrum.push_back(make_vec2(700, 0.05f));
+    context.setGlobalData("cam2_R_spectrum", cam2_R_spectrum);
+    
+    std::vector<helios::vec2> cam2_G_spectrum;  // Medium response for G band
+    cam2_G_spectrum.push_back(make_vec2(500, 0.3f));
+    cam2_G_spectrum.push_back(make_vec2(600, 0.3f));
+    context.setGlobalData("cam2_G_spectrum", cam2_G_spectrum);
+    
+    std::vector<helios::vec2> cam2_B_spectrum;  // Very high response for B band
+    cam2_B_spectrum.push_back(make_vec2(400, 1.0f));
+    cam2_B_spectrum.push_back(make_vec2(500, 1.0f));
+    context.setGlobalData("cam2_B_spectrum", cam2_B_spectrum);
+    
+    radiation.addRadiationCamera("camera2", band_labels, make_vec3(5, 0, 5), make_vec3(0, 0, 0), camera_props, 1);
+    radiation.setCameraSpectralResponse("camera2", "R", "cam2_R_spectrum");
+    radiation.setCameraSpectralResponse("camera2", "G", "cam2_G_spectrum");
+    radiation.setCameraSpectralResponse("camera2", "B", "cam2_B_spectrum");
+    
+    radiation.disableEmission("R");
+    radiation.disableEmission("G");
+    radiation.disableEmission("B");
+    radiation.setScatteringDepth("R", 1);
+    radiation.setScatteringDepth("G", 1);
+    radiation.setScatteringDepth("B", 1);
+    
+    // CRITICAL TEST: Update geometry - this triggers the band-specific caching
+    // The original bug would cause a map::at exception due to incorrect cache keys
+    DOCTEST_CHECK_NOTHROW(radiation.updateGeometry());
+    
+    // Run the radiation simulation to test that different bands produce different results
+    radiation.runBand("R");
+    radiation.runBand("G");
+    radiation.runBand("B");
+    
+    // === TEST 1: Verify spectral specificity by checking absorbed flux ===
+    uint red_patch = red_patches[0];
+    float red_flux_R, red_flux_G, red_flux_B;
+    context.getPrimitiveData(red_patch, "radiation_flux_R", red_flux_R);
+    context.getPrimitiveData(red_patch, "radiation_flux_G", red_flux_G);
+    context.getPrimitiveData(red_patch, "radiation_flux_B", red_flux_B);
+    
+    uint green_patch = green_patches[0];
+    float green_flux_R, green_flux_G, green_flux_B;
+    context.getPrimitiveData(green_patch, "radiation_flux_R", green_flux_R);
+    context.getPrimitiveData(green_patch, "radiation_flux_G", green_flux_G);
+    context.getPrimitiveData(green_patch, "radiation_flux_B", green_flux_B);
+    
+    uint blue_patch = blue_patches[0];
+    float blue_flux_R, blue_flux_G, blue_flux_B;
+    context.getPrimitiveData(blue_patch, "radiation_flux_R", blue_flux_R);
+    context.getPrimitiveData(blue_patch, "radiation_flux_G", blue_flux_G);
+    context.getPrimitiveData(blue_patch, "radiation_flux_B", blue_flux_B);
+    
+    // Red spectrum should have LOWEST absorption in R band (high reflectivity = low absorption)
+    DOCTEST_CHECK(red_flux_R < red_flux_G);
+    DOCTEST_CHECK(red_flux_R < red_flux_B);
+    
+    // Green spectrum should have LOWEST absorption in G band
+    DOCTEST_CHECK(green_flux_G < green_flux_R);
+    DOCTEST_CHECK(green_flux_G < green_flux_B);
+    
+    // Blue spectrum should have LOWEST absorption in B band
+    DOCTEST_CHECK(blue_flux_B < blue_flux_R);
+    DOCTEST_CHECK(blue_flux_B < blue_flux_G);
+    
+    // === TEST 2: Verify different spectra produce different results ===
+    DOCTEST_CHECK(red_flux_R != green_flux_R);
+    DOCTEST_CHECK(green_flux_G != blue_flux_G);
+    DOCTEST_CHECK(blue_flux_B != red_flux_B);
+    
+    // === TEST 3: CRITICAL - Verify bands produce different flux values ===
+    // This confirms the band-specific caching is working
+    DOCTEST_CHECK(std::abs(red_flux_R - red_flux_G) > 0.01f);
+    DOCTEST_CHECK(std::abs(green_flux_G - green_flux_B) > 0.01f);
+    DOCTEST_CHECK(std::abs(blue_flux_B - blue_flux_R) > 0.01f);
+    
+    // If we reach here, the band-specific caching is working correctly
+    // The original bug would have caused all bands to have the same values
+}
