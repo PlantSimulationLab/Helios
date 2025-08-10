@@ -1150,7 +1150,7 @@ std::vector<uint> Context::filterObjectsByData(const std::vector<uint> &IDs, con
 
     for (uint i = 0; i < IDs.size(); i++) {
         if (doesObjectDataExist(IDs.at(i), object_data)) {
-            HeliosDataType type = getObjectDataType(IDs.at(i), object_data);
+            HeliosDataType type = getObjectDataType(object_data);
             if (type == HELIOS_TYPE_UINT) {
                 uint R;
                 getObjectData(IDs.at(i), object_data, R);
@@ -2825,25 +2825,25 @@ void Context::colorPrimitiveByDataPseudocolor(const std::vector<uint> &UUIDs, co
 
         float dataf = 0;
         if (doesPrimitiveDataExist(UUID, primitive_data.c_str())) {
-            if (getPrimitiveDataType(UUID, primitive_data.c_str()) != HELIOS_TYPE_FLOAT && getPrimitiveDataType(UUID, primitive_data.c_str()) != HELIOS_TYPE_INT && getPrimitiveDataType(UUID, primitive_data.c_str()) != HELIOS_TYPE_UINT &&
-                getPrimitiveDataType(UUID, primitive_data.c_str()) != HELIOS_TYPE_DOUBLE) {
+            if (getPrimitiveDataType(primitive_data.c_str()) != HELIOS_TYPE_FLOAT && getPrimitiveDataType(primitive_data.c_str()) != HELIOS_TYPE_INT && getPrimitiveDataType(primitive_data.c_str()) != HELIOS_TYPE_UINT &&
+                getPrimitiveDataType(primitive_data.c_str()) != HELIOS_TYPE_DOUBLE) {
                 std::cerr << "WARNING (Context::colorPrimitiveDataPseudocolor): Only primitive data types of int, uint, float, and double are supported for this function. Skipping this primitive." << std::endl;
                 continue;
             }
 
-            if (getPrimitiveDataType(UUID, primitive_data.c_str()) == HELIOS_TYPE_FLOAT) {
+            if (getPrimitiveDataType(primitive_data.c_str()) == HELIOS_TYPE_FLOAT) {
                 float data;
                 getPrimitiveData(UUID, primitive_data.c_str(), data);
                 dataf = data;
-            } else if (getPrimitiveDataType(UUID, primitive_data.c_str()) == HELIOS_TYPE_DOUBLE) {
+            } else if (getPrimitiveDataType(primitive_data.c_str()) == HELIOS_TYPE_DOUBLE) {
                 double data;
                 getPrimitiveData(UUID, primitive_data.c_str(), data);
                 dataf = float(data);
-            } else if (getPrimitiveDataType(UUID, primitive_data.c_str()) == HELIOS_TYPE_INT) {
+            } else if (getPrimitiveDataType(primitive_data.c_str()) == HELIOS_TYPE_INT) {
                 int data;
                 getPrimitiveData(UUID, primitive_data.c_str(), data);
                 dataf = float(data);
-            } else if (getPrimitiveDataType(UUID, primitive_data.c_str()) == HELIOS_TYPE_UINT) {
+            } else if (getPrimitiveDataType(primitive_data.c_str()) == HELIOS_TYPE_UINT) {
                 uint data;
                 getPrimitiveData(UUID, primitive_data.c_str(), data);
                 dataf = float(data);
@@ -3421,7 +3421,7 @@ void Context::printPrimitiveInfo(uint UUID) const {
     std::vector<std::string> pd = listPrimitiveData(UUID);
     for (uint i = 0; i < pd.size(); i++) {
         uint dsize = getPrimitiveDataSize(UUID, pd.at(i).c_str());
-        HeliosDataType dtype = getPrimitiveDataType(UUID, pd.at(i).c_str());
+        HeliosDataType dtype = getPrimitiveDataType(pd.at(i).c_str());
         std::string dstype;
 
         if (dtype == HELIOS_TYPE_INT) {
@@ -3774,7 +3774,7 @@ void Context::printObjectInfo(uint ObjID) const {
     std::vector<std::string> pd = listObjectData(ObjID);
     for (uint i = 0; i < pd.size(); i++) {
         uint dsize = getObjectDataSize(ObjID, pd.at(i).c_str());
-        HeliosDataType dtype = getObjectDataType(ObjID, pd.at(i).c_str());
+        HeliosDataType dtype = getObjectDataType(pd.at(i).c_str());
         std::string dstype;
 
         if (dtype == HELIOS_TYPE_INT) {

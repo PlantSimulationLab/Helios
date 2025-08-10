@@ -1,15 +1,21 @@
 # Changelog
 
-# [1.3.44] 2025-XX-XX
+# [1.3.44] 2025-08-10
 
 * Added `BUILD_TESTS` CMake option to conditionally build test executables instead of building them by default
+* Test file renamed to `run_tests.sh`, and now runs tests without needing any of the sample projects (`samples/`)
+* Deleted most of the `samples/[*]_selftest` directories, as they are no longer needed for testing. `context_selftest`, `energybalance_selftest`, and `radiation_selftest` were left because they are referenced in YouTube tutorials
+* Added compiler warning suppression for third-party libraries (zlib, libpng, libjpeg) to reduce build noise
 
 ## Context
-- Added automatic filtering of zero-area primitives in addSphere(), addTube(), and other geometric construction methods
+- Added automatic filtering of zero-area primitives in addSphere(), addTube(), addDisk(), addCone(), and other geometric construction methods
 - Improved tube generation robustness by handling degenerate cross products when axis vectors are parallel or near-vertical
 - Added minimum size validation (1e-6) for patch primitives to prevent numerical precision issues
 - Added debug warnings for malformed triangles with near-zero area
 - Deprecated `Context::getPrimitiveDataType(uint, const char*)` and `Context::getObjectDataType(uint, const char*)` in favor of `Context::getPrimitiveDataType(const char*)` and `Context::getObjectDataType(const char*)`
+- Enhanced DEPRECATED macro to support optional custom deprecation messages
+- Added new `fzero()` function overload that returns convergence status
+- Implemented linspace utility functions in `global.h`/`global.cpp` for float, vec2, vec3, and vec4 types
 
 ## Plant Architecture
 - Fixed leaf prototype scale validation to ensure minimum positive values
@@ -20,6 +26,10 @@
 - Added Gray Edge white balance algorithm implementation for color constancy
 - Fixed gamma compression application in image processing pipeline
 - Improved gain adjustment and histogram equalization for better image quality
+
+## Project Builder
+- Removed `linspace` function from `ProjectBuilder.cpp` since it is now available in the Helios core
+- `CMakeLists.txt` was missing the conditional include guards for the canopy generator plug-in, which would cause a linker error if the plug-in was not built
 
 # [1.3.43] 2025-08-04
 

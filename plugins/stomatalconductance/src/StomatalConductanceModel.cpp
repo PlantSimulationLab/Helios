@@ -413,7 +413,11 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
             std::vector<float> variables{An, Cs, es, ea, gbw, beta};
 
-            float esurf = fzero(evaluate_BWBmodel, variables, &coeffs, es);
+            // Use better initial guess: start closer to air vapor pressure
+            // Surface vapor pressure should be between ea and es, typically closer to ea
+            float initial_guess = ea + 0.1f * (es - ea);
+            // Use looser tolerance and more iterations for vapor pressure equations
+            float esurf = fzero(evaluate_BWBmodel, variables, &coeffs, initial_guess, 0.001f, 200);
             float hs = esurf / es;
             gs = gs0 + a1 * An * beta * hs / Cs;
 
@@ -440,7 +444,9 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
             std::vector<float> variables{An, Cs, Gamma, es, ea, gbw, press, beta};
 
-            float esurf = fzero(evaluate_BBLmodel, variables, &coeffs, es); // Pa
+            // Use better initial guess: start closer to air vapor pressure  
+            float initial_guess = ea + 0.1f * (es - ea);
+            float esurf = fzero(evaluate_BBLmodel, variables, &coeffs, initial_guess, 0.001f, 200); // Pa
             float Ds = max(0.f, (es - esurf) / press * 1000.f); // mmol/mol
             gs = gs0 + a1 * An * beta / (Cs - Gamma) / (1.f + Ds / D0);
 
@@ -466,7 +472,11 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
             std::vector<float> variables{An, Cs, es, ea, gbw, beta};
 
-            float esurf = fzero(evaluate_MOPTmodel, variables, &coeffs, ea);
+            // Use better initial guess: start closer to air vapor pressure
+            // Surface vapor pressure should be between ea and es, typically closer to ea
+            float initial_guess = ea + 0.1f * (es - ea);
+            // Use looser tolerance and more iterations for vapor pressure equations
+            float esurf = fzero(evaluate_MOPTmodel, variables, &coeffs, initial_guess, 0.001f, 200);
             float Ds = max(0.00001f, (es - esurf) / 1000.f); // kPa
             gs = gs0 + 1.6f * (1.f + g1 * sqrtf(beta / Ds)) * An / Cs;
 
@@ -513,7 +523,9 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
             std::vector<float> variables{i, es, ea, gbw, press, beta};
 
-            float esurf = fzero(evaluate_BMFmodel, variables, &coeffs, es);
+            // Use better initial guess: start closer to air vapor pressure  
+            float initial_guess = ea + 0.1f * (es - ea);
+            float esurf = fzero(evaluate_BMFmodel, variables, &coeffs, initial_guess, 0.001f, 200);
             float Ds = max(0.f, (es - esurf) / press * 1000.f);
 
             gs = Em * beta * (i + i0) / (k + b * i + (i + i0) * Ds);

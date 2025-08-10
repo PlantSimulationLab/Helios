@@ -1522,9 +1522,16 @@ TEST_CASE("Print and Information Functions") {
         uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
         uint obj = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
 
-        // These functions print to stdout, so we just test they don't crash
+        // Capture stdout output from these functions
+        capture_cout cout_buffer;
         DOCTEST_CHECK_NOTHROW(ctx.printPrimitiveInfo(patch));
         DOCTEST_CHECK_NOTHROW(ctx.printObjectInfo(obj));
+        
+        // Verify that output was captured (functions should produce output)
+        DOCTEST_CHECK(cout_buffer.has_output());
+        std::string output = cout_buffer.get_captured_output();
+        DOCTEST_CHECK(output.find("Info for UUID") != std::string::npos);
+        DOCTEST_CHECK(output.find("Info for ObjID") != std::string::npos);
     }
 }
 

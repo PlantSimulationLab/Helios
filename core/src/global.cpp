@@ -2128,8 +2128,9 @@ helios::RGBAcolor helios::XMLloadrgba(const pugi::xml_node node, const char *fie
 }
 
 float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::vector<float> &vars, const void *params, float init_guess, float err_tol, int max_iter) {
-    constexpr float DELTA_SEED = 1e-4f;
-    constexpr float DENOM_EPS = 1e-12f;
+    constexpr float DELTA_SEED = 1e-3f;  // Increased for better initial slope estimate
+    constexpr float DENOM_EPS = 1e-10f;  // Relaxed flat function detection
+    constexpr float MAX_STEP_FACTOR = 0.5f;  // Limit step size for stability
 
     /* ---- initial pair ---------------------------------------------- */
     float x0 = init_guess;
@@ -2138,27 +2139,66 @@ float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::
     float f0 = f(x0, vars, params);
     float f1 = f(x1, vars, params);
 
+    // If initial points have opposite signs, use bisection for robustness
+    bool use_bisection = (f0 * f1 < 0);
+    float bracket_low = use_bisection ? std::min(x0, x1) : 0;
+    float bracket_high = use_bisection ? std::max(x0, x1) : 0;
+
     for (int iter = 0; iter < max_iter; ++iter) {
 
         float denom = f1 - f0;
 
         /* ------- flat or nearly flat function ----------------------- */
         if (std::fabs(denom) < DENOM_EPS) {
-            if (std::fabs(f1) < err_tol) { // already “close enough”
+            if (std::fabs(f1) < err_tol) { // already "close enough"
                 return x1;
+            }
+            // Try a different approach if function is flat
+            if (use_bisection) {
+                float x2 = 0.5f * (bracket_low + bracket_high);
+                if (std::fabs(x2 - x1) < err_tol * std::fabs(x2)) {
+                    return x2;
+                }
+                float f2 = f(x2, vars, params);
+                if (f1 * f2 < 0) {
+                    bracket_high = x1;
+                } else {
+                    bracket_low = x1;
+                }
+                x0 = x1; f0 = f1;
+                x1 = x2; f1 = f2;
+                continue;
             }
             std::cerr << "WARNING: fzero stagnated (|f'|≈0).\n";
             return x1; // graceful exit, finite value
         }
 
-        /* ------- secant update  x₂ = x₁ − f₁ (x₁−x₀)/(f₁−f₀) -------- */
+        /* ------- secant update with step limiting -------------------- */
         float x2 = x1 - f1 * (x1 - x0) / denom;
+        
+        // Limit step size for stability
+        float step = x2 - x1;
+        float max_step = MAX_STEP_FACTOR * std::max(std::fabs(x1), 1.0f);
+        if (std::fabs(step) > max_step) {
+            step = (step > 0) ? max_step : -max_step;
+            x2 = x1 + step;
+        }
+        
         if (!std::isfinite(x2)) { // overflow / NaN safeguard
             std::cerr << "WARNING: fzero produced non-finite iterate.\n";
             return x1;
         }
 
         float f2 = f(x2, vars, params);
+
+        // Update brackets if using bisection fallback
+        if (use_bisection) {
+            if (f1 * f2 < 0) {
+                bracket_high = x1;
+            } else {
+                bracket_low = x1;
+            }
+        }
 
         /* ------- convergence criteria -------------------------------- */
         float rel_step = std::fabs(x2 - x1) / (std::fabs(x2) + 1.0f);
@@ -2174,6 +2214,100 @@ float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::
     }
 
     std::cerr << "WARNING: fzero did not converge after " << max_iter << " iterations.\n";
+    return x1; // best finite estimate
+}
+
+float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::vector<float> &vars, const void *params, float init_guess, bool &converged, float err_tol, int max_iter) {
+    constexpr float DELTA_SEED = 1e-3f;  // Increased for better initial slope estimate
+    constexpr float DENOM_EPS = 1e-10f;  // Relaxed flat function detection
+    constexpr float MAX_STEP_FACTOR = 0.5f;  // Limit step size for stability
+
+    converged = false;  // Initialize as not converged
+
+    /* ---- initial pair ---------------------------------------------- */
+    float x0 = init_guess;
+    float x1 = (std::fabs(init_guess) > 1.0f) ? init_guess * (1.0f + DELTA_SEED) : init_guess + DELTA_SEED;
+
+    float f0 = f(x0, vars, params);
+    float f1 = f(x1, vars, params);
+
+    // If initial points have opposite signs, use bisection for robustness
+    bool use_bisection = (f0 * f1 < 0);
+    float bracket_low = use_bisection ? std::min(x0, x1) : 0;
+    float bracket_high = use_bisection ? std::max(x0, x1) : 0;
+
+    for (int iter = 0; iter < max_iter; ++iter) {
+
+        float denom = f1 - f0;
+
+        /* ------- flat or nearly flat function ----------------------- */
+        if (std::fabs(denom) < DENOM_EPS) {
+            if (std::fabs(f1) < err_tol) { // already "close enough"
+                converged = true;
+                return x1;
+            }
+            // Try a different approach if function is flat
+            if (use_bisection) {
+                float x2 = 0.5f * (bracket_low + bracket_high);
+                if (std::fabs(x2 - x1) < err_tol * std::fabs(x2)) {
+                    converged = true;
+                    return x2;
+                }
+                float f2 = f(x2, vars, params);
+                if (f1 * f2 < 0) {
+                    bracket_high = x1;
+                } else {
+                    bracket_low = x1;
+                }
+                x0 = x1; f0 = f1;
+                x1 = x2; f1 = f2;
+                continue;
+            }
+            // Function is stagnated, not converged
+            return x1; // graceful exit, finite value
+        }
+
+        /* ------- secant update with step limiting -------------------- */
+        float x2 = x1 - f1 * (x1 - x0) / denom;
+        
+        // Limit step size for stability
+        float step = x2 - x1;
+        float max_step = MAX_STEP_FACTOR * std::max(std::fabs(x1), 1.0f);
+        if (std::fabs(step) > max_step) {
+            step = (step > 0) ? max_step : -max_step;
+            x2 = x1 + step;
+        }
+        
+        if (!std::isfinite(x2)) { // overflow / NaN safeguard
+            return x1;
+        }
+
+        float f2 = f(x2, vars, params);
+
+        // Update brackets if using bisection fallback
+        if (use_bisection) {
+            if (f1 * f2 < 0) {
+                bracket_high = x1;
+            } else {
+                bracket_low = x1;
+            }
+        }
+
+        /* ------- convergence criteria -------------------------------- */
+        float rel_step = std::fabs(x2 - x1) / (std::fabs(x2) + 1.0f);
+        if (std::fabs(f2) < err_tol && rel_step < err_tol) {
+            converged = true;
+            return x2;
+        }
+
+        /* ------- next iteration -------------------------------------- */
+        x0 = x1;
+        f0 = f1;
+        x1 = x2;
+        f1 = f2;
+    }
+
+    // Did not converge after max_iter iterations
     return x1; // best finite estimate
 }
 

@@ -132,6 +132,13 @@ if(APPLE AND "visualizer" IN_LIST PLUGINS)
     )
 endif()
 
+# Disable deprecated warnings for third-party nativefiledialog on macOS
+if(APPLE AND "visualizer" IN_LIST PLUGINS)
+    set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/lib/nativefiledialog/src/nfd_cocoa.m"
+        PROPERTIES COMPILE_FLAGS "-Wno-deprecated-declarations"
+    )
+endif()
+
 #target_compile_definitions(projectbuilder PUBLIC BOUNDARYLAYERCONDUCTANCEMODEL)
 #target_compile_definitions(projectbuilder PUBLIC BOUNDARYLAYERCONDUCTANCEMODEL)
 
@@ -192,6 +199,10 @@ endif()
 
 if("plantarchitecture" IN_LIST PLUGINS)
     target_link_libraries( projectbuilder PUBLIC plantarchitecture )
+endif()
+
+if("canopygenerator" IN_LIST PLUGINS)
+    target_link_libraries( projectbuilder PUBLIC canopygenerator )
 endif()
 
 if("radiation" IN_LIST PLUGINS)

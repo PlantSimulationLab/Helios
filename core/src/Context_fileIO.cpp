@@ -2714,7 +2714,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             for (const auto &label: labels) {
                 if (find(pdata_labels.begin(), pdata_labels.end(), label) == pdata_labels.end()) {
                     pdata_labels.push_back(label);
-                    pdata_types.push_back(getPrimitiveDataType(UUID, label.c_str()));
+                    pdata_types.push_back(getPrimitiveDataType(label.c_str()));
                 }
             }
         }
@@ -4291,7 +4291,7 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
                         continue;
                     }
 
-                    HeliosDataType type = getPrimitiveDataType(UUID, label.c_str());
+                    HeliosDataType type = getPrimitiveDataType(label.c_str());
                     if (type == HELIOS_TYPE_INT) {
                         int data;
                         getPrimitiveData(UUID, label.c_str(), data);
@@ -4386,7 +4386,7 @@ void Context::writePrimitiveData(const std::string &filename, const std::vector<
                 file << 0 << " ";
                 continue;
             }
-            HeliosDataType type = getPrimitiveDataType(UUID, label.c_str());
+            HeliosDataType type = getPrimitiveDataType(label.c_str());
             if (type == HELIOS_TYPE_INT) {
                 int data;
                 getPrimitiveData(UUID, label.c_str(), data);

@@ -996,6 +996,19 @@ namespace helios {
      */
     [[nodiscard]] float fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f, int max_iterations = 100);
 
+    //! Use Newton-Raphson method to find the zero of a function with convergence status
+    /**
+     * \param[in] function Function to be evaluated. The function should take as its first argument the value at which the function should be evaluated, as second argument any function arguments.
+     * \param[in] variables Vector of function arguments
+     * \param[in] parameters Pointer to any additional parameters needed by the function
+     * \param[in] init_guess Initial guess for the zero of the function.
+     * \param[out] converged Boolean indicating whether the solver converged successfully.
+     * \param[in] err_tol [optional] Maximum allowable relative error in solution.
+     * \param[in] max_iterations [optional] Maximum number of iterations to allow before exiting solver.
+     * \return Value of function zero (best estimate even if not converged).
+     */
+    [[nodiscard]] float fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, bool &converged, float err_tol = 0.0001f, int max_iterations = 100);
+
     //! Function to perform linear interpolation based on a vector of discrete (x,y) values
     /**
      * \param[in] points Vector of (x,y) pairs. x values must be monotonically increasing and not duplicated.
