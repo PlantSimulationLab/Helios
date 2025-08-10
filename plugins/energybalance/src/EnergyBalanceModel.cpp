@@ -507,57 +507,57 @@ void EnergyBalanceModel::printDefaultValueReport(const std::vector<uint> &UUIDs)
     for (uint UUID: UUIDs) {
 
         // surface temperature (K)
-        if (!context->doesPrimitiveDataExist(UUID, "temperature") || context->getPrimitiveDataType(UUID, "temperature") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "temperature") || context->getPrimitiveDataType("temperature") != HELIOS_TYPE_FLOAT) {
             assumed_default_TL++;
         }
 
         // air pressure (Pa)
-        if (!context->doesPrimitiveDataExist(UUID, "air_pressure") || context->getPrimitiveDataType(UUID, "air_pressure") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "air_pressure") || context->getPrimitiveDataType("air_pressure") != HELIOS_TYPE_FLOAT) {
             assumed_default_p++;
         }
 
         // air temperature (K)
-        if (!context->doesPrimitiveDataExist(UUID, "air_temperature") || context->getPrimitiveDataType(UUID, "air_temperature") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "air_temperature") || context->getPrimitiveDataType("air_temperature") != HELIOS_TYPE_FLOAT) {
             assumed_default_Ta++;
         }
 
         // air humidity
-        if (!context->doesPrimitiveDataExist(UUID, "air_humidity") || context->getPrimitiveDataType(UUID, "air_humidity") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "air_humidity") || context->getPrimitiveDataType("air_humidity") != HELIOS_TYPE_FLOAT) {
             assumed_default_rh++;
         }
 
         // boundary-layer conductance to heat
-        if (!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance") || context->getPrimitiveDataType(UUID, "boundarylayer_conductance") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "boundarylayer_conductance") || context->getPrimitiveDataType("boundarylayer_conductance") != HELIOS_TYPE_FLOAT) {
             assumed_default_gH++;
         }
 
         // wind speed
-        if (!context->doesPrimitiveDataExist(UUID, "wind_speed") || context->getPrimitiveDataType(UUID, "wind_speed") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "wind_speed") || context->getPrimitiveDataType("wind_speed") != HELIOS_TYPE_FLOAT) {
             assumed_default_U++;
         }
 
         // object length
-        if (!context->doesPrimitiveDataExist(UUID, "object_length") || context->getPrimitiveDataType(UUID, "object_length") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "object_length") || context->getPrimitiveDataType("object_length") != HELIOS_TYPE_FLOAT) {
             assumed_default_L++;
         }
 
         // moisture conductance
-        if (!context->doesPrimitiveDataExist(UUID, "moisture_conductance") || context->getPrimitiveDataType(UUID, "moisture_conductance") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "moisture_conductance") || context->getPrimitiveDataType("moisture_conductance") != HELIOS_TYPE_FLOAT) {
             assumed_default_gs++;
         }
 
         // Heat capacity
-        if (!context->doesPrimitiveDataExist(UUID, "heat_capacity") || context->getPrimitiveDataType(UUID, "heat_capacity") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "heat_capacity") || context->getPrimitiveDataType("heat_capacity") != HELIOS_TYPE_FLOAT) {
             assumed_default_heatcapacity++;
         }
 
         //"Other" heat fluxes
-        if (!context->doesPrimitiveDataExist(UUID, "other_surface_flux") || context->getPrimitiveDataType(UUID, "other_surface_flux") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "other_surface_flux") || context->getPrimitiveDataType("other_surface_flux") != HELIOS_TYPE_FLOAT) {
             assumed_default_Qother++;
         }
 
         // two-sided flag
-        if (context->doesPrimitiveDataExist(UUID, "twosided_flag") && context->getPrimitiveDataType(UUID, "twosided_flag") == HELIOS_TYPE_UINT) {
+        if (context->doesPrimitiveDataExist(UUID, "twosided_flag") && context->getPrimitiveDataType("twosided_flag") == HELIOS_TYPE_UINT) {
             uint twosided;
             context->getPrimitiveData(UUID, "twosided_flag", twosided);
             if (twosided == 0) {
@@ -570,7 +570,7 @@ void EnergyBalanceModel::printDefaultValueReport(const std::vector<uint> &UUIDs)
         }
 
         // number of evaporating faces
-        if (context->doesPrimitiveDataExist(UUID, "evaporating_faces") && context->getPrimitiveDataType(UUID, "evaporating_faces") == HELIOS_TYPE_UINT) {
+        if (context->doesPrimitiveDataExist(UUID, "evaporating_faces") && context->getPrimitiveDataType("evaporating_faces") == HELIOS_TYPE_UINT) {
             uint Ne;
             context->getPrimitiveData(UUID, "evaporating_faces", Ne);
             if (Ne == 1) {
@@ -583,7 +583,7 @@ void EnergyBalanceModel::printDefaultValueReport(const std::vector<uint> &UUIDs)
         }
 
         // Surface humidity
-        if (!context->doesPrimitiveDataExist(UUID, "surface_humidity") || context->getPrimitiveDataType(UUID, "surface_humidity") != HELIOS_TYPE_FLOAT) {
+        if (!context->doesPrimitiveDataExist(UUID, "surface_humidity") || context->getPrimitiveDataType("surface_humidity") != HELIOS_TYPE_FLOAT) {
             assumed_default_fs++;
         }
     }

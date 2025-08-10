@@ -10,6 +10,8 @@ file( COPY leaves/ DESTINATION ${CMAKE_BINARY_DIR}/plugins/weberpenntree/leaves/
 file( COPY wood/ DESTINATION ${CMAKE_BINARY_DIR}/plugins/weberpenntree/wood/ )
 file( COPY xml/ DESTINATION ${CMAKE_BINARY_DIR}/plugins/weberpenntree/xml/ )
 
-add_executable(weberpenntree_tests "tests/TestMain.cpp")
-target_link_libraries(weberpenntree_tests PRIVATE weberpenntree)
-add_test(NAME weberpenntree_tests COMMAND weberpenntree_tests)
+if(BUILD_TESTS)
+    add_executable(weberpenntree_tests "tests/TestMain.cpp")
+    target_link_libraries(weberpenntree_tests PRIVATE weberpenntree)
+    add_test(NAME weberpenntree_tests COMMAND weberpenntree_tests)
+endif()

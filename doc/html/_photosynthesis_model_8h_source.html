@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.43</span>
+       <span id="projectnumber">&#160;v1.3.44</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -594,32 +594,34 @@ $(function(){initNavTree('_photosynthesis_model_8h_source.html',''); initResizab
 <div class="line"><a id="l00568" name="l00568"></a><span class="lineno">  568</span>    <a class="code hl_struct" href="struct_empirical_model_coefficients.html">EmpiricalModelCoefficients</a> empiricalmodelcoeffs;</div>
 <div class="line"><a id="l00569" name="l00569"></a><span class="lineno">  569</span>    <a class="code hl_struct" href="struct_farquhar_model_coefficients.html">FarquharModelCoefficients</a> farquharmodelcoeffs;</div>
 <div class="line"><a id="l00570" name="l00570"></a><span class="lineno">  570</span> </div>
-<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>    std::map&lt;uint, EmpiricalModelCoefficients&gt; empiricalmodel_coefficients;</div>
-<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span>    std::map&lt;uint, FarquharModelCoefficients&gt; farquharmodel_coefficients;</div>
-<div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span> </div>
-<div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>    <span class="keywordtype">float</span> evaluateEmpiricalModel(<span class="keyword">const</span> <a class="code hl_struct" href="struct_empirical_model_coefficients.html">EmpiricalModelCoefficients</a> &amp;params, <span class="keywordtype">float</span> i_PAR, <span class="keywordtype">float</span> TL, <span class="keywordtype">float</span> CO2, <span class="keywordtype">float</span> gM);</div>
-<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span> </div>
-<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>    <span class="keywordtype">float</span> evaluateFarquharModel(<span class="keyword">const</span> <a class="code hl_struct" href="struct_farquhar_model_coefficients.html">FarquharModelCoefficients</a> &amp;params, <span class="keywordtype">float</span> i_PAR, <span class="keywordtype">float</span> TL, <span class="keywordtype">float</span> CO2, <span class="keywordtype">float</span> gM, <span class="keywordtype">float</span> &amp;Ci, <span class="keywordtype">float</span> &amp;Gamma, <span class="keywordtype">int</span> &amp;limitation_state, <span class="keywordtype">int</span> &amp;TPU_flag);</div>
-<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span> </div>
-<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>    <span class="keywordtype">float</span> evaluateCi_Empirical(<span class="keyword">const</span> <a class="code hl_struct" href="struct_empirical_model_coefficients.html">EmpiricalModelCoefficients</a> &amp;params, <span class="keywordtype">float</span> Ci, <span class="keywordtype">float</span> CO2, <span class="keywordtype">float</span> fL, <span class="keywordtype">float</span> Rd, <span class="keywordtype">float</span> gM) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span> </div>
-<div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span>    <span class="keyword">static</span> <span class="keywordtype">float</span> evaluateCi_Farquhar(<span class="keywordtype">float</span> Ci, std::vector&lt;float&gt; &amp;variables, <span class="keyword">const</span> <span class="keywordtype">void</span> *parameters);</div>
-<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span> </div>
-<div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span>    <span class="keyword">static</span> <span class="keywordtype">float</span> respondToTemperature(<span class="keyword">const</span> <a class="code hl_struct" href="struct_photosynthetic_temperature_response_parameters.html">PhotosyntheticTemperatureResponseParameters</a> *temperatureResponseParameters, <span class="keywordtype">float</span> T);</div>
-<div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span> </div>
-<div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span>    <span class="keywordtype">float</span> i_PAR_default;</div>
-<div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span>    <span class="keywordtype">float</span> TL_default;</div>
-<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>    <span class="keywordtype">float</span> CO2_default;</div>
-<div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span>    <span class="keywordtype">float</span> gM_default;</div>
-<div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span>    <span class="keywordtype">float</span> gH_default;</div>
-<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span> </div>
-<div class="line"><a id="l00590" name="l00590"></a><span class="lineno">  590</span>    <span class="keywordtype">bool</span> message_flag = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00591" name="l00591"></a><span class="lineno">  591</span></div>
-<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>    std::vector&lt;std::string&gt; output_prim_data;</div>
-<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span>};</div>
+<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>    std::unordered_map&lt;uint, EmpiricalModelCoefficients&gt; empiricalmodel_coefficients;</div>
+<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span>    std::unordered_map&lt;uint, FarquharModelCoefficients&gt; farquharmodel_coefficients;</div>
+<div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span>    </div>
+<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>    std::unordered_map&lt;uint, float&gt; previous_Ci;</div>
+<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span> </div>
+<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>    <span class="keywordtype">float</span> evaluateEmpiricalModel(<span class="keyword">const</span> <a class="code hl_struct" href="struct_empirical_model_coefficients.html">EmpiricalModelCoefficients</a> &amp;params, <span class="keywordtype">float</span> i_PAR, <span class="keywordtype">float</span> TL, <span class="keywordtype">float</span> CO2, <span class="keywordtype">float</span> gM);</div>
+<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span> </div>
+<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>    <span class="keywordtype">float</span> evaluateFarquharModel(<span class="keyword">const</span> <a class="code hl_struct" href="struct_farquhar_model_coefficients.html">FarquharModelCoefficients</a> &amp;params, <span class="keywordtype">float</span> i_PAR, <span class="keywordtype">float</span> TL, <span class="keywordtype">float</span> CO2, <span class="keywordtype">float</span> gM, <span class="keywordtype">float</span> &amp;Ci, <span class="keywordtype">float</span> &amp;Gamma, <span class="keywordtype">int</span> &amp;limitation_state, <span class="keywordtype">int</span> &amp;TPU_flag);</div>
+<div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span> </div>
+<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span>    <span class="keywordtype">float</span> evaluateCi_Empirical(<span class="keyword">const</span> <a class="code hl_struct" href="struct_empirical_model_coefficients.html">EmpiricalModelCoefficients</a> &amp;params, <span class="keywordtype">float</span> Ci, <span class="keywordtype">float</span> CO2, <span class="keywordtype">float</span> fL, <span class="keywordtype">float</span> Rd, <span class="keywordtype">float</span> gM) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span> </div>
+<div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span>    <span class="keyword">static</span> <span class="keywordtype">float</span> evaluateCi_Farquhar(<span class="keywordtype">float</span> Ci, std::vector&lt;float&gt; &amp;variables, <span class="keyword">const</span> <span class="keywordtype">void</span> *parameters);</div>
+<div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span> </div>
+<div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span>    <span class="keyword">static</span> <span class="keywordtype">float</span> respondToTemperature(<span class="keyword">const</span> <a class="code hl_struct" href="struct_photosynthetic_temperature_response_parameters.html">PhotosyntheticTemperatureResponseParameters</a> *temperatureResponseParameters, <span class="keywordtype">float</span> T);</div>
+<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span> </div>
+<div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span>    <span class="keywordtype">float</span> i_PAR_default;</div>
+<div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span>    <span class="keywordtype">float</span> TL_default;</div>
+<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span>    <span class="keywordtype">float</span> CO2_default;</div>
+<div class="line"><a id="l00590" name="l00590"></a><span class="lineno">  590</span>    <span class="keywordtype">float</span> gM_default;</div>
+<div class="line"><a id="l00591" name="l00591"></a><span class="lineno">  591</span>    <span class="keywordtype">float</span> gH_default;</div>
+<div class="line"><a id="l00592" name="l00592"></a><span class="lineno">  592</span> </div>
+<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>    <span class="keywordtype">bool</span> message_flag = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span></div>
+<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>    std::vector&lt;std::string&gt; output_prim_data;</div>
+<div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span>};</div>
 </div>
-<div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span> </div>
-<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span> </div>
+<div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span><span class="preprocessor">#endif</span></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

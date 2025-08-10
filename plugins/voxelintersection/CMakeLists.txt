@@ -75,6 +75,8 @@ target_include_directories(voxelintersection PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/
 
 target_link_libraries(voxelintersection PUBLIC CUDA::cudart_static)
 
-add_executable(voxelintersection_tests "tests/TestMain.cpp")
-target_link_libraries(voxelintersection_tests PRIVATE voxelintersection)
-add_test(NAME voxelintersection_tests COMMAND voxelintersection_tests)
+if(BUILD_TESTS)
+    add_executable(voxelintersection_tests "tests/TestMain.cpp")
+    target_link_libraries(voxelintersection_tests PRIVATE voxelintersection)
+    add_test(NAME voxelintersection_tests COMMAND voxelintersection_tests)
+endif()

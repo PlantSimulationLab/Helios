@@ -750,3 +750,215 @@ TEST_CASE("fzero") {
         DOCTEST_CHECK(std::fabs(near_singular(root, v, nullptr)) < 1e-4f);
     }
 }
+
+TEST_CASE("linspace - Linearly Spaced Values") {
+    SUBCASE("linspace float basic functionality") {
+        std::vector<float> result = linspace(0.f, 10.f, 11);
+        DOCTEST_CHECK(result.size() == 11);
+        DOCTEST_CHECK(result[0] == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[5] == doctest::Approx(5.f));
+        DOCTEST_CHECK(result[10] == doctest::Approx(10.f));
+        
+        // Check uniformly spaced
+        for (size_t i = 1; i < result.size(); ++i) {
+            DOCTEST_CHECK(result[i] - result[i-1] == doctest::Approx(1.f));
+        }
+    }
+
+    SUBCASE("linspace float with negative range") {
+        std::vector<float> result = linspace(-5.f, 5.f, 6);
+        DOCTEST_CHECK(result.size() == 6);
+        DOCTEST_CHECK(result[0] == doctest::Approx(-5.f));
+        DOCTEST_CHECK(result[2] == doctest::Approx(-1.f));
+        DOCTEST_CHECK(result[5] == doctest::Approx(5.f));
+        
+        // Check spacing
+        for (size_t i = 1; i < result.size(); ++i) {
+            DOCTEST_CHECK(result[i] - result[i-1] == doctest::Approx(2.f));
+        }
+    }
+
+    SUBCASE("linspace float single point") {
+        std::vector<float> result = linspace(5.f, 10.f, 1);
+        DOCTEST_CHECK(result.size() == 1);
+        DOCTEST_CHECK(result[0] == doctest::Approx(5.f));
+    }
+
+    SUBCASE("linspace float two points") {
+        std::vector<float> result = linspace(1.f, 3.f, 2);
+        DOCTEST_CHECK(result.size() == 2);
+        DOCTEST_CHECK(result[0] == doctest::Approx(1.f));
+        DOCTEST_CHECK(result[1] == doctest::Approx(3.f));
+    }
+
+    SUBCASE("linspace float reversed range") {
+        std::vector<float> result = linspace(10.f, 0.f, 6);
+        DOCTEST_CHECK(result.size() == 6);
+        DOCTEST_CHECK(result[0] == doctest::Approx(10.f));
+        DOCTEST_CHECK(result[2] == doctest::Approx(6.f));
+        DOCTEST_CHECK(result[5] == doctest::Approx(0.f));
+        
+        // Check negative spacing
+        for (size_t i = 1; i < result.size(); ++i) {
+            DOCTEST_CHECK(result[i] - result[i-1] == doctest::Approx(-2.f));
+        }
+    }
+
+    SUBCASE("linspace float error handling") {
+        capture_cerr cerr_buffer;
+        std::vector<float> result;
+        DOCTEST_CHECK_THROWS(result = linspace(0.f, 1.f, 0));
+        DOCTEST_CHECK_THROWS(result = linspace(0.f, 1.f, -1));
+    }
+
+    SUBCASE("linspace vec2 basic functionality") {
+        vec2 start(0.f, 1.f);
+        vec2 end(4.f, 5.f);
+        std::vector<vec2> result = linspace(start, end, 5);
+        
+        DOCTEST_CHECK(result.size() == 5);
+        DOCTEST_CHECK(result[0].x == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[0].y == doctest::Approx(1.f));
+        DOCTEST_CHECK(result[2].x == doctest::Approx(2.f));
+        DOCTEST_CHECK(result[2].y == doctest::Approx(3.f));
+        DOCTEST_CHECK(result[4].x == doctest::Approx(4.f));
+        DOCTEST_CHECK(result[4].y == doctest::Approx(5.f));
+    }
+
+    SUBCASE("linspace vec2 single point") {
+        vec2 start(1.f, 2.f);
+        vec2 end(3.f, 4.f);
+        std::vector<vec2> result = linspace(start, end, 1);
+        
+        DOCTEST_CHECK(result.size() == 1);
+        DOCTEST_CHECK(result[0].x == doctest::Approx(start.x));
+        DOCTEST_CHECK(result[0].y == doctest::Approx(start.y));
+    }
+
+    SUBCASE("linspace vec2 error handling") {
+        capture_cerr cerr_buffer;
+        std::vector<vec2> result;
+        vec2 start(0.f, 0.f);
+        vec2 end(1.f, 1.f);
+        DOCTEST_CHECK_THROWS(result = linspace(start, end, 0));
+        DOCTEST_CHECK_THROWS(result = linspace(start, end, -5));
+    }
+
+    SUBCASE("linspace vec3 basic functionality") {
+        vec3 start(0.f, 0.f, 0.f);
+        vec3 end(3.f, 6.f, 9.f);
+        std::vector<vec3> result = linspace(start, end, 4);
+        
+        DOCTEST_CHECK(result.size() == 4);
+        DOCTEST_CHECK(result[0].x == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[0].y == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[0].z == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[1].x == doctest::Approx(1.f));
+        DOCTEST_CHECK(result[1].y == doctest::Approx(2.f));
+        DOCTEST_CHECK(result[1].z == doctest::Approx(3.f));
+        DOCTEST_CHECK(result[3].x == doctest::Approx(3.f));
+        DOCTEST_CHECK(result[3].y == doctest::Approx(6.f));
+        DOCTEST_CHECK(result[3].z == doctest::Approx(9.f));
+    }
+
+    SUBCASE("linspace vec3 with mixed positive/negative components") {
+        vec3 start(-1.f, 2.f, -3.f);
+        vec3 end(1.f, -2.f, 3.f);
+        std::vector<vec3> result = linspace(start, end, 3);
+        
+        DOCTEST_CHECK(result.size() == 3);
+        DOCTEST_CHECK(result[0].x == doctest::Approx(-1.f));
+        DOCTEST_CHECK(result[0].y == doctest::Approx(2.f));
+        DOCTEST_CHECK(result[0].z == doctest::Approx(-3.f));
+        DOCTEST_CHECK(result[1].x == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[1].y == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[1].z == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[2].x == doctest::Approx(1.f));
+        DOCTEST_CHECK(result[2].y == doctest::Approx(-2.f));
+        DOCTEST_CHECK(result[2].z == doctest::Approx(3.f));
+    }
+
+    SUBCASE("linspace vec3 error handling") {
+        capture_cerr cerr_buffer;
+        std::vector<vec3> result;
+        vec3 start(0.f, 0.f, 0.f);
+        vec3 end(1.f, 1.f, 1.f);
+        DOCTEST_CHECK_THROWS(result = linspace(start, end, 0));
+        DOCTEST_CHECK_THROWS(result = linspace(start, end, -10));
+    }
+
+    SUBCASE("linspace vec4 basic functionality") {
+        vec4 start(0.f, 1.f, 2.f, 3.f);
+        vec4 end(4.f, 9.f, 14.f, 19.f);
+        std::vector<vec4> result = linspace(start, end, 5);
+        
+        DOCTEST_CHECK(result.size() == 5);
+        DOCTEST_CHECK(result[0].x == doctest::Approx(0.f));
+        DOCTEST_CHECK(result[0].y == doctest::Approx(1.f));
+        DOCTEST_CHECK(result[0].z == doctest::Approx(2.f));
+        DOCTEST_CHECK(result[0].w == doctest::Approx(3.f));
+        DOCTEST_CHECK(result[2].x == doctest::Approx(2.f));
+        DOCTEST_CHECK(result[2].y == doctest::Approx(5.f));
+        DOCTEST_CHECK(result[2].z == doctest::Approx(8.f));
+        DOCTEST_CHECK(result[2].w == doctest::Approx(11.f));
+        DOCTEST_CHECK(result[4].x == doctest::Approx(4.f));
+        DOCTEST_CHECK(result[4].y == doctest::Approx(9.f));
+        DOCTEST_CHECK(result[4].z == doctest::Approx(14.f));
+        DOCTEST_CHECK(result[4].w == doctest::Approx(19.f));
+    }
+
+    SUBCASE("linspace vec4 two points") {
+        vec4 start(1.f, 2.f, 3.f, 4.f);
+        vec4 end(5.f, 6.f, 7.f, 8.f);
+        std::vector<vec4> result = linspace(start, end, 2);
+        
+        DOCTEST_CHECK(result.size() == 2);
+        DOCTEST_CHECK(result[0] == start);
+        DOCTEST_CHECK(result[1] == end);
+    }
+
+    SUBCASE("linspace vec4 error handling") {
+        capture_cerr cerr_buffer;
+        std::vector<vec4> result;
+        vec4 start(0.f, 0.f, 0.f, 0.f);
+        vec4 end(1.f, 1.f, 1.f, 1.f);
+        DOCTEST_CHECK_THROWS(result = linspace(start, end, 0));
+        DOCTEST_CHECK_THROWS(result = linspace(start, end, -1));
+    }
+
+    SUBCASE("linspace precision and endpoint accuracy") {
+        // Test that endpoints are exactly preserved despite floating point arithmetic
+        std::vector<float> result = linspace(0.1f, 0.9f, 9);
+        DOCTEST_CHECK(result[0] == doctest::Approx(0.1f));
+        DOCTEST_CHECK(result[8] == doctest::Approx(0.9f));
+        
+        // Test with large values
+        result = linspace(1000000.f, 2000000.f, 11);
+        DOCTEST_CHECK(result[0] == doctest::Approx(1000000.f));
+        DOCTEST_CHECK(result[10] == doctest::Approx(2000000.f));
+        
+        // Test with very small values
+        result = linspace(1e-6f, 2e-6f, 3);
+        DOCTEST_CHECK(result[0] == doctest::Approx(1e-6f));
+        DOCTEST_CHECK(result[2] == doctest::Approx(2e-6f));
+    }
+
+    SUBCASE("linspace zero-length intervals") {
+        // Test when start == end
+        std::vector<float> result = linspace(5.f, 5.f, 5);
+        DOCTEST_CHECK(result.size() == 5);
+        for (const auto& val : result) {
+            DOCTEST_CHECK(val == doctest::Approx(5.f));
+        }
+        
+        // Test vec3 with zero-length interval
+        vec3 point(1.f, 2.f, 3.f);
+        std::vector<vec3> vec_result = linspace(point, point, 3);
+        DOCTEST_CHECK(vec_result.size() == 3);
+        for (const auto& v : vec_result) {
+            DOCTEST_CHECK(v.x == doctest::Approx(point.x));
+            DOCTEST_CHECK(v.y == doctest::Approx(point.y));
+            DOCTEST_CHECK(v.z == doctest::Approx(point.z));
+        }
+    }
+}

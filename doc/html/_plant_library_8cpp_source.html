@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.43</span>
+       <span id="projectnumber">&#160;v1.3.44</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -784,9 +784,9 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span> </div>
 <div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>    ShootParameters shoot_parameters_primary(context_ptr-&gt;getRandomGenerator());</div>
 <div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span>    shoot_parameters_primary.phytomer_parameters = phytomer_parameters_bindweed;</div>
-<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span>    shoot_parameters_primary.vegetative_bud_break_probability_min = 0.15;</div>
+<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span>    shoot_parameters_primary.vegetative_bud_break_probability_min = 0.1;</div>
 <div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span>    shoot_parameters_primary.vegetative_bud_break_probability_decay_rate = -1.;</div>
-<div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span>    shoot_parameters_primary.vegetative_bud_break_time = 3;</div>
+<div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span>    shoot_parameters_primary.vegetative_bud_break_time = 10;</div>
 <div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>    shoot_parameters_primary.base_roll = 90;</div>
 <div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>    shoot_parameters_primary.phyllochron_min = 1;</div>
 <div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>    shoot_parameters_primary.elongation_rate_max = 0.25;</div>
@@ -1271,9 +1271,9 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01109" name="l01109"></a><span class="lineno"> 1109</span>    phytomer_parameters_trifoliate.inflorescence.roll.uniformDistribution(-20, 20);</div>
 <div class="line"><a id="l01110" name="l01110"></a><span class="lineno"> 1110</span>    phytomer_parameters_trifoliate.inflorescence.flower_prototype_scale = 0.03;</div>
 <div class="line"><a id="l01111" name="l01111"></a><span class="lineno"> 1111</span>    phytomer_parameters_trifoliate.inflorescence.flower_prototype_function = CowpeaFlowerPrototype;</div>
-<div class="line"><a id="l01112" name="l01112"></a><span class="lineno"> 1112</span>    phytomer_parameters_trifoliate.inflorescence.fruit_prototype_scale.uniformDistribution(0.11, 0.13);</div>
+<div class="line"><a id="l01112" name="l01112"></a><span class="lineno"> 1112</span>    phytomer_parameters_trifoliate.inflorescence.fruit_prototype_scale.uniformDistribution(0.09, 0.1);</div>
 <div class="line"><a id="l01113" name="l01113"></a><span class="lineno"> 1113</span>    phytomer_parameters_trifoliate.inflorescence.fruit_prototype_function = CowpeaFruitPrototype;</div>
-<div class="line"><a id="l01114" name="l01114"></a><span class="lineno"> 1114</span>    phytomer_parameters_trifoliate.inflorescence.fruit_gravity_factor_fraction.uniformDistribution(0.5, 0.7);</div>
+<div class="line"><a id="l01114" name="l01114"></a><span class="lineno"> 1114</span>    phytomer_parameters_trifoliate.inflorescence.fruit_gravity_factor_fraction.uniformDistribution(0.3, 0.5);</div>
 <div class="line"><a id="l01115" name="l01115"></a><span class="lineno"> 1115</span> </div>
 <div class="line"><a id="l01116" name="l01116"></a><span class="lineno"> 1116</span>    PhytomerParameters phytomer_parameters_unifoliate = phytomer_parameters_trifoliate;</div>
 <div class="line"><a id="l01117" name="l01117"></a><span class="lineno"> 1117</span>    phytomer_parameters_unifoliate.<a class="code hl_variable" href="struct_phytomer_parameters.html#afd92e77a87bec17a845f81d146600b39" title="Parameters defining the characteristics of an internode.">internode</a>.pitch = 0;</div>
@@ -2077,7 +2077,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01915" name="l01915"></a><span class="lineno"> 1915</span>    shoot_parameters_primary.phytomer_parameters = phytomer_parameters_puncturevine;</div>
 <div class="line"><a id="l01916" name="l01916"></a><span class="lineno"> 1916</span>    shoot_parameters_primary.vegetative_bud_break_probability_min = 0.1;</div>
 <div class="line"><a id="l01917" name="l01917"></a><span class="lineno"> 1917</span>    shoot_parameters_primary.vegetative_bud_break_probability_decay_rate = 1.f;</div>
-<div class="line"><a id="l01918" name="l01918"></a><span class="lineno"> 1918</span>    shoot_parameters_primary.vegetative_bud_break_time = 3;</div>
+<div class="line"><a id="l01918" name="l01918"></a><span class="lineno"> 1918</span>    shoot_parameters_primary.vegetative_bud_break_time = 10;</div>
 <div class="line"><a id="l01919" name="l01919"></a><span class="lineno"> 1919</span>    shoot_parameters_primary.base_roll = 90;</div>
 <div class="line"><a id="l01920" name="l01920"></a><span class="lineno"> 1920</span>    shoot_parameters_primary.phyllochron_min = 1;</div>
 <div class="line"><a id="l01921" name="l01921"></a><span class="lineno"> 1921</span>    shoot_parameters_primary.elongation_rate_max = 0.2;</div>

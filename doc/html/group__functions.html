@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.43</span>
+       <span id="projectnumber">&#160;v1.3.44</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -332,6 +332,18 @@ Functions</h2></td></tr>
 <tr class="memitem:ga7f8e948aa3a70481ebd3a829531bee4e" id="r_ga7f8e948aa3a70481ebd3a829531bee4e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga7f8e948aa3a70481ebd3a829531bee4e">helios::spline_interp3</a> (float u, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;x_start, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;tan_start, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;x_end, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;tan_end)</td></tr>
 <tr class="memdesc:ga7f8e948aa3a70481ebd3a829531bee4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to perform cubic Hermite spline interpolation.  <br /></td></tr>
 <tr class="separator:ga7f8e948aa3a70481ebd3a829531bee4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga7b3096a0046cf1bd108796a6f7d90bfa" id="r_ga7b3096a0046cf1bd108796a6f7d90bfa"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga7b3096a0046cf1bd108796a6f7d90bfa">helios::linspace</a> (float start, float end, int num)</td></tr>
+<tr class="memdesc:ga7b3096a0046cf1bd108796a6f7d90bfa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate linearly spaced values between two endpoints.  <br /></td></tr>
+<tr class="separator:ga7b3096a0046cf1bd108796a6f7d90bfa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaee02b6805960b89201555f4022768c6b" id="r_gaee02b6805960b89201555f4022768c6b"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">vec2</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gaee02b6805960b89201555f4022768c6b">helios::linspace</a> (const <a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;start, const <a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;end, int num)</td></tr>
+<tr class="memdesc:gaee02b6805960b89201555f4022768c6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate linearly spaced vec2 values between two endpoints.  <br /></td></tr>
+<tr class="separator:gaee02b6805960b89201555f4022768c6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga23f7dd71170481919d4d6f91ae6ce658" id="r_ga23f7dd71170481919d4d6f91ae6ce658"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">vec3</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga23f7dd71170481919d4d6f91ae6ce658">helios::linspace</a> (const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;start, const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;end, int num)</td></tr>
+<tr class="memdesc:ga23f7dd71170481919d4d6f91ae6ce658"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate linearly spaced vec3 values between two endpoints.  <br /></td></tr>
+<tr class="separator:ga23f7dd71170481919d4d6f91ae6ce658"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga579d9cf59822d6ead41585737d9d5211" id="r_ga579d9cf59822d6ead41585737d9d5211"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">vec4</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga579d9cf59822d6ead41585737d9d5211">helios::linspace</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;start, const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;end, int num)</td></tr>
+<tr class="memdesc:ga579d9cf59822d6ead41585737d9d5211"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate linearly spaced vec4 values between two endpoints.  <br /></td></tr>
+<tr class="separator:ga579d9cf59822d6ead41585737d9d5211"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <p>Miscellaneous helper functions. </p>
@@ -361,7 +373,7 @@ Functions</h2></td></tr>
 
 <p>arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1, and thus regular acos() returns NaN </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00274">274</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00271">271</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -390,7 +402,7 @@ Functions</h2></td></tr>
 
 <p>arcsine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1, and thus regular asin() returns NaN </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00282">282</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00279">279</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -424,7 +436,7 @@ Functions</h2></td></tr>
 <p>Four quadrant arc tangent between 0 and 2*pi. </p>
 <dl class="section note"><dt>Note</dt><dd>atan2_2pi(0,1) = 0, atan2_2pi(1,0) = pi/2, etc. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00662">662</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00659">659</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -508,7 +520,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>SphericalCoord vector. </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>sphere2cart(), SphericalCoord </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00686">686</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00683">683</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -556,7 +568,7 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00442">442</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00458">458</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -585,7 +597,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Remove all whitespace from character array. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01050">1050</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01047">1047</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -614,7 +626,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Remove all whitespace from a string. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01061">1061</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01058">1058</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -651,7 +663,7 @@ template&lt;typename anytype&gt; </div>
 <dl class="section return"><dt>Returns</dt><dd>angle in radians </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>rad2deg() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00654">654</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00651">651</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -688,7 +700,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00871">871</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00887">887</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -725,7 +737,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00855">855</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00871">871</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -762,7 +774,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00841">841</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00857">857</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -799,7 +811,7 @@ template&lt;typename T&gt; </div>
 <dl class="section return"><dt>Returns</dt><dd>Julian day of year </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>CalendarDay() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01292">1292</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01289">1289</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -842,7 +854,195 @@ template&lt;typename T&gt; </div>
 
 <p>Determine if two line segments intersect. The lines segments are defined by vertices (p1,q1) and (p2,q2) </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00290">290</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00287">287</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="gaee02b6805960b89201555f4022768c6b" name="gaee02b6805960b89201555f4022768c6b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaee02b6805960b89201555f4022768c6b">&#9670;&#160;</a></span>linspace() <span class="overload">[1/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="structhelios_1_1vec2.html">vec2</a> &gt; helios::linspace </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>start</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec2.html">vec2</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>end</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>num</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Generate linearly spaced vec2 values between two endpoints. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">start</td><td>Starting vec2 value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">end</td><td>Ending vec2 value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">num</td><td>Number of uniformly spaced points to generate </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of linearly spaced vec2 values </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02593">2593</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga23f7dd71170481919d4d6f91ae6ce658" name="ga23f7dd71170481919d4d6f91ae6ce658"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga23f7dd71170481919d4d6f91ae6ce658">&#9670;&#160;</a></span>linspace() <span class="overload">[2/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">vec3</a> &gt; helios::linspace </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>start</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>end</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>num</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Generate linearly spaced vec3 values between two endpoints. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">start</td><td>Starting vec3 value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">end</td><td>Ending vec3 value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">num</td><td>Number of uniformly spaced points to generate </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of linearly spaced vec3 values </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02614">2614</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga579d9cf59822d6ead41585737d9d5211" name="ga579d9cf59822d6ead41585737d9d5211"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga579d9cf59822d6ead41585737d9d5211">&#9670;&#160;</a></span>linspace() <span class="overload">[3/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">vec4</a> &gt; helios::linspace </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>start</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>end</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>num</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Generate linearly spaced vec4 values between two endpoints. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">start</td><td>Starting vec4 value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">end</td><td>Ending vec4 value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">num</td><td>Number of uniformly spaced points to generate </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of linearly spaced vec4 values </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02635">2635</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga7b3096a0046cf1bd108796a6f7d90bfa" name="ga7b3096a0046cf1bd108796a6f7d90bfa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga7b3096a0046cf1bd108796a6f7d90bfa">&#9670;&#160;</a></span>linspace() <span class="overload">[4/4]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; float &gt; helios::linspace </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>start</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>end</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>num</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Generate linearly spaced values between two endpoints. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">start</td><td>Starting value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">end</td><td>Ending value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">num</td><td>Number of uniformly spaced points to generate </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of linearly spaced float values </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02572">2572</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -880,7 +1080,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00398">398</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00395">395</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -918,7 +1118,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00448">448</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00445">445</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -962,7 +1162,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00472">472</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00469">469</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1000,7 +1200,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00553">553</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00550">550</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1032,7 +1232,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00534">534</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00531">531</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1064,7 +1264,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00515">515</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00512">512</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1099,7 +1299,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01170">1170</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01167">1167</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1134,7 +1334,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01178">1178</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01175">1175</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1169,7 +1369,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01186">1186</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01183">1183</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1204,7 +1404,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01118">1118</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01115">1115</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1239,7 +1439,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01229">1229</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01226">1226</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1274,7 +1474,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01132">1132</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01129">1129</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1309,7 +1509,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01140">1140</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01137">1137</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1344,7 +1544,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01148">1148</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01145">1145</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1377,7 +1577,7 @@ template&lt;typename T&gt; </div>
 
 <p>Determine whether point lines within a polygon. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00360">360</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00357">357</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1414,7 +1614,7 @@ template&lt;typename T&gt; </div>
 <dl class="section return"><dt>Returns</dt><dd>angle in degrees </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>deg2rad() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00658">658</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00655">655</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1443,7 +1643,7 @@ template&lt;typename T&gt; </div>
 
 <p>Random number from a uniform distribution between 0 and 1. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00260">260</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00257">257</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1476,7 +1676,7 @@ template&lt;typename T&gt; </div>
 
 <p>Random integer from a uniform distribution between imin and imax. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00264">264</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00261">261</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1516,7 +1716,7 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00531">531</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00547">547</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -1562,7 +1762,7 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00544">544</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00560">560</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -1614,7 +1814,7 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00558">558</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00574">574</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -1741,7 +1941,7 @@ template&lt;typename anytype&gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of substrings. If inputstring does not contain delimiter, empty vector is returned </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01081">1081</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01078">1078</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1778,7 +1978,7 @@ template&lt;typename anytype&gt; </div>
 <dl class="section return"><dt>Returns</dt><dd>vec3 vector of Cartesian coordinates </dd></dl>
 <dl class="section see"><dt>See also</dt><dd>cart2sphere() </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00691">691</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00688">688</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1837,7 +2037,7 @@ template&lt;typename anytype&gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Interpolated (x,y,z) Cartesian point. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01948">1948</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01945">1945</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1872,7 +2072,7 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01208">1208</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01205">1205</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1901,7 +2101,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Convert a space-delimited string into an int2 vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00755">755</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00752">752</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1930,7 +2130,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Convert a space-delimited string into an int3 vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00775">775</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00772">772</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1959,7 +2159,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Convert a space-delimited string into an int4 vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00795">795</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00792">792</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1988,7 +2188,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Convert a space-delimited string into an RGBcolor vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00815">815</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00812">812</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2017,7 +2217,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Convert a space-delimited string into a vec2 vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00695">695</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00692">692</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2046,7 +2246,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Convert a space-delimited string into a vec3 vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00715">715</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00712">712</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2075,7 +2275,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Convert a space-delimited string into a vec4 vector. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00735">735</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00732">732</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2110,7 +2310,7 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01105">1105</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01102">1102</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2139,7 +2339,7 @@ template&lt;typename anytype&gt; </div>
 
 <p>Remove leading and trailing whitespace from a string. </p>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01065">1065</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01062">1062</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2166,7 +2366,7 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00393">393</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l00390">390</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>

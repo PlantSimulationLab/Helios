@@ -74,7 +74,7 @@ var searchData=
   ['lightingmodel_71',['LightingModel',['../class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573',1,'Visualizer']]],
   ['lineintersection_72',['lineIntersection',['../group__functions.html#ga3fd112746616c33aae6ac56d9863c9a6',1,'helios']]],
   ['linesintersection_73',['linesIntersection',['../class_voxel_intersection.html#a69cda90cd28f478ae007a88615994df2',1,'VoxelIntersection']]],
-  ['linspace_74',['linspace',['../_project_builder_8h.html#ab5dbf3e7cbda62126b5dc0b34456e149',1,'ProjectBuilder.cpp']]],
+  ['linspace_74',['linspace',['../group__functions.html#ga7b3096a0046cf1bd108796a6f7d90bfa',1,'helios::linspace(float start, float end, int num)'],['../group__functions.html#gaee02b6805960b89201555f4022768c6b',1,'helios::linspace(const vec2 &amp;start, const vec2 &amp;end, int num)'],['../group__functions.html#ga23f7dd71170481919d4d6f91ae6ce658',1,'helios::linspace(const vec3 &amp;start, const vec3 &amp;end, int num)'],['../group__functions.html#ga579d9cf59822d6ead41585737d9d5211',1,'helios::linspace(const vec4 &amp;start, const vec4 &amp;end, int num)']]],
   ['linux_75',['Set-up on Linux',['../_dependent_software.html#SetupLinux',1,'']]],
   ['linux_20wsl_76',['Manually installing OptiX if using Windows Subsystem for Linux (WSL)',['../_dependent_software.html#OptiXWSL',1,'']]],
   ['listallobjectdatalabels_77',['listAllObjectDataLabels',['../classhelios_1_1_context.html#a4c1175f27f7b2e4cd061c971a750a939',1,'helios::Context']]],

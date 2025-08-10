@@ -391,6 +391,20 @@
   $ cmake -DCMAKE_BUILD_TYPE='Release' ..
   ```
 
+  \subsection BuildTests Building Test Executables
+
+  By default, test executables for the core library and plugins are not built to reduce compilation time and dependencies. Test executables can be enabled by setting the BUILD_TESTS option to ON:
+
+  ```
+  $ cmake -DBUILD_TESTS=ON ..
+  ```
+
+  This will build test executables such as `context_tests` for the core library and `[plugin_name]_tests` for each plugin. These tests must be run manually by executing the test executables directly. Test building can be combined with other options:
+
+  ```
+  $ cmake -DCMAKE_BUILD_TYPE='Release' -DBUILD_TESTS=ON ..
+  ```
+
   The code can then be compiled by issuing the 'make' command from the build directory, which will produce an executable in the build directory.
 
   \subsection DirScript New Project Script
@@ -1392,7 +1406,7 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
      context.setPrimitiveData(UUID, "emissivity", eps);
 
      if( context.doesPrimitiveDataExist(UUID, "emissivity") ){
-        HeliosDataType type = context.getPrimitiveDataType(UUID, "emissivity");
+        HeliosDataType type = context.getPrimitiveDataType("emissivity");
         uint L = context.getPrimitiveDataSize(UUID, "emissivity");
      }
 

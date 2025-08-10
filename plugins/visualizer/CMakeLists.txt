@@ -31,7 +31,15 @@ target_link_libraries( visualizer PRIVATE freetype )
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/lib/glew-2.2.0/include")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/glew-2.2.0/build/cmake")
 target_link_libraries( visualizer PRIVATE glew_s )
-#target_link_libraries( visualizer GLEW_static )
+# Disable OpenGL deprecation warnings for GLEW
+target_compile_options(glew_s
+		PRIVATE
+		# for clang, AppleClang & gcc
+		$<$<AND:$<OR:$<C_COMPILER_ID:Clang>,$<C_COMPILER_ID:AppleClang>>,$<COMPILE_LANGUAGE:C>>:-Wno-deprecated-declarations>
+		$<$<AND:$<OR:$<C_COMPILER_ID:Clang>,$<C_COMPILER_ID:AppleClang>>,$<COMPILE_LANGUAGE:C>>:-DGL_SILENCE_DEPRECATION>
+		# for MSVC
+		$<$<C_COMPILER_ID:MSVC>:/wd4996>
+)
 
 #glfw
 include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/lib/glfw-3.3.2/include")
@@ -51,6 +59,10 @@ find_package(OpenGL REQUIRED)
 if(OPENGL_FOUND)
 	include_directories(${OPENGL_INCLUDE_DIRS})
 	target_link_libraries( visualizer PRIVATE ${OPENGL_LIBRARIES} )
+	# Silence OpenGL deprecation warnings on macOS
+	if(APPLE)
+		target_compile_definitions(visualizer PRIVATE GL_SILENCE_DEPRECATION)
+	endif()
 endif(OPENGL_FOUND)
 
 #X11      
@@ -95,6 +107,8 @@ set_target_properties(copy_textures PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 add_dependencies(visualizer copy_shaders copy_textures)
 
-add_executable( visualizer_tests "tests/TestMain.cpp" )
-target_link_libraries( visualizer_tests PRIVATE visualizer )
-add_test( NAME visualizer_tests COMMAND visualizer_tests )
+if(BUILD_TESTS)
+    add_executable( visualizer_tests "tests/TestMain.cpp" )
+    target_link_libraries( visualizer_tests PRIVATE visualizer )
+    add_test( NAME visualizer_tests COMMAND visualizer_tests )
+endif()

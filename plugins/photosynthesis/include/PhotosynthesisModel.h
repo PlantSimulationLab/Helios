@@ -568,8 +568,11 @@ private:
     EmpiricalModelCoefficients empiricalmodelcoeffs;
     FarquharModelCoefficients farquharmodelcoeffs;
 
-    std::map<uint, EmpiricalModelCoefficients> empiricalmodel_coefficients;
-    std::map<uint, FarquharModelCoefficients> farquharmodel_coefficients;
+    std::unordered_map<uint, EmpiricalModelCoefficients> empiricalmodel_coefficients;
+    std::unordered_map<uint, FarquharModelCoefficients> farquharmodel_coefficients;
+    
+    //! Storage for previous timestep Ci values for temporal continuity (O(1) lookup performance)
+    std::unordered_map<uint, float> previous_Ci;
 
     float evaluateEmpiricalModel(const EmpiricalModelCoefficients &params, float i_PAR, float TL, float CO2, float gM);
 

@@ -70,5 +70,5 @@ var searchData=
   ['future_67',['Additional Cone Methods (Future)',['../_collision_detection_doc.html#CDConeIntersection',1,'']]],
   ['fvcb_20model_20independent_20variables_68',['Summary of FvCB Model Independent Variables',['../_photosynthesis_doc.html#FvCBPhotoVars',1,'']]],
   ['fvcb_20model_20parameters_69',['FvCB Model Parameters',['../_photosynthesis_doc.html#FvCBSettingPhotoParams',1,'Setting FvCB Model Parameters'],['../_photosynthesis_doc.html#FvCBPhotoParams',1,'Summary of FvCB Model Parameters']]],
-  ['fzero_70',['fzero',['../global_8h.html#a464923f1888b6ba4dc1a3b6881fa9e80',1,'helios']]]
+  ['fzero_70',['fzero',['../global_8h.html#a464923f1888b6ba4dc1a3b6881fa9e80',1,'helios::fzero(float(*function)(float value, std::vector&lt; float &gt; &amp;variables, const void *parameters), std::vector&lt; float &gt; &amp;variables, const void *parameters, float init_guess, float err_tol=0.0001f, int max_iterations=100)'],['../global_8h.html#ae7cd19eb9f750cc2b60d49a09b14b243',1,'helios::fzero(float(*function)(float value, std::vector&lt; float &gt; &amp;variables, const void *parameters), std::vector&lt; float &gt; &amp;variables, const void *parameters, float init_guess, bool &amp;converged, float err_tol=0.0001f, int max_iterations=100)']]]
 ];

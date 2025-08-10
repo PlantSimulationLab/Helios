@@ -143,7 +143,7 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance(const std::vector<uint> &U
             sprintf(str, "radiation_flux_%s", radiation_bands.at(b).c_str());
             if (!context->doesPrimitiveDataExist(p, str)) {
                 helios::helios_runtime_error("ERROR (EnergyBalanceModel::run): No radiation was found in the context for band " + std::string(radiation_bands.at(b)) + ". Did you run the radiation model for this band?");
-            } else if (context->getPrimitiveDataType(p, str) != helios::HELIOS_TYPE_FLOAT) {
+            } else if (context->getPrimitiveDataType(str) != helios::HELIOS_TYPE_FLOAT) {
                 helios::helios_runtime_error("ERROR (EnergyBalanceModel::run): Radiation primitive data for band " + std::string(radiation_bands.at(b)) + " does not have the correct type of ''float'");
             }
             float R;
@@ -151,7 +151,7 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance(const std::vector<uint> &U
             Rn.at(u) += R;
 
             sprintf(str, "emissivity_%s", radiation_bands.at(b).c_str());
-            if (context->doesPrimitiveDataExist(p, str) && context->getPrimitiveDataType(p, str) == helios::HELIOS_TYPE_FLOAT) {
+            if (context->doesPrimitiveDataExist(p, str) && context->getPrimitiveDataType(str) == helios::HELIOS_TYPE_FLOAT) {
                 context->getPrimitiveData(p, str, emissivity.at(u));
             }
         }
@@ -220,7 +220,7 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance(const std::vector<uint> &U
         size_t p = UUIDs.at(u);
 
         // Initial guess for surface temperature
-        if (context->doesPrimitiveDataExist(p, "temperature") && context->getPrimitiveDataType(p, "temperature") == helios::HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(p, "temperature") && context->getPrimitiveDataType("temperature") == helios::HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(p, "temperature", To[u]);
         } else {
             To[u] = temperature_default;
@@ -230,7 +230,7 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance(const std::vector<uint> &U
         }
 
         // Air temperature
-        if (context->doesPrimitiveDataExist(p, "air_temperature") && context->getPrimitiveDataType(p, "air_temperature") == helios::HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(p, "air_temperature") && context->getPrimitiveDataType("air_temperature") == helios::HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(p, "air_temperature", Ta[u]);
             if (message_flag && Ta[u] < 250.f) {
                 std::cout << "WARNING (EnergyBalanceModel::run): Value of " << Ta[u] << " given in 'air_temperature' primitive data is very small. Values should be given in units of Kelvin. Assuming default value of " << air_temperature_default
@@ -243,7 +243,7 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance(const std::vector<uint> &U
 
         // Air relative humidity
         float hr;
-        if (context->doesPrimitiveDataExist(p, "air_humidity") && context->getPrimitiveDataType(p, "air_humidity") == helios::HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(p, "air_humidity") && context->getPrimitiveDataType("air_humidity") == helios::HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(p, "air_humidity", hr);
             if (hr > 1.f) {
                 if (message_flag) {
@@ -267,7 +267,7 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance(const std::vector<uint> &U
         ea[u] = hr * esat; // Definition of vapor pressure (see Campbell and Norman pp. 42 Eq. 3.11)
 
         // Air pressure
-        if (context->doesPrimitiveDataExist(p, "air_pressure") && context->getPrimitiveDataType(p, "air_pressure") == helios::HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(p, "air_pressure") && context->getPrimitiveDataType("air_pressure") == helios::HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(p, "air_pressure", pressure[u]);
             if (pressure[u] < 10000.f) {
                 if (message_flag) {
@@ -282,7 +282,7 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance(const std::vector<uint> &U
 
         // Number of sides emitting radiation
         Nsides[u] = 2; // default is 2
-        if (context->doesPrimitiveDataExist(p, "twosided_flag") && context->getPrimitiveDataType(p, "twosided_flag") == helios::HELIOS_TYPE_UINT) {
+        if (context->doesPrimitiveDataExist(p, "twosided_flag") && context->getPrimitiveDataType("twosided_flag") == helios::HELIOS_TYPE_UINT) {
             uint flag;
             context->getPrimitiveData(p, "twosided_flag", flag);
             if (flag == 0) {
@@ -292,10 +292,10 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance(const std::vector<uint> &U
 
         // Number of evaporating/transpiring faces
         stomatal_sidedness[u] = 0.f; // if Nsides=1, force this to be 0 (all stomata on upper surface)
-        if (Nsides[u] == 2 && context->doesPrimitiveDataExist(p, "stomatal_sidedness") && context->getPrimitiveDataType(p, "stomatal_sidedness") == helios::HELIOS_TYPE_FLOAT) {
+        if (Nsides[u] == 2 && context->doesPrimitiveDataExist(p, "stomatal_sidedness") && context->getPrimitiveDataType("stomatal_sidedness") == helios::HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(p, "stomatal_sidedness", stomatal_sidedness[u]);
             // this is for backward compatability prior to v1.3.17
-        } else if (Nsides[u] == 2 && context->doesPrimitiveDataExist(p, "evaporating_faces") && context->getPrimitiveDataType(p, "evaporating_faces") == helios::HELIOS_TYPE_UINT) {
+        } else if (Nsides[u] == 2 && context->doesPrimitiveDataExist(p, "evaporating_faces") && context->getPrimitiveDataType("evaporating_faces") == helios::HELIOS_TYPE_UINT) {
             uint flag;
             context->getPrimitiveData(p, "evaporating_faces", flag);
             if (flag == 1) { // stomata on one side
@@ -306,13 +306,13 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance(const std::vector<uint> &U
         }
 
         // Boundary-layer conductance to heat
-        if (context->doesPrimitiveDataExist(p, "boundarylayer_conductance") && context->getPrimitiveDataType(p, "boundarylayer_conductance") == helios::HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(p, "boundarylayer_conductance") && context->getPrimitiveDataType("boundarylayer_conductance") == helios::HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(p, "boundarylayer_conductance", gH[u]);
         } else {
 
             // Wind speed
             float U;
-            if (context->doesPrimitiveDataExist(p, "wind_speed") && context->getPrimitiveDataType(p, "wind_speed") == helios::HELIOS_TYPE_FLOAT) {
+            if (context->doesPrimitiveDataExist(p, "wind_speed") && context->getPrimitiveDataType("wind_speed") == helios::HELIOS_TYPE_FLOAT) {
                 context->getPrimitiveData(p, "wind_speed", U);
             } else {
                 U = wind_speed_default;
@@ -320,7 +320,7 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance(const std::vector<uint> &U
 
             // Characteristic size of primitive
             float L;
-            if (context->doesPrimitiveDataExist(p, "object_length") && context->getPrimitiveDataType(p, "object_length") == helios::HELIOS_TYPE_FLOAT) {
+            if (context->doesPrimitiveDataExist(p, "object_length") && context->getPrimitiveDataType("object_length") == helios::HELIOS_TYPE_FLOAT) {
                 context->getPrimitiveData(p, "object_length", L);
                 if (L == 0) {
                     L = sqrt(context->getPrimitiveArea(p));
@@ -340,28 +340,28 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance(const std::vector<uint> &U
         }
 
         // Moisture conductance
-        if (context->doesPrimitiveDataExist(p, "moisture_conductance") && context->getPrimitiveDataType(p, "moisture_conductance") == helios::HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(p, "moisture_conductance") && context->getPrimitiveDataType("moisture_conductance") == helios::HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(p, "moisture_conductance", gS[u]);
         } else {
             gS[u] = gS_default;
         }
 
         // Other fluxes
-        if (context->doesPrimitiveDataExist(p, "other_surface_flux") && context->getPrimitiveDataType(p, "other_surface_flux") == helios::HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(p, "other_surface_flux") && context->getPrimitiveDataType("other_surface_flux") == helios::HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(p, "other_surface_flux", Qother[u]);
         } else {
             Qother[u] = Qother_default;
         }
 
         // Object heat capacity
-        if (context->doesPrimitiveDataExist(p, "heat_capacity") && context->getPrimitiveDataType(p, "heat_capacity") == helios::HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(p, "heat_capacity") && context->getPrimitiveDataType("heat_capacity") == helios::HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(p, "heat_capacity", heatcapacity[u]);
         } else {
             heatcapacity[u] = heatcapacity_default;
         }
 
         // Surface humidity
-        if (context->doesPrimitiveDataExist(p, "surface_humidity") && context->getPrimitiveDataType(p, "surface_humidity") == helios::HELIOS_TYPE_FLOAT) {
+        if (context->doesPrimitiveDataExist(p, "surface_humidity") && context->getPrimitiveDataType("surface_humidity") == helios::HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(p, "surface_humidity", surfacehumidity[u]);
         } else {
             surfacehumidity[u] = surface_humidity_default;

@@ -3061,7 +3061,7 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t i = 0; i < UUIDs.size(); ++i) {
+            for (int i = 0; i < (int)UUIDs.size(); ++i) {
                 primitives.at(UUIDs[i])->setPrimitiveData(label, data[i]);
             }
         }
@@ -3119,7 +3119,7 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t i = 0; i < UUIDs.size(); ++i) {
+            for (int i = 0; i < (int)UUIDs.size(); ++i) {
                 primitives.at(UUIDs[i])->setPrimitiveData(label, data);
             }
         }
@@ -3166,7 +3166,7 @@ namespace helios {
          * \return Helios data type of primitive data
          * \sa HeliosDataType
          */
-        HeliosDataType getPrimitiveDataType(uint UUID, const char *label) const;
+        DEPRECATED( HeliosDataType getPrimitiveDataType(uint UUID, const char *label) const );
 
         //! Get the expected data type for a primitive data label (cached lookup)
         /**
@@ -3826,7 +3826,7 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t i = 0; i < objIDs.size(); ++i) {
+            for (int i = 0; i < (int)objIDs.size(); ++i) {
                 objects.at(objIDs[i])->setObjectData(label, data);
             }
         }
@@ -3884,7 +3884,7 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t j = 0; j < objIDs.size(); ++j) {
+            for (int j = 0; j < (int)objIDs.size(); ++j) {
                 for (size_t i = 0; i < objIDs[j].size(); ++i) {
                     objects.at(objIDs[j][i])->setObjectData(label, data);
                 }
@@ -3946,7 +3946,7 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t k = 0; k < objIDs.size(); ++k) {
+            for (int k = 0; k < (int)objIDs.size(); ++k) {
                 for (size_t j = 0; j < objIDs[k].size(); ++j) {
                     for (size_t i = 0; i < objIDs[k][j].size(); ++i) {
                         uint objID = objIDs[k][j][i];
@@ -4062,7 +4062,7 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (size_t i = 0; i < objIDs.size(); ++i) {
+            for (int i = 0; i < (int)objIDs.size(); ++i) {
                 objects.at(objIDs[i])->setObjectData(label, data[i]);
             }
         }
@@ -4115,7 +4115,7 @@ namespace helios {
          * \return Helios data type of primitive data
          * \sa HeliosDataType
          */
-        HeliosDataType getObjectDataType(uint objID, const char *label) const;
+        DEPRECATED( HeliosDataType getObjectDataType(uint objID, const char *label) const );
 
         //! Get the expected data type for an object data label (cached lookup)
         /**

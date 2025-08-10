@@ -622,9 +622,9 @@ void PlantArchitecture::initializeBindweedShoots() {
 
     ShootParameters shoot_parameters_primary(context_ptr->getRandomGenerator());
     shoot_parameters_primary.phytomer_parameters = phytomer_parameters_bindweed;
-    shoot_parameters_primary.vegetative_bud_break_probability_min = 0.15;
+    shoot_parameters_primary.vegetative_bud_break_probability_min = 0.1;
     shoot_parameters_primary.vegetative_bud_break_probability_decay_rate = -1.;
-    shoot_parameters_primary.vegetative_bud_break_time = 3;
+    shoot_parameters_primary.vegetative_bud_break_time = 10;
     shoot_parameters_primary.base_roll = 90;
     shoot_parameters_primary.phyllochron_min = 1;
     shoot_parameters_primary.elongation_rate_max = 0.25;
@@ -1109,9 +1109,9 @@ void PlantArchitecture::initializeCowpeaShoots() {
     phytomer_parameters_trifoliate.inflorescence.roll.uniformDistribution(-20, 20);
     phytomer_parameters_trifoliate.inflorescence.flower_prototype_scale = 0.03;
     phytomer_parameters_trifoliate.inflorescence.flower_prototype_function = CowpeaFlowerPrototype;
-    phytomer_parameters_trifoliate.inflorescence.fruit_prototype_scale.uniformDistribution(0.11, 0.13);
+    phytomer_parameters_trifoliate.inflorescence.fruit_prototype_scale.uniformDistribution(0.09, 0.1);
     phytomer_parameters_trifoliate.inflorescence.fruit_prototype_function = CowpeaFruitPrototype;
-    phytomer_parameters_trifoliate.inflorescence.fruit_gravity_factor_fraction.uniformDistribution(0.5, 0.7);
+    phytomer_parameters_trifoliate.inflorescence.fruit_gravity_factor_fraction.uniformDistribution(0.3, 0.5);
 
     PhytomerParameters phytomer_parameters_unifoliate = phytomer_parameters_trifoliate;
     phytomer_parameters_unifoliate.internode.pitch = 0;
@@ -1915,7 +1915,7 @@ void PlantArchitecture::initializePuncturevineShoots() {
     shoot_parameters_primary.phytomer_parameters = phytomer_parameters_puncturevine;
     shoot_parameters_primary.vegetative_bud_break_probability_min = 0.1;
     shoot_parameters_primary.vegetative_bud_break_probability_decay_rate = 1.f;
-    shoot_parameters_primary.vegetative_bud_break_time = 3;
+    shoot_parameters_primary.vegetative_bud_break_time = 10;
     shoot_parameters_primary.base_roll = 90;
     shoot_parameters_primary.phyllochron_min = 1;
     shoot_parameters_primary.elongation_rate_max = 0.2;

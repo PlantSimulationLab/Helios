@@ -2714,7 +2714,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             for (const auto &label: labels) {
                 if (find(pdata_labels.begin(), pdata_labels.end(), label) == pdata_labels.end()) {
                     pdata_labels.push_back(label);
-                    pdata_types.push_back(getPrimitiveDataType(UUID, label.c_str()));
+                    pdata_types.push_back(getPrimitiveDataType(label.c_str()));
                 }
             }
         }
@@ -3440,7 +3440,13 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
             vec3 v1 = vertices.at(faces.at(row).at(t - 1));
             vec3 v2 = vertices.at(faces.at(row).at(t));
 
-            if ((v0 - v1).magnitude() == 0 || (v0 - v2).magnitude() == 0 || (v1 - v2).magnitude() == 0) {
+            if ((v0 - v1).magnitude() < 1e-10f || (v0 - v2).magnitude() < 1e-10f || (v1 - v2).magnitude() < 1e-10f) {
+                continue;
+            }
+
+            // Additional check for triangle area to avoid near-degenerate triangles
+            float triangle_area = calculateTriangleArea(v0, v1, v2);
+            if (triangle_area < 1e-8f) {
                 continue;
             }
 
@@ -3755,23 +3761,34 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
                 v1 = rotatePoint(v1, rotation);
                 v2 = rotatePoint(v2, rotation);
 
-                uint ID;
-                if (!texture.empty() && !texture_inds.at(materialname).at(i).empty()) { // has texture
+                // Calculate final triangle vertices after transformations
+                vec3 vert0 = origin + v0 * scl.x;
+                vec3 vert1 = origin + v1 * scl.y;
+                vec3 vert2 = origin + v2 * scl.z;
+                
+                // Check if triangle has sufficient area to avoid zero-area triangles
+                float triangle_area = calculateTriangleArea(vert0, vert1, vert2);
+                
+                uint ID = 0; // Initialize to invalid ID
+                if (triangle_area > 1e-8f) { // Only create triangle if area is not negligible (increased threshold)
+                    if (!texture.empty() && !texture_inds.at(materialname).at(i).empty()) { // has texture
 
-                    if (t < texture_inds.at(materialname).at(i).size()) {
-                        int iuv0 = texture_inds.at(materialname).at(i).at(0) - 1;
-                        int iuv1 = texture_inds.at(materialname).at(i).at(t - 1) - 1;
-                        int iuv2 = texture_inds.at(materialname).at(i).at(t) - 1;
+                        if (t < texture_inds.at(materialname).at(i).size()) {
+                            int iuv0 = texture_inds.at(materialname).at(i).at(0) - 1;
+                            int iuv1 = texture_inds.at(materialname).at(i).at(t - 1) - 1;
+                            int iuv2 = texture_inds.at(materialname).at(i).at(t) - 1;
 
-                        ID = addTriangle(origin + v0 * scl.x, origin + v1 * scl.y, origin + v2 * scl.z, texture.c_str(), texture_uv.at(iuv0), texture_uv.at(iuv1), texture_uv.at(iuv2));
+                            ID = addTriangle(vert0, vert1, vert2, texture.c_str(), texture_uv.at(iuv0), texture_uv.at(iuv1), texture_uv.at(iuv2));
 
-                        if (textureColorIsOverridden) {
-                            setPrimitiveColor(ID, color);
-                            overridePrimitiveTextureColor(ID);
+                            if (textureColorIsOverridden) {
+                                setPrimitiveColor(ID, color);
+                                overridePrimitiveTextureColor(ID);
+                            }
                         }
+                    } else {
+                        ID = addTriangle(vert0, vert1, vert2, color);
                     }
-                } else {
-                    ID = addTriangle(origin + v0 * scl.x, origin + v1 * scl.y, origin + v2 * scl.z, color);
+                    UUID.push_back(ID);
                 }
 
                 const std::string &object = objects.at(face_inds.at(materialname).at(i).at(0) - 1);
@@ -3779,8 +3796,6 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
                 if (object != "none" && doesPrimitiveExist(ID)) {
                     setPrimitiveData(ID, "object_label", object);
                 }
-
-                UUID.push_back(ID);
             }
         }
     }
@@ -4276,7 +4291,7 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
                         continue;
                     }
 
-                    HeliosDataType type = getPrimitiveDataType(UUID, label.c_str());
+                    HeliosDataType type = getPrimitiveDataType(label.c_str());
                     if (type == HELIOS_TYPE_INT) {
                         int data;
                         getPrimitiveData(UUID, label.c_str(), data);
@@ -4371,7 +4386,7 @@ void Context::writePrimitiveData(const std::string &filename, const std::vector<
                 file << 0 << " ";
                 continue;
             }
-            HeliosDataType type = getPrimitiveDataType(UUID, label.c_str());
+            HeliosDataType type = getPrimitiveDataType(label.c_str());
             if (type == HELIOS_TYPE_INT) {
                 int data;
                 getPrimitiveData(UUID, label.c_str(), data);

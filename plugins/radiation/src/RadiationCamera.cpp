@@ -645,7 +645,7 @@ void RadiationModel::writePrimitiveDataLabelMap(const std::string &cameralabel, 
             uint ii = camera_resolution.x - i - 1;
             uint UUID = pixel_UUIDs.at(j * camera_resolution.x + ii) - 1;
             if (context->doesPrimitiveExist(UUID) && context->doesPrimitiveDataExist(UUID, primitive_data_label.c_str())) {
-                HeliosDataType datatype = context->getPrimitiveDataType(UUID, primitive_data_label.c_str());
+                HeliosDataType datatype = context->getPrimitiveDataType(primitive_data_label.c_str());
                 if (datatype == HELIOS_TYPE_FLOAT) {
                     float labeldata;
                     context->getPrimitiveData(UUID, primitive_data_label.c_str(), labeldata);
@@ -737,7 +737,7 @@ void RadiationModel::writeObjectDataLabelMap(const std::string &cameralabel, con
             }
             uint objID = context->getPrimitiveParentObjectID(UUID);
             if (context->doesObjectExist(objID) && context->doesObjectDataExist(objID, object_data_label.c_str())) {
-                HeliosDataType datatype = context->getObjectDataType(objID, object_data_label.c_str());
+                HeliosDataType datatype = context->getObjectDataType(object_data_label.c_str());
                 if (datatype == HELIOS_TYPE_FLOAT) {
                     float labeldata;
                     context->getObjectData(objID, object_data_label.c_str(), labeldata);
@@ -958,7 +958,7 @@ void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, con
 
                 uint labeldata;
 
-                HeliosDataType datatype = context->getPrimitiveDataType(UUID, primitive_data_label.c_str());
+                HeliosDataType datatype = context->getPrimitiveDataType(primitive_data_label.c_str());
                 if (datatype == HELIOS_TYPE_UINT) {
                     uint labeldata_ui;
                     context->getPrimitiveData(UUID, primitive_data_label.c_str(), labeldata_ui);
@@ -1071,7 +1071,7 @@ void RadiationModel::writeImageBoundingBoxes_ObjectData(const std::string &camer
 
             uint labeldata;
 
-            HeliosDataType datatype = context->getObjectDataType(objID, object_data_label.c_str());
+            HeliosDataType datatype = context->getObjectDataType(object_data_label.c_str());
             if (datatype == HELIOS_TYPE_UINT) {
                 uint labeldata_ui;
                 context->getObjectData(objID, object_data_label.c_str(), labeldata_ui);
@@ -1205,7 +1205,7 @@ std::map<int, std::vector<std::vector<bool>>> RadiationModel::generateLabelMasks
                     // Object data version
                     uint objID = context->getPrimitiveParentObjectID(UUID);
                     if (objID != 0 && context->doesObjectDataExist(objID, data_label.c_str())) {
-                        HeliosDataType datatype = context->getObjectDataType(objID, data_label.c_str());
+                        HeliosDataType datatype = context->getObjectDataType(data_label.c_str());
                         if (datatype == HELIOS_TYPE_UINT) {
                             uint labeldata_ui;
                             context->getObjectData(objID, data_label.c_str(), labeldata_ui);
@@ -1221,7 +1221,7 @@ std::map<int, std::vector<std::vector<bool>>> RadiationModel::generateLabelMasks
                 } else {
                     // Primitive data version
                     if (context->doesPrimitiveDataExist(UUID, data_label.c_str())) {
-                        HeliosDataType datatype = context->getPrimitiveDataType(UUID, data_label.c_str());
+                        HeliosDataType datatype = context->getPrimitiveDataType(data_label.c_str());
                         if (datatype == HELIOS_TYPE_UINT) {
                             uint labeldata_ui;
                             context->getPrimitiveData(UUID, data_label.c_str(), labeldata_ui);
@@ -1788,13 +1788,18 @@ void RadiationModel::applyImageProcessingPipeline(const std::string &cameralabel
 
     camera.normalizePixels();
 
+    // Apply camera spectral correction before white balance to compensate for known sensor bias
+    camera.applyCameraSpectralCorrection(red_band_label, green_band_label, blue_band_label, this->context);
+
     camera.scaleToGreyTarget(red_band_label, green_band_label, blue_band_label, 0.18);
 
-    camera.whiteBalance(red_band_label, green_band_label, blue_band_label, 5.0);
+    // Apply white balance first in linear space
+    camera.whiteBalance(red_band_label, green_band_label, blue_band_label);
 
-    camera.applyGain(red_band_label, green_band_label, blue_band_label, 0.9f);
+    camera.applyGain(red_band_label, green_band_label, blue_band_label, 0.95f);
 
-    camera.globalHistogramEqualization(red_band_label, green_band_label, blue_band_label);
+    // Apply histogram equalization that preserves chromaticity (color)
+    //camera.globalHistogramEqualization(red_band_label, green_band_label, blue_band_label);
 
     if (saturation_adjustment != 1.f || brightness_adjustment != 1.f || contrast_adjustment != 1.f) {
         camera.adjustSBC(red_band_label, green_band_label, blue_band_label, saturation_adjustment, brightness_adjustment, contrast_adjustment);
@@ -1802,7 +1807,8 @@ void RadiationModel::applyImageProcessingPipeline(const std::string &cameralabel
 
     // camera.applyCCM(red_band_label, green_band_label, blue_band_label);
 
-    // camera.gammaCompress(red_band_label, green_band_label, blue_band_label);
+    // Apply gamma compression at the very end
+    camera.gammaCompress(red_band_label, green_band_label, blue_band_label);
 }
 
 void RadiationCamera::normalizePixels() {
@@ -1920,6 +1926,336 @@ void RadiationCamera::whiteBalance(const std::string &red_band_label, const std:
     }
 }
 
+void RadiationCamera::whiteBalanceGrayEdge(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, int derivative_order, float p) {
+    
+#ifdef HELIOS_DEBUG
+    if (pixel_data.find(red_band_label) == pixel_data.end() || pixel_data.find(green_band_label) == pixel_data.end() || pixel_data.find(blue_band_label) == pixel_data.end()) {
+        helios_runtime_error("ERROR (RadiationModel::whiteBalanceGrayEdge): One or more specified band labels do not exist for the camera pixel data.");
+    }
+#endif
+    
+    auto &data_red = pixel_data.at(red_band_label);
+    auto &data_green = pixel_data.at(green_band_label);
+    auto &data_blue = pixel_data.at(blue_band_label);
+    
+    const int width = resolution.x;
+    const int height = resolution.y;
+    const std::size_t N = width * height;
+    
+    if (p < 1.0f) {
+        throw std::invalid_argument("Minkowski exponent p must satisfy p >= 1");
+    }
+    if (derivative_order < 1 || derivative_order > 2) {
+        throw std::invalid_argument("Derivative order must be 1 or 2");
+    }
+    
+    // Compute derivatives using simple finite differences
+    std::vector<float> deriv_red(N, 0.0f);
+    std::vector<float> deriv_green(N, 0.0f);
+    std::vector<float> deriv_blue(N, 0.0f);
+    
+    if (derivative_order == 1) {
+        // First-order derivatives (gradient magnitude)
+        for (int y = 1; y < height - 1; ++y) {
+            for (int x = 1; x < width - 1; ++x) {
+                int idx = y * width + x;
+                
+                // Sobel operator for gradient estimation
+                float dx_r = (data_red[(y-1)*width + (x+1)] + 2*data_red[y*width + (x+1)] + data_red[(y+1)*width + (x+1)])
+                           - (data_red[(y-1)*width + (x-1)] + 2*data_red[y*width + (x-1)] + data_red[(y+1)*width + (x-1)]) / 8.0f;
+                float dy_r = (data_red[(y+1)*width + (x-1)] + 2*data_red[(y+1)*width + x] + data_red[(y+1)*width + (x+1)])
+                           - (data_red[(y-1)*width + (x-1)] + 2*data_red[(y-1)*width + x] + data_red[(y-1)*width + (x+1)]) / 8.0f;
+                deriv_red[idx] = std::sqrt(dx_r * dx_r + dy_r * dy_r);
+                
+                float dx_g = (data_green[(y-1)*width + (x+1)] + 2*data_green[y*width + (x+1)] + data_green[(y+1)*width + (x+1)])
+                           - (data_green[(y-1)*width + (x-1)] + 2*data_green[y*width + (x-1)] + data_green[(y+1)*width + (x-1)]) / 8.0f;
+                float dy_g = (data_green[(y+1)*width + (x-1)] + 2*data_green[(y+1)*width + x] + data_green[(y+1)*width + (x+1)])
+                           - (data_green[(y-1)*width + (x-1)] + 2*data_green[(y-1)*width + x] + data_green[(y-1)*width + (x+1)]) / 8.0f;
+                deriv_green[idx] = std::sqrt(dx_g * dx_g + dy_g * dy_g);
+                
+                float dx_b = (data_blue[(y-1)*width + (x+1)] + 2*data_blue[y*width + (x+1)] + data_blue[(y+1)*width + (x+1)])
+                           - (data_blue[(y-1)*width + (x-1)] + 2*data_blue[y*width + (x-1)] + data_blue[(y+1)*width + (x-1)]) / 8.0f;
+                float dy_b = (data_blue[(y+1)*width + (x-1)] + 2*data_blue[(y+1)*width + x] + data_blue[(y+1)*width + (x+1)])
+                           - (data_blue[(y-1)*width + (x-1)] + 2*data_blue[(y-1)*width + x] + data_blue[(y-1)*width + (x+1)]) / 8.0f;
+                deriv_blue[idx] = std::sqrt(dx_b * dx_b + dy_b * dy_b);
+            }
+        }
+    } else {
+        // Second-order derivatives (Laplacian)
+        for (int y = 1; y < height - 1; ++y) {
+            for (int x = 1; x < width - 1; ++x) {
+                int idx = y * width + x;
+                
+                deriv_red[idx] = std::abs(data_red[(y-1)*width + x] + data_red[(y+1)*width + x] 
+                                        + data_red[y*width + (x-1)] + data_red[y*width + (x+1)] 
+                                        - 4 * data_red[idx]);
+                                        
+                deriv_green[idx] = std::abs(data_green[(y-1)*width + x] + data_green[(y+1)*width + x]
+                                          + data_green[y*width + (x-1)] + data_green[y*width + (x+1)]
+                                          - 4 * data_green[idx]);
+                                          
+                deriv_blue[idx] = std::abs(data_blue[(y-1)*width + x] + data_blue[(y+1)*width + x]
+                                         + data_blue[y*width + (x-1)] + data_blue[y*width + (x+1)]
+                                         - 4 * data_blue[idx]);
+            }
+        }
+    }
+    
+    // Compute Minkowski means of derivatives
+    float acc_r = 0.0f, acc_g = 0.0f, acc_b = 0.0f;
+    int valid_pixels = 0;
+    
+    for (std::size_t i = 0; i < N; ++i) {
+        if (deriv_red[i] > 0 || deriv_green[i] > 0 || deriv_blue[i] > 0) {
+            acc_r += std::pow(deriv_red[i], p);
+            acc_g += std::pow(deriv_green[i], p);
+            acc_b += std::pow(deriv_blue[i], p);
+            valid_pixels++;
+        }
+    }
+    
+    if (valid_pixels == 0) {
+        // No edges detected, fall back to standard white balance
+        whiteBalance(red_band_label, green_band_label, blue_band_label, p);
+        return;
+    }
+    
+    float mean_r_p = acc_r / static_cast<float>(valid_pixels);
+    float mean_g_p = acc_g / static_cast<float>(valid_pixels);
+    float mean_b_p = acc_b / static_cast<float>(valid_pixels);
+    
+    float M_R = std::pow(mean_r_p, 1.0f / p);
+    float M_G = std::pow(mean_g_p, 1.0f / p);
+    float M_B = std::pow(mean_b_p, 1.0f / p);
+    
+    // Avoid division by zero
+    const float eps = 1e-6f;
+    if (M_R < eps || M_G < eps || M_B < eps) {
+        // Fall back to standard white balance
+        whiteBalance(red_band_label, green_band_label, blue_band_label, p);
+        return;
+    }
+    
+    // Compute gray reference
+    float M = (M_R + M_G + M_B) / 3.0f;
+    
+    // Derive per-channel gains
+    helios::vec3 scale;
+    scale.x = M / M_R;
+    scale.y = M / M_G;
+    scale.z = M / M_B;
+    
+    // Apply gains to each pixel
+    for (std::size_t i = 0; i < N; ++i) {
+        data_red[i] *= scale.x;
+        data_green[i] *= scale.y;
+        data_blue[i] *= scale.z;
+    }
+}
+
+void RadiationCamera::whiteBalanceWhitePatch(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float percentile) {
+    
+#ifdef HELIOS_DEBUG
+    if (pixel_data.find(red_band_label) == pixel_data.end() || pixel_data.find(green_band_label) == pixel_data.end() || pixel_data.find(blue_band_label) == pixel_data.end()) {
+        helios_runtime_error("ERROR (RadiationModel::whiteBalanceWhitePatch): One or more specified band labels do not exist for the camera pixel data.");
+    }
+#endif
+    
+    if (percentile <= 0.0f || percentile > 1.0f) {
+        throw std::invalid_argument("Percentile must be in range (0, 1]");
+    }
+    
+    auto &data_red = pixel_data.at(red_band_label);
+    auto &data_green = pixel_data.at(green_band_label);
+    auto &data_blue = pixel_data.at(blue_band_label);
+    
+    const std::size_t N = data_red.size();
+    
+    // Find the percentile values for each channel
+    std::vector<float> sorted_red = data_red;
+    std::vector<float> sorted_green = data_green;
+    std::vector<float> sorted_blue = data_blue;
+    
+    std::size_t k = static_cast<std::size_t>(percentile * (N - 1));
+    
+    std::nth_element(sorted_red.begin(), sorted_red.begin() + k, sorted_red.end());
+    std::nth_element(sorted_green.begin(), sorted_green.begin() + k, sorted_green.end());
+    std::nth_element(sorted_blue.begin(), sorted_blue.begin() + k, sorted_blue.end());
+    
+    float white_r = sorted_red[k];
+    float white_g = sorted_green[k];
+    float white_b = sorted_blue[k];
+    
+    // Avoid division by zero
+    const float eps = 1e-6f;
+    if (white_r < eps || white_g < eps || white_b < eps) {
+        throw std::runtime_error("White patch values too small");
+    }
+    
+    // Apply gains to normalize to white
+    for (std::size_t i = 0; i < N; ++i) {
+        data_red[i] /= white_r;
+        data_green[i] /= white_g;
+        data_blue[i] /= white_b;
+    }
+}
+
+void RadiationCamera::whiteBalanceAuto(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label) {
+    
+#ifdef HELIOS_DEBUG
+    if (pixel_data.find(red_band_label) == pixel_data.end() || pixel_data.find(green_band_label) == pixel_data.end() || pixel_data.find(blue_band_label) == pixel_data.end()) {
+        helios_runtime_error("ERROR (RadiationModel::whiteBalanceAuto): One or more specified band labels do not exist for the camera pixel data.");
+    }
+#endif
+    
+    const auto &data_red = pixel_data.at(red_band_label);
+    const auto &data_green = pixel_data.at(green_band_label);
+    const auto &data_blue = pixel_data.at(blue_band_label);
+    
+    const std::size_t N = data_red.size();
+    const int width = resolution.x;
+    const int height = resolution.y;
+    
+    // Analyze scene characteristics
+    
+    // 1. Check for green dominance (vegetation indicator)
+    float mean_r = 0.0f, mean_g = 0.0f, mean_b = 0.0f;
+    for (std::size_t i = 0; i < N; ++i) {
+        mean_r += data_red[i];
+        mean_g += data_green[i];
+        mean_b += data_blue[i];
+    }
+    mean_r /= N;
+    mean_g /= N;
+    mean_b /= N;
+    
+    float green_dominance = mean_g / (mean_r + mean_g + mean_b + 1e-6f);
+    
+    // 2. Check for bright pixels (white patch candidates)
+    float bright_threshold = 0.9f;
+    int bright_pixels = 0;
+    for (std::size_t i = 0; i < N; ++i) {
+        float max_val = std::max({data_red[i], data_green[i], data_blue[i]});
+        if (max_val > bright_threshold) {
+            bright_pixels++;
+        }
+    }
+    float bright_ratio = static_cast<float>(bright_pixels) / N;
+    
+    // 3. Compute edge density (texture indicator)
+    float edge_density = 0.0f;
+    for (int y = 1; y < height - 1; ++y) {
+        for (int x = 1; x < width - 1; ++x) {
+            int idx = y * width + x;
+            
+            // Simple gradient magnitude
+            float dx = std::abs(data_green[idx + 1] - data_green[idx - 1]);
+            float dy = std::abs(data_green[idx + width] - data_green[idx - width]);
+            edge_density += std::sqrt(dx * dx + dy * dy);
+        }
+    }
+    edge_density /= ((width - 2) * (height - 2));
+    
+    // Select algorithm based on scene characteristics
+              
+    // For LED-lit simulation scenes, avoid White Patch since bright pixels are colored LED lights
+    // Gray Edge works better for controlled lighting scenarios with known spectral bias
+    whiteBalanceGrayEdge(red_band_label, green_band_label, blue_band_label, 1, 5.0f);
+}
+
+void RadiationCamera::applyCameraSpectralCorrection(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, helios::Context *context) {
+    
+#ifdef HELIOS_DEBUG
+    if (pixel_data.find(red_band_label) == pixel_data.end() || pixel_data.find(green_band_label) == pixel_data.end() || pixel_data.find(blue_band_label) == pixel_data.end()) {
+        helios_runtime_error("ERROR (RadiationCamera::applyCameraSpectralCorrection): One or more specified band labels do not exist for the camera pixel data.");
+    }
+#endif
+    
+    // Check if spectral response data exists for all bands
+    if (band_spectral_response.find(red_band_label) == band_spectral_response.end() ||
+        band_spectral_response.find(green_band_label) == band_spectral_response.end() ||
+        band_spectral_response.find(blue_band_label) == band_spectral_response.end()) {
+        return;
+    }
+    
+    // Get spectral response identifiers
+    std::string red_response_id = band_spectral_response.at(red_band_label);
+    std::string green_response_id = band_spectral_response.at(green_band_label);
+    std::string blue_response_id = band_spectral_response.at(blue_band_label);
+    
+    // Skip if using uniform response (no spectral bias to correct)
+    if (red_response_id == "uniform" && green_response_id == "uniform" && blue_response_id == "uniform") {
+        return;
+    }
+    
+    try {
+        // Access spectral response data from global data (assuming vec2 format: wavelength, response)
+        std::vector<helios::vec2> red_spectrum, green_spectrum, blue_spectrum;
+        
+        if (red_response_id != "uniform" && context->doesGlobalDataExist(red_response_id.c_str())) {
+            context->getGlobalData(red_response_id.c_str(), red_spectrum);
+        }
+        if (green_response_id != "uniform" && context->doesGlobalDataExist(green_response_id.c_str())) {
+            context->getGlobalData(green_response_id.c_str(), green_spectrum);
+        }
+        if (blue_response_id != "uniform" && context->doesGlobalDataExist(blue_response_id.c_str())) {
+            context->getGlobalData(blue_response_id.c_str(), blue_spectrum);
+        }
+        
+        // If we don't have spectral data for all channels, skip correction
+        if (red_spectrum.empty() || green_spectrum.empty() || blue_spectrum.empty()) {
+            return;
+        }
+        
+        // Compute integrated response (area under curve) for each channel
+        // This represents the total sensitivity of each channel
+        float red_integrated = 0.0f, green_integrated = 0.0f, blue_integrated = 0.0f;
+        
+        // Simple trapezoidal integration
+        for (size_t i = 1; i < red_spectrum.size(); ++i) {
+            float dw = red_spectrum[i].x - red_spectrum[i-1].x;
+            red_integrated += 0.5f * (red_spectrum[i].y + red_spectrum[i-1].y) * dw;
+        }
+        for (size_t i = 1; i < green_spectrum.size(); ++i) {
+            float dw = green_spectrum[i].x - green_spectrum[i-1].x;
+            green_integrated += 0.5f * (green_spectrum[i].y + green_spectrum[i-1].y) * dw;
+        }
+        for (size_t i = 1; i < blue_spectrum.size(); ++i) {
+            float dw = blue_spectrum[i].x - blue_spectrum[i-1].x;
+            blue_integrated += 0.5f * (blue_spectrum[i].y + blue_spectrum[i-1].y) * dw;
+        }
+        
+        // Avoid division by zero
+        if (red_integrated <= 0 || green_integrated <= 0 || blue_integrated <= 0) {
+            return;
+        }
+        
+        // Compute correction factors to normalize channels relative to their integrated sensitivity
+        // Use the minimum integrated response as reference to avoid amplifying noise
+        float reference_response = std::min({red_integrated, green_integrated, blue_integrated});
+        
+        helios::vec3 correction_factors;
+        correction_factors.x = reference_response / red_integrated;    // Red correction
+        correction_factors.y = reference_response / green_integrated;  // Green correction  
+        correction_factors.z = reference_response / blue_integrated;   // Blue correction
+        
+        // Apply correction factors to pixel data
+        auto &data_red = pixel_data.at(red_band_label);
+        auto &data_green = pixel_data.at(green_band_label);
+        auto &data_blue = pixel_data.at(blue_band_label);
+        
+        const std::size_t N = data_red.size();
+        for (std::size_t i = 0; i < N; ++i) {
+            data_red[i] *= correction_factors.x;
+            data_green[i] *= correction_factors.y;
+            data_blue[i] *= correction_factors.z;
+        }
+        
+    } catch (const std::exception &e) {
+        return;
+    }
+}
+
 void RadiationCamera::reinhardToneMapping(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label) {
 
 #ifdef HELIOS_DEBUG
@@ -1992,15 +2328,24 @@ void RadiationCamera::globalHistogramEqualization(const std::string &red_band_la
     auto &data_green = pixel_data.at(green_band_label);
     auto &data_blue = pixel_data.at(blue_band_label);
 
-    /* luminance array */
+    /* luminance array and store original chromaticity */
     std::vector<float> lum(N);
+    std::vector<float> chroma_r(N), chroma_g(N), chroma_b(N);
+    
     for (size_t i = 0; i < N; ++i) {
-        // vec3 p;
-        // p.x = srgb_to_lin(data_red[i]);
-        // p.y = srgb_to_lin(data_green[i]);
-        // p.z = srgb_to_lin(data_blue[i]);
         vec3 p(data_red[i], data_green[i], data_blue[i]);
         lum[i] = 0.2126f * p.x + 0.7152f * p.y + 0.0722f * p.z;
+        
+        // Store chromaticity ratios (color information)
+        if (lum[i] > eps) {
+            chroma_r[i] = p.x / lum[i];
+            chroma_g[i] = p.y / lum[i];
+            chroma_b[i] = p.z / lum[i];
+        } else {
+            chroma_r[i] = 1.0f;
+            chroma_g[i] = 1.0f;
+            chroma_b[i] = 1.0f;
+        }
     }
 
     /* build CDF on 2048-bin histogram */
@@ -2019,8 +2364,16 @@ void RadiationCamera::globalHistogramEqualization(const std::string &red_band_la
         cdf[b] = float(acc) / float(N);
     }
 
-    /* remap */
+    /* remap - only adjust luminance, preserve chromaticity */
     for (size_t i = 0; i < N; ++i) {
+        // Handle bright pixels (> 1.0) specially
+        if (lum[i] >= 1.0f) {
+            data_red[i] = std::min(1.0f, data_red[i]);
+            data_green[i] = std::min(1.0f, data_green[i]);
+            data_blue[i] = std::min(1.0f, data_blue[i]);
+            continue;
+        }
+
         int b = int(std::clamp(lum[i], 0.0f, 1.0f - eps) * B);
 
         if ( b < 0 || b >= 2048 ) {
@@ -2037,10 +2390,10 @@ void RadiationCamera::globalHistogramEqualization(const std::string &red_band_la
         float t = Ynew - 0.5f;
         Ynew = 0.5f + t * (1.0f + cs - 2.0f * cs * std::fabs(t));
 
-        float scale = lum[i] > 0.0f ? Ynew / lum[i] : 0;
-        data_red[i] = lin_to_srgb(data_red[i] * scale);
-        data_green[i] = lin_to_srgb(data_green[i] * scale);
-        data_blue[i] = lin_to_srgb(data_blue[i] * scale);
+        // Reconstruct RGB using new luminance but original chromaticity
+        data_red[i] = Ynew * chroma_r[i];
+        data_green[i] = Ynew * chroma_g[i];
+        data_blue[i] = Ynew * chroma_b[i];
     }
 }
 

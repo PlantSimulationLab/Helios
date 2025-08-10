@@ -47,12 +47,25 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/libjpeg-9a" "${CMAKE_BINARY_DI
 
 target_link_libraries( helios PRIVATE png_static  jpeg ) #note that zlib is already linked by libpng
 
+# Suppress warnings for third-party libraries
+if(TARGET zlibstatic)
+    target_compile_options(zlibstatic PRIVATE $<$<C_COMPILER_ID:Clang,AppleClang,GNU>:-w>)
+endif()
+if(TARGET png_static)
+    target_compile_options(png_static PRIVATE $<$<C_COMPILER_ID:Clang,AppleClang,GNU>:-w>)
+endif()
+if(TARGET jpeg)
+    target_compile_options(jpeg PRIVATE $<$<C_COMPILER_ID:Clang,AppleClang,GNU>:-w>)
+endif()
+
 set(CMAKE_MESSAGE_LOG_LEVEL ${SAVED_LOG_LEVEL})
 
 file( COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/images" DESTINATION "${CMAKE_BINARY_DIR}/lib/" )
 file( COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/models" DESTINATION "${CMAKE_BINARY_DIR}/lib/" )
 file( COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/testdata" DESTINATION "${CMAKE_BINARY_DIR}/lib/" )
 
-add_executable( context_tests tests/TestMain.cpp )
-target_link_libraries( context_tests PRIVATE helios )
-add_test( NAME context_tests COMMAND context_tests )
+if(BUILD_TESTS)
+    add_executable( context_tests tests/TestMain.cpp )
+    target_link_libraries( context_tests PRIVATE helios )
+    add_test( NAME context_tests COMMAND context_tests )
+endif()

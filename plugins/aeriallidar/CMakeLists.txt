@@ -79,3 +79,9 @@ target_link_libraries(aeriallidar PUBLIC visualizer CUDA::cudart_static)
 add_dependencies(aeriallidar visualizer)
 
 file( COPY xml DESTINATION ${CMAKE_BINARY_DIR}/plugins/aeriallidar/ )
+
+if(BUILD_TESTS)
+	add_executable(aeriallidar_tests "tests/TestMain.cpp")
+	target_link_libraries(aeriallidar_tests PRIVATE aeriallidar)
+	add_test(NAME aeriallidar_tests COMMAND aeriallidar_tests)
+endif()

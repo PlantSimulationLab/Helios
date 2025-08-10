@@ -1,4 +1,6 @@
-option(ENABLE_OPENMP "Enable building with OpenMP" OFF)
+option(ENABLE_OPENMP "Enable building with OpenMP" ON)
+option(BUILD_TESTS "Build test executables" OFF)
+
 
 # Set CMake policies to avoid warnings on newer CMake versions
 if(POLICY CMP0074)
@@ -19,6 +21,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 if (NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
 endif()
+
+message(STATUS "[Helios] Build type: ${CMAKE_BUILD_TYPE}")
 
 # -- automatically force a cmake re-configure if the code version was updated --#
 find_package(Git QUIET)
@@ -94,6 +98,11 @@ if ( WIN32 )
     string(REGEX REPLACE "/MD*" "/MT" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     string(REGEX REPLACE "/W[0-4]" "/W1" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     string(REGEX REPLACE "/W[0-4]" "/W1" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    
+    # Ensure Release builds have optimization flags for C++ code
+    set(CMAKE_CXX_FLAGS_RELEASE "/MT /O2 /Ob2 /DNDEBUG /W1")
+    set(CMAKE_C_FLAGS_RELEASE "/MT /O2 /Ob2 /DNDEBUG /W1")
+    
     cmake_policy(SET CMP0091 NEW)
     set( CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
     foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
@@ -104,6 +113,8 @@ if ( WIN32 )
     endforeach(OUTPUTCONFIG)
 endif()
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+# Enable parallel compilation on Windows (use all available cores)
+add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
 cmake_policy(SET CMP0079 NEW)
 set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
 
@@ -115,6 +126,14 @@ set( LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib )
 set( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}" CACHE STRING "" )
 set( CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib" CACHE STRING "" )
 add_executable( ${EXECUTABLE_NAME} ${SOURCE_FILES} )
+
+# Handle CMake 4.0+ compatibility with third-party libraries (like libpng)
+# that may have minimum version requirements older than 3.5
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+endif()
+
+
 add_subdirectory( "${BASE_DIRECTORY}/core" "lib" )
 target_link_libraries( ${EXECUTABLE_NAME} PUBLIC helios)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9)
@@ -147,7 +166,7 @@ target_compile_definitions(helios PUBLIC $<$<CONFIG:Debug>:HELIOS_DEBUG>  $<$<CO
 if( ENABLE_OPENMP )
     find_package(OpenMP)
     if (OpenMP_CXX_FOUND)
-        message( STATUS "[Helios] Enabling experimental OpenMP support" )
+        message( STATUS "[Helios] Enabling OpenMP support" )
         target_link_libraries(helios PUBLIC OpenMP::OpenMP_CXX)
         target_compile_definitions(helios PUBLIC USE_OPENMP)
     else()

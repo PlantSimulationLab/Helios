@@ -6,6 +6,8 @@ add_library( stomatalconductance STATIC "src/StomatalConductanceModel.cpp" "test
 
 target_include_directories(stomatalconductance PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" )
 
-add_executable(stomatalconductance_tests "tests/TestMain.cpp")
-target_link_libraries(stomatalconductance_tests PRIVATE stomatalconductance)
-add_test(NAME stomatalconductance_tests COMMAND stomatalconductance_tests)
+if(BUILD_TESTS)
+    add_executable(stomatalconductance_tests "tests/TestMain.cpp")
+    target_link_libraries(stomatalconductance_tests PRIVATE stomatalconductance)
+    add_test(NAME stomatalconductance_tests COMMAND stomatalconductance_tests)
+endif()

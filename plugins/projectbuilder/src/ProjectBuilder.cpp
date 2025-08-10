@@ -75,18 +75,6 @@ std::string vec_to_string(const vec3 &v) {
     return oss.str();
 }
 
-std::vector<vec3> linspace(const helios::vec3 &a, const helios::vec3 &b, int num_points) {
-    std::vector<vec3> result(num_points);
-    result[0] = a;
-    for (int i = 1; i < num_points - 1; i++) {
-        result[i].x = a.x + i * ((b.x - a.x) / ((float) num_points - 1.0));
-        result[i].y = a.y + i * ((b.y - a.y) / ((float) num_points - 1.0));
-        result[i].z = a.z + i * ((b.z - a.z) / ((float) num_points - 1.0));
-    }
-    result[num_points - 1] = b;
-    return result;
-}
-
 std::vector<vec3> interpolate(const std::vector<int> &keypoints, const std::vector<helios::vec3> &positions, int num_points) {
     std::vector<vec3> pos = positions;
     std::vector<vec3> result(num_points);
@@ -6031,7 +6019,7 @@ void ProjectBuilder::refreshVisualizationTypes() {
         std::vector<std::string> primitiveData = context->listPrimitiveData(UUID);
         for (auto &data: primitiveData) {
             visualization_types_primitive.insert(data);
-            primitive_data_types[data] = context->getPrimitiveDataType(UUID, data.c_str());
+            primitive_data_types[data] = context->getPrimitiveDataType(data.c_str());
         }
     }
 
@@ -6042,7 +6030,7 @@ void ProjectBuilder::refreshVisualizationTypes() {
         std::vector<std::string> objData = context->listObjectData(objID);
         for (auto &data: objData) {
             visualization_types_object.insert(data);
-            object_data_types[data] = context->getObjectDataType(objID, data.c_str());
+            object_data_types[data] = context->getObjectDataType(data.c_str());
         }
     }
 }

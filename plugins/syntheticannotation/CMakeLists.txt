@@ -9,6 +9,8 @@ target_include_directories(syntheticannotation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR
 add_dependencies( syntheticannotation visualizer )
 target_link_libraries( syntheticannotation PUBLIC visualizer )
 
-add_executable( syntheticannotation_tests "tests/TestMain.cpp" )
-target_link_libraries( syntheticannotation_tests PRIVATE syntheticannotation )
-add_test( NAME syntheticannotation_tests COMMAND syntheticannotation_tests )
+if(BUILD_TESTS)
+    add_executable( syntheticannotation_tests "tests/TestMain.cpp" )
+    target_link_libraries( syntheticannotation_tests PRIVATE syntheticannotation )
+    add_test( NAME syntheticannotation_tests COMMAND syntheticannotation_tests )
+endif()

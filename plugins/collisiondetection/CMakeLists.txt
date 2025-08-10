@@ -93,6 +93,8 @@ else()
     
 endif()
 
-add_executable(collisiondetection_tests "tests/TestMain.cpp")
-target_link_libraries(collisiondetection_tests PRIVATE collisiondetection)
-add_test(NAME collisiondetection_tests COMMAND collisiondetection_tests)
+if(BUILD_TESTS)
+    add_executable(collisiondetection_tests "tests/TestMain.cpp")
+    target_link_libraries(collisiondetection_tests PRIVATE collisiondetection)
+    add_test(NAME collisiondetection_tests COMMAND collisiondetection_tests)
+endif()
