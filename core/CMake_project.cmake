@@ -157,7 +157,7 @@ target_compile_definitions(helios PUBLIC $<$<CONFIG:Debug>:HELIOS_DEBUG>  $<$<CO
 if( ENABLE_OPENMP )
     find_package(OpenMP)
     if (OpenMP_CXX_FOUND)
-        message( STATUS "[Helios] Enabling experimental OpenMP support" )
+        message( STATUS "[Helios] Enabling OpenMP support" )
         target_link_libraries(helios PUBLIC OpenMP::OpenMP_CXX)
         target_compile_definitions(helios PUBLIC USE_OPENMP)
     else()

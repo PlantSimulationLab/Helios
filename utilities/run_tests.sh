@@ -55,8 +55,6 @@ else
     NPROC=1
 fi
 
-echo "Detected ${NPROC} CPU cores for parallel compilation"
-
 # Save the original working directory before changing directories
 ORIGINAL_DIR="$(pwd)"
 
