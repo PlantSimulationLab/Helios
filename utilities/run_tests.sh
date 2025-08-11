@@ -340,6 +340,17 @@ else
     
     echo "Building ${#BUILD_TARGETS[@]} test target(s): ${BUILD_TARGETS[*]}"
     
+    # On Windows, check if parallel compilation flags are actually set in project files
+    if [[ "${OSTYPE}" == "msys"* ]] || [[ "${OSTYPE}" == "cygwin"* ]] || [[ -n "${NUMBER_OF_PROCESSORS}" ]]; then
+      echo "Checking generated project files for parallel compilation and optimization flags..."
+      if [ -f "*.vcxproj" ]; then
+        echo "Checking for /MP flag in project files:"
+        find . -name "*.vcxproj" -exec grep -l "MultiProcessorCompilation" {} \; | head -3
+        echo "Checking for optimization settings:"
+        find . -name "*.vcxproj" -exec grep -A2 -B2 "Optimization" {} \; | head -10
+      fi
+    fi
+    
     # Note: Skip pre-build target validation since cmake --build --target help 
     # is unreliable across different generators (especially Visual Studio on Windows).
     # Instead, we'll attempt to build the targets and validate executables afterward.
@@ -352,7 +363,8 @@ else
         # Windows: Use verbose output to see if parallel compilation is working
         if [ "$VERBOSE" == "ON" ]; then
           echo "Building target $target with diagnostic output to verify parallel compilation and optimization flags"
-          run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" -- /verbosity:diagnostic /clp:ShowCommandLine
+          # Use MSBuild directly with proper verbosity to see actual compiler command lines
+          run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" --verbose -- -verbosity:diagnostic -property:ShowCommandLine=true
         else
           run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" -j "${NPROC}"
         fi

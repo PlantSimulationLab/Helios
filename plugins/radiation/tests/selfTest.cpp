@@ -2079,7 +2079,7 @@ DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
     cam1_B_spectrum.push_back(make_vec2(500, 0.05f));
     context.setGlobalData("cam1_B_spectrum", cam1_B_spectrum);
     
-    radiation.addRadiationCamera("camera1", band_labels, make_vec3(0, 0, 5), make_vec3(0, 0, 0), camera_props, 1);
+    radiation.addRadiationCamera("camera1", band_labels, make_vec3(0, 0, 5), make_vec3(0, 0, 0), camera_props, 100);
     radiation.setCameraSpectralResponse("camera1", "R", "cam1_R_spectrum");
     radiation.setCameraSpectralResponse("camera1", "G", "cam1_G_spectrum");
     radiation.setCameraSpectralResponse("camera1", "B", "cam1_B_spectrum");
