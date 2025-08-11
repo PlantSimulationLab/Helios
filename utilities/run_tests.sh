@@ -346,7 +346,13 @@ else
     echo -ne "Compiling test targets..."
     
     for target in "${BUILD_TARGETS[@]}"; do
-      run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" -j "${NPROC}"
+      if [[ "${OSTYPE}" == "msys"* ]] || [[ "${OSTYPE}" == "cygwin"* ]] || [[ -n "${NUMBER_OF_PROCESSORS}" ]]; then
+        # Windows: Use both project-level and file-level parallelism for Visual Studio
+        # --parallel enables MSBuild worker processes, /p:CL_MPcount enables compiler parallelism
+        run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" --parallel "${NPROC}" -- /p:CL_MPcount="${NPROC}"
+      else
+        run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" -j "${NPROC}"
+      fi
       if (($? != 0)); then
         echo -e "\r\x1B[31mCompiling test target $target...failed.\x1B[39m"
         echo
