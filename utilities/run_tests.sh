@@ -342,13 +342,28 @@ else
     
     # On Windows, check if parallel compilation flags are actually set in project files
     if [[ "${OSTYPE}" == "msys"* ]] || [[ "${OSTYPE}" == "cygwin"* ]] || [[ -n "${NUMBER_OF_PROCESSORS}" ]]; then
-      echo "Checking generated project files for parallel compilation and optimization flags..."
-      if [ -f "*.vcxproj" ]; then
-        echo "Checking for /MP flag in project files:"
-        find . -name "*.vcxproj" -exec grep -l "MultiProcessorCompilation" {} \; | head -3
-        echo "Checking for optimization settings:"
-        find . -name "*.vcxproj" -exec grep -A2 -B2 "Optimization" {} \; | head -10
+      echo "=== Checking generated project files for parallel compilation and optimization flags ==="
+      
+      # Check for MultiProcessorCompilation setting in a specific project file
+      if [ -f "lib/helios.vcxproj" ]; then
+        echo "Checking helios.vcxproj for /MP flag:"
+        grep -c "MultiProcessorCompilation" lib/helios.vcxproj || echo "MultiProcessorCompilation not found in helios.vcxproj"
+        grep "MultiProcessorCompilation" lib/helios.vcxproj || true
       fi
+      
+      # Check for optimization settings in Release configuration
+      if [ -f "lib/helios.vcxproj" ]; then
+        echo "Checking Release optimization settings in helios.vcxproj:"
+        grep -A5 "Configuration.*Release" lib/helios.vcxproj | grep "Optimization" || echo "No optimization settings found"
+      fi
+      
+      # Check actual compiler flags in a project
+      if [ -f "lib/helios.vcxproj" ]; then
+        echo "Checking AdditionalOptions in helios.vcxproj:"
+        grep "AdditionalOptions" lib/helios.vcxproj || echo "No AdditionalOptions found"
+      fi
+      
+      echo "=== End of project file checks ==="
     fi
     
     # Note: Skip pre-build target validation since cmake --build --target help 
@@ -357,6 +372,9 @@ else
     
     # Build only the required test targets
     echo -ne "Compiling test targets..."
+    
+    # Record start time for build performance measurement
+    BUILD_START_TIME=$SECONDS
     
     for target in "${BUILD_TARGETS[@]}"; do
       if [[ "${OSTYPE}" == "msys"* ]] || [[ "${OSTYPE}" == "cygwin"* ]] || [[ -n "${NUMBER_OF_PROCESSORS}" ]]; then
@@ -389,7 +407,10 @@ else
       fi
     done
     
-    echo -e "\r\x1B[32mCompiling test targets...done.\x1B[39m"
+    # Calculate and display build time
+    BUILD_END_TIME=$SECONDS
+    BUILD_DURATION=$((BUILD_END_TIME - BUILD_START_TIME))
+    echo -e "\r\x1B[32mCompiling test targets...done. (Build time: ${BUILD_DURATION} seconds)\x1B[39m"
     
     # Discover available test executables after compilation
     
