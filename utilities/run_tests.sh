@@ -351,8 +351,8 @@ else
       if [[ "${OSTYPE}" == "msys"* ]] || [[ "${OSTYPE}" == "cygwin"* ]] || [[ -n "${NUMBER_OF_PROCESSORS}" ]]; then
         # Windows: Use verbose output to see if parallel compilation is working
         if [ "$VERBOSE" == "ON" ]; then
-          echo "Building target $target with parallel compilation (${NPROC} cores)"
-          run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" --verbose -j "${NPROC}"
+          echo "Building target $target with diagnostic output to verify parallel compilation and optimization flags"
+          run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" -- /verbosity:diagnostic /clp:ShowCommandLine
         else
           run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" -j "${NPROC}"
         fi

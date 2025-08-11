@@ -1844,6 +1844,11 @@ DOCTEST_TEST_CASE("RadiationModel Multi-Spectrum Primitive Assignment") {
     radiation.addRadiationBand("G", 500, 600);
     radiation.addRadiationBand("B", 400, 500);
     
+    // Set higher ray counts for more stable Monte Carlo results
+    radiation.setDiffuseRayCount("R", 10000);
+    radiation.setDiffuseRayCount("G", 10000);
+    radiation.setDiffuseRayCount("B", 10000);
+    
     // Add uniform source
     uint source = radiation.addSunSphereRadiationSource(make_SphericalCoord(0, 0));
     std::vector<helios::vec2> uniform_spectrum;
@@ -2035,6 +2040,11 @@ DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
     radiation.addRadiationBand("R", 600, 700);
     radiation.addRadiationBand("G", 500, 600);
     radiation.addRadiationBand("B", 400, 500);
+    
+    // Set higher ray counts for more stable Monte Carlo results
+    radiation.setDiffuseRayCount("R", 10000);
+    radiation.setDiffuseRayCount("G", 10000);
+    radiation.setDiffuseRayCount("B", 10000);
     
     // Add uniform source with flat spectrum
     uint source = radiation.addSunSphereRadiationSource(make_SphericalCoord(0, 0));
