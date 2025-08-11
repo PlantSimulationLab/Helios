@@ -107,8 +107,9 @@ if ( WIN32 )
     endforeach(OUTPUTCONFIG)
 endif()
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
-# Enable parallel compilation on Windows
+# Enable parallel compilation on Windows (use all available cores)
 add_compile_options($<$<CXX_COMPILER_ID:MSVC>:/MP>)
+# To disable parallel compilation for testing, comment out the line above
 cmake_policy(SET CMP0079 NEW)
 set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
 

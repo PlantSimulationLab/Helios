@@ -55,6 +55,8 @@ else
     NPROC=1
 fi
 
+echo "Detected ${NPROC} CPU cores for parallel compilation"
+
 # Save the original working directory before changing directories
 ORIGINAL_DIR="$(pwd)"
 
@@ -346,7 +348,17 @@ else
     echo -ne "Compiling test targets..."
     
     for target in "${BUILD_TARGETS[@]}"; do
-      run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" -j "${NPROC}"
+      if [[ "${OSTYPE}" == "msys"* ]] || [[ "${OSTYPE}" == "cygwin"* ]] || [[ -n "${NUMBER_OF_PROCESSORS}" ]]; then
+        # Windows: Use verbose output to see if parallel compilation is working
+        if [ "$VERBOSE" == "ON" ]; then
+          echo "Building target $target with parallel compilation (${NPROC} cores)"
+          run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" --verbose -j "${NPROC}"
+        else
+          run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" -j "${NPROC}"
+        fi
+      else
+        run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" -j "${NPROC}"
+      fi
       if (($? != 0)); then
         echo -e "\r\x1B[31mCompiling test target $target...failed.\x1B[39m"
         echo
