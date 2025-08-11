@@ -349,7 +349,7 @@ else
       if [[ "${OSTYPE}" == "msys"* ]] || [[ "${OSTYPE}" == "cygwin"* ]] || [[ -n "${NUMBER_OF_PROCESSORS}" ]]; then
         # Windows: Use both project-level and file-level parallelism for Visual Studio
         # --parallel enables MSBuild worker processes, /p:CL_MPcount enables compiler parallelism
-        run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" --parallel "${NPROC}" -- /p:CL_MPcount="${NPROC}"
+        run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" --parallel "${NPROC}" -- "/p:CL_MPcount=${NPROC}"
       else
         run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" -j "${NPROC}"
       fi
