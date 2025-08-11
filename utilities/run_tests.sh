@@ -340,33 +340,6 @@ else
     
     echo "Building ${#BUILD_TARGETS[@]} test target(s): ${BUILD_TARGETS[*]}"
     
-    # On Windows, check if parallel compilation flags are actually set in project files
-    if [[ "${OSTYPE}" == "msys"* ]] || [[ "${OSTYPE}" == "cygwin"* ]] || [[ -n "${NUMBER_OF_PROCESSORS}" ]]; then
-      echo "=== Checking generated project files for parallel compilation and optimization flags ==="
-      
-      # Check for MultiProcessorCompilation setting in a specific project file
-      if [ -f "lib/helios.vcxproj" ]; then
-        echo "Checking helios.vcxproj for /MP flag:"
-        grep -c "MultiProcessorCompilation" lib/helios.vcxproj || echo "MultiProcessorCompilation not found in helios.vcxproj"
-        grep "MultiProcessorCompilation" lib/helios.vcxproj || true
-      fi
-      
-      # Check for optimization settings in Release configuration
-      if [ -f "lib/helios.vcxproj" ]; then
-        echo "Checking Release optimization settings in helios.vcxproj:"
-        grep -A10 "Configuration.*Release" lib/helios.vcxproj | grep -E "(Optimization|OptimizeReferences|InlineFunctionExpansion)" || echo "No optimization settings found"
-        echo "Checking C++ compiler flags in Release configuration:"
-        grep -A10 "Configuration.*Release" lib/helios.vcxproj | grep -E "(AdditionalOptions|CompileAs)" || echo "No additional C++ flags found"
-      fi
-      
-      # Check actual compiler flags in a project
-      if [ -f "lib/helios.vcxproj" ]; then
-        echo "Checking AdditionalOptions in helios.vcxproj:"
-        grep "AdditionalOptions" lib/helios.vcxproj || echo "No AdditionalOptions found"
-      fi
-      
-      echo "=== End of project file checks ==="
-    fi
     
     # Note: Skip pre-build target validation since cmake --build --target help 
     # is unreliable across different generators (especially Visual Studio on Windows).
@@ -379,18 +352,7 @@ else
     BUILD_START_TIME=$SECONDS
     
     for target in "${BUILD_TARGETS[@]}"; do
-      if [[ "${OSTYPE}" == "msys"* ]] || [[ "${OSTYPE}" == "cygwin"* ]] || [[ -n "${NUMBER_OF_PROCESSORS}" ]]; then
-        # Windows: Use verbose output to see if parallel compilation is working
-        if [ "$VERBOSE" == "ON" ]; then
-          echo "Building target $target with diagnostic output to verify parallel compilation and optimization flags"
-          # Use MSBuild directly with proper verbosity to see actual compiler command lines
-          run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" --verbose -- -verbosity:diagnostic -property:ShowCommandLine=true
-        else
-          run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" -j "${NPROC}"
-        fi
-      else
-        run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" -j "${NPROC}"
-      fi
+      run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" -j "${NPROC}"
       if (($? != 0)); then
         echo -e "\r\x1B[31mCompiling test target $target...failed.\x1B[39m"
         echo
