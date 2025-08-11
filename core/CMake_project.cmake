@@ -21,6 +21,8 @@ if (NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
 endif()
 
+message(STATUS "[Helios] Build type: ${CMAKE_BUILD_TYPE}")
+
 # -- automatically force a cmake re-configure if the code version was updated --#
 find_package(Git QUIET)
 if(GIT_FOUND)
