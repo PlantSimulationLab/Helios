@@ -6,6 +6,8 @@ add_library( photosynthesis STATIC "src/PhotosynthesisModel.cpp" "tests/selfTest
 
 target_include_directories(photosynthesis PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" )
 
-add_executable(photosynthesis_tests "tests/TestMain.cpp")
-target_link_libraries(photosynthesis_tests PRIVATE photosynthesis)
-add_test(NAME photosynthesis_tests COMMAND photosynthesis_tests)
+if(BUILD_TESTS)
+    add_executable(photosynthesis_tests "tests/TestMain.cpp")
+    target_link_libraries(photosynthesis_tests PRIVATE photosynthesis)
+    add_test(NAME photosynthesis_tests COMMAND photosynthesis_tests)
+endif()

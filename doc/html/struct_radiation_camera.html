@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.43</span>
+       <span id="projectnumber">&#160;v1.3.44</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -177,8 +177,20 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a090aa842e322551a73e45295490f0e40"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply auto-exposure scaling to image data to scale the average luminance to a target value.  <br /></td></tr>
 <tr class="separator:a090aa842e322551a73e45295490f0e40"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a708a4f725d65ddb94359a5f52e53aaee" id="r_a708a4f725d65ddb94359a5f52e53aaee"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a708a4f725d65ddb94359a5f52e53aaee">whiteBalance</a> (const std::string &amp;red_band_label, const std::string &amp;green_band_label, const std::string &amp;blue_band_label, float p=5.0)</td></tr>
-<tr class="memdesc:a708a4f725d65ddb94359a5f52e53aaee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply auto-white balancing to image data based on Minkowski mean.  <br /></td></tr>
+<tr class="memdesc:a708a4f725d65ddb94359a5f52e53aaee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply auto-white balancing to image data based on Gray World assumption using Minkowski mean.  <br /></td></tr>
 <tr class="separator:a708a4f725d65ddb94359a5f52e53aaee"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aceea308a1966ca3b930ea9d0c23f5e53" id="r_aceea308a1966ca3b930ea9d0c23f5e53"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aceea308a1966ca3b930ea9d0c23f5e53">whiteBalanceGrayEdge</a> (const std::string &amp;red_band_label, const std::string &amp;green_band_label, const std::string &amp;blue_band_label, int derivative_order=1, float p=5.0)</td></tr>
+<tr class="memdesc:aceea308a1966ca3b930ea9d0c23f5e53"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply Gray Edge white balancing algorithm.  <br /></td></tr>
+<tr class="separator:aceea308a1966ca3b930ea9d0c23f5e53"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a556a2fc2902af55bf468205c183093e4" id="r_a556a2fc2902af55bf468205c183093e4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a556a2fc2902af55bf468205c183093e4">whiteBalanceWhitePatch</a> (const std::string &amp;red_band_label, const std::string &amp;green_band_label, const std::string &amp;blue_band_label, float percentile=0.99f)</td></tr>
+<tr class="memdesc:a556a2fc2902af55bf468205c183093e4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply White Patch white balancing algorithm.  <br /></td></tr>
+<tr class="separator:a556a2fc2902af55bf468205c183093e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a62567240f9da932ed4f56017ccdbf2fa" id="r_a62567240f9da932ed4f56017ccdbf2fa"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a62567240f9da932ed4f56017ccdbf2fa">whiteBalanceAuto</a> (const std::string &amp;red_band_label, const std::string &amp;green_band_label, const std::string &amp;blue_band_label)</td></tr>
+<tr class="memdesc:a62567240f9da932ed4f56017ccdbf2fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Automatically select and apply best white balance algorithm based on scene analysis.  <br /></td></tr>
+<tr class="separator:a62567240f9da932ed4f56017ccdbf2fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3a5eb91b5816c31b5a6ce27fbf2d98cc" id="r_a3a5eb91b5816c31b5a6ce27fbf2d98cc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3a5eb91b5816c31b5a6ce27fbf2d98cc">applyCameraSpectralCorrection</a> (const std::string &amp;red_band_label, const std::string &amp;green_band_label, const std::string &amp;blue_band_label, <a class="el" href="classhelios_1_1_context.html">helios::Context</a> *context)</td></tr>
+<tr class="memdesc:a3a5eb91b5816c31b5a6ce27fbf2d98cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply camera spectral response pre-correction to compensate for known sensor bias.  <br /></td></tr>
+<tr class="separator:a3a5eb91b5816c31b5a6ce27fbf2d98cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a287f2582ba09ba6d2a863ed67652ff7b" id="r_a287f2582ba09ba6d2a863ed67652ff7b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a287f2582ba09ba6d2a863ed67652ff7b">reinhardToneMapping</a> (const std::string &amp;red_band_label, const std::string &amp;green_band_label, const std::string &amp;blue_band_label)</td></tr>
 <tr class="memdesc:a287f2582ba09ba6d2a863ed67652ff7b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply Reinhard tone mapping curve to image data.  <br /></td></tr>
 <tr class="separator:a287f2582ba09ba6d2a863ed67652ff7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -332,7 +344,52 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l02047">2047</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l02400">2400</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a3a5eb91b5816c31b5a6ce27fbf2d98cc" name="a3a5eb91b5816c31b5a6ce27fbf2d98cc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3a5eb91b5816c31b5a6ce27fbf2d98cc">&#9670;&#160;</a></span>applyCameraSpectralCorrection()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void RadiationCamera::applyCameraSpectralCorrection </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>red_band_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>green_band_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>blue_band_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classhelios_1_1_context.html">helios::Context</a> *</td>          <td class="paramname"><span class="paramname"><em>context</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Apply camera spectral response pre-correction to compensate for known sensor bias. </p>
+<p>Computes correction factors based on camera spectral response curves to neutralize the inherent spectral bias of the camera sensor before white balance. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">red_band_label</td><td>Label for red channel band </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">green_band_label</td><td>Label for green channel band <br  />
+ </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">blue_band_label</td><td>Label for blue channel band </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">context</td><td>Pointer to Helios context for accessing spectral data </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l02166">2166</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
 
 </div>
 </div>
@@ -377,7 +434,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l01948">1948</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l02284">2284</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
 
 </div>
 </div>
@@ -418,7 +475,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l02101">2101</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l02454">2454</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
 
 </div>
 </div>
@@ -456,7 +513,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l01980">1980</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l02316">2316</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
 
 </div>
 </div>
@@ -477,7 +534,7 @@ Data Fields</h2></td></tr>
 
 <p>Normalize all pixel data in the camera such that the maximum pixel value is 1.0 and the minimum is 0.0 (no clamping applied) </p>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l01808">1808</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l01814">1814</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
 
 </div>
 </div>
@@ -516,7 +573,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l01923">1923</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l02259">2259</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
 
 </div>
 </div>
@@ -558,7 +615,7 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l01830">1830</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l01836">1836</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
 
 </div>
 </div>
@@ -591,7 +648,7 @@ Data Fields</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Apply auto-white balancing to image data based on Minkowski mean. </p>
+<p>Apply auto-white balancing to image data based on Gray World assumption using Minkowski mean. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">red_band_label</td><td>Label for red channel band </td></tr>
@@ -602,7 +659,139 @@ Data Fields</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l01859">1859</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l01865">1865</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a62567240f9da932ed4f56017ccdbf2fa" name="a62567240f9da932ed4f56017ccdbf2fa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a62567240f9da932ed4f56017ccdbf2fa">&#9670;&#160;</a></span>whiteBalanceAuto()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void RadiationCamera::whiteBalanceAuto </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>red_band_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>green_band_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>blue_band_label</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Automatically select and apply best white balance algorithm based on scene analysis. </p>
+<p>Analyzes scene characteristics and applies the most appropriate white balance method. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">red_band_label</td><td>Label for red channel band </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">green_band_label</td><td>Label for green channel band </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">blue_band_label</td><td>Label for blue channel band </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l02103">2103</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aceea308a1966ca3b930ea9d0c23f5e53" name="aceea308a1966ca3b930ea9d0c23f5e53"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aceea308a1966ca3b930ea9d0c23f5e53">&#9670;&#160;</a></span>whiteBalanceGrayEdge()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void RadiationCamera::whiteBalanceGrayEdge </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>red_band_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>green_band_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>blue_band_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>derivative_order</em></span><span class="paramdefsep"> = </span><span class="paramdefval">1</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>p</em></span><span class="paramdefsep"> = </span><span class="paramdefval">5.0</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Apply Gray Edge white balancing algorithm. </p>
+<p>Uses edge information to estimate illuminant, assuming edge differences are achromatic on average. Works better than Gray World for vegetation and textured scenes. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">red_band_label</td><td>Label for red channel band </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">green_band_label</td><td>Label for green channel band </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">blue_band_label</td><td>Label for blue channel band </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">derivative_order</td><td>[optional] Order of derivative (1 or 2). Default is 1. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">p</td><td>[optional] Minkowski norm parameter. Default is 5.0. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l01929">1929</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a556a2fc2902af55bf468205c183093e4" name="a556a2fc2902af55bf468205c183093e4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a556a2fc2902af55bf468205c183093e4">&#9670;&#160;</a></span>whiteBalanceWhitePatch()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void RadiationCamera::whiteBalanceWhitePatch </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>red_band_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>green_band_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>blue_band_label</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>percentile</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.99f</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Apply White Patch white balancing algorithm. </p>
+<p>Assumes brightest pixels in the scene represent white objects under the illuminant. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">red_band_label</td><td>Label for red channel band </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">green_band_label</td><td>Label for green channel band </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">blue_band_label</td><td>Label for blue channel band </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">percentile</td><td>[optional] Percentile of brightest pixels to use. Default is 0.99 (top 1%). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_radiation_camera_8cpp_source.html#l02056">2056</a> of file <a class="el" href="_radiation_camera_8cpp_source.html">RadiationCamera.cpp</a>.</p>
 
 </div>
 </div>

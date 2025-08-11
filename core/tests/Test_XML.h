@@ -149,14 +149,14 @@ TEST_CASE("Context XML I/O Functions") {
         ctx.setObjectData(box, "object_data", "test_string");
         ctx.setGlobalData("global_test", 123);
 
-        // Write to XML
+        // Write to XML (use quiet parameter to avoid output)
         const char *test_file = "/tmp/helios_test.xml";
-        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file));
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, true));
 
-        // Create new context and load
+        // Create new context and load (use quiet parameter)
         Context ctx2;
         std::vector<uint> loaded_uuids;
-        DOCTEST_CHECK_NOTHROW(loaded_uuids = ctx2.loadXML(test_file));
+        DOCTEST_CHECK_NOTHROW(loaded_uuids = ctx2.loadXML(test_file, true));
         DOCTEST_CHECK(loaded_uuids.size() >= 2);
 
         // Verify loaded data
@@ -193,10 +193,11 @@ TEST_CASE("Context XML I/O Functions") {
         std::vector<uint> selected_objects = {box1};
         const char *test_file = "/tmp/helios_partial_test.xml";
 
-        DOCTEST_CHECK_NOTHROW(ctx.writeXML_byobject(test_file, selected_objects));
+        // Use quiet parameter to avoid output
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML_byobject(test_file, selected_objects, true));
 
         Context ctx2;
-        std::vector<uint> loaded_uuids = ctx2.loadXML(test_file);
+        std::vector<uint> loaded_uuids = ctx2.loadXML(test_file, true);
 
         // Should only have primitives from one box (6 faces)
         DOCTEST_CHECK(loaded_uuids.size() == 6);
@@ -214,10 +215,11 @@ TEST_CASE("Context XML I/O Functions") {
         std::vector<uint> selected_uuids = {p1, p3};
         const char *test_file = "/tmp/helios_uuid_test.xml";
 
-        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, selected_uuids));
+        // Use quiet parameter to avoid output
+        DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, selected_uuids, true));
 
         Context ctx2;
-        std::vector<uint> loaded_uuids = ctx2.loadXML(test_file);
+        std::vector<uint> loaded_uuids = ctx2.loadXML(test_file, true);
 
         DOCTEST_CHECK(loaded_uuids.size() == 2);
 
@@ -234,14 +236,53 @@ TEST_CASE("Context XML I/O Functions") {
         // Create and load a test file
         uint patch = ctx.addPatch();
         const char *test_file = "/tmp/helios_loaded_files_test.xml";
-        ctx.writeXML(test_file);
+        // Use quiet parameter to avoid output
+        ctx.writeXML(test_file, true);
 
         Context ctx2;
-        ctx2.loadXML(test_file);
+        ctx2.loadXML(test_file, true);
 
         std::vector<std::string> loaded_files = ctx2.getLoadedXMLFiles();
         DOCTEST_CHECK(loaded_files.size() == initial_count + 1);
         DOCTEST_CHECK(std::find(loaded_files.begin(), loaded_files.end(), test_file) != loaded_files.end());
+
+        std::remove(test_file);
+    }
+
+    SUBCASE("XML I/O quiet parameter") {
+        Context ctx;
+        uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        const char *test_file = "/tmp/helios_quiet_test.xml";
+
+        // Test writeXML with quiet=false (should produce output)
+        {
+            capture_cout cout_buffer;
+            ctx.writeXML(test_file, false);
+            DOCTEST_CHECK(cout_buffer.get_captured_output().find("Writing XML file") != std::string::npos);
+        }
+
+        // Test loadXML with quiet=false (should produce output)
+        Context ctx2;
+        {
+            capture_cout cout_buffer;
+            ctx2.loadXML(test_file, false);
+            DOCTEST_CHECK(cout_buffer.get_captured_output().find("Loading XML file") != std::string::npos);
+        }
+
+        // Test writeXML with quiet=true (should not produce output)
+        {
+            capture_cout cout_buffer;
+            ctx.writeXML(test_file, true);
+            DOCTEST_CHECK(cout_buffer.get_captured_output().find("Writing XML file") == std::string::npos);
+        }
+
+        // Test loadXML with quiet=true (should not produce output)
+        Context ctx3;
+        {
+            capture_cout cout_buffer;
+            ctx3.loadXML(test_file, true);
+            DOCTEST_CHECK(cout_buffer.get_captured_output().find("Loading XML file") == std::string::npos);
+        }
 
         std::remove(test_file);
     }

@@ -26,8 +26,8 @@ jobs:
         shell: bash
         run: |
           cd utilities
-          if ! ./run_samples.sh --nogpu --visbuildonly --log-file ../windows_selftests.log; then
-            echo "==== run_samples.sh failed; dumping windows_selftests.log ===="
+          if ! ./run_tests.sh --nogpu --visbuildonly --log-file ../windows_selftests.log; then
+            echo "==== run_tests.sh failed; dumping windows_selftests.log ===="
             cat ../windows_selftests.log
             exit 1
           fi

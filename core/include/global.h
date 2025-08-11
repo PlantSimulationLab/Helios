@@ -16,15 +16,36 @@
 #ifndef HELIOS_GLOBAL
 #define HELIOS_GLOBAL
 
-//! Macro for marking functions as deprecated.
-#ifdef __GNUC__
-#define DEPRECATED(func) func __attribute__((deprecated))
+//! Macro for marking functions as deprecated with optional custom message.
+// MSVC requires __declspec to come BEFORE the function declaration
+#if __cplusplus >= 201402L && defined(__has_cpp_attribute) && __has_cpp_attribute(deprecated)
+    #define DEPRECATED_MSG(msg, func) [[deprecated(msg)]] func
+    #define DEPRECATED_NOMSG(func) [[deprecated]] func
+#elif defined(__GNUC__) || defined(__clang__)
+    #define DEPRECATED_MSG(msg, func) func __attribute__((deprecated(msg)))
+    #define DEPRECATED_NOMSG(func) func __attribute__((deprecated))
 #elif defined(_MSC_VER)
-#define DEPRECATED(func) __declspec(deprecated) func
+    // MSVC has issues with custom deprecation messages, use simple deprecation
+    #define DEPRECATED_MSG(msg, func) __declspec(deprecated) func
+    #define DEPRECATED_NOMSG(func) __declspec(deprecated) func
 #else
-#pragma message("WARNING: You need to implement DEPRECATED for this compiler")
-#define DEPRECATED(func) func
+    #pragma message("WARNING: You need to implement DEPRECATED for this compiler")
+    #define DEPRECATED_MSG(msg, func) func
+    #define DEPRECATED_NOMSG(func) func
 #endif
+
+// Helper macro to count arguments
+#define GET_ARG_COUNT(...) GET_ARG_COUNT_IMPL(__VA_ARGS__, 2, 1)
+#define GET_ARG_COUNT_IMPL(_1, _2, N, ...) N
+
+// Main DEPRECATED macro that dispatches based on argument count with corrected parameter order
+#define DEPRECATED(...) GET_DEPRECATED_MACRO(__VA_ARGS__)(__VA_ARGS__)
+#define GET_DEPRECATED_MACRO(...) GET_DEPRECATED_MACRO_IMPL(GET_ARG_COUNT(__VA_ARGS__))
+#define GET_DEPRECATED_MACRO_IMPL(count) GET_DEPRECATED_MACRO_IMPL2(count)
+#define GET_DEPRECATED_MACRO_IMPL2(count) DEPRECATED_##count##_ARGS
+
+#define DEPRECATED_1_ARGS(func) DEPRECATED_NOMSG(func)
+#define DEPRECATED_2_ARGS(func, msg) DEPRECATED_MSG(msg, func)
 
 //! Pi constant.
 #ifndef M_PI
@@ -980,6 +1001,19 @@ namespace helios {
      */
     [[nodiscard]] float fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f, int max_iterations = 100);
 
+    //! Use Newton-Raphson method to find the zero of a function with convergence status
+    /**
+     * \param[in] function Function to be evaluated. The function should take as its first argument the value at which the function should be evaluated, as second argument any function arguments.
+     * \param[in] variables Vector of function arguments
+     * \param[in] parameters Pointer to any additional parameters needed by the function
+     * \param[in] init_guess Initial guess for the zero of the function.
+     * \param[out] converged Boolean indicating whether the solver converged successfully.
+     * \param[in] err_tol [optional] Maximum allowable relative error in solution.
+     * \param[in] max_iterations [optional] Maximum number of iterations to allow before exiting solver.
+     * \return Value of function zero (best estimate even if not converged).
+     */
+    [[nodiscard]] float fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, bool &converged, float err_tol = 0.0001f, int max_iterations = 100);
+
     //! Function to perform linear interpolation based on a vector of discrete (x,y) values
     /**
      * \param[in] points Vector of (x,y) pairs. x values must be monotonically increasing and not duplicated.
@@ -995,6 +1029,46 @@ namespace helios {
      * \return distance between p1 and p2 in three dimensions
      */
     [[nodiscard]] float point_distance(const helios::vec3 &p1, const helios::vec3 &p2);
+
+    //! Generate linearly spaced values between two endpoints
+    /**
+     * \param[in] start Starting value
+     * \param[in] end Ending value
+     * \param[in] num Number of uniformly spaced points to generate
+     * \return Vector of linearly spaced float values
+     * \ingroup functions
+     */
+    [[nodiscard]] std::vector<float> linspace(float start, float end, int num);
+
+    //! Generate linearly spaced vec2 values between two endpoints
+    /**
+     * \param[in] start Starting vec2 value
+     * \param[in] end Ending vec2 value
+     * \param[in] num Number of uniformly spaced points to generate
+     * \return Vector of linearly spaced vec2 values
+     * \ingroup functions
+     */
+    [[nodiscard]] std::vector<vec2> linspace(const vec2 &start, const vec2 &end, int num);
+
+    //! Generate linearly spaced vec3 values between two endpoints
+    /**
+     * \param[in] start Starting vec3 value
+     * \param[in] end Ending vec3 value
+     * \param[in] num Number of uniformly spaced points to generate
+     * \return Vector of linearly spaced vec3 values
+     * \ingroup functions
+     */
+    [[nodiscard]] std::vector<vec3> linspace(const vec3 &start, const vec3 &end, int num);
+
+    //! Generate linearly spaced vec4 values between two endpoints
+    /**
+     * \param[in] start Starting vec4 value
+     * \param[in] end Ending vec4 value
+     * \param[in] num Number of uniformly spaced points to generate
+     * \return Vector of linearly spaced vec4 values
+     * \ingroup functions
+     */
+    [[nodiscard]] std::vector<vec4> linspace(const vec4 &start, const vec4 &end, int num);
 
     //! Parse a file string to get the extension
     /**

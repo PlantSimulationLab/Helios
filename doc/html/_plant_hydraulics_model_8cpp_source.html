@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.43</span>
+       <span id="projectnumber">&#160;v1.3.44</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -165,7 +165,7 @@ $(function(){initNavTree('_plant_hydraulics_model_8cpp_source.html',''); initRes
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="keyword">using namespace </span>std;</div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="keyword">using namespace </span>helios;</div>
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>std::vector&lt;float&gt; linspace(<span class="keywordtype">double</span> begin, <span class="keywordtype">double</span> end, <span class="keywordtype">int</span> n) {</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>std::vector&lt;float&gt; <a class="code hl_function" href="group__functions.html#ga7b3096a0046cf1bd108796a6f7d90bfa" title="Generate linearly spaced values between two endpoints.">linspace</a>(<span class="keywordtype">double</span> begin, <span class="keywordtype">double</span> end, <span class="keywordtype">int</span> n) {</div>
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>    std::vector&lt;float&gt; result;</div>
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    <span class="keywordflow">if</span> (n &lt;= 0)</div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>        <span class="keywordflow">return</span> result;</div>
@@ -183,7 +183,7 @@ $(function(){initNavTree('_plant_hydraulics_model_8cpp_source.html',''); initRes
 <div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span><span class="keywordtype">float</span> invertPVCurve(<span class="keyword">const</span> <a class="code hl_struct" href="struct_hydraulic_capacitance.html">HydraulicCapacitance</a> &amp;coeffs, <span class="keywordtype">float</span> leaf_water_potential) {</div>
 <div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <span class="comment">// simple inverted map of relative water content w to water potential psi</span></div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    std::vector&lt;float&gt; wis = linspace(0.02, 1.0, 50);</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    std::vector&lt;float&gt; wis = <a class="code hl_function" href="group__functions.html#ga7b3096a0046cf1bd108796a6f7d90bfa" title="Generate linearly spaced values between two endpoints.">linspace</a>(0.02, 1.0, 50);</div>
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    std::vector&lt;vec2&gt; points(wis.size());</div>
 <div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> wi = 0; wi &lt; 50; wi++) {</div>
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>        points.at(wi).y = wis.at(wi);</div>

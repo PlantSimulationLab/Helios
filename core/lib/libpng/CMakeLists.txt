@@ -10,8 +10,9 @@
 # For conditions of distribution and use, see the disclaimer
 # and license in png.h
 
-cmake_minimum_required(VERSION 2.8.3)
-cmake_policy(VERSION 2.8.3)
+# BNB 2025-08-11: Updated minimum CMake version for compatibility with CMake 4.0+
+cmake_minimum_required(VERSION 3.5)
+cmake_policy(VERSION 3.5)
 
 # Set MacOSX @rpath usage globally.
 if (POLICY CMP0020)
@@ -750,15 +751,15 @@ if(NOT SKIP_INSTALL_LIBRARIES AND NOT SKIP_INSTALL_ALL )
   if(PNG_SHARED)
     # Create a symlink for libpng.dll.a => libpng16.dll.a on Cygwin
     if(CYGWIN OR MINGW)
-       get_target_property(BUILD_TARGET_LOCATION png LOCATION_${CMAKE_BUILD_TYPE})
-       CREATE_SYMLINK(${BUILD_TARGET_LOCATION} libpng${CMAKE_IMPORT_LIBRARY_SUFFIX})
+       # BNB 2025-08-11: Replaced deprecated LOCATION property with TARGET_FILE generator expression
+       CREATE_SYMLINK($<TARGET_FILE:png> libpng${CMAKE_IMPORT_LIBRARY_SUFFIX})
        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libpng${CMAKE_IMPORT_LIBRARY_SUFFIX}
          DESTINATION ${CMAKE_INSTALL_LIBDIR})
     endif(CYGWIN OR MINGW)
 
     if(NOT WIN32)
-      get_target_property(BUILD_TARGET_LOCATION png LOCATION_${CMAKE_BUILD_TYPE})
-      CREATE_SYMLINK(${BUILD_TARGET_LOCATION} libpng${CMAKE_SHARED_LIBRARY_SUFFIX})
+      # BNB 2025-08-11: Replaced deprecated LOCATION property with TARGET_FILE generator expression
+      CREATE_SYMLINK($<TARGET_FILE:png> libpng${CMAKE_SHARED_LIBRARY_SUFFIX})
       install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libpng${CMAKE_SHARED_LIBRARY_SUFFIX}
          DESTINATION ${CMAKE_INSTALL_LIBDIR})
     endif(NOT WIN32)
@@ -766,8 +767,8 @@ if(NOT SKIP_INSTALL_LIBRARIES AND NOT SKIP_INSTALL_ALL )
 
   if(PNG_STATIC)
     if(NOT WIN32 OR CYGWIN OR MINGW)
-      get_target_property(BUILD_TARGET_LOCATION png_static LOCATION_${CMAKE_BUILD_TYPE})
-      CREATE_SYMLINK(${BUILD_TARGET_LOCATION} libpng${CMAKE_STATIC_LIBRARY_SUFFIX})
+      # BNB 2025-08-11: Replaced deprecated LOCATION property with TARGET_FILE generator expression
+      CREATE_SYMLINK($<TARGET_FILE:png_static> libpng${CMAKE_STATIC_LIBRARY_SUFFIX})
       install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libpng${CMAKE_STATIC_LIBRARY_SUFFIX}
          DESTINATION ${CMAKE_INSTALL_LIBDIR})
     endif(NOT WIN32 OR CYGWIN OR MINGW)

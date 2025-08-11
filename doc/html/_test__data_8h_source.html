@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.43</span>
+       <span id="projectnumber">&#160;v1.3.44</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -345,7 +345,7 @@ $(function(){initNavTree('_test__data_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>        DOCTEST_CHECK(v_r.size() == 2);</div>
 <div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>        DOCTEST_CHECK(v_r[1].y == doctest::Approx(5.0));</div>
 <div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span> </div>
-<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>        DOCTEST_CHECK(ctx.getObjectDataType(o1, <span class="stringliteral">&quot;test_uint&quot;</span>) == HELIOS_TYPE_UINT);</div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>        DOCTEST_CHECK(ctx.getObjectDataType(<span class="stringliteral">&quot;test_uint&quot;</span>) == HELIOS_TYPE_UINT);</div>
 <div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>        DOCTEST_CHECK(ctx.getObjectDataSize(o1, <span class="stringliteral">&quot;test_vec3_vec&quot;</span>) == 2);</div>
 <div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span> </div>
 <div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>        std::vector&lt;std::string&gt; labels = ctx.listObjectData(o1);</div>
@@ -378,7 +378,7 @@ $(function(){initNavTree('_test__data_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>        Context ctx;</div>
 <div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>        capture_cerr cerr_buffer;</div>
 <div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> bad_oid = 999;</div>
-<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>        DOCTEST_CHECK_THROWS(ctx.getObjectDataType(bad_oid, <span class="stringliteral">&quot;test&quot;</span>));</div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>        DOCTEST_CHECK_THROWS(ctx.getObjectDataType(<span class="stringliteral">&quot;test&quot;</span>));</div>
 <div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>        DOCTEST_CHECK_THROWS(ctx.getObjectDataSize(bad_oid, <span class="stringliteral">&quot;test&quot;</span>));</div>
 <div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>        DOCTEST_CHECK_THROWS(ctx.doesObjectDataExist(bad_oid, <span class="stringliteral">&quot;test&quot;</span>));</div>
 <div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>        DOCTEST_CHECK_THROWS(ctx.clearObjectData(bad_oid, <span class="stringliteral">&quot;test&quot;</span>));</div>
@@ -728,7 +728,7 @@ $(function(){initNavTree('_test__data_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00569" name="l00569"></a><span class="lineno">  569</span>    SUBCASE(<span class="stringliteral">&quot;Error Handling&quot;</span>) {</div>
 <div class="line"><a id="l00570" name="l00570"></a><span class="lineno">  570</span>        capture_cerr cerr_buffer;</div>
 <div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> bad_uuid = 999;</div>
-<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span>        DOCTEST_CHECK_THROWS(ctx.getPrimitiveDataType(bad_uuid, <span class="stringliteral">&quot;test&quot;</span>));</div>
+<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span>        DOCTEST_CHECK_THROWS(ctx.getPrimitiveDataType(<span class="stringliteral">&quot;test&quot;</span>));</div>
 <div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span>        DOCTEST_CHECK_THROWS(ctx.getPrimitiveDataSize(bad_uuid, <span class="stringliteral">&quot;test&quot;</span>));</div>
 <div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>        DOCTEST_CHECK_THROWS(ctx.doesPrimitiveDataExist(bad_uuid, <span class="stringliteral">&quot;test&quot;</span>));</div>
 <div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>        DOCTEST_CHECK_THROWS(ctx.clearPrimitiveData(bad_uuid, <span class="stringliteral">&quot;test&quot;</span>));</div>
@@ -813,7 +813,7 @@ $(function(){initNavTree('_test__data_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span>        Context ctx;</div>
 <div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>        capture_cerr cerr_buffer;</div>
 <div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> bad_uuid = 999;</div>
-<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span>        DOCTEST_CHECK_THROWS(ctx.getPrimitiveDataType(bad_uuid, <span class="stringliteral">&quot;test&quot;</span>));</div>
+<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span>        DOCTEST_CHECK_THROWS(ctx.getPrimitiveDataType(<span class="stringliteral">&quot;test&quot;</span>));</div>
 <div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span>        DOCTEST_CHECK_THROWS(ctx.getPrimitiveDataSize(bad_uuid, <span class="stringliteral">&quot;test&quot;</span>));</div>
 <div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span>        DOCTEST_CHECK_THROWS(ctx.doesPrimitiveDataExist(bad_uuid, <span class="stringliteral">&quot;test&quot;</span>));</div>
 <div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span>        DOCTEST_CHECK_THROWS(ctx.clearPrimitiveData(bad_uuid, <span class="stringliteral">&quot;test&quot;</span>));</div>
@@ -1334,9 +1334,9 @@ $(function(){initNavTree('_test__data_8h_source.html',''); initResizable(true); 
 <div class="line"><a id="l01175" name="l01175"></a><span class="lineno"> 1175</span>        ctx.setPrimitiveData(p, <span class="stringliteral">&quot;vec_int3&quot;</span>, v_i3);</div>
 <div class="line"><a id="l01176" name="l01176"></a><span class="lineno"> 1176</span>        ctx.setPrimitiveData(p, <span class="stringliteral">&quot;vec_int4&quot;</span>, v_i4);</div>
 <div class="line"><a id="l01177" name="l01177"></a><span class="lineno"> 1177</span> </div>
-<div class="line"><a id="l01178" name="l01178"></a><span class="lineno"> 1178</span>        DOCTEST_CHECK(ctx.getPrimitiveDataType(p, <span class="stringliteral">&quot;vec_int2&quot;</span>) == HELIOS_TYPE_INT2);</div>
-<div class="line"><a id="l01179" name="l01179"></a><span class="lineno"> 1179</span>        DOCTEST_CHECK(ctx.getPrimitiveDataType(p, <span class="stringliteral">&quot;vec_int3&quot;</span>) == HELIOS_TYPE_INT3);</div>
-<div class="line"><a id="l01180" name="l01180"></a><span class="lineno"> 1180</span>        DOCTEST_CHECK(ctx.getPrimitiveDataType(p, <span class="stringliteral">&quot;vec_int4&quot;</span>) == HELIOS_TYPE_INT4);</div>
+<div class="line"><a id="l01178" name="l01178"></a><span class="lineno"> 1178</span>        DOCTEST_CHECK(ctx.getPrimitiveDataType(<span class="stringliteral">&quot;vec_int2&quot;</span>) == HELIOS_TYPE_INT2);</div>
+<div class="line"><a id="l01179" name="l01179"></a><span class="lineno"> 1179</span>        DOCTEST_CHECK(ctx.getPrimitiveDataType(<span class="stringliteral">&quot;vec_int3&quot;</span>) == HELIOS_TYPE_INT3);</div>
+<div class="line"><a id="l01180" name="l01180"></a><span class="lineno"> 1180</span>        DOCTEST_CHECK(ctx.getPrimitiveDataType(<span class="stringliteral">&quot;vec_int4&quot;</span>) == HELIOS_TYPE_INT4);</div>
 <div class="line"><a id="l01181" name="l01181"></a><span class="lineno"> 1181</span> </div>
 <div class="line"><a id="l01182" name="l01182"></a><span class="lineno"> 1182</span>        DOCTEST_CHECK(ctx.getPrimitiveDataSize(p, <span class="stringliteral">&quot;vec_int2&quot;</span>) == 2);</div>
 <div class="line"><a id="l01183" name="l01183"></a><span class="lineno"> 1183</span>        DOCTEST_CHECK(ctx.getPrimitiveDataSize(p, <span class="stringliteral">&quot;vec_int3&quot;</span>) == 2);</div>

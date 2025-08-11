@@ -359,7 +359,7 @@ void Context::duplicatePrimitiveData(uint UUID, const char *old_label, const cha
     }
 #endif
 
-    HeliosDataType type = getPrimitiveDataType(UUID, old_label);
+    HeliosDataType type = getPrimitiveDataType(old_label);
 
     if (!primitives.at(UUID)->doesPrimitiveDataExist(new_label)) {
         incrementPrimitiveDataLabelCounter(new_label);
@@ -438,7 +438,7 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
     size_t count = 0;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_FLOAT) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_FLOAT) {
             getPrimitiveData(UUID, label.c_str(), value);
             sum += value;
             count++;
@@ -459,7 +459,7 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
     size_t count = 0;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_DOUBLE) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_DOUBLE) {
             getPrimitiveData(UUID, label.c_str(), value);
             sum += value;
             count++;
@@ -480,7 +480,7 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
     size_t count = 0;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_VEC2) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC2) {
             getPrimitiveData(UUID, label.c_str(), value);
             sum = sum + value;
             count++;
@@ -501,7 +501,7 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
     size_t count = 0;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_VEC3) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC3) {
             getPrimitiveData(UUID, label.c_str(), value);
             sum = sum + value;
             count++;
@@ -522,7 +522,7 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
     size_t count = 0;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_VEC4) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC4) {
             getPrimitiveData(UUID, label.c_str(), value);
             sum = sum + value;
             count++;
@@ -544,7 +544,7 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_FLOAT) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_FLOAT) {
             getPrimitiveData(UUID, label.c_str(), value);
             A = getPrimitiveArea(UUID);
             if (std::isnan(A)) {
@@ -573,7 +573,7 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_DOUBLE) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_DOUBLE) {
             getPrimitiveData(UUID, label.c_str(), value);
             A = getPrimitiveArea(UUID);
             if (std::isnan(A)) {
@@ -601,7 +601,7 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_VEC2) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC2) {
             getPrimitiveData(UUID, label.c_str(), value);
             float A = getPrimitiveArea(UUID);
             if (std::isnan(A)) {
@@ -629,7 +629,7 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_VEC3) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC3) {
             getPrimitiveData(UUID, label.c_str(), value);
             float A = getPrimitiveArea(UUID);
             if (std::isnan(A)) {
@@ -657,7 +657,7 @@ void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UU
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_VEC4) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC4) {
             getPrimitiveData(UUID, label.c_str(), value);
             float A = getPrimitiveArea(UUID);
             if (std::isnan(A)) {
@@ -685,7 +685,7 @@ void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const st
     bool added_to_sum = false;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_FLOAT) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_FLOAT) {
             getPrimitiveData(UUID, label.c_str(), value);
             sum += value;
             added_to_sum = true;
@@ -704,7 +704,7 @@ void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const st
     bool added_to_sum = false;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_DOUBLE) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_DOUBLE) {
             getPrimitiveData(UUID, label.c_str(), value);
             sum += value;
             added_to_sum = true;
@@ -723,7 +723,7 @@ void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const st
     bool added_to_sum = false;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_VEC2) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC2) {
             getPrimitiveData(UUID, label.c_str(), value);
             sum = sum + value;
             added_to_sum = true;
@@ -742,7 +742,7 @@ void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const st
     bool added_to_sum = false;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_VEC3) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC3) {
             getPrimitiveData(UUID, label.c_str(), value);
             sum = sum + value;
             added_to_sum = true;
@@ -761,7 +761,7 @@ void Context::calculatePrimitiveDataSum(const std::vector<uint> &UUIDs, const st
     bool added_to_sum = false;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_VEC4) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC4) {
             getPrimitiveData(UUID, label.c_str(), value);
             sum = sum + value;
             added_to_sum = true;
@@ -781,7 +781,7 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_FLOAT) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_FLOAT) {
             float area = getPrimitiveArea(UUID);
             if (std::isnan(area)) {
                 nan_warning = true;
@@ -808,7 +808,7 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_DOUBLE) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_DOUBLE) {
             float area = getPrimitiveArea(UUID);
             if (std::isnan(area)) {
                 nan_warning = true;
@@ -835,7 +835,7 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_VEC2) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC2) {
             float area = getPrimitiveArea(UUID);
             if (std::isnan(area)) {
                 nan_warning = true;
@@ -862,7 +862,7 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_VEC3) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC3) {
             float area = getPrimitiveArea(UUID);
             if (std::isnan(area)) {
                 nan_warning = true;
@@ -889,7 +889,7 @@ void Context::calculatePrimitiveDataAreaWeightedSum(const std::vector<uint> &UUI
     bool nan_warning = false;
     for (uint UUID: UUIDs) {
 
-        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(UUID, label.c_str()) == HELIOS_TYPE_VEC4) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str()) && getPrimitiveDataType(label.c_str()) == HELIOS_TYPE_VEC4) {
             float area = getPrimitiveArea(UUID);
             if (std::isnan(area)) {
                 nan_warning = true;
@@ -921,7 +921,7 @@ void Context::scalePrimitiveData(const std::vector<uint> &UUIDs, const std::stri
             primitive_data_not_exist++;
             continue;
         }
-        HeliosDataType data_type = getPrimitiveDataType(UUID, label.c_str());
+        HeliosDataType data_type = getPrimitiveDataType(label.c_str());
         if (data_type == HELIOS_TYPE_FLOAT) {
             for (float &data: primitives.at(UUID)->primitive_data_float[label]) {
                 data *= scaling_factor;
@@ -1081,7 +1081,7 @@ void Context::aggregatePrimitiveDataSum(const std::vector<uint> &UUIDs, const st
                 continue;
             }
 
-            HeliosDataType data_type_current = getPrimitiveDataType(UUID, label.c_str());
+            HeliosDataType data_type_current = getPrimitiveDataType(label.c_str());
             if (!init_type) {
                 data_type = data_type_current;
                 init_type = true;
@@ -1213,7 +1213,7 @@ void Context::aggregatePrimitiveDataProduct(const std::vector<uint> &UUIDs, cons
                 continue;
             }
 
-            HeliosDataType data_type_current = getPrimitiveDataType(UUID, label.c_str());
+            HeliosDataType data_type_current = getPrimitiveDataType(label.c_str());
             if (!init_type) {
                 data_type = data_type_current;
                 init_type = true;
@@ -1396,7 +1396,7 @@ std::vector<uint> Context::filterPrimitivesByData(const std::vector<uint> &UUIDs
     std::vector<uint> UUIDs_out = UUIDs;
     for (std::size_t p = UUIDs.size(); p-- > 0;) {
         uint UUID = UUIDs_out.at(p);
-        if (doesPrimitiveDataExist(UUID, primitive_data_label.c_str()) && getPrimitiveDataType(UUID, primitive_data_label.c_str()) == HELIOS_TYPE_FLOAT) {
+        if (doesPrimitiveDataExist(UUID, primitive_data_label.c_str()) && getPrimitiveDataType(primitive_data_label.c_str()) == HELIOS_TYPE_FLOAT) {
             float data;
             getPrimitiveData(UUID, primitive_data_label.c_str(), data);
             if (comparator == "==" && data == filter_value) {
@@ -1435,7 +1435,7 @@ std::vector<uint> Context::filterPrimitivesByData(const std::vector<uint> &UUIDs
     std::vector<uint> UUIDs_out = UUIDs;
     for (std::size_t p = UUIDs.size(); p-- > 0;) {
         uint UUID = UUIDs_out.at(p);
-        if (doesPrimitiveDataExist(UUID, primitive_data_label.c_str()) && getPrimitiveDataType(UUID, primitive_data_label.c_str()) == HELIOS_TYPE_DOUBLE) {
+        if (doesPrimitiveDataExist(UUID, primitive_data_label.c_str()) && getPrimitiveDataType(primitive_data_label.c_str()) == HELIOS_TYPE_DOUBLE) {
             double data;
             getPrimitiveData(UUID, primitive_data_label.c_str(), data);
             if (comparator == "==" && data == filter_value) {
@@ -1474,7 +1474,7 @@ std::vector<uint> Context::filterPrimitivesByData(const std::vector<uint> &UUIDs
     std::vector<uint> UUIDs_out = UUIDs;
     for (std::size_t p = UUIDs.size(); p-- > 0;) {
         uint UUID = UUIDs_out.at(p);
-        if (doesPrimitiveDataExist(UUID, primitive_data_label.c_str()) && getPrimitiveDataType(UUID, primitive_data_label.c_str()) == HELIOS_TYPE_INT) {
+        if (doesPrimitiveDataExist(UUID, primitive_data_label.c_str()) && getPrimitiveDataType(primitive_data_label.c_str()) == HELIOS_TYPE_INT) {
             int data;
             getPrimitiveData(UUID, primitive_data_label.c_str(), data);
             if (comparator == "==" && data == filter_value) {
@@ -1513,7 +1513,7 @@ std::vector<uint> Context::filterPrimitivesByData(const std::vector<uint> &UUIDs
     std::vector<uint> UUIDs_out = UUIDs;
     for (std::size_t p = UUIDs.size(); p-- > 0;) {
         uint UUID = UUIDs_out.at(p);
-        if (doesPrimitiveDataExist(UUID, primitive_data_label.c_str()) && getPrimitiveDataType(UUID, primitive_data_label.c_str()) == HELIOS_TYPE_UINT) {
+        if (doesPrimitiveDataExist(UUID, primitive_data_label.c_str()) && getPrimitiveDataType(primitive_data_label.c_str()) == HELIOS_TYPE_UINT) {
             uint data;
             getPrimitiveData(UUID, primitive_data_label.c_str(), data);
             if (comparator == "==" && data == filter_value) {
@@ -1548,7 +1548,7 @@ std::vector<uint> Context::filterPrimitivesByData(const std::vector<uint> &UUIDs
     std::vector<uint> UUIDs_out = UUIDs;
     for (std::size_t p = UUIDs.size(); p-- > 0;) {
         uint UUID = UUIDs_out.at(p);
-        if (doesPrimitiveDataExist(UUID, primitive_data_label.c_str()) && getPrimitiveDataType(UUID, primitive_data_label.c_str()) == HELIOS_TYPE_STRING) {
+        if (doesPrimitiveDataExist(UUID, primitive_data_label.c_str()) && getPrimitiveDataType(primitive_data_label.c_str()) == HELIOS_TYPE_STRING) {
             std::string data;
             getPrimitiveData(UUID, primitive_data_label.c_str(), data);
             if (data != filter_value) {
@@ -1646,7 +1646,7 @@ void Context::duplicateObjectData(uint objID, const char *old_label, const char 
     }
 #endif
 
-    HeliosDataType type = getObjectDataType(objID, old_label);
+    HeliosDataType type = getObjectDataType(old_label);
 
     if (!objects.at(objID)->doesObjectDataExist(new_label)) {
         incrementObjectDataLabelCounter(new_label);
@@ -1888,7 +1888,7 @@ std::vector<uint> Context::filterObjectsByData(const std::vector<uint> &objIDs, 
     std::vector<uint> objIDs_out = objIDs;
     for (std::size_t p = objIDs.size(); p-- > 0;) {
         uint objID = objIDs_out.at(p);
-        if (doesObjectDataExist(objID, object_data_label.c_str()) && getObjectDataType(objID, object_data_label.c_str()) == HELIOS_TYPE_FLOAT) {
+        if (doesObjectDataExist(objID, object_data_label.c_str()) && getObjectDataType(object_data_label.c_str()) == HELIOS_TYPE_FLOAT) {
             float data;
             getObjectData(objID, object_data_label.c_str(), data);
             if (comparator == "==" && data == filter_value) {
@@ -1923,7 +1923,7 @@ std::vector<uint> Context::filterObjectsByData(const std::vector<uint> &objIDs, 
     std::vector<uint> objIDs_out = objIDs;
     for (std::size_t p = objIDs.size(); p-- > 0;) {
         uint objID = objIDs_out.at(p);
-        if (doesObjectDataExist(objID, object_data_label.c_str()) && getObjectDataType(objID, object_data_label.c_str()) == HELIOS_TYPE_DOUBLE) {
+        if (doesObjectDataExist(objID, object_data_label.c_str()) && getObjectDataType(object_data_label.c_str()) == HELIOS_TYPE_DOUBLE) {
             double data;
             getObjectData(objID, object_data_label.c_str(), data);
             if (comparator == "==" && data == filter_value) {
@@ -1958,7 +1958,7 @@ std::vector<uint> Context::filterObjectsByData(const std::vector<uint> &objIDs, 
     std::vector<uint> objIDs_out = objIDs;
     for (std::size_t p = objIDs.size(); p-- > 0;) {
         uint objID = objIDs_out.at(p);
-        if (doesObjectDataExist(objID, object_data_label.c_str()) && getObjectDataType(objID, object_data_label.c_str()) == HELIOS_TYPE_INT) {
+        if (doesObjectDataExist(objID, object_data_label.c_str()) && getObjectDataType(object_data_label.c_str()) == HELIOS_TYPE_INT) {
             int data;
             getObjectData(objID, object_data_label.c_str(), data);
             if (comparator == "==" && data == filter_value) {
@@ -1993,7 +1993,7 @@ std::vector<uint> Context::filterObjectsByData(const std::vector<uint> &objIDs, 
     std::vector<uint> objIDs_out = objIDs;
     for (std::size_t p = objIDs.size(); p-- > 0;) {
         uint objID = objIDs_out.at(p);
-        if (doesObjectDataExist(objID, object_data_label.c_str()) && getObjectDataType(objID, object_data_label.c_str()) == HELIOS_TYPE_UINT) {
+        if (doesObjectDataExist(objID, object_data_label.c_str()) && getObjectDataType(object_data_label.c_str()) == HELIOS_TYPE_UINT) {
             uint data;
             getObjectData(objID, object_data_label.c_str(), data);
             if (comparator == "==" && data == filter_value) {
@@ -2024,9 +2024,9 @@ std::vector<uint> Context::filterObjectsByData(const std::vector<uint> &objIDs, 
     std::vector<uint> objIDs_out = objIDs;
     for (std::size_t p = objIDs.size(); p-- > 0;) {
         uint objID = objIDs_out.at(p);
-        if (doesPrimitiveDataExist(objID, object_data_label.c_str()) && getPrimitiveDataType(objID, object_data_label.c_str()) == HELIOS_TYPE_STRING) {
+        if (doesObjectDataExist(objID, object_data_label.c_str()) && getObjectDataType(object_data_label.c_str()) == HELIOS_TYPE_STRING) {
             std::string data;
-            getPrimitiveData(objID, object_data_label.c_str(), data);
+            getObjectData(objID, object_data_label.c_str(), data);
             if (data != filter_value) {
                 std::swap(objIDs_out.at(p), objIDs_out.back());
                 objIDs_out.pop_back();

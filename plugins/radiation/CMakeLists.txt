@@ -74,15 +74,21 @@ if(NOT DEFINED OPTIX_PATH)
        message( FATAL_ERROR "ERROR: Could not determine operating system for unknown reason." )
 endif(NOT DEFINED OPTIX_PATH)
 
-# Set CUDA flags after enabling language to override defaults
+# Set CUDA flags after enabling language to avoid conflicts with CMake defaults
+# Clear any CMake-generated optimization flags to prevent conflicts
+set(CMAKE_CUDA_FLAGS_DEBUG_INIT "")
+set(CMAKE_CUDA_FLAGS_RELEASE_INIT "")
+set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO_INIT "")
+set(CMAKE_CUDA_FLAGS_MINSIZEREL_INIT "")
+
 if(WIN32)
 	# On Windows, use minimal flags and override any CMake defaults
 	set(CMAKE_CUDA_FLAGS "--use_fast_math")
 	if( CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "" )
-		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g")
+		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -O0")
 		set( OPTIX_COMPILE_OPTIMIZATION_LEVEL_0 ON )
 	else()
-		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O2")
+		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
 		set( OPTIX_COMPILE_OPTIMIZATION_LEVEL_3 ON )
 	endif()
 	
@@ -100,8 +106,8 @@ if(WIN32)
 		__STRICT_ANSI__
 	)
 else()
-	# Non-Windows platforms use full flags
-	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --use_fast_math -Wno-deprecated-gpu-targets")
+	# Non-Windows platforms: set base flags without optimization
+	set(CMAKE_CUDA_FLAGS "--use_fast_math -Wno-deprecated-gpu-targets")
 	
 	if( CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "" )
 		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -O0")
@@ -137,6 +143,7 @@ if(WIN32)
 	if(CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
 		list(APPEND OPTIX_NVCC_FLAGS -g -O0)
 	else()
+		# Use -O3 for PTX compilation on Windows Release builds
 		list(APPEND OPTIX_NVCC_FLAGS -O3)
 	endif()
 else()
@@ -144,6 +151,7 @@ else()
 	if(CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
 		list(APPEND OPTIX_NVCC_FLAGS -g -O0)
 	else()
+		# Use -O3 for PTX compilation on non-Windows Release builds
 		list(APPEND OPTIX_NVCC_FLAGS -O3)
 	endif()
 	list(APPEND OPTIX_NVCC_FLAGS -std=c++${CMAKE_CXX_STANDARD})
@@ -213,6 +221,8 @@ file( COPY include/disk.png DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/)
 file( COPY spectral_data DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
 file( COPY camera_light_models DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
 
-add_executable(radiation_tests "tests/TestMain.cpp")
-target_link_libraries(radiation_tests PRIVATE radiation)
-add_test(NAME radiation_tests COMMAND radiation_tests)
+if(BUILD_TESTS)
+    add_executable(radiation_tests "tests/TestMain.cpp")
+    target_link_libraries(radiation_tests PRIVATE radiation)
+    add_test(NAME radiation_tests COMMAND radiation_tests)
+endif()
