@@ -55,6 +55,9 @@ else
     NPROC=1
 fi
 
+# Save the original working directory before changing directories
+ORIGINAL_DIR="$(pwd)"
+
 cd ../samples || exit 1
 
 if [[ "${OSTYPE}" != "darwin"* ]] && [[ "${OSTYPE}" != "linux"* ]] && [[ "${OSTYPE}" != "msys"* ]];then
@@ -114,7 +117,7 @@ while [ $# -gt 0 ]; do
     if [[ "$2" = /* ]]; then
       LOG_FILE="$2"
     else
-      LOG_FILE="$(pwd)/$2"
+      LOG_FILE="$ORIGINAL_DIR/$2"
     fi
     shift
     ;;

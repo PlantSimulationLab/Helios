@@ -40,8 +40,7 @@ if(CUDAToolkit_FOUND)
     # Set CUDA flags after enabling language to override defaults
     if(WIN32)
     	# On Windows, use minimal flags and override any CMake defaults
-    	# Always use optimization flags for better performance, avoid debug flags that conflict
-    	set(CMAKE_CUDA_FLAGS "--use_fast_math -O3")
+    	set(CMAKE_CUDA_FLAGS "--use_fast_math")
     	
     	# Force override CMake's build-type specific flags after they're set
     	set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS}")
@@ -53,13 +52,12 @@ if(CUDAToolkit_FOUND)
     	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --use_fast_math -Wno-deprecated-gpu-targets")
     	
     	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++${CMAKE_CXX_STANDARD}")
-    	
-    	# Add debug/release specific flags for non-Windows platforms
-    	if( CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "" )
-    		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -O0")
-    	else()
-    		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
-    	endif()
+    endif()
+    
+    if( CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "" )
+    	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -O0")
+    else()
+    	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
     endif()
     
     # Build with CUDA support

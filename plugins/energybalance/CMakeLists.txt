@@ -35,8 +35,7 @@ endif()
 # Set CUDA flags after enabling language to override defaults
 if(WIN32)
 	# On Windows, use minimal flags and override any CMake defaults
-	# Always use optimization flags for better performance, avoid debug flags that conflict
-	set(CMAKE_CUDA_FLAGS "--use_fast_math -O3")
+	set(CMAKE_CUDA_FLAGS "--use_fast_math")
 	
 	# Force override CMake's build-type specific flags after they're set
 	set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS}")
@@ -50,13 +49,12 @@ else()
 	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++${CMAKE_CXX_STANDARD}")
 	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D_MWAITXINTRIN_H_INCLUDED -D__STRICT_ANSI__")
 	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/include")
-	
-	# Add debug/release specific flags for non-Windows platforms
-	if( CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "" )
-		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -O0")
-	else()
-		set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
-	endif()
+endif()
+
+if( CMAKE_BUILD_TYPE STREQUAL Debug OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "" )
+	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -O0")
+else()
+	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
 endif()
 
 add_library(energybalance STATIC "src/EnergyBalanceModel.cpp" "src/EnergyBalanceModel.cu" "tests/selfTest.cpp")
@@ -69,18 +67,6 @@ if(WIN32 AND MSVC)
 	# Remove the global /utf-8 flag and other MSVC options from CUDA compilation
 	set_property(TARGET energybalance PROPERTY COMPILE_OPTIONS "")
 	set_property(TARGET energybalance PROPERTY COMPILE_DEFINITIONS "")
-	
-	# Override CMake's build-type specific C/CXX flags for this target to prevent them from affecting CUDA
-	set_target_properties(energybalance PROPERTIES
-		COMPILE_FLAGS ""
-		COMPILE_FLAGS_DEBUG ""
-		COMPILE_FLAGS_RELEASE ""
-		COMPILE_FLAGS_RELWITHDEBINFO ""
-		COMPILE_FLAGS_MINSIZEREL ""
-	)
-	
-	# Explicitly override CUDA compile rule to use only our custom flags
-	set_property(TARGET energybalance PROPERTY RULE_LAUNCH_COMPILE "")
 	
 	# Windows-specific defines
 	target_compile_definitions(energybalance PRIVATE NOMINMAX _USE_MATH_DEFINES _MWAITXINTRIN_H_INCLUDED __STRICT_ANSI__ )
