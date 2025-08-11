@@ -17,30 +17,35 @@
 #define HELIOS_GLOBAL
 
 //! Macro for marking functions as deprecated with optional custom message.
-#ifdef __GNUC__
-#define DEPRECATED_MSG(func, msg) func __attribute__((deprecated(msg)))
-#define DEPRECATED_NOMSG(func) func __attribute__((deprecated))
+// MSVC requires __declspec to come BEFORE the function declaration
+#if __cplusplus >= 201402L && defined(__has_cpp_attribute) && __has_cpp_attribute(deprecated)
+    #define DEPRECATED_MSG(msg, func) [[deprecated(msg)]] func
+    #define DEPRECATED_NOMSG(func) [[deprecated]] func
+#elif defined(__GNUC__) || defined(__clang__)
+    #define DEPRECATED_MSG(msg, func) func __attribute__((deprecated(msg)))
+    #define DEPRECATED_NOMSG(func) func __attribute__((deprecated))
 #elif defined(_MSC_VER)
-#define DEPRECATED_MSG(func, msg) __declspec(deprecated(msg)) func
-#define DEPRECATED_NOMSG(func) __declspec(deprecated) func
+    // MSVC has issues with custom deprecation messages, use simple deprecation
+    #define DEPRECATED_MSG(msg, func) __declspec(deprecated) func
+    #define DEPRECATED_NOMSG(func) __declspec(deprecated) func
 #else
-#pragma message("WARNING: You need to implement DEPRECATED for this compiler")
-#define DEPRECATED_MSG(func, msg) func
-#define DEPRECATED_NOMSG(func) func
+    #pragma message("WARNING: You need to implement DEPRECATED for this compiler")
+    #define DEPRECATED_MSG(msg, func) func
+    #define DEPRECATED_NOMSG(func) func
 #endif
 
 // Helper macro to count arguments
 #define GET_ARG_COUNT(...) GET_ARG_COUNT_IMPL(__VA_ARGS__, 2, 1)
 #define GET_ARG_COUNT_IMPL(_1, _2, N, ...) N
 
-// Main DEPRECATED macro that dispatches based on argument count
+// Main DEPRECATED macro that dispatches based on argument count with corrected parameter order
 #define DEPRECATED(...) GET_DEPRECATED_MACRO(__VA_ARGS__)(__VA_ARGS__)
 #define GET_DEPRECATED_MACRO(...) GET_DEPRECATED_MACRO_IMPL(GET_ARG_COUNT(__VA_ARGS__))
 #define GET_DEPRECATED_MACRO_IMPL(count) GET_DEPRECATED_MACRO_IMPL2(count)
 #define GET_DEPRECATED_MACRO_IMPL2(count) DEPRECATED_##count##_ARGS
 
 #define DEPRECATED_1_ARGS(func) DEPRECATED_NOMSG(func)
-#define DEPRECATED_2_ARGS(func, msg) DEPRECATED_MSG(func, msg)
+#define DEPRECATED_2_ARGS(func, msg) DEPRECATED_MSG(msg, func)
 
 //! Pi constant.
 #ifndef M_PI

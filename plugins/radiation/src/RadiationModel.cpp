@@ -2499,7 +2499,7 @@ void RadiationModel::updateRadiativeProperties() {
 #ifdef USE_OPENMP
     #pragma omp parallel for schedule(dynamic)
 #endif
-    for (size_t spectrum_idx = 0; spectrum_idx < spectra_rho_vector.size(); spectrum_idx++) {
+    for (int spectrum_idx = 0; spectrum_idx < (int)spectra_rho_vector.size(); spectrum_idx++) {
         const auto &spectrum = spectra_rho_vector[spectrum_idx];
 
         for (uint b = 0; b < Nbands; b++) {
@@ -2599,7 +2599,7 @@ void RadiationModel::updateRadiativeProperties() {
 #ifdef USE_OPENMP
     #pragma omp parallel for schedule(dynamic)
 #endif
-    for (size_t spectrum_idx = 0; spectrum_idx < spectra_tau_vector.size(); spectrum_idx++) {
+    for (int spectrum_idx = 0; spectrum_idx < (int)spectra_tau_vector.size(); spectrum_idx++) {
         const auto &spectrum = spectra_tau_vector[spectrum_idx];
 
         for (uint b = 0; b < Nbands; b++) {

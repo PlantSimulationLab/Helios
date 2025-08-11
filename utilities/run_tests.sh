@@ -335,34 +335,9 @@ else
     
     echo "Building ${#BUILD_TARGETS[@]} test target(s): ${BUILD_TARGETS[*]}"
     
-    # Validate that all requested test targets exist
-    
-    # Get list of available targets from CMake
-    AVAILABLE_TARGETS_RAW=$(cmake --build ./ --target help 2>/dev/null | grep -E "^\.\.\. " | sed 's/^\.\.\. //' || echo "")
-    
-    INVALID_TARGETS=()
-    for target in "${BUILD_TARGETS[@]}"; do
-      if ! echo "$AVAILABLE_TARGETS_RAW" | grep -q "^$target$"; then
-        INVALID_TARGETS+=("$target")
-      fi
-    done
-    
-    if [ ${#INVALID_TARGETS[@]} -gt 0 ]; then
-      echo -e "\r\x1B[31mError: Invalid test target(s): ${INVALID_TARGETS[*]}\x1B[39m"
-      echo
-      echo "Available test targets:"
-      echo "$AVAILABLE_TARGETS_RAW" | grep "_tests$" | sort | sed 's/^/  /'
-      if [ "$(echo "$AVAILABLE_TARGETS_RAW" | grep "_tests$" | wc -l)" -eq 0 ]; then
-        echo "  No test targets found. Make sure BUILD_TESTS=ON was used."
-      fi
-      echo
-      echo "Example usage:"
-      echo "  --test context                    # for context_tests"
-      echo "  --test radiation                  # for radiation_tests"
-      echo "  --tests \"radiation,lidar\"         # for multiple tests"
-      ERROR_COUNT=$((ERROR_COUNT + 1))
-      cleanup
-    fi
+    # Note: Skip pre-build target validation since cmake --build --target help 
+    # is unreliable across different generators (especially Visual Studio on Windows).
+    # Instead, we'll attempt to build the targets and validate executables afterward.
     
     # Build only the required test targets
     echo -ne "Compiling test targets..."
@@ -371,6 +346,17 @@ else
       run_command cmake --build ./ --target "$target" -j "${NPROC}"
       if (($? != 0)); then
         echo -e "\r\x1B[31mCompiling test target $target...failed.\x1B[39m"
+        echo
+        echo "This could indicate:"
+        echo "  1. The target '$target' does not exist (check plugin name spelling)"
+        echo "  2. BUILD_TESTS=ON was not set properly during cmake configuration"
+        echo "  3. There's a compilation error in the test code"
+        echo "  4. Missing dependencies or incorrect CMake generator"
+        echo
+        echo "Example usage:"
+        echo "  --test context                    # for context_tests"  
+        echo "  --test radiation                  # for radiation_tests"
+        echo "  --tests \"radiation,lidar\"         # for multiple tests"
         ERROR_COUNT=$((ERROR_COUNT + 1))
         cleanup
       fi

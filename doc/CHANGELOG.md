@@ -14,7 +14,6 @@
 - Added minimum size validation (1e-6) for patch primitives to prevent numerical precision issues
 - Added debug warnings for malformed triangles with near-zero area
 - Deprecated `Context::getPrimitiveDataType(uint, const char*)` and `Context::getObjectDataType(uint, const char*)` in favor of `Context::getPrimitiveDataType(const char*)` and `Context::getObjectDataType(const char*)`
-- Enhanced DEPRECATED macro to support optional custom deprecation messages
 - Added new `fzero()` function overload that returns convergence status
 - Implemented linspace utility functions in `global.h`/`global.cpp` for float, vec2, vec3, and vec4 types
 

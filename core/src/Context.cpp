@@ -784,7 +784,7 @@ void Context::getDomainBoundingBox(const std::vector<uint> &UUIDs, vec2 &xbounds
 
 // Parallelize the outer loop over primitives. Use "for" inside the parallel region.
 #pragma omp for nowait
-        for (size_t i = 0; i < UUIDs.size(); i++) {
+        for (int i = 0; i < (int)UUIDs.size(); i++) {
             // For each primitive:
             const std::vector<vec3> &verts = getPrimitivePointer_private(UUIDs[i])->getVertices();
             // Update local bounding box for each vertex in this primitive.

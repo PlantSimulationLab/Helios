@@ -42,8 +42,8 @@ jobs:
       - name: Bash script
         run: |
           cd utilities
-          if ! ./run_samples.sh --nogpu --visbuildonly --log-file ../linux_selftests.log; then
-            echo "==== run_samples.sh failed; dumping linux_selftests.log ===="
+          if ! ./run_tests.sh --nogpu --visbuildonly --log-file ../linux_selftests.log; then
+            echo "==== run_tests.sh failed; dumping linux_selftests.log ===="
             cat ../linux_selftests.log
             exit 1
           fi
