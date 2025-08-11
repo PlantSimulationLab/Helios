@@ -1858,6 +1858,9 @@ DOCTEST_TEST_CASE("RadiationModel Multi-Spectrum Primitive Assignment") {
     radiation.setSourceFlux(source, "R", 1000.0f);
     radiation.setSourceFlux(source, "G", 1000.0f);
     radiation.setSourceFlux(source, "B", 1000.0f);
+    radiation.setDirectRayCount("R", 1000);
+    radiation.setDirectRayCount("G", 1000);
+    radiation.setDirectRayCount("B", 1000);
     
     // Add cameras with spectral response to test camera-specific caching
     // Camera 1: emphasizes green band
@@ -1881,12 +1884,12 @@ DOCTEST_TEST_CASE("RadiationModel Multi-Spectrum Primitive Assignment") {
     camera_props.camera_resolution = make_int2(100, 100);
     camera_props.HFOV = 2.0f;
     
-    radiation.addRadiationCamera("camera1", band_labels, make_vec3(0, 0, 5), make_vec3(0, 0, 0), camera_props, 1);
+    radiation.addRadiationCamera("camera1", band_labels, make_vec3(0, 0, 5), make_vec3(0, 0, 0), camera_props, 100);
     radiation.setCameraSpectralResponse("camera1", "R", "camera1_spectrum");
     radiation.setCameraSpectralResponse("camera1", "G", "camera1_spectrum");
     radiation.setCameraSpectralResponse("camera1", "B", "camera1_spectrum");
     
-    radiation.addRadiationCamera("camera2", band_labels, make_vec3(5, 0, 5), make_vec3(0, 0, 0), camera_props, 1);
+    radiation.addRadiationCamera("camera2", band_labels, make_vec3(5, 0, 5), make_vec3(0, 0, 0), camera_props, 100);
     radiation.setCameraSpectralResponse("camera2", "R", "camera2_spectrum");
     radiation.setCameraSpectralResponse("camera2", "G", "camera2_spectrum");
     radiation.setCameraSpectralResponse("camera2", "B", "camera2_spectrum");

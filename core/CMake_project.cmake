@@ -97,6 +97,11 @@ if ( WIN32 )
     string(REGEX REPLACE "/MD*" "/MT" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     string(REGEX REPLACE "/W[0-4]" "/W1" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     string(REGEX REPLACE "/W[0-4]" "/W1" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    
+    # Ensure Release builds have optimization flags for C++ code
+    set(CMAKE_CXX_FLAGS_RELEASE "/MT /O2 /Ob2 /DNDEBUG /W1")
+    set(CMAKE_C_FLAGS_RELEASE "/MT /O2 /Ob2 /DNDEBUG /W1")
+    
     cmake_policy(SET CMP0091 NEW)
     set( CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
     foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )

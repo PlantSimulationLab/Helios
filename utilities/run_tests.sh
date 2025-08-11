@@ -354,7 +354,9 @@ else
       # Check for optimization settings in Release configuration
       if [ -f "lib/helios.vcxproj" ]; then
         echo "Checking Release optimization settings in helios.vcxproj:"
-        grep -A5 "Configuration.*Release" lib/helios.vcxproj | grep "Optimization" || echo "No optimization settings found"
+        grep -A10 "Configuration.*Release" lib/helios.vcxproj | grep -E "(Optimization|OptimizeReferences|InlineFunctionExpansion)" || echo "No optimization settings found"
+        echo "Checking C++ compiler flags in Release configuration:"
+        grep -A10 "Configuration.*Release" lib/helios.vcxproj | grep -E "(AdditionalOptions|CompileAs)" || echo "No additional C++ flags found"
       fi
       
       # Check actual compiler flags in a project
