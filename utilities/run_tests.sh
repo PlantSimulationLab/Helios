@@ -346,7 +346,7 @@ else
     echo -ne "Compiling test targets..."
     
     for target in "${BUILD_TARGETS[@]}"; do
-      run_command cmake --build ./ --target "$target" -j "${NPROC}"
+      run_command cmake --build ./ --target "$target" --config "${BUILD_TYPE}" -j "${NPROC}"
       if (($? != 0)); then
         echo -e "\r\x1B[31mCompiling test target $target...failed.\x1B[39m"
         echo
