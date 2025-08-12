@@ -66,6 +66,11 @@ struct HydraulicResults {
     std::vector<double> flowRates;
 };
 
+enum class SubmainPosition {
+    NORTH,
+    SOUTH,
+    MIDDLE
+};
 
 
 class IrrigationModel {
@@ -74,17 +79,20 @@ public:
     std::vector<Link> links;
 
     // Main system creation
+
     void createCompleteSystem(double Pw, double fieldLength, double fieldWidth,
-                           double sprinklerSpacing, double lineSpacing,
-                           const std::string& connectionType);
+                       double sprinklerSpacing, double lineSpacing,
+                       const std::string& connectionType,
+                       SubmainPosition submainPos = SubmainPosition::NORTH);
 
     int getWaterSourceId() const { return waterSourceId; }
     int getNextNodeId() const;
     // Print network in visualization format
     void printNetwork() const;
     HydraulicResults calculateHydraulics(const std::string& nozzleType, double Qspecified, double Pw);
-
-    // New: Get system summary as string
+    //diagonistic test on the irrigation system
+    void validateHydraulicSystem() const;
+    // Get system summary as string
     std::string getSystemSummary() const;
 
 private:
@@ -103,14 +111,19 @@ private:
     Position calculateWaterSourcePosition(double fieldLength, double fieldWidth,
                                         const std::string& lateralDirection) const;
 
+   // void addSubmainAndWaterSource(double fieldLength, double fieldWidth,
+    //                                         const std::string& lateralDirection);
+
     void addSubmainAndWaterSource(double fieldLength, double fieldWidth,
-                                             const std::string& lateralDirection);
+                            const std::string& lateralDirection,
+                            SubmainPosition submainPos);
 
     double calculateEmitterFlow(double Pw) const;
 
     void buildNeighborLists();
     double calculateResistance(double Re, double Wbar, const Link& link, int iter);
     double calculateEmitterFlow(const std::string& nozzleType, double pressure);
+
 
 };
 

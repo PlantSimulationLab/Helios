@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
 import sys
+import os
+import numpy as np
+
+# Set matplotlib backend FIRST
+import matplotlib
+matplotlib.use('Qt5Agg')  # or 'TkAgg', 'GTK3Agg'
+
+# Now import pyplot
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-import numpy as np
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
+
 
 def read_data():
     """Read irrigation system data from stdin"""
@@ -113,9 +121,9 @@ def visualize_complete_system(nodes, links):
 
         ax.scatter(node['x'], node['y'],
                    marker=style['marker'],
-                   c=node_color,
+                   color=node_color,
                    s=style['size'],
-                   zorder=style['zorder'],
+                   zorder=style.get('zorder', 2),
                    edgecolors='k',
                    linewidths=0.8)
 
@@ -157,8 +165,6 @@ def visualize_complete_system(nodes, links):
                markerfacecolor='#9b59b6', markersize=12),
         Line2D([0], [0], marker='^', color='w', label='Emitter',
                markerfacecolor='#e74c3c', markersize=12),
-        Line2D([0], [0], marker='D', color='w', label='Submain',
-               markerfacecolor='#c0392b', markersize=12),
         Line2D([0], [0], marker='*', color='w', label='Water Source',
                markerfacecolor='#3498db', markersize=18),
         Line2D([0], [0], color='#3498db', lw=2, label='Lateral Pipe'),

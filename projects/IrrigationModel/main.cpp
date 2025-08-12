@@ -1,10 +1,7 @@
-
-
-
-
-#include "IrrigationModel.h"
+#include "/home/yuanzzzy/CLionProjects/Helios/plugins/irrigation/include/IrrigationModel.h"
 
 #include <iostream>
+
 
 int main(){
 
@@ -26,7 +23,8 @@ int main(){
             50.0,    // fieldWidth (m)
             10.0,    // sprinklerSpacing (m)
             25.0,    // lineSpacing (m)
-            "vertical" // lateralDirection
+            "vertical", // lateralDirection
+            SubmainPosition:: MIDDLE
         );
         system.printNetwork();
 
@@ -46,8 +44,13 @@ int main(){
     std::cout << "Total nodes: " << system.nodes.size() << "\n";
     std::cout << "Total links: " << system.links.size() << "\n";
 
+    system.validateHydraulicSystem();
+    HydraulicResults results = system.calculateHydraulics("NPC", 0.0001, Pw);
 
-    auto results = system.calculateHydraulics("NPC", 0.0001, Pw);
+    for (const auto& [id, node] : system.nodes) {
+        std::cout << "Node " << id << " (" << node.type << ") pressure: "
+                  << node.pressure << " psi" << std::endl;
+    }
 
     // find and print the first emitter node
     // for (const auto& [id, node] : system.nodes) {
