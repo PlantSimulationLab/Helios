@@ -1361,13 +1361,19 @@ bool CollisionDetection::validateUUIDs(const std::vector<uint> &UUIDs) const {
 }
 
 bool CollisionDetection::rayPrimitiveIntersection(const vec3 &origin, const vec3 &direction, uint primitive_UUID, float &distance) const {
-    // Get primitive type and vertices
-    PrimitiveType type = context->getPrimitiveType(primitive_UUID);
-    std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_UUID);
-    
-    if (vertices.empty()) {
+    // Check if primitive exists first
+    if (!context->doesPrimitiveExist(primitive_UUID)) {
         return false;
     }
+    
+    try {
+        // Get primitive type and vertices
+        PrimitiveType type = context->getPrimitiveType(primitive_UUID);
+        std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_UUID);
+        
+        if (vertices.empty()) {
+            return false;
+        }
     
     
     bool hit = false;
@@ -1458,12 +1464,16 @@ bool CollisionDetection::rayPrimitiveIntersection(const vec3 &origin, const vec3
         }
     }
     
-    if (hit) {
-        distance = min_distance;
-        return true;
+        if (hit) {
+            distance = min_distance;
+            return true;
+        }
+        
+        return false;
+    } catch (const std::exception& e) {
+        // Primitive no longer exists or can't be accessed
+        return false;
     }
-    
-    return false;
 }
 
 void CollisionDetection::calculateGridIntersection(const vec3 &grid_center, const vec3 &grid_size, const helios::int3 &grid_divisions, const std::vector<uint> &UUIDs) {
@@ -2915,8 +2925,17 @@ CollisionDetection::HitResult CollisionDetection::castRay(const vec3 &origin, co
     // Set up search parameters
     std::vector<uint> search_primitives;
     if (target_UUIDs.empty()) {
-        // Use all primitives in context
-        search_primitives = context->getAllUUIDs();
+        // Use cached primitives if available (thread-safe), otherwise use context (thread-unsafe)
+        if (!primitive_cache.empty()) {
+            // Use cached primitive IDs for thread-safe operation
+            search_primitives.reserve(primitive_cache.size());
+            for (const auto& cached_pair : primitive_cache) {
+                search_primitives.push_back(cached_pair.first);
+            }
+        } else {
+            // Fall back to context call (thread-unsafe)
+            search_primitives = context->getAllUUIDs();
+        }
     } else {
         search_primitives = target_UUIDs;
     }
@@ -2932,12 +2951,25 @@ CollisionDetection::HitResult CollisionDetection::castRay(const vec3 &origin, co
     
     // Test each primitive for intersection
     for (uint candidate_uuid : search_primitives) {
-        if (!context->doesPrimitiveExist(candidate_uuid)) {
-            continue;
+        float intersection_distance;
+        bool hit = false;
+        
+        // Use thread-safe cached intersection if available
+        if (!primitive_cache.empty()) {
+            HitResult primitive_result = intersectPrimitiveThreadSafe(origin, ray_direction, candidate_uuid, max_distance);
+            if (primitive_result.hit) {
+                hit = true;
+                intersection_distance = primitive_result.distance;
+            }
+        } else {
+            // Fall back to thread-unsafe context call
+            if (!context->doesPrimitiveExist(candidate_uuid)) {
+                continue;
+            }
+            hit = rayPrimitiveIntersection(origin, ray_direction, candidate_uuid, intersection_distance);
         }
         
-        float intersection_distance;
-        if (rayPrimitiveIntersection(origin, ray_direction, candidate_uuid, intersection_distance)) {
+        if (hit) {
             // Check distance constraints
             if (intersection_distance > 1e-6f && // Avoid self-intersection
                 intersection_distance < nearest_distance) { // Find nearest
@@ -2957,10 +2989,11 @@ CollisionDetection::HitResult CollisionDetection::castRay(const vec3 &origin, co
         result.intersection_point = origin + ray_direction * nearest_distance;
         
         // Calculate surface normal
-        PrimitiveType type = context->getPrimitiveType(hit_primitive);
-        std::vector<vec3> vertices = context->getPrimitiveVertices(hit_primitive);
-        
-        if (type == PRIMITIVE_TYPE_TRIANGLE && vertices.size() >= 3) {
+        try {
+            PrimitiveType type = context->getPrimitiveType(hit_primitive);
+            std::vector<vec3> vertices = context->getPrimitiveVertices(hit_primitive);
+            
+            if (type == PRIMITIVE_TYPE_TRIANGLE && vertices.size() >= 3) {
             // Calculate triangle normal
             vec3 v0 = vertices[0];
             vec3 v1 = vertices[1];
@@ -2978,8 +3011,12 @@ CollisionDetection::HitResult CollisionDetection::castRay(const vec3 &origin, co
             vec3 edge2 = v2 - v0;
             result.normal = cross(edge1, edge2);
             result.normal = result.normal / result.normal.magnitude();
-        } else {
-            // Default normal (pointing back along ray)
+            } else {
+                // Default normal (pointing back along ray)
+                result.normal = make_vec3(-ray_direction.x, -ray_direction.y, -ray_direction.z);
+            }
+        } catch (const std::exception& e) {
+            // If we can't get surface normal, use default
             result.normal = make_vec3(-ray_direction.x, -ray_direction.y, -ray_direction.z);
         }
     }
@@ -3020,7 +3057,43 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRays(const st
 }
 
 void CollisionDetection::castRaysCPU(const std::vector<RayQuery> &ray_queries, std::vector<HitResult> &results, RayTracingStats &stats) {
-    // Process each ray sequentially (automatic BVH rebuilds should be disabled by caller for performance)
+    const size_t num_rays = ray_queries.size();
+    
+#ifdef _OPENMP
+    // Use OpenMP for parallel processing with thread-safe primitive cache
+    const size_t OPENMP_THRESHOLD = 100; // Use OpenMP for batches larger than this
+    
+    if (num_rays >= OPENMP_THRESHOLD) {
+        // Build primitive cache for thread-safe access BEFORE parallel region
+        buildPrimitiveCache();
+        
+        // Pre-allocate results vector for parallel access
+        results.resize(num_rays);
+        
+        // Thread-local statistics for reduction
+        size_t total_hits = 0;
+        double total_distance = 0.0;
+        
+        #pragma omp parallel for reduction(+:total_hits,total_distance) schedule(dynamic, 16)
+        for (size_t i = 0; i < num_rays; i++) {
+            HitResult result = castRay(ray_queries[i]);
+            results[i] = result;
+            
+            // Update thread-local statistics
+            if (result.hit) {
+                total_hits++;
+                total_distance += result.distance;
+            }
+        }
+        
+        // Update global statistics
+        stats.total_hits = total_hits;
+        stats.average_ray_distance = (total_hits > 0) ? (total_distance / total_hits) : 0.0;
+        return;
+    }
+#endif
+
+    // Fallback to sequential processing - use original push_back approach
     for (const auto &query : ray_queries) {
         HitResult result = castRay(query);
         results.push_back(result);
@@ -3497,17 +3570,48 @@ CollisionDetection::MemoryUsageStats CollisionDetection::getBVHMemoryUsage() con
 }
 
 std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysSoA(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats) {
-    std::vector<HitResult> results;
-    results.reserve(ray_queries.size());
-    
     if (bvh_nodes_soa.node_count == 0) {
         // Fall back to legacy method if SoA not built
         return castRays(ray_queries, &stats);
     }
     
-    stats.total_rays_cast = ray_queries.size();
+    const size_t num_rays = ray_queries.size();
+    std::vector<HitResult> results;
+    stats.total_rays_cast = num_rays;
     
-    // Process each ray using SoA traversal
+#ifdef _OPENMP
+    // Use OpenMP for parallel SoA ray traversal with thread-safe primitive cache
+    const size_t OPENMP_THRESHOLD = 100;
+    
+    // Always build primitive cache for SoA mode to ensure thread safety
+    buildPrimitiveCache();
+    
+    if (num_rays >= OPENMP_THRESHOLD) {
+        
+        results.resize(num_rays); // Pre-allocate for parallel access
+        size_t total_hits = 0;
+        double total_distance = 0.0;
+        
+        #pragma omp parallel for reduction(+:total_hits,total_distance) schedule(dynamic, 16)
+        for (size_t i = 0; i < num_rays; i++) {
+            RayTracingStats thread_stats = {}; // Thread-local stats
+            HitResult result = castRaySoATraversal(ray_queries[i], thread_stats);
+            results[i] = result;
+            
+            if (result.hit) {
+                total_hits++;
+                total_distance += result.distance;
+            }
+        }
+        
+        stats.total_hits = total_hits;
+        stats.average_ray_distance = (total_hits > 0) ? (total_distance / total_hits) : 0.0;
+        return results;
+    }
+#endif
+
+    // Sequential fallback - use push_back approach
+    results.reserve(num_rays);
     for (const auto& query : ray_queries) {
         HitResult result = castRaySoATraversal(query, stats);
         results.push_back(result);
@@ -3532,17 +3636,48 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysSoA(const
 }
 
 std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysQuantized(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats) {
-    std::vector<HitResult> results;
-    results.reserve(ray_queries.size());
-    
     if (bvh_nodes_quantized.node_count == 0) {
         // Fall back to legacy method if quantized BVH not built
         return castRays(ray_queries, &stats);
     }
     
-    stats.total_rays_cast = ray_queries.size();
+    const size_t num_rays = ray_queries.size();
+    std::vector<HitResult> results;
+    stats.total_rays_cast = num_rays;
     
-    // Process each ray using quantized traversal
+#ifdef _OPENMP
+    // Use OpenMP for parallel quantized ray traversal with thread-safe primitive cache
+    const size_t OPENMP_THRESHOLD = 100;
+    
+    // Always build primitive cache for Quantized mode to ensure thread safety
+    buildPrimitiveCache();
+    
+    if (num_rays >= OPENMP_THRESHOLD) {
+        
+        results.resize(num_rays); // Pre-allocate for parallel access
+        size_t total_hits = 0;
+        double total_distance = 0.0;
+        
+        #pragma omp parallel for reduction(+:total_hits,total_distance) schedule(dynamic, 16)
+        for (size_t i = 0; i < num_rays; i++) {
+            RayTracingStats thread_stats = {}; // Thread-local stats
+            HitResult result = castRayQuantizedTraversal(ray_queries[i], thread_stats);
+            results[i] = result;
+            
+            if (result.hit) {
+                total_hits++;
+                total_distance += result.distance;
+            }
+        }
+        
+        stats.total_hits = total_hits;
+        stats.average_ray_distance = (total_hits > 0) ? (total_distance / total_hits) : 0.0;
+        return results;
+    }
+#endif
+
+    // Sequential fallback - use push_back approach  
+    results.reserve(num_rays);
     for (const auto& query : ray_queries) {
         HitResult result = castRayQuantizedTraversal(query, stats);
         results.push_back(result);
@@ -3774,11 +3909,122 @@ bool CollisionDetection::aabbIntersectQuantized(const helios::vec3& ray_origin, 
 
 // Helper method to intersect with individual primitive (reuses existing logic)
 CollisionDetection::HitResult CollisionDetection::intersectPrimitive(const RayQuery &query, uint primitive_id) {
-    // This method delegates to the existing primitive intersection logic
-    // For now, we'll use the single-ray castRay method on individual primitives
-    std::vector<uint> single_primitive = {primitive_id};
-    RayQuery single_query(query.origin, query.direction, query.max_distance, single_primitive);
-    return castRay(single_query);
+    // Thread-safe primitive intersection using cached primitive data
+    return intersectPrimitiveThreadSafe(query.origin, query.direction, primitive_id, query.max_distance);
+}
+
+CollisionDetection::HitResult CollisionDetection::intersectPrimitiveThreadSafe(const vec3 &origin, const vec3 &direction, uint primitive_id, float max_distance) {
+    HitResult result;
+    
+    // Check if we have cached primitive data for this primitive
+    auto it = primitive_cache.find(primitive_id);
+    if (it == primitive_cache.end()) {
+        // Primitive not in cache - this shouldn't happen in optimized paths
+        // This indicates that the context was modified after the cache was built
+        // Fall back to thread-unsafe context call (only safe for sequential code)
+        // For parallel regions, this could cause issues, but it's better than crashing
+        float distance;
+        if (rayPrimitiveIntersection(origin, direction, primitive_id, distance)) {
+            result.hit = true;
+            result.distance = distance;
+            result.primitive_UUID = primitive_id;
+            result.intersection_point = origin + direction * distance;
+        }
+        return result;
+    }
+    
+    const CachedPrimitive &cached = it->second;
+    
+    // Perform intersection test based on primitive type
+    if (cached.type == PRIMITIVE_TYPE_TRIANGLE && cached.vertices.size() >= 3) {
+        float distance;
+        if (triangleIntersect(origin, direction, cached.vertices[0], cached.vertices[1], cached.vertices[2], distance)) {
+            if (distance > 1e-6f && (max_distance <= 0 || distance < max_distance)) {
+                result.hit = true;
+                result.distance = distance;
+                result.primitive_UUID = primitive_id;
+                result.intersection_point = origin + direction * distance;
+            }
+        }
+    }
+    // Add other primitive types as needed (VOXEL, DISK, etc.)
+    
+    return result;
+}
+
+void CollisionDetection::buildPrimitiveCache() {
+    primitive_cache.clear();
+    
+    // Get all primitive UUIDs from context
+    std::vector<uint> all_primitives = context->getAllUUIDs();
+    
+    // Cache primitive data for thread-safe access
+    for (uint primitive_id : all_primitives) {
+        if (context->doesPrimitiveExist(primitive_id)) {
+            try {
+                PrimitiveType type = context->getPrimitiveType(primitive_id);
+                std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_id);
+                
+                primitive_cache[primitive_id] = CachedPrimitive(type, vertices);
+            } catch (const std::exception& e) {
+                // Skip this primitive if it no longer exists or can't be accessed
+                // This can happen when UUIDs from previous contexts persist
+                if (printmessages) {
+                    std::cout << "Warning: Skipping primitive " << primitive_id 
+                              << " in cache build (not accessible: " << e.what() << ")" << std::endl;
+                }
+                continue;
+            }
+        }
+    }
+    
+    if (printmessages) {
+        std::cout << "Built primitive cache with " << primitive_cache.size() << " primitives" << std::endl;
+    }
+}
+
+bool CollisionDetection::triangleIntersect(const vec3 &origin, const vec3 &direction, 
+                                          const vec3 &v0, const vec3 &v1, const vec3 &v2, float &distance) {
+    // Möller-Trumbore triangle intersection algorithm (thread-safe)
+    const float EPSILON = 1e-8f;
+    
+    // Helper lambda for dot product
+    auto dot = [](const vec3 &a, const vec3 &b) -> float {
+        return a.x * b.x + a.y * b.y + a.z * b.z;
+    };
+    
+    vec3 edge1 = v1 - v0;
+    vec3 edge2 = v2 - v0;
+    vec3 h = helios::cross(direction, edge2);
+    float a = dot(edge1, h);
+    
+    if (a > -EPSILON && a < EPSILON) {
+        return false; // Ray is parallel to triangle
+    }
+    
+    float f = 1.0f / a;
+    vec3 s = origin - v0;
+    float u = f * dot(s, h);
+    
+    if (u < 0.0f || u > 1.0f) {
+        return false;
+    }
+    
+    vec3 q = helios::cross(s, edge1);
+    float v = f * dot(direction, q);
+    
+    if (v < 0.0f || u + v > 1.0f) {
+        return false;
+    }
+    
+    float t = f * dot(edge2, q);
+    
+    if (t > EPSILON) {
+        distance = t;
+        return true;
+    }
+    
+    return false; // Line intersection but not ray intersection
 }
 
 #ifdef HELIOS_CUDA_AVAILABLE

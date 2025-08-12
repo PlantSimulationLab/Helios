@@ -18,6 +18,7 @@
 
 #include <set>
 #include <unordered_set>
+#include <unordered_map>
 #include "Context.h"
 
 /**
@@ -685,6 +686,38 @@ private:
 
     //! Flag to enable/disable console messages
     bool printmessages;
+
+    // -------- THREAD-SAFE PRIMITIVE CACHE --------
+
+    /**
+     * \brief Cached primitive data for thread-safe intersection tests
+     */
+    struct CachedPrimitive {
+        helios::PrimitiveType type;
+        std::vector<helios::vec3> vertices;
+        
+        CachedPrimitive() : type(helios::PRIMITIVE_TYPE_TRIANGLE) {}
+        CachedPrimitive(helios::PrimitiveType t, const std::vector<helios::vec3>& v) : type(t), vertices(v) {}
+    };
+
+    //! Cache of primitive data for thread-safe access (maps primitive_id -> cached data)
+    std::unordered_map<uint, CachedPrimitive> primitive_cache;
+
+    /**
+     * \brief Build primitive cache for thread-safe ray casting
+     */
+    void buildPrimitiveCache();
+
+    /**
+     * \brief Thread-safe primitive intersection method using cached data
+     */
+    HitResult intersectPrimitiveThreadSafe(const helios::vec3 &origin, const helios::vec3 &direction, uint primitive_id, float max_distance);
+
+    /**
+     * \brief Fast triangle intersection test (thread-safe)
+     */
+    bool triangleIntersect(const helios::vec3 &origin, const helios::vec3 &direction, 
+                          const helios::vec3 &v0, const helios::vec3 &v1, const helios::vec3 &v2, float &distance);
 
     // -------- BVH DATA STRUCTURES --------
 
