@@ -43,6 +43,196 @@ public:
         float height; //!< Height of cone (0 = infinite)
     };
 
+    // -------- GENERIC RAY-TRACING STRUCTURES --------
+
+    /**
+     * \brief Structure representing a ray query for generic ray-tracing operations
+     */
+    struct RayQuery {
+        helios::vec3 origin; //!< Ray origin point
+        helios::vec3 direction; //!< Ray direction vector (should be normalized)
+        float max_distance; //!< Maximum ray distance (negative = infinite)
+        std::vector<uint> target_UUIDs; //!< Target primitive UUIDs (empty = all primitives)
+
+        RayQuery() : origin(0, 0, 0), direction(0, 0, 1), max_distance(-1.0f) {}
+        RayQuery(const helios::vec3 &ray_origin, const helios::vec3 &ray_direction, float max_dist = -1.0f, const std::vector<uint> &targets = {}) 
+            : origin(ray_origin), direction(ray_direction), max_distance(max_dist), target_UUIDs(targets) {}
+    };
+
+    /**
+     * \brief Structure representing the result of a ray-primitive intersection
+     */
+    struct HitResult {
+        bool hit; //!< True if ray intersected with a primitive
+        float distance; //!< Distance to intersection point (only valid if hit = true)
+        uint primitive_UUID; //!< UUID of intersected primitive (only valid if hit = true)
+        helios::vec3 intersection_point; //!< World coordinates of intersection (only valid if hit = true)
+        helios::vec3 normal; //!< Surface normal at intersection (only valid if hit = true)
+
+        HitResult() : hit(false), distance(-1.0f), primitive_UUID(0), intersection_point(0, 0, 0), normal(0, 0, 0) {}
+    };
+
+    /**
+     * \brief Structure for batch ray-tracing statistics
+     */
+    struct RayTracingStats {
+        size_t total_rays_cast; //!< Total number of rays processed
+        size_t total_hits; //!< Total number of ray-primitive intersections
+        size_t bvh_nodes_visited; //!< Total BVH nodes visited during traversal
+        float average_ray_distance; //!< Average distance of successful ray hits
+        
+        RayTracingStats() : total_rays_cast(0), total_hits(0), bvh_nodes_visited(0), average_ray_distance(0.0f) {}
+    };
+
+    /**
+     * \brief Phase 2 Optimization: Ray streaming for efficient GPU processing
+     * Processes multiple rays simultaneously for better GPU utilization
+     */
+    static constexpr size_t WARP_SIZE = 32;  //!< CUDA warp size for optimal batching
+    static constexpr size_t RAY_BATCH_SIZE = 1024;  //!< Optimal batch size for ray processing
+
+    /**
+     * \brief Optimized ray packet for streaming processing
+     * Organizes ray data in Structure-of-Arrays format for better memory access
+     */
+    struct RayPacket {
+        // Ray data (Structure-of-Arrays layout)
+        std::vector<helios::vec3> origins;      //!< Ray origin points (contiguous)
+        std::vector<helios::vec3> directions;   //!< Ray direction vectors (contiguous)
+        std::vector<float> max_distances;       //!< Maximum ray distances (contiguous)
+        std::vector<std::vector<uint>> target_UUIDs; //!< Target primitive UUIDs per ray
+        
+        // Results (output)
+        std::vector<HitResult> results;         //!< Intersection results (output)
+        
+        size_t ray_count = 0;                   //!< Number of rays in this packet
+        
+        RayPacket() = default;
+        
+        /**
+         * \brief Initialize packet with specified capacity
+         */
+        void reserve(size_t capacity) {
+            origins.reserve(capacity);
+            directions.reserve(capacity);
+            max_distances.reserve(capacity);
+            target_UUIDs.reserve(capacity);
+            results.reserve(capacity);
+        }
+        
+        /**
+         * \brief Add a ray to the packet
+         */
+        void addRay(const RayQuery& query) {
+            origins.push_back(query.origin);
+            directions.push_back(query.direction);
+            max_distances.push_back(query.max_distance);
+            target_UUIDs.push_back(query.target_UUIDs);
+            results.emplace_back(); // Initialize empty result
+            ray_count++;
+        }
+        
+        /**
+         * \brief Clear all data
+         */
+        void clear() {
+            origins.clear();
+            directions.clear();
+            max_distances.clear();
+            target_UUIDs.clear();
+            results.clear();
+            ray_count = 0;
+        }
+        
+        /**
+         * \brief Convert packet back to individual RayQuery objects
+         */
+        std::vector<RayQuery> toRayQueries() const {
+            std::vector<RayQuery> queries;
+            queries.reserve(ray_count);
+            for (size_t i = 0; i < ray_count; ++i) {
+                queries.emplace_back(origins[i], directions[i], max_distances[i], target_UUIDs[i]);
+            }
+            return queries;
+        }
+        
+        /**
+         * \brief Get memory usage of the packet
+         */
+        size_t getMemoryUsage() const {
+            size_t base_memory = (origins.size() + directions.size()) * sizeof(helios::vec3) +
+                                max_distances.size() * sizeof(float) +
+                                results.size() * sizeof(HitResult);
+            
+            // Add memory for target UUIDs
+            for (const auto& targets : target_UUIDs) {
+                base_memory += targets.size() * sizeof(uint);
+            }
+            
+            return base_memory;
+        }
+    };
+    
+    /**
+     * \brief Phase 2 Optimization: Streaming ray tracer interface
+     * Enables efficient batch processing of ray packets
+     */
+    struct RayStream {
+        std::vector<RayPacket> packets;         //!< Collection of ray packets
+        size_t current_packet = 0;              //!< Current packet being processed
+        size_t total_rays = 0;                  //!< Total rays across all packets
+        
+        /**
+         * \brief Add rays to the stream, automatically batching into packets
+         */
+        void addRays(const std::vector<RayQuery>& queries) {
+            for (const auto& query : queries) {
+                // Create new packet if current one is full
+                if (packets.empty() || packets.back().ray_count >= RAY_BATCH_SIZE) {
+                    packets.emplace_back();
+                    packets.back().reserve(RAY_BATCH_SIZE);
+                }
+                
+                packets.back().addRay(query);
+                total_rays++;
+            }
+        }
+        
+        /**
+         * \brief Get all results from processed packets
+         */
+        std::vector<HitResult> getAllResults() const {
+            std::vector<HitResult> all_results;
+            all_results.reserve(total_rays);
+            
+            for (const auto& packet : packets) {
+                all_results.insert(all_results.end(), packet.results.begin(), packet.results.end());
+            }
+            
+            return all_results;
+        }
+        
+        /**
+         * \brief Clear the stream
+         */
+        void clear() {
+            packets.clear();
+            current_packet = 0;
+            total_rays = 0;
+        }
+        
+        /**
+         * \brief Get total memory usage of the stream
+         */
+        size_t getMemoryUsage() const {
+            size_t total_memory = 0;
+            for (const auto& packet : packets) {
+                total_memory += packet.getMemoryUsage();
+            }
+            return total_memory;
+        }
+    };
+
     /**
      * \brief Structure representing the result of optimal cone path detection
      */
@@ -97,6 +287,106 @@ public:
      */
     std::vector<uint> findCollisions(const std::vector<uint> &query_UUIDs, const std::vector<uint> &query_object_IDs, const std::vector<uint> &target_UUIDs, const std::vector<uint> &target_object_IDs);
 
+    // -------- GENERIC RAY-TRACING INTERFACE --------
+
+    /**
+     * \brief Cast a single ray and return detailed intersection information
+     * \param[in] ray_query Ray parameters (origin, direction, max distance, target UUIDs)
+     * \return HitResult containing intersection details
+     */
+    HitResult castRay(const RayQuery &ray_query);
+
+    /**
+     * \brief Cast a single ray with simplified parameters
+     * \param[in] origin Ray origin point
+     * \param[in] direction Ray direction vector (should be normalized)
+     * \param[in] max_distance Maximum ray distance (negative = infinite)
+     * \param[in] target_UUIDs Target primitive UUIDs (empty = all primitives)
+     * \return HitResult containing intersection details
+     */
+    HitResult castRay(const helios::vec3 &origin, const helios::vec3 &direction, float max_distance = -1.0f, const std::vector<uint> &target_UUIDs = {});
+
+    /**
+     * \brief Cast multiple rays in batch for improved performance
+     * \param[in] ray_queries Vector of ray parameters
+     * \param[out] stats Optional ray-tracing statistics
+     * \return Vector of HitResult corresponding to each input ray
+     */
+    std::vector<HitResult> castRays(const std::vector<RayQuery> &ray_queries, RayTracingStats *stats = nullptr);
+
+    // -------- PHASE 2 OPTIMIZATION METHODS --------
+
+    /**
+     * \brief BVH optimization modes for Phase 2 performance improvements
+     */
+    enum class BVHOptimizationMode {
+        LEGACY_AOS,        //!< Original Array-of-Structures layout
+        SOA_UNCOMPRESSED,  //!< Structure-of-Arrays, full precision
+        SOA_QUANTIZED      //!< Structure-of-Arrays with 16-bit quantization
+    };
+
+    /**
+     * \brief Set BVH optimization mode for Phase 2 performance improvements
+     * \param[in] mode Optimization mode (LEGACY_AOS, SOA_UNCOMPRESSED, SOA_QUANTIZED)
+     */
+    void setBVHOptimizationMode(BVHOptimizationMode mode);
+
+    /**
+     * \brief Get current BVH optimization mode
+     * \return Current optimization mode
+     */
+    BVHOptimizationMode getBVHOptimizationMode() const;
+
+    /**
+     * \brief Cast rays using optimized Structure-of-Arrays BVH layout
+     * \param[in] ray_queries Vector of ray parameters
+     * \param[out] stats Optional ray-tracing statistics
+     * \return Vector of HitResult corresponding to each input ray
+     */
+    std::vector<HitResult> castRaysOptimized(const std::vector<RayQuery> &ray_queries, RayTracingStats *stats = nullptr);
+
+    /**
+     * \brief Cast ray packets using streaming interface for optimal GPU utilization
+     * \param[in] ray_stream Ray stream containing batched ray packets
+     * \param[out] stats Optional ray-tracing statistics
+     * \return True if all packets processed successfully
+     */
+    bool processRayStream(RayStream &ray_stream, RayTracingStats *stats = nullptr);
+
+    /**
+     * \brief Get memory usage statistics for different BVH layouts
+     * \return Structure containing memory usage for each optimization mode
+     */
+    struct MemoryUsageStats {
+        size_t legacy_memory_bytes = 0;
+        size_t soa_memory_bytes = 0; 
+        size_t quantized_memory_bytes = 0;
+        float soa_reduction_percent = 0.0f;
+        float quantized_reduction_percent = 0.0f;
+    };
+    MemoryUsageStats getBVHMemoryUsage() const;
+
+    /**
+     * \brief Perform grid-based ray intersection for voxel operations
+     * \param[in] grid_center Center point of the 3D grid
+     * \param[in] grid_size Size of the grid in x, y, z dimensions
+     * \param[in] grid_divisions Number of divisions in x, y, z dimensions
+     * \param[in] ray_queries Vector of rays to intersect with the grid
+     * \return 3D vector indexed as [i][j][k] containing hit counts in each voxel
+     */
+    std::vector<std::vector<std::vector<std::vector<HitResult>>>> performGridRayIntersection(const helios::vec3 &grid_center, const helios::vec3 &grid_size, const helios::int3 &grid_divisions, const std::vector<RayQuery> &ray_queries);
+
+    /**
+     * \brief Enhanced ray path length calculations with detailed statistics
+     * \param[in] grid_center Center point of the 3D voxel grid
+     * \param[in] grid_size Size of the grid in x, y, z dimensions
+     * \param[in] grid_divisions Number of divisions in x, y, z dimensions
+     * \param[in] ray_origins Vector of ray origin points
+     * \param[in] ray_directions Vector of ray direction vectors (should be normalized)
+     * \param[out] hit_results Vector of detailed hit results for each ray
+     */
+    void calculateRayPathLengthsDetailed(const helios::vec3 &grid_center, const helios::vec3 &grid_size, const helios::int3 &grid_divisions, const std::vector<helios::vec3> &ray_origins, const std::vector<helios::vec3> &ray_directions, std::vector<HitResult> &hit_results);
+
     // -------- CONE INTERSECTION QUERIES --------
 
     /**
@@ -135,6 +425,53 @@ public:
      * \return Vector of UUIDs in the specified grid cell
      */
     std::vector<uint> getGridIntersections(int i, int j, int k);
+
+    // -------- VOXEL RAY PATH LENGTH CALCULATIONS --------
+
+    /**
+     * \brief Calculate ray path lengths and transmission statistics for a voxel grid
+     * \param[in] grid_center Center point of the 3D voxel grid
+     * \param[in] grid_size Size of the grid in x, y, z dimensions
+     * \param[in] grid_divisions Number of divisions in x, y, z dimensions
+     * \param[in] ray_origins Vector of ray origin points
+     * \param[in] ray_directions Vector of ray direction vectors (should be normalized)
+     */
+    void calculateVoxelRayPathLengths(const helios::vec3 &grid_center, const helios::vec3 &grid_size, const helios::int3 &grid_divisions, const std::vector<helios::vec3> &ray_origins, const std::vector<helios::vec3> &ray_directions);
+
+    /**
+     * \brief Set transmission probability counts for a voxel
+     * \param[in] P_denom Number of rays that reached this voxel (denominator)
+     * \param[in] P_trans Number of rays that were transmitted through this voxel (numerator)
+     * \param[in] ijk Voxel indices (i,j,k)
+     */
+    void setVoxelTransmissionProbability(int P_denom, int P_trans, const helios::int3 &ijk);
+
+    /**
+     * \brief Get transmission probability counts for a voxel
+     * \param[in] ijk Voxel indices (i,j,k)
+     * \param[out] P_denom Number of rays that reached this voxel
+     * \param[out] P_trans Number of rays that were transmitted through this voxel
+     */
+    void getVoxelTransmissionProbability(const helios::int3 &ijk, int &P_denom, int &P_trans) const;
+
+    /**
+     * \brief Set average ray propagation distance for a voxel
+     * \param[in] r_bar Average ray propagation distance in meters
+     * \param[in] ijk Voxel indices (i,j,k)
+     */
+    void setVoxelRbar(float r_bar, const helios::int3 &ijk);
+
+    /**
+     * \brief Get average ray propagation distance for a voxel
+     * \param[in] ijk Voxel indices (i,j,k)
+     * \return Average ray propagation distance in meters
+     */
+    float getVoxelRbar(const helios::int3 &ijk) const;
+
+    /**
+     * \brief Clear all voxel ray statistics data
+     */
+    void clearVoxelData();
 
     // -------- FEATURE 4: COLLISION MINIMIZATION --------
 
@@ -344,7 +681,7 @@ private:
     // -------- BVH DATA STRUCTURES --------
 
     /**
-     * \brief BVH node structure for CPU storage
+     * \brief Original BVH node structure for CPU storage (legacy support)
      */
     struct BVHNode {
         helios::vec3 aabb_min; //!< Minimum corner of axis-aligned bounding box
@@ -359,8 +696,189 @@ private:
         }
     };
 
-    //! Vector of BVH nodes (linearized tree structure)
+    /**
+     * \brief Structure-of-Arrays (SoA) BVH layout for optimized memory access
+     * Phase 2 Optimization: Improves cache efficiency and enables vectorization
+     */
+    struct BVHNodesSoA {
+        // Hot data: frequently accessed during traversal (cache-friendly grouping)
+        std::vector<helios::vec3> aabb_mins;      //!< All AABB minimum corners (contiguous)
+        std::vector<helios::vec3> aabb_maxs;      //!< All AABB maximum corners (contiguous)
+        std::vector<uint32_t> left_children;     //!< All left child indices (contiguous)
+        std::vector<uint32_t> right_children;    //!< All right child indices (contiguous)
+        
+        // Cold data: accessed less frequently (separate for better cache utilization)
+        std::vector<uint32_t> primitive_starts;  //!< Starting indices in primitive array
+        std::vector<uint32_t> primitive_counts;  //!< Number of primitives per leaf node
+        std::vector<uint8_t> is_leaf_flags;      //!< Leaf node flags (packed to single bytes)
+        
+        // Metadata
+        size_t node_count = 0;                   //!< Total number of nodes
+        
+        BVHNodesSoA() = default;
+        
+        /**
+         * \brief Initialize SoA structure with specified capacity
+         */
+        void reserve(size_t capacity) {
+            aabb_mins.reserve(capacity);
+            aabb_maxs.reserve(capacity);
+            left_children.reserve(capacity);
+            right_children.reserve(capacity);
+            primitive_starts.reserve(capacity);
+            primitive_counts.reserve(capacity);
+            is_leaf_flags.reserve(capacity);
+        }
+        
+        /**
+         * \brief Clear all data
+         */
+        void clear() {
+            aabb_mins.clear();
+            aabb_maxs.clear();
+            left_children.clear();
+            right_children.clear();
+            primitive_starts.clear();
+            primitive_counts.clear();
+            is_leaf_flags.clear();
+            node_count = 0;
+        }
+        
+        /**
+         * \brief Get memory usage in bytes
+         */
+        size_t getMemoryUsage() const {
+            return (aabb_mins.size() + aabb_maxs.size()) * sizeof(helios::vec3) +
+                   (left_children.size() + right_children.size() + 
+                    primitive_starts.size() + primitive_counts.size()) * sizeof(uint32_t) +
+                   is_leaf_flags.size() * sizeof(uint8_t);
+        }
+    };
+
+    /**
+     * \brief Quantized BVH structure for 82% memory reduction
+     * Uses 16-bit quantized coordinates within scene bounding box
+     */
+    struct QuantizedBVHNodes {
+        // Quantization parameters (scene-global)
+        helios::vec3 scene_min;                  //!< Scene bounding box minimum
+        helios::vec3 scene_max;                  //!< Scene bounding box maximum
+        helios::vec3 quantization_scale;         //!< Scale factor for quantization
+        helios::vec3 inverse_quantization_scale; //!< Inverse scale for dequantization
+        
+        // Quantized data arrays (Structure-of-Arrays)
+        std::vector<uint16_t> aabb_mins_x;       //!< Quantized X coordinates (min corners)
+        std::vector<uint16_t> aabb_mins_y;       //!< Quantized Y coordinates (min corners)
+        std::vector<uint16_t> aabb_mins_z;       //!< Quantized Z coordinates (min corners)
+        std::vector<uint16_t> aabb_maxs_x;       //!< Quantized X coordinates (max corners)
+        std::vector<uint16_t> aabb_maxs_y;       //!< Quantized Y coordinates (max corners)
+        std::vector<uint16_t> aabb_maxs_z;       //!< Quantized Z coordinates (max corners)
+        
+        // Navigation data (uncompressed for performance)
+        std::vector<uint32_t> left_children;     //!< Left child indices
+        std::vector<uint32_t> right_children;    //!< Right child indices
+        
+        // Leaf data (compressed)
+        std::vector<uint32_t> primitive_data;    //!< Packed primitive start + count + leaf flag
+        
+        size_t node_count = 0;
+        
+        QuantizedBVHNodes() = default;
+        
+        /**
+         * \brief Initialize quantization parameters from scene bounds
+         */
+        void initializeQuantization(const helios::vec3& scene_min_bound, const helios::vec3& scene_max_bound) {
+            scene_min = scene_min_bound;
+            scene_max = scene_max_bound;
+            
+            helios::vec3 scene_size = scene_max - scene_min;
+            const float quantization_resolution = 65535.0f; // 16-bit resolution
+            
+            quantization_scale.x = quantization_resolution / scene_size.x;
+            quantization_scale.y = quantization_resolution / scene_size.y;
+            quantization_scale.z = quantization_resolution / scene_size.z;
+            
+            inverse_quantization_scale.x = scene_size.x / quantization_resolution;
+            inverse_quantization_scale.y = scene_size.y / quantization_resolution;
+            inverse_quantization_scale.z = scene_size.z / quantization_resolution;
+        }
+        
+        /**
+         * \brief Quantize world coordinates to 16-bit integers
+         */
+        inline uint16_t quantizeCoordinate(float world_coord, float scene_min_coord, float scale) const {
+            float normalized = (world_coord - scene_min_coord) * scale;
+            return static_cast<uint16_t>(std::max(0.0f, std::min(65535.0f, normalized)));
+        }
+        
+        /**
+         * \brief Dequantize 16-bit integers back to world coordinates
+         */
+        inline float dequantizeCoordinate(uint16_t quantized_coord, float scene_min_coord, float inv_scale) const {
+            return scene_min_coord + static_cast<float>(quantized_coord) * inv_scale;
+        }
+        
+        /**
+         * \brief Add quantized node to the structure
+         */
+        void addNode(const helios::vec3& aabb_min, const helios::vec3& aabb_max, 
+                    uint32_t left_child, uint32_t right_child, 
+                    uint32_t primitive_start, uint32_t primitive_count, bool is_leaf) {
+            // Quantize AABB coordinates
+            aabb_mins_x.push_back(quantizeCoordinate(aabb_min.x, scene_min.x, quantization_scale.x));
+            aabb_mins_y.push_back(quantizeCoordinate(aabb_min.y, scene_min.y, quantization_scale.y));
+            aabb_mins_z.push_back(quantizeCoordinate(aabb_min.z, scene_min.z, quantization_scale.z));
+            
+            aabb_maxs_x.push_back(quantizeCoordinate(aabb_max.x, scene_min.x, quantization_scale.x));
+            aabb_maxs_y.push_back(quantizeCoordinate(aabb_max.y, scene_min.y, quantization_scale.y));
+            aabb_maxs_z.push_back(quantizeCoordinate(aabb_max.z, scene_min.z, quantization_scale.z));
+            
+            // Store navigation data
+            left_children.push_back(left_child);
+            right_children.push_back(right_child);
+            
+            // Pack primitive data: [31:1] = primitive_start, [30:16] = primitive_count, [0:0] = is_leaf
+            uint32_t packed_data = (primitive_start << 1) | (primitive_count << 16) | (is_leaf ? 1 : 0);
+            primitive_data.push_back(packed_data);
+            
+            node_count++;
+        }
+        
+        /**
+         * \brief Get dequantized AABB for a node
+         */
+        void getAABB(size_t node_index, helios::vec3& aabb_min, helios::vec3& aabb_max) const {
+            aabb_min.x = dequantizeCoordinate(aabb_mins_x[node_index], scene_min.x, inverse_quantization_scale.x);
+            aabb_min.y = dequantizeCoordinate(aabb_mins_y[node_index], scene_min.y, inverse_quantization_scale.y);
+            aabb_min.z = dequantizeCoordinate(aabb_mins_z[node_index], scene_min.z, inverse_quantization_scale.z);
+            
+            aabb_max.x = dequantizeCoordinate(aabb_maxs_x[node_index], scene_min.x, inverse_quantization_scale.x);
+            aabb_max.y = dequantizeCoordinate(aabb_maxs_y[node_index], scene_min.y, inverse_quantization_scale.y);
+            aabb_max.z = dequantizeCoordinate(aabb_maxs_z[node_index], scene_min.z, inverse_quantization_scale.z);
+        }
+        
+        /**
+         * \brief Get memory usage (should be ~18 bytes per node vs 48 bytes original)
+         */
+        size_t getMemoryUsage() const {
+            return (aabb_mins_x.size() + aabb_mins_y.size() + aabb_mins_z.size() +
+                    aabb_maxs_x.size() + aabb_maxs_y.size() + aabb_maxs_z.size()) * sizeof(uint16_t) +
+                   (left_children.size() + right_children.size() + primitive_data.size()) * sizeof(uint32_t);
+        }
+    };
+
+    //! Vector of BVH nodes (linearized tree structure) - LEGACY
     std::vector<BVHNode> bvh_nodes;
+    
+    //! Phase 2 Optimization: Structure-of-Arrays BVH layout
+    BVHNodesSoA bvh_nodes_soa;
+    
+    //! Phase 2 Optimization: Quantized BVH layout (82% memory reduction)
+    QuantizedBVHNodes bvh_nodes_quantized;
+    
+    //! Phase 2 Optimization: Current optimization mode
+    BVHOptimizationMode bvh_optimization_mode = BVHOptimizationMode::LEGACY_AOS;
 
     //! Primitive indices sorted by BVH construction
     std::vector<uint> primitive_indices;
@@ -378,6 +896,25 @@ private:
     helios::vec3 grid_center;
     helios::vec3 grid_size;
     helios::int3 grid_divisions;
+
+    // -------- VOXEL RAY STATISTICS DATA --------
+
+    //! Voxel ray count statistics [i][j][k] = number of rays reaching voxel (P_denom)
+    std::vector<std::vector<std::vector<int>>> voxel_ray_counts;
+
+    //! Voxel transmission count statistics [i][j][k] = number of rays transmitted (P_trans)
+    std::vector<std::vector<std::vector<int>>> voxel_transmitted;
+
+    //! Voxel cumulative ray path lengths [i][j][k] = sum of path lengths for r_bar calculation
+    std::vector<std::vector<std::vector<float>>> voxel_path_lengths;
+
+    //! Flag to track if voxel data structures are initialized
+    bool voxel_data_initialized;
+
+    //! Current voxel grid parameters (for validation)
+    helios::vec3 voxel_grid_center;
+    helios::vec3 voxel_grid_size;
+    helios::int3 voxel_grid_divisions;
 
     // -------- SPATIAL OPTIMIZATION DATA --------
 
@@ -415,6 +952,9 @@ private:
 
     //! Flag to control automatic BVH rebuilds (default: true)
     bool automatic_bvh_rebuilds;
+    
+    //! Flag to skip BVH currency checks during batch operations (performance optimization)
+    mutable bool batch_mode_skip_bvh_check;
 
     // -------- HIERARCHICAL BVH DATA STRUCTURES --------
     
@@ -612,6 +1152,45 @@ private:
      */
     helios::vec3 findOptimalGapDirection(const std::vector<Gap> &gaps, const helios::vec3 &central_axis);
 
+    // -------- VOXEL RAY PATH LENGTH HELPER METHODS --------
+
+    /**
+     * \brief Initialize voxel data structures for given grid parameters
+     * \param[in] grid_center Center of voxel grid
+     * \param[in] grid_size Size of voxel grid  
+     * \param[in] grid_divisions Number of divisions in each dimension
+     */
+    void initializeVoxelData(const helios::vec3 &grid_center, const helios::vec3 &grid_size, const helios::int3 &grid_divisions);
+
+    /**
+     * \brief CPU implementation of voxel ray path length calculations
+     * \param[in] ray_origins Vector of ray origin points
+     * \param[in] ray_directions Vector of ray direction vectors
+     */
+    void calculateVoxelRayPathLengths_CPU(const std::vector<helios::vec3> &ray_origins, const std::vector<helios::vec3> &ray_directions);
+
+    /**
+     * \brief GPU implementation of voxel ray path length calculations
+     * \param[in] ray_origins Vector of ray origin points
+     * \param[in] ray_directions Vector of ray direction vectors
+     */
+    void calculateVoxelRayPathLengths_GPU(const std::vector<helios::vec3> &ray_origins, const std::vector<helios::vec3> &ray_directions);
+
+    /**
+     * \brief Validate voxel grid indices
+     * \param[in] ijk Voxel indices to validate
+     * \return True if indices are valid
+     */
+    bool validateVoxelIndices(const helios::int3 &ijk) const;
+
+    /**
+     * \brief Calculate voxel AABB from grid parameters and indices
+     * \param[in] ijk Voxel indices
+     * \param[out] voxel_min Minimum corner of voxel AABB
+     * \param[out] voxel_max Maximum corner of voxel AABB
+     */
+    void calculateVoxelAABB(const helios::int3 &ijk, helios::vec3 &voxel_min, helios::vec3 &voxel_max) const;
+
     /**
      * \brief Allocate GPU memory for BVH
      */
@@ -656,6 +1235,62 @@ private:
      * \return True if ray intersects primitive, false otherwise
      */
     bool rayPrimitiveIntersection(const helios::vec3 &origin, const helios::vec3 &direction, uint primitive_UUID, float &distance) const;
+
+    /**
+     * \brief Process ray batch using CPU (sequential processing)
+     * \param[in] ray_queries Input ray queries
+     * \param[out] results Output hit results
+     * \param[out] stats Ray tracing statistics
+     */
+    void castRaysCPU(const std::vector<RayQuery> &ray_queries, std::vector<HitResult> &results, RayTracingStats &stats);
+
+#ifdef HELIOS_CUDA_AVAILABLE
+    /**
+     * \brief Process ray batch using GPU (parallel processing)
+     * \param[in] ray_queries Input ray queries
+     * \param[out] results Output hit results
+     * \param[out] stats Ray tracing statistics
+     */
+    void castRaysGPU(const std::vector<RayQuery> &ray_queries, std::vector<HitResult> &results, RayTracingStats &stats);
+#endif
+
+    // -------- PHASE 2 OPTIMIZATION PRIVATE METHODS --------
+
+    /**
+     * \brief Convert BVH between different layout formats
+     */
+    void convertBVHLayout(BVHOptimizationMode from_mode, BVHOptimizationMode to_mode);
+    void convertLegacyToSoA();
+    void convertLegacyToQuantized();
+    void convertSoAToLegacy();
+    void convertSoAToQuantized();
+    void convertQuantizedToLegacy();
+    void convertQuantizedToSoA();
+
+    /**
+     * \brief Optimized ray casting implementations for different BVH layouts
+     */
+    std::vector<HitResult> castRaysSoA(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats);
+    std::vector<HitResult> castRaysQuantized(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats);
+
+    /**
+     * \brief Single ray traversal methods for optimized BVH layouts
+     */
+    HitResult castRaySoATraversal(const RayQuery &query, RayTracingStats &stats);
+    HitResult castRayQuantizedTraversal(const RayQuery &query, RayTracingStats &stats);
+
+    /**
+     * \brief Optimized AABB intersection tests
+     */
+    inline bool aabbIntersectSoA(const helios::vec3& ray_origin, const helios::vec3& ray_direction, float max_distance,
+                                size_t node_index) const;
+    inline bool aabbIntersectQuantized(const helios::vec3& ray_origin, const helios::vec3& ray_direction, float max_distance,
+                                      size_t node_index) const;
+
+    /**
+     * \brief Helper method for primitive intersection
+     */
+    HitResult intersectPrimitive(const RayQuery &query, uint primitive_id);
 };
 
 #endif

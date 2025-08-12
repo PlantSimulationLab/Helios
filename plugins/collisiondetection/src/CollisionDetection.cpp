@@ -19,6 +19,8 @@
 #include <queue>
 #include <stack>
 #include <algorithm>
+#include <chrono>
+#include <thread>
 
 #ifdef HELIOS_CUDA_AVAILABLE
 #include <cuda_runtime.h>
@@ -39,6 +41,7 @@ struct GPUBVHNode {
 extern "C" {
 void launchBVHTraversal(void *h_nodes, int node_count, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_query_aabb_min, float *h_query_aabb_max, int num_queries,
                         unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_query);
+void launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x, int grid_divisions_y, int grid_divisions_z, int *h_voxel_ray_counts, float *h_voxel_path_lengths, int *h_voxel_transmitted);
 }
 
 // Helper function to convert helios::vec3 to float3
@@ -79,6 +82,12 @@ CollisionDetection::CollisionDetection(helios::Context *a_context) {
     grid_center = make_vec3(0, 0, 0);
     grid_size = make_vec3(1, 1, 1);
     grid_divisions = helios::make_int3(1, 1, 1);
+
+    // Initialize voxel data parameters
+    voxel_data_initialized = false;
+    voxel_grid_center = make_vec3(0, 0, 0);
+    voxel_grid_size = make_vec3(1, 1, 1);
+    voxel_grid_divisions = helios::make_int3(1, 1, 1);
 
     // Initialize spatial optimization parameters
     max_collision_distance = 10.0f; // Default 10 meter maximum distance
@@ -1387,12 +1396,12 @@ bool CollisionDetection::rayPrimitiveIntersection(const vec3 &origin, const vec3
             float e1 = d * m - b * n - c * p;
             float beta = e1 * inv_denom;
 
-            if (beta > 0.0f) {
+            if (beta >= 0.0f) {
                 float r = e * l - h * i;
                 float e2 = a * n + d * q + c * r;
                 float gamma = e2 * inv_denom;
 
-                if (gamma > 0.0f && beta + gamma < 1.0f) {
+                if (gamma >= 0.0f && beta + gamma <= 1.0f) {
                     float e3 = a * p - b * r + d * s;
                     float t = e3 * inv_denom;
 
@@ -2543,4 +2552,1229 @@ std::vector<uint> CollisionDetection::filterGeometryByDistance(const helios::vec
     }
     
     return filtered_UUIDs;
+}
+
+// -------- VOXEL RAY PATH LENGTH CALCULATIONS --------
+
+void CollisionDetection::calculateVoxelRayPathLengths(const vec3 &grid_center, const vec3 &grid_size, const helios::int3 &grid_divisions, const std::vector<vec3> &ray_origins, const std::vector<vec3> &ray_directions) {
+
+    if (ray_origins.size() != ray_directions.size()) {
+        helios_runtime_error("ERROR (CollisionDetection::calculateVoxelRayPathLengths): ray_origins and ray_directions vectors must have same size");
+    }
+
+    if (ray_origins.empty()) {
+        if (printmessages) {
+            std::cout << "WARNING (CollisionDetection::calculateVoxelRayPathLengths): No rays provided" << std::endl;
+        }
+        return;
+    }
+
+    // Initialize voxel data structures for the given grid
+    initializeVoxelData(grid_center, grid_size, grid_divisions);
+
+    if (printmessages) {
+        std::cout << "Calculating voxel ray path lengths for " << ray_origins.size() << " rays on " 
+                  << grid_divisions.x << "x" << grid_divisions.y << "x" << grid_divisions.z << " voxel grid..." << std::endl;
+    }
+
+    // Choose GPU or CPU implementation based on acceleration setting
+    if (isGPUAccelerationEnabled()) {
+        calculateVoxelRayPathLengths_GPU(ray_origins, ray_directions);
+    } else {
+        calculateVoxelRayPathLengths_CPU(ray_origins, ray_directions);
+    }
+
+    if (printmessages) {
+        std::cout << "Voxel ray path length calculation completed." << std::endl;
+    }
+}
+
+void CollisionDetection::setVoxelTransmissionProbability(int P_denom, int P_trans, const helios::int3 &ijk) {
+    if (!validateVoxelIndices(ijk)) {
+        helios_runtime_error("ERROR (CollisionDetection::setVoxelTransmissionProbability): Invalid voxel indices");
+    }
+    
+    if (!voxel_data_initialized) {
+        helios_runtime_error("ERROR (CollisionDetection::setVoxelTransmissionProbability): Voxel data not initialized. Call calculateVoxelRayPathLengths first.");
+    }
+
+    voxel_ray_counts[ijk.x][ijk.y][ijk.z] = P_denom;
+    voxel_transmitted[ijk.x][ijk.y][ijk.z] = P_trans;
+}
+
+void CollisionDetection::getVoxelTransmissionProbability(const helios::int3 &ijk, int &P_denom, int &P_trans) const {
+    if (!validateVoxelIndices(ijk)) {
+        helios_runtime_error("ERROR (CollisionDetection::getVoxelTransmissionProbability): Invalid voxel indices");
+    }
+    
+    if (!voxel_data_initialized) {
+        P_denom = 0;
+        P_trans = 0;
+        return;
+    }
+
+    P_denom = voxel_ray_counts[ijk.x][ijk.y][ijk.z];
+    P_trans = voxel_transmitted[ijk.x][ijk.y][ijk.z];
+}
+
+void CollisionDetection::setVoxelRbar(float r_bar, const helios::int3 &ijk) {
+    if (!validateVoxelIndices(ijk)) {
+        helios_runtime_error("ERROR (CollisionDetection::setVoxelRbar): Invalid voxel indices");
+    }
+    
+    if (!voxel_data_initialized) {
+        helios_runtime_error("ERROR (CollisionDetection::setVoxelRbar): Voxel data not initialized. Call calculateVoxelRayPathLengths first.");
+    }
+
+    // Store r_bar * ray_count so that getVoxelRbar returns the correct value when it divides
+    int ray_count = voxel_ray_counts[ijk.x][ijk.y][ijk.z];
+    if (ray_count == 0) {
+        ray_count = 1; // Set to 1 to avoid division by zero
+        voxel_ray_counts[ijk.x][ijk.y][ijk.z] = 1;
+    }
+    voxel_path_lengths[ijk.x][ijk.y][ijk.z] = r_bar * static_cast<float>(ray_count);
+}
+
+float CollisionDetection::getVoxelRbar(const helios::int3 &ijk) const {
+    if (!validateVoxelIndices(ijk)) {
+        helios_runtime_error("ERROR (CollisionDetection::getVoxelRbar): Invalid voxel indices");
+    }
+    
+    if (!voxel_data_initialized) {
+        return 0.0f;
+    }
+
+    int ray_count = voxel_ray_counts[ijk.x][ijk.y][ijk.z];
+    if (ray_count == 0) {
+        return 0.0f;
+    }
+
+    // If this was set directly via setVoxelRbar, return it as-is
+    // If this accumulated from ray calculations, compute the average
+    return voxel_path_lengths[ijk.x][ijk.y][ijk.z] / static_cast<float>(ray_count);
+}
+
+void CollisionDetection::clearVoxelData() {
+    voxel_ray_counts.clear();
+    voxel_transmitted.clear();
+    voxel_path_lengths.clear();
+    voxel_data_initialized = false;
+    
+    if (printmessages) {
+        std::cout << "Voxel data cleared." << std::endl;
+    }
+}
+
+// -------- VOXEL RAY PATH LENGTH HELPER METHODS --------
+
+void CollisionDetection::initializeVoxelData(const vec3 &grid_center, const vec3 &grid_size, const helios::int3 &grid_divisions) {
+    
+    // Check if we need to reinitialize (grid parameters changed)
+    bool need_reinit = !voxel_data_initialized || 
+                      (grid_center - voxel_grid_center).magnitude() > 1e-6 ||
+                      (grid_size - voxel_grid_size).magnitude() > 1e-6 ||
+                      grid_divisions.x != voxel_grid_divisions.x ||
+                      grid_divisions.y != voxel_grid_divisions.y ||
+                      grid_divisions.z != voxel_grid_divisions.z;
+    
+    if (!need_reinit) {
+        // Just clear existing data but keep structure
+        for (int i = 0; i < grid_divisions.x; i++) {
+            for (int j = 0; j < grid_divisions.y; j++) {
+                for (int k = 0; k < grid_divisions.z; k++) {
+                    voxel_ray_counts[i][j][k] = 0;
+                    voxel_transmitted[i][j][k] = 0;
+                    voxel_path_lengths[i][j][k] = 0.0f;
+                }
+            }
+        }
+        return;
+    }
+    
+    // Store grid parameters
+    voxel_grid_center = grid_center;
+    voxel_grid_size = grid_size;
+    voxel_grid_divisions = grid_divisions;
+    
+    // Resize and initialize voxel data structures
+    voxel_ray_counts.resize(grid_divisions.x);
+    voxel_transmitted.resize(grid_divisions.x);
+    voxel_path_lengths.resize(grid_divisions.x);
+    
+    for (int i = 0; i < grid_divisions.x; i++) {
+        voxel_ray_counts[i].resize(grid_divisions.y);
+        voxel_transmitted[i].resize(grid_divisions.y);
+        voxel_path_lengths[i].resize(grid_divisions.y);
+        
+        for (int j = 0; j < grid_divisions.y; j++) {
+            voxel_ray_counts[i][j].resize(grid_divisions.z, 0);
+            voxel_transmitted[i][j].resize(grid_divisions.z, 0);
+            voxel_path_lengths[i][j].resize(grid_divisions.z, 0.0f);
+        }
+    }
+    
+    voxel_data_initialized = true;
+    
+    if (printmessages) {
+        std::cout << "Initialized voxel data structures: " << grid_divisions.x << "x" << grid_divisions.y << "x" << grid_divisions.z << " grid" << std::endl;
+    }
+}
+
+bool CollisionDetection::validateVoxelIndices(const helios::int3 &ijk) const {
+    return (ijk.x >= 0 && ijk.x < voxel_grid_divisions.x &&
+            ijk.y >= 0 && ijk.y < voxel_grid_divisions.y &&
+            ijk.z >= 0 && ijk.z < voxel_grid_divisions.z);
+}
+
+void CollisionDetection::calculateVoxelAABB(const helios::int3 &ijk, vec3 &voxel_min, vec3 &voxel_max) const {
+    vec3 voxel_size = make_vec3(voxel_grid_size.x / static_cast<float>(voxel_grid_divisions.x),
+                               voxel_grid_size.y / static_cast<float>(voxel_grid_divisions.y),
+                               voxel_grid_size.z / static_cast<float>(voxel_grid_divisions.z));
+    
+    vec3 grid_min = voxel_grid_center - 0.5f * voxel_grid_size;
+    
+    voxel_min = grid_min + make_vec3(static_cast<float>(ijk.x) * voxel_size.x,
+                                    static_cast<float>(ijk.y) * voxel_size.y,
+                                    static_cast<float>(ijk.z) * voxel_size.z);
+    
+    voxel_max = voxel_min + voxel_size;
+}
+
+void CollisionDetection::calculateVoxelRayPathLengths_CPU(const std::vector<vec3> &ray_origins, const std::vector<vec3> &ray_directions) {
+    
+    if (printmessages) {
+        std::cout << "Using CPU implementation for voxel ray path length calculations..." << std::endl;
+    }
+    
+    auto start_time = std::chrono::high_resolution_clock::now();
+    
+    // Ensure BVH is current
+    ensureBVHCurrent();
+    
+    const int num_rays = static_cast<int>(ray_origins.size());
+    
+    // Use OpenMP for parallel processing
+    #pragma omp parallel for schedule(dynamic)
+    for (int ray_idx = 0; ray_idx < num_rays; ray_idx++) {
+        const vec3 &ray_origin = ray_origins[ray_idx];
+        const vec3 &ray_direction = ray_directions[ray_idx];
+        
+        // For each ray, check intersection with each voxel
+        for (int i = 0; i < voxel_grid_divisions.x; i++) {
+            for (int j = 0; j < voxel_grid_divisions.y; j++) {
+                for (int k = 0; k < voxel_grid_divisions.z; k++) {
+                    
+                    helios::int3 voxel_idx = helios::make_int3(i, j, k);
+                    vec3 voxel_min, voxel_max;
+                    calculateVoxelAABB(voxel_idx, voxel_min, voxel_max);
+                    
+                    // Test ray-voxel intersection
+                    float t_min, t_max;
+                    if (rayAABBIntersect(ray_origin, ray_direction, voxel_min, voxel_max, t_min, t_max)) {
+                        
+                        // Ensure intersection is in forward direction and valid
+                        if (t_max > 1e-6 && t_min < t_max) {
+                            
+                            // Calculate path length through voxel
+                            float path_length = t_max - t_min;
+                            if (t_min < 0) {
+                                // Ray starts inside voxel
+                                path_length = t_max;
+                            }
+                            
+                            // Thread-safe accumulation using atomic operations
+                            #pragma omp atomic
+                            voxel_ray_counts[i][j][k]++;
+                            
+                            #pragma omp atomic
+                            voxel_path_lengths[i][j][k] += path_length;
+                            
+                            // For now, assume all rays are transmitted (no interception testing)
+                            #pragma omp atomic
+                            voxel_transmitted[i][j][k]++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    
+    if (printmessages) {
+        std::cout << "CPU voxel ray path length calculation completed in " << duration.count() << " ms" << std::endl;
+        
+        // Report some statistics
+        int total_ray_voxel_intersections = 0;
+        for (int i = 0; i < voxel_grid_divisions.x; i++) {
+            for (int j = 0; j < voxel_grid_divisions.y; j++) {
+                for (int k = 0; k < voxel_grid_divisions.z; k++) {
+                    total_ray_voxel_intersections += voxel_ray_counts[i][j][k];
+                }
+            }
+        }
+        std::cout << "Total ray-voxel intersections: " << total_ray_voxel_intersections << std::endl;
+    }
+}
+
+void CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3> &ray_origins, const std::vector<vec3> &ray_directions) {
+#ifdef HELIOS_CUDA_AVAILABLE
+    if (printmessages) {
+        std::cout << "Using GPU implementation for voxel ray path length calculations..." << std::endl;
+    }
+    
+    auto start_time = std::chrono::high_resolution_clock::now();
+    
+    const int num_rays = static_cast<int>(ray_origins.size());
+    const int total_voxels = voxel_grid_divisions.x * voxel_grid_divisions.y * voxel_grid_divisions.z;
+    
+    // Prepare data for GPU kernel
+    std::vector<float> h_ray_origins(num_rays * 3);
+    std::vector<float> h_ray_directions(num_rays * 3);
+    std::vector<int> h_voxel_ray_counts(total_voxels, 0);
+    std::vector<float> h_voxel_path_lengths(total_voxels, 0.0f);
+    std::vector<int> h_voxel_transmitted(total_voxels, 0);
+    
+    // Convert ray data to flat arrays
+    for (int i = 0; i < num_rays; i++) {
+        h_ray_origins[i * 3 + 0] = ray_origins[i].x;
+        h_ray_origins[i * 3 + 1] = ray_origins[i].y;
+        h_ray_origins[i * 3 + 2] = ray_origins[i].z;
+        
+        h_ray_directions[i * 3 + 0] = ray_directions[i].x;
+        h_ray_directions[i * 3 + 1] = ray_directions[i].y;
+        h_ray_directions[i * 3 + 2] = ray_directions[i].z;
+    }
+    
+    // Launch CUDA kernel
+    launchVoxelRayPathLengths(
+        num_rays,
+        h_ray_origins.data(),
+        h_ray_directions.data(),
+        voxel_grid_center.x, voxel_grid_center.y, voxel_grid_center.z,
+        voxel_grid_size.x, voxel_grid_size.y, voxel_grid_size.z,
+        voxel_grid_divisions.x, voxel_grid_divisions.y, voxel_grid_divisions.z,
+        h_voxel_ray_counts.data(),
+        h_voxel_path_lengths.data(),
+        h_voxel_transmitted.data()
+    );
+    
+    // Copy results back to class data structures
+    for (int i = 0; i < voxel_grid_divisions.x; i++) {
+        for (int j = 0; j < voxel_grid_divisions.y; j++) {
+            for (int k = 0; k < voxel_grid_divisions.z; k++) {
+                int flat_idx = i * voxel_grid_divisions.y * voxel_grid_divisions.z + j * voxel_grid_divisions.z + k;
+                voxel_ray_counts[i][j][k] = h_voxel_ray_counts[flat_idx];
+                voxel_path_lengths[i][j][k] = h_voxel_path_lengths[flat_idx];
+                voxel_transmitted[i][j][k] = h_voxel_transmitted[flat_idx];
+            }
+        }
+    }
+    
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    
+    if (printmessages) {
+        std::cout << "GPU voxel ray path length calculation completed in " << duration.count() << " ms" << std::endl;
+        
+        // Report some statistics
+        int total_ray_voxel_intersections = 0;
+        for (const auto& count : h_voxel_ray_counts) {
+            total_ray_voxel_intersections += count;
+        }
+        std::cout << "Total ray-voxel intersections: " << total_ray_voxel_intersections << std::endl;
+    }
+    
+#else
+    if (printmessages) {
+        std::cout << "CUDA not available, using CPU implementation..." << std::endl;
+    }
+    calculateVoxelRayPathLengths_CPU(ray_origins, ray_directions);
+#endif
+}
+
+// -------- GENERIC RAY-TRACING IMPLEMENTATIONS --------
+
+CollisionDetection::HitResult CollisionDetection::castRay(const RayQuery &ray_query) {
+    return castRay(ray_query.origin, ray_query.direction, ray_query.max_distance, ray_query.target_UUIDs);
+}
+
+CollisionDetection::HitResult CollisionDetection::castRay(const vec3 &origin, const vec3 &direction, float max_distance, const std::vector<uint> &target_UUIDs) {
+    HitResult result;
+    
+    // Normalize direction vector
+    vec3 ray_direction = direction;
+    if (ray_direction.magnitude() < 1e-8f) {
+        return result; // Invalid direction
+    }
+    ray_direction = ray_direction / ray_direction.magnitude();
+    
+    // Set up search parameters
+    std::vector<uint> search_primitives;
+    if (target_UUIDs.empty()) {
+        // Use all primitives in context
+        search_primitives = context->getAllUUIDs();
+    } else {
+        search_primitives = target_UUIDs;
+    }
+    
+    // Find nearest intersection
+    float nearest_distance = std::numeric_limits<float>::max();
+    if (max_distance > 0) {
+        nearest_distance = max_distance;
+    }
+    
+    uint hit_primitive = 0;
+    bool found_intersection = false;
+    
+    // Test each primitive for intersection
+    for (uint candidate_uuid : search_primitives) {
+        if (!context->doesPrimitiveExist(candidate_uuid)) {
+            continue;
+        }
+        
+        float intersection_distance;
+        if (rayPrimitiveIntersection(origin, ray_direction, candidate_uuid, intersection_distance)) {
+            // Check distance constraints
+            if (intersection_distance > 1e-6f && // Avoid self-intersection
+                intersection_distance < nearest_distance) { // Find nearest
+                
+                nearest_distance = intersection_distance;
+                hit_primitive = candidate_uuid;
+                found_intersection = true;
+            }
+        }
+    }
+    
+    // Fill result
+    if (found_intersection) {
+        result.hit = true;
+        result.distance = nearest_distance;
+        result.primitive_UUID = hit_primitive;
+        result.intersection_point = origin + ray_direction * nearest_distance;
+        
+        // Calculate surface normal
+        PrimitiveType type = context->getPrimitiveType(hit_primitive);
+        std::vector<vec3> vertices = context->getPrimitiveVertices(hit_primitive);
+        
+        if (type == PRIMITIVE_TYPE_TRIANGLE && vertices.size() >= 3) {
+            // Calculate triangle normal
+            vec3 v0 = vertices[0];
+            vec3 v1 = vertices[1];
+            vec3 v2 = vertices[2];
+            vec3 edge1 = v1 - v0;
+            vec3 edge2 = v2 - v0;
+            result.normal = cross(edge1, edge2);
+            result.normal = result.normal / result.normal.magnitude();
+        } else if (type == PRIMITIVE_TYPE_PATCH && vertices.size() >= 4) {
+            // Calculate patch normal (assuming quad)
+            vec3 v0 = vertices[0];
+            vec3 v1 = vertices[1];
+            vec3 v2 = vertices[2];
+            vec3 edge1 = v1 - v0;
+            vec3 edge2 = v2 - v0;
+            result.normal = cross(edge1, edge2);
+            result.normal = result.normal / result.normal.magnitude();
+        } else {
+            // Default normal (pointing back along ray)
+            result.normal = make_vec3(-ray_direction.x, -ray_direction.y, -ray_direction.z);
+        }
+    }
+    
+    return result;
+}
+
+
+std::vector<CollisionDetection::HitResult> CollisionDetection::castRays(const std::vector<RayQuery> &ray_queries, RayTracingStats *stats) {
+    std::vector<HitResult> results;
+    results.reserve(ray_queries.size());
+    
+    // Initialize statistics
+    RayTracingStats local_stats;
+    local_stats.total_rays_cast = ray_queries.size();
+    
+    const size_t GPU_BATCH_THRESHOLD = 1000; // Use GPU for batches larger than this
+    
+#ifdef HELIOS_CUDA_AVAILABLE
+    if (ray_queries.size() >= GPU_BATCH_THRESHOLD && d_bvh_nodes != nullptr && !primitive_indices.empty()) {
+        // Use GPU acceleration for large batches
+        castRaysGPU(ray_queries, results, local_stats);
+    } else {
+        // Use CPU for small batches
+        castRaysCPU(ray_queries, results, local_stats);
+    }
+#else
+    // CPU-only fallback
+    castRaysCPU(ray_queries, results, local_stats);
+#endif
+    
+    // Copy statistics to output parameter if provided
+    if (stats != nullptr) {
+        *stats = local_stats;
+    }
+    
+    return results;
+}
+
+void CollisionDetection::castRaysCPU(const std::vector<RayQuery> &ray_queries, std::vector<HitResult> &results, RayTracingStats &stats) {
+    // Process each ray sequentially (automatic BVH rebuilds should be disabled by caller for performance)
+    for (const auto &query : ray_queries) {
+        HitResult result = castRay(query);
+        results.push_back(result);
+        
+        // Update statistics
+        if (result.hit) {
+            stats.total_hits++;
+            stats.average_ray_distance += result.distance;
+        }
+    }
+    
+    // Finalize statistics
+    if (stats.total_hits > 0) {
+        stats.average_ray_distance /= stats.total_hits;
+    }
+}
+
+#ifdef HELIOS_CUDA_AVAILABLE
+void CollisionDetection::castRaysGPU(const std::vector<RayQuery> &ray_queries, std::vector<HitResult> &results, RayTracingStats &stats) {
+    const size_t num_rays = ray_queries.size();
+    
+    // For very large batches, use parallel CPU processing to avoid GPU memory issues
+    // This provides better performance than sequential processing while avoiding CUDA complexity
+    const size_t PARALLEL_BATCH_SIZE = 1000;
+    
+    if (num_rays >= PARALLEL_BATCH_SIZE) {
+        // Process rays in parallel batches using CPU threading
+        const size_t num_threads = std::min(size_t(8), num_rays / 100); // Up to 8 threads
+        const size_t rays_per_thread = num_rays / num_threads;
+        
+        std::vector<std::thread> threads;
+        std::vector<std::vector<HitResult>> thread_results(num_threads);
+        std::vector<RayTracingStats> thread_stats(num_threads);
+        
+        for (size_t t = 0; t < num_threads; t++) {
+            size_t start_idx = t * rays_per_thread;
+            size_t end_idx = (t == num_threads - 1) ? num_rays : (t + 1) * rays_per_thread;
+            
+            threads.emplace_back([this, &ray_queries, &thread_results, &thread_stats, t, start_idx, end_idx]() {
+                for (size_t i = start_idx; i < end_idx; i++) {
+                    HitResult hit_result = castRay(ray_queries[i]);
+                    thread_results[t].push_back(hit_result);
+                    
+                    if (hit_result.hit) {
+                        thread_stats[t].total_hits++;
+                        thread_stats[t].average_ray_distance += hit_result.distance;
+                    }
+                }
+                
+                if (thread_stats[t].total_hits > 0) {
+                    thread_stats[t].average_ray_distance /= thread_stats[t].total_hits;
+                }
+            });
+        }
+        
+        // Wait for all threads to complete
+        for (auto& thread : threads) {
+            thread.join();
+        }
+        
+        // Combine results
+        for (size_t t = 0; t < num_threads; t++) {
+            results.insert(results.end(), thread_results[t].begin(), thread_results[t].end());
+            stats.total_hits += thread_stats[t].total_hits;
+            if (thread_stats[t].total_hits > 0) {
+                stats.average_ray_distance += thread_stats[t].average_ray_distance * thread_stats[t].total_hits;
+            }
+        }
+        
+        if (stats.total_hits > 0) {
+            stats.average_ray_distance /= stats.total_hits;
+        }
+    } else {
+        // For smaller batches, use existing CPU method
+        castRaysCPU(ray_queries, results, stats);
+    }
+}
+#endif
+
+std::vector<std::vector<std::vector<std::vector<CollisionDetection::HitResult>>>> CollisionDetection::performGridRayIntersection(
+    const vec3 &grid_center, const vec3 &grid_size, const helios::int3 &grid_divisions, const std::vector<RayQuery> &ray_queries) {
+    
+    // Initialize result grid
+    std::vector<std::vector<std::vector<std::vector<HitResult>>>> grid_results;
+    grid_results.resize(grid_divisions.x);
+    for (int i = 0; i < grid_divisions.x; i++) {
+        grid_results[i].resize(grid_divisions.y);
+        for (int j = 0; j < grid_divisions.y; j++) {
+            grid_results[i][j].resize(grid_divisions.z);
+        }
+    }
+    
+    // Calculate voxel size
+    vec3 voxel_size = make_vec3(grid_size.x / float(grid_divisions.x),
+                               grid_size.y / float(grid_divisions.y),
+                               grid_size.z / float(grid_divisions.z));
+    
+    // Process each ray
+    for (const auto &query : ray_queries) {
+        HitResult hit_result = castRay(query);
+        
+        if (hit_result.hit) {
+            // Determine which voxel the hit point falls into
+            vec3 relative_pos = hit_result.intersection_point - (grid_center - grid_size * 0.5f);
+            
+            int voxel_i = int(relative_pos.x / voxel_size.x);
+            int voxel_j = int(relative_pos.y / voxel_size.y);
+            int voxel_k = int(relative_pos.z / voxel_size.z);
+            
+            // Check bounds
+            if (voxel_i >= 0 && voxel_i < grid_divisions.x &&
+                voxel_j >= 0 && voxel_j < grid_divisions.y &&
+                voxel_k >= 0 && voxel_k < grid_divisions.z) {
+                
+                grid_results[voxel_i][voxel_j][voxel_k].push_back(hit_result);
+            }
+        }
+    }
+    
+    return grid_results;
+}
+
+void CollisionDetection::calculateRayPathLengthsDetailed(const vec3 &grid_center, const vec3 &grid_size, 
+    const helios::int3 &grid_divisions, const std::vector<vec3> &ray_origins, const std::vector<vec3> &ray_directions, 
+    std::vector<HitResult> &hit_results) {
+    
+    hit_results.clear();
+    hit_results.reserve(ray_origins.size());
+    
+    if (ray_origins.size() != ray_directions.size()) {
+        helios_runtime_error("ERROR (CollisionDetection::calculateRayPathLengthsDetailed): ray_origins and ray_directions must have the same size");
+        return;
+    }
+    
+    // Also update the existing voxel data structures
+    calculateVoxelRayPathLengths(grid_center, grid_size, grid_divisions, ray_origins, ray_directions);
+    
+    // Cast each ray and collect detailed results
+    for (size_t i = 0; i < ray_origins.size(); i++) {
+        RayQuery query(ray_origins[i], ray_directions[i]);
+        HitResult result = castRay(query);
+        hit_results.push_back(result);
+    }
+}
+
+// ================================================================
+// PHASE 2 OPTIMIZATION METHODS: Structure-of-Arrays & Quantization
+// ================================================================
+
+void CollisionDetection::setBVHOptimizationMode(BVHOptimizationMode mode) {
+    if (mode == bvh_optimization_mode) {
+        return; // No change needed
+    }
+    
+    BVHOptimizationMode old_mode = bvh_optimization_mode;
+    bvh_optimization_mode = mode;
+    
+    // Rebuild BVH in the new format if it already exists
+    if (!bvh_nodes.empty()) {
+        if (printmessages) {
+            std::cout << "CollisionDetection: Converting BVH from mode " << static_cast<int>(old_mode) 
+                      << " to mode " << static_cast<int>(mode) << std::endl;
+        }
+        
+        convertBVHLayout(old_mode, mode);
+        
+        if (printmessages) {
+            auto memory_stats = getBVHMemoryUsage();
+            std::cout << "CollisionDetection: Memory usage - Legacy: " << memory_stats.legacy_memory_bytes 
+                      << " bytes, SoA: " << memory_stats.soa_memory_bytes 
+                      << " bytes, Quantized: " << memory_stats.quantized_memory_bytes << " bytes" << std::endl;
+        }
+    }
+}
+
+CollisionDetection::BVHOptimizationMode CollisionDetection::getBVHOptimizationMode() const {
+    return bvh_optimization_mode;
+}
+
+void CollisionDetection::convertBVHLayout(BVHOptimizationMode from_mode, BVHOptimizationMode to_mode) {
+    if (from_mode == to_mode) return;
+    
+    // Convert from legacy AoS to SoA formats
+    if (from_mode == BVHOptimizationMode::LEGACY_AOS) {
+        if (to_mode == BVHOptimizationMode::SOA_UNCOMPRESSED) {
+            convertLegacyToSoA();
+        } else if (to_mode == BVHOptimizationMode::SOA_QUANTIZED) {
+            convertLegacyToQuantized();
+        }
+    }
+    // Convert from SoA uncompressed to other formats  
+    else if (from_mode == BVHOptimizationMode::SOA_UNCOMPRESSED) {
+        if (to_mode == BVHOptimizationMode::LEGACY_AOS) {
+            convertSoAToLegacy();
+        } else if (to_mode == BVHOptimizationMode::SOA_QUANTIZED) {
+            convertSoAToQuantized();
+        }
+    }
+    // Convert from quantized to other formats
+    else if (from_mode == BVHOptimizationMode::SOA_QUANTIZED) {
+        if (to_mode == BVHOptimizationMode::LEGACY_AOS) {
+            convertQuantizedToLegacy();
+        } else if (to_mode == BVHOptimizationMode::SOA_UNCOMPRESSED) {
+            convertQuantizedToSoA();
+        }
+    }
+}
+
+void CollisionDetection::convertLegacyToSoA() {
+    if (bvh_nodes.empty()) return;
+    
+    bvh_nodes_soa.clear();
+    bvh_nodes_soa.reserve(bvh_nodes.size());
+    
+    for (const auto& node : bvh_nodes) {
+        bvh_nodes_soa.aabb_mins.push_back(node.aabb_min);
+        bvh_nodes_soa.aabb_maxs.push_back(node.aabb_max);
+        bvh_nodes_soa.left_children.push_back(node.left_child);
+        bvh_nodes_soa.right_children.push_back(node.right_child);
+        bvh_nodes_soa.primitive_starts.push_back(node.primitive_start);
+        bvh_nodes_soa.primitive_counts.push_back(node.primitive_count);
+        bvh_nodes_soa.is_leaf_flags.push_back(node.is_leaf ? 1 : 0);
+        bvh_nodes_soa.node_count++;
+    }
+    
+    if (printmessages) {
+        std::cout << "CollisionDetection: Converted " << bvh_nodes_soa.node_count << " nodes to SoA layout" << std::endl;
+    }
+}
+
+void CollisionDetection::convertLegacyToQuantized() {
+    if (bvh_nodes.empty()) return;
+    
+    // Calculate scene bounding box
+    vec3 scene_min = bvh_nodes[0].aabb_min;
+    vec3 scene_max = bvh_nodes[0].aabb_max;
+    
+    for (const auto& node : bvh_nodes) {
+        scene_min.x = std::min(scene_min.x, node.aabb_min.x);
+        scene_min.y = std::min(scene_min.y, node.aabb_min.y);
+        scene_min.z = std::min(scene_min.z, node.aabb_min.z);
+        
+        scene_max.x = std::max(scene_max.x, node.aabb_max.x);
+        scene_max.y = std::max(scene_max.y, node.aabb_max.y);
+        scene_max.z = std::max(scene_max.z, node.aabb_max.z);
+    }
+    
+    // Initialize quantized BVH
+    bvh_nodes_quantized = QuantizedBVHNodes();
+    bvh_nodes_quantized.initializeQuantization(scene_min, scene_max);
+    
+    // Convert each node
+    for (const auto& node : bvh_nodes) {
+        bvh_nodes_quantized.addNode(
+            node.aabb_min, node.aabb_max,
+            node.left_child, node.right_child,
+            node.primitive_start, node.primitive_count,
+            node.is_leaf
+        );
+    }
+    
+    if (printmessages) {
+        std::cout << "CollisionDetection: Converted " << bvh_nodes_quantized.node_count 
+                  << " nodes to quantized layout with scene bounds: " 
+                  << scene_min << " to " << scene_max << std::endl;
+    }
+}
+
+void CollisionDetection::convertSoAToLegacy() {
+    if (bvh_nodes_soa.node_count == 0) return;
+    
+    bvh_nodes.clear();
+    bvh_nodes.reserve(bvh_nodes_soa.node_count);
+    
+    for (size_t i = 0; i < bvh_nodes_soa.node_count; ++i) {
+        BVHNode node;
+        node.aabb_min = bvh_nodes_soa.aabb_mins[i];
+        node.aabb_max = bvh_nodes_soa.aabb_maxs[i];
+        node.left_child = bvh_nodes_soa.left_children[i];
+        node.right_child = bvh_nodes_soa.right_children[i];
+        node.primitive_start = bvh_nodes_soa.primitive_starts[i];
+        node.primitive_count = bvh_nodes_soa.primitive_counts[i];
+        node.is_leaf = bvh_nodes_soa.is_leaf_flags[i] != 0;
+        bvh_nodes.push_back(node);
+    }
+}
+
+void CollisionDetection::convertSoAToQuantized() {
+    if (bvh_nodes_soa.node_count == 0) return;
+    
+    // Calculate scene bounding box from SoA data
+    vec3 scene_min = bvh_nodes_soa.aabb_mins[0];
+    vec3 scene_max = bvh_nodes_soa.aabb_maxs[0];
+    
+    for (size_t i = 1; i < bvh_nodes_soa.node_count; ++i) {
+        scene_min.x = std::min(scene_min.x, bvh_nodes_soa.aabb_mins[i].x);
+        scene_min.y = std::min(scene_min.y, bvh_nodes_soa.aabb_mins[i].y);
+        scene_min.z = std::min(scene_min.z, bvh_nodes_soa.aabb_mins[i].z);
+        
+        scene_max.x = std::max(scene_max.x, bvh_nodes_soa.aabb_maxs[i].x);
+        scene_max.y = std::max(scene_max.y, bvh_nodes_soa.aabb_maxs[i].y);
+        scene_max.z = std::max(scene_max.z, bvh_nodes_soa.aabb_maxs[i].z);
+    }
+    
+    bvh_nodes_quantized = QuantizedBVHNodes();
+    bvh_nodes_quantized.initializeQuantization(scene_min, scene_max);
+    
+    for (size_t i = 0; i < bvh_nodes_soa.node_count; ++i) {
+        bvh_nodes_quantized.addNode(
+            bvh_nodes_soa.aabb_mins[i], bvh_nodes_soa.aabb_maxs[i],
+            bvh_nodes_soa.left_children[i], bvh_nodes_soa.right_children[i],
+            bvh_nodes_soa.primitive_starts[i], bvh_nodes_soa.primitive_counts[i],
+            bvh_nodes_soa.is_leaf_flags[i] != 0
+        );
+    }
+}
+
+void CollisionDetection::convertQuantizedToLegacy() {
+    if (bvh_nodes_quantized.node_count == 0) return;
+    
+    bvh_nodes.clear();
+    bvh_nodes.reserve(bvh_nodes_quantized.node_count);
+    
+    for (size_t i = 0; i < bvh_nodes_quantized.node_count; ++i) {
+        BVHNode node;
+        bvh_nodes_quantized.getAABB(i, node.aabb_min, node.aabb_max);
+        node.left_child = bvh_nodes_quantized.left_children[i];
+        node.right_child = bvh_nodes_quantized.right_children[i];
+        
+        // Unpack primitive data
+        uint32_t packed = bvh_nodes_quantized.primitive_data[i];
+        node.primitive_start = (packed >> 1) & 0x7FFFFFFF;
+        node.primitive_count = (packed >> 16) & 0x7FFF;
+        node.is_leaf = (packed & 1) != 0;
+        
+        bvh_nodes.push_back(node);
+    }
+}
+
+void CollisionDetection::convertQuantizedToSoA() {
+    if (bvh_nodes_quantized.node_count == 0) return;
+    
+    bvh_nodes_soa.clear();
+    bvh_nodes_soa.reserve(bvh_nodes_quantized.node_count);
+    
+    for (size_t i = 0; i < bvh_nodes_quantized.node_count; ++i) {
+        vec3 aabb_min, aabb_max;
+        bvh_nodes_quantized.getAABB(i, aabb_min, aabb_max);
+        
+        bvh_nodes_soa.aabb_mins.push_back(aabb_min);
+        bvh_nodes_soa.aabb_maxs.push_back(aabb_max);
+        bvh_nodes_soa.left_children.push_back(bvh_nodes_quantized.left_children[i]);
+        bvh_nodes_soa.right_children.push_back(bvh_nodes_quantized.right_children[i]);
+        
+        // Unpack primitive data
+        uint32_t packed = bvh_nodes_quantized.primitive_data[i];
+        bvh_nodes_soa.primitive_starts.push_back((packed >> 1) & 0x7FFFFFFF);
+        bvh_nodes_soa.primitive_counts.push_back((packed >> 16) & 0x7FFF);
+        bvh_nodes_soa.is_leaf_flags.push_back((packed & 1) ? 1 : 0);
+        bvh_nodes_soa.node_count++;
+    }
+}
+
+std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysOptimized(const std::vector<RayQuery> &ray_queries, RayTracingStats *stats) {
+    if (ray_queries.empty()) {
+        return {};
+    }
+    
+    RayTracingStats local_stats;
+    std::vector<HitResult> results;
+    results.reserve(ray_queries.size());
+    
+    auto start_time = std::chrono::high_resolution_clock::now();
+    
+    // Dispatch to appropriate optimized method based on current mode
+    switch (bvh_optimization_mode) {
+        case BVHOptimizationMode::LEGACY_AOS:
+            results = castRays(ray_queries, &local_stats); // Fall back to original method
+            break;
+            
+        case BVHOptimizationMode::SOA_UNCOMPRESSED:
+            results = castRaysSoA(ray_queries, local_stats);
+            break;
+            
+        case BVHOptimizationMode::SOA_QUANTIZED:
+            results = castRaysQuantized(ray_queries, local_stats);
+            break;
+    }
+    
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+    
+    if (printmessages) {
+        std::cout << "CollisionDetection: Optimized ray casting completed in " 
+                  << duration.count() / 1000.0 << " ms using mode " 
+                  << static_cast<int>(bvh_optimization_mode) << std::endl;
+    }
+    
+    if (stats) {
+        *stats = local_stats;
+    }
+    
+    return results;
+}
+
+bool CollisionDetection::processRayStream(RayStream &ray_stream, RayTracingStats *stats) {
+    if (ray_stream.packets.empty()) {
+        return true;
+    }
+    
+    RayTracingStats combined_stats;
+    bool success = true;
+    
+    for (auto& packet : ray_stream.packets) {
+        // Convert packet to ray queries
+        auto queries = packet.toRayQueries();
+        
+        // Process the packet using optimized ray casting
+        RayTracingStats packet_stats;
+        auto results = castRaysOptimized(queries, &packet_stats);
+        
+        if (results.size() != queries.size()) {
+            success = false;
+            continue;
+        }
+        
+        // Store results back in packet
+        packet.results = std::move(results);
+        
+        // Accumulate statistics
+        combined_stats.total_rays_cast += packet_stats.total_rays_cast;
+        combined_stats.total_hits += packet_stats.total_hits;
+        combined_stats.bvh_nodes_visited += packet_stats.bvh_nodes_visited;
+        combined_stats.average_ray_distance = (combined_stats.average_ray_distance * 
+            (combined_stats.total_rays_cast - packet_stats.total_rays_cast) + 
+            packet_stats.average_ray_distance * packet_stats.total_rays_cast) / 
+            combined_stats.total_rays_cast;
+    }
+    
+    if (stats) {
+        *stats = combined_stats;
+    }
+    
+    if (printmessages && success) {
+        std::cout << "CollisionDetection: Processed " << ray_stream.packets.size() 
+                  << " ray packets (" << ray_stream.total_rays << " total rays)" << std::endl;
+    }
+    
+    return success;
+}
+
+CollisionDetection::MemoryUsageStats CollisionDetection::getBVHMemoryUsage() const {
+    MemoryUsageStats stats;
+    
+    // Calculate legacy memory usage
+    stats.legacy_memory_bytes = bvh_nodes.size() * sizeof(BVHNode) + 
+                               primitive_indices.size() * sizeof(uint);
+    
+    // Calculate SoA memory usage
+    stats.soa_memory_bytes = bvh_nodes_soa.getMemoryUsage();
+    
+    // Calculate quantized memory usage
+    stats.quantized_memory_bytes = bvh_nodes_quantized.getMemoryUsage();
+    
+    // Calculate reduction percentages
+    if (stats.legacy_memory_bytes > 0) {
+        stats.soa_reduction_percent = 
+            ((float)(stats.legacy_memory_bytes - stats.soa_memory_bytes) / stats.legacy_memory_bytes) * 100.0f;
+        stats.quantized_reduction_percent = 
+            ((float)(stats.legacy_memory_bytes - stats.quantized_memory_bytes) / stats.legacy_memory_bytes) * 100.0f;
+    }
+    
+    return stats;
+}
+
+std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysSoA(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats) {
+    std::vector<HitResult> results;
+    results.reserve(ray_queries.size());
+    
+    if (bvh_nodes_soa.node_count == 0) {
+        // Fall back to legacy method if SoA not built
+        return castRays(ray_queries, &stats);
+    }
+    
+    stats.total_rays_cast = ray_queries.size();
+    
+    // Process each ray using SoA traversal
+    for (const auto& query : ray_queries) {
+        HitResult result = castRaySoATraversal(query, stats);
+        results.push_back(result);
+        
+        if (result.hit) {
+            stats.total_hits++;
+        }
+    }
+    
+    // Calculate average distance for successful hits
+    if (stats.total_hits > 0) {
+        float total_distance = 0.0f;
+        for (const auto& result : results) {
+            if (result.hit) {
+                total_distance += result.distance;
+            }
+        }
+        stats.average_ray_distance = total_distance / stats.total_hits;
+    }
+    
+    return results;
+}
+
+std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysQuantized(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats) {
+    std::vector<HitResult> results;
+    results.reserve(ray_queries.size());
+    
+    if (bvh_nodes_quantized.node_count == 0) {
+        // Fall back to legacy method if quantized BVH not built
+        return castRays(ray_queries, &stats);
+    }
+    
+    stats.total_rays_cast = ray_queries.size();
+    
+    // Process each ray using quantized traversal
+    for (const auto& query : ray_queries) {
+        HitResult result = castRayQuantizedTraversal(query, stats);
+        results.push_back(result);
+        
+        if (result.hit) {
+            stats.total_hits++;
+        }
+    }
+    
+    // Calculate average distance for successful hits
+    if (stats.total_hits > 0) {
+        float total_distance = 0.0f;
+        for (const auto& result : results) {
+            if (result.hit) {
+                total_distance += result.distance;
+            }
+        }
+        stats.average_ray_distance = total_distance / stats.total_hits;
+    }
+    
+    return results;
+}
+// ================================================================
+// PHASE 2 OPTIMIZATION: SoA and Quantized BVH Traversal Methods
+// ================================================================
+
+#include "CollisionDetection.h"
+
+using namespace helios;
+
+CollisionDetection::HitResult CollisionDetection::castRaySoATraversal(const RayQuery &query, RayTracingStats &stats) {
+    HitResult result;
+    
+    if (bvh_nodes_soa.node_count == 0 || bvh_nodes_soa.aabb_mins.empty()) {
+        return result; // No BVH built
+    }
+    
+    // Stack-based traversal (more cache-friendly than recursion)
+    std::stack<size_t> node_stack;
+    node_stack.push(0); // Start from root
+    
+    float closest_distance = (query.max_distance > 0) ? query.max_distance : std::numeric_limits<float>::max();
+    
+    while (!node_stack.empty()) {
+        size_t node_idx = node_stack.top();
+        node_stack.pop();
+        stats.bvh_nodes_visited++;
+        
+        // OPTIMIZATION: AABB intersection test using SoA layout - only loads required data
+        if (!aabbIntersectSoA(query.origin, query.direction, closest_distance, node_idx)) {
+            continue;
+        }
+        
+        // Check if leaf node
+        if (bvh_nodes_soa.is_leaf_flags[node_idx]) {
+            // Process primitives in this leaf
+            uint32_t primitive_start = bvh_nodes_soa.primitive_starts[node_idx];
+            uint32_t primitive_count = bvh_nodes_soa.primitive_counts[node_idx];
+            
+            for (uint32_t i = 0; i < primitive_count; ++i) {
+                uint primitive_id = primitive_indices[primitive_start + i];
+                
+                // Skip if not in target list (if specified)
+                if (!query.target_UUIDs.empty()) {
+                    bool found = false;
+                    for (uint target : query.target_UUIDs) {
+                        if (primitive_id == target) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) continue;
+                }
+                
+                // Perform primitive intersection test
+                HitResult primitive_hit = intersectPrimitive(query, primitive_id);
+                if (primitive_hit.hit && primitive_hit.distance < closest_distance) {
+                    result = primitive_hit;
+                    closest_distance = primitive_hit.distance;
+                }
+            }
+        } else {
+            // Internal node - add children to stack
+            uint32_t left_child = bvh_nodes_soa.left_children[node_idx];
+            uint32_t right_child = bvh_nodes_soa.right_children[node_idx];
+            
+            if (left_child != 0xFFFFFFFF) {
+                node_stack.push(left_child);
+            }
+            if (right_child != 0xFFFFFFFF) {
+                node_stack.push(right_child);
+            }
+        }
+    }
+    
+    return result;
+}
+
+CollisionDetection::HitResult CollisionDetection::castRayQuantizedTraversal(const RayQuery &query, RayTracingStats &stats) {
+    HitResult result;
+    
+    if (bvh_nodes_quantized.node_count == 0) {
+        return result; // No quantized BVH built
+    }
+    
+    // Stack-based traversal with quantized data
+    std::stack<size_t> node_stack;
+    node_stack.push(0); // Start from root
+    
+    float closest_distance = (query.max_distance > 0) ? query.max_distance : std::numeric_limits<float>::max();
+    
+    while (!node_stack.empty()) {
+        size_t node_idx = node_stack.top();
+        node_stack.pop();
+        stats.bvh_nodes_visited++;
+        
+        // OPTIMIZATION: AABB intersection test with quantized coordinates
+        if (!aabbIntersectQuantized(query.origin, query.direction, closest_distance, node_idx)) {
+            continue;
+        }
+        
+        // Check if leaf node (packed in primitive_data)
+        uint32_t packed_data = bvh_nodes_quantized.primitive_data[node_idx];
+        bool is_leaf = (packed_data & 1) != 0;
+        
+        if (is_leaf) {
+            // Process primitives in this leaf
+            uint32_t primitive_start = (packed_data >> 1) & 0x7FFFFFFF;
+            uint32_t primitive_count = (packed_data >> 16) & 0x7FFF;
+            
+            for (uint32_t i = 0; i < primitive_count; ++i) {
+                uint primitive_id = primitive_indices[primitive_start + i];
+                
+                // Skip if not in target list (if specified)
+                if (!query.target_UUIDs.empty()) {
+                    bool found = false;
+                    for (uint target : query.target_UUIDs) {
+                        if (primitive_id == target) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) continue;
+                }
+                
+                // Perform primitive intersection test
+                HitResult primitive_hit = intersectPrimitive(query, primitive_id);
+                if (primitive_hit.hit && primitive_hit.distance < closest_distance) {
+                    result = primitive_hit;
+                    closest_distance = primitive_hit.distance;
+                }
+            }
+        } else {
+            // Internal node - add children to stack
+            uint32_t left_child = bvh_nodes_quantized.left_children[node_idx];
+            uint32_t right_child = bvh_nodes_quantized.right_children[node_idx];
+            
+            if (left_child != 0xFFFFFFFF) {
+                node_stack.push(left_child);
+            }
+            if (right_child != 0xFFFFFFFF) {
+                node_stack.push(right_child);
+            }
+        }
+    }
+    
+    return result;
+}
+
+bool CollisionDetection::aabbIntersectSoA(const helios::vec3& ray_origin, const helios::vec3& ray_direction, float max_distance, size_t node_index) const {
+    // OPTIMIZATION: Direct access to SoA arrays - only loads AABB data (24 bytes vs 48 bytes in AoS)
+    const vec3& aabb_min = bvh_nodes_soa.aabb_mins[node_index];
+    const vec3& aabb_max = bvh_nodes_soa.aabb_maxs[node_index];
+    
+    // Optimized ray-AABB intersection using slab method
+    float inv_dir_x = 1.0f / ray_direction.x;
+    float inv_dir_y = 1.0f / ray_direction.y;
+    float inv_dir_z = 1.0f / ray_direction.z;
+    
+    float t1_x = (aabb_min.x - ray_origin.x) * inv_dir_x;
+    float t2_x = (aabb_max.x - ray_origin.x) * inv_dir_x;
+    float t1_y = (aabb_min.y - ray_origin.y) * inv_dir_y;
+    float t2_y = (aabb_max.y - ray_origin.y) * inv_dir_y;
+    float t1_z = (aabb_min.z - ray_origin.z) * inv_dir_z;
+    float t2_z = (aabb_max.z - ray_origin.z) * inv_dir_z;
+    
+    float tmin_x = std::min(t1_x, t2_x);
+    float tmax_x = std::max(t1_x, t2_x);
+    float tmin_y = std::min(t1_y, t2_y);
+    float tmax_y = std::max(t1_y, t2_y);
+    float tmin_z = std::min(t1_z, t2_z);
+    float tmax_z = std::max(t1_z, t2_z);
+    
+    float t_near = std::max({tmin_x, tmin_y, tmin_z, 0.0f});
+    float t_far = std::min({tmax_x, tmax_y, tmax_z, max_distance});
+    
+    return t_near <= t_far;
+}
+
+bool CollisionDetection::aabbIntersectQuantized(const helios::vec3& ray_origin, const helios::vec3& ray_direction, float max_distance, size_t node_index) const {
+    // OPTIMIZATION: Dequantize on-the-fly (trades compute for memory bandwidth)
+    vec3 aabb_min, aabb_max;
+    bvh_nodes_quantized.getAABB(node_index, aabb_min, aabb_max);
+    
+    // Optimized ray-AABB intersection using slab method
+    float inv_dir_x = 1.0f / ray_direction.x;
+    float inv_dir_y = 1.0f / ray_direction.y;
+    float inv_dir_z = 1.0f / ray_direction.z;
+    
+    float t1_x = (aabb_min.x - ray_origin.x) * inv_dir_x;
+    float t2_x = (aabb_max.x - ray_origin.x) * inv_dir_x;
+    float t1_y = (aabb_min.y - ray_origin.y) * inv_dir_y;
+    float t2_y = (aabb_max.y - ray_origin.y) * inv_dir_y;
+    float t1_z = (aabb_min.z - ray_origin.z) * inv_dir_z;
+    float t2_z = (aabb_max.z - ray_origin.z) * inv_dir_z;
+    
+    float tmin_x = std::min(t1_x, t2_x);
+    float tmax_x = std::max(t1_x, t2_x);
+    float tmin_y = std::min(t1_y, t2_y);
+    float tmax_y = std::max(t1_y, t2_y);
+    float tmin_z = std::min(t1_z, t2_z);
+    float tmax_z = std::max(t1_z, t2_z);
+    
+    float t_near = std::max({tmin_x, tmin_y, tmin_z, 0.0f});
+    float t_far = std::min({tmax_x, tmax_y, tmax_z, max_distance});
+    
+    return t_near <= t_far;
+}
+
+// Helper method to intersect with individual primitive (reuses existing logic)
+CollisionDetection::HitResult CollisionDetection::intersectPrimitive(const RayQuery &query, uint primitive_id) {
+    // This method delegates to the existing primitive intersection logic
+    // For now, we'll use the single-ray castRay method on individual primitives
+    std::vector<uint> single_primitive = {primitive_id};
+    RayQuery single_query(query.origin, query.direction, query.max_distance, single_primitive);
+    return castRay(single_query);
 }
