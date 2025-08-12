@@ -1,0 +1,12 @@
+Phase2 SoA Test - BVH Construction,156.315
+Phase2 SoA Test - Ray Traversal,203.566
+Phase2 SoA Test - Total Time,359.881
+Phase2 Quantized Test - BVH Construction,13.132
+Phase2 Quantized Test - Ray Traversal,207.839
+Phase2 Quantized Test - Total Time,220.971
+Phase3 GPU Test - BVH Construction,37.494
+Phase3 GPU Test - Ray Traversal,5.209
+Phase3 GPU Test - Total Time,42.703
+Phase3 GPU Complex - BVH Construction,1798.148
+Phase3 GPU Complex - Ray Traversal,54.144
+Phase3 GPU Complex - Total Time,1852.292

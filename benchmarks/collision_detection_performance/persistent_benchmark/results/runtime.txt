@@ -1,0 +1,18 @@
+Simple Spheres - BVH Construction,187.040
+Simple Spheres - Ray Traversal,459.498
+Simple Spheres - Total Time,646.538
+Dense Cubes - BVH Construction,10.594
+Dense Cubes - Ray Traversal,952.745
+Dense Cubes - Total Time,963.339
+Mixed Geometry - BVH Construction,40.573
+Mixed Geometry - Ray Traversal,4418.976
+Mixed Geometry - Total Time,4459.549
+Complex Plant - BVH Construction,137.454
+Complex Plant - Ray Traversal,37180.197
+Complex Plant - Total Time,37317.651
+Phase2 SoA Test - BVH Construction,121.806
+Phase2 SoA Test - Ray Traversal,28.878
+Phase2 SoA Test - Total Time,150.684
+Phase2 Quantized Test - BVH Construction,100.339
+Phase2 Quantized Test - Ray Traversal,31.328
+Phase2 Quantized Test - Total Time,131.667

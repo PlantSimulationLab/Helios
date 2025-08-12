@@ -42,6 +42,8 @@ extern "C" {
 void launchBVHTraversal(void *h_nodes, int node_count, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_query_aabb_min, float *h_query_aabb_max, int num_queries,
                         unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_query);
 void launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x, int grid_divisions_y, int grid_divisions_z, int *h_voxel_ray_counts, float *h_voxel_path_lengths, int *h_voxel_transmitted);
+// Phase 3: Warp-efficient GPU kernels
+void launchWarpEfficientBVH(void *h_bvh_soa_gpu, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_ray_origins, float *h_ray_directions, float *h_ray_max_distances, int num_rays, unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_ray);
 }
 
 // Helper function to convert helios::vec3 to float3
@@ -3778,3 +3780,162 @@ CollisionDetection::HitResult CollisionDetection::intersectPrimitive(const RayQu
     RayQuery single_query(query.origin, query.direction, query.max_distance, single_primitive);
     return castRay(single_query);
 }
+
+#ifdef HELIOS_CUDA_AVAILABLE
+#include <vector_types.h>  // For make_float3
+
+/**
+ * \brief Phase 3: Cast rays using warp-efficient GPU kernels
+ * \param[in] ray_queries Vector of ray queries to process
+ * \param[out] stats Ray-tracing performance statistics
+ * \return Vector of HitResult with optimal GPU performance
+ */
+std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPUPhase3(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats) {
+    std::vector<HitResult> results;
+    results.resize(ray_queries.size());
+    
+    if (ray_queries.empty() || !gpu_acceleration_enabled) {
+        return castRaysSoA(ray_queries, stats); // CPU fallback
+    }
+    
+    auto start = std::chrono::high_resolution_clock::now();
+    
+    // Ensure BVH is built and in SoA format for GPU
+    setBVHOptimizationMode(BVHOptimizationMode::SOA_UNCOMPRESSED);
+    
+    // Prepare ray data for GPU
+    std::vector<float> ray_origins(ray_queries.size() * 3);
+    std::vector<float> ray_directions(ray_queries.size() * 3);
+    std::vector<float> ray_max_distances(ray_queries.size());
+    
+    for (size_t i = 0; i < ray_queries.size(); i++) {
+        vec3 normalized_dir = ray_queries[i].direction;
+        if (normalized_dir.magnitude() > 1e-8f) {
+            normalized_dir = normalized_dir / normalized_dir.magnitude();
+        }
+        
+        ray_origins[i * 3] = ray_queries[i].origin.x;
+        ray_origins[i * 3 + 1] = ray_queries[i].origin.y;
+        ray_origins[i * 3 + 2] = ray_queries[i].origin.z;
+        
+        ray_directions[i * 3] = normalized_dir.x;
+        ray_directions[i * 3 + 1] = normalized_dir.y;
+        ray_directions[i * 3 + 2] = normalized_dir.z;
+        
+        ray_max_distances[i] = ray_queries[i].max_distance;
+    }
+    
+    // Get all primitives in context
+    std::vector<uint> all_primitives = context->getAllUUIDs();
+    
+    // Prepare primitive data
+    std::vector<float> primitive_aabb_min(all_primitives.size() * 3);
+    std::vector<float> primitive_aabb_max(all_primitives.size() * 3);
+    
+    for (size_t i = 0; i < all_primitives.size(); i++) {
+        vec3 aabb_min, aabb_max;
+        context->getPrimitiveBoundingBox(all_primitives[i], aabb_min, aabb_max);
+        
+        primitive_aabb_min[i * 3] = aabb_min.x;
+        primitive_aabb_min[i * 3 + 1] = aabb_min.y;
+        primitive_aabb_min[i * 3 + 2] = aabb_min.z;
+        
+        primitive_aabb_max[i * 3] = aabb_max.x;
+        primitive_aabb_max[i * 3 + 1] = aabb_max.y;
+        primitive_aabb_max[i * 3 + 2] = aabb_max.z;
+    }
+    
+    // Prepare results arrays
+    const int max_results_per_ray = 1; // For collision detection, we typically want first hit
+    std::vector<unsigned int> gpu_results(ray_queries.size() * max_results_per_ray, 0);
+    std::vector<unsigned int> gpu_result_counts(ray_queries.size(), 0);
+    
+    // Get primitive indices
+    std::vector<unsigned int> primitive_indices(all_primitives.size());
+    for (size_t i = 0; i < all_primitives.size(); i++) {
+        primitive_indices[i] = all_primitives[i];
+    }
+    
+    // Create GPU SoA BVH structure for warp-efficient kernel
+    // For now, use a simplified approach that works with existing BVH data
+    if (bvh_nodes.empty()) {
+        // No BVH built, fall back to CPU
+        return castRaysSoA(ray_queries, stats);
+    }
+    
+    // Create minimal GPU SoA structure on the stack
+    struct {
+        float3 *aabb_mins;
+        float3 *aabb_maxs;
+        uint32_t *left_children;
+        uint32_t *right_children;
+        uint32_t *primitive_starts;
+        uint32_t *primitive_counts;
+        uint8_t *is_leaf_flags;
+        size_t node_count;
+    } gpu_bvh_soa;
+    
+    // Allocate minimal arrays for demonstration
+    std::vector<float3> soa_aabb_mins(bvh_nodes.size());
+    std::vector<float3> soa_aabb_maxs(bvh_nodes.size());
+    std::vector<uint32_t> soa_left_children(bvh_nodes.size());
+    std::vector<uint32_t> soa_right_children(bvh_nodes.size());
+    std::vector<uint32_t> soa_primitive_starts(bvh_nodes.size());
+    std::vector<uint32_t> soa_primitive_counts(bvh_nodes.size());
+    std::vector<uint8_t> soa_is_leaf_flags(bvh_nodes.size());
+    
+    // Convert existing BVH to SoA format
+    for (size_t i = 0; i < bvh_nodes.size(); i++) {
+        soa_aabb_mins[i] = make_float3(bvh_nodes[i].aabb_min.x, bvh_nodes[i].aabb_min.y, bvh_nodes[i].aabb_min.z);
+        soa_aabb_maxs[i] = make_float3(bvh_nodes[i].aabb_max.x, bvh_nodes[i].aabb_max.y, bvh_nodes[i].aabb_max.z);
+        soa_left_children[i] = bvh_nodes[i].left_child;
+        soa_right_children[i] = bvh_nodes[i].right_child;
+        soa_primitive_starts[i] = bvh_nodes[i].primitive_start;
+        soa_primitive_counts[i] = bvh_nodes[i].primitive_count;
+        soa_is_leaf_flags[i] = bvh_nodes[i].is_leaf ? 1 : 0;
+    }
+    
+    // Set up GPU SoA structure
+    gpu_bvh_soa.aabb_mins = soa_aabb_mins.data();
+    gpu_bvh_soa.aabb_maxs = soa_aabb_maxs.data();
+    gpu_bvh_soa.left_children = soa_left_children.data();
+    gpu_bvh_soa.right_children = soa_right_children.data();
+    gpu_bvh_soa.primitive_starts = soa_primitive_starts.data();
+    gpu_bvh_soa.primitive_counts = soa_primitive_counts.data();
+    gpu_bvh_soa.is_leaf_flags = soa_is_leaf_flags.data();
+    gpu_bvh_soa.node_count = bvh_nodes.size();
+    
+    // Call Phase 3 warp-efficient GPU kernel
+    launchWarpEfficientBVH(
+        &gpu_bvh_soa,
+        primitive_indices.data(),
+        static_cast<int>(all_primitives.size()),
+        primitive_aabb_min.data(),
+        primitive_aabb_max.data(),
+        ray_origins.data(),
+        ray_directions.data(),
+        ray_max_distances.data(),
+        static_cast<int>(ray_queries.size()),
+        gpu_results.data(),
+        gpu_result_counts.data(),
+        max_results_per_ray
+    );
+    
+    // Convert GPU results back to HitResult format
+    size_t hit_count = 0;
+    for (size_t i = 0; i < ray_queries.size(); i++) {
+        if (gpu_result_counts[i] > 0) {
+            results[i].hit = true;
+            results[i].primitive_UUID = gpu_results[i * max_results_per_ray];
+            results[i].distance = ray_queries[i].max_distance; // GPU doesn't return distance yet
+            hit_count++;
+        }
+    }
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    stats.total_rays_cast = ray_queries.size();
+    stats.total_hits = hit_count;
+    
+    return results;
+}
+#endif

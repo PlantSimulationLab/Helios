@@ -346,6 +346,14 @@ public:
     std::vector<HitResult> castRaysOptimized(const std::vector<RayQuery> &ray_queries, RayTracingStats *stats = nullptr);
 
     /**
+     * \brief Cast rays using Phase 3 warp-efficient GPU kernels
+     * \param[in] ray_queries Vector of ray queries to process
+     * \param[out] stats Ray-tracing performance statistics
+     * \return Vector of HitResult with optimal GPU performance
+     */
+    std::vector<HitResult> castRaysGPUPhase3(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats);
+
+    /**
      * \brief Cast ray packets using streaming interface for optimal GPU utilization
      * \param[in] ray_stream Ray stream containing batched ray packets
      * \param[out] stats Optional ray-tracing statistics

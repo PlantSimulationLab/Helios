@@ -1,0 +1,12 @@
+Simple Spheres - BVH Construction,186.766
+Simple Spheres - Ray Traversal,424.585
+Simple Spheres - Total Time,611.351
+Dense Cubes - BVH Construction,10.206
+Dense Cubes - Ray Traversal,968.740
+Dense Cubes - Total Time,978.946
+Mixed Geometry - BVH Construction,24.581
+Mixed Geometry - Ray Traversal,4318.288
+Mixed Geometry - Total Time,4342.869
+Complex Plant - BVH Construction,107.080
+Complex Plant - Ray Traversal,37051.815
+Complex Plant - Total Time,37158.895
