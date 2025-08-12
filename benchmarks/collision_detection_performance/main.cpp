@@ -139,10 +139,17 @@ public:
      */
     void initializeScenarios() {
         scenarios = {
+            {"CPU Sequential Legacy", 1000, 10000, "cubes", 0.3f},
+            {"CPU OpenMP Legacy", 1000, 10000, "cubes", 0.3f},
+            {"CPU OpenMP SoA", 1000, 10000, "cubes", 0.3f},
+            {"CPU OpenMP Quantized", 1000, 10000, "cubes", 0.3f},
             {"Phase2 SoA Test", 1000, 10000, "cubes", 0.3f},
             {"Phase2 Quantized Test", 1000, 10000, "cubes", 0.3f},
             {"Phase3 GPU Test", 1000, 10000, "cubes", 0.3f},
-            {"Phase3 GPU Complex", 5000, 50000, "plant", 0.4f}
+            {"Phase3 GPU Complex", 5000, 50000, "plant", 0.4f},
+            {"Large Scale SoA", 5000, 1000000, "cubes", 0.3f},
+            {"Large Scale Quantized", 5000, 1000000, "cubes", 0.3f},
+            {"Large Scale GPU", 5000, 1000000, "cubes", 0.3f}
         };
     }
     
@@ -365,8 +372,35 @@ public:
         
         std::vector<CollisionDetection::HitResult> results;
         
-        // Phase 2 Optimization Testing
-        if (scenario.name == "Phase2 SoA Test") {
+        // CPU Sequential vs OpenMP Testing
+        if (scenario.name == "CPU Sequential Legacy") {
+            // Force sequential execution by temporarily setting thread count to 1
+#ifdef _OPENMP
+            int old_threads = omp_get_max_threads();
+            omp_set_num_threads(1);
+#endif
+            collision_detector->setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::LEGACY_AOS);
+            results = collision_detector->castRays(rays);
+            std::cout << " [Sequential Legacy]";
+#ifdef _OPENMP
+            omp_set_num_threads(old_threads); // Restore thread count
+#endif
+        } else if (scenario.name == "CPU OpenMP Legacy") {
+            // Test OpenMP parallel execution with legacy BVH
+            collision_detector->setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::LEGACY_AOS);
+            results = collision_detector->castRays(rays);
+            std::cout << " [OpenMP Legacy]";
+        } else if (scenario.name == "CPU OpenMP SoA") {
+            // Test OpenMP parallel execution with SoA optimization
+            collision_detector->setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_UNCOMPRESSED);
+            results = collision_detector->castRaysOptimized(rays);
+            std::cout << " [OpenMP SoA]";
+        } else if (scenario.name == "CPU OpenMP Quantized") {
+            // Test OpenMP parallel execution with quantized optimization
+            collision_detector->setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_QUANTIZED);
+            results = collision_detector->castRaysOptimized(rays);
+            std::cout << " [OpenMP Quantized]";
+        } else if (scenario.name == "Phase2 SoA Test") {
             // Test Structure-of-Arrays optimization
             collision_detector->setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_UNCOMPRESSED);
             results = collision_detector->castRaysOptimized(rays);
@@ -381,6 +415,21 @@ public:
             CollisionDetection::RayTracingStats gpu_stats;
             results = collision_detector->castRaysGPUPhase3(rays, gpu_stats);
             std::cout << " [Phase3 GPU Mode]";
+        } else if (scenario.name == "Large Scale SoA") {
+            // Large scale SoA test with SIMD optimizations
+            collision_detector->setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_UNCOMPRESSED);
+            results = collision_detector->castRaysOptimized(rays);
+            std::cout << " [Large SoA + SIMD]";
+        } else if (scenario.name == "Large Scale Quantized") {
+            // Large scale quantized test with SIMD optimizations
+            collision_detector->setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_QUANTIZED);
+            results = collision_detector->castRaysOptimized(rays);
+            std::cout << " [Large Quantized + SIMD]";
+        } else if (scenario.name == "Large Scale GPU") {
+            // Large scale GPU test
+            CollisionDetection::RayTracingStats gpu_stats;
+            results = collision_detector->castRaysGPUPhase3(rays, gpu_stats);
+            std::cout << " [Large Scale GPU]";
         } else {
             // Standard legacy benchmark
             collision_detector->setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::LEGACY_AOS);

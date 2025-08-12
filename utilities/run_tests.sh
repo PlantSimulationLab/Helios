@@ -17,6 +17,7 @@ usage() {
     echo "  --testcase <case> Pass specific test case to doctest (e.g., --testcase \"My Test Case\")"
     echo "  --doctestargs <args> Pass arguments directly to doctest (e.g., --doctestargs \"--help --list-test-cases\")"
     echo "  --project-dir <dir>  Use specified directory for project (persistent, not cleaned up)"
+    echo "  --benchmark      Run performance benchmarks instead of unit tests"
     echo
     exit ${1:-1}
 }
@@ -52,8 +53,11 @@ elif [[ "${OSTYPE}" == "msys"* ]] || [[ "${OSTYPE}" == "cygwin"* ]] || [[ -n "${
     # Windows environment (Git Bash, MSYS2, Cygwin, or GitHub Actions)
     NPROC=${NUMBER_OF_PROCESSORS:-$(nproc 2>/dev/null || echo "1")}
 else
+
     NPROC=1
 fi
+
+echo "Detected ${NPROC} processes for parallel build"
 
 # Save the original working directory before changing directories
 ORIGINAL_DIR="$(pwd)"
@@ -165,6 +169,10 @@ while [ $# -gt 0 ]; do
     fi
     PROJECT_DIR="$2"
     shift
+    ;;
+
+  --benchmark)
+    BENCHMARK_MODE="ON"
     ;;
 
   --help|-h)
@@ -298,45 +306,90 @@ else
 
     cd build || exit 1
 
-    echo -ne "Building unified test project..."
-
-    run_command cmake .. -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" -DBUILD_TESTS=ON
+    if [ "${BENCHMARK_MODE}" == "ON" ]; then
+      echo -ne "Building unified benchmark project..."
+      run_command cmake .. -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" -DBUILD_TESTS=ON -DBUILD_BENCHMARKS=ON
+    else
+      echo -ne "Building unified test project..."
+      run_command cmake .. -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" -DBUILD_TESTS=ON
+    fi
 
     if (($? == 0)); then
-      echo -e "\r\x1B[32mBuilding unified test project...done.\x1B[39m"
+      if [ "${BENCHMARK_MODE}" == "ON" ]; then
+        echo -e "\r\x1B[32mBuilding unified benchmark project...done.\x1B[39m"
+      else
+        echo -e "\r\x1B[32mBuilding unified test project...done.\x1B[39m"
+      fi
     else
-      echo -e "\r\x1B[31mBuilding unified test project...failed.\x1B[39m"
+      if [ "${BENCHMARK_MODE}" == "ON" ]; then
+        echo -e "\r\x1B[31mBuilding unified benchmark project...failed.\x1B[39m"
+      else
+        echo -e "\r\x1B[31mBuilding unified test project...failed.\x1B[39m"
+      fi
       ERROR_COUNT=$((ERROR_COUNT + 1))
       cleanup
     fi
 
-    # Determine which test targets to build based on user selection
+    # Determine which test/benchmark targets to build based on user selection
     BUILD_TARGETS=()
-    if [ -n "$SPECIFIC_TEST" ]; then
-      if [[ "$SPECIFIC_TEST" == "context" ]]; then
-        BUILD_TARGETS+=("context_tests")
+    if [ "${BENCHMARK_MODE}" == "ON" ]; then
+      # Benchmark mode: build benchmark targets
+      if [ -n "$SPECIFIC_TEST" ]; then
+        if [[ "$SPECIFIC_TEST" == "collisiondetection" ]]; then
+          BUILD_TARGETS+=("collision_detection_benchmark")
+        else
+          echo "Note: Benchmark mode currently only supports 'collisiondetection'"
+          BUILD_TARGETS+=("collision_detection_benchmark")
+        fi
+      elif [ -n "$SPECIFIC_TESTS" ]; then
+        IFS=',' read -ra TESTS_ARRAY <<< "$SPECIFIC_TESTS"
+        for test in "${TESTS_ARRAY[@]}"; do
+          test=$(echo "$test" | xargs)  # trim whitespace
+          if [[ "$test" == "collisiondetection" ]]; then
+            BUILD_TARGETS+=("collision_detection_benchmark")
+          fi
+        done
+        # If no valid benchmark targets found, default to collision detection
+        if [ ${#BUILD_TARGETS[@]} -eq 0 ]; then
+          echo "Note: No valid benchmark targets specified, defaulting to collision detection"
+          BUILD_TARGETS+=("collision_detection_benchmark")
+        fi
       else
-        BUILD_TARGETS+=("${SPECIFIC_TEST}_tests")
+        # Build all available benchmark targets
+        BUILD_TARGETS+=("collision_detection_benchmark" "lidar_baseline_comparison")
       fi
-    elif [ -n "$SPECIFIC_TESTS" ]; then
-      IFS=',' read -ra TESTS_ARRAY <<< "$SPECIFIC_TESTS"
-      for test in "${TESTS_ARRAY[@]}"; do
-        test=$(echo "$test" | xargs)  # trim whitespace
-        if [[ "$test" == "context" ]]; then
+    else
+      # Test mode: build test targets
+      if [ -n "$SPECIFIC_TEST" ]; then
+        if [[ "$SPECIFIC_TEST" == "context" ]]; then
           BUILD_TARGETS+=("context_tests")
         else
-          BUILD_TARGETS+=("${test}_tests")
+          BUILD_TARGETS+=("${SPECIFIC_TEST}_tests")
         fi
-      done
-    else
-      # Build all available test targets
-      BUILD_TARGETS+=("context_tests")
-      for plugin in ${TEST_PLUGINS}; do
-        BUILD_TARGETS+=("${plugin}_tests")
-      done
+      elif [ -n "$SPECIFIC_TESTS" ]; then
+        IFS=',' read -ra TESTS_ARRAY <<< "$SPECIFIC_TESTS"
+        for test in "${TESTS_ARRAY[@]}"; do
+          test=$(echo "$test" | xargs)  # trim whitespace
+          if [[ "$test" == "context" ]]; then
+            BUILD_TARGETS+=("context_tests")
+          else
+            BUILD_TARGETS+=("${test}_tests")
+          fi
+        done
+      else
+        # Build all available test targets
+        BUILD_TARGETS+=("context_tests")
+        for plugin in ${TEST_PLUGINS}; do
+          BUILD_TARGETS+=("${plugin}_tests")
+        done
+      fi
     fi
     
-    echo "Building ${#BUILD_TARGETS[@]} test target(s): ${BUILD_TARGETS[*]}"
+    if [ "${BENCHMARK_MODE}" == "ON" ]; then
+      echo "Building ${#BUILD_TARGETS[@]} benchmark target(s): ${BUILD_TARGETS[*]}"
+    else
+      echo "Building ${#BUILD_TARGETS[@]} test target(s): ${BUILD_TARGETS[*]}"
+    fi
     
     
     # Note: Skip pre-build target validation since cmake --build --target help 

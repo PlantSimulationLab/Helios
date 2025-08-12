@@ -6,6 +6,20 @@ if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
      set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
 endif()
 
+# Automatically include collision detection plugin if not already in PLUGINS list
+if(NOT "collisiondetection" IN_LIST PLUGINS AND NOT TARGET collisiondetection)
+    message(STATUS "[LiDAR] Automatically loading collision detection dependency")
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../collisiondetection" "${CMAKE_BINARY_DIR}/plugins/collisiondetection_auto")
+    target_link_libraries(collisiondetection PUBLIC helios)
+endif()
+
+# Automatically include visualizer plugin if not already in PLUGINS list
+if(NOT "visualizer" IN_LIST PLUGINS AND NOT TARGET visualizer)
+    message(STATUS "[LiDAR] Automatically loading visualizer dependency")
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../visualizer" "${CMAKE_BINARY_DIR}/plugins/visualizer_auto")
+    target_link_libraries(visualizer PUBLIC helios)
+endif()
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
 find_package(CUDAToolkit REQUIRED)
@@ -47,6 +61,9 @@ else()
 	# Non-Windows platforms use full flags
 	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --use_fast_math -Wno-deprecated-gpu-targets")
 	
+	# Add position independent code flag for Linux (needed for static libraries)
+	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -fPIC")
+	
 	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++${CMAKE_CXX_STANDARD}")
 	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D_MWAITXINTRIN_H_INCLUDED -D__STRICT_ANSI__")
 	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -76,8 +93,8 @@ endif()
 target_include_directories(lidar PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(lidar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/s_hull_pro)
 
-target_link_libraries(lidar PUBLIC visualizer CUDA::cudart_static)
-add_dependencies(lidar visualizer)
+target_link_libraries(lidar PUBLIC visualizer collisiondetection CUDA::cudart_static)
+add_dependencies(lidar visualizer collisiondetection)
 
 #add_subdirectory( "${CMAKE_CURRENT_SOURCE_DIR}/lib/laszip" )
 #include_directories( "${CMAKE_CURRENT_SOURCE_DIR}/lib/laszip/include" )

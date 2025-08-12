@@ -18,6 +18,15 @@
 #include <functional>
 #include <queue>
 #include <stack>
+
+// SIMD headers
+#ifdef __AVX2__
+#include <immintrin.h>
+#elif defined(__SSE4_1__)
+#include <smmintrin.h>
+#elif defined(__SSE2__)
+#include <emmintrin.h>
+#endif
 #include <algorithm>
 #include <chrono>
 #include <thread>
@@ -3586,7 +3595,50 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysSoA(const
     // Always build primitive cache for SoA mode to ensure thread safety
     buildPrimitiveCache();
     
-    if (num_rays >= OPENMP_THRESHOLD) {
+    // Check if SIMD optimization should be used for large batches
+    const size_t SIMD_THRESHOLD = 32; // Use SIMD for batches of 32+ rays
+    bool use_simd = (num_rays >= SIMD_THRESHOLD);
+    
+    if (use_simd && num_rays >= OPENMP_THRESHOLD) {
+        // Combined OpenMP + SIMD optimization for large batches
+        results.resize(num_rays);
+        size_t total_hits = 0;
+        double total_distance = 0.0;
+        
+        #pragma omp parallel for reduction(+:total_hits,total_distance) schedule(dynamic, 32)
+        for (size_t batch_start = 0; batch_start < num_rays; batch_start += 8) {
+            size_t batch_size = std::min(size_t(8), num_rays - batch_start);
+            
+            // Prepare ray data for SIMD processing
+            alignas(32) vec3 ray_origins[8];
+            alignas(32) vec3 ray_directions[8];
+            HitResult batch_results[8];
+            
+            for (size_t i = 0; i < batch_size; ++i) {
+                ray_origins[i] = ray_queries[batch_start + i].origin;
+                ray_directions[i] = ray_queries[batch_start + i].direction;
+                if (ray_directions[i].magnitude() > 1e-8f) {
+                    ray_directions[i] = ray_directions[i] / ray_directions[i].magnitude();
+                }
+            }
+            
+            // Use SIMD-optimized BVH traversal
+            traverseBVHSIMD(ray_origins, ray_directions, batch_size, batch_results);
+            
+            // Store results and update statistics
+            for (size_t i = 0; i < batch_size; ++i) {
+                results[batch_start + i] = batch_results[i];
+                if (batch_results[i].hit) {
+                    total_hits++;
+                    total_distance += batch_results[i].distance;
+                }
+            }
+        }
+        
+        stats.total_hits = total_hits;
+        stats.average_ray_distance = (total_hits > 0) ? (total_distance / total_hits) : 0.0;
+        return results;
+    } else if (num_rays >= OPENMP_THRESHOLD) {
         
         results.resize(num_rays); // Pre-allocate for parallel access
         size_t total_hits = 0;
@@ -4184,4 +4236,322 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPUPhase3
     
     return results;
 }
+
+// ================================================================
+// SIMD-OPTIMIZED RAY TRACING METHODS
+// ================================================================
+
+uint32_t CollisionDetection::rayAABBIntersectSIMD(const vec3 *ray_origins, const vec3 *ray_directions, 
+                                                   const vec3 *aabb_mins, const vec3 *aabb_maxs,
+                                                   float *t_mins, float *t_maxs, int count) {
+#ifdef __AVX2__
+    if (count == 8) {
+        // AVX2 implementation for 8 rays at once
+        uint32_t hit_mask = 0;
+        
+        for (int i = 0; i < 8; i += 8) {
+            // Load 8 ray origins
+            __m256 orig_x = _mm256_set_ps(ray_origins[i+7].x, ray_origins[i+6].x, ray_origins[i+5].x, ray_origins[i+4].x,
+                                          ray_origins[i+3].x, ray_origins[i+2].x, ray_origins[i+1].x, ray_origins[i+0].x);
+            __m256 orig_y = _mm256_set_ps(ray_origins[i+7].y, ray_origins[i+6].y, ray_origins[i+5].y, ray_origins[i+4].y,
+                                          ray_origins[i+3].y, ray_origins[i+2].y, ray_origins[i+1].y, ray_origins[i+0].y);
+            __m256 orig_z = _mm256_set_ps(ray_origins[i+7].z, ray_origins[i+6].z, ray_origins[i+5].z, ray_origins[i+4].z,
+                                          ray_origins[i+3].z, ray_origins[i+2].z, ray_origins[i+1].z, ray_origins[i+0].z);
+            
+            // Load 8 ray directions
+            __m256 dir_x = _mm256_set_ps(ray_directions[i+7].x, ray_directions[i+6].x, ray_directions[i+5].x, ray_directions[i+4].x,
+                                         ray_directions[i+3].x, ray_directions[i+2].x, ray_directions[i+1].x, ray_directions[i+0].x);
+            __m256 dir_y = _mm256_set_ps(ray_directions[i+7].y, ray_directions[i+6].y, ray_directions[i+5].y, ray_directions[i+4].y,
+                                         ray_directions[i+3].y, ray_directions[i+2].y, ray_directions[i+1].y, ray_directions[i+0].y);
+            __m256 dir_z = _mm256_set_ps(ray_directions[i+7].z, ray_directions[i+6].z, ray_directions[i+5].z, ray_directions[i+4].z,
+                                         ray_directions[i+3].z, ray_directions[i+2].z, ray_directions[i+1].z, ray_directions[i+0].z);
+            
+            // Load 8 AABB mins
+            __m256 aabb_min_x = _mm256_set_ps(aabb_mins[i+7].x, aabb_mins[i+6].x, aabb_mins[i+5].x, aabb_mins[i+4].x,
+                                              aabb_mins[i+3].x, aabb_mins[i+2].x, aabb_mins[i+1].x, aabb_mins[i+0].x);
+            __m256 aabb_min_y = _mm256_set_ps(aabb_mins[i+7].y, aabb_mins[i+6].y, aabb_mins[i+5].y, aabb_mins[i+4].y,
+                                              aabb_mins[i+3].y, aabb_mins[i+2].y, aabb_mins[i+1].y, aabb_mins[i+0].y);
+            __m256 aabb_min_z = _mm256_set_ps(aabb_mins[i+7].z, aabb_mins[i+6].z, aabb_mins[i+5].z, aabb_mins[i+4].z,
+                                              aabb_mins[i+3].z, aabb_mins[i+2].z, aabb_mins[i+1].z, aabb_mins[i+0].z);
+            
+            // Load 8 AABB maxs
+            __m256 aabb_max_x = _mm256_set_ps(aabb_maxs[i+7].x, aabb_maxs[i+6].x, aabb_maxs[i+5].x, aabb_maxs[i+4].x,
+                                              aabb_maxs[i+3].x, aabb_maxs[i+2].x, aabb_maxs[i+1].x, aabb_maxs[i+0].x);
+            __m256 aabb_max_y = _mm256_set_ps(aabb_maxs[i+7].y, aabb_maxs[i+6].y, aabb_maxs[i+5].y, aabb_maxs[i+4].y,
+                                              aabb_maxs[i+3].y, aabb_maxs[i+2].y, aabb_maxs[i+1].y, aabb_maxs[i+0].y);
+            __m256 aabb_max_z = _mm256_set_ps(aabb_maxs[i+7].z, aabb_maxs[i+6].z, aabb_maxs[i+5].z, aabb_maxs[i+4].z,
+                                              aabb_maxs[i+3].z, aabb_maxs[i+2].z, aabb_maxs[i+1].z, aabb_maxs[i+0].z);
+            
+            // Calculate inverse directions
+            __m256 inv_dir_x = _mm256_div_ps(_mm256_set1_ps(1.0f), dir_x);
+            __m256 inv_dir_y = _mm256_div_ps(_mm256_set1_ps(1.0f), dir_y);
+            __m256 inv_dir_z = _mm256_div_ps(_mm256_set1_ps(1.0f), dir_z);
+            
+            // Calculate intersection distances for X axis
+            __m256 t1_x = _mm256_mul_ps(_mm256_sub_ps(aabb_min_x, orig_x), inv_dir_x);
+            __m256 t2_x = _mm256_mul_ps(_mm256_sub_ps(aabb_max_x, orig_x), inv_dir_x);
+            __m256 tmin_x = _mm256_min_ps(t1_x, t2_x);
+            __m256 tmax_x = _mm256_max_ps(t1_x, t2_x);
+            
+            // Calculate intersection distances for Y axis
+            __m256 t1_y = _mm256_mul_ps(_mm256_sub_ps(aabb_min_y, orig_y), inv_dir_y);
+            __m256 t2_y = _mm256_mul_ps(_mm256_sub_ps(aabb_max_y, orig_y), inv_dir_y);
+            __m256 tmin_y = _mm256_min_ps(t1_y, t2_y);
+            __m256 tmax_y = _mm256_max_ps(t1_y, t2_y);
+            
+            // Calculate intersection distances for Z axis
+            __m256 t1_z = _mm256_mul_ps(_mm256_sub_ps(aabb_min_z, orig_z), inv_dir_z);
+            __m256 t2_z = _mm256_mul_ps(_mm256_sub_ps(aabb_max_z, orig_z), inv_dir_z);
+            __m256 tmin_z = _mm256_min_ps(t1_z, t2_z);
+            __m256 tmax_z = _mm256_max_ps(t1_z, t2_z);
+            
+            // Find intersection interval
+            __m256 t_min_final = _mm256_max_ps(_mm256_max_ps(tmin_x, tmin_y), tmin_z);
+            __m256 t_max_final = _mm256_min_ps(_mm256_min_ps(tmax_x, tmax_y), tmax_z);
+            
+            // Store results
+            _mm256_store_ps(&t_mins[i], t_min_final);
+            _mm256_store_ps(&t_maxs[i], t_max_final);
+            
+            // Check for intersection: t_max >= 0 && t_min <= t_max
+            __m256 zero = _mm256_set1_ps(0.0f);
+            __m256 hits = _mm256_and_ps(_mm256_cmp_ps(t_max_final, zero, _CMP_GE_OS),
+                                        _mm256_cmp_ps(t_min_final, t_max_final, _CMP_LE_OS));
+            
+            // Convert to bitmask
+            hit_mask |= _mm256_movemask_ps(hits);
+        }
+        
+        return hit_mask;
+    }
+#endif
+
+#ifdef __SSE4_1__
+    if (count == 4) {
+        // SSE implementation for 4 rays at once
+        uint32_t hit_mask = 0;
+        
+        for (int i = 0; i < 4; i += 4) {
+            // Load 4 ray origins
+            __m128 orig_x = _mm_set_ps(ray_origins[i+3].x, ray_origins[i+2].x, ray_origins[i+1].x, ray_origins[i+0].x);
+            __m128 orig_y = _mm_set_ps(ray_origins[i+3].y, ray_origins[i+2].y, ray_origins[i+1].y, ray_origins[i+0].y);
+            __m128 orig_z = _mm_set_ps(ray_origins[i+3].z, ray_origins[i+2].z, ray_origins[i+1].z, ray_origins[i+0].z);
+            
+            // Load 4 ray directions
+            __m128 dir_x = _mm_set_ps(ray_directions[i+3].x, ray_directions[i+2].x, ray_directions[i+1].x, ray_directions[i+0].x);
+            __m128 dir_y = _mm_set_ps(ray_directions[i+3].y, ray_directions[i+2].y, ray_directions[i+1].y, ray_directions[i+0].y);
+            __m128 dir_z = _mm_set_ps(ray_directions[i+3].z, ray_directions[i+2].z, ray_directions[i+1].z, ray_directions[i+0].z);
+            
+            // Load 4 AABB mins
+            __m128 aabb_min_x = _mm_set_ps(aabb_mins[i+3].x, aabb_mins[i+2].x, aabb_mins[i+1].x, aabb_mins[i+0].x);
+            __m128 aabb_min_y = _mm_set_ps(aabb_mins[i+3].y, aabb_mins[i+2].y, aabb_mins[i+1].y, aabb_mins[i+0].y);
+            __m128 aabb_min_z = _mm_set_ps(aabb_mins[i+3].z, aabb_mins[i+2].z, aabb_mins[i+1].z, aabb_mins[i+0].z);
+            
+            // Load 4 AABB maxs
+            __m128 aabb_max_x = _mm_set_ps(aabb_maxs[i+3].x, aabb_maxs[i+2].x, aabb_maxs[i+1].x, aabb_maxs[i+0].x);
+            __m128 aabb_max_y = _mm_set_ps(aabb_maxs[i+3].y, aabb_maxs[i+2].y, aabb_maxs[i+1].y, aabb_maxs[i+0].y);
+            __m128 aabb_max_z = _mm_set_ps(aabb_maxs[i+3].z, aabb_maxs[i+2].z, aabb_maxs[i+1].z, aabb_maxs[i+0].z);
+            
+            // Calculate inverse directions
+            __m128 inv_dir_x = _mm_div_ps(_mm_set1_ps(1.0f), dir_x);
+            __m128 inv_dir_y = _mm_div_ps(_mm_set1_ps(1.0f), dir_y);
+            __m128 inv_dir_z = _mm_div_ps(_mm_set1_ps(1.0f), dir_z);
+            
+            // Calculate intersection distances for X axis
+            __m128 t1_x = _mm_mul_ps(_mm_sub_ps(aabb_min_x, orig_x), inv_dir_x);
+            __m128 t2_x = _mm_mul_ps(_mm_sub_ps(aabb_max_x, orig_x), inv_dir_x);
+            __m128 tmin_x = _mm_min_ps(t1_x, t2_x);
+            __m128 tmax_x = _mm_max_ps(t1_x, t2_x);
+            
+            // Calculate intersection distances for Y axis
+            __m128 t1_y = _mm_mul_ps(_mm_sub_ps(aabb_min_y, orig_y), inv_dir_y);
+            __m128 t2_y = _mm_mul_ps(_mm_sub_ps(aabb_max_y, orig_y), inv_dir_y);
+            __m128 tmin_y = _mm_min_ps(t1_y, t2_y);
+            __m128 tmax_y = _mm_max_ps(t1_y, t2_y);
+            
+            // Calculate intersection distances for Z axis
+            __m128 t1_z = _mm_mul_ps(_mm_sub_ps(aabb_min_z, orig_z), inv_dir_z);
+            __m128 t2_z = _mm_mul_ps(_mm_sub_ps(aabb_max_z, orig_z), inv_dir_z);
+            __m128 tmin_z = _mm_min_ps(t1_z, t2_z);
+            __m128 tmax_z = _mm_max_ps(t1_z, t2_z);
+            
+            // Find intersection interval
+            __m128 t_min_final = _mm_max_ps(_mm_max_ps(tmin_x, tmin_y), tmin_z);
+            __m128 t_max_final = _mm_min_ps(_mm_min_ps(tmax_x, tmax_y), tmax_z);
+            
+            // Store results
+            _mm_store_ps(&t_mins[i], t_min_final);
+            _mm_store_ps(&t_maxs[i], t_max_final);
+            
+            // Check for intersection: t_max >= 0 && t_min <= t_max
+            __m128 zero = _mm_set1_ps(0.0f);
+            __m128 hits = _mm_and_ps(_mm_cmpge_ps(t_max_final, zero),
+                                     _mm_cmple_ps(t_min_final, t_max_final));
+            
+            // Convert to bitmask
+            hit_mask |= _mm_movemask_ps(hits);
+        }
+        
+        return hit_mask;
+    }
+#endif
+
+    // Fallback to scalar implementation
+    uint32_t hit_mask = 0;
+    for (int i = 0; i < count; ++i) {
+        if (rayAABBIntersect(ray_origins[i], ray_directions[i], aabb_mins[i], aabb_maxs[i], t_mins[i], t_maxs[i])) {
+            hit_mask |= (1 << i);
+        }
+    }
+    return hit_mask;
+}
+
+void CollisionDetection::traverseBVHSIMD(const vec3 *ray_origins, const vec3 *ray_directions, 
+                                          int count, HitResult *results) {
+    if (bvh_nodes.empty()) {
+        // Initialize all results as misses
+        for (int i = 0; i < count; ++i) {
+            results[i] = HitResult();
+        }
+        return;
+    }
+
+    // Determine SIMD batch size based on available instructions
+    int simd_batch_size = 1; // Default to scalar
+#ifdef __AVX2__
+    simd_batch_size = 8;
+#elif defined(__SSE4_1__)
+    simd_batch_size = 4;
+#endif
+
+    // Process rays in SIMD batches
+    for (int batch_start = 0; batch_start < count; batch_start += simd_batch_size) {
+        int batch_count = std::min(simd_batch_size, count - batch_start);
+        
+        // Initialize batch results
+        for (int i = 0; i < batch_count; ++i) {
+            results[batch_start + i] = HitResult();
+        }
+        
+        if (batch_count >= simd_batch_size && simd_batch_size > 1) {
+            // SIMD-optimized batch processing
+            traverseBVHSIMDImpl(&ray_origins[batch_start], &ray_directions[batch_start], 
+                                batch_count, &results[batch_start]);
+        } else {
+            // Scalar fallback for remaining rays
+            for (int i = 0; i < batch_count; ++i) {
+                int ray_idx = batch_start + i;
+                results[ray_idx] = castRay(RayQuery(ray_origins[ray_idx], ray_directions[ray_idx]));
+            }
+        }
+    }
+}
+
+void CollisionDetection::traverseBVHSIMDImpl(const vec3 *ray_origins, const vec3 *ray_directions, 
+                                             int count, HitResult *results) {
+    const size_t MAX_STACK_SIZE = 64;
+    
+    // Per-ray data structures - using aligned arrays for SIMD efficiency
+    alignas(32) uint32_t node_stacks[8][MAX_STACK_SIZE];  // 8 stacks for up to 8 rays
+    alignas(32) uint32_t stack_tops[8] = {0};             // Current stack positions
+    alignas(32) float closest_distances[8];               // Closest hit distances per ray
+    alignas(32) bool ray_active[8];                       // Which rays are still active
+    
+    // Initialize per-ray state
+    for (int i = 0; i < count; ++i) {
+        node_stacks[i][0] = 0;  // Start with root node
+        stack_tops[i] = 1;
+        closest_distances[i] = std::numeric_limits<float>::max();
+        ray_active[i] = true;
+        results[i] = HitResult(); // Initialize as miss
+    }
+    
+    // Main traversal loop - continue while any ray is active
+    while (true) {
+        bool any_active = false;
+        for (int i = 0; i < count; ++i) {
+            if (ray_active[i] && stack_tops[i] > 0) {
+                any_active = true;
+                break;
+            }
+        }
+        if (!any_active) break;
+        
+        // Collect next nodes to test for active rays
+        alignas(32) vec3 test_aabb_mins[8];
+        alignas(32) vec3 test_aabb_maxs[8];
+        alignas(32) uint32_t test_node_indices[8];
+        alignas(32) int test_ray_indices[8];
+        int test_count = 0;
+        
+        for (int i = 0; i < count; ++i) {
+            if (ray_active[i] && stack_tops[i] > 0) {
+                uint32_t node_idx = node_stacks[i][--stack_tops[i]];
+                const BVHNode &node = bvh_nodes[node_idx];
+                
+                test_aabb_mins[test_count] = node.aabb_min;
+                test_aabb_maxs[test_count] = node.aabb_max;
+                test_node_indices[test_count] = node_idx;
+                test_ray_indices[test_count] = i;
+                test_count++;
+                
+                if (test_count == count) break; // Batch is full
+            }
+        }
+        
+        if (test_count == 0) break;
+        
+        // Prepare ray data for SIMD intersection test
+        alignas(32) vec3 batch_origins[8];
+        alignas(32) vec3 batch_directions[8]; 
+        alignas(32) float t_mins[8];
+        alignas(32) float t_maxs[8];
+        
+        for (int i = 0; i < test_count; ++i) {
+            int ray_idx = test_ray_indices[i];
+            batch_origins[i] = ray_origins[ray_idx];
+            batch_directions[i] = ray_directions[ray_idx];
+        }
+        
+        // Perform SIMD AABB intersection test
+        uint32_t hit_mask = rayAABBIntersectSIMD(batch_origins, batch_directions,
+                                                  test_aabb_mins, test_aabb_maxs,
+                                                  t_mins, t_maxs, test_count);
+        
+        // Process intersection results
+        for (int i = 0; i < test_count; ++i) {
+            if (!(hit_mask & (1 << i))) continue; // Ray missed this AABB
+            
+            int ray_idx = test_ray_indices[i];
+            uint32_t node_idx = test_node_indices[i];
+            const BVHNode &node = bvh_nodes[node_idx];
+            
+            if (t_mins[i] > closest_distances[ray_idx]) continue; // Beyond closest hit
+            
+            if (node.is_leaf) {
+                // Test primitives in leaf node
+                for (uint32_t prim_idx = node.primitive_start; 
+                     prim_idx < node.primitive_start + node.primitive_count; ++prim_idx) {
+                    
+                    uint32_t primitive_id = primitive_indices[prim_idx];
+                    
+                    // Use thread-safe primitive intersection
+                    HitResult prim_result = intersectPrimitiveThreadSafe(batch_origins[i], batch_directions[i], 
+                                                                         primitive_id, closest_distances[ray_idx]);
+                    if (prim_result.hit && prim_result.distance < closest_distances[ray_idx]) {
+                        closest_distances[ray_idx] = prim_result.distance;
+                        results[ray_idx] = prim_result;
+                    }
+                }
+            } else {
+                // Add child nodes to stack (if space available)
+                if (stack_tops[ray_idx] < MAX_STACK_SIZE - 2) {
+                    node_stacks[ray_idx][stack_tops[ray_idx]++] = node.left_child;
+                    node_stacks[ray_idx][stack_tops[ray_idx]++] = node.right_child;
+                }
+            }
+        }
+    }
+}
+
 #endif

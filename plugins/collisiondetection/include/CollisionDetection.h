@@ -1107,6 +1107,37 @@ private:
     bool rayAABBIntersect(const helios::vec3 &origin, const helios::vec3 &direction, const helios::vec3 &aabb_min, const helios::vec3 &aabb_max, float &t_min, float &t_max);
 
     /**
+     * \brief SIMD-optimized ray-AABB intersection test using AVX2/SSE
+     * \param[in] ray_origins Array of ray origins (size 4 or 8 for AVX)
+     * \param[in] ray_directions Array of ray directions (size 4 or 8 for AVX)
+     * \param[in] aabb_mins Array of AABB minimum points (size 4 or 8 for AVX)
+     * \param[in] aabb_maxs Array of AABB maximum points (size 4 or 8 for AVX)
+     * \param[out] t_mins Array of near intersection parameters
+     * \param[out] t_maxs Array of far intersection parameters
+     * \param[in] count Number of rays to process (must be 4 or 8)
+     * \return Bitmask indicating which rays intersect their respective AABBs
+     */
+    uint32_t rayAABBIntersectSIMD(const helios::vec3 *ray_origins, const helios::vec3 *ray_directions, 
+                                  const helios::vec3 *aabb_mins, const helios::vec3 *aabb_maxs,
+                                  float *t_mins, float *t_maxs, int count);
+
+    /**
+     * \brief SIMD-optimized BVH traversal for multiple rays
+     * \param[in] ray_origins Array of ray origins
+     * \param[in] ray_directions Array of ray directions  
+     * \param[in] count Number of rays to process
+     * \param[out] results Array to store hit results
+     */
+    void traverseBVHSIMD(const helios::vec3 *ray_origins, const helios::vec3 *ray_directions, 
+                          int count, HitResult *results);
+
+    /**
+     * \brief SIMD implementation helper for BVH traversal
+     */
+    void traverseBVHSIMDImpl(const helios::vec3 *ray_origins, const helios::vec3 *ray_directions, 
+                             int count, HitResult *results);
+
+    /**
      * \brief Test if a cone intersects an AABB
      * \param[in] cone Cone to test
      * \param[in] aabb_min Minimum corner of AABB
