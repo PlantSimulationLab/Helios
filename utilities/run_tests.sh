@@ -62,7 +62,7 @@ echo "Detected ${NPROC} processes for parallel build"
 # Save the original working directory before changing directories
 ORIGINAL_DIR="$(pwd)"
 
-cd ../samples || exit 1
+cd samples || exit 1
 
 if [[ "${OSTYPE}" != "darwin"* ]] && [[ "${OSTYPE}" != "linux"* ]] && [[ "${OSTYPE}" != "msys"* ]];then
   echo "UNSUPPORTED OPERATING SYSTEM"

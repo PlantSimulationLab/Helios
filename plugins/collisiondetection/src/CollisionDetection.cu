@@ -39,7 +39,7 @@ struct GPUBVHNode {
 };
 
 /**
- * \brief Phase 3: GPU-optimized SoA BVH structure for warp-efficient traversal
+ * \brief GPU-optimized SoA BVH structure for warp-efficient traversal
  *
  * This structure stores BVH data in Structure-of-Arrays layout for optimal
  * GPU memory coalescing and SIMD processing within warps.
@@ -60,7 +60,7 @@ struct GPUBVHNodesSoA {
 };
 
 /**
- * \brief Phase 3: GPU-optimized quantized BVH structure for memory efficiency
+ * \brief GPU-optimized quantized BVH structure for memory efficiency
  *
  * Uses 16-bit quantization for 52% memory reduction while maintaining precision.
  */
@@ -102,7 +102,7 @@ struct RayPacket {
  */
 __shared__ extern float shared_bvh_cache[];
 
-// Constants for Phase 3 optimizations
+// Constants for optimizations
 #define WARP_SIZE 32
 #define MAX_SHARED_NODES 256
 #define SHARED_CACHE_SIZE (MAX_SHARED_NODES * 8 * sizeof(float))  // 8 floats per cached node
@@ -120,7 +120,7 @@ __device__ bool d_aabbIntersect(const float3 &min1, const float3 &max1, const fl
 }
 
 /**
- * \brief Phase 3: Warp-efficient ray-AABB intersection for GPU optimization
+ * \brief Warp-efficient ray-AABB intersection for GPU optimization
  * \param[in] ray_origin Ray starting point
  * \param[in] ray_dir Ray direction vector (normalized)
  * \param[in] aabb_min AABB minimum corner
@@ -250,7 +250,7 @@ __global__ void bvhTraversalKernel(GPUBVHNode *d_nodes, unsigned int *d_primitiv
 }
 
 /**
- * \brief Phase 3: Warp-efficient BVH traversal kernel for high-performance ray tracing
+ * \brief Warp-efficient BVH traversal kernel for high-performance ray tracing
  * 
  * This kernel processes rays in warp-coherent packets, uses shared memory caching,
  * and implements cooperative fetching for optimal GPU utilization.
@@ -653,7 +653,7 @@ void launchBVHTraversal(void *h_nodes, int node_count, unsigned int *h_primitive
 void launchConeIntersection(void *h_nodes, int node_count, unsigned int *h_primitive_indices, int primitive_count, float *h_cone_origins, float *h_cone_directions, float *h_cone_angles, float *h_max_distances, int num_queries,
                             unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_query) {
 
-    // Stub implementation - will be completed in Phase 3
+    // Stub implementation
     for (int i = 0; i < num_queries; i++) {
         h_result_counts[i] = 0;
     }
@@ -740,9 +740,9 @@ void launchVoxelRayPathLengths(
 }
 
 /**
- * \brief Phase 3: Launch warp-efficient BVH traversal kernel with SoA optimizations
+ * \brief Launch warp-efficient BVH traversal kernel with SoA optimizations
  * 
- * This function launches the optimized Phase 3 kernel that uses warp-coherent
+ * This function launches the optimized kernel that uses warp-coherent
  * processing, shared memory caching, and Structure-of-Arrays data layout.
  * 
  * \param[in] h_bvh_soa_gpu Host pointer to GPU-allocated SoA BVH structure
@@ -926,7 +926,7 @@ void launchWarpEfficientBVH(
     int threads_per_block = 256;  // Multiple of warp size (32)
     int num_blocks = (num_rays + threads_per_block - 1) / threads_per_block;
     
-    // Launch Phase 3 warp-efficient kernel with shared memory
+    // Launch warp-efficient kernel with shared memory
     size_t shared_memory_size = SHARED_CACHE_SIZE;
     
     warpEfficientBVHKernel<<<num_blocks, threads_per_block, shared_memory_size>>>(
@@ -948,7 +948,7 @@ void launchWarpEfficientBVH(
     cudaDeviceSynchronize();
     err = cudaGetLastError();
     if (err != cudaSuccess) {
-        fprintf(stderr, "Phase 3 warp-efficient kernel launch error: %s\n", cudaGetErrorString(err));
+        fprintf(stderr, "Warp-efficient kernel launch error: %s\n", cudaGetErrorString(err));
     }
     
     // Copy results back to host

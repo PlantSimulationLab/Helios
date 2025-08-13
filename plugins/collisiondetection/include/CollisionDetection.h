@@ -86,7 +86,7 @@ public:
     };
 
     /**
-     * \brief Phase 2 Optimization: Ray streaming for efficient GPU processing
+     * \brief Ray streaming for efficient GPU processing
      * Processes multiple rays simultaneously for better GPU utilization
      */
     static constexpr size_t WARP_SIZE = 32;  //!< CUDA warp size for optimal batching
@@ -175,7 +175,7 @@ public:
     };
     
     /**
-     * \brief Phase 2 Optimization: Streaming ray tracer interface
+     * \brief Streaming ray tracer interface
      * Enables efficient batch processing of ray packets
      */
     struct RayStream {
@@ -315,20 +315,19 @@ public:
      */
     std::vector<HitResult> castRays(const std::vector<RayQuery> &ray_queries, RayTracingStats *stats = nullptr);
 
-    // -------- PHASE 2 OPTIMIZATION METHODS --------
+    // -------- OPTIMIZATION METHODS --------
 
     /**
-     * \brief BVH optimization modes for Phase 2 performance improvements
+     * \brief BVH optimization modes for performance improvements
      */
     enum class BVHOptimizationMode {
-        LEGACY_AOS,        //!< Original Array-of-Structures layout
         SOA_UNCOMPRESSED,  //!< Structure-of-Arrays, full precision
-        SOA_QUANTIZED      //!< Structure-of-Arrays with 16-bit quantization
+        SOA_QUANTIZED      //!< Structure-of-Arrays with 16-bit quantization (default)
     };
 
     /**
-     * \brief Set BVH optimization mode for Phase 2 performance improvements
-     * \param[in] mode Optimization mode (LEGACY_AOS, SOA_UNCOMPRESSED, SOA_QUANTIZED)
+     * \brief Set BVH optimization mode for performance improvements
+     * \param[in] mode Optimization mode (SOA_UNCOMPRESSED, SOA_QUANTIZED)
      */
     void setBVHOptimizationMode(BVHOptimizationMode mode);
 
@@ -347,7 +346,7 @@ public:
     std::vector<HitResult> castRaysOptimized(const std::vector<RayQuery> &ray_queries, RayTracingStats *stats = nullptr);
 
     /**
-     * \brief Cast rays using Phase 3 warp-efficient GPU kernels
+     * \brief Cast rays using warp-efficient GPU kernels
      * \param[in] ray_queries Vector of ray queries to process
      * \param[out] stats Ray-tracing performance statistics
      * \return Vector of HitResult with optimal GPU performance
@@ -367,11 +366,9 @@ public:
      * \return Structure containing memory usage for each optimization mode
      */
     struct MemoryUsageStats {
-        size_t legacy_memory_bytes = 0;
         size_t soa_memory_bytes = 0; 
         size_t quantized_memory_bytes = 0;
-        float soa_reduction_percent = 0.0f;
-        float quantized_reduction_percent = 0.0f;
+        float quantized_reduction_percent = 0.0f;  // Reduction vs SoA
     };
     MemoryUsageStats getBVHMemoryUsage() const;
 
@@ -739,7 +736,7 @@ private:
 
     /**
      * \brief Structure-of-Arrays (SoA) BVH layout for optimized memory access
-     * Phase 2 Optimization: Improves cache efficiency and enables vectorization
+     * Improves cache efficiency and enables vectorization
      */
     struct BVHNodesSoA {
         // Hot data: frequently accessed during traversal (cache-friendly grouping)
@@ -912,14 +909,14 @@ private:
     //! Vector of BVH nodes (linearized tree structure) - LEGACY
     std::vector<BVHNode> bvh_nodes;
     
-    //! Phase 2 Optimization: Structure-of-Arrays BVH layout
+    //! Structure-of-Arrays BVH layout
     BVHNodesSoA bvh_nodes_soa;
     
-    //! Phase 2 Optimization: Quantized BVH layout (82% memory reduction)
+    //! Quantized BVH layout (82% memory reduction)
     QuantizedBVHNodes bvh_nodes_quantized;
     
-    //! Phase 2 Optimization: Current optimization mode
-    BVHOptimizationMode bvh_optimization_mode = BVHOptimizationMode::LEGACY_AOS;
+    //! Current optimization mode
+    BVHOptimizationMode bvh_optimization_mode = BVHOptimizationMode::SOA_QUANTIZED;
 
     //! Primitive indices sorted by BVH construction
     std::vector<uint> primitive_indices;
@@ -1104,7 +1101,7 @@ private:
      * \param[out] t_max Far intersection parameter (if intersects)
      * \return True if ray intersects AABB
      */
-    bool rayAABBIntersect(const helios::vec3 &origin, const helios::vec3 &direction, const helios::vec3 &aabb_min, const helios::vec3 &aabb_max, float &t_min, float &t_max);
+    bool rayAABBIntersect(const helios::vec3 &origin, const helios::vec3 &direction, const helios::vec3 &aabb_min, const helios::vec3 &aabb_max, float &t_min, float &t_max) const;
 
     /**
      * \brief SIMD-optimized ray-AABB intersection test using AVX2/SSE
@@ -1332,11 +1329,7 @@ private:
      * \brief Convert BVH between different layout formats
      */
     void convertBVHLayout(BVHOptimizationMode from_mode, BVHOptimizationMode to_mode);
-    void convertLegacyToSoA();
-    void convertLegacyToQuantized();
-    void convertSoAToLegacy();
     void convertSoAToQuantized();
-    void convertQuantizedToLegacy();
     void convertQuantizedToSoA();
 
     /**

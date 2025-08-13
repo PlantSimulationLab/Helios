@@ -3310,10 +3310,10 @@ DOCTEST_TEST_CASE("CollisionDetection Ray Casting - Compatibility with Other Plu
 }
 
 // ================================================================
-// PHASE 2 OPTIMIZATION TEST CASES
+// OPTIMIZATION TEST CASES
 // ================================================================
 
-DOCTEST_TEST_CASE("CollisionDetection Phase 2 - BVH Optimization Mode Management") {
+DOCTEST_TEST_CASE("CollisionDetection - BVH Optimization Mode Management") {
     Context context;
     CollisionDetection collision(&context);
     collision.disableMessages();
@@ -3322,37 +3322,34 @@ DOCTEST_TEST_CASE("CollisionDetection Phase 2 - BVH Optimization Mode Management
     uint triangle = context.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0.5f, 0, 1));
     auto sphere_uuids = context.addSphere(10, make_vec3(2, 0, 0.5f), 0.5f);
     
-    // Test 1: Default mode should be LEGACY_AOS
-    DOCTEST_CHECK(collision.getBVHOptimizationMode() == CollisionDetection::BVHOptimizationMode::LEGACY_AOS);
+    // Test 1: Default mode should be SOA_QUANTIZED
+    DOCTEST_CHECK(collision.getBVHOptimizationMode() == CollisionDetection::BVHOptimizationMode::SOA_QUANTIZED);
     
     // Test 2: Switch to SOA_UNCOMPRESSED
     DOCTEST_CHECK_NOTHROW(collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_UNCOMPRESSED));
     DOCTEST_CHECK(collision.getBVHOptimizationMode() == CollisionDetection::BVHOptimizationMode::SOA_UNCOMPRESSED);
     
-    // Test 3: Switch to SOA_QUANTIZED  
+    // Test 3: Switch back to SOA_QUANTIZED  
     DOCTEST_CHECK_NOTHROW(collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_QUANTIZED));
     DOCTEST_CHECK(collision.getBVHOptimizationMode() == CollisionDetection::BVHOptimizationMode::SOA_QUANTIZED);
     
     // Test 4: Build BVH to populate memory statistics
     collision.buildBVH();
     
-    // Test 5: Convert to all optimization modes to populate all memory structures
-    collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::LEGACY_AOS);
+    // Test 5: Convert between optimization modes to populate all memory structures
     collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_UNCOMPRESSED);
     collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_QUANTIZED);
     
     // Test 6: Memory usage comparison 
     auto memory_stats = collision.getBVHMemoryUsage();
-    DOCTEST_CHECK(memory_stats.legacy_memory_bytes > 0);
     DOCTEST_CHECK(memory_stats.soa_memory_bytes > 0);
     DOCTEST_CHECK(memory_stats.quantized_memory_bytes > 0);
     
-    // Memory hierarchy: quantized < soa < legacy (with reasonable tolerances)
-    DOCTEST_CHECK(memory_stats.quantized_memory_bytes < memory_stats.legacy_memory_bytes);
-    DOCTEST_CHECK(memory_stats.soa_memory_bytes <= memory_stats.legacy_memory_bytes);
+    // Memory hierarchy: quantized < soa (with reasonable tolerances)
+    DOCTEST_CHECK(memory_stats.quantized_memory_bytes < memory_stats.soa_memory_bytes);
 }
 
-DOCTEST_TEST_CASE("CollisionDetection Phase 2 - Optimized Ray Casting Correctness") {
+DOCTEST_TEST_CASE("CollisionDetection - Optimized Ray Casting Correctness") {
     Context context;
     CollisionDetection collision(&context);
     collision.disableMessages();
@@ -3371,7 +3368,7 @@ DOCTEST_TEST_CASE("CollisionDetection Phase 2 - Optimized Ray Casting Correctnes
     std::vector<CollisionDetection::HitResult> legacy_results, soa_results, quantized_results;
     
     // Legacy mode
-    collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::LEGACY_AOS);
+    collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_UNCOMPRESSED);
     legacy_results = collision.castRays(rays);
     
     // SOA mode  
@@ -3410,7 +3407,7 @@ DOCTEST_TEST_CASE("CollisionDetection Phase 2 - Optimized Ray Casting Correctnes
     DOCTEST_CHECK(legacy_results[2].hit == false); // Miss
 }
 
-DOCTEST_TEST_CASE("CollisionDetection Phase 2 - Ray Streaming Interface") {
+DOCTEST_TEST_CASE("CollisionDetection - Ray Streaming Interface") {
     Context context;
     CollisionDetection collision(&context);
     collision.disableMessages();
@@ -3454,7 +3451,7 @@ DOCTEST_TEST_CASE("CollisionDetection Phase 2 - Ray Streaming Interface") {
     DOCTEST_CHECK(hit_count > 40); // Most rays should hit the triangles
 }
 
-DOCTEST_TEST_CASE("CollisionDetection Phase 2 - BVH Layout Conversion Methods") {
+DOCTEST_TEST_CASE("CollisionDetection - BVH Layout Conversion Methods") {
     Context context;
     CollisionDetection collision(&context);
     collision.disableMessages();
@@ -3465,7 +3462,7 @@ DOCTEST_TEST_CASE("CollisionDetection Phase 2 - BVH Layout Conversion Methods") 
     uint triangle2 = context.addTriangle(make_vec3(-2, 1, 0), make_vec3(0, 1, 0), make_vec3(-1, 1, 1.5f));
     
     // Build initial BVH in legacy mode
-    collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::LEGACY_AOS);
+    collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_UNCOMPRESSED);
     collision.buildBVH();
     
     // Test all possible conversion paths
@@ -3484,7 +3481,7 @@ DOCTEST_TEST_CASE("CollisionDetection Phase 2 - BVH Layout Conversion Methods") 
     auto soa_results = collision.castRaysOptimized(test_rays);
     auto soa_memory = collision.getBVHMemoryUsage();
     
-    collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::LEGACY_AOS);
+    collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_UNCOMPRESSED);
     auto legacy_restored_results = collision.castRays(test_rays);
     
     // Test Legacy → Quantized → Legacy conversion  
@@ -3492,7 +3489,7 @@ DOCTEST_TEST_CASE("CollisionDetection Phase 2 - BVH Layout Conversion Methods") 
     auto quantized_results = collision.castRaysOptimized(test_rays);
     auto quantized_memory = collision.getBVHMemoryUsage();
     
-    collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::LEGACY_AOS);
+    collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_UNCOMPRESSED);
     auto legacy_final_results = collision.castRays(test_rays);
     
     // Test SOA ↔ Quantized conversion
@@ -3551,13 +3548,12 @@ DOCTEST_TEST_CASE("CollisionDetection Phase 2 - BVH Layout Conversion Methods") 
     }
     
     // Memory usage verification
-    DOCTEST_CHECK(legacy_memory.legacy_memory_bytes > 0);
     DOCTEST_CHECK(soa_memory.soa_memory_bytes > 0);  
     DOCTEST_CHECK(quantized_memory.quantized_memory_bytes > 0);
-    DOCTEST_CHECK(quantized_memory.quantized_memory_bytes < legacy_memory.legacy_memory_bytes); // Quantized should be smaller
+    DOCTEST_CHECK(quantized_memory.quantized_memory_bytes < soa_memory.soa_memory_bytes); // Quantized should be smaller
 }
 
-DOCTEST_TEST_CASE("CollisionDetection Phase 2 - RayPacket Edge Cases and Functionality") {
+DOCTEST_TEST_CASE("CollisionDetection - RayPacket Edge Cases and Functionality") {
     Context context;
     CollisionDetection collision(&context);
     collision.disableMessages();
@@ -3615,7 +3611,7 @@ DOCTEST_TEST_CASE("CollisionDetection Phase 2 - RayPacket Edge Cases and Functio
     DOCTEST_CHECK(capacity_packet.getMemoryUsage() == 0);
 }
 
-DOCTEST_TEST_CASE("CollisionDetection Phase 2 - RayStream Batch Management") {
+DOCTEST_TEST_CASE("CollisionDetection - RayStream Batch Management") {
     Context context;
     CollisionDetection collision(&context);
     collision.disableMessages();
@@ -3682,7 +3678,7 @@ DOCTEST_TEST_CASE("CollisionDetection Phase 2 - RayStream Batch Management") {
     DOCTEST_CHECK(large_stream.getMemoryUsage() == 0);
 }
 
-DOCTEST_TEST_CASE("CollisionDetection Phase 2 - Quantization Precision Validation") {
+DOCTEST_TEST_CASE("CollisionDetection - Quantization Precision Validation") {
     Context context;
     CollisionDetection collision(&context);
     collision.disableMessages();
@@ -3693,7 +3689,7 @@ DOCTEST_TEST_CASE("CollisionDetection Phase 2 - Quantization Precision Validatio
     auto sphere_uuids = context.addSphere(12, make_vec3(5, 5, 1), 1.0f);
     
     // Build BVH and get legacy baseline
-    collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::LEGACY_AOS);
+    collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_UNCOMPRESSED);
     collision.buildBVH();
     
     std::vector<CollisionDetection::RayQuery> precision_test_rays = {
@@ -3747,16 +3743,16 @@ DOCTEST_TEST_CASE("CollisionDetection Phase 2 - Quantization Precision Validatio
     // Test quantization memory benefits
     auto memory_stats = collision.getBVHMemoryUsage();
     DOCTEST_CHECK(memory_stats.quantized_reduction_percent > 40.0f); // Should achieve reasonable reduction
-    DOCTEST_CHECK(memory_stats.quantized_memory_bytes < memory_stats.legacy_memory_bytes);
+    DOCTEST_CHECK(memory_stats.quantized_memory_bytes < memory_stats.soa_memory_bytes);
 }
 
-DOCTEST_TEST_CASE("CollisionDetection Phase 2 - Error Handling and Edge Cases") {
+DOCTEST_TEST_CASE("CollisionDetection - Error Handling and Edge Cases") {
     Context context;
     CollisionDetection collision(&context);
     collision.disableMessages();
     
     // Test 1: Mode conversion with empty BVH should not crash
-    collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::LEGACY_AOS);
+    collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_UNCOMPRESSED);
     DOCTEST_CHECK_NOTHROW(collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_UNCOMPRESSED));
     DOCTEST_CHECK_NOTHROW(collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_QUANTIZED));
     
@@ -3767,7 +3763,6 @@ DOCTEST_TEST_CASE("CollisionDetection Phase 2 - Error Handling and Edge Cases") 
     
     // Test 3: Memory usage queries with empty structures
     auto empty_memory_stats = collision.getBVHMemoryUsage();
-    DOCTEST_CHECK(empty_memory_stats.legacy_memory_bytes == 0);
     DOCTEST_CHECK(empty_memory_stats.soa_memory_bytes == 0);
     DOCTEST_CHECK(empty_memory_stats.quantized_memory_bytes == 0);
     
@@ -3801,7 +3796,7 @@ DOCTEST_TEST_CASE("CollisionDetection Phase 2 - Error Handling and Edge Cases") 
     DOCTEST_CHECK(recovery_results[0].hit == true); // Should now hit the triangle
 }
 
-DOCTEST_TEST_CASE("CollisionDetection Phase 2 - Memory and Statistics Validation") {
+DOCTEST_TEST_CASE("CollisionDetection - Memory and Statistics Validation") {
     Context context;
     CollisionDetection collision(&context);
     collision.disableMessages();
@@ -3815,7 +3810,7 @@ DOCTEST_TEST_CASE("CollisionDetection Phase 2 - Memory and Statistics Validation
     auto sphere_uuids = context.addSphere(16, make_vec3(10, 10, 1), 1.5f);
     
     // Build BVH in all modes and collect statistics
-    collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::LEGACY_AOS);
+    collision.setBVHOptimizationMode(CollisionDetection::BVHOptimizationMode::SOA_UNCOMPRESSED);
     collision.buildBVH();
     auto legacy_memory = collision.getBVHMemoryUsage();
     
@@ -3826,18 +3821,14 @@ DOCTEST_TEST_CASE("CollisionDetection Phase 2 - Memory and Statistics Validation
     auto quantized_memory = collision.getBVHMemoryUsage();
     
     // Test memory usage statistics accuracy
-    DOCTEST_CHECK(legacy_memory.legacy_memory_bytes > 0);
     DOCTEST_CHECK(soa_memory.soa_memory_bytes > 0);
     DOCTEST_CHECK(quantized_memory.quantized_memory_bytes > 0);
     
-    // Validate memory hierarchy: quantized < soa <= legacy
-    DOCTEST_CHECK(quantized_memory.quantized_memory_bytes < legacy_memory.legacy_memory_bytes);
-    DOCTEST_CHECK(soa_memory.soa_memory_bytes <= legacy_memory.legacy_memory_bytes);
+    // Validate memory hierarchy: quantized < soa
+    DOCTEST_CHECK(quantized_memory.quantized_memory_bytes < soa_memory.soa_memory_bytes);
     
     // Validate reduction percentages
     DOCTEST_CHECK(quantized_memory.quantized_reduction_percent > 0.0f);
-    DOCTEST_CHECK(soa_memory.soa_reduction_percent >= 0.0f); // SoA might be similar size to legacy
-    DOCTEST_CHECK(quantized_memory.quantized_reduction_percent >= soa_memory.soa_reduction_percent);
     
     // Test ray tracing statistics collection
     std::vector<CollisionDetection::RayQuery> stat_test_rays;
