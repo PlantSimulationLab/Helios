@@ -904,6 +904,22 @@ private:
                     aabb_maxs_x.size() + aabb_maxs_y.size() + aabb_maxs_z.size()) * sizeof(uint16_t) +
                    (left_children.size() + right_children.size() + primitive_data.size()) * sizeof(uint32_t);
         }
+        
+        /**
+         * \brief Clear all quantized BVH data
+         */
+        void clear() {
+            aabb_mins_x.clear();
+            aabb_mins_y.clear();
+            aabb_mins_z.clear();
+            aabb_maxs_x.clear();
+            aabb_maxs_y.clear();
+            aabb_maxs_z.clear();
+            left_children.clear();
+            right_children.clear();
+            primitive_data.clear();
+            node_count = 0;
+        }
     };
 
     //! Vector of BVH nodes (linearized tree structure) - LEGACY
@@ -1331,6 +1347,7 @@ private:
     void convertBVHLayout(BVHOptimizationMode from_mode, BVHOptimizationMode to_mode);
     void convertSoAToQuantized();
     void convertQuantizedToSoA();
+    void ensureOptimizedBVH(); // Populate optimized BVH structures on demand
 
     /**
      * \brief Optimized ray casting implementations for different BVH layouts

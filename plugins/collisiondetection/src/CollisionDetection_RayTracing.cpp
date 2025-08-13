@@ -188,14 +188,24 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRays(const st
     RayTracingStats local_stats;
     local_stats.total_rays_cast = ray_queries.size();
 
+    // Smart CPU/GPU selection based on ray count and scene complexity
+    // Performance analysis shows CPU is faster for small batches (<1000 rays) due to
+    // GPU launch overhead, while GPU provides significant speedup for large batches
     const size_t GPU_BATCH_THRESHOLD = 1000; // Use GPU for batches larger than this
+    const size_t MIN_PRIMITIVES_FOR_GPU = 500; // Minimum primitive count for GPU benefits
 
 #ifdef HELIOS_CUDA_AVAILABLE
-    if (ray_queries.size() >= GPU_BATCH_THRESHOLD && d_bvh_nodes != nullptr && !primitive_indices.empty()) {
-        // Use GPU acceleration for large batches
+    bool use_gpu = gpu_acceleration_enabled && 
+                   ray_queries.size() >= GPU_BATCH_THRESHOLD && 
+                   d_bvh_nodes != nullptr && 
+                   !primitive_indices.empty() &&
+                   primitive_indices.size() >= MIN_PRIMITIVES_FOR_GPU;
+                   
+    if (use_gpu) {
+        // Use GPU acceleration for large batches with sufficient scene complexity
         castRaysGPU(ray_queries, results, local_stats);
     } else {
-        // Use CPU for small batches
+        // Use CPU for small batches or simple scenes
         castRaysCPU(ray_queries, results, local_stats);
     }
 #else
@@ -406,14 +416,15 @@ void CollisionDetection::setBVHOptimizationMode(BVHOptimizationMode mode) {
     BVHOptimizationMode old_mode = bvh_optimization_mode;
     bvh_optimization_mode = mode;
 
-    // Rebuild BVH in the new format if it already exists
-    if (!bvh_nodes.empty()) {
+    // Build optimized structures when mode changes
+    if (old_mode != mode && !bvh_nodes.empty()) {
         if (printmessages) {
             std::cout << "CollisionDetection: Converting BVH from mode " << static_cast<int>(old_mode)
                       << " to mode " << static_cast<int>(mode) << std::endl;
         }
 
-        convertBVHLayout(old_mode, mode);
+        // Build the optimized structures immediately
+        ensureOptimizedBVH();
 
         if (printmessages) {
             auto memory_stats = getBVHMemoryUsage();
@@ -478,6 +489,30 @@ void CollisionDetection::convertSoAToQuantized() {
 }
 
 
+void CollisionDetection::ensureOptimizedBVH() {
+    // Build SoA structure from legacy nodes if available and not already built
+    if (!bvh_nodes.empty() && bvh_nodes_soa.node_count == 0) {
+        bvh_nodes_soa.clear();
+        bvh_nodes_soa.reserve(bvh_nodes.size());
+        
+        for (const auto& node : bvh_nodes) {
+            bvh_nodes_soa.aabb_mins.push_back(node.aabb_min);
+            bvh_nodes_soa.aabb_maxs.push_back(node.aabb_max);
+            bvh_nodes_soa.left_children.push_back(node.left_child);
+            bvh_nodes_soa.right_children.push_back(node.right_child);
+            bvh_nodes_soa.primitive_starts.push_back(node.primitive_start);
+            bvh_nodes_soa.primitive_counts.push_back(node.primitive_count);
+            bvh_nodes_soa.is_leaf_flags.push_back(node.is_leaf ? 1 : 0);
+        }
+        bvh_nodes_soa.node_count = bvh_nodes.size();
+    }
+    
+    // Build quantized structure if not already built and we have SoA data
+    if (bvh_nodes_soa.node_count > 0 && bvh_nodes_quantized.node_count == 0) {
+        convertSoAToQuantized();
+    }
+}
+
 void CollisionDetection::convertQuantizedToSoA() {
     if (bvh_nodes_quantized.node_count == 0) return;
 
@@ -506,6 +541,9 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysOptimized
     if (ray_queries.empty()) {
         return {};
     }
+
+    // Ensure optimized BVH structures are available
+    ensureOptimizedBVH();
 
     RayTracingStats local_stats;
     std::vector<HitResult> results;
@@ -587,6 +625,9 @@ bool CollisionDetection::processRayStream(RayStream &ray_stream, RayTracingStats
 }
 
 CollisionDetection::MemoryUsageStats CollisionDetection::getBVHMemoryUsage() const {
+    // Ensure optimized structures are built before calculating memory usage
+    const_cast<CollisionDetection*>(this)->ensureOptimizedBVH();
+    
     MemoryUsageStats stats;
 
     // Calculate SoA memory usage

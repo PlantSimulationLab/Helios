@@ -397,6 +397,12 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     // Shrink to actual size used
     bvh_nodes.shrink_to_fit();
 
+    // Clear any stale optimized structures since we just rebuilt the BVH
+    // They will be rebuilt on demand by ensureOptimizedBVH() when needed
+    bvh_nodes_soa.clear();
+    bvh_nodes_soa.node_count = 0;
+    bvh_nodes_quantized.clear();
+
     // Transfer to GPU if acceleration is enabled
     if (gpu_acceleration_enabled) {
         transferBVHToGPU();
@@ -1860,117 +1866,31 @@ bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const 
     // Generate ray directions within the cone
     std::vector<vec3> ray_directions = sampleDirectionsInCone(apex, axis, half_angle, num_rays);
     
-    
     float nearest_distance = std::numeric_limits<float>::max();
     vec3 nearest_direction;
     bool found_obstacle = false;
     
-    // Cast rays and find nearest intersection
+    // Use modern batch ray-casting for better performance
+    std::vector<RayQuery> ray_queries;
+    ray_queries.reserve(ray_directions.size());
+    
     for (const vec3 &ray_dir : ray_directions) {
-        // Traverse BVH to find potential intersections along this ray
-        // First, create a ray segment AABB for broad phase
-        vec3 ray_end = apex + ray_dir * height;
-        vec3 ray_aabb_min = make_vec3(
-            std::min(apex.x, ray_end.x),
-            std::min(apex.y, ray_end.y),
-            std::min(apex.z, ray_end.z)
-        );
-        vec3 ray_aabb_max = make_vec3(
-            std::max(apex.x, ray_end.x),
-            std::max(apex.y, ray_end.y),
-            std::max(apex.z, ray_end.z)
-        );
+        ray_queries.emplace_back(apex, ray_dir, height, candidate_UUIDs);
+    }
+    
+    // Cast all rays in batch - automatically selects CPU/GPU based on count
+    RayTracingStats ray_stats;
+    std::vector<HitResult> hit_results = castRays(ray_queries, &ray_stats);
+    
+    // Find the nearest obstacle from all ray results
+    for (size_t i = 0; i < hit_results.size(); ++i) {
+        const HitResult &result = hit_results[i];
         
-        // Add small epsilon to avoid zero-sized AABBs
-        vec3 epsilon(1e-6f, 1e-6f, 1e-6f);
-        ray_aabb_min = ray_aabb_min - epsilon;
-        ray_aabb_max = ray_aabb_max + epsilon;
-        
-        // Traverse BVH to find primitives that might intersect this ray
-        std::vector<uint> potential_primitives;
-        std::stack<uint> node_stack;
-        node_stack.push(0); // Start from root
-        
-        if (false && printmessages) { // Disable verbose BVH debug for performance
-            std::cout << "Starting BVH traversal for ray " << ray_dir << " from " << apex << " (height: " << height << ")" << std::endl;
-            std::cout << "BVH has " << bvh_nodes.size() << " nodes" << std::endl;
+        if (result.hit && result.distance < nearest_distance) {
+            nearest_distance = result.distance;
+            nearest_direction = ray_directions[i];
+            found_obstacle = true;
         }
-        
-        while (!node_stack.empty()) {
-            uint node_index = node_stack.top();
-            node_stack.pop();
-            
-            if (node_index >= bvh_nodes.size()) {
-                if (printmessages) {
-                    std::cout << "WARNING: Invalid node index " << node_index << " >= " << bvh_nodes.size() << std::endl;
-                }
-                continue;
-            }
-            
-            const BVHNode &node = bvh_nodes[node_index];
-            
-            if (false && printmessages) { // Disable verbose node debug
-                std::cout << "Checking node " << node_index << " AABB: min=" << node.aabb_min << ", max=" << node.aabb_max << std::endl;
-            }
-            
-            // Check if ray AABB intersects node AABB
-            if (!aabbIntersect(ray_aabb_min, ray_aabb_max, node.aabb_min, node.aabb_max)) {
-                if (false && printmessages) { // Disable verbose AABB debug
-                    std::cout << "Ray AABB [" << ray_aabb_min << " to " << ray_aabb_max << "] does not intersect node AABB" << std::endl;
-                }
-                continue;
-            }
-            
-            // Also check if ray actually intersects the node's AABB (more precise test)
-            float t_min, t_max;
-            if (!rayAABBIntersect(apex, ray_dir, node.aabb_min, node.aabb_max, t_min, t_max)) {
-                continue;
-            }
-            
-            // Check if intersection is within cone height
-            if (t_min > height) {
-                continue;
-            }
-            
-            if (node.is_leaf) {
-                // Add primitives from this leaf node
-                for (uint i = 0; i < node.primitive_count; ++i) {
-                    uint prim_idx = primitive_indices[node.primitive_start + i];
-                    if (candidate_set.find(prim_idx) != candidate_set.end()) {
-                        potential_primitives.push_back(prim_idx);
-                    }
-                }
-            } else {
-                // Add child nodes to stack
-                if (node.left_child != 0xFFFFFFFF) {
-                    node_stack.push(node.left_child);
-                }
-                if (node.right_child != 0xFFFFFFFF) {
-                    node_stack.push(node.right_child);
-                }
-            }
-        }
-        
-        // Test ray against each potential primitive
-        
-        for (uint prim_uuid : potential_primitives) {
-            // Check if this primitive is in our candidate set
-            bool is_candidate = candidate_set.find(prim_uuid) != candidate_set.end();
-            
-            
-            if (is_candidate) {
-                float intersection_distance;
-                if (rayPrimitiveIntersection(apex, ray_dir, prim_uuid, intersection_distance)) {
-                    // Check if intersection is within cone height
-                    if (intersection_distance <= height && intersection_distance < nearest_distance) {
-                        nearest_distance = intersection_distance;
-                        nearest_direction = ray_dir;
-                        found_obstacle = true;
-                    }
-                }
-            }
-        }
-        
     }
     
     if (found_obstacle) {
@@ -2183,9 +2103,10 @@ CollisionDetection::OptimalPathResult CollisionDetection::findOptimalConePath(co
     // Find optimal direction toward highest-scoring gap
     result.direction = findOptimalGapDirection(detected_gaps, centralAxis);
 
-    // Count collisions along optimal direction for reporting
+    // Count collisions along optimal direction for reporting using modern ray-tracing
     float max_distance = (height > 0.0f) ? height : -1.0f;
-    result.collisionCount = countRayIntersections(apex, result.direction, max_distance);
+    HitResult direction_hit = castRay(apex, result.direction, max_distance);
+    result.collisionCount = direction_hit.hit ? 1 : 0;
 
     // Calculate confidence based on gap quality
     if (!detected_gaps.empty()) {
@@ -2210,28 +2131,37 @@ std::vector<CollisionDetection::Gap> CollisionDetection::detectGapsInCone(const 
         return gaps;
     }
 
-    // Cast rays and build ray sample data
+    // Build ray sample data using modern ray-tracing API
     std::vector<RaySample> ray_samples;
     ray_samples.reserve(sample_directions.size());
 
     float max_distance = (height > 0.0f) ? height : -1.0f;
 
-    for (const vec3 &direction: sample_directions) {
+    // Use batch ray casting for better performance
+    std::vector<RayQuery> ray_queries;
+    ray_queries.reserve(sample_directions.size());
+    
+    for (const vec3 &direction : sample_directions) {
+        ray_queries.emplace_back(apex, direction, max_distance);
+    }
+    
+    // Cast all rays in batch - automatically selects CPU/GPU based on count
+    RayTracingStats ray_stats;
+    std::vector<HitResult> hit_results = castRays(ray_queries, &ray_stats);
+    
+    // Process results to build ray samples
+    for (size_t i = 0; i < hit_results.size(); ++i) {
         RaySample sample;
-        sample.direction = direction;
-
-        // Find distance to first collision
-        int collision_count = countRayIntersections(apex, direction, max_distance);
-
-        if (collision_count == 0) {
-            sample.distance = (max_distance > 0.0f) ? max_distance : 1000.0f; // Large value for "infinite"
-            sample.is_free = true;
-        } else {
-            // Calculate actual distance by doing detailed ray casting
-            sample.distance = 0.0f; // For now, just mark as blocked
+        sample.direction = sample_directions[i];
+        
+        if (hit_results[i].hit) {
+            sample.distance = hit_results[i].distance;
             sample.is_free = false;
+        } else {
+            sample.distance = (max_distance > 0.0f) ? max_distance : 1000.0f;
+            sample.is_free = true;
         }
-
+        
         ray_samples.push_back(sample);
     }
 
