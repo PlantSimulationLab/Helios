@@ -2194,13 +2194,7 @@ void ProjectBuilder::visualize() {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Visualization")) {
-                // ImGui::PushFont(font_awesome);
-                // io.FontDefault = font_awesome;
-                if (ImGui::MenuItem("! REFRESH LIST !")) {
-                    refreshVisualizationTypes();
-                }
-                // ImGui::PopFont();
-                // io.FontDefault = arial;
+                refreshVisualizationTypes();
                 if (ImGui::MenuItem("RGB (Default)") && visualization_type != "RGB") {
                     visualization_type = "RGB";
                     switch_visualization = true;
@@ -6189,24 +6183,14 @@ void ProjectBuilder::deleteGround() {
 void ProjectBuilder::refreshVisualizationTypes() {
     // primitive
     visualization_types_primitive.clear();
-    std::vector<uint> allUUIDs = context->getAllUUIDs();
-    for (auto &UUID: allUUIDs) {
-        std::vector<std::string> primitiveData = context->listPrimitiveData(UUID);
-        for (auto &data: primitiveData) {
-            visualization_types_primitive.insert(data);
-            primitive_data_types[data] = context->getPrimitiveDataType(UUID, data.c_str());
-        }
+    for (auto &data: context->listAllPrimitiveDataLabels()) {
+        visualization_types_primitive.insert(data);
     }
 
     // object
     visualization_types_object.clear();
-    std::vector<uint> allobjIDs = context->getAllObjectIDs();
-    for (auto &objID: allobjIDs) {
-        std::vector<std::string> objData = context->listObjectData(objID);
-        for (auto &data: objData) {
-            visualization_types_object.insert(data);
-            object_data_types[data] = context->getObjectDataType(objID, data.c_str());
-        }
+    for (auto &data: context->listAllObjectDataLabels()) {
+        visualization_types_object.insert(data);
     }
 }
 
