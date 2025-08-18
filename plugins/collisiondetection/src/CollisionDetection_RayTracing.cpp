@@ -53,6 +53,8 @@ void launchBVHTraversal(void *h_nodes, int node_count, unsigned int *h_primitive
 void launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x, int grid_divisions_y, int grid_divisions_z, int *h_voxel_ray_counts, float *h_voxel_path_lengths, int *h_voxel_transmitted);
 // Warp-efficient GPU kernels
 void launchWarpEfficientBVH(void *h_bvh_soa_gpu, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_ray_origins, float *h_ray_directions, float *h_ray_max_distances, int num_rays, unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_ray);
+// High-performance ray-triangle intersection kernel
+void launchRayPrimitiveIntersection(void *h_bvh_nodes, int node_count, unsigned int *h_primitive_indices, int primitive_count, int *h_primitive_types, float3 *h_primitive_vertices, unsigned int *h_vertex_offsets, int total_vertex_count, float *h_ray_origins, float *h_ray_directions, float *h_ray_max_distances, int num_rays, float *h_hit_distances, unsigned int *h_hit_primitive_ids, unsigned int *h_hit_counts, bool find_closest_hit);
 }
 
 // Helper function to convert helios::vec3 to float3
@@ -77,7 +79,24 @@ CollisionDetection::HitResult CollisionDetection::castRay(const vec3 &origin, co
     }
     ray_direction = ray_direction / ray_direction.magnitude();
 
-    // Set up search parameters
+    // Ensure BVH is current before ray casting (handles automatic rebuilds)
+    const_cast<CollisionDetection*>(this)->ensureBVHCurrent();
+
+    // CRITICAL FIX: Use BVH traversal when available for performance
+    // This fixes the 10x+ performance regression by replacing brute-force primitive testing
+    if (!bvh_nodes.empty()) {
+        // Build primitive cache for thread-safe access if not already built
+        if (primitive_cache.empty()) {
+            buildPrimitiveCache();
+        }
+        
+        // Use BVH traversal for both filtered and unfiltered queries - BVH supports UUID filtering
+        RayQuery query(origin, ray_direction, max_distance, target_UUIDs);
+        return castRayBVHTraversal(query);
+    }
+
+    // FALLBACK: Brute-force primitive testing (only when no BVH available or target UUIDs specified)
+    // This is the slow path that was causing the performance regression
     std::vector<uint> search_primitives;
     if (target_UUIDs.empty()) {
         // Use cached primitives if available (thread-safe), otherwise use context (thread-unsafe)
@@ -191,8 +210,9 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRays(const st
     // Smart CPU/GPU selection based on ray count and scene complexity
     // Performance analysis shows CPU is faster for small batches (<1000 rays) due to
     // GPU launch overhead, while GPU provides significant speedup for large batches
-    const size_t GPU_BATCH_THRESHOLD = 1000; // Use GPU for batches larger than this
-    const size_t MIN_PRIMITIVES_FOR_GPU = 500; // Minimum primitive count for GPU benefits
+    // TEMPORARY: Force CPU for LiDAR until GPU normal calculation is implemented
+    const size_t GPU_BATCH_THRESHOLD = 1000000; // Use GPU for batches larger than this (effectively disabled)
+    const size_t MIN_PRIMITIVES_FOR_GPU = 500; // Keep CPU path for stability
 
 #ifdef HELIOS_CUDA_AVAILABLE
     bool use_gpu = gpu_acceleration_enabled && 
@@ -209,7 +229,7 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRays(const st
         castRaysCPU(ray_queries, results, local_stats);
     }
 #else
-    // CPU-only fallback
+    // Use CPU implementation when GPU not available
     castRaysCPU(ray_queries, results, local_stats);
 #endif
 
@@ -222,119 +242,14 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRays(const st
 }
 
 void CollisionDetection::castRaysCPU(const std::vector<RayQuery> &ray_queries, std::vector<HitResult> &results, RayTracingStats &stats) {
-    const size_t num_rays = ray_queries.size();
-
-#ifdef _OPENMP
-    // Use OpenMP for parallel processing with thread-safe primitive cache
-    const size_t OPENMP_THRESHOLD = 100; // Use OpenMP for batches larger than this
-
-    if (num_rays >= OPENMP_THRESHOLD) {
-        // Build primitive cache for thread-safe access BEFORE parallel region
-        buildPrimitiveCache();
-
-        // Pre-allocate results vector for parallel access
-        results.resize(num_rays);
-
-        // Thread-local statistics for reduction
-        size_t total_hits = 0;
-        double total_distance = 0.0;
-
-#pragma omp parallel for reduction(+:total_hits,total_distance) schedule(dynamic, 16)
-        for (size_t i = 0; i < num_rays; i++) {
-            HitResult result = castRay(ray_queries[i]);
-            results[i] = result;
-
-            // Update thread-local statistics
-            if (result.hit) {
-                total_hits++;
-                total_distance += result.distance;
-            }
-        }
-
-        // Update global statistics
-        stats.total_hits = total_hits;
-        stats.average_ray_distance = (total_hits > 0) ? (total_distance / total_hits) : 0.0;
-        return;
-    }
-#endif
-
-    // Fallback to sequential processing - use original push_back approach
-    for (const auto &query : ray_queries) {
-        HitResult result = castRay(query);
-        results.push_back(result);
-
-        // Update statistics
-        if (result.hit) {
-            stats.total_hits++;
-            stats.average_ray_distance += result.distance;
-        }
-    }
-
-    // Finalize statistics
-    if (stats.total_hits > 0) {
-        stats.average_ray_distance /= stats.total_hits;
-    }
+    // Use optimized batch processing - fail explicitly if there are issues
+    results = castRaysOptimized(ray_queries, &stats);
 }
 
 #ifdef HELIOS_CUDA_AVAILABLE
 void CollisionDetection::castRaysGPU(const std::vector<RayQuery> &ray_queries, std::vector<HitResult> &results, RayTracingStats &stats) {
-    const size_t num_rays = ray_queries.size();
-
-    // For very large batches, use parallel CPU processing to avoid GPU memory issues
-    // This provides better performance than sequential processing while avoiding CUDA complexity
-    const size_t PARALLEL_BATCH_SIZE = 1000;
-
-    if (num_rays >= PARALLEL_BATCH_SIZE) {
-        // Process rays in parallel batches using CPU threading
-        const size_t num_threads = std::min(size_t(8), num_rays / 100); // Up to 8 threads
-        const size_t rays_per_thread = num_rays / num_threads;
-
-        std::vector<std::thread> threads;
-        std::vector<std::vector<HitResult>> thread_results(num_threads);
-        std::vector<RayTracingStats> thread_stats(num_threads);
-
-        for (size_t t = 0; t < num_threads; t++) {
-            size_t start_idx = t * rays_per_thread;
-            size_t end_idx = (t == num_threads - 1) ? num_rays : (t + 1) * rays_per_thread;
-
-            threads.emplace_back([this, &ray_queries, &thread_results, &thread_stats, t, start_idx, end_idx]() {
-                for (size_t i = start_idx; i < end_idx; i++) {
-                    HitResult hit_result = castRay(ray_queries[i]);
-                    thread_results[t].push_back(hit_result);
-
-                    if (hit_result.hit) {
-                        thread_stats[t].total_hits++;
-                        thread_stats[t].average_ray_distance += hit_result.distance;
-                    }
-                }
-
-                if (thread_stats[t].total_hits > 0) {
-                    thread_stats[t].average_ray_distance /= thread_stats[t].total_hits;
-                }
-            });
-        }
-
-        // Wait for all threads to complete
-        for (auto& thread : threads) {
-            thread.join();
-        }
-
-        // Combine results
-        for (size_t t = 0; t < num_threads; t++) {
-            results.insert(results.end(), thread_results[t].begin(), thread_results[t].end());
-            stats.total_hits += thread_stats[t].total_hits;
-            if (thread_stats[t].total_hits > 0) {
-                stats.average_ray_distance += thread_stats[t].average_ray_distance * thread_stats[t].total_hits;
-            }
-        }
-
-        if (stats.total_hits > 0) {
-            stats.average_ray_distance /= stats.total_hits;
-        }
-    } else {
-        // For smaller batches, use existing CPU method
-        castRaysCPU(ray_queries, results, stats);
-    }
+    // Use the high-performance GPU ray-triangle intersection implementation
+    results = castRaysGPU(ray_queries, stats);
 }
 #endif
 
@@ -440,110 +355,30 @@ CollisionDetection::BVHOptimizationMode CollisionDetection::getBVHOptimizationMo
 }
 
 void CollisionDetection::convertBVHLayout(BVHOptimizationMode from_mode, BVHOptimizationMode to_mode) {
-    if (from_mode == to_mode) return;
-
-    // Convert between SoA formats
-    if (from_mode == BVHOptimizationMode::SOA_UNCOMPRESSED) {
-        if (to_mode == BVHOptimizationMode::SOA_QUANTIZED) {
-            convertSoAToQuantized();
-        }
-    }
-    else if (from_mode == BVHOptimizationMode::SOA_QUANTIZED) {
-        if (to_mode == BVHOptimizationMode::SOA_UNCOMPRESSED) {
-            convertQuantizedToSoA();
-        }
-    }
+    // With only SOA_UNCOMPRESSED mode remaining, no conversion needed
+    return;
 }
 
 
 
 
-void CollisionDetection::convertSoAToQuantized() {
-    if (bvh_nodes_soa.node_count == 0) return;
-
-    // Calculate scene bounding box from SoA data
-    vec3 scene_min = bvh_nodes_soa.aabb_mins[0];
-    vec3 scene_max = bvh_nodes_soa.aabb_maxs[0];
-
-    for (size_t i = 1; i < bvh_nodes_soa.node_count; ++i) {
-        scene_min.x = std::min(scene_min.x, bvh_nodes_soa.aabb_mins[i].x);
-        scene_min.y = std::min(scene_min.y, bvh_nodes_soa.aabb_mins[i].y);
-        scene_min.z = std::min(scene_min.z, bvh_nodes_soa.aabb_mins[i].z);
-
-        scene_max.x = std::max(scene_max.x, bvh_nodes_soa.aabb_maxs[i].x);
-        scene_max.y = std::max(scene_max.y, bvh_nodes_soa.aabb_maxs[i].y);
-        scene_max.z = std::max(scene_max.z, bvh_nodes_soa.aabb_maxs[i].z);
-    }
-
-    bvh_nodes_quantized = QuantizedBVHNodes();
-    bvh_nodes_quantized.initializeQuantization(scene_min, scene_max);
-
-    for (size_t i = 0; i < bvh_nodes_soa.node_count; ++i) {
-        bvh_nodes_quantized.addNode(
-                bvh_nodes_soa.aabb_mins[i], bvh_nodes_soa.aabb_maxs[i],
-                bvh_nodes_soa.left_children[i], bvh_nodes_soa.right_children[i],
-                bvh_nodes_soa.primitive_starts[i], bvh_nodes_soa.primitive_counts[i],
-                bvh_nodes_soa.is_leaf_flags[i] != 0
-        );
-    }
-}
 
 
-void CollisionDetection::ensureOptimizedBVH() {
-    // Build SoA structure from legacy nodes if available and not already built
-    if (!bvh_nodes.empty() && bvh_nodes_soa.node_count == 0) {
-        bvh_nodes_soa.clear();
-        bvh_nodes_soa.reserve(bvh_nodes.size());
-        
-        for (const auto& node : bvh_nodes) {
-            bvh_nodes_soa.aabb_mins.push_back(node.aabb_min);
-            bvh_nodes_soa.aabb_maxs.push_back(node.aabb_max);
-            bvh_nodes_soa.left_children.push_back(node.left_child);
-            bvh_nodes_soa.right_children.push_back(node.right_child);
-            bvh_nodes_soa.primitive_starts.push_back(node.primitive_start);
-            bvh_nodes_soa.primitive_counts.push_back(node.primitive_count);
-            bvh_nodes_soa.is_leaf_flags.push_back(node.is_leaf ? 1 : 0);
-        }
-        bvh_nodes_soa.node_count = bvh_nodes.size();
-    }
-    
-    // Build quantized structure if not already built and we have SoA data
-    if (bvh_nodes_soa.node_count > 0 && bvh_nodes_quantized.node_count == 0) {
-        convertSoAToQuantized();
-    }
-}
 
-void CollisionDetection::convertQuantizedToSoA() {
-    if (bvh_nodes_quantized.node_count == 0) return;
-
-    bvh_nodes_soa.clear();
-    bvh_nodes_soa.reserve(bvh_nodes_quantized.node_count);
-
-    for (size_t i = 0; i < bvh_nodes_quantized.node_count; ++i) {
-        vec3 aabb_min, aabb_max;
-        bvh_nodes_quantized.getAABB(i, aabb_min, aabb_max);
-
-        bvh_nodes_soa.aabb_mins.push_back(aabb_min);
-        bvh_nodes_soa.aabb_maxs.push_back(aabb_max);
-        bvh_nodes_soa.left_children.push_back(bvh_nodes_quantized.left_children[i]);
-        bvh_nodes_soa.right_children.push_back(bvh_nodes_quantized.right_children[i]);
-
-        // Unpack primitive data
-        uint32_t packed = bvh_nodes_quantized.primitive_data[i];
-        bvh_nodes_soa.primitive_starts.push_back((packed >> 1) & 0x7FFFFFFF);
-        bvh_nodes_soa.primitive_counts.push_back((packed >> 16) & 0x7FFF);
-        bvh_nodes_soa.is_leaf_flags.push_back((packed & 1) ? 1 : 0);
-        bvh_nodes_soa.node_count++;
-    }
-}
 
 std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysOptimized(const std::vector<RayQuery> &ray_queries, RayTracingStats *stats) {
     if (ray_queries.empty()) {
         return {};
     }
 
-    // Ensure optimized BVH structures are available
+    // Ensure BVH is current and optimized structures are available
+    ensureBVHCurrent();
     ensureOptimizedBVH();
+    
+    // Build primitive cache for high-performance thread-safe primitive intersection
+    if (primitive_cache.empty()) {
+        buildPrimitiveCache();
+    }
 
     RayTracingStats local_stats;
     std::vector<HitResult> results;
@@ -555,10 +390,6 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysOptimized
     switch (bvh_optimization_mode) {
         case BVHOptimizationMode::SOA_UNCOMPRESSED:
             results = castRaysSoA(ray_queries, local_stats);
-            break;
-
-        case BVHOptimizationMode::SOA_QUANTIZED:
-            results = castRaysQuantized(ray_queries, local_stats);
             break;
     }
 
@@ -633,195 +464,65 @@ CollisionDetection::MemoryUsageStats CollisionDetection::getBVHMemoryUsage() con
     // Calculate SoA memory usage
     stats.soa_memory_bytes = bvh_nodes_soa.getMemoryUsage();
 
-    // Calculate quantized memory usage  
-    stats.quantized_memory_bytes = bvh_nodes_quantized.getMemoryUsage();
-
-    // Calculate reduction percentage (quantized vs SoA)
-    if (stats.soa_memory_bytes > 0) {
-        stats.quantized_reduction_percent =
-                ((float)(stats.soa_memory_bytes - stats.quantized_memory_bytes) / stats.soa_memory_bytes) * 100.0f;
-    }
+    // With quantized mode removed, set quantized values to 0
+    stats.quantized_memory_bytes = 0;
+    stats.quantized_reduction_percent = 0.0f;
 
     return stats;
 }
 
 std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysSoA(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats) {
+    std::vector<HitResult> results;
+    results.reserve(ray_queries.size());
+    
     if (bvh_nodes_soa.node_count == 0) {
-        // Fall back to legacy method if SoA not built
-        return castRays(ray_queries, &stats);
-    }
-
-    const size_t num_rays = ray_queries.size();
-    std::vector<HitResult> results;
-    stats.total_rays_cast = num_rays;
-
-#ifdef _OPENMP
-    // Use OpenMP for parallel SoA ray traversal with thread-safe primitive cache
-    const size_t OPENMP_THRESHOLD = 100;
-
-    // Always build primitive cache for SoA mode to ensure thread safety
-    buildPrimitiveCache();
-
-    // Check if SIMD optimization should be used for large batches
-    const size_t SIMD_THRESHOLD = 32; // Use SIMD for batches of 32+ rays
-    bool use_simd = (num_rays >= SIMD_THRESHOLD);
-
-    if (use_simd && num_rays >= OPENMP_THRESHOLD) {
-        // Combined OpenMP + SIMD optimization for large batches
-        results.resize(num_rays);
-        size_t total_hits = 0;
-        double total_distance = 0.0;
-
-#pragma omp parallel for reduction(+:total_hits,total_distance) schedule(dynamic, 32)
-        for (size_t batch_start = 0; batch_start < num_rays; batch_start += 8) {
-            size_t batch_size = std::min(size_t(8), num_rays - batch_start);
-
-            // Prepare ray data for SIMD processing
-            alignas(32) vec3 ray_origins[8];
-            alignas(32) vec3 ray_directions[8];
-            HitResult batch_results[8];
-
-            for (size_t i = 0; i < batch_size; ++i) {
-                ray_origins[i] = ray_queries[batch_start + i].origin;
-                ray_directions[i] = ray_queries[batch_start + i].direction;
-                if (ray_directions[i].magnitude() > 1e-8f) {
-                    ray_directions[i] = ray_directions[i] / ray_directions[i].magnitude();
-                }
-            }
-
-            // Use SIMD-optimized BVH traversal
-            traverseBVHSIMD(ray_origins, ray_directions, batch_size, batch_results);
-
-            // Store results and update statistics
-            for (size_t i = 0; i < batch_size; ++i) {
-                results[batch_start + i] = batch_results[i];
-                if (batch_results[i].hit) {
-                    total_hits++;
-                    total_distance += batch_results[i].distance;
-                }
-            }
-        }
-
-        stats.total_hits = total_hits;
-        stats.average_ray_distance = (total_hits > 0) ? (total_distance / total_hits) : 0.0;
+        // Return empty results if no SoA BVH
+        results.resize(ray_queries.size());
         return results;
-    } else if (num_rays >= OPENMP_THRESHOLD) {
-
-        results.resize(num_rays); // Pre-allocate for parallel access
-        size_t total_hits = 0;
-        double total_distance = 0.0;
-
-#pragma omp parallel for reduction(+:total_hits,total_distance) schedule(dynamic, 16)
-        for (size_t i = 0; i < num_rays; i++) {
-            RayTracingStats thread_stats = {}; // Thread-local stats
-            HitResult result = castRaySoATraversal(ray_queries[i], thread_stats);
+    }
+    
+    stats.total_rays_cast = ray_queries.size();
+    stats.total_hits = 0;
+    stats.average_ray_distance = 0.0;
+    
+    // Resize results vector for parallel access
+    results.resize(ray_queries.size());
+    
+    // OpenMP parallel ray processing for high-performance SoA traversal
+    #pragma omp parallel
+    {
+        RayTracingStats local_stats = {}; // Thread-local statistics
+        
+        #pragma omp for schedule(guided, 32)
+        for (size_t i = 0; i < ray_queries.size(); ++i) {
+            HitResult result = castRaySoATraversal(ray_queries[i], local_stats);
             results[i] = result;
-
+            
             if (result.hit) {
-                total_hits++;
-                total_distance += result.distance;
+                local_stats.total_hits++;
+                local_stats.average_ray_distance += result.distance;
             }
         }
-
-        stats.total_hits = total_hits;
-        stats.average_ray_distance = (total_hits > 0) ? (total_distance / total_hits) : 0.0;
-        return results;
+        
+        // Combine thread-local statistics atomically
+        #pragma omp atomic
+        stats.total_hits += local_stats.total_hits;
+        
+        #pragma omp atomic
+        stats.average_ray_distance += local_stats.average_ray_distance;
+        
+        #pragma omp atomic
+        stats.bvh_nodes_visited += local_stats.bvh_nodes_visited;
     }
-#endif
-
-    // Sequential fallback - use push_back approach
-    results.reserve(num_rays);
-    for (const auto& query : ray_queries) {
-        HitResult result = castRaySoATraversal(query, stats);
-        results.push_back(result);
-
-        if (result.hit) {
-            stats.total_hits++;
-        }
-    }
-
-    // Calculate average distance for successful hits
+    
     if (stats.total_hits > 0) {
-        float total_distance = 0.0f;
-        for (const auto& result : results) {
-            if (result.hit) {
-                total_distance += result.distance;
-            }
-        }
-        stats.average_ray_distance = total_distance / stats.total_hits;
+        stats.average_ray_distance /= stats.total_hits;
     }
-
+    
     return results;
 }
 
-std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysQuantized(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats) {
-    if (bvh_nodes_quantized.node_count == 0) {
-        // Fall back to legacy method if quantized BVH not built
-        return castRays(ray_queries, &stats);
-    }
-
-    const size_t num_rays = ray_queries.size();
-    std::vector<HitResult> results;
-    stats.total_rays_cast = num_rays;
-
-#ifdef _OPENMP
-    // Use OpenMP for parallel quantized ray traversal with thread-safe primitive cache
-    const size_t OPENMP_THRESHOLD = 100;
-
-    // Always build primitive cache for Quantized mode to ensure thread safety
-    buildPrimitiveCache();
-
-    if (num_rays >= OPENMP_THRESHOLD) {
-
-        results.resize(num_rays); // Pre-allocate for parallel access
-        size_t total_hits = 0;
-        double total_distance = 0.0;
-
-#pragma omp parallel for reduction(+:total_hits,total_distance) schedule(dynamic, 16)
-        for (size_t i = 0; i < num_rays; i++) {
-            RayTracingStats thread_stats = {}; // Thread-local stats
-            HitResult result = castRayQuantizedTraversal(ray_queries[i], thread_stats);
-            results[i] = result;
-
-            if (result.hit) {
-                total_hits++;
-                total_distance += result.distance;
-            }
-        }
-
-        stats.total_hits = total_hits;
-        stats.average_ray_distance = (total_hits > 0) ? (total_distance / total_hits) : 0.0;
-        return results;
-    }
-#endif
-
-    // Sequential fallback - use push_back approach
-    results.reserve(num_rays);
-    for (const auto& query : ray_queries) {
-        HitResult result = castRayQuantizedTraversal(query, stats);
-        results.push_back(result);
-
-        if (result.hit) {
-            stats.total_hits++;
-        }
-    }
-
-    // Calculate average distance for successful hits
-    if (stats.total_hits > 0) {
-        float total_distance = 0.0f;
-        for (const auto& result : results) {
-            if (result.hit) {
-                total_distance += result.distance;
-            }
-        }
-        stats.average_ray_distance = total_distance / stats.total_hits;
-    }
-
-    return results;
-}
-// ================================================================
-// PHASE 2 OPTIMIZATION: SoA and Quantized BVH Traversal Methods
-// ================================================================
+// Optimized BVH traversal methods using Structure-of-Arrays layout
 
 #include "CollisionDetection.h"
 
@@ -840,12 +541,38 @@ CollisionDetection::HitResult CollisionDetection::castRaySoATraversal(const RayQ
 
     float closest_distance = (query.max_distance > 0) ? query.max_distance : std::numeric_limits<float>::max();
 
+    // Safety limit to prevent infinite loops
+    const size_t MAX_TRAVERSAL_STEPS = 10000000; // 10M steps should be more than enough
+    size_t traversal_steps = 0;
+    
     while (!node_stack.empty()) {
+        // Safety check to prevent infinite loops
+        if (++traversal_steps > MAX_TRAVERSAL_STEPS) {
+            if (printmessages) {
+                std::cout << "WARNING: BVH traversal exceeded maximum steps, terminating ray" << std::endl;
+            }
+            break;
+        }
+        
         size_t node_idx = node_stack.top();
         node_stack.pop();
         stats.bvh_nodes_visited++;
 
-        // OPTIMIZATION: AABB intersection test using SoA layout - only loads required data
+        // Bounds check for node index
+        if (node_idx >= bvh_nodes_soa.node_count) {
+            if (printmessages) {
+                std::cout << "WARNING: Invalid node index " << node_idx << " >= " << bvh_nodes_soa.node_count << std::endl;
+            }
+            continue;
+        }
+
+        // Prefetch data for better cache performance
+        if (node_idx + 1 < bvh_nodes_soa.node_count) {
+            __builtin_prefetch(&bvh_nodes_soa.aabb_mins[node_idx + 1], 0, 1);
+            __builtin_prefetch(&bvh_nodes_soa.aabb_maxs[node_idx + 1], 0, 1);
+        }
+
+        // AABB intersection test using SoA layout
         if (!aabbIntersectSoA(query.origin, query.direction, closest_distance, node_idx)) {
             continue;
         }
@@ -871,11 +598,11 @@ CollisionDetection::HitResult CollisionDetection::castRaySoATraversal(const RayQ
                     if (!found) continue;
                 }
 
-                // Perform primitive intersection test
-                HitResult primitive_hit = intersectPrimitive(query, primitive_id);
-                if (primitive_hit.hit && primitive_hit.distance < closest_distance) {
-                    result = primitive_hit;
-                    closest_distance = primitive_hit.distance;
+                // Use high-performance cached primitive intersection
+                HitResult primitive_result = intersectPrimitiveThreadSafe(query.origin, query.direction, primitive_id, closest_distance);
+                if (primitive_result.hit && primitive_result.distance < closest_distance) {
+                    result = primitive_result;
+                    closest_distance = primitive_result.distance;
                 }
             }
         } else {
@@ -883,10 +610,10 @@ CollisionDetection::HitResult CollisionDetection::castRaySoATraversal(const RayQ
             uint32_t left_child = bvh_nodes_soa.left_children[node_idx];
             uint32_t right_child = bvh_nodes_soa.right_children[node_idx];
 
-            if (left_child != 0xFFFFFFFF) {
+            if (left_child != 0xFFFFFFFF && left_child < bvh_nodes_soa.node_count) {
                 node_stack.push(left_child);
             }
-            if (right_child != 0xFFFFFFFF) {
+            if (right_child != 0xFFFFFFFF && right_child < bvh_nodes_soa.node_count) {
                 node_stack.push(right_child);
             }
         }
@@ -895,41 +622,114 @@ CollisionDetection::HitResult CollisionDetection::castRaySoATraversal(const RayQ
     return result;
 }
 
-CollisionDetection::HitResult CollisionDetection::castRayQuantizedTraversal(const RayQuery &query, RayTracingStats &stats) {
+
+bool CollisionDetection::aabbIntersectSoA(const helios::vec3& ray_origin, const helios::vec3& ray_direction, float max_distance, size_t node_index) const {
+    // Direct access to SoA arrays for optimal memory usage
+    const vec3& aabb_min = bvh_nodes_soa.aabb_mins[node_index];
+    const vec3& aabb_max = bvh_nodes_soa.aabb_maxs[node_index];
+
+#ifdef __SSE4_1__
+    // SIMD-optimized ray-AABB intersection for better performance
+    __m128 ray_orig = _mm_set_ps(0.0f, ray_origin.z, ray_origin.y, ray_origin.x);
+    __m128 ray_dir = _mm_set_ps(0.0f, ray_direction.z, ray_direction.y, ray_direction.x);
+    __m128 aabb_min_vec = _mm_set_ps(0.0f, aabb_min.z, aabb_min.y, aabb_min.x);
+    __m128 aabb_max_vec = _mm_set_ps(0.0f, aabb_max.z, aabb_max.y, aabb_max.x);
+    
+    // Compute inverse ray direction
+    __m128 inv_dir = _mm_div_ps(_mm_set1_ps(1.0f), ray_dir);
+    
+    // Compute t1 and t2 for all axes
+    __m128 t1 = _mm_mul_ps(_mm_sub_ps(aabb_min_vec, ray_orig), inv_dir);
+    __m128 t2 = _mm_mul_ps(_mm_sub_ps(aabb_max_vec, ray_orig), inv_dir);
+    
+    // Get min and max for each axis
+    __m128 tmin = _mm_min_ps(t1, t2);
+    __m128 tmax = _mm_max_ps(t1, t2);
+    
+    // Extract components
+    float tmin_vals[4], tmax_vals[4];
+    _mm_store_ps(tmin_vals, tmin);
+    _mm_store_ps(tmax_vals, tmax);
+    
+    float t_near = std::max({tmin_vals[0], tmin_vals[1], tmin_vals[2], 0.0f});
+    float t_far = std::min({tmax_vals[0], tmax_vals[1], tmax_vals[2], max_distance});
+    
+    return t_near <= t_far;
+#else
+    // Fallback scalar implementation
+    float inv_dir_x = 1.0f / ray_direction.x;
+    float inv_dir_y = 1.0f / ray_direction.y;
+    float inv_dir_z = 1.0f / ray_direction.z;
+
+    float t1_x = (aabb_min.x - ray_origin.x) * inv_dir_x;
+    float t2_x = (aabb_max.x - ray_origin.x) * inv_dir_x;
+    float t1_y = (aabb_min.y - ray_origin.y) * inv_dir_y;
+    float t2_y = (aabb_max.y - ray_origin.y) * inv_dir_y;
+    float t1_z = (aabb_min.z - ray_origin.z) * inv_dir_z;
+    float t2_z = (aabb_max.z - ray_origin.z) * inv_dir_z;
+
+    float tmin_x = std::min(t1_x, t2_x);
+    float tmax_x = std::max(t1_x, t2_x);
+    float tmin_y = std::min(t1_y, t2_y);
+    float tmax_y = std::max(t1_y, t2_y);
+    float tmin_z = std::min(t1_z, t2_z);
+    float tmax_z = std::max(t1_z, t2_z);
+
+    float t_near = std::max({tmin_x, tmin_y, tmin_z, 0.0f});
+    float t_far = std::min({tmax_x, tmax_y, tmax_z, max_distance});
+
+    return t_near <= t_far;
+#endif
+}
+
+
+// Basic BVH traversal using standard node structure
+CollisionDetection::HitResult CollisionDetection::castRayBVHTraversal(const RayQuery &query) {
     HitResult result;
-
-    if (bvh_nodes_quantized.node_count == 0) {
-        return result; // No quantized BVH built
+    
+    if (bvh_nodes.empty()) {
+        return result; // No BVH built
     }
-
-    // Stack-based traversal with quantized data
+    
+    // Stack-based traversal using standard BVH nodes
     std::stack<size_t> node_stack;
     node_stack.push(0); // Start from root
-
+    
     float closest_distance = (query.max_distance > 0) ? query.max_distance : std::numeric_limits<float>::max();
-
+    
     while (!node_stack.empty()) {
         size_t node_idx = node_stack.top();
         node_stack.pop();
-        stats.bvh_nodes_visited++;
-
-        // OPTIMIZATION: AABB intersection test with quantized coordinates
-        if (!aabbIntersectQuantized(query.origin, query.direction, closest_distance, node_idx)) {
-            continue;
+        
+        if (node_idx >= bvh_nodes.size()) {
+            if (printmessages) {
+                std::cout << "ERROR: Invalid BVH node index " << node_idx << " >= " << bvh_nodes.size() << " nodes" << std::endl;
+            }
+            result.hit = false;
+            return result;
         }
-
-        // Check if leaf node (packed in primitive_data)
-        uint32_t packed_data = bvh_nodes_quantized.primitive_data[node_idx];
-        bool is_leaf = (packed_data & 1) != 0;
-
-        if (is_leaf) {
+        
+        const BVHNode& node = bvh_nodes[node_idx];
+        
+        // AABB intersection test - this provides the early miss detection that was missing
+        if (!rayAABBIntersect(query.origin, query.direction, node.aabb_min, node.aabb_max)) {
+            continue; // Ray misses this node's bounding box - skip entire subtree
+        }
+        
+        if (node.is_leaf) {
             // Process primitives in this leaf
-            uint32_t primitive_start = (packed_data >> 1) & 0x7FFFFFFF;
-            uint32_t primitive_count = (packed_data >> 16) & 0x7FFF;
-
-            for (uint32_t i = 0; i < primitive_count; ++i) {
-                uint primitive_id = primitive_indices[primitive_start + i];
-
+            for (uint32_t i = 0; i < node.primitive_count; ++i) {
+                if (node.primitive_start + i >= primitive_indices.size()) {
+                    if (printmessages) {
+                        std::cout << "ERROR: Invalid BVH primitive index " << (node.primitive_start + i) 
+                                  << " >= " << primitive_indices.size() << " primitives" << std::endl;
+                    }
+                    result.hit = false;
+                    return result;
+                }
+                
+                uint primitive_id = primitive_indices[node.primitive_start + i];
+                
                 // Skip if not in target list (if specified)
                 if (!query.target_UUIDs.empty()) {
                     bool found = false;
@@ -941,7 +741,7 @@ CollisionDetection::HitResult CollisionDetection::castRayQuantizedTraversal(cons
                     }
                     if (!found) continue;
                 }
-
+                
                 // Perform primitive intersection test
                 HitResult primitive_hit = intersectPrimitive(query, primitive_id);
                 if (primitive_hit.hit && primitive_hit.distance < closest_distance) {
@@ -950,27 +750,22 @@ CollisionDetection::HitResult CollisionDetection::castRayQuantizedTraversal(cons
                 }
             }
         } else {
-            // Internal node - add children to stack
-            uint32_t left_child = bvh_nodes_quantized.left_children[node_idx];
-            uint32_t right_child = bvh_nodes_quantized.right_children[node_idx];
-
-            if (left_child != 0xFFFFFFFF) {
-                node_stack.push(left_child);
+            // Internal node - add children to stack for traversal
+            if (node.left_child != 0xFFFFFFFF && node.left_child < bvh_nodes.size()) {
+                node_stack.push(node.left_child);
             }
-            if (right_child != 0xFFFFFFFF) {
-                node_stack.push(right_child);
+            if (node.right_child != 0xFFFFFFFF && node.right_child < bvh_nodes.size()) {
+                node_stack.push(node.right_child);
             }
         }
     }
-
+    
     return result;
 }
 
-bool CollisionDetection::aabbIntersectSoA(const helios::vec3& ray_origin, const helios::vec3& ray_direction, float max_distance, size_t node_index) const {
-    // OPTIMIZATION: Direct access to SoA arrays - only loads AABB data (24 bytes vs 48 bytes in AoS)
-    const vec3& aabb_min = bvh_nodes_soa.aabb_mins[node_index];
-    const vec3& aabb_max = bvh_nodes_soa.aabb_maxs[node_index];
-
+// Helper method to test ray-AABB intersection
+bool CollisionDetection::rayAABBIntersect(const vec3& ray_origin, const vec3& ray_direction, 
+                                          const vec3& aabb_min, const vec3& aabb_max) const {
     // Optimized ray-AABB intersection using slab method
     float inv_dir_x = 1.0f / ray_direction.x;
     float inv_dir_y = 1.0f / ray_direction.y;
@@ -991,45 +786,53 @@ bool CollisionDetection::aabbIntersectSoA(const helios::vec3& ray_origin, const 
     float tmax_z = std::max(t1_z, t2_z);
 
     float t_near = std::max({tmin_x, tmin_y, tmin_z, 0.0f});
-    float t_far = std::min({tmax_x, tmax_y, tmax_z, max_distance});
-
-    return t_near <= t_far;
-}
-
-bool CollisionDetection::aabbIntersectQuantized(const helios::vec3& ray_origin, const helios::vec3& ray_direction, float max_distance, size_t node_index) const {
-    // OPTIMIZATION: Dequantize on-the-fly (trades compute for memory bandwidth)
-    vec3 aabb_min, aabb_max;
-    bvh_nodes_quantized.getAABB(node_index, aabb_min, aabb_max);
-
-    // Optimized ray-AABB intersection using slab method
-    float inv_dir_x = 1.0f / ray_direction.x;
-    float inv_dir_y = 1.0f / ray_direction.y;
-    float inv_dir_z = 1.0f / ray_direction.z;
-
-    float t1_x = (aabb_min.x - ray_origin.x) * inv_dir_x;
-    float t2_x = (aabb_max.x - ray_origin.x) * inv_dir_x;
-    float t1_y = (aabb_min.y - ray_origin.y) * inv_dir_y;
-    float t2_y = (aabb_max.y - ray_origin.y) * inv_dir_y;
-    float t1_z = (aabb_min.z - ray_origin.z) * inv_dir_z;
-    float t2_z = (aabb_max.z - ray_origin.z) * inv_dir_z;
-
-    float tmin_x = std::min(t1_x, t2_x);
-    float tmax_x = std::max(t1_x, t2_x);
-    float tmin_y = std::min(t1_y, t2_y);
-    float tmax_y = std::max(t1_y, t2_y);
-    float tmin_z = std::min(t1_z, t2_z);
-    float tmax_z = std::max(t1_z, t2_z);
-
-    float t_near = std::max({tmin_x, tmin_y, tmin_z, 0.0f});
-    float t_far = std::min({tmax_x, tmax_y, tmax_z, max_distance});
+    float t_far = std::min({tmax_x, tmax_y, tmax_z});
 
     return t_near <= t_far;
 }
 
 // Helper method to intersect with individual primitive (reuses existing logic)
 CollisionDetection::HitResult CollisionDetection::intersectPrimitive(const RayQuery &query, uint primitive_id) {
-    // Thread-safe primitive intersection using cached primitive data
-    return intersectPrimitiveThreadSafe(query.origin, query.direction, primitive_id, query.max_distance);
+    // PERFORMANCE FIX: Use direct context call instead of expensive cached primitive data
+    // This avoids the need to build and maintain a primitive cache
+    HitResult result;
+    
+    float distance;
+    if (rayPrimitiveIntersection(query.origin, query.direction, primitive_id, distance)) {
+        result.hit = true;
+        result.distance = distance;
+        result.primitive_UUID = primitive_id;
+        result.intersection_point = query.origin + query.direction * distance;
+        
+        // Calculate surface normal directly from context (minimal overhead)
+        PrimitiveType type = context->getPrimitiveType(primitive_id);
+        std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_id);
+        
+        if (type == PRIMITIVE_TYPE_TRIANGLE && vertices.size() >= 3) {
+            vec3 edge1 = vertices[1] - vertices[0];
+            vec3 edge2 = vertices[2] - vertices[0];
+            result.normal = cross(edge1, edge2);
+            if (result.normal.magnitude() > 1e-8f) {
+                result.normal = result.normal / result.normal.magnitude();
+            } else {
+                result.normal = make_vec3(-query.direction.x, -query.direction.y, -query.direction.z);
+            }
+        } else if (type == PRIMITIVE_TYPE_PATCH && vertices.size() >= 3) {
+            vec3 edge1 = vertices[1] - vertices[0];
+            vec3 edge2 = vertices[2] - vertices[0];
+            result.normal = cross(edge1, edge2);
+            if (result.normal.magnitude() > 1e-8f) {
+                result.normal = result.normal / result.normal.magnitude();
+            } else {
+                result.normal = make_vec3(-query.direction.x, -query.direction.y, -query.direction.z);
+            }
+        } else {
+            // Default normal (opposite to ray direction)
+            result.normal = make_vec3(-query.direction.x, -query.direction.y, -query.direction.z);
+        }
+    }
+    
+    return result;
 }
 
 CollisionDetection::HitResult CollisionDetection::intersectPrimitiveThreadSafe(const vec3 &origin, const vec3 &direction, uint primitive_id, float max_distance) {
@@ -1048,6 +851,45 @@ CollisionDetection::HitResult CollisionDetection::intersectPrimitiveThreadSafe(c
             result.distance = distance;
             result.primitive_UUID = primitive_id;
             result.intersection_point = origin + direction * distance;
+            
+            // Calculate surface normal for uncached primitive
+            PrimitiveType type = context->getPrimitiveType(primitive_id);
+            std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_id);
+            
+            if (type == PRIMITIVE_TYPE_TRIANGLE && vertices.size() >= 3) {
+                vec3 edge1 = vertices[1] - vertices[0];
+                vec3 edge2 = vertices[2] - vertices[0];
+                result.normal = cross(edge1, edge2);
+                if (result.normal.magnitude() > 1e-8f) {
+                    result.normal = result.normal / result.normal.magnitude();
+                    // Ensure normal points towards ray origin (for LiDAR compatibility)
+                    vec3 to_origin = origin - result.intersection_point;
+                    if (result.normal * to_origin < 0) {
+                        result.normal = result.normal * -1.0f;
+                    }
+                } else {
+                    result.normal = make_vec3(-direction.x, -direction.y, -direction.z);
+                    result.normal = result.normal / result.normal.magnitude();
+                }
+            } else if (type == PRIMITIVE_TYPE_PATCH && vertices.size() >= 4) {
+                vec3 edge1 = vertices[1] - vertices[0];
+                vec3 edge2 = vertices[2] - vertices[0];
+                result.normal = cross(edge1, edge2);
+                if (result.normal.magnitude() > 1e-8f) {
+                    result.normal = result.normal / result.normal.magnitude();
+                    // Ensure normal points towards ray origin (for LiDAR compatibility)
+                    vec3 to_origin = origin - result.intersection_point;
+                    if (result.normal * to_origin < 0) {
+                        result.normal = result.normal * -1.0f;
+                    }
+                } else {
+                    result.normal = make_vec3(-direction.x, -direction.y, -direction.z);
+                    result.normal = result.normal / result.normal.magnitude();
+                }
+            } else {
+                result.normal = make_vec3(-direction.x, -direction.y, -direction.z);
+                result.normal = result.normal / result.normal.magnitude();
+            }
         }
         return result;
     }
@@ -1063,10 +905,141 @@ CollisionDetection::HitResult CollisionDetection::intersectPrimitiveThreadSafe(c
                 result.distance = distance;
                 result.primitive_UUID = primitive_id;
                 result.intersection_point = origin + direction * distance;
+                
+                // Calculate triangle normal
+                vec3 edge1 = cached.vertices[1] - cached.vertices[0];
+                vec3 edge2 = cached.vertices[2] - cached.vertices[0];
+                result.normal = cross(edge1, edge2);
+                if (result.normal.magnitude() > 1e-8f) {
+                    result.normal = result.normal / result.normal.magnitude();
+                    // Ensure normal points towards ray origin (for LiDAR compatibility)
+                    vec3 to_origin = origin - result.intersection_point;
+                    if (result.normal * to_origin < 0) {
+                        result.normal = result.normal * -1.0f;
+                    }
+                } else {
+                    result.normal = make_vec3(-direction.x, -direction.y, -direction.z);
+                    result.normal = result.normal / result.normal.magnitude();
+                }
+            }
+        }
+    } else if (cached.type == PRIMITIVE_TYPE_PATCH && cached.vertices.size() >= 4) {
+        float distance;
+        if (patchIntersect(origin, direction, cached.vertices[0], cached.vertices[1], cached.vertices[2], cached.vertices[3], distance)) {
+            if (distance > 1e-6f && (max_distance <= 0 || distance < max_distance)) {
+                result.hit = true;
+                result.distance = distance;
+                result.primitive_UUID = primitive_id;
+                result.intersection_point = origin + direction * distance;
+                
+                // Calculate patch normal (use v0, v1, v2 like the original code)
+                vec3 edge1 = cached.vertices[1] - cached.vertices[0];
+                vec3 edge2 = cached.vertices[2] - cached.vertices[0];
+                result.normal = cross(edge1, edge2);
+                if (result.normal.magnitude() > 1e-8f) {
+                    result.normal = result.normal / result.normal.magnitude();
+                    // Ensure normal points towards ray origin (for LiDAR compatibility)
+                    vec3 to_origin = origin - result.intersection_point;
+                    if (result.normal * to_origin < 0) {
+                        result.normal = result.normal * -1.0f;
+                    }
+                } else {
+                    result.normal = make_vec3(-direction.x, -direction.y, -direction.z);
+                    result.normal = result.normal / result.normal.magnitude();
+                }
+            }
+        }
+    } else if (cached.type == PRIMITIVE_TYPE_VOXEL && cached.vertices.size() == 8) {
+        // Voxel (AABB) intersection using slab method
+        // Calculate AABB from 8 vertices
+        vec3 aabb_min = cached.vertices[0];
+        vec3 aabb_max = cached.vertices[0];
+        
+        for (int i = 1; i < 8; i++) {
+            aabb_min.x = std::min(aabb_min.x, cached.vertices[i].x);
+            aabb_min.y = std::min(aabb_min.y, cached.vertices[i].y);
+            aabb_min.z = std::min(aabb_min.z, cached.vertices[i].z);
+            aabb_max.x = std::max(aabb_max.x, cached.vertices[i].x);
+            aabb_max.y = std::max(aabb_max.y, cached.vertices[i].y);
+            aabb_max.z = std::max(aabb_max.z, cached.vertices[i].z);
+        }
+        
+        // Ray-AABB intersection using slab method
+        float t_near = -std::numeric_limits<float>::max();
+        float t_far = std::numeric_limits<float>::max();
+        
+        // Check intersection with each slab (X, Y, Z)
+        for (int axis = 0; axis < 3; axis++) {
+            float ray_dir_component = (axis == 0) ? direction.x : (axis == 1) ? direction.y : direction.z;
+            float ray_orig_component = (axis == 0) ? origin.x : (axis == 1) ? origin.y : origin.z;
+            float aabb_min_component = (axis == 0) ? aabb_min.x : (axis == 1) ? aabb_min.y : aabb_min.z;
+            float aabb_max_component = (axis == 0) ? aabb_max.x : (axis == 1) ? aabb_max.y : aabb_max.z;
+            
+            if (std::abs(ray_dir_component) < 1e-8f) {
+                // Ray is parallel to slab
+                if (ray_orig_component < aabb_min_component || ray_orig_component > aabb_max_component) {
+                    return result; // Ray is outside slab and parallel - no intersection
+                }
+            } else {
+                // Calculate intersection distances for this slab
+                float t1 = (aabb_min_component - ray_orig_component) / ray_dir_component;
+                float t2 = (aabb_max_component - ray_orig_component) / ray_dir_component;
+                
+                // Ensure t1 <= t2
+                if (t1 > t2) {
+                    std::swap(t1, t2);
+                }
+                
+                // Update near and far intersection distances
+                t_near = std::max(t_near, t1);
+                t_far = std::min(t_far, t2);
+                
+                // Early exit if no intersection possible
+                if (t_near > t_far) {
+                    return result;
+                }
+            }
+        }
+        
+        // Check if intersection is in front of ray origin and within max distance
+        if (t_far >= 0.0f) {
+            // Use t_near if it's positive (ray starts outside box), otherwise t_far (ray starts inside box)
+            float intersection_distance = (t_near >= 1e-6f) ? t_near : t_far;
+            if (intersection_distance >= 1e-6f && (max_distance <= 0 || intersection_distance < max_distance)) {
+                result.hit = true;
+                result.distance = intersection_distance;
+                result.primitive_UUID = primitive_id;
+                result.intersection_point = origin + direction * intersection_distance;
+                
+                // Calculate normal based on which face was hit
+                // Determine which face of the voxel was hit by examining intersection point
+                vec3 hit_point = result.intersection_point;
+                vec3 box_center = (aabb_min + aabb_max) * 0.5f;
+                vec3 box_extent = (aabb_max - aabb_min) * 0.5f;
+                
+                // Find which face the hit point is closest to
+                vec3 local_hit = hit_point - box_center;
+                vec3 abs_local_hit = make_vec3(std::abs(local_hit.x), std::abs(local_hit.y), std::abs(local_hit.z));
+                
+                // Determine which axis has the largest relative coordinate (closest to face)
+                float rel_x = abs_local_hit.x / box_extent.x;
+                float rel_y = abs_local_hit.y / box_extent.y;
+                float rel_z = abs_local_hit.z / box_extent.z;
+                
+                if (rel_x >= rel_y && rel_x >= rel_z) {
+                    // Hit X face
+                    result.normal = make_vec3((local_hit.x > 0) ? 1.0f : -1.0f, 0.0f, 0.0f);
+                } else if (rel_y >= rel_z) {
+                    // Hit Y face
+                    result.normal = make_vec3(0.0f, (local_hit.y > 0) ? 1.0f : -1.0f, 0.0f);
+                } else {
+                    // Hit Z face
+                    result.normal = make_vec3(0.0f, 0.0f, (local_hit.z > 0) ? 1.0f : -1.0f);
+                }
             }
         }
     }
-    // Add other primitive types as needed (VOXEL, DISK, etc.)
+    // Add other primitive types as needed (DISK, etc.)
 
     return result;
 }
@@ -1104,39 +1077,51 @@ void CollisionDetection::buildPrimitiveCache() {
 
 bool CollisionDetection::triangleIntersect(const vec3 &origin, const vec3 &direction,
                                            const vec3 &v0, const vec3 &v1, const vec3 &v2, float &distance) {
-    // Möller-Trumbore triangle intersection algorithm (thread-safe)
+    // Möller-Trumbore triangle intersection algorithm (optimized - no vec3 temporaries)
     const float EPSILON = 1e-8f;
 
-    // Helper lambda for dot product
-    auto dot = [](const vec3 &a, const vec3 &b) -> float {
-        return a.x * b.x + a.y * b.y + a.z * b.z;
-    };
-
-    vec3 edge1 = v1 - v0;
-    vec3 edge2 = v2 - v0;
-    vec3 h = helios::cross(direction, edge2);
-    float a = dot(edge1, h);
+    // Compute triangle edges directly as components (avoid vec3 constructors)
+    float edge1_x = v1.x - v0.x, edge1_y = v1.y - v0.y, edge1_z = v1.z - v0.z;
+    float edge2_x = v2.x - v0.x, edge2_y = v2.y - v0.y, edge2_z = v2.z - v0.z;
+    
+    // Cross product: h = direction × edge2 (computed directly)
+    float h_x = direction.y * edge2_z - direction.z * edge2_y;
+    float h_y = direction.z * edge2_x - direction.x * edge2_z;
+    float h_z = direction.x * edge2_y - direction.y * edge2_x;
+    
+    // Dot product: a = edge1 · h
+    float a = edge1_x * h_x + edge1_y * h_y + edge1_z * h_z;
 
     if (a > -EPSILON && a < EPSILON) {
         return false; // Ray is parallel to triangle
     }
 
     float f = 1.0f / a;
-    vec3 s = origin - v0;
-    float u = f * dot(s, h);
+    
+    // Vector s = origin - v0 (computed as components)
+    float s_x = origin.x - v0.x, s_y = origin.y - v0.y, s_z = origin.z - v0.z;
+    
+    // u = f * (s · h)
+    float u = f * (s_x * h_x + s_y * h_y + s_z * h_z);
 
     if (u < 0.0f || u > 1.0f) {
         return false;
     }
 
-    vec3 q = helios::cross(s, edge1);
-    float v = f * dot(direction, q);
+    // Cross product: q = s × edge1 (computed directly)
+    float q_x = s_y * edge1_z - s_z * edge1_y;
+    float q_y = s_z * edge1_x - s_x * edge1_z;
+    float q_z = s_x * edge1_y - s_y * edge1_x;
+    
+    // v = f * (direction · q)
+    float v = f * (direction.x * q_x + direction.y * q_y + direction.z * q_z);
 
     if (v < 0.0f || u + v > 1.0f) {
         return false;
     }
 
-    float t = f * dot(edge2, q);
+    // t = f * (edge2 · q) - computed directly as dot product
+    float t = f * (edge2_x * q_x + edge2_y * q_y + edge2_z * q_z);
 
     if (t > EPSILON) {
         distance = t;
@@ -1144,6 +1129,45 @@ bool CollisionDetection::triangleIntersect(const vec3 &origin, const vec3 &direc
     }
 
     return false; // Line intersection but not ray intersection
+}
+
+bool CollisionDetection::patchIntersect(const vec3 &origin, const vec3 &direction,
+                                        const vec3 &v0, const vec3 &v1, const vec3 &v2, const vec3 &v3, float &distance) {
+    // Patch (quadrilateral) intersection using radiation model algorithm
+    const float EPSILON = 1e-8f;
+    
+    // Calculate patch vectors and normal (same as radiation model)
+    vec3 anchor = v0;
+    vec3 normal = cross(v1 - v0, v2 - v0);
+    normal.normalize();
+    
+    vec3 a = v1 - v0; // First edge vector
+    vec3 b = v3 - v0; // Second edge vector
+    
+    // Ray-plane intersection
+    float denom = direction * normal;
+    if (std::abs(denom) > EPSILON) { // Not parallel to plane
+        float t = (anchor - origin) * normal / denom;
+        
+        if (t > EPSILON && t < 1e8f) { // Valid intersection distance
+            // Find intersection point
+            vec3 p = origin + direction * t;
+            vec3 d = p - anchor;
+            
+            // Project onto patch coordinate system
+            float ddota = d * a;
+            float ddotb = d * b;
+            
+            // Check if point is within patch bounds
+            if (ddota >= 0.0f && ddota <= (a * a) && 
+                ddotb >= 0.0f && ddotb <= (b * b)) {
+                distance = t;
+                return true;
+            }
+        }
+    }
+    
+    return false;
 }
 
 #ifdef HELIOS_CUDA_AVAILABLE
@@ -1155,18 +1179,26 @@ bool CollisionDetection::triangleIntersect(const vec3 &origin, const vec3 &direc
  * \param[out] stats Ray-tracing performance statistics
  * \return Vector of HitResult with optimal GPU performance
  */
-std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPUPhase3(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats) {
+std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPU(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats) {
     std::vector<HitResult> results;
     results.resize(ray_queries.size());
 
     if (ray_queries.empty() || !gpu_acceleration_enabled) {
-        return castRaysSoA(ray_queries, stats); // CPU fallback
+        return castRaysSoA(ray_queries, stats); // Use CPU implementation
     }
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    // Ensure BVH is built and in SoA format for GPU
-    setBVHOptimizationMode(BVHOptimizationMode::SOA_UNCOMPRESSED);
+    // Ensure BVH is built for GPU acceleration
+    if (bvh_nodes.empty()) {
+        if (printmessages) {
+            std::cout << "Building BVH for GPU ray tracing..." << std::endl;
+        }
+        buildBVH();
+        if (bvh_nodes.empty()) {
+            helios_runtime_error("ERROR: BVH construction failed - no geometry available for ray tracing. Ensure primitives are properly added to the collision detection system.");
+        }
+    }
 
     // Prepare ray data for GPU
     std::vector<float> ray_origins(ray_queries.size() * 3);
@@ -1190,116 +1222,190 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPUPhase3
         ray_max_distances[i] = ray_queries[i].max_distance;
     }
 
-    // Get all primitives in context
+    // Get all primitives for GPU ray tracing (handle all primitive types like CPU)
     std::vector<uint> all_primitives = context->getAllUUIDs();
-
-    // Prepare primitive data
-    std::vector<float> primitive_aabb_min(all_primitives.size() * 3);
-    std::vector<float> primitive_aabb_max(all_primitives.size() * 3);
-
-    for (size_t i = 0; i < all_primitives.size(); i++) {
-        vec3 aabb_min, aabb_max;
-        context->getPrimitiveBoundingBox(all_primitives[i], aabb_min, aabb_max);
-
-        primitive_aabb_min[i * 3] = aabb_min.x;
-        primitive_aabb_min[i * 3 + 1] = aabb_min.y;
-        primitive_aabb_min[i * 3 + 2] = aabb_min.z;
-
-        primitive_aabb_max[i * 3] = aabb_max.x;
-        primitive_aabb_max[i * 3 + 1] = aabb_max.y;
-        primitive_aabb_max[i * 3 + 2] = aabb_max.z;
-    }
-
-    // Prepare results arrays
-    const int max_results_per_ray = 1; // For collision detection, we typically want first hit
-    std::vector<unsigned int> gpu_results(ray_queries.size() * max_results_per_ray, 0);
-    std::vector<unsigned int> gpu_result_counts(ray_queries.size(), 0);
-
-    // Get primitive indices
     std::vector<unsigned int> primitive_indices(all_primitives.size());
+    std::vector<int> primitive_types(all_primitives.size());
+    std::vector<float3> primitive_vertices;
+    std::vector<unsigned int> vertex_offsets(all_primitives.size());
+    
+    size_t triangle_count = 0;
+    size_t patch_count = 0;
+    size_t voxel_count = 0;
+    
+    if (printmessages) {
+        std::cout << "Preparing " << all_primitives.size() << " primitives for GPU ray tracing..." << std::endl;
+    }
+    
+    // Prepare primitive data arrays for GPU
+    size_t vertex_index = 0;
     for (size_t i = 0; i < all_primitives.size(); i++) {
         primitive_indices[i] = all_primitives[i];
+        vertex_offsets[i] = vertex_index;
+        
+        PrimitiveType ptype = context->getPrimitiveType(all_primitives[i]);
+        primitive_types[i] = static_cast<int>(ptype);
+        
+        std::vector<vec3> vertices = context->getPrimitiveVertices(all_primitives[i]);
+        
+        if (ptype == PRIMITIVE_TYPE_TRIANGLE) {
+            triangle_count++;
+            if (vertices.size() >= 3) {
+                // Add 3 vertices for triangle, pad to 4 for alignment
+                for (int v = 0; v < 3; v++) {
+                    primitive_vertices.push_back(make_float3(vertices[v].x, vertices[v].y, vertices[v].z));
+                }
+                primitive_vertices.push_back(make_float3(0, 0, 0)); // Padding
+                vertex_index += 4;
+            } else {
+                if (printmessages) {
+                    std::cout << "WARNING: Triangle primitive " << all_primitives[i] << " has " << vertices.size() << " vertices" << std::endl;
+                }
+                // Add zeros for invalid triangle
+                for (int v = 0; v < 4; v++) {
+                    primitive_vertices.push_back(make_float3(0, 0, 0));
+                }
+                vertex_index += 4;
+            }
+        } else if (ptype == PRIMITIVE_TYPE_PATCH) {
+            patch_count++;
+            if (vertices.size() >= 4) {
+                // Add 4 vertices for patch
+                for (int v = 0; v < 4; v++) {
+                    primitive_vertices.push_back(make_float3(vertices[v].x, vertices[v].y, vertices[v].z));
+                }
+                vertex_index += 4;
+            } else {
+                if (printmessages) {
+                    std::cout << "WARNING: Patch primitive " << all_primitives[i] << " has " << vertices.size() << " vertices" << std::endl;
+                }
+                // Add zeros for invalid patch
+                for (int v = 0; v < 4; v++) {
+                    primitive_vertices.push_back(make_float3(0, 0, 0));
+                }
+                vertex_index += 4;
+            }
+        } else if (ptype == PRIMITIVE_TYPE_VOXEL) {
+            voxel_count++;
+            // For voxels, compute AABB from 8 corner vertices
+            // vertices was already retrieved above, reuse it
+            vec3 voxel_min = vertices[0];
+            vec3 voxel_max = vertices[0];
+            
+            // Find min/max coordinates from all 8 vertices
+            for (const auto& vertex : vertices) {
+                voxel_min.x = std::min(voxel_min.x, vertex.x);
+                voxel_min.y = std::min(voxel_min.y, vertex.y);
+                voxel_min.z = std::min(voxel_min.z, vertex.z);
+                voxel_max.x = std::max(voxel_max.x, vertex.x);
+                voxel_max.y = std::max(voxel_max.y, vertex.y);
+                voxel_max.z = std::max(voxel_max.z, vertex.z);
+            }
+            
+            // Store as: [min.x, min.y, min.z, max.x, max.y, max.z, 0, 0]
+            primitive_vertices.push_back(make_float3(voxel_min.x, voxel_min.y, voxel_min.z));  // v0 = min
+            primitive_vertices.push_back(make_float3(voxel_max.x, voxel_max.y, voxel_max.z));  // v1 = max
+            primitive_vertices.push_back(make_float3(0, 0, 0));  // v2 = padding
+            primitive_vertices.push_back(make_float3(0, 0, 0));  // v3 = padding
+            vertex_index += 4;
+        } else {
+            // Unknown primitive type - add padding
+            for (int v = 0; v < 4; v++) {
+                primitive_vertices.push_back(make_float3(0, 0, 0));
+            }
+            vertex_index += 4;
+        }
+    }
+    
+    if (printmessages) {
+        std::cout << "Found " << triangle_count << " triangles, " << patch_count << " patches, " << voxel_count << " voxels" << std::endl;
     }
 
-    // Create GPU SoA BVH structure for warp-efficient kernel
-    // For now, use a simplified approach that works with existing BVH data
-    if (bvh_nodes.empty()) {
-        // No BVH built, fall back to CPU
+    if (all_primitives.empty()) {
+        if (printmessages) {
+            std::cout << "No primitives found for GPU ray tracing, falling back to CPU" << std::endl;
+        }
         return castRaysSoA(ray_queries, stats);
     }
 
-    // Create minimal GPU SoA structure on the stack
-    struct {
-        float3 *aabb_mins;
-        float3 *aabb_maxs;
-        uint32_t *left_children;
-        uint32_t *right_children;
-        uint32_t *primitive_starts;
-        uint32_t *primitive_counts;
-        uint8_t *is_leaf_flags;
-        size_t node_count;
-    } gpu_bvh_soa;
-
-    // Allocate minimal arrays for demonstration
-    std::vector<float3> soa_aabb_mins(bvh_nodes.size());
-    std::vector<float3> soa_aabb_maxs(bvh_nodes.size());
-    std::vector<uint32_t> soa_left_children(bvh_nodes.size());
-    std::vector<uint32_t> soa_right_children(bvh_nodes.size());
-    std::vector<uint32_t> soa_primitive_starts(bvh_nodes.size());
-    std::vector<uint32_t> soa_primitive_counts(bvh_nodes.size());
-    std::vector<uint8_t> soa_is_leaf_flags(bvh_nodes.size());
-
-    // Convert existing BVH to SoA format
-    for (size_t i = 0; i < bvh_nodes.size(); i++) {
-        soa_aabb_mins[i] = make_float3(bvh_nodes[i].aabb_min.x, bvh_nodes[i].aabb_min.y, bvh_nodes[i].aabb_min.z);
-        soa_aabb_maxs[i] = make_float3(bvh_nodes[i].aabb_max.x, bvh_nodes[i].aabb_max.y, bvh_nodes[i].aabb_max.z);
-        soa_left_children[i] = bvh_nodes[i].left_child;
-        soa_right_children[i] = bvh_nodes[i].right_child;
-        soa_primitive_starts[i] = bvh_nodes[i].primitive_start;
-        soa_primitive_counts[i] = bvh_nodes[i].primitive_count;
-        soa_is_leaf_flags[i] = bvh_nodes[i].is_leaf ? 1 : 0;
+    if (printmessages) {
+        std::cout << "Using high-performance GPU ray-triangle intersection kernel" << std::endl;
+        std::cout << "Processing " << ray_queries.size() << " rays against " << triangle_count << " triangles" << std::endl;
     }
 
-    // Set up GPU SoA structure
-    gpu_bvh_soa.aabb_mins = soa_aabb_mins.data();
-    gpu_bvh_soa.aabb_maxs = soa_aabb_maxs.data();
-    gpu_bvh_soa.left_children = soa_left_children.data();
-    gpu_bvh_soa.right_children = soa_right_children.data();
-    gpu_bvh_soa.primitive_starts = soa_primitive_starts.data();
-    gpu_bvh_soa.primitive_counts = soa_primitive_counts.data();
-    gpu_bvh_soa.is_leaf_flags = soa_is_leaf_flags.data();
-    gpu_bvh_soa.node_count = bvh_nodes.size();
+    // Prepare result arrays
+    std::vector<float> hit_distances(ray_queries.size());
+    std::vector<unsigned int> hit_primitive_ids(ray_queries.size());
+    std::vector<unsigned int> hit_counts(ray_queries.size());
 
-    // Call warp-efficient GPU kernel
-    launchWarpEfficientBVH(
-            &gpu_bvh_soa,
-            primitive_indices.data(),
-            static_cast<int>(all_primitives.size()),
-            primitive_aabb_min.data(),
-            primitive_aabb_max.data(),
-            ray_origins.data(),
-            ray_directions.data(),
-            ray_max_distances.data(),
-            static_cast<int>(ray_queries.size()),
-            gpu_results.data(),
-            gpu_result_counts.data(),
-            max_results_per_ray
+    // Convert CPU BVH nodes to GPU format
+    std::vector<GPUBVHNode> gpu_bvh_nodes(bvh_nodes.size());
+    for (size_t i = 0; i < bvh_nodes.size(); i++) {
+        gpu_bvh_nodes[i].aabb_min = make_float3(bvh_nodes[i].aabb_min.x, bvh_nodes[i].aabb_min.y, bvh_nodes[i].aabb_min.z);
+        gpu_bvh_nodes[i].aabb_max = make_float3(bvh_nodes[i].aabb_max.x, bvh_nodes[i].aabb_max.y, bvh_nodes[i].aabb_max.z);
+        gpu_bvh_nodes[i].left_child = bvh_nodes[i].left_child;
+        gpu_bvh_nodes[i].right_child = bvh_nodes[i].right_child;
+        gpu_bvh_nodes[i].primitive_start = bvh_nodes[i].primitive_start;
+        gpu_bvh_nodes[i].primitive_count = bvh_nodes[i].primitive_count;
+        gpu_bvh_nodes[i].is_leaf = bvh_nodes[i].is_leaf ? 1 : 0;
+        gpu_bvh_nodes[i].padding = 0;
+        
+        // Debug problematic BVH nodes
+        if (bvh_nodes[i].is_leaf && printmessages && i < 3) {
+            std::cout << "BVH leaf node " << i << ": primitive_start=" << bvh_nodes[i].primitive_start 
+                      << ", primitive_count=" << bvh_nodes[i].primitive_count 
+                      << ", max_index=" << (bvh_nodes[i].primitive_start + bvh_nodes[i].primitive_count - 1) << std::endl;
+        }
+    }
+
+    // Launch high-performance GPU ray intersection kernel  
+    launchRayPrimitiveIntersection(
+        gpu_bvh_nodes.data(),                    // BVH nodes
+        static_cast<int>(gpu_bvh_nodes.size()), // Node count
+        primitive_indices.data(),                // Primitive indices  
+        static_cast<int>(all_primitives.size()), // Primitive count
+        primitive_types.data(),                  // Primitive types
+        primitive_vertices.data(),               // Primitive vertices (all types)
+        vertex_offsets.data(),                   // Vertex offsets
+        static_cast<int>(primitive_vertices.size()),
+        ray_origins.data(),                      // Ray origins
+        ray_directions.data(),                   // Ray directions
+        ray_max_distances.data(),                // Ray max distances
+        static_cast<int>(ray_queries.size()),    // Number of rays
+        hit_distances.data(),                    // Output: hit distances
+        hit_primitive_ids.data(),                // Output: hit primitive IDs
+        hit_counts.data(),                       // Output: hit counts
+        true                                     // Find closest hit
     );
 
     // Convert GPU results back to HitResult format
     size_t hit_count = 0;
     for (size_t i = 0; i < ray_queries.size(); i++) {
-        if (gpu_result_counts[i] > 0) {
+        if (hit_counts[i] > 0 && hit_distances[i] <= ray_queries[i].max_distance) {
             results[i].hit = true;
-            results[i].primitive_UUID = gpu_results[i * max_results_per_ray];
-            results[i].distance = ray_queries[i].max_distance; // GPU doesn't return distance yet
+            results[i].primitive_UUID = hit_primitive_ids[i];
+            results[i].distance = hit_distances[i];
+            results[i].intersection_point = ray_queries[i].origin + ray_queries[i].direction * hit_distances[i];
             hit_count++;
+        } else {
+            results[i].hit = false;
+            results[i].primitive_UUID = 0;
+            results[i].distance = std::numeric_limits<float>::max();
         }
     }
 
     auto end = std::chrono::high_resolution_clock::now();
+    double elapsed = std::chrono::duration<double, std::milli>(end - start).count();
+    
     stats.total_rays_cast = ray_queries.size();
     stats.total_hits = hit_count;
+    double rays_per_second = ray_queries.size() / (elapsed / 1000.0);
+
+    if (printmessages) {
+        std::cout << "GPU ray tracing completed: " << hit_count << "/" << ray_queries.size() 
+                  << " hits in " << elapsed << "ms" << std::endl;
+        std::cout << "Performance: " << (rays_per_second / 1e6) << " MRPS" << std::endl;
+    }
 
     return results;
 }
@@ -1505,7 +1611,7 @@ void CollisionDetection::traverseBVHSIMD(const vec3 *ray_origins, const vec3 *ra
             traverseBVHSIMDImpl(&ray_origins[batch_start], &ray_directions[batch_start],
                                 batch_count, &results[batch_start]);
         } else {
-            // Scalar fallback for remaining rays
+            // Process remaining rays individually
             for (int i = 0; i < batch_count; ++i) {
                 int ray_idx = batch_start + i;
                 results[ray_idx] = castRay(RayQuery(ray_origins[ray_idx], ray_directions[ray_idx]));
@@ -1615,9 +1721,72 @@ void CollisionDetection::traverseBVHSIMDImpl(const vec3 *ray_origins, const vec3
                 if (stack_tops[ray_idx] < MAX_STACK_SIZE - 2) {
                     node_stacks[ray_idx][stack_tops[ray_idx]++] = node.left_child;
                     node_stacks[ray_idx][stack_tops[ray_idx]++] = node.right_child;
+                } else {
+                    // Stack overflow - mark ray as inactive to prevent infinite loop
+                    ray_active[ray_idx] = false;
                 }
             }
         }
     }
 }
 #endif
+
+
+bool CollisionDetection::rayAABBIntersectPrimitive(const helios::vec3& origin, const helios::vec3& direction,
+                                                  const helios::vec3& aabb_min, const helios::vec3& aabb_max, 
+                                                  float& distance) {
+    // Ray-AABB intersection using slab method
+    // Optimized version with early termination
+    
+    const float EPSILON = 1e-8f;
+    
+    // Calculate t values for each slab
+    float t_min_x = (aabb_min.x - origin.x) / direction.x;
+    float t_max_x = (aabb_max.x - origin.x) / direction.x;
+    
+    // Handle negative direction components
+    if (direction.x < 0.0f) {
+        float temp = t_min_x;
+        t_min_x = t_max_x;
+        t_max_x = temp;
+    }
+    
+    float t_min_y = (aabb_min.y - origin.y) / direction.y;
+    float t_max_y = (aabb_max.y - origin.y) / direction.y;
+    
+    if (direction.y < 0.0f) {
+        float temp = t_min_y;
+        t_min_y = t_max_y;
+        t_max_y = temp;
+    }
+    
+    // Check for early termination in X-Y
+    float t_min = std::max(t_min_x, t_min_y);
+    float t_max = std::min(t_max_x, t_max_y);
+    
+    if (t_min > t_max) {
+        return false; // No intersection
+    }
+    
+    float t_min_z = (aabb_min.z - origin.z) / direction.z;
+    float t_max_z = (aabb_max.z - origin.z) / direction.z;
+    
+    if (direction.z < 0.0f) {
+        float temp = t_min_z;
+        t_min_z = t_max_z;
+        t_max_z = temp;
+    }
+    
+    // Final intersection test
+    t_min = std::max(t_min, t_min_z);
+    t_max = std::min(t_max, t_max_z);
+    
+    if (t_min > t_max || t_max < EPSILON) {
+        return false; // No intersection or behind ray
+    }
+    
+    // Set distance to closest intersection point
+    distance = (t_min > EPSILON) ? t_min : t_max;
+    
+    return distance > EPSILON;
+}

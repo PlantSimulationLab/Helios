@@ -321,13 +321,12 @@ public:
      * \brief BVH optimization modes for performance improvements
      */
     enum class BVHOptimizationMode {
-        SOA_UNCOMPRESSED,  //!< Structure-of-Arrays, full precision
-        SOA_QUANTIZED      //!< Structure-of-Arrays with 16-bit quantization (default)
+        SOA_UNCOMPRESSED   //!< Structure-of-Arrays, full precision
     };
 
     /**
      * \brief Set BVH optimization mode for performance improvements
-     * \param[in] mode Optimization mode (SOA_UNCOMPRESSED, SOA_QUANTIZED)
+     * \param[in] mode Optimization mode (SOA_UNCOMPRESSED)
      */
     void setBVHOptimizationMode(BVHOptimizationMode mode);
 
@@ -346,12 +345,12 @@ public:
     std::vector<HitResult> castRaysOptimized(const std::vector<RayQuery> &ray_queries, RayTracingStats *stats = nullptr);
 
     /**
-     * \brief Cast rays using warp-efficient GPU kernels
+     * \brief Cast rays using GPU acceleration with warp-efficient kernels
      * \param[in] ray_queries Vector of ray queries to process
      * \param[out] stats Ray-tracing performance statistics
      * \return Vector of HitResult with optimal GPU performance
      */
-    std::vector<HitResult> castRaysGPUPhase3(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats);
+    std::vector<HitResult> castRaysGPU(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats);
 
     /**
      * \brief Cast ray packets using streaming interface for optimal GPU utilization
@@ -715,6 +714,9 @@ private:
      */
     bool triangleIntersect(const helios::vec3 &origin, const helios::vec3 &direction, 
                           const helios::vec3 &v0, const helios::vec3 &v1, const helios::vec3 &v2, float &distance);
+    
+    bool patchIntersect(const helios::vec3 &origin, const helios::vec3 &direction,
+                       const helios::vec3 &v0, const helios::vec3 &v1, const helios::vec3 &v2, const helios::vec3 &v3, float &distance);
 
     // -------- BVH DATA STRUCTURES --------
 
@@ -793,146 +795,18 @@ private:
         }
     };
 
-    /**
-     * \brief Quantized BVH structure for 82% memory reduction
-     * Uses 16-bit quantized coordinates within scene bounding box
-     */
-    struct QuantizedBVHNodes {
-        // Quantization parameters (scene-global)
-        helios::vec3 scene_min;                  //!< Scene bounding box minimum
-        helios::vec3 scene_max;                  //!< Scene bounding box maximum
-        helios::vec3 quantization_scale;         //!< Scale factor for quantization
-        helios::vec3 inverse_quantization_scale; //!< Inverse scale for dequantization
-        
-        // Quantized data arrays (Structure-of-Arrays)
-        std::vector<uint16_t> aabb_mins_x;       //!< Quantized X coordinates (min corners)
-        std::vector<uint16_t> aabb_mins_y;       //!< Quantized Y coordinates (min corners)
-        std::vector<uint16_t> aabb_mins_z;       //!< Quantized Z coordinates (min corners)
-        std::vector<uint16_t> aabb_maxs_x;       //!< Quantized X coordinates (max corners)
-        std::vector<uint16_t> aabb_maxs_y;       //!< Quantized Y coordinates (max corners)
-        std::vector<uint16_t> aabb_maxs_z;       //!< Quantized Z coordinates (max corners)
-        
-        // Navigation data (uncompressed for performance)
-        std::vector<uint32_t> left_children;     //!< Left child indices
-        std::vector<uint32_t> right_children;    //!< Right child indices
-        
-        // Leaf data (compressed)
-        std::vector<uint32_t> primitive_data;    //!< Packed primitive start + count + leaf flag
-        
-        size_t node_count = 0;
-        
-        QuantizedBVHNodes() = default;
-        
-        /**
-         * \brief Initialize quantization parameters from scene bounds
-         */
-        void initializeQuantization(const helios::vec3& scene_min_bound, const helios::vec3& scene_max_bound) {
-            scene_min = scene_min_bound;
-            scene_max = scene_max_bound;
-            
-            helios::vec3 scene_size = scene_max - scene_min;
-            const float quantization_resolution = 65535.0f; // 16-bit resolution
-            
-            quantization_scale.x = quantization_resolution / scene_size.x;
-            quantization_scale.y = quantization_resolution / scene_size.y;
-            quantization_scale.z = quantization_resolution / scene_size.z;
-            
-            inverse_quantization_scale.x = scene_size.x / quantization_resolution;
-            inverse_quantization_scale.y = scene_size.y / quantization_resolution;
-            inverse_quantization_scale.z = scene_size.z / quantization_resolution;
-        }
-        
-        /**
-         * \brief Quantize world coordinates to 16-bit integers
-         */
-        inline uint16_t quantizeCoordinate(float world_coord, float scene_min_coord, float scale) const {
-            float normalized = (world_coord - scene_min_coord) * scale;
-            return static_cast<uint16_t>(std::max(0.0f, std::min(65535.0f, normalized)));
-        }
-        
-        /**
-         * \brief Dequantize 16-bit integers back to world coordinates
-         */
-        inline float dequantizeCoordinate(uint16_t quantized_coord, float scene_min_coord, float inv_scale) const {
-            return scene_min_coord + static_cast<float>(quantized_coord) * inv_scale;
-        }
-        
-        /**
-         * \brief Add quantized node to the structure
-         */
-        void addNode(const helios::vec3& aabb_min, const helios::vec3& aabb_max, 
-                    uint32_t left_child, uint32_t right_child, 
-                    uint32_t primitive_start, uint32_t primitive_count, bool is_leaf) {
-            // Quantize AABB coordinates
-            aabb_mins_x.push_back(quantizeCoordinate(aabb_min.x, scene_min.x, quantization_scale.x));
-            aabb_mins_y.push_back(quantizeCoordinate(aabb_min.y, scene_min.y, quantization_scale.y));
-            aabb_mins_z.push_back(quantizeCoordinate(aabb_min.z, scene_min.z, quantization_scale.z));
-            
-            aabb_maxs_x.push_back(quantizeCoordinate(aabb_max.x, scene_min.x, quantization_scale.x));
-            aabb_maxs_y.push_back(quantizeCoordinate(aabb_max.y, scene_min.y, quantization_scale.y));
-            aabb_maxs_z.push_back(quantizeCoordinate(aabb_max.z, scene_min.z, quantization_scale.z));
-            
-            // Store navigation data
-            left_children.push_back(left_child);
-            right_children.push_back(right_child);
-            
-            // Pack primitive data: [31:1] = primitive_start, [30:16] = primitive_count, [0:0] = is_leaf
-            uint32_t packed_data = (primitive_start << 1) | (primitive_count << 16) | (is_leaf ? 1 : 0);
-            primitive_data.push_back(packed_data);
-            
-            node_count++;
-        }
-        
-        /**
-         * \brief Get dequantized AABB for a node
-         */
-        void getAABB(size_t node_index, helios::vec3& aabb_min, helios::vec3& aabb_max) const {
-            aabb_min.x = dequantizeCoordinate(aabb_mins_x[node_index], scene_min.x, inverse_quantization_scale.x);
-            aabb_min.y = dequantizeCoordinate(aabb_mins_y[node_index], scene_min.y, inverse_quantization_scale.y);
-            aabb_min.z = dequantizeCoordinate(aabb_mins_z[node_index], scene_min.z, inverse_quantization_scale.z);
-            
-            aabb_max.x = dequantizeCoordinate(aabb_maxs_x[node_index], scene_min.x, inverse_quantization_scale.x);
-            aabb_max.y = dequantizeCoordinate(aabb_maxs_y[node_index], scene_min.y, inverse_quantization_scale.y);
-            aabb_max.z = dequantizeCoordinate(aabb_maxs_z[node_index], scene_min.z, inverse_quantization_scale.z);
-        }
-        
-        /**
-         * \brief Get memory usage (should be ~18 bytes per node vs 48 bytes original)
-         */
-        size_t getMemoryUsage() const {
-            return (aabb_mins_x.size() + aabb_mins_y.size() + aabb_mins_z.size() +
-                    aabb_maxs_x.size() + aabb_maxs_y.size() + aabb_maxs_z.size()) * sizeof(uint16_t) +
-                   (left_children.size() + right_children.size() + primitive_data.size()) * sizeof(uint32_t);
-        }
-        
-        /**
-         * \brief Clear all quantized BVH data
-         */
-        void clear() {
-            aabb_mins_x.clear();
-            aabb_mins_y.clear();
-            aabb_mins_z.clear();
-            aabb_maxs_x.clear();
-            aabb_maxs_y.clear();
-            aabb_maxs_z.clear();
-            left_children.clear();
-            right_children.clear();
-            primitive_data.clear();
-            node_count = 0;
-        }
-    };
 
     //! Vector of BVH nodes (linearized tree structure) - LEGACY
     std::vector<BVHNode> bvh_nodes;
     
+    //! Index tracking for pre-allocated BVH node array
+    size_t next_available_node_index;
+    
     //! Structure-of-Arrays BVH layout
     BVHNodesSoA bvh_nodes_soa;
     
-    //! Quantized BVH layout (82% memory reduction)
-    QuantizedBVHNodes bvh_nodes_quantized;
-    
     //! Current optimization mode
-    BVHOptimizationMode bvh_optimization_mode = BVHOptimizationMode::SOA_QUANTIZED;
+    BVHOptimizationMode bvh_optimization_mode = BVHOptimizationMode::SOA_UNCOMPRESSED;
 
     //! Primitive indices sorted by BVH construction
     std::vector<uint> primitive_indices;
@@ -1339,40 +1213,59 @@ private:
     void castRaysGPU(const std::vector<RayQuery> &ray_queries, std::vector<HitResult> &results, RayTracingStats &stats);
 #endif
 
-    // -------- PHASE 2 OPTIMIZATION PRIVATE METHODS --------
+    // -------- OPTIMIZED RAY TRACING PRIVATE METHODS --------
 
     /**
      * \brief Convert BVH between different layout formats
      */
     void convertBVHLayout(BVHOptimizationMode from_mode, BVHOptimizationMode to_mode);
-    void convertSoAToQuantized();
-    void convertQuantizedToSoA();
     void ensureOptimizedBVH(); // Populate optimized BVH structures on demand
 
     /**
      * \brief Optimized ray casting implementations for different BVH layouts
      */
     std::vector<HitResult> castRaysSoA(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats);
-    std::vector<HitResult> castRaysQuantized(const std::vector<RayQuery> &ray_queries, RayTracingStats &stats);
 
     /**
      * \brief Single ray traversal methods for optimized BVH layouts
      */
     HitResult castRaySoATraversal(const RayQuery &query, RayTracingStats &stats);
-    HitResult castRayQuantizedTraversal(const RayQuery &query, RayTracingStats &stats);
+
+    /**
+     * \brief Basic BVH traversal (fallback when optimized structures not available)
+     * This method provides the critical early miss detection that was missing from brute-force approach
+     */
+    HitResult castRayBVHTraversal(const RayQuery &query);
 
     /**
      * \brief Optimized AABB intersection tests
      */
     inline bool aabbIntersectSoA(const helios::vec3& ray_origin, const helios::vec3& ray_direction, float max_distance,
                                 size_t node_index) const;
-    inline bool aabbIntersectQuantized(const helios::vec3& ray_origin, const helios::vec3& ray_direction, float max_distance,
-                                      size_t node_index) const;
+
+    /**
+     * \brief Basic ray-AABB intersection test
+     * Used by the basic BVH traversal for early miss detection
+     */
+    bool rayAABBIntersect(const helios::vec3& ray_origin, const helios::vec3& ray_direction, 
+                         const helios::vec3& aabb_min, const helios::vec3& aabb_max) const;
 
     /**
      * \brief Helper method for primitive intersection
      */
     HitResult intersectPrimitive(const RayQuery &query, uint primitive_id);
+    
+    /**
+     * \brief Ray-AABB intersection test for voxel primitives
+     * \param[in] origin Ray origin point
+     * \param[in] direction Ray direction vector (should be normalized)
+     * \param[in] aabb_min Minimum corner of axis-aligned bounding box
+     * \param[in] aabb_max Maximum corner of axis-aligned bounding box
+     * \param[out] distance Distance to intersection point
+     * \return True if ray intersects the AABB, false otherwise
+     */
+    bool rayAABBIntersectPrimitive(const helios::vec3& origin, const helios::vec3& direction,
+                                  const helios::vec3& aabb_min, const helios::vec3& aabb_max, float& distance);
 };
 
 #endif

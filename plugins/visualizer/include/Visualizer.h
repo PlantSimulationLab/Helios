@@ -175,12 +175,22 @@ struct Colormap {
         if (minval == maxval) {
             color_ind = 0;
         } else {
-            color_ind = std::round((x - minval) / (maxval - minval) * float(cmapsize - 1));
+            float normalized_pos = (x - minval) / (maxval - minval) * float(cmapsize - 1);
+            
+            // Handle values below minimum range
+            if (normalized_pos < 0) {
+                color_ind = 0;
+            }
+            // Handle values above maximum range
+            else if (normalized_pos > float(cmapsize - 1)) {
+                color_ind = cmapsize - 1;
+            }
+            // Handle values within range
+            else {
+                color_ind = std::round(normalized_pos);
+            }
         }
 
-        if (color_ind > cmapsize - 1) {
-            color_ind = int(cmapsize - 1);
-        }
         color.r = cmap.at(color_ind).r;
         color.g = cmap.at(color_ind).g;
         color.b = cmap.at(color_ind).b;

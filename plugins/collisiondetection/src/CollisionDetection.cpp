@@ -346,6 +346,21 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     
     primitives_to_include = valid_primitives;
 
+    // Check if the primitive set has actually changed before clearing cache
+    std::set<uint> new_primitive_set(primitives_to_include.begin(), primitives_to_include.end());
+    std::set<uint> old_primitive_set(primitive_indices.begin(), primitive_indices.end());
+    
+    bool primitive_set_changed = (new_primitive_set != old_primitive_set);
+    
+    if (primitive_set_changed) {
+        // Clear primitive cache only when primitive set changes - CRITICAL for performance
+        primitive_cache.clear();
+        if (printmessages) {
+            std::cout << "Primitive set changed, clearing cache (was " << old_primitive_set.size() 
+                      << " primitives, now " << new_primitive_set.size() << ")" << std::endl;
+        }
+    }
+
     // Clear existing BVH
     bvh_nodes.clear();
     primitive_indices.clear();
@@ -356,8 +371,9 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     // Pre-allocate BVH nodes to avoid excessive resizing
     // For N primitives, we need at most 2*N-1 nodes for a complete binary tree
     size_t max_nodes = std::max(size_t(1), 2 * primitives_to_include.size());
-    bvh_nodes.reserve(max_nodes);
-    bvh_nodes.resize(1); // Start with root node
+    bvh_nodes.clear();
+    bvh_nodes.resize(max_nodes); // Pre-allocate ALL nodes at once to avoid any resizing
+    next_available_node_index = 1; // Track next available node (0 is root)
 
     // OPTIMIZATION: Pre-cache bounding boxes with dirty flagging to avoid repeated expensive calculations
     // Only clear cache for primitives that no longer exist or are dirty
@@ -394,14 +410,13 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     // Build BVH recursively starting from root
     buildBVHRecursive(0, 0, primitive_indices.size(), 0);
 
-    // Shrink to actual size used
-    bvh_nodes.shrink_to_fit();
+    // Resize to actual nodes used (much more efficient than shrink_to_fit)
+    bvh_nodes.resize(next_available_node_index);
 
     // Clear any stale optimized structures since we just rebuilt the BVH
     // They will be rebuilt on demand by ensureOptimizedBVH() when needed
     bvh_nodes_soa.clear();
     bvh_nodes_soa.node_count = 0;
-    bvh_nodes_quantized.clear();
 
     // Transfer to GPU if acceleration is enabled
     if (gpu_acceleration_enabled) {
@@ -515,7 +530,7 @@ void CollisionDetection::buildStaticBVH() {
     std::vector<BVHNode> temp_nodes;
     std::vector<uint> temp_primitives;
     
-    // Temporarily swap in static storage
+    // Swap in static storage for building
     std::swap(bvh_nodes, temp_nodes);
     std::swap(primitive_indices, temp_primitives);
     
@@ -795,9 +810,9 @@ void CollisionDetection::calculateAABB(const std::vector<uint> &primitives, vec3
 
 void CollisionDetection::buildBVHRecursive(uint node_index, size_t primitive_start, size_t primitive_count, int depth) {
 
-    // Ensure node exists (should already be pre-allocated)
+    // Node should already be pre-allocated
     if (node_index >= bvh_nodes.size()) {
-        bvh_nodes.resize(node_index + 1);
+        throw std::runtime_error("CollisionDetection: BVH recursive access exceeded pre-allocated capacity");
     }
 
     BVHNode &node = bvh_nodes[node_index];
@@ -839,8 +854,9 @@ void CollisionDetection::buildBVHRecursive(uint node_index, size_t primitive_sta
     }
 
     // Stopping criteria - make this a leaf
-    const int MAX_PRIMITIVES_PER_LEAF = 4;
-    const int MAX_DEPTH = 20;
+    // TEMPORARY: Very aggressive stopping for large scenes to prevent timeout
+    const int MAX_PRIMITIVES_PER_LEAF = (primitive_indices.size() > 500000) ? 500 : 100;  // Much larger leaves for big scenes
+    const int MAX_DEPTH = (primitive_indices.size() > 500000) ? 6 : 10;                   // Shallower trees for big scenes
 
     if (primitive_count <= MAX_PRIMITIVES_PER_LEAF || depth >= MAX_DEPTH) {
         // Make leaf node
@@ -860,31 +876,48 @@ void CollisionDetection::buildBVHRecursive(uint node_index, size_t primitive_sta
     if (extent.z > (split_axis == 0 ? extent.x : extent.y))
         split_axis = 2;
 
-    // Sort primitives along split axis by their centroid using cached AABBs
-    std::sort(primitive_indices.begin() + primitive_start, primitive_indices.begin() + primitive_start + primitive_count, [&](uint a, uint b) {
-        auto it_a = primitive_aabbs_cache.find(a);
-        auto it_b = primitive_aabbs_cache.find(b);
-        if (it_a == primitive_aabbs_cache.end() || it_b == primitive_aabbs_cache.end()) {
-            return false; // Can't compare missing primitives
-        }
-        const auto &cached_aabb_a = it_a->second;
-        const auto &cached_aabb_b = it_b->second;
-        vec3 centroid_a = 0.5f * (cached_aabb_a.first + cached_aabb_a.second);
-        vec3 centroid_b = 0.5f * (cached_aabb_b.first + cached_aabb_b.second);
-        float a_coord = (split_axis == 0) ? centroid_a.x : (split_axis == 1) ? centroid_a.y : centroid_a.z;
-        float b_coord = (split_axis == 0) ? centroid_b.x : (split_axis == 1) ? centroid_b.y : centroid_b.z;
-        return a_coord < b_coord;
-    });
+    // In-place sort using pre-cached centroids to avoid temporary vector allocations
+    // This is critical for memory efficiency during recursive BVH construction
+    std::sort(primitive_indices.begin() + primitive_start, 
+              primitive_indices.begin() + primitive_start + primitive_count, 
+              [&](uint a, uint b) {
+                  // Use cache lookup with bounds checking for safety
+                  auto it_a = primitive_aabbs_cache.find(a);
+                  auto it_b = primitive_aabbs_cache.find(b);
+                  if (it_a == primitive_aabbs_cache.end() || it_b == primitive_aabbs_cache.end()) {
+                      return a < b; // Fallback to UUID ordering for missing primitives
+                  }
+                  
+                  const auto &aabb_a = it_a->second;
+                  const auto &aabb_b = it_b->second;
+                  
+                  // Compute centroids inline to avoid vec3 temporaries
+                  float centroid_a_coord, centroid_b_coord;
+                  if (split_axis == 0) {
+                      centroid_a_coord = 0.5f * (aabb_a.first.x + aabb_a.second.x);
+                      centroid_b_coord = 0.5f * (aabb_b.first.x + aabb_b.second.x);
+                  } else if (split_axis == 1) {
+                      centroid_a_coord = 0.5f * (aabb_a.first.y + aabb_a.second.y);
+                      centroid_b_coord = 0.5f * (aabb_b.first.y + aabb_b.second.y);
+                  } else {
+                      centroid_a_coord = 0.5f * (aabb_a.first.z + aabb_a.second.z);
+                      centroid_b_coord = 0.5f * (aabb_b.first.z + aabb_b.second.z);
+                  }
+                  
+                  return centroid_a_coord < centroid_b_coord;
+              });
 
     // Split in middle
     size_t split_index = primitive_count / 2;
 
-    // Create child nodes by allocating next two available indices
-    uint left_child_index = bvh_nodes.size();
-    uint right_child_index = bvh_nodes.size() + 1;
-
-    // Resize to accommodate both children at once (more efficient than incremental resizing)
-    bvh_nodes.resize(bvh_nodes.size() + 2);
+    // Allocate child nodes from pre-allocated array (no resizing needed)
+    uint left_child_index = next_available_node_index++;
+    uint right_child_index = next_available_node_index++;
+    
+    // Ensure we don't exceed pre-allocated capacity
+    if (right_child_index >= bvh_nodes.size()) {
+        throw std::runtime_error("CollisionDetection: BVH node allocation exceeded pre-calculated capacity");
+    }
 
     // Re-get the node reference after potential reallocation
     BVHNode &updated_node = bvh_nodes[node_index];
@@ -959,10 +992,7 @@ std::vector<uint> CollisionDetection::traverseBVH_CPU(const vec3 &query_aabb_min
 std::vector<uint> CollisionDetection::traverseBVH_GPU(const vec3 &query_aabb_min, const vec3 &query_aabb_max) {
 #ifdef HELIOS_CUDA_AVAILABLE
     if (!gpu_memory_allocated) {
-        if (printmessages) {
-            std::cerr << "WARNING: GPU memory not allocated, falling back to CPU" << std::endl;
-        }
-        return traverseBVH_CPU(query_aabb_min, query_aabb_max);
+        helios_runtime_error("ERROR: GPU traversal requested but GPU memory is not allocated. Call buildBVH() or transferBVHToGPU() first.");
     }
 
     // Prepare single query
@@ -1323,6 +1353,10 @@ void CollisionDetection::markBVHDirty() {
     last_processed_deleted_uuids.clear();
     last_bvh_geometry.clear();
     bvh_dirty = true;
+    
+    // Note: Don't clear primitive_cache here - it will be cleared only when 
+    // buildBVH() detects actual primitive set changes, not just geometry updates
+    
     // Free GPU memory since BVH will be rebuilt
     freeGPUMemory();
 }
@@ -1474,6 +1508,69 @@ bool CollisionDetection::rayPrimitiveIntersection(const vec3 &origin, const vec3
                             hit = true;
                         }
                     }
+                }
+            }
+        }
+    } else if (type == PRIMITIVE_TYPE_VOXEL) {
+        // Voxel (AABB) intersection using slab method
+        if (vertices.size() == 8) {
+            // Calculate AABB from 8 vertices
+            vec3 aabb_min = vertices[0];
+            vec3 aabb_max = vertices[0];
+            
+            for (int i = 1; i < 8; i++) {
+                aabb_min.x = std::min(aabb_min.x, vertices[i].x);
+                aabb_min.y = std::min(aabb_min.y, vertices[i].y);
+                aabb_min.z = std::min(aabb_min.z, vertices[i].z);
+                aabb_max.x = std::max(aabb_max.x, vertices[i].x);
+                aabb_max.y = std::max(aabb_max.y, vertices[i].y);
+                aabb_max.z = std::max(aabb_max.z, vertices[i].z);
+            }
+            
+            // Ray-AABB intersection using slab method
+            float t_near = -std::numeric_limits<float>::max();
+            float t_far = std::numeric_limits<float>::max();
+            
+            // Check intersection with each slab (X, Y, Z)
+            for (int i = 0; i < 3; i++) {
+                float ray_dir_component = (i == 0) ? direction.x : (i == 1) ? direction.y : direction.z;
+                float ray_orig_component = (i == 0) ? origin.x : (i == 1) ? origin.y : origin.z;
+                float aabb_min_component = (i == 0) ? aabb_min.x : (i == 1) ? aabb_min.y : aabb_min.z;
+                float aabb_max_component = (i == 0) ? aabb_max.x : (i == 1) ? aabb_max.y : aabb_max.z;
+                
+                if (std::abs(ray_dir_component) < 1e-8f) {
+                    // Ray is parallel to slab
+                    if (ray_orig_component < aabb_min_component || ray_orig_component > aabb_max_component) {
+                        return false; // Ray is outside slab and parallel - no intersection
+                    }
+                } else {
+                    // Calculate intersection distances for this slab
+                    float t1 = (aabb_min_component - ray_orig_component) / ray_dir_component;
+                    float t2 = (aabb_max_component - ray_orig_component) / ray_dir_component;
+                    
+                    // Ensure t1 <= t2
+                    if (t1 > t2) {
+                        std::swap(t1, t2);
+                    }
+                    
+                    // Update near and far intersection distances
+                    t_near = std::max(t_near, t1);
+                    t_far = std::min(t_far, t2);
+                    
+                    // Early exit if no intersection possible
+                    if (t_near > t_far) {
+                        return false;
+                    }
+                }
+            }
+            
+            // Check if intersection is in front of ray origin
+            if (t_far >= 0.0f && t_near < min_distance) {
+                // Use t_near if it's positive (ray starts outside box), otherwise t_far (ray starts inside box)
+                float intersection_distance = (t_near >= 1e-8f) ? t_near : t_far;
+                if (intersection_distance >= 1e-8f) {
+                    min_distance = intersection_distance;
+                    hit = true;
                 }
             }
         }
@@ -1707,24 +1804,12 @@ bool CollisionDetection::findNearestRayIntersection(const vec3 &origin, const ve
     
     // First, traverse the static BVH if hierarchical BVH is enabled
     if (check_static_bvh) {
-        if (should_debug && printmessages) {
-            std::cout << "DEBUG: Traversing static BVH..." << std::endl;
-        }
         traverseBVH(static_bvh_nodes, static_bvh_primitives, "static");
     }
     
     // Then, traverse the dynamic BVH
     if (check_dynamic_bvh) {
-        if (should_debug && printmessages) {
-            std::cout << "DEBUG: Traversing dynamic BVH..." << std::endl;
-        }
         traverseBVH(bvh_nodes, primitive_indices, "dynamic");
-    }
-    
-    if (should_debug && printmessages) {
-        std::cout << "DEBUG findNearestRayIntersection: visited " << nodes_visited << " nodes, checked " 
-                  << primitives_checked << " primitives, found " << candidates_found_in_bvh 
-                  << " candidates in BVH, intersection found: " << (found_intersection ? "YES" : "NO") << std::endl;
     }
     
     return found_intersection;
@@ -2010,7 +2095,7 @@ std::vector<helios::vec3> CollisionDetection::sampleDirectionsInCone(const vec3 
     std::uniform_real_distribution<float> uniform_dist(0.0f, 1.0f);
 
     int samples_generated = 0;
-    int max_attempts = num_samples * 10; // Prevent infinite loops
+    int max_attempts = num_samples * 10; // Limit attempts to prevent infinite loops
     int attempts = 0;
 
     while (samples_generated < num_samples && attempts < max_attempts) {
@@ -2843,4 +2928,62 @@ void CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3
     }
     calculateVoxelRayPathLengths_CPU(ray_origins, ray_directions);
 #endif
+}
+
+void CollisionDetection::ensureOptimizedBVH() {
+    // Convert standard BVH to Structure-of-Arrays format for optimal cache performance
+    if (bvh_nodes_soa.node_count != bvh_nodes.size() || bvh_nodes_soa.aabb_mins.empty()) {
+        
+        if (printmessages) {
+            std::cout << "Converting BVH to Structure-of-Arrays format for optimal performance..." << std::endl;
+        }
+        
+        // Clear existing SoA data
+        bvh_nodes_soa.clear();
+        
+        if (bvh_nodes.empty()) {
+            bvh_nodes_soa.node_count = 0;
+            return;
+        }
+        
+        size_t node_count = bvh_nodes.size();
+        bvh_nodes_soa.node_count = node_count;
+        
+        // Reserve space for all arrays (avoid repeated allocations)
+        bvh_nodes_soa.aabb_mins.reserve(node_count);
+        bvh_nodes_soa.aabb_maxs.reserve(node_count);
+        bvh_nodes_soa.left_children.reserve(node_count);
+        bvh_nodes_soa.right_children.reserve(node_count);
+        bvh_nodes_soa.primitive_starts.reserve(node_count);
+        bvh_nodes_soa.primitive_counts.reserve(node_count);
+        bvh_nodes_soa.is_leaf_flags.reserve(node_count);
+        
+        // Convert Array-of-Structures to Structure-of-Arrays
+        for (size_t i = 0; i < node_count; ++i) {
+            const BVHNode& node = bvh_nodes[i];
+            
+            // Hot data: frequently accessed during traversal
+            bvh_nodes_soa.aabb_mins.push_back(node.aabb_min);
+            bvh_nodes_soa.aabb_maxs.push_back(node.aabb_max);
+            bvh_nodes_soa.left_children.push_back(node.left_child);
+            bvh_nodes_soa.right_children.push_back(node.right_child);
+            
+            // Cold data: accessed less frequently
+            bvh_nodes_soa.primitive_starts.push_back(node.primitive_start);
+            bvh_nodes_soa.primitive_counts.push_back(node.primitive_count);
+            bvh_nodes_soa.is_leaf_flags.push_back(node.is_leaf ? 1 : 0);
+        }
+        
+        if (printmessages) {
+            std::cout << "SoA BVH conversion complete: " << node_count << " nodes" << std::endl;
+            
+            // Calculate memory savings
+            size_t aos_memory = node_count * sizeof(BVHNode);
+            size_t soa_hot_memory = node_count * (sizeof(vec3) * 2 + sizeof(uint32_t) * 2); // AABB + children
+            size_t soa_cold_memory = node_count * (sizeof(uint32_t) * 2 + sizeof(uint8_t)); // primitives + flags
+            
+            std::cout << "Memory layout: AoS=" << aos_memory << " bytes, SoA hot=" << soa_hot_memory 
+                      << " bytes, SoA cold=" << soa_cold_memory << " bytes" << std::endl;
+        }
+    }
 }

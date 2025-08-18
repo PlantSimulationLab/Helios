@@ -1,5 +1,6 @@
 option(ENABLE_OPENMP "Enable building with OpenMP" ON)
 option(BUILD_TESTS "Build test executables" OFF)
+option(BUILD_BENCHMARKS "Build performance benchmark executables" OFF)
 
 
 # Set CMake policies to avoid warnings on newer CMake versions

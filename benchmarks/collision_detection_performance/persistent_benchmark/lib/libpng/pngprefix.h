@@ -1,1 +1,0 @@
-/* No libpng symbol prefix configured. */
