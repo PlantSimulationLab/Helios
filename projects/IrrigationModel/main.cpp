@@ -16,13 +16,13 @@ int main(){
     // - Lateral spacing: 12m
     // - Connection type: "vertical" (could also be "horizontal")
 
-    double Pw = 30.0;
+    double Pw = 25.0;
         system.createCompleteSystem(
             Pw,    // Pw (psi)
-            20.0,   // fieldLength (m)
-            50.0,    // fieldWidth (m)
-            10.0,    // sprinklerSpacing (m)
-            25.0,    // lineSpacing (m)
+            44.0 * IrrigationModel::FEET_TO_METER,   // fieldLength (m)
+            32.0 * IrrigationModel::FEET_TO_METER,    // fieldWidth (m)
+            22.0 * IrrigationModel::FEET_TO_METER,    // lineSpacing (m)
+            16.0 * IrrigationModel::FEET_TO_METER,    // sprinklerSpacing (m)
             "vertical", // lateralDirection
             SubmainPosition:: MIDDLE
         );
@@ -45,7 +45,8 @@ int main(){
     std::cout << "Total links: " << system.links.size() << "\n";
 
     system.validateHydraulicSystem();
-    HydraulicResults results = system.calculateHydraulics("NPC", 0.0001, Pw);
+    const double Q_specified = system.calculateEmitterFlow("NPC", Pw*6894.76);
+    HydraulicResults results = system.calculateHydraulics("NPC",Q_specified, Pw);
 
     for (const auto& [id, node] : system.nodes) {
         std::cout << "Node " << id << " (" << node.type << ") pressure: "

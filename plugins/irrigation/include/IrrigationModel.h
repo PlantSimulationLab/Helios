@@ -28,7 +28,7 @@ struct Position {
     double x;
     double y;
 
-    // Add distance calculation
+    // distance calculation
     double distanceTo(const Position& other) const {
         return std::hypot(x - other.x, y - other.y);
     }
@@ -43,7 +43,7 @@ struct Node {
     Position position;
     double pressure;
     bool is_fixed;
-    std::vector<int> neighbors; // <-- This must exist!
+    std::vector<int> neighbors;
 };
 
 struct Link {
@@ -64,6 +64,8 @@ struct Link {
 struct HydraulicResults {
     std::vector<double> nodalPressures;
     std::vector<double> flowRates;
+    bool converged = false;
+    int iterations = 0;
 };
 
 enum class SubmainPosition {
@@ -75,6 +77,8 @@ enum class SubmainPosition {
 
 class IrrigationModel {
 public:
+    static constexpr double INCH_TO_METER = 0.0254;
+    static constexpr double FEET_TO_METER = 0.3048;
     std::unordered_map<int, Node> nodes;
     std::vector<Link> links;
 
@@ -94,10 +98,11 @@ public:
     void validateHydraulicSystem() const;
     // Get system summary as string
     std::string getSystemSummary() const;
+    double calculateEmitterFlow(const std::string& nozzleType, double pressure);
+
 
 private:
-    static constexpr double INCH_TO_METER = 0.0254;
-    static constexpr double FEET_TO_METER = 0.3048;
+
     int waterSourceId = -1;  // Tracks water source node ID
 
     // Helper methods
@@ -115,15 +120,12 @@ private:
     //                                         const std::string& lateralDirection);
 
     void addSubmainAndWaterSource(double fieldLength, double fieldWidth,
-                            const std::string& lateralDirection,
-                            SubmainPosition submainPos);
-
-    double calculateEmitterFlow(double Pw) const;
+                                             const std::string& lateralDirection,
+                                             SubmainPosition submainPosition);
 
     void buildNeighborLists();
     double calculateResistance(double Re, double Wbar, const Link& link, int iter);
-    double calculateEmitterFlow(const std::string& nozzleType, double pressure);
-
+    const Link* findLink(int from, int to) const;
 
 };
 
