@@ -24,6 +24,8 @@ jobs:
         run: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
       - name: Install XQuartz
         run: brew install Caskroom/cask/xquartz
+      - name: Install OpenMP support
+        run: brew install libomp
 
       - name: Bash script
         run: |

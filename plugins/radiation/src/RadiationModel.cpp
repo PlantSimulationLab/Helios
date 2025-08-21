@@ -1671,6 +1671,11 @@ void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
 
     size_t Nprimitives = context_UUIDs.size(); // Number of primitives
 
+    if ( Nprimitives == 0 ) {
+        std::cerr << "WARNING (RadiationModel::updateGeometry): No primitives found in context. Cannot update geometry." << std::endl;
+        return;
+    }
+
     std::vector<uint> objID_all = context->getUniquePrimitiveParentObjectIDs(context_UUIDs, true);
 
     // We need to reorder the primitive UUIDs so they appear in the proper order within the parent object

@@ -11,5 +11,6 @@ var searchData=
   ['branches_5fper_5flevel_8',['branches_per_level',['../struct_white_spruce_canopy_parameters.html#afa54ff0b14e18e615a40ed80386491dc',1,'WhiteSpruceCanopyParameters']]],
   ['bud_5fdeath_5fthreshold_5fdays_9',['bud_death_threshold_days',['../struct_carbohydrate_parameters.html#ac1763759051f2f9cb5657ad378c0fcdd',1,'CarbohydrateParameters']]],
   ['buffer_10',['buffer',['../struct_homogeneous_canopy_parameters.html#a1b6de173fb1f5e71f4d8e7ff9ae99881',1,'HomogeneousCanopyParameters']]],
-  ['build_5fpetiolule_11',['build_petiolule',['../struct_leaf_prototype.html#a97e0456a85a039b8c7c318a0cd57663e',1,'LeafPrototype']]]
+  ['build_5fpetiolule_11',['build_petiolule',['../struct_leaf_prototype.html#a97e0456a85a039b8c7c318a0cd57663e',1,'LeafPrototype']]],
+  ['bvh_5fnodes_5fvisited_12',['bvh_nodes_visited',['../struct_collision_detection_1_1_ray_tracing_stats.html#a9886d3d89b5478b9d6c6f92d46d8ef94',1,'CollisionDetection::RayTracingStats']]]
 ];

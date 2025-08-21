@@ -104,6 +104,15 @@ PlantArchitecture::PlantArchitecture(helios::Context *context_ptr) : context_ptr
     output_object_data["carbohydrate_concentration"] = false;
 }
 
+PlantArchitecture::~PlantArchitecture() {
+    // Clean up owned CollisionDetection instance
+    if (collision_detection_ptr != nullptr && owns_collision_detection) {
+        delete collision_detection_ptr;
+        collision_detection_ptr = nullptr;
+        owns_collision_detection = false;
+    }
+}
+
 LeafPrototype::LeafPrototype(std::minstd_rand0 *generator) : generator(generator) {
     leaf_aspect_ratio.initialize(1.f, generator);
     midrib_fold_fraction.initialize(0.f, generator);
@@ -246,9 +255,13 @@ std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::v
     for (int j = 0; j < plant_count_xy.y; j++) {
         for (int i = 0; i < plant_count_xy.x; i++) {
             if (context_ptr->randu() < germination_rate) {
-                plantIDs.push_back(buildPlantInstanceFromLibrary(canopy_center_position + make_vec3(-0.5f * canopy_extent.x + float(i) * plant_spacing_xy.x, -0.5f * canopy_extent.y + float(j) * plant_spacing_xy.y, 0), age));
+                plantIDs.push_back(buildPlantInstanceFromLibrary(canopy_center_position + make_vec3(-0.5f * canopy_extent.x + float(i) * plant_spacing_xy.x, -0.5f * canopy_extent.y + float(j) * plant_spacing_xy.y, 0), 0));
             }
         }
+    }
+
+    if ( age>0 ) {
+        advanceTime(plantIDs, age);
     }
 
     return plantIDs;
@@ -304,6 +317,16 @@ helios::vec3 Phytomer::getPetioleAxisVector(const float stem_fraction, const uin
         helios_runtime_error("ERROR (Phytomer::getPetioleAxisVector): Petiole index out of range.");
     }
     return getAxisVector(stem_fraction, this->petiole_vertices.at(petiole_index));
+}
+
+helios::vec3 Phytomer::getPeduncleAxisVector(const float stem_fraction, const uint petiole_index, const uint bud_index) const {
+    if (petiole_index >= this->peduncle_vertices.size()) {
+        helios_runtime_error("ERROR (Phytomer::getPeduncleAxisVector): Petiole index out of range.");
+    }
+    if (bud_index >= this->peduncle_vertices.at(petiole_index).size()) {
+        helios_runtime_error("ERROR (Phytomer::getPeduncleAxisVector): Floral bud index out of range.");
+    }
+    return getAxisVector(stem_fraction, this->peduncle_vertices.at(petiole_index).at(bud_index));
 }
 
 helios::vec3 Phytomer::getAxisVector(const float stem_fraction, const std::vector<helios::vec3> &axis_vertices) {
@@ -473,20 +496,35 @@ helios::vec3 Phytomer::calculateCollisionAvoidanceDirection(const helios::vec3 &
     collision_detection_active = false;
 
     if (plantarchitecture_ptr->collision_detection_enabled && plantarchitecture_ptr->collision_detection_ptr != nullptr) {
-        // Build restricted BVH with target geometry only
-        std::vector<uint> target_geometry;
-        if (!plantarchitecture_ptr->collision_target_UUIDs.empty()) {
-            target_geometry = plantarchitecture_ptr->collision_target_UUIDs;
-        } else if (!plantarchitecture_ptr->collision_target_object_IDs.empty()) {
-            for (uint objID: plantarchitecture_ptr->collision_target_object_IDs) {
-                std::vector<uint> obj_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
-                target_geometry.insert(target_geometry.end(), obj_primitives.begin(), obj_primitives.end());
+
+        // BVH should already be built at timestep level - just use it
+        if (!plantarchitecture_ptr->bvh_cached_for_current_growth) {
+            if (plantarchitecture_ptr->printmessages) {
+                std::cout << "WARNING: BVH not cached - this indicates rebuildBVHForTimestep() was not called" << std::endl;
             }
+            return collision_optimal_direction; // Skip collision avoidance if BVH not ready
         }
 
-        if (!target_geometry.empty()) {
-            plantarchitecture_ptr->collision_detection_ptr->buildBVH(target_geometry);
+        // Apply cone-aware culling based on actual collision detection geometry
+        std::vector<uint> filtered_geometry;
 
+        // Calculate spherical sector culling distance
+        // The "cone" is actually a spherical sector with radius = look-ahead distance
+        float look_ahead_distance = plantarchitecture_ptr->collision_cone_height;
+
+        // Only obstacles within the look-ahead distance can be detected by collision rays
+        // Add small buffer for obstacles at sector boundary
+        float max_relevant_distance = look_ahead_distance * 1.1f; // 10% buffer
+
+
+        // Always apply cone-aware culling for performance (no arbitrary thresholds)
+        filtered_geometry = plantarchitecture_ptr->collision_detection_ptr->filterGeometryByDistance(internode_base_origin, max_relevant_distance, plantarchitecture_ptr->cached_target_geometry);
+
+
+        // Update cached filtered geometry for this specific collision check
+        plantarchitecture_ptr->cached_filtered_geometry = filtered_geometry;
+
+        if (plantarchitecture_ptr->bvh_cached_for_current_growth && !plantarchitecture_ptr->cached_filtered_geometry.empty()) {
             // Set up cone parameters for optimal path finding
             vec3 apex = internode_base_origin;
             vec3 central_axis = internode_axis;
@@ -523,11 +561,13 @@ helios::vec3 Phytomer::calculatePetioleCollisionAvoidanceDirection(const helios:
                 std::vector<uint> obj_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
                 target_geometry.insert(target_geometry.end(), obj_primitives.begin(), obj_primitives.end());
             }
+        } else {
+            // If no specific targets provided, use ALL geometry in Context for collision avoidance
+            target_geometry = context_ptr->getAllUUIDs();
         }
 
-        if (!target_geometry.empty()) {
-            plantarchitecture_ptr->collision_detection_ptr->buildBVH(target_geometry);
-
+        // Use cached BVH if available (same cache as internode collision avoidance)
+        if (plantarchitecture_ptr->bvh_cached_for_current_growth && !plantarchitecture_ptr->cached_filtered_geometry.empty()) {
             // Set up cone parameters for optimal path finding using petiole-specific parameters
             vec3 apex = petiole_base_origin;
             vec3 central_axis = proposed_petiole_axis;
@@ -548,6 +588,199 @@ helios::vec3 Phytomer::calculatePetioleCollisionAvoidanceDirection(const helios:
         }
     }
     return collision_optimal_direction;
+}
+
+helios::vec3 Phytomer::calculateFruitCollisionAvoidanceDirection(const helios::vec3 &fruit_base_origin, const helios::vec3 &proposed_fruit_axis, bool &collision_detection_active) const {
+    vec3 collision_optimal_direction;
+    collision_detection_active = false;
+
+
+    if (plantarchitecture_ptr->collision_detection_enabled && plantarchitecture_ptr->collision_detection_ptr != nullptr) {
+        // Build restricted BVH with target geometry only
+        std::vector<uint> target_geometry;
+        if (!plantarchitecture_ptr->collision_target_UUIDs.empty()) {
+            target_geometry = plantarchitecture_ptr->collision_target_UUIDs;
+        } else if (!plantarchitecture_ptr->collision_target_object_IDs.empty()) {
+            for (uint objID: plantarchitecture_ptr->collision_target_object_IDs) {
+                std::vector<uint> obj_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                target_geometry.insert(target_geometry.end(), obj_primitives.begin(), obj_primitives.end());
+            }
+        } else {
+            // If no specific targets provided, use ALL geometry in Context for collision avoidance
+            target_geometry = context_ptr->getAllUUIDs();
+        }
+
+        // Use cached BVH if available (same cache as internode collision avoidance)
+        if (plantarchitecture_ptr->bvh_cached_for_current_growth && !plantarchitecture_ptr->cached_filtered_geometry.empty()) {
+            // Set up cone parameters for optimal path finding using fruit-specific parameters
+            vec3 apex = fruit_base_origin;
+            vec3 central_axis = proposed_fruit_axis;
+            central_axis.normalize();
+            float height = plantarchitecture_ptr->collision_cone_height;
+            float half_angle = plantarchitecture_ptr->collision_cone_half_angle_rad;
+            int samples = plantarchitecture_ptr->collision_sample_count;
+
+            // Find optimal cone path using gap detection for fruit direction
+            auto optimal_result = plantarchitecture_ptr->collision_detection_ptr->findOptimalConePath(apex, central_axis, half_angle, height, samples);
+
+            // Store the optimal direction for later blending
+            if (optimal_result.confidence > 0.0f) {
+                collision_optimal_direction = optimal_result.direction;
+                collision_optimal_direction.normalize();
+                collision_detection_active = true;
+            }
+            
+            // Debug: track when collision detection doesn't find anything
+            static int no_collision_count = 0;
+            if (optimal_result.confidence <= 0.0f) {
+                no_collision_count++;
+                if (no_collision_count <= 5 || no_collision_count % 1000 == 0) {
+                    std::cout << "No collision detected (#" << no_collision_count << ") for fruit at " << fruit_base_origin << " with axis " << proposed_fruit_axis << std::endl;
+                }
+            }
+        } else {
+            static int no_bvh_count = 0;
+            no_bvh_count++;
+            if (no_bvh_count <= 5) {
+                std::cout << "No BVH cached (#" << no_bvh_count << ") - bvh_cached=" << plantarchitecture_ptr->bvh_cached_for_current_growth << ", geometry_size=" << plantarchitecture_ptr->cached_filtered_geometry.size() << std::endl;
+            }
+        }
+    }
+    return collision_optimal_direction;
+}
+
+bool Phytomer::applySolidObstacleAvoidance(const helios::vec3 &current_position, helios::vec3 &internode_axis) const {
+    if (!plantarchitecture_ptr->solid_obstacle_avoidance_enabled || plantarchitecture_ptr->solid_obstacle_UUIDs.empty()) {
+        return false;
+    }
+
+    // Ignore solid obstacles for the first several nodes of the base stem to prevent U-turn growth
+    // when plants start slightly below ground surface
+    if (shoot_index.x == 0 && (rank < 3 || parent_shoot_ptr->calculateShootLength() < 0.05f)) {
+        return false;  // Skip solid obstacle avoidance for first 3 nodes OR if shoot length < 5cm
+    }
+
+    vec3 growth_direction = internode_axis;
+    growth_direction.normalize();
+
+    // Check for obstacles using cone-based detection
+    float nearest_obstacle_distance;
+    vec3 nearest_obstacle_direction;
+
+    // Use smaller cone angle for hard obstacle detection (30 degrees vs 80 degrees for soft avoidance)
+    float hard_detection_cone_angle = deg2rad(30.0f);
+    float detection_distance = plantarchitecture_ptr->solid_obstacle_avoidance_distance;
+
+    if (plantarchitecture_ptr->collision_detection_ptr != nullptr &&
+        plantarchitecture_ptr->collision_detection_ptr->findNearestSolidObstacleInCone(current_position, growth_direction, hard_detection_cone_angle, detection_distance, plantarchitecture_ptr->solid_obstacle_UUIDs, nearest_obstacle_distance,
+                                                                                       nearest_obstacle_direction)) {
+
+        // Define buffer distance as 5% of detection distance (cone length)
+        float buffer_distance = detection_distance * 0.05f;
+        
+        // Normalize distance by detection distance for smooth calculations
+        float normalized_distance = nearest_obstacle_distance / detection_distance;
+        float buffer_threshold = buffer_distance / detection_distance;  // Normalized buffer threshold
+        
+        vec3 avoidance_direction;
+        float rotation_fraction;
+        
+        if (nearest_obstacle_distance <= buffer_distance) {
+            // CRITICAL: Within buffer zone - use strong directional avoidance
+            // Calculate direction that points directly away from the obstacle surface
+            avoidance_direction = current_position - (current_position + nearest_obstacle_direction * nearest_obstacle_distance);
+            if (avoidance_direction.magnitude() < 0.001f) {
+                // Fallback if we can't determine clear avoidance direction
+                avoidance_direction = cross(growth_direction, nearest_obstacle_direction);
+                if (avoidance_direction.magnitude() < 0.001f) {
+                    avoidance_direction = make_vec3(0, 0, 1);  // Fallback to upward growth
+                }
+            }
+            avoidance_direction.normalize();
+            
+            // Strong avoidance when in buffer zone
+            rotation_fraction = 1.0f;
+            
+            // Blend growth direction away from obstacle to maintain buffer
+            float buffer_blend_factor = 0.8f;  // Strong influence to get out of buffer
+            internode_axis = (1.0f - buffer_blend_factor) * growth_direction + buffer_blend_factor * avoidance_direction;
+            internode_axis.normalize();
+            
+        } else {
+            // NORMAL: Outside buffer zone - use smooth rotational avoidance
+            
+            // Calculate the angle between growth direction and obstacle direction
+            float dot_with_obstacle = normalize(growth_direction) * normalize(nearest_obstacle_direction);
+            float angle_deficit = asin_safe(fabs(dot_with_obstacle));
+
+            // Calculate perpendicular direction to avoid obstacle
+            vec3 rotation_axis = cross(growth_direction, -nearest_obstacle_direction);
+
+            if (rotation_axis.magnitude() > 0.001f) {
+                rotation_axis.normalize();
+            } else {
+                angle_deficit = 0.f;
+            }
+
+            if (rotation_axis.magnitude() > 0.001f) {
+
+                // Use smooth, normalized distance-based approach
+                // Use increasing function that reaches 1.0 at 20% of the surface distance
+                float surface_threshold_fraction = 0.2f;  // Function reaches max strength at 20% of detection distance
+                
+                if (normalized_distance <= surface_threshold_fraction) {
+                    // Maximum avoidance strength (1.0) when very close to surface
+                    rotation_fraction = 1.0f;
+                } else {
+                    // Smooth decay from 1.0 to minimum strength as distance increases
+                    float remaining_distance = normalized_distance - surface_threshold_fraction;
+                    float max_remaining_distance = 1.0f - surface_threshold_fraction;
+                    
+                    // Exponential decay for smoother transitions
+                    float distance_factor = remaining_distance / max_remaining_distance;  // 0.0 to 1.0
+                    float min_rotation_fraction = 0.05f;  // Minimum background avoidance strength
+                    
+                    // Exponential decay: strong avoidance close to threshold, gentle far away
+                    rotation_fraction = min_rotation_fraction + (1.0f - min_rotation_fraction) * exp(-3.0f * distance_factor);
+                }
+
+                // Apply fraction of the total angle deficit
+                float rotation_this_step = angle_deficit * rotation_fraction;
+
+                // Apply the rotation
+                internode_axis = rotatePointAboutLine(internode_axis, nullorigin, rotation_axis, rotation_this_step);
+                internode_axis.normalize();
+            }
+        }
+
+        return true; // Obstacle found and avoidance applied
+    }
+
+    return false; // No obstacle found
+}
+
+helios::vec3 Phytomer::calculateAttractionPointDirection(const helios::vec3 &internode_base_origin, const helios::vec3 &internode_axis, bool &attraction_active) const {
+    vec3 attraction_direction;
+    attraction_active = false;
+
+    if (!plantarchitecture_ptr->attraction_points_enabled || plantarchitecture_ptr->attraction_points.empty() || plantarchitecture_ptr->collision_detection_ptr == nullptr) {
+        return attraction_direction;
+    }
+
+    // Use the attraction points detection method from CollisionDetection
+    vec3 look_direction = internode_axis;
+    look_direction.normalize();
+    float half_angle_degrees = rad2deg(plantarchitecture_ptr->attraction_cone_half_angle_rad);
+    float look_ahead_distance = plantarchitecture_ptr->attraction_cone_height;
+
+    vec3 direction_to_closest;
+    if (plantarchitecture_ptr->collision_detection_ptr->detectAttractionPoints(internode_base_origin, look_direction, look_ahead_distance, half_angle_degrees, plantarchitecture_ptr->attraction_points, direction_to_closest)) {
+        attraction_direction = direction_to_closest;
+        attraction_direction.normalize();
+        attraction_active = true;
+    }
+
+    return attraction_direction;
 }
 
 int Shoot::appendPhytomer(float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const PhytomerParameters &phytomer_parameters) {
@@ -850,7 +1083,7 @@ void Shoot::updateShootNodes(bool update_context_geometry) {
     }
 
     // update petiole/leaf positions
-    for (int p = 0; p < phytomers.size() && p < shoot_internode_vertices.size(); p++) {
+    for (int p = 0; p < phytomers.size(); p++) {
         vec3 petiole_base = shoot_internode_vertices.at(p).back();
         if (parent_shoot_ID >= 0) {
             // shift petiole base outward by the parent internode radius
@@ -985,7 +1218,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     if (phytomer_parameters.petiole.petioles_per_internode < 1) {
         build_context_geometry_petiole = false;
         phytomer_parameters.petiole.petioles_per_internode = 1;
-        std::cout << "WARNING (PlantArchitecture::Phytomer): Invalid petioles_per_internode (<1) detected. Setting to 1 and preserving leaf generation." << std::endl;
+        phytomer_parameters.leaf.leaves_per_petiole = 0;
     }
 
     if (phytomer_parameters.petiole.petioles_per_internode == 0) {
@@ -1019,6 +1252,9 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     petiole_length.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_vertices.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_radii.resize(phytomer_parameters.petiole.petioles_per_internode);
+    
+    // initialize peduncle vertices storage (will be resized when floral buds are added)
+    peduncle_vertices.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_pitch.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_curvature.resize(phytomer_parameters.petiole.petioles_per_internode);
     std::vector<float> dr_petiole(phytomer_parameters.petiole.petioles_per_internode);
@@ -1121,13 +1357,20 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         shoot_bending_axis = make_vec3(0, 1, 0);
     }
 
-    // Store collision detection parameters for later use (after all natural rotations)
+    // Store collision detection and attraction points parameters for later use (after all natural rotations)
     vec3 collision_optimal_direction;
     bool collision_detection_active = false;
+    vec3 attraction_direction;
+    bool attraction_active = false;
+    bool obstacle_found = false;
 
     // Calculate collision avoidance direction if collision detection is enabled
     collision_optimal_direction = calculateCollisionAvoidanceDirection(internode_base_origin, internode_axis, collision_detection_active);
 
+    // Calculate attraction point direction if attraction points are enabled
+    attraction_direction = calculateAttractionPointDirection(internode_base_origin, internode_axis, attraction_active);
+
+    // Solid obstacle avoidance is now handled inside the segment creation loop
 
     // create internode tube
     for (int inode_segment = 1; inode_segment <= Ndiv_internode_length; inode_segment++) {
@@ -1151,17 +1394,51 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             internode_axis = rotatePointAboutLine(internode_axis, nullorigin, make_vec3(0, 0, 1), yaw_angle);
         }
 
-        // Apply collision avoidance blending after all natural rotations are complete
-        if (collision_detection_active) {
-            vec3 natural_direction = internode_axis;
-            float inertia_weight = plantarchitecture_ptr->collision_inertia_weight;
+        // Apply solid obstacle avoidance after natural rotations but before soft collision avoidance
+        vec3 current_position = phytomer_internode_vertices.at(inode_segment - 1);
+        obstacle_found = applySolidObstacleAvoidance(current_position, internode_axis);
 
-            // Blend natural direction with optimal direction based on inertia
-            // inertia = 1.0: use natural direction (no collision avoidance)
-            // inertia = 0.0: use optimal direction (full collision avoidance)
-            internode_axis = inertia_weight * natural_direction + (1.0f - inertia_weight) * collision_optimal_direction;
-            internode_axis.normalize();
+        // Apply direction guidance after all natural rotations are complete
+        // New approach: Blend hard obstacle avoidance with attraction to maintain surface attraction
+        
+        vec3 final_direction = internode_axis;  // Start with current direction (includes hard obstacle avoidance if applied)
+        
+        if (attraction_active) {
+            // Always apply attraction points if they're found
+            float attraction_weight = plantarchitecture_ptr->attraction_weight;
+            
+            if (obstacle_found) {
+                // When hard obstacles are present, reduce attraction influence to allow obstacle avoidance
+                // but maintain some attraction to keep plant near surface
+                attraction_weight *= plantarchitecture_ptr->attraction_obstacle_reduction_factor;  // Reduce attraction when avoiding hard obstacles
+            }
+            
+            // Blend current direction (which may include obstacle avoidance) with attraction direction
+            final_direction = (1.0f - attraction_weight) * final_direction + attraction_weight * attraction_direction;
+            final_direction.normalize();
+            
+            // Mark that attraction guidance was applied
+            plantarchitecture_ptr->collision_avoidance_applied = true;
+            
+        } else if (collision_detection_active && !obstacle_found) {
+            // No attraction points found and no hard obstacles - fall back to soft collision avoidance
+            float inertia_weight = plantarchitecture_ptr->collision_inertia_weight;
+            
+            // Blend natural direction with optimal collision avoidance direction
+            final_direction = inertia_weight * final_direction + (1.0f - inertia_weight) * collision_optimal_direction;
+            final_direction.normalize();
+            
+            // Mark that collision avoidance was applied this timestep
+            plantarchitecture_ptr->collision_avoidance_applied = true;
         }
+        
+        if (obstacle_found) {
+            // Mark that hard obstacle avoidance was applied
+            plantarchitecture_ptr->collision_avoidance_applied = true;
+        }
+        
+        // Update the internode axis with the final blended direction
+        internode_axis = final_direction;
 
         // vec3 displacement = dr_internode * internode_axis;
         // // Ensure minimum coordinate-wise displacement to avoid floating-point precision issues
@@ -1264,12 +1541,14 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             petiole_rotation_axis_actual = rotatePointAboutLine(petiole_rotation_axis_actual, nullorigin, internode_axis, budrot);
         }
 
-        // Apply collision avoidance for petiole direction
+        // Apply collision avoidance for petiole direction (if enabled)
         vec3 collision_optimal_petiole_direction;
         bool petiole_collision_active = false;
 
-        collision_optimal_petiole_direction = calculatePetioleCollisionAvoidanceDirection(phytomer_internode_vertices.back(), // petiole base position
-                                                                                          petiole_axis_actual, petiole_collision_active);
+        if (plantarchitecture_ptr->petiole_collision_detection_enabled) {
+            collision_optimal_petiole_direction = calculatePetioleCollisionAvoidanceDirection(phytomer_internode_vertices.back(), // petiole base position
+                                                                                              petiole_axis_actual, petiole_collision_active);
+        }
 
         if (petiole_collision_active) {
             float inertia_weight = plantarchitecture_ptr->collision_inertia_weight;
@@ -1549,6 +1828,26 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
 
     float theta_base = fabs(cart2sphere(peduncle_axis).zenith);
 
+    // Apply collision avoidance for peduncle direction (if enabled) - following petiole pattern
+    vec3 collision_optimal_peduncle_direction;
+    bool peduncle_collision_active = false;
+
+    if (plantarchitecture_ptr->fruit_collision_detection_enabled) {
+        collision_optimal_peduncle_direction = calculateFruitCollisionAvoidanceDirection(fbud.base_position, // peduncle base position
+                                                                                          peduncle_axis, peduncle_collision_active);
+    }
+
+    if (peduncle_collision_active) {
+        float inertia_weight = plantarchitecture_ptr->collision_inertia_weight;
+        vec3 natural_peduncle_direction = peduncle_axis;
+
+        // Blend natural peduncle direction with optimal direction
+        // inertia = 1.0: use natural direction (no collision avoidance)
+        // inertia = 0.0: use optimal direction (full collision avoidance)
+        peduncle_axis = inertia_weight * natural_peduncle_direction + (1.0f - inertia_weight) * collision_optimal_peduncle_direction;
+        peduncle_axis.normalize();
+    }
+
     for (int i = 1; i <= phytomer_parameters.peduncle.length_segments; i++) {
         if (phytomer_parameters.peduncle.curvature.val() != 0.f) {
             float theta_curvature = -deg2rad(phytomer_parameters.peduncle.curvature.val() * dr_peduncle);
@@ -1570,6 +1869,18 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     if (build_context_geometry_peduncle) {
         fbud.peduncle_objIDs.push_back(context_ptr->addTubeObject(Ndiv_peduncle_radius, peduncle_vertices, peduncle_radii, peduncle_colors));
         context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(fbud.peduncle_objIDs.back()), "object_label", "peduncle");
+    }
+    
+    // Store peduncle vertices for later axis vector calculations
+    // Use the parent_index to determine which petiole this floral bud belongs to
+    uint petiole_idx = fbud.parent_index;
+    
+    // Ensure the peduncle_vertices storage has the right size for this floral bud
+    if (petiole_idx < this->peduncle_vertices.size()) {
+        if (this->peduncle_vertices.at(petiole_idx).size() <= fbud.bud_index) {
+            this->peduncle_vertices.at(petiole_idx).resize(fbud.bud_index + 1);
+        }
+        this->peduncle_vertices.at(petiole_idx).at(fbud.bud_index) = peduncle_vertices;
     }
 
     // Create unique inflorescence prototypes for each shoot type so we can simply copy them for each leaf
@@ -1698,6 +2009,8 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
             // gravity effect for fruit
             pitch_inflorescence = pitch_inflorescence + phytomer_parameters.inflorescence.fruit_gravity_factor_fraction.val() * (0.5f * PI_F - pitch_inflorescence);
         }
+
+
         context_ptr->rotateObject(objID_fruit, pitch_inflorescence, "y");
         fruit_axis = rotatePointAboutLine(fruit_axis, nullorigin, make_vec3(1, 0, 0), pitch_inflorescence);
 
@@ -1715,6 +2028,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
             fruit_axis = rotatePointAboutLine(fruit_axis, nullorigin, peduncle_axis, deg2rad(phytomer_parameters.peduncle.roll.val()) + compound_rotation);
         }
         phytomer_parameters.inflorescence.fruit_gravity_factor_fraction.resample();
+
 
         fbud.inflorescence_bases.push_back(fruit_base);
 
@@ -1970,8 +2284,7 @@ void Phytomer::setLeafPrototypeScale(uint petiole_index, float leaf_prototype_sc
         helios_runtime_error("ERROR (PlantArchitecture::Phytomer): Invalid petiole index for leaf prototype scale.");
     }
     if (leaf_prototype_scale < 0.f) {
-        leaf_prototype_scale = 1e-6f;
-        std::cout << "WARNING (PlantArchitecture::Phytomer): Negative leaf_prototype_scale detected. Setting to minimum positive value (1e-6) to prevent zero-area primitives." << std::endl;
+        leaf_prototype_scale = 0;
     }
 
     float tip_ind = ceil(scast<float>(leaf_size_max.at(petiole_index).size() - 1) / 2.f);
@@ -2002,9 +2315,8 @@ void Phytomer::scaleLeafPrototypeScale(uint petiole_index, float scale_factor) {
     if (leaf_objIDs.size() <= petiole_index) {
         helios_runtime_error("ERROR (PlantArchitecture::Phytomer): Invalid petiole index for leaf prototype scale.");
     }
-    if (scale_factor <= 0.f) {
-        std::cout << "WARNING (PlantArchitecture::Phytomer): Invalid leaf scale factor (" << scale_factor << ") detected. Setting to minimum positive value (1e-6) to prevent zero-area primitives." << std::endl;
-        scale_factor = 1e-6f;
+    if (scale_factor < 0.f) {
+        scale_factor = 0;
     }
 
     current_leaf_scale_factor.at(petiole_index) /= scale_factor;
@@ -2068,8 +2380,6 @@ void Phytomer::removeLeaf() {
 }
 
 void Phytomer::deletePhytomer() {
-    // std::cout << "DEBUG: deletePhytomer() called. shoot_index.x=" << shoot_index.x << ", shoot_index.y=" << shoot_index.y << ", phytomers.size()=" << parent_shoot_ptr->phytomers.size() << std::endl;
-    
     // prune the internode tube in the Context
     if (context_ptr->doesObjectExist(parent_shoot_ptr->internode_tube_objID)) {
         uint tube_nodes = context_ptr->getTubeObjectNodeCount(parent_shoot_ptr->internode_tube_objID);
@@ -2086,17 +2396,8 @@ void Phytomer::deletePhytomer() {
         parent_shoot_ptr->terminateApicalBud();
     }
 
-    // Process phytomers in reverse order to avoid issues with container modification during iteration
-    std::vector<std::shared_ptr<Phytomer>> phytomers_to_process;
-    for (uint node = this->shoot_index.x; node < shoot_index.y && node < parent_shoot_ptr->phytomers.size(); node++) {
-        phytomers_to_process.push_back(parent_shoot_ptr->phytomers.at(node));
-    }
-    
-    for (int i = phytomers_to_process.size() - 1; i >= 0; i--) {
-        auto &phytomer = phytomers_to_process[i];
-        uint node = phytomer->shoot_index.x;
-        
-        // std::cout << "DEBUG: Processing phytomer at node=" << node << std::endl;
+    for (uint node = this->shoot_index.x; node < shoot_index.y; node++) {
+        auto &phytomer = parent_shoot_ptr->phytomers.at(node);
 
         // leaves
         phytomer->removeLeaf();
@@ -2355,7 +2656,7 @@ uint PlantArchitecture::appendShoot(uint plantID, int parent_shoot_ID, uint curr
     // accumulate all the values that will be passed to Shoot constructor
     int appended_shootID = int(shoot_tree_ptr->size());
     uint parent_node = shoot_tree_ptr->at(parent_shoot_ID)->current_node_number - 1;
-    uint rank = shoot_tree_ptr->at(parent_shoot_ID)->rank + 1;
+    uint rank = shoot_tree_ptr->at(parent_shoot_ID)->rank;
     vec3 base_position = interpolateTube(shoot_tree_ptr->at(parent_shoot_ID)->phytomers.back()->getInternodeNodePositions(), 0.9f);
 
     // Create the new shoot
@@ -3105,12 +3406,6 @@ void PlantArchitecture::pruneBranch(uint plantID, uint shootID, uint node_index)
 
     auto &shoot = plant_instances.at(plantID).shoot_tree.at(shootID);
 
-    // Check if we're trying to prune the entire base shoot (shootID 0, node 0)
-    if (shootID == 0 && node_index == 0) {
-        std::cout << "WARNING (PlantArchitecture::pruneBranch): Cannot prune entire base shoot from node 0. This would kill the plant." << std::endl;
-        return;
-    }
-
     shoot->phytomers.at(node_index)->deletePhytomer();
 
     if (plant_instances.at(plantID).shoot_tree.empty()) {
@@ -3399,210 +3694,6 @@ float PlantArchitecture::getShootTaper(uint plantID, uint shootID) const {
     }
 
     return taper;
-}
-
-std::vector<std::vector<uint>> PlantArchitecture::getShootIDsByRank(uint plantID) const {
-    if (plant_instances.find(plantID) == plant_instances.end()) {
-        helios_runtime_error("ERROR (PlantArchitecture::getShootIDsByRank): Plant with ID of " + std::to_string(plantID) + " does not exist.");
-    }
-
-    const auto& shoot_tree = plant_instances.at(plantID).shoot_tree;
-    std::vector<std::vector<uint>> shoots_by_rank;
-
-    // Find the maximum rank to size the vector appropriately
-    uint max_rank = 0;
-    for (uint i = 0; i < shoot_tree.size(); ++i) {
-        if (shoot_tree[i]->rank > max_rank) {
-            max_rank = shoot_tree[i]->rank;
-        }
-    }
-
-    // Resize vector to accommodate all ranks
-    shoots_by_rank.resize(max_rank + 1);
-
-    // Group shoots by rank
-    for (uint i = 0; i < shoot_tree.size(); ++i) {
-        shoots_by_rank[shoot_tree[i]->rank].push_back(i);
-    }
-
-    return shoots_by_rank;
-}
-
-std::map<uint, std::vector<uint>> PlantArchitecture::getShootHierarchyMap(uint plantID) const {
-    if (plant_instances.find(plantID) == plant_instances.end()) {
-        helios_runtime_error("ERROR (PlantArchitecture::getShootHierarchyMap): Plant with ID of " + std::to_string(plantID) + " does not exist.");
-    }
-
-    const auto& shoot_tree = plant_instances.at(plantID).shoot_tree;
-    std::map<uint, std::vector<uint>> hierarchy_map;
-
-    // Build parent-to-children mapping
-    for (uint i = 0; i < shoot_tree.size(); ++i) {
-        const auto& shoot = shoot_tree[i];
-        
-        // Collect all children from all node positions
-        for (const auto& node_children : shoot->childIDs) {
-            for (uint child_id : node_children.second) {
-                hierarchy_map[i].push_back(child_id);
-            }
-        }
-    }
-
-    return hierarchy_map;
-}
-
-std::vector<uint> PlantArchitecture::getAllDescendantShootIDs(uint plantID, uint shootID) const {
-    if (plant_instances.find(plantID) == plant_instances.end()) {
-        helios_runtime_error("ERROR (PlantArchitecture::getAllDescendantShootIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
-    }
-    if (plant_instances.at(plantID).shoot_tree.size() <= shootID) {
-        helios_runtime_error("ERROR (PlantArchitecture::getAllDescendantShootIDs): Shoot ID is out of range.");
-    }
-
-    std::vector<uint> descendants;
-    std::vector<uint> to_process = {shootID};
-
-    while (!to_process.empty()) {
-        uint current_shoot = to_process.back();
-        to_process.pop_back();
-
-        const auto& shoot = plant_instances.at(plantID).shoot_tree[current_shoot];
-        
-        // Add all children to descendants and processing queue
-        for (const auto& node_children : shoot->childIDs) {
-            for (uint child_id : node_children.second) {
-                descendants.push_back(child_id);
-                to_process.push_back(child_id);
-            }
-        }
-    }
-
-    return descendants;
-}
-
-std::vector<uint> PlantArchitecture::getChildShootIDs(uint plantID, uint shootID) const {
-    if (plant_instances.find(plantID) == plant_instances.end()) {
-        helios_runtime_error("ERROR (PlantArchitecture::getChildShootIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
-    }
-    if (plant_instances.at(plantID).shoot_tree.size() <= shootID) {
-        helios_runtime_error("ERROR (PlantArchitecture::getChildShootIDs): Shoot ID is out of range.");
-    }
-
-    const auto& shoot = plant_instances.at(plantID).shoot_tree[shootID];
-    std::vector<uint> children;
-
-    // Collect all children from all node positions
-    for (const auto& node_children : shoot->childIDs) {
-        for (uint child_id : node_children.second) {
-            children.push_back(child_id);
-        }
-    }
-
-    return children;
-}
-
-int PlantArchitecture::getParentShootID(uint plantID, uint shootID) const {
-    if (plant_instances.find(plantID) == plant_instances.end()) {
-        helios_runtime_error("ERROR (PlantArchitecture::getParentShootID): Plant with ID of " + std::to_string(plantID) + " does not exist.");
-    }
-    if (plant_instances.at(plantID).shoot_tree.size() <= shootID) {
-        helios_runtime_error("ERROR (PlantArchitecture::getParentShootID): Shoot ID is out of range.");
-    }
-
-    return plant_instances.at(plantID).shoot_tree[shootID]->parent_shoot_ID;
-}
-
-uint PlantArchitecture::getShootRank(uint plantID, uint shootID) const {
-    if (plant_instances.find(plantID) == plant_instances.end()) {
-        helios_runtime_error("ERROR (PlantArchitecture::getShootRank): Plant with ID of " + std::to_string(plantID) + " does not exist.");
-    }
-    if (plant_instances.at(plantID).shoot_tree.size() <= shootID) {
-        helios_runtime_error("ERROR (PlantArchitecture::getShootRank): Shoot ID is out of range.");
-    }
-
-    return plant_instances.at(plantID).shoot_tree[shootID]->rank;
-}
-
-std::vector<uint> PlantArchitecture::getAllShootIDs(uint plantID) const {
-    if (plant_instances.find(plantID) == plant_instances.end()) {
-        helios_runtime_error("ERROR (PlantArchitecture::getAllShootIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
-    }
-
-    const auto& shoot_tree = plant_instances.at(plantID).shoot_tree;
-    std::vector<uint> shoot_ids;
-    shoot_ids.reserve(shoot_tree.size());
-
-    for (uint i = 0; i < shoot_tree.size(); ++i) {
-        shoot_ids.push_back(i);
-    }
-
-    return shoot_ids;
-}
-
-std::vector<uint> PlantArchitecture::getTerminalShootIDs(uint plantID) const {
-    if (plant_instances.find(plantID) == plant_instances.end()) {
-        helios_runtime_error("ERROR (PlantArchitecture::getTerminalShootIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
-    }
-
-    const auto& shoot_tree = plant_instances.at(plantID).shoot_tree;
-    std::vector<uint> terminal_shoots;
-
-    for (uint i = 0; i < shoot_tree.size(); ++i) {
-        const auto& shoot = shoot_tree[i];
-        
-        // Check if shoot has any children
-        bool has_children = false;
-        for (const auto& node_children : shoot->childIDs) {
-            if (!node_children.second.empty()) {
-                has_children = true;
-                break;
-            }
-        }
-        
-        if (!has_children) {
-            terminal_shoots.push_back(i);
-        }
-    }
-
-    return terminal_shoots;
-}
-
-uint PlantArchitecture::getShootDepth(uint plantID, uint shootID) const {
-    if (plant_instances.find(plantID) == plant_instances.end()) {
-        helios_runtime_error("ERROR (PlantArchitecture::getShootDepth): Plant with ID of " + std::to_string(plantID) + " does not exist.");
-    }
-    if (plant_instances.at(plantID).shoot_tree.size() <= shootID) {
-        helios_runtime_error("ERROR (PlantArchitecture::getShootDepth): Shoot ID is out of range.");
-    }
-
-    // The depth is the same as rank in this system
-    return plant_instances.at(plantID).shoot_tree[shootID]->rank;
-}
-
-std::vector<uint> PlantArchitecture::getPathToRoot(uint plantID, uint shootID) const {
-    if (plant_instances.find(plantID) == plant_instances.end()) {
-        helios_runtime_error("ERROR (PlantArchitecture::getPathToRoot): Plant with ID of " + std::to_string(plantID) + " does not exist.");
-    }
-    if (plant_instances.at(plantID).shoot_tree.size() <= shootID) {
-        helios_runtime_error("ERROR (PlantArchitecture::getPathToRoot): Shoot ID is out of range.");
-    }
-
-    std::vector<uint> path;
-    uint current_shoot = shootID;
-
-    // Traverse up the hierarchy to the root
-    while (current_shoot != static_cast<uint>(-1)) {
-        path.push_back(current_shoot);
-        int parent_id = plant_instances.at(plantID).shoot_tree[current_shoot]->parent_shoot_ID;
-        
-        if (parent_id == -1) {
-            break;  // Reached root
-        }
-        
-        current_shoot = static_cast<uint>(parent_id);
-    }
-
-    return path;
 }
 
 std::vector<uint> PlantArchitecture::getAllPlantIDs() const {
@@ -4005,36 +4096,59 @@ void PlantArchitecture::disablePlantPhenology(uint plantID) {
 }
 
 void PlantArchitecture::advanceTime(float time_step_days) {
-    for (auto &[plantID, plant_instance]: plant_instances) {
-        advanceTime(plantID, time_step_days);
-    }
+    advanceTime(this->getAllPlantIDs(), time_step_days);
 }
 
 void PlantArchitecture::advanceTime(int time_step_years, float time_step_days) {
-    for (auto &[plantID, plant_instance]: plant_instances) {
-        advanceTime(plantID, float(time_step_years) * 365.f + time_step_days);
-    }
+    advanceTime(this->getAllPlantIDs(), float(time_step_years) * 365.f + time_step_days);
 }
 
 void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
-    if (plant_instances.find(plantID) == plant_instances.end()) {
-        helios_runtime_error("ERROR (PlantArchitecture::advanceTime): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    std::vector<uint> plantIDs = {plantID};
+    advanceTime(plantIDs, time_step_days);
+}
+
+void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float time_step_days) {
+    for (uint plantID: plantIDs) {
+        if (plant_instances.find(plantID) == plant_instances.end()) {
+            helios_runtime_error("ERROR (PlantArchitecture::advanceTime): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+        }
     }
 
-    PlantInstance &plant_instance = plant_instances.at(plantID);
+    // Clear BVH cache at start of plant growth operation
+    clearBVHCache();
 
-    auto shoot_tree = &plant_instance.shoot_tree;
-
-    if (shoot_tree->empty()) {
-        return;
+    // Rebuild BVH once at the start if collision detection is enabled
+    if (collision_detection_enabled && collision_detection_ptr != nullptr) {
+        rebuildBVHForTimestep();
     }
 
     // accounting for case of time_step_days>phyllochron_min
-    float phyllochron_min = shoot_tree->front()->shoot_parameters.phyllochron_min.val();
-    for (int i = 1; i < shoot_tree->size(); i++) {
-        if (shoot_tree->at(i)->shoot_parameters.phyllochron_min.val() < phyllochron_min) {
-            phyllochron_min = shoot_tree->at(i)->shoot_parameters.phyllochron_min.val();
+    float phyllochron_min = 9999;
+    for (uint plantID: plantIDs) {
+        PlantInstance &plant_instance = plant_instances.at(plantID);
+        auto shoot_tree = &plant_instance.shoot_tree;
+        if (shoot_tree->empty()) {
+            continue;
         }
+        float phyllochron_min_shoot = shoot_tree->front()->shoot_parameters.phyllochron_min.val();
+        if (phyllochron_min_shoot < phyllochron_min) {
+            phyllochron_min = phyllochron_min_shoot;
+        }
+        for (int i = 1; i < shoot_tree->size(); i++) {
+            if (shoot_tree->at(i)->shoot_parameters.phyllochron_min.val() < phyllochron_min) {
+                phyllochron_min_shoot = shoot_tree->at(i)->shoot_parameters.phyllochron_min.val();
+                if (phyllochron_min_shoot < phyllochron_min) {
+                    phyllochron_min = phyllochron_min_shoot;
+                }
+            }
+        }
+    }
+    if (phyllochron_min == 9999) {
+        std::cerr << "WARNING (PlantArchitecture::advanceTime): No shoots have been added ot the model. Returning.." << std::endl;
+        return;
+    } else {
+        std::cout << "Phyllochron min: " << phyllochron_min << std::endl;
     }
 
     // **** accumulate photosynthate **** //
@@ -4058,297 +4172,339 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
         Nsteps++;
     }
     for (int timestep = 0; timestep < Nsteps; timestep++) {
+        // Rebuild BVH periodically (every 10 timesteps) for balance between accuracy and performance
+        if (collision_detection_enabled && collision_detection_ptr != nullptr && timestep % 10 == 0) {
+            rebuildBVHForTimestep();
+        }
+
         if (timestep == Nsteps - 1 && remainder_time != 0.f) {
             dt_max_days = remainder_time;
         }
 
+        for (uint plantID: plantIDs) {
+            PlantInstance &plant_instance = plant_instances.at(plantID);
 
-        if (plant_instance.current_age <= plant_instance.max_age && plant_instance.current_age + dt_max_days > plant_instance.max_age) {
-            std::cout << "PlantArchitecture::advanceTime: Plant has reached its maximum supported age. No further growth will occur." << std::endl;
-        } else if (plant_instance.current_age >= plant_instance.max_age) {
-            // update Context geometry
-            shoot_tree->front()->updateShootNodes(true);
-            return;
-        }
+            auto shoot_tree = &plant_instance.shoot_tree;
 
-        plant_instance.current_age += dt_max_days;
-        plant_instance.time_since_dormancy += dt_max_days;
-
-        if (plant_instance.time_since_dormancy > plant_instance.dd_to_dormancy_break + plant_instance.dd_to_dormancy) {
-            // std::cout << "Going dormant " << plant_instance.current_age << " " << plant_instance.time_since_dormancy << std::endl;
-            plant_instance.time_since_dormancy = 0;
-            for (const auto &shoot: *shoot_tree) {
-                shoot->makeDormant();
-                shoot->phyllochron_counter = 0;
-            }
-            harvestPlant(plantID);
-            continue;
-        }
-
-        size_t shoot_count = shoot_tree->size();
-        for (int i = 0; i < shoot_count; i++) {
-            auto shoot = shoot_tree->at(i);
-
-            // Skip shoots with no phytomers (they were pruned)
-            if (shoot->phytomers.empty()) {
+            if (shoot_tree->empty()) {
                 continue;
             }
 
-            for (auto &phytomer: shoot->phytomers) {
-                phytomer->age += dt_max_days;
+            if (plant_instance.current_age <= plant_instance.max_age && plant_instance.current_age + dt_max_days > plant_instance.max_age) {
+                std::cout << "PlantArchitecture::advanceTime: Plant has reached its maximum supported age. No further growth will occur." << std::endl;
+            } else if (plant_instance.current_age >= plant_instance.max_age) {
+                // update Context geometry
+                shoot_tree->front()->updateShootNodes(true);
+                return;
+            }
 
-                if (phytomer->phytomer_parameters.phytomer_callback_function != nullptr) {
-                    phytomer->phytomer_parameters.phytomer_callback_function(phytomer);
+            plant_instance.current_age += dt_max_days;
+            plant_instance.time_since_dormancy += dt_max_days;
+
+            if (plant_instance.time_since_dormancy > plant_instance.dd_to_dormancy_break + plant_instance.dd_to_dormancy) {
+                // std::cout << "Going dormant " << plant_instance.current_age << " " << plant_instance.time_since_dormancy << std::endl;
+                plant_instance.time_since_dormancy = 0;
+                for (const auto &shoot: *shoot_tree) {
+                    shoot->makeDormant();
+                    shoot->phyllochron_counter = 0;
                 }
-            }
-
-            // ****** PHENOLOGICAL TRANSITIONS ****** //
-
-            // breaking dormancy
-            if (shoot->isdormant && plant_instance.time_since_dormancy >= plant_instance.dd_to_dormancy_break) {
-                shoot->phyllochron_counter = 0;
-                shoot->breakDormancy();
-            }
-
-            if (shoot->isdormant) {
-                // dormant, don't do anything
+                harvestPlant(plantID);
                 continue;
             }
 
-            for (auto &phytomer: shoot->phytomers) {
-                if (phytomer->age > plant_instance.max_leaf_lifespan) {
-                    // delete old leaves that exceed maximum lifespan
-                    phytomer->removeLeaf();
+            size_t shoot_count = shoot_tree->size();
+            for (int i = 0; i < shoot_count; i++) {
+                auto shoot = shoot_tree->at(i);
+
+                for (auto &phytomer: shoot->phytomers) {
+                    phytomer->age += dt_max_days;
+
+                    if (phytomer->phytomer_parameters.phytomer_callback_function != nullptr) {
+                        phytomer->phytomer_parameters.phytomer_callback_function(phytomer);
+                    }
                 }
 
-                if (phytomer->floral_buds.empty()) {
-                    // no floral buds - skip this phytomer
+                // ****** PHENOLOGICAL TRANSITIONS ****** //
+
+                // breaking dormancy
+                if (shoot->isdormant && plant_instance.time_since_dormancy >= plant_instance.dd_to_dormancy_break) {
+                    shoot->phyllochron_counter = 0;
+                    shoot->breakDormancy();
+                }
+
+                if (shoot->isdormant) {
+                    // dormant, don't do anything
                     continue;
                 }
 
-                for (auto &petiole: phytomer->floral_buds) {
-                    for (auto &fbud: petiole) {
-                        if (fbud.state != BUD_DORMANT && fbud.state != BUD_DEAD) {
-                            fbud.time_counter += dt_max_days;
-                        }
+                for (auto &phytomer: shoot->phytomers) {
+                    if (phytomer->age > plant_instance.max_leaf_lifespan) {
+                        // delete old leaves that exceed maximum lifespan
+                        phytomer->removeLeaf();
+                    }
 
-                        // -- Flowering -- //
-                        if (shoot->shoot_parameters.phytomer_parameters.inflorescence.flower_prototype_function != nullptr) {
-                            // user defined a flower prototype function
-                            // -- Flower initiation (closed flowers) -- //
-                            if (fbud.state == BUD_ACTIVE && plant_instance.dd_to_flower_initiation >= 0.f) {
-                                // bud is active and flower initiation is enabled
-                                if ((!shoot->shoot_parameters.flowers_require_dormancy && fbud.time_counter >= plant_instance.dd_to_flower_initiation) ||
-                                    (shoot->shoot_parameters.flowers_require_dormancy && fbud.time_counter >= plant_instance.dd_to_flower_initiation)) {
-                                    fbud.time_counter = 0;
-                                    if (context_ptr->randu() < shoot->shoot_parameters.flower_bud_break_probability.val()) {
-                                        phytomer->setFloralBudState(BUD_FLOWER_CLOSED, fbud);
-                                    } else {
-                                        phytomer->setFloralBudState(BUD_DEAD, fbud);
-                                    }
-                                    if (shoot->shoot_parameters.determinate_shoot_growth) {
-                                        shoot->terminateApicalBud();
-                                        shoot->terminateAxillaryVegetativeBuds();
-                                    }
-                                }
+                    if (phytomer->floral_buds.empty()) {
+                        // no floral buds - skip this phytomer
+                        continue;
+                    }
 
-                                // -- Flower opening -- //
-                            } else if ((fbud.state == BUD_FLOWER_CLOSED && plant_instance.dd_to_flower_opening >= 0.f) || (fbud.state == BUD_ACTIVE && plant_instance.dd_to_flower_initiation < 0.f && plant_instance.dd_to_flower_opening >= 0.f)) {
-                                if (fbud.time_counter >= plant_instance.dd_to_flower_opening) {
-                                    fbud.time_counter = 0;
-                                    if (fbud.state == BUD_FLOWER_CLOSED) {
-                                        phytomer->setFloralBudState(BUD_FLOWER_OPEN, fbud);
-                                    } else {
+                    for (auto &petiole: phytomer->floral_buds) {
+                        for (auto &fbud: petiole) {
+                            if (fbud.state != BUD_DORMANT && fbud.state != BUD_DEAD) {
+                                fbud.time_counter += dt_max_days;
+                            }
+
+                            // -- Flowering -- //
+                            if (shoot->shoot_parameters.phytomer_parameters.inflorescence.flower_prototype_function != nullptr) {
+                                // user defined a flower prototype function
+                                // -- Flower initiation (closed flowers) -- //
+                                if (fbud.state == BUD_ACTIVE && plant_instance.dd_to_flower_initiation >= 0.f) {
+                                    // bud is active and flower initiation is enabled
+                                    if ((!shoot->shoot_parameters.flowers_require_dormancy && fbud.time_counter >= plant_instance.dd_to_flower_initiation) ||
+                                        (shoot->shoot_parameters.flowers_require_dormancy && fbud.time_counter >= plant_instance.dd_to_flower_initiation)) {
+                                        fbud.time_counter = 0;
                                         if (context_ptr->randu() < shoot->shoot_parameters.flower_bud_break_probability.val()) {
-                                            phytomer->setFloralBudState(BUD_FLOWER_OPEN, fbud);
+                                            phytomer->setFloralBudState(BUD_FLOWER_CLOSED, fbud);
                                         } else {
                                             phytomer->setFloralBudState(BUD_DEAD, fbud);
                                         }
+                                        if (shoot->shoot_parameters.determinate_shoot_growth) {
+                                            shoot->terminateApicalBud();
+                                            shoot->terminateAxillaryVegetativeBuds();
+                                        }
                                     }
-                                    if (shoot->shoot_parameters.determinate_shoot_growth) {
-                                        shoot->terminateApicalBud();
-                                        shoot->terminateAxillaryVegetativeBuds();
+
+                                    // -- Flower opening -- //
+                                } else if ((fbud.state == BUD_FLOWER_CLOSED && plant_instance.dd_to_flower_opening >= 0.f) || (fbud.state == BUD_ACTIVE && plant_instance.dd_to_flower_initiation < 0.f && plant_instance.dd_to_flower_opening >= 0.f)) {
+                                    if (fbud.time_counter >= plant_instance.dd_to_flower_opening) {
+                                        fbud.time_counter = 0;
+                                        if (fbud.state == BUD_FLOWER_CLOSED) {
+                                            phytomer->setFloralBudState(BUD_FLOWER_OPEN, fbud);
+                                        } else {
+                                            if (context_ptr->randu() < shoot->shoot_parameters.flower_bud_break_probability.val()) {
+                                                phytomer->setFloralBudState(BUD_FLOWER_OPEN, fbud);
+                                            } else {
+                                                phytomer->setFloralBudState(BUD_DEAD, fbud);
+                                            }
+                                        }
+                                        if (shoot->shoot_parameters.determinate_shoot_growth) {
+                                            shoot->terminateApicalBud();
+                                            shoot->terminateAxillaryVegetativeBuds();
+                                        }
+                                    }
+                                }
+                            }
+
+                            // -- Fruit Set -- //
+                            // If the flower bud is in a 'flowering' state, the fruit set occurs after a certain amount of time
+                            if (shoot->shoot_parameters.phytomer_parameters.inflorescence.fruit_prototype_function != nullptr) {
+                                if ((fbud.state == BUD_FLOWER_OPEN && plant_instance.dd_to_fruit_set >= 0.f) ||
+                                    // flower opened and fruit set is enabled
+                                    (fbud.state == BUD_ACTIVE && plant_instance.dd_to_flower_initiation < 0.f && plant_instance.dd_to_flower_opening < 0.f && plant_instance.dd_to_fruit_set >= 0.f) ||
+                                    // jumped straight to fruit set with no flowering
+                                    (fbud.state == BUD_FLOWER_CLOSED && plant_instance.dd_to_flower_opening < 0.f && plant_instance.dd_to_fruit_set >= 0.f)) {
+                                    // jumped from closed flower to fruit set with no flower opening
+                                    if (fbud.time_counter >= plant_instance.dd_to_fruit_set) {
+                                        fbud.time_counter = 0;
+                                        if (context_ptr->randu() < shoot->shoot_parameters.fruit_set_probability.val()) {
+                                            phytomer->setFloralBudState(BUD_FRUITING, fbud);
+                                        } else {
+                                            phytomer->setFloralBudState(BUD_DEAD, fbud);
+                                        }
+                                        if (shoot->shoot_parameters.determinate_shoot_growth) {
+                                            shoot->terminateApicalBud();
+                                            shoot->terminateAxillaryVegetativeBuds();
+                                        }
                                     }
                                 }
                             }
                         }
+                    }
+                }
 
-                        // -- Fruit Set -- //
-                        // If the flower bud is in a 'flowering' state, the fruit set occurs after a certain amount of time
-                        if (shoot->shoot_parameters.phytomer_parameters.inflorescence.fruit_prototype_function != nullptr) {
-                            if ((fbud.state == BUD_FLOWER_OPEN && plant_instance.dd_to_fruit_set >= 0.f) ||
-                                // flower opened and fruit set is enabled
-                                (fbud.state == BUD_ACTIVE && plant_instance.dd_to_flower_initiation < 0.f && plant_instance.dd_to_flower_opening < 0.f && plant_instance.dd_to_fruit_set >= 0.f) ||
-                                // jumped straight to fruit set with no flowering
-                                (fbud.state == BUD_FLOWER_CLOSED && plant_instance.dd_to_flower_opening < 0.f && plant_instance.dd_to_fruit_set >= 0.f)) {
-                                // jumped from closed flower to fruit set with no flower opening
-                                if (fbud.time_counter >= plant_instance.dd_to_fruit_set) {
-                                    fbud.time_counter = 0;
-                                    if (context_ptr->randu() < shoot->shoot_parameters.fruit_set_probability.val()) {
-                                        phytomer->setFloralBudState(BUD_FRUITING, fbud);
-                                    } else {
-                                        phytomer->setFloralBudState(BUD_DEAD, fbud);
-                                    }
-                                    if (shoot->shoot_parameters.determinate_shoot_growth) {
-                                        shoot->terminateApicalBud();
-                                        shoot->terminateAxillaryVegetativeBuds();
-                                    }
+                // ****** GROWTH/SCALING OF CURRENT PHYTOMERS/FRUIT ****** //
+
+                int node_index = 0;
+                for (auto &phytomer: shoot->phytomers) {
+                    // scale internode length
+                    if (phytomer->current_internode_scale_factor < 1) {
+                        float dL_internode = dt_max_days * shoot->elongation_rate_instantaneous * phytomer->internode_length_max;
+                        float length_scale = fmin(1.f, (phytomer->getInternodeLength() + dL_internode) / phytomer->internode_length_max);
+                        phytomer->setInternodeLengthScaleFraction(length_scale, false);
+                    }
+
+                    // scale internode girth
+                    if (shoot->shoot_parameters.girth_area_factor.val() > 0.f) {
+                        if (carbon_model_enabled) {
+                            incrementPhytomerInternodeGirth_carb(plantID, shoot->ID, node_index, dt_max_days, false);
+                        } else {
+                            incrementPhytomerInternodeGirth(plantID, shoot->ID, node_index, dt_max_days, false);
+                        }
+                    }
+
+                    node_index++;
+                }
+
+                node_index = 0;
+                for (auto &phytomer: shoot->phytomers) {
+                    // scale petiole/leaves
+                    if (phytomer->hasLeaf()) {
+                        for (uint petiole_index = 0; petiole_index < phytomer->current_leaf_scale_factor.size(); petiole_index++) {
+                            if (phytomer->current_leaf_scale_factor.at(petiole_index) >= 1) {
+                                continue;
+                            }
+
+                            float tip_ind = ceil(float(phytomer->leaf_size_max.at(petiole_index).size() - 1) / 2.f);
+                            float leaf_length = phytomer->current_leaf_scale_factor.at(petiole_index) * phytomer->leaf_size_max.at(petiole_index).at(tip_ind);
+                            float dL_leaf = dt_max_days * shoot->elongation_rate_instantaneous * phytomer->leaf_size_max.at(petiole_index).at(tip_ind);
+                            float scale = fmin(1.f, (leaf_length + dL_leaf) / phytomer->phytomer_parameters.leaf.prototype_scale.val());
+                            phytomer->phytomer_parameters.leaf.prototype_scale.resample();
+                            phytomer->setLeafScaleFraction(petiole_index, scale);
+                        }
+                    }
+
+                    // Fruit Growth
+                    for (auto &petiole: phytomer->floral_buds) {
+                        for (auto &fbud: petiole) {
+                            // If the floral bud it in a 'fruiting' state, the fruit grows with time
+                            if (fbud.state == BUD_FRUITING && fbud.time_counter > 0) {
+                                float scale = fmin(1, 0.25f + 0.75f * fbud.time_counter / plant_instance.dd_to_fruit_maturity);
+                                phytomer->setInflorescenceScaleFraction(fbud, scale);
+                            }
+                        }
+                    }
+
+                    // ****** NEW CHILD SHOOTS FROM VEGETATIVE BUDS ****** //
+                    uint parent_petiole_index = 0;
+                    for (auto &petiole: phytomer->axillary_vegetative_buds) {
+                        for (auto &vbud: petiole) {
+                            if (vbud.state == BUD_ACTIVE && phytomer->age + dt_max_days > shoot->shoot_parameters.vegetative_bud_break_time.val()) {
+                                ShootParameters *new_shoot_parameters = &shoot_types.at(vbud.shoot_type_label);
+                                int parent_node_count = shoot->current_node_number;
+
+                                //                            float insertion_angle_adjustment = fmin(new_shoot_parameters->insertion_angle_tip.val() + new_shoot_parameters->insertion_angle_decay_rate.val() * float(parent_node_count -
+                                //                            phytomer->shoot_index.x - 1), 90.f); AxisRotation base_rotation = make_AxisRotation(deg2rad(insertion_angle_adjustment), deg2rad(new_shoot_parameters->base_yaw.val()),
+                                //                            deg2rad(new_shoot_parameters->base_roll.val())); new_shoot_parameters->base_yaw.resample(); if( new_shoot_parameters->insertion_angle_decay_rate.val()==0 ){
+                                //                                new_shoot_parameters->insertion_angle_tip.resample();
+                                //                            }
+                                float insertion_angle_adjustment = fmin(shoot->shoot_parameters.insertion_angle_tip.val() + shoot->shoot_parameters.insertion_angle_decay_rate.val() * float(parent_node_count - phytomer->shoot_index.x - 1), 90.f);
+                                AxisRotation base_rotation = make_AxisRotation(deg2rad(insertion_angle_adjustment), deg2rad(new_shoot_parameters->base_yaw.val()), deg2rad(new_shoot_parameters->base_roll.val()));
+                                new_shoot_parameters->base_yaw.resample();
+                                if (shoot->shoot_parameters.insertion_angle_decay_rate.val() == 0) {
+                                    shoot->shoot_parameters.insertion_angle_tip.resample();
                                 }
+
+                                // scale the shoot internode length based on proximity from the tip
+                                float internode_length_max;
+                                if (new_shoot_parameters->growth_requires_dormancy) {
+                                    internode_length_max = fmax(new_shoot_parameters->internode_length_max.val() - new_shoot_parameters->internode_length_decay_rate.val() * float(parent_node_count - phytomer->shoot_index.x - 1),
+                                                                new_shoot_parameters->internode_length_min.val());
+                                } else {
+                                    internode_length_max = new_shoot_parameters->internode_length_max.val();
+                                }
+
+                                float internode_radius = phytomer->internode_radius_initial;
+
+                                uint childID = addChildShoot(plantID, shoot->ID, node_index, 1, base_rotation, internode_radius, internode_length_max, 0.01, 0.01, 0, vbud.shoot_type_label, parent_petiole_index);
+
+                                phytomer->setVegetativeBudState(BUD_DEAD, vbud);
+                                vbud.shoot_ID = childID;
+                                shoot_tree->at(childID)->isdormant = false;
                             }
                         }
+                        parent_petiole_index++;
                     }
-                }
-            }
 
-            // ****** GROWTH/SCALING OF CURRENT PHYTOMERS/FRUIT ****** //
-
-            int node_index = 0;
-            for (auto &phytomer: shoot->phytomers) {
-                // scale internode length
-                if (phytomer->current_internode_scale_factor < 1) {
-                    float dL_internode = dt_max_days * shoot->elongation_rate_instantaneous * phytomer->internode_length_max;
-                    float length_scale = fmin(1.f, (phytomer->getInternodeLength() + dL_internode) / phytomer->internode_length_max);
-                    phytomer->setInternodeLengthScaleFraction(length_scale, false);
-                }
-
-                // scale internode girth
-                if (shoot->shoot_parameters.girth_area_factor.val() > 0.f) {
-                    if (carbon_model_enabled) {
-                        incrementPhytomerInternodeGirth_carb(plantID, shoot->ID, node_index, dt_max_days, false);
-                    } else {
-                        incrementPhytomerInternodeGirth(plantID, shoot->ID, node_index, dt_max_days, false);
-                    }
-                }
-
-                node_index++;
-            }
-
-            node_index = 0;
-            for (auto &phytomer: shoot->phytomers) {
-                // scale petiole/leaves
-                if (phytomer->hasLeaf()) {
-                    for (uint petiole_index = 0; petiole_index < phytomer->current_leaf_scale_factor.size(); petiole_index++) {
-                        if (phytomer->current_leaf_scale_factor.at(petiole_index) >= 1) {
-                            continue;
-                        }
-
-                        float tip_ind = ceil(float(phytomer->leaf_size_max.at(petiole_index).size() - 1) / 2.f);
-                        float leaf_length = phytomer->current_leaf_scale_factor.at(petiole_index) * phytomer->leaf_size_max.at(petiole_index).at(tip_ind);
-                        float dL_leaf = dt_max_days * shoot->elongation_rate_instantaneous * phytomer->leaf_size_max.at(petiole_index).at(tip_ind);
-                        float scale = fmin(1.f, (leaf_length + dL_leaf) / phytomer->phytomer_parameters.leaf.prototype_scale.val());
-                        phytomer->phytomer_parameters.leaf.prototype_scale.resample();
-                        phytomer->setLeafScaleFraction(petiole_index, scale);
-                    }
-                }
-
-                // Fruit Growth
-                for (auto &petiole: phytomer->floral_buds) {
-                    for (auto &fbud: petiole) {
-                        // If the floral bud it in a 'fruiting' state, the fruit grows with time
-                        if (fbud.state == BUD_FRUITING && fbud.time_counter > 0) {
-                            float scale = fmin(1, 0.25f + 0.75f * fbud.time_counter / plant_instance.dd_to_fruit_maturity);
-                            phytomer->setInflorescenceScaleFraction(fbud, scale);
-                        }
-                    }
-                }
-
-                // ****** NEW CHILD SHOOTS FROM VEGETATIVE BUDS ****** //
-                uint parent_petiole_index = 0;
-                for (auto &petiole: phytomer->axillary_vegetative_buds) {
-                    for (auto &vbud: petiole) {
-                        if (vbud.state == BUD_ACTIVE && phytomer->age + dt_max_days > shoot->shoot_parameters.vegetative_bud_break_time.val()) {
-                            ShootParameters *new_shoot_parameters = &shoot_types.at(vbud.shoot_type_label);
-                            int parent_node_count = shoot->current_node_number;
-
-                            //                            float insertion_angle_adjustment = fmin(new_shoot_parameters->insertion_angle_tip.val() + new_shoot_parameters->insertion_angle_decay_rate.val() * float(parent_node_count -
-                            //                            phytomer->shoot_index.x - 1), 90.f); AxisRotation base_rotation = make_AxisRotation(deg2rad(insertion_angle_adjustment), deg2rad(new_shoot_parameters->base_yaw.val()),
-                            //                            deg2rad(new_shoot_parameters->base_roll.val())); new_shoot_parameters->base_yaw.resample(); if( new_shoot_parameters->insertion_angle_decay_rate.val()==0 ){
-                            //                                new_shoot_parameters->insertion_angle_tip.resample();
-                            //                            }
-                            float insertion_angle_adjustment = fmin(shoot->shoot_parameters.insertion_angle_tip.val() + shoot->shoot_parameters.insertion_angle_decay_rate.val() * float(parent_node_count - phytomer->shoot_index.x - 1), 90.f);
-                            AxisRotation base_rotation = make_AxisRotation(deg2rad(insertion_angle_adjustment), deg2rad(new_shoot_parameters->base_yaw.val()), deg2rad(new_shoot_parameters->base_roll.val()));
-                            new_shoot_parameters->base_yaw.resample();
-                            if (shoot->shoot_parameters.insertion_angle_decay_rate.val() == 0) {
-                                shoot->shoot_parameters.insertion_angle_tip.resample();
+                    if (output_object_data.at("age")) {
+                        if (shoot->build_context_geometry_internode) {
+                            //\todo This is redundant and only needs to be done once per shoot
+                            if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
+                                context_ptr->setObjectData(shoot->internode_tube_objID, "age", phytomer->age);
                             }
-
-                            // scale the shoot internode length based on proximity from the tip
-                            float internode_length_max;
-                            if (new_shoot_parameters->growth_requires_dormancy) {
-                                internode_length_max = fmax(new_shoot_parameters->internode_length_max.val() - new_shoot_parameters->internode_length_decay_rate.val() * float(parent_node_count - phytomer->shoot_index.x - 1),
-                                                            new_shoot_parameters->internode_length_min.val());
-                            } else {
-                                internode_length_max = new_shoot_parameters->internode_length_max.val();
-                            }
-
-                            float internode_radius = phytomer->internode_radius_initial;
-
-                            uint childID = addChildShoot(plantID, shoot->ID, node_index, 1, base_rotation, internode_radius, internode_length_max, 0.01, 0.01, 0, vbud.shoot_type_label, parent_petiole_index);
-
-                            phytomer->setVegetativeBudState(BUD_DEAD, vbud);
-                            vbud.shoot_ID = childID;
-                            shoot_tree->at(childID)->isdormant = false;
                         }
-                    }
-                    parent_petiole_index++;
-                }
-
-                if (output_object_data.at("age")) {
-                    if (shoot->build_context_geometry_internode) {
-                        //\todo This is redundant and only needs to be done once per shoot
-                        if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
-                            context_ptr->setObjectData(shoot->internode_tube_objID, "age", phytomer->age);
+                        if (phytomer->build_context_geometry_petiole) {
+                            context_ptr->setObjectData(phytomer->petiole_objIDs, "age", phytomer->age);
                         }
+                        context_ptr->setObjectData(phytomer->leaf_objIDs, "age", phytomer->age);
                     }
-                    if (phytomer->build_context_geometry_petiole) {
-                        context_ptr->setObjectData(phytomer->petiole_objIDs, "age", phytomer->age);
+
+                    node_index++;
+                }
+
+                // if shoot has reached max_nodes, stop apical growth
+                if (shoot->current_node_number >= shoot->shoot_parameters.max_nodes.val()) {
+                    shoot->terminateApicalBud();
+                }
+
+                // If the apical bud is dead, don't do anything more with the shoot
+                if (!shoot->meristem_is_alive) {
+                    continue;
+                }
+
+                // ****** PHYLLOCHRON - NEW PHYTOMERS ****** //
+                shoot->phyllochron_counter += dt_max_days;
+                if (shoot->phyllochron_counter >= shoot->phyllochron_instantaneous && !shoot->phytomers.back()->isdormant) {
+                    float internode_radius = shoot->shoot_parameters.phytomer_parameters.internode.radius_initial.val();
+                    shoot->shoot_parameters.phytomer_parameters.internode.radius_initial.resample();
+                    float internode_length_max = shoot->internode_length_max_shoot_initial;
+                    appendPhytomerToShoot(plantID, shoot->ID, shoot_types.at(shoot->shoot_type_label).phytomer_parameters, internode_radius, internode_length_max, 0.01,
+                                          0.01); //\todo These factors should be set to be consistent with the shoot
+                    shoot->phyllochron_counter = shoot->phyllochron_counter - shoot->phyllochron_instantaneous;
+                }
+
+                // ****** EPICORMIC SHOOTS ****** //
+                std::string epicormic_shoot_label = plant_instance.epicormic_shoot_probability_perlength_per_day.first;
+                if (!epicormic_shoot_label.empty()) {
+                    std::vector<float> epicormic_fraction;
+                    uint Nepicormic = shoot->sampleEpicormicShoot(time_step_days, epicormic_fraction);
+                    for (int s = 0; s < Nepicormic; s++) {
+                        float internode_radius = shoot_types.at(epicormic_shoot_label).phytomer_parameters.internode.radius_initial.val();
+                        shoot_types.at(epicormic_shoot_label).phytomer_parameters.internode.radius_initial.resample();
+                        float internode_length_max = shoot_types.at(epicormic_shoot_label).internode_length_max.val();
+                        shoot_types.at(epicormic_shoot_label).internode_length_max.resample();
+                        std::cout << "Adding epicormic shoot" << std::endl;
+                        addEpicormicShoot(plantID, shoot->ID, epicormic_fraction.at(s), 1, 0, internode_radius, internode_length_max, 0.01, 0.01, 0, epicormic_shoot_label);
                     }
-                    context_ptr->setObjectData(phytomer->leaf_objIDs, "age", phytomer->age);
                 }
-
-                node_index++;
-            }
-
-            // if shoot has reached max_nodes, stop apical growth
-            if (shoot->current_node_number >= shoot->shoot_parameters.max_nodes.val()) {
-                shoot->terminateApicalBud();
-            }
-
-            // If the apical bud is dead, don't do anything more with the shoot
-            if (!shoot->meristem_is_alive) {
-                continue;
-            }
-
-            // ****** PHYLLOCHRON - NEW PHYTOMERS ****** //
-            shoot->phyllochron_counter += dt_max_days;
-            if (shoot->phyllochron_counter >= shoot->phyllochron_instantaneous && !shoot->phytomers.back()->isdormant) {
-                float internode_radius = shoot->shoot_parameters.phytomer_parameters.internode.radius_initial.val();
-                shoot->shoot_parameters.phytomer_parameters.internode.radius_initial.resample();
-                float internode_length_max = shoot->internode_length_max_shoot_initial;
-                appendPhytomerToShoot(plantID, shoot->ID, shoot_types.at(shoot->shoot_type_label).phytomer_parameters, internode_radius, internode_length_max, 0.01,
-                                      0.01); //\todo These factors should be set to be consistent with the shoot
-                shoot->phyllochron_counter = shoot->phyllochron_counter - shoot->phyllochron_instantaneous;
-            }
-
-            // ****** EPICORMIC SHOOTS ****** //
-            std::string epicormic_shoot_label = plant_instance.epicormic_shoot_probability_perlength_per_day.first;
-            if (!epicormic_shoot_label.empty()) {
-                std::vector<float> epicormic_fraction;
-                uint Nepicormic = shoot->sampleEpicormicShoot(time_step_days, epicormic_fraction);
-                for (int s = 0; s < Nepicormic; s++) {
-                    float internode_radius = shoot_types.at(epicormic_shoot_label).phytomer_parameters.internode.radius_initial.val();
-                    shoot_types.at(epicormic_shoot_label).phytomer_parameters.internode.radius_initial.resample();
-                    float internode_length_max = shoot_types.at(epicormic_shoot_label).internode_length_max.val();
-                    shoot_types.at(epicormic_shoot_label).internode_length_max.resample();
-                    std::cout << "Adding epicormic shoot" << std::endl;
-                    addEpicormicShoot(plantID, shoot->ID, epicormic_fraction.at(s), 1, 0, internode_radius, internode_length_max, 0.01, 0.01, 0, epicormic_shoot_label);
+                if (carbon_model_enabled) {
+                    if (output_object_data.find("carbohydrate_concentration") != output_object_data.end() && context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
+                        float shoot_volume = shoot->calculateShootInternodeVolume();
+                        context_ptr->setObjectData(shoot->internode_tube_objID, "carbohydrate_concentration", shoot->carbohydrate_pool_molC / shoot_volume);
+                    }
                 }
             }
-            if (carbon_model_enabled) {
-                if (output_object_data.find("carbohydrate_concentration") != output_object_data.end() && context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
-                    float shoot_volume = shoot->calculateShootInternodeVolume();
-                    context_ptr->setObjectData(shoot->internode_tube_objID, "carbohydrate_concentration", shoot->carbohydrate_pool_molC / shoot_volume);
+
+
+            // Update Context geometry based on scheduling configuration
+            bool should_update_context = (geometry_update_counter >= geometry_update_frequency);
+
+            // Force Context update if collision avoidance was applied and force_update_on_collision is enabled
+            bool force_update = collision_avoidance_applied && force_update_on_collision;
+
+            if (should_update_context || force_update) {
+                shoot_tree->front()->updateShootNodes(true);
+                geometry_update_counter = 0; // Reset counter
+            } else {
+                // Update plant structure but not Context geometry
+                if (printmessages) {
+                    std::cout << "Updating plant structure only (Context update in " << (geometry_update_frequency - geometry_update_counter) << " timesteps)" << std::endl;
                 }
+                shoot_tree->front()->updateShootNodes(false);
+            }
+
+            // Reset collision avoidance flag for next timestep
+            collision_avoidance_applied = false;
+
+            // *** ground collision detection *** //
+            if (ground_clipping_height != -99999) {
+                pruneGroundCollisions(plantID);
+            }
+
+            // Assign current volume as old volume for your next timestep
+            for (auto &shoot: *shoot_tree) {
+                float shoot_volume = plant_instances.at(plantID).shoot_tree.at(shoot->ID)->calculateShootInternodeVolume();
+                // Find current volume for each shoot in the plant
+                shoot->old_shoot_volume = shoot_volume; // Set old volume to the current volume for the next timestep
             }
         }
 
@@ -4360,27 +4516,532 @@ void PlantArchitecture::advanceTime(uint plantID, float time_step_days) {
             checkCarbonPool_adjustPhyllochron(dt_max_days);
             checkCarbonPool_abortOrgans(dt_max_days);
         }
-    }
 
-    // update Context geometry
-    if (!shoot_tree->front()->phytomers.empty()) {
-        shoot_tree->front()->updateShootNodes(true);
+        geometry_update_counter++;
     }
+    
+    // Adjust fruit positions to avoid solid obstacle collisions
+    adjustFruitForObstacleCollision();
+    
+    // Fallback collision detection: prune any objects that still intersect solid boundaries
+    //pruneSolidBoundaryCollisions();
+}
 
-    // *** ground collision detection *** //
-    if (ground_clipping_height != -99999) {
-        pruneGroundCollisions(plantID);
+void PlantArchitecture::adjustFruitForObstacleCollision() {
+    if (!solid_obstacle_avoidance_enabled || solid_obstacle_UUIDs.empty() || !solid_obstacle_fruit_adjustment_enabled) {
+        return; // No obstacles to check or fruit adjustment disabled
     }
-
-    // Assign current volume as old volume for your next timestep
-    for (auto &shoot: *shoot_tree) {
-        // Skip shoots with no phytomers (they were pruned)
-        if (shoot->phytomers.empty()) {
-            continue;
+    
+    if (collision_detection_ptr == nullptr) {
+        return; // No collision detection available
+    }
+    
+    // Debug counter to limit output
+    int debug_failures_shown = 0;
+    const int max_debug_failures = 0; // Disable debugging for performance
+    
+    // Process each plant instance
+    for (const auto &plant_instance : plant_instances) {
+        uint plantID = plant_instance.first;
+        
+        // Get all fruit object IDs for this plant
+        std::vector<uint> fruit_objIDs = getPlantFruitObjectIDs(plantID);
+        
+        if (fruit_objIDs.empty()) {
+            continue; // No fruit to process
         }
-        float shoot_volume = plant_instances.at(plantID).shoot_tree.at(shoot->ID)->calculateShootInternodeVolume();
-        // Find current volume for each shoot in the plant
-        shoot->old_shoot_volume = shoot_volume; // Set old volume to the current volume for the next timestep
+        
+        // Check each fruit for collision
+        for (uint fruit_objID : fruit_objIDs) {
+            // Get fruit primitives
+            std::vector<uint> fruit_UUIDs = context_ptr->getObjectPrimitiveUUIDs(fruit_objID);
+            
+            if (fruit_UUIDs.empty()) {
+                continue;
+            }
+            
+            // Check if fruit collides with any solid obstacle
+            std::vector<uint> collisions = collision_detection_ptr->findCollisions(fruit_UUIDs, {}, solid_obstacle_UUIDs, {});
+            
+            if (!collisions.empty()) {
+                // Fruit is colliding - need to rotate it up
+                
+                // Get fruit bounding box to estimate rotation needed
+                vec3 bbox_min, bbox_max;
+                context_ptr->getObjectBoundingBox(fruit_objID, bbox_min, bbox_max);
+                
+                // Find the fruit base position and peduncle info from the shoot tree
+                vec3 fruit_base;
+                vec3 peduncle_axis;
+                const Phytomer* fruit_phytomer = nullptr;
+                uint fruit_petiole_index = 0;
+                uint fruit_bud_index = 0;
+                bool found_base = false;
+                
+                // Search through shoot tree to find this fruit's base position
+                for (const auto &shoot : plant_instance.second.shoot_tree) {
+                    for (const auto &phytomer : shoot->phytomers) {
+                        uint petiole_idx = 0;
+                        for (const auto &petiole : phytomer->floral_buds) {
+                            for (const auto &fbud : petiole) {
+                                // Check if this floral bud contains our fruit
+                                for (size_t idx = 0; idx < fbud.inflorescence_objIDs.size(); idx++) {
+                                    if (fbud.inflorescence_objIDs[idx] == fruit_objID && idx < fbud.inflorescence_bases.size()) {
+                                        // Found it! Use the correct index to get the base position
+                                        fruit_base = fbud.inflorescence_bases[idx];
+                                        fruit_phytomer = phytomer.get();
+                                        fruit_petiole_index = petiole_idx;
+                                        fruit_bud_index = fbud.bud_index;
+                                        
+                                        // Get actual peduncle axis using stored vertices
+                                        try {
+                                            peduncle_axis = phytomer->getPeduncleAxisVector(1.0f, petiole_idx, fbud.bud_index);
+                                        } catch (const std::exception& e) {
+                                            // Fallback if peduncle vertices not available
+                                            peduncle_axis = make_vec3(0, 0, 1);
+                                        }
+                                        
+                                        found_base = true;
+                                        break;
+                                    }
+                                }
+                                if (found_base) break;
+                            }
+                            if (found_base) break;
+                            petiole_idx++;
+                        }
+                        if (found_base) break;
+                    }
+                    if (found_base) break;
+                }
+                
+                if (!found_base) {
+                    continue; // Couldn't find fruit base position
+                }
+                
+                // Calculate initial rotation estimate
+                // Estimate fruit "radius" as distance from base to furthest point
+                float fruit_radius = 0;
+                fruit_radius = std::max(fruit_radius, (bbox_max - fruit_base).magnitude());
+                fruit_radius = std::max(fruit_radius, (bbox_min - fruit_base).magnitude());
+                fruit_radius = std::max(fruit_radius, (make_vec3(bbox_min.x, bbox_min.y, bbox_max.z) - fruit_base).magnitude());
+                fruit_radius = std::max(fruit_radius, (make_vec3(bbox_min.x, bbox_max.y, bbox_min.z) - fruit_base).magnitude());
+                fruit_radius = std::max(fruit_radius, (make_vec3(bbox_max.x, bbox_min.y, bbox_min.z) - fruit_base).magnitude());
+                fruit_radius = std::max(fruit_radius, (make_vec3(bbox_min.x, bbox_max.y, bbox_max.z) - fruit_base).magnitude());
+                fruit_radius = std::max(fruit_radius, (make_vec3(bbox_max.x, bbox_min.y, bbox_max.z) - fruit_base).magnitude());
+                fruit_radius = std::max(fruit_radius, (make_vec3(bbox_max.x, bbox_max.y, bbox_min.z) - fruit_base).magnitude());
+                
+                // Calculate penetration depth more accurately
+                // Use the lowest point of the fruit bounding box vs ground level (z=0)
+                float penetration_depth = std::max(0.0f, -bbox_min.z);
+                
+                // Calculate initial rotation guess
+                float initial_rotation = 0;
+                if (fruit_radius > 0 && penetration_depth > 0) {
+                    // Use arc sine to estimate rotation needed
+                    float angle_estimate = std::asin(std::min(1.0f, penetration_depth / fruit_radius));
+                    // Multiply by 1.5 to account for fruit shape complexity (less aggressive than before)
+                    initial_rotation = std::min(deg2rad(35.0f), angle_estimate * 1.5f);
+                } else {
+                    // Default rotation for partially submerged cases
+                    initial_rotation = deg2rad(10.0f);
+                }
+                
+                // Ensure minimum rotation for any collision case
+                initial_rotation = std::max(initial_rotation, deg2rad(8.0f)); // Slightly smaller minimum
+                
+                // Calculate the proper rotation axis based on peduncle orientation
+                vec3 rotation_axis;
+                
+                // Ensure peduncle axis is normalized
+                if (peduncle_axis.magnitude() < 1e-6f) {
+                    // Fallback if peduncle axis is not available
+                    peduncle_axis = make_vec3(0, 0, 1);
+                } else {
+                    peduncle_axis.normalize();
+                }
+                
+                // Get vector from fruit base to fruit center
+                vec3 bbox_center = 0.5f * (bbox_min + bbox_max);
+                vec3 to_fruit_center = bbox_center - fruit_base;
+                if (to_fruit_center.magnitude() > 1e-6f) {
+                    to_fruit_center.normalize();
+                } else {
+                    // If fruit center is at base, use peduncle direction
+                    to_fruit_center = peduncle_axis;
+                }
+                
+                // Rotation axis is perpendicular to both peduncle axis and to_fruit_center
+                // This gives us the pitch rotation axis used for the original fruit positioning
+                rotation_axis = cross(peduncle_axis, to_fruit_center);
+                if (rotation_axis.magnitude() < 1e-6f) {
+                    // Peduncle and fruit are aligned, use perpendicular to peduncle
+                    if (std::abs(peduncle_axis.z) < 0.9f) {
+                        rotation_axis = cross(peduncle_axis, make_vec3(0, 0, 1));
+                    } else {
+                        rotation_axis = cross(peduncle_axis, make_vec3(1, 0, 0));
+                    }
+                }
+                rotation_axis.normalize();
+                
+                // Iteratively rotate fruit until no collision
+                float rotation_step = initial_rotation;
+                float total_rotation = 0;
+                const float max_rotation = deg2rad(120.0f); // Allow more rotation
+                const int max_iterations = 25; // More iterations
+                
+                // Debug info for this fruit (only show first few)
+                bool debug_this_fruit = (debug_failures_shown < max_debug_failures);
+                if (debug_this_fruit && printmessages) {
+                    std::cout << "\n=== DEBUG: Fruit " << fruit_objID << " collision adjustment ===" << std::endl;
+                    std::cout << "Fruit base: " << fruit_base << std::endl;
+                    std::cout << "Fruit bbox: " << bbox_min << " to " << bbox_max << std::endl;
+                    std::cout << "Fruit radius: " << fruit_radius << std::endl;
+                    std::cout << "Penetration depth: " << penetration_depth << std::endl;
+                    std::cout << "Peduncle axis: " << peduncle_axis << std::endl;
+                    std::cout << "Rotation axis: " << rotation_axis << std::endl;
+                    std::cout << "Initial rotation: " << rad2deg(initial_rotation) << " degrees" << std::endl;
+                    std::cout << "Initial collisions: " << collisions.size() << std::endl;
+                }
+                
+                for (int iter = 0; iter < max_iterations && total_rotation < max_rotation; iter++) {
+                    // Apply rotation about fruit base
+                    // Negative rotation to lift fruit up (opposite of gravity)
+                    context_ptr->rotateObject(fruit_objID, -rotation_step, fruit_base, rotation_axis);
+                    total_rotation += rotation_step;
+                    
+                    // Check if still colliding
+                    fruit_UUIDs = context_ptr->getObjectPrimitiveUUIDs(fruit_objID);
+                    collisions = collision_detection_ptr->findCollisions(fruit_UUIDs, {}, solid_obstacle_UUIDs, {});
+                    
+                    if (debug_this_fruit && printmessages) {
+                        std::cout << "Iter " << iter << ": rotated " << rad2deg(rotation_step) 
+                                 << " deg (total " << rad2deg(total_rotation) << "), collisions: " 
+                                 << collisions.size() << std::endl;
+                    }
+                    
+                    if (collisions.empty()) {
+                        // No longer colliding - now try to fine-tune by rotating back down slightly
+                        // to get as close to the ground as possible
+                        float fine_tune_step = deg2rad(3.0f); // Slightly larger steps for efficiency
+                        float fine_tune_attempts = 5; // Fewer attempts to speed up
+                        float original_total = total_rotation;
+                        
+                        if (debug_this_fruit && printmessages) {
+                            std::cout << "Fine-tuning: trying to rotate back down from " << rad2deg(total_rotation) << " degrees" << std::endl;
+                        }
+                        
+                        for (int fine_iter = 0; fine_iter < fine_tune_attempts; fine_iter++) {
+                            // Try rotating back towards ground (positive rotation)
+                            context_ptr->rotateObject(fruit_objID, fine_tune_step, fruit_base, rotation_axis);
+                            
+                            // Check if still collision-free
+                            fruit_UUIDs = context_ptr->getObjectPrimitiveUUIDs(fruit_objID);
+                            std::vector<uint> test_collisions = collision_detection_ptr->findCollisions(fruit_UUIDs, {}, solid_obstacle_UUIDs, {});
+                            
+                            if (!test_collisions.empty()) {
+                                // Collision detected - rotate back up and stop fine-tuning
+                                context_ptr->rotateObject(fruit_objID, -fine_tune_step, fruit_base, rotation_axis);
+                                break;
+                            } else {
+                                // Still collision-free, reduce total rotation count
+                                total_rotation -= fine_tune_step;
+                            }
+                        }
+                        
+                        if (printmessages) {
+                            if (debug_this_fruit) {
+                                std::cout << "Fine-tuning result: " << rad2deg(original_total) << " -> " << rad2deg(total_rotation) 
+                                         << " degrees (saved " << rad2deg(original_total - total_rotation) << " degrees)" << std::endl;
+                            }
+                            std::cout << "Fruit " << fruit_objID << " rotated " << rad2deg(total_rotation) 
+                                     << " degrees (fine-tuned) to avoid obstacle collision." << std::endl;
+                        }
+                        break;
+                    }
+                    
+                    // Adaptive step size - reduce for fine tuning, but not too aggressively
+                    if (iter > 8) {
+                        rotation_step *= 0.7f; // Less aggressive reduction
+                    }
+                }
+                
+                if (!collisions.empty()) {
+                    if (debug_this_fruit && printmessages) {
+                        std::cout << "FAILED: Fruit " << fruit_objID << " still colliding after " 
+                                 << rad2deg(total_rotation) << " degrees rotation (" << max_iterations 
+                                 << " iterations)" << std::endl;
+                        
+                        // Get final bounding box to see where it ended up
+                        vec3 final_bbox_min, final_bbox_max;
+                        context_ptr->getObjectBoundingBox(fruit_objID, final_bbox_min, final_bbox_max);
+                        std::cout << "Final bbox: " << final_bbox_min << " to " << final_bbox_max << std::endl;
+                        std::cout << "Lowest point: " << final_bbox_min.z << std::endl;
+                        
+                        debug_failures_shown++;
+                    } else if (printmessages) {
+                        std::cout << "Warning: Fruit " << fruit_objID << " still colliding after maximum rotation." << std::endl;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void PlantArchitecture::pruneSolidBoundaryCollisions() {
+    if (!solid_obstacle_avoidance_enabled || solid_obstacle_UUIDs.empty()) {
+        return; // No solid boundaries defined
+    }
+    
+    if (collision_detection_ptr == nullptr) {
+        return; // No collision detection available
+    }
+
+    if (printmessages) {
+        std::cout << "Performing fallback collision detection for solid boundaries..." << std::endl;
+    }
+
+    // The BVH should already be current from advanceTime() - we're called at the very end
+    // Collect all plant primitives and do one batch collision detection call for efficiency
+    std::vector<uint> all_plant_primitives;
+    
+    // First pass: collect all plant primitives
+    for (auto &plant_instance : plant_instances) {
+        for (auto &shoot: plant_instance.second.shoot_tree) {
+            // Collect ALL internode primitives (protection applied during pruning, not collection)
+            for (auto &phytomer: shoot->phytomers) {
+                if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
+                    std::vector<uint> internode_primitives = context_ptr->getObjectPrimitiveUUIDs(shoot->internode_tube_objID);
+                    all_plant_primitives.insert(all_plant_primitives.end(), internode_primitives.begin(), internode_primitives.end());
+                }
+                
+                // Collect leaf primitives
+                for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size(); petiole++) {
+                    for (uint objID : phytomer->leaf_objIDs.at(petiole)) {
+                        if (context_ptr->doesObjectExist(objID)) {
+                            std::vector<uint> leaf_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                            all_plant_primitives.insert(all_plant_primitives.end(), leaf_primitives.begin(), leaf_primitives.end());
+                        }
+                    }
+                }
+
+                // Collect petiole primitives
+                for (uint petiole = 0; petiole < phytomer->petiole_objIDs.size(); petiole++) {
+                    for (uint objID : phytomer->petiole_objIDs.at(petiole)) {
+                        if (context_ptr->doesObjectExist(objID)) {
+                            std::vector<uint> petiole_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                            all_plant_primitives.insert(all_plant_primitives.end(), petiole_primitives.begin(), petiole_primitives.end());
+                        }
+                    }
+                }
+
+                // Collect inflorescence primitives
+                for (auto &petiole: phytomer->floral_buds) {
+                    for (auto &fbud: petiole) {
+                        for (uint objID : fbud.peduncle_objIDs) {
+                            if (context_ptr->doesObjectExist(objID)) {
+                                std::vector<uint> peduncle_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                                all_plant_primitives.insert(all_plant_primitives.end(), peduncle_primitives.begin(), peduncle_primitives.end());
+                            }
+                        }
+                        for (uint objID : fbud.inflorescence_objIDs) {
+                            if (context_ptr->doesObjectExist(objID)) {
+                                std::vector<uint> inflorescence_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                                all_plant_primitives.insert(all_plant_primitives.end(), inflorescence_primitives.begin(), inflorescence_primitives.end());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (all_plant_primitives.empty()) {
+        return; // No primitives to check
+    }
+
+    // Note: PlantArchitecture already disables automatic BVH rebuilds in enableCollisionDetection()
+    // So we don't need to modify that setting here - just do batch collision detection
+    
+    // Single collision detection call - this should only trigger one BVH operation
+    std::vector<uint> intersecting_primitives = collision_detection_ptr->findCollisions(solid_obstacle_UUIDs, {}, all_plant_primitives, {});
+    
+    if (intersecting_primitives.empty()) {
+        return; // No collisions detected
+    }
+
+    // Create a set for fast lookup of intersecting primitives
+    std::unordered_set<uint> intersecting_set(intersecting_primitives.begin(), intersecting_primitives.end());
+
+    uint total_pruned_objects = 0;
+    std::vector<uint> objects_to_delete; // Collect objects for deferred deletion
+
+    // Second pass: check organs against the intersecting set and prune efficiently
+    for (auto &plant_instance : plant_instances) {
+        for (auto &shoot: plant_instance.second.shoot_tree) {
+            for (auto &phytomer: shoot->phytomers) {
+                // Check internode collision (protect main stem base like pruneGroundCollisions)
+                if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
+                    std::vector<uint> internode_primitives = context_ptr->getObjectPrimitiveUUIDs(shoot->internode_tube_objID);
+                    
+                    // Check if any internode primitive intersects
+                    bool has_collision = false;
+                    for (uint primitive : internode_primitives) {
+                        if (intersecting_set.find(primitive) != intersecting_set.end()) {
+                            has_collision = true;
+                            break;
+                        }
+                    }
+                    
+                    if (has_collision) {
+                        // Protect main stem base from pruning (like pruneGroundCollisions)
+                        if (!(phytomer->shoot_index.x == 0 && phytomer->rank == 0)) {
+                            objects_to_delete.push_back(shoot->internode_tube_objID);
+                            shoot->terminateApicalBud();
+                            total_pruned_objects++;
+                        }
+                    }
+                }
+            
+                // Check leaves/petioles collision (combine since removeLeaf() removes both)
+                bool leaf_collision = false;
+                for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size() && !leaf_collision; petiole++) {
+                    for (uint objID : phytomer->leaf_objIDs.at(petiole)) {
+                        if (context_ptr->doesObjectExist(objID)) {
+                            std::vector<uint> leaf_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                            for (uint primitive : leaf_primitives) {
+                                if (intersecting_set.find(primitive) != intersecting_set.end()) {
+                                    leaf_collision = true;
+                                    break;
+                                }
+                            }
+                            if (leaf_collision) break;
+                        }
+                    }
+                }
+
+                // Check petioles if leaves didn't already have collision
+                if (!leaf_collision) {
+                    for (uint petiole = 0; petiole < phytomer->petiole_objIDs.size() && !leaf_collision; petiole++) {
+                        for (uint objID : phytomer->petiole_objIDs.at(petiole)) {
+                            if (context_ptr->doesObjectExist(objID)) {
+                                std::vector<uint> petiole_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                                for (uint primitive : petiole_primitives) {
+                                    if (intersecting_set.find(primitive) != intersecting_set.end()) {
+                                        leaf_collision = true;
+                                        break;
+                                    }
+                                }
+                                if (leaf_collision) break;
+                            }
+                        }
+                    }
+                }
+
+                if (leaf_collision) {
+                    // Add leaf and petiole objects to deferred deletion instead of calling removeLeaf()
+                    // which would delete immediately
+                    std::vector<uint> flat_leaf_objIDs = flatten(phytomer->leaf_objIDs);
+                    objects_to_delete.insert(objects_to_delete.end(), flat_leaf_objIDs.begin(), flat_leaf_objIDs.end());
+                    
+                    if (phytomer->build_context_geometry_petiole) {
+                        std::vector<uint> flat_petiole_objIDs = flatten(phytomer->petiole_objIDs);
+                        objects_to_delete.insert(objects_to_delete.end(), flat_petiole_objIDs.begin(), flat_petiole_objIDs.end());
+                    }
+                    
+                    // Clear the phytomer data structures like removeLeaf() does (but without immediate deletion)
+                    phytomer->petiole_radii.resize(0);
+                    phytomer->petiole_colors.resize(0);
+                    phytomer->petiole_length.resize(0);
+                    phytomer->leaf_size_max.resize(0);
+                    phytomer->leaf_rotation.resize(0);
+                    phytomer->leaf_bases.resize(0);
+                    phytomer->leaf_objIDs.clear();
+                    phytomer->leaf_bases.clear();
+                    if (phytomer->build_context_geometry_petiole) {
+                        phytomer->petiole_objIDs.resize(0);
+                    }
+                    
+                    total_pruned_objects++;
+                }
+
+                // Check inflorescence collision (fruits/flowers)
+                for (auto &petiole: phytomer->floral_buds) {
+                    for (auto &fbud: petiole) {
+                        // Check peduncle collision first
+                        bool peduncle_collision = false;
+                        for (uint objID : fbud.peduncle_objIDs) {
+                            if (context_ptr->doesObjectExist(objID)) {
+                                std::vector<uint> peduncle_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                                for (uint primitive : peduncle_primitives) {
+                                    if (intersecting_set.find(primitive) != intersecting_set.end()) {
+                                        peduncle_collision = true;
+                                        break;
+                                    }
+                                }
+                                if (peduncle_collision) break;
+                            }
+                        }
+                        
+                        if (peduncle_collision) {
+                            // Peduncle collision - add all associated objects to deletion list
+                            objects_to_delete.insert(objects_to_delete.end(), fbud.peduncle_objIDs.begin(), fbud.peduncle_objIDs.end());
+                            objects_to_delete.insert(objects_to_delete.end(), fbud.inflorescence_objIDs.begin(), fbud.inflorescence_objIDs.end());
+                            fbud.peduncle_objIDs.clear();
+                            fbud.inflorescence_objIDs.clear();
+                            fbud.inflorescence_bases.clear();
+                            total_pruned_objects++;
+                        } else {
+                            // Check individual inflorescence objects - use backwards iteration like original code
+                            for (int p = fbud.inflorescence_objIDs.size() - 1; p >= 0; p--) {
+                                uint objID = fbud.inflorescence_objIDs.at(p);
+                                if (context_ptr->doesObjectExist(objID)) {
+                                    std::vector<uint> inflorescence_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                                    
+                                    bool obj_collision = false;
+                                    for (uint primitive : inflorescence_primitives) {
+                                        if (intersecting_set.find(primitive) != intersecting_set.end()) {
+                                            obj_collision = true;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if (obj_collision) {
+                                        objects_to_delete.push_back(objID);
+                                        fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
+                                        fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
+                                        total_pruned_objects++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Execute all deletions at once to minimize BVH rebuilds
+    if (!objects_to_delete.empty()) {
+        // Remove duplicates and invalid object IDs to prevent deletion errors
+        std::sort(objects_to_delete.begin(), objects_to_delete.end());
+        objects_to_delete.erase(std::unique(objects_to_delete.begin(), objects_to_delete.end()), objects_to_delete.end());
+        
+        // Filter out objects that don't exist
+        std::vector<uint> valid_objects;
+        for (uint objID : objects_to_delete) {
+            if (context_ptr->doesObjectExist(objID)) {
+                valid_objects.push_back(objID);
+            }
+        }
+        
+        if (!valid_objects.empty()) {
+            context_ptr->deleteObject(valid_objects);
+        }
+    }
+    
+    if (printmessages && total_pruned_objects > 0) {
+        std::cout << "Pruned " << total_pruned_objects << " plant objects due to solid boundary collisions." << std::endl;
     }
 }
 
@@ -4446,29 +5107,56 @@ void PlantArchitecture::optionalOutputObjectData(const std::vector<std::string> 
     }
 }
 
-void PlantArchitecture::enableCollisionDetection(CollisionDetection *collision_detection_ptr, const std::vector<uint> &target_object_UUIDs, const std::vector<uint> &target_object_IDs) {
-    if (collision_detection_ptr == nullptr) {
-        helios_runtime_error("ERROR (PlantArchitecture::enableCollisionDetection): CollisionDetection pointer is null.");
+void PlantArchitecture::enableCollisionDetection(const std::vector<uint> &target_object_UUIDs, const std::vector<uint> &target_object_IDs) {
+    // Clean up any existing collision detection instance
+    if (collision_detection_ptr != nullptr && owns_collision_detection) {
+        delete collision_detection_ptr;
+        collision_detection_ptr = nullptr;
+        owns_collision_detection = false;
     }
 
-    this->collision_detection_ptr = collision_detection_ptr;
-    this->collision_detection_enabled = true;
-    this->collision_target_UUIDs = target_object_UUIDs;
-    this->collision_target_object_IDs = target_object_IDs;
+    // Create new CollisionDetection instance
+    try {
+        collision_detection_ptr = new CollisionDetection(context_ptr);
+        collision_detection_ptr->enableMessages(); // Enable debug output for debugging
+        owns_collision_detection = true;
+        collision_detection_enabled = true;
+        collision_target_UUIDs = target_object_UUIDs;
+        collision_target_object_IDs = target_object_IDs;
 
-    if (printmessages) {
-        std::cout << "Collision detection enabled for plant growth with " << target_object_UUIDs.size() << " target UUIDs and " << target_object_IDs.size() << " target object IDs" << std::endl;
+        // Disable automatic BVH rebuilds - PlantArchitecture will control rebuilds manually
+        collision_detection_ptr->disableAutomaticBVHRebuilds();
+
+        // Disable hierarchical BVH to ensure cone detection can access all geometry in main BVH
+        // collision_detection_ptr->enableHierarchicalBVH();
+
+        // Cone-aware culling is now handled automatically based on collision cone geometry
+
+        setGeometryUpdateScheduling(3, true); // Update every 3 timesteps, force on collision
+
+        if (printmessages) {
+            std::cout << "Created internal CollisionDetection instance and enabled collision detection for plant growth with " << target_object_UUIDs.size() << " target UUIDs and " << target_object_IDs.size() << " target object IDs" << std::endl;
+        }
+    } catch (const std::exception &e) {
+        helios_runtime_error("ERROR (PlantArchitecture::enableCollisionDetection): Failed to create CollisionDetection instance: " + std::string(e.what()));
     }
 }
 
 void PlantArchitecture::disableCollisionDetection() {
     collision_detection_enabled = false;
+
+    // Clean up owned CollisionDetection instance
+    if (collision_detection_ptr != nullptr && owns_collision_detection) {
+        delete collision_detection_ptr;
+        owns_collision_detection = false;
+    }
+
     collision_detection_ptr = nullptr;
     collision_target_UUIDs.clear();
     collision_target_object_IDs.clear();
 
     if (printmessages) {
-        std::cout << "Collision detection disabled for plant growth" << std::endl;
+        std::cout << "Collision detection disabled for plant growth and internal instance cleaned up" << std::endl;
     }
 }
 
@@ -4487,4 +5175,314 @@ void PlantArchitecture::setCollisionAvoidanceParameters(float view_half_angle_de
     collision_cone_height = look_ahead_distance;
     collision_sample_count = sample_count;
     collision_inertia_weight = inertia_weight;
+}
+
+void PlantArchitecture::setStaticObstacles(const std::vector<uint> &target_UUIDs) {
+    if (collision_detection_ptr == nullptr) {
+        helios_runtime_error("ERROR (PlantArchitecture::setStaticObstacles): Collision detection must be enabled before setting static obstacles.");
+    }
+
+    collision_detection_ptr->setStaticGeometry(target_UUIDs);
+
+    if (printmessages) {
+        std::cout << "Marked " << target_UUIDs.size() << " primitives as static obstacles for collision detection" << std::endl;
+    }
+}
+
+void PlantArchitecture::setSpatialOptimization(float max_collision_distance, bool enable_spatial_filtering) {
+    if (collision_detection_ptr == nullptr) {
+        helios_runtime_error("ERROR (PlantArchitecture::setSpatialOptimization): Collision detection must be enabled before configuring spatial optimization.");
+    }
+
+    if (max_collision_distance <= 0.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setSpatialOptimization): max_collision_distance must be positive.");
+    }
+
+    spatial_max_distance = max_collision_distance;
+    spatial_filtering_enabled = enable_spatial_filtering;
+
+    // Configure the CollisionDetection plugin with the new distance
+    collision_detection_ptr->setMaxCollisionDistance(max_collision_distance);
+
+    if (printmessages) {
+        std::cout << "Set spatial optimization: max_distance=" << max_collision_distance << " meters, filtering=" << (enable_spatial_filtering ? "enabled" : "disabled") << std::endl;
+    }
+}
+
+CollisionDetection *PlantArchitecture::getCollisionDetection() const {
+    return collision_detection_ptr;
+}
+
+void PlantArchitecture::setCollisionRelevantOrgans(bool include_internodes, bool include_leaves, bool include_petioles, bool include_flowers, bool include_fruit) {
+    collision_include_internodes = include_internodes;
+    collision_include_leaves = include_leaves;
+    collision_include_petioles = include_petioles;
+    collision_include_flowers = include_flowers;
+    collision_include_fruit = include_fruit;
+
+    // Clear BVH cache to force rebuild with new organ filtering
+    clearBVHCache();
+
+    if (printmessages) {
+        std::cout << "Set collision-relevant organs: internodes=" << (include_internodes ? "yes" : "no") << ", leaves=" << (include_leaves ? "yes" : "no") << ", petioles=" << (include_petioles ? "yes" : "no")
+                  << ", flowers=" << (include_flowers ? "yes" : "no") << ", fruit=" << (include_fruit ? "yes" : "no") << std::endl;
+    }
+}
+
+void PlantArchitecture::enablePetioleCollisionDetection(bool enabled) {
+    petiole_collision_detection_enabled = enabled;
+
+    if (printmessages) {
+        std::cout << "Petiole collision detection " << (enabled ? "enabled" : "disabled") << std::endl;
+    }
+}
+
+void PlantArchitecture::enableFruitCollisionDetection(bool enabled) {
+    fruit_collision_detection_enabled = enabled;
+
+    if (printmessages) {
+        std::cout << "Fruit collision detection " << (enabled ? "enabled" : "disabled") << std::endl;
+    }
+}
+
+void PlantArchitecture::enableSolidObstacleAvoidance(const std::vector<uint> &obstacle_UUIDs, float avoidance_distance, bool enable_fruit_adjustment) {
+    solid_obstacle_avoidance_enabled = true;
+    solid_obstacle_UUIDs = obstacle_UUIDs;
+    solid_obstacle_avoidance_distance = avoidance_distance;
+    solid_obstacle_fruit_adjustment_enabled = enable_fruit_adjustment;
+
+    if (printmessages) {
+        std::cout << "Enabled solid obstacle avoidance for " << obstacle_UUIDs.size() << " primitives (avoidance distance: " << avoidance_distance << "m, fruit adjustment: " << (enable_fruit_adjustment ? "enabled" : "disabled") << ")" << std::endl;
+    }
+
+    // The BVH will be built/updated during rebuildBVHForTimestep to include both
+    // plant geometry and solid obstacles together
+}
+
+void PlantArchitecture::clearBVHCache() const {
+    bvh_cached_for_current_growth = false;
+    cached_target_geometry.clear();
+    cached_filtered_geometry.clear();
+
+    if (printmessages) {
+        std::cout << "Cleared BVH cache for new growth cycle" << std::endl;
+    }
+}
+
+
+void PlantArchitecture::rebuildBVHForTimestep() {
+    if (!collision_detection_enabled || collision_detection_ptr == nullptr) {
+        return;
+    }
+
+
+    // Determine target geometry for BVH
+    std::vector<uint> target_geometry;
+
+    // Always include solid obstacles if enabled
+    if (solid_obstacle_avoidance_enabled && !solid_obstacle_UUIDs.empty()) {
+        target_geometry.insert(target_geometry.end(), solid_obstacle_UUIDs.begin(), solid_obstacle_UUIDs.end());
+    }
+
+    if (!collision_target_UUIDs.empty()) {
+        // Validate that all target UUIDs still exist
+        std::vector<uint> valid_targets;
+        for (uint uuid: collision_target_UUIDs) {
+            if (context_ptr->doesPrimitiveExist(uuid)) {
+                valid_targets.push_back(uuid);
+            }
+        }
+        // Add valid collision targets to existing target_geometry (which may include solid obstacles)
+        target_geometry.insert(target_geometry.end(), valid_targets.begin(), valid_targets.end());
+    } else if (!collision_target_object_IDs.empty()) {
+        // Add object primitives to existing target_geometry (which may include solid obstacles)
+        for (uint objID: collision_target_object_IDs) {
+            if (context_ptr->doesObjectExist(objID)) {
+                std::vector<uint> obj_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
+                target_geometry.insert(target_geometry.end(), obj_primitives.begin(), obj_primitives.end());
+            }
+        }
+    } else {
+        // Use filtered plant geometry based on organ settings + external obstacles
+        // Preserve solid obstacles that were already added
+        std::vector<uint> preserved_solid_obstacles = target_geometry;
+        target_geometry.clear();
+
+        // Add collision-relevant plant organs based on filtering settings (with safety checks)
+        try {
+            if (collision_include_internodes) {
+                std::vector<uint> internode_uuids = getAllInternodeUUIDs();
+                target_geometry.insert(target_geometry.end(), internode_uuids.begin(), internode_uuids.end());
+            }
+            if (collision_include_leaves) {
+                std::vector<uint> leaf_uuids = getAllLeafUUIDs();
+                target_geometry.insert(target_geometry.end(), leaf_uuids.begin(), leaf_uuids.end());
+            }
+            if (collision_include_petioles) {
+                std::vector<uint> petiole_uuids = getAllPetioleUUIDs();
+                target_geometry.insert(target_geometry.end(), petiole_uuids.begin(), petiole_uuids.end());
+            }
+            if (collision_include_flowers) {
+                std::vector<uint> flower_uuids = getAllFlowerUUIDs();
+                target_geometry.insert(target_geometry.end(), flower_uuids.begin(), flower_uuids.end());
+            }
+            if (collision_include_fruit) {
+                std::vector<uint> fruit_uuids = getAllFruitUUIDs();
+                target_geometry.insert(target_geometry.end(), fruit_uuids.begin(), fruit_uuids.end());
+            }
+        } catch (const std::exception &e) {
+            if (printmessages) {
+                std::cout << "Warning: Exception in organ filtering, falling back to all geometry: " << e.what() << std::endl;
+            }
+            target_geometry = context_ptr->getAllUUIDs();
+        }
+
+        // Re-add the preserved solid obstacles
+        target_geometry.insert(target_geometry.end(), preserved_solid_obstacles.begin(), preserved_solid_obstacles.end());
+
+        // Add any external obstacles from Context (non-plant geometry)
+        std::vector<uint> all_context_geometry = context_ptr->getAllUUIDs();
+        std::set<uint> all_plant_geometry_set;
+        try {
+            std::vector<uint> all_plant = getAllUUIDs();
+            all_plant_geometry_set.insert(all_plant.begin(), all_plant.end());
+        } catch (const std::exception &e) {
+            if (printmessages) {
+                std::cout << "Warning: Could not get plant geometry for external obstacle filtering: " << e.what() << std::endl;
+            }
+        }
+
+        for (uint uuid: all_context_geometry) {
+            if (all_plant_geometry_set.find(uuid) == all_plant_geometry_set.end()) {
+                target_geometry.push_back(uuid); // Add external obstacles
+            }
+        }
+    }
+
+    if (!target_geometry.empty()) {
+        // Separate static obstacles from plant geometry for hierarchical BVH
+        std::vector<uint> plant_geometry;
+        try {
+            plant_geometry = getAllUUIDs();
+        } catch (const std::exception &e) {
+            if (printmessages) {
+                std::cout << "Warning: Could not get plant geometry for hierarchical BVH: " << e.what() << std::endl;
+            }
+            plant_geometry.clear();
+        }
+        std::set<uint> plant_set(plant_geometry.begin(), plant_geometry.end());
+
+        std::vector<uint> static_obstacles;
+        for (uint uuid: target_geometry) {
+            if (plant_set.find(uuid) == plant_set.end()) {
+                static_obstacles.push_back(uuid); // Not plant geometry = static obstacle
+            }
+        }
+
+        collision_detection_ptr->setStaticGeometry(static_obstacles);
+
+        // Build BVH once per timestep
+        collision_detection_ptr->updateBVH(target_geometry, true); // Force rebuild
+
+
+        // Cache the geometry for this growth cycle
+        cached_target_geometry = target_geometry;
+        cached_filtered_geometry = target_geometry; // No filtering at timestep level
+        bvh_cached_for_current_growth = true;
+    }
+}
+
+void PlantArchitecture::setGeometryUpdateScheduling(int update_frequency, bool force_update_on_collision) {
+    if (update_frequency < 1) {
+        helios_runtime_error("ERROR (PlantArchitecture::setGeometryUpdateScheduling): update_frequency must be at least 1.");
+    }
+
+    geometry_update_frequency = update_frequency;
+    force_update_on_collision = force_update_on_collision;
+    geometry_update_counter = 0; // Reset counter
+
+    if (printmessages) {
+        std::cout << "Set geometry update scheduling: frequency=" << update_frequency << ", force_on_collision=" << (force_update_on_collision ? "true" : "false") << std::endl;
+    }
+}
+
+// ----- Attraction Points Methods ----- //
+
+void PlantArchitecture::enableAttractionPoints(const std::vector<helios::vec3> &attraction_points_input, float view_half_angle_deg, float look_ahead_distance, float attraction_weight_input) {
+    if (view_half_angle_deg <= 0.0f || view_half_angle_deg > 180.f) {
+        helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): view_half_angle_deg must be between 0 and 180 degrees.");
+    }
+    if (look_ahead_distance <= 0.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): look_ahead_distance must be positive.");
+    }
+    if (attraction_weight_input < 0.0f || attraction_weight_input > 1.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): attraction_weight must be between 0.0 and 1.0.");
+    }
+    if (attraction_points_input.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): attraction_points cannot be empty.");
+    }
+
+    // Ensure collision detection is available for attraction points functionality
+    if (collision_detection_ptr == nullptr) {
+        helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): Collision detection must be enabled before using attraction points.");
+    }
+
+    attraction_points_enabled = true;
+    attraction_points = attraction_points_input;
+    attraction_cone_half_angle_rad = deg2rad(view_half_angle_deg);
+    attraction_cone_height = look_ahead_distance;
+    attraction_weight = attraction_weight_input;
+
+    if (printmessages) {
+        std::cout << "Enabled attraction points with " << attraction_points.size() << " target positions" << std::endl;
+        std::cout << "Attraction parameters: cone_angle=" << view_half_angle_deg << "°, look_ahead=" << look_ahead_distance << "m, weight=" << attraction_weight_input << std::endl;
+    }
+}
+
+void PlantArchitecture::disableAttractionPoints() {
+    attraction_points_enabled = false;
+    attraction_points.clear();
+
+    if (printmessages) {
+        std::cout << "Disabled attraction points - plants will use natural growth patterns" << std::endl;
+    }
+}
+
+void PlantArchitecture::updateAttractionPoints(const std::vector<helios::vec3> &attraction_points_input) {
+    if (!attraction_points_enabled) {
+        helios_runtime_error("ERROR (PlantArchitecture::updateAttractionPoints): Attraction points must be enabled before updating positions.");
+    }
+    if (attraction_points_input.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::updateAttractionPoints): attraction_points cannot be empty.");
+    }
+
+    attraction_points = attraction_points_input;
+
+    if (printmessages) {
+        std::cout << "Updated attraction points with " << attraction_points.size() << " target positions" << std::endl;
+    }
+}
+
+void PlantArchitecture::setAttractionParameters(float view_half_angle_deg, float look_ahead_distance, float attraction_weight_input, float obstacle_reduction_factor) {
+    if (view_half_angle_deg <= 0.0f || view_half_angle_deg > 180.f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setAttractionParameters): view_half_angle_deg must be between 0 and 180 degrees.");
+    }
+    if (look_ahead_distance <= 0.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setAttractionParameters): look_ahead_distance must be positive.");
+    }
+    if (attraction_weight_input < 0.0f || attraction_weight_input > 1.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setAttractionParameters): attraction_weight must be between 0.0 and 1.0.");
+    }
+    if (obstacle_reduction_factor < 0.0f || obstacle_reduction_factor > 1.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setAttractionParameters): obstacle_reduction_factor must be between 0.0 and 1.0.");
+    }
+
+    attraction_cone_half_angle_rad = deg2rad(view_half_angle_deg);
+    attraction_cone_height = look_ahead_distance;
+    attraction_weight = attraction_weight_input;
+    attraction_obstacle_reduction_factor = obstacle_reduction_factor;
+
+    if (printmessages) {
+        std::cout << "Updated attraction parameters: cone_angle=" << view_half_angle_deg << "°, look_ahead=" << look_ahead_distance << "m, weight=" << attraction_weight_input << ", obstacle_reduction=" << obstacle_reduction_factor << std::endl;
+    }
 }

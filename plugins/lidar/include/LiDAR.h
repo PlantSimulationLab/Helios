@@ -18,6 +18,7 @@
 
 #include "Context.h"
 #include "Visualizer.h"
+#include "CollisionDetection.h"
 
 #include "s_hull_pro.h"
 
@@ -288,6 +289,9 @@ private:
     //! Flag denoting whether messages should be printed to screen
     bool printmessages;
 
+    //! Collision detection plugin for unified ray-tracing
+    CollisionDetection* collision_detection;
+
     // -------- I/O --------- //
 
     // -------- RECONSTRUCTION --------- //
@@ -351,6 +355,12 @@ public:
 
     //! Enable all print messages to the screen
     void enableMessages();
+
+    //! Initialize collision detection plugin for unified ray-tracing (called automatically when needed)
+    void initializeCollisionDetection(helios::Context* context);
+
+    //! Perform unified ray-tracing using collision detection plugin (replaces CUDA kernels)
+    void performUnifiedRayTracing(helios::Context* context, size_t N, int Npulse, helios::vec3 scan_origin, helios::vec3* direction, float* hit_t, float* hit_fnorm, int* hit_ID);
 
     // ------- SCANS -------- //
 

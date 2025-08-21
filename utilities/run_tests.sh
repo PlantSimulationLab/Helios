@@ -58,7 +58,12 @@ fi
 # Save the original working directory before changing directories
 ORIGINAL_DIR="$(pwd)"
 
-cd ../samples || exit 1
+# Determine the Helios base directory by finding the script's location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HELIOS_BASE_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Change to the samples directory relative to the Helios base
+cd "$HELIOS_BASE_DIR/samples" || exit 1
 
 if [[ "${OSTYPE}" != "darwin"* ]] && [[ "${OSTYPE}" != "linux"* ]] && [[ "${OSTYPE}" != "msys"* ]];then
   echo "UNSUPPORTED OPERATING SYSTEM"
@@ -210,17 +215,17 @@ fi
 ERROR_COUNT=0
 
 # Determine directory to use for project - either temporary or persistent
-TEMP_BASE="$(pwd)"
+TEMP_BASE="$HELIOS_BASE_DIR"
 if [ -n "$PROJECT_DIR" ]; then
   # Convert to absolute path if relative
   if [[ "$PROJECT_DIR" = /* ]]; then
     TEMP_DIR="$PROJECT_DIR"
   else
-    TEMP_DIR="$(pwd)/$PROJECT_DIR"
+    TEMP_DIR="$HELIOS_BASE_DIR/$PROJECT_DIR"
   fi
   PERSISTENT_PROJECT="ON"
 else
-  TEMP_DIR="$(pwd)/temp_$$_$(date +%s)"
+  TEMP_DIR="$HELIOS_BASE_DIR/temp_$$_$(date +%s)"
   PERSISTENT_PROJECT="OFF"
 fi
 
@@ -258,7 +263,7 @@ else
   mkdir -p "$TEMP_DIR"
 fi
 
-if [ ! -e "../utilities/create_project.sh" ]; then
+if [ ! -e "$HELIOS_BASE_DIR/utilities/create_project.sh" ]; then
   echo -e "\r\x1B[31mProject creation script create_project.sh does not exist...failed.\x1B[39m"
   ERROR_COUNT=$((ERROR_COUNT + 1))
   rm -rf temp
@@ -286,7 +291,7 @@ else
     fi
     
     echo "Building project with plugins: ${PLUGINS_TO_BUILD:-none}"
-    ../utilities/create_project.sh "$TEMP_DIR" ${PLUGINS_TO_BUILD}
+    "$HELIOS_BASE_DIR/utilities/create_project.sh" "$TEMP_DIR" ${PLUGINS_TO_BUILD}
   fi
   
   cd "$TEMP_DIR" || exit 1

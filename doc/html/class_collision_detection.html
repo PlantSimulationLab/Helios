@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.44</span>
+       <span id="projectnumber">&#160;v1.3.45</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -156,8 +156,10 @@ $(function(){initNavTree('class_collision_detection.html',''); initResizable(tru
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Data Structures</a> &#124;
+<a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
-<a href="#pub-static-methods">Static Public Member Functions</a>  </div>
+<a href="#pub-static-methods">Static Public Member Functions</a> &#124;
+<a href="#pub-static-attribs">Static Public Attributes</a>  </div>
   <div class="headertitle"><div class="title">CollisionDetection Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -172,9 +174,34 @@ Data Structures</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_collision_detection_1_1_cone.html">Cone</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Structure representing a cone for collision detection.  <a href="struct_collision_detection_1_1_cone.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_collision_detection_1_1_hit_result.html">HitResult</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Structure representing the result of a ray-primitive intersection.  <a href="struct_collision_detection_1_1_hit_result.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_collision_detection_1_1_memory_usage_stats.html">MemoryUsageStats</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get memory usage statistics for different BVH layouts.  <a href="struct_collision_detection_1_1_memory_usage_stats.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_collision_detection_1_1_optimal_path_result.html">OptimalPathResult</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Structure representing the result of optimal cone path detection.  <a href="struct_collision_detection_1_1_optimal_path_result.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_collision_detection_1_1_ray_packet.html">RayPacket</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Optimized ray packet for streaming processing Organizes ray data in Structure-of-Arrays format for better memory access.  <a href="struct_collision_detection_1_1_ray_packet.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_collision_detection_1_1_ray_query.html">RayQuery</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Structure representing a ray query for generic ray-tracing operations.  <a href="struct_collision_detection_1_1_ray_query.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_collision_detection_1_1_ray_stream.html">RayStream</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Streaming ray tracer interface Enables efficient batch processing of ray packets.  <a href="struct_collision_detection_1_1_ray_stream.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_collision_detection_1_1_ray_tracing_stats.html">RayTracingStats</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Structure for batch ray-tracing statistics.  <a href="struct_collision_detection_1_1_ray_tracing_stats.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
+Public Types</h2></td></tr>
+<tr class="memitem:afcab8e91b6861953a7fc8605dd41b12a" id="r_afcab8e91b6861953a7fc8605dd41b12a"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afcab8e91b6861953a7fc8605dd41b12a">BVHOptimizationMode</a> { <a class="el" href="#afcab8e91b6861953a7fc8605dd41b12aa010dab8f010dd984129714831632e013">SOA_UNCOMPRESSED</a>
+ }</td></tr>
+<tr class="memdesc:afcab8e91b6861953a7fc8605dd41b12a"><td class="mdescLeft">&#160;</td><td class="mdescRight">BVH optimization modes for performance improvements.  <a href="#afcab8e91b6861953a7fc8605dd41b12a">More...</a><br /></td></tr>
+<tr class="separator:afcab8e91b6861953a7fc8605dd41b12a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
@@ -196,6 +223,38 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a6d0a4780ad097156f1f3c2e260114663" id="r_a6d0a4780ad097156f1f3c2e260114663"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6d0a4780ad097156f1f3c2e260114663">findCollisions</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;query_UUIDs, const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;query_object_IDs, const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;target_UUIDs, const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;target_object_IDs)</td></tr>
 <tr class="memdesc:a6d0a4780ad097156f1f3c2e260114663"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find collisions restricting both query and target geometry.  <br /></td></tr>
 <tr class="separator:a6d0a4780ad097156f1f3c2e260114663"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af135bf1b70af3a3cf14679e74a490845" id="r_af135bf1b70af3a3cf14679e74a490845"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_collision_detection_1_1_hit_result.html">HitResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af135bf1b70af3a3cf14679e74a490845">castRay</a> (const <a class="el" href="struct_collision_detection_1_1_ray_query.html">RayQuery</a> &amp;ray_query)</td></tr>
+<tr class="memdesc:af135bf1b70af3a3cf14679e74a490845"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cast a single ray and return detailed intersection information.  <br /></td></tr>
+<tr class="separator:af135bf1b70af3a3cf14679e74a490845"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afcb3a30c3a466f6d2cc9085841c17e2c" id="r_afcb3a30c3a466f6d2cc9085841c17e2c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_collision_detection_1_1_hit_result.html">HitResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afcb3a30c3a466f6d2cc9085841c17e2c">castRay</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;origin, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;direction, float max_distance=-1.0f, const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;target_UUIDs={})</td></tr>
+<tr class="memdesc:afcb3a30c3a466f6d2cc9085841c17e2c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cast a single ray with simplified parameters.  <br /></td></tr>
+<tr class="separator:afcb3a30c3a466f6d2cc9085841c17e2c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab09488c60f0451e3d210ca33ede91e81" id="r_ab09488c60f0451e3d210ca33ede91e81"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="struct_collision_detection_1_1_hit_result.html">HitResult</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab09488c60f0451e3d210ca33ede91e81">castRays</a> (const std::vector&lt; <a class="el" href="struct_collision_detection_1_1_ray_query.html">RayQuery</a> &gt; &amp;ray_queries, <a class="el" href="struct_collision_detection_1_1_ray_tracing_stats.html">RayTracingStats</a> *stats=nullptr)</td></tr>
+<tr class="memdesc:ab09488c60f0451e3d210ca33ede91e81"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cast multiple rays in batch for improved performance.  <br /></td></tr>
+<tr class="separator:ab09488c60f0451e3d210ca33ede91e81"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a643afc63766d0e9e53b3e7c5077811c0" id="r_a643afc63766d0e9e53b3e7c5077811c0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a643afc63766d0e9e53b3e7c5077811c0">setBVHOptimizationMode</a> (<a class="el" href="#afcab8e91b6861953a7fc8605dd41b12a">BVHOptimizationMode</a> mode)</td></tr>
+<tr class="memdesc:a643afc63766d0e9e53b3e7c5077811c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set BVH optimization mode for performance improvements.  <br /></td></tr>
+<tr class="separator:a643afc63766d0e9e53b3e7c5077811c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afec7653310a964fe420c28458eb2a0cd" id="r_afec7653310a964fe420c28458eb2a0cd"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#afcab8e91b6861953a7fc8605dd41b12a">BVHOptimizationMode</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afec7653310a964fe420c28458eb2a0cd">getBVHOptimizationMode</a> () const</td></tr>
+<tr class="memdesc:afec7653310a964fe420c28458eb2a0cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get current BVH optimization mode.  <br /></td></tr>
+<tr class="separator:afec7653310a964fe420c28458eb2a0cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afc01a7fa6406731522cfc4947e2c816d" id="r_afc01a7fa6406731522cfc4947e2c816d"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="struct_collision_detection_1_1_hit_result.html">HitResult</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afc01a7fa6406731522cfc4947e2c816d">castRaysOptimized</a> (const std::vector&lt; <a class="el" href="struct_collision_detection_1_1_ray_query.html">RayQuery</a> &gt; &amp;ray_queries, <a class="el" href="struct_collision_detection_1_1_ray_tracing_stats.html">RayTracingStats</a> *stats=nullptr)</td></tr>
+<tr class="memdesc:afc01a7fa6406731522cfc4947e2c816d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cast rays using optimized Structure-of-Arrays BVH layout.  <br /></td></tr>
+<tr class="separator:afc01a7fa6406731522cfc4947e2c816d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3a9f26162a1ed16cbc47d92c6e0664f7" id="r_a3a9f26162a1ed16cbc47d92c6e0664f7"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3a9f26162a1ed16cbc47d92c6e0664f7">processRayStream</a> (<a class="el" href="struct_collision_detection_1_1_ray_stream.html">RayStream</a> &amp;ray_stream, <a class="el" href="struct_collision_detection_1_1_ray_tracing_stats.html">RayTracingStats</a> *stats=nullptr)</td></tr>
+<tr class="memdesc:a3a9f26162a1ed16cbc47d92c6e0664f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cast ray packets using streaming interface for optimal GPU utilization.  <br /></td></tr>
+<tr class="separator:a3a9f26162a1ed16cbc47d92c6e0664f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a72254baf2f899e983e4afeae593552c7" id="r_a72254baf2f899e983e4afeae593552c7"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_collision_detection_1_1_memory_usage_stats.html">MemoryUsageStats</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a72254baf2f899e983e4afeae593552c7">getBVHMemoryUsage</a> () const</td></tr>
+<tr class="separator:a72254baf2f899e983e4afeae593552c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adabcf62f9dcf6133cdb353b0583150ba" id="r_adabcf62f9dcf6133cdb353b0583150ba"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="struct_collision_detection_1_1_hit_result.html">HitResult</a> &gt; &gt; &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adabcf62f9dcf6133cdb353b0583150ba">performGridRayIntersection</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;grid_center, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;grid_size, const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;grid_divisions, const std::vector&lt; <a class="el" href="struct_collision_detection_1_1_ray_query.html">RayQuery</a> &gt; &amp;ray_queries)</td></tr>
+<tr class="memdesc:adabcf62f9dcf6133cdb353b0583150ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Perform grid-based ray intersection for voxel operations.  <br /></td></tr>
+<tr class="separator:adabcf62f9dcf6133cdb353b0583150ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab14024fac4066cf0f99b291e2fcb10ea" id="r_ab14024fac4066cf0f99b291e2fcb10ea"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::vector&lt; <a class="el" href="struct_collision_detection_1_1_hit_result.html">HitResult</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab14024fac4066cf0f99b291e2fcb10ea">calculateVoxelPathLengths</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;scan_origin, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;ray_directions, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;voxel_centers, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;voxel_sizes)</td></tr>
+<tr class="memdesc:ab14024fac4066cf0f99b291e2fcb10ea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate ray path lengths through individual voxels for LiDAR processing.  <br /></td></tr>
+<tr class="separator:ab14024fac4066cf0f99b291e2fcb10ea"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a75350449e19974df687ffa1afaf4766c" id="r_a75350449e19974df687ffa1afaf4766c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a75350449e19974df687ffa1afaf4766c">calculateRayPathLengthsDetailed</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;grid_center, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;grid_size, const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;grid_divisions, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;ray_origins, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;ray_directions, std::vector&lt; <a class="el" href="struct_collision_detection_1_1_hit_result.html">HitResult</a> &gt; &amp;hit_results)</td></tr>
+<tr class="memdesc:a75350449e19974df687ffa1afaf4766c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enhanced ray path length calculations with detailed statistics.  <br /></td></tr>
+<tr class="separator:a75350449e19974df687ffa1afaf4766c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae74c6dfcd3285830f4e53c786e47d97d" id="r_ae74c6dfcd3285830f4e53c786e47d97d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_collision_detection_1_1_optimal_path_result.html">OptimalPathResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae74c6dfcd3285830f4e53c786e47d97d">findOptimalConePath</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;apex, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;centralAxis, float half_angle, float height=0.0f, int initialSamples=256)</td></tr>
 <tr class="memdesc:ae74c6dfcd3285830f4e53c786e47d97d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find the radial direction through a cone toward the largest gap.  <br /></td></tr>
 <tr class="separator:ae74c6dfcd3285830f4e53c786e47d97d"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -208,15 +267,78 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ab9c8e00e93165b59d5ae2bad87f453d0" id="r_ab9c8e00e93165b59d5ae2bad87f453d0"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab9c8e00e93165b59d5ae2bad87f453d0">getGridIntersections</a> (int i, int j, int k)</td></tr>
 <tr class="memdesc:ab9c8e00e93165b59d5ae2bad87f453d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get primitives in a specific grid cell.  <br /></td></tr>
 <tr class="separator:ab9c8e00e93165b59d5ae2bad87f453d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a51994e51cd857e003032230c36cfb62e" id="r_a51994e51cd857e003032230c36cfb62e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a51994e51cd857e003032230c36cfb62e">calculateVoxelRayPathLengths</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;grid_center, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;grid_size, const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;grid_divisions, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;ray_origins, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;ray_directions)</td></tr>
+<tr class="memdesc:a51994e51cd857e003032230c36cfb62e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calculate ray path lengths and transmission statistics for a voxel grid.  <br /></td></tr>
+<tr class="separator:a51994e51cd857e003032230c36cfb62e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abe68d7d1563d6dbe27a004dfc14bf2da" id="r_abe68d7d1563d6dbe27a004dfc14bf2da"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abe68d7d1563d6dbe27a004dfc14bf2da">setVoxelTransmissionProbability</a> (int P_denom, int P_trans, const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;ijk)</td></tr>
+<tr class="memdesc:abe68d7d1563d6dbe27a004dfc14bf2da"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set transmission probability counts for a voxel.  <br /></td></tr>
+<tr class="separator:abe68d7d1563d6dbe27a004dfc14bf2da"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a880aa991d9c5d76b7d6b6bc4bfdfe306" id="r_a880aa991d9c5d76b7d6b6bc4bfdfe306"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a880aa991d9c5d76b7d6b6bc4bfdfe306">getVoxelTransmissionProbability</a> (const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;ijk, int &amp;P_denom, int &amp;P_trans) const</td></tr>
+<tr class="memdesc:a880aa991d9c5d76b7d6b6bc4bfdfe306"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get transmission probability counts for a voxel.  <br /></td></tr>
+<tr class="separator:a880aa991d9c5d76b7d6b6bc4bfdfe306"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a52283763a74b429f24210ca5a0c70f87" id="r_a52283763a74b429f24210ca5a0c70f87"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a52283763a74b429f24210ca5a0c70f87">setVoxelRbar</a> (float r_bar, const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;ijk)</td></tr>
+<tr class="memdesc:a52283763a74b429f24210ca5a0c70f87"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set average ray propagation distance for a voxel.  <br /></td></tr>
+<tr class="separator:a52283763a74b429f24210ca5a0c70f87"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0f36c644591cf6b7bd5e8fbf64c7397f" id="r_a0f36c644591cf6b7bd5e8fbf64c7397f"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0f36c644591cf6b7bd5e8fbf64c7397f">getVoxelRbar</a> (const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;ijk) const</td></tr>
+<tr class="memdesc:a0f36c644591cf6b7bd5e8fbf64c7397f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get average ray propagation distance for a voxel.  <br /></td></tr>
+<tr class="separator:a0f36c644591cf6b7bd5e8fbf64c7397f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acd5cd4aa0ea095ed0d06b8f799a19fa9" id="r_acd5cd4aa0ea095ed0d06b8f799a19fa9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acd5cd4aa0ea095ed0d06b8f799a19fa9">getVoxelRayHitCounts</a> (const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;ijk, int &amp;hit_before, int &amp;hit_after, int &amp;hit_inside) const</td></tr>
+<tr class="memdesc:acd5cd4aa0ea095ed0d06b8f799a19fa9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get ray classification counts for a voxel (for Beer's law calculations)  <br /></td></tr>
+<tr class="separator:acd5cd4aa0ea095ed0d06b8f799a19fa9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0227ea622d23cd870463788d092cef72" id="r_a0227ea622d23cd870463788d092cef72"><td class="memItemLeft" align="right" valign="top">std::vector&lt; float &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0227ea622d23cd870463788d092cef72">getVoxelRayPathLengths</a> (const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;ijk) const</td></tr>
+<tr class="memdesc:a0227ea622d23cd870463788d092cef72"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get individual ray path lengths for a voxel (for Beer's law calculations)  <br /></td></tr>
+<tr class="separator:a0227ea622d23cd870463788d092cef72"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8d6bcc137e3466657f622f585392f4c3" id="r_a8d6bcc137e3466657f622f585392f4c3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8d6bcc137e3466657f622f585392f4c3">clearVoxelData</a> ()</td></tr>
+<tr class="memdesc:a8d6bcc137e3466657f622f585392f4c3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clear all voxel ray statistics data.  <br /></td></tr>
+<tr class="separator:a8d6bcc137e3466657f622f585392f4c3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac1a666c66c7f99161a881d79ad2795e4" id="r_ac1a666c66c7f99161a881d79ad2795e4"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac1a666c66c7f99161a881d79ad2795e4">optimizeLayout</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs, float learning_rate=0.01f, int max_iterations=1000)</td></tr>
 <tr class="memdesc:ac1a666c66c7f99161a881d79ad2795e4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Optimize layout of primitives/objects to minimize collisions.  <br /></td></tr>
 <tr class="separator:ac1a666c66c7f99161a881d79ad2795e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abddec1ab558454eb03230a4e3556e881" id="r_abddec1ab558454eb03230a4e3556e881"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::pair&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abddec1ab558454eb03230a4e3556e881">findCollisionsWithinDistance</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;query_UUIDs, const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;target_UUIDs, float max_distance)</td></tr>
+<tr class="memdesc:abddec1ab558454eb03230a4e3556e881"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find collisions within a specified distance threshold.  <br /></td></tr>
+<tr class="separator:abddec1ab558454eb03230a4e3556e881"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2a03fd717662dc8e4b0a85fed481ee70" id="r_a2a03fd717662dc8e4b0a85fed481ee70"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2a03fd717662dc8e4b0a85fed481ee70">setMaxCollisionDistance</a> (float distance)</td></tr>
+<tr class="memdesc:a2a03fd717662dc8e4b0a85fed481ee70"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set maximum distance for collision detection queries.  <br /></td></tr>
+<tr class="separator:a2a03fd717662dc8e4b0a85fed481ee70"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5e4e2baef1fe202570271a5b010bbbdd" id="r_a5e4e2baef1fe202570271a5b010bbbdd"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5e4e2baef1fe202570271a5b010bbbdd">getMaxCollisionDistance</a> () const</td></tr>
+<tr class="memdesc:a5e4e2baef1fe202570271a5b010bbbdd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get current maximum collision distance.  <br /></td></tr>
+<tr class="separator:a5e4e2baef1fe202570271a5b010bbbdd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aba847ef6b9ca8d1b9090e8fa355ae3e4" id="r_aba847ef6b9ca8d1b9090e8fa355ae3e4"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aba847ef6b9ca8d1b9090e8fa355ae3e4">filterGeometryByDistance</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;query_center, float max_radius, const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;candidate_UUIDs={})</td></tr>
+<tr class="memdesc:aba847ef6b9ca8d1b9090e8fa355ae3e4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Filter geometry by spatial proximity for efficient collision detection.  <br /></td></tr>
+<tr class="separator:aba847ef6b9ca8d1b9090e8fa355ae3e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8f3f17e75c74e42bf1d5eb252364137f" id="r_a8f3f17e75c74e42bf1d5eb252364137f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8f3f17e75c74e42bf1d5eb252364137f">findNearestPrimitiveDistance</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;origin, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;direction, const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;candidate_UUIDs, float &amp;distance, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;obstacle_direction)</td></tr>
+<tr class="memdesc:a8f3f17e75c74e42bf1d5eb252364137f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Determine the distance to the nearest primitive in any direction, filtered by direction component.  <br /></td></tr>
+<tr class="separator:a8f3f17e75c74e42bf1d5eb252364137f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6592e6643d61e225cf62572dbd6b2ae7" id="r_a6592e6643d61e225cf62572dbd6b2ae7"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6592e6643d61e225cf62572dbd6b2ae7">findNearestSolidObstacleInCone</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;apex, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;axis, float half_angle, float height, const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;candidate_UUIDs, float &amp;distance, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;obstacle_direction, int num_rays=64)</td></tr>
+<tr class="memdesc:a6592e6643d61e225cf62572dbd6b2ae7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find the nearest solid obstacle within a cone using ray casting.  <br /></td></tr>
+<tr class="separator:a6592e6643d61e225cf62572dbd6b2ae7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a01213e644a43396852c3cf9b99908e32" id="r_a01213e644a43396852c3cf9b99908e32"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a01213e644a43396852c3cf9b99908e32">detectAttractionPoints</a> (const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;vertex, const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;look_direction, float look_ahead_distance, float half_angle_degrees, const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;attraction_points, <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;direction_to_closest)</td></tr>
+<tr class="memdesc:a01213e644a43396852c3cf9b99908e32"><td class="mdescLeft">&#160;</td><td class="mdescRight">Detect attraction points within a perception cone and find optimal direction.  <br /></td></tr>
+<tr class="separator:a01213e644a43396852c3cf9b99908e32"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a885abe5c3788b02384e72329f1b41935" id="r_a885abe5c3788b02384e72329f1b41935"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a885abe5c3788b02384e72329f1b41935">buildBVH</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs={})</td></tr>
 <tr class="memdesc:a885abe5c3788b02384e72329f1b41935"><td class="mdescLeft">&#160;</td><td class="mdescRight">Build or rebuild the BVH acceleration structure.  <br /></td></tr>
 <tr class="separator:a885abe5c3788b02384e72329f1b41935"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a20b8c1b8a454ea5aa2d01d6511a89494" id="r_a20b8c1b8a454ea5aa2d01d6511a89494"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a20b8c1b8a454ea5aa2d01d6511a89494">updateBVH</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs, bool force_rebuild=false)</td></tr>
+<tr class="memdesc:a20b8c1b8a454ea5aa2d01d6511a89494"><td class="mdescLeft">&#160;</td><td class="mdescRight">Efficiently update BVH with new geometry (avoids full rebuild when possible)  <br /></td></tr>
+<tr class="separator:a20b8c1b8a454ea5aa2d01d6511a89494"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3983531251633020b987bdf58b8110ae" id="r_a3983531251633020b987bdf58b8110ae"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3983531251633020b987bdf58b8110ae">setStaticGeometry</a> (const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;UUIDs)</td></tr>
+<tr class="memdesc:a3983531251633020b987bdf58b8110ae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Mark specific geometry as static (will be cached for efficiency)  <br /></td></tr>
+<tr class="separator:a3983531251633020b987bdf58b8110ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1f587d401ee4d895bfe7b6472617df14" id="r_a1f587d401ee4d895bfe7b6472617df14"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1f587d401ee4d895bfe7b6472617df14">rebuildBVH</a> ()</td></tr>
 <tr class="memdesc:a1f587d401ee4d895bfe7b6472617df14"><td class="mdescLeft">&#160;</td><td class="mdescRight">Force a complete rebuild of the BVH.  <br /></td></tr>
 <tr class="separator:a1f587d401ee4d895bfe7b6472617df14"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acdf0e78dac168605bbbf95e5840881f6" id="r_acdf0e78dac168605bbbf95e5840881f6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acdf0e78dac168605bbbf95e5840881f6">disableAutomaticBVHRebuilds</a> ()</td></tr>
+<tr class="memdesc:acdf0e78dac168605bbbf95e5840881f6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Disable automatic BVH rebuilds (caller must manually manage rebuilds)  <br /></td></tr>
+<tr class="separator:acdf0e78dac168605bbbf95e5840881f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a560ba2dc39a6bf328dab576254a6f5c8" id="r_a560ba2dc39a6bf328dab576254a6f5c8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a560ba2dc39a6bf328dab576254a6f5c8">enableAutomaticBVHRebuilds</a> ()</td></tr>
+<tr class="memdesc:a560ba2dc39a6bf328dab576254a6f5c8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable automatic BVH rebuilds (default behavior)  <br /></td></tr>
+<tr class="separator:a560ba2dc39a6bf328dab576254a6f5c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9e0593309bf92c1502fe9a9ac75cea00" id="r_a9e0593309bf92c1502fe9a9ac75cea00"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9e0593309bf92c1502fe9a9ac75cea00">enableHierarchicalBVH</a> ()</td></tr>
+<tr class="memdesc:a9e0593309bf92c1502fe9a9ac75cea00"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enable hierarchical BVH with separate static and dynamic geometry.  <br /></td></tr>
+<tr class="separator:a9e0593309bf92c1502fe9a9ac75cea00"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afd88852c5ec81c2724dcd9eb6f9ec7b4" id="r_afd88852c5ec81c2724dcd9eb6f9ec7b4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afd88852c5ec81c2724dcd9eb6f9ec7b4">disableHierarchicalBVH</a> ()</td></tr>
+<tr class="memdesc:afd88852c5ec81c2724dcd9eb6f9ec7b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Disable hierarchical BVH (use single unified BVH)  <br /></td></tr>
+<tr class="separator:afd88852c5ec81c2724dcd9eb6f9ec7b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a44500043dedb9938d97badac89ac820c" id="r_a44500043dedb9938d97badac89ac820c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a44500043dedb9938d97badac89ac820c">isBVHValid</a> () const</td></tr>
 <tr class="memdesc:a44500043dedb9938d97badac89ac820c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if BVH is valid and up-to-date.  <br /></td></tr>
 <tr class="separator:a44500043dedb9938d97badac89ac820c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -244,9 +366,18 @@ Public Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
-<tr class="memitem:aec533a08b58062d517845a0ce25afa4a" id="r_aec533a08b58062d517845a0ce25afa4a"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aec533a08b58062d517845a0ce25afa4a">selfTest</a> (int argc=0, char **argv=nullptr)</td></tr>
-<tr class="memdesc:aec533a08b58062d517845a0ce25afa4a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Self-test routine to verify plugin functionality.  <br /></td></tr>
-<tr class="separator:aec533a08b58062d517845a0ce25afa4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af6cb6667b068d2e05e1adfc9e5285e1a" id="r_af6cb6667b068d2e05e1adfc9e5285e1a"><td class="memItemLeft" align="right" valign="top">static int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af6cb6667b068d2e05e1adfc9e5285e1a">selfTest</a> (int argc, char **argv)</td></tr>
+<tr class="memdesc:af6cb6667b068d2e05e1adfc9e5285e1a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Self-test routine to verify plugin functionality.  <br /></td></tr>
+<tr class="separator:af6cb6667b068d2e05e1adfc9e5285e1a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
+Static Public Attributes</h2></td></tr>
+<tr class="memitem:a86a4e4db6ca804b886b3a9fe8b5069fd" id="r_a86a4e4db6ca804b886b3a9fe8b5069fd"><td class="memItemLeft" align="right" valign="top">static constexpr size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a86a4e4db6ca804b886b3a9fe8b5069fd">WARP_SIZE</a> = 32</td></tr>
+<tr class="memdesc:a86a4e4db6ca804b886b3a9fe8b5069fd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Ray streaming for efficient GPU processing Processes multiple rays simultaneously for better GPU utilization.  <br /></td></tr>
+<tr class="separator:a86a4e4db6ca804b886b3a9fe8b5069fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac23d3c4dd3dccf4360801c13245eec1f" id="r_ac23d3c4dd3dccf4360801c13245eec1f"><td class="memItemLeft" align="right" valign="top">static constexpr size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac23d3c4dd3dccf4360801c13245eec1f">RAY_BATCH_SIZE</a> = 1024</td></tr>
+<tr class="memdesc:ac23d3c4dd3dccf4360801c13245eec1f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Optimal batch size for ray processing.  <br /></td></tr>
+<tr class="separator:ac23d3c4dd3dccf4360801c13245eec1f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Class for GPU-accelerated collision detection and spatial queries in Helios. </p>
@@ -257,8 +388,39 @@ Static Public Member Functions</h2></td></tr>
 <li>Layout optimization to minimize collisions </li>
 </ol>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8h_source.html#l00031">31</a> of file <a class="el" href="_collision_detection_8h_source.html">CollisionDetection.h</a>.</p>
-</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8h_source.html#l00033">33</a> of file <a class="el" href="_collision_detection_8h_source.html">CollisionDetection.h</a>.</p>
+</div><h2 class="groupheader">Member Enumeration Documentation</h2>
+<a id="afcab8e91b6861953a7fc8605dd41b12a" name="afcab8e91b6861953a7fc8605dd41b12a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afcab8e91b6861953a7fc8605dd41b12a">&#9670;&#160;</a></span>BVHOptimizationMode</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="#afcab8e91b6861953a7fc8605dd41b12a">CollisionDetection::BVHOptimizationMode</a></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel strong">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>BVH optimization modes for performance improvements. </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="afcab8e91b6861953a7fc8605dd41b12aa010dab8f010dd984129714831632e013" name="afcab8e91b6861953a7fc8605dd41b12aa010dab8f010dd984129714831632e013"></a>SOA_UNCOMPRESSED&#160;</td><td class="fielddoc"><p>Structure-of-Arrays, full precision. </p>
+</td></tr>
+</table>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8h_source.html#l00324">324</a> of file <a class="el" href="_collision_detection_8h_source.html">CollisionDetection.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="afc69a18532505279599bb9b6e2886d07" name="afc69a18532505279599bb9b6e2886d07"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#afc69a18532505279599bb9b6e2886d07">&#9670;&#160;</a></span>CollisionDetection()</h2>
 
@@ -290,7 +452,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00048">48</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00064">64</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -311,7 +473,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Destructor for CollisionDetection class. </p>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00082">82</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00116">116</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -339,7 +501,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00271">271</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00307">307</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -383,7 +545,400 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01040">1040</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01592">1592</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a75350449e19974df687ffa1afaf4766c" name="a75350449e19974df687ffa1afaf4766c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a75350449e19974df687ffa1afaf4766c">&#9670;&#160;</a></span>calculateRayPathLengthsDetailed()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CollisionDetection::calculateRayPathLengthsDetailed </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>grid_center</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>grid_size</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>grid_divisions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>ray_origins</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>ray_directions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="struct_collision_detection_1_1_hit_result.html">HitResult</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>hit_results</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Enhanced ray path length calculations with detailed statistics. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">grid_center</td><td>Center point of the 3D voxel grid </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">grid_size</td><td>Size of the grid in x, y, z dimensions </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">grid_divisions</td><td>Number of divisions in x, y, z dimensions </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">ray_origins</td><td>Vector of ray origin points </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">ray_directions</td><td>Vector of ray direction vectors (should be normalized) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">hit_results</td><td>Vector of detailed hit results for each ray </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html#l00383">383</a> of file <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html">CollisionDetection_RayTracing.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab14024fac4066cf0f99b291e2fcb10ea" name="ab14024fac4066cf0f99b291e2fcb10ea"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab14024fac4066cf0f99b291e2fcb10ea">&#9670;&#160;</a></span>calculateVoxelPathLengths()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; std::vector&lt; <a class="el" href="struct_collision_detection_1_1_hit_result.html">CollisionDetection::HitResult</a> &gt; &gt; CollisionDetection::calculateVoxelPathLengths </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>scan_origin</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>ray_directions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>voxel_centers</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>voxel_sizes</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Calculate ray path lengths through individual voxels for LiDAR processing. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">scan_origin</td><td>Single vec3 LiDAR scanner position <br  />
+ </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">ray_directions</td><td>Vector of normalized ray directions (10K-10M rays) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">voxel_centers</td><td>Vector of voxel center positions (8-1000 voxels) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">voxel_sizes</td><td>Vector of voxel dimensions (width,height,depth) <br  />
+ </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of HitResult vectors, one per voxel, with path_length populated for each ray intersection</dd></dl>
+<p>This method extends performGridRayIntersection to handle individual voxels with specific centers and sizes. Uses ray-AABB intersection with path_length = t_max - max(0, t_min) for each intersection. Performance target: 1M rays × 100 voxels in &lt;2 seconds with OpenMP parallelization. </p>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html#l00299">299</a> of file <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html">CollisionDetection_RayTracing.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a51994e51cd857e003032230c36cfb62e" name="a51994e51cd857e003032230c36cfb62e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a51994e51cd857e003032230c36cfb62e">&#9670;&#160;</a></span>calculateVoxelRayPathLengths()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CollisionDetection::calculateVoxelRayPathLengths </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>grid_center</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>grid_size</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>grid_divisions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>ray_origins</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>ray_directions</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Calculate ray path lengths and transmission statistics for a voxel grid. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">grid_center</td><td>Center point of the 3D voxel grid </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">grid_size</td><td>Size of the grid in x, y, z dimensions </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">grid_divisions</td><td>Number of divisions in x, y, z dimensions </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">ray_origins</td><td>Vector of ray origin points </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">ray_directions</td><td>Vector of ray direction vectors (should be normalized) </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l02576">2576</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="afcb3a30c3a466f6d2cc9085841c17e2c" name="afcb3a30c3a466f6d2cc9085841c17e2c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afcb3a30c3a466f6d2cc9085841c17e2c">&#9670;&#160;</a></span>castRay() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_collision_detection_1_1_hit_result.html">CollisionDetection::HitResult</a> CollisionDetection::castRay </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>origin</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>direction</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>max_distance</em></span><span class="paramdefsep"> = </span><span class="paramdefval">-1.0f</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>target_UUIDs</em></span><span class="paramdefsep"> = </span><span class="paramdefval">{}</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Cast a single ray with simplified parameters. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">origin</td><td>Ray origin point </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">direction</td><td>Ray direction vector (should be normalized) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">max_distance</td><td>Maximum ray distance (negative = infinite) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">target_UUIDs</td><td>Target primitive UUIDs (empty = all primitives) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>HitResult containing intersection details </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html#l00072">72</a> of file <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html">CollisionDetection_RayTracing.cpp</a>.</p>
+
+</div>
+</div>
+<a id="af135bf1b70af3a3cf14679e74a490845" name="af135bf1b70af3a3cf14679e74a490845"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af135bf1b70af3a3cf14679e74a490845">&#9670;&#160;</a></span>castRay() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_collision_detection_1_1_hit_result.html">CollisionDetection::HitResult</a> CollisionDetection::castRay </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="struct_collision_detection_1_1_ray_query.html">RayQuery</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>ray_query</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Cast a single ray and return detailed intersection information. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ray_query</td><td>Ray parameters (origin, direction, max distance, target UUIDs) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>HitResult containing intersection details </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html#l00068">68</a> of file <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html">CollisionDetection_RayTracing.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab09488c60f0451e3d210ca33ede91e81" name="ab09488c60f0451e3d210ca33ede91e81"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab09488c60f0451e3d210ca33ede91e81">&#9670;&#160;</a></span>castRays()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="struct_collision_detection_1_1_hit_result.html">CollisionDetection::HitResult</a> &gt; CollisionDetection::castRays </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="struct_collision_detection_1_1_ray_query.html">RayQuery</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>ray_queries</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_collision_detection_1_1_ray_tracing_stats.html">RayTracingStats</a> *</td>          <td class="paramname"><span class="paramname"><em>stats</em></span><span class="paramdefsep"> = </span><span class="paramdefval">nullptr</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Cast multiple rays in batch for improved performance. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ray_queries</td><td>Vector of ray parameters </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">stats</td><td>Optional ray-tracing statistics </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of HitResult corresponding to each input ray </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html#l00202">202</a> of file <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html">CollisionDetection_RayTracing.cpp</a>.</p>
+
+</div>
+</div>
+<a id="afc01a7fa6406731522cfc4947e2c816d" name="afc01a7fa6406731522cfc4947e2c816d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afc01a7fa6406731522cfc4947e2c816d">&#9670;&#160;</a></span>castRaysOptimized()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="struct_collision_detection_1_1_hit_result.html">CollisionDetection::HitResult</a> &gt; CollisionDetection::castRaysOptimized </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="struct_collision_detection_1_1_ray_query.html">RayQuery</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>ray_queries</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_collision_detection_1_1_ray_tracing_stats.html">RayTracingStats</a> *</td>          <td class="paramname"><span class="paramname"><em>stats</em></span><span class="paramdefsep"> = </span><span class="paramdefval">nullptr</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Cast rays using optimized Structure-of-Arrays BVH layout. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ray_queries</td><td>Vector of ray parameters </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">stats</td><td>Optional ray-tracing statistics </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of HitResult corresponding to each input ray </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html#l00453">453</a> of file <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html">CollisionDetection_RayTracing.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a8d6bcc137e3466657f622f585392f4c3" name="a8d6bcc137e3466657f622f585392f4c3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8d6bcc137e3466657f622f585392f4c3">&#9670;&#160;</a></span>clearVoxelData()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CollisionDetection::clearVoxelData </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Clear all voxel ray statistics data. </p>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l02774">2774</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a01213e644a43396852c3cf9b99908e32" name="a01213e644a43396852c3cf9b99908e32"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a01213e644a43396852c3cf9b99908e32">&#9670;&#160;</a></span>detectAttractionPoints()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool CollisionDetection::detectAttractionPoints </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>vertex</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>look_direction</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>look_ahead_distance</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>half_angle_degrees</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>attraction_points</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>direction_to_closest</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Detect attraction points within a perception cone and find optimal direction. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">vertex</td><td>Vertex location of the perception cone </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">look_direction</td><td>Central axis direction of the perception cone (normalized) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">look_ahead_distance</td><td>Maximum distance to search for attraction points (cone height) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">half_angle_degrees</td><td>Half-angle of perception cone in degrees </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">attraction_points</td><td>Vector of attraction point positions to evaluate </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">direction_to_closest</td><td>Unit direction vector from vertex to closest attraction point (only valid if return is true) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if one or more attraction points are found within the cone, false otherwise</dd></dl>
+<p>This method determines all attraction points that lie within a perception cone and returns the direction to the attraction point that is closest to the cone's centerline axis. The closeness is measured by angular distance from the centerline. </p>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01977">1977</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="acdf0e78dac168605bbbf95e5840881f6" name="acdf0e78dac168605bbbf95e5840881f6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acdf0e78dac168605bbbf95e5840881f6">&#9670;&#160;</a></span>disableAutomaticBVHRebuilds()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CollisionDetection::disableAutomaticBVHRebuilds </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Disable automatic BVH rebuilds (caller must manually manage rebuilds) </p>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00463">463</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -404,7 +959,28 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Disable GPU acceleration (use CPU-only algorithms) </p>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00445">445</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00737">737</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="afd88852c5ec81c2724dcd9eb6f9ec7b4" name="afd88852c5ec81c2724dcd9eb6f9ec7b4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afd88852c5ec81c2724dcd9eb6f9ec7b4">&#9670;&#160;</a></span>disableHierarchicalBVH()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CollisionDetection::disableHierarchicalBVH </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Disable hierarchical BVH (use single unified BVH) </p>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00485">485</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -425,7 +1001,28 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Disable console output messages. </p>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00454">454</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00748">748</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a560ba2dc39a6bf328dab576254a6f5c8" name="a560ba2dc39a6bf328dab576254a6f5c8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a560ba2dc39a6bf328dab576254a6f5c8">&#9670;&#160;</a></span>enableAutomaticBVHRebuilds()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CollisionDetection::enableAutomaticBVHRebuilds </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Enable automatic BVH rebuilds (default behavior) </p>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00470">470</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -446,7 +1043,28 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Enable GPU acceleration for collision detection. </p>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00438">438</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00724">724</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a9e0593309bf92c1502fe9a9ac75cea00" name="a9e0593309bf92c1502fe9a9ac75cea00"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9e0593309bf92c1502fe9a9ac75cea00">&#9670;&#160;</a></span>enableHierarchicalBVH()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CollisionDetection::enableHierarchicalBVH </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Enable hierarchical BVH with separate static and dynamic geometry. </p>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00477">477</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -467,7 +1085,46 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Enable console output messages. </p>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00458">458</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00752">752</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aba847ef6b9ca8d1b9090e8fa355ae3e4" name="aba847ef6b9ca8d1b9090e8fa355ae3e4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aba847ef6b9ca8d1b9090e8fa355ae3e4">&#9670;&#160;</a></span>filterGeometryByDistance()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; CollisionDetection::filterGeometryByDistance </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>query_center</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>max_radius</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>candidate_UUIDs</em></span><span class="paramdefsep"> = </span><span class="paramdefval">{}</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Filter geometry by spatial proximity for efficient collision detection. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">query_center</td><td>Center point for spatial filtering </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">max_radius</td><td>Maximum radius for including geometry </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">candidate_UUIDs</td><td>Optional list of candidate UUIDs (empty = all geometry) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs within the specified radius </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l02519">2519</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -500,7 +1157,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs that intersect </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00150">150</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00192">192</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -545,7 +1202,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs from the target set that intersect with any query primitive </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00174">174</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00216">216</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -573,7 +1230,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs that intersect with any of the query primitives </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00090">90</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00126">126</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -601,7 +1258,168 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs that intersect with the query primitive </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00086">86</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00122">122</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="abddec1ab558454eb03230a4e3556e881" name="abddec1ab558454eb03230a4e3556e881"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abddec1ab558454eb03230a4e3556e881">&#9670;&#160;</a></span>findCollisionsWithinDistance()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; std::pair&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a>, <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &gt; CollisionDetection::findCollisionsWithinDistance </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>query_UUIDs</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>target_UUIDs</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>max_distance</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Find collisions within a specified distance threshold. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">query_UUIDs</td><td>Vector of primitive UUIDs to test for collisions </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">target_UUIDs</td><td>Vector of primitive UUIDs to test against </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">max_distance</td><td>Maximum distance for collision consideration </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of collision pairs within distance threshold </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l02439">2439</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a8f3f17e75c74e42bf1d5eb252364137f" name="a8f3f17e75c74e42bf1d5eb252364137f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8f3f17e75c74e42bf1d5eb252364137f">&#9670;&#160;</a></span>findNearestPrimitiveDistance()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool CollisionDetection::findNearestPrimitiveDistance </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>origin</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>direction</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>candidate_UUIDs</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float &amp;</td>          <td class="paramname"><span class="paramname"><em>distance</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>obstacle_direction</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Determine the distance to the nearest primitive in any direction, filtered by direction component. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">origin</td><td>Origin location from which to search </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">direction</td><td>Unit direction vector to filter "forward" surfaces (dot product &gt; 0) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">candidate_UUIDs</td><td>Vector of primitive UUIDs to consider for intersection </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">distance</td><td>Distance to the nearest primitive (only valid if return is true) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">obstacle_direction</td><td>Direction from origin to nearest obstacle (only valid if return is true) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if a primitive is found that is "in front" of the direction vector, false otherwise</dd></dl>
+<p>This method finds the nearest solid surface in any direction from the origin point, but only considers surfaces that are "in front" of the growth direction. A surface is considered "in front" if the vector from origin to the closest point on the surface has a positive dot product with the input direction vector. </p>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01809">1809</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a6592e6643d61e225cf62572dbd6b2ae7" name="a6592e6643d61e225cf62572dbd6b2ae7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6592e6643d61e225cf62572dbd6b2ae7">&#9670;&#160;</a></span>findNearestSolidObstacleInCone()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool CollisionDetection::findNearestSolidObstacleInCone </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>apex</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>axis</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>half_angle</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>height</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>candidate_UUIDs</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">float &amp;</td>          <td class="paramname"><span class="paramname"><em>distance</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>obstacle_direction</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>num_rays</em></span><span class="paramdefsep"> = </span><span class="paramdefval">64</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Find the nearest solid obstacle within a cone using ray casting. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">apex</td><td>Cone apex position </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">axis</td><td>Central axis of the cone (normalized) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">half_angle</td><td>Half-angle of cone in radians </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">height</td><td>Maximum detection distance (cone height) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">candidate_UUIDs</td><td>Vector of primitive UUIDs to consider as solid obstacles </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">distance</td><td>Distance to nearest obstacle (only valid if return is true) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">obstacle_direction</td><td>Direction from apex to nearest obstacle (only valid if return is true) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">num_rays</td><td>Number of rays to cast for detection (default: 64) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if a solid obstacle is found within the cone, false otherwise</dd></dl>
+<p>This method casts rays within a cone to find the nearest solid obstacle. Unlike the soft collision avoidance, this uses a smaller cone angle and returns the exact distance to the nearest primitive surface using accurate ray-primitive intersection tests. </p>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01903">1903</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -652,7 +1470,48 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>OptimalPathResult containing the optimal direction and collision count </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01217">1217</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l02138">2138</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a72254baf2f899e983e4afeae593552c7" name="a72254baf2f899e983e4afeae593552c7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a72254baf2f899e983e4afeae593552c7">&#9670;&#160;</a></span>getBVHMemoryUsage()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_collision_detection_1_1_memory_usage_stats.html">CollisionDetection::MemoryUsageStats</a> CollisionDetection::getBVHMemoryUsage </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html#l00542">542</a> of file <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html">CollisionDetection_RayTracing.cpp</a>.</p>
+
+</div>
+</div>
+<a id="afec7653310a964fe420c28458eb2a0cd" name="afec7653310a964fe420c28458eb2a0cd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afec7653310a964fe420c28458eb2a0cd">&#9670;&#160;</a></span>getBVHOptimizationMode()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="#afcab8e91b6861953a7fc8605dd41b12a">CollisionDetection::BVHOptimizationMode</a> CollisionDetection::getBVHOptimizationMode </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get current BVH optimization mode. </p>
+<dl class="section return"><dt>Returns</dt><dd>Current optimization mode </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html#l00437">437</a> of file <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html">CollisionDetection_RayTracing.cpp</a>.</p>
 
 </div>
 </div>
@@ -690,7 +1549,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00466">466</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00760">760</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -712,7 +1571,7 @@ Static Public Member Functions</h2></td></tr>
 <p>Get all grid cells and their contained primitives. </p>
 <dl class="section return"><dt>Returns</dt><dd>3D vector indexed as [i][j][k] containing UUIDs in each cell </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01046">1046</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01598">1598</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -751,7 +1610,37 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of UUIDs in the specified grid cell </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01053">1053</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01605">1605</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a5e4e2baef1fe202570271a5b010bbbdd" name="a5e4e2baef1fe202570271a5b010bbbdd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e4e2baef1fe202570271a5b010bbbdd">&#9670;&#160;</a></span>getMaxCollisionDistance()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float CollisionDetection::getMaxCollisionDistance </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Get current maximum collision distance. </p>
+<dl class="section return"><dt>Returns</dt><dd>Current maximum distance threshold </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l02515">2515</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -781,7 +1670,145 @@ Static Public Member Functions</h2></td></tr>
 <p>Get the number of primitives in the BVH. </p>
 <dl class="section return"><dt>Returns</dt><dd>Number of primitives </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00462">462</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00756">756</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="acd5cd4aa0ea095ed0d06b8f799a19fa9" name="acd5cd4aa0ea095ed0d06b8f799a19fa9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acd5cd4aa0ea095ed0d06b8f799a19fa9">&#9670;&#160;</a></span>getVoxelRayHitCounts()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CollisionDetection::getVoxelRayHitCounts </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>ijk</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int &amp;</td>          <td class="paramname"><span class="paramname"><em>hit_before</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int &amp;</td>          <td class="paramname"><span class="paramname"><em>hit_after</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int &amp;</td>          <td class="paramname"><span class="paramname"><em>hit_inside</em></span>&#160;) const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get ray classification counts for a voxel (for Beer's law calculations) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ijk</td><td>Voxel indices (i,j,k) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">hit_before</td><td>Number of rays that hit geometry BEFORE entering the voxel </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">hit_after</td><td>Number of rays that hit geometry AFTER entering the voxel </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">hit_inside</td><td>Number of rays that hit geometry INSIDE the voxel </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l02711">2711</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a0227ea622d23cd870463788d092cef72" name="a0227ea622d23cd870463788d092cef72"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0227ea622d23cd870463788d092cef72">&#9670;&#160;</a></span>getVoxelRayPathLengths()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; float &gt; CollisionDetection::getVoxelRayPathLengths </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>ijk</em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get individual ray path lengths for a voxel (for Beer's law calculations) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ijk</td><td>Voxel indices (i,j,k) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vector of individual path lengths for rays that passed through the voxel </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l02735">2735</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a0f36c644591cf6b7bd5e8fbf64c7397f" name="a0f36c644591cf6b7bd5e8fbf64c7397f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0f36c644591cf6b7bd5e8fbf64c7397f">&#9670;&#160;</a></span>getVoxelRbar()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float CollisionDetection::getVoxelRbar </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>ijk</em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get average ray propagation distance for a voxel. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ijk</td><td>Voxel indices (i,j,k) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Average ray propagation distance in meters </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l02682">2682</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a880aa991d9c5d76b7d6b6bc4bfdfe306" name="a880aa991d9c5d76b7d6b6bc4bfdfe306"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a880aa991d9c5d76b7d6b6bc4bfdfe306">&#9670;&#160;</a></span>getVoxelTransmissionProbability()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CollisionDetection::getVoxelTransmissionProbability </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>ijk</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int &amp;</td>          <td class="paramname"><span class="paramname"><em>P_denom</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int &amp;</td>          <td class="paramname"><span class="paramname"><em>P_trans</em></span>&#160;) const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get transmission probability counts for a voxel. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ijk</td><td>Voxel indices (i,j,k) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">P_denom</td><td>Number of rays that reached this voxel </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">P_trans</td><td>Number of rays that were transmitted through this voxel </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l02632">2632</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -811,7 +1838,7 @@ Static Public Member Functions</h2></td></tr>
 <p>Check if BVH is valid and up-to-date. </p>
 <dl class="section return"><dt>Returns</dt><dd>True if BVH is valid, false otherwise </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00407">407</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00693">693</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -841,7 +1868,7 @@ Static Public Member Functions</h2></td></tr>
 <p>Check if GPU acceleration is enabled. </p>
 <dl class="section return"><dt>Returns</dt><dd>True if GPU acceleration is enabled </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00450">450</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00744">744</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
@@ -880,7 +1907,85 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Final collision count after optimization </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01060">1060</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l01612">1612</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="adabcf62f9dcf6133cdb353b0583150ba" name="adabcf62f9dcf6133cdb353b0583150ba"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adabcf62f9dcf6133cdb353b0583150ba">&#9670;&#160;</a></span>performGridRayIntersection()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; std::vector&lt; std::vector&lt; std::vector&lt; <a class="el" href="struct_collision_detection_1_1_hit_result.html">CollisionDetection::HitResult</a> &gt; &gt; &gt; &gt; CollisionDetection::performGridRayIntersection </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>grid_center</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1vec3.html">helios::vec3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>grid_size</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>grid_divisions</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="struct_collision_detection_1_1_ray_query.html">RayQuery</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>ray_queries</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Perform grid-based ray intersection for voxel operations. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">grid_center</td><td>Center point of the 3D grid </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">grid_size</td><td>Size of the grid in x, y, z dimensions </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">grid_divisions</td><td>Number of divisions in x, y, z dimensions </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">ray_queries</td><td>Vector of rays to intersect with the grid </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>4D vector indexed as [i][j][k][hit_index] containing HitResult objects for each hit in each voxel </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html#l00256">256</a> of file <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html">CollisionDetection_RayTracing.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a3a9f26162a1ed16cbc47d92c6e0664f7" name="a3a9f26162a1ed16cbc47d92c6e0664f7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3a9f26162a1ed16cbc47d92c6e0664f7">&#9670;&#160;</a></span>processRayStream()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool CollisionDetection::processRayStream </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="struct_collision_detection_1_1_ray_stream.html">RayStream</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>ray_stream</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="struct_collision_detection_1_1_ray_tracing_stats.html">RayTracingStats</a> *</td>          <td class="paramname"><span class="paramname"><em>stats</em></span><span class="paramdefsep"> = </span><span class="paramdefval">nullptr</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Cast ray packets using streaming interface for optimal GPU utilization. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">ray_stream</td><td>Ray stream containing batched ray packets </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">stats</td><td>Optional ray-tracing statistics </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if all packets processed successfully </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html#l00496">496</a> of file <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html">CollisionDetection_RayTracing.cpp</a>.</p>
 
 </div>
 </div>
@@ -901,12 +2006,12 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Force a complete rebuild of the BVH. </p>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00350">350</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00458">458</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
 
 </div>
 </div>
-<a id="aec533a08b58062d517845a0ce25afa4a" name="aec533a08b58062d517845a0ce25afa4a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aec533a08b58062d517845a0ce25afa4a">&#9670;&#160;</a></span>selfTest()</h2>
+<a id="af6cb6667b068d2e05e1adfc9e5285e1a" name="af6cb6667b068d2e05e1adfc9e5285e1a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af6cb6667b068d2e05e1adfc9e5285e1a">&#9670;&#160;</a></span>selfTest()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -917,12 +2022,12 @@ Static Public Member Functions</h2></td></tr>
         <tr>
           <td class="memname">int CollisionDetection::selfTest </td>
           <td>(</td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>argc</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>, </td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>argc</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">char **</td>          <td class="paramname"><span class="paramname"><em>argv</em></span><span class="paramdefsep"> = </span><span class="paramdefval">nullptr</span>&#160;)</td>
+          <td class="paramtype">char **</td>          <td class="paramname"><span class="paramname"><em>argv</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -935,13 +2040,251 @@ Static Public Member Functions</h2></td></tr>
 <p>Self-test routine to verify plugin functionality. </p>
 <dl class="section return"><dt>Returns</dt><dd>0 if all tests pass, non-zero otherwise </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00026">26</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00027">27</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a643afc63766d0e9e53b3e7c5077811c0" name="a643afc63766d0e9e53b3e7c5077811c0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a643afc63766d0e9e53b3e7c5077811c0">&#9670;&#160;</a></span>setBVHOptimizationMode()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CollisionDetection::setBVHOptimizationMode </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="#afcab8e91b6861953a7fc8605dd41b12a">BVHOptimizationMode</a></td>          <td class="paramname"><span class="paramname"><em>mode</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set BVH optimization mode for performance improvements. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">mode</td><td>Optimization mode (SOA_UNCOMPRESSED) </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html#l00410">410</a> of file <a class="el" href="_collision_detection___ray_tracing_8cpp_source.html">CollisionDetection_RayTracing.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2a03fd717662dc8e4b0a85fed481ee70" name="a2a03fd717662dc8e4b0a85fed481ee70"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2a03fd717662dc8e4b0a85fed481ee70">&#9670;&#160;</a></span>setMaxCollisionDistance()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CollisionDetection::setMaxCollisionDistance </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>distance</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set maximum distance for collision detection queries. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">distance</td><td>Maximum distance threshold (meters) </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l02503">2503</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a3983531251633020b987bdf58b8110ae" name="a3983531251633020b987bdf58b8110ae"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3983531251633020b987bdf58b8110ae">&#9670;&#160;</a></span>setStaticGeometry()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CollisionDetection::setStaticGeometry </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Mark specific geometry as static (will be cached for efficiency) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Vector of primitive UUIDs that represent static obstacles </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00627">627</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a52283763a74b429f24210ca5a0c70f87" name="a52283763a74b429f24210ca5a0c70f87"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a52283763a74b429f24210ca5a0c70f87">&#9670;&#160;</a></span>setVoxelRbar()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CollisionDetection::setVoxelRbar </td>
+          <td>(</td>
+          <td class="paramtype">float</td>          <td class="paramname"><span class="paramname"><em>r_bar</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>ijk</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set average ray propagation distance for a voxel. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">r_bar</td><td>Average ray propagation distance in meters </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">ijk</td><td>Voxel indices (i,j,k) </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l02653">2653</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="abe68d7d1563d6dbe27a004dfc14bf2da" name="abe68d7d1563d6dbe27a004dfc14bf2da"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abe68d7d1563d6dbe27a004dfc14bf2da">&#9670;&#160;</a></span>setVoxelTransmissionProbability()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CollisionDetection::setVoxelTransmissionProbability </td>
+          <td>(</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>P_denom</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>P_trans</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structhelios_1_1int3.html">helios::int3</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>ijk</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set transmission probability counts for a voxel. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">P_denom</td><td>Number of rays that reached this voxel (denominator) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">P_trans</td><td>Number of rays that were transmitted through this voxel (numerator) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">ijk</td><td>Voxel indices (i,j,k) </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l02613">2613</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a20b8c1b8a454ea5aa2d01d6511a89494" name="a20b8c1b8a454ea5aa2d01d6511a89494"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a20b8c1b8a454ea5aa2d01d6511a89494">&#9670;&#160;</a></span>updateBVH()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void CollisionDetection::updateBVH </td>
+          <td>(</td>
+          <td class="paramtype">const std::vector&lt; <a class="el" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14">uint</a> &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>UUIDs</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>force_rebuild</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Efficiently update BVH with new geometry (avoids full rebuild when possible) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">UUIDs</td><td>Vector of UUIDs to include in BVH </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">force_rebuild</td><td>Force complete rebuild even if geometry hasn't changed significantly </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cpp_source.html#l00564">564</a> of file <a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Field Documentation</h2>
+<a id="ac23d3c4dd3dccf4360801c13245eec1f" name="ac23d3c4dd3dccf4360801c13245eec1f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac23d3c4dd3dccf4360801c13245eec1f">&#9670;&#160;</a></span>RAY_BATCH_SIZE</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t CollisionDetection::RAY_BATCH_SIZE = 1024</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span><span class="mlabel constexpr">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Optimal batch size for ray processing. </p>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8h_source.html#l00094">94</a> of file <a class="el" href="_collision_detection_8h_source.html">CollisionDetection.h</a>.</p>
+
+</div>
+</div>
+<a id="a86a4e4db6ca804b886b3a9fe8b5069fd" name="a86a4e4db6ca804b886b3a9fe8b5069fd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a86a4e4db6ca804b886b3a9fe8b5069fd">&#9670;&#160;</a></span>WARP_SIZE</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t CollisionDetection::WARP_SIZE = 32</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span><span class="mlabel constexpr">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Ray streaming for efficient GPU processing Processes multiple rays simultaneously for better GPU utilization. </p>
+<p>CUDA warp size for optimal batching </p>
+
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8h_source.html#l00093">93</a> of file <a class="el" href="_collision_detection_8h_source.html">CollisionDetection.h</a>.</p>
 
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>plugins/collisiondetection/include/<a class="el" href="_collision_detection_8h_source.html">CollisionDetection.h</a></li>
 <li>plugins/collisiondetection/src/<a class="el" href="_collision_detection_8cpp_source.html">CollisionDetection.cpp</a></li>
+<li>plugins/collisiondetection/src/<a class="el" href="_collision_detection___ray_tracing_8cpp_source.html">CollisionDetection_RayTracing.cpp</a></li>
 <li>plugins/collisiondetection/tests/<a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a></li>
 </ul>
 </div><!-- contents -->

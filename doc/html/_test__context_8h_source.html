@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.44</span>
+       <span id="projectnumber">&#160;v1.3.45</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -452,7 +452,7 @@ $(function(){initNavTree('_test__context_8h_source.html',''); initResizable(true
 <div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>        DOCTEST_CHECK_NOTHROW(UUID = context_test.addTriangle(v0, v1, v2, color));</div>
 <div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>        DOCTEST_CHECK(context_test.getPrimitiveType(UUID) == PRIMITIVE_TYPE_TRIANGLE);</div>
 <div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span> </div>
-<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>        vec3 normal = normalize(<a class="code hl_function" href="helios__vector__types_8h.html#adc8295b0994f72cb073344adc468df36" title="Cross product of two vec3 vectors.">cross</a>(v1 - v0, v2 - v1));</div>
+<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>        vec3 normal = normalize(<a class="code hl_function" href="_collision_detection_8cu.html#a27d0b255c42a5c1539194f8134e78ffe" title="CUDA device helper functions for vector operations.">cross</a>(v1 - v0, v2 - v1));</div>
 <div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>        vec3 normal_r = context_test.getPrimitiveNormal(UUID);</div>
 <div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>        DOCTEST_CHECK(normal_r.x == doctest::Approx(normal.x).epsilon(errtol));</div>
 <div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>        DOCTEST_CHECK(normal_r.y == doctest::Approx(normal.y).epsilon(errtol));</div>
@@ -755,7 +755,7 @@ $(function(){initNavTree('_test__context_8h_source.html',''); initResizable(true
 <div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>        std::vector&lt;vec3&gt; nodes = context_test.getConeObjectPointer(cone)-&gt;getNodeCoordinates();</div>
 <div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span>        DOCTEST_CHECK(nodes.at(0) == <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 1, 1));</div>
 <div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span>        DOCTEST_CHECK(nodes.at(1) == <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 1, 1 + len));</div>
-<div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>        vec3 axis = <a class="code hl_function" href="helios__vector__types_8h.html#adc8295b0994f72cb073344adc468df36" title="Cross product of two vec3 vectors.">cross</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 1), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 0, 0));</div>
+<div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>        vec3 axis = <a class="code hl_function" href="_collision_detection_8cu.html#a27d0b255c42a5c1539194f8134e78ffe" title="CUDA device helper functions for vector operations.">cross</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 1), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 0, 0));</div>
 <div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>        <span class="keywordtype">float</span> ang = <a class="code hl_function" href="group__functions.html#ga9f732ec5c2153020247c879034f81432" title="arccosine function to handle cases when round-off errors cause an argument &lt;-1 or &gt;1,...">acos_safe</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(1, 0, 0) * <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 1));</div>
 <div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span>        context_test.getConeObjectPointer(cone)-&gt;translate(-nodes.at(0));</div>
 <div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span>        context_test.getConeObjectPointer(cone)-&gt;rotate(ang, axis);</div>

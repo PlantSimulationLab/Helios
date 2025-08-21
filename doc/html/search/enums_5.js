@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['radiationsourcetype_0',['RadiationSourceType',['../_radiation_model_8h.html#a87dc3655cd959da2cde2b3b72e844579',1,'RadiationModel.h']]]
+  ['primitivetype_0',['PrimitiveType',['../_context_8h.html#aa2778fcacd9c556a5ce0d9de2ffc1601',1,'helios']]]
 ];

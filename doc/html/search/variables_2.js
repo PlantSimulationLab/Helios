@@ -37,5 +37,6 @@ var searchData=
   ['cp_5fair_5fmol_34',['cp_air_mol',['../_energy_balance_model_8h.html#adaaf7d57c17dff3c06430b8380c06e80',1,'EnergyBalanceModel.h']]],
   ['crossover_5frate_35',['crossover_rate',['../struct_optimization_settings.html#a6f518ac3afaee1671b313e38b3b153d2',1,'OptimizationSettings']]],
   ['crown_5fheight_36',['crown_height',['../struct_conical_crowns_canopy_parameters.html#a40b24b7e99ad96e967bc4d3d9af277e2',1,'ConicalCrownsCanopyParameters']]],
-  ['crown_5fradius_37',['crown_radius',['../struct_spherical_crowns_canopy_parameters.html#a1695b7794ffb1c8ab8618ebb701fbb6d',1,'SphericalCrownsCanopyParameters::crown_radius'],['../struct_conical_crowns_canopy_parameters.html#ab8ad6dd9a6bdb0ccfbccb268a58e3275',1,'ConicalCrownsCanopyParameters::crown_radius'],['../struct_white_spruce_canopy_parameters.html#a97c71fefdb2f53e1e058f0be363ee592',1,'WhiteSpruceCanopyParameters::crown_radius']]]
+  ['crown_5fradius_37',['crown_radius',['../struct_spherical_crowns_canopy_parameters.html#a1695b7794ffb1c8ab8618ebb701fbb6d',1,'SphericalCrownsCanopyParameters::crown_radius'],['../struct_conical_crowns_canopy_parameters.html#ab8ad6dd9a6bdb0ccfbccb268a58e3275',1,'ConicalCrownsCanopyParameters::crown_radius'],['../struct_white_spruce_canopy_parameters.html#a97c71fefdb2f53e1e058f0be363ee592',1,'WhiteSpruceCanopyParameters::crown_radius']]],
+  ['current_5fpacket_38',['current_packet',['../struct_collision_detection_1_1_ray_stream.html#a9eec7c808344918ae27b43aacb55bb2a',1,'CollisionDetection::RayStream']]]
 ];

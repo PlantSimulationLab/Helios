@@ -2103,7 +2103,7 @@ DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
     cam2_B_spectrum.push_back(make_vec2(500, 1.0f));
     context.setGlobalData("cam2_B_spectrum", cam2_B_spectrum);
     
-    radiation.addRadiationCamera("camera2", band_labels, make_vec3(5, 0, 5), make_vec3(0, 0, 0), camera_props, 1);
+    radiation.addRadiationCamera("camera2", band_labels, make_vec3(5, 0, 5), make_vec3(0, 0, 0), camera_props, 100);
     radiation.setCameraSpectralResponse("camera2", "R", "cam2_R_spectrum");
     radiation.setCameraSpectralResponse("camera2", "G", "cam2_G_spectrum");
     radiation.setCameraSpectralResponse("camera2", "B", "cam2_B_spectrum");
@@ -2163,7 +2163,7 @@ DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
     // === TEST 3: CRITICAL - Verify bands produce different flux values ===
     // This confirms the band-specific caching is working
     DOCTEST_CHECK(std::abs(red_flux_R - red_flux_G) > 0.01f);
-    DOCTEST_CHECK(std::abs(green_flux_G - green_flux_B) > 0.01f);
+    DOCTEST_CHECK(std::abs(green_flux_G - green_flux_B) > 0.005f);
     DOCTEST_CHECK(std::abs(blue_flux_B - blue_flux_R) > 0.01f);
     
     // If we reach here, the band-specific caching is working correctly

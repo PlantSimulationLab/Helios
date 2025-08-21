@@ -33,23 +33,23 @@ var NAVTREE =
       [ "File I/O", "_i_o.html", null ]
     ] ],
     [ "Plugins", "_plug_ins.html", [
-      [ "Visualizer", "_visualizer_doc.html#VisualizerDoc", null ],
-      [ "Radiation Model", "_radiation_doc.html#RadiationDoc", null ],
-      [ "Energy Balance Model", "_energy_balance_doc.html#EnergyBalanceDoc", null ],
-      [ "Boundary-Layer Conductance", "_b_l_conductance_doc.html#BLConductanceDoc", null ],
-      [ "Terrestrial LiDAR", "_li_d_a_r_doc.html#LiDARDoc", null ],
       [ "Aerial LiDAR", "_aerial_li_d_a_r_doc.html#AerialLiDARDoc", null ],
-      [ "Photosynthesis Models", "_photosynthesis_doc.html#PhotosynthesisDoc", null ],
-      [ "Stomatal Conductance Models", "_stomatal_doc.html#StomatalDoc", null ],
-      [ "Solar Position and Fluxes Model", "_solar_position_doc.html#SolarPositionDoc", null ],
-      [ "Voxel Intersection", "_voxel_intersection_doc.html#VoxelIntersectionDoc", null ],
-      [ "Plant Architecture", "_plant_architecture_doc.html#PlantArchitectureDoc", null ],
+      [ "Boundary-Layer Conductance", "_b_l_conductance_doc.html#BLConductanceDoc", null ],
       [ "Canopy Generator", "_canopy_generator_doc.html#CanopyGeneratorDoc", null ],
-      [ "Weber-Penn Tree", "_weber_penn_doc.html#WeberPennDoc", null ],
-      [ "Plant Hydraulics Model", "_plant_hydraulics_doc.html#PlantHydraulicsDoc", null ],
-      [ "Model Parameter Optimization Utility", "_parameter_optimization_doc.html#ParameterOptimizationDoc", null ],
+      [ "Energy Balance Model", "_energy_balance_doc.html#EnergyBalanceDoc", null ],
       [ "Leaf Optics Model", "_leaf_optics_doc.html#LeafOpticsDoc", null ],
-      [ "Project Builder", "_project_builder_doc.html#ProjectBuilderDoc", null ]
+      [ "Model Parameter Optimization Utility", "_parameter_optimization_doc.html#ParameterOptimizationDoc", null ],
+      [ "Photosynthesis Models", "_photosynthesis_doc.html#PhotosynthesisDoc", null ],
+      [ "Plant Architecture", "_plant_architecture_doc.html#PlantArchitectureDoc", null ],
+      [ "Plant Hydraulics Model", "_plant_hydraulics_doc.html#PlantHydraulicsDoc", null ],
+      [ "Project Builder", "_project_builder_doc.html#ProjectBuilderDoc", null ],
+      [ "Radiation Model", "_radiation_doc.html#RadiationDoc", null ],
+      [ "Solar Position and Fluxes Model", "_solar_position_doc.html#SolarPositionDoc", null ],
+      [ "Stomatal Conductance Models", "_stomatal_doc.html#StomatalDoc", null ],
+      [ "Terrestrial LiDAR", "_li_d_a_r_doc.html#LiDARDoc", null ],
+      [ "Visualizer", "_visualizer_doc.html#VisualizerDoc", null ],
+      [ "Voxel Intersection", "_voxel_intersection_doc.html#VoxelIntersectionDoc", null ],
+      [ "Weber-Penn Tree", "_weber_penn_doc.html#WeberPennDoc", null ]
     ] ],
     [ "Tutorials", "_tutorials.html", [
       [ "Tutorial 0: Context Self-Test", "@ref context_selftest_tutorial", null ],
@@ -86,7 +86,7 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "@ref canopy_WUE_tutorial",
-"build_2_c_make_files_23_831_86_2_compiler_id_c_x_x_2_c_make_c_x_x_compiler_id_8cpp_source.html"
+"_weber_penn_tree_8cpp.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

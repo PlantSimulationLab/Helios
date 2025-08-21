@@ -1,5 +1,39 @@
 # Changelog
 
+# [1.3.45] 2025-08-21
+
+* Fixed errors in the `radiation_StanfordBunny` and `energybalance_StanfordBunny` samples that were using the deprecated `Context::setPrimitiveData()` signature with explicit type and size parameters.
+* Added automatic version change detection and CUDA object file cleanup improvements to the CMake build system
+* Enhanced benchmark collection and reporting in `utilities/run_benchmarks.sh`
+* Enhanced OpenMP configuration for macOS with automatic Apple Clang + libomp setup via Homebrew detection
+* Added OpenMP installation step to GitHub Actions macOS workflow for improved CI compatibility
+
+## CollisionDetection
+- Added comprehensive ray-tracing implementation with new `CollisionDetection_RayTracing.cpp` module
+- Implemented advanced ray-tracing data structures including `RayQuery`, `HitResult`, `RayTracingStats`, `RayPacket`, and `RayStream` for efficient batch ray processing
+- Added GPU-accelerated ray casting with warp-efficient CUDA kernels for optimal performance
+- Introduced Structure-of-Arrays (SoA) BVH layout (`BVHNodesSoA`) for improved memory access patterns and cache efficiency
+- Added SIMD-optimized ray-AABB intersection tests using AVX2/SSE instructions
+- Implemented streaming ray tracer interface for optimal GPU utilization with memory usage statistics
+- Enhanced spatial query capabilities including cone intersection queries, voxel ray path length calculations, and proximity-based collision detection
+- Added advanced geometry operations for gap detection, optimal path finding, and attraction point detection within perception cones
+- Implemented thread-safe primitive caching system for safe multi-threaded ray casting operations
+- Added comprehensive GPU memory management with allocation and transfer optimizations
+- Enhanced CMakeLists.txt with improved CUDA support and compilation handling
+- Extended `HitResult` structure with `path_length` field for unobstructed voxel path length calculations in LiDAR processing
+- Added `calculateVoxelPathLengths()` method for efficient ray path length calculations through individual voxels with OpenMP parallelization
+- Enhanced `performGridRayIntersection()` to return detailed `HitResult` objects for each hit instead of simple hit counts
+- Added ray classification methods `getRayClassificationCounts()` for Beer's law calculations with hit_before/hit_after statistics
+
+## Visualizer
+- Fixed an error with `Visualizer::setColorbarRange()` where it was setting the color of values clipped below the lower bound incorrectly by implementing proper bounds checking for normalized color positions.
+
+## Radiation
+- Fixed `RadiationModel::updateGeometry()` to properly handle cases when called with an empty Context by adding a check for zero primitives and returning early with a warning message.
+
+## Plant Architecture
+- Updated integration with enhanced collision detection capabilities for improved geometric operations
+
 # [1.3.44] 2025-08-10
 
 * Added `BUILD_TESTS` CMake option to conditionally build test executables instead of building them by default

@@ -95,11 +95,13 @@ var searchData=
   ['bvh_20construction_92',['BVH Construction',['../_collision_detection_doc.html#CDBVHConstruction',1,'']]],
   ['bvh_20management_20optional_93',['Manual BVH Management (Optional)',['../_collision_detection_doc.html#CDManualBVH',1,'']]],
   ['bvh_20statistics_20and_20validation_94',['BVH Statistics and Validation',['../_collision_detection_doc.html#CDBVHStats',1,'']]],
-  ['bvhtraversalkernel_95',['bvhTraversalKernel',['../_collision_detection_8cu.html#a477305ecd8f0b15fc329e42324235172',1,'CollisionDetection.cu']]],
-  ['bwbcoefficients_96',['BWBcoefficients',['../struct_b_w_bcoefficients.html',1,'']]],
-  ['by_20image_20transparency_20channel_97',['Masking Primitives by Image Transparency Channel',['../_a_p_i.html#TextureMask',1,'']]],
-  ['by_20pseudocolor_20map_98',['Coloring by pseudocolor map',['../_visualizer_doc.html#ColoringPseudo',1,'']]],
-  ['by_20r_20g_20b_20code_99',['Coloring by r-g-b code',['../_visualizer_doc.html#ColoringRGB',1,'']]],
-  ['by_20texture_20map_100',['Coloring Primitives by Texture Map',['../_a_p_i.html#TextureColor',1,'']]],
-  ['by_20texture_20map_101',['Coloring by texture map',['../_visualizer_doc.html#ColoringTexture',1,'']]]
+  ['bvh_5fnodes_5fvisited_95',['bvh_nodes_visited',['../struct_collision_detection_1_1_ray_tracing_stats.html#a9886d3d89b5478b9d6c6f92d46d8ef94',1,'CollisionDetection::RayTracingStats']]],
+  ['bvhoptimizationmode_96',['BVHOptimizationMode',['../class_collision_detection.html#afcab8e91b6861953a7fc8605dd41b12a',1,'CollisionDetection']]],
+  ['bvhtraversalkernel_97',['bvhTraversalKernel',['../_collision_detection_8cu.html#a477305ecd8f0b15fc329e42324235172',1,'CollisionDetection.cu']]],
+  ['bwbcoefficients_98',['BWBcoefficients',['../struct_b_w_bcoefficients.html',1,'']]],
+  ['by_20image_20transparency_20channel_99',['Masking Primitives by Image Transparency Channel',['../_a_p_i.html#TextureMask',1,'']]],
+  ['by_20pseudocolor_20map_100',['Coloring by pseudocolor map',['../_visualizer_doc.html#ColoringPseudo',1,'']]],
+  ['by_20r_20g_20b_20code_101',['Coloring by r-g-b code',['../_visualizer_doc.html#ColoringRGB',1,'']]],
+  ['by_20texture_20map_102',['Coloring Primitives by Texture Map',['../_a_p_i.html#TextureColor',1,'']]],
+  ['by_20texture_20map_103',['Coloring by texture map',['../_visualizer_doc.html#ColoringTexture',1,'']]]
 ];

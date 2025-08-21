@@ -1,5 +1,6 @@
 option(ENABLE_OPENMP "Enable building with OpenMP" ON)
 option(BUILD_TESTS "Build test executables" OFF)
+option(BUILD_BENCHMARKS "Build performance benchmark executables" OFF)
 
 
 # Set CMake policies to avoid warnings on newer CMake versions
@@ -83,6 +84,22 @@ message( STATUS "[Helios] Last configured Helios Git commit hash: ${HELIOS_PREVI
 
 if(NOT HELIOS_PREVIOUS_COMMIT STREQUAL GIT_COMMIT_HASH)
   message(STATUS "[Helios] Git commit version change detected, automatically re-configuring...")
+  
+  # Clean CUDA object files to prevent linking issues with stale objects
+  find_package(CUDAToolkit QUIET)
+  if(CUDAToolkit_FOUND)
+    message(STATUS "[Helios] Cleaning CUDA object files due to version change...")
+    file(GLOB_RECURSE CUDA_OBJECTS 
+      "${CMAKE_BINARY_DIR}/**/*.cu.o"
+      "${CMAKE_BINARY_DIR}/**/*.cudafe*"
+      "${CMAKE_BINARY_DIR}/**/cmake_device_link.o"
+    )
+    if(CUDA_OBJECTS)
+      file(REMOVE ${CUDA_OBJECTS})
+      message(STATUS "[Helios] Removed ${CMAKE_CURRENT_LIST_SIZE} CUDA object files")
+    endif()
+  endif()
+  
   # update cache for next time
   set(HELIOS_PREVIOUS_COMMIT "${GIT_COMMIT_HASH}" CACHE STRING "Last configured Helios Git commit" FORCE)
 endif()
@@ -164,7 +181,59 @@ endforeach(PLUGIN)
 target_compile_definitions(helios PUBLIC $<$<CONFIG:Debug>:HELIOS_DEBUG>  $<$<CONFIG:RelWithDebInfo>:HELIOS_DEBUG> )
 
 if( ENABLE_OPENMP )
-    find_package(OpenMP)
+    # First try standard OpenMP detection
+    find_package(OpenMP QUIET)
+    
+    # If OpenMP not found and we're on macOS with Apple Clang, try automatic libomp configuration
+    if(NOT OpenMP_CXX_FOUND AND CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+        message(STATUS "[Helios] Configuring OpenMP for Apple Clang on macOS...")
+        
+        # Find Homebrew
+        find_program(BREW NAMES brew)
+        if(BREW)
+            # Check if libomp is installed
+            execute_process(COMMAND ${BREW} ls libomp 
+                           RESULT_VARIABLE BREW_RESULT_CODE 
+                           OUTPUT_QUIET ERROR_QUIET)
+            
+            if(NOT BREW_RESULT_CODE)
+                # Get libomp prefix
+                execute_process(COMMAND ${BREW} --prefix libomp 
+                               OUTPUT_VARIABLE LIBOMP_PREFIX 
+                               OUTPUT_STRIP_TRAILING_WHITESPACE)
+                
+                # Configure OpenMP for Apple Clang + libomp
+                set(OpenMP_CXX_FLAGS "-Xpreprocessor;-fopenmp")
+                set(OpenMP_CXX_LIB_NAMES "omp")
+                set(OpenMP_omp_LIBRARY "${LIBOMP_PREFIX}/lib/libomp.dylib")
+                set(OpenMP_CXX_INCLUDE_DIRS "${LIBOMP_PREFIX}/include")
+                
+                # Add include directory globally for compatibility
+                include_directories("${LIBOMP_PREFIX}/include")
+                
+                # Create OpenMP target if it doesn't exist
+                if(NOT TARGET OpenMP::OpenMP_CXX)
+                    add_library(OpenMP::OpenMP_CXX SHARED IMPORTED)
+                    set_target_properties(OpenMP::OpenMP_CXX PROPERTIES
+                        IMPORTED_LOCATION "${OpenMP_omp_LIBRARY}"
+                        INTERFACE_COMPILE_OPTIONS "-Xpreprocessor;-fopenmp"
+                        INTERFACE_INCLUDE_DIRECTORIES "${OpenMP_CXX_INCLUDE_DIRS}"
+                        INTERFACE_LINK_LIBRARIES "${OpenMP_omp_LIBRARY}")
+                endif()
+                
+                set(OpenMP_FOUND TRUE)
+                set(OpenMP_CXX_FOUND TRUE)
+                
+                message(STATUS "[Helios] Automatically configured OpenMP using Homebrew libomp from ${LIBOMP_PREFIX}")
+            else()
+                message(WARNING "[Helios] OpenMP requires libomp on macOS. Install with: brew install libomp")
+            endif()
+        else()
+            message(WARNING "[Helios] OpenMP on macOS requires Homebrew. Install from https://brew.sh then run: brew install libomp")
+        endif()
+    endif()
+    
+    # Final OpenMP configuration
     if (OpenMP_CXX_FOUND)
         message( STATUS "[Helios] Enabling OpenMP support" )
         target_link_libraries(helios PUBLIC OpenMP::OpenMP_CXX)

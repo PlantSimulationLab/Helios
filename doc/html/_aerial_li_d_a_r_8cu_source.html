@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.44</span>
+       <span id="projectnumber">&#160;v1.3.45</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -1622,7 +1622,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l01466" name="l01466"></a><span class="lineno"> 1466</span>        float3 v3 = d_patch_vertex[4 * p + 3];</div>
 <div class="line"><a id="l01467" name="l01467"></a><span class="lineno"> 1467</span> </div>
 <div class="line"><a id="l01468" name="l01468"></a><span class="lineno"> 1468</span>        float3 anchor = v0;</div>
-<div class="line"><a id="l01469" name="l01469"></a><span class="lineno"> 1469</span>        float3 normal = normalize(<a class="code hl_function" href="helios__vector__types_8h.html#adc8295b0994f72cb073344adc468df36" title="Cross product of two vec3 vectors.">cross</a>(v1 - v0, v2 - v0));</div>
+<div class="line"><a id="l01469" name="l01469"></a><span class="lineno"> 1469</span>        float3 normal = normalize(<a class="code hl_function" href="_collision_detection_8cu.html#a27d0b255c42a5c1539194f8134e78ffe" title="CUDA device helper functions for vector operations.">cross</a>(v1 - v0, v2 - v0));</div>
 <div class="line"><a id="l01470" name="l01470"></a><span class="lineno"> 1470</span> </div>
 <div class="line"><a id="l01471" name="l01471"></a><span class="lineno"> 1471</span>        float3 a = v1 - v0;</div>
 <div class="line"><a id="l01472" name="l01472"></a><span class="lineno"> 1472</span>        float3 b = v3 - v0;</div>
@@ -1740,7 +1740,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l01584" name="l01584"></a><span class="lineno"> 1584</span> </div>
 <div class="line"><a id="l01585" name="l01585"></a><span class="lineno"> 1585</span>                    <span class="keywordflow">if</span> (d_tri_textureID[tri] &lt; 0) { <span class="comment">// no texture mask</span></div>
 <div class="line"><a id="l01586" name="l01586"></a><span class="lineno"> 1586</span>                        tmin = t;</div>
-<div class="line"><a id="l01587" name="l01587"></a><span class="lineno"> 1587</span>                        float3 normal = normalize(<a class="code hl_function" href="helios__vector__types_8h.html#adc8295b0994f72cb073344adc468df36" title="Cross product of two vec3 vectors.">cross</a>(v1 - v0, v2 - v0));</div>
+<div class="line"><a id="l01587" name="l01587"></a><span class="lineno"> 1587</span>                        float3 normal = normalize(<a class="code hl_function" href="_collision_detection_8cu.html#a27d0b255c42a5c1539194f8134e78ffe" title="CUDA device helper functions for vector operations.">cross</a>(v1 - v0, v2 - v0));</div>
 <div class="line"><a id="l01588" name="l01588"></a><span class="lineno"> 1588</span>                        nmin = fabs(normal * raydir);</div>
 <div class="line"><a id="l01589" name="l01589"></a><span class="lineno"> 1589</span>                    } <span class="keywordflow">else</span> { <span class="comment">// has texture mask</span></div>
 <div class="line"><a id="l01590" name="l01590"></a><span class="lineno"> 1590</span> </div>
@@ -1760,7 +1760,7 @@ $(function(){initNavTree('_aerial_li_d_a_r_8cu_source.html',''); initResizable(t
 <div class="line"><a id="l01604" name="l01604"></a><span class="lineno"> 1604</span> </div>
 <div class="line"><a id="l01605" name="l01605"></a><span class="lineno"> 1605</span>                        <span class="keywordflow">if</span> (d_maskdata[ID * masksize_max.x * masksize_max.y + ind.y * masksize_max.x + ind.x]) {</div>
 <div class="line"><a id="l01606" name="l01606"></a><span class="lineno"> 1606</span>                            tmin = t;</div>
-<div class="line"><a id="l01607" name="l01607"></a><span class="lineno"> 1607</span>                            float3 normal = normalize(<a class="code hl_function" href="helios__vector__types_8h.html#adc8295b0994f72cb073344adc468df36" title="Cross product of two vec3 vectors.">cross</a>(v1 - v0, v2 - v0));</div>
+<div class="line"><a id="l01607" name="l01607"></a><span class="lineno"> 1607</span>                            float3 normal = normalize(<a class="code hl_function" href="_collision_detection_8cu.html#a27d0b255c42a5c1539194f8134e78ffe" title="CUDA device helper functions for vector operations.">cross</a>(v1 - v0, v2 - v0));</div>
 <div class="line"><a id="l01608" name="l01608"></a><span class="lineno"> 1608</span>                            nmin = fabs(normal * raydir);</div>
 <div class="line"><a id="l01609" name="l01609"></a><span class="lineno"> 1609</span>                        }</div>
 <div class="line"><a id="l01610" name="l01610"></a><span class="lineno"> 1610</span>                    }</div>

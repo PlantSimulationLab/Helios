@@ -51,6 +51,9 @@ if(CUDAToolkit_FOUND)
     	# Non-Windows platforms use full flags
     	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --use_fast_math -Wno-deprecated-gpu-targets")
     	
+    	# Add position independent code flag for Linux (needed for static libraries)
+    	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -fPIC")
+    	
     	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++${CMAKE_CXX_STANDARD}")
     endif()
     
@@ -61,7 +64,7 @@ if(CUDAToolkit_FOUND)
     endif()
     
     # Build with CUDA support
-    add_library(collisiondetection STATIC "src/CollisionDetection.cu" "src/CollisionDetection.cpp" "tests/selfTest.cpp")
+    add_library(collisiondetection STATIC "src/CollisionDetection.cu" "src/CollisionDetection.cpp" "src/CollisionDetection_RayTracing.cpp" "tests/selfTest.cpp")
     
     # Set CUDA properties for the target
     set_target_properties(collisiondetection PROPERTIES CUDA_RUNTIME_LIBRARY Static CUDA_RESOLVE_DEVICE_SYMBOLS ON)
@@ -87,7 +90,7 @@ else()
     message(STATUS "CUDA not found - building CPU-only version")
     
     # Build CPU-only version (exclude .cu file)
-    add_library(collisiondetection STATIC "src/CollisionDetection.cpp" "tests/selfTest.cpp")
+    add_library(collisiondetection STATIC "src/CollisionDetection.cpp" "src/CollisionDetection_RayTracing.cpp" "tests/selfTest.cpp")
     
     target_include_directories(collisiondetection PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
     
@@ -97,4 +100,12 @@ if(BUILD_TESTS)
     add_executable(collisiondetection_tests "tests/TestMain.cpp")
     target_link_libraries(collisiondetection_tests PRIVATE collisiondetection)
     add_test(NAME collisiondetection_tests COMMAND collisiondetection_tests)
+endif()
+
+# Add benchmarks if enabled
+if(BUILD_BENCHMARKS)
+    # Only add benchmarks when we're in the main Helios project context
+    if(EXISTS "${CMAKE_SOURCE_DIR}/benchmarks/collision_detection_performance")
+        add_subdirectory(${CMAKE_SOURCE_DIR}/benchmarks/collision_detection_performance collision_detection_benchmark)
+    endif()
 endif()

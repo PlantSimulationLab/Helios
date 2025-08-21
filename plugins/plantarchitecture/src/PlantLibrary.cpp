@@ -417,7 +417,7 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     shoot_parameters_proleptic.max_nodes_per_season = 20;
     shoot_parameters_proleptic.phyllochron_min = 2.0;
     shoot_parameters_proleptic.elongation_rate_max = 0.15;
-    shoot_parameters_proleptic.girth_area_factor = 5.f;
+    shoot_parameters_proleptic.girth_area_factor = 7.f;
     shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.1;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.4;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
@@ -428,7 +428,7 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     shoot_parameters_proleptic.internode_length_max = 0.04;
     shoot_parameters_proleptic.internode_length_min = 0.01;
     shoot_parameters_proleptic.internode_length_decay_rate = 0.004;
-    shoot_parameters_proleptic.fruit_set_probability = 0.4;
+    shoot_parameters_proleptic.fruit_set_probability = 0.3;
     shoot_parameters_proleptic.flower_bud_break_probability = 0.3;
     shoot_parameters_proleptic.max_terminal_floral_buds = 1;
     shoot_parameters_proleptic.flowers_require_dormancy = true;
@@ -464,7 +464,7 @@ uint PlantArchitecture::buildAppleTree(const helios::vec3 &base_position) {
     uint Nscaffolds = 4; // context_ptr->randu(4,5);
 
     for (int i = 0; i < Nscaffolds; i++) {
-        float pitch = context_ptr->randu(deg2rad(55), deg2rad(65));
+        float pitch = context_ptr->randu(deg2rad(35), deg2rad(45));
         uint uID_shoot = addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - i - 1, context_ptr->randu(7, 9), make_AxisRotation(pitch, (float(i) + context_ptr->randu(-0.2f, 0.2f)) / float(Nscaffolds) * 2 * M_PI, 0), 0.005, 0.04,
                                        1.f, 1.f, 0.5, "proleptic", 0);
     }
@@ -1422,9 +1422,9 @@ void PlantArchitecture::initializeGroundCherryWeedShoots() {
 
     shoot_parameters.phyllochron_min = 1;
     shoot_parameters.elongation_rate_max = 0.1;
-    shoot_parameters.girth_area_factor = 3.f;
-    shoot_parameters.vegetative_bud_break_time = 7;
-    shoot_parameters.vegetative_bud_break_probability_min = 0.2;
+    shoot_parameters.girth_area_factor = 2.f;
+    shoot_parameters.vegetative_bud_break_time = 10;
+    shoot_parameters.vegetative_bud_break_probability_min = 0.1;
     shoot_parameters.vegetative_bud_break_probability_decay_rate = -0.5;
     shoot_parameters.flower_bud_break_probability = 0.25;
     shoot_parameters.fruit_set_probability = 0.5;
@@ -1453,7 +1453,7 @@ uint PlantArchitecture::buildGroundCherryWeedPlant(const helios::vec3 &base_posi
 
     setPlantPhenologicalThresholds(plantID, 0, 20, -1, 20, 30, 1000, false);
 
-    plant_instances.at(plantID).max_age = 50;
+    plant_instances.at(plantID).max_age = 80;
 
     return plantID;
 }
@@ -2549,9 +2549,9 @@ void PlantArchitecture::initializeStrawberryShoots() {
     leaf_prototype.leaf_aspect_ratio = 1.f;
     leaf_prototype.midrib_fold_fraction = 0.2f;
     leaf_prototype.longitudinal_curvature = 0.15f;
-    leaf_prototype.lateral_curvature = 0.4f;
-    leaf_prototype.wave_period = 0.3f;
-    leaf_prototype.wave_amplitude = 0.01f;
+    leaf_prototype.lateral_curvature = -0.35f;
+    leaf_prototype.wave_period = 0.4f;
+    leaf_prototype.wave_amplitude = 0.03f;
     leaf_prototype.subdivisions = 6;
     leaf_prototype.unique_prototypes = 10;
 
@@ -2566,39 +2566,39 @@ void PlantArchitecture::initializeStrawberryShoots() {
     phytomer_parameters.internode.length_segments = 1;
 
     phytomer_parameters.petiole.petioles_per_internode = 1;
-    phytomer_parameters.petiole.pitch.uniformDistribution(0, 45);
+    phytomer_parameters.petiole.pitch.uniformDistribution(10, 45);
     phytomer_parameters.petiole.radius = 0.0025;
-    phytomer_parameters.petiole.length.uniformDistribution(0.15, 0.25);
+    phytomer_parameters.petiole.length.uniformDistribution(0.15, 0.35);
     phytomer_parameters.petiole.taper = 0.5;
-    phytomer_parameters.petiole.curvature.uniformDistribution(-300, 100);
+    phytomer_parameters.petiole.curvature.uniformDistribution(-150, -50);
     phytomer_parameters.petiole.color = make_RGBcolor(0.18, 0.23, 0.1);
     phytomer_parameters.petiole.length_segments = 5;
 
     phytomer_parameters.leaf.leaves_per_petiole = 3;
-    phytomer_parameters.leaf.pitch.uniformDistribution(-30, 10);
-    phytomer_parameters.leaf.yaw = 20;
+    phytomer_parameters.leaf.pitch.uniformDistribution(-35, 0);
+    phytomer_parameters.leaf.yaw = -30;
     phytomer_parameters.leaf.roll = -30;
     phytomer_parameters.leaf.leaflet_offset = 0.01;
     phytomer_parameters.leaf.leaflet_scale = 1.0;
-    phytomer_parameters.leaf.prototype_scale = 0.1;
+    phytomer_parameters.leaf.prototype_scale = 0.12;
     phytomer_parameters.leaf.prototype = leaf_prototype;
 
-    phytomer_parameters.peduncle.length = 0.17;
-    phytomer_parameters.peduncle.radius = 0.00075;
-    phytomer_parameters.peduncle.pitch = 35;
-    phytomer_parameters.peduncle.roll = 0;
-    phytomer_parameters.peduncle.curvature = -200;
+    phytomer_parameters.peduncle.length.uniformDistribution(0.16,0.2);
+    phytomer_parameters.peduncle.radius = 0.0018;
+    phytomer_parameters.peduncle.pitch.uniformDistribution(35,55);
+    phytomer_parameters.peduncle.roll = 90;
+    phytomer_parameters.peduncle.curvature = -150;
     phytomer_parameters.peduncle.length_segments = 5;
     phytomer_parameters.peduncle.radial_subdivisions = 6;
     phytomer_parameters.peduncle.color = phytomer_parameters.petiole.color;
 
-    phytomer_parameters.inflorescence.flowers_per_peduncle.uniformDistribution(1, 3);
+    phytomer_parameters.inflorescence.flowers_per_peduncle = 1;//.uniformDistribution(1, 2);
     phytomer_parameters.inflorescence.flower_offset = 0.2;
     phytomer_parameters.inflorescence.pitch = 70;
     phytomer_parameters.inflorescence.roll = 90;
     phytomer_parameters.inflorescence.flower_prototype_scale = 0.04;
     phytomer_parameters.inflorescence.flower_prototype_function = StrawberryFlowerPrototype;
-    phytomer_parameters.inflorescence.fruit_prototype_scale = 0.06;
+    phytomer_parameters.inflorescence.fruit_prototype_scale = 0.085;
     phytomer_parameters.inflorescence.fruit_prototype_function = StrawberryFruitPrototype;
     phytomer_parameters.inflorescence.fruit_gravity_factor_fraction = 0.65;
 
@@ -2622,10 +2622,10 @@ void PlantArchitecture::initializeStrawberryShoots() {
     shoot_parameters.elongation_rate_max = 0.1;
     shoot_parameters.girth_area_factor = 2.f;
     shoot_parameters.vegetative_bud_break_time = 15;
-    shoot_parameters.vegetative_bud_break_probability_min = 0.1;
-    shoot_parameters.vegetative_bud_break_probability_decay_rate = -0.4;
+    shoot_parameters.vegetative_bud_break_probability_min = 0.;
+    shoot_parameters.vegetative_bud_break_probability_decay_rate = -0.5;
     shoot_parameters.flower_bud_break_probability = 1;
-    shoot_parameters.fruit_set_probability = 0.5;
+    shoot_parameters.fruit_set_probability = 0.3;
     shoot_parameters.flowers_require_dormancy = false;
     shoot_parameters.growth_requires_dormancy = false;
     shoot_parameters.determinate_shoot_growth = true;

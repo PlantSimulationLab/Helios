@@ -12,6 +12,7 @@ var struct_phytomer =
     [ "getInternodeRadius", "struct_phytomer.html#a38c6cd729c0033fcb0b4acec5089d328", null ],
     [ "getLeafArea", "struct_phytomer.html#a78acccf5f57c43c794c85d9170be4656", null ],
     [ "getLeafBasePosition", "struct_phytomer.html#ab6a9cc6c21a82817eee8091481ab8f73", null ],
+    [ "getPeduncleAxisVector", "struct_phytomer.html#a61172d18efe17b016ced32da2607d833", null ],
     [ "getPetioleAxisVector", "struct_phytomer.html#a42a7e97e8c89a8707852869990933a01", null ],
     [ "getPetioleLength", "struct_phytomer.html#a0798f9c7d471372199f72172b67da173", null ],
     [ "hasLeaf", "struct_phytomer.html#a8c3196c1b186e116f85d8a8514a2df40", null ],

@@ -1,0 +1,57 @@
+name: Build and Run on Windows EC2 GPU Instance
+
+on:
+  push:
+    branches: [ "master" ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+
+  start-gpu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
+          aws-region: us-west-2
+      - run: |
+          aws ec2 start-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_WIN }}
+          aws ec2 wait instance-running --instance-ids ${{ secrets.EC2_INSTANCE_ID_WIN }}
+
+  run_samples_windows:
+    runs-on: [self-hosted, Windows]
+    needs: start-gpu
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Bash script
+        shell: bash
+        run: |
+          cd utilities
+          if ! ./run_tests.sh --visbuildonly --log-file ../windows_GPU_selftests.log; then
+            echo "==== run_tests.sh failed; dumping windows_GPU_selftests.log ===="
+            cat ../windows_GPU_selftests.log
+            exit 1
+          fi
+  
+
+  stop-gpu:
+    needs: run_samples_windows
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
+          aws-region: us-west-2
+      - run: |
+          aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_WIN }}
+          aws ec2 wait instance-stopped --instance-ids ${{ secrets.EC2_INSTANCE_ID_WIN }}

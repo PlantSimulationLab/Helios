@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['lightingmodel_0',['LightingModel',['../class_visualizer.html#a580a78fe3e25c423e2d13aebc1b54573',1,'Visualizer']]]
+  ['heliosdatatype_0',['HeliosDataType',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3',1,'helios']]]
 ];

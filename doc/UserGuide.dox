@@ -141,23 +141,23 @@
   4. Class: C++ class associated with the plug-in and the class constructor(s).
   5. Usage: Explanation of plug-in member functions for performing various tasks related to the plug-in. In general, these explanations will comprise the majority of the plug-in documentation.
 
-  - \subpage VisualizerDoc "Visualizer: visualization of model geometry and data"
-  - \subpage WeberPennDoc "Weber-Penn Tree: Procedural tree architecture generation"
-  - \subpage RadiationDoc "Radiation Model: GPU-accelerated ray-tracing radiation transport model"
-  - \subpage EnergyBalanceDoc "Energy Balance Model: Surface energy balance solution"
-  - \subpage BLConductanceDoc "Boundary-Layer Conductance: Perform boundary-layer conductance model calculations based on several possible models."		
-  - \subpage LiDARDoc "LiDAR: Processing and visualizing terrestrial LiDAR data"
   - \subpage AerialLiDARDoc "Aerial LiDAR: Processing and visualizing aerial LiDAR data"
-  - \subpage PhotosynthesisDoc "Photosynthesis Model: Photosynthetic assimilation model"
-  - \subpage StomatalDoc "Stomatal Conductance Model: Model for the conductance of water vapor through stomatal pores"
-  - \subpage SolarPositionDoc "Solar Position Model: Model for the position of the sun in the sky, as well as models of solar radiation flux and longwave flux from the sky."
-  - \subpage VoxelIntersectionDoc "Voxel Intersection: Determine planar primitive elements that lie within voxel primitives."
+  - \subpage BLConductanceDoc "Boundary-Layer Conductance: Perform boundary-layer conductance model calculations based on several possible models."		
   - \subpage CanopyGeneratorDoc "Canopy Generator: Simple generation of different type of plant and canopy geometries."
+  - \subpage EnergyBalanceDoc "Energy Balance Model: Surface energy balance solution"
+  - \subpage LeafOpticsDoc "Leaf Optics: Implementation of the PROSPECT-PRO leaf optical model of leaf reflectance and transmittance spectra."
+  - \subpage LiDARDoc "LiDAR: Processing and visualizing terrestrial LiDAR data"
+  - \subpage ParameterOptimizationDoc "Parameter Optimization: Utility for optimization of model parameters."
+  - \subpage PhotosynthesisDoc "Photosynthesis Model: Photosynthetic assimilation model"
   - \subpage PlantArchitectureDoc "Plant Architecture: Flexible procedural plant generation with dynamic growth and phenology."
   - \subpage PlantHydraulicsDoc "Plant Hydraulics: Models the water potentials, water contents, hydraulic conductances, and hydraulic capacitances."
-  - \subpage ParameterOptimizationDoc "Parameter Optimization: Utility for optimization of model parameters."
-  - \subpage LeafOpticsDoc "Leaf Optics: Implementation of the PROSPECT-PRO leaf optical model of leaf reflectance and transmittance spectra."
   - \subpage ProjectBuilderDoc "GUI and XML interface for creating and running Helios projects."
+  - \subpage RadiationDoc "Radiation Model: GPU-accelerated ray-tracing radiation transport model"
+  - \subpage SolarPositionDoc "Solar Position Model: Model for the position of the sun in the sky, as well as models of solar radiation flux and longwave flux from the sky."
+  - \subpage StomatalDoc "Stomatal Conductance Model: Model for the conductance of water vapor through stomatal pores"
+  - \subpage VisualizerDoc "Visualizer: visualization of model geometry and data"
+  - \subpage VoxelIntersectionDoc "Voxel Intersection: Determine planar primitive elements that lie within voxel primitives."
+  - \subpage WeberPennDoc "Weber-Penn Tree: Procedural tree architecture generation"
 
 */
 

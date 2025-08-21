@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.44</span>
+       <span id="projectnumber">&#160;v1.3.45</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -1043,7 +1043,7 @@ $(function(){initNavTree('_context_8cpp_source.html',''); initResizable(true); }
 <div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span> </div>
 <div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span><span class="comment">// Parallelize the outer loop over primitives. Use &quot;for&quot; inside the parallel region.</span></div>
 <div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span><span class="preprocessor">#pragma omp for nowait</span></div>
-<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; UUIDs.size(); i++) {</div>
+<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; (int)UUIDs.size(); i++) {</div>
 <div class="line"><a id="l00788" name="l00788"></a><span class="lineno">  788</span>            <span class="comment">// For each primitive:</span></div>
 <div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span>            <span class="keyword">const</span> std::vector&lt;vec3&gt; &amp;verts = getPrimitivePointer_private(UUIDs[i])-&gt;getVertices();</div>
 <div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span>            <span class="comment">// Update local bounding box for each vertex in this primitive.</span></div>

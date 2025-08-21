@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.44</span>
+       <span id="projectnumber">&#160;v1.3.45</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -162,10 +162,11 @@ $(function(){initNavTree('plugins_2collisiondetection_2tests_2self_test_8cpp.htm
 <div class="contents">
 <div class="textblock"><code>#include &quot;<a class="el" href="_collision_detection_8h_source.html">CollisionDetection.h</a>&quot;</code><br />
 <code>#include &lt;cmath&gt;</code><br />
+<code>#include &lt;chrono&gt;</code><br />
 <code>#include &lt;doctest.h&gt;</code><br />
+<code>#include &quot;doctest_utils.h&quot;</code><br />
 <code>#include &lt;iostream&gt;</code><br />
 <code>#include &quot;<a class="el" href="global_8h_source.html">global.h</a>&quot;</code><br />
-<code>#include &quot;doctest_utils.h&quot;</code><br />
 </div>
 <p><a href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -213,6 +214,14 @@ Functions</h2></td></tr>
 <tr class="separator:a6b279e8792d64a9819b676eaa9bdb02f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2a4fe54f6bdb1c17fc7c1ea26d53f008" id="r_a2a4fe54f6bdb1c17fc7c1ea26d53f008"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2a4fe54f6bdb1c17fc7c1ea26d53f008">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection BVH Validity Persistence&quot;)</td></tr>
 <tr class="separator:a2a4fe54f6bdb1c17fc7c1ea26d53f008"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae7637b0a163823d9cc6c0510202b97d3" id="r_ae7637b0a163823d9cc6c0510202b97d3"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae7637b0a163823d9cc6c0510202b97d3">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Soft/Hard Detection Integration - BVH Sharing&quot;)</td></tr>
+<tr class="separator:ae7637b0a163823d9cc6c0510202b97d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afd495667cd4b01571996d363dbe5d3cb" id="r_afd495667cd4b01571996d363dbe5d3cb"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afd495667cd4b01571996d363dbe5d3cb">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Soft/Hard Detection Integration - Sequential Calls&quot;)</td></tr>
+<tr class="separator:afd495667cd4b01571996d363dbe5d3cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a05b4721b014fead9e9015280b5ccf124" id="r_a05b4721b014fead9e9015280b5ccf124"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a05b4721b014fead9e9015280b5ccf124">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Soft/Hard Detection Integration - Different Geometry Sets&quot;)</td></tr>
+<tr class="separator:a05b4721b014fead9e9015280b5ccf124"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a37817cecd069eab8afc842601b41a2ed" id="r_a37817cecd069eab8afc842601b41a2ed"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a37817cecd069eab8afc842601b41a2ed">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Soft/Hard Detection Integration - BVH Rebuild Behavior&quot;)</td></tr>
+<tr class="separator:a37817cecd069eab8afc842601b41a2ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2a5e620b5f6f8132eeb18bd0b3b5a6d4" id="r_a2a5e620b5f6f8132eeb18bd0b3b5a6d4"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2a5e620b5f6f8132eeb18bd0b3b5a6d4">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection GPU Acceleration&quot;)</td></tr>
 <tr class="separator:a2a5e620b5f6f8132eeb18bd0b3b5a6d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a70ec1fd77a8a1e41091ec5520e61110b" id="r_a70ec1fd77a8a1e41091ec5520e61110b"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a70ec1fd77a8a1e41091ec5520e61110b">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection GPU/CPU Message Display&quot;)</td></tr>
@@ -255,6 +264,158 @@ Functions</h2></td></tr>
 <tr class="separator:ac40436d1f5d55d2cd5072152560f2479"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5dca96d1b5cbc59a512d1f39f483fb58" id="r_a5dca96d1b5cbc59a512d1f39f483fb58"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5dca96d1b5cbc59a512d1f39f483fb58">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Memory Stress - Progressive Loading&quot;)</td></tr>
 <tr class="separator:a5dca96d1b5cbc59a512d1f39f483fb58"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abdcb6b41192dc3356d771e63bd656826" id="r_abdcb6b41192dc3356d771e63bd656826"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abdcb6b41192dc3356d771e63bd656826">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection findNearestPrimitiveDistance - Basic Functionality&quot;)</td></tr>
+<tr class="separator:abdcb6b41192dc3356d771e63bd656826"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af53bed7aa77dff609151bf245c379a07" id="r_af53bed7aa77dff609151bf245c379a07"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af53bed7aa77dff609151bf245c379a07">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection findNearestPrimitiveDistance - Edge Cases&quot;)</td></tr>
+<tr class="separator:af53bed7aa77dff609151bf245c379a07"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abf6bdc3eec8b98efa5dc9214bfe22604" id="r_abf6bdc3eec8b98efa5dc9214bfe22604"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abf6bdc3eec8b98efa5dc9214bfe22604">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection findNearestPrimitiveDistance - Complex Scenarios&quot;)</td></tr>
+<tr class="separator:abf6bdc3eec8b98efa5dc9214bfe22604"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aff14943a0657c8ad82470f7b3d685f26" id="r_aff14943a0657c8ad82470f7b3d685f26"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aff14943a0657c8ad82470f7b3d685f26">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection findNearestPrimitiveDistance - Directional Testing&quot;)</td></tr>
+<tr class="separator:aff14943a0657c8ad82470f7b3d685f26"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2814eef046d34057221e44274d512fb9" id="r_a2814eef046d34057221e44274d512fb9"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2814eef046d34057221e44274d512fb9">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection - findNearestPrimitiveDistance front/back face detection&quot;)</td></tr>
+<tr class="separator:a2814eef046d34057221e44274d512fb9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a40882df00b41ace37bca1295a3a7d154" id="r_a40882df00b41ace37bca1295a3a7d154"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a40882df00b41ace37bca1295a3a7d154">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection <a class="el" href="classhelios_1_1_cone.html">Cone</a>-Based Obstacle Detection - Basic Functionality&quot;)</td></tr>
+<tr class="separator:a40882df00b41ace37bca1295a3a7d154"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a67dd1dc292e24f82d57ada8ad7a2f4af" id="r_a67dd1dc292e24f82d57ada8ad7a2f4af"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a67dd1dc292e24f82d57ada8ad7a2f4af">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection <a class="el" href="classhelios_1_1_cone.html">Cone</a>-Based vs Legacy Method Comparison&quot;)</td></tr>
+<tr class="separator:a67dd1dc292e24f82d57ada8ad7a2f4af"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aae795c9684e0de18ece0d119747e97dd" id="r_aae795c9684e0de18ece0d119747e97dd"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aae795c9684e0de18ece0d119747e97dd">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection <a class="el" href="classhelios_1_1_cone.html">Cone</a>-Based Triangle vs Patch Intersection&quot;)</td></tr>
+<tr class="separator:aae795c9684e0de18ece0d119747e97dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a95778f76e0d0bac084fb2313b024eb0a" id="r_a95778f76e0d0bac084fb2313b024eb0a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a95778f76e0d0bac084fb2313b024eb0a">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection <a class="el" href="classhelios_1_1_cone.html">Cone</a>-Based Parameter Validation&quot;)</td></tr>
+<tr class="separator:a95778f76e0d0bac084fb2313b024eb0a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2697edc6dc75f92d4915af9c7b82db7d" id="r_a2697edc6dc75f92d4915af9c7b82db7d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2697edc6dc75f92d4915af9c7b82db7d">DOCTEST_TEST_CASE</a> (&quot;Test attraction points detection - basic functionality&quot;)</td></tr>
+<tr class="separator:a2697edc6dc75f92d4915af9c7b82db7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ba4f96de852f73be5a4d19ffec91570" id="r_a1ba4f96de852f73be5a4d19ffec91570"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1ba4f96de852f73be5a4d19ffec91570">DOCTEST_TEST_CASE</a> (&quot;Test attraction points detection - edge cases&quot;)</td></tr>
+<tr class="separator:a1ba4f96de852f73be5a4d19ffec91570"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aef396ba6dc76136592854aa112542f87" id="r_aef396ba6dc76136592854aa112542f87"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aef396ba6dc76136592854aa112542f87">DOCTEST_TEST_CASE</a> (&quot;Test attraction points detection - angular distance prioritization&quot;)</td></tr>
+<tr class="separator:aef396ba6dc76136592854aa112542f87"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3a02c372cda375853e88408bbfc3825d" id="r_a3a02c372cda375853e88408bbfc3825d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3a02c372cda375853e88408bbfc3825d">DOCTEST_TEST_CASE</a> (&quot;Test attraction points detection - various cone orientations&quot;)</td></tr>
+<tr class="separator:a3a02c372cda375853e88408bbfc3825d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad3a3270888050b20db55c0cb19668d58" id="r_ad3a3270888050b20db55c0cb19668d58"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad3a3270888050b20db55c0cb19668d58">DOCTEST_TEST_CASE</a> (&quot;Test attraction points detection - large scale scenario&quot;)</td></tr>
+<tr class="separator:ad3a3270888050b20db55c0cb19668d58"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3cd287dcb12d9d8b0025389216ac84d3" id="r_a3cd287dcb12d9d8b0025389216ac84d3"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3cd287dcb12d9d8b0025389216ac84d3">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Ray Path Length - Basic Functionality&quot;)</td></tr>
+<tr class="separator:a3cd287dcb12d9d8b0025389216ac84d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aef57e257cb5ede4712a89eda42515930" id="r_aef57e257cb5ede4712a89eda42515930"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aef57e257cb5ede4712a89eda42515930">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Ray Path Length - Edge Cases&quot;)</td></tr>
+<tr class="separator:aef57e257cb5ede4712a89eda42515930"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a80b615ff6609e9c2caff9ce39604a43c" id="r_a80b615ff6609e9c2caff9ce39604a43c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a80b615ff6609e9c2caff9ce39604a43c">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Ray Path Length - Data Consistency&quot;)</td></tr>
+<tr class="separator:a80b615ff6609e9c2caff9ce39604a43c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a777075ef64b6c6dae4d1d5729137d3cd" id="r_a777075ef64b6c6dae4d1d5729137d3cd"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a777075ef64b6c6dae4d1d5729137d3cd">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Ray Path Length - Manual Data Setting&quot;)</td></tr>
+<tr class="separator:a777075ef64b6c6dae4d1d5729137d3cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0c2b6a19f33aa6f685fb1cde7a9cc31a" id="r_a0c2b6a19f33aa6f685fb1cde7a9cc31a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0c2b6a19f33aa6f685fb1cde7a9cc31a">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Ray Path Length - Different Grid Sizes&quot;)</td></tr>
+<tr class="separator:a0c2b6a19f33aa6f685fb1cde7a9cc31a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5993f3dabebc471777f1ebc92ade0625" id="r_a5993f3dabebc471777f1ebc92ade0625"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5993f3dabebc471777f1ebc92ade0625">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Ray Path Length - Ray Direction Variations&quot;)</td></tr>
+<tr class="separator:a5993f3dabebc471777f1ebc92ade0625"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3e5c6768e46bdca5bcd75beae3d6d285" id="r_a3e5c6768e46bdca5bcd75beae3d6d285"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3e5c6768e46bdca5bcd75beae3d6d285">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Ray Path Length - GPU/CPU Consistency&quot;)</td></tr>
+<tr class="separator:a3e5c6768e46bdca5bcd75beae3d6d285"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad3f94271c2e8081d751a102f9f954937" id="r_ad3f94271c2e8081d751a102f9f954937"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad3f94271c2e8081d751a102f9f954937">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Ray Path Length - Parameter Validation&quot;)</td></tr>
+<tr class="separator:ad3f94271c2e8081d751a102f9f954937"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae2797739260513047e5bd68a95cdafac" id="r_ae2797739260513047e5bd68a95cdafac"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae2797739260513047e5bd68a95cdafac">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Ray Path Length - Mathematical Validation&quot;)</td></tr>
+<tr class="separator:ae2797739260513047e5bd68a95cdafac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9e4bca3ed7a282944e4ccca6da1d75ab" id="r_a9e4bca3ed7a282944e4ccca6da1d75ab"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9e4bca3ed7a282944e4ccca6da1d75ab">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Ray Path Length - Numerical Precision&quot;)</td></tr>
+<tr class="separator:a9e4bca3ed7a282944e4ccca6da1d75ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac8ff4254491126cbfff37ef8f2e05d76" id="r_ac8ff4254491126cbfff37ef8f2e05d76"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac8ff4254491126cbfff37ef8f2e05d76">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Ray Path Length - Error Recovery and State Management&quot;)</td></tr>
+<tr class="separator:ac8ff4254491126cbfff37ef8f2e05d76"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9d01bbd0f3d27b8814d3d9fe6d18bfcd" id="r_a9d01bbd0f3d27b8814d3d9fe6d18bfcd"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9d01bbd0f3d27b8814d3d9fe6d18bfcd">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Ray Path Length - Memory and Performance Stress&quot;)</td></tr>
+<tr class="separator:a9d01bbd0f3d27b8814d3d9fe6d18bfcd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae28ca7909e738fd77acf39b884376dc1" id="r_ae28ca7909e738fd77acf39b884376dc1"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae28ca7909e738fd77acf39b884376dc1">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Ray Path Length - Integration with BVH&quot;)</td></tr>
+<tr class="separator:ae28ca7909e738fd77acf39b884376dc1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae9ec54841d295626165d7ea7454397e7" id="r_ae9ec54841d295626165d7ea7454397e7"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae9ec54841d295626165d7ea7454397e7">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Ray Path Length - Edge Case Ray Geometries&quot;)</td></tr>
+<tr class="separator:ae9ec54841d295626165d7ea7454397e7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a766c24311ecea77d711d78c1a770518b" id="r_a766c24311ecea77d711d78c1a770518b"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a766c24311ecea77d711d78c1a770518b">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Generic Ray Casting - Basic Functionality&quot;)</td></tr>
+<tr class="separator:a766c24311ecea77d711d78c1a770518b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a06f2e4a65a2ea8661aed24353e1b88dd" id="r_a06f2e4a65a2ea8661aed24353e1b88dd"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a06f2e4a65a2ea8661aed24353e1b88dd">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Generic Ray Casting - <a class="el" href="struct_collision_detection_1_1_ray_query.html">CollisionDetection::RayQuery</a> Structure&quot;)</td></tr>
+<tr class="separator:a06f2e4a65a2ea8661aed24353e1b88dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a144f855a6747dd49119f08402730431a" id="r_a144f855a6747dd49119f08402730431a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a144f855a6747dd49119f08402730431a">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Batch Ray Casting&quot;)</td></tr>
+<tr class="separator:a144f855a6747dd49119f08402730431a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2a3845109b8e4a4cd5eba957fab6f445" id="r_a2a3845109b8e4a4cd5eba957fab6f445"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2a3845109b8e4a4cd5eba957fab6f445">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Grid Ray Intersection&quot;)</td></tr>
+<tr class="separator:a2a3845109b8e4a4cd5eba957fab6f445"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae29178ae07f605ec061200417236e508" id="r_ae29178ae07f605ec061200417236e508"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae29178ae07f605ec061200417236e508">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Ray Path Lengths Detailed&quot;)</td></tr>
+<tr class="separator:ae29178ae07f605ec061200417236e508"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a753fdeec82fce97e37ff5f5e76bac0f6" id="r_a753fdeec82fce97e37ff5f5e76bac0f6"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a753fdeec82fce97e37ff5f5e76bac0f6">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Ray Casting - Normal Calculation&quot;)</td></tr>
+<tr class="separator:a753fdeec82fce97e37ff5f5e76bac0f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab70c962846f30151b87d47a3941de76b" id="r_ab70c962846f30151b87d47a3941de76b"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab70c962846f30151b87d47a3941de76b">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Ray Casting - Edge Cases and Error Handling&quot;)</td></tr>
+<tr class="separator:ab70c962846f30151b87d47a3941de76b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afa032e14103881d7bc0e9147cedf6bdd" id="r_afa032e14103881d7bc0e9147cedf6bdd"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afa032e14103881d7bc0e9147cedf6bdd">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Ray Casting - Performance and Scalability&quot;)</td></tr>
+<tr class="separator:afa032e14103881d7bc0e9147cedf6bdd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29b4749859978df9183b33761576db48" id="r_a29b4749859978df9183b33761576db48"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a29b4749859978df9183b33761576db48">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Ray Casting - Integration with Existing BVH&quot;)</td></tr>
+<tr class="separator:a29b4749859978df9183b33761576db48"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a167e364f4f4f715396cbd6e2b1ca7fcd" id="r_a167e364f4f4f715396cbd6e2b1ca7fcd"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a167e364f4f4f715396cbd6e2b1ca7fcd">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Ray Casting - Compatibility with Other Plugin Methods&quot;)</td></tr>
+<tr class="separator:a167e364f4f4f715396cbd6e2b1ca7fcd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac232025ecbc5c9f1e6a7b3e7c54d1bd5" id="r_ac232025ecbc5c9f1e6a7b3e7c54d1bd5"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac232025ecbc5c9f1e6a7b3e7c54d1bd5">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection - BVH Optimization Mode Management&quot;)</td></tr>
+<tr class="separator:ac232025ecbc5c9f1e6a7b3e7c54d1bd5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2cad8d146a5d1836a38054af431877d4" id="r_a2cad8d146a5d1836a38054af431877d4"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2cad8d146a5d1836a38054af431877d4">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection - Optimized Ray Casting Correctness&quot;)</td></tr>
+<tr class="separator:a2cad8d146a5d1836a38054af431877d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acfa270cedffc5eb61e6d62d4015fea85" id="r_acfa270cedffc5eb61e6d62d4015fea85"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acfa270cedffc5eb61e6d62d4015fea85">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection - Ray Streaming Interface&quot;)</td></tr>
+<tr class="separator:acfa270cedffc5eb61e6d62d4015fea85"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a30286af8c1b1081ed9aa5c3610aaaa68" id="r_a30286af8c1b1081ed9aa5c3610aaaa68"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a30286af8c1b1081ed9aa5c3610aaaa68">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection - BVH Layout Conversion Methods&quot;)</td></tr>
+<tr class="separator:a30286af8c1b1081ed9aa5c3610aaaa68"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a493e4af727c85b85e451224cbdcda935" id="r_a493e4af727c85b85e451224cbdcda935"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a493e4af727c85b85e451224cbdcda935">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection - RayPacket Edge Cases and Functionality&quot;)</td></tr>
+<tr class="separator:a493e4af727c85b85e451224cbdcda935"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2078dc578037c24a4b6f8d57d33af96d" id="r_a2078dc578037c24a4b6f8d57d33af96d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2078dc578037c24a4b6f8d57d33af96d">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection - RayStream Batch Management&quot;)</td></tr>
+<tr class="separator:a2078dc578037c24a4b6f8d57d33af96d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a92c518df4320eaef30599e3eb9de118e" id="r_a92c518df4320eaef30599e3eb9de118e"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a92c518df4320eaef30599e3eb9de118e">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection - SoA Precision Validation&quot;)</td></tr>
+<tr class="separator:a92c518df4320eaef30599e3eb9de118e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a42544c948e9bedd56e68bbbdc2877ac9" id="r_a42544c948e9bedd56e68bbbdc2877ac9"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a42544c948e9bedd56e68bbbdc2877ac9">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection - Error Handling and Edge Cases&quot;)</td></tr>
+<tr class="separator:a42544c948e9bedd56e68bbbdc2877ac9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afbf250107749786fb4406e9f019da05a" id="r_afbf250107749786fb4406e9f019da05a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afbf250107749786fb4406e9f019da05a">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection - Memory and Statistics Validation&quot;)</td></tr>
+<tr class="separator:afbf250107749786fb4406e9f019da05a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7ffefafdaee617d259959e196a122ffc" id="r_a7ffefafdaee617d259959e196a122ffc"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7ffefafdaee617d259959e196a122ffc">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Primitive Intersection - Basic Ray-AABB Tests&quot;)</td></tr>
+<tr class="separator:a7ffefafdaee617d259959e196a122ffc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1752ed7d92d683157db14d0dd61615d8" id="r_a1752ed7d92d683157db14d0dd61615d8"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1752ed7d92d683157db14d0dd61615d8">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Primitive Intersection - Multiple Voxels&quot;)</td></tr>
+<tr class="separator:a1752ed7d92d683157db14d0dd61615d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abb2122d618dda0363889d604b4e2d7b3" id="r_abb2122d618dda0363889d604b4e2d7b3"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abb2122d618dda0363889d604b4e2d7b3">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Voxel Primitive Intersection - GPU vs CPU Consistency&quot;)</td></tr>
+<tr class="separator:abb2122d618dda0363889d604b4e2d7b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a484d81295c10ef7e973e516ee9a82ce9" id="r_a484d81295c10ef7e973e516ee9a82ce9"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a484d81295c10ef7e973e516ee9a82ce9">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Mathematical Accuracy - Ray-Triangle Intersection Algorithms&quot;)</td></tr>
+<tr class="separator:a484d81295c10ef7e973e516ee9a82ce9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9359c31deb185a7d8d5ef16f4bc0c0c8" id="r_a9359c31deb185a7d8d5ef16f4bc0c0c8"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9359c31deb185a7d8d5ef16f4bc0c0c8">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Mathematical Accuracy - Edge Case Intersections&quot;)</td></tr>
+<tr class="separator:a9359c31deb185a7d8d5ef16f4bc0c0c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ace325e64cc688f85314b161ab4a0416d" id="r_ace325e64cc688f85314b161ab4a0416d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ace325e64cc688f85314b161ab4a0416d">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Mathematical Accuracy - Barycentric Coordinate Validation&quot;)</td></tr>
+<tr class="separator:ace325e64cc688f85314b161ab4a0416d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af8c4a4b28e277c2f4bddbf9503d0103b" id="r_af8c4a4b28e277c2f4bddbf9503d0103b"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af8c4a4b28e277c2f4bddbf9503d0103b">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection GPU-Specific - Direct castRaysGPU Testing&quot;)</td></tr>
+<tr class="separator:af8c4a4b28e277c2f4bddbf9503d0103b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4094b62235927322f622c72f998cb38c" id="r_a4094b62235927322f622c72f998cb38c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4094b62235927322f622c72f998cb38c">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection GPU-Specific - Error Handling and Edge Cases&quot;)</td></tr>
+<tr class="separator:a4094b62235927322f622c72f998cb38c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6da17e7e45be6c7bc085425e15186452" id="r_a6da17e7e45be6c7bc085425e15186452"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6da17e7e45be6c7bc085425e15186452">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Floating-Point Precision - Extreme Values&quot;)</td></tr>
+<tr class="separator:a6da17e7e45be6c7bc085425e15186452"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a99e9a48e212df3632170cc3bbeef45cf" id="r_a99e9a48e212df3632170cc3bbeef45cf"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a99e9a48e212df3632170cc3bbeef45cf">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Floating-Point Precision - Near-Parallel Rays&quot;)</td></tr>
+<tr class="separator:a99e9a48e212df3632170cc3bbeef45cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab8997dc8db92a804cbb2afe35a3f9f0e" id="r_ab8997dc8db92a804cbb2afe35a3f9f0e"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab8997dc8db92a804cbb2afe35a3f9f0e">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Floating-Point Precision - Boundary Conditions&quot;)</td></tr>
+<tr class="separator:ab8997dc8db92a804cbb2afe35a3f9f0e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a17b15b616686e74c2f6b462306583e78" id="r_a17b15b616686e74c2f6b462306583e78"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a17b15b616686e74c2f6b462306583e78">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Complex Geometry - Multi-Primitive Accuracy&quot;)</td></tr>
+<tr class="separator:a17b15b616686e74c2f6b462306583e78"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af762c769812232e66b7f16192e856e5d" id="r_af762c769812232e66b7f16192e856e5d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af762c769812232e66b7f16192e856e5d">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Complex Geometry - Stress Test Validation&quot;)</td></tr>
+<tr class="separator:af762c769812232e66b7f16192e856e5d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3ed50ee0fd6bb450d1c44d2ed1679451" id="r_a3ed50ee0fd6bb450d1c44d2ed1679451"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3ed50ee0fd6bb450d1c44d2ed1679451">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Performance Regression - BVH Construction Timing&quot;)</td></tr>
+<tr class="separator:a3ed50ee0fd6bb450d1c44d2ed1679451"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4845e5895109ebaf5ec4553a83be97da" id="r_a4845e5895109ebaf5ec4553a83be97da"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4845e5895109ebaf5ec4553a83be97da">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Performance Regression - Ray Casting Throughput&quot;)</td></tr>
+<tr class="separator:a4845e5895109ebaf5ec4553a83be97da"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a39cd4f89a47a16efd1cb55a86430781d" id="r_a39cd4f89a47a16efd1cb55a86430781d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a39cd4f89a47a16efd1cb55a86430781d">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Performance Regression - Memory Usage Validation&quot;)</td></tr>
+<tr class="separator:a39cd4f89a47a16efd1cb55a86430781d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa867acaa2ef93fa0da732c3b76c68050" id="r_aa867acaa2ef93fa0da732c3b76c68050"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa867acaa2ef93fa0da732c3b76c68050">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Mathematical Accuracy - Ray-Patch Intersection&quot;)</td></tr>
+<tr class="separator:aa867acaa2ef93fa0da732c3b76c68050"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aac24285c34080cc72e02d14348c2bc6f" id="r_aac24285c34080cc72e02d14348c2bc6f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aac24285c34080cc72e02d14348c2bc6f">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Mathematical Accuracy - Ray-Patch Edge Cases&quot;)</td></tr>
+<tr class="separator:aac24285c34080cc72e02d14348c2bc6f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a12210cd373be5a37d1322e58b726b0ea" id="r_a12210cd373be5a37d1322e58b726b0ea"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a12210cd373be5a37d1322e58b726b0ea">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Complex Geometry - Multi-Patch Accuracy&quot;)</td></tr>
+<tr class="separator:a12210cd373be5a37d1322e58b726b0ea"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa56d9642968c244b1ca8c8d31ca0ef41" id="r_aa56d9642968c244b1ca8c8d31ca0ef41"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa56d9642968c244b1ca8c8d31ca0ef41">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Mathematical Accuracy - Ray-Voxel Intersection&quot;)</td></tr>
+<tr class="separator:aa56d9642968c244b1ca8c8d31ca0ef41"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2c65de6feb305d93d9ee1d70302e0660" id="r_a2c65de6feb305d93d9ee1d70302e0660"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2c65de6feb305d93d9ee1d70302e0660">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Mathematical Accuracy - Ray-Voxel Edge Cases&quot;)</td></tr>
+<tr class="separator:a2c65de6feb305d93d9ee1d70302e0660"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2892c6608e1deea354df0aac669ea65f" id="r_a2892c6608e1deea354df0aac669ea65f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2892c6608e1deea354df0aac669ea65f">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Complex Geometry - Multi-Voxel Accuracy&quot;)</td></tr>
+<tr class="separator:a2892c6608e1deea354df0aac669ea65f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaac696ac737c9e6b64c4ae8997dcf93a" id="r_aaac696ac737c9e6b64c4ae8997dcf93a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaac696ac737c9e6b64c4ae8997dcf93a">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Ray Classification - Basic getVoxelRayHitCounts Functionality&quot;)</td></tr>
+<tr class="separator:aaac696ac737c9e6b64c4ae8997dcf93a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4e0398a88c16b825d8c6883633215176" id="r_a4e0398a88c16b825d8c6883633215176"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4e0398a88c16b825d8c6883633215176">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Ray Classification - getVoxelRayPathLengths Individual Lengths&quot;)</td></tr>
+<tr class="separator:a4e0398a88c16b825d8c6883633215176"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae6112529c7aabf5e7e138d40ea3bef85" id="r_ae6112529c7aabf5e7e138d40ea3bef85"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae6112529c7aabf5e7e138d40ea3bef85">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Ray Classification - Beer's Law Scenario with Geometry&quot;)</td></tr>
+<tr class="separator:ae6112529c7aabf5e7e138d40ea3bef85"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac437f7429f3b4e45445c1aae019f874f" id="r_ac437f7429f3b4e45445c1aae019f874f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac437f7429f3b4e45445c1aae019f874f">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Ray Classification - Edge Cases and Boundary Conditions&quot;)</td></tr>
+<tr class="separator:ac437f7429f3b4e45445c1aae019f874f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5a0624fe782facacfb00bad65b2362eb" id="r_a5a0624fe782facacfb00bad65b2362eb"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5a0624fe782facacfb00bad65b2362eb">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Ray Classification - Error Handling and Invalid Inputs&quot;)</td></tr>
+<tr class="separator:a5a0624fe782facacfb00bad65b2362eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad60f59404305b7810a0cdeb9f633989d" id="r_ad60f59404305b7810a0cdeb9f633989d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad60f59404305b7810a0cdeb9f633989d">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection Ray Classification - Beer's Law Integration Test&quot;)</td></tr>
+<tr class="separator:ad60f59404305b7810a0cdeb9f633989d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4dbaeeb6209067ff2a3803e9fcdab736" id="r_a4dbaeeb6209067ff2a3803e9fcdab736"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4dbaeeb6209067ff2a3803e9fcdab736">DOCTEST_TEST_CASE</a> (&quot;CollisionDetection calculateVoxelPathLengths Enhanced Method&quot;)</td></tr>
+<tr class="separator:a4dbaeeb6209067ff2a3803e9fcdab736"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Self-test routines for collision detection plugin</p>
@@ -281,8 +442,198 @@ Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
+<a id="a30286af8c1b1081ed9aa5c3610aaaa68" name="a30286af8c1b1081ed9aa5c3610aaaa68"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a30286af8c1b1081ed9aa5c3610aaaa68">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[1/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection - BVH Layout Conversion Methods&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03443">3443</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ac232025ecbc5c9f1e6a7b3e7c54d1bd5" name="ac232025ecbc5c9f1e6a7b3e7c54d1bd5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac232025ecbc5c9f1e6a7b3e7c54d1bd5">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[2/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection - BVH Optimization Mode Management&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03318">3318</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a42544c948e9bedd56e68bbbdc2877ac9" name="a42544c948e9bedd56e68bbbdc2877ac9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a42544c948e9bedd56e68bbbdc2877ac9">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[3/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection - Error Handling and Edge Cases&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03663">3663</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2814eef046d34057221e44274d512fb9" name="a2814eef046d34057221e44274d512fb9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2814eef046d34057221e44274d512fb9">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[4/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection - findNearestPrimitiveDistance front/back face detection&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01582">1582</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="afbf250107749786fb4406e9f019da05a" name="afbf250107749786fb4406e9f019da05a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afbf250107749786fb4406e9f019da05a">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[5/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection - Memory and Statistics Validation&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03713">3713</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2cad8d146a5d1836a38054af431877d4" name="a2cad8d146a5d1836a38054af431877d4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2cad8d146a5d1836a38054af431877d4">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[6/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection - Optimized Ray Casting Correctness&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03350">3350</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="acfa270cedffc5eb61e6d62d4015fea85" name="acfa270cedffc5eb61e6d62d4015fea85"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acfa270cedffc5eb61e6d62d4015fea85">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[7/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection - Ray Streaming Interface&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03399">3399</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a493e4af727c85b85e451224cbdcda935" name="a493e4af727c85b85e451224cbdcda935"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a493e4af727c85b85e451224cbdcda935">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[8/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection - RayPacket Edge Cases and Functionality&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03489">3489</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2078dc578037c24a4b6f8d57d33af96d" name="a2078dc578037c24a4b6f8d57d33af96d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2078dc578037c24a4b6f8d57d33af96d">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[9/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection - RayStream Batch Management&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03547">3547</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a92c518df4320eaef30599e3eb9de118e" name="a92c518df4320eaef30599e3eb9de118e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a92c518df4320eaef30599e3eb9de118e">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[10/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection - SoA Precision Validation&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03614">3614</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
 <a id="a5b26dc497161b4675872bc4d9b5a932e" name="a5b26dc497161b4675872bc4d9b5a932e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5b26dc497161b4675872bc4d9b5a932e">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[1/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a5b26dc497161b4675872bc4d9b5a932e">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[11/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -296,12 +647,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00603">603</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00813">813</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a5bdf59b2863d2cc723917dec51446c78" name="a5bdf59b2863d2cc723917dec51446c78"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5bdf59b2863d2cc723917dec51446c78">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[2/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a5bdf59b2863d2cc723917dec51446c78">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[12/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -315,12 +666,31 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00126">126</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00127">127</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a144f855a6747dd49119f08402730431a" name="a144f855a6747dd49119f08402730431a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a144f855a6747dd49119f08402730431a">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[13/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Batch Ray Casting&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03010">3010</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a382bfff3b3029f36f9c9d73584975c80" name="a382bfff3b3029f36f9c9d73584975c80"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a382bfff3b3029f36f9c9d73584975c80">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[3/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a382bfff3b3029f36f9c9d73584975c80">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[14/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -334,12 +704,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00106">106</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00107">107</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a9ba88d9feb1fde58b9194913689a39b1" name="a9ba88d9feb1fde58b9194913689a39b1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9ba88d9feb1fde58b9194913689a39b1">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[4/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a9ba88d9feb1fde58b9194913689a39b1">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[15/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -353,12 +723,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00155">155</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00156">156</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a2a4fe54f6bdb1c17fc7c1ea26d53f008" name="a2a4fe54f6bdb1c17fc7c1ea26d53f008"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2a4fe54f6bdb1c17fc7c1ea26d53f008">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[5/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a2a4fe54f6bdb1c17fc7c1ea26d53f008">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[16/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -372,12 +742,183 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00483">483</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00486">486</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a4dbaeeb6209067ff2a3803e9fcdab736" name="a4dbaeeb6209067ff2a3803e9fcdab736"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4dbaeeb6209067ff2a3803e9fcdab736">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[17/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection calculateVoxelPathLengths Enhanced Method&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l05185">5185</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a12210cd373be5a37d1322e58b726b0ea" name="a12210cd373be5a37d1322e58b726b0ea"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a12210cd373be5a37d1322e58b726b0ea">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[18/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Complex Geometry - Multi-Patch Accuracy&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04610">4610</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a17b15b616686e74c2f6b462306583e78" name="a17b15b616686e74c2f6b462306583e78"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a17b15b616686e74c2f6b462306583e78">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[19/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Complex Geometry - Multi-Primitive Accuracy&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04264">4264</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2892c6608e1deea354df0aac669ea65f" name="a2892c6608e1deea354df0aac669ea65f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2892c6608e1deea354df0aac669ea65f">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[20/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Complex Geometry - Multi-Voxel Accuracy&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04736">4736</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="af762c769812232e66b7f16192e856e5d" name="af762c769812232e66b7f16192e856e5d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af762c769812232e66b7f16192e856e5d">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[21/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Complex Geometry - Stress Test Validation&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04351">4351</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a40882df00b41ace37bca1295a3a7d154" name="a40882df00b41ace37bca1295a3a7d154"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a40882df00b41ace37bca1295a3a7d154">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[22/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection <a class="el" href="classhelios_1_1_cone.html">Cone</a>-Based Obstacle Detection - Basic Functionality&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01631">1631</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a95778f76e0d0bac084fb2313b024eb0a" name="a95778f76e0d0bac084fb2313b024eb0a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a95778f76e0d0bac084fb2313b024eb0a">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[23/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection <a class="el" href="classhelios_1_1_cone.html">Cone</a>-Based Parameter Validation&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01748">1748</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aae795c9684e0de18ece0d119747e97dd" name="aae795c9684e0de18ece0d119747e97dd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aae795c9684e0de18ece0d119747e97dd">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[24/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection <a class="el" href="classhelios_1_1_cone.html">Cone</a>-Based Triangle vs Patch Intersection&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01708">1708</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a67dd1dc292e24f82d57ada8ad7a2f4af" name="a67dd1dc292e24f82d57ada8ad7a2f4af"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a67dd1dc292e24f82d57ada8ad7a2f4af">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[25/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection <a class="el" href="classhelios_1_1_cone.html">Cone</a>-Based vs Legacy Method Comparison&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01670">1670</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a6f776d445d6de08dc91ddca40ddc9887" name="a6f776d445d6de08dc91ddca40ddc9887"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6f776d445d6de08dc91ddca40ddc9887">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[6/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a6f776d445d6de08dc91ddca40ddc9887">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[26/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -391,12 +932,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00982">982</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01192">1192</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a199b42742be7cc9c0636303a0f2f53f6" name="a199b42742be7cc9c0636303a0f2f53f6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a199b42742be7cc9c0636303a0f2f53f6">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[7/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a199b42742be7cc9c0636303a0f2f53f6">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[27/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -410,12 +951,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00948">948</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01158">1158</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="ad81967285618370de64914f64d752b14" name="ad81967285618370de64914f64d752b14"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad81967285618370de64914f64d752b14">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[8/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ad81967285618370de64914f64d752b14">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[28/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -429,12 +970,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01071">1071</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01281">1281</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a10044c58ae26f8d8e93465de8fddd37f" name="a10044c58ae26f8d8e93465de8fddd37f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a10044c58ae26f8d8e93465de8fddd37f">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[9/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a10044c58ae26f8d8e93465de8fddd37f">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[29/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -448,12 +989,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01097">1097</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01307">1307</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="ada12bb3199ecf8ae908e08b1afa586a9" name="ada12bb3199ecf8ae908e08b1afa586a9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ada12bb3199ecf8ae908e08b1afa586a9">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[10/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ada12bb3199ecf8ae908e08b1afa586a9">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[30/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -467,12 +1008,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00178">178</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00180">180</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="abae49057c62e7ef1361ddd0b81c60e69" name="abae49057c62e7ef1361ddd0b81c60e69"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abae49057c62e7ef1361ddd0b81c60e69">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[11/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#abae49057c62e7ef1361ddd0b81c60e69">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[31/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -486,12 +1027,88 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00319">319</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00321">321</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="abdcb6b41192dc3356d771e63bd656826" name="abdcb6b41192dc3356d771e63bd656826"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abdcb6b41192dc3356d771e63bd656826">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[32/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection findNearestPrimitiveDistance - Basic Functionality&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01435">1435</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="abf6bdc3eec8b98efa5dc9214bfe22604" name="abf6bdc3eec8b98efa5dc9214bfe22604"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abf6bdc3eec8b98efa5dc9214bfe22604">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[33/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection findNearestPrimitiveDistance - Complex Scenarios&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01506">1506</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aff14943a0657c8ad82470f7b3d685f26" name="aff14943a0657c8ad82470f7b3d685f26"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aff14943a0657c8ad82470f7b3d685f26">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[34/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection findNearestPrimitiveDistance - Directional Testing&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01540">1540</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="af53bed7aa77dff609151bf245c379a07" name="af53bed7aa77dff609151bf245c379a07"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af53bed7aa77dff609151bf245c379a07">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[35/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection findNearestPrimitiveDistance - Edge Cases&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01470">1470</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="af3a9c9a38cae578105809daa7296eb15" name="af3a9c9a38cae578105809daa7296eb15"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af3a9c9a38cae578105809daa7296eb15">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[12/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#af3a9c9a38cae578105809daa7296eb15">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[36/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -505,12 +1122,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00765">765</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00975">975</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a30d63bfee27cd79b6f5261b62c583faa" name="a30d63bfee27cd79b6f5261b62c583faa"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a30d63bfee27cd79b6f5261b62c583faa">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[13/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a30d63bfee27cd79b6f5261b62c583faa">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[37/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -524,12 +1141,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00839">839</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01049">1049</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a44f12532586e1a7cd93c4d3a49feeb2b" name="a44f12532586e1a7cd93c4d3a49feeb2b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a44f12532586e1a7cd93c4d3a49feeb2b">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[14/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a44f12532586e1a7cd93c4d3a49feeb2b">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[38/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -543,12 +1160,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00792">792</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01002">1002</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a871485261136b8f6c239b43b5d5cf177" name="a871485261136b8f6c239b43b5d5cf177"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a871485261136b8f6c239b43b5d5cf177">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[15/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a871485261136b8f6c239b43b5d5cf177">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[39/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -562,12 +1179,107 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00881">881</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01091">1091</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab8997dc8db92a804cbb2afe35a3f9f0e" name="ab8997dc8db92a804cbb2afe35a3f9f0e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab8997dc8db92a804cbb2afe35a3f9f0e">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[40/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Floating-Point Precision - Boundary Conditions&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04226">4226</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a6da17e7e45be6c7bc085425e15186452" name="a6da17e7e45be6c7bc085425e15186452"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6da17e7e45be6c7bc085425e15186452">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[41/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Floating-Point Precision - Extreme Values&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04155">4155</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a99e9a48e212df3632170cc3bbeef45cf" name="a99e9a48e212df3632170cc3bbeef45cf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a99e9a48e212df3632170cc3bbeef45cf">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[42/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Floating-Point Precision - Near-Parallel Rays&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04197">4197</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a766c24311ecea77d711d78c1a770518b" name="a766c24311ecea77d711d78c1a770518b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a766c24311ecea77d711d78c1a770518b">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[43/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Generic Ray Casting - Basic Functionality&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02926">2926</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a06f2e4a65a2ea8661aed24353e1b88dd" name="a06f2e4a65a2ea8661aed24353e1b88dd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a06f2e4a65a2ea8661aed24353e1b88dd">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[44/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Generic Ray Casting - <a class="el" href="struct_collision_detection_1_1_ray_query.html">CollisionDetection::RayQuery</a> Structure&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02972">2972</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a2a5e620b5f6f8132eeb18bd0b3b5a6d4" name="a2a5e620b5f6f8132eeb18bd0b3b5a6d4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2a5e620b5f6f8132eeb18bd0b3b5a6d4">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[16/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a2a5e620b5f6f8132eeb18bd0b3b5a6d4">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[45/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -581,12 +1293,50 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00506">506</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00716">716</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="af8c4a4b28e277c2f4bddbf9503d0103b" name="af8c4a4b28e277c2f4bddbf9503d0103b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af8c4a4b28e277c2f4bddbf9503d0103b">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[46/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection GPU-Specific - Direct castRaysGPU Testing&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04036">4036</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a4094b62235927322f622c72f998cb38c" name="a4094b62235927322f622c72f998cb38c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4094b62235927322f622c72f998cb38c">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[47/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection GPU-Specific - Error Handling and Edge Cases&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04100">4100</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a70ec1fd77a8a1e41091ec5520e61110b" name="a70ec1fd77a8a1e41091ec5520e61110b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a70ec1fd77a8a1e41091ec5520e61110b">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[17/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a70ec1fd77a8a1e41091ec5520e61110b">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[48/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -600,12 +1350,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00555">555</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00765">765</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="aa7e5ad5d679325a647ba80f2ba8c537f" name="aa7e5ad5d679325a647ba80f2ba8c537f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa7e5ad5d679325a647ba80f2ba8c537f">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[18/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#aa7e5ad5d679325a647ba80f2ba8c537f">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[49/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -619,12 +1369,31 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00223">223</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00225">225</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2a3845109b8e4a4cd5eba957fab6f445" name="a2a3845109b8e4a4cd5eba957fab6f445"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2a3845109b8e4a4cd5eba957fab6f445">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[50/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Grid Ray Intersection&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03051">3051</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a42adb68658f3b1fa72dde42aa8e35b28" name="a42adb68658f3b1fa72dde42aa8e35b28"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a42adb68658f3b1fa72dde42aa8e35b28">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[19/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a42adb68658f3b1fa72dde42aa8e35b28">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[51/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -638,12 +1407,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00339">339</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00341">341</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="adc96e56ef53acf2154f1820918763d56" name="adc96e56ef53acf2154f1820918763d56"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adc96e56ef53acf2154f1820918763d56">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[20/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#adc96e56ef53acf2154f1820918763d56">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[52/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -657,12 +1426,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00198">198</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00200">200</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="ade88320746c3b343cb6f96aae93c4c80" name="ade88320746c3b343cb6f96aae93c4c80"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ade88320746c3b343cb6f96aae93c4c80">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[21/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ade88320746c3b343cb6f96aae93c4c80">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[53/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -676,12 +1445,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00269">269</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00271">271</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="ad6c03a95a01dd5c516660b1c7ad5b3ae" name="ad6c03a95a01dd5c516660b1c7ad5b3ae"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad6c03a95a01dd5c516660b1c7ad5b3ae">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[22/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ad6c03a95a01dd5c516660b1c7ad5b3ae">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[54/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -695,12 +1464,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00405">405</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00407">407</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="ae075616ef383200f65446ed9e442ba54" name="ae075616ef383200f65446ed9e442ba54"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae075616ef383200f65446ed9e442ba54">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[23/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ae075616ef383200f65446ed9e442ba54">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[55/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -714,12 +1483,145 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00368">368</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00370">370</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ace325e64cc688f85314b161ab4a0416d" name="ace325e64cc688f85314b161ab4a0416d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ace325e64cc688f85314b161ab4a0416d">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[56/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Mathematical Accuracy - Barycentric Coordinate Validation&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03999">3999</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a9359c31deb185a7d8d5ef16f4bc0c0c8" name="a9359c31deb185a7d8d5ef16f4bc0c0c8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9359c31deb185a7d8d5ef16f4bc0c0c8">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[57/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Mathematical Accuracy - Edge Case Intersections&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03962">3962</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aac24285c34080cc72e02d14348c2bc6f" name="aac24285c34080cc72e02d14348c2bc6f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aac24285c34080cc72e02d14348c2bc6f">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[58/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Mathematical Accuracy - Ray-Patch Edge Cases&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04578">4578</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aa867acaa2ef93fa0da732c3b76c68050" name="aa867acaa2ef93fa0da732c3b76c68050"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa867acaa2ef93fa0da732c3b76c68050">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[59/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Mathematical Accuracy - Ray-Patch Intersection&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04547">4547</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a484d81295c10ef7e973e516ee9a82ce9" name="a484d81295c10ef7e973e516ee9a82ce9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a484d81295c10ef7e973e516ee9a82ce9">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[60/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Mathematical Accuracy - Ray-Triangle Intersection Algorithms&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03925">3925</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2c65de6feb305d93d9ee1d70302e0660" name="a2c65de6feb305d93d9ee1d70302e0660"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2c65de6feb305d93d9ee1d70302e0660">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[61/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Mathematical Accuracy - Ray-Voxel Edge Cases&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04702">4702</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aa56d9642968c244b1ca8c8d31ca0ef41" name="aa56d9642968c244b1ca8c8d31ca0ef41"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa56d9642968c244b1ca8c8d31ca0ef41">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[62/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Mathematical Accuracy - Ray-Voxel Intersection&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04675">4675</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a5dca96d1b5cbc59a512d1f39f483fb58" name="a5dca96d1b5cbc59a512d1f39f483fb58"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5dca96d1b5cbc59a512d1f39f483fb58">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[24/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a5dca96d1b5cbc59a512d1f39f483fb58">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[63/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -733,12 +1635,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01201">1201</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01411">1411</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a86879bea8ee5a3c84d26d2e90404ee53" name="a86879bea8ee5a3c84d26d2e90404ee53"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a86879bea8ee5a3c84d26d2e90404ee53">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[25/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a86879bea8ee5a3c84d26d2e90404ee53">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[64/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -752,12 +1654,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00393">393</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00395">395</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="ad6bf9a624a721f22423608d7c1dbf353" name="ad6bf9a624a721f22423608d7c1dbf353"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad6bf9a624a721f22423608d7c1dbf353">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[26/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ad6bf9a624a721f22423608d7c1dbf353">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[65/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -771,12 +1673,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01041">1041</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01251">1251</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a395c14c48b7c67c8a38e98d4799333af" name="a395c14c48b7c67c8a38e98d4799333af"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a395c14c48b7c67c8a38e98d4799333af">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[27/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a395c14c48b7c67c8a38e98d4799333af">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[66/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -790,12 +1692,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01014">1014</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01224">1224</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a38356928f94d73a678f48c691ca50f83" name="a38356928f94d73a678f48c691ca50f83"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a38356928f94d73a678f48c691ca50f83">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[28/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a38356928f94d73a678f48c691ca50f83">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[67/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -809,12 +1711,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00251">251</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00253">253</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a6b279e8792d64a9819b676eaa9bdb02f" name="a6b279e8792d64a9819b676eaa9bdb02f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6b279e8792d64a9819b676eaa9bdb02f">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[29/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a6b279e8792d64a9819b676eaa9bdb02f">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[68/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -828,12 +1730,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00459">459</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00462">462</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="ac40436d1f5d55d2cd5072152560f2479" name="ac40436d1f5d55d2cd5072152560f2479"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac40436d1f5d55d2cd5072152560f2479">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[30/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ac40436d1f5d55d2cd5072152560f2479">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[69/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -847,12 +1749,69 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01176">1176</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01386">1386</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a3ed50ee0fd6bb450d1c44d2ed1679451" name="a3ed50ee0fd6bb450d1c44d2ed1679451"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3ed50ee0fd6bb450d1c44d2ed1679451">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[70/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Performance Regression - BVH Construction Timing&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04410">4410</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a39cd4f89a47a16efd1cb55a86430781d" name="a39cd4f89a47a16efd1cb55a86430781d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a39cd4f89a47a16efd1cb55a86430781d">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[71/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Performance Regression - Memory Usage Validation&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04501">4501</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a4845e5895109ebaf5ec4553a83be97da" name="a4845e5895109ebaf5ec4553a83be97da"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4845e5895109ebaf5ec4553a83be97da">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[72/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Performance Regression - Ray Casting Throughput&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04451">4451</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="aa62953424b301fb1628b2e52bcd82fba" name="aa62953424b301fb1628b2e52bcd82fba"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa62953424b301fb1628b2e52bcd82fba">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[31/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#aa62953424b301fb1628b2e52bcd82fba">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[73/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -866,12 +1825,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00064">64</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00065">65</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="af756d451ad7dd04dfabc71e32b262005" name="af756d451ad7dd04dfabc71e32b262005"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af756d451ad7dd04dfabc71e32b262005">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[32/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#af756d451ad7dd04dfabc71e32b262005">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[74/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -885,12 +1844,240 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00294">294</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00296">296</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a167e364f4f4f715396cbd6e2b1ca7fcd" name="a167e364f4f4f715396cbd6e2b1ca7fcd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a167e364f4f4f715396cbd6e2b1ca7fcd">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[75/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Ray Casting - Compatibility with Other Plugin Methods&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03290">3290</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ab70c962846f30151b87d47a3941de76b" name="ab70c962846f30151b87d47a3941de76b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab70c962846f30151b87d47a3941de76b">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[76/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Ray Casting - Edge Cases and Error Handling&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03176">3176</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a29b4749859978df9183b33761576db48" name="a29b4749859978df9183b33761576db48"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a29b4749859978df9183b33761576db48">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[77/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Ray Casting - Integration with Existing BVH&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03258">3258</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a753fdeec82fce97e37ff5f5e76bac0f6" name="a753fdeec82fce97e37ff5f5e76bac0f6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a753fdeec82fce97e37ff5f5e76bac0f6">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[78/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Ray Casting - Normal Calculation&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03135">3135</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="afa032e14103881d7bc0e9147cedf6bdd" name="afa032e14103881d7bc0e9147cedf6bdd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afa032e14103881d7bc0e9147cedf6bdd">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[79/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Ray Casting - Performance and Scalability&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03215">3215</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aaac696ac737c9e6b64c4ae8997dcf93a" name="aaac696ac737c9e6b64c4ae8997dcf93a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaac696ac737c9e6b64c4ae8997dcf93a">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[80/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Ray Classification - Basic getVoxelRayHitCounts Functionality&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04817">4817</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad60f59404305b7810a0cdeb9f633989d" name="ad60f59404305b7810a0cdeb9f633989d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad60f59404305b7810a0cdeb9f633989d">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[81/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Ray Classification - Beer's Law Integration Test&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l05084">5084</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae6112529c7aabf5e7e138d40ea3bef85" name="ae6112529c7aabf5e7e138d40ea3bef85"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae6112529c7aabf5e7e138d40ea3bef85">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[82/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Ray Classification - Beer's Law Scenario with Geometry&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04924">4924</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ac437f7429f3b4e45445c1aae019f874f" name="ac437f7429f3b4e45445c1aae019f874f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac437f7429f3b4e45445c1aae019f874f">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[83/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Ray Classification - Edge Cases and Boundary Conditions&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04982">4982</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a5a0624fe782facacfb00bad65b2362eb" name="a5a0624fe782facacfb00bad65b2362eb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5a0624fe782facacfb00bad65b2362eb">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[84/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Ray Classification - Error Handling and Invalid Inputs&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l05042">5042</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a4e0398a88c16b825d8c6883633215176" name="a4e0398a88c16b825d8c6883633215176"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4e0398a88c16b825d8c6883633215176">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[85/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Ray Classification - getVoxelRayPathLengths Individual Lengths&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l04867">4867</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae29178ae07f605ec061200417236e508" name="ae29178ae07f605ec061200417236e508"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae29178ae07f605ec061200417236e508">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[86/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Ray Path Lengths Detailed&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03088">3088</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a16610bb8fef2a39f2485dd25462d6351" name="a16610bb8fef2a39f2485dd25462d6351"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a16610bb8fef2a39f2485dd25462d6351">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[33/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a16610bb8fef2a39f2485dd25462d6351">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[87/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -904,12 +2091,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01125">1125</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01335">1335</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a09e0ea920e64802bc6dfd680a6133796" name="a09e0ea920e64802bc6dfd680a6133796"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a09e0ea920e64802bc6dfd680a6133796">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[34/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a09e0ea920e64802bc6dfd680a6133796">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[88/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -923,12 +2110,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00719">719</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00929">929</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="ab9066a59d751cd406c37f7102e61557d" name="ab9066a59d751cd406c37f7102e61557d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab9066a59d751cd406c37f7102e61557d">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[35/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ab9066a59d751cd406c37f7102e61557d">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[89/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -942,12 +2129,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00688">688</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00898">898</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a4727039fdc5200a50f46eaf7a0074d23" name="a4727039fdc5200a50f46eaf7a0074d23"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4727039fdc5200a50f46eaf7a0074d23">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[36/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a4727039fdc5200a50f46eaf7a0074d23">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[90/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -961,12 +2148,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00647">647</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00857">857</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="ad9b936f338fa7fa47aa83f98a3f1a800" name="ad9b936f338fa7fa47aa83f98a3f1a800"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad9b936f338fa7fa47aa83f98a3f1a800">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[37/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ad9b936f338fa7fa47aa83f98a3f1a800">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[91/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -980,12 +2167,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00912">912</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01122">1122</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="ac72777c032c7da2802c8e4953840738c" name="ac72777c032c7da2802c8e4953840738c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac72777c032c7da2802c8e4953840738c">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[38/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ac72777c032c7da2802c8e4953840738c">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[92/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -999,12 +2186,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00929">929</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01139">1139</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a5e9f20b8777122e00dc1db93e3bafba2" name="a5e9f20b8777122e00dc1db93e3bafba2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5e9f20b8777122e00dc1db93e3bafba2">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[39/39]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e9f20b8777122e00dc1db93e3bafba2">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[93/119]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1018,7 +2205,501 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00434">434</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00437">437</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a37817cecd069eab8afc842601b41a2ed" name="a37817cecd069eab8afc842601b41a2ed"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a37817cecd069eab8afc842601b41a2ed">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[94/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Soft/Hard Detection Integration - BVH Rebuild Behavior&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00660">660</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae7637b0a163823d9cc6c0510202b97d3" name="ae7637b0a163823d9cc6c0510202b97d3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae7637b0a163823d9cc6c0510202b97d3">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[95/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Soft/Hard Detection Integration - BVH Sharing&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00505">505</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a05b4721b014fead9e9015280b5ccf124" name="a05b4721b014fead9e9015280b5ccf124"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a05b4721b014fead9e9015280b5ccf124">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[96/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Soft/Hard Detection Integration - Different Geometry Sets&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00606">606</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="afd495667cd4b01571996d363dbe5d3cb" name="afd495667cd4b01571996d363dbe5d3cb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afd495667cd4b01571996d363dbe5d3cb">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[97/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Soft/Hard Detection Integration - Sequential Calls&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00556">556</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a7ffefafdaee617d259959e196a122ffc" name="a7ffefafdaee617d259959e196a122ffc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7ffefafdaee617d259959e196a122ffc">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[98/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Primitive Intersection - Basic Ray-AABB Tests&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03778">3778</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="abb2122d618dda0363889d604b4e2d7b3" name="abb2122d618dda0363889d604b4e2d7b3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abb2122d618dda0363889d604b4e2d7b3">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[99/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Primitive Intersection - GPU vs CPU Consistency&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03873">3873</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a1752ed7d92d683157db14d0dd61615d8" name="a1752ed7d92d683157db14d0dd61615d8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1752ed7d92d683157db14d0dd61615d8">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[100/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Primitive Intersection - Multiple Voxels&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l03831">3831</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a3cd287dcb12d9d8b0025389216ac84d3" name="a3cd287dcb12d9d8b0025389216ac84d3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3cd287dcb12d9d8b0025389216ac84d3">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[101/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Ray Path Length - Basic Functionality&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02098">2098</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a80b615ff6609e9c2caff9ce39604a43c" name="a80b615ff6609e9c2caff9ce39604a43c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a80b615ff6609e9c2caff9ce39604a43c">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[102/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Ray Path Length - Data Consistency&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02172">2172</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a0c2b6a19f33aa6f685fb1cde7a9cc31a" name="a0c2b6a19f33aa6f685fb1cde7a9cc31a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0c2b6a19f33aa6f685fb1cde7a9cc31a">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[103/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Ray Path Length - Different Grid Sizes&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02266">2266</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae9ec54841d295626165d7ea7454397e7" name="ae9ec54841d295626165d7ea7454397e7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae9ec54841d295626165d7ea7454397e7">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[104/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Ray Path Length - Edge Case Ray Geometries&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02846">2846</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aef57e257cb5ede4712a89eda42515930" name="aef57e257cb5ede4712a89eda42515930"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aef57e257cb5ede4712a89eda42515930">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[105/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Ray Path Length - Edge Cases&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02137">2137</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ac8ff4254491126cbfff37ef8f2e05d76" name="ac8ff4254491126cbfff37ef8f2e05d76"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac8ff4254491126cbfff37ef8f2e05d76">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[106/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Ray Path Length - Error Recovery and State Management&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02640">2640</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a3e5c6768e46bdca5bcd75beae3d6d285" name="a3e5c6768e46bdca5bcd75beae3d6d285"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3e5c6768e46bdca5bcd75beae3d6d285">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[107/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Ray Path Length - GPU/CPU Consistency&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02364">2364</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae28ca7909e738fd77acf39b884376dc1" name="ae28ca7909e738fd77acf39b884376dc1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae28ca7909e738fd77acf39b884376dc1">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[108/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Ray Path Length - Integration with BVH&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02778">2778</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a777075ef64b6c6dae4d1d5729137d3cd" name="a777075ef64b6c6dae4d1d5729137d3cd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a777075ef64b6c6dae4d1d5729137d3cd">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[109/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Ray Path Length - Manual Data Setting&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02219">2219</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae2797739260513047e5bd68a95cdafac" name="ae2797739260513047e5bd68a95cdafac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae2797739260513047e5bd68a95cdafac">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[110/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Ray Path Length - Mathematical Validation&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02497">2497</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a9d01bbd0f3d27b8814d3d9fe6d18bfcd" name="a9d01bbd0f3d27b8814d3d9fe6d18bfcd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9d01bbd0f3d27b8814d3d9fe6d18bfcd">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[111/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Ray Path Length - Memory and Performance Stress&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02704">2704</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a9e4bca3ed7a282944e4ccca6da1d75ab" name="a9e4bca3ed7a282944e4ccca6da1d75ab"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9e4bca3ed7a282944e4ccca6da1d75ab">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[112/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Ray Path Length - Numerical Precision&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02556">2556</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad3f94271c2e8081d751a102f9f954937" name="ad3f94271c2e8081d751a102f9f954937"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad3f94271c2e8081d751a102f9f954937">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[113/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Ray Path Length - Parameter Validation&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02426">2426</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a5993f3dabebc471777f1ebc92ade0625" name="a5993f3dabebc471777f1ebc92ade0625"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5993f3dabebc471777f1ebc92ade0625">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[114/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;CollisionDetection Voxel Ray Path Length - Ray Direction Variations&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02314">2314</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aef396ba6dc76136592854aa112542f87" name="aef396ba6dc76136592854aa112542f87"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aef396ba6dc76136592854aa112542f87">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[115/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;Test attraction points detection - angular distance prioritization&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01965">1965</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2697edc6dc75f92d4915af9c7b82db7d" name="a2697edc6dc75f92d4915af9c7b82db7d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2697edc6dc75f92d4915af9c7b82db7d">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[116/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;Test attraction points detection - basic functionality&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01781">1781</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a1ba4f96de852f73be5a4d19ffec91570" name="a1ba4f96de852f73be5a4d19ffec91570"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1ba4f96de852f73be5a4d19ffec91570">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[117/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;Test attraction points detection - edge cases&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01871">1871</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad3a3270888050b20db55c0cb19668d58" name="ad3a3270888050b20db55c0cb19668d58"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad3a3270888050b20db55c0cb19668d58">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[118/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;Test attraction points detection - large scale scenario&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l02062">2062</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a3a02c372cda375853e88408bbfc3825d" name="a3a02c372cda375853e88408bbfc3825d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3a02c372cda375853e88408bbfc3825d">&#9670;&#160;</a></span>DOCTEST_TEST_CASE() <span class="overload">[119/119]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">DOCTEST_TEST_CASE </td>
+          <td>(</td>
+          <td class="paramtype">&quot;Test attraction points detection - various cone orientations&quot;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l01995">1995</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
@@ -1048,7 +2729,7 @@ Functions</h2></td></tr>
 
 <p>Generate overlapping primitive cluster for positive testing. </p>
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00048">48</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00049">49</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>
@@ -1078,7 +2759,7 @@ Functions</h2></td></tr>
 
 <p>Generate non-overlapping primitives for negative testing. </p>
 
-<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00035">35</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html#l00036">36</a> of file <a class="el" href="plugins_2collisiondetection_2tests_2self_test_8cpp_source.html">selfTest.cpp</a>.</p>
 
 </div>
 </div>

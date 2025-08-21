@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.44</span>
+       <span id="projectnumber">&#160;v1.3.45</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -2082,7 +2082,7 @@ $(function(){initNavTree('_context_8h_source.html',''); initResizable(true); });
 <div class="line"><a id="l03061" name="l03061"></a><span class="lineno"> 3061</span><span class="preprocessor">#ifdef USE_OPENMP</span></div>
 <div class="line"><a id="l03062" name="l03062"></a><span class="lineno"> 3062</span><span class="preprocessor">#pragma omp parallel for</span></div>
 <div class="line"><a id="l03063" name="l03063"></a><span class="lineno"> 3063</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l03064" name="l03064"></a><span class="lineno"> 3064</span>            <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; UUIDs.size(); ++i) {</div>
+<div class="line"><a id="l03064" name="l03064"></a><span class="lineno"> 3064</span>            <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; (int)UUIDs.size(); ++i) {</div>
 <div class="line"><a id="l03065" name="l03065"></a><span class="lineno"> 3065</span>                primitives.at(UUIDs[i])-&gt;setPrimitiveData(label, data[i]);</div>
 <div class="line"><a id="l03066" name="l03066"></a><span class="lineno"> 3066</span>            }</div>
 <div class="line"><a id="l03067" name="l03067"></a><span class="lineno"> 3067</span>        }</div>
@@ -2136,7 +2136,7 @@ $(function(){initNavTree('_context_8h_source.html',''); initResizable(true); });
 <div class="line"><a id="l03119" name="l03119"></a><span class="lineno"> 3119</span><span class="preprocessor">#ifdef USE_OPENMP</span></div>
 <div class="line"><a id="l03120" name="l03120"></a><span class="lineno"> 3120</span><span class="preprocessor">#pragma omp parallel for</span></div>
 <div class="line"><a id="l03121" name="l03121"></a><span class="lineno"> 3121</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l03122" name="l03122"></a><span class="lineno"> 3122</span>            <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; UUIDs.size(); ++i) {</div>
+<div class="line"><a id="l03122" name="l03122"></a><span class="lineno"> 3122</span>            <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; (int)UUIDs.size(); ++i) {</div>
 <div class="line"><a id="l03123" name="l03123"></a><span class="lineno"> 3123</span>                primitives.at(UUIDs[i])-&gt;setPrimitiveData(label, data);</div>
 <div class="line"><a id="l03124" name="l03124"></a><span class="lineno"> 3124</span>            }</div>
 <div class="line"><a id="l03125" name="l03125"></a><span class="lineno"> 3125</span>        }</div>
@@ -2169,7 +2169,7 @@ $(function(){initNavTree('_context_8h_source.html',''); initResizable(true); });
 </div>
 <div class="line"><a id="l03161" name="l03161"></a><span class="lineno"> 3161</span></div>
 <div class="line"><a id="l03163" name="l03163"></a><span class="lineno"> 3163</span></div>
-<div class="line"><a id="l03169" name="l03169"></a><span class="lineno"><a class="line" href="classhelios_1_1_context.html#aee3e0ac65af8ff8bccf96076819e7d79"> 3169</a></span>        <a class="code hl_function" href="classhelios_1_1_context.html#aee3e0ac65af8ff8bccf96076819e7d79" title="Get the Helios data type of primitive data.">DEPRECATED</a>( <a class="code hl_enumeration" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3" title="Data types.">HeliosDataType</a> <a class="code hl_function" href="classhelios_1_1_context.html#a163a2a5370691587b300831bf9742f68" title="Get the expected data type for a primitive data label (cached lookup)">getPrimitiveDataType</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID, <span class="keyword">const</span> <span class="keywordtype">char</span> *label) <span class="keyword">const</span>, <span class="stringliteral">&quot;Use Context::getPrimitiveDataType(const char *label) instead, as it is not necessary to pass a UUID to this method - the same type will be returned for all primitives&quot;</span> );</div>
+<div class="line"><a id="l03169" name="l03169"></a><span class="lineno"><a class="line" href="classhelios_1_1_context.html#ae57bf1933e7ce58b8573ab2cd2a77cc0"> 3169</a></span>        <a class="code hl_function" href="classhelios_1_1_context.html#ae57bf1933e7ce58b8573ab2cd2a77cc0" title="Get the Helios data type of primitive data.">DEPRECATED</a>( <a class="code hl_enumeration" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3" title="Data types.">HeliosDataType</a> <a class="code hl_function" href="classhelios_1_1_context.html#a163a2a5370691587b300831bf9742f68" title="Get the expected data type for a primitive data label (cached lookup)">getPrimitiveDataType</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> UUID, <span class="keyword">const</span> <span class="keywordtype">char</span> *label) <span class="keyword">const</span> );</div>
 <div class="line"><a id="l03170" name="l03170"></a><span class="lineno"> 3170</span></div>
 <div class="line"><a id="l03172" name="l03172"></a><span class="lineno"> 3172</span></div>
 <div class="line"><a id="l03178" name="l03178"></a><span class="lineno"> 3178</span>        <a class="code hl_enumeration" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3" title="Data types.">HeliosDataType</a> <a class="code hl_function" href="classhelios_1_1_context.html#a163a2a5370691587b300831bf9742f68" title="Get the expected data type for a primitive data label (cached lookup)">getPrimitiveDataType</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *label) <span class="keyword">const</span>;</div>
@@ -2538,7 +2538,7 @@ $(function(){initNavTree('_context_8h_source.html',''); initResizable(true); });
 <div class="line"><a id="l03826" name="l03826"></a><span class="lineno"> 3826</span><span class="preprocessor">#ifdef USE_OPENMP</span></div>
 <div class="line"><a id="l03827" name="l03827"></a><span class="lineno"> 3827</span><span class="preprocessor">#pragma omp parallel for</span></div>
 <div class="line"><a id="l03828" name="l03828"></a><span class="lineno"> 3828</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l03829" name="l03829"></a><span class="lineno"> 3829</span>            <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; objIDs.size(); ++i) {</div>
+<div class="line"><a id="l03829" name="l03829"></a><span class="lineno"> 3829</span>            <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; (int)objIDs.size(); ++i) {</div>
 <div class="line"><a id="l03830" name="l03830"></a><span class="lineno"> 3830</span>                objects.at(objIDs[i])-&gt;setObjectData(label, data);</div>
 <div class="line"><a id="l03831" name="l03831"></a><span class="lineno"> 3831</span>            }</div>
 <div class="line"><a id="l03832" name="l03832"></a><span class="lineno"> 3832</span>        }</div>
@@ -2592,7 +2592,7 @@ $(function(){initNavTree('_context_8h_source.html',''); initResizable(true); });
 <div class="line"><a id="l03884" name="l03884"></a><span class="lineno"> 3884</span><span class="preprocessor">#ifdef USE_OPENMP</span></div>
 <div class="line"><a id="l03885" name="l03885"></a><span class="lineno"> 3885</span><span class="preprocessor">#pragma omp parallel for</span></div>
 <div class="line"><a id="l03886" name="l03886"></a><span class="lineno"> 3886</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l03887" name="l03887"></a><span class="lineno"> 3887</span>            <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> j = 0; j &lt; objIDs.size(); ++j) {</div>
+<div class="line"><a id="l03887" name="l03887"></a><span class="lineno"> 3887</span>            <span class="keywordflow">for</span> (<span class="keywordtype">int</span> j = 0; j &lt; (int)objIDs.size(); ++j) {</div>
 <div class="line"><a id="l03888" name="l03888"></a><span class="lineno"> 3888</span>                <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; objIDs[j].size(); ++i) {</div>
 <div class="line"><a id="l03889" name="l03889"></a><span class="lineno"> 3889</span>                    objects.at(objIDs[j][i])-&gt;setObjectData(label, data);</div>
 <div class="line"><a id="l03890" name="l03890"></a><span class="lineno"> 3890</span>                }</div>
@@ -2650,7 +2650,7 @@ $(function(){initNavTree('_context_8h_source.html',''); initResizable(true); });
 <div class="line"><a id="l03946" name="l03946"></a><span class="lineno"> 3946</span><span class="preprocessor">#ifdef USE_OPENMP</span></div>
 <div class="line"><a id="l03947" name="l03947"></a><span class="lineno"> 3947</span><span class="preprocessor">#pragma omp parallel for</span></div>
 <div class="line"><a id="l03948" name="l03948"></a><span class="lineno"> 3948</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l03949" name="l03949"></a><span class="lineno"> 3949</span>            <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> k = 0; k &lt; objIDs.size(); ++k) {</div>
+<div class="line"><a id="l03949" name="l03949"></a><span class="lineno"> 3949</span>            <span class="keywordflow">for</span> (<span class="keywordtype">int</span> k = 0; k &lt; (int)objIDs.size(); ++k) {</div>
 <div class="line"><a id="l03950" name="l03950"></a><span class="lineno"> 3950</span>                <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> j = 0; j &lt; objIDs[k].size(); ++j) {</div>
 <div class="line"><a id="l03951" name="l03951"></a><span class="lineno"> 3951</span>                    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; objIDs[k][j].size(); ++i) {</div>
 <div class="line"><a id="l03952" name="l03952"></a><span class="lineno"> 3952</span>                        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> objID = objIDs[k][j][i];</div>
@@ -2756,7 +2756,7 @@ $(function(){initNavTree('_context_8h_source.html',''); initResizable(true); });
 <div class="line"><a id="l04062" name="l04062"></a><span class="lineno"> 4062</span><span class="preprocessor">#ifdef USE_OPENMP</span></div>
 <div class="line"><a id="l04063" name="l04063"></a><span class="lineno"> 4063</span><span class="preprocessor">#pragma omp parallel for</span></div>
 <div class="line"><a id="l04064" name="l04064"></a><span class="lineno"> 4064</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l04065" name="l04065"></a><span class="lineno"> 4065</span>            <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; objIDs.size(); ++i) {</div>
+<div class="line"><a id="l04065" name="l04065"></a><span class="lineno"> 4065</span>            <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; (int)objIDs.size(); ++i) {</div>
 <div class="line"><a id="l04066" name="l04066"></a><span class="lineno"> 4066</span>                objects.at(objIDs[i])-&gt;setObjectData(label, data[i]);</div>
 <div class="line"><a id="l04067" name="l04067"></a><span class="lineno"> 4067</span>            }</div>
 <div class="line"><a id="l04068" name="l04068"></a><span class="lineno"> 4068</span>        }</div>
@@ -2795,7 +2795,7 @@ $(function(){initNavTree('_context_8h_source.html',''); initResizable(true); });
 </div>
 <div class="line"><a id="l04110" name="l04110"></a><span class="lineno"> 4110</span></div>
 <div class="line"><a id="l04112" name="l04112"></a><span class="lineno"> 4112</span></div>
-<div class="line"><a id="l04118" name="l04118"></a><span class="lineno"><a class="line" href="classhelios_1_1_context.html#aea159f9f6062e61b71993c7da34d66a4"> 4118</a></span>        <a class="code hl_function" href="classhelios_1_1_context.html#aea159f9f6062e61b71993c7da34d66a4" title="Get the Helios data type of primitive data.">DEPRECATED</a>( <a class="code hl_enumeration" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3" title="Data types.">HeliosDataType</a> <a class="code hl_function" href="classhelios_1_1_context.html#a16be12ad763b3da20c181923b76a498c" title="Get the expected data type for an object data label (cached lookup)">getObjectDataType</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> objID, <span class="keyword">const</span> <span class="keywordtype">char</span> *label) <span class="keyword">const</span>, <span class="stringliteral">&quot;Use Context::getObjectDataType(const char *label) instead, as it is not necessary to pass an Object ID to this method - the same type will be returned for all objects&quot;</span>);</div>
+<div class="line"><a id="l04118" name="l04118"></a><span class="lineno"><a class="line" href="classhelios_1_1_context.html#ad9ac0b4eabd707885b657a14a91d8b83"> 4118</a></span>        <a class="code hl_function" href="classhelios_1_1_context.html#ad9ac0b4eabd707885b657a14a91d8b83" title="Get the Helios data type of primitive data.">DEPRECATED</a>( <a class="code hl_enumeration" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3" title="Data types.">HeliosDataType</a> <a class="code hl_function" href="classhelios_1_1_context.html#a16be12ad763b3da20c181923b76a498c" title="Get the expected data type for an object data label (cached lookup)">getObjectDataType</a>(<a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> objID, <span class="keyword">const</span> <span class="keywordtype">char</span> *label) <span class="keyword">const</span> );</div>
 <div class="line"><a id="l04119" name="l04119"></a><span class="lineno"> 4119</span></div>
 <div class="line"><a id="l04121" name="l04121"></a><span class="lineno"> 4121</span></div>
 <div class="line"><a id="l04127" name="l04127"></a><span class="lineno"> 4127</span>        <a class="code hl_enumeration" href="_context_8h.html#a935eb2a4249411a8f376a27820c70de3" title="Data types.">HeliosDataType</a> <a class="code hl_function" href="classhelios_1_1_context.html#a16be12ad763b3da20c181923b76a498c" title="Get the expected data type for an object data label (cached lookup)">getObjectDataType</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *label) <span class="keyword">const</span>;</div>

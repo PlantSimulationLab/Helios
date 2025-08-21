@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.44</span>
+       <span id="projectnumber">&#160;v1.3.45</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -579,7 +579,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>    shoot_parameters_proleptic.max_nodes_per_season = 20;</div>
 <div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>    shoot_parameters_proleptic.phyllochron_min = 2.0;</div>
 <div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>    shoot_parameters_proleptic.elongation_rate_max = 0.15;</div>
-<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span>    shoot_parameters_proleptic.girth_area_factor = 5.f;</div>
+<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span>    shoot_parameters_proleptic.girth_area_factor = 7.f;</div>
 <div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span>    shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.1;</div>
 <div class="line"><a id="l00422" name="l00422"></a><span class="lineno">  422</span>    shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.4;</div>
 <div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span>    shoot_parameters_proleptic.vegetative_bud_break_time = 0;</div>
@@ -590,7 +590,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>    shoot_parameters_proleptic.internode_length_max = 0.04;</div>
 <div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span>    shoot_parameters_proleptic.internode_length_min = 0.01;</div>
 <div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>    shoot_parameters_proleptic.internode_length_decay_rate = 0.004;</div>
-<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>    shoot_parameters_proleptic.fruit_set_probability = 0.4;</div>
+<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>    shoot_parameters_proleptic.fruit_set_probability = 0.3;</div>
 <div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span>    shoot_parameters_proleptic.flower_bud_break_probability = 0.3;</div>
 <div class="line"><a id="l00433" name="l00433"></a><span class="lineno">  433</span>    shoot_parameters_proleptic.max_terminal_floral_buds = 1;</div>
 <div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>    shoot_parameters_proleptic.flowers_require_dormancy = <span class="keyword">true</span>;</div>
@@ -626,7 +626,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l00464" name="l00464"></a><span class="lineno">  464</span>    <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> Nscaffolds = 4; <span class="comment">// context_ptr-&gt;randu(4,5);</span></div>
 <div class="line"><a id="l00465" name="l00465"></a><span class="lineno">  465</span> </div>
 <div class="line"><a id="l00466" name="l00466"></a><span class="lineno">  466</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; Nscaffolds; i++) {</div>
-<div class="line"><a id="l00467" name="l00467"></a><span class="lineno">  467</span>        <span class="keywordtype">float</span> pitch = context_ptr-&gt;randu(<a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(55), <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(65));</div>
+<div class="line"><a id="l00467" name="l00467"></a><span class="lineno">  467</span>        <span class="keywordtype">float</span> pitch = context_ptr-&gt;randu(<a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(35), <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(45));</div>
 <div class="line"><a id="l00468" name="l00468"></a><span class="lineno">  468</span>        <a class="code hl_typedef" href="global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14" title="Unsigned integer type.">uint</a> uID_shoot = <a class="code hl_function" href="class_plant_architecture.html#a0832e7e5e15d64c3ee52ea3d640dee27" title="Manually add a child shoot at the axillary bud of a phytomer.">addChildShoot</a>(plantID, uID_trunk, <a class="code hl_function" href="class_plant_architecture.html#a10f79f5379d69f3c1bfc2edaf1f30e6d" title="Retrieves the number of nodes in a specific shoot of a specific plant.">getShootNodeCount</a>(plantID, uID_trunk) - i - 1, context_ptr-&gt;randu(7, 9), make_AxisRotation(pitch, (<span class="keywordtype">float</span>(i) + context_ptr-&gt;randu(-0.2f, 0.2f)) / <span class="keywordtype">float</span>(Nscaffolds) * 2 * <a class="code hl_define" href="global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3" title="Pi constant.">M_PI</a>, 0), 0.005, 0.04,</div>
 <div class="line"><a id="l00469" name="l00469"></a><span class="lineno">  469</span>                                       1.f, 1.f, 0.5, <span class="stringliteral">&quot;proleptic&quot;</span>, 0);</div>
 <div class="line"><a id="l00470" name="l00470"></a><span class="lineno">  470</span>    }</div>
@@ -1584,9 +1584,9 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01422" name="l01422"></a><span class="lineno"> 1422</span> </div>
 <div class="line"><a id="l01423" name="l01423"></a><span class="lineno"> 1423</span>    shoot_parameters.phyllochron_min = 1;</div>
 <div class="line"><a id="l01424" name="l01424"></a><span class="lineno"> 1424</span>    shoot_parameters.elongation_rate_max = 0.1;</div>
-<div class="line"><a id="l01425" name="l01425"></a><span class="lineno"> 1425</span>    shoot_parameters.girth_area_factor = 3.f;</div>
-<div class="line"><a id="l01426" name="l01426"></a><span class="lineno"> 1426</span>    shoot_parameters.vegetative_bud_break_time = 7;</div>
-<div class="line"><a id="l01427" name="l01427"></a><span class="lineno"> 1427</span>    shoot_parameters.vegetative_bud_break_probability_min = 0.2;</div>
+<div class="line"><a id="l01425" name="l01425"></a><span class="lineno"> 1425</span>    shoot_parameters.girth_area_factor = 2.f;</div>
+<div class="line"><a id="l01426" name="l01426"></a><span class="lineno"> 1426</span>    shoot_parameters.vegetative_bud_break_time = 10;</div>
+<div class="line"><a id="l01427" name="l01427"></a><span class="lineno"> 1427</span>    shoot_parameters.vegetative_bud_break_probability_min = 0.1;</div>
 <div class="line"><a id="l01428" name="l01428"></a><span class="lineno"> 1428</span>    shoot_parameters.vegetative_bud_break_probability_decay_rate = -0.5;</div>
 <div class="line"><a id="l01429" name="l01429"></a><span class="lineno"> 1429</span>    shoot_parameters.flower_bud_break_probability = 0.25;</div>
 <div class="line"><a id="l01430" name="l01430"></a><span class="lineno"> 1430</span>    shoot_parameters.fruit_set_probability = 0.5;</div>
@@ -1615,7 +1615,7 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l01453" name="l01453"></a><span class="lineno"> 1453</span> </div>
 <div class="line"><a id="l01454" name="l01454"></a><span class="lineno"> 1454</span>    <a class="code hl_function" href="class_plant_architecture.html#a041d11df76990a5b0beb694955788301" title="Specify the threshold values for plant phenological stages. All time values have units of days.">setPlantPhenologicalThresholds</a>(plantID, 0, 20, -1, 20, 30, 1000, <span class="keyword">false</span>);</div>
 <div class="line"><a id="l01455" name="l01455"></a><span class="lineno"> 1455</span> </div>
-<div class="line"><a id="l01456" name="l01456"></a><span class="lineno"> 1456</span>    plant_instances.at(plantID).max_age = 50;</div>
+<div class="line"><a id="l01456" name="l01456"></a><span class="lineno"> 1456</span>    plant_instances.at(plantID).max_age = 80;</div>
 <div class="line"><a id="l01457" name="l01457"></a><span class="lineno"> 1457</span> </div>
 <div class="line"><a id="l01458" name="l01458"></a><span class="lineno"> 1458</span>    <span class="keywordflow">return</span> plantID;</div>
 <div class="line"><a id="l01459" name="l01459"></a><span class="lineno"> 1459</span>}</div>
@@ -2711,9 +2711,9 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02549" name="l02549"></a><span class="lineno"> 2549</span>    leaf_prototype.leaf_aspect_ratio = 1.f;</div>
 <div class="line"><a id="l02550" name="l02550"></a><span class="lineno"> 2550</span>    leaf_prototype.midrib_fold_fraction = 0.2f;</div>
 <div class="line"><a id="l02551" name="l02551"></a><span class="lineno"> 2551</span>    leaf_prototype.longitudinal_curvature = 0.15f;</div>
-<div class="line"><a id="l02552" name="l02552"></a><span class="lineno"> 2552</span>    leaf_prototype.lateral_curvature = 0.4f;</div>
-<div class="line"><a id="l02553" name="l02553"></a><span class="lineno"> 2553</span>    leaf_prototype.wave_period = 0.3f;</div>
-<div class="line"><a id="l02554" name="l02554"></a><span class="lineno"> 2554</span>    leaf_prototype.wave_amplitude = 0.01f;</div>
+<div class="line"><a id="l02552" name="l02552"></a><span class="lineno"> 2552</span>    leaf_prototype.lateral_curvature = -0.35f;</div>
+<div class="line"><a id="l02553" name="l02553"></a><span class="lineno"> 2553</span>    leaf_prototype.wave_period = 0.4f;</div>
+<div class="line"><a id="l02554" name="l02554"></a><span class="lineno"> 2554</span>    leaf_prototype.wave_amplitude = 0.03f;</div>
 <div class="line"><a id="l02555" name="l02555"></a><span class="lineno"> 2555</span>    leaf_prototype.subdivisions = 6;</div>
 <div class="line"><a id="l02556" name="l02556"></a><span class="lineno"> 2556</span>    leaf_prototype.unique_prototypes = 10;</div>
 <div class="line"><a id="l02557" name="l02557"></a><span class="lineno"> 2557</span> </div>
@@ -2728,39 +2728,39 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02566" name="l02566"></a><span class="lineno"> 2566</span>    phytomer_parameters.internode.length_segments = 1;</div>
 <div class="line"><a id="l02567" name="l02567"></a><span class="lineno"> 2567</span> </div>
 <div class="line"><a id="l02568" name="l02568"></a><span class="lineno"> 2568</span>    phytomer_parameters.petiole.petioles_per_internode = 1;</div>
-<div class="line"><a id="l02569" name="l02569"></a><span class="lineno"> 2569</span>    phytomer_parameters.petiole.pitch.uniformDistribution(0, 45);</div>
+<div class="line"><a id="l02569" name="l02569"></a><span class="lineno"> 2569</span>    phytomer_parameters.petiole.pitch.uniformDistribution(10, 45);</div>
 <div class="line"><a id="l02570" name="l02570"></a><span class="lineno"> 2570</span>    phytomer_parameters.petiole.radius = 0.0025;</div>
-<div class="line"><a id="l02571" name="l02571"></a><span class="lineno"> 2571</span>    phytomer_parameters.petiole.length.uniformDistribution(0.15, 0.25);</div>
+<div class="line"><a id="l02571" name="l02571"></a><span class="lineno"> 2571</span>    phytomer_parameters.petiole.length.uniformDistribution(0.15, 0.35);</div>
 <div class="line"><a id="l02572" name="l02572"></a><span class="lineno"> 2572</span>    phytomer_parameters.petiole.taper = 0.5;</div>
-<div class="line"><a id="l02573" name="l02573"></a><span class="lineno"> 2573</span>    phytomer_parameters.petiole.curvature.uniformDistribution(-300, 100);</div>
+<div class="line"><a id="l02573" name="l02573"></a><span class="lineno"> 2573</span>    phytomer_parameters.petiole.curvature.uniformDistribution(-150, -50);</div>
 <div class="line"><a id="l02574" name="l02574"></a><span class="lineno"> 2574</span>    phytomer_parameters.petiole.color = <a class="code hl_function" href="group__vectors.html#gaf49d4b6e314ddf4864ae9d1b5ccab4ef" title="Make an RGBcolor vector.">make_RGBcolor</a>(0.18, 0.23, 0.1);</div>
 <div class="line"><a id="l02575" name="l02575"></a><span class="lineno"> 2575</span>    phytomer_parameters.petiole.length_segments = 5;</div>
 <div class="line"><a id="l02576" name="l02576"></a><span class="lineno"> 2576</span> </div>
 <div class="line"><a id="l02577" name="l02577"></a><span class="lineno"> 2577</span>    phytomer_parameters.leaf.leaves_per_petiole = 3;</div>
-<div class="line"><a id="l02578" name="l02578"></a><span class="lineno"> 2578</span>    phytomer_parameters.leaf.pitch.uniformDistribution(-30, 10);</div>
-<div class="line"><a id="l02579" name="l02579"></a><span class="lineno"> 2579</span>    phytomer_parameters.leaf.yaw = 20;</div>
+<div class="line"><a id="l02578" name="l02578"></a><span class="lineno"> 2578</span>    phytomer_parameters.leaf.pitch.uniformDistribution(-35, 0);</div>
+<div class="line"><a id="l02579" name="l02579"></a><span class="lineno"> 2579</span>    phytomer_parameters.leaf.yaw = -30;</div>
 <div class="line"><a id="l02580" name="l02580"></a><span class="lineno"> 2580</span>    phytomer_parameters.leaf.roll = -30;</div>
 <div class="line"><a id="l02581" name="l02581"></a><span class="lineno"> 2581</span>    phytomer_parameters.leaf.leaflet_offset = 0.01;</div>
 <div class="line"><a id="l02582" name="l02582"></a><span class="lineno"> 2582</span>    phytomer_parameters.leaf.leaflet_scale = 1.0;</div>
-<div class="line"><a id="l02583" name="l02583"></a><span class="lineno"> 2583</span>    phytomer_parameters.leaf.prototype_scale = 0.1;</div>
+<div class="line"><a id="l02583" name="l02583"></a><span class="lineno"> 2583</span>    phytomer_parameters.leaf.prototype_scale = 0.12;</div>
 <div class="line"><a id="l02584" name="l02584"></a><span class="lineno"> 2584</span>    phytomer_parameters.leaf.prototype = leaf_prototype;</div>
 <div class="line"><a id="l02585" name="l02585"></a><span class="lineno"> 2585</span> </div>
-<div class="line"><a id="l02586" name="l02586"></a><span class="lineno"> 2586</span>    phytomer_parameters.peduncle.length = 0.17;</div>
-<div class="line"><a id="l02587" name="l02587"></a><span class="lineno"> 2587</span>    phytomer_parameters.peduncle.radius = 0.00075;</div>
-<div class="line"><a id="l02588" name="l02588"></a><span class="lineno"> 2588</span>    phytomer_parameters.peduncle.pitch = 35;</div>
-<div class="line"><a id="l02589" name="l02589"></a><span class="lineno"> 2589</span>    phytomer_parameters.peduncle.roll = 0;</div>
-<div class="line"><a id="l02590" name="l02590"></a><span class="lineno"> 2590</span>    phytomer_parameters.peduncle.curvature = -200;</div>
+<div class="line"><a id="l02586" name="l02586"></a><span class="lineno"> 2586</span>    phytomer_parameters.peduncle.length.uniformDistribution(0.16,0.2);</div>
+<div class="line"><a id="l02587" name="l02587"></a><span class="lineno"> 2587</span>    phytomer_parameters.peduncle.radius = 0.0018;</div>
+<div class="line"><a id="l02588" name="l02588"></a><span class="lineno"> 2588</span>    phytomer_parameters.peduncle.pitch.uniformDistribution(35,55);</div>
+<div class="line"><a id="l02589" name="l02589"></a><span class="lineno"> 2589</span>    phytomer_parameters.peduncle.roll = 90;</div>
+<div class="line"><a id="l02590" name="l02590"></a><span class="lineno"> 2590</span>    phytomer_parameters.peduncle.curvature = -150;</div>
 <div class="line"><a id="l02591" name="l02591"></a><span class="lineno"> 2591</span>    phytomer_parameters.peduncle.length_segments = 5;</div>
 <div class="line"><a id="l02592" name="l02592"></a><span class="lineno"> 2592</span>    phytomer_parameters.peduncle.radial_subdivisions = 6;</div>
 <div class="line"><a id="l02593" name="l02593"></a><span class="lineno"> 2593</span>    phytomer_parameters.peduncle.color = phytomer_parameters.petiole.color;</div>
 <div class="line"><a id="l02594" name="l02594"></a><span class="lineno"> 2594</span> </div>
-<div class="line"><a id="l02595" name="l02595"></a><span class="lineno"> 2595</span>    phytomer_parameters.inflorescence.flowers_per_peduncle.uniformDistribution(1, 3);</div>
+<div class="line"><a id="l02595" name="l02595"></a><span class="lineno"> 2595</span>    phytomer_parameters.inflorescence.flowers_per_peduncle = 1;<span class="comment">//.uniformDistribution(1, 2);</span></div>
 <div class="line"><a id="l02596" name="l02596"></a><span class="lineno"> 2596</span>    phytomer_parameters.inflorescence.flower_offset = 0.2;</div>
 <div class="line"><a id="l02597" name="l02597"></a><span class="lineno"> 2597</span>    phytomer_parameters.inflorescence.pitch = 70;</div>
 <div class="line"><a id="l02598" name="l02598"></a><span class="lineno"> 2598</span>    phytomer_parameters.inflorescence.roll = 90;</div>
 <div class="line"><a id="l02599" name="l02599"></a><span class="lineno"> 2599</span>    phytomer_parameters.inflorescence.flower_prototype_scale = 0.04;</div>
 <div class="line"><a id="l02600" name="l02600"></a><span class="lineno"> 2600</span>    phytomer_parameters.inflorescence.flower_prototype_function = StrawberryFlowerPrototype;</div>
-<div class="line"><a id="l02601" name="l02601"></a><span class="lineno"> 2601</span>    phytomer_parameters.inflorescence.fruit_prototype_scale = 0.06;</div>
+<div class="line"><a id="l02601" name="l02601"></a><span class="lineno"> 2601</span>    phytomer_parameters.inflorescence.fruit_prototype_scale = 0.085;</div>
 <div class="line"><a id="l02602" name="l02602"></a><span class="lineno"> 2602</span>    phytomer_parameters.inflorescence.fruit_prototype_function = StrawberryFruitPrototype;</div>
 <div class="line"><a id="l02603" name="l02603"></a><span class="lineno"> 2603</span>    phytomer_parameters.inflorescence.fruit_gravity_factor_fraction = 0.65;</div>
 <div class="line"><a id="l02604" name="l02604"></a><span class="lineno"> 2604</span> </div>
@@ -2784,10 +2784,10 @@ $(function(){initNavTree('_plant_library_8cpp_source.html',''); initResizable(tr
 <div class="line"><a id="l02622" name="l02622"></a><span class="lineno"> 2622</span>    shoot_parameters.elongation_rate_max = 0.1;</div>
 <div class="line"><a id="l02623" name="l02623"></a><span class="lineno"> 2623</span>    shoot_parameters.girth_area_factor = 2.f;</div>
 <div class="line"><a id="l02624" name="l02624"></a><span class="lineno"> 2624</span>    shoot_parameters.vegetative_bud_break_time = 15;</div>
-<div class="line"><a id="l02625" name="l02625"></a><span class="lineno"> 2625</span>    shoot_parameters.vegetative_bud_break_probability_min = 0.1;</div>
-<div class="line"><a id="l02626" name="l02626"></a><span class="lineno"> 2626</span>    shoot_parameters.vegetative_bud_break_probability_decay_rate = -0.4;</div>
+<div class="line"><a id="l02625" name="l02625"></a><span class="lineno"> 2625</span>    shoot_parameters.vegetative_bud_break_probability_min = 0.;</div>
+<div class="line"><a id="l02626" name="l02626"></a><span class="lineno"> 2626</span>    shoot_parameters.vegetative_bud_break_probability_decay_rate = -0.5;</div>
 <div class="line"><a id="l02627" name="l02627"></a><span class="lineno"> 2627</span>    shoot_parameters.flower_bud_break_probability = 1;</div>
-<div class="line"><a id="l02628" name="l02628"></a><span class="lineno"> 2628</span>    shoot_parameters.fruit_set_probability = 0.5;</div>
+<div class="line"><a id="l02628" name="l02628"></a><span class="lineno"> 2628</span>    shoot_parameters.fruit_set_probability = 0.3;</div>
 <div class="line"><a id="l02629" name="l02629"></a><span class="lineno"> 2629</span>    shoot_parameters.flowers_require_dormancy = <span class="keyword">false</span>;</div>
 <div class="line"><a id="l02630" name="l02630"></a><span class="lineno"> 2630</span>    shoot_parameters.growth_requires_dormancy = <span class="keyword">false</span>;</div>
 <div class="line"><a id="l02631" name="l02631"></a><span class="lineno"> 2631</span>    shoot_parameters.determinate_shoot_growth = <span class="keyword">true</span>;</div>

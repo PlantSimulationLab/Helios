@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['coordinatesystem_0',['CoordinateSystem',['../class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3',1,'Visualizer']]],
-  ['ctable_1',['Ctable',['../class_visualizer.html#a0af839aae42fd7086643608a6cbd194b',1,'Visualizer']]]
+  ['bvhoptimizationmode_0',['BVHOptimizationMode',['../class_collision_detection.html#afcab8e91b6861953a7fc8605dd41b12a',1,'CollisionDetection']]]
 ];

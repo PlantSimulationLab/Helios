@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['primitivetype_0',['PrimitiveType',['../_context_8h.html#aa2778fcacd9c556a5ce0d9de2ffc1601',1,'helios']]]
+  ['objecttype_0',['ObjectType',['../_context_8h.html#ad0894682f41916c84c2026b3cb8ac682',1,'helios']]]
 ];

@@ -3402,36 +3402,10 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         }
         free(bb_hit);
 
-        float3 *d_raydir;
-        CUDA_CHECK_ERROR(cudaMalloc((void **) &d_raydir, N * sizeof(float3))); // allocate device memory
-        CUDA_CHECK_ERROR(cudaMemcpy(d_raydir, direction, N * sizeof(float3), cudaMemcpyHostToDevice));
-
-        // Distance to intersection
-        float *d_hit_t;
-        CUDA_CHECK_ERROR(cudaMalloc((void **) &d_hit_t, N * Npulse * sizeof(float))); // allocate device memory
+        // Allocate host memory for results
         float *hit_t = (float *) malloc(N * Npulse * sizeof(float)); // allocate host memory
-        for (int i = 0; i < N * Npulse; i++) {
-            hit_t[i] = miss_distance;
-        }
-        CUDA_CHECK_ERROR(cudaMemcpy(d_hit_t, hit_t, N * Npulse * sizeof(float), cudaMemcpyHostToDevice));
-
-        // Dot product of primitive normal and ray direction (for calculating intensity)
-        float *d_hit_fnorm;
-        CUDA_CHECK_ERROR(cudaMalloc((void **) &d_hit_fnorm, N * Npulse * sizeof(float))); // allocate device memory
         float *hit_fnorm = (float *) malloc(N * Npulse * sizeof(float)); // allocate host memory
-        for (int i = 0; i < N * Npulse; i++) {
-            hit_fnorm[i] = 1e6;
-        }
-        CUDA_CHECK_ERROR(cudaMemcpy(d_hit_fnorm, hit_fnorm, N * Npulse * sizeof(float), cudaMemcpyHostToDevice));
-
-        // ID of intersected primitive
-        int *d_hit_ID;
-        CUDA_CHECK_ERROR(cudaMalloc((void **) &d_hit_ID, N * Npulse * sizeof(int))); // allocate device memory
         int *hit_ID = (int *) malloc(N * Npulse * sizeof(int)); // allocate host memory
-        for (int i = 0; i < N * Npulse; i++) {
-            hit_ID[i] = 999999999;
-        }
-        CUDA_CHECK_ERROR(cudaMemcpy(d_hit_ID, hit_ID, N * Npulse * sizeof(float), cudaMemcpyHostToDevice));
 
         float exit_diameter = getScanBeamExitDiameter(s);
         float beam_divergence = getScanBeamDivergence(s);
@@ -3443,24 +3417,18 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
         }
         dimGrid = make_uint3(ceil(float(N) / float(dimBlock.x)), ceil(float(Npulse) / float(dimBlock.y)), 1);
 
-        //---- patch kernel ----//
-        intersectPatches<<<dimGrid, dimBlock>>>(N, Npulse, scan_origin, d_raydir, exit_diameter, beam_divergence, Npatches, d_patch_vertex, d_patch_textureID, Ntextures, d_masksize, masksize_max, d_maskdata, d_patch_uv, d_hit_t, d_hit_fnorm,
-                                                d_hit_ID);
-
-        cudaDeviceSynchronize();
-        CUDA_CHECK_ERROR(cudaPeekAtLastError()); // if there was an error inside the kernel, it will show up here
-
-        //---- triangle kernel ----//
-        intersectTriangles<<<dimGrid, dimBlock>>>(N, Npulse, scan_origin, d_raydir, exit_diameter, beam_divergence, Ntriangles, Npatches, d_tri_vertex, d_tri_textureID, Ntextures, d_masksize, masksize_max, d_maskdata, d_tri_uv, d_hit_t, d_hit_fnorm,
-                                                  d_hit_ID);
-
-        cudaDeviceSynchronize();
-        CUDA_CHECK_ERROR(cudaPeekAtLastError()); // if there was an error inside the kernel, it will show up here
-
-        // copy back
-        CUDA_CHECK_ERROR(cudaMemcpy(hit_t, d_hit_t, N * Npulse * sizeof(float), cudaMemcpyDeviceToHost));
-        CUDA_CHECK_ERROR(cudaMemcpy(hit_fnorm, d_hit_fnorm, N * Npulse * sizeof(float), cudaMemcpyDeviceToHost));
-        CUDA_CHECK_ERROR(cudaMemcpy(hit_ID, d_hit_ID, N * Npulse * sizeof(int), cudaMemcpyDeviceToHost));
+        // Initialize collision detection for unified ray-tracing
+        initializeCollisionDetection(context);
+        
+        // Convert CUDA float3 arrays to Helios vec3 format
+        helios::vec3 scan_origin_vec3 = helios::make_vec3(scan_origin.x, scan_origin.y, scan_origin.z);
+        std::vector<helios::vec3> direction_vec3(N * Npulse);
+        for (size_t i = 0; i < N * Npulse; i++) {
+            direction_vec3[i] = helios::make_vec3(direction[i].x, direction[i].y, direction[i].z);
+        }
+        
+        // Use unified ray-tracing engine
+        performUnifiedRayTracing(context, N, Npulse, scan_origin_vec3, direction_vec3.data(), hit_t, hit_fnorm, hit_ID);
 
         size_t Nhits = 0;
         // looping over beams
@@ -3615,10 +3583,7 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
             }
         }
 
-        CUDA_CHECK_ERROR(cudaFree(d_hit_t));
-        CUDA_CHECK_ERROR(cudaFree(d_hit_fnorm));
-        CUDA_CHECK_ERROR(cudaFree(d_hit_ID));
-        CUDA_CHECK_ERROR(cudaFree(d_raydir));
+        // No device memory to free
         free(hit_xyz);
         free(direction);
         free(hit_t);

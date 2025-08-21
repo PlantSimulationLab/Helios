@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.44</span>
+       <span id="projectnumber">&#160;v1.3.45</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -1385,7 +1385,7 @@ $(function(){initNavTree('helios__vector__types_8h_source.html',''); initResizab
 </div>
 <div class="line"><a id="l01191" name="l01191"></a><span class="lineno"> 1191</span> </div>
 <div class="line"><a id="l01192" name="l01192"></a><span class="lineno"> 1192</span>    <span class="keyword">inline</span> vec4 normalize(<span class="keyword">const</span> vec4 &amp;v) {</div>
-<div class="line"><a id="l01193" name="l01193"></a><span class="lineno"> 1193</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> m2 = v.<a class="code hl_variable" href="structhelios_1_1vec2.html#a8dda241c2560b203a3b0a479d1c9e12e" title="First element in vector.">x</a> * v.x + v.y * v.y + v.z * v.z + v.w * v.w;</div>
+<div class="line"><a id="l01193" name="l01193"></a><span class="lineno"> 1193</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> m2 = v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w;</div>
 <div class="line"><a id="l01194" name="l01194"></a><span class="lineno"> 1194</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> inv = 1.0f / sqrtf(m2);</div>
 <div class="line"><a id="l01195" name="l01195"></a><span class="lineno"> 1195</span>        <span class="keywordflow">return</span> {v.x * inv, v.y * inv, v.z * inv, v.w * inv};</div>
 <div class="line"><a id="l01196" name="l01196"></a><span class="lineno"> 1196</span>    }</div>

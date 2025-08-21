@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.44</span>
+       <span id="projectnumber">&#160;v1.3.45</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -191,7 +191,7 @@ $(function(){initNavTree('primitive_intersection_8cu_source.html',''); initResiz
 <div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    float3 v3 = patch_vertices[make_uint2(3, objID)];</div>
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    float3 anchor = v0;</div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    float3 normal = normalize(cross(v1 - v0, v2 - v0));</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    float3 normal = normalize(<a class="code hl_function" href="_collision_detection_8cu.html#a27d0b255c42a5c1539194f8134e78ffe" title="CUDA device helper functions for vector operations.">cross</a>(v1 - v0, v2 - v0));</div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span> </div>
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    float3 a = v1 - v0;</div>
 <div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    float3 b = v3 - v0;</div>
@@ -519,7 +519,7 @@ $(function(){initNavTree('primitive_intersection_8cu_source.html',''); initResiz
 <div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>    float3 v3 = bbox_vertices[make_uint2(3, objID)];</div>
 <div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span> </div>
 <div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span>    float3 anchor = v0;</div>
-<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>    float3 normal = normalize(cross(v1 - v0, v2 - v0));</div>
+<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>    float3 normal = normalize(<a class="code hl_function" href="_collision_detection_8cu.html#a27d0b255c42a5c1539194f8134e78ffe" title="CUDA device helper functions for vector operations.">cross</a>(v1 - v0, v2 - v0));</div>
 <div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span> </div>
 <div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>    float3 a = v1 - v0;</div>
 <div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>    float3 b = v3 - v0;</div>
@@ -581,7 +581,7 @@ $(function(){initNavTree('primitive_intersection_8cu_source.html',''); initResiz
 <div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>    float3 v3 = tile_vertices[make_uint2(3, objID)];</div>
 <div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span> </div>
 <div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>    float3 anchor = v0;</div>
-<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>    float3 normal = normalize(cross(v1 - v0, v2 - v0));</div>
+<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>    float3 normal = normalize(<a class="code hl_function" href="_collision_detection_8cu.html#a27d0b255c42a5c1539194f8134e78ffe" title="CUDA device helper functions for vector operations.">cross</a>(v1 - v0, v2 - v0));</div>
 <div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span> </div>
 <div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>    float3 a = v1 - v0;</div>
 <div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>    float3 b = v3 - v0;</div>

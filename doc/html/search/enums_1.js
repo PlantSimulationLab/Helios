@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['heliosdatatype_0',['HeliosDataType',['../_context_8h.html#a935eb2a4249411a8f376a27820c70de3',1,'helios']]]
+  ['coordinatesystem_0',['CoordinateSystem',['../class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3',1,'Visualizer']]],
+  ['ctable_1',['Ctable',['../class_visualizer.html#a0af839aae42fd7086643608a6cbd194b',1,'Visualizer']]]
 ];

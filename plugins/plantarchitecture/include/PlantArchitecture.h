@@ -983,6 +983,16 @@ public:
     [[nodiscard]] helios::vec3 getPetioleAxisVector(float stem_fraction, uint petiole_index) const;
 
     /**
+     * \brief Retrieves the peduncle axis vector for a given stem fraction, petiole index, and floral bud index.
+     *
+     * \param[in] stem_fraction Fraction along the peduncle (value between 0.0 and 1.0) for which the axis vector is computed.
+     * \param[in] petiole_index Index of the petiole containing the floral bud.
+     * \param[in] bud_index Index of the floral bud within the petiole.
+     * \return The axis vector of the specified peduncle as a helios::vec3.
+     */
+    [[nodiscard]] helios::vec3 getPeduncleAxisVector(float stem_fraction, uint petiole_index, uint bud_index) const;
+
+    /**
      * \brief Computes the normalized vector direction along the axis at a given fraction of the stem.
      *
      * \param[in] stem_fraction Fraction along the stem (value between 0.0 and 1.0) for which the axis vector is computed.
@@ -1228,6 +1238,33 @@ private:
     helios::vec3 calculateCollisionAvoidanceDirection(const helios::vec3 &internode_base_origin, const helios::vec3 &internode_axis, bool &collision_detection_active) const;
 
     /**
+     * \brief Applies hard obstacle avoidance to internode growth direction.
+     *
+     * This method checks for solid obstacles in the growth path and calculates rotation
+     * needed to avoid them. Uses cone-based detection with a smaller angle than soft
+     * collision avoidance for more precise obstacle detection.
+     *
+     * \param[in] current_position Current position of the growing internode
+     * \param[in,out] internode_axis Current growth direction that will be modified if obstacle found
+     * \return true if obstacle was found and avoidance was applied, false otherwise
+     */
+    bool applySolidObstacleAvoidance(const helios::vec3 &current_position, helios::vec3 &internode_axis) const;
+
+    /**
+     * \brief Calculates attraction point direction for internode growth.
+     *
+     * This method uses the CollisionDetection plugin to determine if any attraction points
+     * lie within the plant's perception cone. If found, returns the direction toward the
+     * closest attraction point for growth guidance.
+     *
+     * \param[in] internode_base_origin Current position of the growing internode
+     * \param[in] internode_axis Current natural growth direction
+     * \param[out] attraction_active Set to true if attraction points were found, false otherwise
+     * \return Unit vector pointing toward the closest attraction point (if any found)
+     */
+    helios::vec3 calculateAttractionPointDirection(const helios::vec3 &internode_base_origin, const helios::vec3 &internode_axis, bool &attraction_active) const;
+
+    /**
      * \brief Calculates optimal collision avoidance direction for petiole growth.
      *
      * This method performs collision detection analysis to find an optimal petiole direction
@@ -1241,12 +1278,23 @@ private:
      */
     helios::vec3 calculatePetioleCollisionAvoidanceDirection(const helios::vec3 &petiole_base_origin, const helios::vec3 &proposed_petiole_axis, bool &collision_detection_active) const;
 
+    //! Calculate optimal fruit direction to avoid collisions using cone-based gap detection
+    /**
+     * \param[in] fruit_base_origin Starting position for fruit collision detection cone
+     * \param[in] proposed_fruit_axis Proposed fruit direction before collision avoidance
+     * \param[out] collision_detection_active Flag indicating if collision detection was applied
+     * \return Optimal fruit direction toward largest detected gap
+     */
+    helios::vec3 calculateFruitCollisionAvoidanceDirection(const helios::vec3 &fruit_base_origin, const helios::vec3 &proposed_fruit_axis, bool &collision_detection_active) const;
+
+
 public:
     // ---- phytomer data ---- //
 
     //! Coordinates of internode tube segments. Index is tube segment within internode
     std::vector<std::vector<helios::vec3>> petiole_vertices; // first index is petiole within internode, second index is tube segment within petiole tube
     std::vector<std::vector<helios::vec3>> leaf_bases; // first index is petiole within internode, second index is leaf within petiole
+    std::vector<std::vector<std::vector<helios::vec3>>> peduncle_vertices; // first index is petiole within internode, second index is floral bud within petiole, third index is tube segment within peduncle
     float internode_pitch, internode_phyllotactic_angle;
 
     std::vector<std::vector<float>> petiole_radii; // first index is petiole within internode, second index is segment within petiole tube
@@ -1554,9 +1602,12 @@ public:
      * \param[in] context_ptr Pointer to the Helios context.
      */
     explicit PlantArchitecture(helios::Context *context_ptr);
+    
+    //! Destructor - cleans up internal CollisionDetection instance if owned
+    ~PlantArchitecture();
 
     //! Unit test routines
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc, char **argv);
 
     //! Add optional output object data values to the Context
     /**
@@ -1734,6 +1785,23 @@ public:
      */
     void advanceTime(uint plantID, float time_step_days);
 
+    //! Advance plant growth by a specified time interval for a specified set of plants
+    /**
+     * \param[in] plantIDs IDs of the plant instances.
+     * \param[in] time_step_days Time interval in days.
+     */
+    void advanceTime(const std::vector<uint> &plantIDs, float time_step_days);
+    
+    //! Adjust fruit objects to prevent collision with solid obstacles via rotation
+    /**
+     * This method checks all fruit in the plant architecture for collisions with solid obstacles
+     * and rotates them about their base position to prevent intersection. The rotation is applied
+     * in the opposite direction of the original pitch to simulate natural fruit lifting.
+     * 
+     * \note This method should be called after all plant growth updates are complete.
+     */
+    void adjustFruitForObstacleCollision();
+
     //! Accumulates hourly net photosynthesis for each leaf in the plant architecture
     /**
      * This function iterates through all the plants in the architecture, handling both dormant and active shoots.
@@ -1862,15 +1930,14 @@ public:
 
     // -- collision detection methods -- //
 
-    //! Enable collision detection for plant growth avoidance
+    //! Enable collision detection for plant growth avoidance (creates internal CollisionDetection instance)
     /**
-     * \param[in] collision_detection_ptr Pointer to a CollisionDetection instance
      * \param[in] target_object_UUIDs [optional] Vector of specific UUIDs to avoid (empty = avoid all geometry)
      * \param[in] target_object_IDs [optional] Vector of specific object IDs to avoid (empty = avoid all objects)
      */
-    void enableCollisionDetection(CollisionDetection *collision_detection_ptr, const std::vector<uint> &target_object_UUIDs = {}, const std::vector<uint> &target_object_IDs = {});
+    void enableCollisionDetection(const std::vector<uint> &target_object_UUIDs = {}, const std::vector<uint> &target_object_IDs = {});
 
-    //! Disable collision detection for plant growth
+    //! Disable collision detection for plant growth and clean up internal CollisionDetection instance
     void disableCollisionDetection();
 
     //! Set collision avoidance parameters
@@ -1881,6 +1948,103 @@ public:
      * \param[in] inertia_weight Weight factor for directional inertia vs collision avoidance (0.0 = use optimal direction, 1.0 = ignore collision avoidance) (default = 0.4)
      */
     void setCollisionAvoidanceParameters(float view_half_angle_deg, float look_ahead_distance, int sample_count, float inertia_weight);
+
+    //! Mark specific geometry as static for collision detection efficiency
+    /**
+     * \param[in] target_UUIDs Vector of primitive UUIDs representing static obstacles (buildings, fixed structures, etc.)
+     */
+    void setStaticObstacles(const std::vector<uint> &target_UUIDs);
+
+    //! Configure spatial optimization for collision detection
+    /**
+     * \param[in] max_collision_distance Maximum distance to consider for collision detection (meters)
+     * \param[in] enable_spatial_filtering Enable distance-based filtering to improve performance
+     */
+    void setSpatialOptimization(float max_collision_distance, bool enable_spatial_filtering = true);
+
+    //! Get access to the internal CollisionDetection instance (for advanced usage)
+    /**
+     * \return Pointer to internal CollisionDetection instance, or nullptr if not enabled
+     */
+    [[nodiscard]] CollisionDetection* getCollisionDetection() const;
+
+    //! Set which organ types should participate in collision detection
+    /**
+     * \param[in] include_internodes Include internode segments in collision detection (default: true)
+     * \param[in] include_leaves Include leaf surfaces in collision detection (default: true)
+     * \param[in] include_petioles Include petiole segments in collision detection (default: false for trees, true for small plants)
+     * \param[in] include_flowers Include flower geometry in collision detection (default: false)
+     * \param[in] include_fruit Include fruit geometry in collision detection (default: false)
+     */
+    void setCollisionRelevantOrgans(bool include_internodes = true, bool include_leaves = true, bool include_petioles = false, bool include_flowers = false, bool include_fruit = false);
+    
+    //! Enable solid obstacle avoidance for plant growth
+    /**
+     * \brief Designates certain primitives as solid obstacles that plant growth must avoid.
+     * 
+     * When enabled, plant growth will gradually redirect as it approaches these obstacles,
+     * with increasingly strong curvature as distance decreases. The plant will eventually
+     * grow parallel to the obstacle surface at a marginal distance.
+     * 
+     * \param[in] obstacle_UUIDs Vector of primitive UUIDs that represent solid obstacles
+     * \param[in] avoidance_distance Distance at which obstacle avoidance begins (meters)
+     * \param[in] enable_fruit_adjustment Enable automatic fruit rotation adjustment to avoid obstacles (default: true)
+     */
+    void enableSolidObstacleAvoidance(const std::vector<uint> &obstacle_UUIDs, float avoidance_distance = 0.5f, bool enable_fruit_adjustment = true);
+
+    //! Enable or disable petiole collision detection
+    /**
+     * \param[in] enabled Enable petiole collision detection (useful for small plants like tomatoes, not needed for trees)
+     */
+    void enablePetioleCollisionDetection(bool enabled);
+
+    //! Enable or disable fruit collision detection
+    /**
+     * \param[in] enabled Enable fruit collision detection (useful for plants with large fruit that may collide with ground or other obstacles)
+     */
+    void enableFruitCollisionDetection(bool enabled);
+
+    //! Clear BVH cache (called at start of each growth cycle)
+    void clearBVHCache() const;
+
+    //! Rebuild BVH once per timestep with current target geometry
+    void rebuildBVHForTimestep();
+
+    //! Configure Context geometry update scheduling for efficiency
+    /**
+     * \param[in] update_frequency How often to update Context geometry (1=every timestep, 2=every 2 timesteps, etc.)
+     * \param[in] force_update_on_collision Force Context update when collision avoidance is triggered
+     */
+    void setGeometryUpdateScheduling(int update_frequency = 3, bool force_update_on_collision = true);
+
+    // -- attraction points methods -- //
+    
+    //! Enable attraction points to guide plant growth toward specific targets
+    /**
+     * \param[in] attraction_points Vector of 3D positions that plants should grow toward
+     * \param[in] view_half_angle_deg Half-angle of the attraction detection view cone in degrees (default = 80)
+     * \param[in] look_ahead_distance How far ahead attraction points will be considered in meters (default = 0.1)
+     * \param[in] attraction_weight Weight factor for attraction vs natural growth (0.0 = ignore attraction, 1.0 = full attraction) (default = 0.6)
+     */
+    void enableAttractionPoints(const std::vector<helios::vec3> &attraction_points, float view_half_angle_deg = 80.0f, float look_ahead_distance = 0.1f, float attraction_weight = 0.6f);
+    
+    //! Disable attraction points and revert to natural growth
+    void disableAttractionPoints();
+    
+    //! Update attraction points positions (for dynamic attraction points)
+    /**
+     * \param[in] attraction_points Updated vector of 3D positions that plants should grow toward
+     */
+    void updateAttractionPoints(const std::vector<helios::vec3> &attraction_points);
+    
+    //! Set attraction parameters
+    /**
+     * \param[in] view_half_angle_deg Half-angle of the attraction detection view cone in degrees
+     * \param[in] look_ahead_distance How far ahead attraction points will be considered in meters
+     * \param[in] attraction_weight Weight factor for attraction vs natural growth (0.0 = ignore attraction, 1.0 = full attraction)
+     * \param[in] obstacle_reduction_factor Reduction factor for attraction when hard obstacles are present (default = 0.75)
+     */
+    void setAttractionParameters(float view_half_angle_deg, float look_ahead_distance, float attraction_weight, float obstacle_reduction_factor = 0.75f);
 
     // -- methods for modifying the current plant state -- //
 
@@ -2096,95 +2260,6 @@ public:
      * \return The taper of the shoot as a float value, constrained between 0 and 1.
      */
     [[nodiscard]] float getShootTaper(uint plantID, uint shootID) const;
-
-    // -- methods for querying shoot hierarchy -- //
-
-    /**
-     * \brief Retrieves all shoot IDs organized by branching rank/order.
-     *
-     * \param[in] plantID The unique identifier of the plant.
-     * \return Vector of vectors where index represents rank and values are shoot IDs at that rank.
-     * \note result[0] contains base shoots (rank 0), result[1] contains primary branches (rank 1), etc.
-     */
-    [[nodiscard]] std::vector<std::vector<uint>> getShootIDsByRank(uint plantID) const;
-
-    /**
-     * \brief Retrieves a hierarchical mapping of parent shoot IDs to their children.
-     *
-     * \param[in] plantID The unique identifier of the plant.
-     * \return Map where keys are parent shoot IDs and values are vectors of child shoot IDs.
-     */
-    [[nodiscard]] std::map<uint, std::vector<uint>> getShootHierarchyMap(uint plantID) const;
-
-    /**
-     * \brief Retrieves all descendant shoot IDs of a given shoot recursively.
-     *
-     * \param[in] plantID The unique identifier of the plant.
-     * \param[in] shootID The unique identifier of the parent shoot.
-     * \return Vector containing all descendant shoot IDs in depth-first order.
-     */
-    [[nodiscard]] std::vector<uint> getAllDescendantShootIDs(uint plantID, uint shootID) const;
-
-    /**
-     * \brief Retrieves direct child shoot IDs of a given shoot.
-     *
-     * \param[in] plantID The unique identifier of the plant.
-     * \param[in] shootID The unique identifier of the parent shoot.
-     * \return Vector containing direct child shoot IDs.
-     */
-    [[nodiscard]] std::vector<uint> getChildShootIDs(uint plantID, uint shootID) const;
-
-    /**
-     * \brief Retrieves the parent shoot ID of a given shoot.
-     *
-     * \param[in] plantID The unique identifier of the plant.
-     * \param[in] shootID The unique identifier of the shoot.
-     * \return Parent shoot ID, or -1 if the shoot is a base shoot (no parent).
-     */
-    [[nodiscard]] int getParentShootID(uint plantID, uint shootID) const;
-
-    /**
-     * \brief Retrieves the branching rank/order of a given shoot.
-     *
-     * \param[in] plantID The unique identifier of the plant.
-     * \param[in] shootID The unique identifier of the shoot.
-     * \return The rank of the shoot (0 for base shoots, 1 for primary branches, etc.).
-     */
-    [[nodiscard]] uint getShootRank(uint plantID, uint shootID) const;
-
-    /**
-     * \brief Retrieves all shoot IDs for a given plant.
-     *
-     * \param[in] plantID The unique identifier of the plant.
-     * \return Vector containing all shoot IDs in the plant.
-     */
-    [[nodiscard]] std::vector<uint> getAllShootIDs(uint plantID) const;
-
-    /**
-     * \brief Retrieves shoot IDs that have no children (terminal/leaf shoots).
-     *
-     * \param[in] plantID The unique identifier of the plant.
-     * \return Vector containing shoot IDs of terminal shoots.
-     */
-    [[nodiscard]] std::vector<uint> getTerminalShootIDs(uint plantID) const;
-
-    /**
-     * \brief Retrieves the hierarchy depth of a given shoot.
-     *
-     * \param[in] plantID The unique identifier of the plant.
-     * \param[in] shootID The unique identifier of the shoot.
-     * \return The depth of the shoot in the hierarchy (0 for base shoots).
-     */
-    [[nodiscard]] uint getShootDepth(uint plantID, uint shootID) const;
-
-    /**
-     * \brief Retrieves the path from a given shoot to the root shoot.
-     *
-     * \param[in] plantID The unique identifier of the plant.
-     * \param[in] shootID The unique identifier of the shoot.
-     * \return Vector containing shoot IDs from the given shoot to the root, in ascending order.
-     */
-    [[nodiscard]] std::vector<uint> getPathToRoot(uint plantID, uint shootID) const;
 
     /**
      * \brief Retrieves the base position of the specified plant.
@@ -2568,6 +2643,8 @@ protected:
 
     void pruneGroundCollisions(uint plantID);
 
+    void pruneSolidBoundaryCollisions();
+
     // --- Carbohydrate Model --- //
 
     void accumulateShootPhotosynthesis() const;
@@ -2583,8 +2660,11 @@ protected:
 
     // --- Collision Detection --- //
 
-    //! Pointer to collision detection plugin
+    //! Internal collision detection instance (owned by PlantArchitecture)
     CollisionDetection *collision_detection_ptr = nullptr;
+    
+    //! Flag to track if we own the CollisionDetection instance (for cleanup)
+    bool owns_collision_detection = false;
 
     //! Flag indicating if collision detection is enabled
     bool collision_detection_enabled = false;
@@ -2606,6 +2686,69 @@ protected:
 
     //! Inertia weight for balancing directional preference vs collision avoidance
     float collision_inertia_weight = 0.4f;
+
+    //! Frequency of Context geometry updates (1=every timestep, 2=every 2 timesteps, etc.)
+    int geometry_update_frequency = 3;
+    
+    //! Force Context geometry update when collision avoidance is triggered
+    bool force_update_on_collision = true;
+
+    //! Organ filtering configuration for collision detection
+    bool collision_include_internodes = true;
+    bool collision_include_leaves = true;
+    bool collision_include_petioles = false;  // Default false for tree models
+    bool collision_include_flowers = false;   // Flowers typically not collision obstacles
+    bool collision_include_fruit = false;     // Fruit typically not collision obstacles
+    
+    //! Enable petiole collision detection (separate from general petiole inclusion)
+    bool petiole_collision_detection_enabled = false;
+    
+    //! Enable fruit collision detection (separate from general fruit inclusion)
+    bool fruit_collision_detection_enabled = false;
+    
+    //! Counter to track timesteps for geometry update scheduling
+    int geometry_update_counter = 0;
+    
+    //! Flag to track if collision avoidance was applied in current timestep
+    mutable bool collision_avoidance_applied = false;
+
+    //! Enable spatial filtering for collision detection performance
+    bool spatial_filtering_enabled = false;
+
+    //! Maximum distance for collision detection queries (meters)
+    float spatial_max_distance = 5.0f;
+
+    //! BVH caching for within-timestep efficiency
+    mutable bool bvh_cached_for_current_growth = false;
+    mutable std::vector<uint> cached_target_geometry;
+    mutable std::vector<uint> cached_filtered_geometry;
+    
+    //! Solid obstacle avoidance parameters
+    bool solid_obstacle_avoidance_enabled = false;
+    std::vector<uint> solid_obstacle_UUIDs;
+    float solid_obstacle_avoidance_distance = 0.5f;
+    float solid_obstacle_minimum_distance = 0.05f;
+    bool solid_obstacle_fruit_adjustment_enabled = true;
+
+    // --- Attraction Points --- //
+    
+    //! Flag indicating if attraction points are enabled
+    bool attraction_points_enabled = false;
+    
+    //! Vector of attraction point positions
+    std::vector<helios::vec3> attraction_points;
+    
+    //! Attraction detection cone half-angle in radians
+    float attraction_cone_half_angle_rad = 80.f * M_PI / 180.f;
+    
+    //! Attraction detection cone height in meters
+    float attraction_cone_height = 0.1f;
+    
+    //! Weight factor for attraction vs natural growth (0.0 = ignore attraction, 1.0 = full attraction)
+    float attraction_weight = 0.6f;
+    
+    //! Reduction factor for attraction weight when hard obstacles are present (0.0 = no attraction, 1.0 = full attraction)
+    float attraction_obstacle_reduction_factor = 0.5f;
 
     //! Flag to enable/disable console output messages
     bool printmessages = true;
