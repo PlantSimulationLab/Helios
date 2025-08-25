@@ -61,12 +61,19 @@ void Context::addTexture(const char *texture_file) {
             helios_runtime_error("ERROR (Context::addTexture): Texture file " + std::string(texture_file) + " does not exist.");
         }
 
-        textures.emplace(texture_file, Texture(texture_file));
+        // Use resolved path for texture creation
+        auto resolved_path = resolveTexturePath(texture_file);
+        textures.emplace(texture_file, Texture(resolved_path.string().c_str()));
     }
 }
 
 bool Context::doesTextureFileExist(const char *texture_file) const {
-    return std::filesystem::exists(texture_file);
+    try {
+        auto resolved_path = resolveTexturePath(texture_file);
+        return validateAssetPath(resolved_path);
+    } catch (const std::runtime_error&) {
+        return false;
+    }
 }
 
 bool Context::validateTextureFileExtenstion(const char *texture_file) const {

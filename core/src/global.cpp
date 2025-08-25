@@ -2485,6 +2485,200 @@ bool helios::validateOutputPath(std::string &output_path, const std::vector<std:
     return true;
 }
 
+//--------------------- ASSET PATH RESOLUTION -----------------------------------//
+
+std::filesystem::path helios::resolveAssetPath(const std::string& relativePath) {
+    // Check if environment variable is set for custom asset directory
+    const char* assetDir = std::getenv("HELIOS_ASSET_DIR");
+    if (assetDir) {
+        std::filesystem::path customPath = std::filesystem::path(assetDir) / relativePath;
+        if (std::filesystem::exists(customPath)) {
+            return std::filesystem::canonical(customPath);
+        }
+    }
+
+    // Use cpplocate to find asset relative to executable or library
+    std::string foundPath = cpplocate::locatePath(relativePath, "share/helios", reinterpret_cast<void*>(&helios_runtime_error));
+    
+    if (foundPath.empty()) {
+        // Get executable directory for build directory search
+        std::string executablePath = cpplocate::getExecutablePath();
+        std::filesystem::path executableDir;
+        if (!executablePath.empty()) {
+            executableDir = std::filesystem::path(executablePath).parent_path();
+        }
+        
+        // Try alternative search paths
+        std::vector<std::string> searchPaths = {
+            ".",  // Current directory
+            "..", // Parent directory 
+            "../..", // Up two levels
+            "../../.." // Up three levels
+        };
+        
+        // Add executable directory if we found it
+        if (!executableDir.empty()) {
+            searchPaths.insert(searchPaths.begin(), executableDir.string());
+        }
+        
+        for (const auto& searchPath : searchPaths) {
+            std::filesystem::path testPath = std::filesystem::path(searchPath) / relativePath;
+            if (std::filesystem::exists(testPath)) {
+                return std::filesystem::canonical(testPath);
+            }
+        }
+        
+        helios_runtime_error("ERROR (resolveAssetPath): Could not locate asset file '" + relativePath + 
+                           "'. Searched in executable directory, system paths, and HELIOS_ASSET_DIR. " +
+                           "Ensure the file exists or set HELIOS_ASSET_DIR environment variable.");
+    }
+    
+    std::filesystem::path assetPath = std::filesystem::path(foundPath) / relativePath;
+    if (!std::filesystem::exists(assetPath)) {
+        helios_runtime_error("ERROR (resolveAssetPath): Asset file '" + assetPath.string() + "' does not exist.");
+    }
+    
+    return std::filesystem::canonical(assetPath);
+}
+
+std::filesystem::path helios::resolvePluginAsset(const std::string& pluginName, const std::string& assetPath) {
+    std::string pluginAssetPath = "plugins/" + pluginName + "/" + assetPath;
+    return resolveAssetPath(pluginAssetPath);
+}
+
+std::filesystem::path helios::resolveShaderPath(const std::string& shaderFile) {
+    // First try as direct file path
+    if (shaderFile.find('/') != std::string::npos) {
+        return resolveAssetPath(shaderFile);
+    }
+    
+    // Try in visualizer shaders directory
+    std::string shaderPath = "plugins/visualizer/shaders/" + shaderFile;
+    return resolveAssetPath(shaderPath);
+}
+
+std::filesystem::path helios::resolveTexturePath(const std::string& textureFile) {
+    // First try as direct file path
+    if (textureFile.find('/') != std::string::npos) {
+        return resolveAssetPath(textureFile);
+    }
+    
+    // Try common texture locations
+    std::vector<std::string> texturePaths = {
+        "plugins/visualizer/textures/" + textureFile,
+        "plugins/plantarchitecture/assets/textures/" + textureFile,
+        "textures/" + textureFile
+    };
+    
+    for (const auto& texturePath : texturePaths) {
+        try {
+            return resolveAssetPath(texturePath);
+        } catch (const std::exception&) {
+            // Continue to next path
+        }
+    }
+    
+    helios_runtime_error("ERROR (resolveTexturePath): Could not locate texture file '" + textureFile + 
+                       "' in any standard texture directory.");
+    return {}; // This line should never be reached due to helios_runtime_error throwing
+}
+
+std::filesystem::path helios::resolveModelPath(const std::string& modelFile) {
+    // First try as direct file path
+    if (modelFile.find('/') != std::string::npos) {
+        return resolveAssetPath(modelFile);
+    }
+    
+    // Try common model locations
+    std::vector<std::string> modelPaths = {
+        "plugins/plantarchitecture/assets/obj/" + modelFile,
+        "plugins/radiation/camera_light_models/" + modelFile,
+        "PLY/" + modelFile,
+        "models/" + modelFile
+    };
+    
+    for (const auto& modelPath : modelPaths) {
+        try {
+            return resolveAssetPath(modelPath);
+        } catch (const std::exception&) {
+            // Continue to next path
+        }
+    }
+    
+    helios_runtime_error("ERROR (resolveModelPath): Could not locate model file '" + modelFile + 
+                       "' in any standard model directory.");
+    return {}; // This line should never be reached due to helios_runtime_error throwing
+}
+
+std::filesystem::path helios::resolveSpectraPath(const std::string& spectraFile) {
+    // All spectral data files should be looked for in the radiation plugin's spectral_data directory
+    std::string spectraPath = "plugins/radiation/spectral_data/" + spectraFile;
+    return resolveAssetPath(spectraPath);
+}
+
+bool helios::validateAssetPath(const std::filesystem::path& assetPath) {
+    return std::filesystem::exists(assetPath) && std::filesystem::is_regular_file(assetPath);
+}
+
+std::filesystem::path helios::findProjectRoot(const std::filesystem::path& startPath) {
+    std::filesystem::path currentPath = std::filesystem::absolute(startPath);
+    
+    while (!currentPath.empty() && currentPath != currentPath.parent_path()) {
+        std::filesystem::path cmakeFile = currentPath / "CMakeLists.txt";
+        if (std::filesystem::exists(cmakeFile) && std::filesystem::is_regular_file(cmakeFile)) {
+            return currentPath;
+        }
+        currentPath = currentPath.parent_path();
+    }
+    
+    return {}; // Return empty path if not found
+}
+
+std::filesystem::path helios::resolveProjectFile(const std::string& relativePath) {
+    // Handle empty path
+    if (relativePath.empty()) {
+        helios_runtime_error("ERROR (resolveProjectFile): Cannot resolve empty file path.");
+    }
+    
+    // If it's already absolute, just validate and return it
+    std::filesystem::path inputPath(relativePath);
+    if (inputPath.is_absolute()) {
+        if (validateAssetPath(inputPath)) {
+            return inputPath;
+        } else {
+            helios_runtime_error("ERROR (resolveProjectFile): Absolute path '" + relativePath + "' does not exist or is not a regular file.");
+        }
+    }
+    
+    // Strategy 1: Check current working directory
+    std::filesystem::path cwdPath = std::filesystem::current_path() / relativePath;
+    if (validateAssetPath(cwdPath)) {
+        return std::filesystem::absolute(cwdPath);
+    }
+    
+    // Strategy 2: Check project directory
+    std::filesystem::path projectRoot = findProjectRoot();
+    if (!projectRoot.empty()) {
+        std::filesystem::path projectPath = projectRoot / relativePath;
+        if (validateAssetPath(projectPath)) {
+            return std::filesystem::absolute(projectPath);
+        }
+    }
+    
+    // Strategy 3: Error - file not found in either location
+    std::string errorMsg = "ERROR (resolveProjectFile): Could not locate file '" + relativePath + "'. Searched in:\n";
+    errorMsg += "  - Current working directory: " + std::filesystem::current_path().string() + "\n";
+    if (!projectRoot.empty()) {
+        errorMsg += "  - Project directory: " + projectRoot.string() + "\n";
+    } else {
+        errorMsg += "  - Project directory: (not found - no CMakeLists.txt found in parent directories)\n";
+    }
+    errorMsg += "Ensure the file exists in one of these locations.";
+    
+    helios_runtime_error(errorMsg);
+    return {}; // Never reached due to exception
+}
+
 std::vector<float> helios::importVectorFromFile(const std::string &filepath) {
     std::ifstream stream(filepath.c_str());
 

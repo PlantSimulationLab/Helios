@@ -220,7 +220,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  In this example, we've specified the leaf spectral transmissivity at four wavebands - 300, 400, 500, and 600 nm. Note that wavelength values are always given in nanometers. The label "leaf_transmissivity" is important, as this would be used later to assign this transmissivity spectrum to one or more primitives.
 
- The Helios radiation model has some pre-defined spectra in several XML files. These files are automatically copied into the project build directory under "plugins/radiation/spectral_data/". The files "leaf_surface_spectral_library.xml", "soil_surface_spectral_library.xml", etc. have many surface reflectivity and/or transmissivity spectra; the file "light_spectral_library.xml" has several artificial light spectral flux spectra; the file "solar_spectrum_ASTMG173.xml" has the ASTM standard clear sky solar spectrum.
+ The Helios radiation model has some pre-defined spectra in several XML files. These files are automatically resolved by the asset management system regardless of where the executable is run. The files "leaf_surface_spectral_library.xml", "soil_surface_spectral_library.xml", etc. have many surface reflectivity and/or transmissivity spectra; the file "light_spectral_library.xml" has several artificial light spectral flux spectra; the file "solar_spectrum_ASTMG173.xml" has the ASTM standard clear sky solar spectrum.
 
  In order to get the spectral data into the Context as global data, the XML file containing the data must be loaded. This is done via the usual procedure:
 
@@ -824,7 +824,7 @@ The above example assumes that we have already added some geometry to the Contex
 
  Simulated camera data can be written to file as a JPEG image, or the raw pixel data can be queried from the Context.
 
- JPEG images are written either as a grayscale image (1 spectral band) or and RGB image (3 spectral bands) using the \ref RadiationModel::writeCameraImage() method. This method takes three required arguments and two optional arguments: 1) a string denoting the label of a camera that was added through the \ref RadiationModel::addRadiationCamera() method, 2) a vector of strings denoting the label(s) of radiation bands to be written to the image(s), which must contain exactly 1 element (grayscale image) or 3 elements (RGB image), and 3) a string denoting the base of the image filename, which may be appended with information like a radiation band label or frame count. The two optional arguments are: 1) the relative path to the directory where the images should be stored, and 2) a numerical integer identifier to be appended to the image file name (e.g., "camera_thermal_00001.jpeg"). Note that this value must be less than or equal to 99,9999. By default, images are stored in the directory where the executable is being run (usually the build directory), and the numerical identifier is omitted unless a value is provided.
+ JPEG images are written either as a grayscale image (1 spectral band) or and RGB image (3 spectral bands) using the \ref RadiationModel::writeCameraImage() method. This method takes three required arguments and two optional arguments: 1) a string denoting the label of a camera that was added through the \ref RadiationModel::addRadiationCamera() method, 2) a vector of strings denoting the label(s) of radiation bands to be written to the image(s), which must contain exactly 1 element (grayscale image) or 3 elements (RGB image), and 3) a string denoting the base of the image filename, which may be appended with information like a radiation band label or frame count. The two optional arguments are: 1) the relative path to the directory where the images should be stored, and 2) a numerical integer identifier to be appended to the image file name (e.g., "camera_thermal_00001.jpeg"). Note that this value must be less than or equal to 99,9999. By default, images are stored in the current working directory, and the numerical identifier is omitted unless a value is provided.
 
  \subsubsection RadCamSegmentation Writing Camera Image Segmentation Masks
 
@@ -927,7 +927,7 @@ The above example assumes that we have already added some geometry to the Contex
  }
  ~~~~~~
 
- The above code would produce an image in the build directory called "camera_visible_myimage.jpeg", which is shown below, along with a file labels.txt that contains the primitive data labels for each pixel.
+ The above code would produce an image in the current working directory called "camera_visible_myimage.jpeg", which is shown below, along with a file labels.txt that contains the primitive data labels for each pixel.
 
  \image html camera_visible_myimage.jpeg
 

@@ -1,4 +1,6 @@
 #include "StomatalConductanceModel.h"
+
+#define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest.h"
 #include "doctest_utils.h"
 

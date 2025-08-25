@@ -184,6 +184,27 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+# Validate that only one test specification method is used
+TEST_SPEC_COUNT=0
+if [ -n "$SPECIFIC_TEST" ]; then
+  TEST_SPEC_COUNT=$((TEST_SPEC_COUNT + 1))
+fi
+if [ -n "$SPECIFIC_TESTS" ]; then
+  TEST_SPEC_COUNT=$((TEST_SPEC_COUNT + 1))
+fi
+if [ "$TEST_PLUGINS" = "$TEST_PLUGINS_NOGPU" ]; then
+  TEST_SPEC_COUNT=$((TEST_SPEC_COUNT + 1))
+fi
+
+if [ $TEST_SPEC_COUNT -gt 1 ]; then
+  echo "Error: Only one test specification method can be used at a time:"
+  echo "  --test <name>     (run single test)"
+  echo "  --tests <list>    (run multiple specific tests)"
+  echo "  --nogpu           (run all non-GPU tests)"
+  echo ""
+  usage
+fi
+
 if [ -n "$LOG_FILE" ]; then
   true > "$LOG_FILE"  # Clear the log file
 fi
@@ -242,14 +263,63 @@ cleanup() {
 # Set up signal traps for cleanup on interruption only
 trap cleanup INT TERM
 
+# Determine which plugins are needed for current test selection
+PLUGINS_TO_BUILD=${TEST_PLUGINS}
+if [ -n "$SPECIFIC_TEST" ]; then
+  if [[ "$SPECIFIC_TEST" == "context" ]]; then
+    PLUGINS_TO_BUILD=""  # Context test needs no plugins
+  else
+    PLUGINS_TO_BUILD="$SPECIFIC_TEST"  # Only build the plugin being tested
+  fi
+elif [ -n "$SPECIFIC_TESTS" ]; then
+  PLUGINS_TO_BUILD=""
+  IFS=',' read -ra TESTS_ARRAY <<< "$SPECIFIC_TESTS"
+  for test in "${TESTS_ARRAY[@]}"; do
+    test=$(echo "$test" | xargs)  # trim whitespace
+    if [[ "$test" != "context" ]]; then
+      PLUGINS_TO_BUILD="$PLUGINS_TO_BUILD $test"
+    fi
+  done
+  PLUGINS_TO_BUILD=$(echo "$PLUGINS_TO_BUILD" | xargs)  # trim leading/trailing whitespace
+fi
+
 # Create or verify project directory
 PROJECT_EXISTS="OFF"
 if [ -e "$TEMP_DIR" ]; then
   if [ "$PERSISTENT_PROJECT" == "ON" ]; then
     # Check if the directory has a proper project setup
     if [ -e "$TEMP_DIR/main.cpp" ] && [ -e "$TEMP_DIR/CMakeLists.txt" ] && [ -e "$TEMP_DIR/build" ]; then
-      echo "Using existing project in $TEMP_DIR"
-      PROJECT_EXISTS="ON"
+      
+      # Check if existing project has the right plugin configuration
+      if [ -n "$PLUGINS_TO_BUILD" ]; then
+        # Extract current plugins from CMakeLists.txt
+        CURRENT_PLUGINS=$(grep '^set( PLUGINS' "$TEMP_DIR/CMakeLists.txt" | sed 's/.*PLUGINS "\(.*\)" ).*/\1/' | tr ';' ' ')
+        CURRENT_PLUGINS=$(echo "$CURRENT_PLUGINS" | xargs)  # normalize whitespace
+        NEEDED_PLUGINS=$(echo "$PLUGINS_TO_BUILD" | tr ' ' '\n' | sort | tr '\n' ' ' | xargs)
+        EXISTING_PLUGINS=$(echo "$CURRENT_PLUGINS" | tr ' ' '\n' | sort | tr '\n' ' ' | xargs)
+        
+        if [ "$NEEDED_PLUGINS" == "$EXISTING_PLUGINS" ]; then
+          echo "Using existing project in $TEMP_DIR (plugins match: ${NEEDED_PLUGINS:-none})"
+          PROJECT_EXISTS="ON"
+        else
+          echo "Project directory exists but plugin configuration changed (was: ${EXISTING_PLUGINS:-none}, need: ${NEEDED_PLUGINS:-none}), recreating..."
+          rm -rf "$TEMP_DIR"
+          mkdir -p "$TEMP_DIR"
+        fi
+      else
+        # No plugins needed - check if existing project has no plugins
+        CURRENT_PLUGINS=$(grep '^set( PLUGINS' "$TEMP_DIR/CMakeLists.txt" | sed 's/.*PLUGINS "\(.*\)" ).*/\1/' | tr ';' ' ')
+        CURRENT_PLUGINS=$(echo "$CURRENT_PLUGINS" | xargs)  # normalize whitespace
+        
+        if [ -z "$CURRENT_PLUGINS" ]; then
+          echo "Using existing project in $TEMP_DIR (no plugins needed)"
+          PROJECT_EXISTS="ON"
+        else
+          echo "Project directory exists but plugin configuration changed (was: $CURRENT_PLUGINS, need: none), recreating..."
+          rm -rf "$TEMP_DIR"
+          mkdir -p "$TEMP_DIR"
+        fi
+      fi
     else
       echo "Project directory exists but incomplete, recreating..."
       rm -rf "$TEMP_DIR"
@@ -270,26 +340,6 @@ if [ ! -e "$HELIOS_BASE_DIR/utilities/create_project.sh" ]; then
 else
   # Only create project if it doesn't already exist
   if [ "$PROJECT_EXISTS" == "OFF" ]; then
-    # Determine which plugins to build based on test selection
-    PLUGINS_TO_BUILD=${TEST_PLUGINS}
-    if [ -n "$SPECIFIC_TEST" ]; then
-      if [[ "$SPECIFIC_TEST" == "context" ]]; then
-        PLUGINS_TO_BUILD=""  # Context test needs no plugins
-      else
-        PLUGINS_TO_BUILD="$SPECIFIC_TEST"  # Only build the plugin being tested
-      fi
-    elif [ -n "$SPECIFIC_TESTS" ]; then
-      PLUGINS_TO_BUILD=""
-      IFS=',' read -ra TESTS_ARRAY <<< "$SPECIFIC_TESTS"
-      for test in "${TESTS_ARRAY[@]}"; do
-        test=$(echo "$test" | xargs)  # trim whitespace
-        if [[ "$test" != "context" ]]; then
-          PLUGINS_TO_BUILD="$PLUGINS_TO_BUILD $test"
-        fi
-      done
-      PLUGINS_TO_BUILD=$(echo "$PLUGINS_TO_BUILD" | xargs)  # trim leading/trailing whitespace
-    fi
-    
     echo "Building project with plugins: ${PLUGINS_TO_BUILD:-none}"
     "$HELIOS_BASE_DIR/utilities/create_project.sh" "$TEMP_DIR" ${PLUGINS_TO_BUILD}
   fi

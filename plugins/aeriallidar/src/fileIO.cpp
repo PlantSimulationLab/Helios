@@ -25,8 +25,12 @@ void AerialLiDARcloud::loadXML(const char *filename) {
         cout << "Reading XML file: " << filename << "..." << flush;
     }
 
+    // Resolve file path using project-based resolution
+    std::filesystem::path resolved_path = resolveProjectFile(filename);
+    std::string resolved_filename = resolved_path.string();
+
     // Check if file exists
-    ifstream f(filename);
+    ifstream f(resolved_filename);
     if (!f.good()) {
         cerr << "failed.\n XML file does not exist." << endl;
         exit(EXIT_FAILURE);
@@ -36,7 +40,7 @@ void AerialLiDARcloud::loadXML(const char *filename) {
     pugi::xml_document xmldoc;
 
     // load file
-    pugi::xml_parse_result result = xmldoc.load_file(filename);
+    pugi::xml_parse_result result = xmldoc.load_file(resolved_filename.c_str());
 
     // error checking
     if (!result) {

@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.45</span>
+       <span id="projectnumber">&#160;v1.3.46</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -344,6 +344,33 @@ Functions</h2></td></tr>
 <tr class="memitem:ga579d9cf59822d6ead41585737d9d5211" id="r_ga579d9cf59822d6ead41585737d9d5211"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhelios_1_1vec4.html">vec4</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga579d9cf59822d6ead41585737d9d5211">helios::linspace</a> (const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;start, const <a class="el" href="structhelios_1_1vec4.html">vec4</a> &amp;end, int num)</td></tr>
 <tr class="memdesc:ga579d9cf59822d6ead41585737d9d5211"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate linearly spaced vec4 values between two endpoints.  <br /></td></tr>
 <tr class="separator:ga579d9cf59822d6ead41585737d9d5211"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga24991720c54ea9b7679d2b1231355837" id="r_ga24991720c54ea9b7679d2b1231355837"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga24991720c54ea9b7679d2b1231355837">helios::resolveAssetPath</a> (const std::string &amp;relativePath)</td></tr>
+<tr class="memdesc:ga24991720c54ea9b7679d2b1231355837"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve asset file path using cpplocate, allowing executables to run from any directory.  <br /></td></tr>
+<tr class="separator:ga24991720c54ea9b7679d2b1231355837"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga68877cedb04be67e38ea7701ae53b2e8" id="r_ga68877cedb04be67e38ea7701ae53b2e8"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga68877cedb04be67e38ea7701ae53b2e8">helios::resolvePluginAsset</a> (const std::string &amp;pluginName, const std::string &amp;assetPath)</td></tr>
+<tr class="memdesc:ga68877cedb04be67e38ea7701ae53b2e8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve plugin-specific asset path.  <br /></td></tr>
+<tr class="separator:ga68877cedb04be67e38ea7701ae53b2e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga9cce768f66edb75802e2e0445b12316b" id="r_ga9cce768f66edb75802e2e0445b12316b"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga9cce768f66edb75802e2e0445b12316b">helios::resolveShaderPath</a> (const std::string &amp;shaderFile)</td></tr>
+<tr class="memdesc:ga9cce768f66edb75802e2e0445b12316b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve shader file path.  <br /></td></tr>
+<tr class="separator:ga9cce768f66edb75802e2e0445b12316b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga1237d4a6de015b812f0b4c3187ef25c7" id="r_ga1237d4a6de015b812f0b4c3187ef25c7"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga1237d4a6de015b812f0b4c3187ef25c7">helios::resolveTexturePath</a> (const std::string &amp;textureFile)</td></tr>
+<tr class="memdesc:ga1237d4a6de015b812f0b4c3187ef25c7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve texture file path.  <br /></td></tr>
+<tr class="separator:ga1237d4a6de015b812f0b4c3187ef25c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gaa946386306bd287e5167e14676036e41" id="r_gaa946386306bd287e5167e14676036e41"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gaa946386306bd287e5167e14676036e41">helios::resolveModelPath</a> (const std::string &amp;modelFile)</td></tr>
+<tr class="memdesc:gaa946386306bd287e5167e14676036e41"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve 3D model file path.  <br /></td></tr>
+<tr class="separator:gaa946386306bd287e5167e14676036e41"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gac00df4c5b8a19046f4e606232ffe2842" id="r_gac00df4c5b8a19046f4e606232ffe2842"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gac00df4c5b8a19046f4e606232ffe2842">helios::resolveSpectraPath</a> (const std::string &amp;spectraFile)</td></tr>
+<tr class="memdesc:gac00df4c5b8a19046f4e606232ffe2842"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve spectral data file path.  <br /></td></tr>
+<tr class="separator:gac00df4c5b8a19046f4e606232ffe2842"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga6081cd159b1d50f8a50435316679b6c6" id="r_ga6081cd159b1d50f8a50435316679b6c6"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga6081cd159b1d50f8a50435316679b6c6">helios::validateAssetPath</a> (const std::filesystem::path &amp;assetPath)</td></tr>
+<tr class="memdesc:ga6081cd159b1d50f8a50435316679b6c6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Validate that an asset file exists and is readable.  <br /></td></tr>
+<tr class="separator:ga6081cd159b1d50f8a50435316679b6c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga44d890d0f4059ae47a9938c29f8d098b" id="r_ga44d890d0f4059ae47a9938c29f8d098b"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ga44d890d0f4059ae47a9938c29f8d098b">helios::findProjectRoot</a> (const std::filesystem::path &amp;startPath=std::filesystem::current_path())</td></tr>
+<tr class="memdesc:ga44d890d0f4059ae47a9938c29f8d098b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find the project root directory (directory containing top-level CMakeLists.txt)  <br /></td></tr>
+<tr class="separator:ga44d890d0f4059ae47a9938c29f8d098b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gadadfa82538ea2c04ed2dea45fc07749e" id="r_gadadfa82538ea2c04ed2dea45fc07749e"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#gadadfa82538ea2c04ed2dea45fc07749e">helios::resolveProjectFile</a> (const std::string &amp;relativePath)</td></tr>
+<tr class="memdesc:gadadfa82538ea2c04ed2dea45fc07749e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resolve file path using project-based resolution strategy.  <br /></td></tr>
+<tr class="separator:gadadfa82538ea2c04ed2dea45fc07749e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <p>Miscellaneous helper functions. </p>
@@ -568,7 +595,7 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00463">463</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00467">467</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -667,6 +694,43 @@ template&lt;typename anytype&gt; </div>
 
 </div>
 </div>
+<a id="ga44d890d0f4059ae47a9938c29f8d098b" name="ga44d890d0f4059ae47a9938c29f8d098b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga44d890d0f4059ae47a9938c29f8d098b">&#9670;&#160;</a></span>findProjectRoot()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path helios::findProjectRoot </td>
+          <td>(</td>
+          <td class="paramtype">const std::filesystem::path &amp;</td>          <td class="paramname"><span class="paramname"><em>startPath</em></span><span class="paramdefsep"> = </span><span class="paramdefval">std::filesystem::current_path()</span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Find the project root directory (directory containing top-level CMakeLists.txt) </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">startPath</td><td>Starting directory for search (defaults to current working directory) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Absolute path to the project root directory, or empty path if not found </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Searches upward from startPath for a directory containing CMakeLists.txt </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02616">2616</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
 <a id="ga84d3e20ba0b0b53f9ef8e55bd508e426" name="ga84d3e20ba0b0b53f9ef8e55bd508e426"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ga84d3e20ba0b0b53f9ef8e55bd508e426">&#9670;&#160;</a></span>flatten() <span class="overload">[1/3]</span></h2>
 
@@ -700,7 +764,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00892">892</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00896">896</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -737,7 +801,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00876">876</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00880">880</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -774,7 +838,7 @@ template&lt;typename T&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00862">862</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00866">866</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -901,7 +965,7 @@ template&lt;typename T&gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of linearly spaced vec2 values </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02593">2593</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02780">2780</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -948,7 +1012,7 @@ template&lt;typename T&gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of linearly spaced vec3 values </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02614">2614</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02801">2801</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -995,7 +1059,7 @@ template&lt;typename T&gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of linearly spaced vec4 values </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02635">2635</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02822">2822</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1042,7 +1106,7 @@ template&lt;typename T&gt; </div>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vector of linearly spaced float values </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02572">2572</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02759">2759</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -1716,7 +1780,7 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00552">552</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00556">556</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -1762,7 +1826,7 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00565">565</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00569">569</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
 
 </div>
 </div>
@@ -1814,7 +1878,273 @@ template&lt;typename anytype&gt; </div>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00579">579</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="global_8h_source.html#l00583">583</a> of file <a class="el" href="global_8h_source.html">global.h</a>.</p>
+
+</div>
+</div>
+<a id="ga24991720c54ea9b7679d2b1231355837" name="ga24991720c54ea9b7679d2b1231355837"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga24991720c54ea9b7679d2b1231355837">&#9670;&#160;</a></span>resolveAssetPath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path helios::resolveAssetPath </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>relativePath</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Resolve asset file path using cpplocate, allowing executables to run from any directory. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">relativePath</td><td>Relative path to the asset file (e.g., "plugins/visualizer/shaders/shader.vert") </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Absolute path to the asset file </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>This function searches for assets in multiple locations: build directory, system install locations, and custom paths </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02490">2490</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="gaa946386306bd287e5167e14676036e41" name="gaa946386306bd287e5167e14676036e41"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gaa946386306bd287e5167e14676036e41">&#9670;&#160;</a></span>resolveModelPath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path helios::resolveModelPath </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>modelFile</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Resolve 3D model file path. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">modelFile</td><td>Model filename with or without path (e.g., "AlmondHull.obj" or "assets/obj/AlmondHull.obj") <br  />
+ </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Absolute path to the model file </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02574">2574</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga68877cedb04be67e38ea7701ae53b2e8" name="ga68877cedb04be67e38ea7701ae53b2e8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga68877cedb04be67e38ea7701ae53b2e8">&#9670;&#160;</a></span>resolvePluginAsset()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path helios::resolvePluginAsset </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>pluginName</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>assetPath</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Resolve plugin-specific asset path. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">pluginName</td><td>Name of the plugin (e.g., "visualizer", "plantarchitecture", "radiation") </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">assetPath</td><td>Relative path within the plugin's asset directory </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Absolute path to the plugin asset file </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02532">2532</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="gadadfa82538ea2c04ed2dea45fc07749e" name="gadadfa82538ea2c04ed2dea45fc07749e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gadadfa82538ea2c04ed2dea45fc07749e">&#9670;&#160;</a></span>resolveProjectFile()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path helios::resolveProjectFile </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>relativePath</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Resolve file path using project-based resolution strategy. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">relativePath</td><td>Relative path to the file </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Absolute path to the file </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Resolution order: 1) Current working directory, 2) Project directory, 3) Error </dd></dl>
+<dl class="exception"><dt>Exceptions</dt><dd>
+  <table class="exception">
+    <tr><td class="paramname">std::runtime_error</td><td>if file cannot be found </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02630">2630</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga9cce768f66edb75802e2e0445b12316b" name="ga9cce768f66edb75802e2e0445b12316b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga9cce768f66edb75802e2e0445b12316b">&#9670;&#160;</a></span>resolveShaderPath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path helios::resolveShaderPath </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>shaderFile</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Resolve shader file path. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">shaderFile</td><td>Shader filename with or without path (e.g., "primaryShader.vert" or "shaders/primaryShader.vert") </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Absolute path to the shader file </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02537">2537</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="gac00df4c5b8a19046f4e606232ffe2842" name="gac00df4c5b8a19046f4e606232ffe2842"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gac00df4c5b8a19046f4e606232ffe2842">&#9670;&#160;</a></span>resolveSpectraPath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path helios::resolveSpectraPath </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>spectraFile</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Resolve spectral data file path. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">spectraFile</td><td>Spectral data filename with or without path (e.g., "camera_spectral_library.xml") </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Absolute path to the spectral data file </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02601">2601</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga1237d4a6de015b812f0b4c3187ef25c7" name="ga1237d4a6de015b812f0b4c3187ef25c7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga1237d4a6de015b812f0b4c3187ef25c7">&#9670;&#160;</a></span>resolveTexturePath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path helios::resolveTexturePath </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;</td>          <td class="paramname"><span class="paramname"><em>textureFile</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Resolve texture file path. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">textureFile</td><td>Texture filename with or without path (e.g., "AlmondLeaf.png" or "textures/AlmondLeaf.png") </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Absolute path to the texture file </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02548">2548</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>
@@ -2340,6 +2670,42 @@ template&lt;typename anytype&gt; </div>
 <p>Remove leading and trailing whitespace from a string. </p>
 
 <p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l01062">1062</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ga6081cd159b1d50f8a50435316679b6c6" name="ga6081cd159b1d50f8a50435316679b6c6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga6081cd159b1d50f8a50435316679b6c6">&#9670;&#160;</a></span>validateAssetPath()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool helios::validateAssetPath </td>
+          <td>(</td>
+          <td class="paramtype">const std::filesystem::path &amp;</td>          <td class="paramname"><span class="paramname"><em>assetPath</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel nodiscard">nodiscard</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Validate that an asset file exists and is readable. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">assetPath</td><td>Path to the asset file to validate </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if the file exists and is readable, false otherwise </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="global_8cpp_source.html#l02612">2612</a> of file <a class="el" href="global_8cpp_source.html">global.cpp</a>.</p>
 
 </div>
 </div>

@@ -1,5 +1,21 @@
 # Changelog
 
+# [1.3.46] 2025-08-25
+
+* Added cpplocate library integration for dynamic asset path resolution, enabling executables to run from any directory without path dependencies
+* Enhanced GitHub Actions workflows with new Windows GPU self-tests and improved CI configuration
+* Added comprehensive asset resolution functions including `resolveAssetPath()`, `resolvePluginAsset()`, `resolveShaderPath()`, and texture path resolution
+* Upgraded documentation build system with improved cross-referencing and layout enhancements
+
+## Context
+- Implemented filesystem-based asset path resolution with fallback mechanisms for different installation types
+- Added extensive new utility functions in `global.h` for asset management and path validation
+- Enhanced `Context_fileIO.cpp` with robust file path handling and validation
+- Added comprehensive test coverage for new asset resolution functionality in `Test_functions.h`
+
+## Visualizer
+- Fixed some potential segfaults that could occur when calling `Visualizer::plotInteractive()` or `Visualizer::plotUpdate()` in headless mode.
+
 # [1.3.45] 2025-08-21
 
 * Fixed errors in the `radiation_StanfordBunny` and `energybalance_StanfordBunny` samples that were using the deprecated `Context::setPrimitiveData()` signature with explicit type and size parameters.

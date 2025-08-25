@@ -23,7 +23,7 @@ var searchData=
   ['leaf_5fwidth_5fspread_20',['leaf_width_spread',['../struct_base_grape_vine_parameters.html#aca739e4edc970f7ef36ac4913279b656',1,'BaseGrapeVineParameters']]],
   ['leaflet_5flength_21',['leaflet_length',['../struct_bean_parameters.html#a0ba15d0731c1116186120d1b365438e8',1,'BeanParameters']]],
   ['left_5fchild_22',['left_child',['../struct_g_p_u_b_v_h_node.html#ad0d83efd863edde88673b97d9a80db2b',1,'GPUBVHNode']]],
-  ['left_5fchildren_23',['left_children',['../struct_g_p_u_b_v_h_nodes_so_a.html#af3c2fe3edef4ff3860c91dd5c7caf90d',1,'GPUBVHNodesSoA']]],
+  ['left_5fchildren_23',['left_children',['../struct_g_p_u_b_v_h_nodes_so_a.html#a47e10d10527b9b16a8ac22845063c302',1,'GPUBVHNodesSoA::left_children'],['../struct_g_p_u_quantized_b_v_h_nodes.html#aa57072a8b916fc30922b3b1446a6b7c8',1,'GPUQuantizedBVHNodes::left_children']]],
   ['lens_5fdiameter_24',['lens_diameter',['../struct_camera_properties.html#acf2d9d32a978b027658045c8068c7d1a',1,'CameraProperties']]],
   ['level_5fspacing_25',['level_spacing',['../struct_white_spruce_canopy_parameters.html#a4b00e11bfdda7982ce18779b40eadd6d',1,'WhiteSpruceCanopyParameters']]],
   ['longitude_5fdeg_26',['longitude_deg',['../structhelios_1_1_location.html#a29c4f6f1b7453821766f833673eeaff3',1,'helios::Location']]],

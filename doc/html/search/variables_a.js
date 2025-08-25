@@ -3,7 +3,7 @@ var searchData=
   ['maturity_5fage_0',['maturity_age',['../struct_carbohydrate_parameters.html#a63929a3fd67a785d6b83f45ab1f68418',1,'CarbohydrateParameters']]],
   ['max_1',['max',['../struct_parameter_to_optimize.html#a755706c258b93499dbf212391c992981',1,'ParameterToOptimize']]],
   ['max_5fdistance_2',['max_distance',['../struct_collision_detection_1_1_ray_query.html#a26c425e7b077264c69560baa84bb6446',1,'CollisionDetection::RayQuery']]],
-  ['max_5fdistances_3',['max_distances',['../struct_collision_detection_1_1_ray_packet.html#afdfd0306181a9b103ca3c32697608d3c',1,'CollisionDetection::RayPacket']]],
+  ['max_5fdistances_3',['max_distances',['../struct_collision_detection_1_1_ray_packet.html#afdfd0306181a9b103ca3c32697608d3c',1,'CollisionDetection::RayPacket::max_distances'],['../struct_ray_packet.html#adcd8a3f8f902b2512672a3ac86128d31',1,'RayPacket::max_distances']]],
   ['max_5fnodes_4',['max_nodes',['../struct_shoot_parameters.html#a1b7d4d745d7c738837be69221785905e',1,'ShootParameters']]],
   ['max_5fnodes_5fper_5fseason_5',['max_nodes_per_season',['../struct_shoot_parameters.html#aaa51128ff7911b6b50f873f579a0bfa0',1,'ShootParameters']]],
   ['max_5fterminal_5ffloral_5fbuds_6',['max_terminal_floral_buds',['../struct_shoot_parameters.html#a232d683ca26d2662263e8e8322988b6d',1,'ShootParameters']]],

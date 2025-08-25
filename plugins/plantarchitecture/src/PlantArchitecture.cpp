@@ -4147,8 +4147,6 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
     if (phyllochron_min == 9999) {
         std::cerr << "WARNING (PlantArchitecture::advanceTime): No shoots have been added ot the model. Returning.." << std::endl;
         return;
-    } else {
-        std::cout << "Phyllochron min: " << phyllochron_min << std::endl;
     }
 
     // **** accumulate photosynthate **** //
@@ -4462,7 +4460,6 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                         shoot_types.at(epicormic_shoot_label).phytomer_parameters.internode.radius_initial.resample();
                         float internode_length_max = shoot_types.at(epicormic_shoot_label).internode_length_max.val();
                         shoot_types.at(epicormic_shoot_label).internode_length_max.resample();
-                        std::cout << "Adding epicormic shoot" << std::endl;
                         addEpicormicShoot(plantID, shoot->ID, epicormic_fraction.at(s), 1, 0, internode_radius, internode_length_max, 0.01, 0.01, 0, epicormic_shoot_label);
                     }
                 }
@@ -4486,9 +4483,6 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 geometry_update_counter = 0; // Reset counter
             } else {
                 // Update plant structure but not Context geometry
-                if (printmessages) {
-                    std::cout << "Updating plant structure only (Context update in " << (geometry_update_frequency - geometry_update_counter) << " timesteps)" << std::endl;
-                }
                 shoot_tree->front()->updateShootNodes(false);
             }
 
@@ -5263,10 +5257,6 @@ void PlantArchitecture::clearBVHCache() const {
     bvh_cached_for_current_growth = false;
     cached_target_geometry.clear();
     cached_filtered_geometry.clear();
-
-    if (printmessages) {
-        std::cout << "Cleared BVH cache for new growth cycle" << std::endl;
-    }
 }
 
 
