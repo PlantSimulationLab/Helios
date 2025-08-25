@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.45</span>
+       <span id="projectnumber">&#160;v1.3.46</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -2832,235 +2832,440 @@ $(function(){initNavTree('global_8cpp_source.html',''); initResizable(true); });
 <div class="line"><a id="l02486" name="l02486"></a><span class="lineno"> 2486</span>}</div>
 </div>
 <div class="line"><a id="l02487" name="l02487"></a><span class="lineno"> 2487</span> </div>
-<div class="foldopen" id="foldopen02488" data-start="{" data-end="}">
-<div class="line"><a id="l02488" name="l02488"></a><span class="lineno"><a class="line" href="global_8h.html#a125e8bef86fb7272d4d66898afb7d368"> 2488</a></span>std::vector&lt;float&gt; <a class="code hl_function" href="global_8h.html#a125e8bef86fb7272d4d66898afb7d368" title="Read values contained in a text file into a one-dimensional vector of floats.">helios::importVectorFromFile</a>(<span class="keyword">const</span> std::string &amp;filepath) {</div>
-<div class="line"><a id="l02489" name="l02489"></a><span class="lineno"> 2489</span>    std::ifstream stream(filepath.c_str());</div>
-<div class="line"><a id="l02490" name="l02490"></a><span class="lineno"> 2490</span> </div>
-<div class="line"><a id="l02491" name="l02491"></a><span class="lineno"> 2491</span>    <span class="keywordflow">if</span> (!stream.is_open()) {</div>
-<div class="line"><a id="l02492" name="l02492"></a><span class="lineno"> 2492</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (helios::importVectorFromFile): File &quot;</span> + filepath + <span class="stringliteral">&quot; could not be opened for reading. Check that it exists and that you have permission to read it.&quot;</span>);</div>
-<div class="line"><a id="l02493" name="l02493"></a><span class="lineno"> 2493</span>    }</div>
-<div class="line"><a id="l02494" name="l02494"></a><span class="lineno"> 2494</span> </div>
-<div class="line"><a id="l02495" name="l02495"></a><span class="lineno"> 2495</span>    std::istream_iterator&lt;float&gt; start(stream), end;</div>
-<div class="line"><a id="l02496" name="l02496"></a><span class="lineno"> 2496</span>    std::vector&lt;float&gt; vec(start, end);</div>
-<div class="line"><a id="l02497" name="l02497"></a><span class="lineno"> 2497</span>    <span class="keywordflow">return</span> vec;</div>
-<div class="line"><a id="l02498" name="l02498"></a><span class="lineno"> 2498</span>}</div>
-</div>
+<div class="line"><a id="l02488" name="l02488"></a><span class="lineno"> 2488</span><span class="comment">//--------------------- ASSET PATH RESOLUTION -----------------------------------//</span></div>
+<div class="line"><a id="l02489" name="l02489"></a><span class="lineno"> 2489</span> </div>
+<div class="foldopen" id="foldopen02490" data-start="{" data-end="}">
+<div class="line"><a id="l02490" name="l02490"></a><span class="lineno"><a class="line" href="group__functions.html#ga24991720c54ea9b7679d2b1231355837"> 2490</a></span>std::filesystem::path <a class="code hl_function" href="group__functions.html#ga24991720c54ea9b7679d2b1231355837" title="Resolve asset file path using cpplocate, allowing executables to run from any directory.">helios::resolveAssetPath</a>(<span class="keyword">const</span> std::string&amp; relativePath) {</div>
+<div class="line"><a id="l02491" name="l02491"></a><span class="lineno"> 2491</span>    <span class="comment">// Check if environment variable is set for custom asset directory</span></div>
+<div class="line"><a id="l02492" name="l02492"></a><span class="lineno"> 2492</span>    <span class="keyword">const</span> <span class="keywordtype">char</span>* assetDir = std::getenv(<span class="stringliteral">&quot;HELIOS_ASSET_DIR&quot;</span>);</div>
+<div class="line"><a id="l02493" name="l02493"></a><span class="lineno"> 2493</span>    <span class="keywordflow">if</span> (assetDir) {</div>
+<div class="line"><a id="l02494" name="l02494"></a><span class="lineno"> 2494</span>        std::filesystem::path customPath = std::filesystem::path(assetDir) / relativePath;</div>
+<div class="line"><a id="l02495" name="l02495"></a><span class="lineno"> 2495</span>        <span class="keywordflow">if</span> (std::filesystem::exists(customPath)) {</div>
+<div class="line"><a id="l02496" name="l02496"></a><span class="lineno"> 2496</span>            <span class="keywordflow">return</span> std::filesystem::canonical(customPath);</div>
+<div class="line"><a id="l02497" name="l02497"></a><span class="lineno"> 2497</span>        }</div>
+<div class="line"><a id="l02498" name="l02498"></a><span class="lineno"> 2498</span>    }</div>
 <div class="line"><a id="l02499" name="l02499"></a><span class="lineno"> 2499</span> </div>
-<div class="foldopen" id="foldopen02500" data-start="{" data-end="}">
-<div class="line"><a id="l02500" name="l02500"></a><span class="lineno"><a class="line" href="global_8h.html#aa9adbbb2cb1b5784701c056062a00458"> 2500</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="global_8h.html#aa9adbbb2cb1b5784701c056062a00458" title="Sample from Beta(μ,ν) distribution.">helios::sample_Beta_distribution</a>(<span class="keywordtype">float</span> mu, <span class="keywordtype">float</span> nu, std::minstd_rand0 *generator) {</div>
-<div class="line"><a id="l02501" name="l02501"></a><span class="lineno"> 2501</span>    <span class="comment">// 1) draw two independent Gamma variates:</span></div>
-<div class="line"><a id="l02502" name="l02502"></a><span class="lineno"> 2502</span>    <span class="comment">//    X ~ Gamma(α=ν, 1),  Y ~ Gamma(β=μ, 1)</span></div>
-<div class="line"><a id="l02503" name="l02503"></a><span class="lineno"> 2503</span>    std::gamma_distribution&lt;float&gt; dist_nu(nu, 1.0);</div>
-<div class="line"><a id="l02504" name="l02504"></a><span class="lineno"> 2504</span>    std::gamma_distribution&lt;float&gt; dist_mu(mu, 1.0);</div>
-<div class="line"><a id="l02505" name="l02505"></a><span class="lineno"> 2505</span> </div>
-<div class="line"><a id="l02506" name="l02506"></a><span class="lineno"> 2506</span>    <span class="keywordtype">float</span> X = dist_nu(*generator);</div>
-<div class="line"><a id="l02507" name="l02507"></a><span class="lineno"> 2507</span>    <span class="keywordtype">float</span> Y = dist_mu(*generator);</div>
-<div class="line"><a id="l02508" name="l02508"></a><span class="lineno"> 2508</span> </div>
-<div class="line"><a id="l02509" name="l02509"></a><span class="lineno"> 2509</span>    <span class="comment">// 2) form the Beta = X/(X+Y)</span></div>
-<div class="line"><a id="l02510" name="l02510"></a><span class="lineno"> 2510</span>    <span class="keywordtype">float</span> b = X / (X + Y);</div>
-<div class="line"><a id="l02511" name="l02511"></a><span class="lineno"> 2511</span> </div>
-<div class="line"><a id="l02512" name="l02512"></a><span class="lineno"> 2512</span>    <span class="comment">// 3) rescale to θ_L = (π/2)*b</span></div>
-<div class="line"><a id="l02513" name="l02513"></a><span class="lineno"> 2513</span>    <span class="keywordflow">return</span> 0.5f * <a class="code hl_variable" href="global_8h.html#a2d6b12d3f019b61b427ec3c63270143d" title="Pi constant as a float.">PI_F</a> * b;</div>
-<div class="line"><a id="l02514" name="l02514"></a><span class="lineno"> 2514</span>}</div>
+<div class="line"><a id="l02500" name="l02500"></a><span class="lineno"> 2500</span>    <span class="comment">// Use cpplocate to find asset relative to executable or library</span></div>
+<div class="line"><a id="l02501" name="l02501"></a><span class="lineno"> 2501</span>    std::string foundPath = cpplocate::locatePath(relativePath, <span class="stringliteral">&quot;share/helios&quot;</span>, <span class="keyword">reinterpret_cast&lt;</span><span class="keywordtype">void</span>*<span class="keyword">&gt;</span>(&amp;<a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>));</div>
+<div class="line"><a id="l02502" name="l02502"></a><span class="lineno"> 2502</span>    </div>
+<div class="line"><a id="l02503" name="l02503"></a><span class="lineno"> 2503</span>    <span class="keywordflow">if</span> (foundPath.empty()) {</div>
+<div class="line"><a id="l02504" name="l02504"></a><span class="lineno"> 2504</span>        <span class="comment">// Try alternative search paths</span></div>
+<div class="line"><a id="l02505" name="l02505"></a><span class="lineno"> 2505</span>        std::vector&lt;std::string&gt; searchPaths = {</div>
+<div class="line"><a id="l02506" name="l02506"></a><span class="lineno"> 2506</span>            <span class="stringliteral">&quot;.&quot;</span>,  <span class="comment">// Current directory</span></div>
+<div class="line"><a id="l02507" name="l02507"></a><span class="lineno"> 2507</span>            <span class="stringliteral">&quot;..&quot;</span>, <span class="comment">// Parent directory </span></div>
+<div class="line"><a id="l02508" name="l02508"></a><span class="lineno"> 2508</span>            <span class="stringliteral">&quot;../..&quot;</span>, <span class="comment">// Up two levels</span></div>
+<div class="line"><a id="l02509" name="l02509"></a><span class="lineno"> 2509</span>            <span class="stringliteral">&quot;../../..&quot;</span> <span class="comment">// Up three levels</span></div>
+<div class="line"><a id="l02510" name="l02510"></a><span class="lineno"> 2510</span>        };</div>
+<div class="line"><a id="l02511" name="l02511"></a><span class="lineno"> 2511</span>        </div>
+<div class="line"><a id="l02512" name="l02512"></a><span class="lineno"> 2512</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; searchPath : searchPaths) {</div>
+<div class="line"><a id="l02513" name="l02513"></a><span class="lineno"> 2513</span>            std::filesystem::path testPath = std::filesystem::path(searchPath) / relativePath;</div>
+<div class="line"><a id="l02514" name="l02514"></a><span class="lineno"> 2514</span>            <span class="keywordflow">if</span> (std::filesystem::exists(testPath)) {</div>
+<div class="line"><a id="l02515" name="l02515"></a><span class="lineno"> 2515</span>                <span class="keywordflow">return</span> std::filesystem::canonical(testPath);</div>
+<div class="line"><a id="l02516" name="l02516"></a><span class="lineno"> 2516</span>            }</div>
+<div class="line"><a id="l02517" name="l02517"></a><span class="lineno"> 2517</span>        }</div>
+<div class="line"><a id="l02518" name="l02518"></a><span class="lineno"> 2518</span>        </div>
+<div class="line"><a id="l02519" name="l02519"></a><span class="lineno"> 2519</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (resolveAssetPath): Could not locate asset file &#39;&quot;</span> + relativePath + </div>
+<div class="line"><a id="l02520" name="l02520"></a><span class="lineno"> 2520</span>                           <span class="stringliteral">&quot;&#39;. Searched in executable directory, system paths, and HELIOS_ASSET_DIR. &quot;</span> +</div>
+<div class="line"><a id="l02521" name="l02521"></a><span class="lineno"> 2521</span>                           <span class="stringliteral">&quot;Ensure the file exists or set HELIOS_ASSET_DIR environment variable.&quot;</span>);</div>
+<div class="line"><a id="l02522" name="l02522"></a><span class="lineno"> 2522</span>    }</div>
+<div class="line"><a id="l02523" name="l02523"></a><span class="lineno"> 2523</span>    </div>
+<div class="line"><a id="l02524" name="l02524"></a><span class="lineno"> 2524</span>    std::filesystem::path assetPath = std::filesystem::path(foundPath) / relativePath;</div>
+<div class="line"><a id="l02525" name="l02525"></a><span class="lineno"> 2525</span>    <span class="keywordflow">if</span> (!std::filesystem::exists(assetPath)) {</div>
+<div class="line"><a id="l02526" name="l02526"></a><span class="lineno"> 2526</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (resolveAssetPath): Asset file &#39;&quot;</span> + assetPath.string() + <span class="stringliteral">&quot;&#39; does not exist.&quot;</span>);</div>
+<div class="line"><a id="l02527" name="l02527"></a><span class="lineno"> 2527</span>    }</div>
+<div class="line"><a id="l02528" name="l02528"></a><span class="lineno"> 2528</span>    </div>
+<div class="line"><a id="l02529" name="l02529"></a><span class="lineno"> 2529</span>    <span class="keywordflow">return</span> std::filesystem::canonical(assetPath);</div>
+<div class="line"><a id="l02530" name="l02530"></a><span class="lineno"> 2530</span>}</div>
 </div>
-<div class="line"><a id="l02515" name="l02515"></a><span class="lineno"> 2515</span> </div>
-<div class="line"><a id="l02516" name="l02516"></a><span class="lineno"> 2516</span><span class="comment">// Complete elliptic integral of the first kind via the arithmetic–geometric mean (AGM)</span></div>
-<div class="line"><a id="l02517" name="l02517"></a><span class="lineno"> 2517</span><span class="keywordtype">float</span> compute_elliptic_integral_first_kind(<span class="keywordtype">float</span> e) {</div>
-<div class="line"><a id="l02518" name="l02518"></a><span class="lineno"> 2518</span>    <span class="comment">// K(e) = π / (2 * AGM(1, sqrt(1 - e^2)))</span></div>
-<div class="line"><a id="l02519" name="l02519"></a><span class="lineno"> 2519</span>    <span class="keywordtype">float</span> a = 1.0f;</div>
-<div class="line"><a id="l02520" name="l02520"></a><span class="lineno"> 2520</span>    <span class="keywordtype">float</span> b = std::sqrt(1.0f - e * e);</div>
-<div class="line"><a id="l02521" name="l02521"></a><span class="lineno"> 2521</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> iter = 0; iter &lt; 10; ++iter) {</div>
-<div class="line"><a id="l02522" name="l02522"></a><span class="lineno"> 2522</span>        <span class="keywordtype">float</span> an = 0.5f * (a + b);</div>
-<div class="line"><a id="l02523" name="l02523"></a><span class="lineno"> 2523</span>        <span class="keywordtype">float</span> bn = std::sqrt(a * b);</div>
-<div class="line"><a id="l02524" name="l02524"></a><span class="lineno"> 2524</span>        a = an;</div>
-<div class="line"><a id="l02525" name="l02525"></a><span class="lineno"> 2525</span>        b = bn;</div>
-<div class="line"><a id="l02526" name="l02526"></a><span class="lineno"> 2526</span>    }</div>
-<div class="line"><a id="l02527" name="l02527"></a><span class="lineno"> 2527</span>    <span class="keywordflow">return</span> <a class="code hl_variable" href="global_8h.html#a2d6b12d3f019b61b427ec3c63270143d" title="Pi constant as a float.">PI_F</a> / (2.0f * a);</div>
-<div class="line"><a id="l02528" name="l02528"></a><span class="lineno"> 2528</span>}</div>
-<div class="line"><a id="l02529" name="l02529"></a><span class="lineno"> 2529</span> </div>
-<div class="line"><a id="l02530" name="l02530"></a><span class="lineno"> 2530</span><span class="comment">// Ellipsoidal PDF for leaf azimuth distribution</span></div>
-<div class="line"><a id="l02531" name="l02531"></a><span class="lineno"> 2531</span><span class="comment">// phi: sample angle [0,2π), e: eccentricity, phi0: rotation offset, K_e: precomputed ellip. integral</span></div>
-<div class="line"><a id="l02532" name="l02532"></a><span class="lineno"> 2532</span><span class="keywordtype">float</span> evaluate_ellipsoidal_azimuth_PDF(<span class="keywordtype">float</span> phi, <span class="keywordtype">float</span> e, <span class="keywordtype">float</span> phi0, <span class="keywordtype">float</span> K_e) {</div>
-<div class="line"><a id="l02533" name="l02533"></a><span class="lineno"> 2533</span>    <span class="keywordtype">float</span> d = phi - phi0;</div>
-<div class="line"><a id="l02534" name="l02534"></a><span class="lineno"> 2534</span>    <span class="keywordtype">float</span> c2 = (1.f - e * e) * std::cos(d) * std::cos(d) + std::sin(d) * std::sin(d);</div>
-<div class="line"><a id="l02535" name="l02535"></a><span class="lineno"> 2535</span>    <span class="keywordflow">return</span> 1.f / (4.f * K_e * std::sqrt(c2));</div>
-<div class="line"><a id="l02536" name="l02536"></a><span class="lineno"> 2536</span>}</div>
-<div class="line"><a id="l02537" name="l02537"></a><span class="lineno"> 2537</span> </div>
-<div class="line"><a id="l02538" name="l02538"></a><span class="lineno"> 2538</span><span class="comment">// Sample phi from ellipsoidal distribution via rejection sampling</span></div>
-<div class="foldopen" id="foldopen02539" data-start="{" data-end="}">
-<div class="line"><a id="l02539" name="l02539"></a><span class="lineno"><a class="line" href="global_8h.html#ae106b1ce1d55432f4d0da489092e167b"> 2539</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="global_8h.html#ae106b1ce1d55432f4d0da489092e167b" title="Samples an azimuth angle for an ellipsoidal distribution.">helios::sample_ellipsoidal_azimuth</a>(<span class="keywordtype">float</span> e, <span class="keywordtype">float</span> phi0_degrees, std::minstd_rand0 *generator) {</div>
-<div class="line"><a id="l02540" name="l02540"></a><span class="lineno"> 2540</span>    <span class="comment">// sanity‐check</span></div>
-<div class="line"><a id="l02541" name="l02541"></a><span class="lineno"> 2541</span>    <span class="keywordflow">if</span> (e &lt; 0.f || e &gt; 1.f) {</div>
-<div class="line"><a id="l02542" name="l02542"></a><span class="lineno"> 2542</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (helios::sample_ellipsoidal_azimuth): Eccentricity must be in [0,1].&quot;</span>);</div>
-<div class="line"><a id="l02543" name="l02543"></a><span class="lineno"> 2543</span>    }</div>
-<div class="line"><a id="l02544" name="l02544"></a><span class="lineno"> 2544</span> </div>
-<div class="line"><a id="l02545" name="l02545"></a><span class="lineno"> 2545</span>    <span class="comment">// convert rotation offset to radians</span></div>
-<div class="line"><a id="l02546" name="l02546"></a><span class="lineno"> 2546</span>    <span class="keywordtype">float</span> phi0 = <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(phi0_degrees);</div>
+<div class="line"><a id="l02531" name="l02531"></a><span class="lineno"> 2531</span> </div>
+<div class="foldopen" id="foldopen02532" data-start="{" data-end="}">
+<div class="line"><a id="l02532" name="l02532"></a><span class="lineno"><a class="line" href="group__functions.html#ga68877cedb04be67e38ea7701ae53b2e8"> 2532</a></span>std::filesystem::path <a class="code hl_function" href="group__functions.html#ga68877cedb04be67e38ea7701ae53b2e8" title="Resolve plugin-specific asset path.">helios::resolvePluginAsset</a>(<span class="keyword">const</span> std::string&amp; pluginName, <span class="keyword">const</span> std::string&amp; assetPath) {</div>
+<div class="line"><a id="l02533" name="l02533"></a><span class="lineno"> 2533</span>    std::string pluginAssetPath = <span class="stringliteral">&quot;plugins/&quot;</span> + pluginName + <span class="stringliteral">&quot;/&quot;</span> + assetPath;</div>
+<div class="line"><a id="l02534" name="l02534"></a><span class="lineno"> 2534</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="group__functions.html#ga24991720c54ea9b7679d2b1231355837" title="Resolve asset file path using cpplocate, allowing executables to run from any directory.">resolveAssetPath</a>(pluginAssetPath);</div>
+<div class="line"><a id="l02535" name="l02535"></a><span class="lineno"> 2535</span>}</div>
+</div>
+<div class="line"><a id="l02536" name="l02536"></a><span class="lineno"> 2536</span> </div>
+<div class="foldopen" id="foldopen02537" data-start="{" data-end="}">
+<div class="line"><a id="l02537" name="l02537"></a><span class="lineno"><a class="line" href="group__functions.html#ga9cce768f66edb75802e2e0445b12316b"> 2537</a></span>std::filesystem::path <a class="code hl_function" href="group__functions.html#ga9cce768f66edb75802e2e0445b12316b" title="Resolve shader file path.">helios::resolveShaderPath</a>(<span class="keyword">const</span> std::string&amp; shaderFile) {</div>
+<div class="line"><a id="l02538" name="l02538"></a><span class="lineno"> 2538</span>    <span class="comment">// First try as direct file path</span></div>
+<div class="line"><a id="l02539" name="l02539"></a><span class="lineno"> 2539</span>    <span class="keywordflow">if</span> (shaderFile.find(<span class="charliteral">&#39;/&#39;</span>) != std::string::npos) {</div>
+<div class="line"><a id="l02540" name="l02540"></a><span class="lineno"> 2540</span>        <span class="keywordflow">return</span> <a class="code hl_function" href="group__functions.html#ga24991720c54ea9b7679d2b1231355837" title="Resolve asset file path using cpplocate, allowing executables to run from any directory.">resolveAssetPath</a>(shaderFile);</div>
+<div class="line"><a id="l02541" name="l02541"></a><span class="lineno"> 2541</span>    }</div>
+<div class="line"><a id="l02542" name="l02542"></a><span class="lineno"> 2542</span>    </div>
+<div class="line"><a id="l02543" name="l02543"></a><span class="lineno"> 2543</span>    <span class="comment">// Try in visualizer shaders directory</span></div>
+<div class="line"><a id="l02544" name="l02544"></a><span class="lineno"> 2544</span>    std::string shaderPath = <span class="stringliteral">&quot;plugins/visualizer/shaders/&quot;</span> + shaderFile;</div>
+<div class="line"><a id="l02545" name="l02545"></a><span class="lineno"> 2545</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="group__functions.html#ga24991720c54ea9b7679d2b1231355837" title="Resolve asset file path using cpplocate, allowing executables to run from any directory.">resolveAssetPath</a>(shaderPath);</div>
+<div class="line"><a id="l02546" name="l02546"></a><span class="lineno"> 2546</span>}</div>
+</div>
 <div class="line"><a id="l02547" name="l02547"></a><span class="lineno"> 2547</span> </div>
-<div class="line"><a id="l02548" name="l02548"></a><span class="lineno"> 2548</span>    <span class="comment">// ellipse semiaxes: a=1, b = sqrt(1 - e^2)</span></div>
-<div class="line"><a id="l02549" name="l02549"></a><span class="lineno"> 2549</span>    <span class="keywordtype">float</span> a = 1.f;</div>
-<div class="line"><a id="l02550" name="l02550"></a><span class="lineno"> 2550</span>    <span class="keywordtype">float</span> b = std::sqrt(1.f - e * e);</div>
-<div class="line"><a id="l02551" name="l02551"></a><span class="lineno"> 2551</span> </div>
-<div class="line"><a id="l02552" name="l02552"></a><span class="lineno"> 2552</span>    <span class="comment">// sample the ellipse parameter t uniformly in [0,2π)</span></div>
-<div class="line"><a id="l02553" name="l02553"></a><span class="lineno"> 2553</span>    std::uniform_real_distribution&lt;float&gt; distT(0.f, 2.f * <a class="code hl_variable" href="global_8h.html#a2d6b12d3f019b61b427ec3c63270143d" title="Pi constant as a float.">PI_F</a>);</div>
-<div class="line"><a id="l02554" name="l02554"></a><span class="lineno"> 2554</span>    <span class="keywordtype">float</span> t = distT(*generator);</div>
-<div class="line"><a id="l02555" name="l02555"></a><span class="lineno"> 2555</span> </div>
-<div class="line"><a id="l02556" name="l02556"></a><span class="lineno"> 2556</span>    <span class="comment">// point on the ellipse boundary</span></div>
-<div class="line"><a id="l02557" name="l02557"></a><span class="lineno"> 2557</span>    <span class="keywordtype">float</span> x = a * std::cos(t);</div>
-<div class="line"><a id="l02558" name="l02558"></a><span class="lineno"> 2558</span>    <span class="keywordtype">float</span> y = b * std::sin(t);</div>
-<div class="line"><a id="l02559" name="l02559"></a><span class="lineno"> 2559</span> </div>
-<div class="line"><a id="l02560" name="l02560"></a><span class="lineno"> 2560</span>    <span class="comment">// compute its polar angle</span></div>
-<div class="line"><a id="l02561" name="l02561"></a><span class="lineno"> 2561</span>    <span class="keywordtype">float</span> phi = std::atan2(y, x) + phi0;</div>
-<div class="line"><a id="l02562" name="l02562"></a><span class="lineno"> 2562</span> </div>
-<div class="line"><a id="l02563" name="l02563"></a><span class="lineno"> 2563</span>    <span class="comment">// wrap into [0,2π)</span></div>
-<div class="line"><a id="l02564" name="l02564"></a><span class="lineno"> 2564</span>    <span class="keywordflow">if</span> (phi &lt; 0.f)</div>
-<div class="line"><a id="l02565" name="l02565"></a><span class="lineno"> 2565</span>        phi += 2.f * <a class="code hl_variable" href="global_8h.html#a2d6b12d3f019b61b427ec3c63270143d" title="Pi constant as a float.">PI_F</a>;</div>
-<div class="line"><a id="l02566" name="l02566"></a><span class="lineno"> 2566</span>    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (phi &gt;= 2.f * <a class="code hl_variable" href="global_8h.html#a2d6b12d3f019b61b427ec3c63270143d" title="Pi constant as a float.">PI_F</a>)</div>
-<div class="line"><a id="l02567" name="l02567"></a><span class="lineno"> 2567</span>        phi -= 2.f * <a class="code hl_variable" href="global_8h.html#a2d6b12d3f019b61b427ec3c63270143d" title="Pi constant as a float.">PI_F</a>;</div>
-<div class="line"><a id="l02568" name="l02568"></a><span class="lineno"> 2568</span> </div>
-<div class="line"><a id="l02569" name="l02569"></a><span class="lineno"> 2569</span>    <span class="keywordflow">return</span> phi;</div>
-<div class="line"><a id="l02570" name="l02570"></a><span class="lineno"> 2570</span>}</div>
+<div class="foldopen" id="foldopen02548" data-start="{" data-end="}">
+<div class="line"><a id="l02548" name="l02548"></a><span class="lineno"><a class="line" href="group__functions.html#ga1237d4a6de015b812f0b4c3187ef25c7"> 2548</a></span>std::filesystem::path <a class="code hl_function" href="group__functions.html#ga1237d4a6de015b812f0b4c3187ef25c7" title="Resolve texture file path.">helios::resolveTexturePath</a>(<span class="keyword">const</span> std::string&amp; textureFile) {</div>
+<div class="line"><a id="l02549" name="l02549"></a><span class="lineno"> 2549</span>    <span class="comment">// First try as direct file path</span></div>
+<div class="line"><a id="l02550" name="l02550"></a><span class="lineno"> 2550</span>    <span class="keywordflow">if</span> (textureFile.find(<span class="charliteral">&#39;/&#39;</span>) != std::string::npos) {</div>
+<div class="line"><a id="l02551" name="l02551"></a><span class="lineno"> 2551</span>        <span class="keywordflow">return</span> <a class="code hl_function" href="group__functions.html#ga24991720c54ea9b7679d2b1231355837" title="Resolve asset file path using cpplocate, allowing executables to run from any directory.">resolveAssetPath</a>(textureFile);</div>
+<div class="line"><a id="l02552" name="l02552"></a><span class="lineno"> 2552</span>    }</div>
+<div class="line"><a id="l02553" name="l02553"></a><span class="lineno"> 2553</span>    </div>
+<div class="line"><a id="l02554" name="l02554"></a><span class="lineno"> 2554</span>    <span class="comment">// Try common texture locations</span></div>
+<div class="line"><a id="l02555" name="l02555"></a><span class="lineno"> 2555</span>    std::vector&lt;std::string&gt; texturePaths = {</div>
+<div class="line"><a id="l02556" name="l02556"></a><span class="lineno"> 2556</span>        <span class="stringliteral">&quot;plugins/visualizer/textures/&quot;</span> + textureFile,</div>
+<div class="line"><a id="l02557" name="l02557"></a><span class="lineno"> 2557</span>        <span class="stringliteral">&quot;plugins/plantarchitecture/assets/textures/&quot;</span> + textureFile,</div>
+<div class="line"><a id="l02558" name="l02558"></a><span class="lineno"> 2558</span>        <span class="stringliteral">&quot;textures/&quot;</span> + textureFile</div>
+<div class="line"><a id="l02559" name="l02559"></a><span class="lineno"> 2559</span>    };</div>
+<div class="line"><a id="l02560" name="l02560"></a><span class="lineno"> 2560</span>    </div>
+<div class="line"><a id="l02561" name="l02561"></a><span class="lineno"> 2561</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; texturePath : texturePaths) {</div>
+<div class="line"><a id="l02562" name="l02562"></a><span class="lineno"> 2562</span>        <span class="keywordflow">try</span> {</div>
+<div class="line"><a id="l02563" name="l02563"></a><span class="lineno"> 2563</span>            <span class="keywordflow">return</span> <a class="code hl_function" href="group__functions.html#ga24991720c54ea9b7679d2b1231355837" title="Resolve asset file path using cpplocate, allowing executables to run from any directory.">resolveAssetPath</a>(texturePath);</div>
+<div class="line"><a id="l02564" name="l02564"></a><span class="lineno"> 2564</span>        } <span class="keywordflow">catch</span> (<span class="keyword">const</span> std::exception&amp;) {</div>
+<div class="line"><a id="l02565" name="l02565"></a><span class="lineno"> 2565</span>            <span class="comment">// Continue to next path</span></div>
+<div class="line"><a id="l02566" name="l02566"></a><span class="lineno"> 2566</span>        }</div>
+<div class="line"><a id="l02567" name="l02567"></a><span class="lineno"> 2567</span>    }</div>
+<div class="line"><a id="l02568" name="l02568"></a><span class="lineno"> 2568</span>    </div>
+<div class="line"><a id="l02569" name="l02569"></a><span class="lineno"> 2569</span>    <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (resolveTexturePath): Could not locate texture file &#39;&quot;</span> + textureFile + </div>
+<div class="line"><a id="l02570" name="l02570"></a><span class="lineno"> 2570</span>                       <span class="stringliteral">&quot;&#39; in any standard texture directory.&quot;</span>);</div>
+<div class="line"><a id="l02571" name="l02571"></a><span class="lineno"> 2571</span>    <span class="keywordflow">return</span> {}; <span class="comment">// This line should never be reached due to helios_runtime_error throwing</span></div>
+<div class="line"><a id="l02572" name="l02572"></a><span class="lineno"> 2572</span>}</div>
 </div>
-<div class="line"><a id="l02571" name="l02571"></a><span class="lineno"> 2571</span> </div>
-<div class="foldopen" id="foldopen02572" data-start="{" data-end="}">
-<div class="line"><a id="l02572" name="l02572"></a><span class="lineno"><a class="line" href="group__functions.html#ga7b3096a0046cf1bd108796a6f7d90bfa"> 2572</a></span>std::vector&lt;float&gt; <a class="code hl_function" href="group__functions.html#ga7b3096a0046cf1bd108796a6f7d90bfa" title="Generate linearly spaced values between two endpoints.">helios::linspace</a>(<span class="keywordtype">float</span> start, <span class="keywordtype">float</span> end, <span class="keywordtype">int</span> num) {</div>
-<div class="line"><a id="l02573" name="l02573"></a><span class="lineno"> 2573</span>    <span class="keywordflow">if</span> (num &lt;= 0) {</div>
-<div class="line"><a id="l02574" name="l02574"></a><span class="lineno"> 2574</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (linspace): Number of points must be greater than 0.&quot;</span>);</div>
-<div class="line"><a id="l02575" name="l02575"></a><span class="lineno"> 2575</span>    }</div>
-<div class="line"><a id="l02576" name="l02576"></a><span class="lineno"> 2576</span>    </div>
-<div class="line"><a id="l02577" name="l02577"></a><span class="lineno"> 2577</span>    <span class="keywordflow">if</span> (num == 1) {</div>
-<div class="line"><a id="l02578" name="l02578"></a><span class="lineno"> 2578</span>        <span class="keywordflow">return</span> {start};</div>
-<div class="line"><a id="l02579" name="l02579"></a><span class="lineno"> 2579</span>    }</div>
-<div class="line"><a id="l02580" name="l02580"></a><span class="lineno"> 2580</span>    </div>
-<div class="line"><a id="l02581" name="l02581"></a><span class="lineno"> 2581</span>    std::vector&lt;float&gt; result(num);</div>
-<div class="line"><a id="l02582" name="l02582"></a><span class="lineno"> 2582</span>    <span class="keywordtype">float</span> step = (end - start) / (num - 1);</div>
-<div class="line"><a id="l02583" name="l02583"></a><span class="lineno"> 2583</span>    </div>
-<div class="line"><a id="l02584" name="l02584"></a><span class="lineno"> 2584</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; num; ++i) {</div>
-<div class="line"><a id="l02585" name="l02585"></a><span class="lineno"> 2585</span>        result[i] = start + i * step;</div>
-<div class="line"><a id="l02586" name="l02586"></a><span class="lineno"> 2586</span>    }</div>
+<div class="line"><a id="l02573" name="l02573"></a><span class="lineno"> 2573</span> </div>
+<div class="foldopen" id="foldopen02574" data-start="{" data-end="}">
+<div class="line"><a id="l02574" name="l02574"></a><span class="lineno"><a class="line" href="group__functions.html#gaa946386306bd287e5167e14676036e41"> 2574</a></span>std::filesystem::path <a class="code hl_function" href="group__functions.html#gaa946386306bd287e5167e14676036e41" title="Resolve 3D model file path.">helios::resolveModelPath</a>(<span class="keyword">const</span> std::string&amp; modelFile) {</div>
+<div class="line"><a id="l02575" name="l02575"></a><span class="lineno"> 2575</span>    <span class="comment">// First try as direct file path</span></div>
+<div class="line"><a id="l02576" name="l02576"></a><span class="lineno"> 2576</span>    <span class="keywordflow">if</span> (modelFile.find(<span class="charliteral">&#39;/&#39;</span>) != std::string::npos) {</div>
+<div class="line"><a id="l02577" name="l02577"></a><span class="lineno"> 2577</span>        <span class="keywordflow">return</span> <a class="code hl_function" href="group__functions.html#ga24991720c54ea9b7679d2b1231355837" title="Resolve asset file path using cpplocate, allowing executables to run from any directory.">resolveAssetPath</a>(modelFile);</div>
+<div class="line"><a id="l02578" name="l02578"></a><span class="lineno"> 2578</span>    }</div>
+<div class="line"><a id="l02579" name="l02579"></a><span class="lineno"> 2579</span>    </div>
+<div class="line"><a id="l02580" name="l02580"></a><span class="lineno"> 2580</span>    <span class="comment">// Try common model locations</span></div>
+<div class="line"><a id="l02581" name="l02581"></a><span class="lineno"> 2581</span>    std::vector&lt;std::string&gt; modelPaths = {</div>
+<div class="line"><a id="l02582" name="l02582"></a><span class="lineno"> 2582</span>        <span class="stringliteral">&quot;plugins/plantarchitecture/assets/obj/&quot;</span> + modelFile,</div>
+<div class="line"><a id="l02583" name="l02583"></a><span class="lineno"> 2583</span>        <span class="stringliteral">&quot;plugins/radiation/camera_light_models/&quot;</span> + modelFile,</div>
+<div class="line"><a id="l02584" name="l02584"></a><span class="lineno"> 2584</span>        <span class="stringliteral">&quot;PLY/&quot;</span> + modelFile,</div>
+<div class="line"><a id="l02585" name="l02585"></a><span class="lineno"> 2585</span>        <span class="stringliteral">&quot;models/&quot;</span> + modelFile</div>
+<div class="line"><a id="l02586" name="l02586"></a><span class="lineno"> 2586</span>    };</div>
 <div class="line"><a id="l02587" name="l02587"></a><span class="lineno"> 2587</span>    </div>
-<div class="line"><a id="l02588" name="l02588"></a><span class="lineno"> 2588</span>    result[num - 1] = end;</div>
-<div class="line"><a id="l02589" name="l02589"></a><span class="lineno"> 2589</span>    </div>
-<div class="line"><a id="l02590" name="l02590"></a><span class="lineno"> 2590</span>    <span class="keywordflow">return</span> result;</div>
-<div class="line"><a id="l02591" name="l02591"></a><span class="lineno"> 2591</span>}</div>
+<div class="line"><a id="l02588" name="l02588"></a><span class="lineno"> 2588</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; modelPath : modelPaths) {</div>
+<div class="line"><a id="l02589" name="l02589"></a><span class="lineno"> 2589</span>        <span class="keywordflow">try</span> {</div>
+<div class="line"><a id="l02590" name="l02590"></a><span class="lineno"> 2590</span>            <span class="keywordflow">return</span> <a class="code hl_function" href="group__functions.html#ga24991720c54ea9b7679d2b1231355837" title="Resolve asset file path using cpplocate, allowing executables to run from any directory.">resolveAssetPath</a>(modelPath);</div>
+<div class="line"><a id="l02591" name="l02591"></a><span class="lineno"> 2591</span>        } <span class="keywordflow">catch</span> (<span class="keyword">const</span> std::exception&amp;) {</div>
+<div class="line"><a id="l02592" name="l02592"></a><span class="lineno"> 2592</span>            <span class="comment">// Continue to next path</span></div>
+<div class="line"><a id="l02593" name="l02593"></a><span class="lineno"> 2593</span>        }</div>
+<div class="line"><a id="l02594" name="l02594"></a><span class="lineno"> 2594</span>    }</div>
+<div class="line"><a id="l02595" name="l02595"></a><span class="lineno"> 2595</span>    </div>
+<div class="line"><a id="l02596" name="l02596"></a><span class="lineno"> 2596</span>    <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (resolveModelPath): Could not locate model file &#39;&quot;</span> + modelFile + </div>
+<div class="line"><a id="l02597" name="l02597"></a><span class="lineno"> 2597</span>                       <span class="stringliteral">&quot;&#39; in any standard model directory.&quot;</span>);</div>
+<div class="line"><a id="l02598" name="l02598"></a><span class="lineno"> 2598</span>    <span class="keywordflow">return</span> {}; <span class="comment">// This line should never be reached due to helios_runtime_error throwing</span></div>
+<div class="line"><a id="l02599" name="l02599"></a><span class="lineno"> 2599</span>}</div>
 </div>
-<div class="line"><a id="l02592" name="l02592"></a><span class="lineno"> 2592</span> </div>
-<div class="foldopen" id="foldopen02593" data-start="{" data-end="}">
-<div class="line"><a id="l02593" name="l02593"></a><span class="lineno"><a class="line" href="group__functions.html#gaee02b6805960b89201555f4022768c6b"> 2593</a></span>std::vector&lt;vec2&gt; <a class="code hl_function" href="group__functions.html#ga7b3096a0046cf1bd108796a6f7d90bfa" title="Generate linearly spaced values between two endpoints.">helios::linspace</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> &amp;start, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> &amp;end, <span class="keywordtype">int</span> num) {</div>
-<div class="line"><a id="l02594" name="l02594"></a><span class="lineno"> 2594</span>    <span class="keywordflow">if</span> (num &lt;= 0) {</div>
-<div class="line"><a id="l02595" name="l02595"></a><span class="lineno"> 2595</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (linspace): Number of points must be greater than 0.&quot;</span>);</div>
-<div class="line"><a id="l02596" name="l02596"></a><span class="lineno"> 2596</span>    }</div>
-<div class="line"><a id="l02597" name="l02597"></a><span class="lineno"> 2597</span>    </div>
-<div class="line"><a id="l02598" name="l02598"></a><span class="lineno"> 2598</span>    <span class="keywordflow">if</span> (num == 1) {</div>
-<div class="line"><a id="l02599" name="l02599"></a><span class="lineno"> 2599</span>        <span class="keywordflow">return</span> {start};</div>
-<div class="line"><a id="l02600" name="l02600"></a><span class="lineno"> 2600</span>    }</div>
-<div class="line"><a id="l02601" name="l02601"></a><span class="lineno"> 2601</span>    </div>
-<div class="line"><a id="l02602" name="l02602"></a><span class="lineno"> 2602</span>    std::vector&lt;vec2&gt; result(num);</div>
-<div class="line"><a id="l02603" name="l02603"></a><span class="lineno"> 2603</span>    <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> step = (end - start) / <span class="keywordtype">float</span>(num - 1);</div>
-<div class="line"><a id="l02604" name="l02604"></a><span class="lineno"> 2604</span>    </div>
-<div class="line"><a id="l02605" name="l02605"></a><span class="lineno"> 2605</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; num; ++i) {</div>
-<div class="line"><a id="l02606" name="l02606"></a><span class="lineno"> 2606</span>        result[i] = start + step * float(i);</div>
-<div class="line"><a id="l02607" name="l02607"></a><span class="lineno"> 2607</span>    }</div>
-<div class="line"><a id="l02608" name="l02608"></a><span class="lineno"> 2608</span>    </div>
-<div class="line"><a id="l02609" name="l02609"></a><span class="lineno"> 2609</span>    result[num - 1] = end;</div>
-<div class="line"><a id="l02610" name="l02610"></a><span class="lineno"> 2610</span>    </div>
-<div class="line"><a id="l02611" name="l02611"></a><span class="lineno"> 2611</span>    <span class="keywordflow">return</span> result;</div>
-<div class="line"><a id="l02612" name="l02612"></a><span class="lineno"> 2612</span>}</div>
+<div class="line"><a id="l02600" name="l02600"></a><span class="lineno"> 2600</span> </div>
+<div class="foldopen" id="foldopen02601" data-start="{" data-end="}">
+<div class="line"><a id="l02601" name="l02601"></a><span class="lineno"><a class="line" href="group__functions.html#gac00df4c5b8a19046f4e606232ffe2842"> 2601</a></span>std::filesystem::path <a class="code hl_function" href="group__functions.html#gac00df4c5b8a19046f4e606232ffe2842" title="Resolve spectral data file path.">helios::resolveSpectraPath</a>(<span class="keyword">const</span> std::string&amp; spectraFile) {</div>
+<div class="line"><a id="l02602" name="l02602"></a><span class="lineno"> 2602</span>    <span class="comment">// First try as direct file path</span></div>
+<div class="line"><a id="l02603" name="l02603"></a><span class="lineno"> 2603</span>    <span class="keywordflow">if</span> (spectraFile.find(<span class="charliteral">&#39;/&#39;</span>) != std::string::npos) {</div>
+<div class="line"><a id="l02604" name="l02604"></a><span class="lineno"> 2604</span>        <span class="keywordflow">return</span> <a class="code hl_function" href="group__functions.html#ga24991720c54ea9b7679d2b1231355837" title="Resolve asset file path using cpplocate, allowing executables to run from any directory.">resolveAssetPath</a>(spectraFile);</div>
+<div class="line"><a id="l02605" name="l02605"></a><span class="lineno"> 2605</span>    }</div>
+<div class="line"><a id="l02606" name="l02606"></a><span class="lineno"> 2606</span>    </div>
+<div class="line"><a id="l02607" name="l02607"></a><span class="lineno"> 2607</span>    <span class="comment">// Try in radiation spectral data directory</span></div>
+<div class="line"><a id="l02608" name="l02608"></a><span class="lineno"> 2608</span>    std::string spectraPath = <span class="stringliteral">&quot;plugins/radiation/spectral_data/&quot;</span> + spectraFile;</div>
+<div class="line"><a id="l02609" name="l02609"></a><span class="lineno"> 2609</span>    <span class="keywordflow">return</span> <a class="code hl_function" href="group__functions.html#ga24991720c54ea9b7679d2b1231355837" title="Resolve asset file path using cpplocate, allowing executables to run from any directory.">resolveAssetPath</a>(spectraPath);</div>
+<div class="line"><a id="l02610" name="l02610"></a><span class="lineno"> 2610</span>}</div>
 </div>
-<div class="line"><a id="l02613" name="l02613"></a><span class="lineno"> 2613</span> </div>
-<div class="foldopen" id="foldopen02614" data-start="{" data-end="}">
-<div class="line"><a id="l02614" name="l02614"></a><span class="lineno"><a class="line" href="group__functions.html#ga23f7dd71170481919d4d6f91ae6ce658"> 2614</a></span>std::vector&lt;vec3&gt; <a class="code hl_function" href="group__functions.html#ga7b3096a0046cf1bd108796a6f7d90bfa" title="Generate linearly spaced values between two endpoints.">helios::linspace</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> &amp;start, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> &amp;end, <span class="keywordtype">int</span> num) {</div>
-<div class="line"><a id="l02615" name="l02615"></a><span class="lineno"> 2615</span>    <span class="keywordflow">if</span> (num &lt;= 0) {</div>
-<div class="line"><a id="l02616" name="l02616"></a><span class="lineno"> 2616</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (linspace): Number of points must be greater than 0.&quot;</span>);</div>
-<div class="line"><a id="l02617" name="l02617"></a><span class="lineno"> 2617</span>    }</div>
+<div class="line"><a id="l02611" name="l02611"></a><span class="lineno"> 2611</span> </div>
+<div class="foldopen" id="foldopen02612" data-start="{" data-end="}">
+<div class="line"><a id="l02612" name="l02612"></a><span class="lineno"><a class="line" href="group__functions.html#ga6081cd159b1d50f8a50435316679b6c6"> 2612</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="group__functions.html#ga6081cd159b1d50f8a50435316679b6c6" title="Validate that an asset file exists and is readable.">helios::validateAssetPath</a>(<span class="keyword">const</span> std::filesystem::path&amp; assetPath) {</div>
+<div class="line"><a id="l02613" name="l02613"></a><span class="lineno"> 2613</span>    <span class="keywordflow">return</span> std::filesystem::exists(assetPath) &amp;&amp; std::filesystem::is_regular_file(assetPath);</div>
+<div class="line"><a id="l02614" name="l02614"></a><span class="lineno"> 2614</span>}</div>
+</div>
+<div class="line"><a id="l02615" name="l02615"></a><span class="lineno"> 2615</span> </div>
+<div class="foldopen" id="foldopen02616" data-start="{" data-end="}">
+<div class="line"><a id="l02616" name="l02616"></a><span class="lineno"><a class="line" href="group__functions.html#ga44d890d0f4059ae47a9938c29f8d098b"> 2616</a></span>std::filesystem::path <a class="code hl_function" href="group__functions.html#ga44d890d0f4059ae47a9938c29f8d098b" title="Find the project root directory (directory containing top-level CMakeLists.txt)">helios::findProjectRoot</a>(<span class="keyword">const</span> std::filesystem::path&amp; startPath) {</div>
+<div class="line"><a id="l02617" name="l02617"></a><span class="lineno"> 2617</span>    std::filesystem::path currentPath = std::filesystem::absolute(startPath);</div>
 <div class="line"><a id="l02618" name="l02618"></a><span class="lineno"> 2618</span>    </div>
-<div class="line"><a id="l02619" name="l02619"></a><span class="lineno"> 2619</span>    <span class="keywordflow">if</span> (num == 1) {</div>
-<div class="line"><a id="l02620" name="l02620"></a><span class="lineno"> 2620</span>        <span class="keywordflow">return</span> {start};</div>
-<div class="line"><a id="l02621" name="l02621"></a><span class="lineno"> 2621</span>    }</div>
-<div class="line"><a id="l02622" name="l02622"></a><span class="lineno"> 2622</span>    </div>
-<div class="line"><a id="l02623" name="l02623"></a><span class="lineno"> 2623</span>    std::vector&lt;vec3&gt; result(num);</div>
-<div class="line"><a id="l02624" name="l02624"></a><span class="lineno"> 2624</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> step = (end - start) / <span class="keywordtype">float</span>(num - 1);</div>
-<div class="line"><a id="l02625" name="l02625"></a><span class="lineno"> 2625</span>    </div>
-<div class="line"><a id="l02626" name="l02626"></a><span class="lineno"> 2626</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; num; ++i) {</div>
-<div class="line"><a id="l02627" name="l02627"></a><span class="lineno"> 2627</span>        result[i] = start + step * float(i);</div>
-<div class="line"><a id="l02628" name="l02628"></a><span class="lineno"> 2628</span>    }</div>
-<div class="line"><a id="l02629" name="l02629"></a><span class="lineno"> 2629</span>    </div>
-<div class="line"><a id="l02630" name="l02630"></a><span class="lineno"> 2630</span>    result[num - 1] = end;</div>
-<div class="line"><a id="l02631" name="l02631"></a><span class="lineno"> 2631</span>    </div>
-<div class="line"><a id="l02632" name="l02632"></a><span class="lineno"> 2632</span>    <span class="keywordflow">return</span> result;</div>
-<div class="line"><a id="l02633" name="l02633"></a><span class="lineno"> 2633</span>}</div>
+<div class="line"><a id="l02619" name="l02619"></a><span class="lineno"> 2619</span>    <span class="keywordflow">while</span> (!currentPath.empty() &amp;&amp; currentPath != currentPath.parent_path()) {</div>
+<div class="line"><a id="l02620" name="l02620"></a><span class="lineno"> 2620</span>        std::filesystem::path cmakeFile = currentPath / <span class="stringliteral">&quot;CMakeLists.txt&quot;</span>;</div>
+<div class="line"><a id="l02621" name="l02621"></a><span class="lineno"> 2621</span>        <span class="keywordflow">if</span> (std::filesystem::exists(cmakeFile) &amp;&amp; std::filesystem::is_regular_file(cmakeFile)) {</div>
+<div class="line"><a id="l02622" name="l02622"></a><span class="lineno"> 2622</span>            <span class="keywordflow">return</span> currentPath;</div>
+<div class="line"><a id="l02623" name="l02623"></a><span class="lineno"> 2623</span>        }</div>
+<div class="line"><a id="l02624" name="l02624"></a><span class="lineno"> 2624</span>        currentPath = currentPath.parent_path();</div>
+<div class="line"><a id="l02625" name="l02625"></a><span class="lineno"> 2625</span>    }</div>
+<div class="line"><a id="l02626" name="l02626"></a><span class="lineno"> 2626</span>    </div>
+<div class="line"><a id="l02627" name="l02627"></a><span class="lineno"> 2627</span>    <span class="keywordflow">return</span> {}; <span class="comment">// Return empty path if not found</span></div>
+<div class="line"><a id="l02628" name="l02628"></a><span class="lineno"> 2628</span>}</div>
 </div>
-<div class="line"><a id="l02634" name="l02634"></a><span class="lineno"> 2634</span> </div>
-<div class="foldopen" id="foldopen02635" data-start="{" data-end="}">
-<div class="line"><a id="l02635" name="l02635"></a><span class="lineno"><a class="line" href="group__functions.html#ga579d9cf59822d6ead41585737d9d5211"> 2635</a></span>std::vector&lt;vec4&gt; <a class="code hl_function" href="group__functions.html#ga7b3096a0046cf1bd108796a6f7d90bfa" title="Generate linearly spaced values between two endpoints.">helios::linspace</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> &amp;start, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> &amp;end, <span class="keywordtype">int</span> num) {</div>
-<div class="line"><a id="l02636" name="l02636"></a><span class="lineno"> 2636</span>    <span class="keywordflow">if</span> (num &lt;= 0) {</div>
-<div class="line"><a id="l02637" name="l02637"></a><span class="lineno"> 2637</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (linspace): Number of points must be greater than 0.&quot;</span>);</div>
-<div class="line"><a id="l02638" name="l02638"></a><span class="lineno"> 2638</span>    }</div>
-<div class="line"><a id="l02639" name="l02639"></a><span class="lineno"> 2639</span>    </div>
-<div class="line"><a id="l02640" name="l02640"></a><span class="lineno"> 2640</span>    <span class="keywordflow">if</span> (num == 1) {</div>
-<div class="line"><a id="l02641" name="l02641"></a><span class="lineno"> 2641</span>        <span class="keywordflow">return</span> {start};</div>
-<div class="line"><a id="l02642" name="l02642"></a><span class="lineno"> 2642</span>    }</div>
-<div class="line"><a id="l02643" name="l02643"></a><span class="lineno"> 2643</span>    </div>
-<div class="line"><a id="l02644" name="l02644"></a><span class="lineno"> 2644</span>    std::vector&lt;vec4&gt; result(num);</div>
-<div class="line"><a id="l02645" name="l02645"></a><span class="lineno"> 2645</span>    <a class="code hl_struct" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> step = (end - start) / <span class="keywordtype">float</span>(num - 1);</div>
-<div class="line"><a id="l02646" name="l02646"></a><span class="lineno"> 2646</span>    </div>
-<div class="line"><a id="l02647" name="l02647"></a><span class="lineno"> 2647</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; num; ++i) {</div>
-<div class="line"><a id="l02648" name="l02648"></a><span class="lineno"> 2648</span>        result[i] = start + step * float(i);</div>
-<div class="line"><a id="l02649" name="l02649"></a><span class="lineno"> 2649</span>    }</div>
-<div class="line"><a id="l02650" name="l02650"></a><span class="lineno"> 2650</span>    </div>
-<div class="line"><a id="l02651" name="l02651"></a><span class="lineno"> 2651</span>    result[num - 1] = end;</div>
-<div class="line"><a id="l02652" name="l02652"></a><span class="lineno"> 2652</span>    </div>
-<div class="line"><a id="l02653" name="l02653"></a><span class="lineno"> 2653</span>    <span class="keywordflow">return</span> result;</div>
-<div class="line"><a id="l02654" name="l02654"></a><span class="lineno"> 2654</span>}</div>
+<div class="line"><a id="l02629" name="l02629"></a><span class="lineno"> 2629</span> </div>
+<div class="foldopen" id="foldopen02630" data-start="{" data-end="}">
+<div class="line"><a id="l02630" name="l02630"></a><span class="lineno"><a class="line" href="group__functions.html#gadadfa82538ea2c04ed2dea45fc07749e"> 2630</a></span>std::filesystem::path <a class="code hl_function" href="group__functions.html#gadadfa82538ea2c04ed2dea45fc07749e" title="Resolve file path using project-based resolution strategy.">helios::resolveProjectFile</a>(<span class="keyword">const</span> std::string&amp; relativePath) {</div>
+<div class="line"><a id="l02631" name="l02631"></a><span class="lineno"> 2631</span>    <span class="comment">// Handle empty path</span></div>
+<div class="line"><a id="l02632" name="l02632"></a><span class="lineno"> 2632</span>    <span class="keywordflow">if</span> (relativePath.empty()) {</div>
+<div class="line"><a id="l02633" name="l02633"></a><span class="lineno"> 2633</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (resolveProjectFile): Cannot resolve empty file path.&quot;</span>);</div>
+<div class="line"><a id="l02634" name="l02634"></a><span class="lineno"> 2634</span>    }</div>
+<div class="line"><a id="l02635" name="l02635"></a><span class="lineno"> 2635</span>    </div>
+<div class="line"><a id="l02636" name="l02636"></a><span class="lineno"> 2636</span>    <span class="comment">// If it&#39;s already absolute, just validate and return it</span></div>
+<div class="line"><a id="l02637" name="l02637"></a><span class="lineno"> 2637</span>    std::filesystem::path inputPath(relativePath);</div>
+<div class="line"><a id="l02638" name="l02638"></a><span class="lineno"> 2638</span>    <span class="keywordflow">if</span> (inputPath.is_absolute()) {</div>
+<div class="line"><a id="l02639" name="l02639"></a><span class="lineno"> 2639</span>        <span class="keywordflow">if</span> (<a class="code hl_function" href="group__functions.html#ga6081cd159b1d50f8a50435316679b6c6" title="Validate that an asset file exists and is readable.">validateAssetPath</a>(inputPath)) {</div>
+<div class="line"><a id="l02640" name="l02640"></a><span class="lineno"> 2640</span>            <span class="keywordflow">return</span> inputPath;</div>
+<div class="line"><a id="l02641" name="l02641"></a><span class="lineno"> 2641</span>        } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l02642" name="l02642"></a><span class="lineno"> 2642</span>            <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (resolveProjectFile): Absolute path &#39;&quot;</span> + relativePath + <span class="stringliteral">&quot;&#39; does not exist or is not a regular file.&quot;</span>);</div>
+<div class="line"><a id="l02643" name="l02643"></a><span class="lineno"> 2643</span>        }</div>
+<div class="line"><a id="l02644" name="l02644"></a><span class="lineno"> 2644</span>    }</div>
+<div class="line"><a id="l02645" name="l02645"></a><span class="lineno"> 2645</span>    </div>
+<div class="line"><a id="l02646" name="l02646"></a><span class="lineno"> 2646</span>    <span class="comment">// Strategy 1: Check current working directory</span></div>
+<div class="line"><a id="l02647" name="l02647"></a><span class="lineno"> 2647</span>    std::filesystem::path cwdPath = std::filesystem::current_path() / relativePath;</div>
+<div class="line"><a id="l02648" name="l02648"></a><span class="lineno"> 2648</span>    <span class="keywordflow">if</span> (<a class="code hl_function" href="group__functions.html#ga6081cd159b1d50f8a50435316679b6c6" title="Validate that an asset file exists and is readable.">validateAssetPath</a>(cwdPath)) {</div>
+<div class="line"><a id="l02649" name="l02649"></a><span class="lineno"> 2649</span>        <span class="keywordflow">return</span> std::filesystem::absolute(cwdPath);</div>
+<div class="line"><a id="l02650" name="l02650"></a><span class="lineno"> 2650</span>    }</div>
+<div class="line"><a id="l02651" name="l02651"></a><span class="lineno"> 2651</span>    </div>
+<div class="line"><a id="l02652" name="l02652"></a><span class="lineno"> 2652</span>    <span class="comment">// Strategy 2: Check project directory</span></div>
+<div class="line"><a id="l02653" name="l02653"></a><span class="lineno"> 2653</span>    std::filesystem::path projectRoot = <a class="code hl_function" href="group__functions.html#ga44d890d0f4059ae47a9938c29f8d098b" title="Find the project root directory (directory containing top-level CMakeLists.txt)">findProjectRoot</a>();</div>
+<div class="line"><a id="l02654" name="l02654"></a><span class="lineno"> 2654</span>    <span class="keywordflow">if</span> (!projectRoot.empty()) {</div>
+<div class="line"><a id="l02655" name="l02655"></a><span class="lineno"> 2655</span>        std::filesystem::path projectPath = projectRoot / relativePath;</div>
+<div class="line"><a id="l02656" name="l02656"></a><span class="lineno"> 2656</span>        <span class="keywordflow">if</span> (<a class="code hl_function" href="group__functions.html#ga6081cd159b1d50f8a50435316679b6c6" title="Validate that an asset file exists and is readable.">validateAssetPath</a>(projectPath)) {</div>
+<div class="line"><a id="l02657" name="l02657"></a><span class="lineno"> 2657</span>            <span class="keywordflow">return</span> std::filesystem::absolute(projectPath);</div>
+<div class="line"><a id="l02658" name="l02658"></a><span class="lineno"> 2658</span>        }</div>
+<div class="line"><a id="l02659" name="l02659"></a><span class="lineno"> 2659</span>    }</div>
+<div class="line"><a id="l02660" name="l02660"></a><span class="lineno"> 2660</span>    </div>
+<div class="line"><a id="l02661" name="l02661"></a><span class="lineno"> 2661</span>    <span class="comment">// Strategy 3: Error - file not found in either location</span></div>
+<div class="line"><a id="l02662" name="l02662"></a><span class="lineno"> 2662</span>    std::string errorMsg = <span class="stringliteral">&quot;ERROR (resolveProjectFile): Could not locate file &#39;&quot;</span> + relativePath + <span class="stringliteral">&quot;&#39;. Searched in:\n&quot;</span>;</div>
+<div class="line"><a id="l02663" name="l02663"></a><span class="lineno"> 2663</span>    errorMsg += <span class="stringliteral">&quot;  - Current working directory: &quot;</span> + std::filesystem::current_path().string() + <span class="stringliteral">&quot;\n&quot;</span>;</div>
+<div class="line"><a id="l02664" name="l02664"></a><span class="lineno"> 2664</span>    <span class="keywordflow">if</span> (!projectRoot.empty()) {</div>
+<div class="line"><a id="l02665" name="l02665"></a><span class="lineno"> 2665</span>        errorMsg += <span class="stringliteral">&quot;  - Project directory: &quot;</span> + projectRoot.string() + <span class="stringliteral">&quot;\n&quot;</span>;</div>
+<div class="line"><a id="l02666" name="l02666"></a><span class="lineno"> 2666</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l02667" name="l02667"></a><span class="lineno"> 2667</span>        errorMsg += <span class="stringliteral">&quot;  - Project directory: (not found - no CMakeLists.txt found in parent directories)\n&quot;</span>;</div>
+<div class="line"><a id="l02668" name="l02668"></a><span class="lineno"> 2668</span>    }</div>
+<div class="line"><a id="l02669" name="l02669"></a><span class="lineno"> 2669</span>    errorMsg += <span class="stringliteral">&quot;Ensure the file exists in one of these locations.&quot;</span>;</div>
+<div class="line"><a id="l02670" name="l02670"></a><span class="lineno"> 2670</span>    </div>
+<div class="line"><a id="l02671" name="l02671"></a><span class="lineno"> 2671</span>    <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(errorMsg);</div>
+<div class="line"><a id="l02672" name="l02672"></a><span class="lineno"> 2672</span>    <span class="keywordflow">return</span> {}; <span class="comment">// Never reached due to exception</span></div>
+<div class="line"><a id="l02673" name="l02673"></a><span class="lineno"> 2673</span>}</div>
 </div>
-<div class="line"><a id="l02655" name="l02655"></a><span class="lineno"> 2655</span> </div>
-<div class="line"><a id="l02656" name="l02656"></a><span class="lineno"> 2656</span><span class="comment">// float helios::sample_ellipsoidal_azimuth(</span></div>
-<div class="line"><a id="l02657" name="l02657"></a><span class="lineno"> 2657</span><span class="comment">//     float e,</span></div>
-<div class="line"><a id="l02658" name="l02658"></a><span class="lineno"> 2658</span><span class="comment">//     float phi0_degrees,</span></div>
-<div class="line"><a id="l02659" name="l02659"></a><span class="lineno"> 2659</span><span class="comment">//     std::minstd_rand0 *generator</span></div>
-<div class="line"><a id="l02660" name="l02660"></a><span class="lineno"> 2660</span><span class="comment">// ) {</span></div>
-<div class="line"><a id="l02661" name="l02661"></a><span class="lineno"> 2661</span><span class="comment">//     // 1) sanity‐check</span></div>
-<div class="line"><a id="l02662" name="l02662"></a><span class="lineno"> 2662</span><span class="comment">//     if (e &lt; 0.f || e &gt; 1.f) {</span></div>
-<div class="line"><a id="l02663" name="l02663"></a><span class="lineno"> 2663</span><span class="comment">//         helios_runtime_error(</span></div>
-<div class="line"><a id="l02664" name="l02664"></a><span class="lineno"> 2664</span><span class="comment">//             &quot;ERROR (helios::sample_ellipsoidal_azimuth): &quot;</span></div>
-<div class="line"><a id="l02665" name="l02665"></a><span class="lineno"> 2665</span><span class="comment">//             &quot;eccentricity must be in [0,1].&quot;</span></div>
-<div class="line"><a id="l02666" name="l02666"></a><span class="lineno"> 2666</span><span class="comment">//         );</span></div>
-<div class="line"><a id="l02667" name="l02667"></a><span class="lineno"> 2667</span><span class="comment">//     }</span></div>
-<div class="line"><a id="l02668" name="l02668"></a><span class="lineno"> 2668</span><span class="comment">//</span></div>
-<div class="line"><a id="l02669" name="l02669"></a><span class="lineno"> 2669</span><span class="comment">//     // 2) trivial uniform case</span></div>
-<div class="line"><a id="l02670" name="l02670"></a><span class="lineno"> 2670</span><span class="comment">//     std::uniform_real_distribution&lt;float&gt; distPhi(0.f, 2.f * PI_F);</span></div>
-<div class="line"><a id="l02671" name="l02671"></a><span class="lineno"> 2671</span><span class="comment">//     if (e == 0.f) {</span></div>
-<div class="line"><a id="l02672" name="l02672"></a><span class="lineno"> 2672</span><span class="comment">//         return distPhi(*generator);</span></div>
-<div class="line"><a id="l02673" name="l02673"></a><span class="lineno"> 2673</span><span class="comment">//     }</span></div>
-<div class="line"><a id="l02674" name="l02674"></a><span class="lineno"> 2674</span><span class="comment">//</span></div>
-<div class="line"><a id="l02675" name="l02675"></a><span class="lineno"> 2675</span><span class="comment">//     // 3) precompute rotation offset</span></div>
-<div class="line"><a id="l02676" name="l02676"></a><span class="lineno"> 2676</span><span class="comment">//     float phi0 = deg2rad(phi0_degrees);</span></div>
-<div class="line"><a id="l02677" name="l02677"></a><span class="lineno"> 2677</span><span class="comment">//</span></div>
-<div class="line"><a id="l02678" name="l02678"></a><span class="lineno"> 2678</span><span class="comment">//     // 4) rejection sampling: envelope = uniform φ, accept with ratio = (1–e²)/denominator</span></div>
-<div class="line"><a id="l02679" name="l02679"></a><span class="lineno"> 2679</span><span class="comment">//     std::uniform_real_distribution&lt;float&gt; dist01(0.f, 1.f);</span></div>
-<div class="line"><a id="l02680" name="l02680"></a><span class="lineno"> 2680</span><span class="comment">//     while (true) {</span></div>
-<div class="line"><a id="l02681" name="l02681"></a><span class="lineno"> 2681</span><span class="comment">//         float phi = distPhi(*generator);</span></div>
-<div class="line"><a id="l02682" name="l02682"></a><span class="lineno"> 2682</span><span class="comment">//         float d   = phi - phi0;</span></div>
-<div class="line"><a id="l02683" name="l02683"></a><span class="lineno"> 2683</span><span class="comment">//         // wrap to [–π,π) for numerical stability</span></div>
-<div class="line"><a id="l02684" name="l02684"></a><span class="lineno"> 2684</span><span class="comment">//         if      (d &lt; -PI_F) d += 2.f*PI_F;</span></div>
-<div class="line"><a id="l02685" name="l02685"></a><span class="lineno"> 2685</span><span class="comment">//         else if (d &gt;=  PI_F) d -= 2.f*PI_F;</span></div>
-<div class="line"><a id="l02686" name="l02686"></a><span class="lineno"> 2686</span><span class="comment">//</span></div>
-<div class="line"><a id="l02687" name="l02687"></a><span class="lineno"> 2687</span><span class="comment">//         // denominator = (1–e²)·cos²d + sin²d</span></div>
-<div class="line"><a id="l02688" name="l02688"></a><span class="lineno"> 2688</span><span class="comment">//         float c = std::cos(d), s = std::sin(d);</span></div>
-<div class="line"><a id="l02689" name="l02689"></a><span class="lineno"> 2689</span><span class="comment">//         float denom = (1.f - e*e)*c*c + s*s;</span></div>
-<div class="line"><a id="l02690" name="l02690"></a><span class="lineno"> 2690</span><span class="comment">//</span></div>
-<div class="line"><a id="l02691" name="l02691"></a><span class="lineno"> 2691</span><span class="comment">//         // acceptance ratio ∈ (0,1]</span></div>
-<div class="line"><a id="l02692" name="l02692"></a><span class="lineno"> 2692</span><span class="comment">//         float ratio = (1.f - e*e) / denom;</span></div>
-<div class="line"><a id="l02693" name="l02693"></a><span class="lineno"> 2693</span><span class="comment">//</span></div>
-<div class="line"><a id="l02694" name="l02694"></a><span class="lineno"> 2694</span><span class="comment">//         if (dist01(*generator) &lt;= ratio) {</span></div>
-<div class="line"><a id="l02695" name="l02695"></a><span class="lineno"> 2695</span><span class="comment">//             // wrap phi back into [0,2π)</span></div>
-<div class="line"><a id="l02696" name="l02696"></a><span class="lineno"> 2696</span><span class="comment">//             if      (phi &lt; 0.f)        phi += 2.f*PI_F;</span></div>
-<div class="line"><a id="l02697" name="l02697"></a><span class="lineno"> 2697</span><span class="comment">//             else if (phi &gt;= 2.f*PI_F)  phi -= 2.f*PI_F;</span></div>
-<div class="line"><a id="l02698" name="l02698"></a><span class="lineno"> 2698</span><span class="comment">//             return phi;</span></div>
-<div class="line"><a id="l02699" name="l02699"></a><span class="lineno"> 2699</span><span class="comment">//         }</span></div>
-<div class="line"><a id="l02700" name="l02700"></a><span class="lineno"> 2700</span><span class="comment">//         // otherwise retry</span></div>
-<div class="line"><a id="l02701" name="l02701"></a><span class="lineno"> 2701</span><span class="comment">//     }</span></div>
-<div class="line"><a id="l02702" name="l02702"></a><span class="lineno"> 2702</span><span class="comment">// }</span></div>
+<div class="line"><a id="l02674" name="l02674"></a><span class="lineno"> 2674</span> </div>
+<div class="foldopen" id="foldopen02675" data-start="{" data-end="}">
+<div class="line"><a id="l02675" name="l02675"></a><span class="lineno"><a class="line" href="global_8h.html#a125e8bef86fb7272d4d66898afb7d368"> 2675</a></span>std::vector&lt;float&gt; <a class="code hl_function" href="global_8h.html#a125e8bef86fb7272d4d66898afb7d368" title="Read values contained in a text file into a one-dimensional vector of floats.">helios::importVectorFromFile</a>(<span class="keyword">const</span> std::string &amp;filepath) {</div>
+<div class="line"><a id="l02676" name="l02676"></a><span class="lineno"> 2676</span>    std::ifstream stream(filepath.c_str());</div>
+<div class="line"><a id="l02677" name="l02677"></a><span class="lineno"> 2677</span> </div>
+<div class="line"><a id="l02678" name="l02678"></a><span class="lineno"> 2678</span>    <span class="keywordflow">if</span> (!stream.is_open()) {</div>
+<div class="line"><a id="l02679" name="l02679"></a><span class="lineno"> 2679</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (helios::importVectorFromFile): File &quot;</span> + filepath + <span class="stringliteral">&quot; could not be opened for reading. Check that it exists and that you have permission to read it.&quot;</span>);</div>
+<div class="line"><a id="l02680" name="l02680"></a><span class="lineno"> 2680</span>    }</div>
+<div class="line"><a id="l02681" name="l02681"></a><span class="lineno"> 2681</span> </div>
+<div class="line"><a id="l02682" name="l02682"></a><span class="lineno"> 2682</span>    std::istream_iterator&lt;float&gt; start(stream), end;</div>
+<div class="line"><a id="l02683" name="l02683"></a><span class="lineno"> 2683</span>    std::vector&lt;float&gt; vec(start, end);</div>
+<div class="line"><a id="l02684" name="l02684"></a><span class="lineno"> 2684</span>    <span class="keywordflow">return</span> vec;</div>
+<div class="line"><a id="l02685" name="l02685"></a><span class="lineno"> 2685</span>}</div>
+</div>
+<div class="line"><a id="l02686" name="l02686"></a><span class="lineno"> 2686</span> </div>
+<div class="foldopen" id="foldopen02687" data-start="{" data-end="}">
+<div class="line"><a id="l02687" name="l02687"></a><span class="lineno"><a class="line" href="global_8h.html#aa9adbbb2cb1b5784701c056062a00458"> 2687</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="global_8h.html#aa9adbbb2cb1b5784701c056062a00458" title="Sample from Beta(μ,ν) distribution.">helios::sample_Beta_distribution</a>(<span class="keywordtype">float</span> mu, <span class="keywordtype">float</span> nu, std::minstd_rand0 *generator) {</div>
+<div class="line"><a id="l02688" name="l02688"></a><span class="lineno"> 2688</span>    <span class="comment">// 1) draw two independent Gamma variates:</span></div>
+<div class="line"><a id="l02689" name="l02689"></a><span class="lineno"> 2689</span>    <span class="comment">//    X ~ Gamma(α=ν, 1),  Y ~ Gamma(β=μ, 1)</span></div>
+<div class="line"><a id="l02690" name="l02690"></a><span class="lineno"> 2690</span>    std::gamma_distribution&lt;float&gt; dist_nu(nu, 1.0);</div>
+<div class="line"><a id="l02691" name="l02691"></a><span class="lineno"> 2691</span>    std::gamma_distribution&lt;float&gt; dist_mu(mu, 1.0);</div>
+<div class="line"><a id="l02692" name="l02692"></a><span class="lineno"> 2692</span> </div>
+<div class="line"><a id="l02693" name="l02693"></a><span class="lineno"> 2693</span>    <span class="keywordtype">float</span> X = dist_nu(*generator);</div>
+<div class="line"><a id="l02694" name="l02694"></a><span class="lineno"> 2694</span>    <span class="keywordtype">float</span> Y = dist_mu(*generator);</div>
+<div class="line"><a id="l02695" name="l02695"></a><span class="lineno"> 2695</span> </div>
+<div class="line"><a id="l02696" name="l02696"></a><span class="lineno"> 2696</span>    <span class="comment">// 2) form the Beta = X/(X+Y)</span></div>
+<div class="line"><a id="l02697" name="l02697"></a><span class="lineno"> 2697</span>    <span class="keywordtype">float</span> b = X / (X + Y);</div>
+<div class="line"><a id="l02698" name="l02698"></a><span class="lineno"> 2698</span> </div>
+<div class="line"><a id="l02699" name="l02699"></a><span class="lineno"> 2699</span>    <span class="comment">// 3) rescale to θ_L = (π/2)*b</span></div>
+<div class="line"><a id="l02700" name="l02700"></a><span class="lineno"> 2700</span>    <span class="keywordflow">return</span> 0.5f * <a class="code hl_variable" href="global_8h.html#a2d6b12d3f019b61b427ec3c63270143d" title="Pi constant as a float.">PI_F</a> * b;</div>
+<div class="line"><a id="l02701" name="l02701"></a><span class="lineno"> 2701</span>}</div>
+</div>
+<div class="line"><a id="l02702" name="l02702"></a><span class="lineno"> 2702</span> </div>
+<div class="line"><a id="l02703" name="l02703"></a><span class="lineno"> 2703</span><span class="comment">// Complete elliptic integral of the first kind via the arithmetic–geometric mean (AGM)</span></div>
+<div class="line"><a id="l02704" name="l02704"></a><span class="lineno"> 2704</span><span class="keywordtype">float</span> compute_elliptic_integral_first_kind(<span class="keywordtype">float</span> e) {</div>
+<div class="line"><a id="l02705" name="l02705"></a><span class="lineno"> 2705</span>    <span class="comment">// K(e) = π / (2 * AGM(1, sqrt(1 - e^2)))</span></div>
+<div class="line"><a id="l02706" name="l02706"></a><span class="lineno"> 2706</span>    <span class="keywordtype">float</span> a = 1.0f;</div>
+<div class="line"><a id="l02707" name="l02707"></a><span class="lineno"> 2707</span>    <span class="keywordtype">float</span> b = std::sqrt(1.0f - e * e);</div>
+<div class="line"><a id="l02708" name="l02708"></a><span class="lineno"> 2708</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> iter = 0; iter &lt; 10; ++iter) {</div>
+<div class="line"><a id="l02709" name="l02709"></a><span class="lineno"> 2709</span>        <span class="keywordtype">float</span> an = 0.5f * (a + b);</div>
+<div class="line"><a id="l02710" name="l02710"></a><span class="lineno"> 2710</span>        <span class="keywordtype">float</span> bn = std::sqrt(a * b);</div>
+<div class="line"><a id="l02711" name="l02711"></a><span class="lineno"> 2711</span>        a = an;</div>
+<div class="line"><a id="l02712" name="l02712"></a><span class="lineno"> 2712</span>        b = bn;</div>
+<div class="line"><a id="l02713" name="l02713"></a><span class="lineno"> 2713</span>    }</div>
+<div class="line"><a id="l02714" name="l02714"></a><span class="lineno"> 2714</span>    <span class="keywordflow">return</span> <a class="code hl_variable" href="global_8h.html#a2d6b12d3f019b61b427ec3c63270143d" title="Pi constant as a float.">PI_F</a> / (2.0f * a);</div>
+<div class="line"><a id="l02715" name="l02715"></a><span class="lineno"> 2715</span>}</div>
+<div class="line"><a id="l02716" name="l02716"></a><span class="lineno"> 2716</span> </div>
+<div class="line"><a id="l02717" name="l02717"></a><span class="lineno"> 2717</span><span class="comment">// Ellipsoidal PDF for leaf azimuth distribution</span></div>
+<div class="line"><a id="l02718" name="l02718"></a><span class="lineno"> 2718</span><span class="comment">// phi: sample angle [0,2π), e: eccentricity, phi0: rotation offset, K_e: precomputed ellip. integral</span></div>
+<div class="line"><a id="l02719" name="l02719"></a><span class="lineno"> 2719</span><span class="keywordtype">float</span> evaluate_ellipsoidal_azimuth_PDF(<span class="keywordtype">float</span> phi, <span class="keywordtype">float</span> e, <span class="keywordtype">float</span> phi0, <span class="keywordtype">float</span> K_e) {</div>
+<div class="line"><a id="l02720" name="l02720"></a><span class="lineno"> 2720</span>    <span class="keywordtype">float</span> d = phi - phi0;</div>
+<div class="line"><a id="l02721" name="l02721"></a><span class="lineno"> 2721</span>    <span class="keywordtype">float</span> c2 = (1.f - e * e) * std::cos(d) * std::cos(d) + std::sin(d) * std::sin(d);</div>
+<div class="line"><a id="l02722" name="l02722"></a><span class="lineno"> 2722</span>    <span class="keywordflow">return</span> 1.f / (4.f * K_e * std::sqrt(c2));</div>
+<div class="line"><a id="l02723" name="l02723"></a><span class="lineno"> 2723</span>}</div>
+<div class="line"><a id="l02724" name="l02724"></a><span class="lineno"> 2724</span> </div>
+<div class="line"><a id="l02725" name="l02725"></a><span class="lineno"> 2725</span><span class="comment">// Sample phi from ellipsoidal distribution via rejection sampling</span></div>
+<div class="foldopen" id="foldopen02726" data-start="{" data-end="}">
+<div class="line"><a id="l02726" name="l02726"></a><span class="lineno"><a class="line" href="global_8h.html#ae106b1ce1d55432f4d0da489092e167b"> 2726</a></span><span class="keywordtype">float</span> <a class="code hl_function" href="global_8h.html#ae106b1ce1d55432f4d0da489092e167b" title="Samples an azimuth angle for an ellipsoidal distribution.">helios::sample_ellipsoidal_azimuth</a>(<span class="keywordtype">float</span> e, <span class="keywordtype">float</span> phi0_degrees, std::minstd_rand0 *generator) {</div>
+<div class="line"><a id="l02727" name="l02727"></a><span class="lineno"> 2727</span>    <span class="comment">// sanity‐check</span></div>
+<div class="line"><a id="l02728" name="l02728"></a><span class="lineno"> 2728</span>    <span class="keywordflow">if</span> (e &lt; 0.f || e &gt; 1.f) {</div>
+<div class="line"><a id="l02729" name="l02729"></a><span class="lineno"> 2729</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (helios::sample_ellipsoidal_azimuth): Eccentricity must be in [0,1].&quot;</span>);</div>
+<div class="line"><a id="l02730" name="l02730"></a><span class="lineno"> 2730</span>    }</div>
+<div class="line"><a id="l02731" name="l02731"></a><span class="lineno"> 2731</span> </div>
+<div class="line"><a id="l02732" name="l02732"></a><span class="lineno"> 2732</span>    <span class="comment">// convert rotation offset to radians</span></div>
+<div class="line"><a id="l02733" name="l02733"></a><span class="lineno"> 2733</span>    <span class="keywordtype">float</span> phi0 = <a class="code hl_function" href="group__functions.html#ga60f429b247883516de80687774f4155c" title="Convert degrees to radians.">deg2rad</a>(phi0_degrees);</div>
+<div class="line"><a id="l02734" name="l02734"></a><span class="lineno"> 2734</span> </div>
+<div class="line"><a id="l02735" name="l02735"></a><span class="lineno"> 2735</span>    <span class="comment">// ellipse semiaxes: a=1, b = sqrt(1 - e^2)</span></div>
+<div class="line"><a id="l02736" name="l02736"></a><span class="lineno"> 2736</span>    <span class="keywordtype">float</span> a = 1.f;</div>
+<div class="line"><a id="l02737" name="l02737"></a><span class="lineno"> 2737</span>    <span class="keywordtype">float</span> b = std::sqrt(1.f - e * e);</div>
+<div class="line"><a id="l02738" name="l02738"></a><span class="lineno"> 2738</span> </div>
+<div class="line"><a id="l02739" name="l02739"></a><span class="lineno"> 2739</span>    <span class="comment">// sample the ellipse parameter t uniformly in [0,2π)</span></div>
+<div class="line"><a id="l02740" name="l02740"></a><span class="lineno"> 2740</span>    std::uniform_real_distribution&lt;float&gt; distT(0.f, 2.f * <a class="code hl_variable" href="global_8h.html#a2d6b12d3f019b61b427ec3c63270143d" title="Pi constant as a float.">PI_F</a>);</div>
+<div class="line"><a id="l02741" name="l02741"></a><span class="lineno"> 2741</span>    <span class="keywordtype">float</span> t = distT(*generator);</div>
+<div class="line"><a id="l02742" name="l02742"></a><span class="lineno"> 2742</span> </div>
+<div class="line"><a id="l02743" name="l02743"></a><span class="lineno"> 2743</span>    <span class="comment">// point on the ellipse boundary</span></div>
+<div class="line"><a id="l02744" name="l02744"></a><span class="lineno"> 2744</span>    <span class="keywordtype">float</span> x = a * std::cos(t);</div>
+<div class="line"><a id="l02745" name="l02745"></a><span class="lineno"> 2745</span>    <span class="keywordtype">float</span> y = b * std::sin(t);</div>
+<div class="line"><a id="l02746" name="l02746"></a><span class="lineno"> 2746</span> </div>
+<div class="line"><a id="l02747" name="l02747"></a><span class="lineno"> 2747</span>    <span class="comment">// compute its polar angle</span></div>
+<div class="line"><a id="l02748" name="l02748"></a><span class="lineno"> 2748</span>    <span class="keywordtype">float</span> phi = std::atan2(y, x) + phi0;</div>
+<div class="line"><a id="l02749" name="l02749"></a><span class="lineno"> 2749</span> </div>
+<div class="line"><a id="l02750" name="l02750"></a><span class="lineno"> 2750</span>    <span class="comment">// wrap into [0,2π)</span></div>
+<div class="line"><a id="l02751" name="l02751"></a><span class="lineno"> 2751</span>    <span class="keywordflow">if</span> (phi &lt; 0.f)</div>
+<div class="line"><a id="l02752" name="l02752"></a><span class="lineno"> 2752</span>        phi += 2.f * <a class="code hl_variable" href="global_8h.html#a2d6b12d3f019b61b427ec3c63270143d" title="Pi constant as a float.">PI_F</a>;</div>
+<div class="line"><a id="l02753" name="l02753"></a><span class="lineno"> 2753</span>    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (phi &gt;= 2.f * <a class="code hl_variable" href="global_8h.html#a2d6b12d3f019b61b427ec3c63270143d" title="Pi constant as a float.">PI_F</a>)</div>
+<div class="line"><a id="l02754" name="l02754"></a><span class="lineno"> 2754</span>        phi -= 2.f * <a class="code hl_variable" href="global_8h.html#a2d6b12d3f019b61b427ec3c63270143d" title="Pi constant as a float.">PI_F</a>;</div>
+<div class="line"><a id="l02755" name="l02755"></a><span class="lineno"> 2755</span> </div>
+<div class="line"><a id="l02756" name="l02756"></a><span class="lineno"> 2756</span>    <span class="keywordflow">return</span> phi;</div>
+<div class="line"><a id="l02757" name="l02757"></a><span class="lineno"> 2757</span>}</div>
+</div>
+<div class="line"><a id="l02758" name="l02758"></a><span class="lineno"> 2758</span> </div>
+<div class="foldopen" id="foldopen02759" data-start="{" data-end="}">
+<div class="line"><a id="l02759" name="l02759"></a><span class="lineno"><a class="line" href="group__functions.html#ga7b3096a0046cf1bd108796a6f7d90bfa"> 2759</a></span>std::vector&lt;float&gt; <a class="code hl_function" href="group__functions.html#ga7b3096a0046cf1bd108796a6f7d90bfa" title="Generate linearly spaced values between two endpoints.">helios::linspace</a>(<span class="keywordtype">float</span> start, <span class="keywordtype">float</span> end, <span class="keywordtype">int</span> num) {</div>
+<div class="line"><a id="l02760" name="l02760"></a><span class="lineno"> 2760</span>    <span class="keywordflow">if</span> (num &lt;= 0) {</div>
+<div class="line"><a id="l02761" name="l02761"></a><span class="lineno"> 2761</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (linspace): Number of points must be greater than 0.&quot;</span>);</div>
+<div class="line"><a id="l02762" name="l02762"></a><span class="lineno"> 2762</span>    }</div>
+<div class="line"><a id="l02763" name="l02763"></a><span class="lineno"> 2763</span>    </div>
+<div class="line"><a id="l02764" name="l02764"></a><span class="lineno"> 2764</span>    <span class="keywordflow">if</span> (num == 1) {</div>
+<div class="line"><a id="l02765" name="l02765"></a><span class="lineno"> 2765</span>        <span class="keywordflow">return</span> {start};</div>
+<div class="line"><a id="l02766" name="l02766"></a><span class="lineno"> 2766</span>    }</div>
+<div class="line"><a id="l02767" name="l02767"></a><span class="lineno"> 2767</span>    </div>
+<div class="line"><a id="l02768" name="l02768"></a><span class="lineno"> 2768</span>    std::vector&lt;float&gt; result(num);</div>
+<div class="line"><a id="l02769" name="l02769"></a><span class="lineno"> 2769</span>    <span class="keywordtype">float</span> step = (end - start) / (num - 1);</div>
+<div class="line"><a id="l02770" name="l02770"></a><span class="lineno"> 2770</span>    </div>
+<div class="line"><a id="l02771" name="l02771"></a><span class="lineno"> 2771</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; num; ++i) {</div>
+<div class="line"><a id="l02772" name="l02772"></a><span class="lineno"> 2772</span>        result[i] = start + i * step;</div>
+<div class="line"><a id="l02773" name="l02773"></a><span class="lineno"> 2773</span>    }</div>
+<div class="line"><a id="l02774" name="l02774"></a><span class="lineno"> 2774</span>    </div>
+<div class="line"><a id="l02775" name="l02775"></a><span class="lineno"> 2775</span>    result[num - 1] = end;</div>
+<div class="line"><a id="l02776" name="l02776"></a><span class="lineno"> 2776</span>    </div>
+<div class="line"><a id="l02777" name="l02777"></a><span class="lineno"> 2777</span>    <span class="keywordflow">return</span> result;</div>
+<div class="line"><a id="l02778" name="l02778"></a><span class="lineno"> 2778</span>}</div>
+</div>
+<div class="line"><a id="l02779" name="l02779"></a><span class="lineno"> 2779</span> </div>
+<div class="foldopen" id="foldopen02780" data-start="{" data-end="}">
+<div class="line"><a id="l02780" name="l02780"></a><span class="lineno"><a class="line" href="group__functions.html#gaee02b6805960b89201555f4022768c6b"> 2780</a></span>std::vector&lt;vec2&gt; <a class="code hl_function" href="group__functions.html#ga7b3096a0046cf1bd108796a6f7d90bfa" title="Generate linearly spaced values between two endpoints.">helios::linspace</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> &amp;start, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> &amp;end, <span class="keywordtype">int</span> num) {</div>
+<div class="line"><a id="l02781" name="l02781"></a><span class="lineno"> 2781</span>    <span class="keywordflow">if</span> (num &lt;= 0) {</div>
+<div class="line"><a id="l02782" name="l02782"></a><span class="lineno"> 2782</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (linspace): Number of points must be greater than 0.&quot;</span>);</div>
+<div class="line"><a id="l02783" name="l02783"></a><span class="lineno"> 2783</span>    }</div>
+<div class="line"><a id="l02784" name="l02784"></a><span class="lineno"> 2784</span>    </div>
+<div class="line"><a id="l02785" name="l02785"></a><span class="lineno"> 2785</span>    <span class="keywordflow">if</span> (num == 1) {</div>
+<div class="line"><a id="l02786" name="l02786"></a><span class="lineno"> 2786</span>        <span class="keywordflow">return</span> {start};</div>
+<div class="line"><a id="l02787" name="l02787"></a><span class="lineno"> 2787</span>    }</div>
+<div class="line"><a id="l02788" name="l02788"></a><span class="lineno"> 2788</span>    </div>
+<div class="line"><a id="l02789" name="l02789"></a><span class="lineno"> 2789</span>    std::vector&lt;vec2&gt; result(num);</div>
+<div class="line"><a id="l02790" name="l02790"></a><span class="lineno"> 2790</span>    <a class="code hl_struct" href="structhelios_1_1vec2.html" title="Vector of two elements of type &#39;float&#39;.">vec2</a> step = (end - start) / <span class="keywordtype">float</span>(num - 1);</div>
+<div class="line"><a id="l02791" name="l02791"></a><span class="lineno"> 2791</span>    </div>
+<div class="line"><a id="l02792" name="l02792"></a><span class="lineno"> 2792</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; num; ++i) {</div>
+<div class="line"><a id="l02793" name="l02793"></a><span class="lineno"> 2793</span>        result[i] = start + step * float(i);</div>
+<div class="line"><a id="l02794" name="l02794"></a><span class="lineno"> 2794</span>    }</div>
+<div class="line"><a id="l02795" name="l02795"></a><span class="lineno"> 2795</span>    </div>
+<div class="line"><a id="l02796" name="l02796"></a><span class="lineno"> 2796</span>    result[num - 1] = end;</div>
+<div class="line"><a id="l02797" name="l02797"></a><span class="lineno"> 2797</span>    </div>
+<div class="line"><a id="l02798" name="l02798"></a><span class="lineno"> 2798</span>    <span class="keywordflow">return</span> result;</div>
+<div class="line"><a id="l02799" name="l02799"></a><span class="lineno"> 2799</span>}</div>
+</div>
+<div class="line"><a id="l02800" name="l02800"></a><span class="lineno"> 2800</span> </div>
+<div class="foldopen" id="foldopen02801" data-start="{" data-end="}">
+<div class="line"><a id="l02801" name="l02801"></a><span class="lineno"><a class="line" href="group__functions.html#ga23f7dd71170481919d4d6f91ae6ce658"> 2801</a></span>std::vector&lt;vec3&gt; <a class="code hl_function" href="group__functions.html#ga7b3096a0046cf1bd108796a6f7d90bfa" title="Generate linearly spaced values between two endpoints.">helios::linspace</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> &amp;start, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> &amp;end, <span class="keywordtype">int</span> num) {</div>
+<div class="line"><a id="l02802" name="l02802"></a><span class="lineno"> 2802</span>    <span class="keywordflow">if</span> (num &lt;= 0) {</div>
+<div class="line"><a id="l02803" name="l02803"></a><span class="lineno"> 2803</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (linspace): Number of points must be greater than 0.&quot;</span>);</div>
+<div class="line"><a id="l02804" name="l02804"></a><span class="lineno"> 2804</span>    }</div>
+<div class="line"><a id="l02805" name="l02805"></a><span class="lineno"> 2805</span>    </div>
+<div class="line"><a id="l02806" name="l02806"></a><span class="lineno"> 2806</span>    <span class="keywordflow">if</span> (num == 1) {</div>
+<div class="line"><a id="l02807" name="l02807"></a><span class="lineno"> 2807</span>        <span class="keywordflow">return</span> {start};</div>
+<div class="line"><a id="l02808" name="l02808"></a><span class="lineno"> 2808</span>    }</div>
+<div class="line"><a id="l02809" name="l02809"></a><span class="lineno"> 2809</span>    </div>
+<div class="line"><a id="l02810" name="l02810"></a><span class="lineno"> 2810</span>    std::vector&lt;vec3&gt; result(num);</div>
+<div class="line"><a id="l02811" name="l02811"></a><span class="lineno"> 2811</span>    <a class="code hl_struct" href="structhelios_1_1vec3.html" title="Vector of three elements of type &#39;float&#39;.">vec3</a> step = (end - start) / <span class="keywordtype">float</span>(num - 1);</div>
+<div class="line"><a id="l02812" name="l02812"></a><span class="lineno"> 2812</span>    </div>
+<div class="line"><a id="l02813" name="l02813"></a><span class="lineno"> 2813</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; num; ++i) {</div>
+<div class="line"><a id="l02814" name="l02814"></a><span class="lineno"> 2814</span>        result[i] = start + step * float(i);</div>
+<div class="line"><a id="l02815" name="l02815"></a><span class="lineno"> 2815</span>    }</div>
+<div class="line"><a id="l02816" name="l02816"></a><span class="lineno"> 2816</span>    </div>
+<div class="line"><a id="l02817" name="l02817"></a><span class="lineno"> 2817</span>    result[num - 1] = end;</div>
+<div class="line"><a id="l02818" name="l02818"></a><span class="lineno"> 2818</span>    </div>
+<div class="line"><a id="l02819" name="l02819"></a><span class="lineno"> 2819</span>    <span class="keywordflow">return</span> result;</div>
+<div class="line"><a id="l02820" name="l02820"></a><span class="lineno"> 2820</span>}</div>
+</div>
+<div class="line"><a id="l02821" name="l02821"></a><span class="lineno"> 2821</span> </div>
+<div class="foldopen" id="foldopen02822" data-start="{" data-end="}">
+<div class="line"><a id="l02822" name="l02822"></a><span class="lineno"><a class="line" href="group__functions.html#ga579d9cf59822d6ead41585737d9d5211"> 2822</a></span>std::vector&lt;vec4&gt; <a class="code hl_function" href="group__functions.html#ga7b3096a0046cf1bd108796a6f7d90bfa" title="Generate linearly spaced values between two endpoints.">helios::linspace</a>(<span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> &amp;start, <span class="keyword">const</span> <a class="code hl_struct" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> &amp;end, <span class="keywordtype">int</span> num) {</div>
+<div class="line"><a id="l02823" name="l02823"></a><span class="lineno"> 2823</span>    <span class="keywordflow">if</span> (num &lt;= 0) {</div>
+<div class="line"><a id="l02824" name="l02824"></a><span class="lineno"> 2824</span>        <a class="code hl_function" href="global_8h.html#a672182e7d8beb63c7cf256fa8294dc86" title="Function to throw a runtime error.">helios_runtime_error</a>(<span class="stringliteral">&quot;ERROR (linspace): Number of points must be greater than 0.&quot;</span>);</div>
+<div class="line"><a id="l02825" name="l02825"></a><span class="lineno"> 2825</span>    }</div>
+<div class="line"><a id="l02826" name="l02826"></a><span class="lineno"> 2826</span>    </div>
+<div class="line"><a id="l02827" name="l02827"></a><span class="lineno"> 2827</span>    <span class="keywordflow">if</span> (num == 1) {</div>
+<div class="line"><a id="l02828" name="l02828"></a><span class="lineno"> 2828</span>        <span class="keywordflow">return</span> {start};</div>
+<div class="line"><a id="l02829" name="l02829"></a><span class="lineno"> 2829</span>    }</div>
+<div class="line"><a id="l02830" name="l02830"></a><span class="lineno"> 2830</span>    </div>
+<div class="line"><a id="l02831" name="l02831"></a><span class="lineno"> 2831</span>    std::vector&lt;vec4&gt; result(num);</div>
+<div class="line"><a id="l02832" name="l02832"></a><span class="lineno"> 2832</span>    <a class="code hl_struct" href="structhelios_1_1vec4.html" title="Vector of four elements of type &#39;float&#39;.">vec4</a> step = (end - start) / <span class="keywordtype">float</span>(num - 1);</div>
+<div class="line"><a id="l02833" name="l02833"></a><span class="lineno"> 2833</span>    </div>
+<div class="line"><a id="l02834" name="l02834"></a><span class="lineno"> 2834</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; num; ++i) {</div>
+<div class="line"><a id="l02835" name="l02835"></a><span class="lineno"> 2835</span>        result[i] = start + step * float(i);</div>
+<div class="line"><a id="l02836" name="l02836"></a><span class="lineno"> 2836</span>    }</div>
+<div class="line"><a id="l02837" name="l02837"></a><span class="lineno"> 2837</span>    </div>
+<div class="line"><a id="l02838" name="l02838"></a><span class="lineno"> 2838</span>    result[num - 1] = end;</div>
+<div class="line"><a id="l02839" name="l02839"></a><span class="lineno"> 2839</span>    </div>
+<div class="line"><a id="l02840" name="l02840"></a><span class="lineno"> 2840</span>    <span class="keywordflow">return</span> result;</div>
+<div class="line"><a id="l02841" name="l02841"></a><span class="lineno"> 2841</span>}</div>
+</div>
+<div class="line"><a id="l02842" name="l02842"></a><span class="lineno"> 2842</span> </div>
+<div class="line"><a id="l02843" name="l02843"></a><span class="lineno"> 2843</span><span class="comment">// float helios::sample_ellipsoidal_azimuth(</span></div>
+<div class="line"><a id="l02844" name="l02844"></a><span class="lineno"> 2844</span><span class="comment">//     float e,</span></div>
+<div class="line"><a id="l02845" name="l02845"></a><span class="lineno"> 2845</span><span class="comment">//     float phi0_degrees,</span></div>
+<div class="line"><a id="l02846" name="l02846"></a><span class="lineno"> 2846</span><span class="comment">//     std::minstd_rand0 *generator</span></div>
+<div class="line"><a id="l02847" name="l02847"></a><span class="lineno"> 2847</span><span class="comment">// ) {</span></div>
+<div class="line"><a id="l02848" name="l02848"></a><span class="lineno"> 2848</span><span class="comment">//     // 1) sanity‐check</span></div>
+<div class="line"><a id="l02849" name="l02849"></a><span class="lineno"> 2849</span><span class="comment">//     if (e &lt; 0.f || e &gt; 1.f) {</span></div>
+<div class="line"><a id="l02850" name="l02850"></a><span class="lineno"> 2850</span><span class="comment">//         helios_runtime_error(</span></div>
+<div class="line"><a id="l02851" name="l02851"></a><span class="lineno"> 2851</span><span class="comment">//             &quot;ERROR (helios::sample_ellipsoidal_azimuth): &quot;</span></div>
+<div class="line"><a id="l02852" name="l02852"></a><span class="lineno"> 2852</span><span class="comment">//             &quot;eccentricity must be in [0,1].&quot;</span></div>
+<div class="line"><a id="l02853" name="l02853"></a><span class="lineno"> 2853</span><span class="comment">//         );</span></div>
+<div class="line"><a id="l02854" name="l02854"></a><span class="lineno"> 2854</span><span class="comment">//     }</span></div>
+<div class="line"><a id="l02855" name="l02855"></a><span class="lineno"> 2855</span><span class="comment">//</span></div>
+<div class="line"><a id="l02856" name="l02856"></a><span class="lineno"> 2856</span><span class="comment">//     // 2) trivial uniform case</span></div>
+<div class="line"><a id="l02857" name="l02857"></a><span class="lineno"> 2857</span><span class="comment">//     std::uniform_real_distribution&lt;float&gt; distPhi(0.f, 2.f * PI_F);</span></div>
+<div class="line"><a id="l02858" name="l02858"></a><span class="lineno"> 2858</span><span class="comment">//     if (e == 0.f) {</span></div>
+<div class="line"><a id="l02859" name="l02859"></a><span class="lineno"> 2859</span><span class="comment">//         return distPhi(*generator);</span></div>
+<div class="line"><a id="l02860" name="l02860"></a><span class="lineno"> 2860</span><span class="comment">//     }</span></div>
+<div class="line"><a id="l02861" name="l02861"></a><span class="lineno"> 2861</span><span class="comment">//</span></div>
+<div class="line"><a id="l02862" name="l02862"></a><span class="lineno"> 2862</span><span class="comment">//     // 3) precompute rotation offset</span></div>
+<div class="line"><a id="l02863" name="l02863"></a><span class="lineno"> 2863</span><span class="comment">//     float phi0 = deg2rad(phi0_degrees);</span></div>
+<div class="line"><a id="l02864" name="l02864"></a><span class="lineno"> 2864</span><span class="comment">//</span></div>
+<div class="line"><a id="l02865" name="l02865"></a><span class="lineno"> 2865</span><span class="comment">//     // 4) rejection sampling: envelope = uniform φ, accept with ratio = (1–e²)/denominator</span></div>
+<div class="line"><a id="l02866" name="l02866"></a><span class="lineno"> 2866</span><span class="comment">//     std::uniform_real_distribution&lt;float&gt; dist01(0.f, 1.f);</span></div>
+<div class="line"><a id="l02867" name="l02867"></a><span class="lineno"> 2867</span><span class="comment">//     while (true) {</span></div>
+<div class="line"><a id="l02868" name="l02868"></a><span class="lineno"> 2868</span><span class="comment">//         float phi = distPhi(*generator);</span></div>
+<div class="line"><a id="l02869" name="l02869"></a><span class="lineno"> 2869</span><span class="comment">//         float d   = phi - phi0;</span></div>
+<div class="line"><a id="l02870" name="l02870"></a><span class="lineno"> 2870</span><span class="comment">//         // wrap to [–π,π) for numerical stability</span></div>
+<div class="line"><a id="l02871" name="l02871"></a><span class="lineno"> 2871</span><span class="comment">//         if      (d &lt; -PI_F) d += 2.f*PI_F;</span></div>
+<div class="line"><a id="l02872" name="l02872"></a><span class="lineno"> 2872</span><span class="comment">//         else if (d &gt;=  PI_F) d -= 2.f*PI_F;</span></div>
+<div class="line"><a id="l02873" name="l02873"></a><span class="lineno"> 2873</span><span class="comment">//</span></div>
+<div class="line"><a id="l02874" name="l02874"></a><span class="lineno"> 2874</span><span class="comment">//         // denominator = (1–e²)·cos²d + sin²d</span></div>
+<div class="line"><a id="l02875" name="l02875"></a><span class="lineno"> 2875</span><span class="comment">//         float c = std::cos(d), s = std::sin(d);</span></div>
+<div class="line"><a id="l02876" name="l02876"></a><span class="lineno"> 2876</span><span class="comment">//         float denom = (1.f - e*e)*c*c + s*s;</span></div>
+<div class="line"><a id="l02877" name="l02877"></a><span class="lineno"> 2877</span><span class="comment">//</span></div>
+<div class="line"><a id="l02878" name="l02878"></a><span class="lineno"> 2878</span><span class="comment">//         // acceptance ratio ∈ (0,1]</span></div>
+<div class="line"><a id="l02879" name="l02879"></a><span class="lineno"> 2879</span><span class="comment">//         float ratio = (1.f - e*e) / denom;</span></div>
+<div class="line"><a id="l02880" name="l02880"></a><span class="lineno"> 2880</span><span class="comment">//</span></div>
+<div class="line"><a id="l02881" name="l02881"></a><span class="lineno"> 2881</span><span class="comment">//         if (dist01(*generator) &lt;= ratio) {</span></div>
+<div class="line"><a id="l02882" name="l02882"></a><span class="lineno"> 2882</span><span class="comment">//             // wrap phi back into [0,2π)</span></div>
+<div class="line"><a id="l02883" name="l02883"></a><span class="lineno"> 2883</span><span class="comment">//             if      (phi &lt; 0.f)        phi += 2.f*PI_F;</span></div>
+<div class="line"><a id="l02884" name="l02884"></a><span class="lineno"> 2884</span><span class="comment">//             else if (phi &gt;= 2.f*PI_F)  phi -= 2.f*PI_F;</span></div>
+<div class="line"><a id="l02885" name="l02885"></a><span class="lineno"> 2885</span><span class="comment">//             return phi;</span></div>
+<div class="line"><a id="l02886" name="l02886"></a><span class="lineno"> 2886</span><span class="comment">//         }</span></div>
+<div class="line"><a id="l02887" name="l02887"></a><span class="lineno"> 2887</span><span class="comment">//         // otherwise retry</span></div>
+<div class="line"><a id="l02888" name="l02888"></a><span class="lineno"> 2888</span><span class="comment">//     }</span></div>
+<div class="line"><a id="l02889" name="l02889"></a><span class="lineno"> 2889</span><span class="comment">// }</span></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

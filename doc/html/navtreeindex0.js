@@ -59,11 +59,11 @@ var NAVTREEINDEX0 =
 "_collision_detection_8cpp.html":[5,0,2,3,1,0],
 "_collision_detection_8cpp_source.html":[5,0,2,3,1,0],
 "_collision_detection_8cu.html":[5,0,2,3,1,1],
-"_collision_detection_8cu.html#a08c61a024a224242a420b515f9b43bf9":[5,0,2,3,1,1,8],
 "_collision_detection_8cu.html#a27d0b255c42a5c1539194f8134e78ffe":[5,0,2,3,1,1,3],
 "_collision_detection_8cu.html#a477305ecd8f0b15fc329e42324235172":[5,0,2,3,1,1,2],
+"_collision_detection_8cu.html#a67d6d8320e74ae56af148cfe2c6bd7d3":[5,0,2,3,1,1,5],
 "_collision_detection_8cu.html#a69d47caef398324459fd2f5f7ecb3e50":[5,0,2,3,1,1,4],
-"_collision_detection_8cu.html#a6a4ced553b97c7a945f65b1315ab8290":[5,0,2,3,1,1,5],
+"_collision_detection_8cu.html#a7c15a027001175d4b27adfd99e535c04":[5,0,2,3,1,1,8],
 "_collision_detection_8cu.html#a7e5c31e49f8eceffedee86ff2ac59b53":[5,0,2,3,1,1,11],
 "_collision_detection_8cu.html#a9613831fda0fbaf95b71961b83be82a9":[5,0,2,3,1,1,6],
 "_collision_detection_8cu.html#acc6708dd9137086272cffe83d3398db4":[5,0,2,3,1,1,9],
@@ -72,8 +72,9 @@ var NAVTREEINDEX0 =
 "_collision_detection_8cu_source.html":[5,0,2,3,1,1],
 "_collision_detection_8h.html":[5,0,2,3,0,0],
 "_collision_detection_8h_source.html":[5,0,2,3,0,0],
-"_collision_detection___ray_tracing_8cpp.html":[5,0,2,3,1,2],
-"_collision_detection___ray_tracing_8cpp_source.html":[5,0,2,3,1,2],
+"_collision_detection___ray_tracing_8cpp.html":[5,0,2,3,1,3],
+"_collision_detection___ray_tracing_8cpp_source.html":[5,0,2,3,1,3],
+"_collision_detection__old_8cu_source.html":[5,0,2,3,1,2],
 "_context_8cpp.html":[5,0,0,1,0],
 "_context_8cpp_source.html":[5,0,0,1,0],
 "_context_8h.html":[5,0,0,0,0],
@@ -248,6 +249,5 @@ var NAVTREEINDEX0 =
 "_voxel_intersection_8cu_source.html":[5,0,2,17,1,1],
 "_voxel_intersection_8h.html":[5,0,2,17,0,0],
 "_voxel_intersection_8h_source.html":[5,0,2,17,0,0],
-"_voxel_intersection_doc.html#VoxelIntersectionDoc":[2,15],
-"_weber_penn_doc.html#WeberPennDoc":[2,16]
+"_voxel_intersection_doc.html#VoxelIntersectionDoc":[2,15]
 };

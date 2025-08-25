@@ -1119,7 +1119,11 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         helios_runtime_error("failed.\n File " + fn + " is not XML format.");
     }
 
-    XMLfiles.emplace_back(filename);
+    // Resolve file path using unified resolution
+    std::filesystem::path resolved_path = resolveFilePath(filename);
+    std::string resolved_filename = resolved_path.string();
+
+    XMLfiles.emplace_back(resolved_filename);
 
     uint ID;
     std::vector<uint> UUID;
@@ -1128,7 +1132,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
     pugi::xml_document xmldoc;
 
     // load file
-    pugi::xml_parse_result load_result = xmldoc.load_file(filename);
+    pugi::xml_parse_result load_result = xmldoc.load_file(resolved_filename.c_str());
 
     // error checking
     if (!load_result) {
@@ -3222,8 +3226,12 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
 
     bool ifColor = false;
 
+    // Resolve file path using unified resolution
+    std::filesystem::path resolved_path = resolveFilePath(filename);
+    std::string resolved_filename = resolved_path.string();
+
     std::ifstream inputPly;
-    inputPly.open(filename);
+    inputPly.open(resolved_filename);
 
     if (!inputPly.is_open()) {
         helios_runtime_error("ERROR (Context::loadPLY): Couldn't open " + std::string(filename));
@@ -3580,16 +3588,19 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
 
     std::vector<uint> UUID;
 
+    // Resolve file path using unified resolution
+    std::filesystem::path resolved_path = resolveFilePath(filename);
+    std::string resolved_filename = resolved_path.string();
+    
     std::ifstream inputOBJ, inputMTL;
-    inputOBJ.open(filename);
+    inputOBJ.open(resolved_filename);
 
     if (!inputOBJ.is_open()) {
         helios_runtime_error("ERROR (Context::loadOBJ): Couldn't open " + std::string(filename));
     }
 
-    // determine the base file path for 'filename'
-    std::string fstring = filename;
-    std::string filebase = getFilePath(fstring);
+    // determine the base file path for resolved filename
+    std::string filebase = getFilePath(resolved_filename);
 
     // determine bounding box
     float boxmin = 100000;
@@ -3811,26 +3822,34 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
     std::ifstream inputMTL;
 
     std::string file = material_file;
+    std::string resolved_file;
 
-    // first look for mtl file using path given in obj file
-    inputMTL.open(file.c_str());
-    if (!inputMTL.is_open()) {
-        // if that doesn't work, try looking in the same directory where obj file is located
-        file = filebase + file;
-        file.erase(remove(file.begin(), file.end(), ' '), file.end());
-        for (size_t i = file.size(); i-- > 0;) {
-            if (strcmp(&file.at(i), "l") == 0) {
-                break;
-            }
-
-            file.erase(file.begin() + scast<int>(i));
-        }
-        if (file.empty()) {
-            helios_runtime_error("ERROR (Context::loadMTL): Material file does not have correct file extension (.mtl).");
-        }
+    // Try unified resolution first
+    try {
+        std::filesystem::path resolved_path = resolveFilePath(file);
+        resolved_file = resolved_path.string();
+        inputMTL.open(resolved_file.c_str());
+    } catch (const std::runtime_error &) {
+        // If unified resolution fails, fall back to original logic
         inputMTL.open(file.c_str());
         if (!inputMTL.is_open()) {
-            helios_runtime_error("ERROR (Context::loadMTL): Material file " + std::string(file) + " given in .obj file cannot be found.");
+            // if that doesn't work, try looking in the same directory where obj file is located
+            file = filebase + file;
+            file.erase(remove(file.begin(), file.end(), ' '), file.end());
+            for (size_t i = file.size(); i-- > 0;) {
+                if (strcmp(&file.at(i), "l") == 0) {
+                    break;
+                }
+
+                file.erase(file.begin() + scast<int>(i));
+            }
+            if (file.empty()) {
+                helios_runtime_error("ERROR (Context::loadMTL): Material file does not have correct file extension (.mtl).");
+            }
+            inputMTL.open(file.c_str());
+            if (!inputMTL.is_open()) {
+                helios_runtime_error("ERROR (Context::loadMTL): Material file " + std::string(file) + " given in .obj file cannot be found.");
+            }
         }
     }
 
@@ -4430,7 +4449,11 @@ void Context::writePrimitiveData(const std::string &filename, const std::vector<
 }
 
 void Context::loadTabularTimeseriesData(const std::string &data_file, const std::vector<std::string> &col_labels, const std::string &a_delimeter, const std::string &a_date_string_format, uint headerlines) {
-    std::ifstream datafile(data_file); // open the file
+    // Resolve file path using project-based resolution
+    std::filesystem::path resolved_path = resolveProjectFile(data_file);
+    std::string resolved_filename = resolved_path.string();
+    
+    std::ifstream datafile(resolved_filename); // open the file
 
     if (!datafile.is_open()) { // check that file exists
         helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Weather data file '" + data_file + "' does not exist.");

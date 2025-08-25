@@ -11,7 +11,7 @@ var searchData=
   ['diffusepeakdir_8',['diffusePeakDir',['../struct_radiation_band.html#a640846a7f7b0b525ff33ea0d8143e866',1,'RadiationBand']]],
   ['diffuseraycount_9',['diffuseRayCount',['../struct_radiation_band.html#ad96ca3a5bd5aa77844ac2c9fe16e042d',1,'RadiationBand']]],
   ['direction_10',['direction',['../struct_collision_detection_1_1_ray_query.html#aaba74afd953100356859a41466bd6980',1,'CollisionDetection::RayQuery::direction'],['../struct_collision_detection_1_1_optimal_path_result.html#a7a5d6c6c36f4eebec6042a983d7187d6',1,'CollisionDetection::OptimalPathResult::direction']]],
-  ['directions_11',['directions',['../struct_collision_detection_1_1_ray_packet.html#a6e4ee48bf52e7198301a4ce999df061d',1,'CollisionDetection::RayPacket']]],
+  ['directions_11',['directions',['../struct_collision_detection_1_1_ray_packet.html#a6e4ee48bf52e7198301a4ce999df061d',1,'CollisionDetection::RayPacket::directions'],['../struct_ray_packet.html#a311ab64ba0372262cd6609fe216e9e6e',1,'RayPacket::directions']]],
   ['directraycount_12',['directRayCount',['../struct_radiation_band.html#aff62997df11af06fad82b946b298ee90',1,'RadiationBand']]],
   ['distance_13',['distance',['../struct_collision_detection_1_1_hit_result.html#a193670fcd99ed9e580be3c474f3cfeac',1,'CollisionDetection::HitResult']]]
 ];

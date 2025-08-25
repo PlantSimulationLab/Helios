@@ -2,12 +2,19 @@ var searchData=
 [
   ['a_0',['a',['../structhelios_1_1_r_g_b_acolor.html#a1941a63762f40fe1aabc5bb863a7aa1e',1,'helios::RGBAcolor']]],
   ['aabb_5fmax_1',['aabb_max',['../struct_g_p_u_b_v_h_node.html#a00e1767d2967bb81f57ebdbb3cc30e22',1,'GPUBVHNode']]],
-  ['aabb_5fmaxs_2',['aabb_maxs',['../struct_g_p_u_b_v_h_nodes_so_a.html#a3d32b9459706dbc87f0bf99343ceae80',1,'GPUBVHNodesSoA']]],
-  ['aabb_5fmin_3',['aabb_min',['../struct_g_p_u_b_v_h_node.html#a35aa49c0fb0eec9424720298fc436e07',1,'GPUBVHNode']]],
-  ['aabb_5fmins_4',['aabb_mins',['../struct_g_p_u_b_v_h_nodes_so_a.html#a2ab07acc289fcb122f251450005eddbf',1,'GPUBVHNodesSoA']]],
-  ['age_5',['age',['../struct_phytomer.html#adca1542efc0d16f0117d533f86c849e5',1,'Phytomer']]],
-  ['apex_6',['apex',['../struct_collision_detection_1_1_cone.html#ac81db38547e2c926cf04c8c721b7030b',1,'CollisionDetection::Cone']]],
-  ['average_5fray_5fdistance_7',['average_ray_distance',['../struct_collision_detection_1_1_ray_tracing_stats.html#aacd2d8cb25d33449d417b09de8d902cf',1,'CollisionDetection::RayTracingStats']]],
-  ['axis_8',['axis',['../struct_collision_detection_1_1_cone.html#a526419aa4859e022df28024600455e23',1,'CollisionDetection::Cone']]],
-  ['azimuth_9',['azimuth',['../structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59',1,'helios::SphericalCoord']]]
+  ['aabb_5fmaxs_2',['aabb_maxs',['../struct_g_p_u_b_v_h_nodes_so_a.html#a3c70dadd8f9085c7e6093f23c055a89b',1,'GPUBVHNodesSoA']]],
+  ['aabb_5fmaxs_5fx_3',['aabb_maxs_x',['../struct_g_p_u_quantized_b_v_h_nodes.html#a50235c2bcc4b3ee3b425f8be81c289d6',1,'GPUQuantizedBVHNodes']]],
+  ['aabb_5fmaxs_5fy_4',['aabb_maxs_y',['../struct_g_p_u_quantized_b_v_h_nodes.html#a360e3647f850443ada42c4c60829af44',1,'GPUQuantizedBVHNodes']]],
+  ['aabb_5fmaxs_5fz_5',['aabb_maxs_z',['../struct_g_p_u_quantized_b_v_h_nodes.html#aa1981047bd1548d0d3e24844277b84b9',1,'GPUQuantizedBVHNodes']]],
+  ['aabb_5fmin_6',['aabb_min',['../struct_g_p_u_b_v_h_node.html#a35aa49c0fb0eec9424720298fc436e07',1,'GPUBVHNode']]],
+  ['aabb_5fmins_7',['aabb_mins',['../struct_g_p_u_b_v_h_nodes_so_a.html#a5350ff0009842081a8e3210b0f8985cc',1,'GPUBVHNodesSoA']]],
+  ['aabb_5fmins_5fx_8',['aabb_mins_x',['../struct_g_p_u_quantized_b_v_h_nodes.html#accf6ef097c301bf4ec7a9e86d70abd34',1,'GPUQuantizedBVHNodes']]],
+  ['aabb_5fmins_5fy_9',['aabb_mins_y',['../struct_g_p_u_quantized_b_v_h_nodes.html#aa5c6bf9692c7a287c55f622819d2b7ae',1,'GPUQuantizedBVHNodes']]],
+  ['aabb_5fmins_5fz_10',['aabb_mins_z',['../struct_g_p_u_quantized_b_v_h_nodes.html#adc051328bc33e0f6b9a3baa8f74ce2c3',1,'GPUQuantizedBVHNodes']]],
+  ['active_5fmask_11',['active_mask',['../struct_ray_packet.html#a0832758e2ccd6fb715cdc380bbaaa30f',1,'RayPacket']]],
+  ['age_12',['age',['../struct_phytomer.html#adca1542efc0d16f0117d533f86c849e5',1,'Phytomer']]],
+  ['apex_13',['apex',['../struct_collision_detection_1_1_cone.html#ac81db38547e2c926cf04c8c721b7030b',1,'CollisionDetection::Cone']]],
+  ['average_5fray_5fdistance_14',['average_ray_distance',['../struct_collision_detection_1_1_ray_tracing_stats.html#aacd2d8cb25d33449d417b09de8d902cf',1,'CollisionDetection::RayTracingStats']]],
+  ['axis_15',['axis',['../struct_collision_detection_1_1_cone.html#a526419aa4859e022df28024600455e23',1,'CollisionDetection::Cone']]],
+  ['azimuth_16',['azimuth',['../structhelios_1_1_spherical_coord.html#af63b7ee76a5d57bf5881079eff52aa59',1,'helios::SphericalCoord']]]
 ];

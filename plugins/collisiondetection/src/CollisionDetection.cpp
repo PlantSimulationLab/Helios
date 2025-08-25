@@ -105,13 +105,6 @@ CollisionDetection::CollisionDetection(helios::Context *a_context) {
     // Initialize spatial optimization parameters
     max_collision_distance = 10.0f; // Default 10 meter maximum distance
 
-    if (printmessages) {
-#ifdef HELIOS_CUDA_AVAILABLE
-        std::cout << "CollisionDetection plugin initialized successfully with GPU support." << std::endl;
-#else
-        std::cout << "CollisionDetection plugin initialized successfully (CPU-only mode)." << std::endl;
-#endif
-    }
 }
 
 CollisionDetection::~CollisionDetection() {
@@ -182,10 +175,6 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &UU
     // Remove duplicates
     std::sort(all_collisions.begin(), all_collisions.end());
     all_collisions.erase(std::unique(all_collisions.begin(), all_collisions.end()), all_collisions.end());
-
-    if (printmessages) {
-        std::cout << "Found " << all_collisions.size() << " colliding primitives." << std::endl;
-    }
 
     return all_collisions;
 }
@@ -367,10 +356,6 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     if (primitive_set_changed) {
         // Clear primitive cache only when primitive set changes - CRITICAL for performance
         primitive_cache.clear();
-        if (printmessages) {
-            std::cout << "Primitive set changed, clearing cache (was " << old_primitive_set.size() 
-                      << " primitives, now " << new_primitive_set.size() << ")" << std::endl;
-        }
     }
 
     // Clear existing BVH
@@ -463,24 +448,15 @@ void CollisionDetection::rebuildBVH() {
 
 void CollisionDetection::disableAutomaticBVHRebuilds() {
     automatic_bvh_rebuilds = false;
-    if (printmessages) {
-        std::cout << "Disabled automatic BVH rebuilds - caller must manually manage rebuilds" << std::endl;
-    }
 }
 
 void CollisionDetection::enableAutomaticBVHRebuilds() {
     automatic_bvh_rebuilds = true;
-    if (printmessages) {
-        std::cout << "Enabled automatic BVH rebuilds (default behavior)" << std::endl;
-    }
 }
 
 void CollisionDetection::enableHierarchicalBVH() {
     hierarchical_bvh_enabled = true;
     static_bvh_valid = false; // Force rebuild of static BVH
-    if (printmessages) {
-        std::cout << "Enabled hierarchical BVH (separate static/dynamic geometry)" << std::endl;
-    }
 }
 
 void CollisionDetection::disableHierarchicalBVH() {
@@ -490,9 +466,6 @@ void CollisionDetection::disableHierarchicalBVH() {
     static_bvh_primitives.clear();
     static_bvh_valid = false;
     last_static_bvh_geometry.clear();
-    if (printmessages) {
-        std::cout << "Disabled hierarchical BVH (using single unified BVH)" << std::endl;
-    }
 }
 
 void CollisionDetection::updateHierarchicalBVH(const std::set<uint> &requested_geometry, bool force_rebuild) {
@@ -530,9 +503,6 @@ void CollisionDetection::buildStaticBVH() {
         static_bvh_nodes.clear();
         static_bvh_primitives.clear();
         static_bvh_valid = false;
-        if (printmessages) {
-            std::cout << "[STATIC BVH] No static geometry defined - cleared static BVH" << std::endl;
-        }
         return;
     }
     
@@ -628,10 +598,6 @@ void CollisionDetection::updateBVH(const std::vector<uint> &UUIDs, bool force_re
 void CollisionDetection::setStaticGeometry(const std::vector<uint> &UUIDs) {
     static_geometry_cache.clear();
     static_geometry_cache.insert(UUIDs.begin(), UUIDs.end());
-    
-    if (printmessages) {
-        std::cout << "Marked " << UUIDs.size() << " primitives as static geometry" << std::endl;
-    }
 }
 
 void CollisionDetection::ensureBVHCurrent() {
@@ -730,7 +696,7 @@ void CollisionDetection::enableGPUAcceleration() {
     }
 #else
     if (printmessages) {
-        std::cout << "WARNING: GPU acceleration requested but CUDA not available. Ignoring request." << std::endl;
+        std::cerr << "WARNING: GPU acceleration requested but CUDA not available. Ignoring request." << std::endl;
     }
 #endif
 }
@@ -1279,10 +1245,6 @@ void CollisionDetection::allocateGPUMemory() {
 
     // Mark as allocated only after both allocations succeeded
     gpu_memory_allocated = true;
-
-    if (printmessages) {
-        std::cout << "Allocated " << (bvh_size + indices_size) / 1024 << " KB GPU memory" << std::endl;
-    }
 }
 #endif
 
@@ -1349,9 +1311,6 @@ void CollisionDetection::transferBVHToGPU() {
         helios_runtime_error("CUDA error transferring primitive indices: " + std::string(cudaGetErrorString(err)));
     }
 
-    if (printmessages) {
-        std::cout << "Transferred BVH to GPU (" << bvh_nodes.size() << " nodes, " << primitive_indices.size() << " primitives)" << std::endl;
-    }
 }
 #endif
 
@@ -1372,9 +1331,6 @@ void CollisionDetection::markBVHDirty() {
 }
 
 void CollisionDetection::incrementalUpdateBVH(const std::set<uint> &added_geometry, const std::set<uint> &removed_geometry, const std::set<uint> &final_geometry) {
-    if (printmessages) {
-        std::cout << "Performing incremental BVH update: +" << added_geometry.size() << " -" << removed_geometry.size() << " primitives" << std::endl;
-    }
     
     // For small changes, it's actually more efficient to do a targeted rebuild than complex tree restructuring
     // True incremental BVH updates require complex rebalancing algorithms
@@ -1386,7 +1342,7 @@ void CollisionDetection::incrementalUpdateBVH(const std::set<uint> &added_geomet
     for (uint uuid : added_geometry) {
         if (!context->doesPrimitiveExist(uuid)) {
             if (printmessages) {
-                std::cout << "Warning: Added primitive " << uuid << " does not exist, falling back to full rebuild" << std::endl;
+                std::cerr << "Warning: Added primitive " << uuid << " does not exist, falling back to full rebuild" << std::endl;
             }
             buildBVH(final_primitives);
             return;
@@ -2502,10 +2458,6 @@ std::vector<std::pair<uint, uint>> CollisionDetection::findCollisionsWithinDista
         }
     }
     
-    if (printmessages) {
-        std::cout << "Found " << collision_pairs.size() << " collision pairs within distance threshold" << std::endl;
-    }
-    
     return collision_pairs;
 }
 
@@ -2515,10 +2467,6 @@ void CollisionDetection::setMaxCollisionDistance(float distance) {
     }
     
     max_collision_distance = distance;
-    
-    if (printmessages) {
-        std::cout << "Set maximum collision distance to " << distance << " meters" << std::endl;
-    }
 }
 
 float CollisionDetection::getMaxCollisionDistance() const {
@@ -2528,10 +2476,6 @@ float CollisionDetection::getMaxCollisionDistance() const {
 std::vector<uint> CollisionDetection::filterGeometryByDistance(const helios::vec3 &query_center, float max_radius, const std::vector<uint> &candidate_UUIDs) {
     
     std::vector<uint> filtered_UUIDs;
-    
-    if (printmessages) {
-        //std::cout << "Filtering geometry within radius " << max_radius << " of center " << query_center << std::endl;
-    }
     
     // Get list of candidates (either provided or all primitives)
     std::vector<uint> candidates;
@@ -2573,10 +2517,6 @@ std::vector<uint> CollisionDetection::filterGeometryByDistance(const helios::vec
         }
     }
     
-    if (printmessages) {
-        //std::cout << "Filtered " << candidates.size() << " candidates to " << filtered_UUIDs.size() << " within radius" << std::endl;
-    }
-    
     return filtered_UUIDs;
 }
 
@@ -2590,7 +2530,7 @@ void CollisionDetection::calculateVoxelRayPathLengths(const vec3 &grid_center, c
 
     if (ray_origins.empty()) {
         if (printmessages) {
-            std::cout << "WARNING (CollisionDetection::calculateVoxelRayPathLengths): No rays provided" << std::endl;
+            std::cerr << "WARNING (CollisionDetection::calculateVoxelRayPathLengths): No rays provided" << std::endl;
         }
         return;
     }
@@ -2605,11 +2545,6 @@ void CollisionDetection::calculateVoxelRayPathLengths(const vec3 &grid_center, c
         buildPrimitiveCache();
     }
 
-    if (printmessages) {
-        std::cout << "Calculating voxel ray path lengths for " << ray_origins.size() << " rays on " 
-                  << grid_divisions.x << "x" << grid_divisions.y << "x" << grid_divisions.z << " voxel grid..." << std::endl;
-    }
-
     // Choose GPU or CPU implementation based on acceleration setting
 #ifdef HELIOS_CUDA_AVAILABLE
     if (isGPUAccelerationEnabled()) {
@@ -2621,9 +2556,6 @@ void CollisionDetection::calculateVoxelRayPathLengths(const vec3 &grid_center, c
     calculateVoxelRayPathLengths_CPU(ray_origins, ray_directions);
 #endif
 
-    if (printmessages) {
-        std::cout << "Voxel ray path length calculation completed." << std::endl;
-    }
 }
 
 void CollisionDetection::setVoxelTransmissionProbability(int P_denom, int P_trans, const helios::int3 &ijk) {
@@ -2908,10 +2840,7 @@ void CollisionDetection::initializeVoxelData(const vec3 &grid_center, const vec3
     }
     
     voxel_data_initialized = true;
-    
-    if (printmessages) {
-        std::cout << "Initialized voxel data structures: " << grid_divisions.x << "x" << grid_divisions.y << "x" << grid_divisions.z << " grid" << std::endl;
-    }
+
 }
 
 bool CollisionDetection::validateVoxelIndices(const helios::int3 &ijk) const {
@@ -3256,32 +3185,32 @@ void CollisionDetection::calculateVoxelRayPathLengths_CPU(const std::vector<vec3
     
     // Performance profiling output
     long long avg_raycast_time = raycast_count > 0 ? total_raycast_time.load() / raycast_count.load() : 0;
-    std::cout << "PERFORMANCE PROFILE:" << std::endl;
-    std::cout << "  Total time: " << duration.count() << " ms" << std::endl;
-    std::cout << "  Raycast time: " << (total_raycast_time.load() / 1000) << " ms (" << (100.0 * total_raycast_time.load() / 1000) / duration.count() << "%)" << std::endl;
-    std::cout << "  Rays processed: " << raycast_count.load() << std::endl;
-    std::cout << "  Avg per ray: " << avg_raycast_time << " µs" << std::endl;
-    
-    if (printmessages) {
-        // Report some statistics
-        int total_ray_voxel_intersections = 0;
-        if (use_flat_arrays) {
-            // Sum from flat arrays
-            for (size_t i = 0; i < voxel_ray_counts_flat.size(); i++) {
-                total_ray_voxel_intersections += voxel_ray_counts_flat[i];
-            }
-        } else {
-            // Sum from nested vectors
-            for (int i = 0; i < voxel_grid_divisions.x; i++) {
-                for (int j = 0; j < voxel_grid_divisions.y; j++) {
-                    for (int k = 0; k < voxel_grid_divisions.z; k++) {
-                        total_ray_voxel_intersections += voxel_ray_counts[i][j][k];
-                    }
-                }
-            }
-        }
-        std::cout << "Total ray-voxel intersections: " << total_ray_voxel_intersections << std::endl;
-    }
+    // std::cout << "PERFORMANCE PROFILE:" << std::endl;
+    // std::cout << "  Total time: " << duration.count() << " ms" << std::endl;
+    // std::cout << "  Raycast time: " << (total_raycast_time.load() / 1000) << " ms (" << (100.0 * total_raycast_time.load() / 1000) / duration.count() << "%)" << std::endl;
+    // std::cout << "  Rays processed: " << raycast_count.load() << std::endl;
+    // std::cout << "  Avg per ray: " << avg_raycast_time << " µs" << std::endl;
+    //
+    // if (printmessages) {
+    //     // Report some statistics
+    //     int total_ray_voxel_intersections = 0;
+    //     if (use_flat_arrays) {
+    //         // Sum from flat arrays
+    //         for (size_t i = 0; i < voxel_ray_counts_flat.size(); i++) {
+    //             total_ray_voxel_intersections += voxel_ray_counts_flat[i];
+    //         }
+    //     } else {
+    //         // Sum from nested vectors
+    //         for (int i = 0; i < voxel_grid_divisions.x; i++) {
+    //             for (int j = 0; j < voxel_grid_divisions.y; j++) {
+    //                 for (int k = 0; k < voxel_grid_divisions.z; k++) {
+    //                     total_ray_voxel_intersections += voxel_ray_counts[i][j][k];
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     std::cout << "Total ray-voxel intersections: " << total_ray_voxel_intersections << std::endl;
+    // }
 }
 
 #ifdef HELIOS_CUDA_AVAILABLE
@@ -3528,17 +3457,6 @@ void CollisionDetection::ensureOptimizedBVH() {
             bvh_nodes_soa.primitive_counts.push_back(node.primitive_count);
             bvh_nodes_soa.is_leaf_flags.push_back(node.is_leaf ? 1 : 0);
         }
-        
-        if (printmessages) {
-            std::cout << "SoA BVH conversion complete: " << node_count << " nodes" << std::endl;
-            
-            // Calculate memory savings
-            size_t aos_memory = node_count * sizeof(BVHNode);
-            size_t soa_hot_memory = node_count * (sizeof(vec3) * 2 + sizeof(uint32_t) * 2); // AABB + children
-            size_t soa_cold_memory = node_count * (sizeof(uint32_t) * 2 + sizeof(uint8_t)); // primitives + flags
-            
-            std::cout << "Memory layout: AoS=" << aos_memory << " bytes, SoA hot=" << soa_hot_memory 
-                      << " bytes, SoA cold=" << soa_cold_memory << " bytes" << std::endl;
-        }
+
     }
 }

@@ -99,6 +99,9 @@ constexpr To scast(From &&v) noexcept {
 // pugi XML parser
 #include "pugixml.hpp"
 
+// Standard library for file path resolution
+#include <filesystem>
+
 // *** Groups *** //
 
 //! Miscellaneous helper functions
@@ -1114,6 +1117,70 @@ namespace helios {
      * \return True if directory/file was valid, false otherwise
      */
     [[nodiscard]] bool validateOutputPath(std::string &output_directory, const std::vector<std::string> &allowable_file_extensions = {});
+
+    //--------------------- ASSET PATH RESOLUTION -----------------------------------//
+
+    //! Resolve asset file path using cpplocate, allowing executables to run from any directory
+    /**
+     * \param[in] relativePath Relative path to the asset file (e.g., "plugins/visualizer/shaders/shader.vert")
+     * \return Absolute path to the asset file
+     * \note This function searches for assets in multiple locations: build directory, system install locations, and custom paths
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path resolveAssetPath(const std::string& relativePath);
+
+    //! Resolve plugin-specific asset path  
+    /**
+     * \param[in] pluginName Name of the plugin (e.g., "visualizer", "plantarchitecture", "radiation")
+     * \param[in] assetPath Relative path within the plugin's asset directory
+     * \return Absolute path to the plugin asset file
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path resolvePluginAsset(const std::string& pluginName, const std::string& assetPath);
+
+
+    //! Resolve file path using standard Helios resolution hierarchy
+    /**
+     * \param[in] filename File name with or without path (e.g., "primaryShader.vert" or "shaders/primaryShader.vert")
+     * \return Absolute path to the file
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path resolveFilePath(const std::string& filename);
+
+    //! Resolve spectral data file path
+    /**
+     * \param[in] spectraFile Spectral data filename with or without path (e.g., "camera_spectral_library.xml")
+     * \return Absolute path to the spectral data file
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path resolveSpectraPath(const std::string& spectraFile);
+
+    //! Validate that an asset file exists and is readable
+    /**
+     * \param[in] assetPath Path to the asset file to validate
+     * \return True if the file exists and is readable, false otherwise
+     * \ingroup functions
+     */
+    [[nodiscard]] bool validateAssetPath(const std::filesystem::path& assetPath);
+
+    //! Find the project root directory (directory containing top-level CMakeLists.txt)
+    /**
+     * \param[in] startPath Starting directory for search (defaults to current working directory)
+     * \return Absolute path to the project root directory, or empty path if not found
+     * \note Searches upward from startPath for a directory containing CMakeLists.txt
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path findProjectRoot(const std::filesystem::path& startPath = std::filesystem::current_path());
+
+    //! Resolve file path using project-based resolution strategy
+    /**
+     * \param[in] relativePath Relative path to the file
+     * \return Absolute path to the file
+     * \note Resolution order: 1) Current working directory, 2) Project directory, 3) Error
+     * \throws std::runtime_error if file cannot be found
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path resolveProjectFile(const std::string& relativePath);
 
     //! Read values contained in a text file into a one-dimensional vector of floats
     /**

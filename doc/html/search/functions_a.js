@@ -3,7 +3,7 @@ var searchData=
   ['lasthitfilter_0',['lastHitFilter',['../class_li_d_a_rcloud.html#ab812d48fd5d81a8cc382bf0d1214496d',1,'LiDARcloud']]],
   ['launchbvhtraversal_1',['launchBVHTraversal',['../_collision_detection_8cu.html#a9613831fda0fbaf95b71961b83be82a9',1,'CollisionDetection.cu']]],
   ['launchrayprimitiveintersection_2',['launchRayPrimitiveIntersection',['../_collision_detection_8cu.html#afc857894d236deeb5ecc90388e9b61e5',1,'CollisionDetection.cu']]],
-  ['launchvoxelraypathlengths_3',['launchVoxelRayPathLengths',['../_collision_detection_8cu.html#a08c61a024a224242a420b515f9b43bf9',1,'CollisionDetection.cu']]],
+  ['launchvoxelraypathlengths_3',['launchVoxelRayPathLengths',['../_collision_detection_8cu.html#a7c15a027001175d4b27adfd99e535c04',1,'CollisionDetection.cu']]],
   ['leafoptics_4',['LeafOptics',['../class_leaf_optics.html#a8f286671c723166c8aae098d0efd9b04',1,'LeafOptics']]],
   ['leafprototype_5',['LeafPrototype',['../struct_leaf_prototype.html#af29d0b590d0c675ff43134797d4ade6b',1,'LeafPrototype::LeafPrototype(std::minstd_rand0 *generator)'],['../struct_leaf_prototype.html#a84fd620b7848791fb6a1761259b1a2aa',1,'LeafPrototype::LeafPrototype()=default']]],
   ['leafreconstructionalphamask_6',['leafReconstructionAlphaMask',['../class_li_d_a_rcloud.html#aba102c6c5036ffb99b105fb2b4850935',1,'LiDARcloud::leafReconstructionAlphaMask(float minimum_leaf_group_area, float maximum_leaf_group_area, float leaf_aspect_ratio, const char *mask_file)'],['../class_li_d_a_rcloud.html#a0c80f96188fb83f444e7e08cbf888690',1,'LiDARcloud::leafReconstructionAlphaMask(float minimum_leaf_group_area, float maximum_leaf_group_area, float leaf_aspect_ratio, float leaf_length_constant, const char *mask_file)']]],

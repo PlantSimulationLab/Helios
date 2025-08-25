@@ -150,7 +150,7 @@ TEST_CASE("Context XML I/O Functions") {
         ctx.setGlobalData("global_test", 123);
 
         // Write to XML (use quiet parameter to avoid output)
-        const char *test_file = "/tmp/helios_test.xml";
+        const char *test_file = "helios_test.xml";
         DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, true));
 
         // Create new context and load (use quiet parameter)
@@ -191,7 +191,7 @@ TEST_CASE("Context XML I/O Functions") {
         uint box2 = ctx.addBoxObject(make_vec3(2, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
 
         std::vector<uint> selected_objects = {box1};
-        const char *test_file = "/tmp/helios_partial_test.xml";
+        const char *test_file = "helios_partial_test.xml";
 
         // Use quiet parameter to avoid output
         DOCTEST_CHECK_NOTHROW(ctx.writeXML_byobject(test_file, selected_objects, true));
@@ -213,7 +213,7 @@ TEST_CASE("Context XML I/O Functions") {
         uint p3 = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
 
         std::vector<uint> selected_uuids = {p1, p3};
-        const char *test_file = "/tmp/helios_uuid_test.xml";
+        const char *test_file = "helios_uuid_test.xml";
 
         // Use quiet parameter to avoid output
         DOCTEST_CHECK_NOTHROW(ctx.writeXML(test_file, selected_uuids, true));
@@ -233,26 +233,30 @@ TEST_CASE("Context XML I/O Functions") {
         std::vector<std::string> files = ctx.getLoadedXMLFiles();
         size_t initial_count = files.size();
 
-        // Create and load a test file
+        // Create and load a test file using current working directory (cross-platform)
         uint patch = ctx.addPatch();
-        const char *test_file = "/tmp/helios_loaded_files_test.xml";
+        std::string test_file = "helios_loaded_files_test.xml";
         // Use quiet parameter to avoid output
-        ctx.writeXML(test_file, true);
+        ctx.writeXML(test_file.c_str(), true);
 
         Context ctx2;
-        ctx2.loadXML(test_file, true);
+        ctx2.loadXML(test_file.c_str(), true);
 
         std::vector<std::string> loaded_files = ctx2.getLoadedXMLFiles();
         DOCTEST_CHECK(loaded_files.size() == initial_count + 1);
-        DOCTEST_CHECK(std::find(loaded_files.begin(), loaded_files.end(), test_file) != loaded_files.end());
+        
+        // Compare against the resolved path, not the original path
+        std::filesystem::path resolved_test_file = resolveProjectFile(test_file);
+        std::string resolved_test_file_str = resolved_test_file.string();
+        DOCTEST_CHECK(std::find(loaded_files.begin(), loaded_files.end(), resolved_test_file_str) != loaded_files.end());
 
-        std::remove(test_file);
+        std::remove(test_file.c_str());
     }
 
     SUBCASE("XML I/O quiet parameter") {
         Context ctx;
         uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
-        const char *test_file = "/tmp/helios_quiet_test.xml";
+        const char *test_file = "helios_quiet_test.xml";
 
         // Test writeXML with quiet=false (should produce output)
         {

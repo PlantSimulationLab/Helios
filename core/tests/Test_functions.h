@@ -962,3 +962,228 @@ TEST_CASE("linspace - Linearly Spaced Values") {
         }
     }
 }
+
+TEST_CASE("Asset Resolution Functions") {
+    SUBCASE("resolveAssetPath basic functionality") {
+        // Test that resolveAssetPath works correctly - should throw for non-existent file
+        bool exception_thrown = false;
+        try {
+            [[maybe_unused]] auto path = resolveAssetPath("nonexistent_test_file.txt");
+        } catch (const std::runtime_error&) {
+            exception_thrown = true;
+        }
+        DOCTEST_CHECK(exception_thrown);
+    }
+    
+    SUBCASE("resolvePluginAsset") {
+        // Test plugin-specific asset resolution - should throw for non-existent file
+        bool exception_thrown = false;
+        try {
+            [[maybe_unused]] auto path = resolvePluginAsset("visualizer", "nonexistent_font.ttf");
+        } catch (const std::runtime_error&) {
+            exception_thrown = true;
+        }
+        DOCTEST_CHECK(exception_thrown);
+    }
+    
+    
+    SUBCASE("resolveSpectraPath") {
+        // Test spectra path resolution - should throw for non-existent file
+        bool exception_thrown = false;
+        try {
+            [[maybe_unused]] auto path = resolveSpectraPath("nonexistent_spectra.xml");
+        } catch (const std::runtime_error&) {
+            exception_thrown = true;
+        }
+        DOCTEST_CHECK(exception_thrown);
+    }
+    
+    SUBCASE("validateAssetPath with valid path") {
+        // Create a temporary file for testing
+        std::filesystem::path temp_path = std::filesystem::temp_directory_path() / "helios_test_asset.txt";
+        std::ofstream temp_file(temp_path);
+        temp_file << "test content";
+        temp_file.close();
+        
+        // Test validation of existing file
+        DOCTEST_CHECK(validateAssetPath(temp_path) == true);
+        
+        // Clean up
+        std::filesystem::remove(temp_path);
+    }
+    
+    SUBCASE("validateAssetPath with invalid path") {
+        // Test validation of non-existent file
+        std::filesystem::path non_existent = "/this/path/does/not/exist.txt";
+        DOCTEST_CHECK(validateAssetPath(non_existent) == false);
+    }
+    
+    SUBCASE("resolveAssetPath with empty string") {
+        // Test with empty input - should return a path (empty string is handled gracefully)
+        auto path = resolveAssetPath("");
+        DOCTEST_CHECK(!path.empty());
+        DOCTEST_CHECK(path.is_absolute());
+    }
+    
+    SUBCASE("error message content") {
+        // Test that error messages contain helpful information
+        try {
+            [[maybe_unused]] auto path = resolveAssetPath("nonexistent_file.txt");
+            DOCTEST_FAIL("Expected exception was not thrown");
+        } catch (const std::runtime_error& e) {
+            std::string error_msg = e.what();
+            DOCTEST_CHECK(error_msg.find("Could not locate asset file") != std::string::npos);
+            DOCTEST_CHECK(error_msg.find("nonexistent_file.txt") != std::string::npos);
+        }
+    }
+    
+    SUBCASE("asset resolution consistency") {
+        // Test that multiple calls with same input produce consistent error messages
+        std::string error1, error2;
+        try {
+            [[maybe_unused]] auto path1 = resolveAssetPath("test_consistency.txt");
+        } catch (const std::runtime_error& e) {
+            error1 = e.what();
+        }
+        try {
+            [[maybe_unused]] auto path2 = resolveAssetPath("test_consistency.txt");
+        } catch (const std::runtime_error& e) {
+            error2 = e.what();
+        }
+        DOCTEST_CHECK(error1 == error2);
+    }
+    
+    SUBCASE("different plugin error messages") {
+        // Test that different plugins produce different error messages
+        std::string vis_error, rad_error;
+        try {
+            [[maybe_unused]] auto vis_path = resolvePluginAsset("visualizer", "test.txt");
+        } catch (const std::runtime_error& e) {
+            vis_error = e.what();
+        }
+        try {
+            [[maybe_unused]] auto rad_path = resolvePluginAsset("radiation", "test.txt");
+        } catch (const std::runtime_error& e) {
+            rad_error = e.what();
+        }
+        // Error messages should be different for different plugins
+        DOCTEST_CHECK(vis_error != rad_error);
+        DOCTEST_CHECK(vis_error.find("visualizer") != std::string::npos);
+        DOCTEST_CHECK(rad_error.find("radiation") != std::string::npos);
+    }
+}
+
+TEST_CASE("Project-based File Resolution") {
+    SUBCASE("findProjectRoot basic functionality") {
+        // Test from current working directory (which should contain CMakeLists.txt)
+        std::filesystem::path cwd = std::filesystem::current_path();
+        auto project_root = findProjectRoot(cwd);
+        
+        // Should find a project root (not empty)
+        DOCTEST_CHECK(!project_root.empty());
+        
+        // Project root should contain CMakeLists.txt
+        auto cmake_file = project_root / "CMakeLists.txt";
+        DOCTEST_CHECK(std::filesystem::exists(cmake_file));
+    }
+    
+    SUBCASE("findProjectRoot with non-existent path") {
+        // Test with a path that doesn't exist
+        std::filesystem::path fake_path = "/this/path/does/not/exist";
+        auto project_root = findProjectRoot(fake_path);
+        
+        // Should return empty path when no project found
+        DOCTEST_CHECK(project_root.empty());
+    }
+    
+    SUBCASE("findProjectRoot from root directory") {
+        // Test from system root directory (should not find CMakeLists.txt)
+        std::filesystem::path root_path = "/";
+        auto project_root = findProjectRoot(root_path);
+        
+        // Should return empty path when searching from root
+        DOCTEST_CHECK(project_root.empty());
+    }
+    
+    SUBCASE("resolveProjectFile with existing file in cwd") {
+        // Create a temporary test file in current directory
+        std::string test_filename = "test_project_resolve.tmp";
+        std::ofstream test_file(test_filename);
+        test_file << "test content";
+        test_file.close();
+        
+        try {
+            // Should find file in current working directory
+            auto resolved_path = resolveProjectFile(test_filename);
+            DOCTEST_CHECK(!resolved_path.empty());
+            DOCTEST_CHECK(std::filesystem::exists(resolved_path));
+        } catch (...) {
+            // Clean up even if test fails
+            std::filesystem::remove(test_filename);
+            throw;
+        }
+        
+        // Clean up
+        std::filesystem::remove(test_filename);
+    }
+    
+    SUBCASE("resolveProjectFile with non-existent file") {
+        // Test with file that doesn't exist in current directory or project
+        std::string fake_filename = "this_file_does_not_exist_anywhere.tmp";
+        
+        std::string error_message;
+        try {
+            [[maybe_unused]] auto resolved_path = resolveProjectFile(fake_filename);
+        } catch (const std::runtime_error& e) {
+            error_message = e.what();
+        }
+        
+        // Should throw runtime error for non-existent file
+        DOCTEST_CHECK(!error_message.empty());
+        DOCTEST_CHECK(error_message.find("Could not locate file") != std::string::npos);
+        DOCTEST_CHECK(error_message.find(fake_filename) != std::string::npos);
+    }
+    
+    SUBCASE("resolveProjectFile with empty filename") {
+        // Test with empty filename
+        std::string error_message;
+        try {
+            [[maybe_unused]] auto resolved_path = resolveProjectFile("");
+        } catch (const std::runtime_error& e) {
+            error_message = e.what();
+        }
+        
+        // Should handle empty filename gracefully
+        DOCTEST_CHECK(!error_message.empty());
+    }
+    
+    SUBCASE("resolveProjectFile project directory fallback") {
+        // This test verifies the fallback to project directory works
+        // We'll create a test file in the project root and try to access it from a subdirectory
+        auto project_root = findProjectRoot(std::filesystem::current_path());
+        if (!project_root.empty()) {
+            std::string test_filename = "test_project_fallback.tmp";
+            auto test_file_path = project_root / test_filename;
+            
+            // Create test file in project root
+            std::ofstream test_file(test_file_path);
+            test_file << "fallback test content";
+            test_file.close();
+            
+            try {
+                // Should find file in project directory even if not in cwd
+                auto resolved_path = resolveProjectFile(test_filename);
+                DOCTEST_CHECK(!resolved_path.empty());
+                DOCTEST_CHECK(std::filesystem::exists(resolved_path));
+                DOCTEST_CHECK(resolved_path == test_file_path);
+            } catch (...) {
+                // Clean up even if test fails
+                std::filesystem::remove(test_file_path);
+                throw;
+            }
+            
+            // Clean up
+            std::filesystem::remove(test_file_path);
+        }
+    }
+}

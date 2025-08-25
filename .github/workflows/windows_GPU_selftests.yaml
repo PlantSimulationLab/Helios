@@ -22,8 +22,36 @@ jobs:
           role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
           aws-region: us-west-2
       - run: |
-          aws ec2 start-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_WIN }}
-          aws ec2 wait instance-running --instance-ids ${{ secrets.EC2_INSTANCE_ID_WIN }}
+          # Wait for instance to be in a state where it can be started (max 5 minutes)
+          echo "Waiting for instance to be in a startable state..."
+          timeout 300 bash -c '
+            while true; do
+              STATE=$(aws ec2 describe-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_WIN }} --query "Reservations[0].Instances[0].State.Name" --output text)
+              echo "Current instance state: $STATE"
+              if [[ "$STATE" == "stopped" || "$STATE" == "running" ]]; then
+                echo "Instance is in a startable state: $STATE"
+                break
+              fi
+              echo "Instance is in transitional state: $STATE. Waiting 10 seconds..."
+              sleep 10
+            done
+          ' || {
+            echo "Timeout waiting for instance to reach startable state"
+            exit 1
+          }
+          
+          # Only start if not already running
+          CURRENT_STATE=$(aws ec2 describe-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_WIN }} --query "Reservations[0].Instances[0].State.Name" --output text)
+          if [[ "$CURRENT_STATE" == "stopped" ]]; then
+            echo "Starting instance..."
+            aws ec2 start-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_WIN }}
+            aws ec2 wait instance-running --instance-ids ${{ secrets.EC2_INSTANCE_ID_WIN }}
+          elif [[ "$CURRENT_STATE" == "running" ]]; then
+            echo "Instance is already running"
+          else
+            echo "Unexpected instance state: $CURRENT_STATE"
+            exit 1
+          fi
 
   run_samples_windows:
     runs-on: [self-hosted, Windows]

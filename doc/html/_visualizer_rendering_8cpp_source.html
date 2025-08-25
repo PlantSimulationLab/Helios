@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.45</span>
+       <span id="projectnumber">&#160;v1.3.46</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -1114,7 +1114,7 @@ $(function(){initNavTree('_visualizer_rendering_8cpp_source.html',''); initResiz
 <div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>        std::cout &lt;&lt; <span class="stringliteral">&quot;Updating the plot...&quot;</span> &lt;&lt; std::flush;</div>
 <div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span>    }</div>
 <div class="line"><a id="l00947" name="l00947"></a><span class="lineno">  947</span> </div>
-<div class="line"><a id="l00948" name="l00948"></a><span class="lineno">  948</span>    <span class="keywordflow">if</span> (!hide_window) {</div>
+<div class="line"><a id="l00948" name="l00948"></a><span class="lineno">  948</span>    <span class="keywordflow">if</span> (!hide_window &amp;&amp; !headless &amp;&amp; window != <span class="keyword">nullptr</span>) {</div>
 <div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span>        glfwShowWindow(<a class="code hl_function" href="global_8h.html#ab41db2f933a3e448d99437bf66ae9520" title="Static cast for converting between types.">scast&lt;GLFWwindow *&gt;</a>(window));</div>
 <div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span>    }</div>
 <div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span> </div>
@@ -1633,7 +1633,7 @@ $(function(){initNavTree('_visualizer_rendering_8cpp_source.html',''); initResiz
 <div class="line"><a id="l01440" name="l01440"></a><span class="lineno"> 1440</span>    <span class="keywordflow">if</span> (watermark_ID != 0) {</div>
 <div class="line"><a id="l01441" name="l01441"></a><span class="lineno"> 1441</span>        geometry_handler.deleteGeometry(watermark_ID);</div>
 <div class="line"><a id="l01442" name="l01442"></a><span class="lineno"> 1442</span>    }</div>
-<div class="line"><a id="l01443" name="l01443"></a><span class="lineno"> 1443</span>    watermark_ID = <a class="code hl_function" href="class_visualizer.html#aac01d7ef7d86b1b50b2fc8704032a557" title="Add a rectangle by giving the coordinates of its center.">addRectangleByCenter</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0.75f * width, 0.95f, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(width, 0.07), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0, 0), <span class="stringliteral">&quot;plugins/visualizer/textures/Helios_watermark.png&quot;</span>, <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a9392af82f887f2fc1982a8315bcc95f5">COORDINATES_WINDOW_NORMALIZED</a>);</div>
+<div class="line"><a id="l01443" name="l01443"></a><span class="lineno"> 1443</span>    watermark_ID = <a class="code hl_function" href="class_visualizer.html#aac01d7ef7d86b1b50b2fc8704032a557" title="Add a rectangle by giving the coordinates of its center.">addRectangleByCenter</a>(<a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0.75f * width, 0.95f, 0), <a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(width, 0.07), <a class="code hl_function" href="helios__vector__types_8h.html#ad89212892cf1bdc45eeae189e6d490a1" title="Make a SphericalCoord by specifying elevation and azimuth.">make_SphericalCoord</a>(0, 0), <a class="code hl_function" href="group__functions.html#ga1237d4a6de015b812f0b4c3187ef25c7" title="Resolve texture file path.">helios::resolveTexturePath</a>(<span class="stringliteral">&quot;Helios_watermark.png&quot;</span>).<span class="keywordtype">string</span>().c_str(), <a class="code hl_enumvalue" href="class_visualizer.html#a084713b3d4d0720dcc1ee44d270b42e3a9392af82f887f2fc1982a8315bcc95f5">COORDINATES_WINDOW_NORMALIZED</a>);</div>
 <div class="line"><a id="l01444" name="l01444"></a><span class="lineno"> 1444</span>}</div>
 </div>
 <div class="line"><a id="l01445" name="l01445"></a><span class="lineno"> 1445</span> </div>

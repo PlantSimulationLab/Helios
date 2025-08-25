@@ -618,7 +618,7 @@ std::vector<size_t> Visualizer::addTextboxByCenter(const char *textstring, const
     // Load the font
     std::string font;
     // std::snprintf(font,100,"plugins/visualizer/fonts/%s.ttf",fontname);
-    font = "plugins/visualizer/fonts/" + (std::string) fontname + ".ttf";
+    font = helios::resolvePluginAsset("visualizer", "fonts/" + (std::string) fontname + ".ttf").string();
     auto error = FT_New_Face(ft, font.c_str(), 0, &face);
     if (error != 0) {
         switch (error) {

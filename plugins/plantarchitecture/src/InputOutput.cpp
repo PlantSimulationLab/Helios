@@ -711,8 +711,12 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
     // Using "pugixml" parser.  See pugixml.org
     pugi::xml_document xmldoc;
 
+    // Resolve file path using project-based resolution
+    std::filesystem::path resolved_path = resolveProjectFile(filename);
+    std::string resolved_filename = resolved_path.string();
+
     // load file
-    pugi::xml_parse_result load_result = xmldoc.load_file(filename.c_str());
+    pugi::xml_parse_result load_result = xmldoc.load_file(resolved_filename.c_str());
 
     // error checking
     if (!load_result) {

@@ -49,6 +49,13 @@ std::minstd_rand0 *Context::getRandomGenerator() {
     return &generator;
 }
 
+// Asset directory registration system removed - now using HELIOS_BUILD resolution
+
+std::filesystem::path Context::resolveFilePath(const std::string &filename) const {
+    // Use the global helios::resolveFilePath function which implements HELIOS_BUILD resolution
+    return helios::resolveFilePath(filename);
+}
+
 void Context::addTexture(const char *texture_file) {
     if (textures.find(texture_file) == textures.end()) { // texture has not already been added
 
@@ -61,12 +68,19 @@ void Context::addTexture(const char *texture_file) {
             helios_runtime_error("ERROR (Context::addTexture): Texture file " + std::string(texture_file) + " does not exist.");
         }
 
-        textures.emplace(texture_file, Texture(texture_file));
+        // Use unified path resolution
+        auto resolved_path = resolveFilePath(texture_file);
+        textures.emplace(texture_file, Texture(resolved_path.string().c_str()));
     }
 }
 
 bool Context::doesTextureFileExist(const char *texture_file) const {
-    return std::filesystem::exists(texture_file);
+    try {
+        auto resolved_path = resolveFilePath(texture_file);
+        return std::filesystem::exists(resolved_path);
+    } catch (const std::runtime_error&) {
+        return false;
+    }
 }
 
 bool Context::validateTextureFileExtenstion(const char *texture_file) const {

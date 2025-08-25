@@ -1775,7 +1775,7 @@ void helios::readJPEG(const std::string &filename, uint &width, uint &height, st
     try {
         jpeg_create_decompress(&cinfo);
         jpeg_stdio_src(&cinfo, infile.get());
-        (void) jpeg_read_header(&cinfo, TRUE);
+        (void) jpeg_read_header(&cinfo, (boolean)1);
 
         (void) jpeg_start_decompress(&cinfo);
 
@@ -1836,7 +1836,7 @@ helios::int2 helios::getImageResolutionJPEG(const std::string &filename) {
     try {
         jpeg_create_decompress(&cinfo);
         jpeg_stdio_src(&cinfo, infile.get());
-        (void) jpeg_read_header(&cinfo, TRUE);
+        (void) jpeg_read_header(&cinfo, (boolean)1);
         (void) jpeg_start_decompress(&cinfo);
 
         jpeg_destroy_decompress(&cinfo);
@@ -1896,9 +1896,9 @@ void helios::writeJPEG(const std::string &a_filename, uint width, uint height, c
 
     jpeg_set_defaults(&cinfo);
 
-    jpeg_set_quality(&cinfo, 100, TRUE /* limit to baseline-JPEG values */);
+    jpeg_set_quality(&cinfo, 100, (boolean)1 /* limit to baseline-JPEG values */);
 
-    jpeg_start_compress(&cinfo, TRUE);
+    jpeg_start_compress(&cinfo, (boolean)1);
 
     try {
         row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
@@ -2483,6 +2483,141 @@ bool helios::validateOutputPath(std::string &output_path, const std::vector<std:
     }
 
     return true;
+}
+
+//--------------------- HELIOS_BUILD PATH RESOLUTION -----------------------------------//
+
+//! Get build directory path - requires HELIOS_BUILD environment variable
+std::string getBuildDirectory() {
+    // Try HELIOS_BUILD environment variable (required)
+    if (const char* buildDir = std::getenv("HELIOS_BUILD")) {
+        return std::string(buildDir);
+    }
+    
+    // Fallback: assume current working directory contains the build
+    // This is a simple fallback that should work for most use cases
+    std::filesystem::path currentPath = std::filesystem::current_path();
+    
+    // If we're already in a build directory, use it
+    if (std::filesystem::exists(currentPath / "plugins")) {
+        return currentPath.string();
+    }
+    
+    // If we're in a subdirectory, try going up to find build directory
+    std::filesystem::path parent = currentPath.parent_path();
+    if (std::filesystem::exists(parent / "plugins")) {
+        return parent.string();
+    }
+    
+    // Last resort: use current directory
+    return currentPath.string();
+}
+
+std::filesystem::path helios::resolveAssetPath(const std::string& relativePath) {
+    // This function is deprecated but kept for compatibility
+    // It now just calls resolveFilePath
+    return resolveFilePath(relativePath);
+}
+
+std::filesystem::path helios::resolvePluginAsset(const std::string& pluginName, const std::string& assetPath) {
+    std::string pluginAssetPath = "plugins/" + pluginName + "/" + assetPath;
+    return resolveFilePath(pluginAssetPath);
+}
+
+
+std::filesystem::path helios::resolveFilePath(const std::string& filename) {
+    // 1. If absolute path, validate and return
+    std::filesystem::path filepath(filename);
+    if (filepath.is_absolute()) {
+        if (std::filesystem::exists(filepath)) {
+            return std::filesystem::canonical(filepath);
+        } else {
+            helios_runtime_error("ERROR (helios::resolveFilePath): Absolute file path " + filename + " does not exist.");
+        }
+    }
+
+    // 2. Resolve relative to build directory
+    std::string buildDir = getBuildDirectory();
+    std::filesystem::path fullPath = std::filesystem::path(buildDir) / filename;
+    
+    if (std::filesystem::exists(fullPath)) {
+        return std::filesystem::canonical(fullPath);
+    }
+    
+    // File not found - provide clear error message
+    helios_runtime_error("ERROR (helios::resolveFilePath): Could not locate asset file: " + filename + 
+                        " (resolved to: " + fullPath.string() + "). " +
+                        "Set HELIOS_BUILD environment variable if running from outside build directory.");
+    return {}; // This line should never be reached due to helios_runtime_error throwing
+}
+
+std::filesystem::path helios::resolveSpectraPath(const std::string& spectraFile) {
+    // All spectral data files should be looked for in the radiation plugin's spectral_data directory
+    std::string spectraPath = "plugins/radiation/spectral_data/" + spectraFile;
+    return resolveFilePath(spectraPath);
+}
+
+bool helios::validateAssetPath(const std::filesystem::path& assetPath) {
+    return std::filesystem::exists(assetPath) && std::filesystem::is_regular_file(assetPath);
+}
+
+std::filesystem::path helios::findProjectRoot(const std::filesystem::path& startPath) {
+    std::filesystem::path currentPath = std::filesystem::absolute(startPath);
+    
+    while (!currentPath.empty() && currentPath != currentPath.parent_path()) {
+        std::filesystem::path cmakeFile = currentPath / "CMakeLists.txt";
+        if (std::filesystem::exists(cmakeFile) && std::filesystem::is_regular_file(cmakeFile)) {
+            return currentPath;
+        }
+        currentPath = currentPath.parent_path();
+    }
+    
+    return {}; // Return empty path if not found
+}
+
+std::filesystem::path helios::resolveProjectFile(const std::string& relativePath) {
+    // Handle empty path
+    if (relativePath.empty()) {
+        helios_runtime_error("ERROR (resolveProjectFile): Cannot resolve empty file path.");
+    }
+    
+    // If it's already absolute, just validate and return it
+    std::filesystem::path inputPath(relativePath);
+    if (inputPath.is_absolute()) {
+        if (validateAssetPath(inputPath)) {
+            return inputPath;
+        } else {
+            helios_runtime_error("ERROR (resolveProjectFile): Absolute path '" + relativePath + "' does not exist or is not a regular file.");
+        }
+    }
+    
+    // Strategy 1: Check current working directory
+    std::filesystem::path cwdPath = std::filesystem::current_path() / relativePath;
+    if (validateAssetPath(cwdPath)) {
+        return std::filesystem::absolute(cwdPath);
+    }
+    
+    // Strategy 2: Check project directory
+    std::filesystem::path projectRoot = findProjectRoot();
+    if (!projectRoot.empty()) {
+        std::filesystem::path projectPath = projectRoot / relativePath;
+        if (validateAssetPath(projectPath)) {
+            return std::filesystem::absolute(projectPath);
+        }
+    }
+    
+    // Strategy 3: Error - file not found in either location
+    std::string errorMsg = "ERROR (resolveProjectFile): Could not locate file '" + relativePath + "'. Searched in:\n";
+    errorMsg += "  - Current working directory: " + std::filesystem::current_path().string() + "\n";
+    if (!projectRoot.empty()) {
+        errorMsg += "  - Project directory: " + projectRoot.string() + "\n";
+    } else {
+        errorMsg += "  - Project directory: (not found - no CMakeLists.txt found in parent directories)\n";
+    }
+    errorMsg += "Ensure the file exists in one of these locations.";
+    
+    helios_runtime_error(errorMsg);
+    return {}; // Never reached due to exception
 }
 
 std::vector<float> helios::importVectorFromFile(const std::string &filepath) {

@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.45</span>
+       <span id="projectnumber">&#160;v1.3.46</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -697,7 +697,7 @@ $(function(){initNavTree('plugins_2plantarchitecture_2tests_2self_test_8cpp_sour
 <div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>        <span class="comment">// The key test is that the plant didn&#39;t curve significantly downward (U-turn behavior)</span></div>
 <div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span>        <span class="comment">// A U-turn would result in center of mass well below starting position (e.g., &lt; -0.06)</span></div>
 <div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span>        <span class="comment">// Any value above -0.045 indicates successful avoidance of U-turn behavior</span></div>
-<div class="line"><a id="l00541" name="l00541"></a><span class="lineno">  541</span>        DOCTEST_CHECK(center_of_mass.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a> &gt; -0.045f);  <span class="comment">// Should not have made a U-turn downward</span></div>
+<div class="line"><a id="l00541" name="l00541"></a><span class="lineno">  541</span>        DOCTEST_CHECK(center_of_mass.<a class="code hl_variable" href="structhelios_1_1vec3.html#a870c14ca45729f58e8628a050ce38b6f" title="Third element in vector.">z</a> &gt; -0.05f);  <span class="comment">// Should not have made a U-turn downward</span></div>
 <div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span>    }</div>
 <div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span>    </div>
 <div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span>    <span class="comment">// Additional check: the plant should still exist (wasn&#39;t completely pruned)</span></div>

@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.45</span>
+       <span id="projectnumber">&#160;v1.3.46</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -823,7 +823,7 @@ $(function(){initNavTree('_visualizer_geometry_8cpp_source.html',''); initResiza
 <div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span>    <span class="comment">// Load the font</span></div>
 <div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>    std::string font;</div>
 <div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span>    <span class="comment">// std::snprintf(font,100,&quot;plugins/visualizer/fonts/%s.ttf&quot;,fontname);</span></div>
-<div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span>    font = <span class="stringliteral">&quot;plugins/visualizer/fonts/&quot;</span> + (std::string) fontname + <span class="stringliteral">&quot;.ttf&quot;</span>;</div>
+<div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span>    font = <a class="code hl_function" href="group__functions.html#ga68877cedb04be67e38ea7701ae53b2e8" title="Resolve plugin-specific asset path.">helios::resolvePluginAsset</a>(<span class="stringliteral">&quot;visualizer&quot;</span>, <span class="stringliteral">&quot;fonts/&quot;</span> + (std::string) fontname + <span class="stringliteral">&quot;.ttf&quot;</span>).string();</div>
 <div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>    <span class="keyword">auto</span> error = FT_New_Face(ft, font.c_str(), 0, &amp;face);</div>
 <div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>    <span class="keywordflow">if</span> (error != 0) {</div>
 <div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span>        <span class="keywordflow">switch</span> (error) {</div>

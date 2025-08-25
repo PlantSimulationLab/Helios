@@ -945,7 +945,7 @@ void Visualizer::plotUpdate(bool hide_window) {
         std::cout << "Updating the plot..." << std::flush;
     }
 
-    if (!hide_window) {
+    if (!hide_window && !headless && window != nullptr) {
         glfwShowWindow(scast<GLFWwindow *>(window));
     }
 
@@ -1824,5 +1824,12 @@ int checkerrors() {
         return 0;
     } else {
         return 1;
+    }
+}
+
+// Safe error checking that throws exceptions instead of using assert
+void check_opengl_errors_safe(const std::string &context) {
+    if (!checkerrors()) {
+        helios_runtime_error("ERROR (Visualizer): OpenGL errors detected in " + context + ". Check console output for specific error details.");
     }
 }

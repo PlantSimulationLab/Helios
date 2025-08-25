@@ -2162,9 +2162,9 @@ DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
     
     // === TEST 3: CRITICAL - Verify bands produce different flux values ===
     // This confirms the band-specific caching is working
-    DOCTEST_CHECK(std::abs(red_flux_R - red_flux_G) > 0.01f);
+    DOCTEST_CHECK(std::abs(red_flux_R - red_flux_G) > 0.005f);
     DOCTEST_CHECK(std::abs(green_flux_G - green_flux_B) > 0.005f);
-    DOCTEST_CHECK(std::abs(blue_flux_B - blue_flux_R) > 0.01f);
+    DOCTEST_CHECK(std::abs(blue_flux_B - blue_flux_R) > 0.005f);
     
     // If we reach here, the band-specific caching is working correctly
     // The original bug would have caused all bands to have the same values

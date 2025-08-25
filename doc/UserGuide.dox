@@ -1479,8 +1479,8 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
 <!-- **************** FILE INPUT/OUTPUT ***************** -->	
 /*! \page IO File Input/Output
 
-  <div style="padding:10px;background-color:#FF6666 ;line-height:1.2;">
-  A very important note with regard to File Input/Output is that all file paths need to be given with respect to the current build directory or as absolute paths.
+  <div style="padding:10px;background-color:#66FF66 ;line-height:1.2;">
+  File paths can be given as absolute paths or relative paths. Helios automatically resolves asset file paths (models, textures, spectra, etc.) so executables can be run from any directory. The resolution system searches for assets relative to the build directory. You can set the HELIOS_BUILD environment variable to specify a custom build directory location if needed.
   </div>
 
   \section XMLstructure XML File Structure
@@ -1612,7 +1612,7 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
 
   Arguments to the \ref helios::Context::loadTabularTimeseriesData() method:
 
-  1. A string specifying the file to be loaded, with path relative to where the executable was run (usually the build directory).
+  1. A string specifying the file to be loaded, with path relative to the current working directory or as an absolute path.
   2. A vector of strings specifying labels for the columns in the file. If an empty vector is specified ('{}'), the labels given in the first line of the file will be used. Otherwise, the length of the vector must match the number of columns in the file.
   3. The delimiter character separating values in each row (e.g., ',').
   4. (optional) The format of the date string used to specify date values (e.g., 'YYYYMMDD', 'MMDDYYYY'; month and day should always be two values, and year should be four values). This is not used if dates are specified using the year and DOY. The default format is 'YYYYMMDD'.

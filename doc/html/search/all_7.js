@@ -68,7 +68,7 @@ var searchData=
   ['direction_65',['direction',['../struct_collision_detection_1_1_ray_query.html#aaba74afd953100356859a41466bd6980',1,'CollisionDetection::RayQuery::direction'],['../struct_collision_detection_1_1_optimal_path_result.html#a7a5d6c6c36f4eebec6042a983d7187d6',1,'CollisionDetection::OptimalPathResult::direction']]],
   ['direction_20of_20the_20sun_66',['Getting the Direction of the Sun',['../_solar_position_doc.html#SolarPos',1,'']]],
   ['direction2rc_67',['direction2rc',['../struct_scan_metadata.html#aab2db5e4c22f1eb7979294a7f8993611',1,'ScanMetadata']]],
-  ['directions_68',['directions',['../struct_collision_detection_1_1_ray_packet.html#a6e4ee48bf52e7198301a4ce999df061d',1,'CollisionDetection::RayPacket']]],
+  ['directions_68',['directions',['../struct_collision_detection_1_1_ray_packet.html#a6e4ee48bf52e7198301a4ce999df061d',1,'CollisionDetection::RayPacket::directions'],['../struct_ray_packet.html#a311ab64ba0372262cd6609fe216e9e6e',1,'RayPacket::directions']]],
   ['directory_69',['Build Directory',['../_a_p_i.html#BuildDir',1,'']]],
   ['directory_20structure_70',['Basic Directory Structure',['../_a_p_i.html#DirStruct',1,'']]],
   ['directraycount_71',['directRayCount',['../struct_radiation_band.html#aff62997df11af06fad82b946b298ee90',1,'RadiationBand']]],

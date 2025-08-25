@@ -2154,6 +2154,7 @@ namespace helios {
 
         void addTexture(const char *texture_file);
 
+
         bool doesTextureFileExist(const char *texture_file) const;
 
         bool validateTextureFileExtenstion(const char *texture_file) const;
@@ -2262,7 +2263,7 @@ namespace helios {
             OBJmaterial(const RGBcolor &a_color, std::string a_texture, uint a_materialID) : color{a_color}, texture{std::move(a_texture)}, materialID{a_materialID} {};
         };
 
-        static std::map<std::string, OBJmaterial> loadMTL(const std::string &filebase, const std::string &material_file);
+        std::map<std::string, OBJmaterial> loadMTL(const std::string &filebase, const std::string &material_file);
 
         void loadPData(pugi::xml_node p, uint UUID);
 
@@ -6129,6 +6130,8 @@ namespace helios {
          */
         void writePLY(const char *filename, const std::vector<uint> &UUIDs) const;
 
+        // Asset directory registration removed - now using HELIOS_BUILD resolution
+
         //! Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without any scaling or rotation applied.
         /**
          * \param[in] filename name of OBJ file
@@ -6198,6 +6201,16 @@ namespace helios {
          * \param[in] write_normals [optional] true if we should write the normal vectors
          */
         void writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields, bool write_normals = false) const;
+
+        //------------ FILE PATH RESOLUTION ----------------//
+
+        //! Unified file path resolution for Context methods - resolves relative paths using build directory
+        /**
+         * \param[in] filename Relative or absolute file path to resolve
+         * \return std::filesystem::path Resolved absolute file path
+         * \note Uses HELIOS_BUILD environment variable or auto-detection to resolve relative paths
+         */
+        std::filesystem::path resolveFilePath(const std::string &filename) const;
 
         //! Set simulation date by day, month, year
         /**

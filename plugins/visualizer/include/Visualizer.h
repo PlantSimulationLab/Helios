@@ -1469,5 +1469,8 @@ inline glm::vec3 glm_vec3(const helios::vec3 &v) {
 
 int checkerrors();
 
+//! Safe error checking that throws exceptions instead of using assert
+void check_opengl_errors_safe(const std::string& context);
+
 
 #endif

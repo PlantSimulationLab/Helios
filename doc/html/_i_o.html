@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.45</span>
+       <span id="projectnumber">&#160;v1.3.46</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -157,7 +157,7 @@ $(function(){initNavTree('_i_o.html',''); initResizable(true); });
   <div class="headertitle"><div class="title">File Input/Output</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><div style="padding:10px;background-color:#FF6666 ;line-height:1.2;"> A very important note with regard to File Input/Output is that all file paths need to be given with respect to the current build directory or as absolute paths. </div><h1><a class="anchor" id="XMLstructure"></a>
+<div class="textblock"><div style="padding:10px;background-color:#66FF66 ;line-height:1.2;"> File paths can be given as absolute paths or relative paths. Helios automatically resolves asset file paths (models, textures, spectra, etc.) so executables can be run from any directory. </div><h1><a class="anchor" id="XMLstructure"></a>
 XML File Structure</h1>
 <p>File input and output is handled using .xml files. See the Wikipedia page for xml for more information on xml files: <a href="https://en.wikipedia.org/wiki/XML">en.wikipedia.org/wiki/XML</a>.</p>
 <p>Within Helios, xml files can be used to execute any Context commands that would be issued within a program, for example, adding geometry, adding timeseries, or adding primitive data.</p>
@@ -257,7 +257,7 @@ Adding Timeseries (Weather) Data from Tabular Text Files</h1>
 </table>
 <p>Arguments to the <a class="el" href="classhelios_1_1_context.html#a1dc9a0f79be2477c4873755586744e51">helios::Context::loadTabularTimeseriesData()</a> method:</p>
 <ol type="1">
-<li>A string specifying the file to be loaded, with path relative to where the executable was run (usually the build directory).</li>
+<li>A string specifying the file to be loaded, with path relative to the current working directory or as an absolute path.</li>
 <li>A vector of strings specifying labels for the columns in the file. If an empty vector is specified ('{}'), the labels given in the first line of the file will be used. Otherwise, the length of the vector must match the number of columns in the file.</li>
 <li>The delimiter character separating values in each row (e.g., ',').</li>
 <li>(optional) The format of the date string used to specify date values (e.g., 'YYYYMMDD', 'MMDDYYYY'; month and day should always be two values, and year should be four values). This is not used if dates are specified using the year and DOY. The default format is 'YYYYMMDD'.</li>

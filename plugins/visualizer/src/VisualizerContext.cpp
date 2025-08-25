@@ -31,6 +31,8 @@ void Visualizer::clearContextGeometry() {
 void Visualizer::buildContextGeometry(helios::Context *context_ptr) {
     context = context_ptr;
 
+    // Asset directory registration removed - now using HELIOS_BUILD resolution
+
     build_all_context_geometry = true;
 }
 
@@ -41,6 +43,8 @@ void Visualizer::buildContextGeometry(helios::Context *context_ptr, const std::v
     }
 
     context = context_ptr;
+
+    // Asset directory registration removed - now using HELIOS_BUILD resolution
 
     build_all_context_geometry = false;
     contextUUIDs_build = UUIDs;

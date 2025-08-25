@@ -229,123 +229,151 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     points_rendered_count = 0;
     last_culling_time_ms = 0;
 
-    if (!headless) {
-        // Initialize OpenGL context and open graphic window
+    // Initialize OpenGL context for both regular and headless modes
+    // Headless mode needs an offscreen context for geometry operations
 
-        // Initialise GLFW
-        if (!glfwInit()) {
-            helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLFW");
-        }
+    // Initialise GLFW
+    if (!glfwInit()) {
+        helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLFW");
+    }
 
-        glfwWindowHint(GLFW_SAMPLES, std::max(0, aliasing_samples)); // antialiasing
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_SAMPLES, std::max(0, aliasing_samples)); // antialiasing
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 #if __APPLE__
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL
 #endif
-        glfwWindowHint(GLFW_VISIBLE, 0);
+
+    if (headless) {
+        // Create offscreen context for headless mode
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE); // Ensure window is not visible
+    } else {
+        // Regular windowed mode
+        glfwWindowHint(GLFW_VISIBLE, 0); // Initially hidden, will show later if needed
 
         if (!window_decorations) {
             glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
         }
+    }
 
-        openWindow();
+    openWindow();
 
-        // Initialize GLEW
-        glewExperimental = GL_TRUE; // Needed in core profile
-        if (glewInit() != GLEW_OK) {
-            helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLEW");
-        }
+    // Initialize GLEW - required for both headless and windowed modes
+    glewExperimental = GL_TRUE; // Needed in core profile
+    if (glewInit() != GLEW_OK) {
+        helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLEW");
+    }
 
-        // NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
-        glGetError();
+    // NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
+    glGetError();
 
-        assert(checkerrors());
+    // Check for OpenGL errors after GLEW initialization
+    if (!checkerrors()) {
+        helios_runtime_error("ERROR (Visualizer::initialize): OpenGL context initialization failed after GLEW setup. "
+                             "This often occurs in headless CI environments without proper GPU drivers or display servers. "
+                             "For headless operation, ensure proper virtual display or software rendering is configured.");
+    }
 
-        // Enable relevant parameters
+    // Enable relevant parameters for both regular and headless modes
 
-        glEnable(GL_DEPTH_TEST); // Enable depth test
-        glDepthFunc(GL_LESS); // Accept fragment if it closer to the camera than the former one
-        // glEnable(GL_DEPTH_CLAMP);
+    glEnable(GL_DEPTH_TEST); // Enable depth test
+    glDepthFunc(GL_LESS); // Accept fragment if it closer to the camera than the former one
+    // glEnable(GL_DEPTH_CLAMP);
 
-        if (aliasing_samples <= 0) {
-            glDisable(GL_MULTISAMPLE);
-            glDisable(GL_MULTISAMPLE_ARB);
-        }
+    if (aliasing_samples <= 0) {
+        glDisable(GL_MULTISAMPLE);
+        glDisable(GL_MULTISAMPLE_ARB);
+    }
 
-        if (aliasing_samples <= 1) {
-            glDisable(GL_POLYGON_SMOOTH);
-        } else {
-            glEnable(GL_POLYGON_SMOOTH);
-        }
+    if (aliasing_samples <= 1) {
+        glDisable(GL_POLYGON_SMOOTH);
+    } else {
+        glEnable(GL_POLYGON_SMOOTH);
+    }
 
-        // glEnable(GL_TEXTURE0);
-        //  glEnable(GL_TEXTURE_2D_ARRAY);
-        //  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        //  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // glEnable(GL_TEXTURE0);
+    //  glEnable(GL_TEXTURE_2D_ARRAY);
+    //  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    //  glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-        assert(checkerrors());
+    // Check for OpenGL errors after basic setup
+    if (!checkerrors()) {
+        helios_runtime_error("ERROR (Visualizer::initialize): OpenGL context setup failed during basic parameter configuration. "
+                             "This typically indicates graphics driver incompatibility or missing OpenGL support in the execution environment.");
+    }
 
-        // glEnable(GL_TEXTURE1);
-        glEnable(GL_POLYGON_OFFSET_FILL);
-        glPolygonOffset(1.0f, 1.0f);
-        glDisable(GL_CULL_FACE);
+    // glEnable(GL_TEXTURE1);
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(1.0f, 1.0f);
+    glDisable(GL_CULL_FACE);
 
-        assert(checkerrors());
+    // Check for OpenGL errors after advanced setup
+    if (!checkerrors()) {
+        helios_runtime_error("ERROR (Visualizer::initialize): OpenGL context setup failed during advanced parameter configuration. "
+                             "Verify that the graphics environment supports the required OpenGL version and features.");
+    }
 
-        // Initialize VBO's and texture buffers
-        constexpr size_t Ntypes = GeometryHandler::all_geometry_types.size();
-        // per-vertex data
-        face_index_buffer.resize(Ntypes);
-        vertex_buffer.resize(Ntypes);
-        uv_buffer.resize(Ntypes);
-        glGenBuffers((GLsizei) face_index_buffer.size(), face_index_buffer.data());
-        glGenBuffers((GLsizei) vertex_buffer.size(), vertex_buffer.data());
-        glGenBuffers((GLsizei) uv_buffer.size(), uv_buffer.data());
+    // Initialize VBO's and texture buffers
+    constexpr size_t Ntypes = GeometryHandler::all_geometry_types.size();
+    // per-vertex data
+    face_index_buffer.resize(Ntypes);
+    vertex_buffer.resize(Ntypes);
+    uv_buffer.resize(Ntypes);
+    glGenBuffers((GLsizei) face_index_buffer.size(), face_index_buffer.data());
+    glGenBuffers((GLsizei) vertex_buffer.size(), vertex_buffer.data());
+    glGenBuffers((GLsizei) uv_buffer.size(), uv_buffer.data());
 
-        // per-primitive data
-        color_buffer.resize(Ntypes);
-        color_texture_object.resize(Ntypes);
-        normal_buffer.resize(Ntypes);
-        normal_texture_object.resize(Ntypes);
-        texture_flag_buffer.resize(Ntypes);
-        texture_flag_texture_object.resize(Ntypes);
-        texture_ID_buffer.resize(Ntypes);
-        texture_ID_texture_object.resize(Ntypes);
-        coordinate_flag_buffer.resize(Ntypes);
-        coordinate_flag_texture_object.resize(Ntypes);
-        hidden_flag_buffer.resize(Ntypes);
-        hidden_flag_texture_object.resize(Ntypes);
-        glGenBuffers((GLsizei) color_buffer.size(), color_buffer.data());
-        glGenTextures((GLsizei) color_texture_object.size(), color_texture_object.data());
-        glGenBuffers((GLsizei) normal_buffer.size(), normal_buffer.data());
-        glGenTextures((GLsizei) normal_texture_object.size(), normal_texture_object.data());
-        glGenBuffers((GLsizei) texture_flag_buffer.size(), texture_flag_buffer.data());
-        glGenTextures((GLsizei) texture_flag_texture_object.size(), texture_flag_texture_object.data());
-        glGenBuffers((GLsizei) texture_ID_buffer.size(), texture_ID_buffer.data());
-        glGenTextures((GLsizei) texture_ID_texture_object.size(), texture_ID_texture_object.data());
-        glGenBuffers((GLsizei) coordinate_flag_buffer.size(), coordinate_flag_buffer.data());
-        glGenTextures((GLsizei) coordinate_flag_texture_object.size(), coordinate_flag_texture_object.data());
-        glGenBuffers((GLsizei) hidden_flag_buffer.size(), hidden_flag_buffer.data());
-        glGenTextures((GLsizei) hidden_flag_texture_object.size(), hidden_flag_texture_object.data());
+    // per-primitive data
+    color_buffer.resize(Ntypes);
+    color_texture_object.resize(Ntypes);
+    normal_buffer.resize(Ntypes);
+    normal_texture_object.resize(Ntypes);
+    texture_flag_buffer.resize(Ntypes);
+    texture_flag_texture_object.resize(Ntypes);
+    texture_ID_buffer.resize(Ntypes);
+    texture_ID_texture_object.resize(Ntypes);
+    coordinate_flag_buffer.resize(Ntypes);
+    coordinate_flag_texture_object.resize(Ntypes);
+    hidden_flag_buffer.resize(Ntypes);
+    hidden_flag_texture_object.resize(Ntypes);
+    glGenBuffers((GLsizei) color_buffer.size(), color_buffer.data());
+    glGenTextures((GLsizei) color_texture_object.size(), color_texture_object.data());
+    glGenBuffers((GLsizei) normal_buffer.size(), normal_buffer.data());
+    glGenTextures((GLsizei) normal_texture_object.size(), normal_texture_object.data());
+    glGenBuffers((GLsizei) texture_flag_buffer.size(), texture_flag_buffer.data());
+    glGenTextures((GLsizei) texture_flag_texture_object.size(), texture_flag_texture_object.data());
+    glGenBuffers((GLsizei) texture_ID_buffer.size(), texture_ID_buffer.data());
+    glGenTextures((GLsizei) texture_ID_texture_object.size(), texture_ID_texture_object.data());
+    glGenBuffers((GLsizei) coordinate_flag_buffer.size(), coordinate_flag_buffer.data());
+    glGenTextures((GLsizei) coordinate_flag_texture_object.size(), coordinate_flag_texture_object.data());
+    glGenBuffers((GLsizei) hidden_flag_buffer.size(), hidden_flag_buffer.data());
+    glGenTextures((GLsizei) hidden_flag_texture_object.size(), hidden_flag_texture_object.data());
 
-        glGenBuffers(1, &uv_rescale_buffer);
-        glGenTextures(1, &uv_rescale_texture_object);
+    glGenBuffers(1, &uv_rescale_buffer);
+    glGenTextures(1, &uv_rescale_texture_object);
 
-        assert(checkerrors());
+    // Check for OpenGL errors after buffer creation
+    if (!checkerrors()) {
+        helios_runtime_error("ERROR (Visualizer::initialize): OpenGL buffer creation failed. "
+                             "This indicates insufficient graphics memory or unsupported buffer operations in the current OpenGL context.");
+    }
 
-        //~~~~~~~~~~~~~ Load the Shaders ~~~~~~~~~~~~~~~~~~~//
+    //~~~~~~~~~~~~~ Load the Shaders ~~~~~~~~~~~~~~~~~~~//
 
-        primaryShader.initialize("plugins/visualizer/shaders/primaryShader.vert", "plugins/visualizer/shaders/primaryShader.frag", this);
-        depthShader.initialize("plugins/visualizer/shaders/shadow.vert", "plugins/visualizer/shaders/shadow.frag", this);
+    primaryShader.initialize("plugins/visualizer/shaders/primaryShader.vert", "plugins/visualizer/shaders/primaryShader.frag", this);
+    depthShader.initialize("plugins/visualizer/shaders/shadow.vert", "plugins/visualizer/shaders/shadow.frag", this);
 
-        assert(checkerrors());
+    // Check for OpenGL errors after shader initialization
+    if (!checkerrors()) {
+        helios_runtime_error("ERROR (Visualizer::initialize): Shader initialization failed. "
+                             "Verify that shader files are accessible and the OpenGL context supports the required shading language version.");
+    }
 
-        primaryShader.useShader();
+    primaryShader.useShader();
 
-        // Initialize frame buffer
-
+    // Initialize frame buffer only for windowed mode
+    if (!headless) {
         // The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth buffer.
         glGenFramebuffers(1, &framebufferID);
         glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
@@ -368,7 +396,10 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         // enable hardware depth comparison
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 
-        assert(checkerrors());
+        if (!checkerrors()) {
+            helios_runtime_error("ERROR (Visualizer::initialize): OpenGL setup failed during texture configuration. "
+                                 "This may indicate graphics driver issues or insufficient OpenGL support.");
+        }
 
         // restore default active texture for subsequent texture setup
         glActiveTexture(GL_TEXTURE0);
@@ -383,11 +414,36 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         while (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE && checks < max_checks) {
             checks++;
         }
-        assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+        // Check framebuffer completeness instead of using assert
+        GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
+            std::string error_message = "ERROR (Visualizer::initialize): Framebuffer is incomplete. Status: ";
+            switch (framebuffer_status) {
+                case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+                    error_message += "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT - Framebuffer attachment is incomplete";
+                    break;
+                case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+                    error_message += "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT - No attachments";
+                    break;
+                case GL_FRAMEBUFFER_UNSUPPORTED:
+                    error_message += "GL_FRAMEBUFFER_UNSUPPORTED - Unsupported framebuffer format";
+                    break;
+                default:
+                    error_message += "Unknown framebuffer error code: " + std::to_string(framebuffer_status);
+                    break;
+            }
+            error_message += ". This typically occurs in CI environments with limited graphics support or missing GPU drivers.";
+            helios_runtime_error(error_message);
+        }
 
         // Finished OpenGL setup
-        assert(checkerrors());
+        // Check for OpenGL errors after framebuffer setup
+        if (!checkerrors()) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Framebuffer setup failed. "
+                                 "This indicates issues with OpenGL framebuffer operations, often related to graphics driver limitations or insufficient resources.");
+        }
     } else {
+        // Set framebuffer dimensions for headless mode (no framebuffer created)
         Wframebuffer = Wdisplay;
         Hframebuffer = Hdisplay;
     }
@@ -464,7 +520,11 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         glfwSetCursorPosCallback((GLFWwindow *) window, cursorCallback);
         glfwSetScrollCallback((GLFWwindow *) window, scrollCallback);
 
-        assert(checkerrors());
+        // Check for OpenGL errors after callback setup
+        if (!checkerrors()) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Final OpenGL setup failed during callback configuration. "
+                                 "The OpenGL context may be in an invalid state or missing required extensions.");
+        }
     }
 }
 
