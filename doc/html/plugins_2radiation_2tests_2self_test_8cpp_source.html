@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.45</span>
+       <span id="projectnumber">&#160;v1.3.46</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -2264,7 +2264,7 @@ $(function(){initNavTree('plugins_2radiation_2tests_2self_test_8cpp_source.html'
 <div class="line"><a id="l02103" name="l02103"></a><span class="lineno"> 2103</span>    cam2_B_spectrum.push_back(<a class="code hl_function" href="group__vectors.html#ga2c8ce4551d0597a3aaaf32530233c6fd" title="Make a vec2 from two floats.">make_vec2</a>(500, 1.0f));</div>
 <div class="line"><a id="l02104" name="l02104"></a><span class="lineno"> 2104</span>    context.<a class="code hl_function" href="classhelios_1_1_context.html#abb95eb7d1fa05c0e06b1bcf390157c21" title="Add global data value (scalar)">setGlobalData</a>(<span class="stringliteral">&quot;cam2_B_spectrum&quot;</span>, cam2_B_spectrum);</div>
 <div class="line"><a id="l02105" name="l02105"></a><span class="lineno"> 2105</span>    </div>
-<div class="line"><a id="l02106" name="l02106"></a><span class="lineno"> 2106</span>    radiation.addRadiationCamera(<span class="stringliteral">&quot;camera2&quot;</span>, band_labels, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(5, 0, 5), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), camera_props, 1);</div>
+<div class="line"><a id="l02106" name="l02106"></a><span class="lineno"> 2106</span>    radiation.addRadiationCamera(<span class="stringliteral">&quot;camera2&quot;</span>, band_labels, <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(5, 0, 5), <a class="code hl_function" href="helios__vector__types_8h.html#acff34a9c833707c7aef9618cd19265c5" title="Make a vec3 from three floats.">make_vec3</a>(0, 0, 0), camera_props, 100);</div>
 <div class="line"><a id="l02107" name="l02107"></a><span class="lineno"> 2107</span>    radiation.setCameraSpectralResponse(<span class="stringliteral">&quot;camera2&quot;</span>, <span class="stringliteral">&quot;R&quot;</span>, <span class="stringliteral">&quot;cam2_R_spectrum&quot;</span>);</div>
 <div class="line"><a id="l02108" name="l02108"></a><span class="lineno"> 2108</span>    radiation.setCameraSpectralResponse(<span class="stringliteral">&quot;camera2&quot;</span>, <span class="stringliteral">&quot;G&quot;</span>, <span class="stringliteral">&quot;cam2_G_spectrum&quot;</span>);</div>
 <div class="line"><a id="l02109" name="l02109"></a><span class="lineno"> 2109</span>    radiation.setCameraSpectralResponse(<span class="stringliteral">&quot;camera2&quot;</span>, <span class="stringliteral">&quot;B&quot;</span>, <span class="stringliteral">&quot;cam2_B_spectrum&quot;</span>);</div>
@@ -2324,7 +2324,7 @@ $(function(){initNavTree('plugins_2radiation_2tests_2self_test_8cpp_source.html'
 <div class="line"><a id="l02163" name="l02163"></a><span class="lineno"> 2163</span>    <span class="comment">// === TEST 3: CRITICAL - Verify bands produce different flux values ===</span></div>
 <div class="line"><a id="l02164" name="l02164"></a><span class="lineno"> 2164</span>    <span class="comment">// This confirms the band-specific caching is working</span></div>
 <div class="line"><a id="l02165" name="l02165"></a><span class="lineno"> 2165</span>    DOCTEST_CHECK(std::abs(red_flux_R - red_flux_G) &gt; 0.01f);</div>
-<div class="line"><a id="l02166" name="l02166"></a><span class="lineno"> 2166</span>    DOCTEST_CHECK(std::abs(green_flux_G - green_flux_B) &gt; 0.01f);</div>
+<div class="line"><a id="l02166" name="l02166"></a><span class="lineno"> 2166</span>    DOCTEST_CHECK(std::abs(green_flux_G - green_flux_B) &gt; 0.005f);</div>
 <div class="line"><a id="l02167" name="l02167"></a><span class="lineno"> 2167</span>    DOCTEST_CHECK(std::abs(blue_flux_B - blue_flux_R) &gt; 0.01f);</div>
 <div class="line"><a id="l02168" name="l02168"></a><span class="lineno"> 2168</span>    </div>
 <div class="line"><a id="l02169" name="l02169"></a><span class="lineno"> 2169</span>    <span class="comment">// If we reach here, the band-specific caching is working correctly</span></div>

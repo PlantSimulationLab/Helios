@@ -86,7 +86,7 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "@ref canopy_WUE_tutorial",
-"_weber_penn_tree_8cpp.html"
+"_weber_penn_doc.html#WeberPennDoc"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

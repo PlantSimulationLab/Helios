@@ -8,7 +8,7 @@ var searchData=
   ['new_5',['NEW',['../_collision_detection_doc.html#CDGPUMessages',1,'GPU/CPU Traversal Messages (NEW)'],['../_collision_detection_doc.html#CDRestrictedCollision',1,'Restricted Geometry Collision Detection (NEW)']]],
   ['new_20plant_20models_20to_20the_20library_6',['Adding New Plant Models to the Library',['../_plant_architecture_doc.html#PlantArchAddingModels',1,'']]],
   ['new_20project_20script_7',['New Project Script',['../_a_p_i.html#DirScript',1,'']]],
-  ['node_5fcount_8',['node_count',['../struct_g_p_u_b_v_h_nodes_so_a.html#a6b84649d66c4d217b76b059c77281e75',1,'GPUBVHNodesSoA']]],
+  ['node_5fcount_8',['node_count',['../struct_g_p_u_b_v_h_nodes_so_a.html#a6b84649d66c4d217b76b059c77281e75',1,'GPUBVHNodesSoA::node_count'],['../struct_g_p_u_quantized_b_v_h_nodes.html#a04872b09e8c085b929e4d4b230ee9d0b',1,'GPUQuantizedBVHNodes::node_count']]],
   ['noisepopup_9',['noisePopup',['../class_project_builder.html#ade130e5bf2505f5e7a894413ba1b7ce1',1,'ProjectBuilder']]],
   ['normal_10',['normal',['../struct_collision_detection_1_1_hit_result.html#ad49c60115b4fbebab8b3726ffabb3581',1,'CollisionDetection::HitResult']]],
   ['normalization_11',['Setting the Radiation Source Spectral Distribution and Normalization',['../_radiation_doc.html#SourceDist',1,'']]],

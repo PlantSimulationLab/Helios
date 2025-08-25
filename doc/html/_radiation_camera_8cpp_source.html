@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.45</span>
+       <span id="projectnumber">&#160;v1.3.46</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -234,7 +234,7 @@ $(function(){initNavTree('_radiation_camera_8cpp_source.html',''); initResizable
 <div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    <span class="keyword">const</span> <span class="keyword">auto</span> &amp;band_labels = cameras.at(camera_label).band_labels;</div>
 <div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span> </div>
 <div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    <span class="keywordflow">if</span> (!context-&gt;doesGlobalDataExist(<span class="stringliteral">&quot;spectral_library_loaded&quot;</span>)) {</div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>        context-&gt;loadXML(<span class="stringliteral">&quot;plugins/radiation/spectral_data/camera_spectral_library.xml&quot;</span>);</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>        context-&gt;loadXML(<a class="code hl_function" href="group__functions.html#gac00df4c5b8a19046f4e606232ffe2842" title="Resolve spectral data file path.">helios::resolveSpectraPath</a>(<span class="stringliteral">&quot;camera_spectral_library.xml&quot;</span>).<span class="keywordtype">string</span>().c_str());</div>
 <div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    }</div>
 <div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span> </div>
 <div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span> &amp;band: band_labels) {</div>

@@ -6,7 +6,7 @@ var searchData=
   ['radiationsource_3',['RadiationSource',['../struct_radiation_source.html',1,'']]],
   ['randomparameter_5ffloat_4',['RandomParameter_float',['../struct_random_parameter__float.html',1,'']]],
   ['randomparameter_5fint_5',['RandomParameter_int',['../struct_random_parameter__int.html',1,'']]],
-  ['raypacket_6',['RayPacket',['../struct_collision_detection_1_1_ray_packet.html',1,'CollisionDetection']]],
+  ['raypacket_6',['RayPacket',['../struct_collision_detection_1_1_ray_packet.html',1,'CollisionDetection::RayPacket'],['../struct_ray_packet.html',1,'RayPacket']]],
   ['rayquery_7',['RayQuery',['../struct_collision_detection_1_1_ray_query.html',1,'CollisionDetection']]],
   ['raystream_8',['RayStream',['../struct_collision_detection_1_1_ray_stream.html',1,'CollisionDetection']]],
   ['raytracingstats_9',['RayTracingStats',['../struct_collision_detection_1_1_ray_tracing_stats.html',1,'CollisionDetection']]],

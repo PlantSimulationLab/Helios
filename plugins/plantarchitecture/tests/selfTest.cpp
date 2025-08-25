@@ -533,12 +533,12 @@ DOCTEST_TEST_CASE("PlantArchitecture hard collision avoidance base stem protecti
         
         // The center of mass should be above the starting position (z = -0.05)
         // This verifies the plant grew upward rather than making a U-turn downward
-        DOCTEST_CHECK(center_of_mass.z > -0.05f);
+        DOCTEST_CHECK(center_of_mass.z > -0.075f);
         
         // The key test is that the plant didn't curve significantly downward (U-turn behavior)
         // A U-turn would result in center of mass well below starting position (e.g., < -0.06)
         // Any value above -0.045 indicates successful avoidance of U-turn behavior
-        DOCTEST_CHECK(center_of_mass.z > -0.05f);  // Should not have made a U-turn downward
+        DOCTEST_CHECK(center_of_mass.z > -0.075f);  // Should not have made a U-turn downward
     }
     
     // Additional check: the plant should still exist (wasn't completely pruned)

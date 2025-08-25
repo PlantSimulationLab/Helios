@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.45</span>
+       <span id="projectnumber">&#160;v1.3.46</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -220,12 +220,12 @@ Functions</h2></td></tr>
 <tr class="memitem:a9613831fda0fbaf95b71961b83be82a9" id="r_a9613831fda0fbaf95b71961b83be82a9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9613831fda0fbaf95b71961b83be82a9">launchBVHTraversal</a> (void *h_nodes, int node_count, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_query_aabb_min, float *h_query_aabb_max, int num_queries, unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_query)</td></tr>
 <tr class="memdesc:a9613831fda0fbaf95b71961b83be82a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Launch BVH traversal kernel from C++ code.  <br /></td></tr>
 <tr class="separator:a9613831fda0fbaf95b71961b83be82a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6a4ced553b97c7a945f65b1315ab8290" id="r_a6a4ced553b97c7a945f65b1315ab8290"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6a4ced553b97c7a945f65b1315ab8290">intersectRegularGridKernel</a> (const size_t num_rays, float3 *d_ray_origins, float3 *d_ray_directions, float3 grid_center, float3 grid_size, int3 grid_divisions, int *d_voxel_ray_counts, float *d_voxel_path_lengths, int *d_voxel_transmitted)</td></tr>
-<tr class="memdesc:a6a4ced553b97c7a945f65b1315ab8290"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel to calculate ray path lengths through a regular voxel grid.  <br /></td></tr>
-<tr class="separator:a6a4ced553b97c7a945f65b1315ab8290"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a08c61a024a224242a420b515f9b43bf9" id="r_a08c61a024a224242a420b515f9b43bf9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a08c61a024a224242a420b515f9b43bf9">launchVoxelRayPathLengths</a> (int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x, int grid_divisions_y, int grid_divisions_z, int *h_voxel_ray_counts, float *h_voxel_path_lengths, int *h_voxel_transmitted)</td></tr>
-<tr class="memdesc:a08c61a024a224242a420b515f9b43bf9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Launch CUDA kernel for regular grid voxel ray path length calculation.  <br /></td></tr>
-<tr class="separator:a08c61a024a224242a420b515f9b43bf9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a67d6d8320e74ae56af148cfe2c6bd7d3" id="r_a67d6d8320e74ae56af148cfe2c6bd7d3"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a67d6d8320e74ae56af148cfe2c6bd7d3">intersectRegularGridKernel</a> (const size_t num_rays, float3 *d_ray_origins, float3 *d_ray_directions, float3 grid_center, float3 grid_size, int3 grid_divisions, int primitive_count, int *d_voxel_ray_counts, float *d_voxel_path_lengths, int *d_voxel_transmitted, int *d_voxel_hit_before, int *d_voxel_hit_after, int *d_voxel_hit_inside)</td></tr>
+<tr class="memdesc:a67d6d8320e74ae56af148cfe2c6bd7d3"><td class="mdescLeft">&#160;</td><td class="mdescRight">CUDA kernel to calculate ray path lengths through a regular voxel grid.  <br /></td></tr>
+<tr class="separator:a67d6d8320e74ae56af148cfe2c6bd7d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7c15a027001175d4b27adfd99e535c04" id="r_a7c15a027001175d4b27adfd99e535c04"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7c15a027001175d4b27adfd99e535c04">launchVoxelRayPathLengths</a> (int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x, int grid_divisions_y, int grid_divisions_z, int primitive_count, int *h_voxel_ray_counts, float *h_voxel_path_lengths, int *h_voxel_transmitted, int *h_voxel_hit_before, int *h_voxel_hit_after, int *h_voxel_hit_inside)</td></tr>
+<tr class="memdesc:a7c15a027001175d4b27adfd99e535c04"><td class="mdescLeft">&#160;</td><td class="mdescRight">Launch CUDA kernel for regular grid voxel ray path length calculation.  <br /></td></tr>
+<tr class="separator:a7c15a027001175d4b27adfd99e535c04"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>CUDA source file for GPU-accelerated collision detection</p>
@@ -407,8 +407,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a6a4ced553b97c7a945f65b1315ab8290" name="a6a4ced553b97c7a945f65b1315ab8290"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6a4ced553b97c7a945f65b1315ab8290">&#9670;&#160;</a></span>intersectRegularGridKernel()</h2>
+<a id="a67d6d8320e74ae56af148cfe2c6bd7d3" name="a67d6d8320e74ae56af148cfe2c6bd7d3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a67d6d8320e74ae56af148cfe2c6bd7d3">&#9670;&#160;</a></span>intersectRegularGridKernel()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -446,6 +446,11 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>primitive_count</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">int *</td>          <td class="paramname"><span class="paramname"><em>d_voxel_ray_counts</em></span>, </td>
         </tr>
         <tr>
@@ -456,7 +461,22 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int *</td>          <td class="paramname"><span class="paramname"><em>d_voxel_transmitted</em></span>&#160;)</td>
+          <td class="paramtype">int *</td>          <td class="paramname"><span class="paramname"><em>d_voxel_transmitted</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int *</td>          <td class="paramname"><span class="paramname"><em>d_voxel_hit_before</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int *</td>          <td class="paramname"><span class="paramname"><em>d_voxel_hit_after</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int *</td>          <td class="paramname"><span class="paramname"><em>d_voxel_hit_inside</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -686,8 +706,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a08c61a024a224242a420b515f9b43bf9" name="a08c61a024a224242a420b515f9b43bf9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a08c61a024a224242a420b515f9b43bf9">&#9670;&#160;</a></span>launchVoxelRayPathLengths()</h2>
+<a id="a7c15a027001175d4b27adfd99e535c04" name="a7c15a027001175d4b27adfd99e535c04"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7c15a027001175d4b27adfd99e535c04">&#9670;&#160;</a></span>launchVoxelRayPathLengths()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -755,6 +775,11 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>primitive_count</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">int *</td>          <td class="paramname"><span class="paramname"><em>h_voxel_ray_counts</em></span>, </td>
         </tr>
         <tr>
@@ -765,14 +790,29 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int *</td>          <td class="paramname"><span class="paramname"><em>h_voxel_transmitted</em></span>&#160;)</td>
+          <td class="paramtype">int *</td>          <td class="paramname"><span class="paramname"><em>h_voxel_transmitted</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int *</td>          <td class="paramname"><span class="paramname"><em>h_voxel_hit_before</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int *</td>          <td class="paramname"><span class="paramname"><em>h_voxel_hit_after</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int *</td>          <td class="paramname"><span class="paramname"><em>h_voxel_hit_inside</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>Launch CUDA kernel for regular grid voxel ray path length calculation. </p>
 
-<p class="definition">Definition at line <a class="el" href="_collision_detection_8cu_source.html#l01124">1124</a> of file <a class="el" href="_collision_detection_8cu_source.html">CollisionDetection.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="_collision_detection_8cu_source.html#l01246">1246</a> of file <a class="el" href="_collision_detection_8cu_source.html">CollisionDetection.cu</a>.</p>
 
 </div>
 </div>

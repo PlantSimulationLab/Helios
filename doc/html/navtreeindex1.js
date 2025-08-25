@@ -1,5 +1,6 @@
 var NAVTREEINDEX1 =
 {
+"_weber_penn_doc.html#WeberPennDoc":[2,16],
 "_weber_penn_tree_8cpp.html":[5,0,2,18,1,0],
 "_weber_penn_tree_8cpp_source.html":[5,0,2,18,1,0],
 "_weber_penn_tree_8h.html":[5,0,2,18,0,0],
@@ -117,9 +118,9 @@ var NAVTREEINDEX1 =
 "global_8cpp.html#a73b861b0190d3c6e8300676c40550bcc":[5,0,0,1,5,1],
 "global_8cpp_source.html":[5,0,0,1,5],
 "global_8h.html":[5,0,0,0,2],
-"global_8h.html#a2d6b12d3f019b61b427ec3c63270143d":[5,0,0,0,2,124],
+"global_8h.html#a2d6b12d3f019b61b427ec3c63270143d":[5,0,0,0,2,133],
 "global_8h.html#a91ad9478d81a7aaf2593e8d9c3d06a14":[5,0,0,0,2,6],
-"global_8h.html#ab41db2f933a3e448d99437bf66ae9520":[5,0,0,0,2,89],
+"global_8h.html#ab41db2f933a3e448d99437bf66ae9520":[5,0,0,0,2,97],
 "global_8h.html#ad936c0678cb4b992f2bbb8d67d45191e":[5,0,0,0,2,4],
 "global_8h.html#ae71449b1cc6e6250b91f539153a7a0d3":[5,0,0,0,2,5],
 "global_8h_source.html":[5,0,0,0,2],

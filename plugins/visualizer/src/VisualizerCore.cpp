@@ -229,8 +229,8 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     points_rendered_count = 0;
     last_culling_time_ms = 0;
 
-    if (!headless) {
-        // Initialize OpenGL context and open graphic window
+    // Initialize OpenGL context for both regular and headless modes
+    // Headless mode needs an offscreen context for geometry operations
 
         // Initialise GLFW
         if (!glfwInit()) {
@@ -244,15 +244,22 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // We don't want the old OpenGL
 #endif
-        glfwWindowHint(GLFW_VISIBLE, 0);
+
+    if (headless) {
+        // Create offscreen context for headless mode
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE); // Ensure window is not visible
+    } else {
+        // Regular windowed mode
+        glfwWindowHint(GLFW_VISIBLE, 0); // Initially hidden, will show later if needed
 
         if (!window_decorations) {
             glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
         }
+    }
 
         openWindow();
 
-        // Initialize GLEW
+    // Initialize GLEW - required for both headless and windowed modes
         glewExperimental = GL_TRUE; // Needed in core profile
         if (glewInit() != GLEW_OK) {
             helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLEW");
@@ -263,7 +270,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
         assert(checkerrors());
 
-        // Enable relevant parameters
+    // Enable relevant parameters for both regular and headless modes
 
         glEnable(GL_DEPTH_TEST); // Enable depth test
         glDepthFunc(GL_LESS); // Accept fragment if it closer to the camera than the former one
@@ -337,15 +344,15 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
         //~~~~~~~~~~~~~ Load the Shaders ~~~~~~~~~~~~~~~~~~~//
 
-        primaryShader.initialize("plugins/visualizer/shaders/primaryShader.vert", "plugins/visualizer/shaders/primaryShader.frag", this);
-        depthShader.initialize("plugins/visualizer/shaders/shadow.vert", "plugins/visualizer/shaders/shadow.frag", this);
+        primaryShader.initialize(helios::resolveShaderPath("primaryShader.vert").string().c_str(), helios::resolveShaderPath("primaryShader.frag").string().c_str(), this);
+        depthShader.initialize(helios::resolveShaderPath("shadow.vert").string().c_str(), helios::resolveShaderPath("shadow.frag").string().c_str(), this);
 
         assert(checkerrors());
 
         primaryShader.useShader();
 
-        // Initialize frame buffer
-
+    // Initialize frame buffer only for windowed mode
+    if (!headless) {
         // The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth buffer.
         glGenFramebuffers(1, &framebufferID);
         glBindFramebuffer(GL_FRAMEBUFFER, framebufferID);
@@ -388,6 +395,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         // Finished OpenGL setup
         assert(checkerrors());
     } else {
+        // Set framebuffer dimensions for headless mode (no framebuffer created)
         Wframebuffer = Wdisplay;
         Hframebuffer = Hdisplay;
     }

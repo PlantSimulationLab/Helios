@@ -52,8 +52,12 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
     // Using "pugixml" parser.  See pugixml.org
     pugi::xml_document xmldoc;
 
+    // Resolve file path using project-based resolution
+    std::filesystem::path resolved_path = resolveProjectFile(filename);
+    std::string resolved_filename = resolved_path.string();
+
     // load file
-    pugi::xml_parse_result result = xmldoc.load_file(filename);
+    pugi::xml_parse_result result = xmldoc.load_file(resolved_filename.c_str());
 
     // error checking
     if (!result) {
@@ -398,7 +402,11 @@ void LiDARcloud::loadXML(const char *filename, bool load_grid_only) {
 
 size_t LiDARcloud::loadASCIIFile(uint scanID, const std::string &ASCII_data_file) {
 
-    ifstream datafile(ASCII_data_file); // open the file
+    // Resolve file path using project-based resolution
+    std::filesystem::path resolved_path = resolveProjectFile(ASCII_data_file);
+    std::string resolved_filename = resolved_path.string();
+
+    ifstream datafile(resolved_filename); // open the file
 
     if (!datafile.is_open()) { // check that file exists
         helios_runtime_error("ERROR (LiDARcloud::loadASCIIFile): ASCII data file '" + ASCII_data_file + "' does not exist.");

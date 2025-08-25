@@ -22,14 +22,42 @@ jobs:
           role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
           aws-region: us-west-2
       - run: |
-          aws ec2 start-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
-          aws ec2 wait instance-running --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
+          # Wait for instance to be in a state where it can be started (max 5 minutes)
+          echo "Waiting for instance to be in a startable state..."
+          timeout 300 bash -c '
+            while true; do
+              STATE=$(aws ec2 describe-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_LINUX }} --query "Reservations[0].Instances[0].State.Name" --output text)
+              echo "Current instance state: $STATE"
+              if [[ "$STATE" == "stopped" || "$STATE" == "running" ]]; then
+                echo "Instance is in a startable state: $STATE"
+                break
+              fi
+              echo "Instance is in transitional state: $STATE. Waiting 10 seconds..."
+              sleep 10
+            done
+          ' || {
+            echo "Timeout waiting for instance to reach startable state"
+            exit 1
+          }
+          
+          # Only start if not already running
+          CURRENT_STATE=$(aws ec2 describe-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_LINUX }} --query "Reservations[0].Instances[0].State.Name" --output text)
+          if [[ "$CURRENT_STATE" == "stopped" ]]; then
+            echo "Starting instance..."
+            aws ec2 start-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_LINUX }}
+            aws ec2 wait instance-running --instance-ids ${{ secrets.EC2_INSTANCE_ID_LINUX }}
+          elif [[ "$CURRENT_STATE" == "running" ]]; then
+            echo "Instance is already running"
+          else
+            echo "Unexpected instance state: $CURRENT_STATE"
+            exit 1
+          fi
 
   run_samples_linux:
     # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
     # You can convert this to a matrix build if you need cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: [self-hosted]
+    runs-on: [self-hosted,helios]
     needs: start-gpu
     steps:
       - uses: actions/checkout@v3
@@ -53,5 +81,5 @@ jobs:
           role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
           aws-region: us-west-2
       - run: |
-          aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
-          aws ec2 wait instance-stopped --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
+          aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID_LINUX }}
+          aws ec2 wait instance-stopped --instance-ids ${{ secrets.EC2_INSTANCE_ID_LINUX }}

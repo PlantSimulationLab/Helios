@@ -84,7 +84,7 @@ window.MathJax = {
   <td id="projectlogo"><img alt="Logo" src="Helios_logo_small.png"></td>
   <td id="projectalign">
    <div id="projectname">
-       <span id="projectnumber">&#160;v1.3.45</span>
+       <span id="projectnumber">&#160;v1.3.46</span>
    </div>
   </td>
      <td id="searchbox-container">        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -390,7 +390,7 @@ Input Spectral Data</h2>
 <div class="line">   &lt;<span class="keywordtype">globaldata_vec2</span>&gt;</div>
 <div class="line">&lt;<span class="keywordtype">helios</span>&gt;</div>
 </div><!-- fragment --><p>In this example, we've specified the leaf spectral transmissivity at four wavebands - 300, 400, 500, and 600 nm. Note that wavelength values are always given in nanometers. The label "leaf_transmissivity" is important, as this would be used later to assign this transmissivity spectrum to one or more primitives.</p>
-<p>The Helios radiation model has some pre-defined spectra in several XML files. These files are automatically copied into the project build directory under "plugins/radiation/spectral_data/". The files "leaf_surface_spectral_library.xml", "soil_surface_spectral_library.xml", etc. have many surface reflectivity and/or transmissivity spectra; the file "light_spectral_library.xml" has several artificial light spectral flux spectra; the file "solar_spectrum_ASTMG173.xml" has the ASTM standard clear sky solar spectrum.</p>
+<p>The Helios radiation model has some pre-defined spectra in several XML files. These files are automatically resolved by the asset management system regardless of where the executable is run. The files "leaf_surface_spectral_library.xml", "soil_surface_spectral_library.xml", etc. have many surface reflectivity and/or transmissivity spectra; the file "light_spectral_library.xml" has several artificial light spectral flux spectra; the file "solar_spectrum_ASTMG173.xml" has the ASTM standard clear sky solar spectrum.</p>
 <p>In order to get the spectral data into the Context as global data, the XML file containing the data must be loaded. This is done via the usual procedure:</p>
 <div class="fragment"><div class="line">context.loadXML(<span class="stringliteral">&quot;plugins/radiation/spectral_data/leaf_surface_spectral_library.xml&quot;</span>);</div>
 </div><!-- fragment --><p>This command would load all the leaf surface spectra from the file "leaf_surface_spectral_library.xml" into the Context as global data. We could then access it in the usual way (see page on <a class="el" href="_a_p_i.html#GlobalData">Global Data</a> for details on Helios global data):</p>
@@ -807,7 +807,7 @@ Integrating Fluxes</h3>
 <h3><a class="anchor" id="RadCamOut"></a>
 Writing Camera Images to File</h3>
 <p>Simulated camera data can be written to file as a JPEG image, or the raw pixel data can be queried from the Context.</p>
-<p>JPEG images are written either as a grayscale image (1 spectral band) or and RGB image (3 spectral bands) using the <a class="el" href="class_radiation_model.html#aa30ec7ec3b6c3b109e9a9544b890e8de">RadiationModel::writeCameraImage()</a> method. This method takes three required arguments and two optional arguments: 1) a string denoting the label of a camera that was added through the <a class="el" href="class_radiation_model.html#aedf80552eaf2bf6a8544dcb2c72cb331">RadiationModel::addRadiationCamera()</a> method, 2) a vector of strings denoting the label(s) of radiation bands to be written to the image(s), which must contain exactly 1 element (grayscale image) or 3 elements (RGB image), and 3) a string denoting the base of the image filename, which may be appended with information like a radiation band label or frame count. The two optional arguments are: 1) the relative path to the directory where the images should be stored, and 2) a numerical integer identifier to be appended to the image file name (e.g., "camera_thermal_00001.jpeg"). Note that this value must be less than or equal to 99,9999. By default, images are stored in the directory where the executable is being run (usually the build directory), and the numerical identifier is omitted unless a value is provided.</p>
+<p>JPEG images are written either as a grayscale image (1 spectral band) or and RGB image (3 spectral bands) using the <a class="el" href="class_radiation_model.html#aa30ec7ec3b6c3b109e9a9544b890e8de">RadiationModel::writeCameraImage()</a> method. This method takes three required arguments and two optional arguments: 1) a string denoting the label of a camera that was added through the <a class="el" href="class_radiation_model.html#aedf80552eaf2bf6a8544dcb2c72cb331">RadiationModel::addRadiationCamera()</a> method, 2) a vector of strings denoting the label(s) of radiation bands to be written to the image(s), which must contain exactly 1 element (grayscale image) or 3 elements (RGB image), and 3) a string denoting the base of the image filename, which may be appended with information like a radiation band label or frame count. The two optional arguments are: 1) the relative path to the directory where the images should be stored, and 2) a numerical integer identifier to be appended to the image file name (e.g., "camera_thermal_00001.jpeg"). Note that this value must be less than or equal to 99,9999. By default, images are stored in the current working directory, and the numerical identifier is omitted unless a value is provided.</p>
 <h3><a class="anchor" id="RadCamSegmentation"></a>
 Writing Camera Image Segmentation Masks</h3>
 <p>In addition to regular camera images, the radiation model can generate segmentation masks in COCO JSON format for machine learning applications. Segmentation masks identify and outline objects within camera images, providing pixel-level annotations that can be used for training object detection and segmentation models.</p>
@@ -895,7 +895,7 @@ Writing Camera Image Segmentation Masks</h3>
 <div class="line"> </div>
 <div class="line">   <span class="keywordflow">return</span> 0;</div>
 <div class="line">}</div>
-</div><!-- fragment --><p>The above code would produce an image in the build directory called "camera_visible_myimage.jpeg", which is shown below, along with a file labels.txt that contains the primitive data labels for each pixel.</p>
+</div><!-- fragment --><p>The above code would produce an image in the current working directory called "camera_visible_myimage.jpeg", which is shown below, along with a file labels.txt that contains the primitive data labels for each pixel.</p>
 <div class="image">
 <img src="camera_visible_myimage.jpeg" alt=""/>
 </div>
