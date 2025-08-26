@@ -26,11 +26,9 @@ target_include_directories(helios
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/pugixml>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/doctest>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/cpplocate/cpplocate/include>
         $<INSTALL_INTERFACE:include>
         $<INSTALL_INTERFACE:lib/pugixml>
         $<INSTALL_INTERFACE:lib/doctest>
-        $<INSTALL_INTERFACE:lib/cpplocate/cpplocate/include>
 )
 
 # External libraries
@@ -47,10 +45,7 @@ add_dependencies( png_static zlibstatic )
 include_directories("${CMAKE_BINARY_DIR}/lib/libjpeg-9a" "${CMAKE_CURRENT_SOURCE_DIR}/lib/libjpeg-9a")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/libjpeg-9a" "${CMAKE_BINARY_DIR}/lib/libjpeg-9a")
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/lib/cpplocate/cpplocate/include")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/cpplocate" "${CMAKE_BINARY_DIR}/lib/cpplocate")
-
-target_link_libraries( helios PRIVATE png_static  jpeg cpplocate ) #note that zlib is already linked by libpng
+target_link_libraries( helios PRIVATE png_static  jpeg ) #note that zlib is already linked by libpng
 
 # Suppress warnings for third-party libraries
 if(TARGET zlibstatic)

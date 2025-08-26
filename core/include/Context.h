@@ -2154,9 +2154,7 @@ namespace helios {
 
         void addTexture(const char *texture_file);
 
-        //------------ PLUGIN ASSET DIRECTORIES ----------------//
-
-        std::map<std::string, std::vector<std::string>> plugin_asset_directories;
+        //------------ FILE PATH RESOLUTION ----------------//
 
         //! Unified file path resolution for Context methods
         std::filesystem::path resolveFilePath(const std::string &filename) const;
@@ -6136,12 +6134,7 @@ namespace helios {
          */
         void writePLY(const char *filename, const std::vector<uint> &UUIDs) const;
 
-        //! Register asset directories for a plugin
-        /**
-         * \param[in] plugin_name Name of the plugin
-         * \param[in] asset_directory Asset directory path to register
-         */
-        void registerAssetDirectory(const std::string &plugin_name, const std::string &asset_directory);
+        // Asset directory registration removed - now using HELIOS_BUILD resolution
 
         //! Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without any scaling or rotation applied.
         /**

@@ -656,7 +656,8 @@ float CameraCalibration::getCameraResponseScale(const std::string &cameralabel, 
 }
 
 std::vector<uint> CameraCalibration::readROMCCanopy() {
-    std::ifstream inputFile("external_data/HET01_UNI_scene.def");
+    std::string file_path = context->resolveFilePath("plugins/radiation/spectral_data/external_data/HET01_UNI_scene.def");
+    std::ifstream inputFile(file_path);
     std::vector<uint> iCUUIDs;
     float idata;
     // read the data from the file

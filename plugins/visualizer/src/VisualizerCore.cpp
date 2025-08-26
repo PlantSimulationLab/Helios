@@ -361,8 +361,8 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     //~~~~~~~~~~~~~ Load the Shaders ~~~~~~~~~~~~~~~~~~~//
 
-    primaryShader.initialize(helios::resolveFilePath("plugins/visualizer/shaders/primaryShader.vert").string().c_str(), helios::resolveFilePath("plugins/visualizer/shaders/primaryShader.frag").string().c_str(), this);
-    depthShader.initialize(helios::resolveFilePath("plugins/visualizer/shaders/shadow.vert").string().c_str(), helios::resolveFilePath("plugins/visualizer/shaders/shadow.frag").string().c_str(), this);
+    primaryShader.initialize("plugins/visualizer/shaders/primaryShader.vert", "plugins/visualizer/shaders/primaryShader.frag", this);
+    depthShader.initialize("plugins/visualizer/shaders/shadow.vert", "plugins/visualizer/shaders/shadow.frag", this);
 
     // Check for OpenGL errors after shader initialization
     if (!checkerrors()) {

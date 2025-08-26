@@ -22,10 +22,7 @@ RadiationModel::RadiationModel(helios::Context *context_a) {
 
     context = context_a;
 
-    // Register plugin asset directories
-    context_a->registerAssetDirectory("radiation", "plugins/radiation/camera_light_models");
-    context_a->registerAssetDirectory("radiation", "plugins/radiation/spectral_data");
-    context_a->registerAssetDirectory("radiation", "plugins/radiation/assets");
+    // Asset directory registration removed - now using HELIOS_BUILD resolution
 
     // All default values set here
 

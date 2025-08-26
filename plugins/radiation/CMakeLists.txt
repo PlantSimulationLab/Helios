@@ -217,7 +217,7 @@ endforeach()
 # Ensure main project depends on PTX target
 add_dependencies(radiation ptx)
 
-file( COPY include/disk.png DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/assets/)
+file( COPY include/disk.png DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/)
 file( COPY spectral_data DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
 file( COPY camera_light_models DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )
 

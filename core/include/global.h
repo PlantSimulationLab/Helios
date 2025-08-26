@@ -99,8 +99,7 @@ constexpr To scast(From &&v) noexcept {
 // pugi XML parser
 #include "pugixml.hpp"
 
-// cpplocate for asset path resolution
-#include <cpplocate/cpplocate.h>
+// Standard library for file path resolution
 #include <filesystem>
 
 // *** Groups *** //

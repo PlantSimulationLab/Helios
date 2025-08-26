@@ -1440,7 +1440,7 @@ void Visualizer::updateWatermark() {
     if (watermark_ID != 0) {
         geometry_handler.deleteGeometry(watermark_ID);
     }
-    watermark_ID = addRectangleByCenter(make_vec3(0.75f * width, 0.95f, 0), make_vec2(width, 0.07), make_SphericalCoord(0, 0), helios::resolveFilePath("plugins/visualizer/textures/Helios_watermark.png").string().c_str(), COORDINATES_WINDOW_NORMALIZED);
+    watermark_ID = addRectangleByCenter(make_vec3(0.75f * width, 0.95f, 0), make_vec2(width, 0.07), make_SphericalCoord(0, 0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED);
 }
 
 

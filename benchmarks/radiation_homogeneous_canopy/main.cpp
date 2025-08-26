@@ -23,7 +23,7 @@ int main() {
 
     timer.tic();
 
-    uint objID_ptype = context.addTileObject(make_vec3(0, 0, 0), make_vec2(w_leaf, w_leaf), make_SphericalCoord(0, 0), make_int2(2, 2), "disk.png");
+    uint objID_ptype = context.addTileObject(make_vec3(0, 0, 0), make_vec2(w_leaf, w_leaf), make_SphericalCoord(0, 0), make_int2(2, 2), "plugins/radiation/disk.png");
     std::vector<uint> UUIDs_ptype = context.getObjectPointer(objID_ptype)->getPrimitiveUUIDs();
 
     float A_leaf = 0;

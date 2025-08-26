@@ -416,9 +416,9 @@ DOCTEST_TEST_CASE("RadiationModel Parallel Disks Texture Masked Patches") {
 
     Context context_6;
 
-    context_6.addPatch(make_vec3(0, 0, 0), make_vec2(2.f * r1, 2.f * r1), make_SphericalCoord(0, 0), "disk.png");
-    context_6.addPatch(make_vec3(0, 0, h), make_vec2(2.f * r2, 2.f * r2), make_SphericalCoord(M_PI, 0), "disk.png");
-    context_6.addPatch(make_vec3(0, 0, h + 0.01f), make_vec2(2.f * r2, 2.f * r2), make_SphericalCoord(M_PI, 0), "disk.png");
+    context_6.addPatch(make_vec3(0, 0, 0), make_vec2(2.f * r1, 2.f * r1), make_SphericalCoord(0, 0), "plugins/radiation/disk.png");
+    context_6.addPatch(make_vec3(0, 0, h), make_vec2(2.f * r2, 2.f * r2), make_SphericalCoord(M_PI, 0), "plugins/radiation/disk.png");
+    context_6.addPatch(make_vec3(0, 0, h + 0.01f), make_vec2(2.f * r2, 2.f * r2), make_SphericalCoord(M_PI, 0), "plugins/radiation/disk.png");
 
     context_6.setPrimitiveData(0, "reflectivity_SW", shortwave_rho);
 
@@ -1087,7 +1087,7 @@ DOCTEST_TEST_CASE("RadiationModel Texture-masked Tile Objects with Periodic Boun
 
     Context context_13;
 
-    uint objID_ptype = context_13.addTileObject(make_vec3(0, 0, 0), make_vec2(w_leaf_13, w_leaf_13), make_SphericalCoord(0, 0), make_int2(2, 2), "disk.png");
+    uint objID_ptype = context_13.addTileObject(make_vec3(0, 0, 0), make_vec2(w_leaf_13, w_leaf_13), make_SphericalCoord(0, 0), make_int2(2, 2), "plugins/radiation/disk.png");
     std::vector<uint> UUIDs_ptype = context_13.getObjectPointer(objID_ptype)->getPrimitiveUUIDs();
 
     float A_leaf = 0;
