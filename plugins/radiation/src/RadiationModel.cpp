@@ -1174,13 +1174,13 @@ void RadiationModel::initializeOptiX() {
 
     /* Ray Generation Program */
 
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx", "direct_raygen", &direct_raygen));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx").string().c_str(), "direct_raygen", &direct_raygen);
     RT_CHECK_ERROR(rtContextSetRayGenerationProgram(OptiX_Context, RAYTYPE_DIRECT, direct_raygen));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx", "diffuse_raygen", &diffuse_raygen));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx").string().c_str(), "diffuse_raygen", &diffuse_raygen);
     RT_CHECK_ERROR(rtContextSetRayGenerationProgram(OptiX_Context, RAYTYPE_DIFFUSE, diffuse_raygen));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx", "camera_raygen", &camera_raygen));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx").string().c_str(), "camera_raygen", &camera_raygen);
     RT_CHECK_ERROR(rtContextSetRayGenerationProgram(OptiX_Context, RAYTYPE_CAMERA, camera_raygen));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx", "pixel_label_raygen", &pixel_label_raygen));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx").string().c_str(), "pixel_label_raygen", &pixel_label_raygen);
     RT_CHECK_ERROR(rtContextSetRayGenerationProgram(OptiX_Context, RAYTYPE_PIXEL_LABEL, pixel_label_raygen));
 
     /* Declare Buffers and Variables */
@@ -1369,10 +1369,10 @@ void RadiationModel::initializeOptiX() {
     RTprogram closest_hit_diffuse;
     RTprogram closest_hit_camera;
     RTprogram closest_hit_pixel_label;
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx", "closest_hit_direct", &closest_hit_direct));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx", "closest_hit_diffuse", &closest_hit_diffuse));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx", "closest_hit_camera", &closest_hit_camera));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx", "closest_hit_pixel_label", &closest_hit_pixel_label));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx").string().c_str(), "closest_hit_direct", &closest_hit_direct);
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx").string().c_str(), "closest_hit_diffuse", &closest_hit_diffuse);
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx").string().c_str(), "closest_hit_camera", &closest_hit_camera);
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx").string().c_str(), "closest_hit_pixel_label", &closest_hit_pixel_label);
 
     /* Initialize Patch Geometry */
 
@@ -1381,9 +1381,9 @@ void RadiationModel::initializeOptiX() {
 
     RT_CHECK_ERROR(rtGeometryCreate(OptiX_Context, &patch));
 
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "rectangle_bounds", &patch_bounding_box_program));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx").string().c_str(), "rectangle_bounds", &patch_bounding_box_program));
     RT_CHECK_ERROR(rtGeometrySetBoundingBoxProgram(patch, patch_bounding_box_program));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "rectangle_intersect", &patch_intersection_program));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx").string().c_str(), "rectangle_intersect", &patch_intersection_program));
     RT_CHECK_ERROR(rtGeometrySetIntersectionProgram(patch, patch_intersection_program));
 
     /* Create Patch Material */
@@ -1402,9 +1402,9 @@ void RadiationModel::initializeOptiX() {
 
     RT_CHECK_ERROR(rtGeometryCreate(OptiX_Context, &triangle));
 
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "triangle_bounds", &triangle_bounding_box_program));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx").string().c_str(), "triangle_bounds", &triangle_bounding_box_program));
     RT_CHECK_ERROR(rtGeometrySetBoundingBoxProgram(triangle, triangle_bounding_box_program));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "triangle_intersect", &triangle_intersection_program));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx").string().c_str(), "triangle_intersect", &triangle_intersection_program));
     RT_CHECK_ERROR(rtGeometrySetIntersectionProgram(triangle, triangle_intersection_program));
 
     /* Create Triangle Material */
@@ -1423,9 +1423,9 @@ void RadiationModel::initializeOptiX() {
 
     RT_CHECK_ERROR(rtGeometryCreate(OptiX_Context, &disk));
 
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "disk_bounds", &disk_bounding_box_program));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx").string().c_str(), "disk_bounds", &disk_bounding_box_program));
     RT_CHECK_ERROR(rtGeometrySetBoundingBoxProgram(disk, disk_bounding_box_program));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "disk_intersect", &disk_intersection_program));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx").string().c_str(), "disk_intersect", &disk_intersection_program));
     RT_CHECK_ERROR(rtGeometrySetIntersectionProgram(disk, disk_intersection_program));
 
     /* Create Disk Material */
@@ -1444,9 +1444,9 @@ void RadiationModel::initializeOptiX() {
 
     RT_CHECK_ERROR(rtGeometryCreate(OptiX_Context, &tile));
 
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "tile_bounds", &tile_bounding_box_program));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx").string().c_str(), "tile_bounds", &tile_bounding_box_program));
     RT_CHECK_ERROR(rtGeometrySetBoundingBoxProgram(tile, tile_bounding_box_program));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "tile_intersect", &tile_intersection_program));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx").string().c_str(), "tile_intersect", &tile_intersection_program));
     RT_CHECK_ERROR(rtGeometrySetIntersectionProgram(tile, tile_intersection_program));
 
     /* Create Tile Material */
@@ -1465,9 +1465,9 @@ void RadiationModel::initializeOptiX() {
 
     RT_CHECK_ERROR(rtGeometryCreate(OptiX_Context, &voxel));
 
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "voxel_bounds", &voxel_bounding_box_program));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx").string().c_str(), "voxel_bounds", &voxel_bounding_box_program));
     RT_CHECK_ERROR(rtGeometrySetBoundingBoxProgram(voxel, voxel_bounding_box_program));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "voxel_intersect", &voxel_intersection_program));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx").string().c_str(), "voxel_intersect", &voxel_intersection_program));
     RT_CHECK_ERROR(rtGeometrySetIntersectionProgram(voxel, voxel_intersection_program));
 
     /* Create Voxel Material */
@@ -1486,9 +1486,9 @@ void RadiationModel::initializeOptiX() {
 
     RT_CHECK_ERROR(rtGeometryCreate(OptiX_Context, &bbox));
 
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "bbox_bounds", &bbox_bounding_box_program));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx").string().c_str(), "bbox_bounds", &bbox_bounding_box_program));
     RT_CHECK_ERROR(rtGeometrySetBoundingBoxProgram(bbox, bbox_bounding_box_program));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx", "bbox_intersect", &bbox_intersection_program));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_primitiveIntersection.cu.ptx").string().c_str(), "bbox_intersect", &bbox_intersection_program));
     RT_CHECK_ERROR(rtGeometrySetIntersectionProgram(bbox, bbox_intersection_program));
 
     /* Create Bounding Box Material */
@@ -1505,13 +1505,13 @@ void RadiationModel::initializeOptiX() {
     RTprogram miss_program_diffuse;
     RTprogram miss_program_camera;
     RTprogram miss_program_pixel_label;
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx", "miss_direct", &miss_program_direct));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx").string().c_str(), "miss_direct", &miss_program_direct));
     RT_CHECK_ERROR(rtContextSetMissProgram(OptiX_Context, RAYTYPE_DIRECT, miss_program_direct));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx", "miss_diffuse", &miss_program_diffuse));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx").string().c_str(), "miss_diffuse", &miss_program_diffuse));
     RT_CHECK_ERROR(rtContextSetMissProgram(OptiX_Context, RAYTYPE_DIFFUSE, miss_program_diffuse));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx", "miss_camera", &miss_program_camera));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx").string().c_str(), "miss_camera", &miss_program_camera));
     RT_CHECK_ERROR(rtContextSetMissProgram(OptiX_Context, RAYTYPE_CAMERA, miss_program_camera));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx", "miss_pixel_label", &miss_program_pixel_label));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx").string().c_str(), "miss_pixel_label", &miss_program_pixel_label));
     RT_CHECK_ERROR(rtContextSetMissProgram(OptiX_Context, RAYTYPE_PIXEL_LABEL, miss_program_pixel_label));
 
     /* Create OptiX Geometry Structures */
