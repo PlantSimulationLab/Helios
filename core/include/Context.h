@@ -2154,10 +2154,6 @@ namespace helios {
 
         void addTexture(const char *texture_file);
 
-        //------------ FILE PATH RESOLUTION ----------------//
-
-        //! Unified file path resolution for Context methods
-        std::filesystem::path resolveFilePath(const std::string &filename) const;
 
         bool doesTextureFileExist(const char *texture_file) const;
 
@@ -6205,6 +6201,16 @@ namespace helios {
          * \param[in] write_normals [optional] true if we should write the normal vectors
          */
         void writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields, bool write_normals = false) const;
+
+        //------------ FILE PATH RESOLUTION ----------------//
+
+        //! Unified file path resolution for Context methods - resolves relative paths using build directory
+        /**
+         * \param[in] filename Relative or absolute file path to resolve
+         * \return std::filesystem::path Resolved absolute file path
+         * \note Uses HELIOS_BUILD environment variable or auto-detection to resolve relative paths
+         */
+        std::filesystem::path resolveFilePath(const std::string &filename) const;
 
         //! Set simulation date by day, month, year
         /**
