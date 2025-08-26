@@ -1174,13 +1174,13 @@ void RadiationModel::initializeOptiX() {
 
     /* Ray Generation Program */
 
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx").string().c_str(), "direct_raygen", &direct_raygen);
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx").string().c_str(), "direct_raygen", &direct_raygen));
     RT_CHECK_ERROR(rtContextSetRayGenerationProgram(OptiX_Context, RAYTYPE_DIRECT, direct_raygen));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx").string().c_str(), "diffuse_raygen", &diffuse_raygen);
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx").string().c_str(), "diffuse_raygen", &diffuse_raygen));
     RT_CHECK_ERROR(rtContextSetRayGenerationProgram(OptiX_Context, RAYTYPE_DIFFUSE, diffuse_raygen));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx").string().c_str(), "camera_raygen", &camera_raygen);
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx").string().c_str(), "camera_raygen", &camera_raygen));
     RT_CHECK_ERROR(rtContextSetRayGenerationProgram(OptiX_Context, RAYTYPE_CAMERA, camera_raygen));
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx").string().c_str(), "pixel_label_raygen", &pixel_label_raygen);
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayGeneration.cu.ptx").string().c_str(), "pixel_label_raygen", &pixel_label_raygen));
     RT_CHECK_ERROR(rtContextSetRayGenerationProgram(OptiX_Context, RAYTYPE_PIXEL_LABEL, pixel_label_raygen));
 
     /* Declare Buffers and Variables */
@@ -1369,10 +1369,10 @@ void RadiationModel::initializeOptiX() {
     RTprogram closest_hit_diffuse;
     RTprogram closest_hit_camera;
     RTprogram closest_hit_pixel_label;
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx").string().c_str(), "closest_hit_direct", &closest_hit_direct);
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx").string().c_str(), "closest_hit_diffuse", &closest_hit_diffuse);
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx").string().c_str(), "closest_hit_camera", &closest_hit_camera);
-    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx").string().c_str(), "closest_hit_pixel_label", &closest_hit_pixel_label);
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx").string().c_str(), "closest_hit_direct", &closest_hit_direct));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx").string().c_str(), "closest_hit_diffuse", &closest_hit_diffuse));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx").string().c_str(), "closest_hit_camera", &closest_hit_camera));
+    RT_CHECK_ERROR(rtProgramCreateFromPTXFile(OptiX_Context, helios::resolvePluginAsset("radiation", "cuda_compile_ptx_generated_rayHit.cu.ptx").string().c_str(), "closest_hit_pixel_label", &closest_hit_pixel_label));
 
     /* Initialize Patch Geometry */
 
