@@ -73,7 +73,17 @@ std::filesystem::path Context::resolveFilePath(const std::string &filename) cons
     // 3. Check registered plugin asset directories
     for (const auto &plugin_pair : plugin_asset_directories) {
         for (const auto &asset_dir : plugin_pair.second) {
-            std::filesystem::path candidate_path = std::filesystem::path(asset_dir) / filename;
+            // Prevent infinite recursion by checking if filename already contains the asset_dir prefix
+            // This avoids creating malformed paths like "plugins/radiation/spectral_data/plugins/radiation/disk.png"
+            std::filesystem::path asset_dir_path(asset_dir);
+            std::filesystem::path filename_path(filename);
+            
+            // Skip this asset directory if the filename already starts with it (would create nested path)
+            if (filename_path.string().find(asset_dir) == 0) {
+                continue;
+            }
+            
+            std::filesystem::path candidate_path = asset_dir_path / filename;
             try {
                 auto resolved_candidate = resolveAssetPath(candidate_path.string());
                 if (std::filesystem::exists(resolved_candidate)) {
