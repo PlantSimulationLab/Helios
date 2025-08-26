@@ -1139,29 +1139,14 @@ namespace helios {
      */
     [[nodiscard]] std::filesystem::path resolvePluginAsset(const std::string& pluginName, const std::string& assetPath);
 
-    //! Resolve shader file path
-    /**
-     * \param[in] shaderFile Shader filename with or without path (e.g., "primaryShader.vert" or "shaders/primaryShader.vert")
-     * \return Absolute path to the shader file
-     * \ingroup functions
-     */
-    [[nodiscard]] std::filesystem::path resolveShaderPath(const std::string& shaderFile);
 
-    //! Resolve texture file path
+    //! Resolve file path using standard Helios resolution hierarchy
     /**
-     * \param[in] textureFile Texture filename with or without path (e.g., "AlmondLeaf.png" or "textures/AlmondLeaf.png")
-     * \return Absolute path to the texture file
+     * \param[in] filename File name with or without path (e.g., "primaryShader.vert" or "shaders/primaryShader.vert")
+     * \return Absolute path to the file
      * \ingroup functions
      */
-    [[nodiscard]] std::filesystem::path resolveTexturePath(const std::string& textureFile);
-
-    //! Resolve 3D model file path
-    /**
-     * \param[in] modelFile Model filename with or without path (e.g., "AlmondHull.obj" or "assets/obj/AlmondHull.obj")  
-     * \return Absolute path to the model file
-     * \ingroup functions
-     */
-    [[nodiscard]] std::filesystem::path resolveModelPath(const std::string& modelFile);
+    [[nodiscard]] std::filesystem::path resolveFilePath(const std::string& filename);
 
     //! Resolve spectral data file path
     /**

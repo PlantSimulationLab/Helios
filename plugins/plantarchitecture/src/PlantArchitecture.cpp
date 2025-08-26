@@ -90,6 +90,10 @@ vec3 PlantArchitecture::interpolateTube(const std::vector<vec3> &P, const float 
 PlantArchitecture::PlantArchitecture(helios::Context *context_ptr) : context_ptr(context_ptr) {
     generator = context_ptr->getRandomGenerator();
 
+    // Register plugin asset directories
+    context_ptr->registerAssetDirectory("plantarchitecture", "plugins/plantarchitecture/assets/obj");
+    context_ptr->registerAssetDirectory("plantarchitecture", "plugins/plantarchitecture/assets/textures");
+
     // Initialize plant model registrations
     initializePlantModelRegistrations();
 

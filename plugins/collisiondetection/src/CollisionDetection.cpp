@@ -696,7 +696,7 @@ void CollisionDetection::enableGPUAcceleration() {
     }
 #else
     if (printmessages) {
-        std::cout << "WARNING: GPU acceleration requested but CUDA not available. Ignoring request." << std::endl;
+        std::cerr << "WARNING: GPU acceleration requested but CUDA not available. Ignoring request." << std::endl;
     }
 #endif
 }
@@ -1342,7 +1342,7 @@ void CollisionDetection::incrementalUpdateBVH(const std::set<uint> &added_geomet
     for (uint uuid : added_geometry) {
         if (!context->doesPrimitiveExist(uuid)) {
             if (printmessages) {
-                std::cout << "Warning: Added primitive " << uuid << " does not exist, falling back to full rebuild" << std::endl;
+                std::cerr << "Warning: Added primitive " << uuid << " does not exist, falling back to full rebuild" << std::endl;
             }
             buildBVH(final_primitives);
             return;
@@ -2530,7 +2530,7 @@ void CollisionDetection::calculateVoxelRayPathLengths(const vec3 &grid_center, c
 
     if (ray_origins.empty()) {
         if (printmessages) {
-            std::cout << "WARNING (CollisionDetection::calculateVoxelRayPathLengths): No rays provided" << std::endl;
+            std::cerr << "WARNING (CollisionDetection::calculateVoxelRayPathLengths): No rays provided" << std::endl;
         }
         return;
     }

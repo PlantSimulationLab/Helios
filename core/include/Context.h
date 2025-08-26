@@ -2154,6 +2154,13 @@ namespace helios {
 
         void addTexture(const char *texture_file);
 
+        //------------ PLUGIN ASSET DIRECTORIES ----------------//
+
+        std::map<std::string, std::vector<std::string>> plugin_asset_directories;
+
+        //! Unified file path resolution for Context methods
+        std::filesystem::path resolveFilePath(const std::string &filename) const;
+
         bool doesTextureFileExist(const char *texture_file) const;
 
         bool validateTextureFileExtenstion(const char *texture_file) const;
@@ -2262,7 +2269,7 @@ namespace helios {
             OBJmaterial(const RGBcolor &a_color, std::string a_texture, uint a_materialID) : color{a_color}, texture{std::move(a_texture)}, materialID{a_materialID} {};
         };
 
-        static std::map<std::string, OBJmaterial> loadMTL(const std::string &filebase, const std::string &material_file);
+        std::map<std::string, OBJmaterial> loadMTL(const std::string &filebase, const std::string &material_file);
 
         void loadPData(pugi::xml_node p, uint UUID);
 
@@ -6128,6 +6135,13 @@ namespace helios {
          * \param[in] UUIDs Vector of UUIDs for which geometry should be written
          */
         void writePLY(const char *filename, const std::vector<uint> &UUIDs) const;
+
+        //! Register asset directories for a plugin
+        /**
+         * \param[in] plugin_name Name of the plugin
+         * \param[in] asset_directory Asset directory path to register
+         */
+        void registerAssetDirectory(const std::string &plugin_name, const std::string &asset_directory);
 
         //! Load geometry contained in a Wavefront OBJ file (.obj). Model will be placed at the origin without any scaling or rotation applied.
         /**

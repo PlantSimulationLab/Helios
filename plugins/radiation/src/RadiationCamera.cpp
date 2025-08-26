@@ -82,7 +82,7 @@ void RadiationModel::setCameraSpectralResponseFromLibrary(const std::string &cam
     const auto &band_labels = cameras.at(camera_label).band_labels;
 
     if (!context->doesGlobalDataExist("spectral_library_loaded")) {
-        context->loadXML(helios::resolveSpectraPath("camera_spectral_library.xml").string().c_str());
+        context->loadXML("camera_spectral_library.xml");
     }
 
     for (const auto &band: band_labels) {

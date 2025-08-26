@@ -1119,8 +1119,8 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         helios_runtime_error("failed.\n File " + fn + " is not XML format.");
     }
 
-    // Resolve file path using project-based resolution
-    std::filesystem::path resolved_path = resolveProjectFile(filename);
+    // Resolve file path using unified resolution
+    std::filesystem::path resolved_path = resolveFilePath(filename);
     std::string resolved_filename = resolved_path.string();
 
     XMLfiles.emplace_back(resolved_filename);
@@ -3226,8 +3226,8 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
 
     bool ifColor = false;
 
-    // Resolve file path using project-based resolution
-    std::filesystem::path resolved_path = resolveProjectFile(filename);
+    // Resolve file path using unified resolution
+    std::filesystem::path resolved_path = resolveFilePath(filename);
     std::string resolved_filename = resolved_path.string();
 
     std::ifstream inputPly;
@@ -3588,8 +3588,8 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
 
     std::vector<uint> UUID;
 
-    // Resolve file path using project-based resolution
-    std::filesystem::path resolved_path = resolveProjectFile(filename);
+    // Resolve file path using unified resolution
+    std::filesystem::path resolved_path = resolveFilePath(filename);
     std::string resolved_filename = resolved_path.string();
     
     std::ifstream inputOBJ, inputMTL;
@@ -3824,13 +3824,13 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
     std::string file = material_file;
     std::string resolved_file;
 
-    // Try project-based resolution first
+    // Try unified resolution first
     try {
-        std::filesystem::path resolved_path = resolveProjectFile(file);
+        std::filesystem::path resolved_path = resolveFilePath(file);
         resolved_file = resolved_path.string();
         inputMTL.open(resolved_file.c_str());
     } catch (const std::runtime_error &) {
-        // If project-based resolution fails, fall back to original logic
+        // If unified resolution fails, fall back to original logic
         inputMTL.open(file.c_str());
         if (!inputMTL.is_open()) {
             // if that doesn't work, try looking in the same directory where obj file is located

@@ -49,6 +49,61 @@ std::minstd_rand0 *Context::getRandomGenerator() {
     return &generator;
 }
 
+void Context::registerAssetDirectory(const std::string &plugin_name, const std::string &asset_directory) {
+    plugin_asset_directories[plugin_name].push_back(asset_directory);
+}
+
+std::filesystem::path Context::resolveFilePath(const std::string &filename) const {
+    // 1. If absolute path, validate and return
+    std::filesystem::path filepath(filename);
+    if (filepath.is_absolute()) {
+        if (std::filesystem::exists(filepath)) {
+            return filepath;
+        } else {
+            helios_runtime_error("ERROR (Context::resolveFilePath): Absolute file path " + filename + " does not exist.");
+        }
+    }
+
+    // 2. Check current working directory
+    std::filesystem::path cwd_path = std::filesystem::current_path() / filename;
+    if (std::filesystem::exists(cwd_path)) {
+        return std::filesystem::canonical(cwd_path);
+    }
+
+    // 3. Check registered plugin asset directories
+    for (const auto &plugin_pair : plugin_asset_directories) {
+        for (const auto &asset_dir : plugin_pair.second) {
+            std::filesystem::path candidate_path = std::filesystem::path(asset_dir) / filename;
+            try {
+                auto resolved_candidate = resolveAssetPath(candidate_path.string());
+                if (std::filesystem::exists(resolved_candidate)) {
+                    return resolved_candidate;
+                }
+            } catch (const std::runtime_error&) {
+                // Continue searching if this path fails to resolve
+                continue;
+            }
+        }
+    }
+
+    // 4. Try project-based resolution (existing behavior)
+    try {
+        return resolveProjectFile(filename);
+    } catch (const std::runtime_error&) {
+        // Continue to system-wide asset resolution
+    }
+
+    // 5. Try system-wide asset resolution using cpplocate
+    try {
+        return resolveAssetPath(filename);
+    } catch (const std::runtime_error&) {
+        // All resolution strategies failed
+    }
+
+    helios_runtime_error("ERROR (Context::resolveFilePath): Could not resolve file path for " + filename + ". File not found in current directory, registered plugin asset directories, project directory, or system asset directories.");
+    return {}; // This line should never be reached due to helios_runtime_error throwing
+}
+
 void Context::addTexture(const char *texture_file) {
     if (textures.find(texture_file) == textures.end()) { // texture has not already been added
 
@@ -61,16 +116,16 @@ void Context::addTexture(const char *texture_file) {
             helios_runtime_error("ERROR (Context::addTexture): Texture file " + std::string(texture_file) + " does not exist.");
         }
 
-        // Use resolved path for texture creation
-        auto resolved_path = resolveTexturePath(texture_file);
+        // Use unified path resolution
+        auto resolved_path = resolveFilePath(texture_file);
         textures.emplace(texture_file, Texture(resolved_path.string().c_str()));
     }
 }
 
 bool Context::doesTextureFileExist(const char *texture_file) const {
     try {
-        auto resolved_path = resolveTexturePath(texture_file);
-        return validateAssetPath(resolved_path);
+        auto resolved_path = resolveFilePath(texture_file);
+        return std::filesystem::exists(resolved_path);
     } catch (const std::runtime_error&) {
         return false;
     }

@@ -31,6 +31,10 @@ void Visualizer::clearContextGeometry() {
 void Visualizer::buildContextGeometry(helios::Context *context_ptr) {
     context = context_ptr;
 
+    // Register plugin asset directories
+    context_ptr->registerAssetDirectory("visualizer", "plugins/visualizer/textures");
+    context_ptr->registerAssetDirectory("visualizer", "plugins/visualizer/shaders");
+
     build_all_context_geometry = true;
 }
 
@@ -41,6 +45,10 @@ void Visualizer::buildContextGeometry(helios::Context *context_ptr, const std::v
     }
 
     context = context_ptr;
+
+    // Register plugin asset directories
+    context_ptr->registerAssetDirectory("visualizer", "plugins/visualizer/textures");
+    context_ptr->registerAssetDirectory("visualizer", "plugins/visualizer/shaders");
 
     build_all_context_geometry = false;
     contextUUIDs_build = UUIDs;

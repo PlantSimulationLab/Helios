@@ -158,7 +158,7 @@ std::vector<uint> CameraCalibration::addDGKColorboard(const helios::vec3 &centre
         std::cout << "WARNING (CameraCalibration::addDGKColorboard): Existing colorboard has been cleared in order to add colorboard." << std::endl;
     }
 
-    context->loadXML(helios::resolveSpectraPath("color_board/DGK_DKK_colorboard.xml").string().c_str(), true);
+    context->loadXML("color_board/DGK_DKK_colorboard.xml", true);
 
     assert(context->doesGlobalDataExist("ColorReference_DGK_01"));
 
@@ -172,7 +172,7 @@ std::vector<uint> CameraCalibration::addCalibriteColorboard(const helios::vec3 &
         std::cout << "WARNING (CameraCalibration::addCalibriteColorboard): Existing colorboard has been cleared in order to add colorboard." << std::endl;
     }
 
-    context->loadXML(helios::resolveSpectraPath("color_board/Calibrite_ColorChecker_Classic_colorboard.xml").string().c_str(), true);
+    context->loadXML("color_board/Calibrite_ColorChecker_Classic_colorboard.xml", true);
 
     assert(context->doesGlobalDataExist("ColorReference_Calibrite_01"));
 
@@ -186,7 +186,7 @@ std::vector<uint> CameraCalibration::addSpyderCHECKRColorboard(const helios::vec
         std::cout << "WARNING (CameraCalibration::addSpyderCHECKRColorboard): Existing colorboard has been cleared in order to add colorboard." << std::endl;
     }
 
-    context->loadXML(helios::resolveSpectraPath("color_board/Datacolor_SpyderCHECKR_24_colorboard.xml").string().c_str(), true);
+    context->loadXML("color_board/Datacolor_SpyderCHECKR_24_colorboard.xml", true);
 
     assert(context->doesGlobalDataExist("ColorReference_SpyderCHECKR_01"));
 
@@ -656,7 +656,7 @@ float CameraCalibration::getCameraResponseScale(const std::string &cameralabel, 
 }
 
 std::vector<uint> CameraCalibration::readROMCCanopy() {
-    std::ifstream inputFile(helios::resolveSpectraPath("external_data/HET01_UNI_scene.def").string());
+    std::ifstream inputFile("external_data/HET01_UNI_scene.def");
     std::vector<uint> iCUUIDs;
     float idata;
     // read the data from the file

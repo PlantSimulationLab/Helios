@@ -986,38 +986,6 @@ TEST_CASE("Asset Resolution Functions") {
         DOCTEST_CHECK(exception_thrown);
     }
     
-    SUBCASE("resolveShaderPath") {
-        // Test shader path resolution - should throw for non-existent file
-        bool exception_thrown = false;
-        try {
-            [[maybe_unused]] auto path = resolveShaderPath("nonexistent_shader.vert");
-        } catch (const std::runtime_error&) {
-            exception_thrown = true;
-        }
-        DOCTEST_CHECK(exception_thrown);
-    }
-    
-    SUBCASE("resolveTexturePath") {
-        // Test texture path resolution - should throw for non-existent file
-        bool exception_thrown = false;
-        try {
-            [[maybe_unused]] auto path = resolveTexturePath("nonexistent_texture.png");
-        } catch (const std::runtime_error&) {
-            exception_thrown = true;
-        }
-        DOCTEST_CHECK(exception_thrown);
-    }
-    
-    SUBCASE("resolveModelPath") {
-        // Test model path resolution - should throw for non-existent file
-        bool exception_thrown = false;
-        try {
-            [[maybe_unused]] auto path = resolveModelPath("nonexistent_model.obj");
-        } catch (const std::runtime_error&) {
-            exception_thrown = true;
-        }
-        DOCTEST_CHECK(exception_thrown);
-    }
     
     SUBCASE("resolveSpectraPath") {
         // Test spectra path resolution - should throw for non-existent file

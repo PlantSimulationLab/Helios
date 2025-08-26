@@ -2546,67 +2546,39 @@ std::filesystem::path helios::resolvePluginAsset(const std::string& pluginName, 
     return resolveAssetPath(pluginAssetPath);
 }
 
-std::filesystem::path helios::resolveShaderPath(const std::string& shaderFile) {
-    // First try as direct file path
-    if (shaderFile.find('/') != std::string::npos) {
-        return resolveAssetPath(shaderFile);
-    }
-    
-    // Try in visualizer shaders directory
-    std::string shaderPath = "plugins/visualizer/shaders/" + shaderFile;
-    return resolveAssetPath(shaderPath);
-}
 
-std::filesystem::path helios::resolveTexturePath(const std::string& textureFile) {
-    // First try as direct file path
-    if (textureFile.find('/') != std::string::npos) {
-        return resolveAssetPath(textureFile);
-    }
-    
-    // Try common texture locations
-    std::vector<std::string> texturePaths = {
-        "plugins/visualizer/textures/" + textureFile,
-        "plugins/plantarchitecture/assets/textures/" + textureFile,
-        "textures/" + textureFile
-    };
-    
-    for (const auto& texturePath : texturePaths) {
-        try {
-            return resolveAssetPath(texturePath);
-        } catch (const std::exception&) {
-            // Continue to next path
+std::filesystem::path helios::resolveFilePath(const std::string& filename) {
+    // 1. If absolute path, validate and return
+    std::filesystem::path filepath(filename);
+    if (filepath.is_absolute()) {
+        if (std::filesystem::exists(filepath)) {
+            return filepath;
+        } else {
+            helios_runtime_error("ERROR (helios::resolveFilePath): Absolute file path " + filename + " does not exist.");
         }
     }
-    
-    helios_runtime_error("ERROR (resolveTexturePath): Could not locate texture file '" + textureFile + 
-                       "' in any standard texture directory.");
-    return {}; // This line should never be reached due to helios_runtime_error throwing
-}
 
-std::filesystem::path helios::resolveModelPath(const std::string& modelFile) {
-    // First try as direct file path
-    if (modelFile.find('/') != std::string::npos) {
-        return resolveAssetPath(modelFile);
+    // 2. Check current working directory
+    std::filesystem::path cwd_path = std::filesystem::current_path() / filename;
+    if (std::filesystem::exists(cwd_path)) {
+        return std::filesystem::canonical(cwd_path);
     }
-    
-    // Try common model locations
-    std::vector<std::string> modelPaths = {
-        "plugins/plantarchitecture/assets/obj/" + modelFile,
-        "plugins/radiation/camera_light_models/" + modelFile,
-        "PLY/" + modelFile,
-        "models/" + modelFile
-    };
-    
-    for (const auto& modelPath : modelPaths) {
-        try {
-            return resolveAssetPath(modelPath);
-        } catch (const std::exception&) {
-            // Continue to next path
-        }
+
+    // 3. Try project-based resolution (existing behavior)
+    try {
+        return resolveProjectFile(filename);
+    } catch (const std::runtime_error&) {
+        // Continue to system-wide asset resolution
     }
-    
-    helios_runtime_error("ERROR (resolveModelPath): Could not locate model file '" + modelFile + 
-                       "' in any standard model directory.");
+
+    // 4. Try system-wide asset resolution using cpplocate
+    try {
+        return resolveAssetPath(filename);
+    } catch (const std::runtime_error&) {
+        // All resolution strategies failed
+    }
+
+    helios_runtime_error("ERROR (helios::resolveFilePath): Could not resolve file path for " + filename + ". File not found in current directory, project directory, or system asset directories.");
     return {}; // This line should never be reached due to helios_runtime_error throwing
 }
 
