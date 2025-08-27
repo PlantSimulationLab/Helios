@@ -2686,10 +2686,43 @@ void ProjectBuilder::visualize() {
                     }
                 }
 
-                ImGui::SetNextItemWidth(150);
-                dropDown("Label", calculation_label, calculation_labels_primitive);
-                ImGui::SetNextItemWidth(150);
-                dropDown("Operation", curr_operation, operation_choices);
+                for (int i = 0; i < calculation_labels.size(); i++) {
+                    if (i > 0) {
+                        ImGui::SetNextItemWidth(40);
+                        dropDown("##operator" + std::to_string(i), calculation_operators[i - 1], calculation_operators_labels);
+                    }
+                    ImGui::Text("Scalar:");
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(50);
+                    std::string scalar_label = "##Scalar" + std::to_string(i);
+                    ImGui::InputFloat(scalar_label.c_str(), &calculation_scalars[i]);
+                    ImGui::SameLine();
+                    ImGui::Text("Variable:");
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(100);
+                    dropDown("##Variable" + std::to_string(i), calculation_label, calculation_labels_primitive);
+                    ImGui::SameLine();
+                    ImGui::Text("Operation:");
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(100);
+                    dropDown("##Operation" + std::to_string(i), curr_operation, operation_choices);
+                    if (i == calculation_labels.size() - 1) {
+                        ImGui::SameLine();
+                        if (ImGui::Button("Add Operand")) {
+                            calculation_labels.push_back("");
+                            calculation_scalars.push_back(1.0);
+                            calculation_operators.push_back("+");
+                        }
+                        if (i > 0) {
+                            ImGui::SameLine();
+                            if (ImGui::Button("Remove")) {
+                                calculation_labels.pop_back();
+                                calculation_scalars.pop_back();
+                                calculation_operators.pop_back();
+                            }
+                        }
+                    }
+                }
 
                 if (ImGui::Button("Calculate Result:")) {
                     // Get all relevant primitives
