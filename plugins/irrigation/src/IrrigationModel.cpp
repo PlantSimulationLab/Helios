@@ -17,24 +17,26 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
-#include <Eigen/Dense>  // For matrix operations
+// #include <Eigen/Dense>  // For matrix operations
 #include <unordered_set>  // For std::unordered_set
 #include <queue>          // For std::queue
 #include <iomanip>  // for std::setw and std::setprecision
 
-#include <algorithm>    // For std::find
+#include <algorithm> // For std::find
+
+#include "global.h"
 
 // Add parameter validation
 void IrrigationModel::validateParameters(double fieldLength, double fieldWidth,
                                        double sprinklerSpacing, double lineSpacing) const {
     if (fieldLength <= 0 || fieldWidth <= 0) {
-        throw std::runtime_error("Field dimensions must be positive");
+        helios::helios_runtime_error("ERROR (IrrigationModel::validateParameters): Field dimensions must be positive");
     }
     if (sprinklerSpacing <= 0 || lineSpacing <= 0) {
-        throw std::runtime_error("Spacing values must be positive");
+        helios::helios_runtime_error("ERROR (IrrigationModel::validateParameters): Spacing values must be positive");
     }
     if (sprinklerSpacing > fieldLength || lineSpacing > fieldWidth) {
-        throw std::runtime_error("Spacing values cannot exceed field dimensions");
+        helios::helios_runtime_error("ERROR (IrrigationModel::validateParameters): Spacing values cannot exceed field dimensions");
     }
 }
 
@@ -83,6 +85,8 @@ void IrrigationModel::createCompleteSystem(double Pw, double fieldLength, double
 
     createSprinklerSystem(fieldLength, fieldWidth, sprinklerSpacing, lineSpacing, connectionType);
     addSubmainAndWaterSource(fieldLength, fieldWidth, connectionType, submainPos);
+    validateParameters(fieldLength, fieldWidth, sprinklerSpacing, lineSpacing);
+    validateHydraulicSystem();
 
     // Set fixed pressure at water source
     if (waterSourceId != -1) {
@@ -720,6 +724,12 @@ HydraulicResults IrrigationModel::calculateHydraulics(const std::string& nozzleT
         nodeIndexMap[orderedNodeIds[i]] = i;  // 0-based indexing
     }
 
+   // Output node and index in nodeIndexMap
+    std::cout << "Node Index Map:\n";
+    for (const auto& [id, node] : nodeIndexMap) {
+        std::cout << "Node " << id << " -> index " << node << "\n";
+    }
+
     // Water source fixed on the last row
     int waterSourceId = orderedNodeIds.back();
     int waterSourceIndex = nodeIndexMap[waterSourceId];
@@ -730,7 +740,7 @@ HydraulicResults IrrigationModel::calculateHydraulics(const std::string& nozzleT
     std::vector<double> nodalPressure(numNodes, 0.0);
     std::vector<double> nodalPressure_old(numNodes, 0.0);
 
-    // FIX: Properly set water source - DO THIS ONCE
+    // FIX: Properly set water source for once
     A[waterSourceIndex][waterSourceIndex] = 1.0;
     RHS[waterSourceIndex] = Pw * 6894.76;
 
@@ -755,30 +765,28 @@ HydraulicResults IrrigationModel::calculateHydraulics(const std::string& nozzleT
     }
 
     double err = 1e6;
-    int iter = 0;
-    // Update RHS
-    for (int n = 0; n < numNodes; ++n) {
-        if (n == waterSourceIndex) continue;
-        RHS[n] = currentSources[n];
-    }
+    int iter = 1;
+
 
     while (std::abs(err) > err_max && iter < max_iter) {
         std::cout << "\n=== Iteration " << iter << " ===\n";
 
-
-        for (int i = 0; i < numNodes; ++i) {
-            if (i == waterSourceIndex) continue;  // Don't touch water source row!
-            A[i][i] = 0.0;
-        }
-
         // Build matrix A (water source row remains A[ws][ws] = 1.0)
-        for (const auto& [id, node] : nodes) {
-            int i = nodeIndexMap[id];
-            if (i == waterSourceIndex) continue;  // Skip water source
+        for (int orderedIndex = 0; orderedIndex < orderedNodeIds.size(); ++orderedIndex) {
+            int id = orderedNodeIds[orderedIndex];
+            const auto& node = nodes[id];
 
-            // DON'T reset A[i][i] here - it was already reset above
+            std::cout << "\n orderedIndex" << orderedIndex << " id " << id << "\n";
+
+            if (orderedIndex == waterSourceIndex) continue;  // Skip water source
+            std::cout << "\n watersourceId " << waterSourceId << "\n";
+
+            A[orderedIndex][orderedIndex] = 0.0;
+
             for (size_t j = 0; j < node.neighbors.size(); ++j) {
                 int neighborId = node.neighbors[j];
+                std::cout << neighborId << "\n";
+
                 if (!nodeIndexMap.count(neighborId)) continue;
 
                 int neighborIdx = nodeIndexMap[neighborId];
@@ -786,16 +794,20 @@ HydraulicResults IrrigationModel::calculateHydraulics(const std::string& nozzleT
                 if (!link) continue;
 
                 double Rval = calculateResistance(Re[id][j], W_bar[id][j], *link, iter);
-                Rval = std::max(Rval, 1e-12);
+                //Rval = std::max(Rval, 1e-12);
                 R[id][j] = Rval;
 
-                A[i][i] -= 1.0 / Rval;
-                A[i][neighborIdx] = 1.0 / Rval;
+                A[orderedIndex][orderedIndex] -= 1.0 / Rval;
+                A[orderedIndex][neighborIdx] = 1.0 / Rval;
             }
+
         }
-
-
-
+        // Update RHS
+        for (int n = 0; n < numNodes; ++n) {
+            if (n == waterSourceIndex) continue;
+            RHS[n] = currentSources[n];
+            std::cout << RHS[n] << "\n";
+        }
 
         // Debug output
         std::cout << "Matrix A (water source at " << waterSourceIndex << "):\n";
@@ -810,7 +822,7 @@ HydraulicResults IrrigationModel::calculateHydraulics(const std::string& nozzleT
         // Solve linear system
         for (int gs_iter = 0; gs_iter < 100; ++gs_iter) {
             for (int i = 0; i < numNodes; ++i) {
-                if (i == waterSourceIndex) continue;
+                //if (i == waterSourceIndex) continue;
 
                //check if row is valid
                 if (std::abs(A[i][i]) < 1e-12) {
@@ -820,10 +832,10 @@ HydraulicResults IrrigationModel::calculateHydraulics(const std::string& nozzleT
 
                 double sum = RHS[i];
                 for (int j = 0; j < numNodes; ++j) {
-                    if (i != j) sum -= A[i][j] * nodalPressure[j];
+                    if (i != j) sum -= A[i][j] * nodalPressure[j]; // Aᵢⱼ·xⱼ
                 }
 
-                double new_pressure = sum / A[i][i];
+                double new_pressure = sum / A[i][i]; // xᵢ = (bᵢ - Σ Aᵢⱼ·xⱼ) / Aᵢᵢ
                 if (std::isnan(new_pressure) || std::isinf(new_pressure)) {
                     std::cerr << "NaN pressure at node " << i << ", using old value\n";
                     new_pressure = nodalPressure_old[i];
@@ -897,7 +909,7 @@ HydraulicResults IrrigationModel::calculateHydraulics(const std::string& nozzleT
         }
 
         // Error calculation
-        if (iter == 0) {
+        if (iter == 1) {
             err = 1e6;
         } else {
             double norm_diff = 0.0, norm_old = 0.0;
@@ -907,7 +919,10 @@ HydraulicResults IrrigationModel::calculateHydraulics(const std::string& nozzleT
                 norm_diff += diff * diff;
                 norm_old += nodalPressure_old[i] * nodalPressure_old[i];
             }
-            err = (norm_old > 1e-12) ? (norm_diff / norm_old) : norm_diff;
+
+            err = (norm_old > 1e-12) ? std::sqrt(norm_diff / norm_old) : std::sqrt(norm_diff); //relative error
+           //err = std::sqrt(norm_diff/ numNodes);//RMS error
+
         }
 
         std::cout << "Error: " << err << std::endl;
@@ -929,6 +944,14 @@ HydraulicResults IrrigationModel::calculateHydraulics(const std::string& nozzleT
         results.nodalPressures[i] = nodalPressure[i] / 6894.76;
     }
 
+    // update node's pressure
+    for (const auto& [id, node] : nodes) {
+        if (nodeIndexMap.count(id)) {
+            int matrixIndex = nodeIndexMap[id];
+            nodes[id].pressure = results.nodalPressures[matrixIndex];
+        }
+    }
+
     // Link flows
     for (size_t i = 0; i < links.size(); ++i) {
         const auto& link = links[i];
@@ -939,6 +962,8 @@ HydraulicResults IrrigationModel::calculateHydraulics(const std::string& nozzleT
             results.flowRates[i] = 0.0;
             continue;
         }
+
+
 
         auto it = std::find(nodes[from].neighbors.begin(), nodes[from].neighbors.end(), to);
         if (it != nodes[from].neighbors.end()) {
@@ -1139,20 +1164,16 @@ HydraulicResults IrrigationModel::calculateHydraulics(const std::string& nozzleT
 */
 
 void IrrigationModel::validateHydraulicSystem() const {
-    // 1. Water source validation
+    // Water source validation
     if (waterSourceId == -1) {
-        throw std::runtime_error("No water source defined!");
+        helios::helios_runtime_error("ERROR (IrrigationModel::validateHydraulicSystem) No water source defined");
     }
 
     if (!nodes.count(waterSourceId)) {
-        throw std::runtime_error("Water source node doesn't exist!");
+        helios::helios_runtime_error("ERROR (IrrigationModel::validateHydraulicSystem) Water source node doesn't exist");
     }
 
-    // if (!nodes.at(waterSourceId).is_fixed) {
-    //     throw std::runtime_error("Water source node not marked as fixed!");
-    // }
-
-    // 2. connectivity check, traversing through the network
+    // connectivity check, traversing through the network
     std::unordered_set<int> connectedNodes;
     std::queue<int> nodesToProcess;
     nodesToProcess.push(waterSourceId);
@@ -1175,13 +1196,13 @@ void IrrigationModel::validateHydraulicSystem() const {
         }
     }
 
-    // 3. Report disconnected nodes
+    // Report disconnected nodes
     size_t disconnectedCount = nodes.size() - connectedNodes.size();
     if (disconnectedCount > 0) {
         std::cerr << "Warning: " << disconnectedCount
                  << " nodes are disconnected from the water source!" << std::endl;
 
-        // Optional: List disconnected nodes
+        // List disconnected nodes
         for (const auto& [id, node] : nodes) {
             if (!connectedNodes.count(id)) {
                 std::cerr << "  - Node " << id << " at ("
@@ -1191,21 +1212,21 @@ void IrrigationModel::validateHydraulicSystem() const {
         }
     }
 
-    // 4. Link property validation
+    // Link property validation
     for (const auto& link : links) {
         if (link.diameter <= 0) {
-            throw std::runtime_error("Invalid diameter (<= 0) in link between nodes " +
+            helios::helios_runtime_error("ERROR (IrrigationModel::validateHydraulicSystem) Invalid diameter (<= 0) in link between nodes " +
                                    std::to_string(link.from) + " and " +
                                    std::to_string(link.to));
         }
         if (link.length <= 0) {
-            throw std::runtime_error("Invalid length (<= 0) in link between nodes " +
+            helios::helios_runtime_error("ERROR (IrrigationModel::validateParameters) Invalid length (<= 0) in link between nodes " +
                                    std::to_string(link.from) + " and " +
                                    std::to_string(link.to));
         }
     }
 
-    // 5. System summary
+    // printing system summary
     std::cout << "System validation complete:\n"
               << "  - Total nodes: " << nodes.size() << "\n"
               << "  - Connected nodes: " << connectedNodes.size() << "\n"
@@ -1271,7 +1292,8 @@ double IrrigationModel::calculateEmitterFlow(const std::string& nozzleType, doub
         return k * pow(pressure_psi, x) * 1.052e-6;
     }
     else {
-        throw std::invalid_argument("Unknown nozzle type: " + nozzleType);
+        helios::helios_runtime_error("ERROR (IrrigationModel::calculateEmitterFlow): Unknown nozzle type");
+        return 0.0;
     }
 }
 

@@ -94,11 +94,16 @@ public:
     // Print network in visualization format
     void printNetwork() const;
     HydraulicResults calculateHydraulics(const std::string& nozzleType, double Qspecified, double Pw);
-    //diagonistic test on the irrigation system
-    void validateHydraulicSystem() const;
     // Get system summary as string
     std::string getSystemSummary() const;
     double calculateEmitterFlow(const std::string& nozzleType, double pressure);
+
+
+    //! Self-test
+    /**
+     * \return 0 if test was successful, 1 if test failed.
+     */
+    static int selfTest(int argc = 0, char** argv = nullptr);
 
 
 private:
@@ -106,8 +111,7 @@ private:
     int waterSourceId = -1;  // Tracks water source node ID
 
     // Helper methods
-    void validateParameters(double fieldLength, double fieldWidth,
-                          double sprinklerSpacing, double lineSpacing) const;
+
 
     void createSprinklerSystem(double fieldLength, double fieldWidth,
                              double sprinklerSpacing, double lineSpacing,
@@ -115,6 +119,11 @@ private:
 
     Position calculateWaterSourcePosition(double fieldLength, double fieldWidth,
                                         const std::string& lateralDirection) const;
+
+    void validateParameters(double fieldLength, double fieldWidth,
+                  double sprinklerSpacing, double lineSpacing) const; //include into the createCompleteSystem()
+    void validateHydraulicSystem() const;
+
 
    // void addSubmainAndWaterSource(double fieldLength, double fieldWidth,
     //                                         const std::string& lateralDirection);

@@ -116,7 +116,7 @@ def visualize_complete_system(nodes, links):
     for node_id, node in nodes.items():
         style = styles['nodes'].get(node['type'], {'color': 'gray', 'marker': 'o', 'size': 80})
 
-        # Dynamic color if pressure > 0 (optional)
+        # Dynamic color if pressure > 0
         node_color = cmap(norm(node['pressure'])) if ('cmap' in locals() and node['pressure'] > 0) else style['color']
 
         ax.scatter(node['x'], node['y'],
@@ -140,20 +140,20 @@ def visualize_complete_system(nodes, links):
         elif node['type'] == 'lateral_sprinkler_jn':
             offset_x = 0.4
 
-        ax.text(node['x'] + offset_x,
-                node['y'] + offset_y,
-                label,
-                ha='center', va='center', fontsize=8,
-                bbox=dict(facecolor='white', alpha=0.7, pad=2, edgecolor='none'),
-                zorder=10)
+      #  ax.text(node['x'] + offset_x,
+        #        node['y'] + offset_y,
+        #        label,
+         #       ha='center', va='center', fontsize=8,
+         #       bbox=dict(facecolor='white', alpha=0.7, pad=2, edgecolor='none'),
+          #      zorder=10)
 
         # Label key nodes
-        if node['type'] in ['waterSource', 'lateral_sub_jn']:
-            offset = 0.4 if node['type'] == 'waterSource' else 0.3
-            ax.text(node['x'], node['y'] + offset, node['type'],
-                    ha='center', va='bottom', fontsize=10,
-                    weight='bold', zorder=10,
-                    bbox=dict(facecolor='white', alpha=0.8, pad=2, edgecolor='none'))
+        #if node['type'] in ['waterSource', 'lateral_sub_jn']:
+        #    offset = 0.4 if node['type'] == 'waterSource' else 0.3
+           # ax.text(node['x'], node['y'] + offset, node['type'],
+           #         ha='center', va='bottom', fontsize=10,
+           #         weight='bold', zorder=10,
+           #         bbox=dict(facecolor='white', alpha=0.8, pad=2, edgecolor='none'))
 
     # Legend
     legend_elements = [

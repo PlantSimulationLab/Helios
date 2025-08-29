@@ -45,8 +45,13 @@ int main(){
     std::cout << "Total links: " << system.links.size() << "\n";
 
     system.validateHydraulicSystem();
-    const double Q_specified = system.calculateEmitterFlow("NPC", Pw*6894.76);
+    const double Q_specified = system.calculateEmitterFlow("NPC", Pw);
     HydraulicResults results = system.calculateHydraulics("NPC",Q_specified, Pw);
+    std::cout << "NodalPressures: ";
+    for (double p : results.nodalPressures) {
+        std::cout << p << " ";
+    }
+    std::cout << "\n";
 
     for (const auto& [id, node] : system.nodes) {
         std::cout << "Node " << id << " (" << node.type << ") pressure: "
