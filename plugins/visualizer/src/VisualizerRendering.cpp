@@ -941,6 +941,11 @@ void Visualizer::plotUpdate() {
 }
 
 void Visualizer::plotUpdate(bool hide_window) {
+    // Check if window is marked for closure to prevent hanging on glfwSwapBuffers()
+    if (!headless && window != nullptr && glfwWindowShouldClose(scast<GLFWwindow *>(window))) {
+        return;  // Don't render to a window that should be closed
+    }
+
     if (message_flag) {
         std::cout << "Updating the plot..." << std::flush;
     }

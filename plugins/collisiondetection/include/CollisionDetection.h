@@ -19,6 +19,7 @@
 #include <set>
 #include <unordered_set>
 #include <unordered_map>
+#include <queue>
 #include "Context.h"
 
 /**
@@ -42,6 +43,44 @@ public:
         helios::vec3 axis; //!< Normalized axis direction (apex to base)
         float half_angle; //!< Half-angle of cone in radians
         float height; //!< Height of cone (0 = infinite)
+    };
+    
+    /**
+     * \brief Angular bin structure for rasterization-based collision detection
+     */
+    struct AngularBins {
+        int theta_divisions;  //!< Number of azimuthal divisions (around cone axis)
+        int phi_divisions;    //!< Number of polar divisions (from apex to cone edge)  
+        float angular_resolution; //!< Steradians per bin
+        
+        // Coverage data using packed bits for memory efficiency
+        std::vector<uint8_t> coverage_bits;  //!< Packed coverage bits [theta][phi]
+        std::vector<float> depth_values;     //!< Depth values for covered bins only
+        
+        AngularBins(int theta_div, int phi_div) 
+            : theta_divisions(theta_div), phi_divisions(phi_div) {
+            int total_bins = theta_div * phi_div;
+            coverage_bits.resize((total_bins + 7) / 8, 0); // Packed bits
+            depth_values.resize(total_bins, std::numeric_limits<float>::max());
+            angular_resolution = (2.0f * M_PI) / float(theta_div * phi_div);
+        }
+        
+        // Fast bit operations for coverage testing
+        bool isCovered(int theta, int phi) const {
+            int index = theta * phi_divisions + phi;
+            return coverage_bits[index >> 3] & (1 << (index & 7));
+        }
+        
+        void setCovered(int theta, int phi, float depth) {
+            int index = theta * phi_divisions + phi;
+            coverage_bits[index >> 3] |= (1 << (index & 7));
+            depth_values[index] = std::min(depth_values[index], depth);
+        }
+        
+        void clear() {
+            std::fill(coverage_bits.begin(), coverage_bits.end(), 0);
+            std::fill(depth_values.begin(), depth_values.end(), std::numeric_limits<float>::max());
+        }
     };
 
     // -------- GENERIC RAY-TRACING STRUCTURES --------
@@ -149,7 +188,7 @@ public:
         /**
          * \brief Convert packet back to individual RayQuery objects
          */
-        std::vector<RayQuery> toRayQueries() const {
+        [[nodiscard]] std::vector<RayQuery> toRayQueries() const {
             std::vector<RayQuery> queries;
             queries.reserve(ray_count);
             for (size_t i = 0; i < ray_count; ++i) {
@@ -161,7 +200,7 @@ public:
         /**
          * \brief Get memory usage of the packet
          */
-        size_t getMemoryUsage() const {
+        [[nodiscard]] size_t getMemoryUsage() const {
             size_t base_memory = (origins.size() + directions.size()) * sizeof(helios::vec3) +
                                 max_distances.size() * sizeof(float) +
                                 results.size() * sizeof(HitResult);
@@ -203,7 +242,7 @@ public:
         /**
          * \brief Get all results from processed packets
          */
-        std::vector<HitResult> getAllResults() const {
+        [[nodiscard]] std::vector<HitResult> getAllResults() const {
             std::vector<HitResult> all_results;
             all_results.reserve(total_rays);
             
@@ -226,7 +265,7 @@ public:
         /**
          * \brief Get total memory usage of the stream
          */
-        size_t getMemoryUsage() const {
+        [[nodiscard]] size_t getMemoryUsage() const {
             size_t total_memory = 0;
             for (const auto& packet : packets) {
                 total_memory += packet.getMemoryUsage();
@@ -423,6 +462,7 @@ public:
      */
     OptimalPathResult findOptimalConePath(const helios::vec3 &apex, const helios::vec3 &centralAxis, float half_angle, float height = 0.0f, int initialSamples = 256);
 
+
     // -------- GRID-BASED INTERSECTION --------
 
     /**
@@ -589,6 +629,26 @@ public:
      */
     bool findNearestSolidObstacleInCone(const helios::vec3 &apex, const helios::vec3 &axis, float half_angle, float height, const std::vector<uint> &candidate_UUIDs, float &distance, helios::vec3 &obstacle_direction, int num_rays = 64);
 
+    //! Find nearest solid obstacle in cone with tree identification for per-tree BVH optimization
+    /**
+     * \brief Find the nearest solid obstacle within a cone-shaped detection volume with tree identification
+     * 
+     * This method is optimized for per-tree BVH systems by identifying the querying tree through
+     * plant primitive UUIDs, enabling efficient spatial filtering of collision candidates.
+     * 
+     * \param[in] apex Location of the cone apex (plant growth point)
+     * \param[in] axis Central axis direction of the cone (growth direction, normalized)
+     * \param[in] half_angle Half-angle of the cone in radians
+     * \param[in] height Height of the cone (detection distance)
+     * \param[in] candidate_UUIDs Vector of obstacle primitive UUIDs to check for collisions
+     * \param[in] plant_primitives Vector of plant primitive UUIDs to identify the querying tree
+     * \param[out] distance Distance to the nearest obstacle surface
+     * \param[out] obstacle_direction Direction vector from apex toward the nearest obstacle point
+     * \param[in] num_rays Number of rays to cast within the cone for sampling
+     * \return True if an obstacle was found within the cone, false otherwise
+     */
+    bool findNearestSolidObstacleInCone(const helios::vec3 &apex, const helios::vec3 &axis, float half_angle, float height, const std::vector<uint> &candidate_UUIDs, const std::vector<uint> &plant_primitives, float &distance, helios::vec3 &obstacle_direction, int num_rays = 64);
+
     /**
      * \brief Detect attraction points within a perception cone and find optimal direction
      * \param[in] vertex Vertex location of the perception cone 
@@ -650,6 +710,74 @@ public:
      * \brief Disable hierarchical BVH (use single unified BVH)
      */
     void disableHierarchicalBVH();
+
+    /**
+     * \brief Build static BVH for obstacles and non-growing geometry
+     * 
+     * Builds the static BVH using geometry set by setStaticGeometry().
+     * Should be called after enabling hierarchical BVH and setting static geometry.
+     */
+    void buildStaticBVH();
+
+    /**
+     * \brief Enable tree-based BVH isolation for spatially separated trees
+     * \param[in] isolation_distance Spatial distance threshold for tree isolation
+     * 
+     * When enabled, creates separate BVHs for each tree object that are spatially
+     * separated by at least isolation_distance. This provides linear scaling for
+     * scenarios with multiple non-interacting trees.
+     */
+    void enableTreeBasedBVH(float isolation_distance = 5.0f);
+
+    /**
+     * \brief Disable tree-based BVH isolation
+     */
+    void disableTreeBasedBVH();
+    
+    /**
+     * \brief Check if tree-based BVH isolation is enabled
+     * \return True if tree-based BVH is enabled, false otherwise
+     */
+    [[nodiscard]] bool isTreeBasedBVHEnabled() const;
+    
+    /**
+     * \brief Initialize spatial grid for fast static obstacle lookups
+     */
+    void initializeObstacleSpatialGrid();
+
+    /**
+     * \brief Register a tree object for per-tree BVH isolation
+     * \param[in] tree_object_id Object ID of the tree
+     * \param[in] tree_primitives Primitive UUIDs belonging to this tree
+     * 
+     * Associates primitives with a specific tree for isolated collision detection.
+     * Should be called before plant growth begins.
+     */
+    void registerTree(uint tree_object_id, const std::vector<uint>& tree_primitives);
+
+    /**
+     * \brief Set static obstacle geometry for per-tree collision detection
+     * \param[in] obstacle_primitives Primitive UUIDs that represent static obstacles
+     * 
+     * These primitives will be included in ALL tree collision detection queries.
+     * Should include ground, buildings, and other permanent obstacles.
+     */
+    void setStaticObstacles(const std::vector<uint>& obstacle_primitives);
+
+    /**
+     * \brief Get relevant geometry for tree-based collision detection
+     * \param[in] query_position Position of the collision query
+     * \param[in] query_primitives Primitives making the query (to identify source tree)
+     * \return Vector of primitive UUIDs that should be considered for collision
+     * 
+     * Returns geometry that includes:
+     * - Static obstacles (always relevant)
+     * - Source tree's own geometry 
+     * - Nearby trees within interaction distance
+     */
+    std::vector<uint> getRelevantGeometryForTree(const helios::vec3& query_position, 
+                                                const std::vector<uint>& query_primitives = {}, 
+                                                float max_distance = 15.0f);
 
     /**
      * \brief Check if BVH is valid and up-to-date
@@ -821,7 +949,7 @@ private:
         /**
          * \brief Get memory usage in bytes
          */
-        size_t getMemoryUsage() const {
+        [[nodiscard]] size_t getMemoryUsage() const {
             return (aabb_mins.size() + aabb_maxs.size()) * sizeof(helios::vec3) +
                    (left_children.size() + right_children.size() + 
                     primitive_starts.size() + primitive_counts.size()) * sizeof(uint32_t) +
@@ -942,6 +1070,9 @@ private:
     //! Flag to track if BVH needs rebuilding
     bool bvh_dirty;
 
+    //! Flag to track if SoA structures need rebuilding
+    bool soa_dirty;
+
     //! Flag to control automatic BVH rebuilds (default: true)
     bool automatic_bvh_rebuilds;
     
@@ -967,9 +1098,40 @@ private:
     
     //! Helper method for hierarchical BVH updates
     void updateHierarchicalBVH(const std::set<uint> &requested_geometry, bool force_rebuild);
+
+    // -------- TREE-BASED BVH DATA STRUCTURES --------
     
-    //! Build static BVH from static geometry cache
-    void buildStaticBVH();
+    // Forward declaration
+    struct TreeBVH;
+    
+    //! Flag to enable per-tree BVH isolation for better scaling
+    bool tree_based_bvh_enabled;
+    
+    //! Spatial distance threshold for tree isolation (objects closer than this interact)
+    float tree_isolation_distance;
+    
+    //! Cache of object-to-tree mappings for efficient lookup
+    std::unordered_map<uint, uint> object_to_tree_map;
+    
+    //! Static obstacle primitives (always included in collision detection)
+    std::vector<uint> static_obstacle_primitives;
+    
+    //! Spatial hash grid for fast static obstacle lookups to avoid O(N) distance checks
+    struct ObstacleSpatialGrid {
+        float cell_size;
+        std::unordered_map<int64_t, std::vector<uint>> grid_cells;
+        
+        [[nodiscard]] int64_t getGridKey(float x, float y) const {
+            auto grid_x = static_cast<int32_t>(std::floor(x / cell_size));
+            auto grid_y = static_cast<int32_t>(std::floor(y / cell_size));
+            return (static_cast<int64_t>(grid_x) << 32) | static_cast<uint32_t>(grid_y);
+        }
+        
+        [[nodiscard]] std::vector<uint> getRelevantObstacles(const helios::vec3& position, float radius) const;
+    };
+    
+    mutable ObstacleSpatialGrid obstacle_spatial_grid;
+    bool obstacle_spatial_grid_initialized;
 
     // -------- GAP DETECTION DATA STRUCTURES --------
 
@@ -993,6 +1155,102 @@ private:
         std::vector<int> sample_indices; //!< Indices of ray samples in this gap
     };
 
+    /**
+     * \brief Spatial hash grid for efficient gap detection
+     */
+    struct SpatialHashGrid {
+        struct Cell {
+            std::vector<size_t> sample_indices; //!< Indices of samples in this cell
+        };
+        
+        std::vector<std::vector<Cell>> grid; //!< 2D grid for spherical coordinates
+        int theta_resolution; //!< Number of theta divisions
+        int phi_resolution; //!< Number of phi divisions
+        float theta_step; //!< Angular step size in theta
+        float phi_step; //!< Angular step size in phi
+        
+        explicit SpatialHashGrid(int theta_res = 32, int phi_res = 16)
+            : theta_resolution(theta_res), phi_resolution(phi_res) {
+            grid.resize(theta_resolution);
+            for (auto& row : grid) {
+                row.resize(phi_resolution);
+            }
+            theta_step = M_PI / theta_resolution;
+            phi_step = 2.0f * M_PI / phi_resolution;
+        }
+        
+        void clear() {
+            for (auto& row : grid) {
+                for (auto& cell : row) {
+                    cell.sample_indices.clear();
+                }
+            }
+        }
+        
+        [[nodiscard]] std::pair<int, int> getGridIndex(const helios::vec3& direction) const {
+            // Convert direction to spherical coordinates
+            float theta = acosf(std::max(-1.0f, std::min(1.0f, direction.z)));
+            float phi = atan2f(direction.y, direction.x);
+            if (phi < 0) phi += 2.0f * M_PI;
+            
+            int theta_idx = std::min((int)(theta / theta_step), theta_resolution - 1);
+            int phi_idx = std::min((int)(phi / phi_step), phi_resolution - 1);
+            
+            return {theta_idx, phi_idx};
+        }
+        
+        void addSample(size_t sample_idx, const helios::vec3& direction) {
+            auto [theta_idx, phi_idx] = getGridIndex(direction);
+            grid[theta_idx][phi_idx].sample_indices.push_back(sample_idx);
+        }
+        
+        [[nodiscard]] std::vector<size_t> getNearbyIndices(const helios::vec3& direction, int radius = 1) const {
+            auto [center_theta, center_phi] = getGridIndex(direction);
+            std::vector<size_t> nearby_indices;
+            
+            for (int dt = -radius; dt <= radius; dt++) {
+                for (int dp = -radius; dp <= radius; dp++) {
+                    int theta_idx = center_theta + dt;
+                    int phi_idx = (center_phi + dp + phi_resolution) % phi_resolution;
+                    
+                    if (theta_idx >= 0 && theta_idx < theta_resolution) {
+                        const auto& cell = grid[theta_idx][phi_idx];
+                        nearby_indices.insert(nearby_indices.end(), 
+                                            cell.sample_indices.begin(), 
+                                            cell.sample_indices.end());
+                    }
+                }
+            }
+            
+            return nearby_indices;
+        }
+    };
+
+    /**
+     * \brief Tree-based BVH structure for spatial isolation
+     */
+    struct TreeBVH {
+        uint tree_object_id;                   //!< Object ID of the tree
+        helios::vec3 tree_center;              //!< Spatial center of the tree
+        float tree_radius;                     //!< Spatial radius of the tree
+        std::vector<BVHNode> nodes;            //!< BVH nodes for this tree
+        std::vector<uint> primitive_indices;   //!< Primitive indices for this tree
+        BVHNodesSoA soa_structure;             //!< Optimized SoA structure for this tree
+        bool soa_dirty;                        //!< Whether SoA structure needs rebuilding
+        
+        TreeBVH() : tree_object_id(0), tree_center(0,0,0), tree_radius(0), soa_dirty(true) {}
+        
+        void clear() {
+            nodes.clear();
+            primitive_indices.clear();
+            soa_structure = BVHNodesSoA();
+            soa_dirty = true;
+        }
+    };
+
+    //! Map from tree object ID to tree-specific BVH
+    std::unordered_map<uint, TreeBVH> tree_bvh_map;
+
     // -------- PRIVATE HELPER METHODS --------
 
     /**
@@ -1012,10 +1270,15 @@ private:
     void calculateAABB(const std::vector<uint> &primitives, helios::vec3 &aabb_min, helios::vec3 &aabb_max) const;
 
     /**
-     * \brief Recursively build BVH using Surface Area Heuristic
-     * \param[in] node_index Index of current node being built
-     * \param[in,out] primitives Vector of primitive UUIDs to partition
-     * \param[in] depth Current recursion depth
+     * \brief Recursively builds the BVH (Bounding Volume Hierarchy) for the given primitives.
+     *
+     * This function initializes and processes BVH nodes for efficient collision detection
+     * or spatial queries, using recursive subdivision based on a surface area heuristic.
+     *
+     * \param[in] node_index Index of the current BVH node being processed
+     * \param[in] primitive_start Starting index of the primitives for the current node
+     * \param[in] primitive_count Number of primitives to consider for the current node
+     * \param[in] depth Current depth of the recursion
      */
     void buildBVHRecursive(uint node_index, size_t primitive_start, size_t primitive_count, int depth);
 
@@ -1101,6 +1364,16 @@ private:
     bool coneAABBIntersect(const Cone &cone, const helios::vec3 &aabb_min, const helios::vec3 &aabb_max);
 
     /**
+     * \brief Fast cone-AABB intersection test optimized for high-throughput filtering
+     * \param[in] cone Cone to test
+     * \param[in] aabb_min Minimum corner of AABB  
+     * \param[in] aabb_max Maximum corner of AABB
+     * \return True if cone and AABB intersect
+     * \note This version uses aggressive early rejection for 99%+ geometry elimination
+     */
+    bool coneAABBIntersectFast(const Cone &cone, const helios::vec3 &aabb_min, const helios::vec3 &aabb_max);
+
+    /**
      * \brief Test if a cone intersects an AABB
      * \param[in] cone_origin Origin point of the cone
      * \param[in] cone_direction Direction vector of the cone (normalized)
@@ -1154,6 +1427,28 @@ private:
      * \return Vector of detected gaps
      */
     std::vector<Gap> detectGapsInCone(const helios::vec3 &apex, const helios::vec3 &central_axis, float half_angle, float height, int num_samples);
+
+
+    /**
+     * \brief Get candidate primitives within cone region using BVH culling
+     * \param[in] apex Cone apex position 
+     * \param[in] central_axis Central axis direction (normalized)
+     * \param[in] half_angle Half-angle of cone in radians
+     * \param[in] height Maximum distance to sample
+     * \return Vector of primitive UUIDs that could intersect the cone
+     */
+    std::vector<uint> getCandidatePrimitivesInCone(const helios::vec3 &apex, const helios::vec3 &central_axis, float half_angle, float height);
+
+    /**
+     * \brief Get candidate primitives using spatial grid optimization
+     * \param[in] cone Cone object for filtering
+     * \param[in] apex Cone apex position
+     * \param[in] central_axis Central axis direction (normalized)
+     * \param[in] half_angle Half-angle of cone in radians
+     * \param[in] height Maximum distance to sample
+     * \return Vector of primitive UUIDs that could intersect the cone
+     */
+    std::vector<uint> getCandidatesUsingSpatialGrid(const Cone &cone, const helios::vec3 &apex, const helios::vec3 &central_axis, float half_angle, float height);
 
     /**
      * \brief Calculate angular size (solid angle) of a gap in steradians
@@ -1278,6 +1573,18 @@ private:
     void incrementalUpdateBVH(const std::set<uint> &added_geometry, const std::set<uint> &removed_geometry, const std::set<uint> &final_geometry);
 
     /**
+     * \brief Update primitive AABB cache for a single primitive
+     * \param[in] uuid Primitive UUID to cache AABB for
+     */
+    void updatePrimitiveAABBCache(uint uuid);
+
+    /**
+     * \brief Perform optimized BVH rebuild using cached primitive AABBs  
+     * \param[in] final_geometry Set of all geometry to include in BVH
+     */
+    void optimizedRebuildBVH(const std::set<uint> &final_geometry);
+
+    /**
      * \brief Validate that all required primitives exist in context
      * \param[in] UUIDs Vector of UUIDs to validate
      * \return True if all UUIDs are valid
@@ -1365,6 +1672,113 @@ private:
      */
     bool rayAABBIntersectPrimitive(const helios::vec3& origin, const helios::vec3& direction,
                                   const helios::vec3& aabb_min, const helios::vec3& aabb_max, float& distance);
+
+    // -------- RASTERIZATION-BASED COLLISION DETECTION --------
+
+    /**
+     * \brief Calculate optimal bin count for angular discretization
+     * \param[in] cone_half_angle Cone half-angle in radians
+     * \param[in] geometry_count Number of potentially intersecting primitives
+     * \return Optimal number of bins for both theta and phi divisions
+     */
+    int calculateOptimalBinCount(float cone_half_angle, int geometry_count);
+
+    /**
+     * \brief Filter primitives using fast cone-AABB intersection with OpenMP parallelization
+     * \param[in] cone Cone to test against
+     * \param[in] primitive_uuids All primitive UUIDs to test
+     * \return Vector of UUIDs that intersect the cone
+     */
+    std::vector<uint> filterPrimitivesParallel(const Cone &cone, const std::vector<uint> &primitive_uuids);
+
+    /**
+     * \brief Project geometry to angular bins using spherical coordinates
+     * \param[in] cone Cone parameters for projection
+     * \param[in] filtered_uuids Primitives that passed cone-AABB filter
+     * \param[out] bins Angular bins to populate with coverage data
+     */
+    void projectGeometryToBins(const Cone &cone, const std::vector<uint> &filtered_uuids, AngularBins &bins);
+
+    /**
+     * \brief Find gaps in coverage map using flood-fill algorithm
+     * \param[in] bins Angular bins with coverage data
+     * \param[in] cone Cone parameters for scoring
+     * \return Vector of gaps sorted by quality score
+     */
+    std::vector<Gap> findGapsInCoverageMap(const AngularBins &bins, const Cone &cone);
+
+    /**
+     * \brief Convert spherical coordinates to bin indices
+     * \param[in] theta Azimuthal angle (0 to 2*PI)
+     * \param[in] phi Polar angle (0 to cone_half_angle)
+     * \param[in] bins Angular bin structure
+     * \param[out] theta_bin Theta bin index
+     * \param[out] phi_bin Phi bin index
+     * \return True if angles are within valid cone range
+     */
+    bool sphericalCoordsToBinIndices(float theta, float phi, const AngularBins &bins, int &theta_bin, int &phi_bin);
+
+    /**
+     * \brief Convert 3D cartesian vector to spherical coordinates relative to cone axis
+     * \param[in] vector 3D vector from cone apex
+     * \param[in] cone_axis Normalized cone axis direction
+     * \param[out] theta Azimuthal angle (0 to 2*PI)
+     * \param[out] phi Polar angle (0 to PI)
+     * \return Distance from cone apex
+     */
+    float cartesianToSphericalCone(const helios::vec3 &vector, const helios::vec3 &cone_axis, float &theta, float &phi);
+
+    /**
+     * \brief Serial version of geometry projection for small geometry sets or OpenMP fallback
+     * \param[in] cone Cone parameters for projection
+     * \param[in] filtered_uuids Primitives that passed cone-AABB filter
+     * \param[out] bins Angular bins to populate with coverage data
+     */
+    void projectGeometryToBinsSerial(const Cone &cone, const std::vector<uint> &filtered_uuids, AngularBins &bins);
+
+    /**
+     * \brief Flood-fill algorithm to find contiguous gap regions
+     * \param[in] bins Angular bins with coverage data
+     * \param[in] start_theta Starting theta bin index
+     * \param[in] start_phi Starting phi bin index
+     * \param[in,out] visited Visited bins tracking array
+     * \param[in] cone Cone parameters for gap scoring
+     * \return Gap object representing the found contiguous region
+     */
+    Gap floodFillGap(const AngularBins &bins, int start_theta, int start_phi,
+                     std::vector<std::vector<bool>>& visited, const Cone &cone);
+
+    /**
+     * \brief Calculate solid angle of a single angular bin
+     * \param[in] theta_bin Theta bin index
+     * \param[in] phi_bin Phi bin index
+     * \param[in] bins Angular bin structure
+     * \param[in] cone_half_angle Cone half-angle in radians
+     * \return Solid angle in steradians
+     */
+    float calculateBinSolidAngle(int theta_bin, int phi_bin, const AngularBins &bins, float cone_half_angle);
+
+    /**
+     * \brief Convert bin indices to cartesian direction vector
+     * \param[in] theta_bin Theta bin index
+     * \param[in] phi_bin Phi bin index
+     * \param[in] bins Angular bin structure
+     * \param[in] cone Cone parameters
+     * \return Normalized direction vector
+     */
+    helios::vec3 binIndicesToCartesian(int theta_bin, int phi_bin, const AngularBins &bins, const Cone &cone);
+
+    /**
+     * \brief Add unoccupied neighboring bins to flood-fill queue
+     * \param[in] theta Current theta bin index
+     * \param[in] phi Current phi bin index
+     * \param[in] bins Angular bin structure
+     * \param[in] visited Visited bins tracking array
+     * \param[in,out] queue Flood-fill queue
+     */
+    void addUnoccupiedNeighbors(int theta, int phi, const AngularBins &bins,
+                                std::vector<std::vector<bool>>& visited,
+                                std::queue<std::pair<int,int>>& queue);
 };
 
 #endif

@@ -3822,35 +3822,25 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
     std::ifstream inputMTL;
 
     std::string file = material_file;
-    std::string resolved_file;
-
-    // Try unified resolution first
-    try {
-        std::filesystem::path resolved_path = resolveFilePath(file);
-        resolved_file = resolved_path.string();
-        inputMTL.open(resolved_file.c_str());
-    } catch (const std::runtime_error &) {
-        // If unified resolution fails, fall back to original logic
-        inputMTL.open(file.c_str());
-        if (!inputMTL.is_open()) {
-            // if that doesn't work, try looking in the same directory where obj file is located
-            file = filebase + file;
-            file.erase(remove(file.begin(), file.end(), ' '), file.end());
-            for (size_t i = file.size(); i-- > 0;) {
-                if (strcmp(&file.at(i), "l") == 0) {
-                    break;
-                }
-
-                file.erase(file.begin() + scast<int>(i));
-            }
-            if (file.empty()) {
-                helios_runtime_error("ERROR (Context::loadMTL): Material file does not have correct file extension (.mtl).");
-            }
-            inputMTL.open(file.c_str());
-            if (!inputMTL.is_open()) {
-                helios_runtime_error("ERROR (Context::loadMTL): Material file " + std::string(file) + " given in .obj file cannot be found.");
-            }
-        }
+    
+    // For relative paths, resolve relative to the OBJ file's directory (filebase)
+    // For absolute paths, use unified file resolution
+    std::filesystem::path resolved_path;
+    
+    if (std::filesystem::path(file).is_absolute()) {
+        // Absolute path - use unified resolution
+        resolved_path = resolveFilePath(file);
+    } else {
+        // Relative path - resolve relative to OBJ file directory
+        std::filesystem::path mtl_path = std::filesystem::path(filebase) / file;
+        resolved_path = resolveFilePath(mtl_path.string());
+    }
+    
+    std::string resolved_file = resolved_path.string();
+    inputMTL.open(resolved_file.c_str());
+    
+    if (!inputMTL.is_open()) {
+        helios_runtime_error("ERROR (Context::loadMTL): Could not open material file " + resolved_file + " after successful path resolution.");
     }
 
     std::map<std::string, OBJmaterial> materials;

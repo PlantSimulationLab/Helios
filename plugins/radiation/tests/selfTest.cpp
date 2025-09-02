@@ -1,4 +1,5 @@
 #include "RadiationModel.h"
+#include "CameraCalibration.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
@@ -2168,4 +2169,354 @@ DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
     
     // If we reach here, the band-specific caching is working correctly
     // The original bug would have caused all bands to have the same values
+}
+
+DOCTEST_TEST_CASE("CameraCalibration Basic Functionality") {
+    Context context;
+    
+    // Test 1: Basic Calibrite colorboard creation and UUID retrieval
+    CameraCalibration calibration(&context);
+    std::vector<uint> calibrite_UUIDs = calibration.addCalibriteColorboard(make_vec3(0, 0.5, 0.001), 0.05);
+    DOCTEST_CHECK(calibrite_UUIDs.size() == 24);  // Calibrite ColorChecker Classic has 24 patches
+    
+    // Test 2: getColorBoardUUIDs should return the added colorboard
+    std::vector<uint> all_colorboard_UUIDs = calibration.getColorBoardUUIDs();
+    DOCTEST_CHECK(all_colorboard_UUIDs.size() == 24);  // Only the Calibrite colorboard
+    
+    // Test 3: Verify context has the colorboard primitives
+    std::vector<uint> all_UUIDs = context.getAllUUIDs();
+    DOCTEST_CHECK(all_UUIDs.size() >= 24);  // At least the colorboard primitives should exist
+    
+    // Test 4: Test that Calibrite primitives have reflectivity data
+    int patches_with_reflectivity = 0;
+    for (uint UUID : calibrite_UUIDs) {
+        if (context.doesPrimitiveDataExist(UUID, "reflectivity_spectrum")) {
+            patches_with_reflectivity++;
+        }
+    }
+    DOCTEST_CHECK(patches_with_reflectivity == 24);  // All Calibrite patches should have reflectivity
+    
+    // Test 5: Test SpyderCHECKR colorboard creation (this will replace the Calibrite board)
+    CameraCalibration calibration2(&context);  // New instance to avoid clearing previous colorboard
+    std::vector<uint> spyder_UUIDs = calibration2.addSpyderCHECKRColorboard(make_vec3(0.5, 0.5, 0.001), 0.05);  
+    DOCTEST_CHECK(spyder_UUIDs.size() == 24);  // SpyderCHECKR 24 has 24 patches
+    
+    // Test 6: Verify SpyderCHECKR primitives have reflectivity data
+    patches_with_reflectivity = 0;
+    for (uint UUID : spyder_UUIDs) {
+        if (context.doesPrimitiveDataExist(UUID, "reflectivity_spectrum")) {
+            patches_with_reflectivity++;
+        }
+    }
+    DOCTEST_CHECK(patches_with_reflectivity == 24);  // All SpyderCHECKR patches should have reflectivity
+    
+    // Test 7: Test spectrum XML writing capability
+    std::vector<helios::vec2> test_spectrum;
+    test_spectrum.push_back(make_vec2(400.0f, 0.1f));
+    test_spectrum.push_back(make_vec2(500.0f, 0.5f));
+    test_spectrum.push_back(make_vec2(600.0f, 0.8f));
+    test_spectrum.push_back(make_vec2(700.0f, 0.3f));
+    
+    // Write a test spectrum file (should succeed)
+    bool write_success = calibration.writeSpectralXMLfile("/tmp/test_spectrum.xml", "Test spectrum", "test_label", &test_spectrum);
+    DOCTEST_CHECK(write_success == true);
+}
+
+DOCTEST_TEST_CASE("CameraCalibration DGK Integration") {
+    Context context;
+    CameraCalibration calibration(&context);
+    
+    // Test DGK integration by verifying compilation and basic functionality
+    // Since DGK Lab values are now implemented, the auto-calibration should work for DGK boards
+    
+    // Test 1: Basic instantiation and colorboard support
+    // We can't directly test the Lab values since they're protected methods
+    // But we can verify that the implementation compiles and basic methods work
+    
+    std::vector<uint> colorboard_UUIDs = calibration.getColorBoardUUIDs();
+    // Initially empty since no colorboard has been added
+    DOCTEST_CHECK(colorboard_UUIDs.size() == 0);
+    
+    // Test 2: Add some geometry to context to prepare for potential DGK colorboard usage
+    std::vector<uint> test_patches;
+    for (int i = 0; i < 18; i++) {  // DGK has 18 patches
+        uint patch = context.addPatch(make_vec3(i * 0.1f, 0, 0), make_vec2(0.05f, 0.05f));
+        test_patches.push_back(patch);
+        // Simulate colorboard labeling (as would be done by addDGKColorboard when implemented)
+        context.setPrimitiveData(patch, "colorboard_DGK", uint(i));
+    }
+    
+    // Test 3: Verify context has the test patches
+    std::vector<uint> all_UUIDs = context.getAllUUIDs();
+    DOCTEST_CHECK(all_UUIDs.size() >= 18);
+    
+    // Test 4: Verify primitive data exists for DGK-labeled patches
+    int dgk_labeled_patches = 0;
+    for (uint UUID : test_patches) {
+        if (context.doesPrimitiveDataExist(UUID, "colorboard_DGK")) {
+            dgk_labeled_patches++;
+        }
+    }
+    DOCTEST_CHECK(dgk_labeled_patches == 18);
+    
+    // Note: The old CameraCalibration::autoCalibrateCameraImage() method has been removed
+    // Auto-calibration is now handled by RadiationModel::autoCalibrateCameraImage()
+}
+
+DOCTEST_TEST_CASE("RadiationModel CCM Export and Import") {
+    Context context;
+    RadiationModel radiationmodel(&context);
+    
+    // Create a simple test camera with RGB bands
+    std::vector<std::string> band_labels = {"red", "green", "blue"};
+    std::string camera_label = "test_camera";
+    helios::int2 resolution = make_int2(10, 10); // Small test image
+    
+    // Create camera properties
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = resolution;
+    camera_properties.HFOV = 45.0f;
+    camera_properties.FOV_aspect_ratio = 1.0f;
+    camera_properties.focal_plane_distance = 1.0f;
+    camera_properties.lens_diameter = 0.0f; // Pinhole camera
+    
+    radiationmodel.addRadiationCamera(camera_label, band_labels, make_vec3(0, 0, 1), make_vec3(0, 0, 0), camera_properties, 1);
+    
+    // Initialize camera data with test values
+    size_t pixel_count = resolution.x * resolution.y;
+    std::vector<float> red_data(pixel_count, 0.8f);
+    std::vector<float> green_data(pixel_count, 0.6f);
+    std::vector<float> blue_data(pixel_count, 0.4f);
+    
+    // Set camera pixel data
+    radiationmodel.setCameraPixelData(camera_label, "red", red_data);
+    radiationmodel.setCameraPixelData(camera_label, "green", green_data);
+    radiationmodel.setCameraPixelData(camera_label, "blue", blue_data);
+    
+    // Test 1: CCM XML Export/Import Roundtrip
+    {
+        // Create a test color correction matrix
+        std::vector<std::vector<float>> test_matrix = {
+            {1.2f, -0.1f, 0.05f},
+            {-0.08f, 1.15f, 0.02f},
+            {0.03f, -0.12f, 1.18f}
+        };
+        
+        std::string ccm_file_path = "/tmp/test_ccm_3x3.xml";
+        
+        // Test the exportColorCorrectionMatrixXML function directly
+        radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, camera_label, test_matrix,
+                                                     "/path/to/test_image.jpg", "DGK", 15.5f);
+        
+        // Verify file was created
+        std::ifstream test_file(ccm_file_path);
+        DOCTEST_CHECK(test_file.good());
+        test_file.close();
+        
+        // Test the loadColorCorrectionMatrixXML function
+        std::string loaded_camera_label;
+        std::vector<std::vector<float>> loaded_matrix = radiationmodel.loadColorCorrectionMatrixXML(ccm_file_path, loaded_camera_label);
+        
+        // Verify loaded data matches exported data
+        DOCTEST_CHECK(loaded_camera_label == camera_label);
+        DOCTEST_CHECK(loaded_matrix.size() == 3);
+        DOCTEST_CHECK(loaded_matrix[0].size() == 3);
+        
+        // Check matrix values with tolerance
+        for (size_t i = 0; i < 3; i++) {
+            for (size_t j = 0; j < 3; j++) {
+                DOCTEST_CHECK(std::abs(loaded_matrix[i][j] - test_matrix[i][j]) < 1e-5f);
+            }
+        }
+        
+        // Clean up
+        std::remove(ccm_file_path.c_str());
+    }
+    
+    // Test 2: 4x3 Matrix Support
+    {
+        // Create a test 4x3 color correction matrix (with affine offset)
+        std::vector<std::vector<float>> test_matrix_4x3 = {
+            {1.1f, -0.05f, 0.02f, 0.01f},
+            {-0.04f, 1.08f, 0.01f, -0.005f},
+            {0.02f, -0.06f, 1.12f, 0.008f}
+        };
+        
+        std::string ccm_file_path = "/tmp/test_ccm_4x3.xml";
+        
+        // Export 4x3 matrix
+        radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, camera_label, test_matrix_4x3,
+                                                     "/path/to/test_image.jpg", "Calibrite", 12.3f);
+        
+        // Load and verify
+        std::string loaded_camera_label;
+        std::vector<std::vector<float>> loaded_matrix = radiationmodel.loadColorCorrectionMatrixXML(ccm_file_path, loaded_camera_label);
+        
+        DOCTEST_CHECK(loaded_camera_label == camera_label);
+        DOCTEST_CHECK(loaded_matrix.size() == 3);
+        DOCTEST_CHECK(loaded_matrix[0].size() == 4);
+        
+        // Check matrix values
+        for (size_t i = 0; i < 3; i++) {
+            for (size_t j = 0; j < 4; j++) {
+                DOCTEST_CHECK(std::abs(loaded_matrix[i][j] - test_matrix_4x3[i][j]) < 1e-5f);
+            }
+        }
+        
+        // Clean up
+        std::remove(ccm_file_path.c_str());
+    }
+    
+    // Test 3: applyCameraColorCorrectionMatrix with 3x3 Matrix
+    {
+        // Create a test CCM file
+        std::vector<std::vector<float>> test_matrix = {
+            {1.1f, -0.05f, 0.02f},
+            {-0.03f, 1.08f, 0.01f},
+            {0.01f, -0.04f, 1.12f}
+        };
+        
+        std::string ccm_file_path = "/tmp/test_apply_ccm_3x3.xml";
+        radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, camera_label, test_matrix,
+                                                     "/path/to/test.jpg", "DGK", 10.0f);
+        
+        // Get initial pixel values
+        std::vector<float> initial_red = radiationmodel.getCameraPixelData(camera_label, "red");
+        std::vector<float> initial_green = radiationmodel.getCameraPixelData(camera_label, "green");
+        std::vector<float> initial_blue = radiationmodel.getCameraPixelData(camera_label, "blue");
+        
+        // Apply color correction matrix
+        radiationmodel.applyCameraColorCorrectionMatrix(camera_label, "red", "green", "blue", ccm_file_path);
+        
+        // Get corrected pixel values
+        std::vector<float> corrected_red = radiationmodel.getCameraPixelData(camera_label, "red");
+        std::vector<float> corrected_green = radiationmodel.getCameraPixelData(camera_label, "green");
+        std::vector<float> corrected_blue = radiationmodel.getCameraPixelData(camera_label, "blue");
+        
+        // Verify correction was applied
+        // For first pixel, manually calculate expected values
+        float expected_red = test_matrix[0][0] * initial_red[0] + test_matrix[0][1] * initial_green[0] + test_matrix[0][2] * initial_blue[0];
+        float expected_green = test_matrix[1][0] * initial_red[0] + test_matrix[1][1] * initial_green[0] + test_matrix[1][2] * initial_blue[0];
+        float expected_blue = test_matrix[2][0] * initial_red[0] + test_matrix[2][1] * initial_green[0] + test_matrix[2][2] * initial_blue[0];
+        
+        DOCTEST_CHECK(std::abs(corrected_red[0] - expected_red) < 1e-5f);
+        DOCTEST_CHECK(std::abs(corrected_green[0] - expected_green) < 1e-5f);
+        DOCTEST_CHECK(std::abs(corrected_blue[0] - expected_blue) < 1e-5f);
+        
+        // Clean up
+        std::remove(ccm_file_path.c_str());
+    }
+    
+    // Test 4: applyCameraColorCorrectionMatrix with 4x3 Matrix
+    {
+        // Create a test 4x3 CCM file
+        std::vector<std::vector<float>> test_matrix = {
+            {1.05f, -0.02f, 0.01f, 0.005f},
+            {-0.01f, 1.03f, 0.005f, -0.002f},
+            {0.005f, -0.015f, 1.08f, 0.003f}
+        };
+        
+        std::string ccm_file_path = "/tmp/test_apply_ccm_4x3.xml";
+        radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, camera_label, test_matrix,
+                                                     "/path/to/test.jpg", "SpyderCHECKR", 8.5f);
+        
+        // Reset camera data to known values
+        std::fill(red_data.begin(), red_data.end(), 0.7f);
+        std::fill(green_data.begin(), green_data.end(), 0.5f);
+        std::fill(blue_data.begin(), blue_data.end(), 0.3f);
+        
+        radiationmodel.setCameraPixelData(camera_label, "red", red_data);
+        radiationmodel.setCameraPixelData(camera_label, "green", green_data);
+        radiationmodel.setCameraPixelData(camera_label, "blue", blue_data);
+        
+        // Apply 4x3 color correction matrix
+        radiationmodel.applyCameraColorCorrectionMatrix(camera_label, "red", "green", "blue", ccm_file_path);
+        
+        // Get corrected pixel values
+        std::vector<float> corrected_red = radiationmodel.getCameraPixelData(camera_label, "red");
+        std::vector<float> corrected_green = radiationmodel.getCameraPixelData(camera_label, "green");
+        std::vector<float> corrected_blue = radiationmodel.getCameraPixelData(camera_label, "blue");
+        
+        // Verify 4x3 transformation with affine offset
+        float expected_red = test_matrix[0][0] * 0.7f + test_matrix[0][1] * 0.5f + test_matrix[0][2] * 0.3f + test_matrix[0][3];
+        float expected_green = test_matrix[1][0] * 0.7f + test_matrix[1][1] * 0.5f + test_matrix[1][2] * 0.3f + test_matrix[1][3];
+        float expected_blue = test_matrix[2][0] * 0.7f + test_matrix[2][1] * 0.5f + test_matrix[2][2] * 0.3f + test_matrix[2][3];
+        
+        DOCTEST_CHECK(std::abs(corrected_red[0] - expected_red) < 1e-5f);
+        DOCTEST_CHECK(std::abs(corrected_green[0] - expected_green) < 1e-5f);
+        DOCTEST_CHECK(std::abs(corrected_blue[0] - expected_blue) < 1e-5f);
+        
+        // Clean up
+        std::remove(ccm_file_path.c_str());
+    }
+}
+
+DOCTEST_TEST_CASE("RadiationModel CCM Error Handling") {
+    Context context;
+    RadiationModel radiationmodel(&context);
+    
+    // Test 1: Invalid file path for loading
+    {
+        std::string camera_label;
+        bool exception_thrown = false;
+        try {
+            std::vector<std::vector<float>> matrix = radiationmodel.loadColorCorrectionMatrixXML("/nonexistent/path.xml", camera_label);
+        } catch (const std::runtime_error& e) {
+            exception_thrown = true;
+            std::string error_msg(e.what());
+            DOCTEST_CHECK(error_msg.find("Failed to open file for reading") != std::string::npos);
+        }
+        DOCTEST_CHECK(exception_thrown);
+    }
+    
+    // Test 2: Malformed XML file
+    {
+        std::string malformed_ccm_path = "/tmp/malformed_ccm.xml";
+        std::ofstream malformed_file(malformed_ccm_path);
+        malformed_file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+        malformed_file << "<helios>\n";
+        malformed_file << "  <InvalidTag>\n";
+        malformed_file << "    <row>1.0 0.0 0.0</row>\n";
+        malformed_file << "  </InvalidTag>\n";
+        malformed_file << "</helios>\n";
+        malformed_file.close();
+        
+        std::string camera_label;
+        bool exception_thrown = false;
+        try {
+            std::vector<std::vector<float>> matrix = radiationmodel.loadColorCorrectionMatrixXML(malformed_ccm_path, camera_label);
+        } catch (const std::runtime_error& e) {
+            exception_thrown = true;
+            std::string error_msg(e.what());
+            DOCTEST_CHECK(error_msg.find("No matrix data found") != std::string::npos);
+        }
+        DOCTEST_CHECK(exception_thrown);
+        
+        std::remove(malformed_ccm_path.c_str());
+    }
+    
+    // Test 3: Apply CCM to nonexistent camera
+    {
+        std::string ccm_file_path = "/tmp/test_error_ccm.xml";
+        std::vector<std::vector<float>> identity_matrix = {
+            {1.0f, 0.0f, 0.0f},
+            {0.0f, 1.0f, 0.0f},
+            {0.0f, 0.0f, 1.0f}
+        };
+        
+        radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, "test_camera", identity_matrix,
+                                                     "/test.jpg", "DGK", 5.0f);
+        
+        bool exception_thrown = false;
+        try {
+            radiationmodel.applyCameraColorCorrectionMatrix("nonexistent_camera", "red", "green", "blue", ccm_file_path);
+        } catch (const std::runtime_error& e) {
+            exception_thrown = true;
+            std::string error_msg(e.what());
+            DOCTEST_CHECK(error_msg.find("Camera 'nonexistent_camera' does not exist") != std::string::npos);
+        }
+        DOCTEST_CHECK(exception_thrown);
+        
+        std::remove(ccm_file_path.c_str());
+    }
 }

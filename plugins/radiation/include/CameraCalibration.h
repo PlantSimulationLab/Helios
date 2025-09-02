@@ -50,6 +50,18 @@ struct CameraCalibration {
     std::vector<uint> addColorboard(const helios::vec3 &centrelocation, float patchsize, const helios::vec3 &rotationrad, const std::vector<std::vector<helios::RGBcolor>> &colorassignment = {},
                                     const std::vector<std::vector<std::string>> &spectrumassignment = {});
 
+    //! Add color board geometry into context with colorboard type labeling
+    /**
+     * \param[in] centrelocation location of the board center (vec3 on coordinates x,y,z)
+     * \param[in] patchsize size of each square color patch on the board
+     * \param[in] rotationrad rotation the board about x-, y-, and z-axes
+     * \param[in] colorassignment Color of each patch and size of color board. First index is the row and second index is the column.
+     * \param[in] spectrumassignment Label of global data corresponding to the reflectance spectrum of each color patch on the color board. First index is the row and second index is the column.
+     * \param[in] colorboard_type String identifier for the colorboard type (e.g., "DGK", "Calibrite", "SpyderCHECKR")
+     */
+    std::vector<uint> addColorboard(const helios::vec3 &centrelocation, float patchsize, const helios::vec3 &rotationrad, const std::vector<std::vector<helios::RGBcolor>> &colorassignment,
+                                    const std::vector<std::vector<std::string>> &spectrumassignment, const std::string &colorboard_type);
+
     // //! Set reflectivity for a specific UUID
     // /**
     //  * \param[in] UUID: Corresponding UUID
@@ -188,6 +200,7 @@ struct CameraCalibration {
      */
     std::vector<uint> readROMCCanopy();
 
+
     //! Write calibrated camera response spectra.
     /**
      * \param[in] camerareponselabels Label vector of original camera response spectra to be written.
@@ -198,10 +211,46 @@ struct CameraCalibration {
 
     //    void resetCameraResponses(std::string camerareponselabels, float scale);
 
+    // === PUBLIC METHODS FOR AUTO-CALIBRATION (used by RadiationModel) ===
+    
+    //! Structure to store Lab color values
+    struct LabColor {
+        float L, a, b;
+        LabColor(float L_val, float a_val, float b_val) : L(L_val), a(a_val), b(b_val) {}
+    };
+
+    //! Detect which colorboard type is present in the scene
+    std::string detectColorBoardType() const;
+
+    //! Get reference Lab values for DGK colorboard (18 patches)
+    std::vector<LabColor> getReferenceLab_DGK() const;
+
+    //! Get reference Lab values for Calibrite ColorChecker Classic (24 patches)
+    std::vector<LabColor> getReferenceLab_Calibrite() const;
+
+    //! Get reference Lab values for Datacolor SpyderCHECKR 24 (24 patches)
+    std::vector<LabColor> getReferenceLab_SpyderCHECKR() const;
+
+    //! Convert RGB color to Lab color space (RGB as vec3 [0,1])
+    LabColor rgbToLab(const helios::vec3 &rgb) const;
+
+    //! Convert Lab color to RGB color space (returns vec3 [0,1])
+    helios::vec3 labToRgb(const LabColor &lab) const;
+
+    //! Calculate Delta E 76 (CIE76) color difference between two Lab colors
+    double deltaE76(const LabColor &lab1, const LabColor &lab2) const;
+    
+    //! Calculate Delta E 2000 color difference between two Lab colors (more perceptually accurate)
+    double deltaE2000(const LabColor &lab1, const LabColor &lab2) const;
+
 protected:
     std::map<std::string, std::vector<helios::vec2>> calibratedcameraspectra;
 
     helios::Context *context;
+
+    //! Generate segmentation masks for colorboard patches
+    std::map<int, std::vector<std::vector<bool>>> generateColorBoardSegmentationMasks(const std::string &camera_label, const std::string &colorboard_type) const;
+
 
     //! Expand vector for integral.
     /**

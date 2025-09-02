@@ -14,6 +14,7 @@
 */
 
 #include "PlantArchitecture.h"
+#include "CollisionDetection.h"
 
 using namespace helios;
 
@@ -101,6 +102,14 @@ uint PlantArchitecture::buildPlantInstanceFromLibrary(const helios::vec3 &base_p
     uint plantID = builder_it->second(base_position);
 
     plant_instances.at(plantID).plant_name = current_plant_model;
+
+    // Register plant with per-tree BVH collision detection if enabled
+    if (collision_detection_enabled && collision_detection_ptr != nullptr && collision_detection_ptr->isTreeBasedBVHEnabled()) {
+        std::vector<uint> plant_primitives = getPlantCollisionRelevantObjectIDs(plantID);
+        if (!plant_primitives.empty()) {
+            collision_detection_ptr->registerTree(plantID, plant_primitives);
+        }
+    }
 
     if (age > 0) {
         advanceTime(plantID, age);
@@ -3056,13 +3065,13 @@ void PlantArchitecture::initializeWalnutTreeShoots() {
     shoot_parameters_proleptic.phytomer_parameters.internode.color = make_RGBcolor(0.3, 0.2, 0.2);
     shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = WalnutPhytomerCreationFunction;
     // shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = WalnutPhytomerCallbackFunction;
-    shoot_parameters_proleptic.max_nodes = 30;
-    shoot_parameters_proleptic.max_nodes_per_season = 15;
+    shoot_parameters_proleptic.max_nodes = 24;
+    shoot_parameters_proleptic.max_nodes_per_season = 12;
     shoot_parameters_proleptic.phyllochron_min = 2.;
     shoot_parameters_proleptic.elongation_rate_max = 0.15;
-    shoot_parameters_proleptic.girth_area_factor = 10.f;
-    shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.05;
-    shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.6;
+    shoot_parameters_proleptic.girth_area_factor = 8.f;
+    shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.025;
+    shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.9;
     shoot_parameters_proleptic.vegetative_bud_break_time = 3;
     shoot_parameters_proleptic.gravitropic_curvature = 200;
     shoot_parameters_proleptic.tortuosity = 5;
@@ -3071,7 +3080,7 @@ void PlantArchitecture::initializeWalnutTreeShoots() {
     shoot_parameters_proleptic.internode_length_max = 0.08;
     shoot_parameters_proleptic.internode_length_min = 0.01;
     shoot_parameters_proleptic.internode_length_decay_rate = 0.006;
-    shoot_parameters_proleptic.fruit_set_probability = 0.5;
+    shoot_parameters_proleptic.fruit_set_probability = 0.3;
     shoot_parameters_proleptic.flower_bud_break_probability = 0.3;
     shoot_parameters_proleptic.max_terminal_floral_buds = 4;
     shoot_parameters_proleptic.flowers_require_dormancy = true;

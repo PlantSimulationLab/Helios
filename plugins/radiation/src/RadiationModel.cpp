@@ -15,6 +15,11 @@
 
 #include "RadiationModel.h"
 #include <unordered_set>
+#include <iomanip>
+#include <cmath>
+#include <ctime>
+#include <sstream>
+#include <fstream>
 
 using namespace helios;
 
@@ -47,15 +52,15 @@ RadiationModel::RadiationModel(helios::Context *context_a) {
 
     periodic_flag = make_vec2(0, 0);
 
-    spectral_library_files.push_back("camera_spectral_library.xml");
-    spectral_library_files.push_back("light_spectral_library.xml");
-    spectral_library_files.push_back("soil_surface_spectral_library.xml");
-    spectral_library_files.push_back("leaf_surface_spectral_library.xml");
-    spectral_library_files.push_back("bark_surface_spectral_library.xml");
-    spectral_library_files.push_back("fruit_surface_spectral_library.xml");
-    spectral_library_files.push_back("solar_spectrum_ASTMG173.xml");
-    spectral_library_files.push_back("color_board/Calibrite_ColorChecker_Classic_colorboard.xml");
-    spectral_library_files.push_back("color_board/DGK_DKK_colorboard.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/camera_spectral_library.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/light_spectral_library.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/soil_surface_spectral_library.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/leaf_surface_spectral_library.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/bark_surface_spectral_library.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/fruit_surface_spectral_library.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml");
+    spectral_library_files.push_back("plugins/radiation/spectral_data/color_board/DGK_DKK_colorboard.xml");
 
     initializeOptiX();
 }
@@ -4801,6 +4806,958 @@ float RadiationModel::calculateGtheta(helios::Context *context, vec3 view_direct
     }
 
     return Gtheta / total_area;
+}
+
+void RadiationModel::exportColorCorrectionMatrixXML(const std::string &file_path,
+                                                   const std::string &camera_label,
+                                                   const std::vector<std::vector<float>> &matrix,
+                                                   const std::string &source_image_path,
+                                                   const std::string &colorboard_type,
+                                                   float average_delta_e) {
+    
+    std::ofstream file(file_path);
+    if (!file.is_open()) {
+        helios_runtime_error("ERROR (RadiationModel::exportColorCorrectionMatrixXML): Failed to open file for writing: " + file_path);
+    }
+    
+    // Determine matrix type (3x3 or 4x3)
+    std::string matrix_type = "3x3";
+    if (matrix.size() == 4 || (matrix.size() >= 3 && matrix[0].size() == 4)) {
+        matrix_type = "4x3";
+    }
+    
+    // Write XML header with informative comments
+    file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << std::endl;
+    file << "<!-- Camera Color Correction Matrix -->" << std::endl;
+    file << "<!-- Source Image: " << source_image_path << " -->" << std::endl;
+    file << "<!-- Camera Label: " << camera_label << " -->" << std::endl;
+    file << "<!-- Colorboard Type: " << colorboard_type << " -->" << std::endl;
+    if (average_delta_e >= 0.0f) {
+        file << "<!-- Average Delta E: " << std::fixed << std::setprecision(2) << average_delta_e << " -->" << std::endl;
+    }
+    file << "<!-- Matrix Type: " << matrix_type << " -->" << std::endl;
+    file << "<!-- Generated: " << getCurrentDateTime() << " -->" << std::endl;
+    
+    // Write matrix data
+    file << "<helios>" << std::endl;
+    file << "  <ColorCorrectionMatrix camera_label=\"" << camera_label 
+         << "\" matrix_type=\"" << matrix_type << "\">" << std::endl;
+    
+    for (size_t i = 0; i < matrix.size(); i++) {
+        file << "    <row>";
+        for (size_t j = 0; j < matrix[i].size(); j++) {
+            file << std::fixed << std::setprecision(6) << matrix[i][j];
+            if (j < matrix[i].size() - 1) {
+                file << " ";
+            }
+        }
+        file << "</row>" << std::endl;
+    }
+    
+    file << "  </ColorCorrectionMatrix>" << std::endl;
+    file << "</helios>" << std::endl;
+    
+    file.close();
+}
+
+std::string RadiationModel::getCurrentDateTime() {
+    auto now = std::time(nullptr);
+    auto tm = *std::localtime(&now);
+    std::stringstream ss;
+    ss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+    return ss.str();
+}
+
+std::vector<std::vector<float>> RadiationModel::loadColorCorrectionMatrixXML(const std::string &file_path,
+                                                                           std::string &camera_label_out) {
+    
+    std::ifstream file(file_path);
+    if (!file.is_open()) {
+        helios_runtime_error("ERROR (RadiationModel::loadColorCorrectionMatrixXML): Failed to open file for reading: " + file_path);
+    }
+    
+    std::vector<std::vector<float>> matrix;
+    std::string line;
+    bool in_matrix = false;
+    std::string matrix_type = "";
+    
+    while (std::getline(file, line)) {
+        // Remove leading/trailing whitespace
+        line.erase(0, line.find_first_not_of(" \t"));
+        line.erase(line.find_last_not_of(" \t") + 1);
+        
+        // Look for ColorCorrectionMatrix opening tag
+        if (line.find("<ColorCorrectionMatrix") != std::string::npos) {
+            in_matrix = true;
+            
+            // Extract camera_label attribute
+            size_t camera_start = line.find("camera_label=\"");
+            if (camera_start != std::string::npos) {
+                camera_start += 14; // Length of "camera_label=\""
+                size_t camera_end = line.find("\"", camera_start);
+                if (camera_end != std::string::npos) {
+                    camera_label_out = line.substr(camera_start, camera_end - camera_start);
+                }
+            }
+            
+            // Extract matrix_type attribute
+            size_t type_start = line.find("matrix_type=\"");
+            if (type_start != std::string::npos) {
+                type_start += 13; // Length of "matrix_type=\""
+                size_t type_end = line.find("\"", type_start);
+                if (type_end != std::string::npos) {
+                    matrix_type = line.substr(type_start, type_end - type_start);
+                }
+            }
+            continue;
+        }
+        
+        // Look for ColorCorrectionMatrix closing tag
+        if (line.find("</ColorCorrectionMatrix>") != std::string::npos) {
+            in_matrix = false;
+            break;
+        }
+        
+        // Parse row data
+        if (in_matrix && line.find("<row>") != std::string::npos && line.find("</row>") != std::string::npos) {
+            // Extract content between <row> and </row>
+            size_t start = line.find("<row>") + 5;
+            size_t end = line.find("</row>");
+            std::string row_data = line.substr(start, end - start);
+            
+            // Parse float values from row
+            std::vector<float> row;
+            std::istringstream iss(row_data);
+            float value;
+            while (iss >> value) {
+                row.push_back(value);
+            }
+            
+            if (!row.empty()) {
+                matrix.push_back(row);
+            }
+        }
+    }
+    
+    file.close();
+    
+    // Validate loaded matrix
+    if (matrix.empty()) {
+        helios_runtime_error("ERROR (RadiationModel::loadColorCorrectionMatrixXML): No matrix data found in file: " + file_path);
+    }
+    
+    if (matrix.size() != 3) {
+        helios_runtime_error("ERROR (RadiationModel::loadColorCorrectionMatrixXML): Invalid matrix size. Expected 3 rows, found " + std::to_string(matrix.size()) + " rows in file: " + file_path);
+    }
+    
+    // Validate matrix type consistency
+    bool is_3x3 = (matrix[0].size() == 3 && matrix[1].size() == 3 && matrix[2].size() == 3);
+    bool is_4x3 = (matrix[0].size() == 4 && matrix[1].size() == 4 && matrix[2].size() == 4);
+    
+    if (!is_3x3 && !is_4x3) {
+        helios_runtime_error("ERROR (RadiationModel::loadColorCorrectionMatrixXML): Invalid matrix dimensions. All rows must have either 3 or 4 elements. File: " + file_path);
+    }
+    
+    // Check matrix type attribute matches actual dimensions
+    if (!matrix_type.empty()) {
+        if ((matrix_type == "3x3" && !is_3x3) || (matrix_type == "4x3" && !is_4x3)) {
+            helios_runtime_error("ERROR (RadiationModel::loadColorCorrectionMatrixXML): Matrix type attribute ('" + matrix_type + "') does not match actual matrix dimensions in file: " + file_path);
+        }
+    }
+    
+    return matrix;
+}
+
+std::string RadiationModel::autoCalibrateCameraImage(const std::string &camera_label, 
+                                                   const std::string &red_band_label, 
+                                                   const std::string &green_band_label,
+                                                   const std::string &blue_band_label,
+                                                     const std::string &output_file_path,
+                                                   bool print_quality_report,
+                                                     ColorCorrectionAlgorithm algorithm,
+                                                   const std::string &ccm_export_file_path) {
+    
+    // Step 1: Validate camera exists and get pixel UUID data
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::autoCalibrateCameraImage): Camera '" + camera_label + "' does not exist. Make sure the camera was added to the radiation model.");
+    }
+    
+    // Get camera pixel UUID data from global data (needed for segmentation)
+    std::string pixel_UUID_label = "camera_" + camera_label + "_pixel_UUID";
+    if (!context->doesGlobalDataExist(pixel_UUID_label.c_str())) {
+        helios_runtime_error("ERROR (RadiationModel::autoCalibrateCameraImage): Camera pixel UUID data '" + pixel_UUID_label + "' does not exist for camera '" + camera_label + "'. Make sure the radiation model has been run.");
+    }
+    
+    // Step 2: Detect colorboard type using CameraCalibration helper
+    CameraCalibration calibration(context);
+    std::string colorboard_type;
+    try {
+        colorboard_type = calibration.detectColorBoardType();
+    } catch (const std::exception& e) {
+        helios_runtime_error("ERROR (RadiationModel::autoCalibrateCameraImage): Failed to detect colorboard type. " + std::string(e.what()));
+    }
+    
+    // Step 3: Get reference Lab values for the detected colorboard
+    std::vector<CameraCalibration::LabColor> reference_lab_values;
+    if (colorboard_type == "DGK") {
+        reference_lab_values = calibration.getReferenceLab_DGK();
+    } else if (colorboard_type == "Calibrite") {
+        reference_lab_values = calibration.getReferenceLab_Calibrite();
+    } else if (colorboard_type == "SpyderCHECKR") {
+        reference_lab_values = calibration.getReferenceLab_SpyderCHECKR();
+    } else {
+        helios_runtime_error("ERROR (RadiationModel::autoCalibrateCameraImage): Unsupported colorboard type '" + colorboard_type + "'.");
+    }
+    
+    // Step 4: Generate segmentation masks for colorboard patches
+    std::vector<uint> pixel_UUIDs;
+    context->getGlobalData(pixel_UUID_label.c_str(), pixel_UUIDs);
+    int2 camera_resolution = cameras.at(camera_label).resolution;
+    
+    // Create segmentation masks by finding pixels that belong to colorboard patches
+    std::map<int, std::vector<std::vector<bool>>> patch_masks;
+    for (int patch_idx = 0; patch_idx < (int)reference_lab_values.size(); patch_idx++) {
+        std::vector<std::vector<bool>> mask(camera_resolution.y, std::vector<bool>(camera_resolution.x, false));
+        
+        // Find pixels that correspond to this colorboard patch
+        for (int y = 0; y < camera_resolution.y; y++) {
+            for (int x = 0; x < camera_resolution.x; x++) {
+                int pixel_index = y * camera_resolution.x + x;
+                uint pixel_UUID = pixel_UUIDs[pixel_index];
+                
+                if (pixel_UUID > 0) { // Valid primitive
+                    pixel_UUID--; // Convert from 1-based to 0-based indexing
+                    
+                    // Check if this primitive belongs to the colorboard patch
+                    std::string colorboard_data_label = "colorboard_" + colorboard_type;
+                    if (context->doesPrimitiveDataExist(pixel_UUID, colorboard_data_label.c_str())) {
+                        uint patch_id;
+                        context->getPrimitiveData(pixel_UUID, colorboard_data_label.c_str(), patch_id);
+                        // Patch indices are 0-based, compare directly
+                        if ((int)patch_id == patch_idx) {
+                            mask[y][x] = true;
+                        }
+                    }
+                }
+            }
+        }
+        
+        patch_masks[patch_idx] = mask;
+    }
+    
+    // Step 5: Extract RGB colors from processed camera data (same source as writeCameraImage)
+    // Use the same data source that writeCameraImage() uses: cameras.pixel_data
+    std::vector<float> red_data, green_data, blue_data;
+    
+    // Check if bands exist in camera
+    auto& camera_bands = cameras.at(camera_label).band_labels;
+    if (std::find(camera_bands.begin(), camera_bands.end(), red_band_label) == camera_bands.end()) {
+        helios_runtime_error("ERROR (RadiationModel::autoCalibrateCameraImage): Red band '" + red_band_label + "' not found in camera '" + camera_label + "'.");
+    }
+    if (std::find(camera_bands.begin(), camera_bands.end(), green_band_label) == camera_bands.end()) {
+        helios_runtime_error("ERROR (RadiationModel::autoCalibrateCameraImage): Green band '" + green_band_label + "' not found in camera '" + camera_label + "'.");
+    }
+    if (std::find(camera_bands.begin(), camera_bands.end(), blue_band_label) == camera_bands.end()) {
+        helios_runtime_error("ERROR (RadiationModel::autoCalibrateCameraImage): Blue band '" + blue_band_label + "' not found in camera '" + camera_label + "'.");
+    }
+    
+    // Read processed camera data (same as writeCameraImage uses)
+    red_data = cameras.at(camera_label).pixel_data.at(red_band_label);
+    green_data = cameras.at(camera_label).pixel_data.at(green_band_label);
+    blue_data = cameras.at(camera_label).pixel_data.at(blue_band_label);
+    
+    // Check data range and normalize if needed
+    float max_r = *std::max_element(red_data.begin(), red_data.end());
+    float max_g = *std::max_element(green_data.begin(), green_data.end());
+    float max_b = *std::max_element(blue_data.begin(), blue_data.end());
+    
+    // Normalize camera data to [0,1] range if values are > 1
+    float scale_factor = 1.0f;
+    if (max_r > 1.0f || max_g > 1.0f || max_b > 1.0f) {
+        scale_factor = 1.0f / std::max({max_r, max_g, max_b});
+        
+        for (size_t i = 0; i < red_data.size(); i++) {
+            red_data[i] *= scale_factor;
+            green_data[i] *= scale_factor;
+            blue_data[i] *= scale_factor;
+        }
+    }
+    
+    std::vector<helios::vec3> measured_rgb_values;
+    int visible_patches = 0;
+    
+    for (const auto& [patch_idx, mask] : patch_masks) {
+        float sum_r = 0.0f, sum_g = 0.0f, sum_b = 0.0f;
+        int pixel_count = 0;
+        
+        // Average RGB values over all pixels in this patch
+        for (int y = 0; y < camera_resolution.y; y++) {
+            for (int x = 0; x < camera_resolution.x; x++) {
+                if (mask[y][x]) {
+                    int pixel_index = y * camera_resolution.x + x;
+                    sum_r += red_data[pixel_index];
+                    sum_g += green_data[pixel_index];
+                    sum_b += blue_data[pixel_index];
+                    pixel_count++;
+                }
+            }
+        }
+        
+        if (pixel_count > 10) { // Only consider patches with sufficient pixels
+            helios::vec3 avg_rgb = make_vec3(sum_r / pixel_count, sum_g / pixel_count, sum_b / pixel_count);
+            measured_rgb_values.push_back(avg_rgb);
+            
+            visible_patches++;
+        } else {
+            // Add placeholder for missing patch
+            measured_rgb_values.push_back(make_vec3(0, 0, 0));
+        }
+    }
+    
+    // Convert measured RGB to Lab and calculate correction matrix
+    std::vector<CameraCalibration::LabColor> measured_lab_values;
+    for (const auto& rgb : measured_rgb_values) {
+        if (rgb.magnitude() > 0) { // Only process non-zero values
+            measured_lab_values.push_back(calibration.rgbToLab(rgb));
+        }
+    }
+    
+    // Calculate color correction matrix based on selected algorithm
+    std::vector<std::vector<float>> correction_matrix = {
+        {1.0f, 0.0f, 0.0f},
+        {0.0f, 1.0f, 0.0f}, 
+        {0.0f, 0.0f, 1.0f}
+    };
+    
+    // Report which algorithm is being used
+    std::string algorithm_name;
+    switch (algorithm) {
+        case ColorCorrectionAlgorithm::DIAGONAL_ONLY:
+            algorithm_name = "Diagonal scaling (white balance only)";
+            break;
+        case ColorCorrectionAlgorithm::MATRIX_3X3_AUTO:
+            algorithm_name = "3x3 matrix with auto-fallback to diagonal";
+            break;
+        case ColorCorrectionAlgorithm::MATRIX_3X3_FORCE:
+            algorithm_name = "3x3 matrix (forced)";
+            break;
+    }
+    
+    if (measured_lab_values.size() >= 6 && reference_lab_values.size() >= 6) {
+        // Convert reference Lab back to RGB for matrix fitting
+        std::vector<helios::vec3> target_rgb;
+        
+        for (size_t i = 0; i < reference_lab_values.size(); i++) {
+            CameraCalibration::LabColor ref_lab = reference_lab_values[i];
+            helios::vec3 ref_rgb = calibration.labToRgb(ref_lab);
+            target_rgb.push_back(ref_rgb);
+            
+        }
+        
+        // Build matrices for least squares: M * Measured = Target
+        // We need to solve for M where M is 3x3 matrix
+        // This becomes: M = Target * Measured^T * (Measured * Measured^T)^(-1)
+        
+        // Collect valid patches for matrix calculation
+        std::vector<helios::vec3> valid_measured, valid_target;
+        std::vector<float> patch_weights;
+        
+        for (size_t i = 0; i < std::min(measured_rgb_values.size(), target_rgb.size()); i++) {
+            if (measured_rgb_values[i].magnitude() > 0.01f) {
+                valid_measured.push_back(measured_rgb_values[i]);
+                valid_target.push_back(target_rgb[i]);
+                
+                // Perceptually-weighted patch selection based on colour-science best practices
+                float weight = 1.0f;
+                
+                // Neutral patches (white to black series) - highest priority for white balance
+                if (i >= 18 && i <= 23) {
+                    // White and light grays get highest weight (most visually important)
+                    if (i == 18) weight = 5.0f;        // White patch - critical for white balance
+                    else if (i == 19) weight = 4.0f;   // Light gray - very important for tone mapping
+                    else weight = 3.0f;                // Darker grays - important for contrast
+                }
+                // Primary color patches - important for color accuracy
+                else if (i == 14 || i == 13 || i == 12) weight = 3.0f;  // Red, Green, Blue primaries
+                
+                // Skin tone approximates - patches that represent common skin tones
+                else if (i == 3 || i == 10) weight = 2.5f;  // Foliage and Yellow Green (skin-like hues)
+                
+                // Well-lit patches get higher weight based on luminance
+                helios::vec3 measured_rgb = measured_rgb_values[i];
+                float luminance = 0.299f * measured_rgb.x + 0.587f * measured_rgb.y + 0.114f * measured_rgb.z;
+                
+                // Boost weight for brighter patches (they're more visually prominent)
+                if (luminance > 0.6f) weight *= 1.5f;
+                else if (luminance < 0.2f) weight *= 0.7f;  // Reduce weight for very dark patches
+                
+                // Additional quality checks for measured RGB values
+                // Reduce weight for patches that seem poorly measured (extreme values)
+                if (measured_rgb.magnitude() > 1.2f || measured_rgb.magnitude() < 0.1f) {
+                    weight *= 0.5f;  // Reduce weight for suspicious measurements
+                }
+                
+                patch_weights.push_back(weight);
+            }
+        }
+        
+        if (valid_measured.size() >= 6 && algorithm != ColorCorrectionAlgorithm::DIAGONAL_ONLY) {
+            
+            // Compute robustly regularized weighted least squares solution
+            // Use adaptive regularization to prevent extreme matrix coefficients
+            bool matrix_valid = true;
+            
+            // Try moderate regularization values - avoid extreme regularization that creates bad matrices
+            std::vector<float> lambda_values = {0.01f, 0.05f, 0.1f, 0.15f, 0.2f};
+            int lambda_attempt = 0;
+            
+            while (lambda_attempt < lambda_values.size()) {
+                float lambda = lambda_values[lambda_attempt];
+                matrix_valid = true;
+                
+                for (int row = 0; row < 3; row++) {
+                    // Build weighted normal equations with adaptive regularization
+                    float ATA[3][3] = {{0}};  // A^T * W * A + λI
+                    float ATb[3] = {0};       // A^T * W * b
+                
+                for (size_t i = 0; i < valid_measured.size(); i++) {
+                    float weight = patch_weights[i];
+                    helios::vec3 m = valid_measured[i];  // measured RGB
+                    float target_val = (row == 0) ? valid_target[i].x : (row == 1) ? valid_target[i].y : valid_target[i].z;
+                    
+                    // Update normal equations
+                    ATA[0][0] += weight * m.x * m.x;
+                    ATA[0][1] += weight * m.x * m.y;
+                    ATA[0][2] += weight * m.x * m.z;
+                    ATA[1][0] += weight * m.y * m.x;
+                    ATA[1][1] += weight * m.y * m.y;
+                    ATA[1][2] += weight * m.y * m.z;
+                    ATA[2][0] += weight * m.z * m.x;
+                    ATA[2][1] += weight * m.z * m.y;
+                    ATA[2][2] += weight * m.z * m.z;
+                    
+                    ATb[0] += weight * m.x * target_val;
+                    ATb[1] += weight * m.y * target_val;
+                    ATb[2] += weight * m.z * target_val;
+                }
+                
+                // Add color-preserving regularization 
+                // Stronger regularization on diagonal (preserves primary colors)
+                // Weaker regularization on off-diagonal (allows some color mixing)
+                float diag_reg = lambda * 2.0f;     // Stronger on diagonal
+                float offdiag_reg = lambda * 0.5f;  // Weaker on off-diagonal
+                
+                ATA[0][0] += diag_reg;   // Red preservation
+                ATA[1][1] += diag_reg;   // Green preservation  
+                ATA[2][2] += diag_reg;   // Blue preservation
+                
+                // Light off-diagonal regularization to prevent extreme color mixing
+                ATA[0][1] += offdiag_reg; ATA[1][0] += offdiag_reg;
+                ATA[0][2] += offdiag_reg; ATA[2][0] += offdiag_reg;
+                ATA[1][2] += offdiag_reg; ATA[2][1] += offdiag_reg;
+                
+                // Solve regularized 3x3 system using Cramer's rule
+                float det = ATA[0][0]*(ATA[1][1]*ATA[2][2] - ATA[1][2]*ATA[2][1]) -
+                           ATA[0][1]*(ATA[1][0]*ATA[2][2] - ATA[1][2]*ATA[2][0]) +
+                           ATA[0][2]*(ATA[1][0]*ATA[2][1] - ATA[1][1]*ATA[2][0]);
+                
+                if (fabs(det) < 1e-3f) {
+                    if (algorithm != ColorCorrectionAlgorithm::MATRIX_3X3_FORCE) {
+                        matrix_valid = false;
+                        break;
+                    }
+                }
+                
+                float inv_det = 1.0f / det;
+                correction_matrix[row][0] = inv_det * (ATb[0]*(ATA[1][1]*ATA[2][2] - ATA[1][2]*ATA[2][1]) -
+                                                      ATb[1]*(ATA[0][1]*ATA[2][2] - ATA[0][2]*ATA[2][1]) +
+                                                      ATb[2]*(ATA[0][1]*ATA[1][2] - ATA[0][2]*ATA[1][1]));
+                
+                correction_matrix[row][1] = inv_det * (ATb[1]*(ATA[0][0]*ATA[2][2] - ATA[0][2]*ATA[2][0]) -
+                                                      ATb[0]*(ATA[1][0]*ATA[2][2] - ATA[1][2]*ATA[2][0]) +
+                                                      ATb[2]*(ATA[1][0]*ATA[0][2] - ATA[1][2]*ATA[0][0]));
+                
+                correction_matrix[row][2] = inv_det * (ATb[2]*(ATA[0][0]*ATA[1][1] - ATA[0][1]*ATA[1][0]) -
+                                                      ATb[0]*(ATA[1][0]*ATA[2][1] - ATA[1][1]*ATA[2][0]) +
+                                                      ATb[1]*(ATA[0][0]*ATA[2][1] - ATA[0][1]*ATA[2][0]));
+                }
+                
+                // Validate computed matrix elements are reasonable
+                if (matrix_valid) {
+                    bool elements_reasonable = true;
+                    for (int i = 0; i < 3; i++) {
+                        for (int j = 0; j < 3; j++) {
+                            if (fabs(correction_matrix[i][j]) > 5.0f) {
+                                if (algorithm != ColorCorrectionAlgorithm::MATRIX_3X3_FORCE) {
+                                    elements_reasonable = false;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!elements_reasonable) break;
+                    }
+                    matrix_valid = elements_reasonable;
+                }
+                
+                if (matrix_valid) {
+                    break; // Success!
+                } else {
+                    lambda_attempt++;
+                }
+            }
+            
+            if (!matrix_valid) {
+
+                // Enhanced perceptually-weighted diagonal correction
+                // Calculate weighted averages for each color channel
+                float total_weight = 0.0f;
+                helios::vec3 weighted_correction = make_vec3(0, 0, 0);
+                
+                for (size_t i = 0; i < valid_measured.size(); i++) {
+                    float weight = patch_weights[i];
+                    helios::vec3 measured = valid_measured[i];
+                    helios::vec3 target = valid_target[i];
+                    
+                    // Calculate per-channel correction factors
+                    if (measured.x > 0.01f && measured.y > 0.01f && measured.z > 0.01f) {
+                        helios::vec3 channel_correction = make_vec3(
+                            target.x / measured.x,
+                            target.y / measured.y, 
+                            target.z / measured.z
+                        );
+                        
+                        weighted_correction.x += weight * channel_correction.x;
+                        weighted_correction.y += weight * channel_correction.y;
+                        weighted_correction.z += weight * channel_correction.z;
+                        total_weight += weight;
+                    }
+                }
+                
+                if (total_weight > 0.1f) {
+                    // Apply weighted average correction factors
+                    correction_matrix[0][0] = weighted_correction.x / total_weight;
+                    correction_matrix[1][1] = weighted_correction.y / total_weight;
+                    correction_matrix[2][2] = weighted_correction.z / total_weight;
+                    
+                    // Apply conservative limits 
+                    correction_matrix[0][0] = std::max(0.5f, std::min(2.0f, correction_matrix[0][0]));
+                    correction_matrix[1][1] = std::max(0.5f, std::min(2.0f, correction_matrix[1][1]));
+                    correction_matrix[2][2] = std::max(0.5f, std::min(2.0f, correction_matrix[2][2]));
+                    
+                }
+            }
+            
+            if (!matrix_valid || algorithm == ColorCorrectionAlgorithm::DIAGONAL_ONLY) {
+                // Use diagonal correction using white patch
+                correction_matrix = {
+                    {1.0f, 0.0f, 0.0f},
+                    {0.0f, 1.0f, 0.0f}, 
+                    {0.0f, 0.0f, 1.0f}
+                };
+                
+                // Enhanced perceptually-weighted diagonal correction using all valid patches
+                // This is more robust than using just the white patch
+                if (valid_measured.size() > 0 && patch_weights.size() == valid_measured.size()) {
+                    float total_weight = 0.0f;
+                    helios::vec3 weighted_measured_avg = make_vec3(0, 0, 0);
+                    helios::vec3 weighted_target_avg = make_vec3(0, 0, 0);
+                    
+                    // Compute weighted averages using perceptual patch weights
+                    for (size_t i = 0; i < valid_measured.size(); i++) {
+                        float weight = patch_weights[i];
+                        weighted_measured_avg = weighted_measured_avg + weight * valid_measured[i];
+                        weighted_target_avg = weighted_target_avg + weight * valid_target[i];
+                        total_weight += weight;
+                    }
+                    
+                    if (total_weight > 0) {
+                        weighted_measured_avg = weighted_measured_avg / total_weight;
+                        weighted_target_avg = weighted_target_avg / total_weight;
+                        
+                        if (weighted_measured_avg.x > 0.05f && weighted_measured_avg.y > 0.05f && weighted_measured_avg.z > 0.05f) {
+                            correction_matrix[0][0] = weighted_target_avg.x / weighted_measured_avg.x;
+                            correction_matrix[1][1] = weighted_target_avg.y / weighted_measured_avg.y;
+                            correction_matrix[2][2] = weighted_target_avg.z / weighted_measured_avg.z;
+                            
+                            // Apply conservative limits for stability
+                            correction_matrix[0][0] = std::max(0.5f, std::min(2.0f, correction_matrix[0][0]));
+                            correction_matrix[1][1] = std::max(0.5f, std::min(2.0f, correction_matrix[1][1]));
+                            correction_matrix[2][2] = std::max(0.5f, std::min(2.0f, correction_matrix[2][2]));
+
+                        } else {
+                            // Fallback to original white-patch method
+                            size_t white_idx = 18;
+                            if (white_idx < measured_rgb_values.size() && white_idx < target_rgb.size()) {
+                                helios::vec3 measured_white = measured_rgb_values[white_idx];
+                                helios::vec3 target_white = target_rgb[white_idx];
+                                if (measured_white.x > 0.05f && measured_white.y > 0.05f && measured_white.z > 0.05f) {
+                                    correction_matrix[0][0] = std::max(0.5f, std::min(2.0f, target_white.x / measured_white.x));
+                                    correction_matrix[1][1] = std::max(0.5f, std::min(2.0f, target_white.y / measured_white.y));
+                                    correction_matrix[2][2] = std::max(0.5f, std::min(2.0f, target_white.z / measured_white.z));
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Original simple approach as ultimate fallback
+                    size_t white_idx = 18;
+                    if (white_idx < measured_rgb_values.size() && white_idx < target_rgb.size()) {
+                        helios::vec3 measured_white = measured_rgb_values[white_idx];
+                        helios::vec3 target_white = target_rgb[white_idx];
+                        if (measured_white.x > 0.05f && measured_white.y > 0.05f && measured_white.z > 0.05f) {
+                            correction_matrix[0][0] = std::max(0.5f, std::min(2.0f, target_white.x / measured_white.x));
+                            correction_matrix[1][1] = std::max(0.5f, std::min(2.0f, target_white.y / measured_white.y));
+                            correction_matrix[2][2] = std::max(0.5f, std::min(2.0f, target_white.z / measured_white.z));
+                        }
+                    }
+                }
+            }
+        } else if (algorithm == ColorCorrectionAlgorithm::DIAGONAL_ONLY) {
+            // Apply diagonal correction using white patch
+            size_t white_idx = 18;
+            if (white_idx < measured_rgb_values.size() && white_idx < target_rgb.size() &&
+                measured_rgb_values[white_idx].magnitude() > 0) {
+                
+                helios::vec3 measured_white = measured_rgb_values[white_idx];
+                helios::vec3 target_white = target_rgb[white_idx];
+                
+                if (measured_white.x > 0.05f && measured_white.y > 0.05f && measured_white.z > 0.05f) {
+                    correction_matrix[0][0] = target_white.x / measured_white.x;
+                    correction_matrix[1][1] = target_white.y / measured_white.y;
+                    correction_matrix[2][2] = target_white.z / measured_white.z;
+                    
+                    // Apply limits
+                    correction_matrix[0][0] = std::max(0.5f, std::min(2.0f, correction_matrix[0][0]));
+                    correction_matrix[1][1] = std::max(0.5f, std::min(2.0f, correction_matrix[1][1]));
+                    correction_matrix[2][2] = std::max(0.5f, std::min(2.0f, correction_matrix[2][2]));
+
+                }
+            }
+        } else {
+            std::cout << "Insufficient valid patches (" << valid_measured.size() << " available), using identity matrix" << std::endl;
+        }
+    } else if (algorithm == ColorCorrectionAlgorithm::DIAGONAL_ONLY && measured_lab_values.size() > 0) {
+        // Apply diagonal correction using white patch
+        size_t white_idx = 18;
+        if (white_idx < measured_rgb_values.size() && white_idx < reference_lab_values.size() &&
+            measured_rgb_values[white_idx].magnitude() > 0) {
+            
+            CameraCalibration::LabColor ref_lab = reference_lab_values[white_idx];
+            helios::vec3 target_white = calibration.labToRgb(ref_lab);
+            helios::vec3 measured_white = measured_rgb_values[white_idx];
+            
+            if (measured_white.x > 0.05f && measured_white.y > 0.05f && measured_white.z > 0.05f) {
+                correction_matrix[0][0] = target_white.x / measured_white.x;
+                correction_matrix[1][1] = target_white.y / measured_white.y;
+                correction_matrix[2][2] = target_white.z / measured_white.z;
+                
+                // Apply limits
+                correction_matrix[0][0] = std::max(0.5f, std::min(2.0f, correction_matrix[0][0]));
+                correction_matrix[1][1] = std::max(0.5f, std::min(2.0f, correction_matrix[1][1]));
+                correction_matrix[2][2] = std::max(0.5f, std::min(2.0f, correction_matrix[2][2]));
+
+            }
+        }
+    } else {
+        std::cout << "Insufficient patches for correction (" << measured_lab_values.size() << " available), using identity matrix" << std::endl;
+    }
+    
+    // Generate quality of fit report if requested
+    if (print_quality_report) {
+        std::cout << "\n========== COLOR CALIBRATION QUALITY REPORT ==========" << std::endl;
+        std::cout << "Colorboard type: " << colorboard_type << std::endl;
+        std::cout << "Number of patches analyzed: " << visible_patches << std::endl;
+        std::cout << "Algorithm used: " << algorithm_name << std::endl;
+        
+        // Display matrix conditioning information
+        bool is_diagonal_only = true;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (i != j && fabs(correction_matrix[i][j]) > 1e-6f) {
+                    is_diagonal_only = false;
+                    break;
+                }
+            }
+            if (!is_diagonal_only) break;
+        }
+        
+        if (is_diagonal_only) {
+            std::cout << "Color correction factors applied: R=" << correction_matrix[0][0] 
+                     << ", G=" << correction_matrix[1][1] << ", B=" << correction_matrix[2][2] << std::endl;
+            std::cout << "Matrix type: Diagonal (white balance only)" << std::endl;
+        } else {
+            std::cout << "Full 3x3 color correction matrix applied:" << std::endl;
+            for (int i = 0; i < 3; i++) {
+                std::cout << "[" << std::fixed << std::setprecision(4);
+                for (int j = 0; j < 3; j++) {
+                    std::cout << std::setw(8) << correction_matrix[i][j];
+                    if (j < 2) std::cout << " ";
+                }
+                std::cout << "]" << std::endl;
+            }
+            std::cout << "Matrix type: Full 3x3 (corrects color casts and chromatic errors)" << std::endl;
+            
+            // Calculate matrix determinant for conditioning info
+            float det = correction_matrix[0][0] * (correction_matrix[1][1] * correction_matrix[2][2] - correction_matrix[1][2] * correction_matrix[2][1]) -
+                       correction_matrix[0][1] * (correction_matrix[1][0] * correction_matrix[2][2] - correction_matrix[1][2] * correction_matrix[2][0]) +
+                       correction_matrix[0][2] * (correction_matrix[1][0] * correction_matrix[2][1] - correction_matrix[1][1] * correction_matrix[2][0]);
+            
+            std::cout << "Matrix determinant: " << std::scientific << std::setprecision(3) << det << std::endl;
+            if (fabs(det) > 0.1f) {
+                std::cout << "Matrix conditioning: Good (well-conditioned)" << std::endl;
+            } else if (fabs(det) > 0.01f) {
+                std::cout << "Matrix conditioning: Fair (moderately conditioned)" << std::endl;
+            } else {
+                std::cout << "Matrix conditioning: Poor (ill-conditioned)" << std::endl;
+            }
+            std::cout << std::fixed; // Reset formatting
+        }
+        
+        // Calculate and display quality metrics for each patch
+        double total_delta_e = 0.0;
+        int valid_patches = 0;
+        
+        std::cout << "\nPer-patch analysis (after correction):" << std::endl;
+        std::cout << "Patch | Corrected RGB       | Reference RGB       | Delta E " << std::endl;
+        std::cout << "------|--------------------|--------------------|---------" << std::endl;
+        
+        for (size_t i = 0; i < std::min(measured_rgb_values.size(), reference_lab_values.size()); i++) {
+            if (measured_rgb_values[i].magnitude() > 0) {
+                // Apply color correction to measured RGB values (with optional affine terms)
+                helios::vec3 measured_rgb = measured_rgb_values[i];
+                float corrected_r = correction_matrix[0][0] * measured_rgb.x + correction_matrix[0][1] * measured_rgb.y + correction_matrix[0][2] * measured_rgb.z;
+                float corrected_g = correction_matrix[1][0] * measured_rgb.x + correction_matrix[1][1] * measured_rgb.y + correction_matrix[1][2] * measured_rgb.z;
+                float corrected_b = correction_matrix[2][0] * measured_rgb.x + correction_matrix[2][1] * measured_rgb.y + correction_matrix[2][2] * measured_rgb.z;
+                
+                
+                // Clamp corrected values to [0,1] - DISABLED FOR TESTING
+                // corrected_r = std::max(0.0f, std::min(1.0f, corrected_r));
+                // corrected_g = std::max(0.0f, std::min(1.0f, corrected_g));
+                // corrected_b = std::max(0.0f, std::min(1.0f, corrected_b));
+                
+                helios::vec3 corrected_rgb = make_vec3(corrected_r, corrected_g, corrected_b);
+                
+                // Convert corrected RGB to Lab
+                CameraCalibration::LabColor corrected_lab = calibration.rgbToLab(corrected_rgb);
+                CameraCalibration::LabColor reference_lab = reference_lab_values[i];
+                
+                // Calculate Delta E between corrected and reference
+                // Use ΔE2000 for better perceptual color difference assessment
+                double delta_E = calibration.deltaE2000(corrected_lab, reference_lab);
+                
+                std::cout << std::setw(5) << i << " | " 
+                         << std::fixed << std::setprecision(3)
+                         << "(" << std::setw(5) << corrected_rgb.x 
+                         << "," << std::setw(5) << corrected_rgb.y
+                         << "," << std::setw(5) << corrected_rgb.z << ") | ";
+                
+                helios::vec3 ref_rgb = calibration.labToRgb(reference_lab);
+                std::cout << "(" << std::setw(5) << ref_rgb.x
+                         << "," << std::setw(5) << ref_rgb.y  
+                         << "," << std::setw(5) << ref_rgb.z << ") | "
+                         << std::setw(7) << delta_E << std::endl;
+                
+                total_delta_e += delta_E;
+                valid_patches++;
+            }
+        }
+        
+        // Overall statistics
+        double mean_delta_e = total_delta_e / valid_patches;
+        std::cout << "\n========== OVERALL CALIBRATION QUALITY ==========" << std::endl;
+        std::cout << "Mean Delta E: " << std::fixed << std::setprecision(2) << mean_delta_e << std::endl;
+
+        std::cout << "======================================================\n" << std::endl;
+    }
+    
+    // Step 7: Apply correction to entire image with same pixel ordering as writeCameraImage
+    std::vector<helios::RGBcolor> corrected_pixels;
+    corrected_pixels.resize(red_data.size());
+    
+    // Apply correction using the same pixel transformation as writeCameraImage uses
+    for (int j = 0; j < camera_resolution.y; j++) {
+        for (int i = 0; i < camera_resolution.x; i++) {
+            // Get pixel from source data (no flip)
+            int source_index = j * camera_resolution.x + i;
+            float r = red_data[source_index];
+            float g = green_data[source_index];
+            float b = blue_data[source_index];
+            
+            // Apply correction matrix (with optional affine terms)
+            float corrected_r = correction_matrix[0][0] * r + correction_matrix[0][1] * g + correction_matrix[0][2] * b;
+            float corrected_g = correction_matrix[1][0] * r + correction_matrix[1][1] * g + correction_matrix[1][2] * b;
+            float corrected_b = correction_matrix[2][0] * r + correction_matrix[2][1] * g + correction_matrix[2][2] * b;
+            
+            
+            // Clamp values to [0,1] - DISABLED FOR TESTING
+            // corrected_r = std::max(0.0f, std::min(1.0f, corrected_r));
+            // corrected_g = std::max(0.0f, std::min(1.0f, corrected_g));
+            // corrected_b = std::max(0.0f, std::min(1.0f, corrected_b));
+            
+            // Apply same coordinate transformation as writeCameraImage
+            uint ii = camera_resolution.x - i - 1;  // Horizontal flip
+            uint jj = camera_resolution.y - j - 1;  // Vertical flip
+            uint dest_index = jj * camera_resolution.x + ii;
+            
+            corrected_pixels[dest_index] = make_RGBcolor(corrected_r, corrected_g, corrected_b);
+        }
+    }
+    
+    // Step 8: Write corrected image using writeJPEG
+    std::string output_path = output_file_path;
+    if (output_path.empty()) {
+        output_path = "auto_calibrated_" + camera_label + ".jpg";
+    }
+    
+    try {
+        helios::writeJPEG(output_path, camera_resolution.x, camera_resolution.y, corrected_pixels);
+        std::cout << "Wrote corrected image to: " << output_path << std::endl;
+    } catch (const std::exception& e) {
+        helios_runtime_error("ERROR (RadiationModel::autoCalibrateCameraImage): Failed to write corrected image. " + std::string(e.what()));
+    }
+    
+    // Export CCM to XML file if requested
+    if (!ccm_export_file_path.empty()) {
+        try {
+            // Calculate quality metrics for export (even if not printed)
+            double total_delta_e = 0.0;
+            int valid_patches = 0;
+            
+            for (size_t i = 0; i < std::min(measured_rgb_values.size(), reference_lab_values.size()); i++) {
+                if (measured_rgb_values[i].magnitude() > 0) {
+                    // Apply color correction to measured RGB values
+                    helios::vec3 measured_rgb = measured_rgb_values[i];
+                    float corrected_r = correction_matrix[0][0] * measured_rgb.x + correction_matrix[0][1] * measured_rgb.y + correction_matrix[0][2] * measured_rgb.z;
+                    float corrected_g = correction_matrix[1][0] * measured_rgb.x + correction_matrix[1][1] * measured_rgb.y + correction_matrix[1][2] * measured_rgb.z;
+                    float corrected_b = correction_matrix[2][0] * measured_rgb.x + correction_matrix[2][1] * measured_rgb.y + correction_matrix[2][2] * measured_rgb.z;
+                    
+                    helios::vec3 corrected_rgb = make_vec3(corrected_r, corrected_g, corrected_b);
+                    
+                    // Convert corrected RGB to Lab
+                    CameraCalibration::LabColor corrected_lab = calibration.rgbToLab(corrected_rgb);
+                    CameraCalibration::LabColor reference_lab = reference_lab_values[i];
+                    
+                    // Calculate Delta E between corrected and reference
+                    double delta_E = calibration.deltaE2000(corrected_lab, reference_lab);
+                    total_delta_e += delta_E;
+                    valid_patches++;
+                }
+            }
+            
+            double mean_delta_e = (valid_patches > 0) ? (total_delta_e / valid_patches) : -1.0;
+            
+            // Export CCM to XML file
+            exportColorCorrectionMatrixXML(ccm_export_file_path, camera_label, correction_matrix, 
+                                         output_path, colorboard_type, (float)mean_delta_e);
+            
+            std::cout << "Exported color correction matrix to: " << ccm_export_file_path << std::endl;
+        } catch (const std::exception& e) {
+            helios_runtime_error("ERROR (RadiationModel::autoCalibrateCameraImage): Failed to export CCM to XML. " + std::string(e.what()));
+        }
+    }
+    
+    return output_path;
+}
+
+void RadiationModel::applyCameraColorCorrectionMatrix(const std::string &camera_label,
+                                                     const std::string &red_band_label,
+                                                     const std::string &green_band_label,
+                                                     const std::string &blue_band_label,
+                                                     const std::string &ccm_file_path) {
+    
+    // Step 1: Validate camera exists
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::applyCameraColorCorrectionMatrix): Camera '" + camera_label + "' does not exist. Make sure the camera was added to the radiation model.");
+    }
+    
+    // Step 2: Validate band labels exist in camera
+    auto& camera_bands = cameras.at(camera_label).band_labels;
+    if (std::find(camera_bands.begin(), camera_bands.end(), red_band_label) == camera_bands.end()) {
+        helios_runtime_error("ERROR (RadiationModel::applyCameraColorCorrectionMatrix): Red band '" + red_band_label + "' not found in camera '" + camera_label + "'.");
+    }
+    if (std::find(camera_bands.begin(), camera_bands.end(), green_band_label) == camera_bands.end()) {
+        helios_runtime_error("ERROR (RadiationModel::applyCameraColorCorrectionMatrix): Green band '" + green_band_label + "' not found in camera '" + camera_label + "'.");
+    }
+    if (std::find(camera_bands.begin(), camera_bands.end(), blue_band_label) == camera_bands.end()) {
+        helios_runtime_error("ERROR (RadiationModel::applyCameraColorCorrectionMatrix): Blue band '" + blue_band_label + "' not found in camera '" + camera_label + "'.");
+    }
+    
+    // Step 3: Load color correction matrix from XML file
+    std::string loaded_camera_label;
+    std::vector<std::vector<float>> correction_matrix;
+    try {
+        correction_matrix = loadColorCorrectionMatrixXML(ccm_file_path, loaded_camera_label);
+    } catch (const std::exception& e) {
+        helios_runtime_error("ERROR (RadiationModel::applyCameraColorCorrectionMatrix): Failed to load CCM from XML file. " + std::string(e.what()));
+    }
+    
+    // Step 4: Validate matrix dimensions (should be 3x3 or 4x3)
+    if (correction_matrix.size() != 3) {
+        helios_runtime_error("ERROR (RadiationModel::applyCameraColorCorrectionMatrix): Invalid matrix dimensions. Expected 3x3 or 4x3 matrix, got " + 
+                           std::to_string(correction_matrix.size()) + " rows.");
+    }
+    
+    bool is_3x3 = (correction_matrix[0].size() == 3);
+    bool is_4x3 = (correction_matrix[0].size() == 4);
+    
+    if (!is_3x3 && !is_4x3) {
+        helios_runtime_error("ERROR (RadiationModel::applyCameraColorCorrectionMatrix): Invalid matrix dimensions. Expected 3x3 or 4x3 matrix, got " + 
+                           std::to_string(correction_matrix.size()) + "x" + std::to_string(correction_matrix[0].size()) + " matrix.");
+    }
+    
+    // Step 5: Get camera data (same approach as applyImageProcessingPipeline)
+    std::vector<float>& red_data = cameras.at(camera_label).pixel_data.at(red_band_label);
+    std::vector<float>& green_data = cameras.at(camera_label).pixel_data.at(green_band_label);
+    std::vector<float>& blue_data = cameras.at(camera_label).pixel_data.at(blue_band_label);
+    
+    int2 camera_resolution = cameras.at(camera_label).resolution;
+    size_t pixel_count = red_data.size();
+    
+    // Step 6: Apply color correction matrix to all pixels in-place
+    for (size_t i = 0; i < pixel_count; i++) {
+        float r = red_data[i];
+        float g = green_data[i];
+        float b = blue_data[i];
+        
+        // Apply color correction matrix (3x3 or 4x3)
+        if (is_3x3) {
+            // Standard 3x3 matrix transformation
+            red_data[i] = correction_matrix[0][0] * r + correction_matrix[0][1] * g + correction_matrix[0][2] * b;
+            green_data[i] = correction_matrix[1][0] * r + correction_matrix[1][1] * g + correction_matrix[1][2] * b;
+            blue_data[i] = correction_matrix[2][0] * r + correction_matrix[2][1] * g + correction_matrix[2][2] * b;
+        } else {
+            // 4x3 matrix transformation with affine offset
+            red_data[i] = correction_matrix[0][0] * r + correction_matrix[0][1] * g + correction_matrix[0][2] * b + correction_matrix[0][3];
+            green_data[i] = correction_matrix[1][0] * r + correction_matrix[1][1] * g + correction_matrix[1][2] * b + correction_matrix[1][3];
+            blue_data[i] = correction_matrix[2][0] * r + correction_matrix[2][1] * g + correction_matrix[2][2] * b + correction_matrix[2][3];
+        }
+    }
+    
+    if (message_flag) {
+        std::cout << "Applied color correction matrix from '" << ccm_file_path << "' to camera '" << camera_label << "'" << std::endl;
+        std::cout << "Matrix type: " << (is_3x3 ? "3x3" : "4x3") << ", processed " << pixel_count << " pixels" << std::endl;
+    }
+}
+
+std::vector<float> RadiationModel::getCameraPixelData(const std::string &camera_label, const std::string &band_label) {
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::getCameraPixelData): Camera '" + camera_label + "' does not exist.");
+    }
+    
+    auto& camera_pixel_data = cameras.at(camera_label).pixel_data;
+    if (camera_pixel_data.find(band_label) == camera_pixel_data.end()) {
+        helios_runtime_error("ERROR (RadiationModel::getCameraPixelData): Band '" + band_label + "' does not exist in camera '" + camera_label + "'.");
+    }
+    
+    return camera_pixel_data.at(band_label);
+}
+
+void RadiationModel::setCameraPixelData(const std::string &camera_label, const std::string &band_label, const std::vector<float> &pixel_data) {
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::setCameraPixelData): Camera '" + camera_label + "' does not exist.");
+    }
+    
+    cameras.at(camera_label).pixel_data[band_label] = pixel_data;
 }
 
 void sutilHandleError(RTcontext context, RTresult code, const char *file, int line) {

@@ -60,6 +60,109 @@ namespace CollisionTests {
         return uuids;
     }
 
+    /**
+     * \brief Create parallel walls with a gap for accuracy testing
+     * \param context Context to add geometry to
+     * \param gap_center Position of the gap center
+     * \param gap_width Width of the gap
+     * \param wall_height Height of the walls
+     * \param wall_distance Distance from origin to walls
+     * \return Vector of created primitive UUIDs
+     */
+    std::vector<uint> createParallelWallsWithGap(Context *context, vec3 gap_center, float gap_width, 
+                                               float wall_height = 2.0f, float wall_distance = 3.0f) {
+        std::vector<uint> uuids;
+        float half_gap = gap_width * 0.5f;
+        float half_height = wall_height * 0.5f;
+        
+        // Left wall (before gap)
+        float left_wall_end = gap_center.x - half_gap;
+        if (left_wall_end > -5.0f) {
+            uint uuid1 = context->addTriangle(
+                make_vec3(-5.0f, gap_center.y - half_height, wall_distance),
+                make_vec3(left_wall_end, gap_center.y - half_height, wall_distance),
+                make_vec3(-5.0f, gap_center.y + half_height, wall_distance)
+            );
+            uint uuid2 = context->addTriangle(
+                make_vec3(left_wall_end, gap_center.y - half_height, wall_distance),
+                make_vec3(left_wall_end, gap_center.y + half_height, wall_distance),
+                make_vec3(-5.0f, gap_center.y + half_height, wall_distance)
+            );
+            uuids.push_back(uuid1);
+            uuids.push_back(uuid2);
+        }
+        
+        // Right wall (after gap)
+        float right_wall_start = gap_center.x + half_gap;
+        if (right_wall_start < 5.0f) {
+            uint uuid3 = context->addTriangle(
+                make_vec3(right_wall_start, gap_center.y - half_height, wall_distance),
+                make_vec3(5.0f, gap_center.y - half_height, wall_distance),
+                make_vec3(right_wall_start, gap_center.y + half_height, wall_distance)
+            );
+            uint uuid4 = context->addTriangle(
+                make_vec3(5.0f, gap_center.y - half_height, wall_distance),
+                make_vec3(5.0f, gap_center.y + half_height, wall_distance),
+                make_vec3(right_wall_start, gap_center.y + half_height, wall_distance)
+            );
+            uuids.push_back(uuid3);
+            uuids.push_back(uuid4);
+        }
+        
+        return uuids;
+    }
+
+    /**
+     * \brief Calculate the analytical optimal direction to a gap center
+     * \param apex Starting point of the cone
+     * \param gap_center Center of the gap
+     * \return Normalized direction vector pointing toward gap center
+     */
+    vec3 calculateGapCenterDirection(vec3 apex, vec3 gap_center) {
+        vec3 direction = gap_center - apex;
+        return direction.normalize();
+    }
+
+    /**
+     * \brief Measure angular error between two directions in radians
+     * \param actual The actual direction vector (should be normalized)
+     * \param expected The expected direction vector (should be normalized)
+     * \return Angular deviation in radians
+     */
+    float measureAngularError(vec3 actual, vec3 expected) {
+        // Ensure both vectors are normalized
+        actual = actual.normalize();
+        expected = expected.normalize();
+        
+        // Calculate dot product and clamp to valid range for acos
+        float dot = std::max(-1.0f, std::min(1.0f, actual * expected));
+        return acosf(dot);
+    }
+
+    /**
+     * \brief Create twin gaps at symmetric positions for preference testing
+     * \param context Context to add geometry to
+     * \param gap_separation Distance between gap centers
+     * \param gap_width Width of each gap
+     * \param wall_distance Distance from origin to walls
+     * \return Vector of created primitive UUIDs
+     */
+    std::vector<uint> createSymmetricTwinGaps(Context *context, float gap_separation, float gap_width,
+                                            float wall_distance = 3.0f) {
+        std::vector<uint> uuids;
+        float half_separation = gap_separation * 0.5f;
+        
+        // Create left gap
+        auto left_wall = createParallelWallsWithGap(context, make_vec3(-half_separation, 0, 0), gap_width, 2.0f, wall_distance);
+        uuids.insert(uuids.end(), left_wall.begin(), left_wall.end());
+        
+        // Create right gap  
+        auto right_wall = createParallelWallsWithGap(context, make_vec3(half_separation, 0, 0), gap_width, 2.0f, wall_distance);
+        uuids.insert(uuids.end(), right_wall.begin(), right_wall.end());
+        
+        return uuids;
+    }
+
 } // namespace CollisionTests
 
 DOCTEST_TEST_CASE("CollisionDetection Plugin Initialization") {
@@ -1117,6 +1220,342 @@ DOCTEST_TEST_CASE("CollisionDetection Finite Cone Height") {
     DOCTEST_CHECK(short_result.collisionCount >= 0);
     DOCTEST_CHECK(long_result.collisionCount >= 0);
 
+}
+
+// ================================================================
+// ACCURACY TEST CASES FOR findOptimalConePath
+// ================================================================
+
+DOCTEST_TEST_CASE("CollisionDetection findOptimalConePath Accuracy - Single Gap Tests") {
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    vec3 apex = make_vec3(0, 0, -3);
+    vec3 central_axis = make_vec3(0, 0, 1);
+    float half_angle = M_PI / 4.0f; // 45 degrees
+
+    // Test 1: Center gap - optimal path should point straight ahead
+    {
+        CollisionTests::createParallelWallsWithGap(&context, make_vec3(0, 0, 0), 1.0f, 2.0f, 3.0f);
+        
+        CollisionDetection::OptimalPathResult result = collision.findOptimalConePath(apex, central_axis, half_angle, 0.0f, 128);
+        vec3 expected_direction = CollisionTests::calculateGapCenterDirection(apex, make_vec3(0, 0, 3.0f));
+        float angular_error = CollisionTests::measureAngularError(result.direction, expected_direction);
+        
+        DOCTEST_CHECK(result.direction.magnitude() > 0.9f);
+        DOCTEST_CHECK(result.direction.magnitude() < 1.1f);
+        DOCTEST_CHECK(angular_error < 0.1f); // Less than ~5.7 degrees
+        DOCTEST_CHECK(result.confidence > 0.5f); // Should have reasonable confidence
+    }
+
+    // Test 2: Off-center gap - should point toward gap center
+    {
+        Context context_reset;
+        CollisionDetection collision_reset(&context_reset);
+        collision_reset.disableMessages();
+        
+        vec3 gap_center = make_vec3(0.5f, 0, 0);
+        CollisionTests::createParallelWallsWithGap(&context_reset, gap_center, 0.8f, 2.0f, 3.0f);
+        
+        CollisionDetection::OptimalPathResult result = collision_reset.findOptimalConePath(apex, central_axis, half_angle, 0.0f, 128);
+        vec3 expected_direction = CollisionTests::calculateGapCenterDirection(apex, make_vec3(gap_center.x, gap_center.y, 3.0f));
+        float angular_error = CollisionTests::measureAngularError(result.direction, expected_direction);
+        
+        DOCTEST_CHECK(angular_error < 0.15f); // Less than ~8.6 degrees
+        DOCTEST_CHECK(result.confidence > 0.3f);
+    }
+
+    // Test 3: Narrow gap - should still find it but with lower confidence
+    {
+        Context context_reset;
+        CollisionDetection collision_reset(&context_reset);
+        collision_reset.disableMessages();
+        
+        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(0, 0, 0), 0.3f, 2.0f, 3.0f);
+        
+        CollisionDetection::OptimalPathResult result = collision_reset.findOptimalConePath(apex, central_axis, half_angle, 0.0f, 256);
+        vec3 expected_direction = CollisionTests::calculateGapCenterDirection(apex, make_vec3(0, 0, 3.0f));
+        float angular_error = CollisionTests::measureAngularError(result.direction, expected_direction);
+        
+        DOCTEST_CHECK(angular_error < 0.2f); // Less than ~11.5 degrees (more tolerance for narrow gap)
+        DOCTEST_CHECK(result.confidence >= 0.0f); // Valid confidence
+    }
+}
+
+DOCTEST_TEST_CASE("CollisionDetection findOptimalConePath Accuracy - Symmetric Twin Gaps") {
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    vec3 apex = make_vec3(0, 0, -3);
+    vec3 central_axis = make_vec3(0, 0, 1);
+    float half_angle = M_PI / 3.0f; // 60 degrees - wide enough to see both gaps
+
+    // Test 1: Identical gaps equidistant from center - should prefer center alignment
+    {
+        CollisionTests::createSymmetricTwinGaps(&context, 2.0f, 0.8f, 3.0f);
+        
+        CollisionDetection::OptimalPathResult result = collision.findOptimalConePath(apex, central_axis, half_angle, 0.0f, 256);
+        
+        // Should prefer the more centrally aligned solution
+        float deviation_from_center = fabsf(acosf(std::max(-1.0f, std::min(1.0f, result.direction * central_axis))));
+        DOCTEST_CHECK(deviation_from_center < M_PI / 6.0f); // Less than 30 degrees from center
+        DOCTEST_CHECK(result.confidence > 0.4f);
+    }
+
+    // Test 2: Different sized gaps - should prefer larger gap
+    {
+        Context context_reset;
+        CollisionDetection collision_reset(&context_reset);
+        collision_reset.disableMessages();
+        
+        // Create small left gap and large right gap
+        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(-1.0f, 0, 0), 0.5f, 2.0f, 3.0f);
+        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(1.0f, 0, 0), 1.5f, 2.0f, 3.0f);
+        
+        CollisionDetection::OptimalPathResult result = collision_reset.findOptimalConePath(apex, central_axis, half_angle, 0.0f, 256);
+        
+        // Should prefer the larger gap (right side)
+        vec3 expected_direction = CollisionTests::calculateGapCenterDirection(apex, make_vec3(1.0f, 0, 3.0f));
+        float angular_error = CollisionTests::measureAngularError(result.direction, expected_direction);
+        
+        DOCTEST_CHECK(angular_error < 0.3f); // Should point roughly toward larger gap
+        DOCTEST_CHECK(result.confidence > 0.3f);
+    }
+}
+
+DOCTEST_TEST_CASE("CollisionDetection findOptimalConePath Accuracy - Angular Precision") {
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    vec3 apex = make_vec3(0, 0, -2);
+    vec3 central_axis = make_vec3(0, 0, 1);
+    float half_angle = M_PI / 4.0f; // 45 degrees
+
+    // Test different gap positions at known angles
+    struct TestCase {
+        vec3 gap_position;
+        float expected_angle_from_center; // in radians
+        std::string description;
+    };
+
+    std::vector<TestCase> test_cases = {
+        {make_vec3(0, 0, 0), 0.0f, "Center gap"},
+        {make_vec3(0.5f, 0, 0), 0.245f, "15 degree gap"}, // atan(0.5/2) ≈ 0.245 rad
+        {make_vec3(-0.7f, 0, 0), -0.334f, "Negative 19 degree gap"}, // atan(-0.7/2) ≈ -0.334 rad
+        {make_vec3(0, 0.8f, 0), 0.381f, "Vertical 22 degree gap"} // atan(0.8/2) ≈ 0.381 rad
+    };
+
+    for (const auto& test_case : test_cases) {
+        // Reset context for each test
+        Context context_fresh;
+        CollisionDetection collision_fresh(&context_fresh);
+        collision_fresh.disableMessages();
+
+        // Create gap at specific position
+        CollisionTests::createParallelWallsWithGap(&context_fresh, test_case.gap_position, 0.6f, 2.0f, 2.0f);
+        
+        CollisionDetection::OptimalPathResult result = collision_fresh.findOptimalConePath(apex, central_axis, half_angle, 0.0f, 512);
+        
+        // Calculate expected direction
+        vec3 gap_center_3d = make_vec3(test_case.gap_position.x, test_case.gap_position.y, 2.0f);
+        vec3 expected_direction = CollisionTests::calculateGapCenterDirection(apex, gap_center_3d);
+        float angular_error = CollisionTests::measureAngularError(result.direction, expected_direction);
+        
+        // Verify angular accuracy
+        DOCTEST_CHECK_MESSAGE(angular_error < 0.35f, test_case.description.c_str()); // Less than 20 degrees (realistic tolerance)
+        DOCTEST_CHECK_MESSAGE(result.confidence > 0.1f, test_case.description.c_str());
+    }
+}
+
+DOCTEST_TEST_CASE("CollisionDetection findOptimalConePath Accuracy - Distance-Based Priority") {
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    vec3 apex = make_vec3(0, 0, -4);
+    vec3 central_axis = make_vec3(0, 0, 1);
+    float half_angle = M_PI / 3.0f; // 60 degrees
+
+    // Test 1: Large far gap vs small near gap - fish-eye metric should prefer larger angular gap
+    {
+        // Near small gap (at distance 2.0)
+        CollisionTests::createParallelWallsWithGap(&context, make_vec3(-1.0f, 0, 0), 0.4f, 2.0f, 2.0f);
+        
+        // Far large gap (at distance 6.0) 
+        CollisionTests::createParallelWallsWithGap(&context, make_vec3(1.0f, 0, 0), 2.0f, 2.0f, 6.0f);
+        
+        CollisionDetection::OptimalPathResult result = collision.findOptimalConePath(apex, central_axis, half_angle, 0.0f, 256);
+        
+        // Fish-eye metric should make closer objects appear larger
+        // The closer small gap should have larger angular size than the far large gap
+        vec3 near_direction = CollisionTests::calculateGapCenterDirection(apex, make_vec3(-1.0f, 0, 2.0f));
+        float angular_error_near = CollisionTests::measureAngularError(result.direction, near_direction);
+        
+        DOCTEST_CHECK(angular_error_near < 0.5f); // Should be closer to near gap
+        DOCTEST_CHECK(result.confidence > 0.2f);
+    }
+
+    // Test 2: Same-sized gaps at different distances
+    {
+        Context context_reset;
+        CollisionDetection collision_reset(&context_reset);
+        collision_reset.disableMessages();
+        
+        // Near gap at distance 2.0
+        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(-0.8f, 0, 0), 0.8f, 2.0f, 2.0f);
+        
+        // Far gap at distance 5.0
+        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(0.8f, 0, 0), 0.8f, 2.0f, 5.0f);
+        
+        CollisionDetection::OptimalPathResult result = collision_reset.findOptimalConePath(apex, central_axis, half_angle, 0.0f, 256);
+        
+        // Should prefer the closer gap due to larger angular size
+        vec3 near_direction = CollisionTests::calculateGapCenterDirection(apex, make_vec3(-0.8f, 0, 2.0f));
+        float angular_error_near = CollisionTests::measureAngularError(result.direction, near_direction);
+        
+        DOCTEST_CHECK(angular_error_near < 0.4f); // Should prefer closer gap
+        DOCTEST_CHECK(result.confidence > 0.2f);
+    }
+
+    // Test 3: Gap size vs distance trade-off verification
+    {
+        Context context_reset;
+        CollisionDetection collision_reset(&context_reset);
+        collision_reset.disableMessages();
+        
+        // Create scenario where angular sizes are roughly similar
+        // Near small gap (angular size ≈ gap_width / distance)
+        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(-0.5f, 0, 0), 0.5f, 2.0f, 2.5f); // Angular size ≈ 0.2 rad
+        
+        // Far medium gap  
+        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(0.5f, 0, 0), 1.0f, 2.0f, 5.0f); // Angular size ≈ 0.2 rad
+        
+        CollisionDetection::OptimalPathResult result = collision_reset.findOptimalConePath(apex, central_axis, half_angle, 0.0f, 512);
+        
+        // Both gaps should have similar scoring - result should be reasonable for either
+        DOCTEST_CHECK(result.direction.magnitude() > 0.9f);
+        DOCTEST_CHECK(result.direction.magnitude() < 1.1f);
+        DOCTEST_CHECK(result.confidence > 0.1f);
+        
+        // Direction should point toward one of the gaps (not somewhere random)
+        vec3 near_dir = CollisionTests::calculateGapCenterDirection(apex, make_vec3(-0.5f, 0, 2.5f));
+        vec3 far_dir = CollisionTests::calculateGapCenterDirection(apex, make_vec3(0.5f, 0, 5.0f));
+        float error_near = CollisionTests::measureAngularError(result.direction, near_dir);
+        float error_far = CollisionTests::measureAngularError(result.direction, far_dir);
+        
+        DOCTEST_CHECK((error_near < 0.3f || error_far < 0.3f)); // Should point toward one of the gaps
+    }
+}
+
+DOCTEST_TEST_CASE("CollisionDetection findOptimalConePath Accuracy - Edge Case Geometry") {
+    Context context;
+    CollisionDetection collision(&context);
+    collision.disableMessages();
+
+    vec3 apex = make_vec3(0, 0, -2);
+    vec3 central_axis = make_vec3(0, 0, 1);
+
+    // Test 1: Very narrow gap - algorithm should handle gracefully
+    {
+        float half_angle = M_PI / 6.0f; // 30 degrees
+        CollisionTests::createParallelWallsWithGap(&context, make_vec3(0, 0, 0), 0.1f, 2.0f, 2.0f); // Very narrow gap
+        
+        CollisionDetection::OptimalPathResult result = collision.findOptimalConePath(apex, central_axis, half_angle, 0.0f, 512);
+        
+        DOCTEST_CHECK(result.direction.magnitude() > 0.9f);
+        DOCTEST_CHECK(result.direction.magnitude() < 1.1f);
+        DOCTEST_CHECK(result.confidence >= 0.0f);
+        DOCTEST_CHECK(result.confidence <= 1.0f);
+        
+        // Should still point roughly toward the gap
+        vec3 expected_direction = CollisionTests::calculateGapCenterDirection(apex, make_vec3(0, 0, 2.0f));
+        float angular_error = CollisionTests::measureAngularError(result.direction, expected_direction);
+        DOCTEST_CHECK(angular_error < 0.5f); // Reasonable accuracy even for narrow gap
+    }
+
+    // Test 2: Gap at edge of cone - testing cone boundary conditions
+    {
+        Context context_reset;
+        CollisionDetection collision_reset(&context_reset);
+        collision_reset.disableMessages();
+        
+        float half_angle = M_PI / 4.0f; // 45 degrees
+        // Place gap near the edge of the cone
+        float edge_angle = half_angle * 0.8f; // 80% toward cone edge
+        float gap_x = 2.0f * tan(edge_angle); // Distance * tan(angle) gives x position
+        
+        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(gap_x, 0, 0), 0.6f, 2.0f, 2.0f);
+        
+        CollisionDetection::OptimalPathResult result = collision_reset.findOptimalConePath(apex, central_axis, half_angle, 0.0f, 256);
+        
+        DOCTEST_CHECK(result.direction.magnitude() > 0.9f);
+        DOCTEST_CHECK(result.direction.magnitude() < 1.1f);
+        
+        // Should find the gap at the cone edge
+        vec3 expected_direction = CollisionTests::calculateGapCenterDirection(apex, make_vec3(gap_x, 0, 2.0f));
+        float angular_error = CollisionTests::measureAngularError(result.direction, expected_direction);
+        DOCTEST_CHECK(angular_error < 0.4f); // More tolerance for edge case (less than 23 degrees)
+    }
+
+    // Test 3: Partially occluded gap - realistic scenario
+    {
+        Context context_reset;
+        CollisionDetection collision_reset(&context_reset);
+        collision_reset.disableMessages();
+        
+        float half_angle = M_PI / 3.0f; // 60 degrees
+        
+        // Create main gap
+        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(0, 0, 0), 1.2f, 2.0f, 3.0f);
+        
+        // Add partial obstruction in front of the gap
+        context_reset.addTriangle(
+            make_vec3(-0.3f, -0.4f, 1.5f),
+            make_vec3(0.3f, -0.4f, 1.5f),
+            make_vec3(0, 0.2f, 1.5f)
+        );
+        
+        CollisionDetection::OptimalPathResult result = collision_reset.findOptimalConePath(apex, central_axis, half_angle, 0.0f, 512);
+        
+        // Should still find a reasonable path despite partial occlusion
+        DOCTEST_CHECK(result.direction.magnitude() > 0.9f);
+        DOCTEST_CHECK(result.direction.magnitude() < 1.1f);
+        DOCTEST_CHECK(result.confidence >= 0.0f); // Valid confidence
+        
+        // Should point roughly toward gap region (allowing for avoidance of occlusion)
+        vec3 gap_direction = CollisionTests::calculateGapCenterDirection(apex, make_vec3(0, 0, 3.0f));
+        float angular_error = CollisionTests::measureAngularError(result.direction, gap_direction);
+        DOCTEST_CHECK(angular_error < 0.6f); // More tolerance due to occlusion
+    }
+
+    // Test 4: Multiple competing gaps - stress test for decision making
+    {
+        Context context_reset;
+        CollisionDetection collision_reset(&context_reset);
+        collision_reset.disableMessages();
+        
+        float half_angle = M_PI / 2.5f; // 72 degrees - very wide cone
+        
+        // Create multiple gaps at various positions
+        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(-1.5f, 0, 0), 0.7f, 2.0f, 4.0f);
+        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(0, 0, 0), 0.5f, 2.0f, 3.0f);
+        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(1.2f, 0, 0), 0.8f, 2.0f, 3.5f);
+        CollisionTests::createParallelWallsWithGap(&context_reset, make_vec3(0, 1.0f, 0), 0.6f, 2.0f, 3.2f);
+        
+        CollisionDetection::OptimalPathResult result = collision_reset.findOptimalConePath(apex, central_axis, half_angle, 0.0f, 512);
+        
+        // Should make a reasonable choice among the gaps
+        DOCTEST_CHECK(result.direction.magnitude() > 0.9f);
+        DOCTEST_CHECK(result.direction.magnitude() < 1.1f);
+        DOCTEST_CHECK(result.confidence > 0.1f); // Should have some confidence in the choice
+        
+        // Direction should be within the cone
+        float deviation_from_center = acosf(std::max(-1.0f, std::min(1.0f, result.direction * central_axis)));
+        DOCTEST_CHECK(deviation_from_center <= half_angle + 0.01f); // Within cone bounds (small tolerance)
+    }
 }
 
 DOCTEST_TEST_CASE("CollisionDetection Scale Test - 1000 Primitives") {

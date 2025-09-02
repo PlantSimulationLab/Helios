@@ -15,10 +15,13 @@
 
 #include "CollisionDetection.h"
 #include <atomic>
-#include <limits>
 #include <functional>
+#include <limits>
 #include <queue>
-#include <stack>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 // SIMD headers
 #ifdef __AVX2__
@@ -28,9 +31,6 @@
 #elif defined(__SSE2__)
 #include <emmintrin.h>
 #endif
-#include <algorithm>
-#include <chrono>
-#include <thread>
 
 #ifdef HELIOS_CUDA_AVAILABLE
 #include <cuda_runtime.h>
@@ -51,9 +51,11 @@ struct GPUBVHNode {
 extern "C" {
 void launchBVHTraversal(void *h_nodes, int node_count, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_query_aabb_min, float *h_query_aabb_max, int num_queries,
                         unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_query);
-void launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x, int grid_divisions_y, int grid_divisions_z, int primitive_count, int *h_voxel_ray_counts, float *h_voxel_path_lengths, int *h_voxel_transmitted, int *h_voxel_hit_before, int *h_voxel_hit_after, int *h_voxel_hit_inside);
+void launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x,
+                               int grid_divisions_y, int grid_divisions_z, int primitive_count, int *h_voxel_ray_counts, float *h_voxel_path_lengths, int *h_voxel_transmitted, int *h_voxel_hit_before, int *h_voxel_hit_after, int *h_voxel_hit_inside);
 // Warp-efficient GPU kernels
-void launchWarpEfficientBVH(void *h_bvh_soa_gpu, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_ray_origins, float *h_ray_directions, float *h_ray_max_distances, int num_rays, unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_ray);
+void launchWarpEfficientBVH(void *h_bvh_soa_gpu, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_ray_origins, float *h_ray_directions, float *h_ray_max_distances,
+                            int num_rays, unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_ray);
 }
 
 // Helper function to convert helios::vec3 to float3
@@ -84,11 +86,17 @@ CollisionDetection::CollisionDetection(helios::Context *a_context) {
 
     // Initialize BVH caching variables
     bvh_dirty = true;
+    soa_dirty = true; // SoA needs initial build
     automatic_bvh_rebuilds = true; // Default: allow automatic rebuilds
-    
+
     // Initialize hierarchical BVH variables
     hierarchical_bvh_enabled = false;
     static_bvh_valid = false;
+
+    // Initialize tree-based BVH variables
+    tree_based_bvh_enabled = false;
+    tree_isolation_distance = 5.0f; // Default 5 meter isolation distance
+    obstacle_spatial_grid_initialized = false;
 
     // Initialize grid parameters
     grid_center = make_vec3(0, 0, 0);
@@ -104,7 +112,6 @@ CollisionDetection::CollisionDetection(helios::Context *a_context) {
 
     // Initialize spatial optimization parameters
     max_collision_distance = 10.0f; // Default 10 meter maximum distance
-
 }
 
 CollisionDetection::~CollisionDetection() {
@@ -128,7 +135,7 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &UU
 
     // Validate UUIDs - throw exception if any are invalid
     std::vector<uint> valid_UUIDs;
-    for (uint uuid : UUIDs) {
+    for (uint uuid: UUIDs) {
         if (context->doesPrimitiveExist(uuid)) {
             valid_UUIDs.push_back(uuid);
         } else {
@@ -247,13 +254,36 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &qu
             all_target_UUIDs.insert(all_target_UUIDs.end(), object_UUIDs.begin(), object_UUIDs.end());
         }
 
+        // OPTIMIZATION: Use per-tree BVH if enabled for better scaling
+        if (tree_based_bvh_enabled && !all_query_UUIDs.empty()) {
+            // Get tree-relevant geometry instead of using all targets
+            helios::vec3 query_center = helios::vec3(0, 0, 0);
+            if (!all_query_UUIDs.empty()) {
+                // Calculate approximate query center from first query primitive
+                helios::vec3 min_corner, max_corner;
+                context->getPrimitiveBoundingBox(all_query_UUIDs[0], min_corner, max_corner);
+                query_center = (min_corner + max_corner) * 0.5f;
+            }
+
+            // Use the configured tree isolation distance (collision cone height)
+            std::vector<uint> effective_targets = getRelevantGeometryForTree(query_center, all_query_UUIDs, tree_isolation_distance);
+            
+            all_target_UUIDs = effective_targets;
+
+            if (printmessages && !effective_targets.empty()) {
+                std::cout << "Per-tree findCollisions: Using " << effective_targets.size() << " relevant targets instead of " << (target_UUIDs.size() + target_object_IDs.size()) << " total targets" << std::endl;
+            }
+        }
+
         // Validate target UUIDs
-        if (!validateUUIDs(all_target_UUIDs)) {
+        if (!all_target_UUIDs.empty() && !validateUUIDs(all_target_UUIDs)) {
             helios_runtime_error("ERROR (CollisionDetection::findCollisions): One or more invalid target UUIDs provided");
         }
 
         // Build BVH with only the target geometry (with caching)
-        updateBVH(all_target_UUIDs, false); // Use caching logic instead of direct rebuild
+        if (!all_target_UUIDs.empty()) {
+            updateBVH(all_target_UUIDs, false); // Use caching logic instead of direct rebuild
+        }
     }
 
     // Perform collision detection using the same logic as the standard findCollisions
@@ -304,7 +334,7 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     } else {
         primitives_to_include = UUIDs;
     }
-    
+
 
     if (primitives_to_include.empty()) {
         if (printmessages) {
@@ -317,7 +347,7 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     std::vector<uint> valid_primitives;
     if (!UUIDs.empty()) {
         // When specific UUIDs are provided, they must all be valid
-        for (uint uuid : primitives_to_include) {
+        for (uint uuid: primitives_to_include) {
             if (context->doesPrimitiveExist(uuid)) {
                 valid_primitives.push_back(uuid);
             } else {
@@ -329,14 +359,14 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
         }
     } else {
         // When no specific UUIDs provided (use all), filter out invalid ones
-        for (uint uuid : primitives_to_include) {
+        for (uint uuid: primitives_to_include) {
             if (context->doesPrimitiveExist(uuid)) {
                 valid_primitives.push_back(uuid);
             } else if (printmessages) {
                 std::cerr << "WARNING (CollisionDetection::buildBVH): Skipping invalid UUID " << uuid << std::endl;
             }
         }
-        
+
         if (valid_primitives.empty()) {
             if (printmessages) {
                 std::cerr << "WARNING (CollisionDetection::buildBVH): No valid primitives found after filtering" << std::endl;
@@ -344,15 +374,15 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
             return;
         }
     }
-    
+
     primitives_to_include = valid_primitives;
 
     // Check if the primitive set has actually changed before clearing cache
     std::set<uint> new_primitive_set(primitives_to_include.begin(), primitives_to_include.end());
     std::set<uint> old_primitive_set(primitive_indices.begin(), primitive_indices.end());
-    
+
     bool primitive_set_changed = (new_primitive_set != old_primitive_set);
-    
+
     if (primitive_set_changed) {
         // Clear primitive cache only when primitive set changes - CRITICAL for performance
         primitive_cache.clear();
@@ -375,7 +405,7 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     // OPTIMIZATION: Pre-cache bounding boxes with dirty flagging to avoid repeated expensive calculations
     // Only clear cache for primitives that no longer exist or are dirty
     std::unordered_set<uint> current_primitives(primitives_to_include.begin(), primitives_to_include.end());
-    
+
     // Remove cached entries for primitives that no longer exist
     auto cache_it = primitive_aabbs_cache.begin();
     while (cache_it != primitive_aabbs_cache.end()) {
@@ -385,17 +415,16 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
             ++cache_it;
         }
     }
-    
+
     // Update only dirty or missing cache entries
     for (uint UUID: primitives_to_include) {
         if (!context->doesPrimitiveExist(UUID)) {
             continue; // Skip invalid primitive
         }
-        
+
         // Only update if not cached or marked as dirty
-        bool needs_update = (primitive_aabbs_cache.find(UUID) == primitive_aabbs_cache.end()) ||
-                           (dirty_primitive_cache.find(UUID) != dirty_primitive_cache.end());
-        
+        bool needs_update = (primitive_aabbs_cache.find(UUID) == primitive_aabbs_cache.end()) || (dirty_primitive_cache.find(UUID) != dirty_primitive_cache.end());
+
         if (needs_update) {
             vec3 aabb_min, aabb_max;
             context->getPrimitiveBoundingBox(UUID, aabb_min, aabb_max);
@@ -438,7 +467,7 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     last_bvh_geometry.clear();
     last_bvh_geometry.insert(primitives_to_include.begin(), primitives_to_include.end());
     bvh_dirty = false;
-
+    soa_dirty = true; // SoA needs rebuild after BVH change
 }
 
 void CollisionDetection::rebuildBVH() {
@@ -469,33 +498,34 @@ void CollisionDetection::disableHierarchicalBVH() {
 }
 
 void CollisionDetection::updateHierarchicalBVH(const std::set<uint> &requested_geometry, bool force_rebuild) {
-    
+
     // Step 1: Build/update static BVH if needed
     if (!static_bvh_valid || force_rebuild || static_geometry_cache != last_static_bvh_geometry) {
         buildStaticBVH();
     }
-    
+
     // Step 2: Separate dynamic geometry (not in static cache)
     std::vector<uint> dynamic_geometry;
-    for (uint uuid : requested_geometry) {
+    for (uint uuid: requested_geometry) {
         if (static_geometry_cache.find(uuid) == static_geometry_cache.end()) {
             dynamic_geometry.push_back(uuid);
         }
     }
-    
-    
+
+
     // Step 3: Build dynamic BVH with remaining geometry (this is smaller and faster)
     if (!dynamic_geometry.empty()) {
-        buildBVH(dynamic_geometry);  // Use existing buildBVH for dynamic part
+        buildBVH(dynamic_geometry); // Use existing buildBVH for dynamic part
     } else {
         // No dynamic geometry - just clear the dynamic BVH
         bvh_nodes.clear();
         primitive_indices.clear();
     }
-    
+
     // Update cache
     last_bvh_geometry = requested_geometry;
     bvh_dirty = false;
+    soa_dirty = true; // SoA needs rebuild after BVH change
 }
 
 void CollisionDetection::buildStaticBVH() {
@@ -505,54 +535,49 @@ void CollisionDetection::buildStaticBVH() {
         static_bvh_valid = false;
         return;
     }
-    
+
     std::vector<uint> static_primitives(static_geometry_cache.begin(), static_geometry_cache.end());
-    
-    
+
+
     // Build BVH for static geometry (reuse existing GPU BVH building logic)
     // For now, we'll store it in the static BVH structures but use same building method
     std::vector<BVHNode> temp_nodes;
     std::vector<uint> temp_primitives;
-    
+
     // Swap in static storage for building
     std::swap(bvh_nodes, temp_nodes);
     std::swap(primitive_indices, temp_primitives);
-    
+
     // Build BVH using existing method
     buildBVH(static_primitives);
-    
+
     // Store result in static BVH and restore dynamic BVH
     static_bvh_nodes = bvh_nodes;
     static_bvh_primitives = primitive_indices;
     std::swap(bvh_nodes, temp_nodes);
     std::swap(primitive_indices, temp_primitives);
-    
+
     static_bvh_valid = true;
     last_static_bvh_geometry = static_geometry_cache;
-    
 }
 
 void CollisionDetection::updateBVH(const std::vector<uint> &UUIDs, bool force_rebuild) {
     // Convert input to set for efficient comparison
     std::set<uint> requested_geometry(UUIDs.begin(), UUIDs.end());
-    
+
     // Check if geometry has changed significantly
     bool geometry_changed = (requested_geometry != last_bvh_geometry) || bvh_dirty;
-    
+
     if (!geometry_changed && !force_rebuild) {
         return;
     }
-    
-    if (printmessages) {
-        std::cout << "BVH update: " << UUIDs.size() << " primitives" << std::endl;
-    }
-    
+
     // Use hierarchical BVH approach if enabled
     if (hierarchical_bvh_enabled) {
         updateHierarchicalBVH(requested_geometry, force_rebuild);
         return;
     }
-    
+
     // Determine if we need a full rebuild or can do incremental update
     if (force_rebuild || bvh_nodes.empty()) {
         // Full rebuild required
@@ -560,39 +585,34 @@ void CollisionDetection::updateBVH(const std::vector<uint> &UUIDs, bool force_re
     } else {
         // Check how much geometry has changed
         std::set<uint> added_geometry, removed_geometry;
-        
+
         // Find added geometry (in requested but not in last_bvh_geometry)
-        std::set_difference(requested_geometry.begin(), requested_geometry.end(),
-                           last_bvh_geometry.begin(), last_bvh_geometry.end(),
-                           std::inserter(added_geometry, added_geometry.begin()));
-        
+        std::set_difference(requested_geometry.begin(), requested_geometry.end(), last_bvh_geometry.begin(), last_bvh_geometry.end(), std::inserter(added_geometry, added_geometry.begin()));
+
         // Find removed geometry (in last_bvh_geometry but not in requested)
-        std::set_difference(last_bvh_geometry.begin(), last_bvh_geometry.end(),
-                           requested_geometry.begin(), requested_geometry.end(),
-                           std::inserter(removed_geometry, removed_geometry.begin()));
-        
+        std::set_difference(last_bvh_geometry.begin(), last_bvh_geometry.end(), requested_geometry.begin(), requested_geometry.end(), std::inserter(removed_geometry, removed_geometry.begin()));
+
         // If more than 20% of geometry changed, do full rebuild, otherwise incremental
         size_t total_change = added_geometry.size() + removed_geometry.size();
         size_t current_size = std::max(last_bvh_geometry.size(), requested_geometry.size());
-        
-        if (current_size == 0 || (float(total_change) / float(current_size)) > 0.2f) {
-            if (printmessages) {
-                std::cout << "Significant geometry change detected, performing full rebuild" << std::endl;
-            }
+
+        // For plant growth, we want to favor incremental updates since they're mostly additions
+        // Use a more aggressive threshold that considers the type of changes
+        bool mostly_additions = (removed_geometry.size() < added_geometry.size() * 0.1f); // <10% removals
+        float change_threshold = mostly_additions ? 0.5f : 0.2f; // Higher threshold for growth scenarios
+
+        if (current_size == 0 || (float(total_change) / float(current_size)) > change_threshold) {
             buildBVH(UUIDs);
         } else {
-            if (printmessages) {
-                std::cout << "Minor geometry change detected, performing incremental update (" 
-                         << added_geometry.size() << " added, " << removed_geometry.size() << " removed)" << std::endl;
-            }
             // Implement incremental update by selective insertion/removal
             incrementalUpdateBVH(added_geometry, removed_geometry, requested_geometry);
         }
     }
-    
+
     // Update tracking
     last_bvh_geometry = requested_geometry;
     bvh_dirty = false;
+    soa_dirty = true; // SoA needs rebuild after BVH change
 }
 
 void CollisionDetection::setStaticGeometry(const std::vector<uint> &UUIDs) {
@@ -605,7 +625,7 @@ void CollisionDetection::ensureBVHCurrent() {
     if (!automatic_bvh_rebuilds) {
         return;
     }
-    
+
     // If BVH is completely empty, build it with all geometry
     if (bvh_nodes.empty()) {
         if (printmessages) {
@@ -802,13 +822,11 @@ void CollisionDetection::buildBVHRecursive(uint node_index, size_t primitive_sta
     if (node_index >= bvh_nodes.size()) {
         throw std::runtime_error("CollisionDetection: BVH recursive access exceeded pre-allocated capacity");
     }
-    
+
     // Bounds check for primitive_indices access
     if (primitive_start + primitive_count > primitive_indices.size()) {
-        throw std::runtime_error("CollisionDetection: BVH primitive bounds check failed - primitive_start(" + 
-                                std::to_string(primitive_start) + ") + primitive_count(" + 
-                                std::to_string(primitive_count) + ") > primitive_indices.size(" + 
-                                std::to_string(primitive_indices.size()) + ")");
+        throw std::runtime_error("CollisionDetection: BVH primitive bounds check failed - primitive_start(" + std::to_string(primitive_start) + ") + primitive_count(" + std::to_string(primitive_count) + ") > primitive_indices.size(" +
+                                 std::to_string(primitive_indices.size()) + ")");
     }
 
     BVHNode &node = bvh_nodes[node_index];
@@ -851,8 +869,8 @@ void CollisionDetection::buildBVHRecursive(uint node_index, size_t primitive_sta
 
     // Stopping criteria - make this a leaf
     // TEMPORARY: Very aggressive stopping for large scenes to prevent timeout
-    const int MAX_PRIMITIVES_PER_LEAF = (primitive_indices.size() > 500000) ? 500 : 100;  // Much larger leaves for big scenes
-    const int MAX_DEPTH = (primitive_indices.size() > 500000) ? 6 : 10;                   // Shallower trees for big scenes
+    const int MAX_PRIMITIVES_PER_LEAF = (primitive_indices.size() > 500000) ? 500 : 100; // Much larger leaves for big scenes
+    const int MAX_DEPTH = (primitive_indices.size() > 500000) ? 6 : 10; // Shallower trees for big scenes
 
     if (primitive_count <= MAX_PRIMITIVES_PER_LEAF || depth >= MAX_DEPTH) {
         // Make leaf node
@@ -874,34 +892,32 @@ void CollisionDetection::buildBVHRecursive(uint node_index, size_t primitive_sta
 
     // In-place sort using pre-cached centroids to avoid temporary vector allocations
     // This is critical for memory efficiency during recursive BVH construction
-    std::sort(primitive_indices.begin() + primitive_start, 
-              primitive_indices.begin() + primitive_start + primitive_count, 
-              [&](uint a, uint b) {
-                  // Use cache lookup with bounds checking for safety
-                  auto it_a = primitive_aabbs_cache.find(a);
-                  auto it_b = primitive_aabbs_cache.find(b);
-                  if (it_a == primitive_aabbs_cache.end() || it_b == primitive_aabbs_cache.end()) {
-                      return a < b; // Fallback to UUID ordering for missing primitives
-                  }
-                  
-                  const auto &aabb_a = it_a->second;
-                  const auto &aabb_b = it_b->second;
-                  
-                  // Compute centroids inline to avoid vec3 temporaries
-                  float centroid_a_coord, centroid_b_coord;
-                  if (split_axis == 0) {
-                      centroid_a_coord = 0.5f * (aabb_a.first.x + aabb_a.second.x);
-                      centroid_b_coord = 0.5f * (aabb_b.first.x + aabb_b.second.x);
-                  } else if (split_axis == 1) {
-                      centroid_a_coord = 0.5f * (aabb_a.first.y + aabb_a.second.y);
-                      centroid_b_coord = 0.5f * (aabb_b.first.y + aabb_b.second.y);
-                  } else {
-                      centroid_a_coord = 0.5f * (aabb_a.first.z + aabb_a.second.z);
-                      centroid_b_coord = 0.5f * (aabb_b.first.z + aabb_b.second.z);
-                  }
-                  
-                  return centroid_a_coord < centroid_b_coord;
-              });
+    std::sort(primitive_indices.begin() + primitive_start, primitive_indices.begin() + primitive_start + primitive_count, [&](uint a, uint b) {
+        // Use cache lookup with bounds checking for safety
+        auto it_a = primitive_aabbs_cache.find(a);
+        auto it_b = primitive_aabbs_cache.find(b);
+        if (it_a == primitive_aabbs_cache.end() || it_b == primitive_aabbs_cache.end()) {
+            return a < b; // Fallback to UUID ordering for missing primitives
+        }
+
+        const auto &aabb_a = it_a->second;
+        const auto &aabb_b = it_b->second;
+
+        // Compute centroids inline to avoid vec3 temporaries
+        float centroid_a_coord, centroid_b_coord;
+        if (split_axis == 0) {
+            centroid_a_coord = 0.5f * (aabb_a.first.x + aabb_a.second.x);
+            centroid_b_coord = 0.5f * (aabb_b.first.x + aabb_b.second.x);
+        } else if (split_axis == 1) {
+            centroid_a_coord = 0.5f * (aabb_a.first.y + aabb_a.second.y);
+            centroid_b_coord = 0.5f * (aabb_b.first.y + aabb_b.second.y);
+        } else {
+            centroid_a_coord = 0.5f * (aabb_a.first.z + aabb_a.second.z);
+            centroid_b_coord = 0.5f * (aabb_b.first.z + aabb_b.second.z);
+        }
+
+        return centroid_a_coord < centroid_b_coord;
+    });
 
     // Split in middle
     size_t split_index = primitive_count / 2;
@@ -909,7 +925,7 @@ void CollisionDetection::buildBVHRecursive(uint node_index, size_t primitive_sta
     // Allocate child nodes from pre-allocated array (no resizing needed)
     uint left_child_index = next_available_node_index++;
     uint right_child_index = next_available_node_index++;
-    
+
     // Ensure we don't exceed pre-allocated capacity
     if (right_child_index >= bvh_nodes.size()) {
         throw std::runtime_error("CollisionDetection: BVH node allocation exceeded pre-calculated capacity");
@@ -1206,6 +1222,480 @@ bool CollisionDetection::coneAABBIntersect(const Cone &cone, const vec3 &aabb_mi
     return false;
 }
 
+bool CollisionDetection::coneAABBIntersectFast(const Cone &cone, const vec3 &aabb_min, const vec3 &aabb_max) {
+    // Fast-path cone-AABB intersection optimized for high-throughput filtering
+    // Uses aggressive early rejection to eliminate 99%+ of geometry with minimal computation
+
+    // Fast rejection test 1: Check if apex is inside AABB (very common case, worth checking first)
+    if (cone.apex.x >= aabb_min.x && cone.apex.x <= aabb_max.x && cone.apex.y >= aabb_min.y && cone.apex.y <= aabb_max.y && cone.apex.z >= aabb_min.z && cone.apex.z <= aabb_max.z) {
+        return true; // Apex inside AABB - definite intersection
+    }
+
+    // Fast rejection test 2: Behind-apex test (eliminates geometry behind cone)
+    vec3 box_center = 0.5f * (aabb_min + aabb_max);
+    vec3 apex_to_center = box_center - cone.apex;
+    float distance_along_axis = apex_to_center * cone.axis;
+
+    if (distance_along_axis <= 0.0f) {
+        return false; // AABB is completely behind cone apex
+    }
+
+    // Fast rejection test 3: Height test for finite cones
+    if (cone.height > 0.0f && distance_along_axis > cone.height) {
+        // Box center is beyond cone height, but we need to check if any part of box is within height
+        vec3 box_half_extents = 0.5f * (aabb_max - aabb_min);
+        float box_radius = box_half_extents.magnitude();
+        if (distance_along_axis - box_radius > cone.height) {
+            return false; // Entire AABB is beyond cone height
+        }
+    }
+
+    // Fast rejection test 4: Cone angle bounding sphere test (fast approximation)
+    float max_distance = (cone.height > 0.0f) ? cone.height : distance_along_axis;
+    float max_radius_at_distance = max_distance * tanf(cone.half_angle);
+
+    // Find closest point on cone axis to box center
+    vec3 axis_point = cone.apex + cone.axis * distance_along_axis;
+    float distance_from_axis = (box_center - axis_point).magnitude();
+
+    // Conservative bounding sphere test
+    vec3 box_half_extents = 0.5f * (aabb_max - aabb_min);
+    float box_radius = box_half_extents.magnitude();
+
+    if (distance_from_axis > max_radius_at_distance + box_radius) {
+        return false; // AABB is completely outside cone's maximum radius
+    }
+
+    // If we get here, AABB might intersect cone - fall back to precise test
+    // This should only happen for a small percentage of AABBs
+    return coneAABBIntersect(cone, aabb_min, aabb_max);
+}
+
+// -------- RASTERIZATION-BASED COLLISION DETECTION IMPLEMENTATION --------
+
+int CollisionDetection::calculateOptimalBinCount(float cone_half_angle, int geometry_count) {
+    // Target: ~1 degree angular resolution, scaled by cone size
+    float base_resolution = M_PI / 180.0f; // 1 degree in radians
+    float cone_solid_angle = 2.0f * M_PI * (1.0f - cosf(cone_half_angle));
+    int optimal_bins = (int) (cone_solid_angle / (base_resolution * base_resolution));
+
+    // Clamp based on geometry complexity and performance
+    int min_bins = 64; // Always enough resolution for gap detection
+    int max_bins = std::min(1024, geometry_count * 4); // Don't exceed geometry complexity
+
+    return std::clamp(optimal_bins, min_bins, max_bins);
+}
+
+std::vector<uint> CollisionDetection::filterPrimitivesParallel(const Cone &cone, const std::vector<uint> &primitive_uuids) {
+    std::vector<uint> filtered_uuids;
+
+    if (primitive_uuids.empty()) {
+        return filtered_uuids;
+    }
+
+    // Reserve space for result vector
+    filtered_uuids.reserve(primitive_uuids.size() / 10); // Estimate ~10% will pass filter
+
+#ifdef _OPENMP
+    // Use thread-local vectors to avoid synchronization overhead
+    const int num_threads = omp_get_max_threads();
+    std::vector<std::vector<uint>> thread_results(num_threads);
+
+    // Pre-allocate thread-local storage
+    for (int i = 0; i < num_threads; i++) {
+        thread_results[i].reserve(primitive_uuids.size() / (num_threads * 10));
+    }
+
+// Always parallelize AABB filtering (high value, low overhead)
+#pragma omp parallel
+    {
+        int thread_id = omp_get_thread_num();
+        std::vector<uint> &local_results = thread_results[thread_id];
+
+#pragma omp for nowait
+        for (int i = 0; i < static_cast<int>(primitive_uuids.size()); i++) {
+            uint uuid = primitive_uuids[i];
+
+            // Get primitive vertices and calculate AABB
+            if (context->doesPrimitiveExist(uuid)) {
+                std::vector<vec3> vertices = context->getPrimitiveVertices(uuid);
+                if (!vertices.empty()) {
+                    // Calculate AABB from vertices
+                    vec3 aabb_min = vertices[0];
+                    vec3 aabb_max = vertices[0];
+                    for (const vec3 &vertex: vertices) {
+                        aabb_min = make_vec3(std::min(aabb_min.x, vertex.x), std::min(aabb_min.y, vertex.y), std::min(aabb_min.z, vertex.z));
+                        aabb_max = make_vec3(std::max(aabb_max.x, vertex.x), std::max(aabb_max.y, vertex.y), std::max(aabb_max.z, vertex.z));
+                    }
+
+                    // Use fast cone-AABB intersection test
+                    if (coneAABBIntersectFast(cone, aabb_min, aabb_max)) {
+                        local_results.push_back(uuid);
+                    }
+                }
+            }
+        }
+    }
+
+    // Merge results from all threads
+    size_t total_count = 0;
+    for (const auto &thread_result: thread_results) {
+        total_count += thread_result.size();
+    }
+
+    filtered_uuids.reserve(total_count);
+    for (const auto &thread_result: thread_results) {
+        filtered_uuids.insert(filtered_uuids.end(), thread_result.begin(), thread_result.end());
+    }
+#else
+    // Serial fallback when OpenMP is not available
+    for (size_t i = 0; i < primitive_uuids.size(); i++) {
+        uint uuid = primitive_uuids[i];
+
+        // Get primitive vertices and calculate AABB
+        if (context->doesPrimitiveExist(uuid)) {
+            std::vector<vec3> vertices = context->getPrimitiveVertices(uuid);
+            if (!vertices.empty()) {
+                // Calculate AABB from vertices
+                vec3 aabb_min = vertices[0];
+                vec3 aabb_max = vertices[0];
+                for (const vec3 &vertex: vertices) {
+                    aabb_min = make_vec3(std::min(aabb_min.x, vertex.x), std::min(aabb_min.y, vertex.y), std::min(aabb_min.z, vertex.z));
+                    aabb_max = make_vec3(std::max(aabb_max.x, vertex.x), std::max(aabb_max.y, vertex.y), std::max(aabb_max.z, vertex.z));
+                }
+
+                // Use fast cone-AABB intersection test
+                if (coneAABBIntersectFast(cone, aabb_min, aabb_max)) {
+                    filtered_uuids.push_back(uuid);
+                }
+            }
+        }
+    }
+#endif
+
+    return filtered_uuids;
+}
+
+float CollisionDetection::cartesianToSphericalCone(const vec3 &vector, const vec3 &cone_axis, float &theta, float &phi) {
+    float distance = vector.magnitude();
+    if (distance < 1e-6f) {
+        theta = 0.0f;
+        phi = 0.0f;
+        return 0.0f;
+    }
+
+    vec3 normalized_vector = vector / distance;
+
+    // Calculate phi (polar angle from cone axis)
+    float cos_phi = normalized_vector * cone_axis;
+    phi = acosf(std::clamp(cos_phi, -1.0f, 1.0f));
+
+    // Calculate theta (azimuthal angle around cone axis)
+    // Create orthonormal basis from cone axis
+    vec3 up = (abs(cone_axis.z) < 0.999f) ? make_vec3(0, 0, 1) : make_vec3(1, 0, 0);
+    vec3 right = cross(cone_axis, up);
+    right.normalize();
+    vec3 forward = cross(right, cone_axis);
+
+    // Project vector onto perpendicular plane
+    vec3 projected = normalized_vector - cone_axis * cos_phi;
+    if (projected.magnitude() > 1e-6f) {
+        projected.normalize();
+        float cos_theta = projected * right;
+        float sin_theta = projected * forward;
+        theta = atan2f(sin_theta, cos_theta);
+        if (theta < 0.0f)
+            theta += 2.0f * M_PI; // Ensure [0, 2π]
+    } else {
+        theta = 0.0f; // Vector is along cone axis
+    }
+
+    return distance;
+}
+
+bool CollisionDetection::sphericalCoordsToBinIndices(float theta, float phi, const AngularBins &bins, int &theta_bin, int &phi_bin) {
+    // Check if angles are within valid cone range
+    if (phi < 0.0f || theta < 0.0f || theta >= 2.0f * M_PI) {
+        return false;
+    }
+
+    // Map to bin indices
+    theta_bin = (int) (theta * bins.theta_divisions / (2.0f * M_PI));
+    phi_bin = (int) (phi * bins.phi_divisions / M_PI); // Assume phi range is [0, PI] for full sphere
+
+    // Clamp to valid ranges
+    theta_bin = std::clamp(theta_bin, 0, bins.theta_divisions - 1);
+    phi_bin = std::clamp(phi_bin, 0, bins.phi_divisions - 1);
+
+    return true;
+}
+
+void CollisionDetection::projectGeometryToBins(const Cone &cone, const std::vector<uint> &filtered_uuids, AngularBins &bins) {
+    bins.clear();
+
+    const int PARALLEL_THRESHOLD = 500; // Empirically determined threshold
+
+    if (filtered_uuids.size() > PARALLEL_THRESHOLD) {
+// Conditional parallel projection for large geometry sets
+#ifdef _OPENMP
+        const int num_threads = omp_get_max_threads();
+        std::vector<AngularBins> thread_bins(num_threads, AngularBins(bins.theta_divisions, bins.phi_divisions));
+
+#pragma omp parallel
+        {
+            int thread_id = omp_get_thread_num();
+            AngularBins &local_bins = thread_bins[thread_id];
+
+#pragma omp for nowait
+            for (int i = 0; i < static_cast<int>(filtered_uuids.size()); i++) {
+                uint uuid = filtered_uuids[i];
+
+                if (context->doesPrimitiveExist(uuid)) {
+                    std::vector<vec3> vertices = context->getPrimitiveVertices(uuid);
+
+                    // Project each vertex to spherical coordinates
+                    for (const vec3 &vertex: vertices) {
+                        vec3 apex_to_vertex = vertex - cone.apex;
+                        float distance = apex_to_vertex.magnitude();
+
+                        if (distance > 1e-6f) {
+                            float theta, phi;
+                            cartesianToSphericalCone(apex_to_vertex, cone.axis, theta, phi);
+
+                            // Skip if outside cone angle
+                            if (phi <= cone.half_angle) {
+                                int theta_bin, phi_bin;
+                                if (sphericalCoordsToBinIndices(theta, phi, local_bins, theta_bin, phi_bin)) {
+                                    local_bins.setCovered(theta_bin, phi_bin, distance);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Merge thread-local bins into global bins
+        for (const auto &thread_bin: thread_bins) {
+            for (int theta = 0; theta < bins.theta_divisions; theta++) {
+                for (int phi = 0; phi < bins.phi_divisions; phi++) {
+                    if (thread_bin.isCovered(theta, phi)) {
+                        int index = theta * bins.phi_divisions + phi;
+                        float thread_depth = thread_bin.depth_values[index];
+                        bins.setCovered(theta, phi, thread_depth);
+                    }
+                }
+            }
+        }
+#else
+        // Fallback to serial if OpenMP not available
+        projectGeometryToBinsSerial(cone, filtered_uuids, bins);
+#endif
+    } else {
+        // Serial projection for small geometry sets
+        projectGeometryToBinsSerial(cone, filtered_uuids, bins);
+    }
+}
+
+void CollisionDetection::projectGeometryToBinsSerial(const Cone &cone, const std::vector<uint> &filtered_uuids, AngularBins &bins) {
+    for (uint uuid: filtered_uuids) {
+        if (context->doesPrimitiveExist(uuid)) {
+            std::vector<vec3> vertices = context->getPrimitiveVertices(uuid);
+
+            // Project each vertex to spherical coordinates
+            for (const vec3 &vertex: vertices) {
+                vec3 apex_to_vertex = vertex - cone.apex;
+                float distance = apex_to_vertex.magnitude();
+
+                if (distance > 1e-6f) {
+                    float theta, phi;
+                    cartesianToSphericalCone(apex_to_vertex, cone.axis, theta, phi);
+
+                    // Skip if outside cone angle
+                    if (phi <= cone.half_angle) {
+                        int theta_bin, phi_bin;
+                        if (sphericalCoordsToBinIndices(theta, phi, bins, theta_bin, phi_bin)) {
+                            bins.setCovered(theta_bin, phi_bin, distance);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+std::vector<CollisionDetection::Gap> CollisionDetection::findGapsInCoverageMap(const AngularBins &bins, const Cone &cone) {
+    std::vector<Gap> gaps;
+
+    // Connected component analysis to find contiguous free regions
+    std::vector<std::vector<bool>> visited(bins.theta_divisions, std::vector<bool>(bins.phi_divisions, false));
+
+    for (int theta = 0; theta < bins.theta_divisions; theta++) {
+        for (int phi = 0; phi < bins.phi_divisions; phi++) {
+            if (!bins.isCovered(theta, phi) && !visited[theta][phi]) {
+                // Found start of new gap - flood fill to find full extent
+                Gap gap = floodFillGap(bins, theta, phi, visited, cone);
+
+                // Only keep gaps meeting minimum size thresholds
+                const float MIN_GAP_SIZE_STERADIANS = 0.01f; // Minimum gap size
+                if (gap.angular_size > MIN_GAP_SIZE_STERADIANS) {
+                    gaps.push_back(gap);
+                }
+            }
+        }
+    }
+
+    // Sort gaps by angular size (largest first)
+    std::sort(gaps.begin(), gaps.end(), [](const Gap &a, const Gap &b) { return a.angular_size > b.angular_size; });
+
+    return gaps;
+}
+
+CollisionDetection::Gap CollisionDetection::floodFillGap(const AngularBins &bins, int start_theta, int start_phi, std::vector<std::vector<bool>> &visited, const Cone &cone) {
+    Gap gap;
+    std::queue<std::pair<int, int>> queue;
+    queue.push({start_theta, start_phi});
+
+    float total_solid_angle = 0;
+    vec3 weighted_center(0, 0, 0);
+
+    while (!queue.empty()) {
+        auto [theta, phi] = queue.front();
+        queue.pop();
+
+        if (visited[theta][phi] || bins.isCovered(theta, phi))
+            continue;
+        visited[theta][phi] = true;
+
+        // Calculate solid angle contribution of this bin
+        float bin_solid_angle = calculateBinSolidAngle(theta, phi, bins, cone.half_angle);
+        total_solid_angle += bin_solid_angle;
+
+        // Accumulate weighted center direction
+        vec3 bin_direction = binIndicesToCartesian(theta, phi, bins, cone);
+        weighted_center = weighted_center + bin_direction * bin_solid_angle;
+
+        // Add unoccupied neighbors to queue
+        addUnoccupiedNeighbors(theta, phi, bins, visited, queue);
+    }
+
+    gap.angular_size = total_solid_angle;
+    gap.center_direction = weighted_center.magnitude() > 1e-6f ? weighted_center.normalize() : cone.axis;
+
+    return gap;
+}
+
+float CollisionDetection::calculateBinSolidAngle(int theta_bin, int phi_bin, const AngularBins &bins, float cone_half_angle) {
+    // Calculate solid angle of a single bin
+    float theta_step = 2.0f * M_PI / bins.theta_divisions;
+    float phi_step = cone_half_angle / bins.phi_divisions;
+
+    // For small angles, solid angle ≈ θ_step × φ_step × sin(φ)
+    float phi = (phi_bin + 0.5f) * phi_step;
+    return theta_step * phi_step * sinf(phi);
+}
+
+vec3 CollisionDetection::binIndicesToCartesian(int theta_bin, int phi_bin, const AngularBins &bins, const Cone &cone) {
+    // Convert bin indices back to cartesian direction
+    float theta = (theta_bin + 0.5f) * 2.0f * M_PI / bins.theta_divisions;
+    float phi = (phi_bin + 0.5f) * cone.half_angle / bins.phi_divisions;
+
+    // Create orthonormal basis from cone axis (same as in cartesianToSphericalCone)
+    vec3 up = (abs(cone.axis.z) < 0.999f) ? make_vec3(0, 0, 1) : make_vec3(1, 0, 0);
+    vec3 right = cross(cone.axis, up);
+    right.normalize();
+    vec3 forward = cross(right, cone.axis);
+
+    // Convert spherical to cartesian
+    float sin_phi = sinf(phi);
+    float cos_phi = cosf(phi);
+    float sin_theta = sinf(theta);
+    float cos_theta = cosf(theta);
+
+    vec3 direction = cone.axis * cos_phi + (right * cos_theta + forward * sin_theta) * sin_phi;
+    return direction.normalize();
+}
+
+void CollisionDetection::addUnoccupiedNeighbors(int theta, int phi, const AngularBins &bins, std::vector<std::vector<bool>> &visited, std::queue<std::pair<int, int>> &queue) {
+    // Add 4-connected neighbors (up, down, left, right in bin space)
+    const int neighbors[4][2] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+
+    for (int i = 0; i < 4; i++) {
+        int new_theta = theta + neighbors[i][0];
+        int new_phi = phi + neighbors[i][1];
+
+        // Handle theta wraparound (circular)
+        if (new_theta < 0)
+            new_theta += bins.theta_divisions;
+        if (new_theta >= bins.theta_divisions)
+            new_theta -= bins.theta_divisions;
+
+        // Check phi bounds (no wraparound)
+        if (new_phi >= 0 && new_phi < bins.phi_divisions) {
+            if (!visited[new_theta][new_phi] && !bins.isCovered(new_theta, new_phi)) {
+                queue.push({new_theta, new_phi});
+            }
+        }
+    }
+}
+
+// -------- MAIN RASTERIZED FINDOPTIMALCONEPATH IMPLEMENTATION --------
+
+CollisionDetection::OptimalPathResult CollisionDetection::findOptimalConePath(const vec3 &apex, const vec3 &centralAxis, float half_angle, float height, int initialSamples) {
+
+    OptimalPathResult result;
+    result.direction = centralAxis;
+    result.direction.normalize();
+    result.collisionCount = 0;
+    result.confidence = 0.0f;
+
+    // Validate input parameters
+    if (initialSamples <= 0 || half_angle <= 0.0f || half_angle > M_PI) {
+        if (printmessages) {
+            std::cerr << "WARNING: Invalid parameters for findOptimalConePath" << std::endl;
+        }
+        return result;
+    }
+
+    if (bvh_nodes.empty()) {
+        // No geometry to collide with, central axis is optimal
+        result.confidence = 1.0f;
+        return result;
+    }
+
+    // Use original fish-eye camera gap detection algorithm
+    std::vector<Gap> detected_gaps = detectGapsInCone(apex, centralAxis, half_angle, height, initialSamples);
+
+    if (detected_gaps.empty()) {
+        // No gaps found, fall back to central axis
+        // if (printmessages) {
+        //     std::cerr << "WARNING: No gaps detected in cone, using central axis" << std::endl;
+        // }
+        result.confidence = 0.1f;
+        return result;
+    }
+
+    // Score gaps using fish-eye metric
+    scoreGapsByFishEyeMetric(detected_gaps, centralAxis);
+
+    // Find optimal direction toward highest-scoring gap
+    result.direction = findOptimalGapDirection(detected_gaps, centralAxis);
+
+    // Count collisions along optimal direction for reporting using modern ray-tracing
+    float max_distance = (height > 0.0f) ? height : -1.0f;
+    HitResult direction_hit = castRay(apex, result.direction, max_distance);
+    result.collisionCount = direction_hit.hit ? 1 : 0;
+
+    // Calculate confidence based on gap quality
+    if (!detected_gaps.empty()) {
+        // Higher confidence for larger, well-defined gaps
+        const Gap &best_gap = detected_gaps[0]; // Assuming first is best after sorting
+        result.confidence = std::min(1.0f, best_gap.angular_size * 10.0f); // Scale angular size to confidence
+    }
+
+    return result;
+}
+
 #ifdef HELIOS_CUDA_AVAILABLE
 void CollisionDetection::allocateGPUMemory() {
     if (gpu_memory_allocated) {
@@ -1310,7 +1800,6 @@ void CollisionDetection::transferBVHToGPU() {
     if (err != cudaSuccess) {
         helios_runtime_error("CUDA error transferring primitive indices: " + std::string(cudaGetErrorString(err)));
     }
-
 }
 #endif
 
@@ -1320,10 +1809,10 @@ void CollisionDetection::markBVHDirty() {
     last_processed_deleted_uuids.clear();
     last_bvh_geometry.clear();
     bvh_dirty = true;
-    
-    // Note: Don't clear primitive_cache here - it will be cleared only when 
+
+    // Note: Don't clear primitive_cache here - it will be cleared only when
     // buildBVH() detects actual primitive set changes, not just geometry updates
-    
+
     // Free GPU memory since BVH will be rebuilt
 #ifdef HELIOS_CUDA_AVAILABLE
     freeGPUMemory();
@@ -1331,35 +1820,81 @@ void CollisionDetection::markBVHDirty() {
 }
 
 void CollisionDetection::incrementalUpdateBVH(const std::set<uint> &added_geometry, const std::set<uint> &removed_geometry, const std::set<uint> &final_geometry) {
-    
-    // For small changes, it's actually more efficient to do a targeted rebuild than complex tree restructuring
-    // True incremental BVH updates require complex rebalancing algorithms
-    
-    // Convert final geometry to vector for buildBVH
-    std::vector<uint> final_primitives(final_geometry.begin(), final_geometry.end());
-    
-    // Validate new geometries exist
-    for (uint uuid : added_geometry) {
+
+    // Validate new geometries exist first
+    for (uint uuid: added_geometry) {
         if (!context->doesPrimitiveExist(uuid)) {
             if (printmessages) {
                 std::cerr << "Warning: Added primitive " << uuid << " does not exist, falling back to full rebuild" << std::endl;
             }
+            std::vector<uint> final_primitives(final_geometry.begin(), final_geometry.end());
             buildBVH(final_primitives);
             return;
         }
     }
-    
-    // For now, use optimized rebuild for incremental updates
-    // This is still faster than full geometry traversal since we're limiting to specific primitives
+
+    // For plant growth scenarios, most changes are additions (new leaves/branches)
+    // We can optimize for this by caching primitive AABBs and selective reconstruction
+
     if (printmessages) {
-        std::cout << "Performing targeted rebuild with " << final_primitives.size() << " primitives" << std::endl;
+        std::cout << "Performing optimized incremental update (" << added_geometry.size() << " added, " << removed_geometry.size() << " removed)" << std::endl;
     }
-    
+
+    // Update primitive AABB cache for new primitives
+    for (uint uuid: added_geometry) {
+        updatePrimitiveAABBCache(uuid);
+    }
+
+    // Remove old primitives from cache
+    for (uint uuid: removed_geometry) {
+        primitive_aabbs_cache.erase(uuid);
+    }
+
+    // For incremental updates, we use a two-stage approach:
+    // 1. If the number of changes is small relative to tree size, do targeted insertion
+    // 2. Otherwise, do optimized rebuild with cached AABBs
+
+    size_t total_changes = added_geometry.size() + removed_geometry.size();
+    size_t current_size = final_geometry.size();
+
+    // If changes are very small (<5% of tree), try targeted insertion
+    if (current_size > 0 && !bvh_nodes.empty() && (float(total_changes) / float(current_size)) < 0.05f) {
+        // For very small changes, targeted insertion can be beneficial
+        bool insertion_successful = true;
+
+        // Remove primitives from primitive_indices
+        if (!removed_geometry.empty()) {
+            primitive_indices.erase(std::remove_if(primitive_indices.begin(), primitive_indices.end(), [&removed_geometry](uint uuid) { return removed_geometry.find(uuid) != removed_geometry.end(); }), primitive_indices.end());
+        }
+
+        // Add new primitives to primitive_indices
+        for (uint uuid: added_geometry) {
+            primitive_indices.push_back(uuid);
+        }
+
+        // For small changes, rebuild only affected subtrees by invalidating nodes
+        // This is more efficient than full rebuild for tiny changes
+        if (insertion_successful && total_changes < 50) {
+            if (printmessages) {
+                std::cout << "Using targeted tree update for " << total_changes << " changes" << std::endl;
+            }
+
+            // Mark BVH as needing rebalance but keep existing structure where possible
+            // For now, we do a fast rebuild since true incremental tree rebalancing
+            // requires complex algorithms that may not be worth the complexity
+            optimizedRebuildBVH(final_geometry);
+            return;
+        }
+    }
+
+    // Fall back to optimized full rebuild using cached AABBs
+    std::vector<uint> final_primitives(final_geometry.begin(), final_geometry.end());
     buildBVH(final_primitives);
-    
+
     // Update tracking
     last_bvh_geometry = final_geometry;
     bvh_dirty = false;
+    soa_dirty = true; // SoA needs rebuild after BVH change
 }
 
 bool CollisionDetection::validateUUIDs(const std::vector<uint> &UUIDs) const {
@@ -1380,175 +1915,174 @@ bool CollisionDetection::rayPrimitiveIntersection(const vec3 &origin, const vec3
     if (!context->doesPrimitiveExist(primitive_UUID)) {
         return false;
     }
-    
+
     try {
         // Get primitive type and vertices
         PrimitiveType type = context->getPrimitiveType(primitive_UUID);
         std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_UUID);
-        
+
         if (vertices.empty()) {
             return false;
         }
-    
-    
-    bool hit = false;
-    float min_distance = std::numeric_limits<float>::max();
-    
-    if (type == PRIMITIVE_TYPE_TRIANGLE) {
-        // Triangle intersection using radiation model algorithm (proven to work)
-        if (vertices.size() >= 3) {
-            const vec3 &v0 = vertices[0];
-            const vec3 &v1 = vertices[1];
-            const vec3 &v2 = vertices[2];
-            
-            // Use the same algorithm as radiation model's triangle_intersect
-            float a = v0.x - v1.x, b = v0.x - v2.x, c = direction.x, d = v0.x - origin.x;
-            float e = v0.y - v1.y, f = v0.y - v2.y, g = direction.y, h = v0.y - origin.y;
-            float i = v0.z - v1.z, j = v0.z - v2.z, k = direction.z, l = v0.z - origin.z;
 
-            float m = f * k - g * j, n = h * k - g * l, p = f * l - h * j;
-            float q = g * i - e * k, s = e * j - f * i;
 
-            float denom = a * m + b * q + c * s;
-            if (std::abs(denom) < 1e-8f) {
-                return false; // Ray is parallel to triangle
-            }
-            
-            float inv_denom = 1.0f / denom;
+        bool hit = false;
+        float min_distance = std::numeric_limits<float>::max();
 
-            float e1 = d * m - b * n - c * p;
-            float beta = e1 * inv_denom;
+        if (type == PRIMITIVE_TYPE_TRIANGLE) {
+            // Triangle intersection using radiation model algorithm (proven to work)
+            if (vertices.size() >= 3) {
+                const vec3 &v0 = vertices[0];
+                const vec3 &v1 = vertices[1];
+                const vec3 &v2 = vertices[2];
 
-            if (beta >= 0.0f) {
-                float r = e * l - h * i;
-                float e2 = a * n + d * q + c * r;
-                float gamma = e2 * inv_denom;
+                // Use the same algorithm as radiation model's triangle_intersect
+                float a = v0.x - v1.x, b = v0.x - v2.x, c = direction.x, d = v0.x - origin.x;
+                float e = v0.y - v1.y, f = v0.y - v2.y, g = direction.y, h = v0.y - origin.y;
+                float i = v0.z - v1.z, j = v0.z - v2.z, k = direction.z, l = v0.z - origin.z;
 
-                if (gamma >= 0.0f && beta + gamma <= 1.0f) {
-                    float e3 = a * p - b * r + d * s;
-                    float t = e3 * inv_denom;
+                float m = f * k - g * j, n = h * k - g * l, p = f * l - h * j;
+                float q = g * i - e * k, s = e * j - f * i;
 
-                    if (t > 1e-8f && t < min_distance) {
-                        min_distance = t;
-                        hit = true;
-                    }
+                float denom = a * m + b * q + c * s;
+                if (std::abs(denom) < 1e-8f) {
+                    return false; // Ray is parallel to triangle
                 }
-            }
-        }
-    } else if (type == PRIMITIVE_TYPE_PATCH) {
-        // Patch (quadrilateral) intersection using radiation model algorithm
-        if (vertices.size() >= 4) {
-            const vec3 &v0 = vertices[0];
-            const vec3 &v1 = vertices[1];
-            const vec3 &v2 = vertices[2];
-            const vec3 &v3 = vertices[3];
-            
-            // Calculate patch vectors and normal (same as radiation model)
-            vec3 anchor = v0;
-            vec3 normal = cross(v1 - v0, v2 - v0);
-            normal.normalize();
-            
-            vec3 a = v1 - v0; // First edge vector
-            vec3 b = v3 - v0; // Second edge vector
-            
-            // Ray-plane intersection
-            float denom = direction * normal;
-            if (std::abs(denom) > 1e-8f) { // Not parallel to plane
-                float t = (anchor - origin) * normal / denom;
-                
-                if (t > 1e-8f && t < 1e8f) { // Valid intersection distance
-                    // Find intersection point
-                    vec3 p = origin + direction * t;
-                    vec3 d = p - anchor;
-                    
-                    // Project onto patch coordinate system
-                    float ddota = d * a;
-                    float ddotb = d * b;
-                    
-                    // Check if point is within patch bounds
-                    if (ddota >= 0.0f && ddota <= (a * a) && 
-                        ddotb >= 0.0f && ddotb <= (b * b)) {
-                        
-                        if (t < min_distance) {
+
+                float inv_denom = 1.0f / denom;
+
+                float e1 = d * m - b * n - c * p;
+                float beta = e1 * inv_denom;
+
+                if (beta >= 0.0f) {
+                    float r = e * l - h * i;
+                    float e2 = a * n + d * q + c * r;
+                    float gamma = e2 * inv_denom;
+
+                    if (gamma >= 0.0f && beta + gamma <= 1.0f) {
+                        float e3 = a * p - b * r + d * s;
+                        float t = e3 * inv_denom;
+
+                        if (t > 1e-8f && t < min_distance) {
                             min_distance = t;
                             hit = true;
                         }
                     }
                 }
             }
-        }
-    } else if (type == PRIMITIVE_TYPE_VOXEL) {
-        // Voxel (AABB) intersection using slab method
-        if (vertices.size() == 8) {
-            // Calculate AABB from 8 vertices
-            vec3 aabb_min = vertices[0];
-            vec3 aabb_max = vertices[0];
-            
-            for (int i = 1; i < 8; i++) {
-                aabb_min.x = std::min(aabb_min.x, vertices[i].x);
-                aabb_min.y = std::min(aabb_min.y, vertices[i].y);
-                aabb_min.z = std::min(aabb_min.z, vertices[i].z);
-                aabb_max.x = std::max(aabb_max.x, vertices[i].x);
-                aabb_max.y = std::max(aabb_max.y, vertices[i].y);
-                aabb_max.z = std::max(aabb_max.z, vertices[i].z);
-            }
-            
-            // Ray-AABB intersection using slab method
-            float t_near = -std::numeric_limits<float>::max();
-            float t_far = std::numeric_limits<float>::max();
-            
-            // Check intersection with each slab (X, Y, Z)
-            for (int i = 0; i < 3; i++) {
-                float ray_dir_component = (i == 0) ? direction.x : (i == 1) ? direction.y : direction.z;
-                float ray_orig_component = (i == 0) ? origin.x : (i == 1) ? origin.y : origin.z;
-                float aabb_min_component = (i == 0) ? aabb_min.x : (i == 1) ? aabb_min.y : aabb_min.z;
-                float aabb_max_component = (i == 0) ? aabb_max.x : (i == 1) ? aabb_max.y : aabb_max.z;
-                
-                if (std::abs(ray_dir_component) < 1e-8f) {
-                    // Ray is parallel to slab
-                    if (ray_orig_component < aabb_min_component || ray_orig_component > aabb_max_component) {
-                        return false; // Ray is outside slab and parallel - no intersection
-                    }
-                } else {
-                    // Calculate intersection distances for this slab
-                    float t1 = (aabb_min_component - ray_orig_component) / ray_dir_component;
-                    float t2 = (aabb_max_component - ray_orig_component) / ray_dir_component;
-                    
-                    // Ensure t1 <= t2
-                    if (t1 > t2) {
-                        std::swap(t1, t2);
-                    }
-                    
-                    // Update near and far intersection distances
-                    t_near = std::max(t_near, t1);
-                    t_far = std::min(t_far, t2);
-                    
-                    // Early exit if no intersection possible
-                    if (t_near > t_far) {
-                        return false;
+        } else if (type == PRIMITIVE_TYPE_PATCH) {
+            // Patch (quadrilateral) intersection using radiation model algorithm
+            if (vertices.size() >= 4) {
+                const vec3 &v0 = vertices[0];
+                const vec3 &v1 = vertices[1];
+                const vec3 &v2 = vertices[2];
+                const vec3 &v3 = vertices[3];
+
+                // Calculate patch vectors and normal (same as radiation model)
+                vec3 anchor = v0;
+                vec3 normal = cross(v1 - v0, v2 - v0);
+                normal.normalize();
+
+                vec3 a = v1 - v0; // First edge vector
+                vec3 b = v3 - v0; // Second edge vector
+
+                // Ray-plane intersection
+                float denom = direction * normal;
+                if (std::abs(denom) > 1e-8f) { // Not parallel to plane
+                    float t = (anchor - origin) * normal / denom;
+
+                    if (t > 1e-8f && t < 1e8f) { // Valid intersection distance
+                        // Find intersection point
+                        vec3 p = origin + direction * t;
+                        vec3 d = p - anchor;
+
+                        // Project onto patch coordinate system
+                        float ddota = d * a;
+                        float ddotb = d * b;
+
+                        // Check if point is within patch bounds
+                        if (ddota >= 0.0f && ddota <= (a * a) && ddotb >= 0.0f && ddotb <= (b * b)) {
+
+                            if (t < min_distance) {
+                                min_distance = t;
+                                hit = true;
+                            }
+                        }
                     }
                 }
             }
-            
-            // Check if intersection is in front of ray origin
-            if (t_far >= 0.0f && t_near < min_distance) {
-                // Use t_near if it's positive (ray starts outside box), otherwise t_far (ray starts inside box)
-                float intersection_distance = (t_near >= 1e-8f) ? t_near : t_far;
-                if (intersection_distance >= 1e-8f) {
-                    min_distance = intersection_distance;
-                    hit = true;
+        } else if (type == PRIMITIVE_TYPE_VOXEL) {
+            // Voxel (AABB) intersection using slab method
+            if (vertices.size() == 8) {
+                // Calculate AABB from 8 vertices
+                vec3 aabb_min = vertices[0];
+                vec3 aabb_max = vertices[0];
+
+                for (int i = 1; i < 8; i++) {
+                    aabb_min.x = std::min(aabb_min.x, vertices[i].x);
+                    aabb_min.y = std::min(aabb_min.y, vertices[i].y);
+                    aabb_min.z = std::min(aabb_min.z, vertices[i].z);
+                    aabb_max.x = std::max(aabb_max.x, vertices[i].x);
+                    aabb_max.y = std::max(aabb_max.y, vertices[i].y);
+                    aabb_max.z = std::max(aabb_max.z, vertices[i].z);
+                }
+
+                // Ray-AABB intersection using slab method
+                float t_near = -std::numeric_limits<float>::max();
+                float t_far = std::numeric_limits<float>::max();
+
+                // Check intersection with each slab (X, Y, Z)
+                for (int i = 0; i < 3; i++) {
+                    float ray_dir_component = (i == 0) ? direction.x : (i == 1) ? direction.y : direction.z;
+                    float ray_orig_component = (i == 0) ? origin.x : (i == 1) ? origin.y : origin.z;
+                    float aabb_min_component = (i == 0) ? aabb_min.x : (i == 1) ? aabb_min.y : aabb_min.z;
+                    float aabb_max_component = (i == 0) ? aabb_max.x : (i == 1) ? aabb_max.y : aabb_max.z;
+
+                    if (std::abs(ray_dir_component) < 1e-8f) {
+                        // Ray is parallel to slab
+                        if (ray_orig_component < aabb_min_component || ray_orig_component > aabb_max_component) {
+                            return false; // Ray is outside slab and parallel - no intersection
+                        }
+                    } else {
+                        // Calculate intersection distances for this slab
+                        float t1 = (aabb_min_component - ray_orig_component) / ray_dir_component;
+                        float t2 = (aabb_max_component - ray_orig_component) / ray_dir_component;
+
+                        // Ensure t1 <= t2
+                        if (t1 > t2) {
+                            std::swap(t1, t2);
+                        }
+
+                        // Update near and far intersection distances
+                        t_near = std::max(t_near, t1);
+                        t_far = std::min(t_far, t2);
+
+                        // Early exit if no intersection possible
+                        if (t_near > t_far) {
+                            return false;
+                        }
+                    }
+                }
+
+                // Check if intersection is in front of ray origin
+                if (t_far >= 0.0f && t_near < min_distance) {
+                    // Use t_near if it's positive (ray starts outside box), otherwise t_far (ray starts inside box)
+                    float intersection_distance = (t_near >= 1e-8f) ? t_near : t_far;
+                    if (intersection_distance >= 1e-8f) {
+                        min_distance = intersection_distance;
+                        hit = true;
+                    }
                 }
             }
         }
-    }
-    
+
         if (hit) {
             distance = min_distance;
             return true;
         }
-        
+
         return false;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         // Primitive no longer exists or can't be accessed
         return false;
     }
@@ -1641,7 +2175,7 @@ int CollisionDetection::countRayIntersections(const vec3 &origin, const vec3 &di
                     // Check distance constraints (both min and max)
                     bool within_min_distance = prim_t_min >= min_distance;
                     bool within_max_distance = (max_distance <= 0.0f) || (prim_t_min <= max_distance);
-                    
+
                     if (within_min_distance && within_max_distance) {
                         intersection_count++;
                     }
@@ -1662,190 +2196,190 @@ int CollisionDetection::countRayIntersections(const vec3 &origin, const vec3 &di
 }
 
 bool CollisionDetection::findNearestRayIntersection(const vec3 &origin, const vec3 &direction, const std::set<uint> &candidate_UUIDs, float &nearest_distance, float max_distance) {
-    
+
     nearest_distance = std::numeric_limits<float>::max();
     bool found_intersection = false;
-    
+
     // Check if we need to traverse both static and dynamic BVHs
     bool check_static_bvh = hierarchical_bvh_enabled && static_bvh_valid && !static_bvh_nodes.empty();
     bool check_dynamic_bvh = !bvh_nodes.empty();
-    
+
     if (!check_static_bvh && !check_dynamic_bvh) {
         return false;
     }
-    
-    
+
+
     // Ensure the BVH is current before traversal
     const_cast<CollisionDetection *>(this)->ensureBVHCurrent();
-    
+
     // Lambda function to traverse a BVH and find ray intersections
-    auto traverseBVH = [&](const std::vector<BVHNode>& nodes, const std::vector<uint>& primitives, const char* bvh_name) {
-        if (nodes.empty()) return;
-        
+    auto traverseBVH = [&](const std::vector<BVHNode> &nodes, const std::vector<uint> &primitives, const char *bvh_name) {
+        if (nodes.empty())
+            return;
+
         // Stack-based traversal to avoid recursion
         std::vector<uint> node_stack;
         node_stack.push_back(0); // Start with root node
-        
+
         while (!node_stack.empty()) {
             uint node_idx = node_stack.back();
             node_stack.pop_back();
-            
+
             if (node_idx >= nodes.size()) {
                 continue;
             }
-            
+
             const BVHNode &node = nodes[node_idx];
-        
-        // Test if ray intersects node AABB
-        float t_min, t_max;
-        if (!rayAABBIntersect(origin, direction, node.aabb_min, node.aabb_max, t_min, t_max)) {
-            continue;
-        }
-        
-        // Check if intersection is within distance range
-        if (max_distance > 0.0f && t_min > max_distance) {
-            continue; // Entire AABB is too far - skip
-        }
-        
-        // If we've already found a closer intersection than this AABB, skip it
-        if (t_min > nearest_distance) {
-            continue;
-        }
-        
-        if (node.is_leaf) {
-            // Check each primitive in this leaf for ray intersection
-            for (uint i = 0; i < node.primitive_count; i++) {
-                uint primitive_id = primitives[node.primitive_start + i];
-                
-                
-                // Skip if this primitive is not in the candidate set (unless candidate set is empty)
-                if (!candidate_UUIDs.empty() && candidate_UUIDs.find(primitive_id) == candidate_UUIDs.end()) {
-                    continue;
-                }
-                
-                
-                // Get this primitive's AABB
-                if (!context->doesPrimitiveExist(primitive_id)) {
-                    continue; // Skip invalid primitive
-                }
-                
-                vec3 prim_min, prim_max;
-                context->getPrimitiveBoundingBox(primitive_id, prim_min, prim_max);
-                
-                // Test ray against primitive AABB
-                float prim_t_min, prim_t_max;
-                if (rayAABBIntersect(origin, direction, prim_min, prim_max, prim_t_min, prim_t_max)) {
-                    // Check distance constraints
-                    bool within_max_distance = (max_distance <= 0.0f) || (prim_t_min <= max_distance);
-                    
-                    if (within_max_distance && prim_t_min > 0.0f && prim_t_min < nearest_distance) {
-                        // For now, we use AABB intersection distance as an approximation
-                        // A more accurate implementation would perform exact ray-primitive intersection
-                        nearest_distance = prim_t_min;
-                        found_intersection = true;
+
+            // Test if ray intersects node AABB
+            float t_min, t_max;
+            if (!rayAABBIntersect(origin, direction, node.aabb_min, node.aabb_max, t_min, t_max)) {
+                continue;
+            }
+
+            // Check if intersection is within distance range
+            if (max_distance > 0.0f && t_min > max_distance) {
+                continue; // Entire AABB is too far - skip
+            }
+
+            // If we've already found a closer intersection than this AABB, skip it
+            if (t_min > nearest_distance) {
+                continue;
+            }
+
+            if (node.is_leaf) {
+                // Check each primitive in this leaf for ray intersection
+                for (uint i = 0; i < node.primitive_count; i++) {
+                    uint primitive_id = primitives[node.primitive_start + i];
+
+
+                    // Skip if this primitive is not in the candidate set (unless candidate set is empty)
+                    if (!candidate_UUIDs.empty() && candidate_UUIDs.find(primitive_id) == candidate_UUIDs.end()) {
+                        continue;
+                    }
+
+
+                    // Get this primitive's AABB
+                    if (!context->doesPrimitiveExist(primitive_id)) {
+                        continue; // Skip invalid primitive
+                    }
+
+                    vec3 prim_min, prim_max;
+                    context->getPrimitiveBoundingBox(primitive_id, prim_min, prim_max);
+
+                    // Test ray against primitive AABB
+                    float prim_t_min, prim_t_max;
+                    if (rayAABBIntersect(origin, direction, prim_min, prim_max, prim_t_min, prim_t_max)) {
+                        // Check distance constraints
+                        bool within_max_distance = (max_distance <= 0.0f) || (prim_t_min <= max_distance);
+
+                        if (within_max_distance && prim_t_min > 0.0f && prim_t_min < nearest_distance) {
+                            // For now, we use AABB intersection distance as an approximation
+                            // A more accurate implementation would perform exact ray-primitive intersection
+                            nearest_distance = prim_t_min;
+                            found_intersection = true;
+                        }
                     }
                 }
+            } else {
+                // Add child nodes to stack for further traversal
+                if (node.left_child != 0xFFFFFFFF) {
+                    node_stack.push_back(node.left_child);
+                }
+                if (node.right_child != 0xFFFFFFFF) {
+                    node_stack.push_back(node.right_child);
+                }
             }
-        } else {
-            // Add child nodes to stack for further traversal
-            if (node.left_child != 0xFFFFFFFF) {
-                node_stack.push_back(node.left_child);
-            }
-            if (node.right_child != 0xFFFFFFFF) {
-                node_stack.push_back(node.right_child);
-            }
-        }
-        }  // End of while loop
-    };  // End of lambda
-    
+        } // End of while loop
+    }; // End of lambda
+
     // First, traverse the static BVH if hierarchical BVH is enabled
     if (check_static_bvh) {
         traverseBVH(static_bvh_nodes, static_bvh_primitives, "static");
     }
-    
+
     // Then, traverse the dynamic BVH
     if (check_dynamic_bvh) {
         traverseBVH(bvh_nodes, primitive_indices, "dynamic");
     }
-    
+
     return found_intersection;
 }
 
 bool CollisionDetection::findNearestPrimitiveDistance(const vec3 &origin, const vec3 &direction, const std::vector<uint> &candidate_UUIDs, float &distance, vec3 &obstacle_direction) {
-    
+
     if (candidate_UUIDs.empty()) {
         if (printmessages) {
             std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): No candidate UUIDs provided" << std::endl;
         }
         return false;
     }
-    
+
     // Validate that direction is normalized
     float dir_magnitude = direction.magnitude();
     if (std::abs(dir_magnitude - 1.0f) > 1e-6f) {
         if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): Direction vector is not normalized (magnitude = " 
-                      << dir_magnitude << ")" << std::endl;
+            std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): Direction vector is not normalized (magnitude = " << dir_magnitude << ")" << std::endl;
         }
         return false;
     }
-    
-    
+
+
     // Filter out invalid UUIDs
     std::vector<uint> valid_candidates;
-    for (uint uuid : candidate_UUIDs) {
+    for (uint uuid: candidate_UUIDs) {
         if (context->doesPrimitiveExist(uuid)) {
             valid_candidates.push_back(uuid);
         } else if (printmessages) {
             std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): Skipping invalid UUID " << uuid << std::endl;
         }
     }
-    
-    
+
+
     if (valid_candidates.empty()) {
         if (printmessages) {
             std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): No valid candidate UUIDs after filtering" << std::endl;
         }
         return false;
     }
-    
+
     float nearest_distance_found = std::numeric_limits<float>::max();
     vec3 nearest_obstacle_direction;
     bool found_forward_surface = false;
-    
+
     // Check each candidate primitive to find the nearest "forward-facing" surface
-    for (uint primitive_id : valid_candidates) {
+    for (uint primitive_id: valid_candidates) {
         // Get primitive normal and a point on the surface using Context methods
         vec3 surface_normal = context->getPrimitiveNormal(primitive_id);
         std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_id);
-        
+
         if (vertices.empty()) {
             continue; // Skip if no vertices
         }
-        
+
         // Use first vertex as a point on the plane
         vec3 point_on_plane = vertices[0];
-        
+
         // Calculate distance from origin to the plane
         vec3 to_origin = origin - point_on_plane;
         float distance_to_plane = to_origin * surface_normal;
-        
+
         // Distance is the absolute value
         float surface_distance = std::abs(distance_to_plane);
-        
+
         // The direction from origin to closest point on surface
         vec3 surface_direction;
         if (distance_to_plane > 0) {
             // Origin is on the positive side of the normal - direction to surface is -normal
             surface_direction = -surface_normal;
         } else {
-            // Origin is on the negative side of the normal - direction to surface is +normal  
+            // Origin is on the negative side of the normal - direction to surface is +normal
             surface_direction = surface_normal;
         }
-        
+
         // Check if this surface is "in front" using dot product
         float dot_product = surface_direction * direction;
-        
+
         if (dot_product > 0.0f) { // Surface is in front of origin
             if (surface_distance < nearest_distance_found) {
                 nearest_distance_found = surface_distance;
@@ -1854,151 +2388,243 @@ bool CollisionDetection::findNearestPrimitiveDistance(const vec3 &origin, const 
             }
         }
     }
-    
+
     if (found_forward_surface) {
         distance = nearest_distance_found;
         obstacle_direction = nearest_obstacle_direction;
         return true;
     }
-    
-    
+
+
     return false;
 }
 
 bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const vec3 &axis, float half_angle, float height, const std::vector<uint> &candidate_UUIDs, float &distance, vec3 &obstacle_direction, int num_rays) {
-    
-    if (candidate_UUIDs.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestSolidObstacleInCone): No candidate UUIDs provided" << std::endl;
-        }
-        return false;
+
+    // OPTIMIZATION: Use per-tree BVH if enabled for better scaling
+    std::vector<uint> effective_candidates;
+    if (tree_based_bvh_enabled) {
+        // Get tree-relevant geometry - use proportional distance for spatial filtering  
+        float spatial_filter_distance = height * 1.25f;  // 25% buffer beyond cone height
+        effective_candidates = getRelevantGeometryForTree(apex, candidate_UUIDs, spatial_filter_distance);
+        
+    } else {
+        effective_candidates = candidate_UUIDs;
     }
-    
+
+    if (effective_candidates.empty()) {
+        return false; // No obstacles within detection range - normal for outer branches
+    }
+
     // Validate input parameters
-    if (half_angle <= 0.0f || half_angle > M_PI/2.0f) {
+    if (half_angle <= 0.0f || half_angle > M_PI / 2.0f) {
         if (printmessages) {
             std::cerr << "WARNING (CollisionDetection::findNearestSolidObstacleInCone): Invalid half_angle " << half_angle << std::endl;
         }
         return false;
     }
-    
+
     if (height <= 0.0f) {
         if (printmessages) {
             std::cerr << "WARNING (CollisionDetection::findNearestSolidObstacleInCone): Invalid height " << height << std::endl;
         }
         return false;
     }
-    
+
     // Ensure BVH is current
     ensureBVHCurrent();
-    
+
     // Check if BVH is empty
     if (bvh_nodes.empty()) {
         return false; // No geometry to collide with
     }
-    
-    // Convert candidate UUIDs to set for efficient lookup
-    std::set<uint> candidate_set(candidate_UUIDs.begin(), candidate_UUIDs.end());
-    
+
+    // Convert effective candidate UUIDs to set for efficient lookup
+    std::set<uint> candidate_set(effective_candidates.begin(), effective_candidates.end());
+
     // Generate ray directions within the cone
     std::vector<vec3> ray_directions = sampleDirectionsInCone(apex, axis, half_angle, num_rays);
-    
+
     float nearest_distance = std::numeric_limits<float>::max();
     vec3 nearest_direction;
     bool found_obstacle = false;
-    
+
     // Use modern batch ray-casting for better performance
     std::vector<RayQuery> ray_queries;
     ray_queries.reserve(ray_directions.size());
-    
-    for (const vec3 &ray_dir : ray_directions) {
+
+    for (const vec3 &ray_dir: ray_directions) {
         ray_queries.emplace_back(apex, ray_dir, height, candidate_UUIDs);
     }
-    
+
     // Cast all rays in batch - automatically selects CPU/GPU based on count
     RayTracingStats ray_stats;
     std::vector<HitResult> hit_results = castRays(ray_queries, &ray_stats);
-    
+
     // Find the nearest obstacle from all ray results
     for (size_t i = 0; i < hit_results.size(); ++i) {
         const HitResult &result = hit_results[i];
-        
+
         if (result.hit && result.distance < nearest_distance) {
             nearest_distance = result.distance;
             nearest_direction = ray_directions[i];
             found_obstacle = true;
         }
     }
-    
+
     if (found_obstacle) {
         distance = nearest_distance;
         obstacle_direction = nearest_direction;
         return true;
     }
-    
+
+    return false;
+}
+
+bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const vec3 &axis, float half_angle, float height, const std::vector<uint> &candidate_UUIDs, const std::vector<uint> &plant_primitives, float &distance, vec3 &obstacle_direction, int num_rays) {
+
+    // OPTIMIZATION: Use per-tree BVH with plant primitive identification for better scaling
+    std::vector<uint> effective_candidates;
+    if (tree_based_bvh_enabled) {
+        // Get tree-relevant geometry using plant primitives to identify the querying tree
+        effective_candidates = getRelevantGeometryForTree(apex, plant_primitives, height);
+        
+        if (printmessages && !effective_candidates.empty()) {
+            std::cout << "Per-tree findNearestSolidObstacleInCone: Using " << effective_candidates.size() << " relevant targets instead of " << candidate_UUIDs.size() << " total targets" << std::endl;
+        }
+    } else {
+        effective_candidates = candidate_UUIDs;
+    }
+
+    if (effective_candidates.empty()) {
+        return false; // No obstacles within detection range - normal for outer branches
+    }
+
+    // Validate input parameters
+    if (half_angle <= 0.0f || half_angle > M_PI / 2.0f) {
+        if (printmessages) {
+            std::cerr << "WARNING (CollisionDetection::findNearestSolidObstacleInCone): Invalid half_angle " << half_angle << std::endl;
+        }
+        return false;
+    }
+
+    if (height <= 0.0f) {
+        if (printmessages) {
+            std::cerr << "WARNING (CollisionDetection::findNearestSolidObstacleInCone): Invalid height " << height << std::endl;
+        }
+        return false;
+    }
+
+    // Ensure BVH is current
+    ensureBVHCurrent();
+
+    // Check if BVH is empty
+    if (bvh_nodes.empty()) {
+        return false; // No geometry to collide with
+    }
+
+    // Convert effective candidate UUIDs to set for efficient lookup
+    std::set<uint> candidate_set(effective_candidates.begin(), effective_candidates.end());
+
+    // Generate ray directions within the cone
+    std::vector<vec3> ray_directions = sampleDirectionsInCone(apex, axis, half_angle, num_rays);
+
+    float nearest_distance = std::numeric_limits<float>::max();
+    vec3 nearest_direction;
+    bool found_obstacle = false;
+
+    // Use modern batch ray-casting for better performance
+    std::vector<RayQuery> ray_queries;
+    ray_queries.reserve(ray_directions.size());
+
+    for (const vec3 &ray_dir: ray_directions) {
+        ray_queries.emplace_back(apex, ray_dir, height, effective_candidates);
+    }
+
+    // Cast all rays in batch - automatically selects CPU/GPU based on count
+    RayTracingStats ray_stats;
+    std::vector<HitResult> hit_results = castRays(ray_queries, &ray_stats);
+
+    // Find the nearest obstacle from all ray results
+    for (size_t i = 0; i < hit_results.size(); ++i) {
+        const HitResult &result = hit_results[i];
+
+        if (result.hit && result.distance < nearest_distance) {
+            nearest_distance = result.distance;
+            nearest_direction = ray_directions[i];
+            found_obstacle = true;
+        }
+    }
+
+    if (found_obstacle) {
+        distance = nearest_distance;
+        obstacle_direction = nearest_direction;
+        return true;
+    }
+
     return false;
 }
 
 bool CollisionDetection::detectAttractionPoints(const vec3 &vertex, const vec3 &look_direction, float look_ahead_distance, float half_angle_degrees, const std::vector<vec3> &attraction_points, vec3 &direction_to_closest) {
-    
+
     // Validate input parameters
     if (attraction_points.empty()) {
         return false;
     }
-    
+
     if (look_ahead_distance <= 0.0f) {
         if (printmessages) {
             std::cerr << "WARNING (CollisionDetection::detectAttractionPoints): Invalid look-ahead distance (<= 0)" << std::endl;
         }
         return false;
     }
-    
+
     if (half_angle_degrees <= 0.0f || half_angle_degrees >= 180.0f) {
         if (printmessages) {
             std::cerr << "WARNING (CollisionDetection::detectAttractionPoints): Invalid half-angle (must be in range (0, 180) degrees)" << std::endl;
         }
         return false;
     }
-    
+
     // Convert half-angle to radians
     float half_angle_rad = half_angle_degrees * M_PI / 180.0f;
-    
+
     // Normalize look direction
     vec3 axis = look_direction;
     axis.normalize();
-    
+
     // Variables to track the closest attraction point
     bool found_any = false;
     float min_angular_distance = std::numeric_limits<float>::max();
     vec3 closest_point;
-    
+
     // Check each attraction point
-    for (const vec3 &point : attraction_points) {
+    for (const vec3 &point: attraction_points) {
         // Calculate vector from vertex to attraction point
         vec3 to_point = point - vertex;
         float distance_to_point = to_point.magnitude();
-        
+
         // Skip if point is at the vertex or beyond look-ahead distance
         if (distance_to_point < 1e-6f || distance_to_point > look_ahead_distance) {
             continue;
         }
-        
+
         // Normalize the direction to the point
         vec3 direction_to_point = to_point;
         direction_to_point.normalize();
-        
+
         // Calculate angle between look direction and direction to point
         float cos_angle = axis * direction_to_point;
-        
+
         // Clamp to handle numerical precision issues
         cos_angle = std::max(-1.0f, std::min(1.0f, cos_angle));
-        
+
         float angle = std::acos(cos_angle);
-        
+
         // Check if point is within the perception cone
         if (angle <= half_angle_rad) {
             found_any = true;
-            
+
             // Check if this is the closest to the centerline
             if (angle < min_angular_distance) {
                 min_angular_distance = angle;
@@ -2006,14 +2632,14 @@ bool CollisionDetection::detectAttractionPoints(const vec3 &vertex, const vec3 &
             }
         }
     }
-    
+
     // If we found any attraction points, calculate the direction to the closest one
     if (found_any) {
         direction_to_closest = closest_point - vertex;
         direction_to_closest.normalize();
         return true;
     }
-    
+
     return false;
 }
 
@@ -2100,60 +2726,44 @@ std::vector<helios::vec3> CollisionDetection::sampleDirectionsInCone(const vec3 
     return directions;
 }
 
-CollisionDetection::OptimalPathResult CollisionDetection::findOptimalConePath(const vec3 &apex, const vec3 &centralAxis, float half_angle, float height, int initialSamples) {
 
-    OptimalPathResult result;
-    result.direction = centralAxis;
-    result.direction.normalize();
-    result.collisionCount = 0;
-    result.confidence = 0.0f;
+// -------- SPATIAL GRID OPTIMIZATION --------
 
-    // Validate input parameters
-    if (initialSamples <= 0 || half_angle <= 0.0f || half_angle > M_PI) {
-        if (printmessages) {
-            std::cerr << "WARNING: Invalid parameters for findOptimalConePath" << std::endl;
-        }
-        return result;
+std::vector<uint> CollisionDetection::getCandidatesUsingSpatialGrid(const Cone &cone, const vec3 &apex, const vec3 &central_axis, float half_angle, float height) {
+    // Get cone AABB for grid cell determination
+    vec3 cone_base = apex + central_axis * height;
+    float cone_base_radius = height * tan(half_angle);
+
+    vec3 cone_aabb_min = vec3(std::min(apex.x, cone_base.x - cone_base_radius), std::min(apex.y, cone_base.y - cone_base_radius), std::min(apex.z, cone_base.z - cone_base_radius));
+    vec3 cone_aabb_max = vec3(std::max(apex.x, cone_base.x + cone_base_radius), std::max(apex.y, cone_base.y + cone_base_radius), std::max(apex.z, cone_base.z + cone_base_radius));
+
+    // Use BVH primitive indices approach for better performance
+    std::vector<uint> all_primitives;
+    if (!primitive_indices.empty()) {
+        all_primitives = primitive_indices; // Use BVH primitive indices
+    } else {
+        // Fallback: get all primitives from context (slower)
+        all_primitives = context->getAllUUIDs();
     }
 
-    if (bvh_nodes.empty()) {
-        // No geometry to collide with, central axis is optimal
-        result.confidence = 1.0f;
-        return result;
-    }
-
-    // Use fish-eye camera gap detection algorithm
-    std::vector<Gap> detected_gaps = detectGapsInCone(apex, centralAxis, half_angle, height, initialSamples);
-
-    if (detected_gaps.empty()) {
-        // No gaps found, fall back to central axis
-        if (printmessages) {
-            std::cerr << "WARNING: No gaps detected in cone, using central axis" << std::endl;
-        }
-        result.confidence = 0.1f;
-        return result;
-    }
-
-    // Score gaps using fish-eye metric
-    scoreGapsByFishEyeMetric(detected_gaps, centralAxis);
-
-    // Find optimal direction toward highest-scoring gap
-    result.direction = findOptimalGapDirection(detected_gaps, centralAxis);
-
-    // Count collisions along optimal direction for reporting using modern ray-tracing
-    float max_distance = (height > 0.0f) ? height : -1.0f;
-    HitResult direction_hit = castRay(apex, result.direction, max_distance);
-    result.collisionCount = direction_hit.hit ? 1 : 0;
-
-    // Calculate confidence based on gap quality
-    if (!detected_gaps.empty()) {
-        // Higher confidence for larger, well-defined gaps
-        const Gap &best_gap = detected_gaps[0]; // Assuming first is best after sorting
-        result.confidence = std::min(1.0f, best_gap.angular_size * 10.0f); // Scale angular size to confidence
-    }
-
-    return result;
+    // Use existing filterPrimitivesParallel method with cone object
+    return filterPrimitivesParallel(cone, all_primitives);
 }
+
+// -------- HYBRID BVH + RASTERIZATION METHODS --------
+
+std::vector<uint> CollisionDetection::getCandidatePrimitivesInCone(const vec3 &apex, const vec3 &central_axis, float half_angle, float height) {
+    std::vector<uint> candidates;
+
+    // Create cone object for filtering
+    Cone cone{apex, central_axis, half_angle, height};
+
+    // OPTIMIZATION: Use spatial grid to avoid O(N) scaling with tree count
+    candidates = getCandidatesUsingSpatialGrid(cone, apex, central_axis, half_angle, height);
+
+    return candidates;
+}
+
 
 // -------- GAP DETECTION IMPLEMENTATION --------
 
@@ -2177,20 +2787,20 @@ std::vector<CollisionDetection::Gap> CollisionDetection::detectGapsInCone(const 
     // Use batch ray casting for better performance
     std::vector<RayQuery> ray_queries;
     ray_queries.reserve(sample_directions.size());
-    
-    for (const vec3 &direction : sample_directions) {
+
+    for (const vec3 &direction: sample_directions) {
         ray_queries.emplace_back(apex, direction, max_distance);
     }
-    
+
     // Cast all rays in batch - automatically selects CPU/GPU based on count
     RayTracingStats ray_stats;
     std::vector<HitResult> hit_results = castRays(ray_queries, &ray_stats);
-    
+
     // Process results to build ray samples
     for (size_t i = 0; i < hit_results.size(); ++i) {
         RaySample sample;
         sample.direction = sample_directions[i];
-        
+
         if (hit_results[i].hit) {
             sample.distance = hit_results[i].distance;
             sample.is_free = false;
@@ -2198,7 +2808,7 @@ std::vector<CollisionDetection::Gap> CollisionDetection::detectGapsInCone(const 
             sample.distance = (max_distance > 0.0f) ? max_distance : 1000.0f;
             sample.is_free = true;
         }
-        
+
         ray_samples.push_back(sample);
     }
 
@@ -2226,10 +2836,11 @@ std::vector<CollisionDetection::Gap> CollisionDetection::detectGapsInCone(const 
     // Find contiguous free regions (gaps) with minimum size threshold
     std::vector<bool> processed(ray_samples.size(), false);
     float min_gap_angular_size = half_angle * 0.05f; // 5% of cone angle minimum gap size
-    
+
     for (size_t start = 0; start < angular_positions.size(); ++start) {
         size_t start_idx = angular_positions[start].second;
-        if (processed[start_idx]) continue;
+        if (processed[start_idx])
+            continue;
 
         Gap new_gap;
         new_gap.sample_indices.push_back(start_idx);
@@ -2249,12 +2860,11 @@ std::vector<CollisionDetection::Gap> CollisionDetection::detectGapsInCone(const 
         }
 
         // Add nearby samples to gap using adaptive threshold
-        float sample_density = 2.0f * half_angle / sqrtf((float)num_samples);
+        float sample_density = 2.0f * half_angle / sqrtf((float) num_samples);
         float adaptive_threshold = sample_density * 3.0f; // 3x sample spacing for connection
-        
+
         for (size_t j = 0; j < ray_samples.size(); ++j) {
-            if (j != start_idx && ray_samples[j].is_free && !processed[j] && 
-                distances_to_start[j] < adaptive_threshold) {
+            if (j != start_idx && ray_samples[j].is_free && !processed[j] && distances_to_start[j] < adaptive_threshold) {
                 new_gap.sample_indices.push_back(j);
                 processed[j] = true;
             }
@@ -2294,23 +2904,21 @@ std::vector<CollisionDetection::Gap> CollisionDetection::detectGapsInCone(const 
     // This reduces the number of gaps passed to the expensive scoring function
     if (gaps.size() > 10) {
         float max_angular_distance = half_angle * 0.8f; // Only consider gaps within 80% of cone angle
-        
-        auto it = std::remove_if(gaps.begin(), gaps.end(), [max_angular_distance](const Gap& gap) {
-            return gap.angular_distance > max_angular_distance;
-        });
-        
+
+        auto it = std::remove_if(gaps.begin(), gaps.end(), [max_angular_distance](const Gap &gap) { return gap.angular_distance > max_angular_distance; });
+
         gaps.erase(it, gaps.end());
-        
+
         // If filtering removed too many gaps, keep at least the closest ones
         if (gaps.size() < 3 && gaps.size() > 0) {
             // Sort by angular distance and keep the closest ones
-            std::partial_sort(gaps.begin(), gaps.begin() + std::min(size_t(3), gaps.size()), gaps.end(),
-                            [](const Gap& a, const Gap& b) { return a.angular_distance < b.angular_distance; });
+            std::partial_sort(gaps.begin(), gaps.begin() + std::min(size_t(3), gaps.size()), gaps.end(), [](const Gap &a, const Gap &b) { return a.angular_distance < b.angular_distance; });
         }
     }
 
     return gaps;
 }
+
 
 float CollisionDetection::calculateGapAngularSize(const std::vector<RaySample> &gap_samples, const vec3 &central_axis) {
 
@@ -2358,11 +2966,11 @@ void CollisionDetection::scoreGapsByFishEyeMetric(std::vector<Gap> &gaps, const 
         std::sort(gaps.begin(), gaps.end(), [](const Gap &a, const Gap &b) { return a.score > b.score; });
         return;
     }
-    
+
     // OPTIMIZATION: For large gap counts, use partial sorting
     // We only need the top 3-5 gaps for collision avoidance
     const size_t max_gaps_needed = std::min(size_t(5), gaps.size());
-    
+
     // Calculate scores for all gaps
     for (Gap &gap: gaps) {
         // Fish-eye metric: prefer larger gaps closer to central axis
@@ -2376,11 +2984,10 @@ void CollisionDetection::scoreGapsByFishEyeMetric(std::vector<Gap> &gaps, const 
         // Combined score (higher is better)
         gap.score = size_score / distance_penalty;
     }
-    
+
     // Use partial_sort to get only the top N gaps - O(n log k) instead of O(n log n)
-    std::partial_sort(gaps.begin(), gaps.begin() + max_gaps_needed, gaps.end(), 
-                     [](const Gap &a, const Gap &b) { return a.score > b.score; });
-    
+    std::partial_sort(gaps.begin(), gaps.begin() + max_gaps_needed, gaps.end(), [](const Gap &a, const Gap &b) { return a.score > b.score; });
+
     // Resize to keep only the top gaps to avoid processing unnecessary gaps later
     gaps.resize(max_gaps_needed);
 }
@@ -2402,18 +3009,18 @@ helios::vec3 CollisionDetection::findOptimalGapDirection(const std::vector<Gap> 
 // -------- SPATIAL OPTIMIZATION METHODS --------
 
 std::vector<std::pair<uint, uint>> CollisionDetection::findCollisionsWithinDistance(const std::vector<uint> &query_UUIDs, const std::vector<uint> &target_UUIDs, float max_distance) {
-    
+
     std::vector<std::pair<uint, uint>> collision_pairs;
 
-    
+
     // Update primitive centroids cache for target geometry
-    for (uint target_id : target_UUIDs) {
+    for (uint target_id: target_UUIDs) {
         if (primitive_centroids_cache.find(target_id) == primitive_centroids_cache.end()) {
             // Calculate and cache centroid for this primitive
             std::vector<vec3> vertices = context->getPrimitiveVertices(target_id);
             if (!vertices.empty()) {
                 vec3 centroid = make_vec3(0, 0, 0);
-                for (const vec3& vertex : vertices) {
+                for (const vec3 &vertex: vertices) {
                     centroid = centroid + vertex;
                 }
                 centroid = centroid / float(vertices.size());
@@ -2421,34 +3028,36 @@ std::vector<std::pair<uint, uint>> CollisionDetection::findCollisionsWithinDista
             }
         }
     }
-    
+
     // For each query primitive, find nearby targets within distance
-    for (uint query_id : query_UUIDs) {
+    for (uint query_id: query_UUIDs) {
         // Get query centroid
         std::vector<vec3> query_vertices = context->getPrimitiveVertices(query_id);
-        if (query_vertices.empty()) continue;
-        
+        if (query_vertices.empty())
+            continue;
+
         vec3 query_centroid = make_vec3(0, 0, 0);
-        for (const vec3& vertex : query_vertices) {
+        for (const vec3 &vertex: query_vertices) {
             query_centroid = query_centroid + vertex;
         }
         query_centroid = query_centroid / float(query_vertices.size());
-        
+
         // Check distance to each target
-        for (uint target_id : target_UUIDs) {
-            if (query_id == target_id) continue; // Skip self-collision
-            
+        for (uint target_id: target_UUIDs) {
+            if (query_id == target_id)
+                continue; // Skip self-collision
+
             auto target_centroid_it = primitive_centroids_cache.find(target_id);
             if (target_centroid_it != primitive_centroids_cache.end()) {
                 vec3 target_centroid = target_centroid_it->second;
                 float distance = (query_centroid - target_centroid).magnitude();
-                
+
                 if (distance <= max_distance) {
                     // Within distance threshold, check for actual collision
                     std::vector<uint> single_query = {query_id};
                     std::vector<uint> single_target = {target_id};
                     std::vector<uint> empty_objects;
-                    
+
                     std::vector<uint> collisions = findCollisions(single_query, empty_objects, single_target, empty_objects);
                     if (!collisions.empty()) {
                         collision_pairs.push_back(std::make_pair(query_id, target_id));
@@ -2457,7 +3066,7 @@ std::vector<std::pair<uint, uint>> CollisionDetection::findCollisionsWithinDista
             }
         }
     }
-    
+
     return collision_pairs;
 }
 
@@ -2465,7 +3074,7 @@ void CollisionDetection::setMaxCollisionDistance(float distance) {
     if (distance <= 0.0f) {
         helios_runtime_error("ERROR (CollisionDetection::setMaxCollisionDistance): Distance must be positive");
     }
-    
+
     max_collision_distance = distance;
 }
 
@@ -2474,9 +3083,9 @@ float CollisionDetection::getMaxCollisionDistance() const {
 }
 
 std::vector<uint> CollisionDetection::filterGeometryByDistance(const helios::vec3 &query_center, float max_radius, const std::vector<uint> &candidate_UUIDs) {
-    
+
     std::vector<uint> filtered_UUIDs;
-    
+
     // Get list of candidates (either provided or all primitives)
     std::vector<uint> candidates;
     if (candidate_UUIDs.empty()) {
@@ -2484,14 +3093,14 @@ std::vector<uint> CollisionDetection::filterGeometryByDistance(const helios::vec
     } else {
         candidates = candidate_UUIDs;
     }
-    
+
     // Filter candidates by distance
-    for (uint candidate_id : candidates) {
+    for (uint candidate_id: candidates) {
         // Skip if primitive doesn't exist
         if (!context->doesPrimitiveExist(candidate_id)) {
             continue;
         }
-        
+
         // Get primitive centroid (calculate if not cached)
         vec3 centroid;
         auto cache_it = primitive_centroids_cache.find(candidate_id);
@@ -2500,23 +3109,24 @@ std::vector<uint> CollisionDetection::filterGeometryByDistance(const helios::vec
         } else {
             // Calculate and cache centroid
             std::vector<vec3> vertices = context->getPrimitiveVertices(candidate_id);
-            if (vertices.empty()) continue;
-            
+            if (vertices.empty())
+                continue;
+
             centroid = make_vec3(0, 0, 0);
-            for (const vec3& vertex : vertices) {
+            for (const vec3 &vertex: vertices) {
                 centroid = centroid + vertex;
             }
             centroid = centroid / float(vertices.size());
             primitive_centroids_cache[candidate_id] = centroid;
         }
-        
+
         // Check distance from query center
         float distance = (query_center - centroid).magnitude();
         if (distance <= max_radius) {
             filtered_UUIDs.push_back(candidate_id);
         }
     }
-    
+
     return filtered_UUIDs;
 }
 
@@ -2555,14 +3165,13 @@ void CollisionDetection::calculateVoxelRayPathLengths(const vec3 &grid_center, c
 #else
     calculateVoxelRayPathLengths_CPU(ray_origins, ray_directions);
 #endif
-
 }
 
 void CollisionDetection::setVoxelTransmissionProbability(int P_denom, int P_trans, const helios::int3 &ijk) {
     if (!validateVoxelIndices(ijk)) {
         helios_runtime_error("ERROR (CollisionDetection::setVoxelTransmissionProbability): Invalid voxel indices");
     }
-    
+
     if (!voxel_data_initialized) {
         helios_runtime_error("ERROR (CollisionDetection::setVoxelTransmissionProbability): Voxel data not initialized. Call calculateVoxelRayPathLengths first.");
     }
@@ -2581,7 +3190,7 @@ void CollisionDetection::getVoxelTransmissionProbability(const helios::int3 &ijk
     if (!validateVoxelIndices(ijk)) {
         helios_runtime_error("ERROR (CollisionDetection::getVoxelTransmissionProbability): Invalid voxel indices");
     }
-    
+
     if (!voxel_data_initialized) {
         P_denom = 0;
         P_trans = 0;
@@ -2602,7 +3211,7 @@ void CollisionDetection::setVoxelRbar(float r_bar, const helios::int3 &ijk) {
     if (!validateVoxelIndices(ijk)) {
         helios_runtime_error("ERROR (CollisionDetection::setVoxelRbar): Invalid voxel indices");
     }
-    
+
     if (!voxel_data_initialized) {
         helios_runtime_error("ERROR (CollisionDetection::setVoxelRbar): Voxel data not initialized. Call calculateVoxelRayPathLengths first.");
     }
@@ -2631,7 +3240,7 @@ float CollisionDetection::getVoxelRbar(const helios::int3 &ijk) const {
     if (!validateVoxelIndices(ijk)) {
         helios_runtime_error("ERROR (CollisionDetection::getVoxelRbar): Invalid voxel indices");
     }
-    
+
     if (!voxel_data_initialized) {
         return 0.0f;
     }
@@ -2660,7 +3269,7 @@ void CollisionDetection::getVoxelRayHitCounts(const helios::int3 &ijk, int &hit_
     if (!validateVoxelIndices(ijk)) {
         helios_runtime_error("ERROR (CollisionDetection::getVoxelRayHitCounts): Invalid voxel indices");
     }
-    
+
     if (!voxel_data_initialized) {
         hit_before = 0;
         hit_after = 0;
@@ -2684,7 +3293,7 @@ std::vector<float> CollisionDetection::getVoxelRayPathLengths(const helios::int3
     if (!validateVoxelIndices(ijk)) {
         helios_runtime_error("ERROR (CollisionDetection::getVoxelRayPathLengths): Invalid voxel indices");
     }
-    
+
     if (!voxel_data_initialized) {
         return std::vector<float>();
     }
@@ -2692,27 +3301,27 @@ std::vector<float> CollisionDetection::getVoxelRayPathLengths(const helios::int3
     if (use_flat_arrays) {
         // Use flat array structure with offsets
         size_t flat_idx = flatIndex(ijk);
-        
+
         // Bounds checking for flat array access
         if (flat_idx >= voxel_individual_path_offsets.size() || flat_idx >= voxel_individual_path_counts.size()) {
             return std::vector<float>();
         }
-        
+
         size_t offset = voxel_individual_path_offsets[flat_idx];
         size_t count = voxel_individual_path_counts[flat_idx];
-        
+
         // Additional bounds checking for the data array
         if (count == 0 || offset + count > voxel_individual_path_lengths_flat.size()) {
             return std::vector<float>();
         }
-        
+
         std::vector<float> result;
         result.reserve(count);
-        
+
         for (size_t i = 0; i < count; ++i) {
             result.push_back(voxel_individual_path_lengths_flat[offset + i]);
         }
-        
+
         return result;
     } else {
         return voxel_individual_path_lengths[ijk.x][ijk.y][ijk.z];
@@ -2728,7 +3337,7 @@ void CollisionDetection::clearVoxelData() {
     voxel_hit_inside.clear();
     voxel_individual_path_lengths.clear();
     voxel_data_initialized = false;
-    
+
     if (printmessages) {
         std::cout << "Voxel data cleared." << std::endl;
     }
@@ -2737,15 +3346,11 @@ void CollisionDetection::clearVoxelData() {
 // -------- VOXEL RAY PATH LENGTH HELPER METHODS --------
 
 void CollisionDetection::initializeVoxelData(const vec3 &grid_center, const vec3 &grid_size, const helios::int3 &grid_divisions) {
-    
+
     // Check if we need to reinitialize (grid parameters changed)
-    bool need_reinit = !voxel_data_initialized || 
-                      (grid_center - voxel_grid_center).magnitude() > 1e-6 ||
-                      (grid_size - voxel_grid_size).magnitude() > 1e-6 ||
-                      grid_divisions.x != voxel_grid_divisions.x ||
-                      grid_divisions.y != voxel_grid_divisions.y ||
-                      grid_divisions.z != voxel_grid_divisions.z;
-    
+    bool need_reinit = !voxel_data_initialized || (grid_center - voxel_grid_center).magnitude() > 1e-6 || (grid_size - voxel_grid_size).magnitude() > 1e-6 || grid_divisions.x != voxel_grid_divisions.x || grid_divisions.y != voxel_grid_divisions.y ||
+                       grid_divisions.z != voxel_grid_divisions.z;
+
     if (!need_reinit) {
         // Just clear existing data but keep structure
         if (use_flat_arrays) {
@@ -2757,7 +3362,7 @@ void CollisionDetection::initializeVoxelData(const vec3 &grid_center, const vec3
             std::fill(voxel_hit_before_flat.begin(), voxel_hit_before_flat.end(), 0);
             std::fill(voxel_hit_after_flat.begin(), voxel_hit_after_flat.end(), 0);
             std::fill(voxel_hit_inside_flat.begin(), voxel_hit_inside_flat.end(), 0);
-            
+
             // Clear individual path lengths
             voxel_individual_path_lengths_flat.clear();
             std::fill(voxel_individual_path_offsets.begin(), voxel_individual_path_offsets.end(), 0);
@@ -2780,34 +3385,34 @@ void CollisionDetection::initializeVoxelData(const vec3 &grid_center, const vec3
         }
         return;
     }
-    
+
     // Store grid parameters
     voxel_grid_center = grid_center;
     voxel_grid_size = grid_size;
     voxel_grid_divisions = grid_divisions;
-    
+
     // Enable flat arrays for better performance
     use_flat_arrays = true;
-    
+
     if (use_flat_arrays) {
         // Initialize optimized flat arrays (Structure-of-Arrays)
         size_t total_voxels = static_cast<size_t>(grid_divisions.x) * grid_divisions.y * grid_divisions.z;
-        
+
         voxel_ray_counts_flat.assign(total_voxels, 0);
         voxel_transmitted_flat.assign(total_voxels, 0);
         voxel_path_lengths_flat.assign(total_voxels, 0.0f);
         voxel_hit_before_flat.assign(total_voxels, 0);
         voxel_hit_after_flat.assign(total_voxels, 0);
         voxel_hit_inside_flat.assign(total_voxels, 0);
-        
+
         // Individual path lengths with dynamic storage
         voxel_individual_path_lengths_flat.clear();
         voxel_individual_path_offsets.assign(total_voxels, 0);
         voxel_individual_path_counts.assign(total_voxels, 0);
-        
+
         // Reserve reasonable initial capacity for individual paths
         voxel_individual_path_lengths_flat.reserve(total_voxels * 10); // Average 10 paths per voxel
-        
+
     } else {
         // Fallback to nested vectors for compatibility
         voxel_ray_counts.resize(grid_divisions.x);
@@ -2817,7 +3422,7 @@ void CollisionDetection::initializeVoxelData(const vec3 &grid_center, const vec3
         voxel_hit_after.resize(grid_divisions.x);
         voxel_hit_inside.resize(grid_divisions.x);
         voxel_individual_path_lengths.resize(grid_divisions.x);
-        
+
         for (int i = 0; i < grid_divisions.x; i++) {
             voxel_ray_counts[i].resize(grid_divisions.y);
             voxel_transmitted[i].resize(grid_divisions.y);
@@ -2826,7 +3431,7 @@ void CollisionDetection::initializeVoxelData(const vec3 &grid_center, const vec3
             voxel_hit_after[i].resize(grid_divisions.y);
             voxel_hit_inside[i].resize(grid_divisions.y);
             voxel_individual_path_lengths[i].resize(grid_divisions.y);
-            
+
             for (int j = 0; j < grid_divisions.y; j++) {
                 voxel_ray_counts[i][j].resize(grid_divisions.z, 0);
                 voxel_transmitted[i][j].resize(grid_divisions.z, 0);
@@ -2838,55 +3443,46 @@ void CollisionDetection::initializeVoxelData(const vec3 &grid_center, const vec3
             }
         }
     }
-    
-    voxel_data_initialized = true;
 
+    voxel_data_initialized = true;
 }
 
 bool CollisionDetection::validateVoxelIndices(const helios::int3 &ijk) const {
-    return (ijk.x >= 0 && ijk.x < voxel_grid_divisions.x &&
-            ijk.y >= 0 && ijk.y < voxel_grid_divisions.y &&
-            ijk.z >= 0 && ijk.z < voxel_grid_divisions.z);
+    return (ijk.x >= 0 && ijk.x < voxel_grid_divisions.x && ijk.y >= 0 && ijk.y < voxel_grid_divisions.y && ijk.z >= 0 && ijk.z < voxel_grid_divisions.z);
 }
 
 void CollisionDetection::calculateVoxelAABB(const helios::int3 &ijk, vec3 &voxel_min, vec3 &voxel_max) const {
-    vec3 voxel_size = make_vec3(voxel_grid_size.x / static_cast<float>(voxel_grid_divisions.x),
-                               voxel_grid_size.y / static_cast<float>(voxel_grid_divisions.y),
-                               voxel_grid_size.z / static_cast<float>(voxel_grid_divisions.z));
-    
+    vec3 voxel_size = make_vec3(voxel_grid_size.x / static_cast<float>(voxel_grid_divisions.x), voxel_grid_size.y / static_cast<float>(voxel_grid_divisions.y), voxel_grid_size.z / static_cast<float>(voxel_grid_divisions.z));
+
     vec3 grid_min = voxel_grid_center - 0.5f * voxel_grid_size;
-    
-    voxel_min = grid_min + make_vec3(static_cast<float>(ijk.x) * voxel_size.x,
-                                    static_cast<float>(ijk.y) * voxel_size.y,
-                                    static_cast<float>(ijk.z) * voxel_size.z);
-    
+
+    voxel_min = grid_min + make_vec3(static_cast<float>(ijk.x) * voxel_size.x, static_cast<float>(ijk.y) * voxel_size.y, static_cast<float>(ijk.z) * voxel_size.z);
+
     voxel_max = voxel_min + voxel_size;
 }
 
 std::vector<std::pair<helios::int3, float>> CollisionDetection::traverseVoxelGrid(const vec3 &ray_origin, const vec3 &ray_direction) const {
     std::vector<std::pair<helios::int3, float>> traversed_voxels;
-    
+
     // Grid bounds
     vec3 grid_min = voxel_grid_center - 0.5f * voxel_grid_size;
     vec3 grid_max = voxel_grid_center + 0.5f * voxel_grid_size;
-    vec3 voxel_size = make_vec3(voxel_grid_size.x / static_cast<float>(voxel_grid_divisions.x),
-                               voxel_grid_size.y / static_cast<float>(voxel_grid_divisions.y),
-                               voxel_grid_size.z / static_cast<float>(voxel_grid_divisions.z));
-    
+    vec3 voxel_size = make_vec3(voxel_grid_size.x / static_cast<float>(voxel_grid_divisions.x), voxel_grid_size.y / static_cast<float>(voxel_grid_divisions.y), voxel_grid_size.z / static_cast<float>(voxel_grid_divisions.z));
+
     // Test if ray intersects grid at all
     float t_grid_min, t_grid_max;
     if (!rayAABBIntersect(ray_origin, ray_direction, grid_min, grid_max, t_grid_min, t_grid_max)) {
         return traversed_voxels; // Empty - ray doesn't hit grid
     }
-    
+
     // Ensure intersection is in forward direction
     if (t_grid_max <= 1e-6) {
         return traversed_voxels; // Grid is behind ray
     }
-    
+
     // Clamp t_grid_min to 0 if ray starts inside grid
     t_grid_min = std::max(0.0f, t_grid_min);
-    
+
     // Fast path for single voxel grids
     if (voxel_grid_divisions.x == 1 && voxel_grid_divisions.y == 1 && voxel_grid_divisions.z == 1) {
         float path_length = t_grid_max - t_grid_min;
@@ -2895,25 +3491,25 @@ std::vector<std::pair<helios::int3, float>> CollisionDetection::traverseVoxelGri
         }
         return traversed_voxels;
     }
-    
+
     // Starting position in grid space
     vec3 start_pos = ray_origin + t_grid_min * ray_direction;
-    
+
     // Convert to voxel indices (clamped to grid bounds)
     helios::int3 current_voxel;
     current_voxel.x = static_cast<int>(std::floor((start_pos.x - grid_min.x) / voxel_size.x));
     current_voxel.y = static_cast<int>(std::floor((start_pos.y - grid_min.y) / voxel_size.y));
     current_voxel.z = static_cast<int>(std::floor((start_pos.z - grid_min.z) / voxel_size.z));
-    
+
     // Clamp to grid bounds
     current_voxel.x = std::max(0, std::min(current_voxel.x, voxel_grid_divisions.x - 1));
     current_voxel.y = std::max(0, std::min(current_voxel.y, voxel_grid_divisions.y - 1));
     current_voxel.z = std::max(0, std::min(current_voxel.z, voxel_grid_divisions.z - 1));
-    
+
     // DDA algorithm parameters
     helios::int3 step;
     vec3 t_delta, t_max;
-    
+
     // Set up stepping direction and delta t values
     for (int i = 0; i < 3; i++) {
         float dir_comp = (i == 0) ? ray_direction.x : (i == 1) ? ray_direction.y : ray_direction.z;
@@ -2922,7 +3518,7 @@ std::vector<std::pair<helios::int3, float>> CollisionDetection::traverseVoxelGri
         float start_comp = (i == 0) ? start_pos.x : (i == 1) ? start_pos.y : start_pos.z;
         int current_comp = (i == 0) ? current_voxel.x : (i == 1) ? current_voxel.y : current_voxel.z;
         int max_comp = (i == 0) ? voxel_grid_divisions.x : (i == 1) ? voxel_grid_divisions.y : voxel_grid_divisions.z;
-        
+
         if (std::abs(dir_comp) < 1e-8f) {
             // Ray is parallel to this axis
             if (i == 0) {
@@ -2943,7 +3539,7 @@ std::vector<std::pair<helios::int3, float>> CollisionDetection::traverseVoxelGri
             if (i == 0) {
                 step.x = (dir_comp > 0) ? 1 : -1;
                 t_delta.x = std::abs(size_comp / dir_comp);
-                
+
                 if (step.x > 0) {
                     t_max.x = t_grid_min + (grid_min_comp + (current_comp + 1) * size_comp - start_comp) / dir_comp;
                 } else {
@@ -2952,7 +3548,7 @@ std::vector<std::pair<helios::int3, float>> CollisionDetection::traverseVoxelGri
             } else if (i == 1) {
                 step.y = (dir_comp > 0) ? 1 : -1;
                 t_delta.y = std::abs(size_comp / dir_comp);
-                
+
                 if (step.y > 0) {
                     t_max.y = t_grid_min + (grid_min_comp + (current_comp + 1) * size_comp - start_comp) / dir_comp;
                 } else {
@@ -2961,7 +3557,7 @@ std::vector<std::pair<helios::int3, float>> CollisionDetection::traverseVoxelGri
             } else {
                 step.z = (dir_comp > 0) ? 1 : -1;
                 t_delta.z = std::abs(size_comp / dir_comp);
-                
+
                 if (step.z > 0) {
                     t_max.z = t_grid_min + (grid_min_comp + (current_comp + 1) * size_comp - start_comp) / dir_comp;
                 } else {
@@ -2970,24 +3566,24 @@ std::vector<std::pair<helios::int3, float>> CollisionDetection::traverseVoxelGri
             }
         }
     }
-    
+
     // Traverse the grid
     float current_t = t_grid_min;
-    
+
     while (validateVoxelIndices(current_voxel) && current_t < t_grid_max) {
         // Calculate path length through this voxel
         float next_t = std::min({t_max.x, t_max.y, t_max.z, t_grid_max});
         float path_length = next_t - current_t;
-        
+
         if (path_length > 1e-6f) {
             traversed_voxels.emplace_back(current_voxel, path_length);
         }
-        
+
         // Move to next voxel
         if (next_t >= t_grid_max) {
             break; // Reached end of grid
         }
-        
+
         // Determine which axis to step along
         if (t_max.x <= t_max.y && t_max.x <= t_max.z) {
             current_voxel.x += step.x;
@@ -2999,31 +3595,37 @@ std::vector<std::pair<helios::int3, float>> CollisionDetection::traverseVoxelGri
             current_voxel.z += step.z;
             t_max.z += t_delta.z;
         }
-        
+
         current_t = next_t;
     }
-    
+
     return traversed_voxels;
 }
 
 void CollisionDetection::calculateVoxelRayPathLengths_CPU(const std::vector<vec3> &ray_origins, const std::vector<vec3> &ray_directions) {
-    
-    
+
+
     auto start_time = std::chrono::high_resolution_clock::now();
-    
+
     // Performance profiling variables
     std::atomic<long long> total_raycast_time(0);
     std::atomic<int> raycast_count(0);
-    
+
     // NOTE: BVH currency should be ensured by caller before calling this function
     // to avoid rebuilding BVH on every batch of rays
-    
+
     const int num_rays = static_cast<int>(ray_origins.size());
-    
+
     // PERFORMANCE OPTIMIZATION: Use thread-local storage to eliminate atomic operations
     const int total_voxels = voxel_grid_divisions.x * voxel_grid_divisions.y * voxel_grid_divisions.z;
+
+    // Pre-compute grid bounds for early culling
+    vec3 grid_min = voxel_grid_center - 0.5f * voxel_grid_size;
+    vec3 grid_max = voxel_grid_center + 0.5f * voxel_grid_size;
+
+#ifdef _OPENMP
     const int num_threads = omp_get_max_threads();
-    
+
     // Thread-local accumulation arrays to eliminate atomic operations
     std::vector<std::vector<int>> thread_ray_counts(num_threads, std::vector<int>(total_voxels, 0));
     std::vector<std::vector<float>> thread_path_lengths(num_threads, std::vector<float>(total_voxels, 0.0f));
@@ -3032,65 +3634,62 @@ void CollisionDetection::calculateVoxelRayPathLengths_CPU(const std::vector<vec3
     std::vector<std::vector<int>> thread_hit_inside(num_threads, std::vector<int>(total_voxels, 0));
     std::vector<std::vector<int>> thread_transmitted(num_threads, std::vector<int>(total_voxels, 0));
     std::vector<std::vector<std::vector<float>>> thread_individual_paths(num_threads, std::vector<std::vector<float>>(total_voxels));
-    
-    // Pre-compute grid bounds for early culling
-    vec3 grid_min = voxel_grid_center - 0.5f * voxel_grid_size;
-    vec3 grid_max = voxel_grid_center + 0.5f * voxel_grid_size;
-    
-    // Use OpenMP for parallel processing with thread-local accumulation
-    #pragma omp parallel for schedule(dynamic)
+
+// Use OpenMP for parallel processing with thread-local accumulation
+#pragma omp parallel for schedule(dynamic)
     for (int ray_idx = 0; ray_idx < num_rays; ray_idx++) {
         const int thread_id = omp_get_thread_num();
         const vec3 &ray_origin = ray_origins[ray_idx];
         const vec3 &ray_direction = ray_directions[ray_idx];
-        
+
         // Early culling: Skip rays that don't intersect the grid at all
         float t_grid_min, t_grid_max;
         if (!rayAABBIntersect(ray_origin, ray_direction, grid_min, grid_max, t_grid_min, t_grid_max) || t_grid_max <= 1e-6) {
             continue; // Skip this ray entirely
         }
-        
+
         // Use DDA traversal to get only intersected voxels
         auto traversed_voxels = traverseVoxelGrid(ray_origin, ray_direction);
-        
+
         // Only perform expensive ray classification for rays that actually intersect the grid
         if (traversed_voxels.empty()) {
             continue; // Skip rays that don't traverse any voxels
         }
-        
+
         // Perform ray classification once per ray (outside voxel loop for efficiency)
         auto raycast_start = std::chrono::high_resolution_clock::now();
         RayQuery query(ray_origin, ray_direction, -1.0f, {});
         HitResult hit = castRay(query);
         auto raycast_end = std::chrono::high_resolution_clock::now();
-        
+
         // Profile raycast performance
         total_raycast_time += std::chrono::duration_cast<std::chrono::microseconds>(raycast_end - raycast_start).count();
         raycast_count++;
-        
+
         float hit_distance = hit.hit ? hit.distance : 1e30f; // Large value if no hit
-        
+
         // Process each intersected voxel
-        for (const auto &voxel_data : traversed_voxels) {
+        for (const auto &voxel_data: traversed_voxels) {
             const helios::int3 &voxel_idx = voxel_data.first;
             float path_length = voxel_data.second;
-            
+
             // Calculate voxel bounds for ray classification
             vec3 voxel_min, voxel_max;
             calculateVoxelAABB(voxel_idx, voxel_min, voxel_max);
-            
+
             // Get t_min and t_max for this voxel
             float t_min, t_max;
             rayAABBIntersect(ray_origin, ray_direction, voxel_min, voxel_max, t_min, t_max);
-            
+
             // Ensure valid intersection
-            if (t_min < 0) t_min = 0;
-            
+            if (t_min < 0)
+                t_min = 0;
+
             // Perform ray classification for Beer's law calculations
             bool hit_before = false;
-            bool hit_after = false; 
+            bool hit_after = false;
             bool hit_inside = false;
-            
+
             if (hit.hit) {
                 // Classify the hit based on where it occurs relative to voxel
                 if (hit_distance < t_min) {
@@ -3099,23 +3698,23 @@ void CollisionDetection::calculateVoxelRayPathLengths_CPU(const std::vector<vec3
                 } else if (hit_distance >= t_min && hit_distance <= t_max) {
                     // Hit occurs inside voxel
                     hit_inside = true;
-                    hit_after = true;  // Also count as hit_after since it's after entering
+                    hit_after = true; // Also count as hit_after since it's after entering
                 } else {
                     // Hit occurs after exiting voxel
                     hit_after = true;
                 }
             } else {
                 // No geometry hit - ray is transmitted through entire scene
-                hit_after = true;  // Consider this as reaching the voxel
+                hit_after = true; // Consider this as reaching the voxel
             }
-            
+
             // PERFORMANCE OPTIMIZATION: Use thread-local accumulation (no synchronization!)
             size_t flat_idx = flatIndex(voxel_idx);
-            
+
             // All operations are now thread-local - no atomic operations needed!
             thread_ray_counts[thread_id][flat_idx]++;
             thread_path_lengths[thread_id][flat_idx] += path_length;
-            
+
             if (hit_before) {
                 thread_hit_before[thread_id][flat_idx]++;
             }
@@ -3127,12 +3726,12 @@ void CollisionDetection::calculateVoxelRayPathLengths_CPU(const std::vector<vec3
             } else {
                 thread_transmitted[thread_id][flat_idx]++;
             }
-            
+
             // Store individual path lengths in thread-local storage (no critical section!)
             thread_individual_paths[thread_id][flat_idx].push_back(path_length);
         }
     }
-    
+
     // PERFORMANCE OPTIMIZATION: Reduction phase - combine thread-local results
     // This single reduction eliminates hundreds of thousands of atomic operations!
     for (int thread_id = 0; thread_id < num_threads; ++thread_id) {
@@ -3145,12 +3744,12 @@ void CollisionDetection::calculateVoxelRayPathLengths_CPU(const std::vector<vec3
             voxel_transmitted_flat[voxel_idx] += thread_transmitted[thread_id][voxel_idx];
         }
     }
-    
+
     // Post-process for flat array storage - aggregate individual paths from thread-local storage
     if (use_flat_arrays) {
         // Consolidate individual path lengths into flat storage with proper offsets
         voxel_individual_path_lengths_flat.clear();
-        
+
         // Calculate total size needed from all threads
         size_t total_paths = 0;
         for (int thread_id = 0; thread_id < num_threads; ++thread_id) {
@@ -3159,37 +3758,177 @@ void CollisionDetection::calculateVoxelRayPathLengths_CPU(const std::vector<vec3
             }
         }
         voxel_individual_path_lengths_flat.reserve(total_paths);
-        
+
         // Build flat array and offsets by aggregating from all threads
         size_t current_offset = 0;
         for (int voxel_idx = 0; voxel_idx < total_voxels; ++voxel_idx) {
             voxel_individual_path_offsets[voxel_idx] = current_offset;
             size_t voxel_path_count = 0;
-            
+
             // Aggregate paths from all threads for this voxel
             for (int thread_id = 0; thread_id < num_threads; ++thread_id) {
-                for (float path_length : thread_individual_paths[thread_id][voxel_idx]) {
+                for (float path_length: thread_individual_paths[thread_id][voxel_idx]) {
                     voxel_individual_path_lengths_flat.push_back(path_length);
                     voxel_path_count++;
                 }
             }
-            
+
             voxel_individual_path_counts[voxel_idx] = voxel_path_count;
             current_offset += voxel_path_count;
         }
-        
     }
-    
+#else
+    // Serial fallback when OpenMP is not available
+    const int num_threads = 1;
+    const int thread_id = 0;
+
+    // Direct accumulation arrays for serial processing
+    std::vector<int> serial_ray_counts(total_voxels, 0);
+    std::vector<float> serial_path_lengths(total_voxels, 0.0f);
+    std::vector<int> serial_hit_before(total_voxels, 0);
+    std::vector<int> serial_hit_after(total_voxels, 0);
+    std::vector<int> serial_hit_inside(total_voxels, 0);
+    std::vector<int> serial_transmitted(total_voxels, 0);
+    std::vector<std::vector<float>> serial_individual_paths(total_voxels);
+
+    // Serial processing without OpenMP pragmas
+    for (int ray_idx = 0; ray_idx < num_rays; ray_idx++) {
+        const vec3 &ray_origin = ray_origins[ray_idx];
+        const vec3 &ray_direction = ray_directions[ray_idx];
+
+        // Early culling: Skip rays that don't intersect the grid at all
+        float t_grid_min, t_grid_max;
+        if (!rayAABBIntersect(ray_origin, ray_direction, grid_min, grid_max, t_grid_min, t_grid_max) || t_grid_max <= 1e-6) {
+            continue; // Skip this ray entirely
+        }
+
+        // Use DDA traversal to get only intersected voxels
+        auto traversed_voxels = traverseVoxelGrid(ray_origin, ray_direction);
+
+        // Only perform expensive ray classification for rays that actually intersect the grid
+        if (traversed_voxels.empty()) {
+            continue; // Skip rays that don't traverse any voxels
+        }
+
+        // Perform ray classification once per ray (outside voxel loop for efficiency)
+        auto raycast_start = std::chrono::high_resolution_clock::now();
+        RayQuery query(ray_origin, ray_direction, -1.0f, {});
+        HitResult hit = castRay(query);
+        auto raycast_end = std::chrono::high_resolution_clock::now();
+
+        // Profile raycast performance
+        total_raycast_time += std::chrono::duration_cast<std::chrono::microseconds>(raycast_end - raycast_start).count();
+        raycast_count++;
+
+        float hit_distance = hit.hit ? hit.distance : 1e30f; // Large value if no hit
+
+        // Process each intersected voxel
+        for (const auto &voxel_data: traversed_voxels) {
+            const helios::int3 &voxel_idx = voxel_data.first;
+            float path_length = voxel_data.second;
+
+            // Calculate voxel bounds for ray classification
+            vec3 voxel_min, voxel_max;
+            calculateVoxelAABB(voxel_idx, voxel_min, voxel_max);
+
+            // Get t_min and t_max for this voxel
+            float t_min, t_max;
+            rayAABBIntersect(ray_origin, ray_direction, voxel_min, voxel_max, t_min, t_max);
+
+            // Ensure valid intersection
+            if (t_min < 0)
+                t_min = 0;
+
+            // Perform ray classification for Beer's law calculations
+            bool hit_before = false;
+            bool hit_after = false;
+            bool hit_inside = false;
+
+            if (hit.hit) {
+                // Classify the hit based on where it occurs relative to voxel
+                if (hit_distance < t_min) {
+                    // Hit occurs before entering voxel
+                    hit_before = true;
+                } else if (hit_distance >= t_min && hit_distance <= t_max) {
+                    // Hit occurs inside voxel
+                    hit_inside = true;
+                    hit_after = true; // Also count as hit_after since it's after entering
+                } else {
+                    // Hit occurs after exiting voxel
+                    hit_after = true;
+                }
+            } else {
+                // No geometry hit - ray is transmitted through entire scene
+                hit_after = true; // Consider this as reaching the voxel
+            }
+
+            // Direct accumulation for serial processing
+            size_t flat_idx = flatIndex(voxel_idx);
+
+            serial_ray_counts[flat_idx]++;
+            serial_path_lengths[flat_idx] += path_length;
+
+            if (hit_before) {
+                serial_hit_before[flat_idx]++;
+            }
+            if (hit_after) {
+                serial_hit_after[flat_idx]++;
+            }
+            if (hit_inside) {
+                serial_hit_inside[flat_idx]++;
+            } else {
+                serial_transmitted[flat_idx]++;
+            }
+
+            // Store individual path lengths for serial processing
+            serial_individual_paths[flat_idx].push_back(path_length);
+        }
+    }
+
+    // Direct assignment from serial arrays to final storage
+    for (int voxel_idx = 0; voxel_idx < total_voxels; ++voxel_idx) {
+        voxel_ray_counts_flat[voxel_idx] += serial_ray_counts[voxel_idx];
+        voxel_path_lengths_flat[voxel_idx] += serial_path_lengths[voxel_idx];
+        voxel_hit_before_flat[voxel_idx] += serial_hit_before[voxel_idx];
+        voxel_hit_after_flat[voxel_idx] += serial_hit_after[voxel_idx];
+        voxel_hit_inside_flat[voxel_idx] += serial_hit_inside[voxel_idx];
+        voxel_transmitted_flat[voxel_idx] += serial_transmitted[voxel_idx];
+    }
+
+    // Post-process for flat array storage - aggregate individual paths from serial storage
+    if (use_flat_arrays) {
+        // Consolidate individual path lengths into flat storage with proper offsets
+        voxel_individual_path_lengths_flat.clear();
+
+        // Calculate total size needed
+        size_t total_paths = 0;
+        for (int voxel_idx = 0; voxel_idx < total_voxels; ++voxel_idx) {
+            total_paths += serial_individual_paths[voxel_idx].size();
+        }
+        voxel_individual_path_lengths_flat.reserve(total_paths);
+
+        // Build flat array and offsets
+        size_t current_offset = 0;
+        for (int voxel_idx = 0; voxel_idx < total_voxels; ++voxel_idx) {
+            voxel_individual_path_offsets[voxel_idx] = current_offset;
+            size_t voxel_path_count = serial_individual_paths[voxel_idx].size();
+
+            // Copy paths to flat array
+            for (float path_length: serial_individual_paths[voxel_idx]) {
+                voxel_individual_path_lengths_flat.push_back(path_length);
+            }
+
+            voxel_individual_path_counts[voxel_idx] = voxel_path_count;
+            current_offset += voxel_path_count;
+        }
+    }
+#endif
+
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-    
+
     // Performance profiling output
     long long avg_raycast_time = raycast_count > 0 ? total_raycast_time.load() / raycast_count.load() : 0;
-    // std::cout << "PERFORMANCE PROFILE:" << std::endl;
-    // std::cout << "  Total time: " << duration.count() << " ms" << std::endl;
-    // std::cout << "  Raycast time: " << (total_raycast_time.load() / 1000) << " ms (" << (100.0 * total_raycast_time.load() / 1000) / duration.count() << "%)" << std::endl;
-    // std::cout << "  Rays processed: " << raycast_count.load() << std::endl;
-    // std::cout << "  Avg per ray: " << avg_raycast_time << " µs" << std::endl;
     //
     // if (printmessages) {
     //     // Report some statistics
@@ -3209,21 +3948,19 @@ void CollisionDetection::calculateVoxelRayPathLengths_CPU(const std::vector<vec3
     //             }
     //         }
     //     }
-    //     std::cout << "Total ray-voxel intersections: " << total_ray_voxel_intersections << std::endl;
     // }
 }
 
 #ifdef HELIOS_CUDA_AVAILABLE
 void CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3> &ray_origins, const std::vector<vec3> &ray_directions) {
     if (printmessages) {
-        std::cout << "Using GPU implementation for voxel ray path length calculations..." << std::endl;
     }
-    
+
     auto start_time = std::chrono::high_resolution_clock::now();
-    
+
     const int num_rays = static_cast<int>(ray_origins.size());
     const int total_voxels = voxel_grid_divisions.x * voxel_grid_divisions.y * voxel_grid_divisions.z;
-    
+
     // Prepare data for GPU kernel
     std::vector<float> h_ray_origins(num_rays * 3);
     std::vector<float> h_ray_directions(num_rays * 3);
@@ -3233,102 +3970,90 @@ void CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3
     std::vector<int> h_voxel_hit_before(total_voxels, 0);
     std::vector<int> h_voxel_hit_after(total_voxels, 0);
     std::vector<int> h_voxel_hit_inside(total_voxels, 0);
-    
+
     // Convert ray data to flat arrays
     for (int i = 0; i < num_rays; i++) {
         h_ray_origins[i * 3 + 0] = ray_origins[i].x;
         h_ray_origins[i * 3 + 1] = ray_origins[i].y;
         h_ray_origins[i * 3 + 2] = ray_origins[i].z;
-        
+
         h_ray_directions[i * 3 + 0] = ray_directions[i].x;
         h_ray_directions[i * 3 + 1] = ray_directions[i].y;
         h_ray_directions[i * 3 + 2] = ray_directions[i].z;
     }
-    
+
     // Check if there are any primitives in the scene for geometry detection
     int primitive_count = static_cast<int>(primitive_cache.size());
-    
+
     // Launch CUDA kernel
-    launchVoxelRayPathLengths(
-        num_rays,
-        h_ray_origins.data(),
-        h_ray_directions.data(),
-        voxel_grid_center.x, voxel_grid_center.y, voxel_grid_center.z,
-        voxel_grid_size.x, voxel_grid_size.y, voxel_grid_size.z,
-        voxel_grid_divisions.x, voxel_grid_divisions.y, voxel_grid_divisions.z,
-        primitive_count,
-        h_voxel_ray_counts.data(),
-        h_voxel_path_lengths.data(),
-        h_voxel_transmitted.data(),
-        h_voxel_hit_before.data(),
-        h_voxel_hit_after.data(),
-        h_voxel_hit_inside.data()
-    );
-    
+    launchVoxelRayPathLengths(num_rays, h_ray_origins.data(), h_ray_directions.data(), voxel_grid_center.x, voxel_grid_center.y, voxel_grid_center.z, voxel_grid_size.x, voxel_grid_size.y, voxel_grid_size.z, voxel_grid_divisions.x,
+                              voxel_grid_divisions.y, voxel_grid_divisions.z, primitive_count, h_voxel_ray_counts.data(), h_voxel_path_lengths.data(), h_voxel_transmitted.data(), h_voxel_hit_before.data(), h_voxel_hit_after.data(),
+                              h_voxel_hit_inside.data());
+
     // Copy results back to class data structures
     if (use_flat_arrays) {
         // Copy directly to flat arrays
         voxel_ray_counts_flat = h_voxel_ray_counts;
         voxel_path_lengths_flat = h_voxel_path_lengths;
         voxel_transmitted_flat = h_voxel_transmitted;
-        
+
         // Copy hit classification data from GPU kernel
         voxel_hit_before_flat = h_voxel_hit_before;
         voxel_hit_after_flat = h_voxel_hit_after;
         voxel_hit_inside_flat = h_voxel_hit_inside;
-        
+
         // Initialize individual path length data structures
         // Note: GPU implementation currently provides aggregate data only
         // For now, initialize empty individual path data to prevent crashes
         voxel_individual_path_lengths_flat.clear();
         std::fill(voxel_individual_path_offsets.begin(), voxel_individual_path_offsets.end(), 0);
         std::fill(voxel_individual_path_counts.begin(), voxel_individual_path_counts.end(), 0);
-        
+
         // TODO: Implement proper individual path length collection in GPU kernel
         // For now, estimate individual path lengths based on ray geometry
         // This is a workaround until the GPU kernel can provide individual path data
         for (int voxel_idx = 0; voxel_idx < total_voxels; ++voxel_idx) {
             voxel_individual_path_offsets[voxel_idx] = voxel_individual_path_lengths_flat.size();
-            
+
             if (h_voxel_ray_counts[voxel_idx] > 0) {
                 // Calculate individual path lengths for each ray by simulating ray-voxel intersection
                 // This is an approximation but more accurate than using just averages
                 std::vector<float> estimated_paths;
-                
+
                 // Convert flat voxel index back to 3D coordinates
                 int voxel_z = voxel_idx % voxel_grid_divisions.z;
                 int voxel_y = (voxel_idx / voxel_grid_divisions.z) % voxel_grid_divisions.y;
                 int voxel_x = voxel_idx / (voxel_grid_divisions.y * voxel_grid_divisions.z);
-                
+
                 // Calculate voxel bounds
                 vec3 voxel_size = voxel_grid_size;
                 voxel_size.x /= voxel_grid_divisions.x;
                 voxel_size.y /= voxel_grid_divisions.y;
                 voxel_size.z /= voxel_grid_divisions.z;
-                
+
                 vec3 voxel_min = voxel_grid_center - voxel_grid_size * 0.5f;
                 voxel_min.x += voxel_x * voxel_size.x;
                 voxel_min.y += voxel_y * voxel_size.y;
                 voxel_min.z += voxel_z * voxel_size.z;
-                
+
                 vec3 voxel_max = voxel_min + voxel_size;
-                
+
                 // Check each ray to see if it intersects this voxel and calculate path length
                 for (int ray_idx = 0; ray_idx < num_rays; ++ray_idx) {
                     vec3 ray_origin = ray_origins[ray_idx];
                     vec3 ray_dir = ray_directions[ray_idx];
-                    
+
                     // Ray-box intersection algorithm
                     float t_min = 0.0f;
                     float t_max = std::numeric_limits<float>::max();
-                    
+
                     // Check intersection with each axis-aligned slab
                     for (int axis = 0; axis < 3; ++axis) {
                         float origin_comp = (axis == 0) ? ray_origin.x : (axis == 1) ? ray_origin.y : ray_origin.z;
                         float dir_comp = (axis == 0) ? ray_dir.x : (axis == 1) ? ray_dir.y : ray_dir.z;
                         float min_comp = (axis == 0) ? voxel_min.x : (axis == 1) ? voxel_min.y : voxel_min.z;
                         float max_comp = (axis == 0) ? voxel_max.x : (axis == 1) ? voxel_max.y : voxel_max.z;
-                        
+
                         if (std::abs(dir_comp) < 1e-9f) {
                             // Ray is parallel to slab
                             if (origin_comp < min_comp || origin_comp > max_comp) {
@@ -3338,30 +4063,32 @@ void CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3
                         } else {
                             float t1 = (min_comp - origin_comp) / dir_comp;
                             float t2 = (max_comp - origin_comp) / dir_comp;
-                            
-                            if (t1 > t2) std::swap(t1, t2);
-                            
+
+                            if (t1 > t2)
+                                std::swap(t1, t2);
+
                             t_min = std::max(t_min, t1);
                             t_max = std::min(t_max, t2);
-                            
-                            if (t_min > t_max) break; // No intersection
+
+                            if (t_min > t_max)
+                                break; // No intersection
                         }
                     }
-                    
+
                     // If there's a valid intersection, calculate path length
                     if (t_max > t_min && t_max > 0.0f) {
                         float entry_t = std::max(0.0f, t_min);
                         float exit_t = t_max;
                         float path_length = exit_t - entry_t;
-                        
+
                         if (path_length > 1e-6f) {
                             estimated_paths.push_back(path_length);
                         }
                     }
                 }
-                
+
                 // Store the estimated paths
-                for (float path_length : estimated_paths) {
+                for (float path_length: estimated_paths) {
                     voxel_individual_path_lengths_flat.push_back(path_length);
                 }
                 voxel_individual_path_counts[voxel_idx] = estimated_paths.size();
@@ -3369,7 +4096,7 @@ void CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3
                 voxel_individual_path_counts[voxel_idx] = 0;
             }
         }
-        
+
     } else {
         // Copy to nested vectors
         for (int i = 0; i < voxel_grid_divisions.x; i++) {
@@ -3379,12 +4106,12 @@ void CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3
                     voxel_ray_counts[i][j][k] = h_voxel_ray_counts[flat_idx];
                     voxel_path_lengths[i][j][k] = h_voxel_path_lengths[flat_idx];
                     voxel_transmitted[i][j][k] = h_voxel_transmitted[flat_idx];
-                    
+
                     // Copy hit classification data from GPU kernel
                     voxel_hit_before[i][j][k] = h_voxel_hit_before[flat_idx];
                     voxel_hit_after[i][j][k] = h_voxel_hit_after[flat_idx];
                     voxel_hit_inside[i][j][k] = h_voxel_hit_inside[flat_idx];
-                    
+
                     // Initialize individual path lengths (approximation)
                     voxel_individual_path_lengths[i][j][k].clear();
                     if (h_voxel_ray_counts[flat_idx] > 0) {
@@ -3397,66 +4124,347 @@ void CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3
             }
         }
     }
-    
+
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-    
+
     if (printmessages) {
-        std::cout << "GPU voxel ray path length calculation completed in " << duration.count() << " ms" << std::endl;
-        
+
         // Report some statistics
         int total_ray_voxel_intersections = 0;
-        for (const auto& count : h_voxel_ray_counts) {
+        for (const auto &count: h_voxel_ray_counts) {
             total_ray_voxel_intersections += count;
         }
-        std::cout << "Total ray-voxel intersections: " << total_ray_voxel_intersections << std::endl;
     }
 }
 #endif
 
 void CollisionDetection::ensureOptimizedBVH() {
     // Convert standard BVH to Structure-of-Arrays format for optimal cache performance
-    if (bvh_nodes_soa.node_count != bvh_nodes.size() || bvh_nodes_soa.aabb_mins.empty()) {
-        
-        if (printmessages) {
-            std::cout << "Converting BVH to Structure-of-Arrays format for optimal performance..." << std::endl;
-        }
-        
-        // Clear existing SoA data
-        bvh_nodes_soa.clear();
-        
+    // Only rebuild if BVH structure has actually changed OR SoA is explicitly dirty
+    if (soa_dirty || bvh_nodes_soa.node_count != bvh_nodes.size() || bvh_nodes_soa.aabb_mins.empty()) {
+
         if (bvh_nodes.empty()) {
+            bvh_nodes_soa.clear();
             bvh_nodes_soa.node_count = 0;
             return;
         }
-        
+
         size_t node_count = bvh_nodes.size();
+
+        // OPTIMIZATION 1: Pre-allocate all arrays to exact size (no reserve+push_back)
         bvh_nodes_soa.node_count = node_count;
-        
-        // Reserve space for all arrays (avoid repeated allocations)
-        bvh_nodes_soa.aabb_mins.reserve(node_count);
-        bvh_nodes_soa.aabb_maxs.reserve(node_count);
-        bvh_nodes_soa.left_children.reserve(node_count);
-        bvh_nodes_soa.right_children.reserve(node_count);
-        bvh_nodes_soa.primitive_starts.reserve(node_count);
-        bvh_nodes_soa.primitive_counts.reserve(node_count);
-        bvh_nodes_soa.is_leaf_flags.reserve(node_count);
-        
-        // Convert Array-of-Structures to Structure-of-Arrays
+        bvh_nodes_soa.aabb_mins.resize(node_count);
+        bvh_nodes_soa.aabb_maxs.resize(node_count);
+        bvh_nodes_soa.left_children.resize(node_count);
+        bvh_nodes_soa.right_children.resize(node_count);
+        bvh_nodes_soa.primitive_starts.resize(node_count);
+        bvh_nodes_soa.primitive_counts.resize(node_count);
+        bvh_nodes_soa.is_leaf_flags.resize(node_count);
+
+        // OPTIMIZATION 2: Direct assignment instead of push_back (much faster)
         for (size_t i = 0; i < node_count; ++i) {
-            const BVHNode& node = bvh_nodes[i];
-            
+            const BVHNode &node = bvh_nodes[i];
+
             // Hot data: frequently accessed during traversal
-            bvh_nodes_soa.aabb_mins.push_back(node.aabb_min);
-            bvh_nodes_soa.aabb_maxs.push_back(node.aabb_max);
-            bvh_nodes_soa.left_children.push_back(node.left_child);
-            bvh_nodes_soa.right_children.push_back(node.right_child);
-            
+            bvh_nodes_soa.aabb_mins[i] = node.aabb_min;
+            bvh_nodes_soa.aabb_maxs[i] = node.aabb_max;
+            bvh_nodes_soa.left_children[i] = node.left_child;
+            bvh_nodes_soa.right_children[i] = node.right_child;
+
             // Cold data: accessed less frequently
-            bvh_nodes_soa.primitive_starts.push_back(node.primitive_start);
-            bvh_nodes_soa.primitive_counts.push_back(node.primitive_count);
-            bvh_nodes_soa.is_leaf_flags.push_back(node.is_leaf ? 1 : 0);
+            bvh_nodes_soa.primitive_starts[i] = node.primitive_start;
+            bvh_nodes_soa.primitive_counts[i] = node.primitive_count;
+            bvh_nodes_soa.is_leaf_flags[i] = node.is_leaf ? 1 : 0;
         }
 
+        // Mark SoA as clean after successful conversion
+        soa_dirty = false;
     }
+}
+
+void CollisionDetection::updatePrimitiveAABBCache(uint uuid) {
+    // Check if primitive exists
+    if (!context->doesPrimitiveExist(uuid)) {
+        return;
+    }
+
+    try {
+        // Get primitive vertices to compute AABB
+        std::vector<vec3> vertices = context->getPrimitiveVertices(uuid);
+        if (vertices.empty()) {
+            return;
+        }
+
+        // Compute AABB from vertices
+        vec3 aabb_min = vertices[0];
+        vec3 aabb_max = vertices[0];
+
+        for (const vec3 &vertex: vertices) {
+            aabb_min.x = std::min(aabb_min.x, vertex.x);
+            aabb_min.y = std::min(aabb_min.y, vertex.y);
+            aabb_min.z = std::min(aabb_min.z, vertex.z);
+
+            aabb_max.x = std::max(aabb_max.x, vertex.x);
+            aabb_max.y = std::max(aabb_max.y, vertex.y);
+            aabb_max.z = std::max(aabb_max.z, vertex.z);
+        }
+
+        // Store in cache
+        primitive_aabbs_cache[uuid] = std::make_pair(aabb_min, aabb_max);
+
+    } catch (const std::exception &e) {
+        if (printmessages) {
+            std::cerr << "Warning: Failed to cache AABB for primitive " << uuid << ": " << e.what() << std::endl;
+        }
+    }
+}
+
+void CollisionDetection::optimizedRebuildBVH(const std::set<uint> &final_geometry) {
+    // Convert to vector for buildBVH compatibility
+    std::vector<uint> final_primitives(final_geometry.begin(), final_geometry.end());
+
+    // Ensure all primitive AABBs are cached
+    for (uint uuid: final_geometry) {
+        if (primitive_aabbs_cache.find(uuid) == primitive_aabbs_cache.end()) {
+            updatePrimitiveAABBCache(uuid);
+        }
+    }
+
+    if (printmessages) {
+        std::cout << "Optimized rebuild with " << final_primitives.size() << " primitives (using cached AABBs)" << std::endl;
+    }
+
+    // Use regular buildBVH but with pre-cached AABBs for efficiency
+    buildBVH(final_primitives);
+
+    // Update tracking
+    last_bvh_geometry = final_geometry;
+    bvh_dirty = false;
+    soa_dirty = true; // SoA needs rebuild after BVH change
+}
+
+// -------- TREE-BASED BVH IMPLEMENTATION --------
+
+void CollisionDetection::enableTreeBasedBVH(float isolation_distance) {
+    tree_based_bvh_enabled = true;
+    tree_isolation_distance = isolation_distance;
+}
+
+void CollisionDetection::disableTreeBasedBVH() {
+    tree_based_bvh_enabled = false;
+    tree_bvh_map.clear();
+    object_to_tree_map.clear();
+}
+
+bool CollisionDetection::isTreeBasedBVHEnabled() const {
+    return tree_based_bvh_enabled;
+}
+
+void CollisionDetection::initializeObstacleSpatialGrid() {
+    if (static_obstacle_primitives.empty() || obstacle_spatial_grid_initialized) {
+        return;
+    }
+
+    // Set cell size to be roughly the static obstacle distance for optimal performance
+    obstacle_spatial_grid.cell_size = 20.0f; // Slightly larger than MAX_STATIC_OBSTACLE_DISTANCE
+    obstacle_spatial_grid.grid_cells.clear();
+
+    // Insert each static obstacle into the spatial grid
+    for (uint obstacle_prim: static_obstacle_primitives) {
+        if (context->doesPrimitiveExist(obstacle_prim)) {
+            helios::vec3 min_corner, max_corner;
+            context->getPrimitiveBoundingBox(obstacle_prim, min_corner, max_corner);
+            helios::vec3 prim_center = (min_corner + max_corner) * 0.5f;
+
+            int64_t grid_key = obstacle_spatial_grid.getGridKey(prim_center.x, prim_center.y);
+            obstacle_spatial_grid.grid_cells[grid_key].push_back(obstacle_prim);
+        }
+    }
+
+    obstacle_spatial_grid_initialized = true;
+
+}
+
+std::vector<uint> CollisionDetection::ObstacleSpatialGrid::getRelevantObstacles(const helios::vec3 &position, float radius) const {
+    std::vector<uint> relevant_obstacles;
+
+    // Calculate the range of grid cells to search
+    int32_t min_grid_x = static_cast<int32_t>(std::floor((position.x - radius) / cell_size));
+    int32_t max_grid_x = static_cast<int32_t>(std::floor((position.x + radius) / cell_size));
+    int32_t min_grid_y = static_cast<int32_t>(std::floor((position.y - radius) / cell_size));
+    int32_t max_grid_y = static_cast<int32_t>(std::floor((position.y + radius) / cell_size));
+
+    // Search all relevant grid cells
+    for (int32_t grid_x = min_grid_x; grid_x <= max_grid_x; ++grid_x) {
+        for (int32_t grid_y = min_grid_y; grid_y <= max_grid_y; ++grid_y) {
+            int64_t grid_key = (static_cast<int64_t>(grid_x) << 32) | static_cast<uint32_t>(grid_y);
+
+            auto cell_it = grid_cells.find(grid_key);
+            if (cell_it != grid_cells.end()) {
+                // Add all obstacles from this cell (could add distance filtering here if needed)
+                relevant_obstacles.insert(relevant_obstacles.end(), cell_it->second.begin(), cell_it->second.end());
+            }
+        }
+    }
+
+    return relevant_obstacles;
+}
+
+void CollisionDetection::registerTree(uint tree_object_id, const std::vector<uint> &tree_primitives) {
+    if (!tree_based_bvh_enabled) {
+        if (printmessages) {
+            std::cout << "WARNING: Tree registration ignored - tree-based BVH not enabled" << std::endl;
+        }
+        return;
+    }
+
+    // Calculate tree spatial bounds
+    vec3 tree_center(0, 0, 0);
+    vec3 aabb_min(1e30f, 1e30f, 1e30f);
+    vec3 aabb_max(-1e30f, -1e30f, -1e30f);
+
+    for (uint prim_uuid: tree_primitives) {
+        if (context->doesPrimitiveExist(prim_uuid)) {
+            vec3 prim_min, prim_max;
+            context->getPrimitiveBoundingBox(prim_uuid, prim_min, prim_max);
+
+            aabb_min.x = std::min(aabb_min.x, prim_min.x);
+            aabb_min.y = std::min(aabb_min.y, prim_min.y);
+            aabb_min.z = std::min(aabb_min.z, prim_min.z);
+
+            aabb_max.x = std::max(aabb_max.x, prim_max.x);
+            aabb_max.y = std::max(aabb_max.y, prim_max.y);
+            aabb_max.z = std::max(aabb_max.z, prim_max.z);
+        }
+    }
+
+    tree_center = (aabb_min + aabb_max) * 0.5f;
+    float tree_radius = (aabb_max - aabb_min).magnitude() * 0.5f;
+
+    // Create or update tree BVH entry
+    TreeBVH &tree_bvh = tree_bvh_map[tree_object_id];
+    tree_bvh.tree_object_id = tree_object_id;
+    tree_bvh.tree_center = tree_center;
+    tree_bvh.tree_radius = tree_radius;
+
+    // Update object-to-tree mapping
+    for (uint prim_uuid: tree_primitives) {
+        object_to_tree_map[prim_uuid] = tree_object_id;
+    }
+
+}
+
+void CollisionDetection::setStaticObstacles(const std::vector<uint> &obstacle_primitives) {
+    static_obstacle_primitives.clear();
+
+    // Validate and store static obstacles
+    for (uint prim_uuid: obstacle_primitives) {
+        if (context->doesPrimitiveExist(prim_uuid)) {
+            static_obstacle_primitives.push_back(prim_uuid);
+        }
+    }
+
+    // Initialize spatial grid for fast obstacle lookup
+    obstacle_spatial_grid_initialized = false;
+    initializeObstacleSpatialGrid();
+
+}
+
+std::vector<uint> CollisionDetection::getRelevantGeometryForTree(const helios::vec3 &query_position, const std::vector<uint> &query_primitives, float max_distance) {
+    std::vector<uint> relevant_geometry;
+
+    if (!tree_based_bvh_enabled) {
+        // If tree-based BVH is disabled, return empty to signal using all geometry
+        return relevant_geometry;
+    }
+
+    // Use spatial grid for fast static obstacle lookup if available
+    const float MAX_STATIC_OBSTACLE_DISTANCE = max_distance; // Use collision detection distance for static obstacles
+
+    if (obstacle_spatial_grid_initialized && !static_obstacle_primitives.empty()) {
+        // Fast spatial grid lookup - O(1) instead of O(N)
+        std::vector<uint> candidate_obstacles = obstacle_spatial_grid.getRelevantObstacles(query_position, MAX_STATIC_OBSTACLE_DISTANCE);
+        
+
+        // Still need distance check for precise filtering within grid cells
+        for (uint static_prim: candidate_obstacles) {
+            if (context->doesPrimitiveExist(static_prim)) {
+                helios::vec3 min_corner, max_corner;
+                context->getPrimitiveBoundingBox(static_prim, min_corner, max_corner);
+                helios::vec3 prim_center = (min_corner + max_corner) * 0.5f;
+                float distance = (query_position - prim_center).magnitude();
+                if (distance < MAX_STATIC_OBSTACLE_DISTANCE) {
+                    relevant_geometry.push_back(static_prim);
+                }
+            }
+        }
+
+    } else {
+        // Fallback to linear search if spatial grid not available
+        for (uint static_prim: static_obstacle_primitives) {
+            if (context->doesPrimitiveExist(static_prim)) {
+                helios::vec3 min_corner, max_corner;
+                context->getPrimitiveBoundingBox(static_prim, min_corner, max_corner);
+                helios::vec3 prim_center = (min_corner + max_corner) * 0.5f;
+                float distance = (query_position - prim_center).magnitude();
+                if (distance < MAX_STATIC_OBSTACLE_DISTANCE) {
+                    relevant_geometry.push_back(static_prim);
+                }
+            }
+        }
+    }
+
+    // Find which tree this query belongs to
+    uint source_tree_id = 0;
+    if (!query_primitives.empty()) {
+        // Use the first query primitive to identify source tree
+        auto it = object_to_tree_map.find(query_primitives[0]);
+        if (it != object_to_tree_map.end()) {
+            source_tree_id = it->second;
+        }
+    }
+
+    // If we couldn't identify the source tree, find the closest tree to query position
+    if (source_tree_id == 0) {
+        float min_distance = 1e30f;
+        for (const auto &tree_pair: tree_bvh_map) {
+            const TreeBVH &tree = tree_pair.second;
+            float distance = (query_position - tree.tree_center).magnitude();
+            if (distance < min_distance) {
+                min_distance = distance;
+                source_tree_id = tree.tree_object_id;
+            }
+        }
+    }
+
+    // Add geometry from source tree and nearby trees within interaction distance
+    for (const auto &tree_pair: tree_bvh_map) {
+        const TreeBVH &tree = tree_pair.second;
+        uint tree_id = tree_pair.first;
+
+        if (tree_id == source_tree_id) {
+            // Always include source tree's own geometry
+            for (uint prim_uuid: tree.primitive_indices) {
+                if (context->doesPrimitiveExist(prim_uuid)) {
+                    relevant_geometry.push_back(prim_uuid);
+                }
+            }
+        } else {
+            // Check if other trees are within interaction distance
+            float distance = (query_position - tree.tree_center).magnitude();
+            float interaction_threshold = tree_isolation_distance + tree.tree_radius;
+
+            if (distance < interaction_threshold) {
+                // Include nearby tree's geometry
+                for (uint prim_uuid: tree.primitive_indices) {
+                    if (context->doesPrimitiveExist(prim_uuid)) {
+                        relevant_geometry.push_back(prim_uuid);
+                    }
+                }
+            }
+        }
+    }
+
+    return relevant_geometry;
 }

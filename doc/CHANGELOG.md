@@ -1,5 +1,45 @@
 # Changelog
 
+# [1.3.47] 2025-09-02
+
+- Enhanced `dependencies.sh` script with comprehensive OpenMP support
+- Added GitHub Actions workflow for auto-generating and deploying documentation to GitHub Pages with automatic version synchronization
+- Added comprehensive OpenMP documentation and build instructions to User Guide
+- Added Tutorial 12: Radiation camera and annotation example
+
+## Core
+- Added `ProgressBar` class for console progress indication with customizable width and messaging
+- Enhanced global utilities with progress tracking capabilities for long-running operations
+
+## Context
+- Fixed object data value caching for bulk data operations (`Context::setObjectData` for multiple objects)
+- Enhanced object data caching to properly handle vector-based data operations with comprehensive cache management
+- Enhanced MTL file loading with improved path resolution for both absolute and relative paths
+- Fixed file resolution logic to properly handle relative paths in MTL files relative to OBJ file directories
+
+## CollisionDetection
+- Major performance optimizations for gap and solid object detection in plant architecture model:
+  - Implemented rasterization-based collision detection with angular binning for optimal path finding
+  - Added fast cone-AABB intersection filtering using aggressive early rejection tests
+  - Introduced spatial hash grids and OpenMP parallelization for improved scaling
+  - Enhanced BVH management with tree-based isolation for spatially separated objects
+- Added tests to verify the accuracy of `CollisionDetection::findOptimalConePath()`
+
+## Radiation
+- Enhanced camera image writing functions to return output filename for better integration
+- Modernized image annotation API with improved vector-based interfaces:
+  - Updated `writeImageBoundingBoxes()` and `writeImageBoundingBoxes_ObjectData()` to support multiple data labels and class IDs
+  - Enhanced `writeImageSegmentationMasks()` and `writeImageSegmentationMasks_ObjectData()` with vector-based parameters
+  - Deprecated single-value versions of annotation functions in favor of more flexible vector-based approaches
+- Added automatic image calibration pipeline (`RadiationModel::autoCalibrateCameraImage()`).
+
+## Plant Architecture
+- Updated integration with enhanced collision detection optimizations for improved geometric operations
+
+## Visualizer
+- Some OpenGL buffers were not being properly deleted when the Visualizer was destroyed, which could lead to memory leaks. This has been fixed.
+- Fixed an issue where the visualizer could hang if `Visualizer::plotUpdate()` is called after `Visualizer::plotInteractive()`.
+
 # [1.3.46] 2025-08-25
 
 * Enhanced GitHub Actions workflows with new Windows GPU self-tests and improved CI configuration

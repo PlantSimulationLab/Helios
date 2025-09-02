@@ -881,6 +881,150 @@ TEST_CASE("Primitive Data") {
     }
 }
 
+TEST_CASE("Vector setObjectData Value Caching") {
+    Context ctx_test;
+    
+    // Enable caching for test labels
+    ctx_test.enableObjectDataValueCaching("vec_string");
+    ctx_test.enableObjectDataValueCaching("vec_int"); 
+    ctx_test.enableObjectDataValueCaching("vec_uint");
+    
+    DOCTEST_CHECK(ctx_test.isObjectDataValueCachingEnabled("vec_string"));
+    DOCTEST_CHECK(ctx_test.isObjectDataValueCachingEnabled("vec_int"));
+    DOCTEST_CHECK(ctx_test.isObjectDataValueCachingEnabled("vec_uint"));
+    
+    // Create test objects
+    uint obj1 = ctx_test.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
+    uint obj2 = ctx_test.addTileObject(make_vec3(1, 0, 0), make_vec2(1, 1), nullrotation, make_int2(1, 1));
+    uint obj3 = ctx_test.addSphereObject(1, make_vec3(2, 0, 0), 1.0f);
+    uint obj4 = ctx_test.addConeObject(1, make_vec3(3, 0, 0), make_vec3(3, 0, 2), 1.0f, 2.0f);
+    
+    SUBCASE("Vector<uint> string caching") {
+        // Test vector version with string data
+        std::vector<uint> obj_vec = {obj1, obj2};
+        ctx_test.setObjectData(obj_vec, "vec_string", std::string("apple"));
+        
+        // Single object gets different value
+        ctx_test.setObjectData(obj3, "vec_string", std::string("banana"));
+        
+        std::vector<std::string> string_values;
+        ctx_test.getUniqueObjectDataValues("vec_string", string_values);
+        DOCTEST_CHECK(string_values.size() == 2);
+        std::sort(string_values.begin(), string_values.end());
+        DOCTEST_CHECK(string_values[0] == "apple");
+        DOCTEST_CHECK(string_values[1] == "banana");
+    }
+    
+    SUBCASE("Vector<uint> int caching") {
+        // Test vector version with int data
+        std::vector<uint> obj_vec = {obj1, obj2, obj3};
+        ctx_test.setObjectData(obj_vec, "vec_int", 100);
+        
+        // Single object gets different value
+        ctx_test.setObjectData(obj4, "vec_int", 200);
+        
+        std::vector<int> int_values;
+        ctx_test.getUniqueObjectDataValues("vec_int", int_values);
+        DOCTEST_CHECK(int_values.size() == 2);
+        std::sort(int_values.begin(), int_values.end());
+        DOCTEST_CHECK(int_values[0] == 100);
+        DOCTEST_CHECK(int_values[1] == 200);
+    }
+    
+    SUBCASE("Vector<uint> uint caching") {
+        // Test vector version with uint data
+        std::vector<uint> obj_vec = {obj1, obj2};
+        ctx_test.setObjectData(obj_vec, "vec_uint", 50u);
+        
+        // Another vector with same value (should not increase unique count)
+        std::vector<uint> obj_vec2 = {obj3};
+        ctx_test.setObjectData(obj_vec2, "vec_uint", 50u);
+        
+        // Single object gets different value
+        ctx_test.setObjectData(obj4, "vec_uint", 150u);
+        
+        std::vector<uint> uint_values;
+        ctx_test.getUniqueObjectDataValues("vec_uint", uint_values);
+        DOCTEST_CHECK(uint_values.size() == 2);
+        std::sort(uint_values.begin(), uint_values.end());
+        DOCTEST_CHECK(uint_values[0] == 50u);
+        DOCTEST_CHECK(uint_values[1] == 150u);
+    }
+    
+    SUBCASE("Vector<vector<uint>> caching") {
+        // Test nested vector version
+        std::vector<std::vector<uint>> nested_vec = {{obj1, obj2}, {obj3}};
+        ctx_test.setObjectData(nested_vec, "vec_string", std::string("cherry"));
+        
+        // Single object gets different value
+        ctx_test.setObjectData(obj4, "vec_string", std::string("date"));
+        
+        std::vector<std::string> string_values;
+        ctx_test.getUniqueObjectDataValues("vec_string", string_values);
+        DOCTEST_CHECK(string_values.size() == 2);
+        std::sort(string_values.begin(), string_values.end());
+        DOCTEST_CHECK(string_values[0] == "cherry");
+        DOCTEST_CHECK(string_values[1] == "date");
+    }
+    
+    SUBCASE("Vector<vector<vector<uint>>> caching") {
+        // Test triple nested vector version
+        std::vector<std::vector<std::vector<uint>>> triple_vec = {{{obj1}, {obj2}}, {{obj3}}};
+        ctx_test.setObjectData(triple_vec, "vec_int", 300);
+        
+        // Single object gets different value
+        ctx_test.setObjectData(obj4, "vec_int", 400);
+        
+        std::vector<int> int_values;
+        ctx_test.getUniqueObjectDataValues("vec_int", int_values);
+        DOCTEST_CHECK(int_values.size() == 2);
+        std::sort(int_values.begin(), int_values.end());
+        DOCTEST_CHECK(int_values[0] == 300);
+        DOCTEST_CHECK(int_values[1] == 400);
+    }
+    
+    SUBCASE("Vector cache update behavior") {
+        // Test that updating existing data via vector properly maintains cache
+        std::vector<uint> obj_vec = {obj1, obj2};
+        
+        // Set initial values
+        ctx_test.setObjectData(obj_vec, "vec_string", std::string("old_value"));
+        ctx_test.setObjectData(obj3, "vec_string", std::string("other_value"));
+        
+        // Verify initial state
+        std::vector<std::string> string_values;
+        ctx_test.getUniqueObjectDataValues("vec_string", string_values);
+        DOCTEST_CHECK(string_values.size() == 2);
+        
+        // Update values via vector
+        ctx_test.setObjectData(obj_vec, "vec_string", std::string("new_value"));
+        
+        // Verify cache is properly updated
+        ctx_test.getUniqueObjectDataValues("vec_string", string_values);
+        DOCTEST_CHECK(string_values.size() == 2);
+        std::sort(string_values.begin(), string_values.end());
+        DOCTEST_CHECK(string_values[0] == "new_value");
+        DOCTEST_CHECK(string_values[1] == "other_value");
+    }
+    
+    SUBCASE("Mixed single and vector operations") {
+        // Test mixing single objID and vector objID operations
+        ctx_test.setObjectData(obj1, "vec_int", 10);
+        
+        std::vector<uint> obj_vec = {obj2, obj3};
+        ctx_test.setObjectData(obj_vec, "vec_int", 10);  // Same value
+        
+        ctx_test.setObjectData(obj4, "vec_int", 20);  // Different value
+        
+        std::vector<int> int_values;
+        ctx_test.getUniqueObjectDataValues("vec_int", int_values);
+        DOCTEST_CHECK(int_values.size() == 2);
+        std::sort(int_values.begin(), int_values.end());
+        DOCTEST_CHECK(int_values[0] == 10);
+        DOCTEST_CHECK(int_values[1] == 20);
+    }
+}
+
 TEST_CASE("Object Data Filtering") {
     Context ctx;
     uint o1 = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));

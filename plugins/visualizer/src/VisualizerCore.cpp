@@ -550,6 +550,13 @@ Visualizer::~Visualizer() {
         glDeleteBuffers((GLsizei) hidden_flag_buffer.size(), hidden_flag_buffer.data());
         glDeleteTextures((GLsizei) hidden_flag_texture_object.size(), hidden_flag_texture_object.data());
 
+        // Clean up texture array and UV rescaling resources
+        if (texArray != 0) {
+            glDeleteTextures(1, &texArray);
+        }
+        glDeleteBuffers(1, &uv_rescale_buffer);
+        glDeleteTextures(1, &uv_rescale_texture_object);
+
         glfwDestroyWindow(scast<GLFWwindow *>(window));
         glfwTerminate();
     }

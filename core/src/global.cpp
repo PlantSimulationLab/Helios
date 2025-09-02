@@ -387,6 +387,73 @@ bool helios::pointInPolygon(const vec2 &p, const std::vector<vec2> &poly) {
     return (crossings & 1) == 1;
 }
 
+helios::ProgressBar::ProgressBar(size_t total, int width, bool enable, const std::string &progress_message) 
+    : total_steps(total), current_step(0), bar_width(width), enabled(enable), message(progress_message) {
+}
+
+void helios::ProgressBar::update() {
+    if (!enabled) return;
+    
+    current_step++;
+    double progress = (double)current_step / total_steps;
+    int filled = (int)(progress * bar_width);
+    
+    std::cout << "\r" << message << ": [";
+    for (int i = 0; i < bar_width; ++i) {
+        if (i < filled) std::cout << "=";
+        else if (i == filled) std::cout << ">";
+        else std::cout << " ";
+    }
+    std::cout << "] " << (int)(progress * 100) << "% (" 
+              << current_step << "/" << total_steps << ")";
+    std::cout.flush();
+    
+    if (current_step >= total_steps) {
+        std::cout << std::endl;
+    }
+}
+
+void helios::ProgressBar::update(size_t step_number) {
+    if (!enabled) return;
+    
+    current_step = step_number;
+    if (current_step > total_steps) {
+        current_step = total_steps;
+    }
+    
+    double progress = (double)current_step / total_steps;
+    int filled = (int)(progress * bar_width);
+    
+    std::cout << "\r" << message << ": [";
+    for (int i = 0; i < bar_width; ++i) {
+        if (i < filled) std::cout << "=";
+        else if (i == filled) std::cout << ">";
+        else std::cout << " ";
+    }
+    std::cout << "] " << (int)(progress * 100) << "% (" 
+              << current_step << "/" << total_steps << ")";
+    std::cout.flush();
+    
+    if (current_step >= total_steps) {
+        std::cout << std::endl;
+    }
+}
+
+void helios::ProgressBar::finish() {
+    if (enabled && current_step < total_steps) {
+        current_step = total_steps;
+        update(current_step);
+    }
+}
+
+void helios::ProgressBar::setEnabled(bool enable) {
+    enabled = enable;
+}
+
+bool helios::ProgressBar::isEnabled() const {
+    return enabled;
+}
+
 void helios::wait(float seconds) {
     int msec = (int) lround(seconds * 1000.f);
     std::this_thread::sleep_for(std::chrono::milliseconds(msec));

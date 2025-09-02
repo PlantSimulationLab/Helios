@@ -82,7 +82,7 @@ void RadiationModel::setCameraSpectralResponseFromLibrary(const std::string &cam
     const auto &band_labels = cameras.at(camera_label).band_labels;
 
     if (!context->doesGlobalDataExist("spectral_library_loaded")) {
-        context->loadXML("camera_spectral_library.xml");
+        context->loadXML("plugins/radiation/spectral_data/camera_spectral_library.xml");
     }
 
     for (const auto &band: band_labels) {
@@ -184,12 +184,12 @@ std::vector<std::string> RadiationModel::getAllCameraLabels() {
     return labels;
 }
 
-void RadiationModel::writeCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path, int frame, float flux_to_pixel_conversion) {
+std::string RadiationModel::writeCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path, int frame, float flux_to_pixel_conversion) {
 
     // check if camera exists
     if (cameras.find(camera) == cameras.end()) {
         std::cout << "ERROR (RadiationModel::writeCameraImage): camera with label " << camera << " does not exist. Skipping image write for this camera." << std::endl;
-        return;
+        return "";
     }
 
     if (bands.size() != 1 && bands.size() != 3) {
@@ -204,7 +204,7 @@ void RadiationModel::writeCameraImage(const std::string &camera, const std::vect
         // check if band exists
         if (std::find(cameras.at(camera).band_labels.begin(), cameras.at(camera).band_labels.end(), band) == cameras.at(camera).band_labels.end()) {
             std::cout << "ERROR (RadiationModel::writeCameraImage): camera " << camera << " band with label " << band << " does not exist. Skipping image write for this camera." << std::endl;
-            return;
+            return "";
         }
 
         // std::string global_data_label = "camera_" + camera + "_" + bands.at(b);
@@ -245,7 +245,7 @@ void RadiationModel::writeCameraImage(const std::string &camera, const std::vect
 
     if (!testfile.is_open()) {
         std::cout << "ERROR (RadiationModel::writeCameraImage): image file " << outfile.str() << " could not be opened. Check that the path exists and that you have write permission. Skipping image write for this camera." << std::endl;
-        return;
+        return "";
     }
     testfile.close();
 
@@ -270,19 +270,21 @@ void RadiationModel::writeCameraImage(const std::string &camera, const std::vect
     }
 
     writeJPEG(outfile.str(), camera_resolution.x, camera_resolution.y, pixel_data_RGB);
+
+    return outfile.str();
 }
 
-void RadiationModel::writeNormCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path, int frame) {
+std::string RadiationModel::writeNormCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path, int frame) {
     float maxval = 0;
     // Find maximum mean value over all bands
     for (const std::string &band: bands) {
         std::string global_data_label = "camera_" + camera + "_" + band;
         if (std::find(cameras.at(camera).band_labels.begin(), cameras.at(camera).band_labels.end(), band) == cameras.at(camera).band_labels.end()) {
             std::cout << "ERROR (RadiationModel::writeNormCameraImage): camera " << camera << " band with label " << band << " does not exist. Skipping image write for this camera." << std::endl;
-            return;
+            return "";
         } else if (!context->doesGlobalDataExist(global_data_label.c_str())) {
             std::cout << "ERROR (RadiationModel::writeNormCameraImage): image data for camera " << camera << ", band " << band << " has not been created. Did you run the radiation model? Skipping image write for this camera." << std::endl;
-            return;
+            return "";
         }
         std::vector<float> cameradata;
         context->getGlobalData(global_data_label.c_str(), cameradata);
@@ -303,7 +305,7 @@ void RadiationModel::writeNormCameraImage(const std::string &camera, const std::
         context->setGlobalData(global_data_label.c_str(), cameradata);
     }
 
-    RadiationModel::writeCameraImage(camera, bands, imagefile_base, image_path, frame);
+    return RadiationModel::writeCameraImage(camera, bands, imagefile_base, image_path, frame);
 }
 
 void RadiationModel::writeCameraImageData(const std::string &camera, const std::string &band, const std::string &imagefile_base, const std::string &image_path, int frame) {
@@ -898,7 +900,7 @@ void RadiationModel::writeNormDepthImage(const std::string &cameralabel, const s
     writeJPEG(outfile.str(), camera_resolution.x, camera_resolution.y, pixel_data);
 }
 
-
+//DEPRECATED
 void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, const std::string &primitive_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path, bool append_label_file, int frame) {
 
     if (cameras.find(cameralabel) == cameras.end()) {
@@ -1003,6 +1005,7 @@ void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, con
     label_file.close();
 }
 
+//DEPRECATED
 void RadiationModel::writeImageBoundingBoxes_ObjectData(const std::string &cameralabel, const std::string &object_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path, bool append_label_file, int frame) {
 
     if (cameras.find(cameralabel) == cameras.end()) {
@@ -1115,8 +1118,256 @@ void RadiationModel::writeImageBoundingBoxes_ObjectData(const std::string &camer
     label_file.close();
 }
 
+void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, const std::string &primitive_data_label, const uint &object_class_ID, const std::string &image_file, const std::string &classes_txt_file, const std::string &image_path){
+    writeImageBoundingBoxes( cameralabel, std::vector<std::string>{primitive_data_label}, std::vector<uint>{object_class_ID}, image_file, classes_txt_file, image_path);
+}
+
+void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, const std::vector<std::string> &primitive_data_label, const std::vector<uint> &object_class_ID, const std::string &image_file, const std::string &classes_txt_file, const std::string &image_path) {
+
+    if (cameras.find(cameralabel) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes): Camera '" + cameralabel + "' does not exist.");
+    }
+
+    if (primitive_data_label.size() != object_class_ID.size()) {
+        helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes): The lengths of primitive_data_label and object_class_ID vectors must be the same.");
+    }
+
+    // Get image UUID labels
+    std::vector<uint> camera_UUIDs;
+    std::string global_data_label = "camera_" + cameralabel + "_pixel_UUID";
+    if (!context->doesGlobalDataExist(global_data_label.c_str())) {
+        helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes): Pixel labels for camera '" + cameralabel + "' do not exist. Was the radiation model run to generate labels?");
+    }
+    context->getGlobalData(global_data_label.c_str(), camera_UUIDs);
+    std::vector<uint> pixel_UUIDs = camera_UUIDs;
+    int2 camera_resolution = cameras.at(cameralabel).resolution;
+
+    std::string output_path = image_path;
+    if (!image_path.empty() && !validateOutputPath(output_path)) {
+        helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
+    } else if (!getFileName(output_path).empty()) {
+        helios_runtime_error("ERROR(RadiationModel::writeImageBoundingBoxes): Image output directory contains a filename. This argument should be the path to a directory not a file.");
+    }
+
+    std::string outfile_txt = output_path + std::filesystem::path(image_file).stem().string() + ".txt";
+
+    std::ofstream label_file(outfile_txt);
+
+    if (!label_file.is_open()) {
+        helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes): Could not open output bounding box file '" + outfile_txt + "'.");
+    }
+
+    // Map to store bounding boxes for each data label class combination
+    std::map<std::pair<uint, uint>, vec4> pdata_bounds; // (class_id, label_value) -> bbox
+
+    // Iterate through all pixels
+    for (int j = 0; j < camera_resolution.y; j++) {
+        for (int i = 0; i < camera_resolution.x; i++) {
+            uint ii = camera_resolution.x - i - 1;
+            uint UUID = pixel_UUIDs.at(j * camera_resolution.x + ii) - 1;
+            
+            if (context->doesPrimitiveExist(UUID)) {
+                // Check each primitive data label
+                for (size_t label_idx = 0; label_idx < primitive_data_label.size(); label_idx++) {
+                    const std::string &data_label = primitive_data_label[label_idx];
+                    uint class_id = object_class_ID[label_idx];
+                    
+                    if (context->doesPrimitiveDataExist(UUID, data_label.c_str())) {
+                        uint labeldata;
+                        bool has_data = false;
+
+                        HeliosDataType datatype = context->getPrimitiveDataType(data_label.c_str());
+                        if (datatype == HELIOS_TYPE_UINT) {
+                            uint labeldata_ui;
+                            context->getPrimitiveData(UUID, data_label.c_str(), labeldata_ui);
+                            labeldata = labeldata_ui;
+                            has_data = true;
+                        } else if (datatype == HELIOS_TYPE_INT) {
+                            int labeldata_i;
+                            context->getPrimitiveData(UUID, data_label.c_str(), labeldata_i);
+                            labeldata = (uint) labeldata_i;
+                            has_data = true;
+                        }
+
+                        if (has_data) {
+                            std::pair<uint, uint> key = std::make_pair(class_id, labeldata);
+                            
+                            if (pdata_bounds.find(key) == pdata_bounds.end()) {
+                                pdata_bounds[key] = make_vec4(1e6, -1, 1e6, -1);
+                            }
+
+                            if (i < pdata_bounds[key].x) {
+                                pdata_bounds[key].x = i;
+                            }
+                            if (i > pdata_bounds[key].y) {
+                                pdata_bounds[key].y = i;
+                            }
+                            if (j < pdata_bounds[key].z) {
+                                pdata_bounds[key].z = j;
+                            }
+                            if (j > pdata_bounds[key].w) {
+                                pdata_bounds[key].w = j;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for (auto box: pdata_bounds) {
+        uint class_id = box.first.first;
+        vec4 bbox = box.second;
+        if (bbox.x == bbox.y || bbox.z == bbox.w) { // filter boxes of zero size
+            continue;
+        }
+        label_file << class_id << " " << (bbox.x + 0.5 * (bbox.y - bbox.x)) / float(camera_resolution.x) << " " << (bbox.z + 0.5 * (bbox.w - bbox.z)) / float(camera_resolution.y) << " " << std::setprecision(6) << std::fixed
+                   << (bbox.y - bbox.x) / float(camera_resolution.x) << " " << (bbox.w - bbox.z) / float(camera_resolution.y) << std::endl;
+    }
+
+    label_file.close();
+
+    std::ofstream classes_txt_stream(output_path + classes_txt_file);
+    if (!classes_txt_stream.is_open()) {
+        helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes): Could not open output classes file '" + output_path + classes_txt_file + ".");
+    }
+    for (int i = 0; i < object_class_ID.size(); i++) {
+        classes_txt_stream << object_class_ID.at(i) << " " << primitive_data_label.at(i) << std::endl;
+    }
+    classes_txt_stream.close();
+
+}
+
+void RadiationModel::writeImageBoundingBoxes_ObjectData(const std::string &cameralabel, const std::string &object_data_label, const uint &object_class_ID, const std::string &image_file, const std::string &classes_txt_file, const std::string &image_path){
+    writeImageBoundingBoxes_ObjectData( cameralabel, std::vector<std::string>{object_data_label}, std::vector<uint>{object_class_ID}, image_file, classes_txt_file, image_path);
+}
+
+void RadiationModel::writeImageBoundingBoxes_ObjectData( const std::string &cameralabel, const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &image_file, const std::string &classes_txt_file, const std::string &image_path ) {
+
+    if (cameras.find(cameralabel) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes_ObjectData): Camera '" + cameralabel + "' does not exist.");
+    }
+
+    if (object_data_label.size() != object_class_ID.size()) {
+        helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes_ObjectData): The lengths of object_data_label and object_class_ID vectors must be the same.");
+    }
+
+    // Get image UUID labels
+    std::vector<uint> camera_UUIDs;
+    std::string global_data_label = "camera_" + cameralabel + "_pixel_UUID";
+    if (!context->doesGlobalDataExist(global_data_label.c_str())) {
+        helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes_ObjectData): Pixel labels for camera '" + cameralabel + "' do not exist. Was the radiation model run to generate labels?");
+    }
+    context->getGlobalData(global_data_label.c_str(), camera_UUIDs);
+    std::vector<uint> pixel_UUIDs = camera_UUIDs;
+    int2 camera_resolution = cameras.at(cameralabel).resolution;
+
+    std::string output_path = image_path;
+    if (!image_path.empty() && !validateOutputPath(output_path)) {
+        helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes_ObjectData): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
+    } else if (!getFileName(output_path).empty()) {
+        helios_runtime_error("ERROR(RadiationModel::writeImageBoundingBoxes_ObjectData): Image output directory contains a filename. This argument should be the path to a directory not a file.");
+    }
+
+    std::string outfile_txt = output_path + std::filesystem::path(image_file).stem().string() + ".txt";
+
+    std::ofstream label_file(outfile_txt);
+
+    if (!label_file.is_open()) {
+        helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes_ObjectData): Could not open output bounding box file '" + outfile_txt + "'.");
+    }
+
+    // Map to store bounding boxes for each data label class combination
+    std::map<std::pair<uint, uint>, vec4> pdata_bounds; // (class_id, label_value) -> bbox
+
+    // Iterate through all pixels
+    for (int j = 0; j < camera_resolution.y; j++) {
+        for (int i = 0; i < camera_resolution.x; i++) {
+            uint ii = camera_resolution.x - i - 1;
+            uint UUID = pixel_UUIDs.at(j * camera_resolution.x + ii) - 1;
+
+            if (!context->doesPrimitiveExist(UUID)) {
+                continue;
+            }
+
+            uint objID = context->getPrimitiveParentObjectID(UUID);
+
+            if (!context->doesObjectExist(objID)) {
+                continue;
+            }
+
+            // Check each object data label
+            for (size_t label_idx = 0; label_idx < object_data_label.size(); label_idx++) {
+                const std::string &data_label = object_data_label[label_idx];
+                uint class_id = object_class_ID[label_idx];
+                
+                if (context->doesObjectDataExist(objID, data_label.c_str())) {
+                    uint labeldata;
+                    bool has_data = false;
+
+                    HeliosDataType datatype = context->getObjectDataType(data_label.c_str());
+                    if (datatype == HELIOS_TYPE_UINT) {
+                        uint labeldata_ui;
+                        context->getObjectData(objID, data_label.c_str(), labeldata_ui);
+                        labeldata = labeldata_ui;
+                        has_data = true;
+                    } else if (datatype == HELIOS_TYPE_INT) {
+                        int labeldata_i;
+                        context->getObjectData(objID, data_label.c_str(), labeldata_i);
+                        labeldata = (uint) labeldata_i;
+                        has_data = true;
+                    }
+
+                    if (has_data) {
+                        std::pair<uint, uint> key = std::make_pair(class_id, labeldata);
+                        
+                        if (pdata_bounds.find(key) == pdata_bounds.end()) {
+                            pdata_bounds[key] = make_vec4(1e6, -1, 1e6, -1);
+                        }
+
+                        if (i < pdata_bounds[key].x) {
+                            pdata_bounds[key].x = i;
+                        }
+                        if (i > pdata_bounds[key].y) {
+                            pdata_bounds[key].y = i;
+                        }
+                        if (j < pdata_bounds[key].z) {
+                            pdata_bounds[key].z = j;
+                        }
+                        if (j > pdata_bounds[key].w) {
+                            pdata_bounds[key].w = j;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for (auto box: pdata_bounds) {
+        uint class_id = box.first.first;
+        vec4 bbox = box.second;
+        if (bbox.x == bbox.y || bbox.z == bbox.w) { // filter boxes of zero size
+            continue;
+        }
+        label_file << class_id << " " << (bbox.x + 0.5 * (bbox.y - bbox.x)) / float(camera_resolution.x) << " " << (bbox.z + 0.5 * (bbox.w - bbox.z)) / float(camera_resolution.y) << " " << std::setprecision(6) << std::fixed
+                   << (bbox.y - bbox.x) / float(camera_resolution.x) << " " << (bbox.w - bbox.z) / float(camera_resolution.y) << std::endl;
+    }
+
+    label_file.close();
+
+    std::ofstream classes_txt_stream(output_path + classes_txt_file);
+    if (!classes_txt_stream.is_open()) {
+        helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes_ObjectData): Could not open output classes file '" + output_path + classes_txt_file + ".");
+    }
+    for (int i = 0; i < object_class_ID.size(); i++) {
+        classes_txt_stream << object_class_ID.at(i) << " " << object_data_label.at(i) << std::endl;
+    }
+    classes_txt_stream.close();
+
+}
+
 // Helper function to initialize or load existing COCO JSON structure
-nlohmann::json RadiationModel::initializeCOCOJson(const std::string &filename, bool append_file, const std::string &cameralabel, const helios::int2 &camera_resolution) {
+nlohmann::json RadiationModel::initializeCOCOJson(const std::string &filename, bool append_file, const std::string &cameralabel, const helios::int2 &camera_resolution, const std::string &image_file) {
     nlohmann::json coco_json;
 
     if (append_file) {
@@ -1137,14 +1388,15 @@ nlohmann::json RadiationModel::initializeCOCOJson(const std::string &filename, b
         coco_json["images"] = nlohmann::json::array();
         coco_json["annotations"] = nlohmann::json::array();
 
+        // Extract just the filename (no path) from the image file
+        std::filesystem::path image_path_obj(image_file);
+        std::string filename_only = image_path_obj.filename().string();
+
         // Add the image entry (only once)
         nlohmann::json image_entry;
-        image_entry["id"] = 0;
-        image_entry["license"] = 1;
-        image_entry["file_name"] = cameralabel + "_RGB.jpeg";
+        image_entry["file_name"] = filename_only;
         image_entry["height"] = camera_resolution.y;
         image_entry["width"] = camera_resolution.x;
-        image_entry["date_captured"] = "2025-07-28T00:00:00+00:00";
         coco_json["images"].push_back(image_entry);
     }
 
@@ -1152,20 +1404,26 @@ nlohmann::json RadiationModel::initializeCOCOJson(const std::string &filename, b
 }
 
 // Helper function to add category to COCO JSON if it doesn't exist
-void RadiationModel::addCategoryToCOCO(nlohmann::json &coco_json, uint object_class_ID, const std::string &category_name) {
-    bool category_exists = false;
-    for (auto &cat: coco_json["categories"]) {
-        if (cat["id"] == object_class_ID) {
-            category_exists = true;
-            break;
-        }
+void RadiationModel::addCategoryToCOCO(nlohmann::json &coco_json, const std::vector<uint> &object_class_ID, const std::vector<std::string> &category_name) {
+    if (object_class_ID.size() != category_name.size()) {
+        helios_runtime_error("ERROR (RadiationModel::addCategoryToCOCO): The lengths of object_class_ID and category_name vectors must be the same.");
     }
-    if (!category_exists) {
-        nlohmann::json category;
-        category["id"] = object_class_ID;
-        category["name"] = category_name;
-        category["supercategory"] = "none";
-        coco_json["categories"].push_back(category);
+
+    for (size_t i = 0; i < object_class_ID.size(); ++i) {
+        bool category_exists = false;
+        for (auto &cat: coco_json["categories"]) {
+            if (cat["id"] == object_class_ID[i]) {
+                category_exists = true;
+                break;
+            }
+        }
+        if (!category_exists) {
+            nlohmann::json category;
+            category["id"] = object_class_ID[i];
+            category["name"] = category_name[i];
+            category["supercategory"] = "none";
+            coco_json["categories"].push_back(category);
+        }
     }
 }
 
@@ -1487,10 +1745,18 @@ std::vector<std::map<std::string, std::vector<float>>> RadiationModel::generateA
     return annotations;
 }
 
-void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel, const std::string &primitive_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path, bool append_file, int frame) {
+void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel, const std::string &primitive_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, bool append_file ){
+    writeImageSegmentationMasks(cameralabel, std::vector<std::string>{primitive_data_label}, std::vector<uint>{object_class_ID}, json_filename, image_file, append_file);
+}
+
+void RadiationModel::writeImageSegmentationMasks( const std::string &cameralabel, const std::vector<std::string> &primitive_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file, bool append_file ) {
 
     if (cameras.find(cameralabel) == cameras.end()) {
         helios_runtime_error("ERROR (RadiationModel::writeImageSegmentationMasks): Camera '" + cameralabel + "' does not exist.");
+    }
+
+    if (primitive_data_label.size() != object_class_ID.size()) {
+        helios_runtime_error("ERROR (RadiationModel::writeImageSegmentationMasks): The lengths of primitive_data_label and object_class_ID vectors must be the same.");
     }
 
     // Check that camera pixel data exists
@@ -1499,74 +1765,89 @@ void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel,
         helios_runtime_error("ERROR (RadiationModel::writeImageSegmentationMasks): Pixel labels for camera '" + cameralabel + "' do not exist. Was the radiation model run to generate labels?");
     }
 
-    // Validate output path
-    std::string output_path = image_path;
-    if (!image_path.empty() && !validateOutputPath(output_path)) {
-        helios_runtime_error("ERROR (RadiationModel::writeImageSegmentationMasks): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
-    } else if (!getFileName(output_path).empty()) {
-        helios_runtime_error("ERROR(RadiationModel::writeImageSegmentationMasks): Image output directory contains a filename. This argument should be the path to a directory not a file.");
+    // Check that all primitive data labels exist
+    std::vector<std::string> all_primitive_data = context->listAllPrimitiveDataLabels();
+    for (const auto& data_label : primitive_data_label) {
+        if (std::find(all_primitive_data.begin(), all_primitive_data.end(), data_label) == all_primitive_data.end()) {
+            std::cerr << "WARNING (RadiationModel::writeImageSegmentationMasks): Primitive data label '" << data_label << "' does not exist in the context." << std::endl;
+        }
     }
 
-    // Create output filename
-    std::ostringstream outfile;
-    outfile << output_path;
-    if (frame >= 0) {
-        std::string frame_str = std::to_string(frame);
-        outfile << cameralabel << "_" << imagefile_base << "_" << std::setw(5) << std::setfill('0') << frame_str << ".json";
-    } else {
-        outfile << cameralabel << "_" << imagefile_base << ".json";
+    // Check that image file exists
+    if (!std::filesystem::exists(image_file)) {
+        helios_runtime_error("ERROR (RadiationModel::writeImageSegmentationMasks): Image file '" + image_file + "' does not exist.");
     }
 
-    // Generate label masks using helper function (primitive data version)
-    std::map<int, std::vector<std::vector<bool>>> label_masks = generateLabelMasks(cameralabel, primitive_data_label, false);
+    // Validate and ensure JSON filename has .json extension
+    std::string validated_json_filename = json_filename;
+    if (validated_json_filename.length() < 5 || validated_json_filename.substr(validated_json_filename.length() - 5) != ".json") {
+        validated_json_filename += ".json";
+    }
 
-    // Generate annotations from masks using helper function
-    int2 camera_resolution = cameras.at(cameralabel).resolution;
-    std::vector<std::map<std::string, std::vector<float>>> annotations = generateAnnotationsFromMasks(label_masks, object_class_ID, camera_resolution);
+    // Use the validated filename directly
+    std::string outfile = validated_json_filename;
 
     // Write annotations to JSON file
-    nlohmann::json coco_json = initializeCOCOJson(outfile.str(), append_file, cameralabel, camera_resolution);
+    int2 camera_resolution = cameras.at(cameralabel).resolution;
+    nlohmann::json coco_json = initializeCOCOJson(outfile, append_file, cameralabel, camera_resolution, image_file);
     addCategoryToCOCO(coco_json, object_class_ID, primitive_data_label);
 
-    // Find the highest existing annotation ID to avoid conflicts
-    int max_annotation_id = -1;
-    for (const auto &existing_ann: coco_json["annotations"]) {
-        if (existing_ann["id"] > max_annotation_id) {
-            max_annotation_id = existing_ann["id"];
+    // Process each data label and class ID pair
+    for (size_t i = 0; i < primitive_data_label.size(); ++i) {
+        // Generate label masks using helper function (primitive data version)
+        std::map<int, std::vector<std::vector<bool>>> label_masks = generateLabelMasks(cameralabel, primitive_data_label[i], false);
+
+        // Generate annotations from masks using helper function
+        std::vector<std::map<std::string, std::vector<float>>> annotations = generateAnnotationsFromMasks(label_masks, object_class_ID[i], camera_resolution);
+
+        // Find the highest existing annotation ID to avoid conflicts
+        int max_annotation_id = -1;
+        for (const auto &existing_ann: coco_json["annotations"]) {
+            if (existing_ann["id"] > max_annotation_id) {
+                max_annotation_id = existing_ann["id"];
+            }
         }
-    }
 
-    // Add new annotations
-    for (const auto &ann: annotations) {
-        nlohmann::json json_annotation;
-        json_annotation["id"] = max_annotation_id + 1;
-        json_annotation["image_id"] = (int) ann.at("image_id")[0];
-        json_annotation["category_id"] = (int) ann.at("category_id")[0];
+        // Add new annotations for this data label
+        for (const auto &ann: annotations) {
+            nlohmann::json json_annotation;
+            json_annotation["id"] = max_annotation_id + 1;
+            json_annotation["image_id"] = (int) ann.at("image_id")[0];
+            json_annotation["category_id"] = (int) ann.at("category_id")[0];
 
-        const auto &bbox = ann.at("bbox");
-        json_annotation["bbox"] = {(int) bbox[0], (int) bbox[1], (int) bbox[2], (int) bbox[3]};
-        json_annotation["area"] = (int) ann.at("area")[0];
+            const auto &bbox = ann.at("bbox");
+            json_annotation["bbox"] = {(int) bbox[0], (int) bbox[1], (int) bbox[2], (int) bbox[3]};
+            json_annotation["area"] = (int) ann.at("area")[0];
 
-        const auto &seg = ann.at("segmentation");
-        std::vector<int> segmentation_coords;
-        for (float coord: seg) {
-            segmentation_coords.push_back((int) coord);
+            const auto &seg = ann.at("segmentation");
+            std::vector<int> segmentation_coords;
+            for (float coord: seg) {
+                segmentation_coords.push_back((int) coord);
+            }
+            json_annotation["segmentation"] = {segmentation_coords};
+            json_annotation["iscrowd"] = (int) ann.at("iscrowd")[0];
+
+            coco_json["annotations"].push_back(json_annotation);
+            max_annotation_id++;
         }
-        json_annotation["segmentation"] = {segmentation_coords};
-        json_annotation["iscrowd"] = (int) ann.at("iscrowd")[0];
-
-        coco_json["annotations"].push_back(json_annotation);
-        max_annotation_id++;
     }
 
     // Write JSON to file
-    writeCOCOJson(coco_json, outfile.str());
+    writeCOCOJson(coco_json, outfile);
 }
 
-void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::string &object_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path, bool append_file, int frame) {
+void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::string &object_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, bool append_file ){
+    writeImageSegmentationMasks_ObjectData(cameralabel, std::vector<std::string>{object_data_label}, std::vector<uint>{object_class_ID}, json_filename, image_file, append_file);
+}
+
+void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file, bool append_file ) {
 
     if (cameras.find(cameralabel) == cameras.end()) {
         helios_runtime_error("ERROR (RadiationModel::writeImageSegmentationMasks_ObjectData): Camera '" + cameralabel + "' does not exist.");
+    }
+
+    if (object_data_label.size() != object_class_ID.size()) {
+        helios_runtime_error("ERROR (RadiationModel::writeImageSegmentationMasks_ObjectData): The lengths of object_data_label and object_class_ID vectors must be the same.");
     }
 
     // Check that camera pixel data exists
@@ -1575,68 +1856,75 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
         helios_runtime_error("ERROR (RadiationModel::writeImageSegmentationMasks_ObjectData): Pixel labels for camera '" + cameralabel + "' do not exist. Was the radiation model run to generate labels?");
     }
 
-    // Validate output path
-    std::string output_path = image_path;
-    if (!image_path.empty() && !validateOutputPath(output_path)) {
-        helios_runtime_error("ERROR (RadiationModel::writeImageSegmentationMasks_ObjectData): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
-    } else if (!getFileName(output_path).empty()) {
-        helios_runtime_error("ERROR(RadiationModel::writeImageSegmentationMasks_ObjectData): Image output directory contains a filename. This argument should be the path to a directory not a file.");
+    // Check that all object data labels exist
+    std::vector<std::string> all_object_data = context->listAllObjectDataLabels();
+    for (const auto& data_label : object_data_label) {
+        if (std::find(all_object_data.begin(), all_object_data.end(), data_label) == all_object_data.end()) {
+            std::cerr << "WARNING (RadiationModel::writeImageSegmentationMasks_ObjectData): Object data label '" << data_label << "' does not exist in the context." << std::endl;
+        }
     }
 
-    // Create output filename
-    std::ostringstream outfile;
-    outfile << output_path;
-    if (frame >= 0) {
-        std::string frame_str = std::to_string(frame);
-        outfile << cameralabel << "_" << imagefile_base << "_" << std::setw(5) << std::setfill('0') << frame_str << ".json";
-    } else {
-        outfile << cameralabel << "_" << imagefile_base << ".json";
+    // Check that image file exists
+    if (!std::filesystem::exists(image_file)) {
+        helios_runtime_error("ERROR (RadiationModel::writeImageSegmentationMasks_ObjectData): Image file '" + image_file + "' does not exist.");
     }
 
-    // Generate label masks using helper function (object data version)
-    std::map<int, std::vector<std::vector<bool>>> label_masks = generateLabelMasks(cameralabel, object_data_label, true);
+    // Validate and ensure JSON filename has .json extension
+    std::string validated_json_filename = json_filename;
+    if (validated_json_filename.length() < 5 || validated_json_filename.substr(validated_json_filename.length() - 5) != ".json") {
+        validated_json_filename += ".json";
+    }
 
-    // Generate annotations from masks using helper function
-    int2 camera_resolution = cameras.at(cameralabel).resolution;
-    std::vector<std::map<std::string, std::vector<float>>> annotations = generateAnnotationsFromMasks(label_masks, object_class_ID, camera_resolution);
+    // Use the validated filename directly
+    std::string outfile = validated_json_filename;
 
     // Write annotations to JSON file
-    nlohmann::json coco_json = initializeCOCOJson(outfile.str(), append_file, cameralabel, camera_resolution);
+    int2 camera_resolution = cameras.at(cameralabel).resolution;
+    nlohmann::json coco_json = initializeCOCOJson(outfile, append_file, cameralabel, camera_resolution, image_file);
     addCategoryToCOCO(coco_json, object_class_ID, object_data_label);
 
-    // Find the highest existing annotation ID to avoid conflicts
-    int max_annotation_id = -1;
-    for (const auto &existing_ann: coco_json["annotations"]) {
-        if (existing_ann["id"] > max_annotation_id) {
-            max_annotation_id = existing_ann["id"];
+    // Process each data label and class ID pair
+    for (size_t i = 0; i < object_data_label.size(); ++i) {
+        // Generate label masks using helper function (object data version)
+        std::map<int, std::vector<std::vector<bool>>> label_masks = generateLabelMasks(cameralabel, object_data_label[i], true);
+
+        // Generate annotations from masks using helper function
+        std::vector<std::map<std::string, std::vector<float>>> annotations = generateAnnotationsFromMasks(label_masks, object_class_ID[i], camera_resolution);
+
+        // Find the highest existing annotation ID to avoid conflicts
+        int max_annotation_id = -1;
+        for (const auto &existing_ann: coco_json["annotations"]) {
+            if (existing_ann["id"] > max_annotation_id) {
+                max_annotation_id = existing_ann["id"];
+            }
         }
-    }
 
-    // Add new annotations
-    for (const auto &ann: annotations) {
-        nlohmann::json json_annotation;
-        json_annotation["id"] = max_annotation_id + 1;
-        json_annotation["image_id"] = (int) ann.at("image_id")[0];
-        json_annotation["category_id"] = (int) ann.at("category_id")[0];
+        // Add new annotations for this data label
+        for (const auto &ann: annotations) {
+            nlohmann::json json_annotation;
+            json_annotation["id"] = max_annotation_id + 1;
+            json_annotation["image_id"] = (int) ann.at("image_id")[0];
+            json_annotation["category_id"] = (int) ann.at("category_id")[0];
 
-        const auto &bbox = ann.at("bbox");
-        json_annotation["bbox"] = {(int) bbox[0], (int) bbox[1], (int) bbox[2], (int) bbox[3]};
-        json_annotation["area"] = (int) ann.at("area")[0];
+            const auto &bbox = ann.at("bbox");
+            json_annotation["bbox"] = {(int) bbox[0], (int) bbox[1], (int) bbox[2], (int) bbox[3]};
+            json_annotation["area"] = (int) ann.at("area")[0];
 
-        const auto &seg = ann.at("segmentation");
-        std::vector<int> segmentation_coords;
-        for (float coord: seg) {
-            segmentation_coords.push_back((int) coord);
+            const auto &seg = ann.at("segmentation");
+            std::vector<int> segmentation_coords;
+            for (float coord: seg) {
+                segmentation_coords.push_back((int) coord);
+            }
+            json_annotation["segmentation"] = {segmentation_coords};
+            json_annotation["iscrowd"] = (int) ann.at("iscrowd")[0];
+
+            coco_json["annotations"].push_back(json_annotation);
+            max_annotation_id++;
         }
-        json_annotation["segmentation"] = {segmentation_coords};
-        json_annotation["iscrowd"] = (int) ann.at("iscrowd")[0];
-
-        coco_json["annotations"].push_back(json_annotation);
-        max_annotation_id++;
     }
 
     // Write JSON to file
-    writeCOCOJson(coco_json, outfile.str());
+    writeCOCOJson(coco_json, outfile);
 }
 
 void RadiationModel::setPadValue(const std::string &cameralabel, const std::vector<std::string> &bandlabels, const std::vector<float> &padvalues) {
@@ -1776,7 +2064,7 @@ std::vector<helios::vec2> RadiationModel::generateGaussianCameraResponse(float F
 }
 
 void RadiationModel::applyImageProcessingPipeline(const std::string &cameralabel, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float saturation_adjustment, float brightness_adjustment,
-                                                  float contrast_adjustment) {
+                                                  float contrast_adjustment, float gain_adjustment) {
 
     if (cameras.find(cameralabel) == cameras.end()) {
         helios_runtime_error("ERROR (RadiationModel::applyImageProcessingPipeline): Camera '" + cameralabel + "' does not exist.");
@@ -1786,28 +2074,26 @@ void RadiationModel::applyImageProcessingPipeline(const std::string &cameralabel
         helios_runtime_error("ERROR (RadiationModel::applyImageProcessingPipeline): One or more specified band labels do not exist for the camera pixel data.");
     }
 
-    camera.normalizePixels();
+    // Step 1: Smart Auto-Exposure (percentile-based normalization)
+    camera.autoExposure(red_band_label, green_band_label, blue_band_label, gain_adjustment);
 
-    // Apply camera spectral correction before white balance to compensate for known sensor bias
+    // Step 2: Camera spectral correction
     camera.applyCameraSpectralCorrection(red_band_label, green_band_label, blue_band_label, this->context);
 
-    camera.scaleToGreyTarget(red_band_label, green_band_label, blue_band_label, 0.18);
+    // Step 3: Scene-adaptive white balance  
+    camera.whiteBalanceAuto(red_band_label, green_band_label, blue_band_label);
 
-    // Apply white balance first in linear space
-    camera.whiteBalance(red_band_label, green_band_label, blue_band_label);
-
-    camera.applyGain(red_band_label, green_band_label, blue_band_label, 0.95f);
-
-    // Apply histogram equalization that preserves chromaticity (color)
-    //camera.globalHistogramEqualization(red_band_label, green_band_label, blue_band_label);
-
-    if (saturation_adjustment != 1.f || brightness_adjustment != 1.f || contrast_adjustment != 1.f) {
-        camera.adjustSBC(red_band_label, green_band_label, blue_band_label, saturation_adjustment, brightness_adjustment, contrast_adjustment);
+    // Step 4: Brightness and contrast adjustments in linear space
+    if (brightness_adjustment != 1.f || contrast_adjustment != 1.f) {
+        camera.adjustBrightnessContrast(red_band_label, green_band_label, blue_band_label, brightness_adjustment, contrast_adjustment);
     }
 
-    // camera.applyCCM(red_band_label, green_band_label, blue_band_label);
+    // Step 5: Saturation adjustment
+    if (saturation_adjustment != 1.f) {
+        camera.adjustSaturation(red_band_label, green_band_label, blue_band_label, saturation_adjustment);
+    }
 
-    // Apply gamma compression at the very end
+    // Step 6: Gamma compression (final step)
     camera.gammaCompress(red_band_label, green_band_label, blue_band_label);
 }
 
@@ -1829,35 +2115,6 @@ void RadiationCamera::normalizePixels() {
     for (auto &[channel_label, data]: pixel_data) {
         for (float &v: data) {
             v = (v - min_P) / (max_P - min_P); // Normalize to [0, 1]
-        }
-    }
-}
-
-void RadiationCamera::scaleToGreyTarget(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float target) {
-
-#ifdef HELIOS_DEBUG
-    if (pixel_data.find(red_band_label) == pixel_data.end() || pixel_data.find(green_band_label) == pixel_data.end() || pixel_data.find(blue_band_label) == pixel_data.end()) {
-        helios_runtime_error("ERROR (RadiationModel::scaleToGreyTarget): One or more specified band labels do not exist for the camera pixel data.");
-    }
-#endif
-
-    const std::size_t N = resolution.x * resolution.y;
-    constexpr float eps = 1e-6f;
-
-    double logSum = 0.0;
-    const auto &data_red = pixel_data.at(red_band_label);
-    const auto &data_green = pixel_data.at(green_band_label);
-    const auto &data_blue = pixel_data.at(blue_band_label);
-    for (std::size_t i = 0; i < N; ++i) {
-        logSum += std::log(luminance(data_red[i], data_green[i], data_blue[i]) + eps);
-    }
-
-    const float Llog = std::exp(logSum / static_cast<double>(N));
-    const float k = target / Llog;
-
-    for (auto &[channel, data]: pixel_data) {
-        for (float &v: data) {
-            v *= k;
         }
     }
 }
@@ -2467,5 +2724,116 @@ void RadiationCamera::gammaCompress(const std::string &red_band_label, const std
     }
     for (float &v: pixel_data.at(blue_band_label)) {
         v = lin_to_srgb(std::fmaxf(0.0f, v));
+    }
+}
+
+// New methods for improved image processing pipeline
+
+void RadiationCamera::autoExposure(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float gain_multiplier) {
+#ifdef HELIOS_DEBUG
+    if (pixel_data.find(red_band_label) == pixel_data.end() || pixel_data.find(green_band_label) == pixel_data.end() || pixel_data.find(blue_band_label) == pixel_data.end()) {
+        helios_runtime_error("ERROR (RadiationModel::autoExposure): One or more specified band labels do not exist for the camera pixel data.");
+    }
+#endif
+
+    auto &data_red = pixel_data.at(red_band_label);
+    auto &data_green = pixel_data.at(green_band_label);
+    auto &data_blue = pixel_data.at(blue_band_label);
+    
+    const std::size_t N = data_red.size();
+    
+    // Calculate luminance for each pixel
+    std::vector<float> luminance_values(N);
+    for (std::size_t i = 0; i < N; ++i) {
+        luminance_values[i] = luminance(data_red[i], data_green[i], data_blue[i]);
+    }
+    
+    // Sort luminance values to find percentiles
+    std::vector<float> sorted_luminance = luminance_values;
+    std::sort(sorted_luminance.begin(), sorted_luminance.end());
+    
+    // Calculate 95th percentile for exposure (prevents bright outliers from under-exposing scene)
+    std::size_t p95_idx = static_cast<std::size_t>(0.95f * (N - 1));
+    float p95_luminance = sorted_luminance[p95_idx];
+    
+    // Calculate median luminance for scene analysis
+    std::size_t median_idx = N / 2;
+    float median_luminance = sorted_luminance[median_idx];
+    
+    // Target median luminance scaled appropriately for the data range
+    // Since RGB data is not normalized to [0,1], we need to scale the target accordingly
+    float target_median = 0.18f;  // Calibrated based on empirical testing
+    float auto_gain = target_median / std::max(median_luminance, 1e-6f);
+    
+    // Clamp auto-gain to reasonable range to prevent over/under exposure
+    //auto_gain = std::clamp(auto_gain, 0.0005f, 0.5f);
+    
+    // Apply final gain (auto-exposure * manual adjustment)
+    float final_gain = auto_gain * gain_multiplier;
+    
+    // Apply gain to all channels
+    for (std::size_t i = 0; i < N; ++i) {
+        data_red[i] *= final_gain;
+        data_green[i] *= final_gain;
+        data_blue[i] *= final_gain;
+    }
+}
+
+void RadiationCamera::adjustBrightnessContrast(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float brightness, float contrast) {
+#ifdef HELIOS_DEBUG
+    if (pixel_data.find(red_band_label) == pixel_data.end() || pixel_data.find(green_band_label) == pixel_data.end() || pixel_data.find(blue_band_label) == pixel_data.end()) {
+        helios_runtime_error("ERROR (RadiationModel::adjustBrightnessContrast): One or more specified band labels do not exist for the camera pixel data.");
+    }
+#endif
+
+    auto &data_red = pixel_data.at(red_band_label);
+    auto &data_green = pixel_data.at(green_band_label);
+    auto &data_blue = pixel_data.at(blue_band_label);
+    
+    const std::size_t N = data_red.size();
+    
+    for (std::size_t i = 0; i < N; ++i) {
+        // Apply brightness adjustment
+        float r = data_red[i] * brightness;
+        float g = data_green[i] * brightness;
+        float b = data_blue[i] * brightness;
+        
+        // Apply contrast adjustment (around 0.5 midpoint in linear space)
+        r = 0.5f + (r - 0.5f) * contrast;
+        g = 0.5f + (g - 0.5f) * contrast;
+        b = 0.5f + (b - 0.5f) * contrast;
+        
+        // Store results (allow values outside [0,1] range for HDR processing)
+        data_red[i] = r;
+        data_green[i] = g;
+        data_blue[i] = b;
+    }
+}
+
+void RadiationCamera::adjustSaturation(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float saturation) {
+#ifdef HELIOS_DEBUG
+    if (pixel_data.find(red_band_label) == pixel_data.end() || pixel_data.find(green_band_label) == pixel_data.end() || pixel_data.find(blue_band_label) == pixel_data.end()) {
+        helios_runtime_error("ERROR (RadiationModel::adjustSaturation): One or more specified band labels do not exist for the camera pixel data.");
+    }
+#endif
+
+    auto &data_red = pixel_data.at(red_band_label);
+    auto &data_green = pixel_data.at(green_band_label);
+    auto &data_blue = pixel_data.at(blue_band_label);
+    
+    const std::size_t N = data_red.size();
+    
+    for (std::size_t i = 0; i < N; ++i) {
+        float r = data_red[i];
+        float g = data_green[i];
+        float b = data_blue[i];
+        
+        // Calculate luminance for this pixel
+        float lum = luminance(r, g, b);
+        
+        // Apply saturation adjustment by interpolating between luminance (grayscale) and original color
+        data_red[i] = lum + saturation * (r - lum);
+        data_green[i] = lum + saturation * (g - lum);
+        data_blue[i] = lum + saturation * (b - lum);
     }
 }

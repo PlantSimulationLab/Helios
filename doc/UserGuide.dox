@@ -407,6 +407,83 @@
 
   The code can then be compiled by issuing the 'make' command from the build directory, which will produce an executable in the build directory.
 
+  \subsection BuildOpenMP OpenMP Parallel Processing Support
+
+  Helios includes OpenMP support for multi-threaded parallel processing to significantly improve performance on multi-core systems. OpenMP parallelization is integrated into several key components:
+
+  <ul>
+    <li><b>Core Context operations:</b> Many geometric calculations and data management operations in the Context class use OpenMP for parallel processing</li>
+    <li><b>Collision Detection plugin:</b> Ray-tracing algorithms are heavily parallelized using OpenMP with dynamic scheduling</li>
+    <li><b>Radiation plugin:</b> Radiative transfer calculations utilize OpenMP for parallel computation</li>
+  </ul>
+
+  \subsubsection OpenMPBuild Building with OpenMP
+
+  By default, Helios attempts to build with OpenMP support enabled. The CMake configuration automatically detects OpenMP availability and enables it when found. OpenMP support is controlled by the ENABLE_OPENMP CMake option:
+
+  ```
+  $ cmake -DENABLE_OPENMP=ON ..     # Enable OpenMP (default)
+  $ cmake -DENABLE_OPENMP=OFF ..    # Disable OpenMP
+  ```
+
+  When OpenMP is enabled, Helios will automatically use all available CPU cores for parallelized operations. If OpenMP is not available or disabled, Helios gracefully falls back to serial computation without any loss of functionality.
+
+  \subsubsection OpenMPInstall Installing OpenMP
+
+  <b>Linux:</b>
+  OpenMP is typically included with GCC. For Ubuntu/Debian systems, ensure development packages are installed:
+  ```
+  $ sudo apt-get install libomp-dev
+  ```
+  For RHEL/CentOS systems:
+  ```
+  $ sudo yum install libgomp-devel
+  ```
+
+  <b>macOS:</b>  
+  OpenMP requires additional installation since Apple Clang doesn't include it by default:
+  ```
+  $ brew install libomp
+  ```
+  Helios automatically configures libomp when detected via Homebrew.
+
+  <b>Windows:</b>
+  OpenMP is included with Visual Studio C++ compiler and should work automatically.
+
+  \subsubsection OpenMPPerformance Performance Considerations
+
+  OpenMP can provide significant performance improvements, especially for:
+  <ul>
+    <li>Large geometric models with many primitives</li>
+    <li>Collision detection with complex geometries</li>
+    <li>Radiation calculations over large canopies</li>
+    <li>Data processing operations across many primitives</li>
+  </ul>
+
+  Performance scaling typically works best with 2-16 CPU cores. Beyond 16 cores, improvements may diminish due to memory bandwidth limitations and synchronization overhead.
+
+  \subsubsection OpenMPTroubleshooting Troubleshooting OpenMP
+
+  <b>Build Errors:</b>
+  If you encounter OpenMP-related build errors, try:
+  ```
+  $ cmake -DENABLE_OPENMP=OFF ..    # Disable OpenMP temporarily
+  ```
+
+  <b>Runtime Issues:</b>
+  To control the number of threads used by OpenMP at runtime:
+  ```
+  $ export OMP_NUM_THREADS=4       # Use 4 threads (Linux/macOS)
+  $ set OMP_NUM_THREADS=4          # Use 4 threads (Windows)
+  ```
+
+  <b>macOS Issues:</b>
+  If builds fail with OpenMP errors on macOS, ensure libomp is installed:
+  ```
+  $ brew install libomp
+  $ brew --prefix libomp           # Verify installation path
+  ```
+
   \subsection DirScript New Project Script
 
   There is a script in the main Helios directory that can quickly set up a new project called "create\_project.sh". First, create a new directory where the project will exist, for example:

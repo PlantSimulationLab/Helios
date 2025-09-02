@@ -1935,7 +1935,7 @@ public:
      * \param[in] target_object_UUIDs [optional] Vector of specific UUIDs to avoid (empty = avoid all geometry)
      * \param[in] target_object_IDs [optional] Vector of specific object IDs to avoid (empty = avoid all objects)
      */
-    void enableCollisionDetection(const std::vector<uint> &target_object_UUIDs = {}, const std::vector<uint> &target_object_IDs = {});
+    void enableSoftCollisionAvoidance(const std::vector<uint> &target_object_UUIDs = {}, const std::vector<uint> &target_object_IDs = {});
 
     //! Disable collision detection for plant growth and clean up internal CollisionDetection instance
     void disableCollisionDetection();
@@ -1947,20 +1947,13 @@ public:
      * \param[in] sample_count Number of directional samples within the cone (default = 256)
      * \param[in] inertia_weight Weight factor for directional inertia vs collision avoidance (0.0 = use optimal direction, 1.0 = ignore collision avoidance) (default = 0.4)
      */
-    void setCollisionAvoidanceParameters(float view_half_angle_deg, float look_ahead_distance, int sample_count, float inertia_weight);
+    void setSoftCollisionAvoidanceParameters(float view_half_angle_deg, float look_ahead_distance, int sample_count, float inertia_weight);
 
     //! Mark specific geometry as static for collision detection efficiency
     /**
      * \param[in] target_UUIDs Vector of primitive UUIDs representing static obstacles (buildings, fixed structures, etc.)
      */
     void setStaticObstacles(const std::vector<uint> &target_UUIDs);
-
-    //! Configure spatial optimization for collision detection
-    /**
-     * \param[in] max_collision_distance Maximum distance to consider for collision detection (meters)
-     * \param[in] enable_spatial_filtering Enable distance-based filtering to improve performance
-     */
-    void setSpatialOptimization(float max_collision_distance, bool enable_spatial_filtering = true);
 
     //! Get access to the internal CollisionDetection instance (for advanced usage)
     /**
@@ -1970,13 +1963,13 @@ public:
 
     //! Set which organ types should participate in collision detection
     /**
-     * \param[in] include_internodes Include internode segments in collision detection (default: true)
+     * \param[in] include_internodes Include internode segments in collision detection (default: false)
      * \param[in] include_leaves Include leaf surfaces in collision detection (default: true)
      * \param[in] include_petioles Include petiole segments in collision detection (default: false for trees, true for small plants)
      * \param[in] include_flowers Include flower geometry in collision detection (default: false)
      * \param[in] include_fruit Include fruit geometry in collision detection (default: false)
      */
-    void setCollisionRelevantOrgans(bool include_internodes = true, bool include_leaves = true, bool include_petioles = false, bool include_flowers = false, bool include_fruit = false);
+    void setCollisionRelevantOrgans(bool include_internodes = false, bool include_leaves = true, bool include_petioles = false, bool include_flowers = false, bool include_fruit = false);
     
     //! Enable solid obstacle avoidance for plant growth
     /**
@@ -1988,27 +1981,22 @@ public:
      * 
      * \param[in] obstacle_UUIDs Vector of primitive UUIDs that represent solid obstacles
      * \param[in] avoidance_distance Distance at which obstacle avoidance begins (meters)
-     * \param[in] enable_fruit_adjustment Enable automatic fruit rotation adjustment to avoid obstacles (default: true)
+     * \param[in] enable_fruit_adjustment Enable automatic fruit rotation adjustment to avoid obstacles (default: false)
      */
-    void enableSolidObstacleAvoidance(const std::vector<uint> &obstacle_UUIDs, float avoidance_distance = 0.5f, bool enable_fruit_adjustment = true);
+    void enableSolidObstacleAvoidance(const std::vector<uint> &obstacle_UUIDs, float avoidance_distance = 0.5f, bool enable_fruit_adjustment = false);
 
-    //! Enable or disable petiole collision detection
-    /**
-     * \param[in] enabled Enable petiole collision detection (useful for small plants like tomatoes, not needed for trees)
-     */
-    void enablePetioleCollisionDetection(bool enabled);
+    //! Enable petiole collision detection
+    void enablePetioleCollisionDetection();
 
-    //! Enable or disable fruit collision detection
-    /**
-     * \param[in] enabled Enable fruit collision detection (useful for plants with large fruit that may collide with ground or other obstacles)
-     */
-    void enableFruitCollisionDetection(bool enabled);
+    //! Disable petiole collision detection
+    void disablePetioleCollisionDetection();
 
-    //! Clear BVH cache (called at start of each growth cycle)
-    void clearBVHCache() const;
+    //! Enable fruit collision detection
+    void enableFruitCollisionDetection();
 
-    //! Rebuild BVH once per timestep with current target geometry
-    void rebuildBVHForTimestep();
+    //! Disable fruit collision detection
+    void disableFruitCollisionDetection();
+
 
     //! Configure Context geometry update scheduling for efficiency
     /**
@@ -2437,6 +2425,16 @@ public:
      * \return Vector of object IDs for all fruits in the plant.
      */
     [[nodiscard]] std::vector<uint> getPlantFruitObjectIDs(uint plantID) const;
+    
+    //! Get collision-relevant object IDs for a specific plant
+    /**
+     * \param[in] plantID Plant ID for which to query collision-relevant object IDs
+     * \return Vector of object IDs for collision-relevant organs belonging to specified plant
+     * 
+     * Returns object IDs for plant organs that are currently enabled for collision detection
+     * based on the settings from setCollisionRelevantOrgans().
+     */
+    [[nodiscard]] std::vector<uint> getPlantCollisionRelevantObjectIDs(uint plantID) const;
 
     //! Get UUIDs for all existing plant primitives
     /**
@@ -2564,8 +2562,21 @@ public:
      */
     std::vector<uint> readPlantStructureXML(const std::string &filename, bool quiet = false);
 
+    //! Disable standard output from this plug-in
+    void disableMessages();
+
+    //! Re-enable standard output from this plug-in
+    void enableMessages();
+
     friend struct Phytomer;
     friend struct Shoot;
+
+private:
+    //! Clear BVH cache (called at start of each growth cycle)
+    void clearBVHCache() const;
+
+    //! Rebuild BVH once per timestep with current target geometry
+    void rebuildBVHForTimestep();
 
 protected:
     helios::Context *context_ptr;
@@ -2694,11 +2705,11 @@ protected:
     bool force_update_on_collision = true;
 
     //! Organ filtering configuration for collision detection
-    bool collision_include_internodes = true;
+    bool collision_include_internodes = false;
     bool collision_include_leaves = true;
-    bool collision_include_petioles = false;  // Default false for tree models
-    bool collision_include_flowers = false;   // Flowers typically not collision obstacles
-    bool collision_include_fruit = false;     // Fruit typically not collision obstacles
+    bool collision_include_petioles = false;
+    bool collision_include_flowers = false;
+    bool collision_include_fruit = false;
     
     //! Enable petiole collision detection (separate from general petiole inclusion)
     bool petiole_collision_detection_enabled = false;

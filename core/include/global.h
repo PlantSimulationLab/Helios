@@ -774,6 +774,56 @@ namespace helios {
         std::chrono::high_resolution_clock::time_point timer_start;
     };
 
+    //! Simple progress bar for console output
+    /**
+     * \ingroup functions
+     */
+    class ProgressBar {
+    private:
+        size_t total_steps;
+        size_t current_step;
+        int bar_width;
+        bool enabled;
+        std::string message;
+
+    public:
+        //! Constructor for ProgressBar
+        /**
+         * \param[in] total Total number of steps expected
+         * \param[in] width Width of the progress bar in characters (default: 50)
+         * \param[in] enable Whether to enable progress bar display (default: true)
+         * \param[in] progress_message Custom message to display (default: "Progress")
+         */
+        ProgressBar(size_t total, int width = 50, bool enable = true, const std::string &progress_message = "Progress");
+
+        //! Update progress bar by one step
+        void update();
+
+        //! Update progress bar to a specific step
+        /**
+         * \param[in] step_number Current step number (0-based)
+         */
+        void update(size_t step_number);
+
+        //! Finish the progress bar and ensure it shows 100%
+        void finish();
+
+        //! Enable or disable the progress bar
+        /**
+         * \param[in] enable True to enable, false to disable
+         */
+        void setEnabled(bool enable);
+
+        //! Check if progress bar is enabled
+        /**
+         * \return True if enabled, false otherwise
+         */
+        [[nodiscard]] bool isEnabled() const;
+
+        //! Disable all progress bar output
+        void disableMessages();
+    };
+
     //! Wait/sleep for a specified amount of time
     /**
      * \param[in] seconds Number of seconds to wait

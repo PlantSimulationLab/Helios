@@ -40,12 +40,13 @@
       <tab type="user" visible="yes" url="@ref visualizer_custom_tutorial" title="Tutorial 9: Visualizer configuration"/>
       <tab type="user" visible="yes" url="@ref radiation_basics_tutorial" title="Tutorial 10: Tree light interception"/>
       <tab type="user" visible="yes" url="@ref radiation_BeersLaw_tutorial" title="Tutorial 11: Light interception for a homogeneous canopy"/>
-      <tab type="user" visible="yes" url="@ref canopy_WUE_tutorial" title="Tutorial 12: Water-use efficiency for a canopy of spherical crowns"/>
+      <tab type="user" visible="yes" url="@ref radiation_segmentation_tutorial" title="Tutorial 12: Radaition camera and image annotation"/>
+      <tab type="user" visible="yes" url="@ref canopy_WUE_tutorial" title="Tutorial 13: Water-use efficiency for a canopy of spherical crowns"/>
     </tab>
     <tab type="usergroup" visible="yes" url="@ref Benchmarks" title="Benchmarks">
       <tab type="user" visible="yes" url="@ref RadCanopyBenchmark" title="Homogeneous Canopy Radiation"/>
     </tab>
-    <tab type="user" visible="yes" url="@ref changelog" title="Changelog"/>
+    <tab type="user" visible="yes" url="md_doc_2_c_h_a_n_g_e_l_o_g.html" title="Changelog"/>
     <tab type="files" visible="yes" title="Files">
       <tab type="filelist" visible="yes" title="" intro=""/>
       <tab type="globals" visible="yes" title="" intro=""/>

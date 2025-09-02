@@ -283,7 +283,7 @@ DOCTEST_TEST_CASE("PlantArchitecture pruneSolidBoundaryCollisions") {
     PlantArchitecture plantarchitecture(&context);
     
     // Enable collision detection first
-    plantarchitecture.enableCollisionDetection();
+    plantarchitecture.enableSoftCollisionAvoidance();
     
     // Load a plant model from library
     plantarchitecture.loadPlantModelFromLibrary("tomato");
@@ -362,7 +362,7 @@ DOCTEST_TEST_CASE("PlantArchitecture hard collision avoidance base stem protecti
     PlantArchitecture plantarchitecture(&context);
     
     // Enable collision detection first
-    plantarchitecture.enableCollisionDetection();
+    plantarchitecture.enableSoftCollisionAvoidance();
     
     // Load a plant model from library  
     plantarchitecture.loadPlantModelFromLibrary("tomato");
@@ -472,7 +472,7 @@ DOCTEST_TEST_CASE("PlantArchitecture base stem protection with short internodes"
     PlantArchitecture plantarchitecture(&context);
     
     // Enable collision detection first
-    plantarchitecture.enableCollisionDetection();
+    plantarchitecture.enableSoftCollisionAvoidance();
     
     // Load a plant model 
     plantarchitecture.loadPlantModelFromLibrary("tomato");
@@ -545,7 +545,7 @@ DOCTEST_TEST_CASE("PlantArchitecture Attraction Points Basic Functionality") {
     PlantArchitecture plantarchitecture(&context);
     
     // First enable collision detection (required for attraction points)
-    plantarchitecture.enableCollisionDetection();
+    plantarchitecture.enableSoftCollisionAvoidance();
     
     // Test basic attraction points functionality
     std::vector<vec3> attraction_points = {
@@ -597,7 +597,7 @@ DOCTEST_TEST_CASE("PlantArchitecture Attraction Points Empty Vector") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
     
-    plantarchitecture.enableCollisionDetection();
+    plantarchitecture.enableSoftCollisionAvoidance();
     
     std::vector<vec3> empty_attraction_points;
     
@@ -617,7 +617,7 @@ DOCTEST_TEST_CASE("PlantArchitecture Attraction Points Plant Growth Integration"
     PlantArchitecture plantarchitecture(&context);
     
     // Enable collision detection first
-    plantarchitecture.enableCollisionDetection();
+    plantarchitecture.enableSoftCollisionAvoidance();
     
     // Set up attraction points above the plant to guide upward growth
     std::vector<vec3> attraction_points = {
@@ -694,7 +694,7 @@ DOCTEST_TEST_CASE("PlantArchitecture Attraction Points Priority Over Collision A
     }
     
     // Enable collision detection with obstacles
-    plantarchitecture.enableCollisionDetection(obstacle_UUIDs);
+    plantarchitecture.enableSoftCollisionAvoidance(obstacle_UUIDs);
     
     // Set up attraction points on the opposite side of obstacles
     std::vector<vec3> attraction_points = {
@@ -757,7 +757,7 @@ DOCTEST_TEST_CASE("PlantArchitecture Hard Obstacle Avoidance Takes Priority Over
     }
     
     // Enable collision detection first
-    plantarchitecture.enableCollisionDetection();
+    plantarchitecture.enableSoftCollisionAvoidance();
     
     // Enable solid obstacle avoidance (hard obstacles)
     plantarchitecture.enableSolidObstacleAvoidance(solid_obstacle_UUIDs, 0.15f);
@@ -831,7 +831,7 @@ DOCTEST_TEST_CASE("PlantArchitecture Attraction Points with Surface Following") 
     }
     
     // Enable collision detection with wall obstacles
-    plantarchitecture.enableCollisionDetection();
+    plantarchitecture.enableSoftCollisionAvoidance();
     
     // Enable solid obstacle avoidance for the wall
     plantarchitecture.enableSolidObstacleAvoidance(wall_obstacle_UUIDs, 0.05f);
@@ -885,7 +885,7 @@ DOCTEST_TEST_CASE("PlantArchitecture Smooth Hard Obstacle Avoidance") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
     
-    plantarchitecture.enableCollisionDetection();
+    plantarchitecture.enableSoftCollisionAvoidance();
     plantarchitecture.loadPlantModelFromLibrary("bean");
     
     // Create obstacles at varying distances to test smooth avoidance behavior
@@ -953,7 +953,7 @@ DOCTEST_TEST_CASE("PlantArchitecture Hard Obstacle Avoidance Buffer Zone") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
     
-    plantarchitecture.enableCollisionDetection();
+    plantarchitecture.enableSoftCollisionAvoidance();
     plantarchitecture.loadPlantModelFromLibrary("bean");
     
     // Create a vertical post obstacle similar to the test case image

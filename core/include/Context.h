@@ -3818,6 +3818,33 @@ namespace helios {
                 registerOrValidateObjectDataType<T>(label, data_type);
             }
 
+            // Check if caching is enabled for this label
+            std::string label_str = std::string(label);
+            bool caching_enabled = isObjectDataValueCachingEnabled(label_str);
+
+            // For caching, we need to handle old values before setting new ones (cannot parallelize this part)
+            if (caching_enabled) {
+                // Handle caching only for supported types
+                if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                    for (uint objID : objIDs) {
+                        if (objects.at(objID)->doesObjectDataExist(label)) {
+                            T old_cached_value{};
+                            objects.at(objID)->getObjectData(label, old_cached_value);
+                            decrementObjectValueRegistry(label_str, old_cached_value);
+                        }
+                    }
+                } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    for (uint objID : objIDs) {
+                        if (objects.at(objID)->doesObjectDataExist(label)) {
+                            std::string old_cached_value;
+                            objects.at(objID)->getObjectData(label, old_cached_value);
+                            decrementObjectValueRegistry(label_str, old_cached_value);
+                        }
+                    }
+                }
+            }
+
+            // Count new data labels
             for (uint objID: objIDs) {
                 if (!objects.at(objID)->doesObjectDataExist(label)) {
                     incrementObjectDataLabelCounter(label);
@@ -3829,6 +3856,21 @@ namespace helios {
 #endif
             for (int i = 0; i < (int)objIDs.size(); ++i) {
                 objects.at(objIDs[i])->setObjectData(label, data);
+            }
+
+            // Update value registry if caching is enabled (increment the new value for all objects)
+            if (caching_enabled) {
+                if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                    // Increment the new value once for each object that received it
+                    for (size_t i = 0; i < objIDs.size(); ++i) {
+                        incrementObjectValueRegistry(label_str, data);
+                    }
+                } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    // Increment the new value once for each object that received it
+                    for (size_t i = 0; i < objIDs.size(); ++i) {
+                        incrementObjectValueRegistry(label_str, std::string(data));
+                    }
+                }
             }
         }
 
@@ -3874,6 +3916,44 @@ namespace helios {
                 registerOrValidateObjectDataType<T>(label, data_type);
             }
 
+            // Check if caching is enabled for this label
+            std::string label_str = std::string(label);
+            bool caching_enabled = isObjectDataValueCachingEnabled(label_str);
+            size_t total_objects = 0;
+
+            // For caching, we need to handle old values before setting new ones (cannot parallelize this part)
+            if (caching_enabled) {
+                // Handle caching only for supported types
+                if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                    for (const auto &j: objIDs) {
+                        for (uint objID : j) {
+                            total_objects++;
+                            if (objects.at(objID)->doesObjectDataExist(label)) {
+                                T old_cached_value{};
+                                objects.at(objID)->getObjectData(label, old_cached_value);
+                                decrementObjectValueRegistry(label_str, old_cached_value);
+                            }
+                        }
+                    }
+                } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    for (const auto &j: objIDs) {
+                        for (uint objID : j) {
+                            total_objects++;
+                            if (objects.at(objID)->doesObjectDataExist(label)) {
+                                std::string old_cached_value;
+                                objects.at(objID)->getObjectData(label, old_cached_value);
+                                decrementObjectValueRegistry(label_str, old_cached_value);
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Count total objects for later cache increment
+                for (const auto &j: objIDs) {
+                    total_objects += j.size();
+                }
+            }
+
             for (const auto &j: objIDs) {
                 for (uint objID: j) {
                     if (!objects.at(objID)->doesObjectDataExist(label)) {
@@ -3888,6 +3968,21 @@ namespace helios {
             for (int j = 0; j < (int)objIDs.size(); ++j) {
                 for (size_t i = 0; i < objIDs[j].size(); ++i) {
                     objects.at(objIDs[j][i])->setObjectData(label, data);
+                }
+            }
+
+            // Update value registry if caching is enabled (increment the new value for all objects)
+            if (caching_enabled) {
+                if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                    // Increment the new value once for each object that received it
+                    for (size_t i = 0; i < total_objects; ++i) {
+                        incrementObjectValueRegistry(label_str, data);
+                    }
+                } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    // Increment the new value once for each object that received it
+                    for (size_t i = 0; i < total_objects; ++i) {
+                        incrementObjectValueRegistry(label_str, std::string(data));
+                    }
                 }
             }
         }
@@ -3934,6 +4029,50 @@ namespace helios {
                 registerOrValidateObjectDataType<T>(label, data_type);
             }
 
+            // Check if caching is enabled for this label
+            std::string label_str = std::string(label);
+            bool caching_enabled = isObjectDataValueCachingEnabled(label_str);
+            size_t total_objects = 0;
+
+            // For caching, we need to handle old values before setting new ones (cannot parallelize this part)
+            if (caching_enabled) {
+                // Handle caching only for supported types
+                if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                    for (const auto &k: objIDs) {
+                        for (const auto &j: k) {
+                            for (uint objID : j) {
+                                total_objects++;
+                                if (objects.at(objID)->doesObjectDataExist(label)) {
+                                    T old_cached_value{};
+                                    objects.at(objID)->getObjectData(label, old_cached_value);
+                                    decrementObjectValueRegistry(label_str, old_cached_value);
+                                }
+                            }
+                        }
+                    }
+                } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    for (const auto &k: objIDs) {
+                        for (const auto &j: k) {
+                            for (uint objID : j) {
+                                total_objects++;
+                                if (objects.at(objID)->doesObjectDataExist(label)) {
+                                    std::string old_cached_value;
+                                    objects.at(objID)->getObjectData(label, old_cached_value);
+                                    decrementObjectValueRegistry(label_str, old_cached_value);
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Count total objects for later cache increment
+                for (const auto &k: objIDs) {
+                    for (const auto &j: k) {
+                        total_objects += j.size();
+                    }
+                }
+            }
+
             for (const auto &k: objIDs) {
                 for (const auto &j: k) {
                     for (uint objID: j) {
@@ -3952,6 +4091,21 @@ namespace helios {
                     for (size_t i = 0; i < objIDs[k][j].size(); ++i) {
                         uint objID = objIDs[k][j][i];
                         objects.at(objID)->setObjectData(label, data);
+                    }
+                }
+            }
+
+            // Update value registry if caching is enabled (increment the new value for all objects)
+            if (caching_enabled) {
+                if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
+                    // Increment the new value once for each object that received it
+                    for (size_t i = 0; i < total_objects; ++i) {
+                        incrementObjectValueRegistry(label_str, data);
+                    }
+                } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                    // Increment the new value once for each object that received it
+                    for (size_t i = 0; i < total_objects; ++i) {
+                        incrementObjectValueRegistry(label_str, std::string(data));
                     }
                 }
             }

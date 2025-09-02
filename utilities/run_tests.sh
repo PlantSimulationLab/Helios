@@ -17,6 +17,7 @@ usage() {
     echo "  --testcase <case> Pass specific test case to doctest (e.g., --testcase \"My Test Case\")"
     echo "  --doctestargs <args> Pass arguments directly to doctest (e.g., --doctestargs \"--help --list-test-cases\")"
     echo "  --project-dir <dir>  Use specified directory for project (persistent, not cleaned up)"
+    echo "  --disableopenmp      Disable OpenMP by passing -DENABLE_OPENMP=OFF to cmake"
     echo
     exit ${1:-1}
 }
@@ -170,6 +171,10 @@ while [ $# -gt 0 ]; do
     fi
     PROJECT_DIR="$2"
     shift
+    ;;
+
+  --disableopenmp)
+    DISABLE_OPENMP="ON"
     ;;
 
   --help|-h)
@@ -355,7 +360,12 @@ else
 
     echo -ne "Building unified test project..."
 
-    run_command cmake .. -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" -DBUILD_TESTS=ON
+    CMAKE_ARGS="-DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DBUILD_TESTS=ON"
+    if [ "${DISABLE_OPENMP}" == "ON" ]; then
+      CMAKE_ARGS="${CMAKE_ARGS} -DENABLE_OPENMP=OFF"
+    fi
+
+    run_command cmake .. ${CMAKE_ARGS}
 
     if (($? == 0)); then
       echo -e "\r\x1B[32mBuilding unified test project...done.\x1B[39m"

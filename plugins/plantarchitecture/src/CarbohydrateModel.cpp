@@ -119,14 +119,12 @@ void PlantArchitecture::accumulateHourlyLeafPhotosynthesis() const {
 
                             float new_hourly_photo = leaf_A * lUUID_area * 3600.f * 1e-6f;
                             ; // hourly net photosynthesis (mol C) from umol CO2 m-2 sec-1
-                            // std::cout<< "hourly photosynthesis mol C: "<< new_hourly_photo<<std::endl;
                             float current_net_photo = 0.f;
                             if (context_ptr->doesPrimitiveDataExist(UUID, "cumulative_net_photosynthesis") && context_ptr->getPrimitiveDataType("cumulative_net_photosynthesis") == HELIOS_TYPE_FLOAT) {
                                 context_ptr->getPrimitiveData(UUID, "cumulative_net_photosynthesis", current_net_photo);
                             }
                             current_net_photo += new_hourly_photo;
                             context_ptr->setPrimitiveData(UUID, "cumulative_net_photosynthesis", current_net_photo);
-                            // std::cout<< "net photo mol C: "<< current_net_photo<<std::endl;
                         }
                     }
                 }
@@ -174,7 +172,6 @@ void PlantArchitecture::accumulateShootPhotosynthesis() const {
             }
             if (net_photosynthesis >= 0.f) {
                 shoot->carbohydrate_pool_molC += net_photosynthesis;
-                // std::cout<< "Net photosynthesis"<< net_photosynthesis<<std::endl;
             }
             context_ptr->setObjectData(shoot->internode_tube_objID, "carbohydrate_concentration", shoot->carbohydrate_pool_molC / shoot_volume);
         }
@@ -490,7 +487,6 @@ void PlantArchitecture::incrementPhytomerInternodeGirth_carb(uint plantID, uint 
 
     // float leaf_area = phytomer->calculateDownstreamLeafArea();
     float leaf_area = phytomer->downstream_leaf_area;
-    // std::cout << "leaf area: " << leaf_area_old << " " << leaf_area << std::endl;
     if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
         context_ptr->setObjectData(shoot->internode_tube_objID, "leaf_area", leaf_area);
     }
