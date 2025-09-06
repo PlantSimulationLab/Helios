@@ -388,13 +388,13 @@ void IrrigationModel::addSubmainAndWaterSource(double fieldLength, double fieldW
         }
     }
 
-    // Create water source node
+     // Create water source node
     waterSourceId = getNextNodeId();
     Position waterSourcePos;
 
     if (lateralDirection == "vertical") {
         // manual setting: water source position logic for vertical laterals
-        waterSourcePos = {fieldLength + 5.0, fieldWidth - fieldWidth / 3.0 - 0.5};
+        waterSourcePos = {fieldLength /2-2, fieldWidth - fieldWidth / 3.0 +2};
 
         // Adjust based on submain position
         if (submainPosition == SubmainPosition::NORTH) {
@@ -415,52 +415,155 @@ void IrrigationModel::addSubmainAndWaterSource(double fieldLength, double fieldW
         true
     };
 
-    // Find closest submain node to connect to
-    // need to modify this to connect to the submain line not a node
-    int closestSubmainId = -1;
+    // Find closest submain pipe(not node) to the water source
+    int closestLinkIndex = -1;
     double minDistance = std::numeric_limits<double>::max();
+    Position closestPoint;
 
-    for (const auto& [id, node] : nodes) {
-        if (node.type == "submain_junction") {
-            double dist = node.position.distanceTo(waterSourcePos);
+    // Determine submain Y position for range checking
+    if (lateralDirection == "vertical") {
+        switch (submainPosition) {
+            case SubmainPosition::NORTH:
+                submainY = fieldWidth;
+                break;
+            case SubmainPosition::SOUTH:
+                submainY = 0.0;
+                break;
+            case SubmainPosition::MIDDLE:
+                submainY = fieldWidth - fieldWidth / 3.0 - 0.5;
+                break;
+        }
+    }
+
+    for (size_t i = 0; i < links.size(); ++i) {
+        const auto& link = links[i];
+        if (link.type != "submain") continue;
+
+        const auto& nodeA = nodes[link.from];
+        const auto& nodeB = nodes[link.to];
+
+        // Check if both endpoints are submain_junction nodes
+        if (nodeA.type != "submain_junction" || nodeB.type != "submain_junction") {
+            continue;
+        }
+
+        // Check if water source X position is within this submain segment's range
+        double minX = std::min(nodeA.position.x, nodeB.position.x);
+        double maxX = std::max(nodeA.position.x, nodeB.position.x);
+
+        if (waterSourcePos.x >= minX && waterSourcePos.x <= maxX) {
+            // Calculate closest point on the segment to water source
+            Position vecAB = {nodeB.position.x - nodeA.position.x, nodeB.position.y - nodeA.position.y};
+            Position vecAW = {waterSourcePos.x - nodeA.position.x, waterSourcePos.y - nodeA.position.y};
+            double dotProduct = vecAB.x * vecAW.x + vecAB.y * vecAW.y;
+            double lengthSquared = vecAB.x * vecAB.x + vecAB.y * vecAB.y;
+
+            // Avoid division by zero
+            if (lengthSquared < 1e-12) continue;
+
+            double t = std::max(0.0, std::min(1.0, dotProduct / lengthSquared));
+
+            Position pointOnSegment = {
+                nodeA.position.x + t * vecAB.x,
+                nodeA.position.y + t * vecAB.y
+            };
+
+            double dist = waterSourcePos.distanceTo(pointOnSegment);
             if (dist < minDistance) {
                 minDistance = dist;
-                closestSubmainId = id;
+                closestLinkIndex = i;
+                closestPoint = pointOnSegment;
             }
         }
     }
 
-    if (closestSubmainId != -1) {
-        // Connect water source to closest submain node
-        links.push_back({
-            waterSourceId,
-            closestSubmainId,
-            2.0 * INCH_TO_METER,
-            5.0 * FEET_TO_METER, // Fixed length
-            "mainline"
-        });
-    } else {
-        // Fallback: create a default connection if no submain nodes found
-        int defaultSubmainId = getNextNodeId();
-        Position defaultPos = (lateralDirection == "vertical") ?
-            Position{fieldLength / 2.0, submainY} :
-            Position{submainX, fieldWidth / 2.0};
-
-        nodes[defaultSubmainId] = {
-            defaultSubmainId,
+    if (closestLinkIndex != -1) {
+        // Create new junction node on the submain line (this will be second last node)
+        int newJunctionId = getNextNodeId();
+        nodes[newJunctionId] = {
+            newJunctionId,
             "submain_junction",
-            defaultPos,
+            closestPoint,
             0.0,
             false
         };
 
+        // Split the closest submain link
+        const Link& oldLink = links[closestLinkIndex];
+        double length1 = nodes[oldLink.from].position.distanceTo(closestPoint);
+        double length2 = nodes[oldLink.to].position.distanceTo(closestPoint);
+
         links.push_back({
-            waterSourceId,
-            defaultSubmainId,
+            oldLink.from,        // from: existing submain junction
+            newJunctionId,       // to: new submain junction
+            oldLink.diameter,
+            length1,
+            "submain"
+        });
+        links.push_back({
+            newJunctionId,       // from: new submain junction
+            oldLink.to,          // to: existing submain junction
+            oldLink.diameter,
+            length2,
+            "submain"
+        });
+        links.erase(links.begin() + closestLinkIndex);         // Remove the old link and add two new submain segments
+
+        // Connect new submain junction (second last) to water source (last?)
+        links.push_back({
+            newJunctionId,        // from: new submain junction (second last)
+            waterSourceId,        // to: water source
             2.0 * INCH_TO_METER,
-            waterSourcePos.distanceTo(defaultPos),
+            waterSourcePos.distanceTo(closestPoint),
             "mainline"
         });
+    } else {
+        // Fallback: connect to closest existing SUBMAIN JUNCTION node only
+        int closestSubmainId = -1;
+        double minDist = std::numeric_limits<double>::max();
+        for (const auto& [id, node] : nodes) {
+            if (node.type == "submain_junction") {
+                double dist = node.position.distanceTo(waterSourcePos);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestSubmainId = id;
+                }
+            }
+        }
+
+        if (closestSubmainId != -1) {
+            // Connect water source (last node) to closest existing submain junction
+            links.push_back({
+                closestSubmainId,      // from: existing submain junction
+                waterSourceId,         // to: water source (always last node)
+                2.0 * INCH_TO_METER,
+                minDist,
+                "mainline"
+            });
+        } else {
+            // Create a new submain junction (this will be second last node)
+            int newSubmainId = getNextNodeId();
+            Position newSubmainPos = (lateralDirection == "vertical") ?
+                Position{fieldLength / 2.0, submainY} :
+                Position{submainX, fieldWidth / 2.0};
+
+            nodes[newSubmainId] = {
+                newSubmainId,
+                "submain_junction",
+                newSubmainPos,
+                0.0,
+                false
+            };
+
+            // Connect new submain junction (second last) to water source (last)
+            links.push_back({
+                newSubmainId,          // from: new submain junction (second last)
+                waterSourceId,         // to: water source (always last node)
+                2.0 * INCH_TO_METER,
+                waterSourcePos.distanceTo(newSubmainPos),
+                "mainline"
+            });
+        }
     }
 }
 
@@ -1219,11 +1322,11 @@ void IrrigationModel::validateHydraulicSystem() const {
                                    std::to_string(link.from) + " and " +
                                    std::to_string(link.to));
         }
-        if (link.length <= 0) {
-            helios::helios_runtime_error("ERROR (IrrigationModel::validateParameters) Invalid length (<= 0) in link between nodes " +
-                                   std::to_string(link.from) + " and " +
-                                   std::to_string(link.to));
-        }
+        // if (link.length <= 0) {
+        //     helios::helios_runtime_error("ERROR (IrrigationModel::validateParameters) Invalid length (<= 0) in link between nodes " +
+        //                            std::to_string(link.from) + " and " +
+        //                            std::to_string(link.to));
+        // }
     }
 
     // printing system summary

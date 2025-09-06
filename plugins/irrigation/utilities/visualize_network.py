@@ -108,9 +108,9 @@ def visualize_complete_system(nodes, links):
             # Label with length
             mid_x = (from_node['x'] + to_node['x']) / 2
             mid_y = (from_node['y'] + to_node['y']) / 2
-            ax.text(mid_x, mid_y, f"{link['length']:.2f}m",
-                    ha='center', va='center', fontsize=9,
-                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+  #          ax.text(mid_x, mid_y, f"{link['length']:.2f}m",
+   #                 ha='center', va='center', fontsize=9,
+   #                 bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
 
     # Draw nodes with pressure labels
     for node_id, node in nodes.items():

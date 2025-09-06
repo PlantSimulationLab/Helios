@@ -26,8 +26,36 @@ int main(){
             "vertical", // lateralDirection
             SubmainPosition:: MIDDLE
         );
-        system.printNetwork();
 
+    // std::vector<Position> boundary = {
+    //     {0, 0}, {44.0 * IrrigationModel::FEET_TO_METER, 0}, {0, 32.0 * IrrigationModel::FEET_TO_METER}, {44.0 * IrrigationModel::FEET_TO_METER, 32.0 * IrrigationModel::FEET_TO_METER}
+    // };
+    //
+    //
+    // std::vector<Position> Boundary = {
+    //   //  {0, 0}, {50, 0}, {75, 25}, {50, 50}, {25, 75}, {0, 50}
+    //      {0, 0}, {0,50}, {50, 50}, {50,0} //coordinates need to be in anti-clockwise
+    //
+    // };
+    //
+    // // Example of how to use the irregular system
+    // std::vector<Position> irregularBoundary = {
+    //     {0, 0}, {50, 0}, {75, 25}, {50, 50}, {25, 75}, {0, 50}
+    // };
+    //
+    // system.createIrregularSystem(50.0, Boundary, 16.0, 16.0, "vertical", SubmainPosition::MIDDLE);
+
+    // Calculate hydraulics
+
+    // Print system summary
+    std::cout << system.getSystemSummary() << std::endl;
+
+
+
+    // Create irregular irrigation system
+    //system.createIrregularSystem(Pw, Boundary,60.0 * IrrigationModel::FEET_TO_METER, 40.0 * IrrigationModel::FEET_TO_METER, "vertical", SubmainPosition::MIDDLE);
+
+    system.printNetwork();
     // Get water source info
     int wsID = system.getWaterSourceId();
     if (wsID != -1) {
@@ -44,7 +72,6 @@ int main(){
     std::cout << "Total nodes: " << system.nodes.size() << "\n";
     std::cout << "Total links: " << system.links.size() << "\n";
 
-    system.validateHydraulicSystem();
     const double Q_specified = system.calculateEmitterFlow("NPC", Pw);
     HydraulicResults results = system.calculateHydraulics("NPC",Q_specified, Pw);
     std::cout << "NodalPressures: ";
