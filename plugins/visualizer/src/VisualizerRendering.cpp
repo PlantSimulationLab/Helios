@@ -58,13 +58,16 @@ void Visualizer::printWindow(const char *outfile) const {
         helios_runtime_error("ERROR (Visualizer::printWindow): Output path is not valid or does not have a valid image extension (.jpeg, .jpg).");
     }
 
-    // Ensure the frame is fully rendered before reading pixels
-    // Swap buffers to make sure the back buffer is ready for reading
+    // Don't swap buffers again - content is already displayed by plotUpdate()
+    // Just ensure rendering is complete and read from the front buffer
     if (window != nullptr && !headless) {
-        glfwSwapBuffers((GLFWwindow *) window);
         glfwPollEvents();
     }
-
+    
+    // Ensure rendering is complete
+    glFinish();
+    
+    // Read pixels from front buffer (where the displayed content is)
     write_JPEG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, message_flag);
 }
 

@@ -2603,18 +2603,24 @@ std::filesystem::path helios::resolveFilePath(const std::string& filename) {
         }
     }
 
-    // 2. Resolve relative to build directory
-    std::string buildDir = getBuildDirectory();
-    std::filesystem::path fullPath = std::filesystem::path(buildDir) / filename;
-    
-    if (std::filesystem::exists(fullPath)) {
-        return std::filesystem::canonical(fullPath);
+    // 2. First try: Check relative to current working directory
+    std::filesystem::path currentDirPath = std::filesystem::current_path() / filename;
+    if (std::filesystem::exists(currentDirPath)) {
+        return std::filesystem::canonical(currentDirPath);
     }
     
-    // File not found - provide clear error message
+    // 3. Second try: Resolve relative to build directory (fallback for HELIOS_BUILD)
+    std::string buildDir = getBuildDirectory();
+    std::filesystem::path buildDirPath = std::filesystem::path(buildDir) / filename;
+    
+    if (std::filesystem::exists(buildDirPath)) {
+        return std::filesystem::canonical(buildDirPath);
+    }
+    
+    // File not found in either location - provide clear error message
     helios_runtime_error("ERROR (helios::resolveFilePath): Could not locate asset file: " + filename + 
-                        " (resolved to: " + fullPath.string() + "). " +
-                        "Set HELIOS_BUILD environment variable if running from outside build directory.");
+                        " (checked: " + currentDirPath.string() + " and " + buildDirPath.string() + "). " +
+                        "Ensure file exists relative to current directory or HELIOS_BUILD path.");
     return {}; // This line should never be reached due to helios_runtime_error throwing
 }
 

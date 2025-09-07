@@ -104,8 +104,9 @@ public:
     //! Load tree library from an XML file
     /**
      * \param[in] filename XML file with path relative to build directory
+     * \param[in] silent Disable output messages
      */
-    void loadXML(const char *filename);
+    void loadXML(const char *filename, bool silent = false);
 
     //! Construct a Weber-Penn tree using a tree already in the library
     /**
@@ -202,6 +203,12 @@ public:
      */
     void optionalOutputPrimitiveData(const char *label);
 
+    //! Disable all print messages to the screen except for fatal error messages
+    void disableMessages();
+
+    //! Enable all print messages to the screen
+    void enableMessages();
+
 private:
     helios::Context *context;
 
@@ -252,4 +259,7 @@ private:
 
     //! Names of additional primitive data to add to the Context
     std::vector<std::string> output_prim_data;
+
+    //! Flag denoting whether messages should be printed to screen
+    bool printmessages;
 };

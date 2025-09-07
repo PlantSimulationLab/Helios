@@ -72,6 +72,7 @@ DOCTEST_TEST_CASE("PhytomerParameters Constructor") {
 DOCTEST_TEST_CASE("Plant Library Model Building - almond") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("almond"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -79,6 +80,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - almond") {
 DOCTEST_TEST_CASE("Plant Library Model Building - apple") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("apple"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -86,6 +88,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - apple") {
 DOCTEST_TEST_CASE("Plant Library Model Building - asparagus") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("asparagus"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -93,6 +96,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - asparagus") {
 DOCTEST_TEST_CASE("Plant Library Model Building - bindweed") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("bindweed"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -100,6 +104,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - bindweed") {
 DOCTEST_TEST_CASE("Plant Library Model Building - bean") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("bean"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -107,6 +112,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - bean") {
 DOCTEST_TEST_CASE("Plant Library Model Building - cheeseweed") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("cheeseweed"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -114,6 +120,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - cheeseweed") {
 DOCTEST_TEST_CASE("Plant Library Model Building - cowpea") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("cowpea"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -121,6 +128,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - cowpea") {
 DOCTEST_TEST_CASE("Plant Library Model Building - grapevine_VSP") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -128,6 +136,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - grapevine_VSP") {
 DOCTEST_TEST_CASE("Plant Library Model Building - maize") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("maize"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -135,6 +144,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - maize") {
 DOCTEST_TEST_CASE("Plant Library Model Building - olive") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("olive"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -142,6 +152,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - olive") {
 DOCTEST_TEST_CASE("Plant Library Model Building - pistachio") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("pistachio"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -149,6 +160,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - pistachio") {
 DOCTEST_TEST_CASE("Plant Library Model Building - puncturevine") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("puncturevine"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -156,6 +168,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - puncturevine") {
 DOCTEST_TEST_CASE("Plant Library Model Building - easternredbud") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("easternredbud"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -163,6 +176,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - easternredbud") {
 DOCTEST_TEST_CASE("Plant Library Model Building - rice") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("rice"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -170,6 +184,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - rice") {
 DOCTEST_TEST_CASE("Plant Library Model Building - butterlettuce") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("butterlettuce"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -177,6 +192,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - butterlettuce") {
 DOCTEST_TEST_CASE("Plant Library Model Building - sorghum") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("sorghum"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -184,6 +200,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - sorghum") {
 DOCTEST_TEST_CASE("Plant Library Model Building - soybean") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("soybean"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -191,6 +208,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - soybean") {
 DOCTEST_TEST_CASE("Plant Library Model Building - strawberry") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("strawberry"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -198,6 +216,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - strawberry") {
 DOCTEST_TEST_CASE("Plant Library Model Building - sugarbeet") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("sugarbeet"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -205,6 +224,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - sugarbeet") {
 DOCTEST_TEST_CASE("Plant Library Model Building - tomato") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("tomato"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -212,6 +232,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - tomato") {
 DOCTEST_TEST_CASE("Plant Library Model Building - walnut") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("walnut"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -219,6 +240,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - walnut") {
 DOCTEST_TEST_CASE("Plant Library Model Building - wheat") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("wheat"));
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
@@ -226,6 +248,7 @@ DOCTEST_TEST_CASE("Plant Library Model Building - wheat") {
 DOCTEST_TEST_CASE("PlantArchitecture writeTreeQSM") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
 
     // Build a simple plant
     plantarchitecture.loadPlantModelFromLibrary("bean");
@@ -273,6 +296,7 @@ DOCTEST_TEST_CASE("PlantArchitecture writeTreeQSM invalid plant") {
     capture_cerr cerr_buffer;
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
 
     // Test with invalid plant ID
     DOCTEST_CHECK_THROWS(plantarchitecture.writeQSMCylinderFile(999, "invalid_plant.txt"));
@@ -281,6 +305,7 @@ DOCTEST_TEST_CASE("PlantArchitecture writeTreeQSM invalid plant") {
 DOCTEST_TEST_CASE("PlantArchitecture pruneSolidBoundaryCollisions") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     
     // Enable collision detection first
     plantarchitecture.enableSoftCollisionAvoidance();
@@ -335,6 +360,7 @@ DOCTEST_TEST_CASE("PlantArchitecture pruneSolidBoundaryCollisions") {
 DOCTEST_TEST_CASE("PlantArchitecture pruneSolidBoundaryCollisions no boundaries") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     
     // Load a plant model from library
     plantarchitecture.loadPlantModelFromLibrary("tomato");
@@ -360,6 +386,7 @@ DOCTEST_TEST_CASE("PlantArchitecture pruneSolidBoundaryCollisions no boundaries"
 DOCTEST_TEST_CASE("PlantArchitecture hard collision avoidance base stem protection") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     
     // Enable collision detection first
     plantarchitecture.enableSoftCollisionAvoidance();
@@ -440,6 +467,7 @@ DOCTEST_TEST_CASE("PlantArchitecture hard collision avoidance base stem protecti
 DOCTEST_TEST_CASE("PlantArchitecture enableSolidObstacleAvoidance fruit adjustment control") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     
     // Create some obstacles  
     std::vector<uint> obstacle_UUIDs;
@@ -470,6 +498,7 @@ DOCTEST_TEST_CASE("PlantArchitecture enableSolidObstacleAvoidance fruit adjustme
 DOCTEST_TEST_CASE("PlantArchitecture base stem protection with short internodes") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     
     // Enable collision detection first
     plantarchitecture.enableSoftCollisionAvoidance();
@@ -543,8 +572,9 @@ DOCTEST_TEST_CASE("PlantArchitecture base stem protection with short internodes"
 DOCTEST_TEST_CASE("PlantArchitecture Attraction Points Basic Functionality") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     
-    // First enable collision detection (required for attraction points)
+    // Enable collision detection for this test (optional - attraction points work independently)
     plantarchitecture.enableSoftCollisionAvoidance();
     
     // Test basic attraction points functionality
@@ -581,40 +611,88 @@ DOCTEST_TEST_CASE("PlantArchitecture Attraction Points Basic Functionality") {
     DOCTEST_CHECK_THROWS(plantarchitecture.updateAttractionPoints(new_attraction_points));
 }
 
-DOCTEST_TEST_CASE("PlantArchitecture Attraction Points Requires Collision Detection") {
+DOCTEST_TEST_CASE("PlantArchitecture Attraction Points Independent of Collision Detection") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     
     std::vector<vec3> attraction_points = {
         make_vec3(1.0f, 0.0f, 1.0f)
     };
     
-    // Try to enable attraction points without collision detection first
-    DOCTEST_CHECK_THROWS(plantarchitecture.enableAttractionPoints(attraction_points));
+    // Attraction points should work without collision detection enabled
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.enableAttractionPoints(attraction_points));
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture Attraction Points Empty Vector") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
-    
-    plantarchitecture.enableSoftCollisionAvoidance();
+    plantarchitecture.disableMessages();
     
     std::vector<vec3> empty_attraction_points;
     
     // Try to enable attraction points with empty vector
-    DOCTEST_CHECK_THROWS(plantarchitecture.enableAttractionPoints(empty_attraction_points));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.enableAttractionPoints(empty_attraction_points));
     
-    // Enable with valid points first
+    // Enable with valid points first (should work without collision detection)
     std::vector<vec3> valid_points = {make_vec3(1.0f, 0.0f, 1.0f)};
     DOCTEST_CHECK_NOTHROW(plantarchitecture.enableAttractionPoints(valid_points));
     
-    // Try to update with empty vector
+    // Try to update with empty vector (should fail)
     DOCTEST_CHECK_THROWS(plantarchitecture.updateAttractionPoints(empty_attraction_points));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture Native Attraction Point Cone Detection") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    
+    // Set up attraction points at known locations
+    std::vector<vec3> attraction_points = {
+        make_vec3(0.0f, 0.0f, 2.0f),   // Directly ahead 
+        make_vec3(1.0f, 0.0f, 1.0f),   // Right and forward
+        make_vec3(-1.0f, 0.0f, 1.0f),  // Left and forward
+        make_vec3(0.0f, 2.0f, 0.0f),   // Far to the side (should be outside cone)
+    };
+    
+    // Enable attraction points (should work without collision detection)
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.enableAttractionPoints(attraction_points, 60.0f, 3.0f, 0.7f));
+    
+    // Test 1: Looking straight up should find the point directly ahead
+    vec3 vertex = make_vec3(0.0f, 0.0f, 0.0f);
+    vec3 look_direction = make_vec3(0.0f, 0.0f, 1.0f);  // Looking up
+    vec3 direction_to_closest;
+    
+    bool found = plantarchitecture.detectAttractionPointsInCone(vertex, look_direction, 3.0f, 60.0f, direction_to_closest);
+    DOCTEST_CHECK(found);
+    
+    // The closest should be the one directly ahead (0,0,2)
+    vec3 expected_direction = make_vec3(0.0f, 0.0f, 1.0f);
+    float dot_product = direction_to_closest * expected_direction;
+    DOCTEST_CHECK(dot_product > 0.99f);  // Should be very close to parallel
+    
+    // Test 2: Looking to the side should NOT find the point far to the side (outside cone)
+    look_direction = make_vec3(1.0f, 0.0f, 0.0f);  // Looking right
+    found = plantarchitecture.detectAttractionPointsInCone(vertex, look_direction, 3.0f, 30.0f, direction_to_closest);
+    
+    // With a narrow cone (30 degrees), the side point at (0,2,0) should be outside the cone
+    // But the point at (1,0,1) might be visible, so we might still find something
+    
+    // Test 3: Test parameter validation
+    found = plantarchitecture.detectAttractionPointsInCone(vertex, look_direction, -1.0f, 60.0f, direction_to_closest);
+    DOCTEST_CHECK(!found);  // Should fail with negative look ahead distance
+    
+    found = plantarchitecture.detectAttractionPointsInCone(vertex, look_direction, 3.0f, 0.0f, direction_to_closest);
+    DOCTEST_CHECK(!found);  // Should fail with zero half angle
+    
+    found = plantarchitecture.detectAttractionPointsInCone(vertex, look_direction, 3.0f, 180.0f, direction_to_closest);
+    DOCTEST_CHECK(!found);  // Should fail with 180 degree half angle
 }
 
 DOCTEST_TEST_CASE("PlantArchitecture Attraction Points Plant Growth Integration") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     
     // Enable collision detection first
     plantarchitecture.enableSoftCollisionAvoidance();
@@ -680,6 +758,7 @@ DOCTEST_TEST_CASE("PlantArchitecture Attraction Points Plant Growth Integration"
 DOCTEST_TEST_CASE("PlantArchitecture Attraction Points Priority Over Collision Avoidance") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     
     // Create some obstacle geometry
     std::vector<uint> obstacle_UUIDs;
@@ -743,6 +822,7 @@ DOCTEST_TEST_CASE("PlantArchitecture Attraction Points Priority Over Collision A
 DOCTEST_TEST_CASE("PlantArchitecture Hard Obstacle Avoidance Takes Priority Over Attraction Points") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     
     // Create ground-level obstacles that would trigger hard obstacle avoidance
     std::vector<uint> solid_obstacle_UUIDs;
@@ -810,6 +890,7 @@ DOCTEST_TEST_CASE("PlantArchitecture Hard Obstacle Avoidance Takes Priority Over
 DOCTEST_TEST_CASE("PlantArchitecture Attraction Points with Surface Following") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     
     // Create a vertical wall that we want the plant to approach and then grow parallel to
     std::vector<uint> wall_obstacle_UUIDs;
@@ -884,6 +965,7 @@ DOCTEST_TEST_CASE("PlantArchitecture Attraction Points with Surface Following") 
 DOCTEST_TEST_CASE("PlantArchitecture Smooth Hard Obstacle Avoidance") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     
     plantarchitecture.enableSoftCollisionAvoidance();
     plantarchitecture.loadPlantModelFromLibrary("bean");
@@ -952,6 +1034,7 @@ DOCTEST_TEST_CASE("PlantArchitecture Smooth Hard Obstacle Avoidance") {
 DOCTEST_TEST_CASE("PlantArchitecture Hard Obstacle Avoidance Buffer Zone") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
     
     plantarchitecture.enableSoftCollisionAvoidance();
     plantarchitecture.loadPlantModelFromLibrary("bean");
@@ -1044,6 +1127,183 @@ DOCTEST_TEST_CASE("PlantArchitecture Hard Obstacle Avoidance Buffer Zone") {
         // With buffer zone avoidance, plant should either go around or grow upward
         DOCTEST_CHECK(fabs(plant_center.x - 0.1f) > expected_buffer * 0.5f);  // Should maintain some distance from post center line
     }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture solid obstacle avoidance works independently") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    
+    // Create obstacle geometry (ground plane)
+    std::vector<uint> obstacle_UUIDs;
+    obstacle_UUIDs.push_back(context.addTriangle(
+        make_vec3(-1, -1, -0.01f),
+        make_vec3(1, -1, -0.01f),
+        make_vec3(-1, 1, -0.01f)
+    ));
+    obstacle_UUIDs.push_back(context.addTriangle(
+        make_vec3(1, 1, -0.01f),
+        make_vec3(1, -1, -0.01f),
+        make_vec3(-1, 1, -0.01f)
+    ));
+    
+    // Test: Enable ONLY solid obstacle avoidance (no soft collision avoidance)
+    // This should work independently after our fix
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.enableSolidObstacleAvoidance(obstacle_UUIDs, 0.2f));
+    
+    // Load and build a plant
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    
+    // Advance time - this should work without crashing and plant should grow upward
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 5.0f));
+    
+    // Verify plant was created and grew
+    std::vector<uint> plant_objects = plantarchitecture.getAllObjectIDs();
+    DOCTEST_CHECK(plant_objects.size() > 0);
+    
+    // Calculate plant center of mass to verify upward growth (avoiding ground obstacle)
+    vec3 plant_center = make_vec3(0, 0, 0);
+    uint plant_object_count = 0;
+    
+    for (uint objID : plant_objects) {
+        if (context.doesObjectExist(objID)) {
+            vec3 min_corner, max_corner;
+            context.getObjectBoundingBox(objID, min_corner, max_corner);
+            vec3 object_center = (min_corner + max_corner) / 2.0f;
+            plant_center = plant_center + object_center;
+            plant_object_count++;
+        }
+    }
+    
+    if (plant_object_count > 0) {
+        plant_center = plant_center / float(plant_object_count);
+        // Plant should grow upward, avoiding the ground obstacle at z = -0.01f
+        DOCTEST_CHECK(plant_center.z > 0.01f);
+    }
+    
+    // Test: Add soft collision avoidance on top of existing solid obstacle avoidance
+    // This should work together seamlessly
+    std::vector<uint> soft_target_UUIDs;
+    std::vector<uint> soft_target_IDs;
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.enableSoftCollisionAvoidance(soft_target_UUIDs, soft_target_IDs));
+    
+    // Continue growing - should still work with both systems enabled
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 2.0f));
+    
+    // Verify plant continued to grow
+    std::vector<uint> final_plant_objects = plantarchitecture.getAllObjectIDs();
+    DOCTEST_CHECK(final_plant_objects.size() >= plant_objects.size());
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture Per-Plant Attraction Points") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    
+    // Disable messages for cleaner test output
+    plantarchitecture.disableMessages();
+    
+    // Create two plants at different positions
+    uint plantID1 = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0);
+    uint plantID2 = plantarchitecture.addPlantInstance(make_vec3(5, 0, 0), 0);
+    
+    // Set different attraction points for each plant
+    std::vector<vec3> attraction_points_1 = {
+        make_vec3(1.0f, 0.0f, 1.0f),
+        make_vec3(0.0f, 1.0f, 1.5f)
+    };
+    std::vector<vec3> attraction_points_2 = {
+        make_vec3(6.0f, 0.0f, 1.0f),
+        make_vec3(5.0f, 1.0f, 1.5f)
+    };
+    
+    // Enable attraction points for each plant with different parameters
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.enableAttractionPoints(plantID1, attraction_points_1, 60.0f, 0.2f, 0.7f));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.enableAttractionPoints(plantID2, attraction_points_2, 45.0f, 0.15f, 0.5f));
+    
+    // Test parameter updates for individual plants
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.setAttractionParameters(plantID1, 80.0f, 0.25f, 0.8f, 0.6f));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.updateAttractionPoints(plantID2, {make_vec3(6.5f, 0.5f, 2.0f)}));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.appendAttractionPoints(plantID1, {make_vec3(1.5f, 1.5f, 2.0f)}));
+    
+    // Test disabling for individual plants
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.disableAttractionPoints(plantID1));
+    
+    // Test error handling for invalid plant IDs
+    DOCTEST_CHECK_THROWS(plantarchitecture.enableAttractionPoints(9999, attraction_points_1));
+    DOCTEST_CHECK_THROWS(plantarchitecture.disableAttractionPoints(9999));
+    DOCTEST_CHECK_THROWS(plantarchitecture.updateAttractionPoints(9999, attraction_points_1));
+    DOCTEST_CHECK_THROWS(plantarchitecture.appendAttractionPoints(9999, attraction_points_1));
+    DOCTEST_CHECK_THROWS(plantarchitecture.setAttractionParameters(9999, 60.0f, 0.15f, 0.7f, 0.75f));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture Global vs Per-Plant Interaction") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    
+    // Disable messages for cleaner test output
+    plantarchitecture.disableMessages();
+    
+    // Create a plant first
+    uint plantID1 = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0);
+    
+    // Set global attraction points - should affect all plants including existing ones
+    std::vector<vec3> global_attraction_points = {
+        make_vec3(1.0f, 0.0f, 1.0f),
+        make_vec3(0.0f, 1.0f, 1.5f)
+    };
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.enableAttractionPoints(global_attraction_points, 60.0f, 0.15f, 0.7f));
+    
+    // Create another plant after global attraction points are set
+    uint plantID2 = plantarchitecture.addPlantInstance(make_vec3(5, 0, 0), 0);
+    
+    // Now set plant-specific attraction points for plant 1 - should override global for that plant
+    std::vector<vec3> specific_attraction_points = {
+        make_vec3(2.0f, 0.0f, 2.0f)
+    };
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.enableAttractionPoints(plantID1, specific_attraction_points, 45.0f, 0.1f, 0.5f));
+    
+    // Test that global update affects all plants with attraction points enabled
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.updateAttractionPoints({make_vec3(3.0f, 0.0f, 3.0f)}));
+    
+    // Global disable should affect all plants
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.disableAttractionPoints());
+    
+    // Re-enable global attraction points to test backward compatibility
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.enableAttractionPoints(global_attraction_points));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture Plant-Specific Attraction Points Validation") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    
+    // Disable messages for cleaner test output
+    plantarchitecture.disableMessages();
+    
+    // Create plants to test validation and method calls
+    uint plantID1 = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0);
+    uint plantID2 = plantarchitecture.addPlantInstance(make_vec3(5, 0, 0), 0);
+    
+    // Set different attraction points for each plant  
+    std::vector<vec3> attraction_points_1 = {make_vec3(1.0f, 0.0f, 1.0f)};
+    std::vector<vec3> attraction_points_2 = {make_vec3(6.0f, 0.0f, 1.0f)};
+    
+    // Test that plant-specific methods work correctly
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.enableAttractionPoints(plantID1, attraction_points_1));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.enableAttractionPoints(plantID2, attraction_points_2));
+    
+    // Test parameter validation  
+    DOCTEST_CHECK_THROWS(plantarchitecture.enableAttractionPoints(plantID1, {}, 60.0f, 0.15f, 0.7f)); // Empty vector
+    DOCTEST_CHECK_THROWS(plantarchitecture.setAttractionParameters(plantID1, 0.0f, 0.15f, 0.7f)); // Invalid angle
+    DOCTEST_CHECK_THROWS(plantarchitecture.setAttractionParameters(plantID1, 60.0f, 0.0f, 0.7f)); // Invalid distance
+    
+    // Test successful parameter updates
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.setAttractionParameters(plantID1, 80.0f, 0.25f, 0.8f, 0.6f));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.updateAttractionPoints(plantID2, {make_vec3(6.5f, 0.5f, 2.0f)}));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.appendAttractionPoints(plantID1, {make_vec3(1.5f, 1.5f, 2.0f)}));
+    
+    // Test disabling
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.disableAttractionPoints(plantID1));
 }
 
 int PlantArchitecture::selfTest(int argc, char** argv) {

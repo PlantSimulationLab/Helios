@@ -70,7 +70,7 @@ void PhotosynthesisModel::setModelCoefficients(const FarquharModelCoefficients &
 
 void PhotosynthesisModel::setModelCoefficients(const std::vector<FarquharModelCoefficients> &modelcoefficients, const std::vector<uint> &UUIDs) {
     if (modelcoefficients.size() != UUIDs.size()) {
-        printf("WARNING (PhotosynthesisModel::setModelCoefficients): number of model coefficients (%zu) does not match number of UUIDs (%zu).", modelcoefficients.size(), UUIDs.size());
+        std::cerr << "WARNING (PhotosynthesisModel::setModelCoefficients): number of model coefficients (" + std::to_string(modelcoefficients.size()) + ") does not match number of UUIDs (" + std::to_string(UUIDs.size()) + ")" << std::endl;
         return;
     }
     for (uint i = 0; i < UUIDs.size(); i++) {
@@ -204,12 +204,12 @@ FarquharModelCoefficients PhotosynthesisModel::getFarquharCoefficientsFromLibrar
     } else {
         defaultSpecies = true;
         if (message_flag) {
-            std::cout << "WARNING (PhotosynthesisModel::getModelCoefficients): unknown species " << s << ". Setting default (Almond)." << std::endl;
+            std::cerr << "WARNING (PhotosynthesisModel::getModelCoefficients): unknown species " << s << ". Setting default (Almond)." << std::endl;
         }
     }
     if (!defaultSpecies) {
         if (message_flag) {
-            std::cout << "Setting Photosynthesis Model Coefficients to " << s << std::endl;
+            std::cerr << "Setting Photosynthesis Model Coefficients to " << s << std::endl;
         }
     }
     return fmc;
@@ -230,7 +230,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
             if (i_PAR < 0) {
                 i_PAR = 0;
                 if (message_flag) {
-                    std::cout << "WARNING (runPhotosynthesis): PAR flux value provided was negative.  Clipping to zero." << std::endl;
+                    std::cerr << "WARNING (runPhotosynthesis): PAR flux value provided was negative.  Clipping to zero." << std::endl;
                 }
             }
         } else {
@@ -242,7 +242,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
             context->getPrimitiveData(UUID, "temperature", TL);
             if (TL < 200) {
                 if (message_flag) {
-                    std::cout << "WARNING (PhotosynthesisModel::run): Primitive temperature value was very low (" << TL << "K). Assuming. Are you using absolute temperature units?" << std::endl;
+                    std::cerr << "WARNING (PhotosynthesisModel::run): Primitive temperature value was very low (" << TL << "K). Assuming. Are you using absolute temperature units?" << std::endl;
                 }
                 TL = TL_default;
             }
@@ -256,7 +256,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
             if (CO2 < 0) {
                 CO2 = 0;
                 if (message_flag) {
-                    std::cout << "WARNING (PhotosynthesisModel::run): CO2 concentration value provided was negative. Clipping to zero." << std::endl;
+                    std::cerr << "WARNING (PhotosynthesisModel::run): CO2 concentration value provided was negative. Clipping to zero." << std::endl;
                 }
             }
         } else {
@@ -269,7 +269,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
             if (gM < 0) {
                 gM = 0;
                 if (message_flag) {
-                    std::cout << "WARNING (PhotosynthesisModel::run): Moisture conductance value provided was negative. Clipping to zero." << std::endl;
+                    std::cerr << "WARNING (PhotosynthesisModel::run): Moisture conductance value provided was negative. Clipping to zero." << std::endl;
                 }
             }
         } else {
@@ -302,7 +302,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
         if (gH < 0) {
             gH = 0;
             if (message_flag) {
-                std::cout << "WARNING (PhotosynthesisModel::run): Boundary-layer conductance value provided was negative. Clipping to zero." << std::endl;
+                std::cerr << "WARNING (PhotosynthesisModel::run): Boundary-layer conductance value provided was negative. Clipping to zero." << std::endl;
             }
         }
 
@@ -350,7 +350,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
 
         if (A == 0) {
             if (message_flag) {
-                std::cout << "WARNING (PhotosynthesisModel::run): Solution did not converge for primitive " << UUID << "." << std::endl;
+                std::cerr << "WARNING (PhotosynthesisModel::run): Solution did not converge for primitive " << UUID << "." << std::endl;
             }
         }
 
@@ -650,7 +650,7 @@ void PhotosynthesisModel::optionalOutputPrimitiveData(const char *label) {
         output_prim_data.emplace_back(label);
     } else {
         if (message_flag) {
-            std::cout << "WARNING (PhotosynthesisModel::optionalOutputPrimitiveData): unknown output primitive data " << label << std::endl;
+            std::cerr << "WARNING (PhotosynthesisModel::optionalOutputPrimitiveData): unknown output primitive data " << label << std::endl;
         }
     }
 }

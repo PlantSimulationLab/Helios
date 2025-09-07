@@ -1,0 +1,47 @@
+/*! \page context_timeseries_tutorial Tutorial 3: Data Timeseries
+
+Timeseries data allow environmental variables to vary with time.  Each
+variable is stored in its own `<timeseries>` block with one entry per
+date and time.
+
+An abbreviated example is shown below.  All `<timeseries>` blocks should
+appear inside a single `<helios>` tag.
+
+ ~~~~~~{.xml}
+ <helios>
+   <timeseries label="air_temperature">
+    <datapoint>
+      <dateJulian> 172 2024 </dateJulian>
+      <time> 6 0 0 </time>
+      <value> 285.25 </value>
+    </datapoint>
+   </timeseries>
+ </helios>
+ ~~~~~~
+
+Load the XML file and query values using \ref helios::Context::loadXML() "loadXML()" and \ref helios::Context::queryTimeseriesData() "queryTimeseriesData()":
+
+ ~~~~~~{.cpp}
+ Context context;
+ context.loadXML("../xml/6_20_2024_CIMIS.xml");
+
+ Date date(20,6,2024);
+ Time time(9,0,0);
+ float air_temp = context.queryTimeseriesData("air_temperature", date, time);
+ ~~~~~~
+
+Tabular CSV files can also be read with
+\ref helios::Context::loadTabularTimeseriesData() "loadTabularTimeseriesData()".  This is convenient for importing weather files that contain columns for dates, times and measured values:
+
+ ~~~~~~{.cpp}
+ context.loadTabularTimeseriesData("lib/testdata/weather_data.csv", {"date","hour","temperature"}, ",", "MMDDYYYY", 1);
+ Date date2(2,1,2020);
+ Time time2(13,0,0);
+ float T = context.queryTimeseriesData("temperature", date2, time2);
+ ~~~~~~
+
+Indices may be accessed directly with \ref helios::Context::setCurrentTimeseriesPoint() "setCurrentTimeseriesPoint()" when iterating over a dataset.
+
+A complete example of using timeseries data can be found in \subpage canopy_WUE_tutorial "Tutorial 13".
+
+*/

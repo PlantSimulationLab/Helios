@@ -1191,8 +1191,14 @@ namespace helios {
 
     //! Resolve file path using standard Helios resolution hierarchy
     /**
-     * \param[in] filename File name with or without path (e.g., "primaryShader.vert" or "shaders/primaryShader.vert")
-     * \return Absolute path to the file
+     * Resolves file paths using the following fallback sequence:
+     * 1. If absolute path, validates existence and returns canonical path
+     * 2. Checks relative to current working directory first
+     * 3. Falls back to checking relative to HELIOS_BUILD environment variable path
+     * 4. Throws helios_runtime_error if file not found in either location
+     * 
+     * \param[in] filename File name with or without path (e.g., "texture.jpg" or "models/texture.jpg")
+     * \return Absolute canonical path to the file
      * \ingroup functions
      */
     [[nodiscard]] std::filesystem::path resolveFilePath(const std::string& filename);

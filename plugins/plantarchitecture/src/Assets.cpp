@@ -22,7 +22,11 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
 
     // If OBJ model file is specified, load it and return the object ID
     if (!prototype_parameters->OBJ_model_file.empty()) {
-        if (!std::filesystem::exists(prototype_parameters->OBJ_model_file)) {
+        // Use unified file resolution to validate OBJ file existence
+        try {
+            std::filesystem::path resolved_path = helios::resolveFilePath(prototype_parameters->OBJ_model_file);
+            (void)resolved_path; // Suppress unused variable warning
+        } catch (const std::runtime_error&) {
             helios_runtime_error("ERROR (PlantArchitecture): Leaf prototype OBJ file " + prototype_parameters->OBJ_model_file + " does not exist.");
         }
         return context_ptr->addPolymeshObject(context_ptr->loadOBJ(prototype_parameters->OBJ_model_file.c_str(), prototype_parameters->leaf_offset, 0, nullrotation, RGB::black, "ZUP", true));
@@ -431,7 +435,7 @@ bool spheres_overlap(const helios::vec3 &center1, float radius1, const helios::v
 uint GrapevineFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
 
     int num_grapes = 60;
-    float height = 6.0f; // Height of the cluster
+    float height = 5.0f; // Height of the cluster
     float base_radius = 2.f; // Base radius of the cluster
     float taper_factor = 0.6f; // Taper factor (higher means more taper)
     float grape_radius = 0.25f; // Fixed radius for each grape
@@ -498,7 +502,9 @@ uint GrapevineFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
         UUIDs.insert(UUIDs.end(), UUIDs_tmp.begin(), UUIDs_tmp.end());
     }
 
-    context_ptr->rotatePrimitive(UUIDs, -0.5 * M_PI, "y");
+    context_ptr->rotatePrimitive(UUIDs, 0.5 * M_PI, "y");
+
+    context_ptr->setPrimitiveData( UUIDs, "object_label", "fruit");
 
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
@@ -514,6 +520,13 @@ void GrapevinePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint 
 
     // blind nodes
     if (shoot_node_index >= 2) {
+        phytomer->setFloralBudState(BUD_DEAD);
+    }
+    if ( phytomer->rank >= 1 && shoot_node_index >= 8) {
+        phytomer->setVegetativeBudState(BUD_DEAD);
+    }
+    if ( phytomer->rank >= 2 ) {
+        phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->setFloralBudState(BUD_DEAD);
     }
 }

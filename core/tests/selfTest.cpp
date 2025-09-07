@@ -29,6 +29,7 @@ double errtol = 1e-6;
 #include "Test_data.h"
 #include "Test_functions.h"
 #include "Test_utilities.h"
+#include "Test_OBJ.h"
 
 int Context::selfTest(int argc, char** argv) {
     return helios::runDoctestWithValidation(argc, argv);

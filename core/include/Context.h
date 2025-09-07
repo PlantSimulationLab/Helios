@@ -6336,16 +6336,18 @@ namespace helios {
         /**
          * \param[in] filename Base filename of .obj and .mtl file
          * \param[in] write_normals [optional] true if we should write the normal vectors
+         * \param[in] silent [optional] If set to true, output messaged will be disabled
          */
-        void writeOBJ(const std::string &filename, bool write_normals = false) const;
+        void writeOBJ(const std::string &filename, bool write_normals = false, bool silent = false) const;
 
         //! Write geometry in the Context to a Wavefront file (.obj) for a subset of UUIDs
         /**
          * \param[in] filename Base filename of .obj and .mtl file
          * \param[in] UUIDs Vector of UUIDs for which geometry should be written
          * \param[in] write_normals [optional] true if we should write the normal vectors
+         * \param[in] silent [optional] If set to true, output messaged will be disabled
          */
-        void writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, bool write_normals = false) const;
+        void writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, bool write_normals = false, bool silent = false) const;
 
         //! Write geometry in the Context to a Wavefront file (.obj)
         /**
@@ -6353,8 +6355,9 @@ namespace helios {
          * \param[in] UUIDs Vector of UUIDs for which geometry should be written
          * \param[in] primitive_dat_fields A .dat file will be written containing primitive data given in this vector (for Unity visualization)
          * \param[in] write_normals [optional] true if we should write the normal vectors
+         * \param[in] silent [optional] If set to true, output messaged will be disabled
          */
-        void writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields, bool write_normals = false) const;
+        void writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields, bool write_normals = false, bool silent = false) const;
 
         //------------ FILE PATH RESOLUTION ----------------//
 

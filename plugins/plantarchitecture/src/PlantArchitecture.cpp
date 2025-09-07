@@ -17,6 +17,7 @@
 #include "CollisionDetection.h"
 
 #include <utility>
+#include <unordered_set>
 
 using namespace helios;
 
@@ -651,7 +652,7 @@ bool Phytomer::applySolidObstacleAvoidance(const helios::vec3 &current_position,
 
     // Ignore solid obstacles for the first several nodes of the base stem to prevent U-turn growth
     // when plants start slightly below ground surface
-    if (shoot_index.x == 0 && (rank < 3 || parent_shoot_ptr->calculateShootLength() < 0.05f)) {
+    if (rank == 0 && (shoot_index.x < 3 || parent_shoot_ptr->calculateShootLength() < 0.05f)) {
         return false;  // Skip solid obstacle avoidance for first 3 nodes OR if shoot length < 5cm
     }
 
@@ -758,24 +759,201 @@ helios::vec3 Phytomer::calculateAttractionPointDirection(const helios::vec3 &int
     vec3 attraction_direction;
     attraction_active = false;
 
-    if (!plantarchitecture_ptr->attraction_points_enabled || plantarchitecture_ptr->attraction_points.empty() || plantarchitecture_ptr->collision_detection_ptr == nullptr) {
+    // First check if this plant has plant-specific attraction points enabled
+    if (plantarchitecture_ptr->plant_instances.find(plantID) != plantarchitecture_ptr->plant_instances.end()) {
+        const auto &plant = plantarchitecture_ptr->plant_instances.at(plantID);
+        if (plant.attraction_points_enabled && !plant.attraction_points.empty()) {
+            // Use plant-specific attraction points
+            vec3 look_direction = internode_axis;
+            look_direction.normalize();
+            float half_angle_degrees = rad2deg(plant.attraction_cone_half_angle_rad);
+            float look_ahead_distance = plant.attraction_cone_height;
+
+            vec3 direction_to_closest;
+            if (plantarchitecture_ptr->detectAttractionPointsInCone(plant.attraction_points, internode_base_origin, look_direction, look_ahead_distance, half_angle_degrees, direction_to_closest)) {
+                attraction_direction = direction_to_closest;
+                attraction_direction.normalize();
+                attraction_active = true;
+            }
+            return attraction_direction;
+        }
+    }
+
+    // Fall back to global attraction points for backward compatibility
+    if (!plantarchitecture_ptr->attraction_points_enabled || plantarchitecture_ptr->attraction_points.empty()) {
         return attraction_direction;
     }
 
-    // Use the attraction points detection method from CollisionDetection
+    // Use the native attraction points detection method from PlantArchitecture (no collision detection required)
     vec3 look_direction = internode_axis;
     look_direction.normalize();
     float half_angle_degrees = rad2deg(plantarchitecture_ptr->attraction_cone_half_angle_rad);
     float look_ahead_distance = plantarchitecture_ptr->attraction_cone_height;
 
     vec3 direction_to_closest;
-    if (plantarchitecture_ptr->collision_detection_ptr->detectAttractionPoints(internode_base_origin, look_direction, look_ahead_distance, half_angle_degrees, plantarchitecture_ptr->attraction_points, direction_to_closest)) {
+    if (plantarchitecture_ptr->detectAttractionPointsInCone(plantarchitecture_ptr->attraction_points, internode_base_origin, look_direction, look_ahead_distance, half_angle_degrees, direction_to_closest)) {
         attraction_direction = direction_to_closest;
         attraction_direction.normalize();
         attraction_active = true;
     }
 
     return attraction_direction;
+}
+
+bool PlantArchitecture::detectAttractionPointsInCone(const helios::vec3 &vertex, const helios::vec3 &look_direction, float look_ahead_distance, float half_angle_degrees, helios::vec3 &direction_to_closest) const {
+
+    // Validate input parameters
+    if (attraction_points.empty()) {
+        return false;
+    }
+
+    if (look_ahead_distance <= 0.0f) {
+        if (printmessages) {
+            std::cerr << "WARNING (PlantArchitecture::detectAttractionPointsInCone): Invalid look-ahead distance (<= 0)" << std::endl;
+        }
+        return false;
+    }
+
+    if (half_angle_degrees <= 0.0f || half_angle_degrees >= 180.0f) {
+        if (printmessages) {
+            std::cerr << "WARNING (PlantArchitecture::detectAttractionPointsInCone): Invalid half-angle (must be in range (0, 180) degrees)" << std::endl;
+        }
+        return false;
+    }
+
+    // Convert half-angle to radians
+    float half_angle_rad = half_angle_degrees * M_PI / 180.0f;
+
+    // Normalize look direction
+    vec3 axis = look_direction;
+    axis.normalize();
+
+    // Variables to track the closest attraction point
+    bool found_any = false;
+    float min_angular_distance = std::numeric_limits<float>::max();
+    vec3 closest_point;
+
+    // Check each attraction point
+    for (const vec3 &point: attraction_points) {
+        // Calculate vector from vertex to attraction point
+        vec3 to_point = point - vertex;
+        float distance_to_point = to_point.magnitude();
+
+        // Skip if point is at the vertex or beyond look-ahead distance
+        if (distance_to_point < 1e-6f || distance_to_point > look_ahead_distance) {
+            continue;
+        }
+
+        // Normalize the direction to the point
+        vec3 direction_to_point = to_point;
+        direction_to_point.normalize();
+
+        // Calculate angle between look direction and direction to point
+        float cos_angle = axis * direction_to_point;
+
+        // Clamp to handle numerical precision issues
+        cos_angle = std::max(-1.0f, std::min(1.0f, cos_angle));
+
+        float angle = std::acos(cos_angle);
+
+        // Check if point is within the perception cone
+        if (angle <= half_angle_rad) {
+            found_any = true;
+
+            // Check if this is the closest to the centerline
+            if (angle < min_angular_distance) {
+                min_angular_distance = angle;
+                closest_point = point;
+            }
+        }
+    }
+
+    // If we found any attraction points, calculate the direction to the closest one
+    if (found_any) {
+        direction_to_closest = closest_point - vertex;
+        direction_to_closest.normalize();
+        return true;
+    }
+
+    return false;
+}
+
+bool PlantArchitecture::detectAttractionPointsInCone(const std::vector<helios::vec3> &attraction_points_input, const helios::vec3 &vertex, const helios::vec3 &look_direction, float look_ahead_distance, float half_angle_degrees, helios::vec3 &direction_to_closest) const {
+
+    // Validate input parameters
+    if (attraction_points_input.empty()) {
+        return false;
+    }
+
+    if (look_ahead_distance <= 0.0f) {
+        if (printmessages) {
+            std::cerr << "WARNING (PlantArchitecture::detectAttractionPointsInCone): Invalid look-ahead distance (<= 0)" << std::endl;
+        }
+        return false;
+    }
+
+    if (half_angle_degrees <= 0.0f || half_angle_degrees >= 180.0f) {
+        if (printmessages) {
+            std::cerr << "WARNING (PlantArchitecture::detectAttractionPointsInCone): Invalid half-angle (must be in range (0, 180) degrees)" << std::endl;
+        }
+        return false;
+    }
+
+    // Convert half-angle to radians
+    float half_angle_rad = half_angle_degrees * M_PI / 180.0f;
+
+    // Normalize look direction
+    vec3 axis = look_direction;
+    axis.normalize();
+
+    // Variables to track the closest attraction point
+    bool found_any = false;
+    float min_angular_distance = std::numeric_limits<float>::max();
+    vec3 closest_point;
+
+    // Check each attraction point
+    for (const vec3 &point: attraction_points_input) {
+        // Calculate vector from vertex to attraction point
+        vec3 to_point = point - vertex;
+        float distance_to_point = to_point.magnitude();
+
+        // Skip if point is at the vertex or beyond look-ahead distance
+        if (distance_to_point <= 1e-6 || distance_to_point > look_ahead_distance) {
+            continue;
+        }
+
+        // Normalize the direction to the point
+        vec3 direction_to_point = to_point;
+        direction_to_point.normalize();
+
+        // Calculate angle between look direction and direction to point
+        float cos_angle = axis * direction_to_point;
+
+        // Clamp to handle numerical precision issues
+        cos_angle = std::max(-1.0f, std::min(1.0f, cos_angle));
+
+        float angle = std::acos(cos_angle);
+
+        // Check if point is within the perception cone
+        if (angle <= half_angle_rad) {
+            found_any = true;
+
+            // Check if this is the closest to the centerline
+            if (angle < min_angular_distance) {
+                min_angular_distance = angle;
+                closest_point = point;
+            }
+        }
+    }
+
+    // If we found any attraction points, calculate the direction to the closest one
+    if (found_any) {
+        direction_to_closest = closest_point - vertex;
+        direction_to_closest.normalize();
+        return true;
+    }
+
+    return false;
 }
 
 int Shoot::appendPhytomer(float internode_radius, float internode_length_max, float internode_length_scale_factor_fraction, float leaf_scale_factor_fraction, const PhytomerParameters &phytomer_parameters) {
@@ -1509,10 +1687,17 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         vec3 petiole_axis = internode_axis;
 
         // petiole pitch rotation
-        petiole_pitch.at(petiole) = deg2rad(phytomer_parameters.petiole.pitch.val());
-        phytomer_parameters.petiole.pitch.resample();
-        if (fabs(petiole_pitch.at(petiole)) < deg2rad(5.f)) {
-            petiole_pitch.at(petiole) = deg2rad(5.f);
+        // Check if this is the last phytomer on a shoot that has reached max_nodes
+        if (shoot_index.y + 1 == shoot_index.z) {
+            // Last phytomer on shoot - set petiole pitch to 0
+            petiole_pitch.at(petiole) = 0.0f;
+        } else {
+            // Normal phytomer - use standard pitch calculation
+            petiole_pitch.at(petiole) = deg2rad(phytomer_parameters.petiole.pitch.val());
+            phytomer_parameters.petiole.pitch.resample();
+            if (fabs(petiole_pitch.at(petiole)) < deg2rad(5.f)) {
+                petiole_pitch.at(petiole) = deg2rad(5.f);
+            }
         }
         petiole_axis = rotatePointAboutLine(petiole_axis, nullorigin, petiole_rotation_axis, std::abs(petiole_pitch.at(petiole)));
 
@@ -3356,6 +3541,22 @@ void PlantArchitecture::removeShootLeaves(uint plantID, uint shootID) {
     }
 }
 
+void PlantArchitecture::removeShootVegetativeBuds(uint plantID, uint shootID) {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::removeShootVegetativeBuds): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    if (shootID >= plant_instances.at(plantID).shoot_tree.size()) {
+        helios_runtime_error("ERROR (PlantArchitecture::removeShootVegetativeBuds): Shoot with ID of " + std::to_string(shootID) + " does not exist.");
+    }
+
+    auto &shoot = plant_instances.at(plantID).shoot_tree.at(shootID);
+
+    for (auto &phytomer: shoot->phytomers) {
+        phytomer->setVegetativeBudState(BUD_DEAD);
+    }
+}
+
 void PlantArchitecture::removePlantLeaves(uint plantID) {
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::removePlantLeaves): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -4586,7 +4787,9 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
     adjustFruitForObstacleCollision();
     
     // Fallback collision detection: prune any objects that still intersect solid boundaries
-    //pruneSolidBoundaryCollisions();
+    if (solid_obstacle_pruning_enabled) {
+        pruneSolidBoundaryCollisions();
+    }
     
     // When collision detection is disabled, update all plant geometry once at the end
     // This is more efficient than periodic updates and ensures correct visualization
@@ -4615,36 +4818,39 @@ void PlantArchitecture::adjustFruitForObstacleCollision() {
     int debug_failures_shown = 0;
     const int max_debug_failures = 0; // Disable debugging for performance
     
+    // Initialize progress bar for processing plants
+    helios::ProgressBar progress_bar(plant_instances.size(), 50, plant_instances.size() > 1 && printmessages, "Adjusting fruit collisions");
+
     // Process each plant instance
     for (const auto &plant_instance : plant_instances) {
         uint plantID = plant_instance.first;
-        
+
         // Get all fruit object IDs for this plant
         std::vector<uint> fruit_objIDs = getPlantFruitObjectIDs(plantID);
-        
+
         if (fruit_objIDs.empty()) {
             continue; // No fruit to process
         }
-        
+
         // Check each fruit for collision
         for (uint fruit_objID : fruit_objIDs) {
             // Get fruit primitives
             std::vector<uint> fruit_UUIDs = context_ptr->getObjectPrimitiveUUIDs(fruit_objID);
-            
+
             if (fruit_UUIDs.empty()) {
                 continue;
             }
-            
+
             // Check if fruit collides with any solid obstacle
-            std::vector<uint> collisions = collision_detection_ptr->findCollisions(fruit_UUIDs, {}, solid_obstacle_UUIDs, {});
-            
+            std::vector<uint> collisions = collision_detection_ptr->findCollisions(fruit_UUIDs, {}, solid_obstacle_UUIDs, {}, false);
+
             if (!collisions.empty()) {
                 // Fruit is colliding - need to rotate it up
-                
+
                 // Get fruit bounding box to estimate rotation needed
                 vec3 bbox_min, bbox_max;
                 context_ptr->getObjectBoundingBox(fruit_objID, bbox_min, bbox_max);
-                
+
                 // Find the fruit base position and peduncle info from the shoot tree
                 vec3 fruit_base;
                 vec3 peduncle_axis;
@@ -4652,7 +4858,7 @@ void PlantArchitecture::adjustFruitForObstacleCollision() {
                 uint fruit_petiole_index = 0;
                 uint fruit_bud_index = 0;
                 bool found_base = false;
-                
+
                 // Search through shoot tree to find this fruit's base position
                 for (const auto &shoot : plant_instance.second.shoot_tree) {
                     for (const auto &phytomer : shoot->phytomers) {
@@ -4667,7 +4873,7 @@ void PlantArchitecture::adjustFruitForObstacleCollision() {
                                         fruit_phytomer = phytomer.get();
                                         fruit_petiole_index = petiole_idx;
                                         fruit_bud_index = fbud.bud_index;
-                                        
+
                                         // Get actual peduncle axis using stored vertices
                                         try {
                                             peduncle_axis = phytomer->getPeduncleAxisVector(1.0f, petiole_idx, fbud.bud_index);
@@ -4675,7 +4881,7 @@ void PlantArchitecture::adjustFruitForObstacleCollision() {
                                             // Fallback if peduncle vertices not available
                                             peduncle_axis = make_vec3(0, 0, 1);
                                         }
-                                        
+
                                         found_base = true;
                                         break;
                                     }
@@ -4689,11 +4895,11 @@ void PlantArchitecture::adjustFruitForObstacleCollision() {
                     }
                     if (found_base) break;
                 }
-                
+
                 if (!found_base) {
                     continue; // Couldn't find fruit base position
                 }
-                
+
                 // Calculate initial rotation estimate
                 // Estimate fruit "radius" as distance from base to furthest point
                 float fruit_radius = 0;
@@ -4705,11 +4911,11 @@ void PlantArchitecture::adjustFruitForObstacleCollision() {
                 fruit_radius = std::max(fruit_radius, (make_vec3(bbox_min.x, bbox_max.y, bbox_max.z) - fruit_base).magnitude());
                 fruit_radius = std::max(fruit_radius, (make_vec3(bbox_max.x, bbox_min.y, bbox_max.z) - fruit_base).magnitude());
                 fruit_radius = std::max(fruit_radius, (make_vec3(bbox_max.x, bbox_max.y, bbox_min.z) - fruit_base).magnitude());
-                
+
                 // Calculate penetration depth more accurately
                 // Use the lowest point of the fruit bounding box vs ground level (z=0)
                 float penetration_depth = std::max(0.0f, -bbox_min.z);
-                
+
                 // Calculate initial rotation guess
                 float initial_rotation = 0;
                 if (fruit_radius > 0 && penetration_depth > 0) {
@@ -4721,13 +4927,13 @@ void PlantArchitecture::adjustFruitForObstacleCollision() {
                     // Default rotation for partially submerged cases
                     initial_rotation = deg2rad(10.0f);
                 }
-                
+
                 // Ensure minimum rotation for any collision case
                 initial_rotation = std::max(initial_rotation, deg2rad(8.0f)); // Slightly smaller minimum
-                
+
                 // Calculate the proper rotation axis based on peduncle orientation
                 vec3 rotation_axis;
-                
+
                 // Ensure peduncle axis is normalized
                 if (peduncle_axis.magnitude() < 1e-6f) {
                     // Fallback if peduncle axis is not available
@@ -4735,7 +4941,7 @@ void PlantArchitecture::adjustFruitForObstacleCollision() {
                 } else {
                     peduncle_axis.normalize();
                 }
-                
+
                 // Get vector from fruit base to fruit center
                 vec3 bbox_center = 0.5f * (bbox_min + bbox_max);
                 vec3 to_fruit_center = bbox_center - fruit_base;
@@ -4745,7 +4951,7 @@ void PlantArchitecture::adjustFruitForObstacleCollision() {
                     // If fruit center is at base, use peduncle direction
                     to_fruit_center = peduncle_axis;
                 }
-                
+
                 // Rotation axis is perpendicular to both peduncle axis and to_fruit_center
                 // This gives us the pitch rotation axis used for the original fruit positioning
                 rotation_axis = cross(peduncle_axis, to_fruit_center);
@@ -4758,13 +4964,13 @@ void PlantArchitecture::adjustFruitForObstacleCollision() {
                     }
                 }
                 rotation_axis.normalize();
-                
+
                 // Iteratively rotate fruit until no collision
                 float rotation_step = initial_rotation;
                 float total_rotation = 0;
                 const float max_rotation = deg2rad(120.0f); // Allow more rotation
                 const int max_iterations = 25; // More iterations
-                
+
                 // Debug info for this fruit (only show first few)
                 bool debug_this_fruit = (debug_failures_shown < max_debug_failures);
                 if (debug_this_fruit && printmessages) {
@@ -4778,42 +4984,42 @@ void PlantArchitecture::adjustFruitForObstacleCollision() {
                     std::cout << "Initial rotation: " << rad2deg(initial_rotation) << " degrees" << std::endl;
                     std::cout << "Initial collisions: " << collisions.size() << std::endl;
                 }
-                
+
                 for (int iter = 0; iter < max_iterations && total_rotation < max_rotation; iter++) {
                     // Apply rotation about fruit base
                     // Negative rotation to lift fruit up (opposite of gravity)
                     context_ptr->rotateObject(fruit_objID, -rotation_step, fruit_base, rotation_axis);
                     total_rotation += rotation_step;
-                    
+
                     // Check if still colliding
                     fruit_UUIDs = context_ptr->getObjectPrimitiveUUIDs(fruit_objID);
-                    collisions = collision_detection_ptr->findCollisions(fruit_UUIDs, {}, solid_obstacle_UUIDs, {});
-                    
+                    collisions = collision_detection_ptr->findCollisions(fruit_UUIDs, {}, solid_obstacle_UUIDs, {}, false);
+
                     if (debug_this_fruit && printmessages) {
-                        std::cout << "Iter " << iter << ": rotated " << rad2deg(rotation_step) 
-                                 << " deg (total " << rad2deg(total_rotation) << "), collisions: " 
+                        std::cout << "Iter " << iter << ": rotated " << rad2deg(rotation_step)
+                                 << " deg (total " << rad2deg(total_rotation) << "), collisions: "
                                  << collisions.size() << std::endl;
                     }
-                    
+
                     if (collisions.empty()) {
                         // No longer colliding - now try to fine-tune by rotating back down slightly
                         // to get as close to the ground as possible
                         float fine_tune_step = deg2rad(3.0f); // Slightly larger steps for efficiency
                         float fine_tune_attempts = 5;
                         float original_total = total_rotation;
-                        
+
                         if (debug_this_fruit && printmessages) {
                             std::cout << "Fine-tuning: trying to rotate back down from " << rad2deg(total_rotation) << " degrees" << std::endl;
                         }
-                        
+
                         for (int fine_iter = 0; fine_iter < fine_tune_attempts; fine_iter++) {
                             // Try rotating back towards ground (positive rotation)
                             context_ptr->rotateObject(fruit_objID, fine_tune_step, fruit_base, rotation_axis);
-                            
+
                             // Check if still collision-free
                             fruit_UUIDs = context_ptr->getObjectPrimitiveUUIDs(fruit_objID);
-                            std::vector<uint> test_collisions = collision_detection_ptr->findCollisions(fruit_UUIDs, {}, solid_obstacle_UUIDs, {});
-                            
+                            std::vector<uint> test_collisions = collision_detection_ptr->findCollisions(fruit_UUIDs, {}, solid_obstacle_UUIDs, {}, false);
+
                             if (!test_collisions.empty()) {
                                 // Collision detected - rotate back up and stop fine-tuning
                                 context_ptr->rotateObject(fruit_objID, -fine_tune_step, fruit_base, rotation_axis);
@@ -4826,31 +5032,37 @@ void PlantArchitecture::adjustFruitForObstacleCollision() {
 
                         break;
                     }
-                    
+
                     // Adaptive step size - reduce for fine tuning, but not too aggressively
                     if (iter > 8) {
                         rotation_step *= 0.7f; // Less aggressive reduction
                     }
                 }
-                
+
                 if (!collisions.empty()) {
                     if (debug_this_fruit && printmessages) {
-                        std::cout << "FAILED: Fruit " << fruit_objID << " still colliding after " 
-                                 << rad2deg(total_rotation) << " degrees rotation (" << max_iterations 
+                        std::cout << "FAILED: Fruit " << fruit_objID << " still colliding after "
+                                 << rad2deg(total_rotation) << " degrees rotation (" << max_iterations
                                  << " iterations)" << std::endl;
-                        
+
                         // Get final bounding box to see where it ended up
                         vec3 final_bbox_min, final_bbox_max;
                         context_ptr->getObjectBoundingBox(fruit_objID, final_bbox_min, final_bbox_max);
                         std::cout << "Final bbox: " << final_bbox_min << " to " << final_bbox_max << std::endl;
                         std::cout << "Lowest point: " << final_bbox_min.z << std::endl;
-                        
+
                         debug_failures_shown++;
                     }
                 }
             }
         }
+
+        // Update progress bar
+        progress_bar.update();
     }
+    
+    // Ensure progress bar shows 100% completion
+    progress_bar.finish();
 }
 
 void PlantArchitecture::pruneSolidBoundaryCollisions() {
@@ -4863,250 +5075,119 @@ void PlantArchitecture::pruneSolidBoundaryCollisions() {
     }
 
     if (printmessages) {
-        std::cout << "Performing fallback collision detection for solid boundaries..." << std::endl;
+        std::cout << "Performing solid boundary collision detection..." << std::endl;
     }
 
     // The BVH should already be current from advanceTime() - we're called at the very end
     // Collect all plant primitives and do one batch collision detection call for efficiency
     std::vector<uint> all_plant_primitives;
-    
-    // First pass: collect all plant primitives
-    for (auto &plant_instance : plant_instances) {
-        for (auto &shoot: plant_instance.second.shoot_tree) {
-            // Collect ALL internode primitives (protection applied during pruning, not collection)
-            for (auto &phytomer: shoot->phytomers) {
-                if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
-                    std::vector<uint> internode_primitives = context_ptr->getObjectPrimitiveUUIDs(shoot->internode_tube_objID);
-                    all_plant_primitives.insert(all_plant_primitives.end(), internode_primitives.begin(), internode_primitives.end());
-                }
-                
-                // Collect leaf primitives
-                for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size(); petiole++) {
-                    for (uint objID : phytomer->leaf_objIDs.at(petiole)) {
-                        if (context_ptr->doesObjectExist(objID)) {
-                            std::vector<uint> leaf_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
-                            all_plant_primitives.insert(all_plant_primitives.end(), leaf_primitives.begin(), leaf_primitives.end());
-                        }
-                    }
-                }
 
-                // Collect petiole primitives
-                for (uint petiole = 0; petiole < phytomer->petiole_objIDs.size(); petiole++) {
-                    for (uint objID : phytomer->petiole_objIDs.at(petiole)) {
-                        if (context_ptr->doesObjectExist(objID)) {
-                            std::vector<uint> petiole_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
-                            all_plant_primitives.insert(all_plant_primitives.end(), petiole_primitives.begin(), petiole_primitives.end());
-                        }
-                    }
-                }
+    all_plant_primitives = getAllUUIDs();
 
-                // Collect inflorescence primitives
-                for (auto &petiole: phytomer->floral_buds) {
-                    for (auto &fbud: petiole) {
-                        for (uint objID : fbud.peduncle_objIDs) {
-                            if (context_ptr->doesObjectExist(objID)) {
-                                std::vector<uint> peduncle_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
-                                all_plant_primitives.insert(all_plant_primitives.end(), peduncle_primitives.begin(), peduncle_primitives.end());
-                            }
-                        }
-                        for (uint objID : fbud.inflorescence_objIDs) {
-                            if (context_ptr->doesObjectExist(objID)) {
-                                std::vector<uint> inflorescence_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
-                                all_plant_primitives.insert(all_plant_primitives.end(), inflorescence_primitives.begin(), inflorescence_primitives.end());
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    std::vector<uint> intersecting_primitives = collision_detection_ptr->findCollisions(solid_obstacle_UUIDs, {},  all_plant_primitives, {}, false);
 
-    if (all_plant_primitives.empty()) {
-        return; // No primitives to check
-    }
+    std::vector<uint> intersecting_objIDs = context_ptr->getUniquePrimitiveParentObjectIDs(intersecting_primitives);
 
-    // Note: PlantArchitecture already disables automatic BVH rebuilds in enableSoftCollisionAvoidance()
-    // So we don't need to modify that setting here - just do batch collision detection
-    
-    // Single collision detection call - this should only trigger one BVH operation
-    std::vector<uint> intersecting_primitives = collision_detection_ptr->findCollisions(solid_obstacle_UUIDs, {}, all_plant_primitives, {});
-    
+
     if (intersecting_primitives.empty()) {
+        if (printmessages) {
+            std::cout << "No collisions detected - this is unexpected given visible fruit penetration" << std::endl;
+        }
         return; // No collisions detected
     }
+    
+    if (printmessages) {
+        std::cout << "Intersecting primitives found: " << intersecting_primitives.size() << std::endl;
+    }
 
-    // Create a set for fast lookup of intersecting primitives
-    std::unordered_set<uint> intersecting_set(intersecting_primitives.begin(), intersecting_primitives.end());
+    // Create lookup set for O(1) collision checking
+    std::unordered_set<uint> collision_set(intersecting_objIDs.begin(), intersecting_objIDs.end());
 
-    uint total_pruned_objects = 0;
-    std::vector<uint> objects_to_delete; // Collect objects for deferred deletion
-
-    // Second pass: check organs against the intersecting set and prune efficiently
-    for (auto &plant_instance : plant_instances) {
-        for (auto &shoot: plant_instance.second.shoot_tree) {
-            for (auto &phytomer: shoot->phytomers) {
-                // Check internode collision (protect main stem base like pruneGroundCollisions)
-                if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
-                    std::vector<uint> internode_primitives = context_ptr->getObjectPrimitiveUUIDs(shoot->internode_tube_objID);
-                    
-                    // Check if any internode primitive intersects
-                    bool has_collision = false;
-                    for (uint primitive : internode_primitives) {
-                        if (intersecting_set.find(primitive) != intersecting_set.end()) {
-                            has_collision = true;
-                            break;
-                        }
-                    }
-                    
-                    if (has_collision) {
-                        // Protect main stem base from pruning (like pruneGroundCollisions)
-                        if (!(phytomer->shoot_index.x == 0 && phytomer->rank == 0)) {
-                            objects_to_delete.push_back(shoot->internode_tube_objID);
-                            shoot->terminateApicalBud();
-                            total_pruned_objects++;
-                        }
-                    }
-                }
+    // Traverse plant topology and prune intersected organs and all downstream organs
+    for (auto& [plantID, plant] : plant_instances) {
+        for (uint shootID = 0; shootID < plant.shoot_tree.size(); shootID++) {
+            auto &shoot = plant.shoot_tree.at(shootID);
+            bool shoot_was_deleted = false;
             
-                // Check leaves/petioles collision (combine since removeLeaf() removes both)
-                bool leaf_collision = false;
-                for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size() && !leaf_collision; petiole++) {
-                    for (uint objID : phytomer->leaf_objIDs.at(petiole)) {
-                        if (context_ptr->doesObjectExist(objID)) {
-                            std::vector<uint> leaf_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
-                            for (uint primitive : leaf_primitives) {
-                                if (intersecting_set.find(primitive) != intersecting_set.end()) {
-                                    leaf_collision = true;
-                                    break;
-                                }
-                            }
-                            if (leaf_collision) break;
+            // Check if entire shoot's internode tube is colliding
+            if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
+                if (collision_set.count(shoot->internode_tube_objID)) {
+                    // Protect the entire main stem (rank 0 shoots)
+                    if (shoot->rank != 0) {
+                        // Delete the entire branch shoot
+                        pruneBranch(plantID, shootID, 0); // Prune from the beginning of the shoot
+                        shoot_was_deleted = true;
+                    }
+                }
+            }
+            
+            // If the shoot was deleted due to internode collision, skip checking individual organs
+            if (shoot_was_deleted) {
+                continue;
+            }
+            
+            for (uint node = 0; node < shoot->current_node_number; node++) {
+                auto &phytomer = shoot->phytomers.at(node);
+                
+                // Check leaves for collision
+                for (uint petiole = 0; petiole < phytomer->leaf_objIDs.size(); petiole++) {
+                    for (uint leaflet = 0; leaflet < phytomer->leaf_objIDs.at(petiole).size(); leaflet++) {
+                        uint leaf_objID = phytomer->leaf_objIDs.at(petiole).at(leaflet);
+                        if (collision_set.count(leaf_objID)) {
+                            phytomer->removeLeaf();
+                            break; // removeLeaf() removes all leaflets on this petiole
                         }
                     }
                 }
-
-                // Check petioles if leaves didn't already have collision
-                if (!leaf_collision) {
-                    for (uint petiole = 0; petiole < phytomer->petiole_objIDs.size() && !leaf_collision; petiole++) {
-                        for (uint objID : phytomer->petiole_objIDs.at(petiole)) {
-                            if (context_ptr->doesObjectExist(objID)) {
-                                std::vector<uint> petiole_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
-                                for (uint primitive : petiole_primitives) {
-                                    if (intersecting_set.find(primitive) != intersecting_set.end()) {
-                                        leaf_collision = true;
-                                        break;
-                                    }
-                                }
-                                if (leaf_collision) break;
-                            }
+                
+                // Check petiole objects for collision
+                for (uint petiole = 0; petiole < phytomer->petiole_objIDs.size(); petiole++) {
+                    for (uint segment = 0; segment < phytomer->petiole_objIDs.at(petiole).size(); segment++) {
+                        uint petiole_objID = phytomer->petiole_objIDs.at(petiole).at(segment);
+                        if (collision_set.count(petiole_objID)) {
+                            phytomer->removeLeaf();
+                            break; // removeLeaf() removes petiole and all leaflets
                         }
                     }
                 }
-
-                if (leaf_collision) {
-                    // Add leaf and petiole objects to deferred deletion instead of calling removeLeaf()
-                    // which would delete immediately
-                    std::vector<uint> flat_leaf_objIDs = flatten(phytomer->leaf_objIDs);
-                    objects_to_delete.insert(objects_to_delete.end(), flat_leaf_objIDs.begin(), flat_leaf_objIDs.end());
-                    
-                    if (phytomer->build_context_geometry_petiole) {
-                        std::vector<uint> flat_petiole_objIDs = flatten(phytomer->petiole_objIDs);
-                        objects_to_delete.insert(objects_to_delete.end(), flat_petiole_objIDs.begin(), flat_petiole_objIDs.end());
-                    }
-                    
-                    // Clear the phytomer data structures like removeLeaf() does (but without immediate deletion)
-                    phytomer->petiole_radii.resize(0);
-                    phytomer->petiole_colors.resize(0);
-                    phytomer->petiole_length.resize(0);
-                    phytomer->leaf_size_max.resize(0);
-                    phytomer->leaf_rotation.resize(0);
-                    phytomer->leaf_bases.resize(0);
-                    phytomer->leaf_objIDs.clear();
-                    phytomer->leaf_bases.clear();
-                    if (phytomer->build_context_geometry_petiole) {
-                        phytomer->petiole_objIDs.resize(0);
-                    }
-                    
-                    total_pruned_objects++;
-                }
-
-                // Check inflorescence collision (fruits/flowers)
+                
+                // Check inflorescence for collision
                 for (auto &petiole: phytomer->floral_buds) {
                     for (auto &fbud: petiole) {
-                        // Check peduncle collision first
-                        bool peduncle_collision = false;
-                        for (uint objID : fbud.peduncle_objIDs) {
-                            if (context_ptr->doesObjectExist(objID)) {
-                                std::vector<uint> peduncle_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
-                                for (uint primitive : peduncle_primitives) {
-                                    if (intersecting_set.find(primitive) != intersecting_set.end()) {
-                                        peduncle_collision = true;
-                                        break;
-                                    }
-                                }
-                                if (peduncle_collision) break;
+                        // Check inflorescence objects
+                        for (int p = fbud.inflorescence_objIDs.size() - 1; p >= 0; p--) {
+                            uint objID = fbud.inflorescence_objIDs.at(p);
+                            if (collision_set.count(objID)) {
+                                context_ptr->deleteObject(objID);
+                                fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
+                                fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
                             }
                         }
-                        
-                        if (peduncle_collision) {
-                            // Peduncle collision - add all associated objects to deletion list
-                            objects_to_delete.insert(objects_to_delete.end(), fbud.peduncle_objIDs.begin(), fbud.peduncle_objIDs.end());
-                            objects_to_delete.insert(objects_to_delete.end(), fbud.inflorescence_objIDs.begin(), fbud.inflorescence_objIDs.end());
-                            fbud.peduncle_objIDs.clear();
-                            fbud.inflorescence_objIDs.clear();
-                            fbud.inflorescence_bases.clear();
-                            total_pruned_objects++;
-                        } else {
-                            // Check individual inflorescence objects - use backwards iteration like original code
-                            for (int p = fbud.inflorescence_objIDs.size() - 1; p >= 0; p--) {
-                                uint objID = fbud.inflorescence_objIDs.at(p);
-                                if (context_ptr->doesObjectExist(objID)) {
-                                    std::vector<uint> inflorescence_primitives = context_ptr->getObjectPrimitiveUUIDs(objID);
-                                    
-                                    bool obj_collision = false;
-                                    for (uint primitive : inflorescence_primitives) {
-                                        if (intersecting_set.find(primitive) != intersecting_set.end()) {
-                                            obj_collision = true;
-                                            break;
-                                        }
-                                    }
-                                    
-                                    if (obj_collision) {
-                                        objects_to_delete.push_back(objID);
-                                        fbud.inflorescence_objIDs.erase(fbud.inflorescence_objIDs.begin() + p);
-                                        fbud.inflorescence_bases.erase(fbud.inflorescence_bases.begin() + p);
-                                        total_pruned_objects++;
-                                    }
-                                }
+                        // Check peduncle objects
+                        for (int p = fbud.peduncle_objIDs.size() - 1; p >= 0; p--) {
+                            uint objID = fbud.peduncle_objIDs.at(p);
+                            if (collision_set.count(objID)) {
+                                // Delete all peduncle and inflorescence objects for this floral bud
+                                context_ptr->deleteObject(fbud.peduncle_objIDs);
+                                context_ptr->deleteObject(fbud.inflorescence_objIDs);
+                                fbud.peduncle_objIDs.clear();
+                                fbud.inflorescence_objIDs.clear();
+                                fbud.inflorescence_bases.clear();
+                                break;
                             }
                         }
                     }
                 }
             }
+            
+            if (shoot_was_deleted) {
+                break; // This shoot was pruned, no need to check more nodes
+            }
         }
     }
 
-    // Execute all deletions at once to minimize BVH rebuilds
-    if (!objects_to_delete.empty()) {
-        // Remove duplicates and invalid object IDs to prevent deletion errors
-        std::sort(objects_to_delete.begin(), objects_to_delete.end());
-        objects_to_delete.erase(std::unique(objects_to_delete.begin(), objects_to_delete.end()), objects_to_delete.end());
-        
-        // Filter out objects that don't exist
-        std::vector<uint> valid_objects;
-        for (uint objID : objects_to_delete) {
-            if (context_ptr->doesObjectExist(objID)) {
-                valid_objects.push_back(objID);
-            }
-        }
-        
-        if (!valid_objects.empty()) {
-            context_ptr->deleteObject(valid_objects);
-        }
-    }
-    
-    if (printmessages && total_pruned_objects > 0) {
-        std::cout << "Pruned " << total_pruned_objects << " plant objects due to solid boundary collisions." << std::endl;
+    if (printmessages) {
+        std::cout << "Solid boundary collision pruning completed" << std::endl;
     }
 }
 
@@ -5172,7 +5253,7 @@ void PlantArchitecture::optionalOutputObjectData(const std::vector<std::string> 
     }
 }
 
-void PlantArchitecture::enableSoftCollisionAvoidance(const std::vector<uint> &target_object_UUIDs, const std::vector<uint> &target_object_IDs) {
+void PlantArchitecture::enableSoftCollisionAvoidance(const std::vector<uint> &target_object_UUIDs, const std::vector<uint> &target_object_IDs, bool enable_petiole_collision, bool enable_fruit_collision) {
     // Clean up any existing collision detection instance
     if (collision_detection_ptr != nullptr && owns_collision_detection) {
         delete collision_detection_ptr;
@@ -5188,6 +5269,10 @@ void PlantArchitecture::enableSoftCollisionAvoidance(const std::vector<uint> &ta
         collision_detection_enabled = true;
         collision_target_UUIDs = target_object_UUIDs;
         collision_target_object_IDs = target_object_IDs;
+
+        // Set organ-specific collision detection flags
+        petiole_collision_detection_enabled = enable_petiole_collision;
+        fruit_collision_detection_enabled = enable_fruit_collision;
 
         // Disable automatic BVH rebuilds - PlantArchitecture will control rebuilds manually
         collision_detection_ptr->disableAutomaticBVHRebuilds();
@@ -5294,27 +5379,33 @@ void PlantArchitecture::setCollisionRelevantOrgans(bool include_internodes, bool
     }
 }
 
-void PlantArchitecture::enablePetioleCollisionDetection() {
-    petiole_collision_detection_enabled = true;
-}
 
-void PlantArchitecture::disablePetioleCollisionDetection() {
-    petiole_collision_detection_enabled = false;
-}
-
-void PlantArchitecture::enableFruitCollisionDetection() {
-    fruit_collision_detection_enabled = true;
-}
-
-void PlantArchitecture::disableFruitCollisionDetection() {
-    fruit_collision_detection_enabled = false;
-}
-
-void PlantArchitecture::enableSolidObstacleAvoidance(const std::vector<uint> &obstacle_UUIDs, float avoidance_distance, bool enable_fruit_adjustment) {
+void PlantArchitecture::enableSolidObstacleAvoidance(const std::vector<uint> &obstacle_UUIDs, float avoidance_distance, bool enable_fruit_adjustment, bool enable_obstacle_pruning) {
     solid_obstacle_avoidance_enabled = true;
     solid_obstacle_UUIDs = obstacle_UUIDs;
     solid_obstacle_avoidance_distance = avoidance_distance;
     solid_obstacle_fruit_adjustment_enabled = enable_fruit_adjustment;
+    solid_obstacle_pruning_enabled = enable_obstacle_pruning;
+
+    // Create CollisionDetection instance if needed for solid obstacle avoidance
+    if (collision_detection_ptr == nullptr) {
+        try {
+            collision_detection_ptr = new CollisionDetection(context_ptr);
+            collision_detection_ptr->enableMessages(); // Enable debug output for debugging
+            owns_collision_detection = true;
+            collision_detection_enabled = true;
+            
+            // Disable automatic BVH rebuilds - PlantArchitecture will control rebuilds manually
+            collision_detection_ptr->disableAutomaticBVHRebuilds();
+            // Enable per-tree BVH for linear scaling with multiple trees
+            collision_detection_ptr->enableTreeBasedBVH(collision_cone_height); // Use collision cone height as isolation distance
+            
+            // Build initial BVH cache to prevent warnings during early collision detection calls
+            rebuildBVHForTimestep();
+        } catch (std::exception &e) {
+            helios_runtime_error("ERROR (PlantArchitecture::enableSolidObstacleAvoidance): Failed to create CollisionDetection instance: " + std::string(e.what()));
+        }
+    }
 
     // Update CollisionDetection static obstacles if per-tree BVH is enabled
     if (collision_detection_enabled && collision_detection_ptr != nullptr && collision_detection_ptr->isTreeBasedBVHEnabled()) {
@@ -5480,34 +5571,36 @@ void PlantArchitecture::enableAttractionPoints(const std::vector<helios::vec3> &
     if (attraction_weight_input < 0.0f || attraction_weight_input > 1.0f) {
         helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): attraction_weight must be between 0.0 and 1.0.");
     }
-    if (attraction_points_input.empty()) {
-        helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): attraction_points cannot be empty.");
-    }
 
-    // Ensure collision detection is available for attraction points functionality
-    if (collision_detection_ptr == nullptr) {
-        helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): Collision detection must be enabled before using attraction points.");
-    }
-
+    // Set global attraction points for backward compatibility
     attraction_points_enabled = true;
     attraction_points = attraction_points_input;
     attraction_cone_half_angle_rad = deg2rad(view_half_angle_deg);
     attraction_cone_height = look_ahead_distance;
     attraction_weight = attraction_weight_input;
 
-    if (printmessages) {
-        std::cout << "Enabled attraction points with " << attraction_points.size() << " target positions" << std::endl;
-        std::cout << "Attraction parameters: cone_angle=" << view_half_angle_deg << "°, look_ahead=" << look_ahead_distance << "m, weight=" << attraction_weight_input << std::endl;
+    // Also apply to all existing plants for backward compatibility
+    for (auto &[plantID, plant] : plant_instances) {
+        plant.attraction_points_enabled = true;
+        plant.attraction_points = attraction_points_input;
+        plant.attraction_cone_half_angle_rad = deg2rad(view_half_angle_deg);
+        plant.attraction_cone_height = look_ahead_distance;
+        plant.attraction_weight = attraction_weight_input;
     }
+
 }
 
 void PlantArchitecture::disableAttractionPoints() {
+    // Disable global attraction points for backward compatibility
     attraction_points_enabled = false;
     attraction_points.clear();
 
-    if (printmessages) {
-        std::cout << "Disabled attraction points - plants will use natural growth patterns" << std::endl;
+    // Also disable for all existing plants for backward compatibility
+    for (auto &[plantID, plant] : plant_instances) {
+        plant.attraction_points_enabled = false;
+        plant.attraction_points.clear();
     }
+
 }
 
 void PlantArchitecture::updateAttractionPoints(const std::vector<helios::vec3> &attraction_points_input) {
@@ -5518,10 +5611,33 @@ void PlantArchitecture::updateAttractionPoints(const std::vector<helios::vec3> &
         helios_runtime_error("ERROR (PlantArchitecture::updateAttractionPoints): attraction_points cannot be empty.");
     }
 
+    // Update global attraction points for backward compatibility
     attraction_points = attraction_points_input;
 
-    if (printmessages) {
-        std::cout << "Updated attraction points with " << attraction_points.size() << " target positions" << std::endl;
+    // Also update for all existing plants for backward compatibility
+    for (auto &[plantID, plant] : plant_instances) {
+        if (plant.attraction_points_enabled) {
+            plant.attraction_points = attraction_points_input;
+        }
+    }
+}
+
+void PlantArchitecture::appendAttractionPoints(const std::vector<helios::vec3> &attraction_points_input) {
+    if (!attraction_points_enabled) {
+        helios_runtime_error("ERROR (PlantArchitecture::appendAttractionPoints): Attraction points must be enabled before updating positions.");
+    }
+    if (attraction_points_input.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::appendAttractionPoints): attraction_points cannot be empty.");
+    }
+
+    // Append to global attraction points for backward compatibility
+    attraction_points.insert(attraction_points.end(), attraction_points_input.begin(), attraction_points_input.end());
+
+    // Also append for all existing plants for backward compatibility
+    for (auto &[plantID, plant] : plant_instances) {
+        if (plant.attraction_points_enabled) {
+            plant.attraction_points.insert(plant.attraction_points.end(), attraction_points_input.begin(), attraction_points_input.end());
+        }
     }
 }
 
@@ -5539,20 +5655,173 @@ void PlantArchitecture::setAttractionParameters(float view_half_angle_deg, float
         helios_runtime_error("ERROR (PlantArchitecture::setAttractionParameters): obstacle_reduction_factor must be between 0.0 and 1.0.");
     }
 
+    // Update global attraction parameters for backward compatibility
     attraction_cone_half_angle_rad = deg2rad(view_half_angle_deg);
     attraction_cone_height = look_ahead_distance;
     attraction_weight = attraction_weight_input;
     attraction_obstacle_reduction_factor = obstacle_reduction_factor;
 
+    // Also update for all existing plants for backward compatibility
+    for (auto &[plantID, plant] : plant_instances) {
+        if (plant.attraction_points_enabled) {
+            plant.attraction_cone_half_angle_rad = deg2rad(view_half_angle_deg);
+            plant.attraction_cone_height = look_ahead_distance;
+            plant.attraction_weight = attraction_weight_input;
+            plant.attraction_obstacle_reduction_factor = obstacle_reduction_factor;
+        }
+    }
+
     if (printmessages) {
         std::cout << "Updated attraction parameters: cone_angle=" << view_half_angle_deg << "°, look_ahead=" << look_ahead_distance << "m, weight=" << attraction_weight_input << ", obstacle_reduction=" << obstacle_reduction_factor << std::endl;
+        if (!plant_instances.empty()) {
+            std::cout << "Applied to " << plant_instances.size() << " existing plants with attraction points enabled" << std::endl;
+        }
+    }
+}
+
+// Plant-specific attraction point methods
+
+void PlantArchitecture::enableAttractionPoints(uint plantID, const std::vector<helios::vec3> &attraction_points_input, float view_half_angle_deg, float look_ahead_distance, float attraction_weight_input) {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): Plant with ID " + std::to_string(plantID) + " does not exist.");
+    }
+    
+    if (view_half_angle_deg <= 0.0f || view_half_angle_deg > 180.f) {
+        helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): view_half_angle_deg must be between 0 and 180 degrees.");
+    }
+    if (look_ahead_distance <= 0.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): look_ahead_distance must be greater than 0.");
+    }
+    if (attraction_points_input.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::enableAttractionPoints): attraction_points cannot be empty.");
+    }
+
+    auto &plant = plant_instances.at(plantID);
+    plant.attraction_points_enabled = true;
+    plant.attraction_points = attraction_points_input;
+    plant.attraction_cone_half_angle_rad = deg2rad(view_half_angle_deg);
+    plant.attraction_cone_height = look_ahead_distance;
+    plant.attraction_weight = attraction_weight_input;
+
+    if (printmessages) {
+        std::cout << "Enabled attraction points for plant " << plantID << " with " << attraction_points_input.size() << " target positions" << std::endl;
+        std::cout << "Plant " << plantID << " attraction parameters: cone_angle=" << view_half_angle_deg << "°, look_ahead=" << look_ahead_distance << "m, weight=" << attraction_weight_input << std::endl;
+    }
+}
+
+void PlantArchitecture::disableAttractionPoints(uint plantID) {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::disableAttractionPoints): Plant with ID " + std::to_string(plantID) + " does not exist.");
+    }
+
+    auto &plant = plant_instances.at(plantID);
+    plant.attraction_points_enabled = false;
+    plant.attraction_points.clear();
+
+    if (printmessages) {
+        std::cout << "Disabled attraction points for plant " << plantID << " - will use natural growth patterns" << std::endl;
+    }
+}
+
+void PlantArchitecture::updateAttractionPoints(uint plantID, const std::vector<helios::vec3> &attraction_points_input) {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::updateAttractionPoints): Plant with ID " + std::to_string(plantID) + " does not exist.");
+    }
+    
+    auto &plant = plant_instances.at(plantID);
+    if (!plant.attraction_points_enabled) {
+        helios_runtime_error("ERROR (PlantArchitecture::updateAttractionPoints): Attraction points must be enabled for plant " + std::to_string(plantID) + " before updating positions.");
+    }
+    if (attraction_points_input.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::updateAttractionPoints): attraction_points cannot be empty.");
+    }
+
+    plant.attraction_points = attraction_points_input;
+}
+
+void PlantArchitecture::appendAttractionPoints(uint plantID, const std::vector<helios::vec3> &attraction_points_input) {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::appendAttractionPoints): Plant with ID " + std::to_string(plantID) + " does not exist.");
+    }
+    
+    auto &plant = plant_instances.at(plantID);
+    if (!plant.attraction_points_enabled) {
+        helios_runtime_error("ERROR (PlantArchitecture::appendAttractionPoints): Attraction points must be enabled for plant " + std::to_string(plantID) + " before updating positions.");
+    }
+    if (attraction_points_input.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::appendAttractionPoints): attraction_points cannot be empty.");
+    }
+
+    plant.attraction_points.insert(plant.attraction_points.end(), attraction_points_input.begin(), attraction_points_input.end());
+}
+
+void PlantArchitecture::setAttractionParameters(uint plantID, float view_half_angle_deg, float look_ahead_distance, float attraction_weight_input, float obstacle_reduction_factor) {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::setAttractionParameters): Plant with ID " + std::to_string(plantID) + " does not exist.");
+    }
+    
+    if (view_half_angle_deg <= 0.0f || view_half_angle_deg > 180.f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setAttractionParameters): view_half_angle_deg must be between 0 and 180 degrees.");
+    }
+    if (look_ahead_distance <= 0.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setAttractionParameters): look_ahead_distance must be greater than 0.");
+    }
+    if (obstacle_reduction_factor < 0.0f || obstacle_reduction_factor > 1.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setAttractionParameters): obstacle_reduction_factor must be between 0 and 1.");
+    }
+
+    auto &plant = plant_instances.at(plantID);
+    plant.attraction_cone_half_angle_rad = deg2rad(view_half_angle_deg);
+    plant.attraction_cone_height = look_ahead_distance;
+    plant.attraction_weight = attraction_weight_input;
+    plant.attraction_obstacle_reduction_factor = obstacle_reduction_factor;
+
+    if (printmessages) {
+        std::cout << "Updated attraction parameters for plant " << plantID << ": cone_angle=" << view_half_angle_deg << "°, look_ahead=" << look_ahead_distance << "m, weight=" << attraction_weight_input << ", obstacle_reduction=" << obstacle_reduction_factor << std::endl;
+    }
+}
+
+void PlantArchitecture::setPlantAttractionPoints(uint plantID, const std::vector<helios::vec3> &attraction_points_input, float view_half_angle_deg, float look_ahead_distance, float attraction_weight_input, float obstacle_reduction_factor) {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPlantAttractionPoints): Plant with ID " + std::to_string(plantID) + " does not exist.");
+    }
+    
+    if (view_half_angle_deg <= 0.0f || view_half_angle_deg > 180.f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPlantAttractionPoints): view_half_angle_deg must be between 0 and 180 degrees.");
+    }
+    if (look_ahead_distance <= 0.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPlantAttractionPoints): look_ahead_distance must be greater than 0.");
+    }
+    if (attraction_points_input.empty()) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPlantAttractionPoints): attraction_points cannot be empty.");
+    }
+    if (obstacle_reduction_factor < 0.0f || obstacle_reduction_factor > 1.0f) {
+        helios_runtime_error("ERROR (PlantArchitecture::setPlantAttractionPoints): obstacle_reduction_factor must be between 0 and 1.");
+    }
+
+    auto &plant = plant_instances.at(plantID);
+    plant.attraction_points_enabled = true;
+    plant.attraction_points = attraction_points_input;
+    plant.attraction_cone_half_angle_rad = deg2rad(view_half_angle_deg);
+    plant.attraction_cone_height = look_ahead_distance;
+    plant.attraction_weight = attraction_weight_input;
+    plant.attraction_obstacle_reduction_factor = obstacle_reduction_factor;
+
+    if (printmessages) {
+        std::cout << "Set attraction points for plant " << plantID << " with " << attraction_points_input.size() << " target positions (internal library call)" << std::endl;
     }
 }
 
 void PlantArchitecture::disableMessages() {
     printmessages = false;
+    if (collision_detection_ptr != nullptr) {
+        collision_detection_ptr->disableMessages();
+    }
 }
 
 void PlantArchitecture::enableMessages() {
     printmessages = true;
+    if (collision_detection_ptr != nullptr) {
+        collision_detection_ptr->enableMessages();
+    }
 }

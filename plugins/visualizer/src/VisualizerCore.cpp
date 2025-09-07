@@ -53,11 +53,9 @@ int write_JPEG_file(const char *filename, uint width, uint height, bool print_me
     std::vector<GLubyte> screen_shot_trans;
     screen_shot_trans.resize(bsize);
 
-#if defined(__APPLE__)
+    // Read from front buffer since we may be in headless mode or have complex timing
+    // The front buffer should contain the most recent rendered content
     constexpr GLenum read_buf = GL_FRONT;
-#else
-    constexpr GLenum read_buf = GL_BACK;
-#endif
     glReadBuffer(read_buf);
     glReadPixels(0, 0, scast<GLsizei>(width), scast<GLsizei>(height), GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
     glFinish();

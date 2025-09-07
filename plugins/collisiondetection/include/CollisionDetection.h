@@ -299,24 +299,27 @@ public:
     /**
      * \brief Find all primitives/objects that collide with a given primitive
      * \param[in] UUID Unique identifier of the query primitive
+     * \param[in] allow_spatial_culling If true, use tree-based BVH spatial culling for efficiency (default: true)
      * \return Vector of UUIDs that intersect with the query primitive
      */
-    std::vector<uint> findCollisions(uint UUID);
+    std::vector<uint> findCollisions(uint UUID, bool allow_spatial_culling = true);
 
     /**
      * \brief Find all primitives/objects that collide with any of the given primitives
      * \param[in] UUIDs Vector of query primitive UUIDs
+     * \param[in] allow_spatial_culling If true, use tree-based BVH spatial culling for efficiency (default: true)
      * \return Vector of UUIDs that intersect with any of the query primitives
      */
-    std::vector<uint> findCollisions(const std::vector<uint> &UUIDs);
+    std::vector<uint> findCollisions(const std::vector<uint> &UUIDs, bool allow_spatial_culling = true);
 
     /**
      * \brief Find collisions between primitives and compound objects
      * \param[in] primitive_UUIDs Vector of primitive UUIDs to test
      * \param[in] object_IDs Vector of compound object IDs to test against
+     * \param[in] allow_spatial_culling If true, use tree-based BVH spatial culling for efficiency (default: true)
      * \return Vector of UUIDs that intersect
      */
-    std::vector<uint> findCollisions(const std::vector<uint> &primitive_UUIDs, const std::vector<uint> &object_IDs);
+    std::vector<uint> findCollisions(const std::vector<uint> &primitive_UUIDs, const std::vector<uint> &object_IDs, bool allow_spatial_culling = true);
 
     /**
      * \brief Find collisions restricting both query and target geometry
@@ -324,9 +327,10 @@ public:
      * \param[in] query_object_IDs Vector of object IDs to test for collisions
      * \param[in] target_UUIDs Vector of primitive UUIDs to test against (empty = all primitives)
      * \param[in] target_object_IDs Vector of object IDs to test against (empty = all objects)
+     * \param[in] allow_spatial_culling If true, use tree-based BVH spatial culling for efficiency (default: true)
      * \return Vector of UUIDs from the target set that intersect with any query primitive
      */
-    std::vector<uint> findCollisions(const std::vector<uint> &query_UUIDs, const std::vector<uint> &query_object_IDs, const std::vector<uint> &target_UUIDs, const std::vector<uint> &target_object_IDs);
+    std::vector<uint> findCollisions(const std::vector<uint> &query_UUIDs, const std::vector<uint> &query_object_IDs, const std::vector<uint> &target_UUIDs, const std::vector<uint> &target_object_IDs, bool allow_spatial_culling = true);
 
     // -------- GENERIC RAY-TRACING INTERFACE --------
 
@@ -649,21 +653,6 @@ public:
      */
     bool findNearestSolidObstacleInCone(const helios::vec3 &apex, const helios::vec3 &axis, float half_angle, float height, const std::vector<uint> &candidate_UUIDs, const std::vector<uint> &plant_primitives, float &distance, helios::vec3 &obstacle_direction, int num_rays = 64);
 
-    /**
-     * \brief Detect attraction points within a perception cone and find optimal direction
-     * \param[in] vertex Vertex location of the perception cone 
-     * \param[in] look_direction Central axis direction of the perception cone (normalized)
-     * \param[in] look_ahead_distance Maximum distance to search for attraction points (cone height)
-     * \param[in] half_angle_degrees Half-angle of perception cone in degrees
-     * \param[in] attraction_points Vector of attraction point positions to evaluate
-     * \param[out] direction_to_closest Unit direction vector from vertex to closest attraction point (only valid if return is true)
-     * \return True if one or more attraction points are found within the cone, false otherwise
-     * 
-     * This method determines all attraction points that lie within a perception cone and returns
-     * the direction to the attraction point that is closest to the cone's centerline axis. The
-     * closeness is measured by angular distance from the centerline.
-     */
-    bool detectAttractionPoints(const helios::vec3 &vertex, const helios::vec3 &look_direction, float look_ahead_distance, float half_angle_degrees, const std::vector<helios::vec3> &attraction_points, helios::vec3 &direction_to_closest);
 
     // -------- BVH MANAGEMENT --------
 

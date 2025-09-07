@@ -18,9 +18,6 @@ using namespace std;
 using namespace helios;
 
 LeafOptics::LeafOptics(helios::Context *a_context) {
-    if (message_flag) {
-        std::cout << "Initializing LeafOptics model..." << std::flush;
-    }
 
     context = a_context; // just copying the pointer to the context
 
@@ -152,10 +149,6 @@ LeafOptics::LeafOptics(helios::Context *a_context) {
 
     LeafOptics::surface(90.0, R_spec_diffuse);
     // 0..90° degrees range from the vertical = diffuse incidence on a perfectly smooth leaf
-
-    if (message_flag) {
-        std::cout << "done." << std::endl;
-    }
 }
 
 void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties &leafproperties, const std::string &label) {

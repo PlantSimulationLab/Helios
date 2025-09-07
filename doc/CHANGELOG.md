@@ -1,5 +1,36 @@
 # Changelog
 
+# [1.3.48] 2025-09-07
+
+- Split tutorials into separate files for better organization
+
+## Context
+- Added OpenMP parallelization to `Context::loadOBJ()` for faster processing of large models
+- Added comprehensive bounds checking for face and texture indices with detailed error messages
+- Better handling of missing texture files and UV coordinate validation
+- Corrected vertex scaling to apply individual scale factors per axis instead of uniform scaling
+- Skip triangles with area below threshold to avoid rendering issues
+- Enhanced `Context::writeOBJ()` with optional `silent` parameter to suppress output messages
+- Improved path resolution hierarchy: checks current working directory first, then HELIOS_BUILD environment variable path
+- Enhanced `resolveFilePath()` function with better error messages showing all checked paths
+
+## Plant Architecture
+- Many updates to the collision detection integration
+- Moved attraction points code from collision detection plug-in to plant architecture plug-in, as it doesn't use any of the collision detection functionality like BVH's
+
+## Collision Detection
+- Code cleanup and optimization with removal of deprecated functionality
+- Streamlined API and improved documentation organization
+- Enhanced test suite maintenance and cleanup
+
+## Visualizer
+- Minor fixes and improvements to core rendering functionality
+- The issue with `Visualizer::printWindow()` outputting black images has seemed to persist. A more robust fix has been implemented that should hopefully resolve this issue once and for all.
+
+## Weber-Penn Tree
+- Updated error handling to use modern `helios_runtime_error`.
+- Added `WeberPennTree::disableMessages` and `WeberPennTree::enableMessages()`
+
 # [1.3.47] 2025-09-02
 
 - Enhanced `dependencies.sh` script with comprehensive OpenMP support

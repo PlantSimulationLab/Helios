@@ -295,7 +295,11 @@ TEST_CASE("Visualizer::addPoint with different sizes") {
     size_t point1 = visualizer.addPoint(make_vec3(0, 0, 0), RGB::red, 1.0f, Visualizer::COORDINATES_CARTESIAN);
     size_t point2 = visualizer.addPoint(make_vec3(1, 0, 0), RGB::green, 2.5f, Visualizer::COORDINATES_CARTESIAN);
     size_t point3 = visualizer.addPoint(make_vec3(2, 0, 0), RGB::blue, 5.0f, Visualizer::COORDINATES_CARTESIAN);
+    
+    // Test point with size outside supported range (should trigger warning)
+    capture_cerr cerr_buffer;
     size_t point4 = visualizer.addPoint(make_vec3(3, 0, 0), RGB::yellow, 0.5f, Visualizer::COORDINATES_CARTESIAN);
+    DOCTEST_CHECK(cerr_buffer.has_output()); // Should capture warning about point size clamping
 
     // Verify unique UUIDs were returned
     DOCTEST_CHECK(point1 != 0);
@@ -342,15 +346,23 @@ TEST_CASE("Visualizer::point culling metrics functionality") {
 TEST_CASE("Visualizer::point size edge cases") {
     Visualizer visualizer(800, 600, true); // Headless mode
 
-    // Test with very small and large point sizes (should not crash in headless mode)
+    // Test with very small point size (should trigger warning and not crash in headless mode)
+    capture_cerr cerr_buffer1;
     size_t point1 = visualizer.addPoint(make_vec3(0, 0, 0), RGB::white, 0.001f, Visualizer::COORDINATES_CARTESIAN);
     DOCTEST_CHECK(point1 != 0);
+    DOCTEST_CHECK(cerr_buffer1.has_output()); // Should capture warning about point size clamping
 
+    // Test with very large point size (should trigger warning and not crash in headless mode)
+    capture_cerr cerr_buffer2;
     size_t point2 = visualizer.addPoint(make_vec3(1, 0, 0), RGB::white, 1000.0f, Visualizer::COORDINATES_CARTESIAN);
     DOCTEST_CHECK(point2 != 0);
+    DOCTEST_CHECK(cerr_buffer2.has_output()); // Should capture warning about point size clamping
 
+    // Test with valid point size (should not trigger warning)
+    capture_cerr cerr_buffer3;
     size_t point3 = visualizer.addPoint(make_vec3(2, 0, 0), RGB::white, 2.0f, Visualizer::COORDINATES_CARTESIAN);
     DOCTEST_CHECK(point3 != 0);
+    DOCTEST_CHECK(!cerr_buffer3.has_output()); // Should not capture any warning
 
     // Verify UUIDs are unique
     DOCTEST_CHECK(point1 != point2);
