@@ -54,9 +54,55 @@ if(NOT HAVE_FSEEKO)
 endif()
 
 #
-# Check for unistd.h
+# Check for unistd.h and stdarg.h
 #
 check_include_file(unistd.h Z_HAVE_UNISTD_H)
+check_include_file(stdarg.h HAVE_STDARG_H)
+
+# Comprehensive zlib compatibility fixes for manylinux and older containers
+# Critical: Force STDC definition BEFORE configure_file() to ensure proper z_size_t typedef
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    message(STATUS "Applying Linux-specific zlib compatibility fixes")
+
+    # CRITICAL: Set STDC in CMAKE_REQUIRED_DEFINITIONS for configure time
+    set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS} -DSTDC=1)
+
+    # Force STDC definition for compile time as well
+    add_definitions(-DSTDC=1)
+
+    # Force __STDC__ definition as backup (some compilers check this instead)
+    add_definitions(-D__STDC__=1)
+
+    # Ensure stdarg.h definitions are available
+    if(HAVE_STDARG_H)
+        add_definitions(-DHAVE_STDARG_H)
+    endif()
+
+    # Additional compatibility definitions
+    add_definitions(-D_GNU_SOURCE)
+
+    # Check if we're in a manylinux container and apply additional fixes
+    if(DEFINED ENV{CIBUILDWHEEL})
+        message(STATUS "Detected manylinux container - applying enhanced zlib compatibility fixes")
+
+        # Force size_t availability by including stddef.h
+        add_definitions(-DHAVE_STDDEF_H=1)
+
+        # Ensure proper include paths for system headers
+        include_directories(/usr/include)
+
+        # Additional manylinux-specific compiler flags
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
+
+        # CRITICAL: Direct workaround for z_size_t definition issues in manylinux2014
+        # The conditional logic in zconf.h isn't working correctly with older CentOS 7 headers
+        # So we bypass it entirely by directly defining z_size_t as size_t
+        add_definitions(-Dz_size_t=size_t)
+        message(STATUS "Applied direct z_size_t=size_t workaround for manylinux compatibility")
+    endif()
+
+    message(STATUS "Linux zlib compatibility: STDC=1, __STDC__=1, HAVE_STDDEF_H=1")
+endif()
 
 if(MSVC)
     #set(CMAKE_DEBUG_POSTFIX "d") //BNB 6/9/2024

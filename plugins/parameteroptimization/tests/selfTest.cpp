@@ -97,8 +97,8 @@ DOCTEST_TEST_CASE("ParameterOptimization model parameter search") {
     ParameterOptimization popt;
     ParametersToOptimize params = {{"Em_BMF", {10, 0, 100}}, {"i0_BMF", {10, 0, 1000}}, {"k_BMF", {1e5, 0, 20000}}, {"b_BMF", {0.5, 0, 100}}};
     OptimizationSettings settings;
-    settings.population_size = 100;
-    settings.generations = 100;
+    settings.population_size = 200;
+    settings.generations = 125;
     settings.crossover_rate = 0.5;
     settings.mutation_rate = 0.1;
 

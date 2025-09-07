@@ -120,11 +120,11 @@ CollisionDetection::~CollisionDetection() {
 #endif
 }
 
-std::vector<uint> CollisionDetection::findCollisions(uint UUID) {
-    return findCollisions(std::vector<uint>{UUID});
+std::vector<uint> CollisionDetection::findCollisions(uint UUID, bool allow_spatial_culling) {
+    return findCollisions(std::vector<uint>{UUID}, allow_spatial_culling);
 }
 
-std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &UUIDs) {
+std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &UUIDs, bool allow_spatial_culling) {
 
     if (UUIDs.empty()) {
         if (printmessages) {
@@ -186,7 +186,7 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &UU
     return all_collisions;
 }
 
-std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &primitive_UUIDs, const std::vector<uint> &object_IDs) {
+std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &primitive_UUIDs, const std::vector<uint> &object_IDs, bool allow_spatial_culling) {
 
     if (primitive_UUIDs.empty() && object_IDs.empty()) {
         if (printmessages) {
@@ -207,10 +207,10 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &pr
         all_test_UUIDs.insert(all_test_UUIDs.end(), object_UUIDs.begin(), object_UUIDs.end());
     }
 
-    return findCollisions(all_test_UUIDs);
+    return findCollisions(all_test_UUIDs, allow_spatial_culling);
 }
 
-std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &query_UUIDs, const std::vector<uint> &query_object_IDs, const std::vector<uint> &target_UUIDs, const std::vector<uint> &target_object_IDs) {
+std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &query_UUIDs, const std::vector<uint> &query_object_IDs, const std::vector<uint> &target_UUIDs, const std::vector<uint> &target_object_IDs, bool allow_spatial_culling) {
 
     if (query_UUIDs.empty() && query_object_IDs.empty()) {
         if (printmessages) {
@@ -255,7 +255,7 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &qu
         }
 
         // OPTIMIZATION: Use per-tree BVH if enabled for better scaling
-        if (tree_based_bvh_enabled && !all_query_UUIDs.empty()) {
+        if (tree_based_bvh_enabled && allow_spatial_culling && !all_query_UUIDs.empty()) {
             // Get tree-relevant geometry instead of using all targets
             helios::vec3 query_center = helios::vec3(0, 0, 0);
             if (!all_query_UUIDs.empty()) {
@@ -270,9 +270,6 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &qu
             
             all_target_UUIDs = effective_targets;
 
-            if (printmessages && !effective_targets.empty()) {
-                std::cout << "Per-tree findCollisions: Using " << effective_targets.size() << " relevant targets instead of " << (target_UUIDs.size() + target_object_IDs.size()) << " total targets" << std::endl;
-            }
         }
 
         // Validate target UUIDs
@@ -1836,10 +1833,6 @@ void CollisionDetection::incrementalUpdateBVH(const std::set<uint> &added_geomet
     // For plant growth scenarios, most changes are additions (new leaves/branches)
     // We can optimize for this by caching primitive AABBs and selective reconstruction
 
-    if (printmessages) {
-        std::cout << "Performing optimized incremental update (" << added_geometry.size() << " added, " << removed_geometry.size() << " removed)" << std::endl;
-    }
-
     // Update primitive AABB cache for new primitives
     for (uint uuid: added_geometry) {
         updatePrimitiveAABBCache(uuid);
@@ -2565,83 +2558,6 @@ bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const 
     return false;
 }
 
-bool CollisionDetection::detectAttractionPoints(const vec3 &vertex, const vec3 &look_direction, float look_ahead_distance, float half_angle_degrees, const std::vector<vec3> &attraction_points, vec3 &direction_to_closest) {
-
-    // Validate input parameters
-    if (attraction_points.empty()) {
-        return false;
-    }
-
-    if (look_ahead_distance <= 0.0f) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::detectAttractionPoints): Invalid look-ahead distance (<= 0)" << std::endl;
-        }
-        return false;
-    }
-
-    if (half_angle_degrees <= 0.0f || half_angle_degrees >= 180.0f) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::detectAttractionPoints): Invalid half-angle (must be in range (0, 180) degrees)" << std::endl;
-        }
-        return false;
-    }
-
-    // Convert half-angle to radians
-    float half_angle_rad = half_angle_degrees * M_PI / 180.0f;
-
-    // Normalize look direction
-    vec3 axis = look_direction;
-    axis.normalize();
-
-    // Variables to track the closest attraction point
-    bool found_any = false;
-    float min_angular_distance = std::numeric_limits<float>::max();
-    vec3 closest_point;
-
-    // Check each attraction point
-    for (const vec3 &point: attraction_points) {
-        // Calculate vector from vertex to attraction point
-        vec3 to_point = point - vertex;
-        float distance_to_point = to_point.magnitude();
-
-        // Skip if point is at the vertex or beyond look-ahead distance
-        if (distance_to_point < 1e-6f || distance_to_point > look_ahead_distance) {
-            continue;
-        }
-
-        // Normalize the direction to the point
-        vec3 direction_to_point = to_point;
-        direction_to_point.normalize();
-
-        // Calculate angle between look direction and direction to point
-        float cos_angle = axis * direction_to_point;
-
-        // Clamp to handle numerical precision issues
-        cos_angle = std::max(-1.0f, std::min(1.0f, cos_angle));
-
-        float angle = std::acos(cos_angle);
-
-        // Check if point is within the perception cone
-        if (angle <= half_angle_rad) {
-            found_any = true;
-
-            // Check if this is the closest to the centerline
-            if (angle < min_angular_distance) {
-                min_angular_distance = angle;
-                closest_point = point;
-            }
-        }
-    }
-
-    // If we found any attraction points, calculate the direction to the closest one
-    if (found_any) {
-        direction_to_closest = closest_point - vertex;
-        direction_to_closest.normalize();
-        return true;
-    }
-
-    return false;
-}
 
 std::vector<helios::vec3> CollisionDetection::sampleDirectionsInCone(const vec3 &apex, const vec3 &central_axis, float half_angle, int num_samples) {
 

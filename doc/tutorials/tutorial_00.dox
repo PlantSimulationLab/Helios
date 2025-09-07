@@ -1,0 +1,103 @@
+/*! \page context_selftest_tutorial Tutorial 0: Context Self-Test Tutorial
+
+This tutorial illustrates a very simple example of how to declare the Helios context, and run its self-test function.  The self-test function runs through a series of sanity checks to verify that the core system is working properly.  This tutorial will illustrate how to:
+
+1. Write a simple program that uses the Helios API.
+    - Declare and instance of the Helios context class.
+    - Run the context self-test function.
+2. Build and compile the core Helios library.
+
+\section program_1 C++ Program
+
+We will first write a basic C++ program that uses types included as part of the Helios library. The program is written in the same way any C++ program, and contains a <a href="http://en.cppreference.com/w/cpp/language/main_function">main function</a>.  Helios simply provides a group of data types and functions that manages model geometry and data.  These types and functions are defined in the header file "Context.h", which must be included in any files that use Helios constructs.
+
+  ```
+  #include "Context.h"
+
+  int main(){
+
+    //Write program here
+
+  }
+  ```
+
+The above program does not actually perform any calculations.  Next, we will declare and instance of the Helios context, which is a C++ <a href="http://en.cppreference.com/w/cpp/language/class">class</a> that contains a number of functions and data structures.  We will declare an instance of the class, which we will give the arbitrary name of "context".
+
+Next, we will call the function within the Context class called \ref helios::Context::selfTest() "selfTest()", which performs a number of basic tests to ensure that the context is working properly.
+
+ ```
+  #include "Context.h"
+
+  int main(){
+
+     //Declare and initialize the Helios context
+     helios::Context context;
+
+     //Run the self-test
+     context.selfTest(); 
+
+  }
+  ```
+
+Note that the Context is within the "helios" <a href="http://en.cppreference.com/w/cpp/language/namespace">namespace</a>.  Alternatively, we could use the "using namespace helios" directive before our main function to avoid the need to explicitly specify the namespace for each name (i.e., "helios::" no longer needed).
+
+We will save this file as "main.cpp", which we will reference later when building/compiling.
+
+\section build_2 Building, Compiling, and Running
+
+Before building and compiling, please reference the \ref DependentSoftware "Install and Set-up" page to ensure you have installed all required dependent libraries.
+
+The files needed to build and compile this tutorial are located in the directory "samples/context_selftest".  There is a "CMakeLists.txt" file that contains the information needed to build the project.  There is also the file "main.cpp" which contains the source code for the program that we wrote previously, and there is a directory called "build" which will be used to hold the files and folders for the current build of the code.  Note, however, that the build directory could be placed anywhere and have any name.
+
+To build the project, change into the build directory.  Next, use the "cmake" command to build the code.  The argument to the cmake command should be an absolute or relative path to the directory that contains the CMakeLists.txt file for the build.  Given the directory structure used in this project, the CMakeLists.txt file is up one directory, so the relative path to this directory is "..".  The following commands should build the project, assuming you are starting from the base Helios directory:
+
+  ~~~~~~
+  cd samples/context_selftest/build
+  cmake ..
+  ~~~~~~
+
+If all goes well, the command should output many lines of information, the last of which is
+
+  ~~~~~~
+  -- Build files have been written to: /path/to/Helios/samples/context_selftest/build
+  ~~~~~~
+
+and there should be a file named "Makefile" now in the build directory.  Use this makefile to complile the code into an executable
+
+  ~~~~~~
+  make
+  ~~~~~~
+
+This should produce an executable file named "context_selftest" that can be run:
+
+  ~~~~~~
+  ./context_selftest
+  ~~~~~~
+
+which should produce the following output:
+
+  ~~~~~~
+  Running Context self-test...passed.
+  ~~~~~~
+
+So what determines the name of the executable file (i.e., why is it called "context_selftest")?  This was specified in the CMakeLists.txt file.  If you open up the CMakeLists.txt file, you will find several inputs on the first couple of lines:
+
+  ~~~~~~
+  #-------- USER INPUTS ---------#
+
+  #provide the path (relative or absolute) to Helios base directory
+  set( BASE_DIRECTORY "../.." )
+	
+  #define the name of the executable to be created
+  set( EXECUTABLE_NAME "context_selftest" )
+
+  #provide name of source file(s) (separate multiple file names with semicolon)
+  set( SOURCE_FILES "main.cpp" )
+
+  #specify which plug-ins to use (separate plug-in names with semicolon)
+  set( PLUGINS "" )
+  ~~~~~~
+
+Notice the line where we have set the name of the executable to "context_selftest", which we could change to any name.  Notice also just below where we specify the name of the source code file ("main.cpp").  It is important to note that the path to the source files is relative to the directory where the CMakeLists.txt file is located.
+
+*/

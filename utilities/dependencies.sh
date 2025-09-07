@@ -92,9 +92,7 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     echo -e "Installing $MODE dependencies for macOS host...\n"
     PACKAGE_MANAGER="brew"
     DEPENDENCIES_PATH+=("pybind11" "libomp")
-    if [[ "$MODE" == "all" || "$MODE" == "cuda" || "$MODE" == "vis" ]]; then
-        DEPENDENCIES_PATH+=("Caskroom" "cask")
-    fi
+    # Note: Caskroom and cask are built into modern Homebrew, no need to install separately
     if [[ "$MODE" == "all" || "$MODE" == "vis" ]]; then
         DEPENDENCIES_PATH+=("xquartz")
     fi

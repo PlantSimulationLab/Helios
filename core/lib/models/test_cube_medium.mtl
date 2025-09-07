@@ -1,0 +1,20 @@
+# Material file for cube test
+# Created for Helios OBJ loading tests
+
+newmtl red_material
+Ka 0.2 0.0 0.0
+Kd 1.0 0.0 0.0
+Ks 0.5 0.5 0.5
+Ns 50.0
+
+newmtl blue_material  
+Ka 0.0 0.0 0.2
+Kd 0.0 0.0 1.0
+Ks 0.5 0.5 0.5
+Ns 50.0
+
+newmtl green_material
+Ka 0.0 0.2 0.0
+Kd 0.0 1.0 0.0
+Ks 0.5 0.5 0.5
+Ns 50.0

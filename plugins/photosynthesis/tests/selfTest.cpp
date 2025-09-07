@@ -245,14 +245,16 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Vector Coefficients with Size Mismatch") 
     std::vector<FarquharModelCoefficients> coeffs_vector(2);
     std::vector<uint> UUIDs = {UUID1}; // Only one UUID, but 2 coefficients
 
-    // Disable messages to avoid warning output
-    photomodel.disableMessages();
+    // Capture the warning message from stderr
+    capture_cerr cerr_buffer;
     
     // This should print a warning and return without setting coefficients
     DOCTEST_CHECK_NOTHROW(photomodel.setModelCoefficients(coeffs_vector, UUIDs));
     
-    // Re-enable messages
-    photomodel.enableMessages();
+    // Verify we captured the expected warning message
+    std::string captured_warnings = cerr_buffer.get_captured_output();
+    DOCTEST_CHECK_MESSAGE(captured_warnings.find("number of model coefficients (2) does not match number of UUIDs (1)") != std::string::npos,
+                          "Size mismatch should produce warning message");
 }
 
 DOCTEST_TEST_CASE("PhotosynthesisModel Vector Coefficients Matching Size") {

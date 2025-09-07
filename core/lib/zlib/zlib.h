@@ -37,6 +37,11 @@
 #include "zconf.h"
 #endif
 
+/* Ensure stdarg.h is included for va_list on Linux systems */
+#if defined(__linux__) && defined(STDC)
+#include <stdarg.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

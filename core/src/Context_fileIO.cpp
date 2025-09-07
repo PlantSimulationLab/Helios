@@ -17,6 +17,10 @@
 
 using namespace helios;
 
+// Geometric tolerance for triangle area validation
+// Triangles with area below this threshold are considered degenerate and skipped
+static constexpr float MIN_TRIANGLE_AREA_THRESHOLD = 1e-8f;
+
 int XMLparser::parse_data_float(const pugi::xml_node &node_data, std::vector<float> &data) {
     std::string data_str = node_data.child_value();
     data.resize(0);
@@ -3454,7 +3458,7 @@ std::vector<uint> Context::loadPLY(const char *filename, const vec3 &origin, flo
 
             // Additional check for triangle area to avoid near-degenerate triangles
             float triangle_area = calculateTriangleArea(v0, v1, v2);
-            if (triangle_area < 1e-8f) {
+            if (triangle_area < MIN_TRIANGLE_AREA_THRESHOLD) {
                 continue;
             }
 
@@ -3563,6 +3567,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, flo
 }
 
 std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, const helios::vec3 &scale, const SphericalCoord &rotation, const RGBcolor &default_color, const char *upaxis, bool silent) {
+
     if (!silent) {
         std::cout << "Reading OBJ file " << filename << "..." << std::flush;
     }
@@ -3591,7 +3596,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
     // Resolve file path using unified resolution
     std::filesystem::path resolved_path = resolveFilePath(filename);
     std::string resolved_filename = resolved_path.string();
-    
+
     std::ifstream inputOBJ, inputMTL;
     inputOBJ.open(resolved_filename);
 
@@ -3693,12 +3698,22 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
                     if (!parse_int(digitf, face)) {
                         helios_runtime_error("ERROR (Context::loadOBJ): Face index on line " + std::to_string(lineno) + " must be a non-negative integer value.");
                     }
+                    // Add bounds checking for face indices
+                    if (face <= 0 || face > vertices.size()) {
+                        helios_runtime_error("ERROR (Context::loadOBJ): Face vertex index " + std::to_string(face) + " on line " + std::to_string(lineno) + " is out of range. Valid range is 1-" + std::to_string(vertices.size()) +
+                                             ". Check that vertex indices in face definitions reference existing vertices.");
+                    }
                     f.push_back(face);
                 }
                 if (!digitu.empty()) {
                     int uv;
                     if (!parse_int(digitu, uv)) {
                         helios_runtime_error("ERROR (Context::loadOBJ): u,v index on line " + std::to_string(lineno) + " must be a non-negative integer value.");
+                    }
+                    // Add bounds checking for UV indices
+                    if (uv <= 0 || uv > texture_uv.size()) {
+                        helios_runtime_error("ERROR (Context::loadOBJ): Texture coordinate index " + std::to_string(uv) + " on line " + std::to_string(lineno) + " is out of range. Valid range is 1-" + std::to_string(texture_uv.size()) +
+                                             ". Check that texture coordinate indices in face definitions reference existing texture coordinates.");
                     }
                     u.push_back(uv);
                 }
@@ -3714,7 +3729,12 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
 
     vec3 scl = scale;
     if (scl.x == 0 && scl.y == 0 && scl.z > 0) {
-        scl = make_vec3(scale.z / (boxmax - boxmin), scale.z / (boxmax - boxmin), scale.z / (boxmax - boxmin));
+        if (boxmax - boxmin > 1e-6f) {
+            scl = make_vec3(scale.z / (boxmax - boxmin), scale.z / (boxmax - boxmin), scale.z / (boxmax - boxmin));
+        } else {
+            // Object is flat or has zero height - use uniform scaling of requested height
+            scl = make_vec3(scale.z, scale.z, scale.z);
+        }
     } else {
         if (scl.x == 0 && (scl.y != 0 || scl.z != 0)) {
             std::cout << "WARNING (Context::loadOBJ): Scaling factor given for x-direction is zero. Setting scaling factor to 1" << std::endl;
@@ -3737,6 +3757,20 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
         }
     }
 
+    // Structure to hold triangle data for parallel processing
+    struct TriangleData {
+        vec3 vert0, vert1, vert2;
+        std::string texture;
+        vec2 uv0, uv1, uv2;
+        RGBcolor color;
+        bool hasTexture;
+        bool textureColorIsOverridden;
+        std::string object;
+    };
+
+    std::vector<TriangleData> triangleDataList;
+
+    // First pass: Parallel data preparation - compute all triangle vertex data
     for (auto iter = face_inds.begin(); iter != face_inds.end(); ++iter) {
         std::string materialname = iter->first;
 
@@ -3752,62 +3786,129 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
             textureColorIsOverridden = mat.textureColorIsOverridden;
         }
 
-        for (size_t i = 0; i < face_inds.at(materialname).size(); i++) {
-            for (uint t = 2; t < face_inds.at(materialname).at(i).size(); t++) {
-                vec3 v0 = vertices.at(face_inds.at(materialname).at(i).at(0) - 1);
-                vec3 v1 = vertices.at(face_inds.at(materialname).at(i).at(t - 1) - 1);
-                vec3 v2 = vertices.at(face_inds.at(materialname).at(i).at(t) - 1);
 
-                if ((v0 - v1).magnitude() == 0 || (v0 - v2).magnitude() == 0 || (v1 - v2).magnitude() == 0) {
-                    continue;
-                }
+        const auto &material_faces = face_inds.at(materialname);
+        const auto &material_texture_inds = texture_inds.count(materialname) ? texture_inds.at(materialname) : std::vector<std::vector<int>>();
 
-                if (strcmp(upaxis, "YUP") == 0) {
-                    v0 = rotatePointAboutLine(v0, make_vec3(0, 0, 0), make_vec3(1, 0, 0), 0.5 * M_PI);
-                    v1 = rotatePointAboutLine(v1, make_vec3(0, 0, 0), make_vec3(1, 0, 0), 0.5 * M_PI);
-                    v2 = rotatePointAboutLine(v2, make_vec3(0, 0, 0), make_vec3(1, 0, 0), 0.5 * M_PI);
-                }
+        // Exception handling for OpenMP - capture exceptions and rethrow after parallel region
+        std::string exception_message;
+        bool exception_occurred = false;
 
-                v0 = rotatePoint(v0, rotation);
-                v1 = rotatePoint(v1, rotation);
-                v2 = rotatePoint(v2, rotation);
+#ifdef USE_OPENMP
+#pragma omp parallel for schedule(dynamic)
+#endif
+        for (int i = 0; i < static_cast<int>(material_faces.size()); i++) {
+            try {
+                for (uint t = 2; t < material_faces[i].size(); t++) {
+                    vec3 v0 = vertices.at(material_faces[i][0] - 1);
+                    vec3 v1 = vertices.at(material_faces[i][t - 1] - 1);
+                    vec3 v2 = vertices.at(material_faces[i][t] - 1);
 
-                // Calculate final triangle vertices after transformations
-                vec3 vert0 = origin + v0 * scl.x;
-                vec3 vert1 = origin + v1 * scl.y;
-                vec3 vert2 = origin + v2 * scl.z;
-                
-                // Check if triangle has sufficient area to avoid zero-area triangles
-                float triangle_area = calculateTriangleArea(vert0, vert1, vert2);
-                
-                uint ID = 0; // Initialize to invalid ID
-                if (triangle_area > 1e-8f) { // Only create triangle if area is not negligible (increased threshold)
-                    if (!texture.empty() && !texture_inds.at(materialname).at(i).empty()) { // has texture
-
-                        if (t < texture_inds.at(materialname).at(i).size()) {
-                            int iuv0 = texture_inds.at(materialname).at(i).at(0) - 1;
-                            int iuv1 = texture_inds.at(materialname).at(i).at(t - 1) - 1;
-                            int iuv2 = texture_inds.at(materialname).at(i).at(t) - 1;
-
-                            ID = addTriangle(vert0, vert1, vert2, texture.c_str(), texture_uv.at(iuv0), texture_uv.at(iuv1), texture_uv.at(iuv2));
-
-                            if (textureColorIsOverridden) {
-                                setPrimitiveColor(ID, color);
-                                overridePrimitiveTextureColor(ID);
-                            }
-                        }
-                    } else {
-                        ID = addTriangle(vert0, vert1, vert2, color);
+                    if ((v0 - v1).magnitude() == 0 || (v0 - v2).magnitude() == 0 || (v1 - v2).magnitude() == 0) {
+                        continue;
                     }
-                    UUID.push_back(ID);
+
+                    if (strcmp(upaxis, "YUP") == 0) {
+                        v0 = rotatePointAboutLine(v0, make_vec3(0, 0, 0), make_vec3(1, 0, 0), 0.5 * M_PI);
+                        v1 = rotatePointAboutLine(v1, make_vec3(0, 0, 0), make_vec3(1, 0, 0), 0.5 * M_PI);
+                        v2 = rotatePointAboutLine(v2, make_vec3(0, 0, 0), make_vec3(1, 0, 0), 0.5 * M_PI);
+                    }
+
+                    v0 = rotatePoint(v0, rotation);
+                    v1 = rotatePoint(v1, rotation);
+                    v2 = rotatePoint(v2, rotation);
+
+                    // Calculate final triangle vertices after transformations
+                    vec3 vert0 = origin + make_vec3(v0.x * scl.x, v0.y * scl.y, v0.z * scl.z);
+                    vec3 vert1 = origin + make_vec3(v1.x * scl.x, v1.y * scl.y, v1.z * scl.z);
+                    vec3 vert2 = origin + make_vec3(v2.x * scl.x, v2.y * scl.y, v2.z * scl.z);
+
+                    // Check if triangle has sufficient area to avoid zero-area triangles
+                    float triangle_area = calculateTriangleArea(vert0, vert1, vert2);
+
+                    if (triangle_area > MIN_TRIANGLE_AREA_THRESHOLD) { // Only process triangle if area is not negligible
+                        TriangleData triangleData;
+                        triangleData.vert0 = vert0;
+                        triangleData.vert1 = vert1;
+                        triangleData.vert2 = vert2;
+                        triangleData.texture = texture;
+                        triangleData.color = color;
+                        triangleData.textureColorIsOverridden = textureColorIsOverridden;
+                        triangleData.object = objects.at(material_faces[i][0] - 1);
+
+                        // Handle texture coordinates if present
+                        // First check if material has texture file
+                        triangleData.hasTexture = !texture.empty();
+
+
+                        // If texture exists, try to get UV coordinates
+                        if (triangleData.hasTexture && i < material_texture_inds.size() && !material_texture_inds[i].empty() && t < material_texture_inds[i].size()) {
+
+                            int iuv0 = material_texture_inds[i][0] - 1;
+                            int iuv1 = material_texture_inds[i][t - 1] - 1;
+                            int iuv2 = material_texture_inds[i][t] - 1;
+
+                            if (iuv0 >= 0 && iuv0 < texture_uv.size() && iuv1 >= 0 && iuv1 < texture_uv.size() && iuv2 >= 0 && iuv2 < texture_uv.size()) {
+                                triangleData.uv0 = texture_uv.at(iuv0);
+                                triangleData.uv1 = texture_uv.at(iuv1);
+                                triangleData.uv2 = texture_uv.at(iuv2);
+                            } else {
+                                helios_runtime_error("ERROR (Context::loadOBJ): Invalid texture coordinate indices in face for material '" + materialname + "'. " + "UV indices [" + std::to_string(iuv0 + 1) + ", " + std::to_string(iuv1 + 1) + ", " +
+                                                     std::to_string(iuv2 + 1) + "] " + "exceed available UV coordinates (1-" + std::to_string(texture_uv.size()) + "). " +
+                                                     "Check that all face texture coordinate references in the OBJ file are valid.");
+                            }
+                        } else if (triangleData.hasTexture) {
+                            helios_runtime_error("ERROR (Context::loadOBJ): Material '" + materialname + "' specifies texture file '" + texture + "' " + "but face has no texture coordinates. Either remove the texture from the material " +
+                                                 "or add texture coordinates (vt) and face texture indices (f v1/vt1 v2/vt2 v3/vt3) to the OBJ file.");
+                        }
+
+#ifdef USE_OPENMP
+#pragma omp critical
+#endif
+                        {
+                            triangleDataList.push_back(triangleData);
+                        }
+                    }
                 }
-
-                const std::string &object = objects.at(face_inds.at(materialname).at(i).at(0) - 1);
-
-                if (object != "none" && doesPrimitiveExist(ID)) {
-                    setPrimitiveData(ID, "object_label", object);
+            } catch (const std::exception &e) {
+                // Capture exception in OpenMP-safe way
+#ifdef USE_OPENMP
+#pragma omp critical
+#endif
+                {
+                    if (!exception_occurred) {
+                        exception_message = e.what();
+                        exception_occurred = true;
+                    }
                 }
             }
+        }
+
+        // Rethrow captured exception after parallel region
+        if (exception_occurred) {
+            helios_runtime_error(exception_message);
+        }
+    }
+
+    // Second pass: Sequential triangle creation to maintain thread safety
+    for (const auto &triangleData: triangleDataList) {
+        uint ID = 0;
+
+        if (triangleData.hasTexture) {
+            ID = addTriangle(triangleData.vert0, triangleData.vert1, triangleData.vert2, triangleData.texture.c_str(), triangleData.uv0, triangleData.uv1, triangleData.uv2);
+
+            if (triangleData.textureColorIsOverridden) {
+                setPrimitiveColor(ID, triangleData.color);
+                overridePrimitiveTextureColor(ID);
+            }
+        } else {
+            ID = addTriangle(triangleData.vert0, triangleData.vert1, triangleData.vert2, triangleData.color);
+        }
+
+        UUID.push_back(ID);
+
+        if (triangleData.object != "none" && doesPrimitiveExist(ID)) {
+            setPrimitiveData(ID, "object_label", triangleData.object);
         }
     }
 
@@ -3822,11 +3923,11 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
     std::ifstream inputMTL;
 
     std::string file = material_file;
-    
+
     // For relative paths, resolve relative to the OBJ file's directory (filebase)
     // For absolute paths, use unified file resolution
     std::filesystem::path resolved_path;
-    
+
     if (std::filesystem::path(file).is_absolute()) {
         // Absolute path - use unified resolution
         resolved_path = resolveFilePath(file);
@@ -3835,10 +3936,10 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
         std::filesystem::path mtl_path = std::filesystem::path(filebase) / file;
         resolved_path = resolveFilePath(mtl_path.string());
     }
-    
+
     std::string resolved_file = resolved_path.string();
     inputMTL.open(resolved_file.c_str());
-    
+
     if (!inputMTL.is_open()) {
         helios_runtime_error("ERROR (Context::loadMTL): Could not open material file " + resolved_file + " after successful path resolution.");
     }
@@ -3879,20 +3980,27 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
                         std::string ext = getFileExtension(tmp);
                         if (ext == ".png" || ext == ".PNG" || ext == ".jpg" || ext == ".JPG" || ext == ".jpeg" || ext == ".JPEG") {
                             std::string texturefile = tmp;
-                            std::ifstream tfile;
 
-                            // first look for texture file using path given in mtl file
-                            tfile.open(texturefile.c_str());
-                            if (!tfile.is_open()) {
-                                // if that doesn't work, try looking in the same directory where obj file is located
-                                tfile.close();
-                                texturefile = filebase + texturefile;
-                                tfile.open(texturefile.c_str());
-                                if (!tfile.is_open()) {
-                                    std::cerr << "WARNING (Context::loadOBJ): Texture file " << texturefile << " given in .mtl file cannot be found." << std::endl;
+                            // Check for texture file existence using filesystem operations (more efficient)
+                            std::filesystem::path texture_path = texturefile;
+                            bool texture_exists = false;
+
+                            // First try the path as given in MTL file
+                            if (std::filesystem::exists(texture_path)) {
+                                texture_exists = true;
+                            } else {
+                                // Try looking in the same directory where OBJ file is located
+                                texture_path = std::filesystem::path(filebase) / tmp;
+                                texturefile = texture_path.string();
+                                if (std::filesystem::exists(texture_path)) {
+                                    texture_exists = true;
                                 }
                             }
-                            tfile.close();
+
+                            if (!texture_exists) {
+                                helios_runtime_error("ERROR (Context::loadOBJ): Texture file '" + tmp + "' referenced in .mtl file cannot be found. " + "Searched in current directory and OBJ file directory (" + filebase + "). " +
+                                                     "Ensure texture file exists or remove texture reference from material.");
+                            }
 
                             if (maptype == "map_d") {
                                 map_d = texturefile;
@@ -3929,15 +4037,15 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
     return materials;
 }
 
-void Context::writeOBJ(const std::string &filename, bool write_normals) const {
-    writeOBJ(filename, getAllUUIDs(), {}, write_normals);
+void Context::writeOBJ(const std::string &filename, bool write_normals, bool silent) const {
+    writeOBJ(filename, getAllUUIDs(), {}, write_normals, silent);
 }
 
-void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, bool write_normals) const {
-    writeOBJ(filename, UUIDs, {}, write_normals);
+void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, bool write_normals, bool silent) const {
+    writeOBJ(filename, UUIDs, {}, write_normals, silent);
 }
 
-void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields, bool write_normals) const {
+void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_dat_fields, bool write_normals, bool silent) const {
 
     if (UUIDs.empty()) {
         std::cout << "WARNING (Context::writeOBJ): No primitives found to write - OBJ file " << filename << " will not be written." << std::endl;
@@ -3969,48 +4077,67 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
 
     if (!file_path.empty() && !std::filesystem::exists(file_path)) {
         if (!std::filesystem::create_directory(file_path)) {
-            std::cout << "failed. Directory " << file_path << " does not exist and it could not be created - OBJ file will not be written." << std::endl;
+            std::cerr << "failed. Directory " << file_path << " does not exist and it could not be created - OBJ file will not be written." << std::endl;
             return;
         }
     }
 
-    std::cout << "Writing OBJ file " << objfilename << "..." << std::flush;
+    if (!silent) {
+        std::cout << "Writing OBJ file " << objfilename << "..." << std::flush;
+    }
 
     std::vector<OBJmaterial> materials;
-
-    bool uuidexistswarning = false;
-    bool voxelwarning = false;
+    std::unordered_map<std::string, uint> material_cache;
+    const size_t primitive_count = UUIDs.size();
+    const size_t estimated_vertices = primitive_count * 4;
 
     std::vector<vec3> verts;
+    verts.reserve(estimated_vertices);
     std::vector<vec3> normals;
+    if (write_normals) {
+        normals.reserve(primitive_count);
+    }
     std::vector<vec2> uv;
+    uv.reserve(estimated_vertices);
+
     std::map<uint, std::vector<int3>> faces;
     std::map<uint, std::vector<int>> normal_inds;
     std::map<uint, std::vector<int3>> uv_inds;
-    size_t vertex_count = 1; // OBJ files start indices at 1
+    size_t vertex_count = 1;
     size_t normal_count = 0;
     size_t uv_count = 1;
     std::map<uint, std::vector<uint>> UUIDs_write;
-    // maintain object groupings
+
     std::map<std::string, std::map<uint, std::vector<int3>>> object_faces;
     std::map<std::string, std::map<uint, std::vector<int>>> object_normal_inds;
     std::map<std::string, std::map<uint, std::vector<int3>>> object_uv_inds;
     std::vector<std::string> object_order;
+    object_order.reserve(primitive_count / 10);
     bool object_groups_found = false;
 
     for (size_t p: UUIDs) {
         if (!doesPrimitiveExist(p)) {
-            uuidexistswarning = true;
-            continue;
-        } else if (getPrimitivePointer_private(p)->getType() == PRIMITIVE_TYPE_VOXEL) {
-            voxelwarning = true;
-            continue;
+            std::ostringstream err_stream;
+            err_stream << "ERROR (Context::writeOBJ): Primitive with UUID " << p << " does not exist. "
+                       << "Ensure all UUIDs in the input vector correspond to valid primitives before calling writeOBJ.";
+            helios_runtime_error(err_stream.str());
         }
 
-        std::vector<vec3> vertices = getPrimitivePointer_private(p)->getVertices();
-        PrimitiveType type = getPrimitivePointer_private(p)->getType();
-        RGBcolor C = getPrimitivePointer_private(p)->getColor();
-        std::string texturefile = getPrimitivePointer_private(p)->getTextureFile();
+        const Primitive *prim_ptr = getPrimitivePointer_private(p);
+
+        if (prim_ptr->getType() == PRIMITIVE_TYPE_VOXEL) {
+            std::ostringstream err_stream;
+            err_stream << "ERROR (Context::writeOBJ): Voxel primitives (UUID " << p << ") cannot be written to OBJ format. "
+                       << "OBJ format only supports surface primitives (triangles, patches). "
+                       << "Filter out voxel primitives before calling writeOBJ.";
+            helios_runtime_error(err_stream.str());
+        }
+
+        std::vector<vec3> vertices = prim_ptr->getVertices();
+        PrimitiveType type = prim_ptr->getType();
+        RGBcolor C = prim_ptr->getColor();
+        std::string texturefile = prim_ptr->getTextureFile();
+        bool texture_color_overridden = prim_ptr->isTextureColorOverridden();
 
         std::string obj_label = "default";
         if (doesPrimitiveDataExist(p, "object_label")) {
@@ -4024,27 +4151,28 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
             object_order.push_back(obj_label);
         }
 
-        bool material_exists = false;
-        uint material_ID = 99999;
+        std::string material_key = texturefile + "|" + std::to_string(C.r) + "," + std::to_string(C.g) + "," + std::to_string(C.b) + "|" + std::to_string(texture_color_overridden);
 
-        for (auto &material: materials) {
-            if (material.texture == texturefile && material.color == C && material.textureColorIsOverridden == getPrimitivePointer_private(p)->isTextureColorOverridden()) {
-                material_exists = true;
-                material_ID = material.materialID;
-                break;
-            }
-        }
+        uint material_ID;
+        auto material_iter = material_cache.find(material_key);
 
-        if (!material_exists) {
+        if (material_iter != material_cache.end()) {
+            // Material exists in cache
+            material_ID = material_iter->second;
+        } else {
+            // Create new material
             OBJmaterial mat(C, texturefile, materials.size());
             materials.emplace_back(mat);
             material_ID = mat.materialID;
+
             if (primitiveTextureHasTransparencyChannel(p)) {
                 materials.back().textureHasTransparency = true;
             }
-            if (isPrimitiveTextureColorOverridden(p)) {
+            if (texture_color_overridden) {
                 materials.back().textureColorIsOverridden = true;
             }
+
+            material_cache[material_key] = material_ID;
         }
 
         if (!primitive_dat_fields.empty()) {
@@ -4144,13 +4272,58 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
     }
 
     // copy material textures to new directory and edit old file paths
-    std::filesystem::path texture_dir = std::filesystem::path(file_path);
+    std::filesystem::path output_path = std::filesystem::path(file_path);
+    std::filesystem::path texture_dir = output_path.parent_path();
+
+    // If no parent path (filename only), use current directory
+    if (texture_dir.empty()) {
+        texture_dir = ".";
+    }
+
     for (auto &material: materials) {
         std::string texture = material.texture;
-        if (!texture.empty() && std::filesystem::exists(texture)) {
-            auto file = std::filesystem::path(texture).filename();
-            std::filesystem::copy_file(texture, texture_dir / file, std::filesystem::copy_options::overwrite_existing);
-            material.texture = file.string();
+        if (!texture.empty()) {
+            std::error_code ec;
+            std::filesystem::path source_path = std::filesystem::absolute(texture, ec);
+
+            // If we can't resolve the absolute path, try the original path
+            if (ec) {
+                source_path = std::filesystem::path(texture);
+            }
+
+            if (!std::filesystem::exists(source_path)) {
+                // Skip missing texture files silently (maintain original behavior)
+                continue;
+            }
+
+            auto filename = source_path.filename();
+            std::filesystem::path dest_path = texture_dir / filename;
+
+            // Skip copying if source and destination are the same file
+            bool same_file = false;
+            try {
+                same_file = std::filesystem::equivalent(source_path, dest_path, ec);
+                if (ec)
+                    same_file = false; // If we can't determine equivalence, assume different
+            } catch (...) {
+                same_file = false;
+            }
+
+            if (same_file) {
+                material.texture = filename.string();
+                continue;
+            }
+
+            // Attempt to copy file, but don't fail if it doesn't work
+            try {
+                std::filesystem::copy_file(source_path, dest_path, std::filesystem::copy_options::overwrite_existing, ec);
+                if (!ec) {
+                    material.texture = filename.string();
+                } // else keep original texture path
+            } catch (...) {
+                // If copy fails for any reason, keep original texture path
+                // This maintains backward compatibility
+            }
         }
     }
 
@@ -4163,77 +4336,265 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
     objfstream << "# baileylab.ucdavis.edu/software/helios" << std::endl;
     objfstream << "mtllib " << getFileName(mtlfilename) << std::endl;
 
-    for (auto &vert: verts) {
-        objfstream << "v " << vert.x << " " << vert.y << " " << vert.z << std::endl;
-    }
-    if (write_normals) {
-        float epsilon = 1e-7;
-        for (auto &n: normals) {
-            if (std::abs(n.x) < epsilon)
-                n.x = 0;
-            if (std::abs(n.y) < epsilon)
-                n.y = 0;
-            if (std::abs(n.z) < epsilon)
-                n.z = 0;
-            objfstream << "vn " << n.x << " " << n.y << " " << n.z << std::endl;
+    // Parallel string formatting for vertices, normals, and UV coordinates
+    std::vector<std::string> vertex_chunks;
+    const int num_threads = std::min(static_cast<int>(verts.size() / 1000 + 1), std::max(1, static_cast<int>(std::thread::hardware_concurrency())));
+    vertex_chunks.resize(num_threads);
+
+#ifdef USE_OPENMP
+#pragma omp parallel num_threads(num_threads)
+#endif
+    {
+        int tid = 0;
+#ifdef USE_OPENMP
+        tid = omp_get_thread_num();
+#endif
+        std::ostringstream vertex_stream;
+        vertex_stream.precision(8);
+
+        const size_t chunk_size = (verts.size() + num_threads - 1) / num_threads;
+        const size_t start_idx = tid * chunk_size;
+        const size_t end_idx = std::min(start_idx + chunk_size, verts.size());
+
+        for (size_t i = start_idx; i < end_idx; i++) {
+            vertex_stream << "v " << verts[i].x << " " << verts[i].y << " " << verts[i].z << "\n";
         }
-    }
-    for (auto &v: uv) {
-        objfstream << "vt " << v.x << " " << v.y << std::endl;
+
+        vertex_chunks[tid] = vertex_stream.str();
     }
 
+    for (const auto &chunk: vertex_chunks) {
+        objfstream << chunk;
+    }
+
+    if (write_normals) {
+        std::vector<std::string> normal_chunks;
+        normal_chunks.resize(num_threads);
+
+#ifdef USE_OPENMP
+#pragma omp parallel num_threads(num_threads)
+#endif
+        {
+            int tid = 0;
+#ifdef USE_OPENMP
+            tid = omp_get_thread_num();
+#endif
+            std::ostringstream normal_stream;
+            normal_stream.precision(8);
+
+            const size_t chunk_size = (normals.size() + num_threads - 1) / num_threads;
+            const size_t start_idx = tid * chunk_size;
+            const size_t end_idx = std::min(start_idx + chunk_size, normals.size());
+
+            const float epsilon = 1e-7;
+            for (size_t i = start_idx; i < end_idx; i++) {
+                vec3 n = normals[i];
+                if (std::abs(n.x) < epsilon)
+                    n.x = 0;
+                if (std::abs(n.y) < epsilon)
+                    n.y = 0;
+                if (std::abs(n.z) < epsilon)
+                    n.z = 0;
+                normal_stream << "vn " << n.x << " " << n.y << " " << n.z << "\n";
+            }
+
+            normal_chunks[tid] = normal_stream.str();
+        }
+
+        for (const auto &chunk: normal_chunks) {
+            objfstream << chunk;
+        }
+    }
+
+    if (!uv.empty()) {
+        std::vector<std::string> uv_chunks;
+        uv_chunks.resize(num_threads);
+
+#ifdef USE_OPENMP
+#pragma omp parallel num_threads(num_threads)
+#endif
+        {
+            int tid = 0;
+#ifdef USE_OPENMP
+            tid = omp_get_thread_num();
+#endif
+            std::ostringstream uv_stream;
+            uv_stream.precision(8);
+
+            const size_t chunk_size = (uv.size() + num_threads - 1) / num_threads;
+            const size_t start_idx = tid * chunk_size;
+            const size_t end_idx = std::min(start_idx + chunk_size, uv.size());
+
+            for (size_t i = start_idx; i < end_idx; i++) {
+                uv_stream << "vt " << uv[i].x << " " << uv[i].y << "\n";
+            }
+
+            uv_chunks[tid] = uv_stream.str();
+        }
+
+        for (const auto &chunk: uv_chunks) {
+            objfstream << chunk;
+        }
+    }
+
+    // Parallel face string generation
+
     if (object_groups_found) {
+        // Process object groups sequentially (maintain OBJ structure)
+        // but parallelize face generation within each material group
         for (const auto &obj_label: object_order) {
-            objfstream << "o " << obj_label << std::endl;
+            objfstream << "o " << obj_label << "\n";
+
             for (int mat = 0; mat < materials.size(); mat++) {
                 auto fit = object_faces[obj_label].find(mat);
                 if (fit == object_faces[obj_label].end())
                     continue;
-                objfstream << "usemtl material" << mat << std::endl;
-                for (size_t f = 0; f < fit->second.size(); ++f) {
-                    if (uv.empty()) {
-                        if (write_normals) {
-                            objfstream << "f " << fit->second.at(f).x << "//" << object_normal_inds[obj_label][mat].at(f) << " " << fit->second.at(f).y << "//" << object_normal_inds[obj_label][mat].at(f) << " " << fit->second.at(f).z << "//"
-                                       << object_normal_inds[obj_label][mat].at(f) << std::endl;
-                        } else {
-                            objfstream << "f " << fit->second.at(f).x << " " << fit->second.at(f).y << " " << fit->second.at(f).z << std::endl;
+
+                objfstream << "usemtl material" << mat << "\n";
+
+                const auto &current_faces = fit->second;
+                if (current_faces.size() > 100) { // Only parallelize if enough faces
+                    // Parallel face string generation for this material
+                    std::vector<std::string> face_chunks;
+                    face_chunks.resize(num_threads);
+
+#ifdef USE_OPENMP
+#pragma omp parallel num_threads(num_threads)
+#endif
+                    {
+                        int tid = 0;
+#ifdef USE_OPENMP
+                        tid = omp_get_thread_num();
+#endif
+                        std::ostringstream face_stream;
+
+                        const size_t chunk_size = (current_faces.size() + num_threads - 1) / num_threads;
+                        const size_t start_idx = tid * chunk_size;
+                        const size_t end_idx = std::min(start_idx + chunk_size, current_faces.size());
+
+                        for (size_t f = start_idx; f < end_idx; f++) {
+                            if (uv.empty()) {
+                                if (write_normals) {
+                                    face_stream << "f " << current_faces[f].x << "//" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].y << "//" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].z << "//"
+                                                << object_normal_inds[obj_label][mat][f] << "\n";
+                                } else {
+                                    face_stream << "f " << current_faces[f].x << " " << current_faces[f].y << " " << current_faces[f].z << "\n";
+                                }
+                            } else if (object_uv_inds[obj_label][mat][f].x < 0) {
+                                face_stream << "f " << current_faces[f].x << "/1 " << current_faces[f].y << "/1 " << current_faces[f].z << "/1\n";
+                            } else {
+                                if (write_normals) {
+                                    face_stream << "f " << current_faces[f].x << "/" << object_uv_inds[obj_label][mat][f].x << "/" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].y << "/" << object_uv_inds[obj_label][mat][f].y
+                                                << "/" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].z << "/" << object_uv_inds[obj_label][mat][f].z << "/" << object_normal_inds[obj_label][mat][f] << "\n";
+                                } else {
+                                    face_stream << "f " << current_faces[f].x << "/" << object_uv_inds[obj_label][mat][f].x << " " << current_faces[f].y << "/" << object_uv_inds[obj_label][mat][f].y << " " << current_faces[f].z << "/"
+                                                << object_uv_inds[obj_label][mat][f].z << "\n";
+                                }
+                            }
                         }
-                    } else if (object_uv_inds[obj_label][mat].at(f).x < 0) {
-                        objfstream << "f " << fit->second.at(f).x << "/1 " << fit->second.at(f).y << "/1 " << fit->second.at(f).z << "/1" << std::endl;
-                    } else {
-                        if (write_normals) {
-                            objfstream << "f " << fit->second.at(f).x << "/" << object_uv_inds[obj_label][mat].at(f).x << "/" << object_normal_inds[obj_label][mat].at(f) << " " << fit->second.at(f).y << "/" << object_uv_inds[obj_label][mat].at(f).y
-                                       << "/" << object_normal_inds[obj_label][mat].at(f) << " " << fit->second.at(f).z << "/" << object_uv_inds[obj_label][mat].at(f).z << "/" << object_normal_inds[obj_label][mat].at(f) << std::endl;
+
+                        face_chunks[tid] = face_stream.str();
+                    }
+
+                    // Sequential write of face chunks
+                    for (const auto &chunk: face_chunks) {
+                        objfstream << chunk;
+                    }
+                } else {
+                    // For small face counts, use original sequential approach
+                    for (size_t f = 0; f < current_faces.size(); ++f) {
+                        if (uv.empty()) {
+                            if (write_normals) {
+                                objfstream << "f " << current_faces[f].x << "//" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].y << "//" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].z << "//"
+                                           << object_normal_inds[obj_label][mat][f] << std::endl;
+                            } else {
+                                objfstream << "f " << current_faces[f].x << " " << current_faces[f].y << " " << current_faces[f].z << std::endl;
+                            }
+                        } else if (object_uv_inds[obj_label][mat][f].x < 0) {
+                            objfstream << "f " << current_faces[f].x << "/1 " << current_faces[f].y << "/1 " << current_faces[f].z << "/1" << std::endl;
                         } else {
-                            objfstream << "f " << fit->second.at(f).x << "/" << object_uv_inds[obj_label][mat].at(f).x << " " << fit->second.at(f).y << "/" << object_uv_inds[obj_label][mat].at(f).y << " " << fit->second.at(f).z << "/"
-                                       << object_uv_inds[obj_label][mat].at(f).z << std::endl;
+                            if (write_normals) {
+                                objfstream << "f " << current_faces[f].x << "/" << object_uv_inds[obj_label][mat][f].x << "/" << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].y << "/" << object_uv_inds[obj_label][mat][f].y << "/"
+                                           << object_normal_inds[obj_label][mat][f] << " " << current_faces[f].z << "/" << object_uv_inds[obj_label][mat][f].z << "/" << object_normal_inds[obj_label][mat][f] << std::endl;
+                            } else {
+                                objfstream << "f " << current_faces[f].x << "/" << object_uv_inds[obj_label][mat][f].x << " " << current_faces[f].y << "/" << object_uv_inds[obj_label][mat][f].y << " " << current_faces[f].z << "/"
+                                           << object_uv_inds[obj_label][mat][f].z << std::endl;
+                            }
                         }
                     }
                 }
             }
         }
     } else {
+        // No object groups - simpler structure, better parallelization opportunity
         for (int mat = 0; mat < materials.size(); mat++) {
             assert(materials.at(mat).materialID == mat);
+            objfstream << "usemtl material" << mat << "\n";
 
-            objfstream << "usemtl material" << mat << std::endl;
+            const auto &current_faces = faces.at(mat);
+            if (current_faces.size() > 100) { // Only parallelize if enough faces
+                // Parallel face string generation for this material
+                std::vector<std::string> face_chunks;
+                face_chunks.resize(num_threads);
 
-            for (int f = 0; f < faces.at(mat).size(); f++) {
-                if (uv.empty()) {
-                    if (write_normals) {
-                        objfstream << "f " << faces.at(mat).at(f).x << "//" << normal_inds.at(mat).at(f) << " " << faces.at(mat).at(f).y << "//" << normal_inds.at(mat).at(f) << " " << faces.at(mat).at(f).z << "//" << normal_inds.at(mat).at(f)
-                                   << std::endl;
-                    } else {
-                        objfstream << "f " << faces.at(mat).at(f).x << " " << faces.at(mat).at(f).y << " " << faces.at(mat).at(f).z << std::endl;
+#ifdef USE_OPENMP
+#pragma omp parallel num_threads(num_threads)
+#endif
+                {
+                    int tid = 0;
+#ifdef USE_OPENMP
+                    tid = omp_get_thread_num();
+#endif
+                    std::ostringstream face_stream;
+
+                    const size_t chunk_size = (current_faces.size() + num_threads - 1) / num_threads;
+                    const size_t start_idx = tid * chunk_size;
+                    const size_t end_idx = std::min(start_idx + chunk_size, current_faces.size());
+
+                    for (size_t f = start_idx; f < end_idx; f++) {
+                        if (uv.empty()) {
+                            if (write_normals) {
+                                face_stream << "f " << current_faces[f].x << "//" << normal_inds.at(mat)[f] << " " << current_faces[f].y << "//" << normal_inds.at(mat)[f] << " " << current_faces[f].z << "//" << normal_inds.at(mat)[f] << "\n";
+                            } else {
+                                face_stream << "f " << current_faces[f].x << " " << current_faces[f].y << " " << current_faces[f].z << "\n";
+                            }
+                        } else if (uv_inds.at(mat)[f].x < 0) {
+                            face_stream << "f " << current_faces[f].x << "/1 " << current_faces[f].y << "/1 " << current_faces[f].z << "/1\n";
+                        } else {
+                            if (write_normals) {
+                                face_stream << "f " << current_faces[f].x << "/" << uv_inds.at(mat)[f].x << "/" << normal_inds.at(mat)[f] << " " << current_faces[f].y << "/" << uv_inds.at(mat)[f].y << "/" << normal_inds.at(mat)[f] << " "
+                                            << current_faces[f].z << "/" << uv_inds.at(mat)[f].z << "/" << normal_inds.at(mat)[f] << "\n";
+                            } else {
+                                face_stream << "f " << current_faces[f].x << "/" << uv_inds.at(mat)[f].x << " " << current_faces[f].y << "/" << uv_inds.at(mat)[f].y << " " << current_faces[f].z << "/" << uv_inds.at(mat)[f].z << "\n";
+                            }
+                        }
                     }
-                } else if (uv_inds.at(mat).at(f).x < 0) {
-                    objfstream << "f " << faces.at(mat).at(f).x << "/1 " << faces.at(mat).at(f).y << "/1 " << faces.at(mat).at(f).z << "/1" << std::endl;
-                } else {
-                    if (write_normals) {
-                        objfstream << "f " << faces.at(mat).at(f).x << "/" << uv_inds.at(mat).at(f).x << "/" << normal_inds.at(mat).at(f) << " " << faces.at(mat).at(f).y << "/" << uv_inds.at(mat).at(f).y << "/" << normal_inds.at(mat).at(f) << " "
-                                   << faces.at(mat).at(f).z << "/" << uv_inds.at(mat).at(f).z << "/" << normal_inds.at(mat).at(f) << std::endl;
+
+                    face_chunks[tid] = face_stream.str();
+                }
+
+                // Sequential write of face chunks
+                for (const auto &chunk: face_chunks) {
+                    objfstream << chunk;
+                }
+            } else {
+                // For small face counts, use original sequential approach
+                for (int f = 0; f < current_faces.size(); f++) {
+                    if (uv.empty()) {
+                        if (write_normals) {
+                            objfstream << "f " << current_faces[f].x << "//" << normal_inds.at(mat)[f] << " " << current_faces[f].y << "//" << normal_inds.at(mat)[f] << " " << current_faces[f].z << "//" << normal_inds.at(mat)[f] << std::endl;
+                        } else {
+                            objfstream << "f " << current_faces[f].x << " " << current_faces[f].y << " " << current_faces[f].z << std::endl;
+                        }
+                    } else if (uv_inds.at(mat)[f].x < 0) {
+                        objfstream << "f " << current_faces[f].x << "/1 " << current_faces[f].y << "/1 " << current_faces[f].z << "/1" << std::endl;
                     } else {
-                        objfstream << "f " << faces.at(mat).at(f).x << "/" << uv_inds.at(mat).at(f).x << " " << faces.at(mat).at(f).y << "/" << uv_inds.at(mat).at(f).y << " " << faces.at(mat).at(f).z << "/" << uv_inds.at(mat).at(f).z << std::endl;
+                        if (write_normals) {
+                            objfstream << "f " << current_faces[f].x << "/" << uv_inds.at(mat)[f].x << "/" << normal_inds.at(mat)[f] << " " << current_faces[f].y << "/" << uv_inds.at(mat)[f].y << "/" << normal_inds.at(mat)[f] << " "
+                                       << current_faces[f].z << "/" << uv_inds.at(mat)[f].z << "/" << normal_inds.at(mat)[f] << std::endl;
+                        } else {
+                            objfstream << "f " << current_faces[f].x << "/" << uv_inds.at(mat)[f].x << " " << current_faces[f].y << "/" << uv_inds.at(mat)[f].y << " " << current_faces[f].z << "/" << uv_inds.at(mat)[f].z << std::endl;
+                        }
                     }
                 }
             }
@@ -4270,9 +4631,9 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
     mtlfstream.close();
 
     if (!primitive_dat_fields.empty()) {
+        bool uuidexistswarning = false;
         bool dataexistswarning = false;
         bool datatypewarning = false;
-
 
         for (const std::string &label: primitive_dat_fields) {
             std::filesystem::path dat_path = std::filesystem::path(file_path) / (file_stem + "_" + std::string(label) + ".dat");
@@ -4344,21 +4705,15 @@ void Context::writeOBJ(const std::string &filename, const std::vector<uint> &UUI
         }
 
         if (uuidexistswarning) {
-            std::cerr << "WARNING (Context::writeOBJ): Vector of UUIDs passed to writePrimitiveData() function contained UUIDs that do not exist, which were skipped." << std::endl;
+            helios_runtime_error("Context::writeOBJ: One or more UUIDs do not exist in the Context. Cannot write OBJ file with invalid primitives.");
         }
         if (dataexistswarning) {
-            std::cerr << "WARNING (Context::writeOBJ): Primitive data requested did not exist for one or more primitives. A default value of 0 was written in these cases." << std::endl;
+            helios_runtime_error("Context::writeOBJ: Primitive data requested did not exist for one or more primitives. Cannot write incomplete data to OBJ file.");
         }
         if (datatypewarning) {
-            std::cerr << "WARNING (Context::writeOBJ): Only scalar primitive data types (uint, int, float, and double) are supported for this function. A column of 0's was written in these cases." << std::endl;
-        }
-        if (voxelwarning) {
-            std::cerr << "WARNING (Context::writeOBJ): Writing voxels to OBJ file is not supported. Some voxels were ignored. Use boxes or box objects to represent rectangular prism geometry." << std::endl;
+            helios_runtime_error("Context::writeOBJ: Only scalar primitive data types (uint, int, float, double, and string) are supported for primitive data export.");
         }
     }
-
-
-    std::cout << "done." << std::endl;
 }
 
 void Context::writePrimitiveData(const std::string &filename, const std::vector<std::string> &column_format, bool print_header) const {
@@ -4442,7 +4797,7 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
     // Resolve file path using project-based resolution
     std::filesystem::path resolved_path = resolveProjectFile(data_file);
     std::string resolved_filename = resolved_path.string();
-    
+
     std::ifstream datafile(resolved_filename); // open the file
 
     if (!datafile.is_open()) { // check that file exists

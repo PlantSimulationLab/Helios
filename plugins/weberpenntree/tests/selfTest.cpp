@@ -12,15 +12,13 @@ DOCTEST_TEST_CASE("WeberPennTree Constructor") {
 }
 
 DOCTEST_TEST_CASE("WeberPennTree Build Default Library Trees") {
-    std::stringstream buffer;
-    std::streambuf *old = std::cout.rdbuf(buffer.rdbuf());
-
     float spacing = 5;
     std::vector<std::string> trees = {"Almond", "Apple", "Avocado", "Lemon", "Olive", "Orange", "Peach", "Pistachio", "Walnut"};
 
     for (int i = 0; i < trees.size(); i++) {
         Context context;
         WeberPennTree weberpenntree(&context);
+        weberpenntree.disableMessages();
 
         DOCTEST_CHECK_NOTHROW(weberpenntree.setBranchRecursionLevel(1));
         DOCTEST_CHECK_NOTHROW(weberpenntree.setLeafSubdivisions(make_int2(3, 3)));
@@ -32,13 +30,9 @@ DOCTEST_TEST_CASE("WeberPennTree Build Default Library Trees") {
         std::vector<uint> all_UUIDs = context.getAllUUIDs();
         DOCTEST_CHECK(!all_UUIDs.empty());
     }
-
-    std::cout.rdbuf(old);
 }
 
 DOCTEST_TEST_CASE("WeberPennTree Individual Tree Types") {
-    std::stringstream buffer;
-    std::streambuf *old = std::cout.rdbuf(buffer.rdbuf());
 
     DOCTEST_SUBCASE("Almond Tree") {
         Context context;
@@ -102,13 +96,9 @@ DOCTEST_TEST_CASE("WeberPennTree Individual Tree Types") {
         DOCTEST_CHECK_NOTHROW(weberpenntree.buildTree("Walnut", make_vec3(0, 0, 0)));
         DOCTEST_CHECK(!context.getAllUUIDs().empty());
     }
-
-    std::cout.rdbuf(old);
 }
 
 DOCTEST_TEST_CASE("WeberPennTree Recursion Level") {
-    std::stringstream buffer;
-    std::streambuf *old = std::cout.rdbuf(buffer.rdbuf());
 
     Context context;
     WeberPennTree weberpenntree(&context);
@@ -117,13 +107,9 @@ DOCTEST_TEST_CASE("WeberPennTree Recursion Level") {
     DOCTEST_CHECK_NOTHROW(weberpenntree.setBranchRecursionLevel(0));
     DOCTEST_CHECK_NOTHROW(weberpenntree.setBranchRecursionLevel(1));
     DOCTEST_CHECK_NOTHROW(weberpenntree.setBranchRecursionLevel(2));
-
-    std::cout.rdbuf(old);
 }
 
 DOCTEST_TEST_CASE("WeberPennTree Leaf Subdivisions") {
-    std::stringstream buffer;
-    std::streambuf *old = std::cout.rdbuf(buffer.rdbuf());
 
     Context context;
     WeberPennTree weberpenntree(&context);
@@ -133,12 +119,9 @@ DOCTEST_TEST_CASE("WeberPennTree Leaf Subdivisions") {
     DOCTEST_CHECK_NOTHROW(weberpenntree.setLeafSubdivisions(make_int2(3, 3)));
     DOCTEST_CHECK_NOTHROW(weberpenntree.setLeafSubdivisions(make_int2(5, 5)));
 
-    std::cout.rdbuf(old);
 }
 
 DOCTEST_TEST_CASE("WeberPennTree Scaled Trees") {
-    std::stringstream buffer;
-    std::streambuf *old = std::cout.rdbuf(buffer.rdbuf());
 
     Context context;
     WeberPennTree weberpenntree(&context);
@@ -149,8 +132,6 @@ DOCTEST_TEST_CASE("WeberPennTree Scaled Trees") {
     DOCTEST_CHECK_NOTHROW(weberpenntree.buildTree("Apple", make_vec3(10, 0, 0), 1.5f));
 
     DOCTEST_CHECK(!context.getAllUUIDs().empty());
-
-    std::cout.rdbuf(old);
 }
 
 int WeberPennTree::selfTest(int argc, char** argv) {
