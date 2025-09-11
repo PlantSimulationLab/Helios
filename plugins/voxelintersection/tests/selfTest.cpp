@@ -193,6 +193,6 @@ DOCTEST_TEST_CASE("VoxelIntersection - Basic functionality test") {
     DOCTEST_CHECK(sliced_UUIDs.size() >= 1);
 }
 
-int VoxelIntersection::selfTest(int argc, char** argv) {
+int VoxelIntersection::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

@@ -19,19 +19,19 @@
 //! Macro for marking functions as deprecated with optional custom message.
 // MSVC requires __declspec to come BEFORE the function declaration
 #if __cplusplus >= 201402L && defined(__has_cpp_attribute) && __has_cpp_attribute(deprecated)
-    #define DEPRECATED_MSG(msg, func) [[deprecated(msg)]] func
-    #define DEPRECATED_NOMSG(func) [[deprecated]] func
+#define DEPRECATED_MSG(msg, func) [[deprecated(msg)]] func
+#define DEPRECATED_NOMSG(func) [[deprecated]] func
 #elif defined(__GNUC__) || defined(__clang__)
-    #define DEPRECATED_MSG(msg, func) func __attribute__((deprecated(msg)))
-    #define DEPRECATED_NOMSG(func) func __attribute__((deprecated))
+#define DEPRECATED_MSG(msg, func) func __attribute__((deprecated(msg)))
+#define DEPRECATED_NOMSG(func) func __attribute__((deprecated))
 #elif defined(_MSC_VER)
-    // MSVC has issues with custom deprecation messages, use simple deprecation
-    #define DEPRECATED_MSG(msg, func) __declspec(deprecated) func
-    #define DEPRECATED_NOMSG(func) __declspec(deprecated) func
+// MSVC has issues with custom deprecation messages, use simple deprecation
+#define DEPRECATED_MSG(msg, func) __declspec(deprecated) func
+#define DEPRECATED_NOMSG(func) __declspec(deprecated) func
 #else
-    #pragma message("WARNING: You need to implement DEPRECATED for this compiler")
-    #define DEPRECATED_MSG(msg, func) func
-    #define DEPRECATED_NOMSG(func) func
+#pragma message("WARNING: You need to implement DEPRECATED for this compiler")
+#define DEPRECATED_MSG(msg, func) func
+#define DEPRECATED_NOMSG(func) func
 #endif
 
 // Helper macro to count arguments
@@ -72,13 +72,13 @@ constexpr float PI_F = 3.14159265358979323846f;
 #include <map>
 #include <memory>
 #include <random>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <thread>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
-#include <set>
 
 #ifdef USE_OPENMP
 #include <omp.h>
@@ -1065,7 +1065,8 @@ namespace helios {
      * \param[in] max_iterations [optional] Maximum number of iterations to allow before exiting solver.
      * \return Value of function zero (best estimate even if not converged).
      */
-    [[nodiscard]] float fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, bool &converged, float err_tol = 0.0001f, int max_iterations = 100);
+    [[nodiscard]] float fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, bool &converged, float err_tol = 0.0001f,
+                              int max_iterations = 100);
 
     //! Function to perform linear interpolation based on a vector of discrete (x,y) values
     /**
@@ -1177,16 +1178,16 @@ namespace helios {
      * \note This function searches for assets in multiple locations: build directory, system install locations, and custom paths
      * \ingroup functions
      */
-    [[nodiscard]] std::filesystem::path resolveAssetPath(const std::string& relativePath);
+    [[nodiscard]] std::filesystem::path resolveAssetPath(const std::string &relativePath);
 
-    //! Resolve plugin-specific asset path  
+    //! Resolve plugin-specific asset path
     /**
      * \param[in] pluginName Name of the plugin (e.g., "visualizer", "plantarchitecture", "radiation")
      * \param[in] assetPath Relative path within the plugin's asset directory
      * \return Absolute path to the plugin asset file
      * \ingroup functions
      */
-    [[nodiscard]] std::filesystem::path resolvePluginAsset(const std::string& pluginName, const std::string& assetPath);
+    [[nodiscard]] std::filesystem::path resolvePluginAsset(const std::string &pluginName, const std::string &assetPath);
 
 
     //! Resolve file path using standard Helios resolution hierarchy
@@ -1196,12 +1197,12 @@ namespace helios {
      * 2. Checks relative to current working directory first
      * 3. Falls back to checking relative to HELIOS_BUILD environment variable path
      * 4. Throws helios_runtime_error if file not found in either location
-     * 
+     *
      * \param[in] filename File name with or without path (e.g., "texture.jpg" or "models/texture.jpg")
      * \return Absolute canonical path to the file
      * \ingroup functions
      */
-    [[nodiscard]] std::filesystem::path resolveFilePath(const std::string& filename);
+    [[nodiscard]] std::filesystem::path resolveFilePath(const std::string &filename);
 
     //! Resolve spectral data file path
     /**
@@ -1209,7 +1210,7 @@ namespace helios {
      * \return Absolute path to the spectral data file
      * \ingroup functions
      */
-    [[nodiscard]] std::filesystem::path resolveSpectraPath(const std::string& spectraFile);
+    [[nodiscard]] std::filesystem::path resolveSpectraPath(const std::string &spectraFile);
 
     //! Validate that an asset file exists and is readable
     /**
@@ -1217,7 +1218,7 @@ namespace helios {
      * \return True if the file exists and is readable, false otherwise
      * \ingroup functions
      */
-    [[nodiscard]] bool validateAssetPath(const std::filesystem::path& assetPath);
+    [[nodiscard]] bool validateAssetPath(const std::filesystem::path &assetPath);
 
     //! Find the project root directory (directory containing top-level CMakeLists.txt)
     /**
@@ -1226,7 +1227,7 @@ namespace helios {
      * \note Searches upward from startPath for a directory containing CMakeLists.txt
      * \ingroup functions
      */
-    [[nodiscard]] std::filesystem::path findProjectRoot(const std::filesystem::path& startPath = std::filesystem::current_path());
+    [[nodiscard]] std::filesystem::path findProjectRoot(const std::filesystem::path &startPath = std::filesystem::current_path());
 
     //! Resolve file path using project-based resolution strategy
     /**
@@ -1236,7 +1237,7 @@ namespace helios {
      * \throws std::runtime_error if file cannot be found
      * \ingroup functions
      */
-    [[nodiscard]] std::filesystem::path resolveProjectFile(const std::string& relativePath);
+    [[nodiscard]] std::filesystem::path resolveProjectFile(const std::string &relativePath);
 
     //! Read values contained in a text file into a one-dimensional vector of floats
     /**

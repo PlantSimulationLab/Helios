@@ -194,6 +194,6 @@ DOCTEST_TEST_CASE("PlantHydraulicsModel - Documentation Example 2") {
     }
 }
 
-int PlantHydraulicsModel::selfTest(int argc, char** argv) {
+int PlantHydraulicsModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

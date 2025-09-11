@@ -65,7 +65,7 @@ public:
      *
      * \return The number of errors encountered during the self-test. Returns 0 if all tests pass successfully.
      */
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
 
 private:

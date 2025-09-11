@@ -21,7 +21,7 @@
 
 using namespace helios;
 
-int ParameterOptimization::selfTest(int argc, char** argv) {
+int ParameterOptimization::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }
 

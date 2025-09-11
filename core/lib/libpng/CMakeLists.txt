@@ -43,7 +43,8 @@ set(PNGLIB_VERSION ${PNGLIB_MAJOR}.${PNGLIB_MINOR}.${PNGLIB_RELEASE})
 # needed packages
 #find_package(ZLIB REQUIRED)
 
-set( ZLIB_INCLUDE_DIR "${PROJECT_BINARY_DIR}/lib/zlib;${CMAKE_CURRENT_SOURCE_DIR}/../zlib" )
+# CRITICAL: List build directory FIRST to ensure libpng uses generated zconf.h with z_size_t fixes
+set( ZLIB_INCLUDE_DIR "${CMAKE_BINARY_DIR}/lib/zlib;${CMAKE_CURRENT_SOURCE_DIR}/../zlib" )
 if( UNIX AND NOT APPLE)
     set( ZLIB_LIBRARY ${CMAKE_BINARY_DIR}/lib/libz.a )#BNB 12/6/2022
 endif( UNIX AND NOT APPLE)
@@ -54,6 +55,19 @@ if( WIN32 )
   set( ZLIB_LIBRARY ${CMAKE_BINARY_DIR}/lib/zlibstatic.lib )#BNB 10/2/2021
 endif( WIN32 )
 include_directories(${ZLIB_INCLUDE_DIR})
+
+# MANYLINUX COMPATIBILITY FIX - Apply z_size_t fix for libpng
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if(DEFINED ENV{CIBUILDWHEEL} OR DEFINED ENV{AUDITWHEEL_PLAT} OR "$ENV{AUDITWHEEL_PLAT}" MATCHES "manylinux")
+        message(STATUS "libpng: Applying manylinux z_size_t compatibility fix")
+        # Force inclusion of stddef.h to ensure size_t is available before any zlib headers
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -include stddef.h")
+        # CRITICAL: Force libpng to use build directory zlib headers with z_size_t fixes
+        # Use -I to prepend the build directory to the include search path
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I${CMAKE_BINARY_DIR}/lib/zlib")
+        message(STATUS "libpng: Applied stddef.h inclusion and forced build zlib headers for manylinux compatibility")
+    endif()
+endif()
 
 if(NOT WIN32)
   find_library(M_LIBRARY

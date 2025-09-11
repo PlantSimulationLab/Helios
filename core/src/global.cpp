@@ -387,53 +387,58 @@ bool helios::pointInPolygon(const vec2 &p, const std::vector<vec2> &poly) {
     return (crossings & 1) == 1;
 }
 
-helios::ProgressBar::ProgressBar(size_t total, int width, bool enable, const std::string &progress_message) 
-    : total_steps(total), current_step(0), bar_width(width), enabled(enable), message(progress_message) {
+helios::ProgressBar::ProgressBar(size_t total, int width, bool enable, const std::string &progress_message) : total_steps(total), current_step(0), bar_width(width), enabled(enable), message(progress_message) {
 }
 
 void helios::ProgressBar::update() {
-    if (!enabled) return;
-    
+    if (!enabled)
+        return;
+
     current_step++;
-    double progress = (double)current_step / total_steps;
-    int filled = (int)(progress * bar_width);
-    
+    double progress = (double) current_step / total_steps;
+    int filled = (int) (progress * bar_width);
+
     std::cout << "\r" << message << ": [";
     for (int i = 0; i < bar_width; ++i) {
-        if (i < filled) std::cout << "=";
-        else if (i == filled) std::cout << ">";
-        else std::cout << " ";
+        if (i < filled)
+            std::cout << "=";
+        else if (i == filled)
+            std::cout << ">";
+        else
+            std::cout << " ";
     }
-    std::cout << "] " << (int)(progress * 100) << "% (" 
-              << current_step << "/" << total_steps << ")";
+    std::cout << "] " << (int) (progress * 100) << "% (" << current_step << "/" << total_steps << ")";
     std::cout.flush();
-    
+
     if (current_step >= total_steps) {
         std::cout << std::endl;
     }
 }
 
 void helios::ProgressBar::update(size_t step_number) {
-    if (!enabled) return;
-    
+    if (!enabled)
+        return;
+
     current_step = step_number;
     if (current_step > total_steps) {
         current_step = total_steps;
     }
-    
-    double progress = (double)current_step / total_steps;
-    int filled = (int)(progress * bar_width);
-    
+
+    double progress = (double) current_step / total_steps;
+    int filled = (int) (progress * bar_width);
+
     std::cout << "\r" << message << ": [";
     for (int i = 0; i < bar_width; ++i) {
-        if (i < filled) std::cout << "=";
-        else if (i == filled) std::cout << ">";
-        else std::cout << " ";
+        if (i < filled)
+            std::cout << "=";
+        else if (i == filled)
+            std::cout << ">";
+        else
+            std::cout << " ";
     }
-    std::cout << "] " << (int)(progress * 100) << "% (" 
-              << current_step << "/" << total_steps << ")";
+    std::cout << "] " << (int) (progress * 100) << "% (" << current_step << "/" << total_steps << ")";
     std::cout.flush();
-    
+
     if (current_step >= total_steps) {
         std::cout << std::endl;
     }
@@ -1040,8 +1045,17 @@ bool helios::open_xml_file(const std::string &xml_file, pugi::xml_document &xmld
         return false;
     }
 
+    // Resolve file path using the build directory path resolution system
+    std::filesystem::path resolvedPath;
+    try {
+        resolvedPath = resolveFilePath(xml_file);
+    } catch (const std::runtime_error &e) {
+        error_string = std::string(e.what());
+        return false;
+    }
+    
     // load file
-    pugi::xml_parse_result load_result = xmldoc.load_file(xml_file.c_str());
+    pugi::xml_parse_result load_result = xmldoc.load_file(resolvedPath.string().c_str());
 
     // error checking
     if (!load_result) {
@@ -1842,7 +1856,7 @@ void helios::readJPEG(const std::string &filename, uint &width, uint &height, st
     try {
         jpeg_create_decompress(&cinfo);
         jpeg_stdio_src(&cinfo, infile.get());
-        (void) jpeg_read_header(&cinfo, (boolean)1);
+        (void) jpeg_read_header(&cinfo, (boolean) 1);
 
         (void) jpeg_start_decompress(&cinfo);
 
@@ -1903,7 +1917,7 @@ helios::int2 helios::getImageResolutionJPEG(const std::string &filename) {
     try {
         jpeg_create_decompress(&cinfo);
         jpeg_stdio_src(&cinfo, infile.get());
-        (void) jpeg_read_header(&cinfo, (boolean)1);
+        (void) jpeg_read_header(&cinfo, (boolean) 1);
         (void) jpeg_start_decompress(&cinfo);
 
         jpeg_destroy_decompress(&cinfo);
@@ -1963,9 +1977,9 @@ void helios::writeJPEG(const std::string &a_filename, uint width, uint height, c
 
     jpeg_set_defaults(&cinfo);
 
-    jpeg_set_quality(&cinfo, 100, (boolean)1 /* limit to baseline-JPEG values */);
+    jpeg_set_quality(&cinfo, 100, (boolean) 1 /* limit to baseline-JPEG values */);
 
-    jpeg_start_compress(&cinfo, (boolean)1);
+    jpeg_start_compress(&cinfo, (boolean) 1);
 
     try {
         row_stride = width * 3; /* JSAMPLEs per row in image_buffer */
@@ -2195,9 +2209,9 @@ helios::RGBAcolor helios::XMLloadrgba(const pugi::xml_node node, const char *fie
 }
 
 float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::vector<float> &vars, const void *params, float init_guess, float err_tol, int max_iter) {
-    constexpr float DELTA_SEED = 1e-3f;  // Increased for better initial slope estimate
-    constexpr float DENOM_EPS = 1e-10f;  // Relaxed flat function detection
-    constexpr float MAX_STEP_FACTOR = 0.5f;  // Limit step size for stability
+    constexpr float DELTA_SEED = 1e-3f; // Increased for better initial slope estimate
+    constexpr float DENOM_EPS = 1e-10f; // Relaxed flat function detection
+    constexpr float MAX_STEP_FACTOR = 0.5f; // Limit step size for stability
 
     /* ---- initial pair ---------------------------------------------- */
     float x0 = init_guess;
@@ -2232,8 +2246,10 @@ float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::
                 } else {
                     bracket_low = x1;
                 }
-                x0 = x1; f0 = f1;
-                x1 = x2; f1 = f2;
+                x0 = x1;
+                f0 = f1;
+                x1 = x2;
+                f1 = f2;
                 continue;
             }
             std::cerr << "WARNING: fzero stagnated (|f'|≈0).\n";
@@ -2242,7 +2258,7 @@ float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::
 
         /* ------- secant update with step limiting -------------------- */
         float x2 = x1 - f1 * (x1 - x0) / denom;
-        
+
         // Limit step size for stability
         float step = x2 - x1;
         float max_step = MAX_STEP_FACTOR * std::max(std::fabs(x1), 1.0f);
@@ -2250,7 +2266,7 @@ float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::
             step = (step > 0) ? max_step : -max_step;
             x2 = x1 + step;
         }
-        
+
         if (!std::isfinite(x2)) { // overflow / NaN safeguard
             std::cerr << "WARNING: fzero produced non-finite iterate.\n";
             return x1;
@@ -2285,11 +2301,11 @@ float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::
 }
 
 float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::vector<float> &vars, const void *params, float init_guess, bool &converged, float err_tol, int max_iter) {
-    constexpr float DELTA_SEED = 1e-3f;  // Increased for better initial slope estimate
-    constexpr float DENOM_EPS = 1e-10f;  // Relaxed flat function detection
-    constexpr float MAX_STEP_FACTOR = 0.5f;  // Limit step size for stability
+    constexpr float DELTA_SEED = 1e-3f; // Increased for better initial slope estimate
+    constexpr float DENOM_EPS = 1e-10f; // Relaxed flat function detection
+    constexpr float MAX_STEP_FACTOR = 0.5f; // Limit step size for stability
 
-    converged = false;  // Initialize as not converged
+    converged = false; // Initialize as not converged
 
     /* ---- initial pair ---------------------------------------------- */
     float x0 = init_guess;
@@ -2326,8 +2342,10 @@ float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::
                 } else {
                     bracket_low = x1;
                 }
-                x0 = x1; f0 = f1;
-                x1 = x2; f1 = f2;
+                x0 = x1;
+                f0 = f1;
+                x1 = x2;
+                f1 = f2;
                 continue;
             }
             // Function is stagnated, not converged
@@ -2336,7 +2354,7 @@ float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::
 
         /* ------- secant update with step limiting -------------------- */
         float x2 = x1 - f1 * (x1 - x0) / denom;
-        
+
         // Limit step size for stability
         float step = x2 - x1;
         float max_step = MAX_STEP_FACTOR * std::max(std::fabs(x1), 1.0f);
@@ -2344,7 +2362,7 @@ float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::
             step = (step > 0) ? max_step : -max_step;
             x2 = x1 + step;
         }
-        
+
         if (!std::isfinite(x2)) { // overflow / NaN safeguard
             return x1;
         }
@@ -2393,7 +2411,7 @@ float helios::interp1(const std::vector<helios::vec2> &points, float x) {
     // This avoids full validation for performance-critical applications
     constexpr float EPSILON = 1.0E-5f;
     bool is_likely_increasing = points.size() < 2 || points[1].x > points[0].x;
-    
+
     if (is_likely_increasing) {
         // Quick verification for increasing sequence
         bool is_valid_increasing = true;
@@ -2403,7 +2421,7 @@ float helios::interp1(const std::vector<helios::vec2> &points, float x) {
                 is_valid_increasing = false;
             }
         }
-        
+
         if (is_valid_increasing) {
             // Handle extrapolation cases
             if (x <= points.front().x) {
@@ -2412,23 +2430,22 @@ float helios::interp1(const std::vector<helios::vec2> &points, float x) {
             if (x >= points.back().x) {
                 return points.back().y;
             }
-            
+
             // Optimized binary search for increasing sequence
-            auto it = std::lower_bound(points.begin(), points.end(), x, 
-                [](const vec2 &point, float value) { return point.x < value; });
-            
+            auto it = std::lower_bound(points.begin(), points.end(), x, [](const vec2 &point, float value) { return point.x < value; });
+
             size_t upper_idx = std::distance(points.begin(), it);
             size_t lower_idx = upper_idx - 1;
-            
+
             const vec2 &p1 = points[lower_idx];
             const vec2 &p2 = points[upper_idx];
-            
+
             // Linear interpolation
             float t = (x - p1.x) / (p2.x - p1.x);
             return p1.y + t * (p2.y - p1.y);
         }
     }
-    
+
     // Fallback: full validation for decreasing or invalid sequences
     bool is_increasing = true;
     bool is_decreasing = true;
@@ -2459,18 +2476,18 @@ float helios::interp1(const std::vector<helios::vec2> &points, float x) {
         if (x <= points.back().x) {
             return points.back().y;
         }
-        
+
         // Optimized binary search for decreasing sequence
-        auto it = std::lower_bound(points.begin(), points.end(), x, 
-            [](const vec2 &point, float value) { return point.x > value; });
-        
+        auto it = std::lower_bound(points.begin(), points.end(), x, [](const vec2 &point, float value) { return point.x > value; });
+
         size_t upper_idx = std::distance(points.begin(), it);
-        if (upper_idx == 0) upper_idx = 1;
+        if (upper_idx == 0)
+            upper_idx = 1;
         size_t lower_idx = upper_idx - 1;
-        
+
         const vec2 &p1 = points[lower_idx];
         const vec2 &p2 = points[upper_idx];
-        
+
         // Linear interpolation
         float t = (x - p1.x) / (p2.x - p1.x);
         return p1.y + t * (p2.y - p1.y);
@@ -2557,42 +2574,42 @@ bool helios::validateOutputPath(std::string &output_path, const std::vector<std:
 //! Get build directory path - requires HELIOS_BUILD environment variable
 std::string getBuildDirectory() {
     // Try HELIOS_BUILD environment variable (required)
-    if (const char* buildDir = std::getenv("HELIOS_BUILD")) {
+    if (const char *buildDir = std::getenv("HELIOS_BUILD")) {
         return std::string(buildDir);
     }
-    
+
     // Fallback: assume current working directory contains the build
     // This is a simple fallback that should work for most use cases
     std::filesystem::path currentPath = std::filesystem::current_path();
-    
+
     // If we're already in a build directory, use it
     if (std::filesystem::exists(currentPath / "plugins")) {
         return currentPath.string();
     }
-    
+
     // If we're in a subdirectory, try going up to find build directory
     std::filesystem::path parent = currentPath.parent_path();
     if (std::filesystem::exists(parent / "plugins")) {
         return parent.string();
     }
-    
+
     // Last resort: use current directory
     return currentPath.string();
 }
 
-std::filesystem::path helios::resolveAssetPath(const std::string& relativePath) {
+std::filesystem::path helios::resolveAssetPath(const std::string &relativePath) {
     // This function is deprecated but kept for compatibility
     // It now just calls resolveFilePath
     return resolveFilePath(relativePath);
 }
 
-std::filesystem::path helios::resolvePluginAsset(const std::string& pluginName, const std::string& assetPath) {
+std::filesystem::path helios::resolvePluginAsset(const std::string &pluginName, const std::string &assetPath) {
     std::string pluginAssetPath = "plugins/" + pluginName + "/" + assetPath;
     return resolveFilePath(pluginAssetPath);
 }
 
 
-std::filesystem::path helios::resolveFilePath(const std::string& filename) {
+std::filesystem::path helios::resolveFilePath(const std::string &filename) {
     // 1. If absolute path, validate and return
     std::filesystem::path filepath(filename);
     if (filepath.is_absolute()) {
@@ -2608,35 +2625,34 @@ std::filesystem::path helios::resolveFilePath(const std::string& filename) {
     if (std::filesystem::exists(currentDirPath)) {
         return std::filesystem::canonical(currentDirPath);
     }
-    
+
     // 3. Second try: Resolve relative to build directory (fallback for HELIOS_BUILD)
     std::string buildDir = getBuildDirectory();
     std::filesystem::path buildDirPath = std::filesystem::path(buildDir) / filename;
-    
+
     if (std::filesystem::exists(buildDirPath)) {
         return std::filesystem::canonical(buildDirPath);
     }
-    
+
     // File not found in either location - provide clear error message
-    helios_runtime_error("ERROR (helios::resolveFilePath): Could not locate asset file: " + filename + 
-                        " (checked: " + currentDirPath.string() + " and " + buildDirPath.string() + "). " +
-                        "Ensure file exists relative to current directory or HELIOS_BUILD path.");
+    helios_runtime_error("ERROR (helios::resolveFilePath): Could not locate asset file: " + filename + " (checked: " + currentDirPath.string() + " and " + buildDirPath.string() + "). " +
+                         "Ensure file exists relative to current directory or HELIOS_BUILD path.");
     return {}; // This line should never be reached due to helios_runtime_error throwing
 }
 
-std::filesystem::path helios::resolveSpectraPath(const std::string& spectraFile) {
+std::filesystem::path helios::resolveSpectraPath(const std::string &spectraFile) {
     // All spectral data files should be looked for in the radiation plugin's spectral_data directory
     std::string spectraPath = "plugins/radiation/spectral_data/" + spectraFile;
     return resolveFilePath(spectraPath);
 }
 
-bool helios::validateAssetPath(const std::filesystem::path& assetPath) {
+bool helios::validateAssetPath(const std::filesystem::path &assetPath) {
     return std::filesystem::exists(assetPath) && std::filesystem::is_regular_file(assetPath);
 }
 
-std::filesystem::path helios::findProjectRoot(const std::filesystem::path& startPath) {
+std::filesystem::path helios::findProjectRoot(const std::filesystem::path &startPath) {
     std::filesystem::path currentPath = std::filesystem::absolute(startPath);
-    
+
     while (!currentPath.empty() && currentPath != currentPath.parent_path()) {
         std::filesystem::path cmakeFile = currentPath / "CMakeLists.txt";
         if (std::filesystem::exists(cmakeFile) && std::filesystem::is_regular_file(cmakeFile)) {
@@ -2644,16 +2660,16 @@ std::filesystem::path helios::findProjectRoot(const std::filesystem::path& start
         }
         currentPath = currentPath.parent_path();
     }
-    
+
     return {}; // Return empty path if not found
 }
 
-std::filesystem::path helios::resolveProjectFile(const std::string& relativePath) {
+std::filesystem::path helios::resolveProjectFile(const std::string &relativePath) {
     // Handle empty path
     if (relativePath.empty()) {
         helios_runtime_error("ERROR (resolveProjectFile): Cannot resolve empty file path.");
     }
-    
+
     // If it's already absolute, just validate and return it
     std::filesystem::path inputPath(relativePath);
     if (inputPath.is_absolute()) {
@@ -2663,13 +2679,13 @@ std::filesystem::path helios::resolveProjectFile(const std::string& relativePath
             helios_runtime_error("ERROR (resolveProjectFile): Absolute path '" + relativePath + "' does not exist or is not a regular file.");
         }
     }
-    
+
     // Strategy 1: Check current working directory
     std::filesystem::path cwdPath = std::filesystem::current_path() / relativePath;
     if (validateAssetPath(cwdPath)) {
         return std::filesystem::absolute(cwdPath);
     }
-    
+
     // Strategy 2: Check project directory
     std::filesystem::path projectRoot = findProjectRoot();
     if (!projectRoot.empty()) {
@@ -2678,7 +2694,7 @@ std::filesystem::path helios::resolveProjectFile(const std::string& relativePath
             return std::filesystem::absolute(projectPath);
         }
     }
-    
+
     // Strategy 3: Error - file not found in either location
     std::string errorMsg = "ERROR (resolveProjectFile): Could not locate file '" + relativePath + "'. Searched in:\n";
     errorMsg += "  - Current working directory: " + std::filesystem::current_path().string() + "\n";
@@ -2688,7 +2704,7 @@ std::filesystem::path helios::resolveProjectFile(const std::string& relativePath
         errorMsg += "  - Project directory: (not found - no CMakeLists.txt found in parent directories)\n";
     }
     errorMsg += "Ensure the file exists in one of these locations.";
-    
+
     helios_runtime_error(errorMsg);
     return {}; // Never reached due to exception
 }
@@ -2781,20 +2797,20 @@ std::vector<float> helios::linspace(float start, float end, int num) {
     if (num <= 0) {
         helios_runtime_error("ERROR (linspace): Number of points must be greater than 0.");
     }
-    
+
     if (num == 1) {
         return {start};
     }
-    
+
     std::vector<float> result(num);
     float step = (end - start) / (num - 1);
-    
+
     for (int i = 0; i < num; ++i) {
         result[i] = start + i * step;
     }
-    
+
     result[num - 1] = end;
-    
+
     return result;
 }
 
@@ -2802,20 +2818,20 @@ std::vector<vec2> helios::linspace(const vec2 &start, const vec2 &end, int num) 
     if (num <= 0) {
         helios_runtime_error("ERROR (linspace): Number of points must be greater than 0.");
     }
-    
+
     if (num == 1) {
         return {start};
     }
-    
+
     std::vector<vec2> result(num);
     vec2 step = (end - start) / float(num - 1);
-    
+
     for (int i = 0; i < num; ++i) {
         result[i] = start + step * float(i);
     }
-    
+
     result[num - 1] = end;
-    
+
     return result;
 }
 
@@ -2823,20 +2839,20 @@ std::vector<vec3> helios::linspace(const vec3 &start, const vec3 &end, int num) 
     if (num <= 0) {
         helios_runtime_error("ERROR (linspace): Number of points must be greater than 0.");
     }
-    
+
     if (num == 1) {
         return {start};
     }
-    
+
     std::vector<vec3> result(num);
     vec3 step = (end - start) / float(num - 1);
-    
+
     for (int i = 0; i < num; ++i) {
         result[i] = start + step * float(i);
     }
-    
+
     result[num - 1] = end;
-    
+
     return result;
 }
 
@@ -2844,20 +2860,20 @@ std::vector<vec4> helios::linspace(const vec4 &start, const vec4 &end, int num) 
     if (num <= 0) {
         helios_runtime_error("ERROR (linspace): Number of points must be greater than 0.");
     }
-    
+
     if (num == 1) {
         return {start};
     }
-    
+
     std::vector<vec4> result(num);
     vec4 step = (end - start) / float(num - 1);
-    
+
     for (int i = 0; i < num; ++i) {
         result[i] = start + step * float(i);
     }
-    
+
     result[num - 1] = end;
-    
+
     return result;
 }
 

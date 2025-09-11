@@ -63,10 +63,10 @@ void Visualizer::printWindow(const char *outfile) const {
     if (window != nullptr && !headless) {
         glfwPollEvents();
     }
-    
+
     // Ensure rendering is complete
     glFinish();
-    
+
     // Read pixels from front buffer (where the displayed content is)
     write_JPEG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, message_flag);
 }
@@ -946,7 +946,7 @@ void Visualizer::plotUpdate() {
 void Visualizer::plotUpdate(bool hide_window) {
     // Check if window is marked for closure to prevent hanging on glfwSwapBuffers()
     if (!headless && window != nullptr && glfwWindowShouldClose(scast<GLFWwindow *>(window))) {
-        return;  // Don't render to a window that should be closed
+        return; // Don't render to a window that should be closed
     }
 
     if (message_flag) {

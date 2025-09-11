@@ -16,9 +16,9 @@
 #ifndef HELIOS_CONTEXT
 #define HELIOS_CONTEXT
 
-#include <utility>
 #include <set>
 #include <unordered_set>
+#include <utility>
 
 #include "global.h"
 
@@ -2167,25 +2167,25 @@ namespace helios {
         std::unordered_map<std::string, size_t> object_data_label_counts;
 
         //----------- DATA TYPE CONSISTENCY REGISTRIES -------------//
-        
+
         //! Registry to track the expected data type for each primitive data label across all primitives
         std::unordered_map<std::string, HeliosDataType> primitive_data_type_registry;
-        
+
         //! Registry to track the expected data type for each object data label across all objects
         std::unordered_map<std::string, HeliosDataType> object_data_type_registry;
 
         //----------- VALUE-LEVEL CACHING REGISTRIES -------------//
-        
+
         //! Generic value registries for primitive data - maps data_label -> {value -> reference_count}
         std::unordered_map<std::string, std::unordered_map<std::string, size_t>> primitive_string_value_registry;
         std::unordered_map<std::string, std::unordered_map<int, size_t>> primitive_int_value_registry;
         std::unordered_map<std::string, std::unordered_map<uint, size_t>> primitive_uint_value_registry;
-        
+
         //! Generic value registries for object data - maps data_label -> {value -> reference_count}
         std::unordered_map<std::string, std::unordered_map<std::string, size_t>> object_string_value_registry;
         std::unordered_map<std::string, std::unordered_map<int, size_t>> object_int_value_registry;
         std::unordered_map<std::string, std::unordered_map<uint, size_t>> object_uint_value_registry;
-        
+
         //! Sets to track which data labels have value-level caching enabled
         std::unordered_set<std::string> cached_primitive_data_labels;
         std::unordered_set<std::string> cached_object_data_labels;
@@ -2202,7 +2202,6 @@ namespace helios {
          */
         void decrementPrimitiveDataLabelCounter(const std::string &primitive_data_label);
 
-        
 
         //! Increments the count associated with a given object data label.
         /**
@@ -2218,7 +2217,7 @@ namespace helios {
 
         //! Helper function to convert data type enum to string
         std::string dataTypeToString(HeliosDataType type) const;
-        
+
         //! Helper function to check if type casting is supported between two types
         bool isTypeCastingSupported(HeliosDataType from_type, HeliosDataType to_type) const;
 
@@ -2314,7 +2313,7 @@ namespace helios {
          * \param[in] argv Array of command line argument strings
          * \return 0 if test was successful, 1 if test failed.
          */
-        static int selfTest(int argc, char** argv);
+        static int selfTest(int argc, char **argv);
 
         //! Set seed for random generator
         /**
@@ -2881,7 +2880,7 @@ namespace helios {
             // Check if this primitive already has cached data for registry maintenance
             std::string label_str = std::string(label);
             bool had_cached_value = false;
-            
+
             // Handle caching only for supported types, and avoid character arrays
             if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
                 if (isPrimitiveDataValueCachingEnabled(label_str) && primitives.at(UUID)->doesPrimitiveDataExist(label)) {
@@ -2898,11 +2897,11 @@ namespace helios {
                     had_cached_value = true;
                 }
             }
-            
+
             if (!primitives.at(UUID)->doesPrimitiveDataExist(label)) {
                 incrementPrimitiveDataLabelCounter(label);
             }
-            
+
             // Validate data type consistency and register/validate type
             HeliosDataType data_type;
             if constexpr (std::is_same_v<T, int>) {
@@ -2929,14 +2928,14 @@ namespace helios {
                 data_type = HELIOS_TYPE_STRING;
             }
             HeliosDataType target_type = registerOrValidatePrimitiveDataType<T>(label, data_type);
-            
+
             // Store data with type casting if needed
             if (target_type != data_type && isTypeCastingSupported(data_type, target_type)) {
                 storeDataWithTypeCasting(UUID, label, data, target_type);
             } else {
                 primitives.at(UUID)->setPrimitiveData(label, data);
             }
-            
+
             // Update value registry if caching is enabled for this label (only for new data)
             if (isPrimitiveDataValueCachingEnabled(label_str) && !had_cached_value) {
                 if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
@@ -2971,7 +2970,7 @@ namespace helios {
             if (!primitives.at(UUID)->doesPrimitiveDataExist(label)) {
                 incrementPrimitiveDataLabelCounter(label);
             }
-            
+
             // For vector data, register the base type (not vector type)
             HeliosDataType data_type;
             if constexpr (std::is_same_v<T, int>) {
@@ -2998,7 +2997,7 @@ namespace helios {
                 data_type = HELIOS_TYPE_STRING;
             }
             registerOrValidatePrimitiveDataType<T>(label, data_type);
-            
+
             primitives.at(UUID)->setPrimitiveData(label, data);
         }
 
@@ -3062,7 +3061,7 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (int i = 0; i < (int)UUIDs.size(); ++i) {
+            for (int i = 0; i < (int) UUIDs.size(); ++i) {
                 primitives.at(UUIDs[i])->setPrimitiveData(label, data[i]);
             }
         }
@@ -3120,7 +3119,7 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (int i = 0; i < (int)UUIDs.size(); ++i) {
+            for (int i = 0; i < (int) UUIDs.size(); ++i) {
                 primitives.at(UUIDs[i])->setPrimitiveData(label, data);
             }
         }
@@ -3167,7 +3166,7 @@ namespace helios {
          * \return Helios data type of primitive data
          * \sa HeliosDataType
          */
-        DEPRECATED( HeliosDataType getPrimitiveDataType(uint UUID, const char *label) const );
+        DEPRECATED(HeliosDataType getPrimitiveDataType(uint UUID, const char *label) const);
 
         //! Get the expected data type for a primitive data label (cached lookup)
         /**
@@ -3216,38 +3215,38 @@ namespace helios {
 
 
         //----------- VALUE-LEVEL CACHING CONFIGURATION ----------//
-        
+
         //! Enable value-level caching for a primitive data label
         /**
          * \param[in] label The primitive data label to enable caching for. Must have string, int, or uint type.
          */
         void enablePrimitiveDataValueCaching(const std::string &label);
-        
+
         //! Disable value-level caching for a primitive data label
         /**
          * \param[in] label The primitive data label to disable caching for.
          */
         void disablePrimitiveDataValueCaching(const std::string &label);
-        
+
         //! Check if value-level caching is enabled for a primitive data label
         /**
          * \param[in] label The primitive data label to check.
          * \return True if caching is enabled, false otherwise.
          */
         [[nodiscard]] bool isPrimitiveDataValueCachingEnabled(const std::string &label) const;
-        
+
         //! Enable value-level caching for an object data label
         /**
          * \param[in] label The object data label to enable caching for. Must have string, int, or uint type.
          */
         void enableObjectDataValueCaching(const std::string &label);
-        
+
         //! Disable value-level caching for an object data label
         /**
          * \param[in] label The object data label to disable caching for.
          */
         void disableObjectDataValueCaching(const std::string &label);
-        
+
         //! Check if value-level caching is enabled for an object data label
         /**
          * \param[in] label The object data label to check.
@@ -3256,7 +3255,7 @@ namespace helios {
         [[nodiscard]] bool isObjectDataValueCachingEnabled(const std::string &label) const;
 
         //----------- UNIQUE VALUE QUERY METHODS ----------//
-        
+
 
         //! Method to get the Primitive type
         /**
@@ -3705,7 +3704,7 @@ namespace helios {
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
-            
+
             // Validate data type consistency and register/validate type
             HeliosDataType data_type;
             if constexpr (std::is_same_v<T, int>) {
@@ -3732,11 +3731,11 @@ namespace helios {
                 data_type = HELIOS_TYPE_STRING;
             }
             registerOrValidateObjectDataType<T>(label, data_type);
-            
+
             // Check if this object already has cached data for registry maintenance
             std::string label_str = std::string(label);
             bool had_cached_value = false;
-            
+
             // Handle caching only for supported types, and avoid character arrays
             if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
                 if (isObjectDataValueCachingEnabled(label_str) && objects.at(objID)->doesObjectDataExist(label)) {
@@ -3753,12 +3752,12 @@ namespace helios {
                     had_cached_value = true;
                 }
             }
-            
+
             if (!objects.at(objID)->doesObjectDataExist(label)) {
                 incrementObjectDataLabelCounter(label);
             }
             objects.at(objID)->setObjectData(label, data);
-            
+
             // Update value registry if caching is enabled for this label (only for new data)
             if (isObjectDataValueCachingEnabled(label_str) && !had_cached_value) {
                 if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
@@ -3826,7 +3825,7 @@ namespace helios {
             if (caching_enabled) {
                 // Handle caching only for supported types
                 if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
-                    for (uint objID : objIDs) {
+                    for (uint objID: objIDs) {
                         if (objects.at(objID)->doesObjectDataExist(label)) {
                             T old_cached_value{};
                             objects.at(objID)->getObjectData(label, old_cached_value);
@@ -3834,7 +3833,7 @@ namespace helios {
                         }
                     }
                 } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
-                    for (uint objID : objIDs) {
+                    for (uint objID: objIDs) {
                         if (objects.at(objID)->doesObjectDataExist(label)) {
                             std::string old_cached_value;
                             objects.at(objID)->getObjectData(label, old_cached_value);
@@ -3854,7 +3853,7 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (int i = 0; i < (int)objIDs.size(); ++i) {
+            for (int i = 0; i < (int) objIDs.size(); ++i) {
                 objects.at(objIDs[i])->setObjectData(label, data);
             }
 
@@ -3926,7 +3925,7 @@ namespace helios {
                 // Handle caching only for supported types
                 if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
                     for (const auto &j: objIDs) {
-                        for (uint objID : j) {
+                        for (uint objID: j) {
                             total_objects++;
                             if (objects.at(objID)->doesObjectDataExist(label)) {
                                 T old_cached_value{};
@@ -3937,7 +3936,7 @@ namespace helios {
                     }
                 } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                     for (const auto &j: objIDs) {
-                        for (uint objID : j) {
+                        for (uint objID: j) {
                             total_objects++;
                             if (objects.at(objID)->doesObjectDataExist(label)) {
                                 std::string old_cached_value;
@@ -3965,7 +3964,7 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (int j = 0; j < (int)objIDs.size(); ++j) {
+            for (int j = 0; j < (int) objIDs.size(); ++j) {
                 for (size_t i = 0; i < objIDs[j].size(); ++i) {
                     objects.at(objIDs[j][i])->setObjectData(label, data);
                 }
@@ -4040,7 +4039,7 @@ namespace helios {
                 if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>) {
                     for (const auto &k: objIDs) {
                         for (const auto &j: k) {
-                            for (uint objID : j) {
+                            for (uint objID: j) {
                                 total_objects++;
                                 if (objects.at(objID)->doesObjectDataExist(label)) {
                                     T old_cached_value{};
@@ -4053,7 +4052,7 @@ namespace helios {
                 } else if constexpr (std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
                     for (const auto &k: objIDs) {
                         for (const auto &j: k) {
-                            for (uint objID : j) {
+                            for (uint objID: j) {
                                 total_objects++;
                                 if (objects.at(objID)->doesObjectDataExist(label)) {
                                     std::string old_cached_value;
@@ -4086,7 +4085,7 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (int k = 0; k < (int)objIDs.size(); ++k) {
+            for (int k = 0; k < (int) objIDs.size(); ++k) {
                 for (size_t j = 0; j < objIDs[k].size(); ++j) {
                     for (size_t i = 0; i < objIDs[k][j].size(); ++i) {
                         uint objID = objIDs[k][j][i];
@@ -4129,7 +4128,7 @@ namespace helios {
             static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
                                   std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
                           "Context::setObjectData() was called with an unsupported type.");
-            
+
             // Validate data type consistency and register/validate type
             HeliosDataType data_type;
             if constexpr (std::is_same_v<T, int>) {
@@ -4156,7 +4155,7 @@ namespace helios {
                 data_type = HELIOS_TYPE_STRING;
             }
             registerOrValidateObjectDataType<T>(label, data_type);
-            
+
             objects.at(objID)->setObjectData(label, data);
         }
 
@@ -4217,7 +4216,7 @@ namespace helios {
 #ifdef USE_OPENMP
 #pragma omp parallel for
 #endif
-            for (int i = 0; i < (int)objIDs.size(); ++i) {
+            for (int i = 0; i < (int) objIDs.size(); ++i) {
                 objects.at(objIDs[i])->setObjectData(label, data[i]);
             }
         }
@@ -4270,7 +4269,7 @@ namespace helios {
          * \return Helios data type of primitive data
          * \sa HeliosDataType
          */
-        DEPRECATED( HeliosDataType getObjectDataType(uint objID, const char *label) const );
+        DEPRECATED(HeliosDataType getObjectDataType(uint objID, const char *label) const);
 
         //! Get the expected data type for an object data label (cached lookup)
         /**
@@ -6881,7 +6880,7 @@ namespace helios {
         std::vector<RGBcolor> generateColormap(const std::vector<helios::RGBcolor> &ctable, const std::vector<float> &cfrac, uint Ncolors);
 
         // ---------- Template method implementations for data type consistency ---------- //
-        
+
         template<typename T>
         void storeDataWithTypeCasting(uint UUID, const char *label, const T &data, HeliosDataType target_type) {
             // Only cast between numeric scalar types
@@ -6903,7 +6902,7 @@ namespace helios {
                 primitives.at(UUID)->setPrimitiveData(label, data);
             }
         }
-        
+
         template<typename T>
         void storeObjectDataWithTypeCasting(uint objID, const char *label, const T &data, HeliosDataType target_type) {
             // Only cast between numeric scalar types
@@ -6939,19 +6938,19 @@ namespace helios {
                 if (expected_type != data_type) {
                     // Types don't match - check if casting is possible
                     if (!isTypeCastingSupported(data_type, expected_type)) {
-                        helios_runtime_error("ERROR (Context::registerOrValidatePrimitiveDataType): Data type mismatch for label '" + label + "'. Expected " + 
-                                           dataTypeToString(expected_type) + " but got " + dataTypeToString(data_type) + 
-                                           ". Type casting between these types is not supported.");
+                        helios_runtime_error("ERROR (Context::registerOrValidatePrimitiveDataType): Data type mismatch for label '" + label + "'. Expected " + dataTypeToString(expected_type) + " but got " + dataTypeToString(data_type) +
+                                             ". Type casting between these types is not supported.");
                     } else {
-                        std::cerr << "WARNING (Context::registerOrValidatePrimitiveDataType): Type casting from " + dataTypeToString(data_type) + 
-                                     " to " + dataTypeToString(expected_type) + " for label '" + label + "'. Consider using consistent types." << std::endl;
+                        std::cerr << "WARNING (Context::registerOrValidatePrimitiveDataType): Type casting from " + dataTypeToString(data_type) + " to " + dataTypeToString(expected_type) + " for label '" + label +
+                                             "'. Consider using consistent types."
+                                  << std::endl;
                     }
                 }
                 return expected_type;
             }
         }
 
-        template<typename T>  
+        template<typename T>
         HeliosDataType registerOrValidateObjectDataType(const std::string &label, HeliosDataType data_type) {
             auto it = object_data_type_registry.find(label);
             if (it == object_data_type_registry.end()) {
@@ -6964,12 +6963,11 @@ namespace helios {
                 if (expected_type != data_type) {
                     // Types don't match - check if casting is possible
                     if (!isTypeCastingSupported(data_type, expected_type)) {
-                        helios_runtime_error("ERROR (Context::registerOrValidateObjectDataType): Data type mismatch for label '" + label + "'. Expected " + 
-                                           dataTypeToString(expected_type) + " but got " + dataTypeToString(data_type) + 
-                                           ". Type casting between these types is not supported.");
+                        helios_runtime_error("ERROR (Context::registerOrValidateObjectDataType): Data type mismatch for label '" + label + "'. Expected " + dataTypeToString(expected_type) + " but got " + dataTypeToString(data_type) +
+                                             ". Type casting between these types is not supported.");
                     } else {
-                        std::cerr << "WARNING (Context::registerOrValidateObjectDataType): Type casting from " + dataTypeToString(data_type) + 
-                                     " to " + dataTypeToString(expected_type) + " for label '" + label + "'. Consider using consistent types." << std::endl;
+                        std::cerr << "WARNING (Context::registerOrValidateObjectDataType): Type casting from " + dataTypeToString(data_type) + " to " + dataTypeToString(expected_type) + " for label '" + label + "'. Consider using consistent types."
+                                  << std::endl;
                     }
                 }
                 return expected_type;
@@ -6977,7 +6975,7 @@ namespace helios {
         }
 
         //----------- TEMPLATE METHOD IMPLEMENTATIONS FOR VALUE REGISTRY ----------//
-        
+
         //! Template implementation for incrementing primitive value registry
         template<typename T>
         void incrementPrimitiveValueRegistry(const std::string &label, const T &value) {
@@ -6990,7 +6988,7 @@ namespace helios {
                 primitive_uint_value_registry[label][value]++;
             }
         }
-        
+
         //! Template implementation for decrementing primitive value registry
         template<typename T>
         void decrementPrimitiveValueRegistry(const std::string &label, const T &value) {
@@ -7039,7 +7037,7 @@ namespace helios {
                 }
             }
         }
-        
+
         //! Template implementation for incrementing object value registry
         template<typename T>
         void incrementObjectValueRegistry(const std::string &label, const T &value) {
@@ -7052,7 +7050,7 @@ namespace helios {
                 object_uint_value_registry[label][value]++;
             }
         }
-        
+
         //! Template implementation for decrementing object value registry
         template<typename T>
         void decrementObjectValueRegistry(const std::string &label, const T &value) {
@@ -7103,7 +7101,7 @@ namespace helios {
         }
 
         //----------- UNIQUE VALUE QUERY METHODS ----------//
-        
+
         //! Get all unique values for a primitive data label (requires caching to be enabled)
         /**
          * \tparam T Data type (std::string, int, or uint)
@@ -7113,20 +7111,19 @@ namespace helios {
          */
         template<typename T>
         void getUniquePrimitiveDataValues(const std::string &label, std::vector<T> &values) const {
-            static_assert(std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>,
-                         "getUniquePrimitiveDataValues() only supports std::string, int, and uint types.");
-            
+            static_assert(std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>, "getUniquePrimitiveDataValues() only supports std::string, int, and uint types.");
+
             if (!isPrimitiveDataValueCachingEnabled(label)) {
                 helios_runtime_error("ERROR (Context::getUniquePrimitiveDataValues): Value-level caching is not enabled for primitive data label '" + label + "'. Use enablePrimitiveDataValueCaching() first.");
             }
-            
+
             values.clear();
-            
+
             if constexpr (std::is_same_v<T, std::string>) {
                 auto it = primitive_string_value_registry.find(label);
                 if (it != primitive_string_value_registry.end()) {
                     values.reserve(it->second.size());
-                    for (const auto &[value, count] : it->second) {
+                    for (const auto &[value, count]: it->second) {
                         if (count > 0) {
                             values.push_back(value);
                         }
@@ -7136,7 +7133,7 @@ namespace helios {
                 auto it = primitive_int_value_registry.find(label);
                 if (it != primitive_int_value_registry.end()) {
                     values.reserve(it->second.size());
-                    for (const auto &[value, count] : it->second) {
+                    for (const auto &[value, count]: it->second) {
                         if (count > 0) {
                             values.push_back(value);
                         }
@@ -7146,7 +7143,7 @@ namespace helios {
                 auto it = primitive_uint_value_registry.find(label);
                 if (it != primitive_uint_value_registry.end()) {
                     values.reserve(it->second.size());
-                    for (const auto &[value, count] : it->second) {
+                    for (const auto &[value, count]: it->second) {
                         if (count > 0) {
                             values.push_back(value);
                         }
@@ -7154,7 +7151,7 @@ namespace helios {
                 }
             }
         }
-        
+
         //! Get all unique values for an object data label (requires caching to be enabled)
         /**
          * \tparam T Data type (std::string, int, or uint)
@@ -7164,20 +7161,19 @@ namespace helios {
          */
         template<typename T>
         void getUniqueObjectDataValues(const std::string &label, std::vector<T> &values) const {
-            static_assert(std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>,
-                         "getUniqueObjectDataValues() only supports std::string, int, and uint types.");
-            
+            static_assert(std::is_same_v<T, std::string> || std::is_same_v<T, int> || std::is_same_v<T, uint>, "getUniqueObjectDataValues() only supports std::string, int, and uint types.");
+
             if (!isObjectDataValueCachingEnabled(label)) {
                 helios_runtime_error("ERROR (Context::getUniqueObjectDataValues): Value-level caching is not enabled for object data label '" + label + "'. Use enableObjectDataValueCaching() first.");
             }
-            
+
             values.clear();
-            
+
             if constexpr (std::is_same_v<T, std::string>) {
                 auto it = object_string_value_registry.find(label);
                 if (it != object_string_value_registry.end()) {
                     values.reserve(it->second.size());
-                    for (const auto &[value, count] : it->second) {
+                    for (const auto &[value, count]: it->second) {
                         if (count > 0) {
                             values.push_back(value);
                         }
@@ -7187,7 +7183,7 @@ namespace helios {
                 auto it = object_int_value_registry.find(label);
                 if (it != object_int_value_registry.end()) {
                     values.reserve(it->second.size());
-                    for (const auto &[value, count] : it->second) {
+                    for (const auto &[value, count]: it->second) {
                         if (count > 0) {
                             values.push_back(value);
                         }
@@ -7197,7 +7193,7 @@ namespace helios {
                 auto it = object_uint_value_registry.find(label);
                 if (it != object_uint_value_registry.end()) {
                     values.reserve(it->second.size());
-                    for (const auto &[value, count] : it->second) {
+                    for (const auto &[value, count]: it->second) {
                         if (count > 0) {
                             values.push_back(value);
                         }
@@ -7205,8 +7201,6 @@ namespace helios {
                 }
             }
         }
-
-
     };
 
 } // namespace helios

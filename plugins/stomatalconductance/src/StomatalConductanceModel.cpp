@@ -444,7 +444,7 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
             std::vector<float> variables{An, Cs, Gamma, es, ea, gbw, press, beta};
 
-            // Use better initial guess: start closer to air vapor pressure  
+            // Use better initial guess: start closer to air vapor pressure
             float initial_guess = ea + 0.1f * (es - ea);
             float esurf = fzero(evaluate_BBLmodel, variables, &coeffs, initial_guess, 0.001f, 200); // Pa
             float Ds = max(0.f, (es - esurf) / press * 1000.f); // mmol/mol
@@ -523,7 +523,7 @@ void StomatalConductanceModel::run(const std::vector<uint> &UUIDs, float dt) {
 
             std::vector<float> variables{i, es, ea, gbw, press, beta};
 
-            // Use better initial guess: start closer to air vapor pressure  
+            // Use better initial guess: start closer to air vapor pressure
             float initial_guess = ea + 0.1f * (es - ea);
             float esurf = fzero(evaluate_BMFmodel, variables, &coeffs, initial_guess, 0.001f, 200);
             float Ds = max(0.f, (es - esurf) / press * 1000.f);

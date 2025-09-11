@@ -141,7 +141,7 @@ uint Context::addTriangle(const vec3 &vertex0, const vec3 &vertex1, const vec3 &
     auto *tri_new = (new Triangle(vertex0, vertex1, vertex2, color, 0, currentUUID));
 
 #ifdef HELIOS_DEBUG
-    if ( calculateTriangleArea(vertex0, vertex1, vertex2) < 1e-10 ) {
+    if (calculateTriangleArea(vertex0, vertex1, vertex2) < 1e-10) {
         std::cerr << "WARNING (Context::addTriangle): Triangle is malformed and has near-zero surface area." << std::endl;
     }
 #endif
@@ -160,7 +160,7 @@ uint Context::addTriangle(const helios::vec3 &vertex0, const helios::vec3 &verte
     auto *tri_new = (new Triangle(vertex0, vertex1, vertex2, texture_file, uv, textures, 0, currentUUID));
 
 #ifdef HELIOS_DEBUG
-    if ( calculateTriangleArea(vertex0, vertex1, vertex2) < 1e-10 ) {
+    if (calculateTriangleArea(vertex0, vertex1, vertex2) < 1e-10) {
         std::cerr << "WARNING (Context::addTriangle): Triangle is malformed and has near-zero surface area." << std::endl;
     }
 #endif

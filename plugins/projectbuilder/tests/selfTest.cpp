@@ -15,6 +15,6 @@ DOCTEST_TEST_CASE("ProjectBuilder - buildFromXML") {
     DOCTEST_CHECK_NOTHROW(projectbuilder.buildFromXML());
 }
 
-int ProjectBuilder::selfTest(int argc, char** argv) {
+int ProjectBuilder::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

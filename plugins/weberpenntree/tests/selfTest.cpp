@@ -118,7 +118,6 @@ DOCTEST_TEST_CASE("WeberPennTree Leaf Subdivisions") {
     DOCTEST_CHECK_NOTHROW(weberpenntree.setLeafSubdivisions(make_int2(1, 1)));
     DOCTEST_CHECK_NOTHROW(weberpenntree.setLeafSubdivisions(make_int2(3, 3)));
     DOCTEST_CHECK_NOTHROW(weberpenntree.setLeafSubdivisions(make_int2(5, 5)));
-
 }
 
 DOCTEST_TEST_CASE("WeberPennTree Scaled Trees") {
@@ -134,6 +133,6 @@ DOCTEST_TEST_CASE("WeberPennTree Scaled Trees") {
     DOCTEST_CHECK(!context.getAllUUIDs().empty());
 }
 
-int WeberPennTree::selfTest(int argc, char** argv) {
+int WeberPennTree::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

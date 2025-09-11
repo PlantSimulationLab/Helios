@@ -758,10 +758,10 @@ TEST_CASE("linspace - Linearly Spaced Values") {
         DOCTEST_CHECK(result[0] == doctest::Approx(0.f));
         DOCTEST_CHECK(result[5] == doctest::Approx(5.f));
         DOCTEST_CHECK(result[10] == doctest::Approx(10.f));
-        
+
         // Check uniformly spaced
         for (size_t i = 1; i < result.size(); ++i) {
-            DOCTEST_CHECK(result[i] - result[i-1] == doctest::Approx(1.f));
+            DOCTEST_CHECK(result[i] - result[i - 1] == doctest::Approx(1.f));
         }
     }
 
@@ -771,10 +771,10 @@ TEST_CASE("linspace - Linearly Spaced Values") {
         DOCTEST_CHECK(result[0] == doctest::Approx(-5.f));
         DOCTEST_CHECK(result[2] == doctest::Approx(-1.f));
         DOCTEST_CHECK(result[5] == doctest::Approx(5.f));
-        
+
         // Check spacing
         for (size_t i = 1; i < result.size(); ++i) {
-            DOCTEST_CHECK(result[i] - result[i-1] == doctest::Approx(2.f));
+            DOCTEST_CHECK(result[i] - result[i - 1] == doctest::Approx(2.f));
         }
     }
 
@@ -797,10 +797,10 @@ TEST_CASE("linspace - Linearly Spaced Values") {
         DOCTEST_CHECK(result[0] == doctest::Approx(10.f));
         DOCTEST_CHECK(result[2] == doctest::Approx(6.f));
         DOCTEST_CHECK(result[5] == doctest::Approx(0.f));
-        
+
         // Check negative spacing
         for (size_t i = 1; i < result.size(); ++i) {
-            DOCTEST_CHECK(result[i] - result[i-1] == doctest::Approx(-2.f));
+            DOCTEST_CHECK(result[i] - result[i - 1] == doctest::Approx(-2.f));
         }
     }
 
@@ -815,7 +815,7 @@ TEST_CASE("linspace - Linearly Spaced Values") {
         vec2 start(0.f, 1.f);
         vec2 end(4.f, 5.f);
         std::vector<vec2> result = linspace(start, end, 5);
-        
+
         DOCTEST_CHECK(result.size() == 5);
         DOCTEST_CHECK(result[0].x == doctest::Approx(0.f));
         DOCTEST_CHECK(result[0].y == doctest::Approx(1.f));
@@ -829,7 +829,7 @@ TEST_CASE("linspace - Linearly Spaced Values") {
         vec2 start(1.f, 2.f);
         vec2 end(3.f, 4.f);
         std::vector<vec2> result = linspace(start, end, 1);
-        
+
         DOCTEST_CHECK(result.size() == 1);
         DOCTEST_CHECK(result[0].x == doctest::Approx(start.x));
         DOCTEST_CHECK(result[0].y == doctest::Approx(start.y));
@@ -848,7 +848,7 @@ TEST_CASE("linspace - Linearly Spaced Values") {
         vec3 start(0.f, 0.f, 0.f);
         vec3 end(3.f, 6.f, 9.f);
         std::vector<vec3> result = linspace(start, end, 4);
-        
+
         DOCTEST_CHECK(result.size() == 4);
         DOCTEST_CHECK(result[0].x == doctest::Approx(0.f));
         DOCTEST_CHECK(result[0].y == doctest::Approx(0.f));
@@ -865,7 +865,7 @@ TEST_CASE("linspace - Linearly Spaced Values") {
         vec3 start(-1.f, 2.f, -3.f);
         vec3 end(1.f, -2.f, 3.f);
         std::vector<vec3> result = linspace(start, end, 3);
-        
+
         DOCTEST_CHECK(result.size() == 3);
         DOCTEST_CHECK(result[0].x == doctest::Approx(-1.f));
         DOCTEST_CHECK(result[0].y == doctest::Approx(2.f));
@@ -891,7 +891,7 @@ TEST_CASE("linspace - Linearly Spaced Values") {
         vec4 start(0.f, 1.f, 2.f, 3.f);
         vec4 end(4.f, 9.f, 14.f, 19.f);
         std::vector<vec4> result = linspace(start, end, 5);
-        
+
         DOCTEST_CHECK(result.size() == 5);
         DOCTEST_CHECK(result[0].x == doctest::Approx(0.f));
         DOCTEST_CHECK(result[0].y == doctest::Approx(1.f));
@@ -911,7 +911,7 @@ TEST_CASE("linspace - Linearly Spaced Values") {
         vec4 start(1.f, 2.f, 3.f, 4.f);
         vec4 end(5.f, 6.f, 7.f, 8.f);
         std::vector<vec4> result = linspace(start, end, 2);
-        
+
         DOCTEST_CHECK(result.size() == 2);
         DOCTEST_CHECK(result[0] == start);
         DOCTEST_CHECK(result[1] == end);
@@ -931,12 +931,12 @@ TEST_CASE("linspace - Linearly Spaced Values") {
         std::vector<float> result = linspace(0.1f, 0.9f, 9);
         DOCTEST_CHECK(result[0] == doctest::Approx(0.1f));
         DOCTEST_CHECK(result[8] == doctest::Approx(0.9f));
-        
+
         // Test with large values
         result = linspace(1000000.f, 2000000.f, 11);
         DOCTEST_CHECK(result[0] == doctest::Approx(1000000.f));
         DOCTEST_CHECK(result[10] == doctest::Approx(2000000.f));
-        
+
         // Test with very small values
         result = linspace(1e-6f, 2e-6f, 3);
         DOCTEST_CHECK(result[0] == doctest::Approx(1e-6f));
@@ -947,15 +947,15 @@ TEST_CASE("linspace - Linearly Spaced Values") {
         // Test when start == end
         std::vector<float> result = linspace(5.f, 5.f, 5);
         DOCTEST_CHECK(result.size() == 5);
-        for (const auto& val : result) {
+        for (const auto &val: result) {
             DOCTEST_CHECK(val == doctest::Approx(5.f));
         }
-        
+
         // Test vec3 with zero-length interval
         vec3 point(1.f, 2.f, 3.f);
         std::vector<vec3> vec_result = linspace(point, point, 3);
         DOCTEST_CHECK(vec_result.size() == 3);
-        for (const auto& v : vec_result) {
+        for (const auto &v: vec_result) {
             DOCTEST_CHECK(v.x == doctest::Approx(point.x));
             DOCTEST_CHECK(v.y == doctest::Approx(point.y));
             DOCTEST_CHECK(v.z == doctest::Approx(point.z));
@@ -969,101 +969,101 @@ TEST_CASE("Asset Resolution Functions") {
         bool exception_thrown = false;
         try {
             [[maybe_unused]] auto path = resolveAssetPath("nonexistent_test_file.txt");
-        } catch (const std::runtime_error&) {
+        } catch (const std::runtime_error &) {
             exception_thrown = true;
         }
         DOCTEST_CHECK(exception_thrown);
     }
-    
+
     SUBCASE("resolvePluginAsset") {
         // Test plugin-specific asset resolution - should throw for non-existent file
         bool exception_thrown = false;
         try {
             [[maybe_unused]] auto path = resolvePluginAsset("visualizer", "nonexistent_font.ttf");
-        } catch (const std::runtime_error&) {
+        } catch (const std::runtime_error &) {
             exception_thrown = true;
         }
         DOCTEST_CHECK(exception_thrown);
     }
-    
-    
+
+
     SUBCASE("resolveSpectraPath") {
         // Test spectra path resolution - should throw for non-existent file
         bool exception_thrown = false;
         try {
             [[maybe_unused]] auto path = resolveSpectraPath("nonexistent_spectra.xml");
-        } catch (const std::runtime_error&) {
+        } catch (const std::runtime_error &) {
             exception_thrown = true;
         }
         DOCTEST_CHECK(exception_thrown);
     }
-    
+
     SUBCASE("validateAssetPath with valid path") {
         // Create a temporary file for testing
         std::filesystem::path temp_path = std::filesystem::temp_directory_path() / "helios_test_asset.txt";
         std::ofstream temp_file(temp_path);
         temp_file << "test content";
         temp_file.close();
-        
+
         // Test validation of existing file
         DOCTEST_CHECK(validateAssetPath(temp_path) == true);
-        
+
         // Clean up
         std::filesystem::remove(temp_path);
     }
-    
+
     SUBCASE("validateAssetPath with invalid path") {
         // Test validation of non-existent file
         std::filesystem::path non_existent = "/this/path/does/not/exist.txt";
         DOCTEST_CHECK(validateAssetPath(non_existent) == false);
     }
-    
+
     SUBCASE("resolveAssetPath with empty string") {
         // Test with empty input - should return a path (empty string is handled gracefully)
         auto path = resolveAssetPath("");
         DOCTEST_CHECK(!path.empty());
         DOCTEST_CHECK(path.is_absolute());
     }
-    
+
     SUBCASE("error message content") {
         // Test that error messages contain helpful information
         try {
             [[maybe_unused]] auto path = resolveAssetPath("nonexistent_file.txt");
             DOCTEST_FAIL("Expected exception was not thrown");
-        } catch (const std::runtime_error& e) {
+        } catch (const std::runtime_error &e) {
             std::string error_msg = e.what();
             DOCTEST_CHECK(error_msg.find("Could not locate asset file") != std::string::npos);
             DOCTEST_CHECK(error_msg.find("nonexistent_file.txt") != std::string::npos);
         }
     }
-    
+
     SUBCASE("asset resolution consistency") {
         // Test that multiple calls with same input produce consistent error messages
         std::string error1, error2;
         try {
             [[maybe_unused]] auto path1 = resolveAssetPath("test_consistency.txt");
-        } catch (const std::runtime_error& e) {
+        } catch (const std::runtime_error &e) {
             error1 = e.what();
         }
         try {
             [[maybe_unused]] auto path2 = resolveAssetPath("test_consistency.txt");
-        } catch (const std::runtime_error& e) {
+        } catch (const std::runtime_error &e) {
             error2 = e.what();
         }
         DOCTEST_CHECK(error1 == error2);
     }
-    
+
     SUBCASE("different plugin error messages") {
         // Test that different plugins produce different error messages
         std::string vis_error, rad_error;
         try {
             [[maybe_unused]] auto vis_path = resolvePluginAsset("visualizer", "test.txt");
-        } catch (const std::runtime_error& e) {
+        } catch (const std::runtime_error &e) {
             vis_error = e.what();
         }
         try {
             [[maybe_unused]] auto rad_path = resolvePluginAsset("radiation", "test.txt");
-        } catch (const std::runtime_error& e) {
+        } catch (const std::runtime_error &e) {
             rad_error = e.what();
         }
         // Error messages should be different for different plugins
@@ -1078,40 +1078,40 @@ TEST_CASE("Project-based File Resolution") {
         // Test from current working directory (which should contain CMakeLists.txt)
         std::filesystem::path cwd = std::filesystem::current_path();
         auto project_root = findProjectRoot(cwd);
-        
+
         // Should find a project root (not empty)
         DOCTEST_CHECK(!project_root.empty());
-        
+
         // Project root should contain CMakeLists.txt
         auto cmake_file = project_root / "CMakeLists.txt";
         DOCTEST_CHECK(std::filesystem::exists(cmake_file));
     }
-    
+
     SUBCASE("findProjectRoot with non-existent path") {
         // Test with a path that doesn't exist
         std::filesystem::path fake_path = "/this/path/does/not/exist";
         auto project_root = findProjectRoot(fake_path);
-        
+
         // Should return empty path when no project found
         DOCTEST_CHECK(project_root.empty());
     }
-    
+
     SUBCASE("findProjectRoot from root directory") {
         // Test from system root directory (should not find CMakeLists.txt)
         std::filesystem::path root_path = "/";
         auto project_root = findProjectRoot(root_path);
-        
+
         // Should return empty path when searching from root
         DOCTEST_CHECK(project_root.empty());
     }
-    
+
     SUBCASE("resolveProjectFile with existing file in cwd") {
         // Create a temporary test file in current directory
         std::string test_filename = "test_project_resolve.tmp";
         std::ofstream test_file(test_filename);
         test_file << "test content";
         test_file.close();
-        
+
         try {
             // Should find file in current working directory
             auto resolved_path = resolveProjectFile(test_filename);
@@ -1122,41 +1122,41 @@ TEST_CASE("Project-based File Resolution") {
             std::filesystem::remove(test_filename);
             throw;
         }
-        
+
         // Clean up
         std::filesystem::remove(test_filename);
     }
-    
+
     SUBCASE("resolveProjectFile with non-existent file") {
         // Test with file that doesn't exist in current directory or project
         std::string fake_filename = "this_file_does_not_exist_anywhere.tmp";
-        
+
         std::string error_message;
         try {
             [[maybe_unused]] auto resolved_path = resolveProjectFile(fake_filename);
-        } catch (const std::runtime_error& e) {
+        } catch (const std::runtime_error &e) {
             error_message = e.what();
         }
-        
+
         // Should throw runtime error for non-existent file
         DOCTEST_CHECK(!error_message.empty());
         DOCTEST_CHECK(error_message.find("Could not locate file") != std::string::npos);
         DOCTEST_CHECK(error_message.find(fake_filename) != std::string::npos);
     }
-    
+
     SUBCASE("resolveProjectFile with empty filename") {
         // Test with empty filename
         std::string error_message;
         try {
             [[maybe_unused]] auto resolved_path = resolveProjectFile("");
-        } catch (const std::runtime_error& e) {
+        } catch (const std::runtime_error &e) {
             error_message = e.what();
         }
-        
+
         // Should handle empty filename gracefully
         DOCTEST_CHECK(!error_message.empty());
     }
-    
+
     SUBCASE("resolveProjectFile project directory fallback") {
         // This test verifies the fallback to project directory works
         // We'll create a test file in the project root and try to access it from a subdirectory
@@ -1164,12 +1164,12 @@ TEST_CASE("Project-based File Resolution") {
         if (!project_root.empty()) {
             std::string test_filename = "test_project_fallback.tmp";
             auto test_file_path = project_root / test_filename;
-            
+
             // Create test file in project root
             std::ofstream test_file(test_file_path);
             test_file << "fallback test content";
             test_file.close();
-            
+
             try {
                 // Should find file in project directory even if not in cwd
                 auto resolved_path = resolveProjectFile(test_filename);
@@ -1181,7 +1181,7 @@ TEST_CASE("Project-based File Resolution") {
                 std::filesystem::remove(test_file_path);
                 throw;
             }
-            
+
             // Clean up
             std::filesystem::remove(test_file_path);
         }

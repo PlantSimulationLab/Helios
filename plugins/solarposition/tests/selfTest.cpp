@@ -229,6 +229,6 @@ TEST_CASE("SolarPosition turbidity calculation") {
     DOCTEST_CHECK_THROWS_AS(turbidity = sp.calibrateTurbidityFromTimeseries("non_existent_timeseries"), std::runtime_error);
 }
 
-int SolarPosition::selfTest(int argc, char** argv) {
+int SolarPosition::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

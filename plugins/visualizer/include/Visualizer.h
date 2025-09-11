@@ -176,7 +176,7 @@ struct Colormap {
             color_ind = 0;
         } else {
             float normalized_pos = (x - minval) / (maxval - minval) * float(cmapsize - 1);
-            
+
             // Handle values below minimum range
             if (normalized_pos < 0) {
                 color_ind = 0;
@@ -318,7 +318,7 @@ public:
     ~Visualizer();
 
     //! Visualizer self-test routine
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
     //! Enable standard output from this plug-in (default)
     void enableMessages();
@@ -1470,7 +1470,7 @@ inline glm::vec3 glm_vec3(const helios::vec3 &v) {
 int checkerrors();
 
 //! Safe error checking that throws exceptions instead of using assert
-void check_opengl_errors_safe(const std::string& context);
+void check_opengl_errors_safe(const std::string &context);
 
 
 #endif

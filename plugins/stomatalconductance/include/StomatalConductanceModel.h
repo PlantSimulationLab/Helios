@@ -100,7 +100,7 @@ public:
     explicit StomatalConductanceModel(helios::Context *m_context);
 
     //! Self-test (unit test) routine
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
     //! Set the model coefficient values for all primitives - Ball, Woodrow, Berry model
     /**

@@ -224,6 +224,6 @@ DOCTEST_TEST_CASE("Missing parameters and zero inputs") {
     DOCTEST_CHECK(gH > 0.f);
 }
 
-int BLConductanceModel::selfTest(int argc, char** argv) {
+int BLConductanceModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

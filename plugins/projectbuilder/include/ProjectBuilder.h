@@ -68,15 +68,12 @@ void InitializeSimulation(const std::string &xml_input_file, helios::Context *co
 #endif // SOLARPOSITION
 
 #ifdef ENABLE_HELIOS_VISUALIZER
-#include "glew.h"
 #include "Visualizer.h"
-// IMGUI
-#include "GLFW/glfw3.h"
-#include "backends/imgui_impl_glfw.h"
-#include "backends/imgui_impl_opengl3.h"
-#include "imgui.h"
-#include "imgui_internal.h"
-#include "misc/cpp/imgui_stdlib.h"
+// Forward declarations to avoid pulling in heavy OpenGL/ImGui headers
+struct ImVec2;
+struct ImVec4;
+struct ImGuiIO;
+struct ImFont;
 #endif // HELIOS_VISUALIZER
 
 
@@ -643,7 +640,7 @@ private:
     helios::int2 ground_resolution = {1, 1};
 
     //! Ground texture file
-    std::string ground_texture_file = "plugins/visualizer/textures/dirt.jpg";
+    std::string ground_texture_file = "plugins/projectbuilder/inputs/dirt.jpg";
 
     //! Use ground texture file (0 = manually enter color, 1 = texture file, 2 = model file)
     int ground_flag = 1;
@@ -1278,7 +1275,7 @@ public:
     CameraProperties *cameraproperties = nullptr;
 
     //! Method to run through automated tests
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
     //! Function to update spectra based on saved information
     void updateSpectra();
@@ -1648,6 +1645,7 @@ public:
      */
     void setNodeLabels(const std::string &label_name, const std::string &node_name, std::set<std::string> &labels_set);
 
+#ifdef ENABLE_HELIOS_VISUALIZER
     //! Function to create an ImGui Popup for randomizing a variable
     /**
      * \param[in] popup_name Name of the parameter being randomized
@@ -1661,6 +1659,10 @@ public:
      * \param[in] dist_vec Vector of noise distributions to be applied
      */
     void noisePopup(std::string popup_name, std::vector<distribution> &dist_vec);
+#else
+    void randomizePopup(std::string popup_name, taggedPtr ptr);
+    void noisePopup(std::string popup_name, std::vector<distribution> &dist_vec);
+#endif // ENABLE_HELIOS_VISUALIZER
 
     //! Function to apply random distribution to a variable
     /**
@@ -1683,11 +1685,15 @@ public:
      */
     void randomize(bool randomize_all);
 
+#ifdef ENABLE_HELIOS_VISUALIZER
     //! Get current randomization parameters for the given variable
     /**
      * \param[in] var_name Name of the variable being randomized
      */
     void randomizerParams(std::string var_name);
+#else
+    void randomizerParams(std::string var_name);
+#endif // ENABLE_HELIOS_VISUALIZER
 
     //! Set value of variable with random sample from respective distribution
     /**
@@ -1698,8 +1704,12 @@ public:
     //! Set value of all variables using random samples from their respective distributions
     void sampleAll();
 
+#ifdef ENABLE_HELIOS_VISUALIZER
     //! Output console as ImGui multiline text
     void outputConsole();
+#else
+    void outputConsole();
+#endif // ENABLE_HELIOS_VISUALIZER
 
     //! Update color of object, rig, etc.
     /**
@@ -1724,6 +1734,7 @@ public:
      */
     void deleteRig(std::string curr_rig);
 
+#ifdef ENABLE_HELIOS_VISUALIZER
     //! Create dropdown widget
     /**
      * \param[in] widget_name Name of dropdown widget (must be unique)
@@ -1739,15 +1750,28 @@ public:
      * \param[in] choices Possible selection options
      */
     void dropDown(std::string widget_name, std::string &selected, std::set<std::string> choices);
+#else
+    void dropDown(std::string widget_name, std::string &selected, std::vector<std::string> choices);
+    void dropDown(std::string widget_name, std::string &selected, std::set<std::string> choices);
+#endif // ENABLE_HELIOS_VISUALIZER
 
+#ifdef ENABLE_HELIOS_VISUALIZER
     //! Refresh visualizer context and display loading text
     void refreshVisualization();
 
     //! Refresh visualization types
     void refreshVisualizationTypes();
+#else
+    void refreshVisualization();
+    void refreshVisualizationTypes();
+#endif // ENABLE_HELIOS_VISUALIZER
 
+#ifdef ENABLE_HELIOS_VISUALIZER
     //! Popup that appears when right-clicking the "Record" button
     void recordPopup();
+#else
+    void recordPopup();
+#endif // ENABLE_HELIOS_VISUALIZER
 
     //! Update location
     void updateLocation();

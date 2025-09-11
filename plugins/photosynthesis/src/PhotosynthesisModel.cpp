@@ -317,7 +317,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
         int limitation_state, TPU_flag = 0;
 
         if (model == "farquhar") { // Farquhar-von Caemmerer-Berry Model
-            
+
             // Initialize Ci with previous timestep value for temporal continuity, or reasonable default
             if (previous_Ci.find(UUID) != previous_Ci.end()) {
                 Ci = previous_Ci.at(UUID); // Use previous timestep's Ci
@@ -332,7 +332,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                 coeffs = farquharmodel_coefficients.at(UUID);
             }
             A = evaluateFarquharModel(coeffs, i_PAR, TL, CO2, gM, Ci, Gamma, limitation_state, TPU_flag);
-            
+
             // Store computed Ci for next timestep (temporal continuity)
             previous_Ci[UUID] = Ci;
 
@@ -572,22 +572,22 @@ float PhotosynthesisModel::evaluateFarquharModel(const FarquharModelCoefficients
     // Temporal continuity approach: use previous Ci as initial guess, with fallbacks
     // This leverages the fact that Ci changes slowly between timesteps
     std::vector<float> initial_guesses;
-    
+
     // First try previous Ci if available (temporal continuity)
     if (Ci > 0 && std::isfinite(Ci)) {
         initial_guesses.push_back(Ci);
     }
-    
+
     // Add fallback guesses based on research (physiologically reasonable values)
     initial_guesses.insert(initial_guesses.end(), {CO2 * 0.7f, 100.0f, CO2 * 0.3f, CO2 * 0.9f, 50.0f});
-    
+
     bool overall_converged = false;
-    for (float guess : initial_guesses) {
+    for (float guess: initial_guesses) {
         // Reset variables for each attempt
         std::vector<float> vars_attempt = variables;
         bool attempt_converged = false;
         float Ci_attempt = fzero(evaluateCi_Farquhar, vars_attempt, &farquharmodelcoeffs, guess, attempt_converged, 0.001f, 200);
-        
+
         // Check if solution converged and is physiologically reasonable
         if (attempt_converged && Ci_attempt > 0 && std::isfinite(Ci_attempt)) {
             Ci = Ci_attempt;
@@ -596,7 +596,7 @@ float PhotosynthesisModel::evaluateFarquharModel(const FarquharModelCoefficients
             break;
         }
     }
-    
+
     // If all initial guesses failed, issue a warning message that will be captured in tests
     if (!overall_converged) {
         std::cerr << "WARNING: Photosynthesis model failed to converge for Ci calculation after trying multiple initial guesses.\n";

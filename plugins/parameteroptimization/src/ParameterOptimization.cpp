@@ -23,7 +23,7 @@ ParametersToOptimize readParametersFromFile(const std::string &filename) {
     // Resolve file path using project-based resolution
     std::filesystem::path resolved_path = resolveProjectFile(filename);
     std::string resolved_filename = resolved_path.string();
-    
+
     std::ifstream infile(resolved_filename);
     if (!infile.is_open()) {
         throw std::runtime_error("Failed to open parameter file: " + filename);

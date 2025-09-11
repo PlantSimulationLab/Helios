@@ -16,9 +16,9 @@
 #ifndef LIDARPLUGIN
 #define LIDARPLUGIN
 
+#include "CollisionDetection.h"
 #include "Context.h"
 #include "Visualizer.h"
-#include "CollisionDetection.h"
 
 #include "s_hull_pro.h"
 
@@ -290,7 +290,7 @@ private:
     bool printmessages;
 
     //! Collision detection plugin for unified ray-tracing
-    CollisionDetection* collision_detection;
+    CollisionDetection *collision_detection;
 
     // -------- I/O --------- //
 
@@ -346,7 +346,7 @@ public:
     ~LiDARcloud();
 
     //! Self-test (unit test) function
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
     void validateRayDirections();
 
@@ -357,10 +357,10 @@ public:
     void enableMessages();
 
     //! Initialize collision detection plugin for unified ray-tracing (called automatically when needed)
-    void initializeCollisionDetection(helios::Context* context);
+    void initializeCollisionDetection(helios::Context *context);
 
     //! Perform unified ray-tracing using collision detection plugin (replaces CUDA kernels)
-    void performUnifiedRayTracing(helios::Context* context, size_t N, int Npulse, helios::vec3 scan_origin, helios::vec3* direction, float* hit_t, float* hit_fnorm, int* hit_ID);
+    void performUnifiedRayTracing(helios::Context *context, size_t N, int Npulse, helios::vec3 scan_origin, helios::vec3 *direction, float *hit_t, float *hit_fnorm, int *hit_ID);
 
     // ------- SCANS -------- //
 

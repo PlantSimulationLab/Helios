@@ -27,7 +27,7 @@ public:
     VoxelIntersection(helios::Context *context);
 
     //! Self-test function (unit tests)
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
     //! Calculate primitives that reside in all voxels for every primitive in the Context
     void calculatePrimitiveVoxelIntersection();

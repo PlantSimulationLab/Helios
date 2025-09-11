@@ -59,49 +59,33 @@ endif()
 check_include_file(unistd.h Z_HAVE_UNISTD_H)
 check_include_file(stdarg.h HAVE_STDARG_H)
 
-# Comprehensive zlib compatibility fixes for manylinux and older containers
-# Critical: Force STDC definition BEFORE configure_file() to ensure proper z_size_t typedef
+# Targeted zlib compatibility fix for manylinux containers
+# Check for multiple indicators of manylinux environment
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    message(STATUS "Applying Linux-specific zlib compatibility fixes")
+    # Debug: Always show environment detection
+    message(STATUS "zlib: Linux detected, checking manylinux environment...")
+    message(STATUS "zlib: CIBUILDWHEEL env var: $ENV{CIBUILDWHEEL}")
+    message(STATUS "zlib: AUDITWHEEL_PLAT env var: $ENV{AUDITWHEEL_PLAT}")
 
-    # CRITICAL: Set STDC in CMAKE_REQUIRED_DEFINITIONS for configure time
-    set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS} -DSTDC=1)
+    # Check for manylinux indicators
+    if(DEFINED ENV{CIBUILDWHEEL} OR DEFINED ENV{AUDITWHEEL_PLAT} OR "$ENV{AUDITWHEEL_PLAT}" MATCHES "manylinux")
+        message(STATUS "Applying manylinux-specific zlib z_size_t compatibility fix")
 
-    # Force STDC definition for compile time as well
-    add_definitions(-DSTDC=1)
+        # CRITICAL: Force inclusion of stddef.h before any zlib headers are processed
+        # This ensures size_t is available when zconf.h processes the z_size_t typedef
+        # The zconf.h logic should then correctly use: typedef size_t z_size_t;
+        # Apply globally so that libpng and other dependencies also get this fix
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -include stddef.h")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include stddef.h")
 
-    # Force __STDC__ definition as backup (some compilers check this instead)
-    add_definitions(-D__STDC__=1)
+        # Also set parent scope so this applies to the entire build
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}" PARENT_SCOPE)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" PARENT_SCOPE)
 
-    # Ensure stdarg.h definitions are available
-    if(HAVE_STDARG_H)
-        add_definitions(-DHAVE_STDARG_H)
+        message(STATUS "Applied z_size_t fix: forced stddef.h inclusion for manylinux")
+    else()
+        message(STATUS "Not a manylinux environment, skipping z_size_t fix")
     endif()
-
-    # Additional compatibility definitions
-    add_definitions(-D_GNU_SOURCE)
-
-    # Check if we're in a manylinux container and apply additional fixes
-    if(DEFINED ENV{CIBUILDWHEEL})
-        message(STATUS "Detected manylinux container - applying enhanced zlib compatibility fixes")
-
-        # Force size_t availability by including stddef.h
-        add_definitions(-DHAVE_STDDEF_H=1)
-
-        # Ensure proper include paths for system headers
-        include_directories(/usr/include)
-
-        # Additional manylinux-specific compiler flags
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
-
-        # CRITICAL: Direct workaround for z_size_t definition issues in manylinux2014
-        # The conditional logic in zconf.h isn't working correctly with older CentOS 7 headers
-        # So we bypass it entirely by directly defining z_size_t as size_t
-        add_definitions(-Dz_size_t=size_t)
-        message(STATUS "Applied direct z_size_t=size_t workaround for manylinux compatibility")
-    endif()
-
-    message(STATUS "Linux zlib compatibility: STDC=1, __STDC__=1, HAVE_STDDEF_H=1")
 endif()
 
 if(MSVC)

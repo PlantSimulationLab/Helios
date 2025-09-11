@@ -212,11 +212,12 @@ struct CameraCalibration {
     //    void resetCameraResponses(std::string camerareponselabels, float scale);
 
     // === PUBLIC METHODS FOR AUTO-CALIBRATION (used by RadiationModel) ===
-    
+
     //! Structure to store Lab color values
     struct LabColor {
         float L, a, b;
-        LabColor(float L_val, float a_val, float b_val) : L(L_val), a(a_val), b(b_val) {}
+        LabColor(float L_val, float a_val, float b_val) : L(L_val), a(a_val), b(b_val) {
+        }
     };
 
     //! Detect which colorboard type is present in the scene
@@ -239,7 +240,7 @@ struct CameraCalibration {
 
     //! Calculate Delta E 76 (CIE76) color difference between two Lab colors
     double deltaE76(const LabColor &lab1, const LabColor &lab2) const;
-    
+
     //! Calculate Delta E 2000 color difference between two Lab colors (more perceptually accurate)
     double deltaE2000(const LabColor &lab1, const LabColor &lab2) const;
 

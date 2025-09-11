@@ -258,7 +258,7 @@ void Context::clearPrimitiveData(uint UUID, const char *label) {
             decrementPrimitiveValueRegistry(label_str, cached_value);
         }
     }
-    
+
     if (primitives.at(UUID)->doesPrimitiveDataExist(label)) {
         decrementPrimitiveDataLabelCounter(label);
     }
@@ -290,7 +290,7 @@ void Context::clearPrimitiveData(const std::vector<uint> &UUIDs, const char *lab
                 decrementPrimitiveValueRegistry(label_str, cached_value);
             }
         }
-        
+
         if (primitives.at(UUID)->doesPrimitiveDataExist(label)) {
             decrementPrimitiveDataLabelCounter(label);
         }
@@ -1718,7 +1718,7 @@ void Context::clearObjectData(uint objID, const char *label) {
             decrementObjectValueRegistry(label_str, cached_value);
         }
     }
-    
+
     if (objects.at(objID)->doesObjectDataExist(label)) {
         decrementObjectDataLabelCounter(label);
     }
@@ -1750,7 +1750,7 @@ void Context::clearObjectData(const std::vector<uint> &objIDs, const char *label
                 decrementObjectValueRegistry(label_str, cached_value);
             }
         }
-        
+
         if (objects.at(objID)->doesObjectDataExist(label)) {
             decrementObjectDataLabelCounter(label);
         }
@@ -2242,28 +2242,40 @@ void Context::incrementGlobalData(const char *label, double increment) {
 
 std::string Context::dataTypeToString(HeliosDataType type) const {
     switch (type) {
-        case HELIOS_TYPE_INT: return "int";
-        case HELIOS_TYPE_UINT: return "uint";
-        case HELIOS_TYPE_FLOAT: return "float";
-        case HELIOS_TYPE_DOUBLE: return "double";
-        case HELIOS_TYPE_VEC2: return "vec2";
-        case HELIOS_TYPE_VEC3: return "vec3";
-        case HELIOS_TYPE_VEC4: return "vec4";
-        case HELIOS_TYPE_INT2: return "int2";
-        case HELIOS_TYPE_INT3: return "int3";
-        case HELIOS_TYPE_INT4: return "int4";
-        case HELIOS_TYPE_STRING: return "string";
-        case HELIOS_TYPE_BOOL: return "bool";
-        case HELIOS_TYPE_UNKNOWN: return "unknown";
-        default: return "undefined";
+        case HELIOS_TYPE_INT:
+            return "int";
+        case HELIOS_TYPE_UINT:
+            return "uint";
+        case HELIOS_TYPE_FLOAT:
+            return "float";
+        case HELIOS_TYPE_DOUBLE:
+            return "double";
+        case HELIOS_TYPE_VEC2:
+            return "vec2";
+        case HELIOS_TYPE_VEC3:
+            return "vec3";
+        case HELIOS_TYPE_VEC4:
+            return "vec4";
+        case HELIOS_TYPE_INT2:
+            return "int2";
+        case HELIOS_TYPE_INT3:
+            return "int3";
+        case HELIOS_TYPE_INT4:
+            return "int4";
+        case HELIOS_TYPE_STRING:
+            return "string";
+        case HELIOS_TYPE_BOOL:
+            return "bool";
+        case HELIOS_TYPE_UNKNOWN:
+            return "unknown";
+        default:
+            return "undefined";
     }
 }
 
 bool Context::isTypeCastingSupported(HeliosDataType from_type, HeliosDataType to_type) const {
     // Support casting between numeric types only
-    const std::set<HeliosDataType> numeric_types = {
-        HELIOS_TYPE_INT, HELIOS_TYPE_UINT, HELIOS_TYPE_FLOAT, HELIOS_TYPE_DOUBLE
-    };
-    
+    const std::set<HeliosDataType> numeric_types = {HELIOS_TYPE_INT, HELIOS_TYPE_UINT, HELIOS_TYPE_FLOAT, HELIOS_TYPE_DOUBLE};
+
     return (numeric_types.count(from_type) > 0 && numeric_types.count(to_type) > 0);
 }

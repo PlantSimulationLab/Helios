@@ -1526,7 +1526,7 @@ TEST_CASE("Print and Information Functions") {
         capture_cout cout_buffer;
         DOCTEST_CHECK_NOTHROW(ctx.printPrimitiveInfo(patch));
         DOCTEST_CHECK_NOTHROW(ctx.printObjectInfo(obj));
-        
+
         // Verify that output was captured (functions should produce output)
         DOCTEST_CHECK(cout_buffer.has_output());
         std::string output = cout_buffer.get_captured_output();
@@ -1813,32 +1813,32 @@ TEST_CASE("Comprehensive Coverage Tests") {
 TEST_CASE("getAllUUIDs Cache Performance") {
     SUBCASE("Cache invalidation on primitive add/delete") {
         Context ctx;
-        
+
         // Initial empty state
         std::vector<uint> empty_uuids = ctx.getAllUUIDs();
         DOCTEST_CHECK(empty_uuids.empty());
-        
+
         // Add primitives and test cache invalidation
         uint p1 = ctx.addPatch();
         std::vector<uint> one_uuid = ctx.getAllUUIDs();
         DOCTEST_CHECK(one_uuid.size() == 1);
         DOCTEST_CHECK(one_uuid[0] == p1);
-        
+
         // Test cache consistency - repeated calls should return same result
         std::vector<uint> same_uuid = ctx.getAllUUIDs();
         DOCTEST_CHECK(same_uuid.size() == 1);
         DOCTEST_CHECK(same_uuid[0] == p1);
-        
+
         // Add more primitives
-        uint t1 = ctx.addTriangle(make_vec3(0,0,0), make_vec3(1,0,0), make_vec3(0,1,0));
-        uint v1 = ctx.addVoxel(make_vec3(0,0,0), make_vec3(1,1,1));
-        
+        uint t1 = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0));
+        uint v1 = ctx.addVoxel(make_vec3(0, 0, 0), make_vec3(1, 1, 1));
+
         std::vector<uint> three_uuids = ctx.getAllUUIDs();
         DOCTEST_CHECK(three_uuids.size() == 3);
         DOCTEST_CHECK(std::find(three_uuids.begin(), three_uuids.end(), p1) != three_uuids.end());
         DOCTEST_CHECK(std::find(three_uuids.begin(), three_uuids.end(), t1) != three_uuids.end());
         DOCTEST_CHECK(std::find(three_uuids.begin(), three_uuids.end(), v1) != three_uuids.end());
-        
+
         // Test delete invalidation
         ctx.deletePrimitive(t1);
         std::vector<uint> two_uuids = ctx.getAllUUIDs();
@@ -1847,17 +1847,17 @@ TEST_CASE("getAllUUIDs Cache Performance") {
         DOCTEST_CHECK(std::find(two_uuids.begin(), two_uuids.end(), p1) != two_uuids.end());
         DOCTEST_CHECK(std::find(two_uuids.begin(), two_uuids.end(), v1) != two_uuids.end());
     }
-    
+
     SUBCASE("Cache invalidation on hide/show primitives") {
         Context ctx;
         uint p1 = ctx.addPatch();
         uint p2 = ctx.addPatch();
         uint p3 = ctx.addPatch();
-        
+
         // All visible initially
         std::vector<uint> all_visible = ctx.getAllUUIDs();
         DOCTEST_CHECK(all_visible.size() == 3);
-        
+
         // Hide one primitive
         ctx.hidePrimitive(p2);
         std::vector<uint> two_visible = ctx.getAllUUIDs();
@@ -1865,72 +1865,72 @@ TEST_CASE("getAllUUIDs Cache Performance") {
         DOCTEST_CHECK(std::find(two_visible.begin(), two_visible.end(), p2) == two_visible.end());
         DOCTEST_CHECK(std::find(two_visible.begin(), two_visible.end(), p1) != two_visible.end());
         DOCTEST_CHECK(std::find(two_visible.begin(), two_visible.end(), p3) != two_visible.end());
-        
+
         // Hide multiple primitives
         std::vector<uint> to_hide = {p1, p3};
         ctx.hidePrimitive(to_hide);
         std::vector<uint> none_visible = ctx.getAllUUIDs();
         DOCTEST_CHECK(none_visible.empty());
-        
+
         // Show one primitive back
         ctx.showPrimitive(p1);
         std::vector<uint> one_visible = ctx.getAllUUIDs();
         DOCTEST_CHECK(one_visible.size() == 1);
         DOCTEST_CHECK(one_visible[0] == p1);
-        
+
         // Show all primitives back
         std::vector<uint> to_show = {p2, p3};
         ctx.showPrimitive(to_show);
         std::vector<uint> all_back = ctx.getAllUUIDs();
         DOCTEST_CHECK(all_back.size() == 3);
     }
-    
+
     SUBCASE("Cache invalidation on copy primitives") {
         Context ctx;
         uint original = ctx.addPatch();
-        
+
         std::vector<uint> before_copy = ctx.getAllUUIDs();
         DOCTEST_CHECK(before_copy.size() == 1);
-        
+
         uint copied = ctx.copyPrimitive(original);
         std::vector<uint> after_copy = ctx.getAllUUIDs();
         DOCTEST_CHECK(after_copy.size() == 2);
         DOCTEST_CHECK(std::find(after_copy.begin(), after_copy.end(), original) != after_copy.end());
         DOCTEST_CHECK(std::find(after_copy.begin(), after_copy.end(), copied) != after_copy.end());
-        
+
         // Test multiple copy
         std::vector<uint> originals = {original, copied};
         std::vector<uint> copies = ctx.copyPrimitive(originals);
         std::vector<uint> after_multi_copy = ctx.getAllUUIDs();
         DOCTEST_CHECK(after_multi_copy.size() == 4);
-        for (uint copy_id : copies) {
+        for (uint copy_id: copies) {
             DOCTEST_CHECK(std::find(after_multi_copy.begin(), after_multi_copy.end(), copy_id) != after_multi_copy.end());
         }
     }
-    
+
     SUBCASE("Cache consistency across mixed operations") {
         Context ctx;
-        
+
         // Complex sequence of operations
         uint p1 = ctx.addPatch();
-        uint p2 = ctx.addTriangle(make_vec3(0,0,0), make_vec3(1,0,0), make_vec3(0,1,0));
-        
+        uint p2 = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0));
+
         std::vector<uint> step1 = ctx.getAllUUIDs();
         DOCTEST_CHECK(step1.size() == 2);
-        
+
         ctx.hidePrimitive(p1);
         std::vector<uint> step2 = ctx.getAllUUIDs();
         DOCTEST_CHECK(step2.size() == 1);
         DOCTEST_CHECK(step2[0] == p2);
-        
-        uint p3 = ctx.addVoxel(make_vec3(0,0,0), make_vec3(1,1,1));
+
+        uint p3 = ctx.addVoxel(make_vec3(0, 0, 0), make_vec3(1, 1, 1));
         std::vector<uint> step3 = ctx.getAllUUIDs();
         DOCTEST_CHECK(step3.size() == 2);
-        
+
         ctx.showPrimitive(p1);
         std::vector<uint> step4 = ctx.getAllUUIDs();
         DOCTEST_CHECK(step4.size() == 3);
-        
+
         ctx.deletePrimitive(p2);
         std::vector<uint> step5 = ctx.getAllUUIDs();
         DOCTEST_CHECK(step5.size() == 2);
@@ -1959,51 +1959,43 @@ TEST_CASE("Error Handling") {
 TEST_CASE("Zero Area Triangle Detection") {
     SUBCASE("addTubeObject with nearly identical vertices should not create zero-area triangles") {
         Context ctx;
-        
+
         // Test case based on problematic vertices from plant architecture
-        std::vector<vec3> nodes = {
-            make_vec3(0.300000012f, -0.112000048f, 0.00999999978f),
-            make_vec3(0.29995966f, -0.111979447f, 0.0109989736f),
-            make_vec3(0.299919307f, -0.111958846f, 0.0119979475f)
-        };
-        
+        std::vector<vec3> nodes = {make_vec3(0.300000012f, -0.112000048f, 0.00999999978f), make_vec3(0.29995966f, -0.111979447f, 0.0109989736f), make_vec3(0.299919307f, -0.111958846f, 0.0119979475f)};
+
         std::vector<float> radii = {0.000500000024f, 0.000500000024f, 0.000500000024f};
         std::vector<RGBcolor> colors = {RGB::green, RGB::green, RGB::green};
-        
+
         // Use exact same parameters as failing case: Ndiv_internode_radius = 7
         uint tube_obj = ctx.addTubeObject(7, nodes, radii, colors);
-        
+
         // Verify the tube object was created
         DOCTEST_CHECK(ctx.doesObjectExist(tube_obj));
-        
+
         // Get all primitives in the tube and check their areas
         std::vector<uint> tube_primitives = ctx.getObjectPrimitiveUUIDs(tube_obj);
         DOCTEST_CHECK(tube_primitives.size() > 0);
-        
-        for (uint uuid : tube_primitives) {
+
+        for (uint uuid: tube_primitives) {
             float area = ctx.getPrimitiveArea(uuid);
-            DOCTEST_CHECK(area > 0.0f);  // No zero-area triangles
-            DOCTEST_CHECK(area > 1e-12f);  // Area should be reasonably above precision limit
+            DOCTEST_CHECK(area > 0.0f); // No zero-area triangles
+            DOCTEST_CHECK(area > 1e-12f); // Area should be reasonably above precision limit
         }
     }
-    
+
     SUBCASE("addTubeObject with extremely small displacements") {
         Context ctx;
-        
+
         // Even more extreme case - displacements on the order of 1e-5
-        std::vector<vec3> nodes = {
-            make_vec3(0.0f, 0.0f, 0.0f),
-            make_vec3(1e-5f, 1e-5f, 1e-3f),
-            make_vec3(2e-5f, 2e-5f, 2e-3f)
-        };
-        
+        std::vector<vec3> nodes = {make_vec3(0.0f, 0.0f, 0.0f), make_vec3(1e-5f, 1e-5f, 1e-3f), make_vec3(2e-5f, 2e-5f, 2e-3f)};
+
         std::vector<float> radii = {1e-4f, 1e-4f, 1e-4f};
-        
+
         uint tube_obj = ctx.addTubeObject(6, nodes, radii);
         DOCTEST_CHECK(ctx.doesObjectExist(tube_obj));
-        
+
         std::vector<uint> tube_primitives = ctx.getObjectPrimitiveUUIDs(tube_obj);
-        for (uint uuid : tube_primitives) {
+        for (uint uuid: tube_primitives) {
             float area = ctx.getPrimitiveArea(uuid);
             DOCTEST_CHECK(area > 0.0f);
         }
@@ -2013,52 +2005,52 @@ TEST_CASE("Zero Area Triangle Detection") {
 TEST_CASE("Transparent Texture Zero Area Validation") {
     SUBCASE("addSphere with transparent texture should filter zero-area triangles") {
         Context ctx;
-        
+
         // Test with diamond texture (has transparency)
         std::vector<uint> sphere_uuids = ctx.addSphere(20, make_vec3(0, 0, 0), 1.0f, "lib/images/diamond_texture.png");
-        
+
         // All returned primitives should have positive area
         DOCTEST_CHECK(sphere_uuids.size() > 0);
-        for (uint uuid : sphere_uuids) {
+        for (uint uuid: sphere_uuids) {
             DOCTEST_CHECK(ctx.doesPrimitiveExist(uuid));
             float area = ctx.getPrimitiveArea(uuid);
             DOCTEST_CHECK(area > 0.0f);
         }
-        
+
         // Test with disk texture (more transparency)
         std::vector<uint> sphere_disk_uuids = ctx.addSphere(30, make_vec3(2, 0, 0), 1.0f, "lib/images/disk_texture.png");
-        
+
         DOCTEST_CHECK(sphere_disk_uuids.size() > 0);
-        for (uint uuid : sphere_disk_uuids) {
+        for (uint uuid: sphere_disk_uuids) {
             DOCTEST_CHECK(ctx.doesPrimitiveExist(uuid));
             float area = ctx.getPrimitiveArea(uuid);
             DOCTEST_CHECK(area > 0.0f);
         }
-        
+
         // Verify ALL primitives in each sphere have positive area
         int zero_area_count_diamond = 0;
-        for (uint uuid : sphere_uuids) {
+        for (uint uuid: sphere_uuids) {
             float area = ctx.getPrimitiveArea(uuid);
             if (area <= 0.0f) {
                 zero_area_count_diamond++;
             }
         }
         DOCTEST_CHECK(zero_area_count_diamond == 0);
-        
+
         int zero_area_count_disk = 0;
-        for (uint uuid : sphere_disk_uuids) {
+        for (uint uuid: sphere_disk_uuids) {
             float area = ctx.getPrimitiveArea(uuid);
             if (area <= 0.0f) {
                 zero_area_count_disk++;
             }
         }
         DOCTEST_CHECK(zero_area_count_disk == 0);
-        
+
         // Compare with solid sphere for reference
         std::vector<uint> solid_sphere_uuids = ctx.addSphere(20, make_vec3(4, 0, 0), 1.0f, RGB::green);
-        
+
         int zero_area_count_solid = 0;
-        for (uint uuid : solid_sphere_uuids) {
+        for (uint uuid: solid_sphere_uuids) {
             float area = ctx.getPrimitiveArea(uuid);
             if (area <= 0.0f) {
                 zero_area_count_solid++;
@@ -2066,34 +2058,34 @@ TEST_CASE("Transparent Texture Zero Area Validation") {
         }
         DOCTEST_CHECK(zero_area_count_solid == 0);
     }
-    
+
     SUBCASE("texture transparency validation preserves object integrity") {
         Context ctx;
-        
+
         // Create textured sphere and verify all returned UUIDs are valid
         std::vector<uint> sphere_uuids = ctx.addSphere(15, make_vec3(0, 0, 0), 1.0f, "lib/images/diamond_texture.png");
-        
+
         // Check that all returned primitives exist and have positive area
-        for (uint uuid : sphere_uuids) {
+        for (uint uuid: sphere_uuids) {
             DOCTEST_CHECK(ctx.doesPrimitiveExist(uuid));
             DOCTEST_CHECK(ctx.getPrimitiveType(uuid) == PRIMITIVE_TYPE_TRIANGLE);
-            
+
             float area = ctx.getPrimitiveArea(uuid);
             DOCTEST_CHECK(area > 0.0f);
             DOCTEST_CHECK(area > 1e-10f); // Should be significantly above precision threshold
-            
+
             // Verify solid fraction is reasonable (not exactly 0 or 1)
             float solid_fraction = ctx.getPrimitiveSolidFraction(uuid);
             DOCTEST_CHECK(solid_fraction > 0.0f);
             DOCTEST_CHECK(solid_fraction <= 1.0f);
         }
-        
+
         // Comprehensive check: verify no zero-area primitives exist anywhere in context
         std::vector<uint> all_uuids = ctx.getAllUUIDs();
         int total_zero_area = 0;
         int total_negative_area = 0;
-        
-        for (uint uuid : all_uuids) {
+
+        for (uint uuid: all_uuids) {
             float area = ctx.getPrimitiveArea(uuid);
             if (area == 0.0f) {
                 total_zero_area++;
@@ -2102,17 +2094,17 @@ TEST_CASE("Transparent Texture Zero Area Validation") {
                 total_negative_area++;
             }
         }
-        
+
         // No zero or negative area primitives should exist
         DOCTEST_CHECK(total_zero_area == 0);
         DOCTEST_CHECK(total_negative_area == 0);
-        
+
         // Additional validation: check that all primitives have reasonable solid fractions
-        for (uint uuid : sphere_uuids) {
+        for (uint uuid: sphere_uuids) {
             float solid_fraction = ctx.getPrimitiveSolidFraction(uuid);
             DOCTEST_CHECK(solid_fraction >= 0.0f);
             DOCTEST_CHECK(solid_fraction <= 1.0f);
-            
+
             // For textured primitives, effective area should be geometric_area * solid_fraction
             if (ctx.getPrimitiveType(uuid) == PRIMITIVE_TYPE_TRIANGLE) {
                 vec3 v0 = ctx.getTriangleVertex(uuid, 0);
@@ -2120,25 +2112,25 @@ TEST_CASE("Transparent Texture Zero Area Validation") {
                 vec3 v2 = ctx.getTriangleVertex(uuid, 2);
                 float geometric_area = calculateTriangleArea(v0, v1, v2);
                 float effective_area = ctx.getPrimitiveArea(uuid);
-                
+
                 // Effective area should be <= geometric area (due to solid fraction)
                 DOCTEST_CHECK(effective_area <= geometric_area + 1e-6f); // Allow small numerical tolerance
                 DOCTEST_CHECK(effective_area > 0.0f);
             }
         }
-        
+
         // Test zero-area validation for other primitive methods (addTube, addDisk, addCone)
         DOCTEST_SUBCASE("Test Other Primitive Methods Zero Area Validation") {
             Context ctx_other;
-            
+
             // Test addTube with transparent texture
             std::vector<vec3> tube_nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1), make_vec3(0, 0, 2)};
             std::vector<float> tube_radii = {0.1f, 0.15f, 0.1f};
             std::vector<uint> tube_uuids = ctx_other.addTube(8, tube_nodes, tube_radii, "lib/images/diamond_texture.png");
-            
+
             // All returned UUIDs should have positive area
             int tube_positive_area = 0, tube_zero_area = 0;
-            for (uint uuid : tube_uuids) {
+            for (uint uuid: tube_uuids) {
                 float area = ctx_other.getPrimitiveArea(uuid);
                 DOCTEST_CHECK(area >= 0.0f);
                 if (area > 0.0f) {
@@ -2147,16 +2139,16 @@ TEST_CASE("Transparent Texture Zero Area Validation") {
                     tube_zero_area++;
                 }
             }
-            
+
             DOCTEST_CHECK(tube_positive_area > 0); // Should have some positive area triangles
-            DOCTEST_CHECK(tube_zero_area == 0);    // Should have no zero area triangles
-            
+            DOCTEST_CHECK(tube_zero_area == 0); // Should have no zero area triangles
+
             // Test addDisk with transparent texture
             std::vector<uint> disk_uuids = ctx_other.addDisk(make_int2(4, 3), make_vec3(0, 0, 0), make_vec2(1.0f, 1.0f), make_SphericalCoord(0, 0), "lib/images/disk_texture.png");
-            
+
             // All returned UUIDs should have positive area
             int disk_positive_area = 0, disk_zero_area = 0;
-            for (uint uuid : disk_uuids) {
+            for (uint uuid: disk_uuids) {
                 float area = ctx_other.getPrimitiveArea(uuid);
                 DOCTEST_CHECK(area >= 0.0f);
                 if (area > 0.0f) {
@@ -2165,16 +2157,16 @@ TEST_CASE("Transparent Texture Zero Area Validation") {
                     disk_zero_area++;
                 }
             }
-            
+
             DOCTEST_CHECK(disk_positive_area > 0); // Should have some positive area triangles
-            DOCTEST_CHECK(disk_zero_area == 0);    // Should have no zero area triangles
-            
+            DOCTEST_CHECK(disk_zero_area == 0); // Should have no zero area triangles
+
             // Test addCone with transparent texture
             std::vector<uint> cone_uuids = ctx_other.addCone(8, make_vec3(0, 0, 0), make_vec3(0, 0, 1), 0.1f, 0.2f, "lib/images/diamond_texture.png");
-            
+
             // All returned UUIDs should have positive area
             int cone_positive_area = 0, cone_zero_area = 0;
-            for (uint uuid : cone_uuids) {
+            for (uint uuid: cone_uuids) {
                 float area = ctx_other.getPrimitiveArea(uuid);
                 DOCTEST_CHECK(area >= 0.0f);
                 if (area > 0.0f) {
@@ -2183,16 +2175,16 @@ TEST_CASE("Transparent Texture Zero Area Validation") {
                     cone_zero_area++;
                 }
             }
-            
+
             DOCTEST_CHECK(cone_positive_area > 0); // Should have some positive area triangles
-            DOCTEST_CHECK(cone_zero_area == 0);    // Should have no zero area triangles
-            
+            DOCTEST_CHECK(cone_zero_area == 0); // Should have no zero area triangles
+
             // Test addTile with transparent texture (should already work, but verify)
             std::vector<uint> tile_uuids = ctx_other.addTile(make_vec3(0, 0, 0), make_vec2(1.0f, 1.0f), make_SphericalCoord(0, 0), make_int2(4, 4), "lib/images/diamond_texture.png");
-            
+
             // All returned UUIDs should have positive area
             int tile_positive_area = 0, tile_zero_area = 0;
-            for (uint uuid : tile_uuids) {
+            for (uint uuid: tile_uuids) {
                 float area = ctx_other.getPrimitiveArea(uuid);
                 DOCTEST_CHECK(area >= 0.0f);
                 if (area > 0.0f) {
@@ -2201,22 +2193,22 @@ TEST_CASE("Transparent Texture Zero Area Validation") {
                     tile_zero_area++;
                 }
             }
-            
-            DOCTEST_CHECK(tile_positive_area > 0); // Should have some positive area triangles  
-            DOCTEST_CHECK(tile_zero_area == 0);    // Should have no zero area triangles
+
+            DOCTEST_CHECK(tile_positive_area > 0); // Should have some positive area triangles
+            DOCTEST_CHECK(tile_zero_area == 0); // Should have no zero area triangles
         }
-        
+
         // Test zero-area validation for compound object methods
         DOCTEST_SUBCASE("Test Compound Object Methods Zero Area Validation") {
             Context ctx_compound;
-            
+
             // Test addSphereObject with transparent texture
             uint sphere_obj = ctx_compound.addSphereObject(8, make_vec3(0, 0, 0), 0.5f, "lib/images/diamond_texture.png");
             std::vector<uint> sphere_primitives = ctx_compound.getObjectPrimitiveUUIDs(sphere_obj);
-            
+
             // All primitives should have positive area
             int sphere_positive_area = 0, sphere_zero_area = 0;
-            for (uint uuid : sphere_primitives) {
+            for (uint uuid: sphere_primitives) {
                 float area = ctx_compound.getPrimitiveArea(uuid);
                 DOCTEST_CHECK(area >= 0.0f);
                 if (area > 0.0f) {
@@ -2225,19 +2217,19 @@ TEST_CASE("Transparent Texture Zero Area Validation") {
                     sphere_zero_area++;
                 }
             }
-            
+
             DOCTEST_CHECK(sphere_positive_area > 0); // Should have some positive area triangles
-            DOCTEST_CHECK(sphere_zero_area == 0);    // Should have no zero area triangles
-            
+            DOCTEST_CHECK(sphere_zero_area == 0); // Should have no zero area triangles
+
             // Test addTubeObject with transparent texture
             std::vector<vec3> tube_nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1), make_vec3(0, 0, 2)};
             std::vector<float> tube_radii = {0.1f, 0.15f, 0.1f};
             uint tube_obj = ctx_compound.addTubeObject(8, tube_nodes, tube_radii, "lib/images/diamond_texture.png");
             std::vector<uint> tube_primitives = ctx_compound.getObjectPrimitiveUUIDs(tube_obj);
-            
+
             // All primitives should have positive area
             int tube_positive_area = 0, tube_zero_area = 0;
-            for (uint uuid : tube_primitives) {
+            for (uint uuid: tube_primitives) {
                 float area = ctx_compound.getPrimitiveArea(uuid);
                 DOCTEST_CHECK(area >= 0.0f);
                 if (area > 0.0f) {
@@ -2246,17 +2238,17 @@ TEST_CASE("Transparent Texture Zero Area Validation") {
                     tube_zero_area++;
                 }
             }
-            
+
             DOCTEST_CHECK(tube_positive_area > 0); // Should have some positive area triangles
-            DOCTEST_CHECK(tube_zero_area == 0);    // Should have no zero area triangles
-            
+            DOCTEST_CHECK(tube_zero_area == 0); // Should have no zero area triangles
+
             // Test addDiskObject with transparent texture
             uint disk_obj = ctx_compound.addDiskObject(make_int2(4, 3), make_vec3(0, 0, 0), make_vec2(1.0f, 1.0f), make_SphericalCoord(0, 0), "lib/images/disk_texture.png");
             std::vector<uint> disk_primitives = ctx_compound.getObjectPrimitiveUUIDs(disk_obj);
-            
+
             // All primitives should have positive area
             int disk_positive_area = 0, disk_zero_area = 0;
-            for (uint uuid : disk_primitives) {
+            for (uint uuid: disk_primitives) {
                 float area = ctx_compound.getPrimitiveArea(uuid);
                 DOCTEST_CHECK(area >= 0.0f);
                 if (area > 0.0f) {
@@ -2265,17 +2257,17 @@ TEST_CASE("Transparent Texture Zero Area Validation") {
                     disk_zero_area++;
                 }
             }
-            
+
             DOCTEST_CHECK(disk_positive_area > 0); // Should have some positive area triangles
-            DOCTEST_CHECK(disk_zero_area == 0);    // Should have no zero area triangles
-            
+            DOCTEST_CHECK(disk_zero_area == 0); // Should have no zero area triangles
+
             // Test addConeObject with transparent texture
             uint cone_obj = ctx_compound.addConeObject(8, make_vec3(0, 0, 0), make_vec3(0, 0, 1), 0.1f, 0.2f, "lib/images/diamond_texture.png");
             std::vector<uint> cone_primitives = ctx_compound.getObjectPrimitiveUUIDs(cone_obj);
-            
+
             // All primitives should have positive area
             int cone_positive_area = 0, cone_zero_area = 0;
-            for (uint uuid : cone_primitives) {
+            for (uint uuid: cone_primitives) {
                 float area = ctx_compound.getPrimitiveArea(uuid);
                 DOCTEST_CHECK(area >= 0.0f);
                 if (area > 0.0f) {
@@ -2284,9 +2276,9 @@ TEST_CASE("Transparent Texture Zero Area Validation") {
                     cone_zero_area++;
                 }
             }
-            
+
             DOCTEST_CHECK(cone_positive_area > 0); // Should have some positive area triangles
-            DOCTEST_CHECK(cone_zero_area == 0);    // Should have no zero area triangles
+            DOCTEST_CHECK(cone_zero_area == 0); // Should have no zero area triangles
         }
     }
 }
@@ -2295,55 +2287,53 @@ TEST_CASE("File path resolution priority") {
     SUBCASE("resolveFilePath current directory priority") {
         // Test that the new file resolution logic checks current directory first,
         // then falls back to HELIOS_BUILD directory
-        
+
         // Create a test texture file in the current directory
         std::string testFileName = "test_file_resolution.jpg";
         std::filesystem::path currentDirFile = std::filesystem::current_path() / testFileName;
-        
+
         // Copy the existing texture for our test
         std::filesystem::path sourceTexture = "core/lib/models/texture.jpg";
-        
+
         if (std::filesystem::exists(sourceTexture)) {
             // Copy to current directory
             std::filesystem::copy_file(sourceTexture, currentDirFile, std::filesystem::copy_options::overwrite_existing);
             DOCTEST_CHECK(std::filesystem::exists(currentDirFile));
-            
-            // Test resolveFilePath function directly  
+
+            // Test resolveFilePath function directly
             std::filesystem::path resolved = helios::resolveFilePath(testFileName);
             DOCTEST_CHECK(resolved == std::filesystem::canonical(currentDirFile));
-            
+
             // Clean up
             std::filesystem::remove(currentDirFile);
         }
     }
-    
+
     SUBCASE("addPatch with texture from current directory") {
         Context ctx;
-        
+
         // Create test directory structure in current working directory
         std::filesystem::create_directories("test_models");
         std::string testTexture = "test_models/test_texture.jpg";
         std::filesystem::path testTexturePath = std::filesystem::current_path() / testTexture;
-        
+
         // Copy source texture
         std::filesystem::path sourceTexture = "core/lib/models/texture.jpg";
-        
+
         if (std::filesystem::exists(sourceTexture)) {
             std::filesystem::copy_file(sourceTexture, testTexturePath, std::filesystem::copy_options::overwrite_existing);
-            
+
             // This should work with the fix - loads from current directory first
             // addPatch uses resolveFilePath internally for texture loading
             SphericalCoord rotation = make_SphericalCoord(0, 0);
             uint patch_id;
-            DOCTEST_CHECK_NOTHROW({
-                patch_id = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), rotation, testTexture.c_str());
-            });
+            DOCTEST_CHECK_NOTHROW({ patch_id = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), rotation, testTexture.c_str()); });
             DOCTEST_CHECK(patch_id > 0);
-            
+
             // Verify the texture loaded correctly
             bool has_transparency = ctx.primitiveTextureHasTransparencyChannel(patch_id);
             DOCTEST_CHECK((has_transparency || !has_transparency)); // Just verify it's a boolean (texture loaded)
-            
+
             // Clean up
             std::filesystem::remove(testTexturePath);
             std::filesystem::remove("test_models");

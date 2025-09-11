@@ -67,12 +67,12 @@ uint WeberPennTree::buildTree(const char *treename, helios::vec3 origin, float s
     if (file.substr(file.find_last_of(".") + 1) != "png") {
         helios_runtime_error("ERROR (WeberPennTree::buildTree): Leaf image file for tree " + std::string(treename) + " is not a PNG image.");
     }
-    
+
     // Use unified file resolution to validate leaf texture file existence
     try {
         std::filesystem::path resolved_path = helios::resolveFilePath(file);
-        (void)resolved_path; // Suppress unused variable warning
-    } catch (const std::runtime_error&) {
+        (void) resolved_path; // Suppress unused variable warning
+    } catch (const std::runtime_error &) {
         helios_runtime_error("ERROR (WeberPennTree::buildTree): Leaf image file " + file + " does not exist.");
     }
 
@@ -705,7 +705,7 @@ void WeberPennTree::seedRandomGenerator(const uint seed) {
     generator.seed(seed);
 }
 
-void WeberPennTree::loadXML(const char *filename, bool silent ) {
+void WeberPennTree::loadXML(const char *filename, bool silent) {
 
     if (printmessages && !silent) {
         std::cout << "Loading Weber Penn Tree library from XML file: " << filename << "..." << std::flush;

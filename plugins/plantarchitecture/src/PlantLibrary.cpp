@@ -13,8 +13,8 @@
 
 */
 
-#include "PlantArchitecture.h"
 #include "CollisionDetection.h"
+#include "PlantArchitecture.h"
 
 using namespace helios;
 
@@ -1401,7 +1401,7 @@ void PlantArchitecture::initializeGrapevineWyeShoots() {
     phytomer_parameters_grapevine.peduncle.length = 0.04;
     phytomer_parameters_grapevine.peduncle.radius = 0.005;
     phytomer_parameters_grapevine.peduncle.color = make_RGBcolor(0.13, 0.125, 0.03);
-    phytomer_parameters_grapevine.peduncle.pitch.uniformDistribution( 80,100);
+    phytomer_parameters_grapevine.peduncle.pitch.uniformDistribution(80, 100);
 
     phytomer_parameters_grapevine.inflorescence.flowers_per_peduncle = 1;
     phytomer_parameters_grapevine.inflorescence.pitch = 0;
@@ -1424,7 +1424,7 @@ void PlantArchitecture::initializeGrapevineWyeShoots() {
     shoot_parameters_main.phyllochron_min.uniformDistribution(2.5, 3.5);
     shoot_parameters_main.elongation_rate_max = 0.15;
     shoot_parameters_main.girth_area_factor = 0.8f;
-    shoot_parameters_main.gravitropic_curvature.uniformDistribution(0,100);
+    shoot_parameters_main.gravitropic_curvature.uniformDistribution(0, 100);
     shoot_parameters_main.tortuosity = 10;
     shoot_parameters_main.internode_length_max.uniformDistribution(0.06, 0.08);
     shoot_parameters_main.internode_length_decay_rate = 0;
@@ -1436,9 +1436,9 @@ void PlantArchitecture::initializeGrapevineWyeShoots() {
     shoot_parameters_main.max_terminal_floral_buds = 0;
     shoot_parameters_main.flower_bud_break_probability = 0.5;
     shoot_parameters_main.fruit_set_probability = 0.2;
-    shoot_parameters_main.max_nodes.uniformDistribution(14,18);
+    shoot_parameters_main.max_nodes.uniformDistribution(14, 18);
     shoot_parameters_main.base_roll.uniformDistribution(90 - 25, 90 + 25);
-    shoot_parameters_main.base_yaw.uniformDistribution(-50,50);
+    shoot_parameters_main.base_yaw.uniformDistribution(-50, 50);
 
     ShootParameters shoot_parameters_cordon = shoot_parameters_main;
     shoot_parameters_cordon.phytomer_parameters.internode.image_texture = "plugins/plantarchitecture/assets/textures/GrapeBark.jpg";
@@ -1488,20 +1488,20 @@ uint PlantArchitecture::buildGrapevineWye(const helios::vec3 &base_position) {
     float head_height = 1.6;
     float vine_spacing = 1.8;
 
-    //fruiting wires
-    trellis_points.push_back(linspace(make_vec3(-0.5f*vine_spacing,-0.5f*wire_spacing,head_height), make_vec3(0.5f*vine_spacing,-0.5f*wire_spacing,head_height), 8));
-    trellis_points.push_back(linspace(make_vec3(-0.5f*vine_spacing,0.5f*wire_spacing,head_height), make_vec3(0.5f*vine_spacing,0.5f*wire_spacing,head_height), 8));
+    // fruiting wires
+    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, -0.5f * wire_spacing, head_height), make_vec3(0.5f * vine_spacing, -0.5f * wire_spacing, head_height), 8));
+    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, 0.5f * wire_spacing, head_height), make_vec3(0.5f * vine_spacing, 0.5f * wire_spacing, head_height), 8));
 
     // first catch wires (these don't exist in a real Wye trellis, but are needed to keep the vines from falling through the wires)
-    trellis_points.push_back(linspace(make_vec3(-0.5f*vine_spacing, -0.5f*wire_spacing-0.15f,head_height+0.15f), make_vec3(0.5f*vine_spacing, -0.5f*wire_spacing-0.15f,head_height+0.15f), 8));
-    trellis_points.push_back(linspace(make_vec3(-0.5f*vine_spacing, 0.5f*wire_spacing+0.15f,head_height+0.15f), make_vec3(0.5f*vine_spacing, 0.5f*wire_spacing+0.15f,head_height+0.15f), 8));
+    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, -0.5f * wire_spacing - 0.15f, head_height + 0.15f), make_vec3(0.5f * vine_spacing, -0.5f * wire_spacing - 0.15f, head_height + 0.15f), 8));
+    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, 0.5f * wire_spacing + 0.15f, head_height + 0.15f), make_vec3(0.5f * vine_spacing, 0.5f * wire_spacing + 0.15f, head_height + 0.15f), 8));
 
     // second catch wires
-    trellis_points.push_back(linspace(make_vec3(-0.5f*vine_spacing, -0.5f*wire_spacing-0.35f,head_height+0.35f), make_vec3(0.5f*vine_spacing, -0.5f*wire_spacing-0.35f,head_height+0.35f), 8));
-    trellis_points.push_back(linspace(make_vec3(-0.5f*vine_spacing, 0.5f*wire_spacing+0.35f,head_height+0.35f), make_vec3(0.5f*vine_spacing, 0.5f*wire_spacing+0.35f,head_height+0.35f), 8));
+    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, -0.5f * wire_spacing - 0.35f, head_height + 0.35f), make_vec3(0.5f * vine_spacing, -0.5f * wire_spacing - 0.35f, head_height + 0.35f), 8));
+    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, 0.5f * wire_spacing + 0.35f, head_height + 0.35f), make_vec3(0.5f * vine_spacing, 0.5f * wire_spacing + 0.35f, head_height + 0.35f), 8));
 
-    for ( int j=0; j<trellis_points.size(); j++ ) {
-        for ( int i=0; i<trellis_points[j].size(); i++ ) {
+    for (int j = 0; j < trellis_points.size(); j++) {
+        for (int i = 0; i < trellis_points[j].size(); i++) {
             trellis_points.at(j).at(i) += base_position;
         }
     }
@@ -1513,14 +1513,14 @@ uint PlantArchitecture::buildGrapevineWye(const helios::vec3 &base_position) {
 
     uint uID_stem = addBaseStemShoot(plantID, 8, make_AxisRotation(0., 0, 0), shoot_types.at("grapevine_trunk").phytomer_parameters.internode.radius_initial.val(), 0.165, 1, 1, 0.1, "grapevine_trunk");
 
-    uint uID_upright_L = appendShoot(plantID, uID_stem, 3, make_AxisRotation( deg2rad(context_ptr->randu(42.f,48.f)), 0, M_PI), 0.03, 0.14, 1, 1, 0.2, "grapevine_trunk");
-    uint uID_upright_R = appendShoot(plantID, uID_stem, 3, make_AxisRotation(deg2rad(context_ptr->randu(42.f,48.f)), M_PI, M_PI), 0.03, 0.14, 1, 1, 0.2, "grapevine_trunk");
+    uint uID_upright_L = appendShoot(plantID, uID_stem, 3, make_AxisRotation(deg2rad(context_ptr->randu(42.f, 48.f)), 0, M_PI), 0.03, 0.14, 1, 1, 0.2, "grapevine_trunk");
+    uint uID_upright_R = appendShoot(plantID, uID_stem, 3, make_AxisRotation(deg2rad(context_ptr->randu(42.f, 48.f)), M_PI, M_PI), 0.03, 0.14, 1, 1, 0.2, "grapevine_trunk");
 
-    uint uID_cordon_L1 = appendShoot(plantID, uID_upright_L, 8, make_AxisRotation(deg2rad(-90), 0.5*M_PI, -0.2), 0.02, 0.11, 1, 1, 0.5, "grapevine_cordon");
-    uint uID_cordon_L2 = appendShoot(plantID, uID_upright_L, 8, make_AxisRotation(deg2rad(-90), -0.5*M_PI, 0.2), 0.02, 0.11, 1, 1, 0.5, "grapevine_cordon");
+    uint uID_cordon_L1 = appendShoot(plantID, uID_upright_L, 8, make_AxisRotation(deg2rad(-90), 0.5 * M_PI, -0.2), 0.02, 0.11, 1, 1, 0.5, "grapevine_cordon");
+    uint uID_cordon_L2 = appendShoot(plantID, uID_upright_L, 8, make_AxisRotation(deg2rad(-90), -0.5 * M_PI, 0.2), 0.02, 0.11, 1, 1, 0.5, "grapevine_cordon");
 
-    uint uID_cordon_R1 = appendShoot(plantID, uID_upright_R, 8, make_AxisRotation(deg2rad(-90), 0.5*M_PI, 0.2), 0.02, 0.11, 1, 1, 0.5, "grapevine_cordon");
-    uint uID_cordon_R2 = appendShoot(plantID, uID_upright_R, 8, make_AxisRotation(deg2rad(-90), -0.5*M_PI, -0.2), 0.02, 0.11, 1, 1, 0.5, "grapevine_cordon");
+    uint uID_cordon_R1 = appendShoot(plantID, uID_upright_R, 8, make_AxisRotation(deg2rad(-90), 0.5 * M_PI, 0.2), 0.02, 0.11, 1, 1, 0.5, "grapevine_cordon");
+    uint uID_cordon_R2 = appendShoot(plantID, uID_upright_R, 8, make_AxisRotation(deg2rad(-90), -0.5 * M_PI, -0.2), 0.02, 0.11, 1, 1, 0.5, "grapevine_cordon");
 
     removeShootLeaves(plantID, uID_stem);
     removeShootLeaves(plantID, uID_upright_L);
@@ -2780,16 +2780,16 @@ void PlantArchitecture::initializeStrawberryShoots() {
     phytomer_parameters.leaf.prototype_scale = 0.12;
     phytomer_parameters.leaf.prototype = leaf_prototype;
 
-    phytomer_parameters.peduncle.length.uniformDistribution(0.16,0.2);
+    phytomer_parameters.peduncle.length.uniformDistribution(0.16, 0.2);
     phytomer_parameters.peduncle.radius = 0.0018;
-    phytomer_parameters.peduncle.pitch.uniformDistribution(35,55);
+    phytomer_parameters.peduncle.pitch.uniformDistribution(35, 55);
     phytomer_parameters.peduncle.roll = 90;
     phytomer_parameters.peduncle.curvature = -150;
     phytomer_parameters.peduncle.length_segments = 5;
     phytomer_parameters.peduncle.radial_subdivisions = 6;
     phytomer_parameters.peduncle.color = phytomer_parameters.petiole.color;
 
-    phytomer_parameters.inflorescence.flowers_per_peduncle = 1;//.uniformDistribution(1, 2);
+    phytomer_parameters.inflorescence.flowers_per_peduncle = 1; //.uniformDistribution(1, 2);
     phytomer_parameters.inflorescence.flower_offset = 0.2;
     phytomer_parameters.inflorescence.pitch = 70;
     phytomer_parameters.inflorescence.roll = 90;

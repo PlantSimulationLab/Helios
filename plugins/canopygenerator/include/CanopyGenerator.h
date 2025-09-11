@@ -1043,7 +1043,7 @@ public:
     explicit CanopyGenerator(helios::Context *context);
 
     //! Unit testing routine
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
     //! Stores the given canopy parameters
     template<typename CanopyType, typename... Args>

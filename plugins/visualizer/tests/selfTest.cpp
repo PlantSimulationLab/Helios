@@ -295,7 +295,7 @@ TEST_CASE("Visualizer::addPoint with different sizes") {
     size_t point1 = visualizer.addPoint(make_vec3(0, 0, 0), RGB::red, 1.0f, Visualizer::COORDINATES_CARTESIAN);
     size_t point2 = visualizer.addPoint(make_vec3(1, 0, 0), RGB::green, 2.5f, Visualizer::COORDINATES_CARTESIAN);
     size_t point3 = visualizer.addPoint(make_vec3(2, 0, 0), RGB::blue, 5.0f, Visualizer::COORDINATES_CARTESIAN);
-    
+
     // Test point with size outside supported range (should trigger warning)
     capture_cerr cerr_buffer;
     size_t point4 = visualizer.addPoint(make_vec3(3, 0, 0), RGB::yellow, 0.5f, Visualizer::COORDINATES_CARTESIAN);
@@ -370,6 +370,6 @@ TEST_CASE("Visualizer::point size edge cases") {
     DOCTEST_CHECK(point1 != point3);
 }
 
-int Visualizer::selfTest(int argc, char** argv) {
+int Visualizer::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

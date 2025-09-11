@@ -900,7 +900,7 @@ void RadiationModel::writeNormDepthImage(const std::string &cameralabel, const s
     writeJPEG(outfile.str(), camera_resolution.x, camera_resolution.y, pixel_data);
 }
 
-//DEPRECATED
+// DEPRECATED
 void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, const std::string &primitive_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path, bool append_label_file, int frame) {
 
     if (cameras.find(cameralabel) == cameras.end()) {
@@ -1005,7 +1005,7 @@ void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, con
     label_file.close();
 }
 
-//DEPRECATED
+// DEPRECATED
 void RadiationModel::writeImageBoundingBoxes_ObjectData(const std::string &cameralabel, const std::string &object_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path, bool append_label_file, int frame) {
 
     if (cameras.find(cameralabel) == cameras.end()) {
@@ -1118,11 +1118,12 @@ void RadiationModel::writeImageBoundingBoxes_ObjectData(const std::string &camer
     label_file.close();
 }
 
-void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, const std::string &primitive_data_label, const uint &object_class_ID, const std::string &image_file, const std::string &classes_txt_file, const std::string &image_path){
-    writeImageBoundingBoxes( cameralabel, std::vector<std::string>{primitive_data_label}, std::vector<uint>{object_class_ID}, image_file, classes_txt_file, image_path);
+void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, const std::string &primitive_data_label, const uint &object_class_ID, const std::string &image_file, const std::string &classes_txt_file, const std::string &image_path) {
+    writeImageBoundingBoxes(cameralabel, std::vector<std::string>{primitive_data_label}, std::vector<uint>{object_class_ID}, image_file, classes_txt_file, image_path);
 }
 
-void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, const std::vector<std::string> &primitive_data_label, const std::vector<uint> &object_class_ID, const std::string &image_file, const std::string &classes_txt_file, const std::string &image_path) {
+void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, const std::vector<std::string> &primitive_data_label, const std::vector<uint> &object_class_ID, const std::string &image_file, const std::string &classes_txt_file,
+                                             const std::string &image_path) {
 
     if (cameras.find(cameralabel) == cameras.end()) {
         helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes): Camera '" + cameralabel + "' does not exist.");
@@ -1165,13 +1166,13 @@ void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, con
         for (int i = 0; i < camera_resolution.x; i++) {
             uint ii = camera_resolution.x - i - 1;
             uint UUID = pixel_UUIDs.at(j * camera_resolution.x + ii) - 1;
-            
+
             if (context->doesPrimitiveExist(UUID)) {
                 // Check each primitive data label
                 for (size_t label_idx = 0; label_idx < primitive_data_label.size(); label_idx++) {
                     const std::string &data_label = primitive_data_label[label_idx];
                     uint class_id = object_class_ID[label_idx];
-                    
+
                     if (context->doesPrimitiveDataExist(UUID, data_label.c_str())) {
                         uint labeldata;
                         bool has_data = false;
@@ -1191,7 +1192,7 @@ void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, con
 
                         if (has_data) {
                             std::pair<uint, uint> key = std::make_pair(class_id, labeldata);
-                            
+
                             if (pdata_bounds.find(key) == pdata_bounds.end()) {
                                 pdata_bounds[key] = make_vec4(1e6, -1, 1e6, -1);
                             }
@@ -1235,14 +1236,15 @@ void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, con
         classes_txt_stream << object_class_ID.at(i) << " " << primitive_data_label.at(i) << std::endl;
     }
     classes_txt_stream.close();
-
 }
 
-void RadiationModel::writeImageBoundingBoxes_ObjectData(const std::string &cameralabel, const std::string &object_data_label, const uint &object_class_ID, const std::string &image_file, const std::string &classes_txt_file, const std::string &image_path){
-    writeImageBoundingBoxes_ObjectData( cameralabel, std::vector<std::string>{object_data_label}, std::vector<uint>{object_class_ID}, image_file, classes_txt_file, image_path);
+void RadiationModel::writeImageBoundingBoxes_ObjectData(const std::string &cameralabel, const std::string &object_data_label, const uint &object_class_ID, const std::string &image_file, const std::string &classes_txt_file,
+                                                        const std::string &image_path) {
+    writeImageBoundingBoxes_ObjectData(cameralabel, std::vector<std::string>{object_data_label}, std::vector<uint>{object_class_ID}, image_file, classes_txt_file, image_path);
 }
 
-void RadiationModel::writeImageBoundingBoxes_ObjectData( const std::string &cameralabel, const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &image_file, const std::string &classes_txt_file, const std::string &image_path ) {
+void RadiationModel::writeImageBoundingBoxes_ObjectData(const std::string &cameralabel, const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &image_file, const std::string &classes_txt_file,
+                                                        const std::string &image_path) {
 
     if (cameras.find(cameralabel) == cameras.end()) {
         helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes_ObjectData): Camera '" + cameralabel + "' does not exist.");
@@ -1300,7 +1302,7 @@ void RadiationModel::writeImageBoundingBoxes_ObjectData( const std::string &came
             for (size_t label_idx = 0; label_idx < object_data_label.size(); label_idx++) {
                 const std::string &data_label = object_data_label[label_idx];
                 uint class_id = object_class_ID[label_idx];
-                
+
                 if (context->doesObjectDataExist(objID, data_label.c_str())) {
                     uint labeldata;
                     bool has_data = false;
@@ -1320,7 +1322,7 @@ void RadiationModel::writeImageBoundingBoxes_ObjectData( const std::string &came
 
                     if (has_data) {
                         std::pair<uint, uint> key = std::make_pair(class_id, labeldata);
-                        
+
                         if (pdata_bounds.find(key) == pdata_bounds.end()) {
                             pdata_bounds[key] = make_vec4(1e6, -1, 1e6, -1);
                         }
@@ -1363,12 +1365,12 @@ void RadiationModel::writeImageBoundingBoxes_ObjectData( const std::string &came
         classes_txt_stream << object_class_ID.at(i) << " " << object_data_label.at(i) << std::endl;
     }
     classes_txt_stream.close();
-
 }
 
-// Helper function to initialize or load existing COCO JSON structure
-nlohmann::json RadiationModel::initializeCOCOJson(const std::string &filename, bool append_file, const std::string &cameralabel, const helios::int2 &camera_resolution, const std::string &image_file) {
+// Helper function to initialize or load existing COCO JSON structure and get image ID
+std::pair<nlohmann::json, int> RadiationModel::initializeCOCOJsonWithImageId(const std::string &filename, bool append_file, const std::string &cameralabel, const helios::int2 &camera_resolution, const std::string &image_file) {
     nlohmann::json coco_json;
+    int image_id = 0;
 
     if (append_file) {
         std::ifstream existing_file(filename);
@@ -1387,20 +1389,48 @@ nlohmann::json RadiationModel::initializeCOCOJson(const std::string &filename, b
         coco_json["categories"] = nlohmann::json::array();
         coco_json["images"] = nlohmann::json::array();
         coco_json["annotations"] = nlohmann::json::array();
+    }
 
-        // Extract just the filename (no path) from the image file
-        std::filesystem::path image_path_obj(image_file);
-        std::string filename_only = image_path_obj.filename().string();
+    // Extract just the filename (no path) from the image file
+    std::filesystem::path image_path_obj(image_file);
+    std::string filename_only = image_path_obj.filename().string();
 
-        // Add the image entry (only once)
+    // Check if this image already exists in the JSON
+    bool image_exists = false;
+    for (const auto &img: coco_json["images"]) {
+        if (img["file_name"] == filename_only) {
+            image_id = img["id"];
+            image_exists = true;
+            break;
+        }
+    }
+
+    // If image doesn't exist, add it with a new unique ID
+    if (!image_exists) {
+        // Find the next available image ID
+        int max_image_id = -1;
+        for (const auto &img: coco_json["images"]) {
+            if (img["id"] > max_image_id) {
+                max_image_id = img["id"];
+            }
+        }
+        image_id = max_image_id + 1;
+
+        // Add the new image entry
         nlohmann::json image_entry;
+        image_entry["id"] = image_id;
         image_entry["file_name"] = filename_only;
         image_entry["height"] = camera_resolution.y;
         image_entry["width"] = camera_resolution.x;
         coco_json["images"].push_back(image_entry);
     }
 
-    return coco_json;
+    return std::make_pair(coco_json, image_id);
+}
+
+// Helper function to initialize or load existing COCO JSON structure (backward compatibility)
+nlohmann::json RadiationModel::initializeCOCOJson(const std::string &filename, bool append_file, const std::string &cameralabel, const helios::int2 &camera_resolution, const std::string &image_file) {
+    return initializeCOCOJsonWithImageId(filename, append_file, cameralabel, camera_resolution, image_file).first;
 }
 
 // Helper function to add category to COCO JSON if it doesn't exist
@@ -1627,7 +1657,7 @@ std::vector<std::pair<int, int>> RadiationModel::traceBoundarySimple(const std::
 }
 
 // Helper function to generate annotations from label masks
-std::vector<std::map<std::string, std::vector<float>>> RadiationModel::generateAnnotationsFromMasks(const std::map<int, std::vector<std::vector<bool>>> &label_masks, uint object_class_ID, const helios::int2 &camera_resolution) {
+std::vector<std::map<std::string, std::vector<float>>> RadiationModel::generateAnnotationsFromMasks(const std::map<int, std::vector<std::vector<bool>>> &label_masks, uint object_class_ID, const helios::int2 &camera_resolution, int image_id) {
     std::vector<std::map<std::string, std::vector<float>>> annotations;
     int annotation_id = 0;
 
@@ -1719,7 +1749,7 @@ std::vector<std::map<std::string, std::vector<float>>> RadiationModel::generateA
                                 // Create annotation
                                 std::map<std::string, std::vector<float>> annotation;
                                 annotation["id"] = {(float) annotation_id++};
-                                annotation["image_id"] = {0.0f}; // Will be updated when writing
+                                annotation["image_id"] = {(float) image_id};
                                 annotation["category_id"] = {(float) object_class_ID};
                                 annotation["bbox"] = {(float) min_x, (float) min_y, (float) (max_x - min_x), (float) (max_y - min_y)};
                                 annotation["area"] = {(float) area};
@@ -1745,11 +1775,12 @@ std::vector<std::map<std::string, std::vector<float>>> RadiationModel::generateA
     return annotations;
 }
 
-void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel, const std::string &primitive_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, bool append_file ){
+void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel, const std::string &primitive_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, bool append_file) {
     writeImageSegmentationMasks(cameralabel, std::vector<std::string>{primitive_data_label}, std::vector<uint>{object_class_ID}, json_filename, image_file, append_file);
 }
 
-void RadiationModel::writeImageSegmentationMasks( const std::string &cameralabel, const std::vector<std::string> &primitive_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file, bool append_file ) {
+void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel, const std::vector<std::string> &primitive_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file,
+                                                 bool append_file) {
 
     if (cameras.find(cameralabel) == cameras.end()) {
         helios_runtime_error("ERROR (RadiationModel::writeImageSegmentationMasks): Camera '" + cameralabel + "' does not exist.");
@@ -1767,7 +1798,7 @@ void RadiationModel::writeImageSegmentationMasks( const std::string &cameralabel
 
     // Check that all primitive data labels exist
     std::vector<std::string> all_primitive_data = context->listAllPrimitiveDataLabels();
-    for (const auto& data_label : primitive_data_label) {
+    for (const auto &data_label: primitive_data_label) {
         if (std::find(all_primitive_data.begin(), all_primitive_data.end(), data_label) == all_primitive_data.end()) {
             std::cerr << "WARNING (RadiationModel::writeImageSegmentationMasks): Primitive data label '" << data_label << "' does not exist in the context." << std::endl;
         }
@@ -1789,7 +1820,9 @@ void RadiationModel::writeImageSegmentationMasks( const std::string &cameralabel
 
     // Write annotations to JSON file
     int2 camera_resolution = cameras.at(cameralabel).resolution;
-    nlohmann::json coco_json = initializeCOCOJson(outfile, append_file, cameralabel, camera_resolution, image_file);
+    auto coco_json_pair = initializeCOCOJsonWithImageId(outfile, append_file, cameralabel, camera_resolution, image_file);
+    nlohmann::json coco_json = coco_json_pair.first;
+    int image_id = coco_json_pair.second;
     addCategoryToCOCO(coco_json, object_class_ID, primitive_data_label);
 
     // Process each data label and class ID pair
@@ -1798,7 +1831,7 @@ void RadiationModel::writeImageSegmentationMasks( const std::string &cameralabel
         std::map<int, std::vector<std::vector<bool>>> label_masks = generateLabelMasks(cameralabel, primitive_data_label[i], false);
 
         // Generate annotations from masks using helper function
-        std::vector<std::map<std::string, std::vector<float>>> annotations = generateAnnotationsFromMasks(label_masks, object_class_ID[i], camera_resolution);
+        std::vector<std::map<std::string, std::vector<float>>> annotations = generateAnnotationsFromMasks(label_masks, object_class_ID[i], camera_resolution, image_id);
 
         // Find the highest existing annotation ID to avoid conflicts
         int max_annotation_id = -1;
@@ -1836,11 +1869,12 @@ void RadiationModel::writeImageSegmentationMasks( const std::string &cameralabel
     writeCOCOJson(coco_json, outfile);
 }
 
-void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::string &object_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, bool append_file ){
+void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::string &object_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, bool append_file) {
     writeImageSegmentationMasks_ObjectData(cameralabel, std::vector<std::string>{object_data_label}, std::vector<uint>{object_class_ID}, json_filename, image_file, append_file);
 }
 
-void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file, bool append_file ) {
+void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file,
+                                                            bool append_file) {
 
     if (cameras.find(cameralabel) == cameras.end()) {
         helios_runtime_error("ERROR (RadiationModel::writeImageSegmentationMasks_ObjectData): Camera '" + cameralabel + "' does not exist.");
@@ -1858,7 +1892,7 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
 
     // Check that all object data labels exist
     std::vector<std::string> all_object_data = context->listAllObjectDataLabels();
-    for (const auto& data_label : object_data_label) {
+    for (const auto &data_label: object_data_label) {
         if (std::find(all_object_data.begin(), all_object_data.end(), data_label) == all_object_data.end()) {
             std::cerr << "WARNING (RadiationModel::writeImageSegmentationMasks_ObjectData): Object data label '" << data_label << "' does not exist in the context." << std::endl;
         }
@@ -1880,7 +1914,9 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
 
     // Write annotations to JSON file
     int2 camera_resolution = cameras.at(cameralabel).resolution;
-    nlohmann::json coco_json = initializeCOCOJson(outfile, append_file, cameralabel, camera_resolution, image_file);
+    auto coco_json_pair = initializeCOCOJsonWithImageId(outfile, append_file, cameralabel, camera_resolution, image_file);
+    nlohmann::json coco_json = coco_json_pair.first;
+    int image_id = coco_json_pair.second;
     addCategoryToCOCO(coco_json, object_class_ID, object_data_label);
 
     // Process each data label and class ID pair
@@ -1889,7 +1925,7 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
         std::map<int, std::vector<std::vector<bool>>> label_masks = generateLabelMasks(cameralabel, object_data_label[i], true);
 
         // Generate annotations from masks using helper function
-        std::vector<std::map<std::string, std::vector<float>>> annotations = generateAnnotationsFromMasks(label_masks, object_class_ID[i], camera_resolution);
+        std::vector<std::map<std::string, std::vector<float>>> annotations = generateAnnotationsFromMasks(label_masks, object_class_ID[i], camera_resolution, image_id);
 
         // Find the highest existing annotation ID to avoid conflicts
         int max_annotation_id = -1;
@@ -2080,7 +2116,7 @@ void RadiationModel::applyImageProcessingPipeline(const std::string &cameralabel
     // Step 2: Camera spectral correction
     camera.applyCameraSpectralCorrection(red_band_label, green_band_label, blue_band_label, this->context);
 
-    // Step 3: Scene-adaptive white balance  
+    // Step 3: Scene-adaptive white balance
     camera.whiteBalanceAuto(red_band_label, green_band_label, blue_band_label);
 
     // Step 4: Brightness and contrast adjustments in linear space
@@ -2184,56 +2220,56 @@ void RadiationCamera::whiteBalance(const std::string &red_band_label, const std:
 }
 
 void RadiationCamera::whiteBalanceGrayEdge(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, int derivative_order, float p) {
-    
+
 #ifdef HELIOS_DEBUG
     if (pixel_data.find(red_band_label) == pixel_data.end() || pixel_data.find(green_band_label) == pixel_data.end() || pixel_data.find(blue_band_label) == pixel_data.end()) {
         helios_runtime_error("ERROR (RadiationModel::whiteBalanceGrayEdge): One or more specified band labels do not exist for the camera pixel data.");
     }
 #endif
-    
+
     auto &data_red = pixel_data.at(red_band_label);
     auto &data_green = pixel_data.at(green_band_label);
     auto &data_blue = pixel_data.at(blue_band_label);
-    
+
     const int width = resolution.x;
     const int height = resolution.y;
     const std::size_t N = width * height;
-    
+
     if (p < 1.0f) {
         throw std::invalid_argument("Minkowski exponent p must satisfy p >= 1");
     }
     if (derivative_order < 1 || derivative_order > 2) {
         throw std::invalid_argument("Derivative order must be 1 or 2");
     }
-    
+
     // Compute derivatives using simple finite differences
     std::vector<float> deriv_red(N, 0.0f);
     std::vector<float> deriv_green(N, 0.0f);
     std::vector<float> deriv_blue(N, 0.0f);
-    
+
     if (derivative_order == 1) {
         // First-order derivatives (gradient magnitude)
         for (int y = 1; y < height - 1; ++y) {
             for (int x = 1; x < width - 1; ++x) {
                 int idx = y * width + x;
-                
+
                 // Sobel operator for gradient estimation
-                float dx_r = (data_red[(y-1)*width + (x+1)] + 2*data_red[y*width + (x+1)] + data_red[(y+1)*width + (x+1)])
-                           - (data_red[(y-1)*width + (x-1)] + 2*data_red[y*width + (x-1)] + data_red[(y+1)*width + (x-1)]) / 8.0f;
-                float dy_r = (data_red[(y+1)*width + (x-1)] + 2*data_red[(y+1)*width + x] + data_red[(y+1)*width + (x+1)])
-                           - (data_red[(y-1)*width + (x-1)] + 2*data_red[(y-1)*width + x] + data_red[(y-1)*width + (x+1)]) / 8.0f;
+                float dx_r = (data_red[(y - 1) * width + (x + 1)] + 2 * data_red[y * width + (x + 1)] + data_red[(y + 1) * width + (x + 1)]) -
+                             (data_red[(y - 1) * width + (x - 1)] + 2 * data_red[y * width + (x - 1)] + data_red[(y + 1) * width + (x - 1)]) / 8.0f;
+                float dy_r = (data_red[(y + 1) * width + (x - 1)] + 2 * data_red[(y + 1) * width + x] + data_red[(y + 1) * width + (x + 1)]) -
+                             (data_red[(y - 1) * width + (x - 1)] + 2 * data_red[(y - 1) * width + x] + data_red[(y - 1) * width + (x + 1)]) / 8.0f;
                 deriv_red[idx] = std::sqrt(dx_r * dx_r + dy_r * dy_r);
-                
-                float dx_g = (data_green[(y-1)*width + (x+1)] + 2*data_green[y*width + (x+1)] + data_green[(y+1)*width + (x+1)])
-                           - (data_green[(y-1)*width + (x-1)] + 2*data_green[y*width + (x-1)] + data_green[(y+1)*width + (x-1)]) / 8.0f;
-                float dy_g = (data_green[(y+1)*width + (x-1)] + 2*data_green[(y+1)*width + x] + data_green[(y+1)*width + (x+1)])
-                           - (data_green[(y-1)*width + (x-1)] + 2*data_green[(y-1)*width + x] + data_green[(y-1)*width + (x+1)]) / 8.0f;
+
+                float dx_g = (data_green[(y - 1) * width + (x + 1)] + 2 * data_green[y * width + (x + 1)] + data_green[(y + 1) * width + (x + 1)]) -
+                             (data_green[(y - 1) * width + (x - 1)] + 2 * data_green[y * width + (x - 1)] + data_green[(y + 1) * width + (x - 1)]) / 8.0f;
+                float dy_g = (data_green[(y + 1) * width + (x - 1)] + 2 * data_green[(y + 1) * width + x] + data_green[(y + 1) * width + (x + 1)]) -
+                             (data_green[(y - 1) * width + (x - 1)] + 2 * data_green[(y - 1) * width + x] + data_green[(y - 1) * width + (x + 1)]) / 8.0f;
                 deriv_green[idx] = std::sqrt(dx_g * dx_g + dy_g * dy_g);
-                
-                float dx_b = (data_blue[(y-1)*width + (x+1)] + 2*data_blue[y*width + (x+1)] + data_blue[(y+1)*width + (x+1)])
-                           - (data_blue[(y-1)*width + (x-1)] + 2*data_blue[y*width + (x-1)] + data_blue[(y+1)*width + (x-1)]) / 8.0f;
-                float dy_b = (data_blue[(y+1)*width + (x-1)] + 2*data_blue[(y+1)*width + x] + data_blue[(y+1)*width + (x+1)])
-                           - (data_blue[(y-1)*width + (x-1)] + 2*data_blue[(y-1)*width + x] + data_blue[(y-1)*width + (x+1)]) / 8.0f;
+
+                float dx_b = (data_blue[(y - 1) * width + (x + 1)] + 2 * data_blue[y * width + (x + 1)] + data_blue[(y + 1) * width + (x + 1)]) -
+                             (data_blue[(y - 1) * width + (x - 1)] + 2 * data_blue[y * width + (x - 1)] + data_blue[(y + 1) * width + (x - 1)]) / 8.0f;
+                float dy_b = (data_blue[(y + 1) * width + (x - 1)] + 2 * data_blue[(y + 1) * width + x] + data_blue[(y + 1) * width + (x + 1)]) -
+                             (data_blue[(y - 1) * width + (x - 1)] + 2 * data_blue[(y - 1) * width + x] + data_blue[(y - 1) * width + (x + 1)]) / 8.0f;
                 deriv_blue[idx] = std::sqrt(dx_b * dx_b + dy_b * dy_b);
             }
         }
@@ -2242,26 +2278,20 @@ void RadiationCamera::whiteBalanceGrayEdge(const std::string &red_band_label, co
         for (int y = 1; y < height - 1; ++y) {
             for (int x = 1; x < width - 1; ++x) {
                 int idx = y * width + x;
-                
-                deriv_red[idx] = std::abs(data_red[(y-1)*width + x] + data_red[(y+1)*width + x] 
-                                        + data_red[y*width + (x-1)] + data_red[y*width + (x+1)] 
-                                        - 4 * data_red[idx]);
-                                        
-                deriv_green[idx] = std::abs(data_green[(y-1)*width + x] + data_green[(y+1)*width + x]
-                                          + data_green[y*width + (x-1)] + data_green[y*width + (x+1)]
-                                          - 4 * data_green[idx]);
-                                          
-                deriv_blue[idx] = std::abs(data_blue[(y-1)*width + x] + data_blue[(y+1)*width + x]
-                                         + data_blue[y*width + (x-1)] + data_blue[y*width + (x+1)]
-                                         - 4 * data_blue[idx]);
+
+                deriv_red[idx] = std::abs(data_red[(y - 1) * width + x] + data_red[(y + 1) * width + x] + data_red[y * width + (x - 1)] + data_red[y * width + (x + 1)] - 4 * data_red[idx]);
+
+                deriv_green[idx] = std::abs(data_green[(y - 1) * width + x] + data_green[(y + 1) * width + x] + data_green[y * width + (x - 1)] + data_green[y * width + (x + 1)] - 4 * data_green[idx]);
+
+                deriv_blue[idx] = std::abs(data_blue[(y - 1) * width + x] + data_blue[(y + 1) * width + x] + data_blue[y * width + (x - 1)] + data_blue[y * width + (x + 1)] - 4 * data_blue[idx]);
             }
         }
     }
-    
+
     // Compute Minkowski means of derivatives
     float acc_r = 0.0f, acc_g = 0.0f, acc_b = 0.0f;
     int valid_pixels = 0;
-    
+
     for (std::size_t i = 0; i < N; ++i) {
         if (deriv_red[i] > 0 || deriv_green[i] > 0 || deriv_blue[i] > 0) {
             acc_r += std::pow(deriv_red[i], p);
@@ -2270,21 +2300,21 @@ void RadiationCamera::whiteBalanceGrayEdge(const std::string &red_band_label, co
             valid_pixels++;
         }
     }
-    
+
     if (valid_pixels == 0) {
         // No edges detected, fall back to standard white balance
         whiteBalance(red_band_label, green_band_label, blue_band_label, p);
         return;
     }
-    
+
     float mean_r_p = acc_r / static_cast<float>(valid_pixels);
     float mean_g_p = acc_g / static_cast<float>(valid_pixels);
     float mean_b_p = acc_b / static_cast<float>(valid_pixels);
-    
+
     float M_R = std::pow(mean_r_p, 1.0f / p);
     float M_G = std::pow(mean_g_p, 1.0f / p);
     float M_B = std::pow(mean_b_p, 1.0f / p);
-    
+
     // Avoid division by zero
     const float eps = 1e-6f;
     if (M_R < eps || M_G < eps || M_B < eps) {
@@ -2292,16 +2322,16 @@ void RadiationCamera::whiteBalanceGrayEdge(const std::string &red_band_label, co
         whiteBalance(red_band_label, green_band_label, blue_band_label, p);
         return;
     }
-    
+
     // Compute gray reference
     float M = (M_R + M_G + M_B) / 3.0f;
-    
+
     // Derive per-channel gains
     helios::vec3 scale;
     scale.x = M / M_R;
     scale.y = M / M_G;
     scale.z = M / M_B;
-    
+
     // Apply gains to each pixel
     for (std::size_t i = 0; i < N; ++i) {
         data_red[i] *= scale.x;
@@ -2311,44 +2341,44 @@ void RadiationCamera::whiteBalanceGrayEdge(const std::string &red_band_label, co
 }
 
 void RadiationCamera::whiteBalanceWhitePatch(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float percentile) {
-    
+
 #ifdef HELIOS_DEBUG
     if (pixel_data.find(red_band_label) == pixel_data.end() || pixel_data.find(green_band_label) == pixel_data.end() || pixel_data.find(blue_band_label) == pixel_data.end()) {
         helios_runtime_error("ERROR (RadiationModel::whiteBalanceWhitePatch): One or more specified band labels do not exist for the camera pixel data.");
     }
 #endif
-    
+
     if (percentile <= 0.0f || percentile > 1.0f) {
         throw std::invalid_argument("Percentile must be in range (0, 1]");
     }
-    
+
     auto &data_red = pixel_data.at(red_band_label);
     auto &data_green = pixel_data.at(green_band_label);
     auto &data_blue = pixel_data.at(blue_band_label);
-    
+
     const std::size_t N = data_red.size();
-    
+
     // Find the percentile values for each channel
     std::vector<float> sorted_red = data_red;
     std::vector<float> sorted_green = data_green;
     std::vector<float> sorted_blue = data_blue;
-    
+
     std::size_t k = static_cast<std::size_t>(percentile * (N - 1));
-    
+
     std::nth_element(sorted_red.begin(), sorted_red.begin() + k, sorted_red.end());
     std::nth_element(sorted_green.begin(), sorted_green.begin() + k, sorted_green.end());
     std::nth_element(sorted_blue.begin(), sorted_blue.begin() + k, sorted_blue.end());
-    
+
     float white_r = sorted_red[k];
     float white_g = sorted_green[k];
     float white_b = sorted_blue[k];
-    
+
     // Avoid division by zero
     const float eps = 1e-6f;
     if (white_r < eps || white_g < eps || white_b < eps) {
         throw std::runtime_error("White patch values too small");
     }
-    
+
     // Apply gains to normalize to white
     for (std::size_t i = 0; i < N; ++i) {
         data_red[i] /= white_r;
@@ -2358,23 +2388,23 @@ void RadiationCamera::whiteBalanceWhitePatch(const std::string &red_band_label, 
 }
 
 void RadiationCamera::whiteBalanceAuto(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label) {
-    
+
 #ifdef HELIOS_DEBUG
     if (pixel_data.find(red_band_label) == pixel_data.end() || pixel_data.find(green_band_label) == pixel_data.end() || pixel_data.find(blue_band_label) == pixel_data.end()) {
         helios_runtime_error("ERROR (RadiationModel::whiteBalanceAuto): One or more specified band labels do not exist for the camera pixel data.");
     }
 #endif
-    
+
     const auto &data_red = pixel_data.at(red_band_label);
     const auto &data_green = pixel_data.at(green_band_label);
     const auto &data_blue = pixel_data.at(blue_band_label);
-    
+
     const std::size_t N = data_red.size();
     const int width = resolution.x;
     const int height = resolution.y;
-    
+
     // Analyze scene characteristics
-    
+
     // 1. Check for green dominance (vegetation indicator)
     float mean_r = 0.0f, mean_g = 0.0f, mean_b = 0.0f;
     for (std::size_t i = 0; i < N; ++i) {
@@ -2385,9 +2415,9 @@ void RadiationCamera::whiteBalanceAuto(const std::string &red_band_label, const 
     mean_r /= N;
     mean_g /= N;
     mean_b /= N;
-    
+
     float green_dominance = mean_g / (mean_r + mean_g + mean_b + 1e-6f);
-    
+
     // 2. Check for bright pixels (white patch candidates)
     float bright_threshold = 0.9f;
     int bright_pixels = 0;
@@ -2398,13 +2428,13 @@ void RadiationCamera::whiteBalanceAuto(const std::string &red_band_label, const 
         }
     }
     float bright_ratio = static_cast<float>(bright_pixels) / N;
-    
+
     // 3. Compute edge density (texture indicator)
     float edge_density = 0.0f;
     for (int y = 1; y < height - 1; ++y) {
         for (int x = 1; x < width - 1; ++x) {
             int idx = y * width + x;
-            
+
             // Simple gradient magnitude
             float dx = std::abs(data_green[idx + 1] - data_green[idx - 1]);
             float dy = std::abs(data_green[idx + width] - data_green[idx - width]);
@@ -2412,43 +2442,41 @@ void RadiationCamera::whiteBalanceAuto(const std::string &red_band_label, const 
         }
     }
     edge_density /= ((width - 2) * (height - 2));
-    
+
     // Select algorithm based on scene characteristics
-              
+
     // For LED-lit simulation scenes, avoid White Patch since bright pixels are colored LED lights
     // Gray Edge works better for controlled lighting scenarios with known spectral bias
     whiteBalanceGrayEdge(red_band_label, green_band_label, blue_band_label, 1, 5.0f);
 }
 
 void RadiationCamera::applyCameraSpectralCorrection(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, helios::Context *context) {
-    
+
 #ifdef HELIOS_DEBUG
     if (pixel_data.find(red_band_label) == pixel_data.end() || pixel_data.find(green_band_label) == pixel_data.end() || pixel_data.find(blue_band_label) == pixel_data.end()) {
         helios_runtime_error("ERROR (RadiationCamera::applyCameraSpectralCorrection): One or more specified band labels do not exist for the camera pixel data.");
     }
 #endif
-    
+
     // Check if spectral response data exists for all bands
-    if (band_spectral_response.find(red_band_label) == band_spectral_response.end() ||
-        band_spectral_response.find(green_band_label) == band_spectral_response.end() ||
-        band_spectral_response.find(blue_band_label) == band_spectral_response.end()) {
+    if (band_spectral_response.find(red_band_label) == band_spectral_response.end() || band_spectral_response.find(green_band_label) == band_spectral_response.end() || band_spectral_response.find(blue_band_label) == band_spectral_response.end()) {
         return;
     }
-    
+
     // Get spectral response identifiers
     std::string red_response_id = band_spectral_response.at(red_band_label);
     std::string green_response_id = band_spectral_response.at(green_band_label);
     std::string blue_response_id = band_spectral_response.at(blue_band_label);
-    
+
     // Skip if using uniform response (no spectral bias to correct)
     if (red_response_id == "uniform" && green_response_id == "uniform" && blue_response_id == "uniform") {
         return;
     }
-    
+
     try {
         // Access spectral response data from global data (assuming vec2 format: wavelength, response)
         std::vector<helios::vec2> red_spectrum, green_spectrum, blue_spectrum;
-        
+
         if (red_response_id != "uniform" && context->doesGlobalDataExist(red_response_id.c_str())) {
             context->getGlobalData(red_response_id.c_str(), red_spectrum);
         }
@@ -2458,56 +2486,56 @@ void RadiationCamera::applyCameraSpectralCorrection(const std::string &red_band_
         if (blue_response_id != "uniform" && context->doesGlobalDataExist(blue_response_id.c_str())) {
             context->getGlobalData(blue_response_id.c_str(), blue_spectrum);
         }
-        
+
         // If we don't have spectral data for all channels, skip correction
         if (red_spectrum.empty() || green_spectrum.empty() || blue_spectrum.empty()) {
             return;
         }
-        
+
         // Compute integrated response (area under curve) for each channel
         // This represents the total sensitivity of each channel
         float red_integrated = 0.0f, green_integrated = 0.0f, blue_integrated = 0.0f;
-        
+
         // Simple trapezoidal integration
         for (size_t i = 1; i < red_spectrum.size(); ++i) {
-            float dw = red_spectrum[i].x - red_spectrum[i-1].x;
-            red_integrated += 0.5f * (red_spectrum[i].y + red_spectrum[i-1].y) * dw;
+            float dw = red_spectrum[i].x - red_spectrum[i - 1].x;
+            red_integrated += 0.5f * (red_spectrum[i].y + red_spectrum[i - 1].y) * dw;
         }
         for (size_t i = 1; i < green_spectrum.size(); ++i) {
-            float dw = green_spectrum[i].x - green_spectrum[i-1].x;
-            green_integrated += 0.5f * (green_spectrum[i].y + green_spectrum[i-1].y) * dw;
+            float dw = green_spectrum[i].x - green_spectrum[i - 1].x;
+            green_integrated += 0.5f * (green_spectrum[i].y + green_spectrum[i - 1].y) * dw;
         }
         for (size_t i = 1; i < blue_spectrum.size(); ++i) {
-            float dw = blue_spectrum[i].x - blue_spectrum[i-1].x;
-            blue_integrated += 0.5f * (blue_spectrum[i].y + blue_spectrum[i-1].y) * dw;
+            float dw = blue_spectrum[i].x - blue_spectrum[i - 1].x;
+            blue_integrated += 0.5f * (blue_spectrum[i].y + blue_spectrum[i - 1].y) * dw;
         }
-        
+
         // Avoid division by zero
         if (red_integrated <= 0 || green_integrated <= 0 || blue_integrated <= 0) {
             return;
         }
-        
+
         // Compute correction factors to normalize channels relative to their integrated sensitivity
         // Use the minimum integrated response as reference to avoid amplifying noise
         float reference_response = std::min({red_integrated, green_integrated, blue_integrated});
-        
+
         helios::vec3 correction_factors;
-        correction_factors.x = reference_response / red_integrated;    // Red correction
-        correction_factors.y = reference_response / green_integrated;  // Green correction  
-        correction_factors.z = reference_response / blue_integrated;   // Blue correction
-        
+        correction_factors.x = reference_response / red_integrated; // Red correction
+        correction_factors.y = reference_response / green_integrated; // Green correction
+        correction_factors.z = reference_response / blue_integrated; // Blue correction
+
         // Apply correction factors to pixel data
         auto &data_red = pixel_data.at(red_band_label);
         auto &data_green = pixel_data.at(green_band_label);
         auto &data_blue = pixel_data.at(blue_band_label);
-        
+
         const std::size_t N = data_red.size();
         for (std::size_t i = 0; i < N; ++i) {
             data_red[i] *= correction_factors.x;
             data_green[i] *= correction_factors.y;
             data_blue[i] *= correction_factors.z;
         }
-        
+
     } catch (const std::exception &e) {
         return;
     }
@@ -2588,11 +2616,11 @@ void RadiationCamera::globalHistogramEqualization(const std::string &red_band_la
     /* luminance array and store original chromaticity */
     std::vector<float> lum(N);
     std::vector<float> chroma_r(N), chroma_g(N), chroma_b(N);
-    
+
     for (size_t i = 0; i < N; ++i) {
         vec3 p(data_red[i], data_green[i], data_blue[i]);
         lum[i] = 0.2126f * p.x + 0.7152f * p.y + 0.0722f * p.z;
-        
+
         // Store chromaticity ratios (color information)
         if (lum[i] > eps) {
             chroma_r[i] = p.x / lum[i];
@@ -2610,7 +2638,7 @@ void RadiationCamera::globalHistogramEqualization(const std::string &red_band_la
     std::vector<int> hist(B, 0);
     for (float v: lum) {
         int b = int(std::clamp(v, 0.0f, 1.0f - eps) * B);
-        if ( b >= 0 && b < 2048 ) {
+        if (b >= 0 && b < 2048) {
             hist[b]++;
         }
     }
@@ -2633,7 +2661,7 @@ void RadiationCamera::globalHistogramEqualization(const std::string &red_band_la
 
         int b = int(std::clamp(lum[i], 0.0f, 1.0f - eps) * B);
 
-        if ( b < 0 || b >= 2048 ) {
+        if (b < 0 || b >= 2048) {
             continue;
         }
 
@@ -2739,38 +2767,38 @@ void RadiationCamera::autoExposure(const std::string &red_band_label, const std:
     auto &data_red = pixel_data.at(red_band_label);
     auto &data_green = pixel_data.at(green_band_label);
     auto &data_blue = pixel_data.at(blue_band_label);
-    
+
     const std::size_t N = data_red.size();
-    
+
     // Calculate luminance for each pixel
     std::vector<float> luminance_values(N);
     for (std::size_t i = 0; i < N; ++i) {
         luminance_values[i] = luminance(data_red[i], data_green[i], data_blue[i]);
     }
-    
+
     // Sort luminance values to find percentiles
     std::vector<float> sorted_luminance = luminance_values;
     std::sort(sorted_luminance.begin(), sorted_luminance.end());
-    
+
     // Calculate 95th percentile for exposure (prevents bright outliers from under-exposing scene)
     std::size_t p95_idx = static_cast<std::size_t>(0.95f * (N - 1));
     float p95_luminance = sorted_luminance[p95_idx];
-    
+
     // Calculate median luminance for scene analysis
     std::size_t median_idx = N / 2;
     float median_luminance = sorted_luminance[median_idx];
-    
+
     // Target median luminance scaled appropriately for the data range
     // Since RGB data is not normalized to [0,1], we need to scale the target accordingly
-    float target_median = 0.18f;  // Calibrated based on empirical testing
+    float target_median = 0.18f; // Calibrated based on empirical testing
     float auto_gain = target_median / std::max(median_luminance, 1e-6f);
-    
+
     // Clamp auto-gain to reasonable range to prevent over/under exposure
-    //auto_gain = std::clamp(auto_gain, 0.0005f, 0.5f);
-    
+    // auto_gain = std::clamp(auto_gain, 0.0005f, 0.5f);
+
     // Apply final gain (auto-exposure * manual adjustment)
     float final_gain = auto_gain * gain_multiplier;
-    
+
     // Apply gain to all channels
     for (std::size_t i = 0; i < N; ++i) {
         data_red[i] *= final_gain;
@@ -2789,20 +2817,20 @@ void RadiationCamera::adjustBrightnessContrast(const std::string &red_band_label
     auto &data_red = pixel_data.at(red_band_label);
     auto &data_green = pixel_data.at(green_band_label);
     auto &data_blue = pixel_data.at(blue_band_label);
-    
+
     const std::size_t N = data_red.size();
-    
+
     for (std::size_t i = 0; i < N; ++i) {
         // Apply brightness adjustment
         float r = data_red[i] * brightness;
         float g = data_green[i] * brightness;
         float b = data_blue[i] * brightness;
-        
+
         // Apply contrast adjustment (around 0.5 midpoint in linear space)
         r = 0.5f + (r - 0.5f) * contrast;
         g = 0.5f + (g - 0.5f) * contrast;
         b = 0.5f + (b - 0.5f) * contrast;
-        
+
         // Store results (allow values outside [0,1] range for HDR processing)
         data_red[i] = r;
         data_green[i] = g;
@@ -2820,17 +2848,17 @@ void RadiationCamera::adjustSaturation(const std::string &red_band_label, const 
     auto &data_red = pixel_data.at(red_band_label);
     auto &data_green = pixel_data.at(green_band_label);
     auto &data_blue = pixel_data.at(blue_band_label);
-    
+
     const std::size_t N = data_red.size();
-    
+
     for (std::size_t i = 0; i < N; ++i) {
         float r = data_red[i];
         float g = data_green[i];
         float b = data_blue[i];
-        
+
         // Calculate luminance for this pixel
         float lum = luminance(r, g, b);
-        
+
         // Apply saturation adjustment by interpolating between luminance (grayscale) and original color
         data_red[i] = lum + saturation * (r - lum);
         data_green[i] = lum + saturation * (g - lum);

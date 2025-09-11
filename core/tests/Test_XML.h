@@ -244,7 +244,7 @@ TEST_CASE("Context XML I/O Functions") {
 
         std::vector<std::string> loaded_files = ctx2.getLoadedXMLFiles();
         DOCTEST_CHECK(loaded_files.size() == initial_count + 1);
-        
+
         // Compare against the resolved path, not the original path
         std::filesystem::path resolved_test_file = resolveProjectFile(test_file);
         std::string resolved_test_file_str = resolved_test_file.string();

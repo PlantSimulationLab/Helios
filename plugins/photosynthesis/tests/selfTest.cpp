@@ -210,16 +210,15 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Print Default Value Report") {
 
     // Disable messages to avoid verbose output
     photomodel.disableMessages();
-    
+
     // Capture stdout from default value report
     capture_cout cout_buffer;
     DOCTEST_CHECK_NOTHROW(photomodel.printDefaultValueReport());
-    
+
     // Verify the report was generated
     std::string report_output = cout_buffer.get_captured_output();
-    DOCTEST_CHECK_MESSAGE(report_output.find("Photosynthesis Model Default Value Report") != std::string::npos,
-                          "Default value report should be generated");
-    
+    DOCTEST_CHECK_MESSAGE(report_output.find("Photosynthesis Model Default Value Report") != std::string::npos, "Default value report should be generated");
+
     // Re-enable messages
     photomodel.enableMessages();
 }
@@ -247,14 +246,13 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Vector Coefficients with Size Mismatch") 
 
     // Capture the warning message from stderr
     capture_cerr cerr_buffer;
-    
+
     // This should print a warning and return without setting coefficients
     DOCTEST_CHECK_NOTHROW(photomodel.setModelCoefficients(coeffs_vector, UUIDs));
-    
+
     // Verify we captured the expected warning message
     std::string captured_warnings = cerr_buffer.get_captured_output();
-    DOCTEST_CHECK_MESSAGE(captured_warnings.find("number of model coefficients (2) does not match number of UUIDs (1)") != std::string::npos,
-                          "Size mismatch should produce warning message");
+    DOCTEST_CHECK_MESSAGE(captured_warnings.find("number of model coefficients (2) does not match number of UUIDs (1)") != std::string::npos, "Size mismatch should produce warning message");
 }
 
 DOCTEST_TEST_CASE("PhotosynthesisModel Vector Coefficients Matching Size") {
@@ -324,16 +322,14 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Default Value Reports") {
     capture_cout cout_buffer_all;
     DOCTEST_CHECK_NOTHROW(photomodel.printDefaultValueReport());
     std::string report_all = cout_buffer_all.get_captured_output();
-    DOCTEST_CHECK_MESSAGE(report_all.find("Photosynthesis Model Default Value Report") != std::string::npos,
-                          "Default value report should be generated for all primitives");
+    DOCTEST_CHECK_MESSAGE(report_all.find("Photosynthesis Model Default Value Report") != std::string::npos, "Default value report should be generated for all primitives");
 
     // Capture stdout from default value report for specific UUIDs
     capture_cout cout_buffer_subset;
     std::vector<uint> UUIDs = {UUID1, UUID2};
     DOCTEST_CHECK_NOTHROW(photomodel.printDefaultValueReport(UUIDs));
     std::string report_subset = cout_buffer_subset.get_captured_output();
-    DOCTEST_CHECK_MESSAGE(report_subset.find("Photosynthesis Model Default Value Report") != std::string::npos,
-                          "Default value report should be generated for specific UUIDs");
+    DOCTEST_CHECK_MESSAGE(report_subset.find("Photosynthesis Model Default Value Report") != std::string::npos, "Default value report should be generated for specific UUIDs");
 
     // Re-enable messages
     photomodel.enableMessages();
@@ -527,11 +523,10 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Edge Cases and Error Conditions") {
     // Capture warnings from extreme conditions (expected behavior)
     capture_cerr cerr_buffer;
     DOCTEST_CHECK_NOTHROW(photomodel.run());
-    
+
     // Verify we captured convergence warnings (expected for these extreme conditions)
     std::string captured_warnings = cerr_buffer.get_captured_output();
-    DOCTEST_CHECK_MESSAGE(captured_warnings.find("Photosynthesis model failed to converge") != std::string::npos, 
-                          "Extreme conditions should produce convergence warnings");
+    DOCTEST_CHECK_MESSAGE(captured_warnings.find("Photosynthesis model failed to converge") != std::string::npos, "Extreme conditions should produce convergence warnings");
 
     // Re-enable messages
     photomodel.enableMessages();
@@ -675,6 +670,6 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Temperature Response Edge Cases") {
     }
 }
 
-int PhotosynthesisModel::selfTest(int argc, char** argv) {
+int PhotosynthesisModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

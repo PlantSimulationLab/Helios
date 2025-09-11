@@ -25,8 +25,8 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
         // Use unified file resolution to validate OBJ file existence
         try {
             std::filesystem::path resolved_path = helios::resolveFilePath(prototype_parameters->OBJ_model_file);
-            (void)resolved_path; // Suppress unused variable warning
-        } catch (const std::runtime_error&) {
+            (void) resolved_path; // Suppress unused variable warning
+        } catch (const std::runtime_error &) {
             helios_runtime_error("ERROR (PlantArchitecture): Leaf prototype OBJ file " + prototype_parameters->OBJ_model_file + " does not exist.");
         }
         return context_ptr->addPolymeshObject(context_ptr->loadOBJ(prototype_parameters->OBJ_model_file.c_str(), prototype_parameters->leaf_offset, 0, nullrotation, RGB::black, "ZUP", true));
@@ -504,7 +504,7 @@ uint GrapevineFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
 
     context_ptr->rotatePrimitive(UUIDs, 0.5 * M_PI, "y");
 
-    context_ptr->setPrimitiveData( UUIDs, "object_label", "fruit");
+    context_ptr->setPrimitiveData(UUIDs, "object_label", "fruit");
 
     uint objID = context_ptr->addPolymeshObject(UUIDs);
     return objID;
@@ -522,10 +522,10 @@ void GrapevinePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint 
     if (shoot_node_index >= 2) {
         phytomer->setFloralBudState(BUD_DEAD);
     }
-    if ( phytomer->rank >= 1 && shoot_node_index >= 8) {
+    if (phytomer->rank >= 1 && shoot_node_index >= 8) {
         phytomer->setVegetativeBudState(BUD_DEAD);
     }
-    if ( phytomer->rank >= 2 ) {
+    if (phytomer->rank >= 2) {
         phytomer->setVegetativeBudState(BUD_DEAD);
         phytomer->setFloralBudState(BUD_DEAD);
     }

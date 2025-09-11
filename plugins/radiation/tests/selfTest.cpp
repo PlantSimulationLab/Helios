@@ -1,5 +1,5 @@
-#include "RadiationModel.h"
 #include "CameraCalibration.h"
+#include "RadiationModel.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
@@ -7,7 +7,7 @@
 
 using namespace helios;
 
-int RadiationModel::selfTest(int argc, char** argv) {
+int RadiationModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }
 
@@ -1409,11 +1409,11 @@ DOCTEST_TEST_CASE("RadiationModel ROMC Camera Test Verification") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Spectral Integration and Interpolation Tests") {
-    
+
     Context context;
     RadiationModel radiation(&context);
     radiation.disableMessages();
-    
+
     // Test 1: Basic spectral integration
     {
         std::vector<helios::vec2> test_spectrum;
@@ -1421,20 +1421,20 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Integration and Interpolation Tests")
         test_spectrum.push_back(make_vec2(500, 0.5f));
         test_spectrum.push_back(make_vec2(600, 0.3f));
         test_spectrum.push_back(make_vec2(700, 0.2f));
-        
+
         // Test full spectrum integration using trapezoidal rule
         float full_integral = radiation.integrateSpectrum(test_spectrum);
         // Trapezoidal integration: (y0+y1)*dx/2 + (y1+y2)*dx/2 + (y2+y3)*dx/2
         float expected_integral = (0.1f + 0.5f) * 100.0f * 0.5f + (0.5f + 0.3f) * 100.0f * 0.5f + (0.3f + 0.2f) * 100.0f * 0.5f;
         DOCTEST_CHECK(std::abs(full_integral - expected_integral) < 1e-5f);
-        
+
         // Test partial spectrum integration (450-650 nm)
         // The algorithm integrates over segments that overlap with bounds, but returns full spectrum integral
         float partial_integral = radiation.integrateSpectrum(test_spectrum, 450, 650);
         // This actually returns the same as full integral due to implementation
         DOCTEST_CHECK(std::abs(partial_integral - full_integral) < 1e-5f);
     }
-    
+
     // Test 2: Source spectrum integration
     {
         std::vector<helios::vec2> source_spectrum;
@@ -1442,23 +1442,23 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Integration and Interpolation Tests")
         source_spectrum.push_back(make_vec2(500, 2.0f));
         source_spectrum.push_back(make_vec2(600, 1.5f));
         source_spectrum.push_back(make_vec2(700, 0.5f));
-        
+
         std::vector<helios::vec2> surface_spectrum;
         surface_spectrum.push_back(make_vec2(400, 0.2f));
         surface_spectrum.push_back(make_vec2(500, 0.6f));
         surface_spectrum.push_back(make_vec2(600, 0.4f));
         surface_spectrum.push_back(make_vec2(700, 0.1f));
-        
+
         uint source_ID = radiation.addCollimatedRadiationSource(make_SphericalCoord(0, 0));
         radiation.setSourceSpectrum(source_ID, source_spectrum);
-        
+
         float integrated_product = radiation.integrateSpectrum(source_ID, surface_spectrum, 400, 700);
-        
+
         // Should compute normalized integral of source * surface spectrum
         DOCTEST_CHECK(integrated_product > 0.0f);
         DOCTEST_CHECK(integrated_product <= 1.0f); // Normalized result
     }
-    
+
     // Test 3: Camera spectral response integration
     {
         std::vector<helios::vec2> surface_spectrum;
@@ -1466,13 +1466,13 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Integration and Interpolation Tests")
         surface_spectrum.push_back(make_vec2(500, 0.7f));
         surface_spectrum.push_back(make_vec2(600, 0.5f));
         surface_spectrum.push_back(make_vec2(700, 0.2f));
-        
+
         std::vector<helios::vec2> camera_response;
         camera_response.push_back(make_vec2(400, 0.1f));
         camera_response.push_back(make_vec2(500, 0.8f));
         camera_response.push_back(make_vec2(600, 0.9f));
         camera_response.push_back(make_vec2(700, 0.3f));
-        
+
         float camera_integrated = radiation.integrateSpectrum(surface_spectrum, camera_response);
         DOCTEST_CHECK(camera_integrated >= 0.0f);
         DOCTEST_CHECK(camera_integrated <= 1.0f);
@@ -1480,14 +1480,14 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Integration and Interpolation Tests")
 }
 
 DOCTEST_TEST_CASE("RadiationModel Spectral Radiative Properties Setting and Validation") {
-    
+
     Context context;
     RadiationModel radiation(&context);
     radiation.disableMessages();
-    
+
     // Create test geometry
     uint patch_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
-    
+
     // Test 1: Setting spectral reflectivity and transmissivity
     {
         // Create test spectral data
@@ -1497,46 +1497,46 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Radiative Properties Setting and Vali
         leaf_reflectivity.push_back(make_vec2(600, 0.08f));
         leaf_reflectivity.push_back(make_vec2(700, 0.45f));
         leaf_reflectivity.push_back(make_vec2(800, 0.50f));
-        
+
         std::vector<helios::vec2> leaf_transmissivity;
         leaf_transmissivity.push_back(make_vec2(400, 0.02f));
         leaf_transmissivity.push_back(make_vec2(500, 0.05f));
         leaf_transmissivity.push_back(make_vec2(600, 0.04f));
         leaf_transmissivity.push_back(make_vec2(700, 0.40f));
         leaf_transmissivity.push_back(make_vec2(800, 0.45f));
-        
+
         context.setGlobalData("test_leaf_reflectivity", leaf_reflectivity);
         context.setGlobalData("test_leaf_transmissivity", leaf_transmissivity);
-        
+
         // Set spectral properties on primitive
         context.setPrimitiveData(patch_UUID, "reflectivity_spectrum", "test_leaf_reflectivity");
         context.setPrimitiveData(patch_UUID, "transmissivity_spectrum", "test_leaf_transmissivity");
-        
+
         // Verify the spectral data was set correctly
         std::string refl_spectrum_label;
         context.getPrimitiveData(patch_UUID, "reflectivity_spectrum", refl_spectrum_label);
         DOCTEST_CHECK(refl_spectrum_label == "test_leaf_reflectivity");
-        
+
         std::string trans_spectrum_label;
         context.getPrimitiveData(patch_UUID, "transmissivity_spectrum", trans_spectrum_label);
         DOCTEST_CHECK(trans_spectrum_label == "test_leaf_transmissivity");
-        
+
         // Verify global data exists and matches
         std::vector<helios::vec2> retrieved_refl;
         context.getGlobalData("test_leaf_reflectivity", retrieved_refl);
         DOCTEST_CHECK(retrieved_refl.size() == leaf_reflectivity.size());
-        
+
         for (size_t i = 0; i < retrieved_refl.size(); i++) {
             DOCTEST_CHECK(std::abs(retrieved_refl[i].x - leaf_reflectivity[i].x) < 1e-5f);
             DOCTEST_CHECK(std::abs(retrieved_refl[i].y - leaf_reflectivity[i].y) < 1e-5f);
         }
     }
-    
+
     // Test 2: Integration with radiation bands and source spectrum
     {
         radiation.addRadiationBand("VIS", 400, 700);
         radiation.addRadiationBand("NIR", 700, 900);
-        
+
         // Add solar spectrum
         std::vector<helios::vec2> solar_spectrum;
         solar_spectrum.push_back(make_vec2(400, 1.5f));
@@ -1545,28 +1545,28 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Radiative Properties Setting and Vali
         solar_spectrum.push_back(make_vec2(700, 1.2f));
         solar_spectrum.push_back(make_vec2(800, 1.0f));
         solar_spectrum.push_back(make_vec2(900, 0.8f));
-        
+
         uint sun_source = radiation.addSunSphereRadiationSource(make_SphericalCoord(0, 0));
         radiation.setSourceSpectrum(sun_source, solar_spectrum);
-        
+
         radiation.setScatteringDepth("VIS", 0);
         radiation.setScatteringDepth("NIR", 0);
         radiation.disableEmission("VIS");
         radiation.disableEmission("NIR");
-        
+
         // Update geometry to process spectral properties
         radiation.updateGeometry();
-        
+
         // Verify that spectral properties are still accessible after updateGeometry()
         // The system should maintain spectral data for internal calculations
         bool has_refl_spectrum = context.doesPrimitiveDataExist(patch_UUID, "reflectivity_spectrum");
         bool has_trans_spectrum = context.doesPrimitiveDataExist(patch_UUID, "transmissivity_spectrum");
-        
+
         // After updateGeometry(), spectral properties should still exist
         DOCTEST_CHECK(has_refl_spectrum);
         DOCTEST_CHECK(has_trans_spectrum);
     }
-    
+
     // Test 3: Camera integration with spectral data
     {
         std::vector<helios::vec2> rgb_red_response;
@@ -1575,23 +1575,21 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Radiative Properties Setting and Vali
         rgb_red_response.push_back(make_vec2(600, 0.6f));
         rgb_red_response.push_back(make_vec2(700, 0.9f));
         rgb_red_response.push_back(make_vec2(800, 0.1f));
-        
+
         context.setGlobalData("rgb_red_response", rgb_red_response);
-        
+
         CameraProperties camera_properties;
         camera_properties.camera_resolution = make_int2(10, 10);
         camera_properties.HFOV = 45.0f * M_PI / 180.0f;
-        
-        radiation.addRadiationCamera("test_camera", {"VIS"}, 
-                                   make_vec3(0, 0, 5), make_vec3(0, 0, 0), 
-                                   camera_properties, 1);
-        
+
+        radiation.addRadiationCamera("test_camera", {"VIS"}, make_vec3(0, 0, 5), make_vec3(0, 0, 0), camera_properties, 1);
+
         radiation.setCameraSpectralResponse("test_camera", "VIS", "rgb_red_response");
-        
+
         // Verify camera spectral response was set
         // This tests the internal spectral processing pipeline
         radiation.updateGeometry();
-        
+
         // The test passes if updateGeometry() completes without errors
         // indicating spectral properties were processed correctly
         DOCTEST_CHECK(true);
@@ -1599,15 +1597,15 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Radiative Properties Setting and Vali
 }
 
 DOCTEST_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
-    
+
     Context context;
     RadiationModel radiation(&context);
     radiation.disableMessages();
-    
+
     // Test 1: Empty spectrum handling
     {
         std::vector<helios::vec2> empty_spectrum;
-        
+
         // Should handle empty spectrum gracefully
         bool caught_error = false;
         try {
@@ -1617,12 +1615,12 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
         }
         DOCTEST_CHECK(caught_error); // Should throw error for empty spectrum
     }
-    
+
     // Test 2: Single-point spectrum
     {
         std::vector<helios::vec2> single_point;
         single_point.push_back(make_vec2(550, 0.5f));
-        
+
         bool caught_error = false;
         try {
             float integral = radiation.integrateSpectrum(single_point);
@@ -1631,14 +1629,14 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
         }
         DOCTEST_CHECK(caught_error); // Should require at least 2 points
     }
-    
+
     // Test 3: Invalid wavelength bounds
     {
         std::vector<helios::vec2> test_spectrum;
         test_spectrum.push_back(make_vec2(400, 0.2f));
         test_spectrum.push_back(make_vec2(600, 0.8f));
         test_spectrum.push_back(make_vec2(800, 0.3f));
-        
+
         bool caught_error = false;
         try {
             // Invalid bounds (max < min)
@@ -1647,7 +1645,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
             caught_error = true;
         }
         DOCTEST_CHECK(caught_error);
-        
+
         caught_error = false;
         try {
             // Equal bounds
@@ -1657,14 +1655,14 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
         }
         DOCTEST_CHECK(caught_error);
     }
-    
+
     // Test 4: Non-monotonic wavelengths
     {
         std::vector<helios::vec2> non_monotonic;
         non_monotonic.push_back(make_vec2(500, 0.3f));
         non_monotonic.push_back(make_vec2(400, 0.5f)); // Decreasing wavelength
         non_monotonic.push_back(make_vec2(600, 0.2f));
-        
+
         // Should handle non-monotonic data appropriately
         // The interp1 function should detect and handle this
         bool function_completed = true;
@@ -1672,7 +1670,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
             context.setGlobalData("non_monotonic_spectrum", non_monotonic);
             uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
             context.setPrimitiveData(patch, "reflectivity_spectrum", "non_monotonic_spectrum");
-            
+
             radiation.addRadiationBand("test", 400, 700);
             radiation.updateGeometry(); // This should process the spectral data
         } catch (...) {
@@ -1681,17 +1679,17 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
         // Should either handle gracefully or throw appropriate error
         DOCTEST_CHECK(function_completed); // Test passes if we reach here without crash
     }
-    
+
     // Test 5: Extrapolation beyond spectrum bounds
     {
         std::vector<helios::vec2> limited_spectrum;
         limited_spectrum.push_back(make_vec2(500, 0.3f));
         limited_spectrum.push_back(make_vec2(600, 0.7f));
-        
+
         // Integration beyond spectrum bounds
         float extended_integral = radiation.integrateSpectrum(limited_spectrum, 400, 800);
         float limited_integral = radiation.integrateSpectrum(limited_spectrum, 500, 600);
-        
+
         // Extended integration beyond bounds returns 0, limited returns actual integral
         DOCTEST_CHECK(extended_integral == 0.0f);
         DOCTEST_CHECK(limited_integral > 0.0f);
@@ -1699,11 +1697,11 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Spectral Caching and Performance Validation") {
-    
+
     Context context;
     RadiationModel radiation(&context);
     radiation.disableMessages();
-    
+
     // Test spectral caching by using identical spectra on multiple primitives
     {
         // Create identical spectral data
@@ -1712,9 +1710,9 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Caching and Performance Validation") 
         common_spectrum.push_back(make_vec2(500, 0.5f));
         common_spectrum.push_back(make_vec2(600, 0.3f));
         common_spectrum.push_back(make_vec2(700, 0.2f));
-        
+
         context.setGlobalData("common_leaf_spectrum", common_spectrum);
-        
+
         // Create multiple primitives with same spectrum
         std::vector<uint> patch_UUIDs;
         for (int i = 0; i < 10; i++) {
@@ -1723,27 +1721,27 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Caching and Performance Validation") 
             context.setPrimitiveData(patch, "transmissivity_spectrum", "common_leaf_spectrum");
             patch_UUIDs.push_back(patch);
         }
-        
+
         // Add radiation band and source
         radiation.addRadiationBand("test_band", 400, 700);
         uint source = radiation.addSunSphereRadiationSource(make_SphericalCoord(0, 0));
         radiation.setSourceSpectrum(source, common_spectrum);
-        
+
         radiation.disableEmission("test_band");
         radiation.setScatteringDepth("test_band", 0);
-        
+
         // Update geometry - this should trigger spectral caching
         auto start_time = std::chrono::high_resolution_clock::now();
         radiation.updateGeometry();
         auto end_time = std::chrono::high_resolution_clock::now();
-        
+
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
-        
+
         // Test should complete reasonably quickly due to caching
         DOCTEST_CHECK(duration.count() < 10000000); // Less than 10 seconds
-        
+
         // Verify all primitives were processed
-        for (uint patch_UUID : patch_UUIDs) {
+        for (uint patch_UUID: patch_UUIDs) {
             // Should have computed properties or maintain spectral references
             bool has_spectrum = context.doesPrimitiveDataExist(patch_UUID, "reflectivity_spectrum");
             DOCTEST_CHECK(has_spectrum);
@@ -1752,16 +1750,16 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Caching and Performance Validation") 
 }
 
 DOCTEST_TEST_CASE("RadiationModel Spectral Library Integration") {
-    
+
     Context context;
     RadiationModel radiation(&context);
     radiation.disableMessages();
-    
+
     // Test standard spectral library data if available
     {
         // Create a simple test to verify spectral library functionality works
         uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
-        
+
         // Try to use a standard spectrum (this may or may not exist)
         bool library_available = false;
         try {
@@ -1770,12 +1768,12 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Library Integration") {
         } catch (...) {
             library_available = false;
         }
-        
+
         if (library_available) {
             // If standard library is available, test its usage
             radiation.addRadiationBand("test", 400, 800);
             radiation.updateGeometry();
-            
+
             std::string spectrum_label;
             context.getPrimitiveData(patch, "reflectivity_spectrum", spectrum_label);
             DOCTEST_CHECK(spectrum_label == "leaf_reflectivity");
@@ -1787,69 +1785,69 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Library Integration") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Multi-Spectrum Primitive Assignment") {
-    
+
     Context context;
     RadiationModel radiation(&context);
     radiation.disableMessages();
-    
+
     // Create three different spectra with distinct reflectivity values
-    std::vector<helios::vec2> red_spectrum;   // High reflectivity in red
-    red_spectrum.push_back(make_vec2(400, 0.1f));  
-    red_spectrum.push_back(make_vec2(500, 0.1f));  
-    red_spectrum.push_back(make_vec2(600, 0.8f));  // High in red
-    red_spectrum.push_back(make_vec2(700, 0.9f));  // High in red
-    
+    std::vector<helios::vec2> red_spectrum; // High reflectivity in red
+    red_spectrum.push_back(make_vec2(400, 0.1f));
+    red_spectrum.push_back(make_vec2(500, 0.1f));
+    red_spectrum.push_back(make_vec2(600, 0.8f)); // High in red
+    red_spectrum.push_back(make_vec2(700, 0.9f)); // High in red
+
     std::vector<helios::vec2> green_spectrum; // High reflectivity in green
     green_spectrum.push_back(make_vec2(400, 0.1f));
     green_spectrum.push_back(make_vec2(500, 0.8f)); // High in green
     green_spectrum.push_back(make_vec2(600, 0.9f)); // High in green
     green_spectrum.push_back(make_vec2(700, 0.1f));
-    
-    std::vector<helios::vec2> blue_spectrum;  // High reflectivity in blue
+
+    std::vector<helios::vec2> blue_spectrum; // High reflectivity in blue
     blue_spectrum.push_back(make_vec2(400, 0.9f)); // High in blue
     blue_spectrum.push_back(make_vec2(500, 0.8f)); // High in blue
     blue_spectrum.push_back(make_vec2(600, 0.1f));
     blue_spectrum.push_back(make_vec2(700, 0.1f));
-    
+
     // Register spectra as global data
     context.setGlobalData("red_spectrum", red_spectrum);
     context.setGlobalData("green_spectrum", green_spectrum);
     context.setGlobalData("blue_spectrum", blue_spectrum);
-    
+
     // Create primitives with different spectra
     std::vector<uint> red_patches, green_patches, blue_patches;
-    
+
     // Create 5 red patches
     for (int i = 0; i < 5; i++) {
         uint patch = context.addPatch(make_vec3(i, 0, 0), make_vec2(1, 1));
         context.setPrimitiveData(patch, "reflectivity_spectrum", "red_spectrum");
         red_patches.push_back(patch);
     }
-    
+
     // Create 5 green patches
     for (int i = 0; i < 5; i++) {
         uint patch = context.addPatch(make_vec3(i, 1, 0), make_vec2(1, 1));
         context.setPrimitiveData(patch, "reflectivity_spectrum", "green_spectrum");
         green_patches.push_back(patch);
     }
-    
+
     // Create 5 blue patches
     for (int i = 0; i < 5; i++) {
         uint patch = context.addPatch(make_vec3(i, 2, 0), make_vec2(1, 1));
         context.setPrimitiveData(patch, "reflectivity_spectrum", "blue_spectrum");
         blue_patches.push_back(patch);
     }
-    
+
     // Add radiation bands for RGB
     radiation.addRadiationBand("R", 600, 700);
     radiation.addRadiationBand("G", 500, 600);
     radiation.addRadiationBand("B", 400, 500);
-    
+
     // Set higher ray counts for more stable Monte Carlo results
     radiation.setDiffuseRayCount("R", 10000);
     radiation.setDiffuseRayCount("G", 10000);
     radiation.setDiffuseRayCount("B", 10000);
-    
+
     // Add uniform source
     uint source = radiation.addSunSphereRadiationSource(make_SphericalCoord(0, 0));
     std::vector<helios::vec2> uniform_spectrum;
@@ -1862,58 +1860,58 @@ DOCTEST_TEST_CASE("RadiationModel Multi-Spectrum Primitive Assignment") {
     radiation.setDirectRayCount("R", 1000);
     radiation.setDirectRayCount("G", 1000);
     radiation.setDirectRayCount("B", 1000);
-    
+
     // Add cameras with spectral response to test camera-specific caching
     // Camera 1: emphasizes green band
     std::vector<helios::vec2> camera_spectrum;
     camera_spectrum.push_back(make_vec2(400, 0.3f));
-    camera_spectrum.push_back(make_vec2(500, 0.9f));  // High sensitivity in green
+    camera_spectrum.push_back(make_vec2(500, 0.9f)); // High sensitivity in green
     camera_spectrum.push_back(make_vec2(600, 0.8f));
     camera_spectrum.push_back(make_vec2(700, 0.2f));
     context.setGlobalData("camera1_spectrum", camera_spectrum);
-    
+
     // Camera 2: emphasizes red band
     std::vector<helios::vec2> camera_spectrum2;
     camera_spectrum2.push_back(make_vec2(400, 0.2f));
     camera_spectrum2.push_back(make_vec2(500, 0.3f));
-    camera_spectrum2.push_back(make_vec2(600, 0.8f));  // High sensitivity in red
+    camera_spectrum2.push_back(make_vec2(600, 0.8f)); // High sensitivity in red
     camera_spectrum2.push_back(make_vec2(700, 0.9f));
     context.setGlobalData("camera2_spectrum", camera_spectrum2);
-    
+
     std::vector<std::string> band_labels = {"R", "G", "B"};
     CameraProperties camera_props;
     camera_props.camera_resolution = make_int2(100, 100);
     camera_props.HFOV = 2.0f;
-    
+
     radiation.addRadiationCamera("camera1", band_labels, make_vec3(0, 0, 5), make_vec3(0, 0, 0), camera_props, 100);
     radiation.setCameraSpectralResponse("camera1", "R", "camera1_spectrum");
     radiation.setCameraSpectralResponse("camera1", "G", "camera1_spectrum");
     radiation.setCameraSpectralResponse("camera1", "B", "camera1_spectrum");
-    
+
     radiation.addRadiationCamera("camera2", band_labels, make_vec3(5, 0, 5), make_vec3(0, 0, 0), camera_props, 100);
     radiation.setCameraSpectralResponse("camera2", "R", "camera2_spectrum");
     radiation.setCameraSpectralResponse("camera2", "G", "camera2_spectrum");
     radiation.setCameraSpectralResponse("camera2", "B", "camera2_spectrum");
-    
+
     radiation.disableEmission("R");
     radiation.disableEmission("G");
     radiation.disableEmission("B");
-    radiation.setScatteringDepth("R", 1);  // Enable scattering to test radiative properties
+    radiation.setScatteringDepth("R", 1); // Enable scattering to test radiative properties
     radiation.setScatteringDepth("G", 1);
     radiation.setScatteringDepth("B", 1);
-    
+
     // Update geometry - this triggers updateRadiativeProperties
     radiation.updateGeometry();
-    
+
     // Run the radiation model to compute absorbed flux
     radiation.runBand("R");
     radiation.runBand("G");
     radiation.runBand("B");
-    
+
     // Verify that primitives with different spectra have different absorbed fluxes
     // Red patches should absorb more in red band
     float red_patch_R_flux = 0, red_patch_G_flux = 0, red_patch_B_flux = 0;
-    for (uint patch : red_patches) {
+    for (uint patch: red_patches) {
         float flux_R, flux_G, flux_B;
         context.getPrimitiveData(patch, "radiation_flux_R", flux_R);
         context.getPrimitiveData(patch, "radiation_flux_G", flux_G);
@@ -1925,10 +1923,10 @@ DOCTEST_TEST_CASE("RadiationModel Multi-Spectrum Primitive Assignment") {
     red_patch_R_flux /= red_patches.size();
     red_patch_G_flux /= red_patches.size();
     red_patch_B_flux /= red_patches.size();
-    
+
     // Green patches should absorb more in green band
     float green_patch_R_flux = 0, green_patch_G_flux = 0, green_patch_B_flux = 0;
-    for (uint patch : green_patches) {
+    for (uint patch: green_patches) {
         float flux_R, flux_G, flux_B;
         context.getPrimitiveData(patch, "radiation_flux_R", flux_R);
         context.getPrimitiveData(patch, "radiation_flux_G", flux_G);
@@ -1940,10 +1938,10 @@ DOCTEST_TEST_CASE("RadiationModel Multi-Spectrum Primitive Assignment") {
     green_patch_R_flux /= green_patches.size();
     green_patch_G_flux /= green_patches.size();
     green_patch_B_flux /= green_patches.size();
-    
+
     // Blue patches should absorb more in blue band
     float blue_patch_R_flux = 0, blue_patch_G_flux = 0, blue_patch_B_flux = 0;
-    for (uint patch : blue_patches) {
+    for (uint patch: blue_patches) {
         float flux_R, flux_G, flux_B;
         context.getPrimitiveData(patch, "radiation_flux_R", flux_R);
         context.getPrimitiveData(patch, "radiation_flux_G", flux_G);
@@ -1955,35 +1953,35 @@ DOCTEST_TEST_CASE("RadiationModel Multi-Spectrum Primitive Assignment") {
     blue_patch_R_flux /= blue_patches.size();
     blue_patch_G_flux /= blue_patches.size();
     blue_patch_B_flux /= blue_patches.size();
-    
+
     // Verify that different spectrum primitives have substantially different absorbed fluxes
     // Red patches should absorb LEAST in red band (high reflectivity = low absorption)
     DOCTEST_CHECK(red_patch_R_flux < red_patch_G_flux);
     DOCTEST_CHECK(red_patch_R_flux < red_patch_B_flux);
-    
+
     // Green patches should absorb LEAST in green band (high reflectivity = low absorption)
     DOCTEST_CHECK(green_patch_G_flux < green_patch_R_flux);
     DOCTEST_CHECK(green_patch_G_flux < green_patch_B_flux);
-    
+
     // Blue patches should absorb LEAST in blue band (high reflectivity = low absorption)
     DOCTEST_CHECK(blue_patch_B_flux < blue_patch_R_flux);
     DOCTEST_CHECK(blue_patch_B_flux < blue_patch_G_flux);
-    
+
     // Also verify that patches with the same spectrum have similar absorbed fluxes
     for (uint i = 1; i < red_patches.size(); i++) {
         float flux_R_0, flux_R_i;
         context.getPrimitiveData(red_patches[0], "radiation_flux_R", flux_R_0);
         context.getPrimitiveData(red_patches[i], "radiation_flux_R", flux_R_i);
-        DOCTEST_CHECK(std::abs(flux_R_0 - flux_R_i) / flux_R_0 < 0.15f);  // Within 15% of each other (Monte Carlo variability)
+        DOCTEST_CHECK(std::abs(flux_R_0 - flux_R_i) / flux_R_0 < 0.15f); // Within 15% of each other (Monte Carlo variability)
     }
 }
 
 DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
-    
+
     Context context;
     RadiationModel radiation(&context);
     radiation.disableMessages();
-    
+
     // Create distinct spectral properties with clear peaks
     // Red spectrum: high reflectivity in red band
     std::vector<helios::vec2> red_spectrum;
@@ -1992,7 +1990,7 @@ DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
     red_spectrum.push_back(make_vec2(600, 0.8f));
     red_spectrum.push_back(make_vec2(700, 0.9f));
     context.setGlobalData("red_spectrum", red_spectrum);
-    
+
     // Green spectrum: high reflectivity in green band
     std::vector<helios::vec2> green_spectrum;
     green_spectrum.push_back(make_vec2(400, 0.1f));
@@ -2000,7 +1998,7 @@ DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
     green_spectrum.push_back(make_vec2(600, 0.9f));
     green_spectrum.push_back(make_vec2(700, 0.1f));
     context.setGlobalData("green_spectrum", green_spectrum);
-    
+
     // Blue spectrum: high reflectivity in blue band
     std::vector<helios::vec2> blue_spectrum;
     blue_spectrum.push_back(make_vec2(400, 0.9f));
@@ -2008,48 +2006,48 @@ DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
     blue_spectrum.push_back(make_vec2(600, 0.1f));
     blue_spectrum.push_back(make_vec2(700, 0.1f));
     context.setGlobalData("blue_spectrum", blue_spectrum);
-    
+
     // Create patches with different spectral properties
     std::vector<uint> red_patches, green_patches, blue_patches, white_patches;
-    
+
     // Red patches
     for (int i = 0; i < 2; i++) {
         uint patch = context.addPatch(make_vec3(i, 0, 0), make_vec2(1, 1));
         context.setPrimitiveData(patch, "reflectivity_spectrum", "red_spectrum");
         red_patches.push_back(patch);
     }
-    
+
     // Green patches
     for (int i = 0; i < 2; i++) {
         uint patch = context.addPatch(make_vec3(i, 2, 0), make_vec2(1, 1));
         context.setPrimitiveData(patch, "reflectivity_spectrum", "green_spectrum");
         green_patches.push_back(patch);
     }
-    
+
     // Blue patches
     for (int i = 0; i < 2; i++) {
         uint patch = context.addPatch(make_vec3(i, 4, 0), make_vec2(1, 1));
         context.setPrimitiveData(patch, "reflectivity_spectrum", "blue_spectrum");
         blue_patches.push_back(patch);
     }
-    
+
     // White patches - for testing that same spectrum produces different results for different camera bands
     for (int i = 0; i < 2; i++) {
         uint patch = context.addPatch(make_vec3(i, 6, 0), make_vec2(1, 1));
         context.setPrimitiveData(patch, "reflectivity_spectrum", "white_spectrum");
         white_patches.push_back(patch);
     }
-    
+
     // Add radiation bands for RGB with clear spectral separation
     radiation.addRadiationBand("R", 600, 700);
     radiation.addRadiationBand("G", 500, 600);
     radiation.addRadiationBand("B", 400, 500);
-    
+
     // Set higher ray counts for more stable Monte Carlo results
     radiation.setDiffuseRayCount("R", 10000);
     radiation.setDiffuseRayCount("G", 10000);
     radiation.setDiffuseRayCount("B", 10000);
-    
+
     // Add uniform source with flat spectrum
     uint source = radiation.addSunSphereRadiationSource(make_SphericalCoord(0, 0));
     std::vector<helios::vec2> uniform_spectrum;
@@ -2059,85 +2057,85 @@ DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
     radiation.setSourceFlux(source, "R", 1000.0f);
     radiation.setSourceFlux(source, "G", 1000.0f);
     radiation.setSourceFlux(source, "B", 1000.0f);
-    
+
     // Set up cameras with VERY DIFFERENT spectral responses per band
     // This is critical for testing the band-specific caching fix
     std::vector<std::string> band_labels = {"R", "G", "B"};
     CameraProperties camera_props;
     camera_props.camera_resolution = make_int2(100, 100);
     camera_props.HFOV = 2.0f;
-    
+
     // Camera 1: Red-biased camera (strongly favors R band, suppresses G and B)
-    std::vector<helios::vec2> cam1_R_spectrum;  // Very high response for R band
+    std::vector<helios::vec2> cam1_R_spectrum; // Very high response for R band
     cam1_R_spectrum.push_back(make_vec2(600, 1.0f));
     cam1_R_spectrum.push_back(make_vec2(700, 1.0f));
     context.setGlobalData("cam1_R_spectrum", cam1_R_spectrum);
-    
-    std::vector<helios::vec2> cam1_G_spectrum;  // Very low response for G band
+
+    std::vector<helios::vec2> cam1_G_spectrum; // Very low response for G band
     cam1_G_spectrum.push_back(make_vec2(500, 0.05f));
     cam1_G_spectrum.push_back(make_vec2(600, 0.05f));
     context.setGlobalData("cam1_G_spectrum", cam1_G_spectrum);
-    
-    std::vector<helios::vec2> cam1_B_spectrum;  // Very low response for B band
+
+    std::vector<helios::vec2> cam1_B_spectrum; // Very low response for B band
     cam1_B_spectrum.push_back(make_vec2(400, 0.05f));
     cam1_B_spectrum.push_back(make_vec2(500, 0.05f));
     context.setGlobalData("cam1_B_spectrum", cam1_B_spectrum);
-    
+
     radiation.addRadiationCamera("camera1", band_labels, make_vec3(0, 0, 5), make_vec3(0, 0, 0), camera_props, 100);
     radiation.setCameraSpectralResponse("camera1", "R", "cam1_R_spectrum");
     radiation.setCameraSpectralResponse("camera1", "G", "cam1_G_spectrum");
     radiation.setCameraSpectralResponse("camera1", "B", "cam1_B_spectrum");
-    
+
     // Camera 2: Blue-biased camera (strongly favors B band, suppresses R and G)
-    std::vector<helios::vec2> cam2_R_spectrum;  // Very low response for R band
+    std::vector<helios::vec2> cam2_R_spectrum; // Very low response for R band
     cam2_R_spectrum.push_back(make_vec2(600, 0.05f));
     cam2_R_spectrum.push_back(make_vec2(700, 0.05f));
     context.setGlobalData("cam2_R_spectrum", cam2_R_spectrum);
-    
-    std::vector<helios::vec2> cam2_G_spectrum;  // Medium response for G band
+
+    std::vector<helios::vec2> cam2_G_spectrum; // Medium response for G band
     cam2_G_spectrum.push_back(make_vec2(500, 0.3f));
     cam2_G_spectrum.push_back(make_vec2(600, 0.3f));
     context.setGlobalData("cam2_G_spectrum", cam2_G_spectrum);
-    
-    std::vector<helios::vec2> cam2_B_spectrum;  // Very high response for B band
+
+    std::vector<helios::vec2> cam2_B_spectrum; // Very high response for B band
     cam2_B_spectrum.push_back(make_vec2(400, 1.0f));
     cam2_B_spectrum.push_back(make_vec2(500, 1.0f));
     context.setGlobalData("cam2_B_spectrum", cam2_B_spectrum);
-    
+
     radiation.addRadiationCamera("camera2", band_labels, make_vec3(5, 0, 5), make_vec3(0, 0, 0), camera_props, 100);
     radiation.setCameraSpectralResponse("camera2", "R", "cam2_R_spectrum");
     radiation.setCameraSpectralResponse("camera2", "G", "cam2_G_spectrum");
     radiation.setCameraSpectralResponse("camera2", "B", "cam2_B_spectrum");
-    
+
     radiation.disableEmission("R");
     radiation.disableEmission("G");
     radiation.disableEmission("B");
     radiation.setScatteringDepth("R", 1);
     radiation.setScatteringDepth("G", 1);
     radiation.setScatteringDepth("B", 1);
-    
+
     // CRITICAL TEST: Update geometry - this triggers the band-specific caching
     // The original bug would cause a map::at exception due to incorrect cache keys
     DOCTEST_CHECK_NOTHROW(radiation.updateGeometry());
-    
+
     // Run the radiation simulation to test that different bands produce different results
     radiation.runBand("R");
     radiation.runBand("G");
     radiation.runBand("B");
-    
+
     // === TEST 1: Verify spectral specificity by checking absorbed flux ===
     uint red_patch = red_patches[0];
     float red_flux_R, red_flux_G, red_flux_B;
     context.getPrimitiveData(red_patch, "radiation_flux_R", red_flux_R);
     context.getPrimitiveData(red_patch, "radiation_flux_G", red_flux_G);
     context.getPrimitiveData(red_patch, "radiation_flux_B", red_flux_B);
-    
+
     uint green_patch = green_patches[0];
     float green_flux_R, green_flux_G, green_flux_B;
     context.getPrimitiveData(green_patch, "radiation_flux_R", green_flux_R);
     context.getPrimitiveData(green_patch, "radiation_flux_G", green_flux_G);
     context.getPrimitiveData(green_patch, "radiation_flux_B", green_flux_B);
-    
+
     uint blue_patch = blue_patches[0];
     float blue_flux_R, blue_flux_G, blue_flux_B;
     context.getPrimitiveData(blue_patch, "radiation_flux_R", blue_flux_R);
@@ -2168,57 +2166,57 @@ DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
     // DOCTEST_CHECK(std::abs(red_flux_R - red_flux_G) > 0.005f);
     // DOCTEST_CHECK(std::abs(green_flux_G - green_flux_B) > 0.005f);
     // DOCTEST_CHECK(std::abs(blue_flux_B - blue_flux_R) > 0.005f);
-    
+
     // If we reach here, the band-specific caching is working correctly
     // The original bug would have caused all bands to have the same values
 }
 
 DOCTEST_TEST_CASE("CameraCalibration Basic Functionality") {
     Context context;
-    
+
     // Test 1: Basic Calibrite colorboard creation and UUID retrieval
     CameraCalibration calibration(&context);
     std::vector<uint> calibrite_UUIDs = calibration.addCalibriteColorboard(make_vec3(0, 0.5, 0.001), 0.05);
-    DOCTEST_CHECK(calibrite_UUIDs.size() == 24);  // Calibrite ColorChecker Classic has 24 patches
-    
+    DOCTEST_CHECK(calibrite_UUIDs.size() == 24); // Calibrite ColorChecker Classic has 24 patches
+
     // Test 2: getColorBoardUUIDs should return the added colorboard
     std::vector<uint> all_colorboard_UUIDs = calibration.getColorBoardUUIDs();
-    DOCTEST_CHECK(all_colorboard_UUIDs.size() == 24);  // Only the Calibrite colorboard
-    
+    DOCTEST_CHECK(all_colorboard_UUIDs.size() == 24); // Only the Calibrite colorboard
+
     // Test 3: Verify context has the colorboard primitives
     std::vector<uint> all_UUIDs = context.getAllUUIDs();
-    DOCTEST_CHECK(all_UUIDs.size() >= 24);  // At least the colorboard primitives should exist
-    
+    DOCTEST_CHECK(all_UUIDs.size() >= 24); // At least the colorboard primitives should exist
+
     // Test 4: Test that Calibrite primitives have reflectivity data
     int patches_with_reflectivity = 0;
-    for (uint UUID : calibrite_UUIDs) {
+    for (uint UUID: calibrite_UUIDs) {
         if (context.doesPrimitiveDataExist(UUID, "reflectivity_spectrum")) {
             patches_with_reflectivity++;
         }
     }
-    DOCTEST_CHECK(patches_with_reflectivity == 24);  // All Calibrite patches should have reflectivity
-    
+    DOCTEST_CHECK(patches_with_reflectivity == 24); // All Calibrite patches should have reflectivity
+
     // Test 5: Test SpyderCHECKR colorboard creation (this will replace the Calibrite board)
-    CameraCalibration calibration2(&context);  // New instance to avoid clearing previous colorboard
-    std::vector<uint> spyder_UUIDs = calibration2.addSpyderCHECKRColorboard(make_vec3(0.5, 0.5, 0.001), 0.05);  
-    DOCTEST_CHECK(spyder_UUIDs.size() == 24);  // SpyderCHECKR 24 has 24 patches
-    
+    CameraCalibration calibration2(&context); // New instance to avoid clearing previous colorboard
+    std::vector<uint> spyder_UUIDs = calibration2.addSpyderCHECKRColorboard(make_vec3(0.5, 0.5, 0.001), 0.05);
+    DOCTEST_CHECK(spyder_UUIDs.size() == 24); // SpyderCHECKR 24 has 24 patches
+
     // Test 6: Verify SpyderCHECKR primitives have reflectivity data
     patches_with_reflectivity = 0;
-    for (uint UUID : spyder_UUIDs) {
+    for (uint UUID: spyder_UUIDs) {
         if (context.doesPrimitiveDataExist(UUID, "reflectivity_spectrum")) {
             patches_with_reflectivity++;
         }
     }
-    DOCTEST_CHECK(patches_with_reflectivity == 24);  // All SpyderCHECKR patches should have reflectivity
-    
+    DOCTEST_CHECK(patches_with_reflectivity == 24); // All SpyderCHECKR patches should have reflectivity
+
     // Test 7: Test spectrum XML writing capability
     std::vector<helios::vec2> test_spectrum;
     test_spectrum.push_back(make_vec2(400.0f, 0.1f));
     test_spectrum.push_back(make_vec2(500.0f, 0.5f));
     test_spectrum.push_back(make_vec2(600.0f, 0.8f));
     test_spectrum.push_back(make_vec2(700.0f, 0.3f));
-    
+
     // Write a test spectrum file (should succeed)
     bool write_success = calibration.writeSpectralXMLfile("/tmp/test_spectrum.xml", "Test spectrum", "test_label", &test_spectrum);
     DOCTEST_CHECK(write_success == true);
@@ -2227,40 +2225,40 @@ DOCTEST_TEST_CASE("CameraCalibration Basic Functionality") {
 DOCTEST_TEST_CASE("CameraCalibration DGK Integration") {
     Context context;
     CameraCalibration calibration(&context);
-    
+
     // Test DGK integration by verifying compilation and basic functionality
     // Since DGK Lab values are now implemented, the auto-calibration should work for DGK boards
-    
+
     // Test 1: Basic instantiation and colorboard support
     // We can't directly test the Lab values since they're protected methods
     // But we can verify that the implementation compiles and basic methods work
-    
+
     std::vector<uint> colorboard_UUIDs = calibration.getColorBoardUUIDs();
     // Initially empty since no colorboard has been added
     DOCTEST_CHECK(colorboard_UUIDs.size() == 0);
-    
+
     // Test 2: Add some geometry to context to prepare for potential DGK colorboard usage
     std::vector<uint> test_patches;
-    for (int i = 0; i < 18; i++) {  // DGK has 18 patches
+    for (int i = 0; i < 18; i++) { // DGK has 18 patches
         uint patch = context.addPatch(make_vec3(i * 0.1f, 0, 0), make_vec2(0.05f, 0.05f));
         test_patches.push_back(patch);
         // Simulate colorboard labeling (as would be done by addDGKColorboard when implemented)
         context.setPrimitiveData(patch, "colorboard_DGK", uint(i));
     }
-    
+
     // Test 3: Verify context has the test patches
     std::vector<uint> all_UUIDs = context.getAllUUIDs();
     DOCTEST_CHECK(all_UUIDs.size() >= 18);
-    
+
     // Test 4: Verify primitive data exists for DGK-labeled patches
     int dgk_labeled_patches = 0;
-    for (uint UUID : test_patches) {
+    for (uint UUID: test_patches) {
         if (context.doesPrimitiveDataExist(UUID, "colorboard_DGK")) {
             dgk_labeled_patches++;
         }
     }
     DOCTEST_CHECK(dgk_labeled_patches == 18);
-    
+
     // Note: The old CameraCalibration::autoCalibrateCameraImage() method has been removed
     // Auto-calibration is now handled by RadiationModel::autoCalibrateCameraImage()
 }
@@ -2268,12 +2266,12 @@ DOCTEST_TEST_CASE("CameraCalibration DGK Integration") {
 DOCTEST_TEST_CASE("RadiationModel CCM Export and Import") {
     Context context;
     RadiationModel radiationmodel(&context);
-    
+
     // Create a simple test camera with RGB bands
     std::vector<std::string> band_labels = {"red", "green", "blue"};
     std::string camera_label = "test_camera";
     helios::int2 resolution = make_int2(10, 10); // Small test image
-    
+
     // Create camera properties
     CameraProperties camera_properties;
     camera_properties.camera_resolution = resolution;
@@ -2281,173 +2279,153 @@ DOCTEST_TEST_CASE("RadiationModel CCM Export and Import") {
     camera_properties.FOV_aspect_ratio = 1.0f;
     camera_properties.focal_plane_distance = 1.0f;
     camera_properties.lens_diameter = 0.0f; // Pinhole camera
-    
+
     radiationmodel.addRadiationCamera(camera_label, band_labels, make_vec3(0, 0, 1), make_vec3(0, 0, 0), camera_properties, 1);
-    
+
     // Initialize camera data with test values
     size_t pixel_count = resolution.x * resolution.y;
     std::vector<float> red_data(pixel_count, 0.8f);
     std::vector<float> green_data(pixel_count, 0.6f);
     std::vector<float> blue_data(pixel_count, 0.4f);
-    
+
     // Set camera pixel data
     radiationmodel.setCameraPixelData(camera_label, "red", red_data);
     radiationmodel.setCameraPixelData(camera_label, "green", green_data);
     radiationmodel.setCameraPixelData(camera_label, "blue", blue_data);
-    
+
     // Test 1: CCM XML Export/Import Roundtrip
     {
         // Create a test color correction matrix
-        std::vector<std::vector<float>> test_matrix = {
-            {1.2f, -0.1f, 0.05f},
-            {-0.08f, 1.15f, 0.02f},
-            {0.03f, -0.12f, 1.18f}
-        };
-        
+        std::vector<std::vector<float>> test_matrix = {{1.2f, -0.1f, 0.05f}, {-0.08f, 1.15f, 0.02f}, {0.03f, -0.12f, 1.18f}};
+
         std::string ccm_file_path = "/tmp/test_ccm_3x3.xml";
-        
+
         // Test the exportColorCorrectionMatrixXML function directly
-        radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, camera_label, test_matrix,
-                                                     "/path/to/test_image.jpg", "DGK", 15.5f);
-        
+        radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, camera_label, test_matrix, "/path/to/test_image.jpg", "DGK", 15.5f);
+
         // Verify file was created
         std::ifstream test_file(ccm_file_path);
         DOCTEST_CHECK(test_file.good());
         test_file.close();
-        
+
         // Test the loadColorCorrectionMatrixXML function
         std::string loaded_camera_label;
         std::vector<std::vector<float>> loaded_matrix = radiationmodel.loadColorCorrectionMatrixXML(ccm_file_path, loaded_camera_label);
-        
+
         // Verify loaded data matches exported data
         DOCTEST_CHECK(loaded_camera_label == camera_label);
         DOCTEST_CHECK(loaded_matrix.size() == 3);
         DOCTEST_CHECK(loaded_matrix[0].size() == 3);
-        
+
         // Check matrix values with tolerance
         for (size_t i = 0; i < 3; i++) {
             for (size_t j = 0; j < 3; j++) {
                 DOCTEST_CHECK(std::abs(loaded_matrix[i][j] - test_matrix[i][j]) < 1e-5f);
             }
         }
-        
+
         // Clean up
         std::remove(ccm_file_path.c_str());
     }
-    
+
     // Test 2: 4x3 Matrix Support
     {
         // Create a test 4x3 color correction matrix (with affine offset)
-        std::vector<std::vector<float>> test_matrix_4x3 = {
-            {1.1f, -0.05f, 0.02f, 0.01f},
-            {-0.04f, 1.08f, 0.01f, -0.005f},
-            {0.02f, -0.06f, 1.12f, 0.008f}
-        };
-        
+        std::vector<std::vector<float>> test_matrix_4x3 = {{1.1f, -0.05f, 0.02f, 0.01f}, {-0.04f, 1.08f, 0.01f, -0.005f}, {0.02f, -0.06f, 1.12f, 0.008f}};
+
         std::string ccm_file_path = "/tmp/test_ccm_4x3.xml";
-        
+
         // Export 4x3 matrix
-        radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, camera_label, test_matrix_4x3,
-                                                     "/path/to/test_image.jpg", "Calibrite", 12.3f);
-        
+        radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, camera_label, test_matrix_4x3, "/path/to/test_image.jpg", "Calibrite", 12.3f);
+
         // Load and verify
         std::string loaded_camera_label;
         std::vector<std::vector<float>> loaded_matrix = radiationmodel.loadColorCorrectionMatrixXML(ccm_file_path, loaded_camera_label);
-        
+
         DOCTEST_CHECK(loaded_camera_label == camera_label);
         DOCTEST_CHECK(loaded_matrix.size() == 3);
         DOCTEST_CHECK(loaded_matrix[0].size() == 4);
-        
+
         // Check matrix values
         for (size_t i = 0; i < 3; i++) {
             for (size_t j = 0; j < 4; j++) {
                 DOCTEST_CHECK(std::abs(loaded_matrix[i][j] - test_matrix_4x3[i][j]) < 1e-5f);
             }
         }
-        
+
         // Clean up
         std::remove(ccm_file_path.c_str());
     }
-    
+
     // Test 3: applyCameraColorCorrectionMatrix with 3x3 Matrix
     {
         // Create a test CCM file
-        std::vector<std::vector<float>> test_matrix = {
-            {1.1f, -0.05f, 0.02f},
-            {-0.03f, 1.08f, 0.01f},
-            {0.01f, -0.04f, 1.12f}
-        };
-        
+        std::vector<std::vector<float>> test_matrix = {{1.1f, -0.05f, 0.02f}, {-0.03f, 1.08f, 0.01f}, {0.01f, -0.04f, 1.12f}};
+
         std::string ccm_file_path = "/tmp/test_apply_ccm_3x3.xml";
-        radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, camera_label, test_matrix,
-                                                     "/path/to/test.jpg", "DGK", 10.0f);
-        
+        radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, camera_label, test_matrix, "/path/to/test.jpg", "DGK", 10.0f);
+
         // Get initial pixel values
         std::vector<float> initial_red = radiationmodel.getCameraPixelData(camera_label, "red");
         std::vector<float> initial_green = radiationmodel.getCameraPixelData(camera_label, "green");
         std::vector<float> initial_blue = radiationmodel.getCameraPixelData(camera_label, "blue");
-        
+
         // Apply color correction matrix
         radiationmodel.applyCameraColorCorrectionMatrix(camera_label, "red", "green", "blue", ccm_file_path);
-        
+
         // Get corrected pixel values
         std::vector<float> corrected_red = radiationmodel.getCameraPixelData(camera_label, "red");
         std::vector<float> corrected_green = radiationmodel.getCameraPixelData(camera_label, "green");
         std::vector<float> corrected_blue = radiationmodel.getCameraPixelData(camera_label, "blue");
-        
+
         // Verify correction was applied
         // For first pixel, manually calculate expected values
         float expected_red = test_matrix[0][0] * initial_red[0] + test_matrix[0][1] * initial_green[0] + test_matrix[0][2] * initial_blue[0];
         float expected_green = test_matrix[1][0] * initial_red[0] + test_matrix[1][1] * initial_green[0] + test_matrix[1][2] * initial_blue[0];
         float expected_blue = test_matrix[2][0] * initial_red[0] + test_matrix[2][1] * initial_green[0] + test_matrix[2][2] * initial_blue[0];
-        
+
         DOCTEST_CHECK(std::abs(corrected_red[0] - expected_red) < 1e-5f);
         DOCTEST_CHECK(std::abs(corrected_green[0] - expected_green) < 1e-5f);
         DOCTEST_CHECK(std::abs(corrected_blue[0] - expected_blue) < 1e-5f);
-        
+
         // Clean up
         std::remove(ccm_file_path.c_str());
     }
-    
+
     // Test 4: applyCameraColorCorrectionMatrix with 4x3 Matrix
     {
         // Create a test 4x3 CCM file
-        std::vector<std::vector<float>> test_matrix = {
-            {1.05f, -0.02f, 0.01f, 0.005f},
-            {-0.01f, 1.03f, 0.005f, -0.002f},
-            {0.005f, -0.015f, 1.08f, 0.003f}
-        };
-        
+        std::vector<std::vector<float>> test_matrix = {{1.05f, -0.02f, 0.01f, 0.005f}, {-0.01f, 1.03f, 0.005f, -0.002f}, {0.005f, -0.015f, 1.08f, 0.003f}};
+
         std::string ccm_file_path = "/tmp/test_apply_ccm_4x3.xml";
-        radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, camera_label, test_matrix,
-                                                     "/path/to/test.jpg", "SpyderCHECKR", 8.5f);
-        
+        radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, camera_label, test_matrix, "/path/to/test.jpg", "SpyderCHECKR", 8.5f);
+
         // Reset camera data to known values
         std::fill(red_data.begin(), red_data.end(), 0.7f);
         std::fill(green_data.begin(), green_data.end(), 0.5f);
         std::fill(blue_data.begin(), blue_data.end(), 0.3f);
-        
+
         radiationmodel.setCameraPixelData(camera_label, "red", red_data);
         radiationmodel.setCameraPixelData(camera_label, "green", green_data);
         radiationmodel.setCameraPixelData(camera_label, "blue", blue_data);
-        
+
         // Apply 4x3 color correction matrix
         radiationmodel.applyCameraColorCorrectionMatrix(camera_label, "red", "green", "blue", ccm_file_path);
-        
+
         // Get corrected pixel values
         std::vector<float> corrected_red = radiationmodel.getCameraPixelData(camera_label, "red");
         std::vector<float> corrected_green = radiationmodel.getCameraPixelData(camera_label, "green");
         std::vector<float> corrected_blue = radiationmodel.getCameraPixelData(camera_label, "blue");
-        
+
         // Verify 4x3 transformation with affine offset
         float expected_red = test_matrix[0][0] * 0.7f + test_matrix[0][1] * 0.5f + test_matrix[0][2] * 0.3f + test_matrix[0][3];
         float expected_green = test_matrix[1][0] * 0.7f + test_matrix[1][1] * 0.5f + test_matrix[1][2] * 0.3f + test_matrix[1][3];
         float expected_blue = test_matrix[2][0] * 0.7f + test_matrix[2][1] * 0.5f + test_matrix[2][2] * 0.3f + test_matrix[2][3];
-        
+
         DOCTEST_CHECK(std::abs(corrected_red[0] - expected_red) < 1e-5f);
         DOCTEST_CHECK(std::abs(corrected_green[0] - expected_green) < 1e-5f);
         DOCTEST_CHECK(std::abs(corrected_blue[0] - expected_blue) < 1e-5f);
-        
+
         // Clean up
         std::remove(ccm_file_path.c_str());
     }
@@ -2456,21 +2434,21 @@ DOCTEST_TEST_CASE("RadiationModel CCM Export and Import") {
 DOCTEST_TEST_CASE("RadiationModel CCM Error Handling") {
     Context context;
     RadiationModel radiationmodel(&context);
-    
+
     // Test 1: Invalid file path for loading
     {
         std::string camera_label;
         bool exception_thrown = false;
         try {
             std::vector<std::vector<float>> matrix = radiationmodel.loadColorCorrectionMatrixXML("/nonexistent/path.xml", camera_label);
-        } catch (const std::runtime_error& e) {
+        } catch (const std::runtime_error &e) {
             exception_thrown = true;
             std::string error_msg(e.what());
             DOCTEST_CHECK(error_msg.find("Failed to open file for reading") != std::string::npos);
         }
         DOCTEST_CHECK(exception_thrown);
     }
-    
+
     // Test 2: Malformed XML file
     {
         std::string malformed_ccm_path = "/tmp/malformed_ccm.xml";
@@ -2482,43 +2460,38 @@ DOCTEST_TEST_CASE("RadiationModel CCM Error Handling") {
         malformed_file << "  </InvalidTag>\n";
         malformed_file << "</helios>\n";
         malformed_file.close();
-        
+
         std::string camera_label;
         bool exception_thrown = false;
         try {
             std::vector<std::vector<float>> matrix = radiationmodel.loadColorCorrectionMatrixXML(malformed_ccm_path, camera_label);
-        } catch (const std::runtime_error& e) {
+        } catch (const std::runtime_error &e) {
             exception_thrown = true;
             std::string error_msg(e.what());
             DOCTEST_CHECK(error_msg.find("No matrix data found") != std::string::npos);
         }
         DOCTEST_CHECK(exception_thrown);
-        
+
         std::remove(malformed_ccm_path.c_str());
     }
-    
+
     // Test 3: Apply CCM to nonexistent camera
     {
         std::string ccm_file_path = "/tmp/test_error_ccm.xml";
-        std::vector<std::vector<float>> identity_matrix = {
-            {1.0f, 0.0f, 0.0f},
-            {0.0f, 1.0f, 0.0f},
-            {0.0f, 0.0f, 1.0f}
-        };
-        
-        radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, "test_camera", identity_matrix,
-                                                     "/test.jpg", "DGK", 5.0f);
-        
+        std::vector<std::vector<float>> identity_matrix = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
+
+        radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, "test_camera", identity_matrix, "/test.jpg", "DGK", 5.0f);
+
         bool exception_thrown = false;
         try {
             radiationmodel.applyCameraColorCorrectionMatrix("nonexistent_camera", "red", "green", "blue", ccm_file_path);
-        } catch (const std::runtime_error& e) {
+        } catch (const std::runtime_error &e) {
             exception_thrown = true;
             std::string error_msg(e.what());
             DOCTEST_CHECK(error_msg.find("Camera 'nonexistent_camera' does not exist") != std::string::npos);
         }
         DOCTEST_CHECK(exception_thrown);
-        
+
         std::remove(ccm_file_path.c_str());
     }
 }

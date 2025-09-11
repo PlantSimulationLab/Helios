@@ -450,7 +450,7 @@ public:
      */
     explicit PhotosynthesisModel(helios::Context *a_context);
 
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
     //! Sets photosynthesis to be calculated according to the empirical model
     void setModelType_Empirical();
@@ -570,7 +570,7 @@ private:
 
     std::unordered_map<uint, EmpiricalModelCoefficients> empiricalmodel_coefficients;
     std::unordered_map<uint, FarquharModelCoefficients> farquharmodel_coefficients;
-    
+
     //! Storage for previous timestep Ci values for temporal continuity (O(1) lookup performance)
     std::unordered_map<uint, float> previous_Ci;
 

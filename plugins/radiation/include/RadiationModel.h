@@ -126,7 +126,7 @@ struct RadiationCamera {
      * \param[in] p [optional] Minkowski mean parameter. Default is 5.0.
      */
     void whiteBalance(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float p = 5.0);
-    
+
     //! Apply Gray Edge white balancing algorithm
     /**
      * Uses edge information to estimate illuminant, assuming edge differences are achromatic on average.
@@ -138,8 +138,8 @@ struct RadiationCamera {
      * \param[in] p [optional] Minkowski norm parameter. Default is 5.0.
      */
     void whiteBalanceGrayEdge(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, int derivative_order = 1, float p = 5.0);
-    
-    //! Apply White Patch white balancing algorithm  
+
+    //! Apply White Patch white balancing algorithm
     /**
      * Assumes brightest pixels in the scene represent white objects under the illuminant.
      * \param[in] red_band_label Label for red channel band
@@ -148,7 +148,7 @@ struct RadiationCamera {
      * \param[in] percentile [optional] Percentile of brightest pixels to use. Default is 0.99 (top 1%).
      */
     void whiteBalanceWhitePatch(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float percentile = 0.99f);
-    
+
     //! Automatically select and apply best white balance algorithm based on scene analysis
     /**
      * Analyzes scene characteristics and applies the most appropriate white balance method.
@@ -157,13 +157,13 @@ struct RadiationCamera {
      * \param[in] blue_band_label Label for blue channel band
      */
     void whiteBalanceAuto(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label);
-    
+
     //! Apply camera spectral response pre-correction to compensate for known sensor bias
     /**
      * Computes correction factors based on camera spectral response curves to neutralize
      * the inherent spectral bias of the camera sensor before white balance.
      * \param[in] red_band_label Label for red channel band
-     * \param[in] green_band_label Label for green channel band  
+     * \param[in] green_band_label Label for green channel band
      * \param[in] blue_band_label Label for blue channel band
      * \param[in] context Pointer to Helios context for accessing spectral data
      */
@@ -272,8 +272,10 @@ private:
      */
     static float lin_to_srgb(float x) noexcept {
         // Clamp negative values to 0, bright values > 1.0 to white (1.0)
-        if (x <= 0.0f) return 0.0f;
-        if (x >= 1.0f) return 1.0f;  // Bright pixels clipped to white
+        if (x <= 0.0f)
+            return 0.0f;
+        if (x >= 1.0f)
+            return 1.0f; // Bright pixels clipped to white
         return (x <= 0.0031308f) ? 12.92f * x : 1.055f * std::pow(x, 1.0f / 2.4f) - 0.055f;
     }
 
@@ -434,7 +436,7 @@ public:
     /**
      * \return 0 if test was successful, 1 if test failed
      */
-    static int selfTest(int argc = 0, char** argv = nullptr);
+    static int selfTest(int argc = 0, char **argv = nullptr);
 
     //! Disable/silence status messages
     /**
@@ -1110,11 +1112,7 @@ public:
      * \param[in] blue_band_label Label for blue channel band data
      * \param[in] ccm_file_path Path to XML file containing color correction matrix
      */
-    void applyCameraColorCorrectionMatrix(const std::string &camera_label,
-                                         const std::string &red_band_label,
-                                         const std::string &green_band_label,
-                                         const std::string &blue_band_label,
-                                         const std::string &ccm_file_path);
+    void applyCameraColorCorrectionMatrix(const std::string &camera_label, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, const std::string &ccm_file_path);
 
     //! Apply auto white balancing algorithm selection based on scene analysis
     /**
@@ -1167,7 +1165,7 @@ public:
      * \param[in] image_path Path to directory where images should be saved
      * \param[in] frame [optional] A frame count number to be appended to the output image file (e.g., camera_thermal_00001.jpeg). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
      * \return Name of the output image file that was written
-    */
+     */
     std::string writeNormCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
 
     //! Write camera data for one band to an ASCII text file
@@ -1231,7 +1229,8 @@ public:
      * \param[in] append_label_file [optional] If true, the label file will be appended to the existing file. If false, the label file will be overwritten. By default, it is false.
      * \param[in] frame [optional] A frame count number to be appended to the output file (e.g., camera_thermal_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
      */
-    DEPRECATED( void writeImageBoundingBoxes(const std::string &cameralabel, const std::string &primitive_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path = "./", bool append_label_file = false, int frame = -1) );
+    DEPRECATED(void writeImageBoundingBoxes(const std::string &cameralabel, const std::string &primitive_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path = "./", bool append_label_file = false,
+                                            int frame = -1));
 
     //! Write bounding boxes based on object data labels (Ultralytic's YOLO format). Object data must have type of 'uint' or 'int'.
     /**
@@ -1243,8 +1242,8 @@ public:
      * \param[in] append_label_file [optional] If true, the label file will be appended to the existing file. If false, the label file will be overwritten. By default, it is false.
      * \param[in] frame [optional] A frame count number to be appended to the output file (e.g., camera_thermal_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
      */
-    DEPRECATED( void writeImageBoundingBoxes_ObjectData(const std::string &cameralabel, const std::string &object_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path = "./", bool append_label_file = false,
-                                            int frame = -1) );
+    DEPRECATED(void writeImageBoundingBoxes_ObjectData(const std::string &cameralabel, const std::string &object_data_label, uint object_class_ID, const std::string &imagefile_base, const std::string &image_path = "./",
+                                                       bool append_label_file = false, int frame = -1));
 
     //! Write bounding boxes based on primitive data labels (Ultralytic's YOLO format). Primitive data must have type of 'uint' or 'int'.
     /**
@@ -1256,7 +1255,8 @@ public:
      * \param[in] image_path [optional] Path to directory where images should be saved. By default, it will be placed in the current working directory.
      * \note The lengths of primitive_data_label and object_class_ID vectors must be the same.
      */
-    void writeImageBoundingBoxes(const std::string &cameralabel, const std::string &primitive_data_label, const uint &object_class_ID, const std::string &image_file, const std::string &classes_txt_file = "classes.txt", const std::string &image_path = "./");
+    void writeImageBoundingBoxes(const std::string &cameralabel, const std::string &primitive_data_label, const uint &object_class_ID, const std::string &image_file, const std::string &classes_txt_file = "classes.txt",
+                                 const std::string &image_path = "./");
 
     //! Write bounding boxes based on primitive data labels (Ultralytic's YOLO format). Primitive data must have type of 'uint' or 'int'.
     /**
@@ -1267,8 +1267,9 @@ public:
      * \param[in] classes_txt_file [optional] Name of text file to write class names. By default, it is "classes.txt".
      * \param[in] image_path [optional] Path to directory where images should be saved. By default, it will be placed in the current working directory.
      * \note The lengths of primitive_data_label and object_class_ID vectors must be the same.
-    */
-    void writeImageBoundingBoxes(const std::string &cameralabel, const std::vector<std::string> &primitive_data_label, const std::vector<uint> &object_class_ID, const std::string &image_file, const std::string &classes_txt_file = "classes.txt", const std::string &image_path = "./");
+     */
+    void writeImageBoundingBoxes(const std::string &cameralabel, const std::vector<std::string> &primitive_data_label, const std::vector<uint> &object_class_ID, const std::string &image_file, const std::string &classes_txt_file = "classes.txt",
+                                 const std::string &image_path = "./");
 
     //! Write bounding boxes based on object data labels (Ultralytic's YOLO format). Object data must have type of 'uint' or 'int'.
     /**
@@ -1280,7 +1281,8 @@ public:
      * \param[in] classes_txt_file [optional] Name of text file to write class names. By default, it is "classes.txt".
      * \note The lengths of object_data_label and object_class_ID vectors must be the same.
      */
-    void writeImageBoundingBoxes_ObjectData(const std::string &cameralabel, const std::string &object_data_label, const uint &object_class_ID, const std::string &image_file, const std::string &classes_txt_file = "classes.txt", const std::string &image_path = "./" );
+    void writeImageBoundingBoxes_ObjectData(const std::string &cameralabel, const std::string &object_data_label, const uint &object_class_ID, const std::string &image_file, const std::string &classes_txt_file = "classes.txt",
+                                            const std::string &image_path = "./");
 
     //! Write bounding boxes based on object data labels (Ultralytic's YOLO format). Object data must have type of 'uint' or 'int'.
     /**
@@ -1291,8 +1293,9 @@ public:
      * \param[in] image_path [optional] Path to directory where images should be saved. By default, it will be placed in the current working directory.
      * \param[in] classes_txt_file [optional] Name of text file to write class names. By default, it is "classes.txt".
      * \note The lengths of object_data_label and object_class_ID vectors must be the same.
-    */
-    void writeImageBoundingBoxes_ObjectData(const std::string &cameralabel, const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &image_file, const std::string &classes_txt_file = "classes.txt", const std::string &image_path = "./" );
+     */
+    void writeImageBoundingBoxes_ObjectData(const std::string &cameralabel, const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &image_file,
+                                            const std::string &classes_txt_file = "classes.txt", const std::string &image_path = "./");
 
     //! Write segmentation masks for primitive data in COCO JSON format. Primitive data must have type of 'uint' or 'int'.
     /**
@@ -1304,7 +1307,7 @@ public:
      * \param[in] append_file [optional] If true, the data will be appended to the existing COCO JSON file. If false, a new file will be created. By default, it is false.
      * \note The lengths of primitive_data_label and object_class_ID vectors must be the same.
      */
-    void writeImageSegmentationMasks(const std::string &cameralabel, const std::string &primitive_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, bool append_file = false );
+    void writeImageSegmentationMasks(const std::string &cameralabel, const std::string &primitive_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, bool append_file = false);
 
     //! Write segmentation masks for primitive data in COCO JSON format. Primitive data must have type of 'uint' or 'int'.
     /**
@@ -1316,7 +1319,8 @@ public:
      * \param[in] append_file [optional] If true, the data will be appended to the existing COCO JSON file. If false, a new file will be created. By default, it is false.
      * \note The lengths of primitive_data_label and object_class_ID vectors must be the same.
      */
-    void writeImageSegmentationMasks(const std::string &cameralabel, const std::vector<std::string> &primitive_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file, bool append_file = false );
+    void writeImageSegmentationMasks(const std::string &cameralabel, const std::vector<std::string> &primitive_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file,
+                                     bool append_file = false);
 
     //! Write segmentation masks for object data in COCO JSON format. Object data must have type of 'uint' or 'int'.
     /**
@@ -1340,10 +1344,12 @@ public:
      * \param[in] append_file [optional] If true, the data will be appended to the existing COCO JSON file. If false, a new file will be created. By default, it is false.
      * \note The lengths of object_data_label and object_class_ID vectors must be the same.
      */
-    void writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file, bool append_file = false);
+    void writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file,
+                                                bool append_file = false);
 
 private:
     // Helper functions for COCO JSON handling
+    std::pair<nlohmann::json, int> initializeCOCOJsonWithImageId(const std::string &filename, bool append_file, const std::string &cameralabel, const helios::int2 &camera_resolution, const std::string &image_file);
     nlohmann::json initializeCOCOJson(const std::string &filename, bool append_file, const std::string &cameralabel, const helios::int2 &camera_resolution, const std::string &image_file);
     void addCategoryToCOCO(nlohmann::json &coco_json, const std::vector<uint> &object_class_ID, const std::vector<std::string> &category_name);
     void writeCOCOJson(const nlohmann::json &coco_json, const std::string &filename);
@@ -1353,7 +1359,7 @@ private:
     std::pair<int, int> findStartingBoundaryPixel(const std::vector<std::vector<bool>> &mask, const helios::int2 &camera_resolution);
     std::vector<std::pair<int, int>> traceBoundaryMoore(const std::vector<std::vector<bool>> &mask, int start_x, int start_y, const helios::int2 &camera_resolution);
     std::vector<std::pair<int, int>> traceBoundarySimple(const std::vector<std::vector<bool>> &mask, int start_x, int start_y, const helios::int2 &camera_resolution);
-    std::vector<std::map<std::string, std::vector<float>>> generateAnnotationsFromMasks(const std::map<int, std::vector<std::vector<bool>>> &label_masks, uint object_class_ID, const helios::int2 &camera_resolution);
+    std::vector<std::map<std::string, std::vector<float>>> generateAnnotationsFromMasks(const std::map<int, std::vector<std::vector<bool>>> &label_masks, uint object_class_ID, const helios::int2 &camera_resolution, int image_id);
 
 public:
     //! Set padding value for pixels do not have valid values
@@ -1388,15 +1394,15 @@ public:
 
     //! Color correction algorithm types for auto-calibration
     enum class ColorCorrectionAlgorithm {
-        DIAGONAL_ONLY,        //!< Simple diagonal scaling (white balance only)
-        MATRIX_3X3_AUTO,      //!< 3x3 matrix with automatic fallback to diagonal if unstable
-        MATRIX_3X3_FORCE      //!< Force 3x3 matrix calculation even if potentially unstable
+        DIAGONAL_ONLY, //!< Simple diagonal scaling (white balance only)
+        MATRIX_3X3_AUTO, //!< 3x3 matrix with automatic fallback to diagonal if unstable
+        MATRIX_3X3_FORCE //!< Force 3x3 matrix calculation even if potentially unstable
     };
 
     //! Auto-calibrate camera image using colorboard reference values
     /**
      * \param[in] camera_label Label of the camera that generated the image
-     * \param[in] red_band_label Label for red channel band data 
+     * \param[in] red_band_label Label for red channel band data
      * \param[in] green_band_label Label for green channel band data
      * \param[in] blue_band_label Label for blue channel band data
      * \param[in] output_file_path Path where corrected image will be written
@@ -1405,26 +1411,14 @@ public:
      * \param[in] ccm_export_file_path Optional path to export the computed color correction matrix to XML file
      * \return Path to the written corrected image file
      */
-    std::string autoCalibrateCameraImage(const std::string &camera_label, 
-                                       const std::string &red_band_label, 
-                                       const std::string &green_band_label,
-                                       const std::string &blue_band_label,
-                                       const std::string &output_file_path,
-                                       bool print_quality_report = false,
-                                       ColorCorrectionAlgorithm algorithm = ColorCorrectionAlgorithm::MATRIX_3X3_AUTO,
-                                       const std::string &ccm_export_file_path = "");
+    std::string autoCalibrateCameraImage(const std::string &camera_label, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, const std::string &output_file_path,
+                                         bool print_quality_report = false, ColorCorrectionAlgorithm algorithm = ColorCorrectionAlgorithm::MATRIX_3X3_AUTO, const std::string &ccm_export_file_path = "");
 
     //! Helper function to export color correction matrix to XML file (public for testing)
-    void exportColorCorrectionMatrixXML(const std::string &file_path,
-                                       const std::string &camera_label,
-                                       const std::vector<std::vector<float>> &matrix,
-                                       const std::string &source_image_path,
-                                       const std::string &colorboard_type,
-                                       float average_delta_e);
+    void exportColorCorrectionMatrixXML(const std::string &file_path, const std::string &camera_label, const std::vector<std::vector<float>> &matrix, const std::string &source_image_path, const std::string &colorboard_type, float average_delta_e);
 
     //! Helper function to load color correction matrix from XML file (public for testing)
-    std::vector<std::vector<float>> loadColorCorrectionMatrixXML(const std::string &file_path,
-                                                                std::string &camera_label_out);
+    std::vector<std::vector<float>> loadColorCorrectionMatrixXML(const std::string &file_path, std::string &camera_label_out);
 
     //! Get camera pixel data for a specific band
     std::vector<float> getCameraPixelData(const std::string &camera_label, const std::string &band_label);

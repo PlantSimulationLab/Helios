@@ -7,7 +7,7 @@
 using namespace std;
 using namespace helios;
 
-int StomatalConductanceModel::selfTest(int argc, char** argv) {
+int StomatalConductanceModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }
 
@@ -81,7 +81,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Original selfTest") {
         context_selftest.getPrimitiveData(UUID0, "moisture_conductance", gs_BMF.at(i));
         RMSE_BMF += pow(gs_BMF.at(i) - gs_ref.at(i), 2) / float(gs_ref.size());
     }
-    
+
     DOCTEST_CHECK(sqrtf(RMSE_BWB) <= RMSE_max);
     DOCTEST_CHECK(sqrtf(RMSE_BBL) <= RMSE_max);
     DOCTEST_CHECK(sqrtf(RMSE_MOPT) <= RMSE_max);
@@ -103,33 +103,33 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Normal Conditions Should Converge"
     uint UUID = context.addPatch();
 
     // Set completely normal, reasonable physiological conditions
-    context.setPrimitiveData(UUID, "radiation_flux_PAR", 200.0f);  // 200 µmol/m²-s
-    context.setPrimitiveData(UUID, "net_photosynthesis", 15.0f);   // 15 µmol/m²-s  
-    context.setPrimitiveData(UUID, "temperature", 298.15f);        // 25°C
-    context.setPrimitiveData(UUID, "air_temperature", 298.15f);    // 25°C
-    context.setPrimitiveData(UUID, "air_CO2", 400.0f);             // 400 ppm
-    context.setPrimitiveData(UUID, "air_humidity", 0.6f);          // 60%
-    context.setPrimitiveData(UUID, "air_pressure", 101325.0f);     // sea level
+    context.setPrimitiveData(UUID, "radiation_flux_PAR", 200.0f); // 200 µmol/m²-s
+    context.setPrimitiveData(UUID, "net_photosynthesis", 15.0f); // 15 µmol/m²-s
+    context.setPrimitiveData(UUID, "temperature", 298.15f); // 25°C
+    context.setPrimitiveData(UUID, "air_temperature", 298.15f); // 25°C
+    context.setPrimitiveData(UUID, "air_CO2", 400.0f); // 400 ppm
+    context.setPrimitiveData(UUID, "air_humidity", 0.6f); // 60%
+    context.setPrimitiveData(UUID, "air_pressure", 101325.0f); // sea level
     context.setPrimitiveData(UUID, "boundarylayer_conductance", 2.0f);
     context.setPrimitiveData(UUID, "Gamma_CO2", 45.0f);
-    context.setPrimitiveData(UUID, "beta_soil", 1.0f);             // soil moisture factor
+    context.setPrimitiveData(UUID, "beta_soil", 1.0f); // soil moisture factor
 
     // Test BWB model - should converge without warnings
     BWBcoefficients bwb;
     bwb.gs0 = 0.08f;
     bwb.a1 = 9.0f;
     gsm.setModelCoefficients(bwb);
-    
+
     // This should NOT produce any fzero warnings
     capture_cerr cerr_buffer;
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
-    
+
     // Verify result is reasonable
     float result_gs;
     context.getPrimitiveData(UUID, "moisture_conductance", result_gs);
     DOCTEST_CHECK(result_gs > 0.0f);
-    DOCTEST_CHECK(result_gs < 1.0f);  // Reasonable stomatal conductance range
-    
+    DOCTEST_CHECK(result_gs < 1.0f); // Reasonable stomatal conductance range
+
     // Check that no convergence warnings occurred
     std::string warnings = cerr_buffer.get_captured_output();
     DOCTEST_CHECK_MESSAGE(warnings.empty(), "Normal conditions should not cause fzero warnings");
@@ -403,7 +403,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Alternative Boundary Layer Data") 
 
     BMFcoefficients coeffs;
     gsm.setModelCoefficients(coeffs);
-    
+
     // Alternative boundary layer data should NOT cause convergence issues
     // If fzero warnings occur, the test should fail
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
@@ -418,7 +418,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Non-existent Primitive") {
 
     BMFcoefficients coeffs;
     gsm.setModelCoefficients(coeffs);
-    
+
     // Non-existent primitive should be handled gracefully without convergence issues
     // If fzero warnings occur, the test should fail
     DOCTEST_CHECK_NOTHROW(gsm.run(UUIDs));
@@ -433,7 +433,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Missing Photosynthesis Data") {
 
     BWBcoefficients coeffs;
     gsm.setModelCoefficients(coeffs);
-    
+
     // Missing data with defaults should NOT cause convergence issues
     // If fzero warnings occur, the test should fail
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
@@ -530,7 +530,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Additional Coverage Tests") {
 
     // These are normal physiological conditions - should NOT cause convergence issues
     // If fzero warnings occur, the test should fail to expose the problem
-    
+
     // Test BWB model with full data
     BWBcoefficients bwb;
     bwb.gs0 = 0.08f;
@@ -600,7 +600,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Dynamic Model Comprehensive") {
 
     // These are normal dynamic model conditions - should NOT cause convergence issues
     // If fzero warnings occur, the test should fail to expose the problem
-    
+
     // Test dynamic model with different time steps
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}, 30.0f));
     DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}, 90.0f));

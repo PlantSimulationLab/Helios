@@ -1593,24 +1593,24 @@ struct PlantInstance {
     float max_age = 999;
 
     CarbohydrateParameters carb_parameters;
-    
+
     // --- Per-plant Attraction Points --- //
-    
+
     //! Flag indicating if attraction points are enabled for this plant
     bool attraction_points_enabled = false;
-    
+
     //! Vector of attraction point positions for this plant
     std::vector<helios::vec3> attraction_points;
-    
+
     //! Attraction detection cone half-angle in radians for this plant
     float attraction_cone_half_angle_rad = 80.f * M_PI / 180.f;
-    
+
     //! Attraction detection cone height in meters for this plant
     float attraction_cone_height = 0.1f;
-    
+
     //! Weight factor for attraction vs natural growth for this plant (0.0 = ignore attraction, 1.0 = full attraction)
     float attraction_weight = 0.6f;
-    
+
     //! Reduction factor for attraction weight when hard obstacles are present for this plant (0.0 = no attraction, 1.0 = full attraction)
     float attraction_obstacle_reduction_factor = 0.5f;
 };
@@ -1622,7 +1622,7 @@ public:
      * \param[in] context_ptr Pointer to the Helios context.
      */
     explicit PlantArchitecture(helios::Context *context_ptr);
-    
+
     //! Destructor - cleans up internal CollisionDetection instance if owned
     ~PlantArchitecture();
 
@@ -1811,13 +1811,13 @@ public:
      * \param[in] time_step_days Time interval in days.
      */
     void advanceTime(const std::vector<uint> &plantIDs, float time_step_days);
-    
+
     //! Adjust fruit objects to prevent collision with solid obstacles via rotation
     /**
      * This method checks all fruit in the plant architecture for collisions with solid obstacles
      * and rotates them about their base position to prevent intersection. The rotation is applied
      * in the opposite direction of the original pitch to simulate natural fruit lifting.
-     * 
+     *
      * \note This method should be called after all plant growth updates are complete.
      */
     void adjustFruitForObstacleCollision();
@@ -1981,7 +1981,7 @@ public:
     /**
      * \return Pointer to internal CollisionDetection instance, or nullptr if not enabled
      */
-    [[nodiscard]] CollisionDetection* getCollisionDetection() const;
+    [[nodiscard]] CollisionDetection *getCollisionDetection() const;
 
     //! Set which organ types should participate in collision detection
     /**
@@ -1992,15 +1992,15 @@ public:
      * \param[in] include_fruit Include fruit geometry in collision detection (default: false)
      */
     void setCollisionRelevantOrgans(bool include_internodes, bool include_leaves, bool include_petioles, bool include_flowers, bool include_fruit);
-    
+
     //! Enable solid obstacle avoidance for plant growth
     /**
      * \brief Designates certain primitives as solid obstacles that plant growth must avoid.
-     * 
+     *
      * When enabled, plant growth will gradually redirect as it approaches these obstacles,
      * with increasingly strong curvature as distance decreases. The plant will eventually
      * grow parallel to the obstacle surface at a marginal distance.
-     * 
+     *
      * \param[in] obstacle_UUIDs Vector of primitive UUIDs that represent solid obstacles
      * \param[in] avoidance_distance Distance at which obstacle avoidance begins (meters)
      * \param[in] enable_fruit_adjustment Enable automatic fruit rotation adjustment to avoid obstacles (default: false)
@@ -2016,7 +2016,7 @@ public:
     void setGeometryUpdateScheduling(int update_frequency = 3, bool force_update_on_collision = true);
 
     // -- attraction points methods -- //
-    
+
     //! Enable attraction points to guide plant growth toward specific targets
     /**
      * \param[in] attraction_points Vector of 3D positions that plants should grow toward
@@ -2025,10 +2025,10 @@ public:
      * \param[in] attraction_weight Weight factor for attraction vs natural growth (0.0 = ignore attraction, 1.0 = full attraction) (default = 0.6)
      */
     void enableAttractionPoints(const std::vector<helios::vec3> &attraction_points, float view_half_angle_deg = 80.0f, float look_ahead_distance = 0.1f, float attraction_weight = 0.6f);
-    
+
     //! Disable attraction points and revert to natural growth
     void disableAttractionPoints();
-    
+
     //! Update attraction points positions (overwrites existing points)
     /**
      * \param[in] attraction_points Updated vector of 3D positions that plants should grow toward
@@ -2040,7 +2040,7 @@ public:
      * \param[in] attraction_points Updated vector of 3D positions that plants should grow toward
      */
     void appendAttractionPoints(const std::vector<helios::vec3> &attraction_points);
-    
+
     //! Set attraction parameters
     /**
      * \param[in] view_half_angle_deg Half-angle of the attraction detection view cone in degrees
@@ -2059,27 +2059,27 @@ public:
      * \param[in] attraction_weight Weight factor for attraction vs natural growth (0.0 = ignore attraction, 1.0 = full attraction) (default = 0.6)
      */
     void enableAttractionPoints(uint plantID, const std::vector<helios::vec3> &attraction_points, float view_half_angle_deg = 80.0f, float look_ahead_distance = 0.1f, float attraction_weight = 0.6f);
-    
+
     //! Disable attraction points for a specific plant
     /**
      * \param[in] plantID Identifier of the plant to disable attraction points for
      */
     void disableAttractionPoints(uint plantID);
-    
+
     //! Update attraction points positions for a specific plant (overwrites existing points)
     /**
      * \param[in] plantID Identifier of the plant to update attraction points for
      * \param[in] attraction_points Updated vector of 3D positions that the plant should grow toward
      */
     void updateAttractionPoints(uint plantID, const std::vector<helios::vec3> &attraction_points);
-    
+
     //! Append attraction points for a specific plant
     /**
      * \param[in] plantID Identifier of the plant to append attraction points for
      * \param[in] attraction_points Vector of 3D positions to append to existing attraction points
      */
     void appendAttractionPoints(uint plantID, const std::vector<helios::vec3> &attraction_points);
-    
+
     //! Set attraction parameters for a specific plant
     /**
      * \param[in] plantID Identifier of the plant to set attraction parameters for
@@ -2092,11 +2092,11 @@ public:
 
     /**
      * \brief Detects attraction points within a viewing cone from a given position.
-     * 
+     *
      * This method finds the closest attraction point within a cone defined by the look direction,
      * half-angle, and look-ahead distance. It performs pure geometric calculations without
      * requiring collision detection infrastructure.
-     * 
+     *
      * \param[in] vertex Starting position (apex of the viewing cone)
      * \param[in] look_direction Direction the cone is pointing (will be normalized)
      * \param[in] look_ahead_distance Maximum distance to look for attraction points
@@ -2105,7 +2105,7 @@ public:
      * \return True if an attraction point was found within the cone, false otherwise
      */
     bool detectAttractionPointsInCone(const helios::vec3 &vertex, const helios::vec3 &look_direction, float look_ahead_distance, float half_angle_degrees, helios::vec3 &direction_to_closest) const;
-    
+
     //! Overloaded version that accepts attraction points as a parameter (for plant-specific attraction points)
     bool detectAttractionPointsInCone(const std::vector<helios::vec3> &attraction_points, const helios::vec3 &vertex, const helios::vec3 &look_direction, float look_ahead_distance, float half_angle_degrees, helios::vec3 &direction_to_closest) const;
 
@@ -2508,12 +2508,12 @@ public:
      * \return Vector of object IDs for all fruits in the plant.
      */
     [[nodiscard]] std::vector<uint> getPlantFruitObjectIDs(uint plantID) const;
-    
+
     //! Get collision-relevant object IDs for a specific plant
     /**
      * \param[in] plantID Plant ID for which to query collision-relevant object IDs
      * \return Vector of object IDs for collision-relevant organs belonging to specified plant
-     * 
+     *
      * Returns object IDs for plant organs that are currently enabled for collision detection
      * based on the settings from setCollisionRelevantOrgans().
      */
@@ -2769,7 +2769,7 @@ protected:
 
     //! Internal collision detection instance (owned by PlantArchitecture)
     CollisionDetection *collision_detection_ptr = nullptr;
-    
+
     //! Flag to track if we own the CollisionDetection instance (for cleanup)
     bool owns_collision_detection = false;
 
@@ -2796,7 +2796,7 @@ protected:
 
     //! Frequency of Context geometry updates (1=every timestep, 2=every 2 timesteps, etc.)
     int geometry_update_frequency = 3;
-    
+
     //! Force Context geometry update when collision avoidance is triggered
     bool force_update_on_collision = true;
 
@@ -2806,16 +2806,16 @@ protected:
     bool collision_include_petioles = false;
     bool collision_include_flowers = false;
     bool collision_include_fruit = false;
-    
+
     //! Enable petiole collision detection (separate from general petiole inclusion)
     bool petiole_collision_detection_enabled = false;
-    
+
     //! Enable fruit collision detection (separate from general fruit inclusion)
     bool fruit_collision_detection_enabled = false;
-    
+
     //! Counter to track timesteps for geometry update scheduling
     int geometry_update_counter = 0;
-    
+
     //! Flag to track if collision avoidance was applied in current timestep
     mutable bool collision_avoidance_applied = false;
 
@@ -2829,7 +2829,7 @@ protected:
     mutable bool bvh_cached_for_current_growth = false;
     mutable std::vector<uint> cached_target_geometry;
     mutable std::vector<uint> cached_filtered_geometry;
-    
+
     //! Solid obstacle avoidance parameters
     bool solid_obstacle_avoidance_enabled = false;
     std::vector<uint> solid_obstacle_UUIDs;
@@ -2839,22 +2839,22 @@ protected:
     bool solid_obstacle_pruning_enabled = false;
 
     // --- Attraction Points --- //
-    
+
     //! Flag indicating if attraction points are enabled
     bool attraction_points_enabled = false;
-    
+
     //! Vector of attraction point positions
     std::vector<helios::vec3> attraction_points;
-    
+
     //! Attraction detection cone half-angle in radians
     float attraction_cone_half_angle_rad = 80.f * M_PI / 180.f;
-    
+
     //! Attraction detection cone height in meters
     float attraction_cone_height = 0.1f;
-    
+
     //! Weight factor for attraction vs natural growth (0.0 = ignore attraction, 1.0 = full attraction)
     float attraction_weight = 0.6f;
-    
+
     //! Reduction factor for attraction weight when hard obstacles are present (0.0 = no attraction, 1.0 = full attraction)
     float attraction_obstacle_reduction_factor = 0.5f;
 

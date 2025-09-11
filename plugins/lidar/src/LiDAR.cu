@@ -3419,14 +3419,14 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
 
         // Initialize collision detection for unified ray-tracing
         initializeCollisionDetection(context);
-        
+
         // Convert CUDA float3 arrays to Helios vec3 format
         helios::vec3 scan_origin_vec3 = helios::make_vec3(scan_origin.x, scan_origin.y, scan_origin.z);
         std::vector<helios::vec3> direction_vec3(N * Npulse);
         for (size_t i = 0; i < N * Npulse; i++) {
             direction_vec3[i] = helios::make_vec3(direction[i].x, direction[i].y, direction[i].z);
         }
-        
+
         // Use unified ray-tracing engine
         performUnifiedRayTracing(context, N, Npulse, scan_origin_vec3, direction_vec3.data(), hit_t, hit_fnorm, hit_ID);
 
@@ -3561,7 +3561,7 @@ void LiDARcloud::syntheticScan(helios::Context *context, int rays_per_pulse, flo
 
                     color = context->getPrimitiveColor(uint(UUID));
 
-                    if (context->doesPrimitiveDataExist(uint(UUID), "object_label") && context->getPrimitiveDataType( "object_label") == helios::HELIOS_TYPE_INT) {
+                    if (context->doesPrimitiveDataExist(uint(UUID), "object_label") && context->getPrimitiveDataType("object_label") == helios::HELIOS_TYPE_INT) {
                         int label;
                         context->getPrimitiveData(uint(UUID), "object_label", label);
                         data["object_label"] = double(label);

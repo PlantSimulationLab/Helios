@@ -348,6 +348,6 @@ DOCTEST_TEST_CASE("EnergyBalanceModel Additional Dynamic Model Check") {
     DOCTEST_CHECK(!temperature_dyn.empty());
 }
 
-int EnergyBalanceModel::selfTest(int argc, char** argv) {
+int EnergyBalanceModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

@@ -513,6 +513,6 @@ DOCTEST_TEST_CASE("LeafOptics Multiple Runs Data Consistency") {
     }
 }
 
-int LeafOptics::selfTest(int argc, char** argv) {
+int LeafOptics::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

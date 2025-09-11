@@ -15,6 +15,20 @@
 #endif
 #endif
 
+// OpenGL/ImGui includes - must come after Windows headers but before ProjectBuilder.h
+#ifdef ENABLE_HELIOS_VISUALIZER
+// IMPORTANT: glew.h must be included before any OpenGL headers (including GLFW)
+#include "glew.h"
+// IMGUI
+#define GLFW_INCLUDE_NONE  // Prevent GLFW from including OpenGL headers
+#include "GLFW/glfw3.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
+#include "imgui.h"
+#include "imgui_internal.h"
+#include "misc/cpp/imgui_stdlib.h"
+#endif // HELIOS_VISUALIZER
+
 #include "ProjectBuilder.h"
 
 #ifdef ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
@@ -5303,6 +5317,7 @@ void ProjectBuilder::addBand(std::string label, bool enable_emission) {
 }
 
 
+#ifdef ENABLE_HELIOS_VISUALIZER
 void ProjectBuilder::randomizePopup(std::string popup_name, taggedPtr ptr) {
     std::string popup = "randomize_" + popup_name;
     if (ImGui::BeginPopup(popup.c_str())) {
@@ -5346,8 +5361,14 @@ void ProjectBuilder::randomizePopup(std::string popup_name, taggedPtr ptr) {
         ImGui::EndPopup();
     }
 }
+#else
+void ProjectBuilder::randomizePopup(std::string popup_name, taggedPtr ptr) {
+    // Visualizer plugin is required for GUI functionality
+}
+#endif // ENABLE_HELIOS_VISUALIZER
 
 
+#ifdef ENABLE_HELIOS_VISUALIZER
 void ProjectBuilder::noisePopup(std::string popup_name, std::vector<distribution> &dist_vec) {
     std::string popup = popup_name;
     if (ImGui::BeginPopup(popup.c_str())) {
@@ -5437,6 +5458,11 @@ void ProjectBuilder::noisePopup(std::string popup_name, std::vector<distribution
         ImGui::EndPopup();
     }
 }
+#else
+void ProjectBuilder::noisePopup(std::string popup_name, std::vector<distribution> &dist_vec) {
+    // Visualizer plugin is required for GUI functionality
+}
+#endif // ENABLE_HELIOS_VISUALIZER
 
 
 void ProjectBuilder::applyDistribution(std::string var_name, taggedPtr ptr) {
@@ -5564,6 +5590,7 @@ distribution createDistribution(const std::weibull_distribution<float> &dist, bo
     return d;
 }
 
+#ifdef ENABLE_HELIOS_VISUALIZER
 void ProjectBuilder::randomizerParams(std::string var_name) {
     if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
         if (distribution_params.find(var_name) != distribution_params.end()) {
@@ -5581,6 +5608,11 @@ void ProjectBuilder::randomizerParams(std::string var_name) {
         }
     }
 }
+#else
+void ProjectBuilder::randomizerParams(std::string var_name) {
+    // Visualizer plugin is required for GUI functionality
+}
+#endif // ENABLE_HELIOS_VISUALIZER
 
 void ProjectBuilder::sample(std::string var_name) {
     if (distribution_types.find(var_name) == distribution_types.end() || distribution_types[var_name] == "N/A") {
@@ -5642,6 +5674,7 @@ void ProjectBuilder::sampleAll() {
     }
 }
 
+#ifdef ENABLE_HELIOS_VISUALIZER
 void ProjectBuilder::outputConsole() {
     // Temporarily restore std::cout so ImGui can print to the console without
     // altering the member pointer used by the destructor to restore the
@@ -5659,6 +5692,11 @@ void ProjectBuilder::outputConsole() {
     last_console_size = buffer_size;
     std::cout.rdbuf(prev_buf);
 }
+#else
+void ProjectBuilder::outputConsole() {
+    // Visualizer plugin is required for GUI functionality
+}
+#endif // ENABLE_HELIOS_VISUALIZER
 
 void ProjectBuilder::updateColor(std::string curr_obj, std::string obj_type, float *new_color) {
     RGBcolor *curr_color = nullptr;
@@ -5787,6 +5825,7 @@ void ProjectBuilder::deleteRig(std::string curr_rig) {
 }
 
 
+#ifdef ENABLE_HELIOS_VISUALIZER
 void ProjectBuilder::dropDown(std::string widget_name, std::string &selected, std::vector<std::string> choices) {
     if (ImGui::BeginCombo(widget_name.c_str(), selected.c_str())) {
         for (int n = 0; n < choices.size(); n++) {
@@ -5813,6 +5852,15 @@ void ProjectBuilder::dropDown(std::string widget_name, std::string &selected, st
         ImGui::EndCombo();
     }
 }
+#else
+void ProjectBuilder::dropDown(std::string widget_name, std::string &selected, std::vector<std::string> choices) {
+    // Visualizer plugin is required for GUI functionality
+}
+
+void ProjectBuilder::dropDown(std::string widget_name, std::string &selected, std::set<std::string> choices) {
+    // Visualizer plugin is required for GUI functionality
+}
+#endif // ENABLE_HELIOS_VISUALIZER
 
 void ProjectBuilder::deleteCanopy(const std::string &canopy) {
 #ifdef ENABLE_PLANT_ARCHITECTURE
@@ -5913,6 +5961,7 @@ void ProjectBuilder::addCanopy() {
 }
 
 
+#ifdef ENABLE_HELIOS_VISUALIZER
 void ProjectBuilder::refreshVisualization() {
     const char *font_name = "LCD";
     visualizer->addTextboxByCenter("LOADING...", vec3(.5, .5, 0), make_SphericalCoord(0, 0), RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
@@ -5924,8 +5973,14 @@ void ProjectBuilder::refreshVisualization() {
     }
     visualizer->plotUpdate();
 }
+#else
+void ProjectBuilder::refreshVisualization() {
+    // Visualizer plugin is required for GUI functionality
+}
+#endif // ENABLE_HELIOS_VISUALIZER
 
 
+#ifdef ENABLE_HELIOS_VISUALIZER
 void ProjectBuilder::recordPopup() {
     if (ImGui::BeginPopup("repeat_record")) {
         ImGui::SetNextItemWidth(100);
@@ -5933,6 +5988,11 @@ void ProjectBuilder::recordPopup() {
         ImGui::EndPopup();
     }
 }
+#else
+void ProjectBuilder::recordPopup() {
+    // Visualizer plugin is required for GUI functionality
+}
+#endif // ENABLE_HELIOS_VISUALIZER
 
 
 void ProjectBuilder::updateLocation() {
@@ -6011,6 +6071,7 @@ void ProjectBuilder::deleteGround() {
     primitive_UUIDs["ground"].clear();
 }
 
+#ifdef ENABLE_HELIOS_VISUALIZER
 void ProjectBuilder::refreshVisualizationTypes() {
     // primitive
     visualization_types_primitive.clear();
@@ -6034,6 +6095,11 @@ void ProjectBuilder::refreshVisualizationTypes() {
         }
     }
 }
+#else
+void ProjectBuilder::refreshVisualizationTypes() {
+    // Visualizer plugin is required for GUI functionality
+}
+#endif // ENABLE_HELIOS_VISUALIZER
 
 
 std::string ProjectBuilder::shortenPath(std::string path_name) {

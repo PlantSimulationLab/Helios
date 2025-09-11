@@ -78,7 +78,7 @@ bool Context::doesTextureFileExist(const char *texture_file) const {
     try {
         auto resolved_path = resolveFilePath(texture_file);
         return std::filesystem::exists(resolved_path);
-    } catch (const std::runtime_error&) {
+    } catch (const std::runtime_error &) {
         return false;
     }
 }
@@ -460,7 +460,7 @@ std::vector<uint> Context::getAllUUIDs() const {
     if (all_uuids_cache_valid) {
         return cached_all_uuids;
     }
-    
+
     // Rebuild cache
     cached_all_uuids.clear();
     cached_all_uuids.reserve(primitives.size());
@@ -798,7 +798,7 @@ void Context::getDomainBoundingBox(const std::vector<uint> &UUIDs, vec2 &xbounds
 
 // Parallelize the outer loop over primitives. Use "for" inside the parallel region.
 #pragma omp for nowait
-        for (int i = 0; i < (int)UUIDs.size(); i++) {
+        for (int i = 0; i < (int) UUIDs.size(); i++) {
             // For each primitive:
             const std::vector<vec3> &verts = getPrimitivePointer_private(UUIDs[i])->getVertices();
             // Update local bounding box for each vertex in this primitive.
@@ -2122,7 +2122,7 @@ std::vector<uint> Context::addTube(uint radial_subdivisions, const std::vector<v
         if (fabs(vec.z) > 0.95f) {
             nvec = vec3(1.0f, 0.0f, 0.0f); // Use horizontal direction for vertical axes
         }
-        
+
         convec = cross(nvec, vec);
         convec.normalize();
         nvec = cross(vec, convec);
@@ -2228,7 +2228,7 @@ std::vector<uint> Context::addTube(uint radial_subdivisions, const std::vector<v
         if (fabs(vec.z) > 0.95f) {
             nvec = vec3(1.0f, 0.0f, 0.0f); // Use horizontal direction for vertical axes
         }
-        
+
         convec = cross(nvec, vec);
         convec.normalize();
         nvec = cross(vec, convec);
@@ -2295,7 +2295,7 @@ std::vector<uint> Context::addTube(uint radial_subdivisions, const std::vector<v
 
     // Remove invalid UUIDs (zeros) from the vector
     UUIDs.erase(std::remove(UUIDs.begin(), UUIDs.end(), 0), UUIDs.end());
-    
+
     return UUIDs;
 }
 
@@ -2578,8 +2578,8 @@ std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const 
 
             if (r == 0) {
                 uint triangle_uuid = addTriangle(make_vec3(0, 0, 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texturefile, make_vec2(0.5, 0.5),
-                                         make_vec2(0.5f * (1.f + cosf(theta) * rx_plus / size.x), 0.5f * (1.f + sinf(theta) * ry_plus / size.y)),
-                                         make_vec2(0.5f * (1.f + cosf(theta_plus) * rx_plus / size.x), 0.5f * (1.f + sinf(theta_plus) * ry_plus / size.y)));
+                                                 make_vec2(0.5f * (1.f + cosf(theta) * rx_plus / size.x), 0.5f * (1.f + sinf(theta) * ry_plus / size.y)),
+                                                 make_vec2(0.5f * (1.f + cosf(theta_plus) * rx_plus / size.x), 0.5f * (1.f + sinf(theta_plus) * ry_plus / size.y)));
                 if (getPrimitiveArea(triangle_uuid) > 0) {
                     UUID.push_back(triangle_uuid);
                 } else {
@@ -2588,17 +2588,18 @@ std::vector<uint> Context::addDisk(const int2 &Ndivs, const vec3 &center, const 
                 }
             } else {
                 uint triangle_uuid1 = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx * cosf(theta), ry * sinf(theta), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), texturefile,
-                                         make_vec2(0.5f * (1.f + cosf(theta_plus) * rx / size.x), 0.5f * (1.f + sinf(theta_plus) * ry / size.y)), make_vec2(0.5f * (1.f + cosf(theta) * rx / size.x), 0.5f * (1.f + sinf(theta) * ry / size.y)),
-                                         make_vec2(0.5f * (1.f + cosf(theta) * rx_plus / size.x), 0.5f * (1.f + sinf(theta) * ry_plus / size.y)));
+                                                  make_vec2(0.5f * (1.f + cosf(theta_plus) * rx / size.x), 0.5f * (1.f + sinf(theta_plus) * ry / size.y)), make_vec2(0.5f * (1.f + cosf(theta) * rx / size.x), 0.5f * (1.f + sinf(theta) * ry / size.y)),
+                                                  make_vec2(0.5f * (1.f + cosf(theta) * rx_plus / size.x), 0.5f * (1.f + sinf(theta) * ry_plus / size.y)));
                 if (getPrimitiveArea(triangle_uuid1) > 0) {
                     UUID.push_back(triangle_uuid1);
                 } else {
                     deletePrimitive(triangle_uuid1);
                 }
-                
-                uint triangle_uuid2 = addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texturefile,
-                                         make_vec2(0.5f * (1.f + cosf(theta_plus) * rx / size.x), 0.5f * (1.f + sinf(theta_plus) * ry / size.y)), make_vec2(0.5f * (1.f + cosf(theta) * rx_plus / size.x), 0.5f * (1.f + sinf(theta) * ry_plus / size.y)),
-                                         make_vec2(0.5f * (1.f + cosf(theta_plus) * rx_plus / size.x), 0.5f * (1.f + sinf(theta_plus) * ry_plus / size.y)));
+
+                uint triangle_uuid2 =
+                        addTriangle(make_vec3(rx * cosf(theta_plus), ry * sinf(theta_plus), 0), make_vec3(rx_plus * cosf(theta), ry_plus * sinf(theta), 0), make_vec3(rx_plus * cosf(theta_plus), ry_plus * sinf(theta_plus), 0), texturefile,
+                                    make_vec2(0.5f * (1.f + cosf(theta_plus) * rx / size.x), 0.5f * (1.f + sinf(theta_plus) * ry / size.y)), make_vec2(0.5f * (1.f + cosf(theta) * rx_plus / size.x), 0.5f * (1.f + sinf(theta) * ry_plus / size.y)),
+                                    make_vec2(0.5f * (1.f + cosf(theta_plus) * rx_plus / size.x), 0.5f * (1.f + sinf(theta_plus) * ry_plus / size.y)));
                 if (getPrimitiveArea(triangle_uuid2) > 0) {
                     UUID.push_back(triangle_uuid2);
                 } else {

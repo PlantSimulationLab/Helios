@@ -267,9 +267,8 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &qu
 
             // Use the configured tree isolation distance (collision cone height)
             std::vector<uint> effective_targets = getRelevantGeometryForTree(query_center, all_query_UUIDs, tree_isolation_distance);
-            
-            all_target_UUIDs = effective_targets;
 
+            all_target_UUIDs = effective_targets;
         }
 
         // Validate target UUIDs
@@ -2397,10 +2396,10 @@ bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const 
     // OPTIMIZATION: Use per-tree BVH if enabled for better scaling
     std::vector<uint> effective_candidates;
     if (tree_based_bvh_enabled) {
-        // Get tree-relevant geometry - use proportional distance for spatial filtering  
-        float spatial_filter_distance = height * 1.25f;  // 25% buffer beyond cone height
+        // Get tree-relevant geometry - use proportional distance for spatial filtering
+        float spatial_filter_distance = height * 1.25f; // 25% buffer beyond cone height
         effective_candidates = getRelevantGeometryForTree(apex, candidate_UUIDs, spatial_filter_distance);
-        
+
     } else {
         effective_candidates = candidate_UUIDs;
     }
@@ -2474,14 +2473,15 @@ bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const 
     return false;
 }
 
-bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const vec3 &axis, float half_angle, float height, const std::vector<uint> &candidate_UUIDs, const std::vector<uint> &plant_primitives, float &distance, vec3 &obstacle_direction, int num_rays) {
+bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const vec3 &axis, float half_angle, float height, const std::vector<uint> &candidate_UUIDs, const std::vector<uint> &plant_primitives, float &distance,
+                                                        vec3 &obstacle_direction, int num_rays) {
 
     // OPTIMIZATION: Use per-tree BVH with plant primitive identification for better scaling
     std::vector<uint> effective_candidates;
     if (tree_based_bvh_enabled) {
         // Get tree-relevant geometry using plant primitives to identify the querying tree
         effective_candidates = getRelevantGeometryForTree(apex, plant_primitives, height);
-        
+
         if (printmessages && !effective_candidates.empty()) {
             std::cout << "Per-tree findNearestSolidObstacleInCone: Using " << effective_candidates.size() << " relevant targets instead of " << candidate_UUIDs.size() << " total targets" << std::endl;
         }
@@ -4199,7 +4199,6 @@ void CollisionDetection::initializeObstacleSpatialGrid() {
     }
 
     obstacle_spatial_grid_initialized = true;
-
 }
 
 std::vector<uint> CollisionDetection::ObstacleSpatialGrid::getRelevantObstacles(const helios::vec3 &position, float radius) const {
@@ -4268,7 +4267,6 @@ void CollisionDetection::registerTree(uint tree_object_id, const std::vector<uin
     for (uint prim_uuid: tree_primitives) {
         object_to_tree_map[prim_uuid] = tree_object_id;
     }
-
 }
 
 void CollisionDetection::setStaticObstacles(const std::vector<uint> &obstacle_primitives) {
@@ -4284,7 +4282,6 @@ void CollisionDetection::setStaticObstacles(const std::vector<uint> &obstacle_pr
     // Initialize spatial grid for fast obstacle lookup
     obstacle_spatial_grid_initialized = false;
     initializeObstacleSpatialGrid();
-
 }
 
 std::vector<uint> CollisionDetection::getRelevantGeometryForTree(const helios::vec3 &query_position, const std::vector<uint> &query_primitives, float max_distance) {
@@ -4301,7 +4298,7 @@ std::vector<uint> CollisionDetection::getRelevantGeometryForTree(const helios::v
     if (obstacle_spatial_grid_initialized && !static_obstacle_primitives.empty()) {
         // Fast spatial grid lookup - O(1) instead of O(N)
         std::vector<uint> candidate_obstacles = obstacle_spatial_grid.getRelevantObstacles(query_position, MAX_STATIC_OBSTACLE_DISTANCE);
-        
+
 
         // Still need distance check for precise filtering within grid cells
         for (uint static_prim: candidate_obstacles) {

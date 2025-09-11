@@ -1,5 +1,20 @@
 # Changelog
 
+# [1.3.49] 2025-09-11
+
+- Ran `.clang-format` on all source files to ensure consistent code formatting.
+
+## Context
+- Fixes for zlib and pnglib building on old linux systems
+
+## Radiation 
+- Fixed assignment of image IDs in JSON image segmentation mask output files
+
+## Project Builder
+- Fixed some issues with include file order
+- Loading of XML files now properly uses Helios' file path resolution system
+- Copied `dirt.jpg` asset from the visualizer to the project builder so that the default XML works when not building with the visualizer
+
 # [1.3.48] 2025-09-07
 
 - Split tutorials into separate files for better organization

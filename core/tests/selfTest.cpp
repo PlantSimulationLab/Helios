@@ -24,13 +24,13 @@ using namespace helios;
 
 double errtol = 1e-6;
 
+#include "Test_OBJ.h"
 #include "Test_XML.h"
 #include "Test_context.h"
 #include "Test_data.h"
 #include "Test_functions.h"
 #include "Test_utilities.h"
-#include "Test_OBJ.h"
 
-int Context::selfTest(int argc, char** argv) {
+int Context::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

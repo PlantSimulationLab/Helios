@@ -98,51 +98,51 @@ void LiDARcloud::disableMessages() {
     printmessages = false;
 }
 
-void LiDARcloud::initializeCollisionDetection(helios::Context* context) {
+void LiDARcloud::initializeCollisionDetection(helios::Context *context) {
     if (collision_detection == nullptr) {
         collision_detection = new CollisionDetection(context);
         collision_detection->disableMessages();
     }
 }
 
-void LiDARcloud::performUnifiedRayTracing(helios::Context* context, size_t N, int Npulse, helios::vec3 scan_origin, helios::vec3* direction, float* hit_t, float* hit_fnorm, int* hit_ID) {
+void LiDARcloud::performUnifiedRayTracing(helios::Context *context, size_t N, int Npulse, helios::vec3 scan_origin, helios::vec3 *direction, float *hit_t, float *hit_fnorm, int *hit_ID) {
     const float miss_distance = 1001.0f;
-    
+
     size_t total_rays = N * Npulse;
-    
+
     // Disable automatic BVH rebuilds during batch ray tracing (geometry is static during scan)
     collision_detection->disableAutomaticBVHRebuilds();
-    
+
     // Manually ensure BVH is current once for the entire batch
     collision_detection->buildBVH();
-    
+
     // Convert LiDAR rays to CollisionDetection format
     std::vector<CollisionDetection::RayQuery> ray_queries;
     ray_queries.reserve(total_rays);
-    
+
     for (size_t i = 0; i < total_rays; i++) {
         ray_queries.emplace_back(scan_origin, direction[i], miss_distance);
     }
-    
+
     // Use the collision detection ray casting (this replaces the old CUDA kernels)
     std::vector<CollisionDetection::HitResult> hit_results = collision_detection->castRays(ray_queries);
-    
+
     // Re-enable automatic BVH rebuilds for future operations
     collision_detection->enableAutomaticBVHRebuilds();
-    
+
     // Convert results back to LiDAR format
     size_t hit_count = 0;
     for (size_t i = 0; i < total_rays; i++) {
-        const auto& result = hit_results[i];
+        const auto &result = hit_results[i];
         if (result.hit) {
             hit_count++;
             hit_t[i] = result.distance;
             hit_ID[i] = static_cast<int>(result.primitive_UUID);
-            
-            // Calculate dot product for surface normal (approximation)  
+
+            // Calculate dot product for surface normal (approximation)
             helios::vec3 ray_dir = direction[i];
             hit_fnorm[i] = ray_dir.x * result.normal.x + ray_dir.y * result.normal.y + ray_dir.z * result.normal.z;
-            
+
         } else {
             hit_t[i] = miss_distance;
             hit_ID[i] = -1;
