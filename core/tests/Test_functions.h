@@ -455,6 +455,38 @@ TEST_CASE("String, File Path, and Parsing Utilities") {
         DOCTEST_CHECK(getFileName("..") == "..");
         DOCTEST_CHECK(getFileStem("..") == "..");
     }
+    SUBCASE("Directory path detection") {
+        // Test cases that should be detected as directories
+        DOCTEST_CHECK(isDirectoryPath("./annotations") == true);  // The bug case
+        DOCTEST_CHECK(isDirectoryPath("./output") == true);
+        DOCTEST_CHECK(isDirectoryPath("results") == true);
+        DOCTEST_CHECK(isDirectoryPath("data/") == true);
+        DOCTEST_CHECK(isDirectoryPath("/path/to/dir/") == true);
+        DOCTEST_CHECK(isDirectoryPath("temp") == true);
+        DOCTEST_CHECK(isDirectoryPath("images") == true);
+        DOCTEST_CHECK(isDirectoryPath("..") == true);
+        DOCTEST_CHECK(isDirectoryPath(".") == true);
+
+        // Test cases that should be detected as files
+        DOCTEST_CHECK(isDirectoryPath("file.txt") == false);
+        DOCTEST_CHECK(isDirectoryPath("./test.cpp") == false);
+        DOCTEST_CHECK(isDirectoryPath("output.json") == false);
+        DOCTEST_CHECK(isDirectoryPath("/path/to/file.xml") == false);
+        DOCTEST_CHECK(isDirectoryPath("image.jpg") == false);
+        DOCTEST_CHECK(isDirectoryPath("data.csv") == false);
+        DOCTEST_CHECK(isDirectoryPath(".bashrc") == false);
+
+        // Edge cases
+        DOCTEST_CHECK(isDirectoryPath("") == false);  // empty path
+
+        // Test with existing directories if they exist
+        if (std::filesystem::exists("core/tests")) {
+            DOCTEST_CHECK(isDirectoryPath("core/tests") == true);
+        }
+        if (std::filesystem::exists("core/include/global.h")) {
+            DOCTEST_CHECK(isDirectoryPath("core/include/global.h") == false);
+        }
+    }
     SUBCASE("Primitive Type Parsing") {
         float f;
         DOCTEST_CHECK(parse_float("1.23", f));

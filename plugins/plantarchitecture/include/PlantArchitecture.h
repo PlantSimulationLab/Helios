@@ -1594,6 +1594,10 @@ struct PlantInstance {
 
     CarbohydrateParameters carb_parameters;
 
+    //! Snapshot of shoot parameters that were active when this plant was created
+    //! This prevents parameter contamination between different plant types
+    std::map<std::string, ShootParameters> shoot_types_snapshot;
+
     // --- Per-plant Attraction Points --- //
 
     //! Flag indicating if attraction points are enabled for this plant
@@ -2024,7 +2028,7 @@ public:
      * \param[in] look_ahead_distance How far ahead attraction points will be considered in meters (default = 0.1)
      * \param[in] attraction_weight Weight factor for attraction vs natural growth (0.0 = ignore attraction, 1.0 = full attraction) (default = 0.6)
      */
-    void enableAttractionPoints(const std::vector<helios::vec3> &attraction_points, float view_half_angle_deg = 80.0f, float look_ahead_distance = 0.1f, float attraction_weight = 0.6f);
+    void enableAttractionPoints(const std::vector<helios::vec3> &attraction_points, float view_half_angle_deg = 45.0f, float look_ahead_distance = 0.1f, float attraction_weight = 0.6f);
 
     //! Disable attraction points and revert to natural growth
     void disableAttractionPoints();
@@ -2265,6 +2269,14 @@ public:
      * \param[in] shootID ID of the shoot within the plant whose buds are to be removed.
      */
     void removeShootVegetativeBuds(uint plantID, uint shootID);
+
+    /**
+     * \brief Removes all floral buds from a specified shoot in a specified plant.
+     *
+     * \param[in] plantID ID of the plant from which floral buds are to be removed.
+     * \param[in] shootID ID of the shoot within the plant whose floral buds are to be removed.
+     */
+    void removeShootFloralBuds(uint plantID, uint shootID);
 
     /**
      * \brief Removes all leaves from the plant with the specified ID.
@@ -2710,7 +2722,7 @@ protected:
 
     float ground_clipping_height = -99999;
 
-    void validateShootTypes(ShootParameters &shoot_parameters) const;
+    void validateShootTypes(ShootParameters &shoot_parameters, const std::map<std::string, ShootParameters> &shoot_types_ref) const;
 
     //! Register a plant model with its initialization and build functions
     void registerPlantModel(const std::string &name, std::function<void()> shoot_init, std::function<uint(const helios::vec3 &)> plant_build);
@@ -2882,6 +2894,10 @@ protected:
     void initializeBeanShoots();
 
     uint buildBeanPlant(const helios::vec3 &base_position);
+
+    void initializeBougainvilleaShoots();
+
+    uint buildBougainvilleaPlant(const helios::vec3 &base_position);
 
     void initializeCapsicumShoots();
 

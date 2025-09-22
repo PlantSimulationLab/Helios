@@ -323,12 +323,18 @@ uint BindweedFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bo
     return objID;
 }
 
+uint BougainvilleaFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open) {
+    std::vector<uint> UUIDs = context_ptr->loadOBJ("plugins/plantarchitecture/assets/obj/BougainvilleaFlower.obj", true);
+    uint objID = context_ptr->addPolymeshObject(UUIDs);
+    return objID;
+}
+
 uint CapsicumFruitPrototype(helios::Context *context_ptr, uint subdivisions) {
     std::string OBJ_file;
     if (context_ptr->randn() < 0.4) {
-        OBJ_file = "CapsicumFruit_green.obj";
+        OBJ_file = "plugins/plantarchitecture/assets/obj/CapsicumFruit_green.obj";
     } else {
-        OBJ_file = "CapsicumFruit_red.obj";
+        OBJ_file = "plugins/plantarchitecture/assets/obj/CapsicumFruit_red.obj";
     }
 
     std::vector<uint> UUIDs = context_ptr->loadOBJ(OBJ_file.c_str(), make_vec3(0., 0, 0), 0, nullrotation, RGB::black, "ZUP", true);

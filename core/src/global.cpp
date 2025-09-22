@@ -2569,6 +2569,46 @@ bool helios::validateOutputPath(std::string &output_path, const std::vector<std:
     return true;
 }
 
+bool helios::isDirectoryPath(const std::string &path) {
+    if (path.empty()) {
+        return false;
+    }
+
+    // Check if path exists and is a directory
+    if (std::filesystem::exists(path) && std::filesystem::is_directory(path)) {
+        return true;
+    }
+
+    // If path doesn't exist, use heuristics to determine if it's intended to be a directory
+
+    // 1. Check for trailing slash (most reliable indicator)
+    if (path.back() == '/' || path.back() == '\\') {
+        return true;
+    }
+
+    // 2. Check if the last component has a file extension
+    std::filesystem::path path_obj(path);
+    std::string extension = path_obj.extension().string();
+
+    // If there's no extension, it's likely a directory
+    // (This handles cases like "./annotations" vs "./file.txt")
+    if (extension.empty()) {
+        std::string filename = path_obj.filename().string();
+
+        // Handle special cases: dotfiles are usually files, not directories
+        if (filename.front() == '.' && filename != "." && filename != "..") {
+            return false;  // .bashrc, .gitignore, .hidden files, etc.
+        }
+
+        // For other cases without extension, assume it's a directory
+        // This fixes the bug where "./annotations" was treated as a file
+        return true;
+    }
+
+    // 3. If it has an extension, it's likely a file
+    return false;
+}
+
 //--------------------- HELIOS_BUILD PATH RESOLUTION -----------------------------------//
 
 //! Get build directory path - requires HELIOS_BUILD environment variable

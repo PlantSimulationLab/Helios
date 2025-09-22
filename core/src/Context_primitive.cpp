@@ -515,6 +515,8 @@ uint Context::copyPrimitive(uint UUID) {
             } else {
                 patch_new = (new Patch(texture_file.c_str(), solid_fraction, parentID, currentUUID));
             }
+            // Preserve the color from the original patch
+            patch_new->setColor(p->getColorRGBA());
         }
         float transform[16];
         p->getTransformationMatrix(transform);
@@ -532,6 +534,8 @@ uint Context::copyPrimitive(uint UUID) {
             float solid_fraction = p->getArea() / calculateTriangleArea(vertices.at(0), vertices.at(1), vertices.at(2));
             tri_new = (new Triangle(vertices.at(0), vertices.at(1), vertices.at(2), texture_file.c_str(), uv, solid_fraction, parentID, currentUUID));
             tri_new->setSolidFraction(solid_fraction);
+            // Preserve the color from the original triangle
+            tri_new->setColor(p->getColorRGBA());
         }
         float transform[16];
         p->getTransformationMatrix(transform);

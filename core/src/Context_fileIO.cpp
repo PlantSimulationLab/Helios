@@ -3628,7 +3628,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
         } else if (line == "mtllib") {
             getline(inputOBJ, line);
             std::string material_file = trim_whitespace(line);
-            materials = loadMTL(filebase, material_file);
+            materials = loadMTL(filebase, material_file, default_color);
 
             // ------- OBJECT ------- //
         } else if (line == "o") {
@@ -3919,7 +3919,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
     return UUID;
 }
 
-std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &filebase, const std::string &material_file) {
+std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &filebase, const std::string &material_file, const RGBcolor &default_color) {
     std::ifstream inputMTL;
 
     std::string file = material_file;
@@ -3957,7 +3957,7 @@ std::map<std::string, Context::OBJmaterial> Context::loadMTL(const std::string &
         } else if (line == "newmtl") { // material library
             getline(inputMTL, line);
             std::string material_name = trim_whitespace(line);
-            OBJmaterial mat(RGB::red, "", 0);
+            OBJmaterial mat(default_color, "", 0);
             materials.emplace(material_name, mat);
 
             std::string map_Kd, map_d;

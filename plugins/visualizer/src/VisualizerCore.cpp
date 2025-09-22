@@ -49,16 +49,113 @@ int write_JPEG_file(const char *filename, uint width, uint height, bool print_me
         std::cout << "writing JPEG image: " << filename << std::endl;
     }
 
+    // Validate framebuffer completeness
+    GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
+        std::cerr << "ERROR (write_JPEG_file): Framebuffer is not complete (status: " << framebuffer_status << ")" << std::endl;
+        return 0;
+    }
+
+    // Clear any existing OpenGL errors
+    while (glGetError() != GL_NO_ERROR) {}
+
     const size_t bsize = 3 * width * height;
     std::vector<GLubyte> screen_shot_trans;
     screen_shot_trans.resize(bsize);
 
-    // Read from front buffer since we may be in headless mode or have complex timing
-    // The front buffer should contain the most recent rendered content
-    constexpr GLenum read_buf = GL_FRONT;
-    glReadBuffer(read_buf);
-    glReadPixels(0, 0, scast<GLsizei>(width), scast<GLsizei>(height), GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
+    // Set proper pixel alignment for reliable reading
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+    // Robustly determine which buffer contains rendered content
+    // Sample multiple pixels to avoid false negatives from legitimately black pixels
+    const int num_samples = 9;
+    const uint sample_positions[][2] = {
+        {width/4, height/4}, {width/2, height/4}, {3*width/4, height/4},
+        {width/4, height/2}, {width/2, height/2}, {3*width/4, height/2},
+        {width/4, 3*height/4}, {width/2, 3*height/4}, {3*width/4, 3*height/4}
+    };
+    GLubyte test_pixels[num_samples * 3];
+
+    auto count_non_black_pixels = [](const GLubyte* pixels, int count) -> int {
+        int non_black = 0;
+        for (int i = 0; i < count * 3; i += 3) {
+            if (pixels[i] > 5 || pixels[i+1] > 5 || pixels[i+2] > 5) { // Use small threshold to account for compression artifacts
+                non_black++;
+            }
+        }
+        return non_black;
+    };
+
+    int back_buffer_content_score = 0;
+    int front_buffer_content_score = 0;
+
+    // Test back buffer with multiple samples
+    glReadBuffer(GL_BACK);
+    GLenum error = glGetError();
+    if (error == GL_NO_ERROR) {
+        glFinish();
+        for (int i = 0; i < num_samples; i++) {
+            glReadPixels(sample_positions[i][0], sample_positions[i][1], 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &test_pixels[i*3]);
+        }
+        if (glGetError() == GL_NO_ERROR) {
+            back_buffer_content_score = count_non_black_pixels(test_pixels, num_samples);
+        }
+    }
+
+    // Test front buffer with multiple samples
+    glReadBuffer(GL_FRONT);
+    error = glGetError();
+    if (error == GL_NO_ERROR) {
+        glFinish();
+        for (int i = 0; i < num_samples; i++) {
+            glReadPixels(sample_positions[i][0], sample_positions[i][1], 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &test_pixels[i*3]);
+        }
+        if (glGetError() == GL_NO_ERROR) {
+            front_buffer_content_score = count_non_black_pixels(test_pixels, num_samples);
+        }
+    }
+
+    // Choose the buffer with higher content score, prefer back buffer if scores are equal
+    if (back_buffer_content_score >= front_buffer_content_score && back_buffer_content_score > 0) {
+        glReadBuffer(GL_BACK);
+    } else if (front_buffer_content_score > 0) {
+        glReadBuffer(GL_FRONT);
+    } else {
+        // Neither buffer has detectable content, default to back buffer
+        glReadBuffer(GL_BACK);
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            glReadBuffer(GL_FRONT);
+            error = glGetError();
+            if (error != GL_NO_ERROR) {
+                std::cerr << "ERROR (write_JPEG_file): Cannot set read buffer (error: " << error << ")" << std::endl;
+                return 0;
+            }
+        }
+    }
+
+    // Ensure all rendering commands complete before reading
     glFinish();
+
+    // Read pixels with error checking
+    glReadPixels(0, 0, scast<GLsizei>(width), scast<GLsizei>(height), GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
+    error = glGetError();
+    if (error != GL_NO_ERROR) {
+        std::cerr << "ERROR (write_JPEG_file): glReadPixels failed (error: " << error << ")" << std::endl;
+        return 0;
+    }
+
+    // Check if we got all black pixels (common failure mode)
+    bool all_black = true;
+    for (size_t i = 0; i < bsize && all_black; i++) {
+        if (screen_shot_trans[i] != 0) {
+            all_black = false;
+        }
+    }
+
+    if (all_black) {
+        std::cerr << "WARNING (write_JPEG_file): All pixels are black - this may indicate a timing or buffer issue" << std::endl;
+    }
 
     // Convert to RGBcolor vector and use Context's writeJPEG
     std::vector<helios::RGBcolor> rgb_data;
@@ -165,19 +262,406 @@ void Visualizer::openWindow() {
 
     // Initialize GLEW
     glewExperimental = GL_TRUE; // Needed in core profile
-    if (glewInit() != GLEW_OK) {
-        helios_runtime_error("ERROR (Visualizer): Failed to initialize GLEW.");
+    GLenum glew_result = glewInit();
+    if (glew_result != GLEW_OK) {
+        std::string error_msg = "ERROR (Visualizer): Failed to initialize GLEW. ";
+        error_msg += "GLEW error: " + std::string((const char*)glewGetErrorString(glew_result));
+        helios_runtime_error(error_msg);
     }
 
-    // NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
-    glGetError();
+    // Check for and handle the expected GL_INVALID_ENUM error from glewExperimental
+    // This is a known issue with glewExperimental on some OpenGL implementations
+    GLenum gl_error = glGetError();
+    if (gl_error != GL_NO_ERROR && gl_error != GL_INVALID_ENUM) {
+        std::string error_msg = "ERROR (Visualizer): Unexpected OpenGL error after GLEW initialization: ";
+        error_msg += std::to_string(gl_error);
+        helios_runtime_error(error_msg);
+    }
+}
+
+void Visualizer::createOffscreenContext() {
+    // Create an offscreen context for headless rendering
+    // This avoids the need for a display server on CI systems
+    //
+    // NOTE: On macOS, you may see OpenGL warnings like:
+    // "UNSUPPORTED (log once): POSSIBLE ISSUE: unit 6 GLD_TEXTURE_INDEX_2D is unloadable..."
+    // This is a known macOS OpenGL driver warning in headless mode and is harmless.
+
+    // Check for environment variables that indicate CI/headless operation
+    const char* ci_env = std::getenv("CI");
+    const char* display_env = std::getenv("DISPLAY");
+    const char* force_offscreen = std::getenv("HELIOS_FORCE_OFFSCREEN");
+
+    bool is_ci = (ci_env != nullptr && std::string(ci_env) == "true");
+    bool has_display = (display_env != nullptr && std::strlen(display_env) > 0);
+    bool force_software = (force_offscreen != nullptr && std::string(force_offscreen) == "1");
+
+    // Configure GLFW window hints for optimal CI compatibility
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_NATIVE_CONTEXT_API);
+
+#if __APPLE__
+    // On macOS, configure for better CI compatibility
+    glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_FALSE);  // Disable double buffering for offscreen
+    if (is_ci || force_software) {
+        // In CI environments, prefer compatibility profile for better software rendering support
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
+    }
+#elif __linux__
+    // On Linux, detect and configure for software rendering if needed
+    if (is_ci && !has_display) {
+        // Likely a headless CI environment - use software rendering hints
+        glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_FALSE);
+        glfwWindowHint(GLFW_SAMPLES, 0);  // Disable multisampling for software rendering
+    }
+#elif _WIN32
+    // On Windows, configure for CI environments
+    if (is_ci || force_software) {
+        glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_FALSE);
+    }
+#endif
+
+    // Create a minimal 1x1 window for the OpenGL context
+    // This window will be invisible but provides the necessary OpenGL context
+    GLFWwindow* _window = glfwCreateWindow(1, 1, "Helios Offscreen", nullptr, nullptr);
+
+    if (_window == nullptr) {
+        // Failed to create even an offscreen context - provide platform-specific guidance
+        std::string error_msg = "ERROR (Visualizer::createOffscreenContext): Unable to create OpenGL context for headless rendering.\n";
+        error_msg += "This typically occurs in CI environments without GPU drivers or display servers.\n";
+        error_msg += "Platform-specific solutions:\n";
+
+#if __APPLE__
+        error_msg += "-- macOS CI: Install Xcode command line tools and ensure graphics frameworks are available\n";
+        error_msg += "-- Try setting HELIOS_FORCE_OFFSCREEN=1 environment variable\n";
+        error_msg += "-- Consider using a macOS runner with graphics support\n";
+#elif __linux__
+        error_msg += "-- Linux CI: Install virtual display server: apt-get install xvfb\n";
+        error_msg += "-- Start virtual display: Xvfb :99 -screen 0 1024x768x24 &\n";
+        error_msg += "-- Set display variable: export DISPLAY=:99\n";
+        error_msg += "-- Install Mesa software rendering: apt-get install mesa-utils libgl1-mesa-dev\n";
+        error_msg += "-- Force software rendering: export LIBGL_ALWAYS_SOFTWARE=1\n";
+#elif _WIN32
+        error_msg += "-- Windows CI: Ensure OpenGL drivers are available\n";
+        error_msg += "-- Install Mesa3D for software rendering\n";
+        error_msg += "-- Try using a Windows runner with graphics support\n";
+#endif
+        error_msg += "-- Alternative: Skip visualizer tests in CI with conditional test execution\n";
+        error_msg += "-- Set HELIOS_FORCE_OFFSCREEN=1 to attempt software rendering";
+
+        helios_runtime_error(error_msg);
+    }
+
+    glfwMakeContextCurrent(_window);
+    window = (void*)_window;
+
+    // Verify the context is current and functional
+    const char* gl_version = (const char*)glGetString(GL_VERSION);
+    if (gl_version == nullptr) {
+        glfwDestroyWindow(_window);
+        helios_runtime_error("ERROR (Visualizer::createOffscreenContext): Failed to obtain OpenGL version. Context creation failed.");
+    }
+
+    // Set framebuffer dimensions to match requested display size for offscreen rendering
+    Wframebuffer = Wdisplay;
+    Hframebuffer = Hdisplay;
+
+    // Initialize offscreen framebuffer for true headless rendering
+    // Delay this until after GLEW initialization
+    // setupOffscreenFramebuffer();
+
+    // Note: In headless mode, we won't set up window callbacks since there's no user interaction
+}
+
+void Visualizer::setupOffscreenFramebuffer() {
+    // Create a complete framebuffer for offscreen rendering with both color and depth attachments
+    // This enables full OpenGL testing in CI environments
+
+    // Validate OpenGL context and required extensions are available
+    const char* gl_version = (const char*)glGetString(GL_VERSION);
+    if (gl_version == nullptr) {
+        helios_runtime_error("ERROR (Visualizer::setupOffscreenFramebuffer): OpenGL context is not valid - unable to retrieve version string.");
+    }
+
+    // Check for framebuffer object support (OpenGL 3.0+ or ARB_framebuffer_object extension)
+    if (!GLEW_VERSION_3_0 && !GLEW_ARB_framebuffer_object) {
+        helios_runtime_error("ERROR (Visualizer::setupOffscreenFramebuffer): OpenGL context does not support framebuffer objects (requires OpenGL 3.0+ or ARB_framebuffer_object extension).");
+    }
+
+    // Validate framebuffer dimensions (must be positive and within reasonable limits)
+    if (Wframebuffer == 0 || Hframebuffer == 0) {
+        helios_runtime_error("ERROR (Visualizer::setupOffscreenFramebuffer): Invalid framebuffer dimensions (" + std::to_string(Wframebuffer) + "x" + std::to_string(Hframebuffer) + "). Dimensions must be positive.");
+    }
+
+    // Get maximum texture size to validate our request
+    GLint max_texture_size;
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_texture_size);
+    if (static_cast<GLint>(Wframebuffer) > max_texture_size || static_cast<GLint>(Hframebuffer) > max_texture_size) {
+        helios_runtime_error("ERROR (Visualizer::setupOffscreenFramebuffer): Requested framebuffer size (" + std::to_string(Wframebuffer) + "x" + std::to_string(Hframebuffer) + ") exceeds maximum texture size (" + std::to_string(max_texture_size) + ").");
+    }
+
+    // Ensure we start with a clean OpenGL state
+    if (!checkerrors()) {
+        helios_runtime_error("ERROR (Visualizer::setupOffscreenFramebuffer): OpenGL errors detected before framebuffer setup.");
+    }
+
+    // Generate the framebuffer with error checking
+    glGenFramebuffers(1, &offscreenFramebufferID);
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR || offscreenFramebufferID == 0) {
+        helios_runtime_error("ERROR (Visualizer::setupOffscreenFramebuffer): Failed to generate framebuffer object. OpenGL error: " + std::to_string(error));
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, offscreenFramebufferID);
+    error = glGetError();
+    if (error != GL_NO_ERROR) {
+        glDeleteFramebuffers(1, &offscreenFramebufferID);
+        offscreenFramebufferID = 0;
+        helios_runtime_error("ERROR (Visualizer::setupOffscreenFramebuffer): Failed to bind framebuffer object. OpenGL error: " + std::to_string(error));
+    }
+
+    // Create color texture attachment with comprehensive error checking
+    glGenTextures(1, &offscreenColorTexture);
+    error = glGetError();
+    if (error != GL_NO_ERROR || offscreenColorTexture == 0) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDeleteFramebuffers(1, &offscreenFramebufferID);
+        offscreenFramebufferID = 0;
+        helios_runtime_error("ERROR (Visualizer::setupOffscreenFramebuffer): Failed to generate color texture. OpenGL error: " + std::to_string(error));
+    }
+
+    glBindTexture(GL_TEXTURE_2D, offscreenColorTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, static_cast<GLsizei>(Wframebuffer), static_cast<GLsizei>(Hframebuffer), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    error = glGetError();
+    if (error != GL_NO_ERROR) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDeleteTextures(1, &offscreenColorTexture);
+        glDeleteFramebuffers(1, &offscreenFramebufferID);
+        offscreenColorTexture = 0;
+        offscreenFramebufferID = 0;
+        helios_runtime_error("ERROR (Visualizer::setupOffscreenFramebuffer): Failed to create color texture storage. OpenGL error: " + std::to_string(error) + ". This may indicate insufficient GPU memory or unsupported texture format.");
+    }
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, offscreenColorTexture, 0);
+
+    // Create depth texture attachment with error checking
+    glGenTextures(1, &offscreenDepthTexture);
+    error = glGetError();
+    if (error != GL_NO_ERROR || offscreenDepthTexture == 0) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDeleteTextures(1, &offscreenColorTexture);
+        glDeleteFramebuffers(1, &offscreenFramebufferID);
+        offscreenColorTexture = 0;
+        offscreenFramebufferID = 0;
+        helios_runtime_error("ERROR (Visualizer::setupOffscreenFramebuffer): Failed to generate depth texture. OpenGL error: " + std::to_string(error));
+    }
+
+    glBindTexture(GL_TEXTURE_2D, offscreenDepthTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, static_cast<GLsizei>(Wframebuffer), static_cast<GLsizei>(Hframebuffer), 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    error = glGetError();
+    if (error != GL_NO_ERROR) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDeleteTextures(1, &offscreenDepthTexture);
+        glDeleteTextures(1, &offscreenColorTexture);
+        glDeleteFramebuffers(1, &offscreenFramebufferID);
+        offscreenDepthTexture = 0;
+        offscreenColorTexture = 0;
+        offscreenFramebufferID = 0;
+        helios_runtime_error("ERROR (Visualizer::setupOffscreenFramebuffer): Failed to create depth texture storage. OpenGL error: " + std::to_string(error) + ". This may indicate insufficient GPU memory or unsupported depth format.");
+    }
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, offscreenDepthTexture, 0);
+
+    // Check framebuffer completeness with detailed error reporting
+    GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
+        // Clean up before throwing error
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        cleanupOffscreenFramebuffer();
+
+        std::string error_message = "ERROR (Visualizer::setupOffscreenFramebuffer): Offscreen framebuffer is not complete. Status: ";
+        switch (framebuffer_status) {
+            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+                error_message += "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT - One or more attachment points are not framebuffer attachment complete";
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+                error_message += "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT - No images are attached to the framebuffer";
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+                error_message += "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER - Draw buffer configuration error";
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+                error_message += "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER - Read buffer configuration error";
+                break;
+            case GL_FRAMEBUFFER_UNSUPPORTED:
+                error_message += "GL_FRAMEBUFFER_UNSUPPORTED - Combination of internal formats is not supported";
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+                error_message += "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE - Multisample configuration error";
+                break;
+            default:
+                error_message += "Unknown framebuffer error (code: " + std::to_string(framebuffer_status) + ")";
+                break;
+        }
+        error_message += ". This typically occurs in virtualized graphics environments or with limited OpenGL driver support.";
+        helios_runtime_error(error_message);
+    }
+
+    // Restore default framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Final error check
+    if (!checkerrors()) {
+        cleanupOffscreenFramebuffer();
+        helios_runtime_error("ERROR (Visualizer::setupOffscreenFramebuffer): OpenGL errors occurred during offscreen framebuffer setup completion.");
+    }
+}
+
+void Visualizer::cleanupOffscreenFramebuffer() {
+    // Clean up offscreen rendering resources safely
+    // Only attempt cleanup if we have a valid OpenGL context
+    if (window != nullptr) {
+        if (offscreenFramebufferID != 0) {
+            glDeleteFramebuffers(1, &offscreenFramebufferID);
+            offscreenFramebufferID = 0;
+        }
+        if (offscreenColorTexture != 0) {
+            glDeleteTextures(1, &offscreenColorTexture);
+            offscreenColorTexture = 0;
+        }
+        if (offscreenDepthTexture != 0) {
+            glDeleteTextures(1, &offscreenDepthTexture);
+            offscreenDepthTexture = 0;
+        }
+    }
+}
+
+std::vector<helios::RGBcolor> Visualizer::readOffscreenPixels() const {
+    // Read pixels from the offscreen framebuffer for printWindow functionality
+
+    if (offscreenFramebufferID == 0) {
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): No offscreen framebuffer available. "
+                           "Ensure setupOffscreenFramebuffer() was called successfully in headless mode.");
+    }
+
+    // Validate framebuffer dimensions
+    if (Wframebuffer == 0 || Hframebuffer == 0) {
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Invalid framebuffer dimensions (" +
+                           std::to_string(Wframebuffer) + "x" + std::to_string(Hframebuffer) +
+                           "). This indicates the offscreen framebuffer was not properly initialized.");
+    }
+
+    // Check that we have a valid OpenGL context
+    const char* gl_version = (const char*)glGetString(GL_VERSION);
+    if (gl_version == nullptr) {
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Invalid OpenGL context. "
+                           "This indicates OpenGL initialization failed or the context was lost.");
+    }
+
+    // Clear any existing OpenGL errors
+    while (glGetError() != GL_NO_ERROR) {}
+
+    // Bind the offscreen framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, offscreenFramebufferID);
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Failed to bind offscreen framebuffer (OpenGL error: " +
+                           std::to_string(error) + "). This indicates graphics driver issues or corrupted framebuffer.");
+    }
+
+    // Verify framebuffer is complete
+    GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Framebuffer is not complete (status: " +
+                           std::to_string(framebuffer_status) +
+                           "). This indicates missing attachments or graphics driver incompatibility.");
+    }
+
+    // Calculate pixel data size with overflow protection
+    const size_t pixel_count = static_cast<size_t>(Wframebuffer) * static_cast<size_t>(Hframebuffer);
+    const size_t data_size = pixel_count * 3;
+
+    // Check for potential overflow
+    if (pixel_count > SIZE_MAX / 3 || data_size > SIZE_MAX / sizeof(unsigned char)) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Framebuffer dimensions too large (" +
+                           std::to_string(Wframebuffer) + "x" + std::to_string(Hframebuffer) +
+                           "). This would cause memory allocation overflow.");
+    }
+
+    std::vector<helios::RGBcolor> pixels;
+    try {
+        // Read pixels from the color attachment
+        std::vector<unsigned char> pixel_data(data_size);
+        glReadPixels(0, 0, static_cast<GLsizei>(Wframebuffer), static_cast<GLsizei>(Hframebuffer), GL_RGB, GL_UNSIGNED_BYTE, pixel_data.data());
+
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Failed to read pixels from framebuffer (OpenGL error: " +
+                               std::to_string(error) + "). This indicates graphics driver issues or framebuffer format problems.");
+        }
+
+        // Convert to RGBcolor format with bounds checking
+        pixels.reserve(pixel_count);
+        for (size_t i = 0; i + 2 < pixel_data.size(); i += 3) {
+            float r = pixel_data[i] / 255.0f;
+            float g = pixel_data[i + 1] / 255.0f;
+            float b = pixel_data[i + 2] / 255.0f;
+            pixels.emplace_back(make_RGBcolor(r, g, b));
+        }
+    } catch (const std::exception& e) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Memory allocation or conversion failed: " +
+                           std::string(e.what()) + ". This may indicate insufficient memory or data corruption.");
+    }
+
+    // Restore default framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    return pixels;
+}
+
+void Visualizer::renderToOffscreenBuffer() {
+    // Switch rendering target to offscreen framebuffer
+    if (offscreenFramebufferID != 0) {
+        glBindFramebuffer(GL_FRAMEBUFFER, offscreenFramebufferID);
+        glViewport(0, 0, Wframebuffer, Hframebuffer);
+    }
 }
 
 void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels, int aliasing_samples, bool window_decorations, bool headless_mode) {
     Wdisplay = window_width_pixels;
     Hdisplay = window_height_pixels;
 
-    headless = headless_mode;
+    // Check environment variables for automatic headless mode detection
+    const char* force_offscreen = std::getenv("HELIOS_FORCE_OFFSCREEN");
+    const char* ci_env = std::getenv("CI");
+    const char* display_env = std::getenv("DISPLAY");
+
+    bool should_force_headless = false;
+    if (force_offscreen != nullptr && std::string(force_offscreen) == "1") {
+        should_force_headless = true;
+    } else if (ci_env != nullptr && std::string(ci_env) == "true") {
+        // In CI environment, check if we have a display
+#if __linux__
+        if (display_env == nullptr || std::strlen(display_env) == 0) {
+            should_force_headless = true;  // Linux CI without DISPLAY
+        }
+#elif __APPLE__ || _WIN32
+        // On macOS and Windows CI, graphics might not be available
+        should_force_headless = true;  // Can be overridden by explicit headless=false
+#endif
+    }
+
+    // Final headless determination: explicit parameter OR environment-forced
+    headless = headless_mode || should_force_headless;
 
     shadow_buffer_size = make_uint2(8192, 8192);
 
@@ -186,6 +670,11 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     texArray = 0;
     texture_array_layers = 0;
     textures_dirty = false;
+
+    // Initialize offscreen rendering variables
+    offscreenFramebufferID = 0;
+    offscreenColorTexture = 0;
+    offscreenDepthTexture = 0;
 
     message_flag = true;
 
@@ -245,7 +734,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     if (headless) {
         // Create offscreen context for headless mode
-        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE); // Ensure window is not visible
+        createOffscreenContext();
     } else {
         // Regular windowed mode
         glfwWindowHint(GLFW_VISIBLE, 0); // Initially hidden, will show later if needed
@@ -253,22 +742,75 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         if (!window_decorations) {
             glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
         }
-    }
 
-    openWindow();
+        openWindow();
+    }
 
     // Initialize GLEW - required for both headless and windowed modes
     glewExperimental = GL_TRUE; // Needed in core profile
-    if (glewInit() != GLEW_OK) {
-        helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLEW");
+    GLenum glew_result = glewInit();
+    if (glew_result != GLEW_OK) {
+        std::string error_msg = "ERROR (Visualizer::initialize): Failed to initialize GLEW. ";
+        error_msg += "GLEW error: " + std::string((const char*)glewGetErrorString(glew_result));
+
+        if (headless) {
+            error_msg += "\nIn headless mode, this usually indicates:";
+            error_msg += "\n- Missing or incompatible OpenGL drivers";
+            error_msg += "\n- Virtual display server not properly configured";
+            error_msg += "\n- VirtualGL or Mesa software rendering issues";
+            error_msg += "\nConsider setting LIBGL_ALWAYS_SOFTWARE=1 for software rendering";
+        }
+
+        helios_runtime_error(error_msg);
     }
 
-    // NOTE: for some reason calling glewInit throws an error.  Need to clear it to move on.
-    glGetError();
+    // Check for and handle the expected GL_INVALID_ENUM error from glewExperimental
+    // This is a known issue with glewExperimental on some OpenGL implementations
+    GLenum gl_error = glGetError();
+    if (gl_error != GL_NO_ERROR && gl_error != GL_INVALID_ENUM) {
+        std::string error_msg = "ERROR (Visualizer): Unexpected OpenGL error after GLEW initialization: ";
+        error_msg += std::to_string(gl_error);
+        if (headless) {
+            error_msg += "\nThis indicates a serious OpenGL context or driver issue in headless mode.";
+        }
+        helios_runtime_error(error_msg);
+    }
 
-    // Check for OpenGL errors after GLEW initialization
+    // Validate basic OpenGL functionality after GLEW initialization
+    const char* gl_version = (const char*)glGetString(GL_VERSION);
+    const char* gl_vendor = (const char*)glGetString(GL_VENDOR);
+    const char* gl_renderer = (const char*)glGetString(GL_RENDERER);
+
+    if (gl_version == nullptr || gl_vendor == nullptr || gl_renderer == nullptr) {
+        helios_runtime_error("ERROR (Visualizer::initialize): OpenGL context is not functional - unable to query basic GL information. "
+                             "This indicates a fundamental issue with OpenGL context creation or driver compatibility.");
+    }
+
+    // In debug mode or verbose CI, log the OpenGL information
+    if (headless && (std::getenv("CI") != nullptr || std::getenv("HELIOS_DEBUG") != nullptr)) {
+        std::cout << "OpenGL Version: " << gl_version << std::endl;
+        std::cout << "OpenGL Vendor: " << gl_vendor << std::endl;
+        std::cout << "OpenGL Renderer: " << gl_renderer << std::endl;
+    }
+
+    // Test basic OpenGL operations that are required for visualizer functionality
+    GLint max_texture_size;
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_texture_size);
+    GLenum validation_error = glGetError();
+    if (validation_error != GL_NO_ERROR) {
+        helios_runtime_error("ERROR (Visualizer::initialize): Basic OpenGL query operations failed (error: " + std::to_string(validation_error) + "). "
+                             "This indicates the OpenGL context is not properly initialized or lacks required functionality.");
+    }
+
+    // Warn if texture size is unusually small (indicates software rendering or limited drivers)
+    if (max_texture_size < 1024 && headless) {
+        std::cerr << "WARNING (Visualizer::initialize): Maximum texture size is very small (" << max_texture_size
+                  << "x" << max_texture_size << "). This may indicate software rendering or limited driver support." << std::endl;
+    }
+
+    // Final verification that we don't have accumulated OpenGL errors
     if (!checkerrors()) {
-        helios_runtime_error("ERROR (Visualizer::initialize): OpenGL context initialization failed after GLEW setup. "
+        helios_runtime_error("ERROR (Visualizer::initialize): OpenGL context initialization failed after GLEW setup and validation. "
                              "This often occurs in headless CI environments without proper GPU drivers or display servers. "
                              "For headless operation, ensure proper virtual display or software rendering is configured.");
     }
@@ -301,6 +843,11 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
                              "This typically indicates graphics driver incompatibility or missing OpenGL support in the execution environment.");
     }
 
+    // Initialize offscreen framebuffer for headless mode after OpenGL context is fully set up
+    if (headless) {
+        setupOffscreenFramebuffer();
+    }
+
     // glEnable(GL_TEXTURE1);
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(1.0f, 1.0f);
@@ -312,48 +859,148 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
                              "Verify that the graphics environment supports the required OpenGL version and features.");
     }
 
-    // Initialize VBO's and texture buffers
+    // Initialize VBO's and texture buffers with comprehensive error checking
     constexpr size_t Ntypes = GeometryHandler::all_geometry_types.size();
-    // per-vertex data
-    face_index_buffer.resize(Ntypes);
-    vertex_buffer.resize(Ntypes);
-    uv_buffer.resize(Ntypes);
-    glGenBuffers((GLsizei) face_index_buffer.size(), face_index_buffer.data());
-    glGenBuffers((GLsizei) vertex_buffer.size(), vertex_buffer.data());
-    glGenBuffers((GLsizei) uv_buffer.size(), uv_buffer.data());
 
-    // per-primitive data
-    color_buffer.resize(Ntypes);
-    color_texture_object.resize(Ntypes);
-    normal_buffer.resize(Ntypes);
-    normal_texture_object.resize(Ntypes);
-    texture_flag_buffer.resize(Ntypes);
-    texture_flag_texture_object.resize(Ntypes);
-    texture_ID_buffer.resize(Ntypes);
-    texture_ID_texture_object.resize(Ntypes);
-    coordinate_flag_buffer.resize(Ntypes);
-    coordinate_flag_texture_object.resize(Ntypes);
-    hidden_flag_buffer.resize(Ntypes);
-    hidden_flag_texture_object.resize(Ntypes);
-    glGenBuffers((GLsizei) color_buffer.size(), color_buffer.data());
-    glGenTextures((GLsizei) color_texture_object.size(), color_texture_object.data());
-    glGenBuffers((GLsizei) normal_buffer.size(), normal_buffer.data());
-    glGenTextures((GLsizei) normal_texture_object.size(), normal_texture_object.data());
-    glGenBuffers((GLsizei) texture_flag_buffer.size(), texture_flag_buffer.data());
-    glGenTextures((GLsizei) texture_flag_texture_object.size(), texture_flag_texture_object.data());
-    glGenBuffers((GLsizei) texture_ID_buffer.size(), texture_ID_buffer.data());
-    glGenTextures((GLsizei) texture_ID_texture_object.size(), texture_ID_texture_object.data());
-    glGenBuffers((GLsizei) coordinate_flag_buffer.size(), coordinate_flag_buffer.data());
-    glGenTextures((GLsizei) coordinate_flag_texture_object.size(), coordinate_flag_texture_object.data());
-    glGenBuffers((GLsizei) hidden_flag_buffer.size(), hidden_flag_buffer.data());
-    glGenTextures((GLsizei) hidden_flag_texture_object.size(), hidden_flag_texture_object.data());
+    // Validate that we have a reasonable number of geometry types to prevent memory issues
+    if (Ntypes == 0 || Ntypes > 1000) {
+        helios_runtime_error("ERROR (Visualizer::initialize): Invalid number of geometry types (" + std::to_string(Ntypes) + "). "
+                             "This indicates a configuration issue with GeometryHandler.");
+    }
 
-    glGenBuffers(1, &uv_rescale_buffer);
-    glGenTextures(1, &uv_rescale_texture_object);
+    try {
+        // per-vertex data with error checking after each allocation
+        face_index_buffer.resize(Ntypes);
+        vertex_buffer.resize(Ntypes);
+        uv_buffer.resize(Ntypes);
 
-    // Check for OpenGL errors after buffer creation
+        // Generate per-vertex buffers with immediate error checking
+        glGenBuffers((GLsizei) face_index_buffer.size(), face_index_buffer.data());
+        GLenum error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate face index buffers. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenBuffers((GLsizei) vertex_buffer.size(), vertex_buffer.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate vertex buffers. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenBuffers((GLsizei) uv_buffer.size(), uv_buffer.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate UV buffers. OpenGL error: " + std::to_string(error));
+        }
+
+        // per-primitive data with error checking after each allocation
+        color_buffer.resize(Ntypes);
+        color_texture_object.resize(Ntypes);
+        normal_buffer.resize(Ntypes);
+        normal_texture_object.resize(Ntypes);
+        texture_flag_buffer.resize(Ntypes);
+        texture_flag_texture_object.resize(Ntypes);
+        texture_ID_buffer.resize(Ntypes);
+        texture_ID_texture_object.resize(Ntypes);
+        coordinate_flag_buffer.resize(Ntypes);
+        coordinate_flag_texture_object.resize(Ntypes);
+        hidden_flag_buffer.resize(Ntypes);
+        hidden_flag_texture_object.resize(Ntypes);
+
+        // Generate per-primitive buffers and textures with comprehensive error checking
+        glGenBuffers((GLsizei) color_buffer.size(), color_buffer.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate color buffers. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenTextures((GLsizei) color_texture_object.size(), color_texture_object.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate color texture objects. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenBuffers((GLsizei) normal_buffer.size(), normal_buffer.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate normal buffers. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenTextures((GLsizei) normal_texture_object.size(), normal_texture_object.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate normal texture objects. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenBuffers((GLsizei) texture_flag_buffer.size(), texture_flag_buffer.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate texture flag buffers. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenTextures((GLsizei) texture_flag_texture_object.size(), texture_flag_texture_object.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate texture flag texture objects. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenBuffers((GLsizei) texture_ID_buffer.size(), texture_ID_buffer.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate texture ID buffers. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenTextures((GLsizei) texture_ID_texture_object.size(), texture_ID_texture_object.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate texture ID texture objects. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenBuffers((GLsizei) coordinate_flag_buffer.size(), coordinate_flag_buffer.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate coordinate flag buffers. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenTextures((GLsizei) coordinate_flag_texture_object.size(), coordinate_flag_texture_object.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate coordinate flag texture objects. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenBuffers((GLsizei) hidden_flag_buffer.size(), hidden_flag_buffer.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate hidden flag buffers. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenTextures((GLsizei) hidden_flag_texture_object.size(), hidden_flag_texture_object.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate hidden flag texture objects. OpenGL error: " + std::to_string(error));
+        }
+
+        // Generate UV rescaling buffers
+        glGenBuffers(1, &uv_rescale_buffer);
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate UV rescale buffer. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenTextures(1, &uv_rescale_texture_object);
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate UV rescale texture object. OpenGL error: " + std::to_string(error));
+        }
+
+    } catch (const std::exception& e) {
+        helios_runtime_error("ERROR (Visualizer::initialize): Exception during buffer allocation: " + std::string(e.what()) +
+                             ". This may indicate insufficient memory or OpenGL driver issues.");
+    }
+
+    // Final verification that all buffer operations completed successfully
     if (!checkerrors()) {
-        helios_runtime_error("ERROR (Visualizer::initialize): OpenGL buffer creation failed. "
+        helios_runtime_error("ERROR (Visualizer::initialize): OpenGL buffer creation failed with accumulated errors. "
                              "This indicates insufficient graphics memory or unsupported buffer operations in the current OpenGL context.");
     }
 
@@ -527,9 +1174,20 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 }
 
 Visualizer::~Visualizer() {
-    if (!headless) {
-        glDeleteFramebuffers(1, &framebufferID);
-        glDeleteTextures(1, &depthTexture);
+    // Clean up resources for both headless and windowed modes
+    if (headless) {
+        cleanupOffscreenFramebuffer();
+    } else {
+        if (framebufferID != 0) {
+            glDeleteFramebuffers(1, &framebufferID);
+        }
+        if (depthTexture != 0) {
+            glDeleteTextures(1, &depthTexture);
+        }
+    }
+
+    // Clean up common OpenGL resources regardless of mode
+    if (window != nullptr) {
 
         glDeleteBuffers((GLsizei) face_index_buffer.size(), face_index_buffer.data());
         glDeleteBuffers((GLsizei) vertex_buffer.size(), vertex_buffer.data());

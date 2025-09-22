@@ -647,6 +647,48 @@ TEST_CASE("Object Management") {
         DOCTEST_CHECK(!ctx.doesObjectExist(obj2));
     }
 
+    SUBCASE("copy object with texture override preserves color") {
+        Context ctx;
+
+        // Create a tile with texture
+        std::vector<uint> UUIDs = ctx.addTile(nullorigin, make_vec2(1,1), nullrotation, make_int2(2,2), "lib/images/disk_texture.png");
+
+        // Set color and override texture
+        RGBcolor green_color = make_RGBcolor(0, 1, 0);
+        ctx.setPrimitiveColor(UUIDs, green_color);
+        ctx.overridePrimitiveTextureColor(UUIDs);
+
+        // Create object from primitives
+        uint objID = ctx.addPolymeshObject(UUIDs);
+
+        // Verify original object has correct color and texture override
+        DOCTEST_CHECK(ctx.getPrimitiveColor(UUIDs[0]) == green_color);
+        DOCTEST_CHECK(ctx.isPrimitiveTextureColorOverridden(UUIDs[0]));
+
+        // Copy the object
+        uint objID_copy = ctx.copyObject(objID);
+        std::vector<uint> UUIDs_copy = ctx.getObjectPrimitiveUUIDs(objID_copy);
+
+        // Verify copied object preserves both color and texture override
+        DOCTEST_CHECK(ctx.getPrimitiveColor(UUIDs_copy[0]) == green_color);
+        DOCTEST_CHECK(ctx.isPrimitiveTextureColorOverridden(UUIDs_copy[0]));
+
+        // Test with Triangle as well
+        uint triangle = ctx.addTriangle(make_vec3(0,0,0), make_vec3(1,0,0), make_vec3(0,1,0), "lib/images/disk_texture.png",
+                                      make_vec2(0,0), make_vec2(1,0), make_vec2(0,1));
+        RGBcolor blue_color = make_RGBcolor(0, 0, 1);
+        ctx.setPrimitiveColor(triangle, blue_color);
+        ctx.overridePrimitiveTextureColor(triangle);
+
+        std::vector<uint> triangle_UUIDs = {triangle};
+        uint triangle_obj = ctx.addPolymeshObject(triangle_UUIDs);
+        uint triangle_obj_copy = ctx.copyObject(triangle_obj);
+        std::vector<uint> triangle_UUIDs_copy = ctx.getObjectPrimitiveUUIDs(triangle_obj_copy);
+
+        DOCTEST_CHECK(ctx.getPrimitiveColor(triangle_UUIDs_copy[0]) == blue_color);
+        DOCTEST_CHECK(ctx.isPrimitiveTextureColorOverridden(triangle_UUIDs_copy[0]));
+    }
+
     SUBCASE("domain cropping") {
         capture_cerr cerr_buffer;
         Context ctx;

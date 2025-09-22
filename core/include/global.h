@@ -1169,6 +1169,14 @@ namespace helios {
      */
     [[nodiscard]] bool validateOutputPath(std::string &output_directory, const std::vector<std::string> &allowable_file_extensions = {});
 
+    //! Check whether a path string represents a directory path (as opposed to a file path)
+    /**
+     * \param[in] path String containing the path to check
+     * \return True if the path represents a directory, false if it represents a file
+     * \note This function uses multiple heuristics: trailing slash, existing filesystem paths, and common file extensions
+     */
+    [[nodiscard]] bool isDirectoryPath(const std::string &path);
+
     //--------------------- ASSET PATH RESOLUTION -----------------------------------//
 
     //! Resolve asset file path using cpplocate, allowing executables to run from any directory
