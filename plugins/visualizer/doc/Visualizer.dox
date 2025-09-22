@@ -43,7 +43,13 @@
  
  \section VisIssues Known Issues
 
- - None currently known. Large point clouds are supported with automatic culling optimization.
+ - **macOS OpenGL Warning in Headless Mode**: When using headless rendering on macOS, you may see a warning like:
+   ```
+   UNSUPPORTED (log once): POSSIBLE ISSUE: unit 6 GLD_TEXTURE_INDEX_2D is unloadable and bound to sampler type (Float) - using zero texture because texture unloadable
+   ```
+   This is a harmless driver warning from the macOS OpenGL implementation and does not affect rendering functionality. It appears once per run and can be safely ignored.
+
+ - Large point clouds are supported with automatic culling optimization.
 
  \section VisIntro Introduction
 
@@ -101,7 +107,7 @@
 
   ~~~~~~{.cpp}
    #include "Visualizer.h"
-	
+
    int main(){
       Visualizer vis( 1200 );
       vis.plotUpdate(); //we have not added geometry, so window is blank
@@ -109,6 +115,47 @@
       vis.closeWindow();
     }
   ~~~~~~
+
+ \subsection Headless Headless Rendering
+
+ The Visualizer supports headless rendering for server environments or automated workflows where no display is available. Headless mode enables all visualization and image export functionality without requiring a graphics display or user interaction.
+
+ <b>Enabling Headless Mode:</b>
+
+ Headless mode is enabled through the constructor by setting the `headless` parameter to `true`:
+
+ ~~~~~~{.cpp}
+ #include "Visualizer.h"
+
+ int main(){
+     // Enable headless mode (5th parameter = true)
+     Visualizer vis( 1200, 800, 8, true, true );
+
+     // All visualization functions work normally
+     vis.buildContextGeometry(&context);
+     vis.setCameraPosition( make_vec3(0,0,5), make_vec3(0,0,0) );
+     vis.plotUpdate(true);
+     vis.printWindow("headless_output.jpg");
+ }
+ ~~~~~~
+
+ <b>Key Features:</b>
+ - Full OpenGL rendering using offscreen framebuffers
+ - All geometry types and visual effects supported
+ - Image export via \ref Visualizer::printWindow() "printWindow()" and \ref Visualizer::getWindowPixelsRGB() "getWindowPixelsRGB()"
+ - No display or window manager required
+ - Identical visual output to windowed mode
+
+ <b>Important Notes:</b>
+ - When in headless mode, calling \ref Visualizer::plotUpdate(false) "plotUpdate(false)" (requesting visible window) will issue a warning and continue with offscreen rendering
+ - Always use \ref Visualizer::plotUpdate(true) "plotUpdate(true)" for headless workflows to avoid warnings
+ - \ref Visualizer::plotInteractive() "plotInteractive()" is not available in headless mode
+
+ <b>Use Cases:</b>
+ - Automated visualization pipelines on servers
+ - Batch processing of simulation results
+ - Integration with cloud computing environments
+ - Continuous integration testing of visualization features
 
  <!-- \subsection Layer Layers
 

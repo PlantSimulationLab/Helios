@@ -137,7 +137,7 @@ TEST_CASE("OBJ File Writing - Basic Functionality") {
 
         // Write to OBJ file
         std::string output_file = "lib/models/test_output_simple.obj";
-        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), original_uuids, true));
+        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), original_uuids, false, true));
 
         // Verify file was created
         std::ifstream file_check(output_file);
@@ -179,7 +179,7 @@ TEST_CASE("OBJ File Writing - Basic Functionality") {
 
         // Write all primitives
         std::string output_file = "lib/models/test_output_all.obj";
-        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str()));
+        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), true, true));
 
         // Verify file was created and has content
         std::ifstream file_check(output_file);
@@ -242,7 +242,7 @@ TEST_CASE("OBJ File I/O - Error Handling and Edge Cases") {
 
         // Try to write to invalid path
         std::vector<uint> test_uuids = {tri};
-        DOCTEST_CHECK_THROWS(ctx.writeOBJ("/invalid/path/test.obj", test_uuids, true));
+        DOCTEST_CHECK_THROWS(ctx.writeOBJ("/invalid/path/test.obj", test_uuids, true, true));
     }
 
     SUBCASE("Write with invalid UUIDs") {
@@ -250,7 +250,7 @@ TEST_CASE("OBJ File I/O - Error Handling and Edge Cases") {
         std::vector<uint> invalid_uuids = {999, 1000}; // Non-existent UUIDs
 
         // Should throw exception for invalid UUIDs (fail-fast philosophy)
-        DOCTEST_CHECK_THROWS(ctx.writeOBJ("lib/models/test_invalid_uuid.obj", invalid_uuids, true));
+        DOCTEST_CHECK_THROWS(ctx.writeOBJ("lib/models/test_invalid_uuid.obj", invalid_uuids, false, true));
 
         // Clean up if file was created
         std::remove("lib/models/test_invalid_uuid.obj");
@@ -672,7 +672,7 @@ TEST_CASE("OBJ File I/O - Performance Benchmarking") {
         // Benchmark writing
         std::string output_file = "lib/models/test_perf_output.obj";
         auto start = std::chrono::high_resolution_clock::now();
-        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids));
+        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids, false, true));
         auto end = std::chrono::high_resolution_clock::now();
 
         auto write_duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
@@ -697,15 +697,15 @@ TEST_CASE("OBJ File I/O - Correctness Validation") {
 
         // Write to new file
         std::string intermediate_file = "lib/models/test_roundtrip.obj";
-        DOCTEST_CHECK_NOTHROW(ctx1.writeOBJ(intermediate_file.c_str(), original_uuids, true));
+        DOCTEST_CHECK_NOTHROW(ctx1.writeOBJ(intermediate_file.c_str(), original_uuids, false, true));
 
         // Load the written file
         std::vector<uint> roundtrip_uuids;
-        DOCTEST_CHECK_NOTHROW(roundtrip_uuids = ctx2.loadOBJ(intermediate_file.c_str(), true));
+        DOCTEST_CHECK_NOTHROW(roundtrip_uuids = ctx2.loadOBJ(intermediate_file.c_str(),  true));
 
         // Write again
         std::string final_file = "lib/models/test_roundtrip2.obj";
-        DOCTEST_CHECK_NOTHROW(ctx2.writeOBJ(final_file.c_str(), roundtrip_uuids, true));
+        DOCTEST_CHECK_NOTHROW(ctx2.writeOBJ(final_file.c_str(), roundtrip_uuids, false, true));
 
         // Load final file
         std::vector<uint> final_uuids;
@@ -747,7 +747,7 @@ TEST_CASE("OBJ File I/O - Correctness Validation") {
 
         // Write and reload
         std::string output_file = "lib/models/test_material_preservation.obj";
-        DOCTEST_CHECK_NOTHROW(ctx1.writeOBJ(output_file.c_str(), original_uuids, true));
+        DOCTEST_CHECK_NOTHROW(ctx1.writeOBJ(output_file.c_str(), original_uuids, false, true));
 
         std::vector<uint> reloaded_uuids;
         DOCTEST_CHECK_NOTHROW(reloaded_uuids = ctx2.loadOBJ(output_file.c_str(), true));
@@ -854,7 +854,7 @@ TEST_CASE("OBJ WriteOBJ - Comprehensive Test Suite for Optimization") {
         std::vector<uint> uuids = createTestDataset(ctx, "simple_triangles", 50);
 
         std::string output_file = "test_writeobj_small.obj";
-        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids));
+        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids, false, true));
 
         // Verify round-trip correctness
         Context ctx_reload;
@@ -873,7 +873,7 @@ TEST_CASE("OBJ WriteOBJ - Comprehensive Test Suite for Optimization") {
         std::vector<uint> uuids = createTestDataset(ctx, "mixed_primitives", 100);
 
         std::string output_file = "test_writeobj_mixed.obj";
-        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids));
+        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids, false, true));
 
         // Verify round-trip correctness
         Context ctx_reload;
@@ -893,7 +893,7 @@ TEST_CASE("OBJ WriteOBJ - Comprehensive Test Suite for Optimization") {
         std::vector<uint> uuids = createTestDataset(ctx, "textured_primitives", 75);
 
         std::string output_file = "test_writeobj_textured.obj";
-        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids));
+        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids, false, true));
 
         // Verify round-trip correctness
         Context ctx_reload;
@@ -913,7 +913,7 @@ TEST_CASE("OBJ WriteOBJ - Comprehensive Test Suite for Optimization") {
         std::vector<uint> uuids = createTestDataset(ctx, "multi_material", 200);
 
         std::string output_file = "test_writeobj_materials.obj";
-        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids, true));
+        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids, false, true));
 
         // Verify MTL file was created and contains multiple materials
         std::string mtl_file = "test_writeobj_materials.mtl";
@@ -941,7 +941,7 @@ TEST_CASE("OBJ WriteOBJ - Comprehensive Test Suite for Optimization") {
         std::vector<uint> uuids = createTestDataset(ctx, "object_groups", 100);
 
         std::string output_file = "test_writeobj_groups.obj";
-        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids, true));
+        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids, false, true));
 
         // Verify OBJ file contains object group directives
         std::ifstream obj_check(output_file);
@@ -971,7 +971,7 @@ TEST_CASE("OBJ WriteOBJ - Performance Benchmarking Suite") {
         std::string output_file = "bench_" + test_name + ".obj";
 
         auto start = std::chrono::high_resolution_clock::now();
-        ctx.writeOBJ(output_file.c_str(), uuids);
+        ctx.writeOBJ(output_file.c_str(), uuids, false, true);
         auto end = std::chrono::high_resolution_clock::now();
 
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
@@ -1055,7 +1055,7 @@ TEST_CASE("OBJ WriteOBJ - Performance Benchmarking Suite") {
         std::string output_file = "bench_memory_test.obj";
 
         // This test primarily verifies no memory leaks or excessive allocation
-        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids));
+        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids, false, true));
 
         // Verify file was created with reasonable size
         std::ifstream file_check(output_file, std::ios::ate);
@@ -1088,7 +1088,7 @@ TEST_CASE("OBJ WriteOBJ - Stress Testing and Edge Cases") {
         std::string output_file = "stress_large.obj";
 
         auto start = std::chrono::high_resolution_clock::now();
-        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids));
+        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids, false, true));
         auto end = std::chrono::high_resolution_clock::now();
 
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
@@ -1121,7 +1121,7 @@ TEST_CASE("OBJ WriteOBJ - Stress Testing and Edge Cases") {
         }
 
         std::string output_file = "stress_materials.obj";
-        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids));
+        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids, false, true));
 
         // Verify many materials were created
         std::string mtl_file = "stress_materials.mtl";
@@ -1162,7 +1162,7 @@ TEST_CASE("OBJ WriteOBJ - Stress Testing and Edge Cases") {
         }
 
         std::string output_file = "stress_degenerate.obj";
-        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids));
+        DOCTEST_CHECK_NOTHROW(ctx.writeOBJ(output_file.c_str(), uuids, false, true));
 
         // Verify file was written correctly by checking it exists and has content
         std::ifstream file_check(output_file);
@@ -1181,5 +1181,76 @@ TEST_CASE("OBJ WriteOBJ - Stress Testing and Edge Cases") {
         // Clean up
         std::remove(output_file.c_str());
         std::remove("stress_degenerate.mtl");
+    }
+}
+
+TEST_CASE("OBJ Material Color Override Test") {
+    SUBCASE("Material with Kd color and map_d transparency should use correct color") {
+        Context ctx;
+
+        // Create a simple OBJ file with a material that has both Kd (diffuse color) and map_d (transparency map)
+        std::string obj_content = R"(# Test OBJ file for material color override bug
+mtllib test_material_color.mtl
+o TestObject
+v 0.0 0.0 0.0
+v 1.0 0.0 0.0
+v 0.5 1.0 0.0
+vt 0.0 0.0
+vt 1.0 0.0
+vt 0.5 1.0
+usemtl TestMaterial
+f 1/1 2/2 3/3
+)";
+
+        // Create a test MTL file with blue diffuse color and transparency map
+        std::string mtl_content = R"(# Test MTL file for material color override bug
+newmtl TestMaterial
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.000000 0.000000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 2
+map_d lib/images/solid.jpg
+)";
+
+        // Write test files
+        std::ofstream obj_file("lib/models/test_material_color.obj");
+        obj_file << obj_content;
+        obj_file.close();
+
+        std::ofstream mtl_file("lib/models/test_material_color.mtl");
+        mtl_file << mtl_content;
+        mtl_file.close();
+
+        // Load the OBJ file with a default color (green) to ensure materials override it properly
+        std::vector<uint> UUIDs;
+        RGBcolor default_color = RGB::green;
+        DOCTEST_CHECK_NOTHROW(UUIDs = ctx.loadOBJ("lib/models/test_material_color.obj", make_vec3(0,0,0), make_vec3(1,1,1), nullrotation, default_color, "ZUP", true));
+        DOCTEST_CHECK(UUIDs.size() == 1);
+
+        // Verify that the triangle was loaded
+        DOCTEST_CHECK(ctx.doesPrimitiveExist(UUIDs[0]));
+        DOCTEST_CHECK(ctx.getPrimitiveType(UUIDs[0]) == PRIMITIVE_TYPE_TRIANGLE);
+
+        // Check that the primitive has a texture (the map_d transparency texture)
+        std::string texture_file = ctx.getPrimitiveTextureFile(UUIDs[0]);
+        DOCTEST_CHECK(!texture_file.empty());
+
+        // Most importantly: check that the color is BLUE (from Kd), not RED (old bug) or GREEN (default)
+        RGBcolor primitive_color = ctx.getPrimitiveColor(UUIDs[0]);
+
+        // The material specified Kd 0.000000 0.000000 0.800000 (blue)
+        DOCTEST_CHECK(primitive_color.r == doctest::Approx(0.0f).epsilon(1e-5));
+        DOCTEST_CHECK(primitive_color.g == doctest::Approx(0.0f).epsilon(1e-5));
+        DOCTEST_CHECK(primitive_color.b == doctest::Approx(0.8f).epsilon(1e-5));
+
+        // Verify that texture color is overridden (because only map_d was specified, not map_Kd)
+        DOCTEST_CHECK(ctx.isPrimitiveTextureColorOverridden(UUIDs[0]));
+
+        // Clean up test files
+        std::remove("lib/models/test_material_color.obj");
+        std::remove("lib/models/test_material_color.mtl");
     }
 }

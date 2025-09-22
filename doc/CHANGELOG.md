@@ -1,5 +1,30 @@
 # Changelog
 
+# [1.3.50] 2025-09-22
+
+- Updated PugiXML library from version 1.7 to 1.15 with compact mode and XPath disabled for improved performance
+
+## Context
+- Fixed a bug in `Context::loadOBJ()` where materials that have a texture mask (`map_d`) and a diffuse color `Kd` were not being loaded correctly. The texture was being applied but it was using the default color.
+- Fixed a bug where copied primitives with texture color overridden were not copying the constant RGB color.
+- Enhanced OBJ/MTL loading system with improved default color handling in `loadMTL()` function
+- Added `isDirectoryPath()` utility function to distinguish between directory and file paths using multiple heuristics
+
+## Plant Architecture
+- Fixed a bug that could cause plant parameter contamination between different plant types in the scene.
+- Added Bougainvillea flower 3D model assets (OBJ/MTL files and Blender source)
+- Updated strawberry and tomato fruit models with improved geometry
+- Enhanced documentation with collision detection schematics and perception cone diagrams
+
+## Visualizer
+- Fixes to headless rendering mode, including ability to save images without opening a window
+- Significant changes to front/back buffer detection hopefully to fix issues with `Visualizer::printWindow()` producing black images. Automated tests added for this in headless and windowed mode.
+- Improved shader management and geometry handling
+- Enhanced documentation with updated API references
+
+## Radiation
+- Updates to RadiationCamera file path discovery to check whether the file is a directory or file, and handle accordingly
+
 # [1.3.49] 2025-09-11
 
 - Ran `.clang-format` on all source files to ensure consistent code formatting.

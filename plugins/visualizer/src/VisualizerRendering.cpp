@@ -58,17 +58,40 @@ void Visualizer::printWindow(const char *outfile) const {
         helios_runtime_error("ERROR (Visualizer::printWindow): Output path is not valid or does not have a valid image extension (.jpeg, .jpg).");
     }
 
-    // Don't swap buffers again - content is already displayed by plotUpdate()
-    // Just ensure rendering is complete and read from the front buffer
+    // Ensure window is visible and rendering is complete
     if (window != nullptr && !headless) {
+        // Check if window is minimized or occluded
+        int window_attrib = glfwGetWindowAttrib((GLFWwindow*)window, GLFW_ICONIFIED);
+        if (window_attrib == GLFW_TRUE) {
+            std::cerr << "WARNING (printWindow): Window is minimized - screenshot may be unreliable" << std::endl;
+        }
+
         glfwPollEvents();
     }
 
-    // Ensure rendering is complete
+    // Additional safety: ensure all OpenGL commands have completed
     glFinish();
 
-    // Read pixels from front buffer (where the displayed content is)
-    write_JPEG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, message_flag);
+    // Handle screenshot differently based on headless mode
+    if (headless && offscreenFramebufferID != 0) {
+        // In headless mode, read pixels from the offscreen framebuffer
+        std::vector<helios::RGBcolor> pixels = readOffscreenPixels();
+        if (pixels.empty()) {
+            helios_runtime_error("ERROR (Visualizer::printWindow): Failed to read pixels from offscreen framebuffer.");
+        }
+
+        // Use the overloaded write_JPEG_file that accepts RGBcolor data
+        int result = write_JPEG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, pixels, message_flag);
+        if (result == 0) {
+            helios_runtime_error("ERROR (Visualizer::printWindow): Failed to save screenshot to " + outfile_str);
+        }
+    } else {
+        // In windowed mode, use the traditional framebuffer reading
+        int result = write_JPEG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, message_flag);
+        if (result == 0) {
+            helios_runtime_error("ERROR (Visualizer::printWindow): Failed to save screenshot to " + outfile_str);
+        }
+    }
 }
 
 void Visualizer::displayImage(const std::vector<unsigned char> &pixel_data, uint width_pixels, uint height_pixels) {
@@ -128,19 +151,112 @@ void Visualizer::displayImage(const std::string &file_name) {
 }
 
 void Visualizer::getWindowPixelsRGB(uint *buffer) const {
+    // Validate framebuffer completeness
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        helios_runtime_error("ERROR (getWindowPixelsRGB): Framebuffer is not complete");
+    }
+
     std::vector<GLubyte> buff;
     buff.resize(3 * Wframebuffer * Hframebuffer);
 
-#if defined(__APPLE__)
-    constexpr GLenum read_buf = GL_FRONT;
-#else
-    constexpr GLenum read_buf = GL_BACK;
-#endif
-    glReadBuffer(read_buf);
-    glReadPixels(0, 0, GLsizei(Wframebuffer), GLsizei(Hframebuffer), GL_RGB, GL_UNSIGNED_BYTE, &buff[0]);
-    glFinish();
+    // Set proper pixel alignment
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
-    // assert( checkerrors() );
+    // Handle different pixel reading approaches based on headless mode
+    if (headless && offscreenFramebufferID != 0) {
+        // In headless mode with offscreen framebuffer, ensure we're reading from the correct framebuffer
+        // Bind the offscreen framebuffer to ensure we read from the rendered content
+        GLint current_framebuffer;
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &current_framebuffer);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, offscreenFramebufferID);
+
+        // Framebuffer objects don't use front/back buffer concepts, read directly
+        glReadPixels(0, 0, GLsizei(Wframebuffer), GLsizei(Hframebuffer), GL_RGB, GL_UNSIGNED_BYTE, &buff[0]);
+        GLenum error = glGetError();
+
+        // Restore the previous framebuffer binding
+        glBindFramebuffer(GL_FRAMEBUFFER, current_framebuffer);
+
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (getWindowPixelsRGB): glReadPixels failed in headless mode (error: " + std::to_string(error) + ")");
+        }
+    } else {
+        // In windowed mode, robustly determine which buffer contains rendered content
+        // Sample multiple pixels to avoid false negatives from legitimately black pixels
+        const int num_samples = 9;
+        const uint sample_positions[][2] = {
+            {Wframebuffer/4, Hframebuffer/4}, {Wframebuffer/2, Hframebuffer/4}, {3*Wframebuffer/4, Hframebuffer/4},
+            {Wframebuffer/4, Hframebuffer/2}, {Wframebuffer/2, Hframebuffer/2}, {3*Wframebuffer/4, Hframebuffer/2},
+            {Wframebuffer/4, 3*Hframebuffer/4}, {Wframebuffer/2, 3*Hframebuffer/4}, {3*Wframebuffer/4, 3*Hframebuffer/4}
+        };
+        GLubyte test_pixels[num_samples * 3];
+
+        auto count_non_black_pixels = [](const GLubyte* pixels, int count) -> int {
+            int non_black = 0;
+            for (int i = 0; i < count * 3; i += 3) {
+                if (pixels[i] > 5 || pixels[i+1] > 5 || pixels[i+2] > 5) { // Use small threshold to account for compression artifacts
+                    non_black++;
+                }
+            }
+            return non_black;
+        };
+
+        int back_buffer_content_score = 0;
+        int front_buffer_content_score = 0;
+
+        // Test back buffer with multiple samples
+        glReadBuffer(GL_BACK);
+        GLenum error = glGetError();
+        if (error == GL_NO_ERROR) {
+            glFinish();
+            for (int i = 0; i < num_samples; i++) {
+                glReadPixels(sample_positions[i][0], sample_positions[i][1], 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &test_pixels[i*3]);
+            }
+            if (glGetError() == GL_NO_ERROR) {
+                back_buffer_content_score = count_non_black_pixels(test_pixels, num_samples);
+            }
+        }
+
+        // Test front buffer with multiple samples
+        glReadBuffer(GL_FRONT);
+        error = glGetError();
+        if (error == GL_NO_ERROR) {
+            glFinish();
+            for (int i = 0; i < num_samples; i++) {
+                glReadPixels(sample_positions[i][0], sample_positions[i][1], 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &test_pixels[i*3]);
+            }
+            if (glGetError() == GL_NO_ERROR) {
+                front_buffer_content_score = count_non_black_pixels(test_pixels, num_samples);
+            }
+        }
+
+        // Choose the buffer with higher content score, prefer back buffer if scores are equal
+        if (back_buffer_content_score >= front_buffer_content_score && back_buffer_content_score > 0) {
+            glReadBuffer(GL_BACK);
+        } else if (front_buffer_content_score > 0) {
+            glReadBuffer(GL_FRONT);
+        } else {
+            // Neither buffer has detectable content, default to back buffer
+            glReadBuffer(GL_BACK);
+            error = glGetError();
+            if (error != GL_NO_ERROR) {
+                glReadBuffer(GL_FRONT);
+                error = glGetError();
+                if (error != GL_NO_ERROR) {
+                    helios_runtime_error("ERROR (getWindowPixelsRGB): Cannot set read buffer");
+                }
+            }
+        }
+
+        glReadPixels(0, 0, GLsizei(Wframebuffer), GLsizei(Hframebuffer), GL_RGB, GL_UNSIGNED_BYTE, &buff[0]);
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (getWindowPixelsRGB): glReadPixels failed");
+        }
+    }
+
+    glFinish();
 
     for (int i = 0; i < 3 * Wframebuffer * Hframebuffer; i++) {
         buffer[i] = (unsigned int) buff[i];
@@ -696,27 +812,27 @@ void Visualizer::render(bool shadow) const {
     if (triangle_count > 0) {
         glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_BUFFER, color_texture_object.at(triangle_ind));
-        glUniform1i(glGetUniformLocation(current_shader_program, "color_texture_object"), 3);
+        // Note: Uniform location already set during shader initialization
 
         glActiveTexture(GL_TEXTURE4);
         glBindTexture(GL_TEXTURE_BUFFER, normal_texture_object.at(triangle_ind));
-        glUniform1i(glGetUniformLocation(current_shader_program, "normal_texture_object"), 4);
+        // Note: Uniform location already set during shader initialization
 
         glActiveTexture(GL_TEXTURE5);
         glBindTexture(GL_TEXTURE_BUFFER, texture_flag_texture_object.at(triangle_ind));
-        glUniform1i(glGetUniformLocation(current_shader_program, "texture_flag_texture_object"), 5);
+        // Note: Uniform location already set during shader initialization
 
         glActiveTexture(GL_TEXTURE6);
         glBindTexture(GL_TEXTURE_BUFFER, texture_ID_texture_object.at(triangle_ind));
-        glUniform1i(glGetUniformLocation(current_shader_program, "texture_ID_texture_object"), 6);
+        // Note: Uniform location already set during shader initialization
 
         glActiveTexture(GL_TEXTURE7);
         glBindTexture(GL_TEXTURE_BUFFER, coordinate_flag_texture_object.at(triangle_ind));
-        glUniform1i(glGetUniformLocation(current_shader_program, "coordinate_flag_texture_object"), 7);
+        // Note: Uniform location already set during shader initialization
 
         glActiveTexture(GL_TEXTURE8);
         glBindTexture(GL_TEXTURE_BUFFER, hidden_flag_texture_object.at(triangle_ind));
-        glUniform1i(glGetUniformLocation(current_shader_program, "hidden_flag_texture_object"), 8);
+        // Note: Uniform location already set during shader initialization
 
         glBindVertexArray(primaryShader.vertex_array_IDs.at(triangle_ind));
         assert(checkerrors());
@@ -730,27 +846,27 @@ void Visualizer::render(bool shadow) const {
     if (rectangle_count > 0) {
         glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_BUFFER, color_texture_object.at(rectangle_ind));
-        glUniform1i(glGetUniformLocation(current_shader_program, "color_texture_object"), 3);
+        // Note: Uniform location already set during shader initialization
 
         glActiveTexture(GL_TEXTURE4);
         glBindTexture(GL_TEXTURE_BUFFER, normal_texture_object.at(rectangle_ind));
-        glUniform1i(glGetUniformLocation(current_shader_program, "normal_texture_object"), 4);
+        // Note: Uniform location already set during shader initialization
 
         glActiveTexture(GL_TEXTURE5);
         glBindTexture(GL_TEXTURE_BUFFER, texture_flag_texture_object.at(rectangle_ind));
-        glUniform1i(glGetUniformLocation(current_shader_program, "texture_flag_texture_object"), 5);
+        // Note: Uniform location already set during shader initialization
 
         glActiveTexture(GL_TEXTURE6);
         glBindTexture(GL_TEXTURE_BUFFER, texture_ID_texture_object.at(rectangle_ind));
-        glUniform1i(glGetUniformLocation(current_shader_program, "texture_ID_texture_object"), 6);
+        // Note: Uniform location already set during shader initialization
 
         glActiveTexture(GL_TEXTURE7);
         glBindTexture(GL_TEXTURE_BUFFER, coordinate_flag_texture_object.at(rectangle_ind));
-        glUniform1i(glGetUniformLocation(current_shader_program, "coordinate_flag_texture_object"), 7);
+        // Note: Uniform location already set during shader initialization
 
         glActiveTexture(GL_TEXTURE8);
         glBindTexture(GL_TEXTURE_BUFFER, hidden_flag_texture_object.at(rectangle_ind));
-        glUniform1i(glGetUniformLocation(current_shader_program, "hidden_flag_texture_object"), 8);
+        // Note: Uniform location already set during shader initialization
 
         glBindVertexArray(primaryShader.vertex_array_IDs.at(rectangle_ind));
 
@@ -814,27 +930,27 @@ void Visualizer::render(bool shadow) const {
         if (line_count > 0) {
             glActiveTexture(GL_TEXTURE3);
             glBindTexture(GL_TEXTURE_BUFFER, color_texture_object.at(line_ind));
-            glUniform1i(glGetUniformLocation(current_shader_program, "color_texture_object"), 3);
+            // Note: Uniform location already set during shader initialization
 
             glActiveTexture(GL_TEXTURE4);
             glBindTexture(GL_TEXTURE_BUFFER, normal_texture_object.at(line_ind));
-            glUniform1i(glGetUniformLocation(current_shader_program, "normal_texture_object"), 4);
+            // Note: Uniform location already set during shader initialization
 
             glActiveTexture(GL_TEXTURE5);
             glBindTexture(GL_TEXTURE_BUFFER, texture_flag_texture_object.at(line_ind));
-            glUniform1i(glGetUniformLocation(current_shader_program, "texture_flag_texture_object"), 5);
+            // Note: Uniform location already set during shader initialization
 
             glActiveTexture(GL_TEXTURE6);
             glBindTexture(GL_TEXTURE_BUFFER, texture_ID_texture_object.at(line_ind));
-            glUniform1i(glGetUniformLocation(current_shader_program, "texture_ID_texture_object"), 6);
+            // Note: Uniform location already set during shader initialization
 
             glActiveTexture(GL_TEXTURE7);
             glBindTexture(GL_TEXTURE_BUFFER, coordinate_flag_texture_object.at(line_ind));
-            glUniform1i(glGetUniformLocation(current_shader_program, "coordinate_flag_texture_object"), 7);
+            // Note: Uniform location already set during shader initialization
 
             glActiveTexture(GL_TEXTURE8);
             glBindTexture(GL_TEXTURE_BUFFER, hidden_flag_texture_object.at(line_ind));
-            glUniform1i(glGetUniformLocation(current_shader_program, "hidden_flag_texture_object"), 8);
+            // Note: Uniform location already set during shader initialization
 
             glBindVertexArray(primaryShader.vertex_array_IDs.at(line_ind));
 
@@ -875,27 +991,27 @@ void Visualizer::render(bool shadow) const {
         if (point_count > 0) {
             glActiveTexture(GL_TEXTURE3);
             glBindTexture(GL_TEXTURE_BUFFER, color_texture_object.at(point_ind));
-            glUniform1i(glGetUniformLocation(current_shader_program, "color_texture_object"), 3);
+            // Note: Uniform location already set during shader initialization
 
             glActiveTexture(GL_TEXTURE4);
             glBindTexture(GL_TEXTURE_BUFFER, normal_texture_object.at(point_ind));
-            glUniform1i(glGetUniformLocation(current_shader_program, "normal_texture_object"), 4);
+            // Note: Uniform location already set during shader initialization
 
             glActiveTexture(GL_TEXTURE5);
             glBindTexture(GL_TEXTURE_BUFFER, texture_flag_texture_object.at(point_ind));
-            glUniform1i(glGetUniformLocation(current_shader_program, "texture_flag_texture_object"), 5);
+            // Note: Uniform location already set during shader initialization
 
             glActiveTexture(GL_TEXTURE6);
             glBindTexture(GL_TEXTURE_BUFFER, texture_ID_texture_object.at(point_ind));
-            glUniform1i(glGetUniformLocation(current_shader_program, "texture_ID_texture_object"), 6);
+            // Note: Uniform location already set during shader initialization
 
             glActiveTexture(GL_TEXTURE7);
             glBindTexture(GL_TEXTURE_BUFFER, coordinate_flag_texture_object.at(point_ind));
-            glUniform1i(glGetUniformLocation(current_shader_program, "coordinate_flag_texture_object"), 7);
+            // Note: Uniform location already set during shader initialization
 
             glActiveTexture(GL_TEXTURE8);
             glBindTexture(GL_TEXTURE_BUFFER, hidden_flag_texture_object.at(point_ind));
-            glUniform1i(glGetUniformLocation(current_shader_program, "hidden_flag_texture_object"), 8);
+            // Note: Uniform location already set during shader initialization
 
             glBindVertexArray(primaryShader.vertex_array_IDs.at(point_ind));
 
@@ -937,6 +1053,10 @@ void Visualizer::render(bool shadow) const {
         //     glDrawArrays(GL_TRIANGLES, triangle_size+line_size+point_size, positionData["sky"].size()/3 );
         // }
     }
+
+    // Clean up texture units to prevent macOS OpenGL warnings
+    // This helps prevent texture unit binding issues in headless mode
+    glActiveTexture(GL_TEXTURE0);
 }
 
 void Visualizer::plotUpdate() {
@@ -951,6 +1071,13 @@ void Visualizer::plotUpdate(bool hide_window) {
 
     if (message_flag) {
         std::cout << "Updating the plot..." << std::flush;
+    }
+
+    // Warn user if they request visible window in headless mode
+    if (!hide_window && headless) {
+        if (message_flag) {
+            std::cout << "\nWARNING: plotUpdate(false) called in headless mode - window cannot be displayed. Use plotUpdate(true) for headless rendering." << std::endl;
+        }
     }
 
     if (!hide_window && !headless && window != nullptr) {
@@ -1034,9 +1161,16 @@ void Visualizer::plotUpdate(bool hide_window) {
 
     assert(checkerrors());
 
-    // Render to the screen
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, Wframebuffer, Hframebuffer);
+    // Render to the screen or offscreen framebuffer depending on headless mode
+    if (headless && offscreenFramebufferID != 0) {
+        // Render to offscreen framebuffer for headless mode
+        glBindFramebuffer(GL_FRAMEBUFFER, offscreenFramebufferID);
+        glViewport(0, 0, Wframebuffer, Hframebuffer);
+    } else {
+        // Render to the default framebuffer for windowed mode
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, Wframebuffer, Hframebuffer);
+    }
 
     glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, 0.0f);
 
@@ -1065,15 +1199,18 @@ void Visualizer::plotUpdate(bool hide_window) {
 
     render(false);
 
-    glfwPollEvents();
-    getViewKeystrokes(camera_eye_location, camera_lookat_center);
+    // Skip window-specific operations in headless mode
+    if (!headless && window != nullptr) {
+        glfwPollEvents();
+        getViewKeystrokes(camera_eye_location, camera_lookat_center);
 
-    int width, height;
-    glfwGetFramebufferSize((GLFWwindow *) window, &width, &height);
-    Wframebuffer = width;
-    Hframebuffer = height;
+        int width, height;
+        glfwGetFramebufferSize((GLFWwindow *) window, &width, &height);
+        Wframebuffer = width;
+        Hframebuffer = height;
 
-    glfwSwapBuffers((GLFWwindow *) window);
+        glfwSwapBuffers((GLFWwindow *) window);
+    }
 
     if (message_flag) {
         std::cout << "done." << std::endl;
@@ -1328,6 +1465,23 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
 
     // Texture (u,v) rescaling factor
     uvRescaleUniform = glGetUniformLocation(shaderID, "uv_rescale");
+
+    // Cache texture buffer uniform locations to avoid glGetUniformLocation during rendering
+    // This prevents macOS OpenGL warnings about texture unit binding issues
+    colorTextureObjectUniform = glGetUniformLocation(shaderID, "color_texture_object");
+    normalTextureObjectUniform = glGetUniformLocation(shaderID, "normal_texture_object");
+    textureFlagTextureObjectUniform = glGetUniformLocation(shaderID, "texture_flag_texture_object");
+    textureIDTextureObjectUniform = glGetUniformLocation(shaderID, "texture_ID_texture_object");
+    coordinateFlagTextureObjectUniform = glGetUniformLocation(shaderID, "coordinate_flag_texture_object");
+    hiddenFlagTextureObjectUniform = glGetUniformLocation(shaderID, "hidden_flag_texture_object");
+
+    // Set the texture unit assignments for texture buffers
+    if (colorTextureObjectUniform >= 0) glUniform1i(colorTextureObjectUniform, 3);
+    if (normalTextureObjectUniform >= 0) glUniform1i(normalTextureObjectUniform, 4);
+    if (textureFlagTextureObjectUniform >= 0) glUniform1i(textureFlagTextureObjectUniform, 5);
+    if (textureIDTextureObjectUniform >= 0) glUniform1i(textureIDTextureObjectUniform, 6);
+    if (coordinateFlagTextureObjectUniform >= 0) glUniform1i(coordinateFlagTextureObjectUniform, 7);
+    if (hiddenFlagTextureObjectUniform >= 0) glUniform1i(hiddenFlagTextureObjectUniform, 8);
 
     assert(checkerrors());
 

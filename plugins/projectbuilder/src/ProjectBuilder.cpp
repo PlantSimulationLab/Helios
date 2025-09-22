@@ -793,7 +793,7 @@ void ProjectBuilder::record() {
                             }
                         }
                         for (auto &box_pair: bounding_boxes_map)
-                            radiation->writeImageBoundingBoxes_ObjectData(cameralabel, box_pair.first, box_pair.second, band_group_ + std::to_string(i), image_dir + rig_label + '/', true);
+                            radiation->writeImageBoundingBoxes(cameralabel, box_pair.first, box_pair.second, band_group_ + std::to_string(i), "classes.txt", image_dir + rig_label + '/');
                     }
                     //
                 }

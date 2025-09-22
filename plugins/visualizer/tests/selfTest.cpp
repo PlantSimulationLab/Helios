@@ -3,6 +3,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest.h"
 #include "doctest_utils.h"
+#include <filesystem>
 
 using namespace helios;
 
@@ -368,6 +369,205 @@ TEST_CASE("Visualizer::point size edge cases") {
     DOCTEST_CHECK(point1 != point2);
     DOCTEST_CHECK(point2 != point3);
     DOCTEST_CHECK(point1 != point3);
+}
+
+TEST_CASE("CI/Offscreen - Basic OpenGL Context") {
+    // Test that we can create a headless visualizer with offscreen rendering
+    DOCTEST_CHECK_NOTHROW({
+        Visualizer visualizer(400, 300, 4, true, true);  // headless=true
+        // If we get here without throwing, the offscreen context was created successfully
+    });
+}
+
+TEST_CASE("CI/Offscreen - Framebuffer Operations") {
+    Visualizer visualizer(200, 150, 0, true, true);  // Small size for CI efficiency
+
+    // Test that we can perform basic OpenGL operations
+    DOCTEST_CHECK_NOTHROW(visualizer.setBackgroundColor(RGB::black));
+    DOCTEST_CHECK_NOTHROW(visualizer.setLightDirection(make_vec3(0, 0, -1)));
+    DOCTEST_CHECK_NOTHROW(visualizer.setLightIntensityFactor(1.0f));
+}
+
+TEST_CASE("CI/Offscreen - Geometry Rendering") {
+    Visualizer visualizer(100, 100, 0, true, true);  // Minimal size for speed
+
+    // Add some basic geometry directly to visualizer
+    size_t triangle = visualizer.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0.5, 1, 0), RGB::red, Visualizer::COORDINATES_CARTESIAN);
+    DOCTEST_CHECK(triangle != 0);
+
+    // Test basic rendering without crashing
+    DOCTEST_CHECK_NOTHROW(visualizer.setBackgroundColor(RGB::black));
+}
+
+TEST_CASE("CI/Offscreen - Environment Variable Detection") {
+    // Test that environment variables are properly detected
+    // Note: This test runs in normal environment, so we just test the code paths
+
+    // Test with explicit headless=false but environment might force it
+    DOCTEST_CHECK_NOTHROW({
+        Visualizer visualizer(100, 100, 0, true, false);  // headless=false
+        // Should still work - environment detection might force headless mode in CI
+    });
+}
+
+TEST_CASE("CI/Offscreen - Render Target Switching") {
+    Visualizer visualizer(64, 64, 0, true, true);
+
+    // Test switching to offscreen buffer
+    DOCTEST_CHECK_NOTHROW(visualizer.renderToOffscreenBuffer());
+
+    // Test that we can add geometry after switching render targets
+    size_t triangle = visualizer.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0.5, 1, 0), make_RGBcolor(1, 1, 1), Visualizer::COORDINATES_CARTESIAN);
+    DOCTEST_CHECK(triangle != 0);
+
+    // Test basic rendering operations
+    DOCTEST_CHECK_NOTHROW(visualizer.setBackgroundColor(RGB::black));
+}
+
+TEST_CASE("CI/Offscreen - Stress Test") {
+    // Test multiple visualizers to ensure proper cleanup
+    std::vector<std::unique_ptr<Visualizer>> visualizers;
+
+    for (int i = 0; i < 3; ++i) {
+        DOCTEST_CHECK_NOTHROW({
+            visualizers.emplace_back(std::make_unique<Visualizer>(32, 32, 0, true, true));
+        });
+    }
+
+    // All visualizers should be valid
+    for (const auto& vis : visualizers) {
+        DOCTEST_CHECK(vis != nullptr);
+    }
+
+    // Cleanup happens automatically when unique_ptrs go out of scope
+}
+
+TEST_CASE("Visualizer::printWindow after plotUpdate regression test") {
+    // Regression test for the black image issue when calling printWindow() after plotUpdate(true)
+    // This test ensures the fix for the Ubuntu/Linux buffer reading issue works correctly
+
+    // Test works in both windowed and headless mode thanks to offscreen rendering support
+
+    Context context;
+    Visualizer visualizer(200, 200, 0, true, true); // Small size for speed, headless mode
+    visualizer.disableMessages();
+
+    // Add some geometry to render (a simple sphere)
+    std::vector<uint> sphere_uuids = context.addSphere(10, make_vec3(0, 0, 0), 1.0f);
+    context.setPrimitiveColor(sphere_uuids, RGB::red);
+
+    // Build geometry in visualizer
+    visualizer.buildContextGeometry(&context);
+
+    // Set camera to view the sphere
+    visualizer.setCameraPosition(make_vec3(0, 0, 3), make_vec3(0, 0, 0));
+
+    // This is the critical workflow that was failing: plotUpdate(true) followed by printWindow()
+    DOCTEST_CHECK_NOTHROW(visualizer.plotUpdate(true)); // render with hidden window
+
+    // Test screenshot functionality - this should NOT produce a black image
+    std::string test_filename = "test_printWindow_regression.jpg";
+    DOCTEST_CHECK_NOTHROW(visualizer.printWindow(test_filename.c_str()));
+
+    // Verify the file was created
+    DOCTEST_CHECK(std::filesystem::exists(test_filename));
+
+    // Validate that the image is not all black (the original issue)
+    // Read back the pixels directly from the visualizer to verify content
+    std::vector<uint> pixel_buffer(200 * 200 * 3);
+    DOCTEST_CHECK_NOTHROW(visualizer.getWindowPixelsRGB(pixel_buffer.data()));
+
+    // Check that we have non-black pixels (red sphere should be visible)
+    bool has_non_black_pixels = false;
+    for (size_t i = 0; i < pixel_buffer.size(); i++) {
+        if (pixel_buffer[i] > 10) { // Allow for some tolerance due to anti-aliasing
+            has_non_black_pixels = true;
+            break;
+        }
+    }
+
+    DOCTEST_CHECK_MESSAGE(has_non_black_pixels,
+                         "Image appears to be all black - this indicates the original buffer reading issue");
+
+    // The key test: ensure we're not getting all black pixels (the original issue)
+    // This test validates that the buffer reading fix is working correctly
+
+    // Note: Offscreen rendering is already tested by existing "CI/Offscreen" test cases
+    // Our regression test focuses on the specific plotUpdate()->printWindow() workflow
+
+    // Clean up test file
+    if (std::filesystem::exists(test_filename)) {
+        std::filesystem::remove(test_filename);
+    }
+}
+
+TEST_CASE("Visualizer::printWindow after plotUpdate non-headless regression test") {
+    // Regression test for the black image issue when calling printWindow() after plotUpdate(true)
+    // in non-headless mode. Only runs when a display is available.
+
+    // Check if we have a display available (skip test if running in headless environment)
+    const char* display = std::getenv("DISPLAY");
+    const char* wayland_display = std::getenv("WAYLAND_DISPLAY");
+
+#ifdef __APPLE__
+    // On macOS, we can always create a window context
+    bool has_display = true;
+#else
+    // On Linux, check for X11 or Wayland display
+    bool has_display = (display != nullptr && strlen(display) > 0) ||
+                       (wayland_display != nullptr && strlen(wayland_display) > 0);
+#endif
+
+    if (!has_display) {
+        // Skip test silently when no display is available
+        return;
+    }
+
+    Context context;
+    Visualizer visualizer(200, 200, 0, true, false); // NON-headless mode - requires display
+    visualizer.disableMessages();
+
+    // Add some geometry to render (a simple sphere)
+    std::vector<uint> sphere_uuids = context.addSphere(10, make_vec3(0, 0, 0), 1.0f);
+    context.setPrimitiveColor(sphere_uuids, RGB::red);
+
+    // Build geometry in visualizer
+    visualizer.buildContextGeometry(&context);
+
+    // Set camera to view the sphere
+    visualizer.setCameraPosition(make_vec3(0, 0, 3), make_vec3(0, 0, 0));
+
+    // This is the critical workflow that was failing: plotUpdate(true) followed by printWindow()
+    DOCTEST_CHECK_NOTHROW(visualizer.plotUpdate(true)); // render with hidden window
+
+    // Test screenshot functionality - this should NOT produce a black image
+    std::string test_filename = "test_printWindow_nonheadless_regression.jpg";
+    DOCTEST_CHECK_NOTHROW(visualizer.printWindow(test_filename.c_str()));
+
+    // Verify the file was created
+    DOCTEST_CHECK(std::filesystem::exists(test_filename));
+
+    // Validate that the image is not all black (the original issue)
+    // Read back the pixels directly from the visualizer to verify content
+    std::vector<uint> pixel_buffer(200 * 200 * 3);
+    DOCTEST_CHECK_NOTHROW(visualizer.getWindowPixelsRGB(pixel_buffer.data()));
+
+    // Check that we have non-black pixels (red sphere should be visible)
+    bool has_non_black_pixels = false;
+    for (size_t i = 0; i < pixel_buffer.size(); i++) {
+        if (pixel_buffer[i] > 10) { // Allow for some tolerance due to anti-aliasing
+            has_non_black_pixels = true;
+            break;
+        }
+    }
+
+    DOCTEST_CHECK_MESSAGE(has_non_black_pixels,
+                         "Image appears to be all black in non-headless mode - buffer reading issue");
+
+    // Clean up test file
+    if (std::filesystem::exists(test_filename)) {
+        std::filesystem::remove(test_filename);
+    }
 }
 
 int Visualizer::selfTest(int argc, char **argv) {

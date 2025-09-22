@@ -29,7 +29,6 @@
 #include "glm/gtx/transform.hpp"
 
 #include "GeometryHandler.h"
-#include "Visualizer.h"
 
 class Visualizer;
 
@@ -117,6 +116,14 @@ struct Shader {
     GLint lightIntensityUniform;
     std::vector<GLuint> vertex_array_IDs;
     GLint uvRescaleUniform;
+
+    // Texture buffer uniform locations (cached to avoid glGetUniformLocation during rendering)
+    GLint colorTextureObjectUniform;
+    GLint normalTextureObjectUniform;
+    GLint textureFlagTextureObjectUniform;
+    GLint textureIDTextureObjectUniform;
+    GLint coordinateFlagTextureObjectUniform;
+    GLint hiddenFlagTextureObjectUniform;
 
     //! Indicates whether initialize() has been successfully called
     bool initialized = false;
@@ -404,6 +411,16 @@ public:
      * \param[in] lightintensityfactor Scaling factor for light intensity. Default is 1.0
      */
     void setLightIntensityFactor(float lightintensityfactor);
+
+    //! Setup offscreen framebuffer for headless rendering
+    void setupOffscreenFramebuffer();
+
+    //! Clean up offscreen framebuffer resources
+    void cleanupOffscreenFramebuffer();
+
+
+    //! Switch rendering target to offscreen buffer
+    void renderToOffscreenBuffer();
 
     //! Set the background color for the visualizer window
     /**
@@ -1049,6 +1066,9 @@ private:
      */
     [[nodiscard]] std::vector<uint> getFrameBufferSize() const;
 
+    //! Read pixels from offscreen framebuffer for internal use by printWindow
+    std::vector<helios::RGBcolor> readOffscreenPixels() const;
+
     /**
      * \brief Sets the size of the frame buffer.
      *
@@ -1086,6 +1106,8 @@ private:
     [[nodiscard]] uint getDepthTexture() const;
 
     void openWindow();
+
+    void createOffscreenContext();
 
     //! Callback when the window framebuffer is resized
     static void framebufferResizeCallback(GLFWwindow *window, int width, int height);
@@ -1232,6 +1254,11 @@ private:
 
     uint framebufferID;
     uint depthTexture;
+
+    // Offscreen rendering support for CI testing
+    uint offscreenFramebufferID;
+    uint offscreenColorTexture;
+    uint offscreenDepthTexture;
 
     //! Lighting model for Context object primitives (default is LIGHTING_NONE)
     std::vector<LightingModel> primaryLightingModel;

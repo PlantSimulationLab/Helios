@@ -229,8 +229,8 @@ std::string RadiationModel::writeCameraImage(const std::string &camera, const st
     std::string output_path = image_path;
     if (!image_path.empty() && !validateOutputPath(output_path)) {
         helios_runtime_error("ERROR (RadiationModel::writeCameraImage): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
-    } else if (!getFileName(output_path).empty()) {
-        helios_runtime_error("ERROR(RadiationModel::writeCameraImage): Image output directory contains a filename. This argument should be the path to a directory not a file.");
+    } else if (!isDirectoryPath(output_path)) {
+        helios_runtime_error("ERROR(RadiationModel::writeCameraImage): Expected a directory path but got a file path for argument 'image_path'.");
     }
 
     std::ostringstream outfile;
@@ -341,8 +341,8 @@ void RadiationModel::writeCameraImageData(const std::string &camera, const std::
     std::string output_path = image_path;
     if (!image_path.empty() && !validateOutputPath(output_path)) {
         helios_runtime_error("ERROR (RadiationModel::writeCameraImage): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
-    } else if (!getFileName(output_path).empty()) {
-        helios_runtime_error("ERROR(RadiationModel::writeCameraImage): Image output directory contains a filename. This argument should be the path to a directory not a file.");
+    } else if (!isDirectoryPath(output_path)) {
+        helios_runtime_error("ERROR(RadiationModel::writeCameraImage): Expected a directory path but got a file path for argument 'image_path'.");
     }
 
     std::ostringstream outfile;
@@ -621,8 +621,8 @@ void RadiationModel::writePrimitiveDataLabelMap(const std::string &cameralabel, 
     std::string output_path = image_path;
     if (!image_path.empty() && !validateOutputPath(output_path)) {
         helios_runtime_error("ERROR (RadiationModel::writePrimitiveDataLabelMap): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
-    } else if (!getFileName(output_path).empty()) {
-        helios_runtime_error("ERROR(RadiationModel::writePrimitiveDataLabelMap): Image output directory contains a filename. This argument should be the path to a directory not a file.");
+    } else if (!isDirectoryPath(output_path)) {
+        helios_runtime_error("ERROR(RadiationModel::writePrimitiveDataLabelMap): Expected a directory path but got a file path for argument 'image_path'.");
     }
 
     std::ostringstream outfile;
@@ -708,8 +708,8 @@ void RadiationModel::writeObjectDataLabelMap(const std::string &cameralabel, con
     std::string output_path = image_path;
     if (!image_path.empty() && !validateOutputPath(output_path)) {
         helios_runtime_error("ERROR (RadiationModel::writeObjectDataLabelMap): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
-    } else if (!getFileName(output_path).empty()) {
-        helios_runtime_error("ERROR(RadiationModel::writeObjectDataLabelMap): Image output directory contains a filename. This argument should be the path to a directory not a file.");
+    } else if (!isDirectoryPath(output_path)) {
+        helios_runtime_error("ERROR(RadiationModel::writeObjectDataLabelMap): Expected a directory path but got a file path for argument 'image_path'.");
     }
 
     std::ostringstream outfile;
@@ -801,8 +801,8 @@ void RadiationModel::writeDepthImageData(const std::string &cameralabel, const s
     std::string output_path = image_path;
     if (!image_path.empty() && !validateOutputPath(output_path)) {
         helios_runtime_error("ERROR (RadiationModel::writeDepthImageData): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
-    } else if (!getFileName(output_path).empty()) {
-        helios_runtime_error("ERROR(RadiationModel::writeDepthImageData): Image output directory contains a filename. This argument should be the path to a directory not a file.");
+    } else if (!isDirectoryPath(output_path)) {
+        helios_runtime_error("ERROR(RadiationModel::writeDepthImageData): Expected a directory path but got a file path for argument 'image_path'.");
     }
 
     std::ostringstream outfile;
@@ -856,8 +856,8 @@ void RadiationModel::writeNormDepthImage(const std::string &cameralabel, const s
     std::string output_path = image_path;
     if (!image_path.empty() && !validateOutputPath(output_path)) {
         helios_runtime_error("ERROR (RadiationModel::writeNormDepthImage): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
-    } else if (!getFileName(output_path).empty()) {
-        helios_runtime_error("ERROR(RadiationModel::writeNormDepthImage): Image output directory contains a filename. This argument should be the path to a directory not a file.");
+    } else if (!isDirectoryPath(output_path)) {
+        helios_runtime_error("ERROR(RadiationModel::writeNormDepthImage): Expected a directory path but got a file path for argument 'image_path'.");
     }
 
     std::ostringstream outfile;
@@ -925,8 +925,8 @@ void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, con
     std::string output_path = image_path;
     if (!image_path.empty() && !validateOutputPath(output_path)) {
         helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
-    } else if (!getFileName(output_path).empty()) {
-        helios_runtime_error("ERROR(RadiationModel::writeImageBoundingBoxes): Image output directory contains a filename. This argument should be the path to a directory not a file.");
+    } else if (!isDirectoryPath(output_path)) {
+        helios_runtime_error("ERROR(RadiationModel::writeImageBoundingBoxes): Expected a directory path but got a file path for argument 'image_path'.");
     }
 
     std::ostringstream outfile;
@@ -1030,8 +1030,8 @@ void RadiationModel::writeImageBoundingBoxes_ObjectData(const std::string &camer
     std::string output_path = image_path;
     if (!image_path.empty() && !validateOutputPath(output_path)) {
         helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes_ObjectData): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
-    } else if (!getFileName(output_path).empty()) {
-        helios_runtime_error("ERROR(RadiationModel::writeImageBoundingBoxes_ObjectData): Image output directory contains a filename. This argument should be the path to a directory not a file.");
+    } else if (!isDirectoryPath(output_path)) {
+        helios_runtime_error("ERROR(RadiationModel::writeImageBoundingBoxes_ObjectData): Expected a directory path but got a file path for argument 'image_path'.");
     }
 
     std::ostringstream outfile;
@@ -1146,8 +1146,8 @@ void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, con
     std::string output_path = image_path;
     if (!image_path.empty() && !validateOutputPath(output_path)) {
         helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
-    } else if (!getFileName(output_path).empty()) {
-        helios_runtime_error("ERROR(RadiationModel::writeImageBoundingBoxes): Image output directory contains a filename. This argument should be the path to a directory not a file.");
+    } else if (!isDirectoryPath(output_path)) {
+        helios_runtime_error("ERROR(RadiationModel::writeImageBoundingBoxes): Expected a directory path but got a file path for argument 'image_path'.");
     }
 
     std::string outfile_txt = output_path + std::filesystem::path(image_file).stem().string() + ".txt";
@@ -1267,8 +1267,8 @@ void RadiationModel::writeImageBoundingBoxes_ObjectData(const std::string &camer
     std::string output_path = image_path;
     if (!image_path.empty() && !validateOutputPath(output_path)) {
         helios_runtime_error("ERROR (RadiationModel::writeImageBoundingBoxes_ObjectData): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
-    } else if (!getFileName(output_path).empty()) {
-        helios_runtime_error("ERROR(RadiationModel::writeImageBoundingBoxes_ObjectData): Image output directory contains a filename. This argument should be the path to a directory not a file.");
+    } else if (!isDirectoryPath(output_path)) {
+        helios_runtime_error("ERROR(RadiationModel::writeImageBoundingBoxes_ObjectData): Expected a directory path but got a file path for argument 'image_path'.");
     }
 
     std::string outfile_txt = output_path + std::filesystem::path(image_file).stem().string() + ".txt";

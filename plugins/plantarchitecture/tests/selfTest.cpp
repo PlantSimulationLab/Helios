@@ -1227,6 +1227,23 @@ DOCTEST_TEST_CASE("PlantArchitecture Plant-Specific Attraction Points Validation
     DOCTEST_CHECK_NOTHROW(plantarchitecture.disableAttractionPoints(plantID1));
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture removeShootFloralBuds") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Test invalid plant ID - should throw
+    capture_cerr cerr_buffer;
+    DOCTEST_CHECK_THROWS(plantarchitecture.removeShootFloralBuds(9999, 0));
+
+    // Create a plant instance to test valid plant ID but invalid shoot ID
+    uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0);
+    DOCTEST_CHECK(plantID != -1);
+
+    // Test invalid shoot ID - should throw
+    DOCTEST_CHECK_THROWS(plantarchitecture.removeShootFloralBuds(plantID, 9999));
+}
+
 int PlantArchitecture::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

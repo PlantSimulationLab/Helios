@@ -2262,7 +2262,7 @@ namespace helios {
             OBJmaterial(const RGBcolor &a_color, std::string a_texture, uint a_materialID) : color{a_color}, texture{std::move(a_texture)}, materialID{a_materialID} {};
         };
 
-        std::map<std::string, OBJmaterial> loadMTL(const std::string &filebase, const std::string &material_file);
+        std::map<std::string, OBJmaterial> loadMTL(const std::string &filebase, const std::string &material_file, const RGBcolor &default_color);
 
         void loadPData(pugi::xml_node p, uint UUID);
 

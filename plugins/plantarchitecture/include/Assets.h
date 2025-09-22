@@ -27,6 +27,8 @@ void BeanPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot
 
 uint BindweedFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open = false);
 
+uint BougainvilleaFlowerPrototype(helios::Context *context_ptr, uint subdivisions, bool flower_is_open = false);
+
 uint CapsicumFruitPrototype(helios::Context *context_ptr, uint subdivisions);
 void CapsicumPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age);
 
