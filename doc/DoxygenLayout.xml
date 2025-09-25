@@ -46,6 +46,7 @@
     <tab type="usergroup" visible="yes" url="@ref Benchmarks" title="Benchmarks">
       <tab type="user" visible="yes" url="@ref RadCanopyBenchmark" title="Homogeneous Canopy Radiation"/>
     </tab>
+    <tab type="user" visible="yes" url="@ref Validation" title="Validation"/>
     <tab type="user" visible="yes" url="md_doc_2_c_h_a_n_g_e_l_o_g.html" title="Changelog"/>
     <tab type="files" visible="yes" title="Files">
       <tab type="filelist" visible="yes" title="" intro=""/>

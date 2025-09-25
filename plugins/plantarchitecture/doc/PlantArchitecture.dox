@@ -202,6 +202,129 @@ Plant type string argument | time_to_dormancy_break | time_to_flower_initiation 
 "walnut" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1095 days (3 years) |
 "wheat" | 0 | -1 | -1 | 4 | 10 | \f$\infty\f$ | 0 | 365 days (1 year) |
 
+\subsection PlantArchCollision Collision Avoidance
+
+The plant architecture model integrates the Helios collision detection plug-in to enable two primary types of object collision avoidance: 1) "soft" avoidance of other plant organs during growth in order to create a plant structure that generally minimizes collisions with itself and other plants while also tending to fill open space (i.e., space colonization), and 2) "hard" avoidance of solid obstacle objects that should not be intersected like the ground or buildings.
+
+Both types of collision avoidance use the concept of a perception cone at the shoot apex (see figure below). The parameters of the cone are user-defined, which determine the "look-ahead distance" (length of cone axis) and the cone field of view. Ray-tracing calculations are used to determine objects 'sensed' within the cone view. It should be noted that the parameters of the perception cone affects model computational expense. A larger cone will tend to result in reduced performance because more intersection queries will be needed in general. If the cone is too small, model accuracy may be sacrificed because the plant may not adequately perceive obstacles and thus growth may not be appropriately modified.
+
+\image html collision_perception_cone.jpeg "Schematic representation of the perception cone used to determine potential collisions at the shoot apex in order to modify the internode and/or petiole growth direction to minimize or eliminate collisions."
+
+The collision detection framework utilizes several optimizations to improve performance. It uses OpenMP parallelization to accelerate ray-tracing operations associated with perception cone object detection. It also uses an efficient plant-centric bounding volume hierarchy (BVH) to rapidly cull distant geometry during ray intersection traversals.
+
+\image html collision_types.jpeg "Schematic representation of how the perception cone is utilized to determine the augmented (target) growth direction. (a) 'hard' collision avoidance: perception cone (pink) points in the initial direction of internode, petiole, or peduncle growth. The normal vector of the nearest object detected in the cone is used to calculate a target growth direction perpendicular to the object normal. (b) 'soft' collision avoidance: hemispherical projection of the perception cone field of view. Target growth direction is determined based on a weighted combination of the perceived gap size and distance from the cone axis. (c) attraction points: attraction points lying in the perception cone are detected. The target growth direction points toward the closest detected attraction point."
+
+\subsubsection PlantArchSoftCollision Soft Collision Avoidance
+
+Calling \ref PlantArchitecture::enableSoftCollisionAvoidance() will enable "soft" collision avoidance for internodes, and optionally for petioles and peduncles. The term "soft" here is used because growth will generally tend in a direction that minimizes collisions, but it will not strictly prevent collisions.
+
+When enabled, each time a new internode (or optionally petiole or peduncle) is spawned during growth, a "perception cone" with axis oriented in the initial candidate growth direction is used to determine potential obstacles. A user-defined number of rays are launched from the cone apex toward its base to calculate points of intersection for objects within the cone. The algorithm then uses this information to determine the largest contiguous gap within the cone's view, and a direction vector originating at the cone's base and pointing to the middle of the gap. An "inertia" factor is set that determines how abruptly growth is adjusted toward the gap -- a factor of 0.0 sets the new growth direction exactly toward the gap, while a factor of 1.0 does not modify the growth direction. By default, only leaves are considered as obstacles for soft collision avoidance, but other organ types can be optionally enabled, which are accompanied by increased computational cost.
+
+~~~~~~{.cpp}
+#include "PlantArchitecture.h"
+using namespace helios;
+
+int main(){
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+
+    // Enable soft collision avoidance with default parameters
+    plantarchitecture.enableSoftCollisionAvoidance();
+
+    // Load and build plant
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    plantarchitecture.buildPlantInstanceFromLibrary(nullorigin, 0);
+
+    // Configure collision parameters
+    plantarchitecture.setSoftCollisionAvoidanceParameters(
+        80.0f,   // view_half_angle_deg
+        0.1f,    // look_ahead_distance
+        256,     // sample_count
+        0.4f     // inertia_weight
+    );
+
+    // Grow plant with collision avoidance
+    for( int t=0; t<50; t++ ){
+        plantarchitecture.advanceTime(1);
+    }
+
+    return 0;
+}
+~~~~~~
+
+\subsubsection PlantArchHardCollision Hard Boundary Collision Avoidance
+
+To strictly enforce that plants do not grow into solid boundaries, "hard" boundary collision avoidance can be enabled using \ref PlantArchitecture::enableSolidObstacleAvoidance(). Users define which geometry should be considered as solid boundaries, and the parameters defining the perception cone. Similar to soft object avoidance, solid obstacle avoidance involves launching rays from the perception cone apex toward its base to determine solid obstacles contained in the perception cone. If present, the distance to the solid obstacle closest to the cone apex is determined, along with the normal vector of the obstacle. The new target growth direction is a vector perpendicular to the surface of the object. The strength of the change in growth direction to achieve the target growth direction increases as the plant gets closer to the object. When it gets very near the object, the growth direction is set equal to the target growth direction to ensure that the object will not be hit.
+
+~~~~~~{.cpp}
+#include "PlantArchitecture.h"
+using namespace helios;
+
+int main(){
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+
+    // Create ground plane geometry
+    std::vector<uint> ground_UUIDs;
+    ground_UUIDs.push_back( context.addPatch( make_vec3(-5,-5,0), make_vec3(5,-5,0), make_vec3(5,5,0), make_vec3(-5,5,0) ) );
+
+    // Enable solid obstacle avoidance
+    plantarchitecture.enableSolidObstacleAvoidance(ground_UUIDs, 0.5f);
+
+    // Load and build plant
+    plantarchitecture.loadPlantModelFromLibrary("tomato");
+    plantarchitecture.buildPlantInstanceFromLibrary(nullorigin, 0);
+
+    // Grow plant with obstacle avoidance
+    for( int t=0; t<30; t++ ){
+        plantarchitecture.advanceTime(1);
+    }
+
+    return 0;
+}
+~~~~~~
+
+When soft collision avoidance is enabled, depending on the value of the inertia factor, plants may effectively avoid solid boundaries without hard boundary collision avoidance enabled.
+
+When enabling hard boundary collision avoidance, users can optionally enable fruit adjustment based on solid obstacle collisions using the \c enable_fruit_adjustment parameter. This is useful for large fruit growing near solid obstacles (e.g., large fruit resting on the ground). When this is enabled, fruit are rotated away from the boundary such that a bounding box encompassing the fruit no longer intersects the solid boundaries it was intersecting. Then an iterative refinement procedure rotates the fruit back toward the boundary to get it closer without intersecting it again.
+
+\subsubsection PlantArchCollisionConfig Collision Detection Configuration
+
+The collision detection system provides several configuration options to optimize performance and behavior:
+
+**Collision-Relevant Organs**: Use \ref PlantArchitecture::setCollisionRelevantOrgans() to specify which organ types should participate in collision detection. By default, only leaves are considered to minimize computational cost.
+
+~~~~~~{.cpp}
+plantarchitecture.setCollisionRelevantOrgans(
+    false,  // include_internodes
+    true,   // include_leaves
+    false,  // include_petioles
+    false,  // include_flowers
+    false   // include_fruit
+);
+~~~~~~
+
+**Static Obstacles**: For efficiency, mark geometry that doesn't move during simulation as static using \ref PlantArchitecture::setStaticObstacles().
+
+~~~~~~{.cpp}
+std::vector<uint> building_UUIDs = {...}; // building geometry UUIDs
+plantarchitecture.setStaticObstacles(building_UUIDs);
+~~~~~~
+
+**Advanced Access**: For advanced users, direct access to the internal \ref CollisionDetection instance is available via \ref PlantArchitecture::getCollisionDetection().
+
+**Performance Notes**: Collision detection incurs computational expense proportional to scene complexity and perception cone parameters. For compute-intensive plants like trees, consider:
+- Using smaller perception cone parameters
+- Limiting collision-relevant organs to leaves only
+- Marking static geometry appropriately
+- Enabling collision detection only when necessary
+
+\subsubsection PlantArchGroundClipping Ground Collision Detection (Legacy)
+
+The model also has the ability to detect collisions with the ground plane and clip any organs that intersect the ground using \ref PlantArchitecture::enableGroundClipping(). By default, the ground is assumed to be at a height of 0, but this can optionally be set to any height. This is a legacy feature that is superseded by the more flexible solid obstacle avoidance system described above.
+
 \section PlantArchDescription Background Theory
 
 \subsection PlantArchPhytomer The Phytomer: Basic unit of a plant shoot
@@ -256,15 +379,15 @@ Available distributions for \ref RandomParameter_float are listed below
 
 | Distribution | Method | Parameters |
 | ------| ------ | ------ |
-| Uniform | \ref RandomParameter_float::uniformDistribution(float minval, float maxval) | minimum value, maximum value |
-| Normal | \ref RandomParameter_float::normalDistribution(float mean, float std_dev) | mean, standard deviation |
-| Weibull | \ref RandomParameter_float::weibullDistribution(float shape, float scale) | shape parameter, scale parameter |
+| Uniform | \ref RandomParameter_float::uniformDistribution | minimum value, maximum value |
+| Normal | \ref RandomParameter_float::normalDistribution | mean, standard deviation |
+| Weibull | \ref RandomParameter_float::weibullDistribution | shape parameter, scale parameter |
 
 and for \ref RandomParameter_int are:
 
 | Distribution | Method | Parameters |
 | ------| ------ | ------ |
-| Uniform | \ref RandomParameter_int::uniformDistribution( int minval, int maxval ) | minimum value, maximum value |
+| Uniform | \ref RandomParameter_int::uniformDistribution | minimum value, maximum value |
 | Discrete Values | \ref RandomParameter_int::discreteValues | vector of discrete int values that will be randomly chosen |
 
 
@@ -599,8 +722,8 @@ The PlantArchitecture plugin includes a streamlined system for adding new plant 
 Adding a new plant model to the library involves the following steps:
 
 1. **Create assets (if needed)** - Prepare texture images, OBJ models, or other visual assets if needed.
-2. **Implement the plant-specific methods** - Create the `initialize[*]Shoots()` and `build[*]()` methods that define the plant's architecture and parameters in \ref PlantLibrary.cpp. You can find many examples in this file for existing plants.
-3. **Register the plant model** - Add a single registration line to \ref initializePlantModelRegistrations() in \ref PlantLibrary.cpp to make the model available in the library. This can be found at the top of \ref PlantLibrary.cpp, with examples for existing plants.
+2. **Implement the plant-specific methods** - Create the `initialize[*]Shoots()` and `build[*]()` methods that define the plant's architecture and parameters in PlantLibrary.cpp. You can find many examples in this file for existing plants.
+3. **Register the plant model** - Add a single registration line to \ref PlantArchitecture::initializePlantModelRegistrations in PlantLibrary.cpp to make the model available in the library. This can be found at the top of PlantLibrary.cpp, with examples for existing plants.
 
 A good approach is to start with an existing plant model that is similar to the new plant, and copy paste its code `initialize[*]Shoots()` and `build[*]()` for your new plant. You can then tweak parameters to achieve your desired result.
 
@@ -697,7 +820,7 @@ uint PlantArchitecture::buildNewPlant(const helios::vec3 &base_position) {
 
 \subsubsection PlantArchAddStep3 Step 3: Register the Plant Model
 
-Add a single registration line to the `initializePlantModelRegistrations()` method in \ref PlantLibrary.cpp:
+Add a single registration line to the \ref PlantArchitecture::initializePlantModelRegistrations method in PlantLibrary.cpp:
 ~~~~~~{cpp}
 void PlantArchitecture::initializePlantModelRegistrations() {
     // ... existing registrations ...
@@ -707,128 +830,6 @@ void PlantArchitecture::initializePlantModelRegistrations() {
         [this](const helios::vec3& pos){ return buildNewPlant(pos); });
 }
 ~~~~~~
-
-\subsection PlantArchCollision Collision Avoidance
-
-The plant architecture model integrates the Helios collision detection plug-in to enable two primary types of object collision avoidance: 1) "soft" avoidance of other plant organs during growth in order to create a plant structure that generally minimizes collisions with itself and other plants while also tending to fill open space (i.e., space colonization), and 2) "hard" avoidance of solid obstacle objects that should not be intersected like the ground or buildings.
-
-Both types of collision avoidance use the concept of a perception cone at the shoot apex (see figure below). The parameters of the cone are user-defined, which determine the "look-ahead distance" (length of cone axis) and the cone field of view. Ray-tracing calculations are used to determine objects 'sensed' within the cone view. It should be noted that the parameters of the perception cone affects model computational expense. A larger cone will tend to result in reduced performance because more intersection queries will be needed in general. If the cone is too small, model accuracy may be sacrificed because the plant may not adequately perceive obstacles and thus growth may not be appropriately modified.
-
-\image html collision_perception_cone.jpeg "Schematic representation of the perception cone used to determine potential collisions at the shoot apex in order to modify the internode and/or petiole growth direction to minimize or eliminate collisions."
-
-The collision detection framework utilizes several optimizations to improve performance. It uses OpenMP parallelization to accelerate ray-tracing operations associated with perception cone object detection. It also uses an efficient plant-centric bounding volume hierarchy (BVH) to rapidly cull distant geometry during ray intersection traversals.
-
-\image html collision_types.jpeg "Schematic representation of how the perception cone is utilized to determine the augmented (target) growth direction. (a) 'hard' collision avoidance: perception cone (pink) points in the initial direction of internode, petiole, or peduncle growth. The normal vector of the nearest object detected in the cone is used to calculate a target growth direction perpendicular to the object normal. (b) 'soft' collision avoidance: hemispherical projection of the perception cone field of view. Target growth direction is determined based on a weighted combination of the perceived gap size and distance from the cone axis. (c) attraction points: attraction points lying in the perception cone are detected. The target growth direction points toward the closest detected attraction point."
-
-\subsubsection PlantArchSoftCollision Soft Collision Avoidance
-
-Calling \ref PlantArchitecture::enableSoftCollisionAvoidance() will enable "soft" collision avoidance for internodes, and optionally for petioles and peduncles. The term "soft" here is used because growth will generally tend in a direction that minimizes collisions, but it will not strictly prevent collisions.
-
-When enabled, each time a new internode (or optionally petiole or peduncle) is spawned during growth, a "perception cone" with axis oriented in the initial candidate growth direction is used to determine potential obstacles. A user-defined number of rays are launched from the cone apex toward its base to calculate points of intersection for objects within the cone. The algorithm then uses this information to determine the largest contiguous gap within the cone's view, and a direction vector originating at the cone's base and pointing to the middle of the gap. An "inertia" factor is set that determines how abruptly growth is adjusted toward the gap -- a factor of 0.0 sets the new growth direction exactly toward the gap, while a factor of 1.0 does not modify the growth direction. By default, only leaves are considered as obstacles for soft collision avoidance, but other organ types can be optionally enabled, which are accompanied by increased computational cost.
-
-~~~~~~{.cpp}
-#include "PlantArchitecture.h"
-using namespace helios;
-
-int main(){
-
-    Context context;
-    PlantArchitecture plantarchitecture(&context);
-
-    // Enable soft collision avoidance with default parameters
-    plantarchitecture.enableSoftCollisionAvoidance();
-    
-    // Configure collision parameters
-    plantarchitecture.setSoftCollisionAvoidanceParameters(
-        60.0f,   // view_half_angle_deg
-        0.25f,    // look_ahead_distance
-        256,     // sample_count
-        0.4f     // inertia_weight
-    );
-
-    // Load and build plant
-    plantarchitecture.loadPlantModelFromLibrary("bean");
-    plantarchitecture.buildPlantInstanceFromLibrary(nullorigin, 0);
-
-    // Grow plant with collision avoidance
-    plantarchitecture.advanceTime(50);
-
-    return EXIT_SUCCESS;
-}
-~~~~~~
-
-\subsubsection PlantArchHardCollision Hard Boundary Collision Avoidance
-
-To strictly enforce that plants do not grow into solid boundaries, "hard" boundary collision avoidance can be enabled using \ref PlantArchitecture::enableSolidObstacleAvoidance(). Users define which geometry should be considered as solid boundaries, and the parameters defining the perception cone. Similar to soft object avoidance, solid obstacle avoidance involves launching rays from the perception cone apex toward its base to determine solid obstacles contained in the perception cone. If present, the distance to the solid obstacle closest to the cone apex is determined, along with the normal vector of the obstacle. The new target growth direction is a vector perpendicular to the surface of the object. The strength of the change in growth direction to achieve the target growth direction increases as the plant gets closer to the object. When it gets very near the object, the growth direction is set equal to the target growth direction to ensure that the object will not be hit.
-
-~~~~~~{.cpp}
-#include "PlantArchitecture.h"
-using namespace helios;
-
-int main(){
-
-    Context context;
-    PlantArchitecture plantarchitecture(&context);
-
-    // Create ground plane geometry
-    std::vector<uint> ground_UUIDs;
-    ground_UUIDs.push_back( context.addPatch( make_vec3(-5,-5,0), make_vec3(5,-5,0), make_vec3(5,5,0), make_vec3(-5,5,0) ) );
-
-    // Enable solid obstacle avoidance
-    plantarchitecture.enableSolidObstacleAvoidance(ground_UUIDs, 0.5f);
-
-    // Load and build plant
-    plantarchitecture.loadPlantModelFromLibrary("tomato");
-    plantarchitecture.buildPlantInstanceFromLibrary(nullorigin, 0);
-
-    // Grow plant with obstacle avoidance
-    for( int t=0; t<30; t++ ){
-        plantarchitecture.advanceTime(1);
-    }
-
-    return 0;
-}
-~~~~~~
-
-When soft collision avoidance is enabled, depending on the value of the inertia factor, plants may effectively avoid solid boundaries without hard boundary collision avoidance enabled.
-
-When enabling hard boundary collision avoidance, users can optionally enable fruit adjustment based on solid obstacle collisions using the \c enable_fruit_adjustment parameter. This is useful for large fruit growing near solid obstacles (e.g., large fruit resting on the ground). When this is enabled, fruit are rotated away from the boundary such that a bounding box encompassing the fruit no longer intersects the solid boundaries it was intersecting. Then an iterative refinement procedure rotates the fruit back toward the boundary to get it closer without intersecting it again.
-
-\subsubsection PlantArchCollisionConfig Collision Detection Configuration
-
-The collision detection system provides several configuration options to optimize performance and behavior:
-
-<b>Collision-Relevant Organs</b>: Use \ref PlantArchitecture::setCollisionRelevantOrgans() to specify which organ types should participate in collision detection. By default, only leaves are considered to minimize computational cost.
-
-~~~~~~{.cpp}
-plantarchitecture.setCollisionRelevantOrgans(
-    false,  // include_internodes
-    true,   // include_leaves
-    false,  // include_petioles
-    false,  // include_flowers
-    false   // include_fruit
-);
-~~~~~~
-
-**Static Obstacles**: For efficiency, mark geometry that doesn't move during simulation as static using \ref PlantArchitecture::setStaticObstacles().
-
-~~~~~~{.cpp}
-std::vector<uint> building_UUIDs = {...}; // building geometry UUIDs
-plantarchitecture.setStaticObstacles(building_UUIDs);
-~~~~~~
-
-**Advanced Access**: For advanced users, direct access to the internal \ref CollisionDetection instance is available via \ref PlantArchitecture::getCollisionDetection().
-
-**Performance Notes**: Collision detection incurs computational expense proportional to scene complexity and perception cone parameters. For compute-intensive plants like trees, consider:
-- Using smaller perception cone parameters
-- Limiting collision-relevant organs to leaves only
-- Marking static geometry appropriately
-- Enabling collision detection only when necessary
-
-\subsubsection PlantArchGroundClipping Ground Collision Detection (Legacy)
-
-The model also has the ability to detect collisions with the ground plane and clip any organs that intersect the ground using \ref PlantArchitecture::enableGroundClipping(). By default, the ground is assumed to be at a height of 0, but this can optionally be set to any height. This is a legacy feature that is superseded by the more flexible solid obstacle avoidance system described above.
-
 
 \section PlantArchPruning Shoot Pruning and Hierarchical Management
 

@@ -186,7 +186,7 @@ void PlantArchitecture::initializeAlmondTreeShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/AlmondLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/AlmondLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 0.33f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
     leaf_prototype.longitudinal_curvature = 0.05;
@@ -202,7 +202,7 @@ void PlantArchitecture::initializeAlmondTreeShoots() {
     phytomer_parameters_almond.internode.phyllotactic_angle.uniformDistribution(120, 160);
     phytomer_parameters_almond.internode.radius_initial = 0.002;
     phytomer_parameters_almond.internode.length_segments = 1;
-    phytomer_parameters_almond.internode.image_texture = "plugins/plantarchitecture/assets/textures/AlmondBark.jpg";
+    phytomer_parameters_almond.internode.image_texture = helios::resolvePluginAsset("plantarchitecture", "assets/textures/AlmondBark.jpg").string().c_str();
     phytomer_parameters_almond.internode.max_floral_buds_per_petiole = 1; //
 
     phytomer_parameters_almond.petiole.petioles_per_internode = 1;
@@ -359,7 +359,7 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/AppleLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/AppleLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 0.6f;
     leaf_prototype.midrib_fold_fraction = 0.4f;
     leaf_prototype.longitudinal_curvature = -0.3f;
@@ -375,7 +375,7 @@ void PlantArchitecture::initializeAppleTreeShoots() {
     phytomer_parameters_apple.internode.phyllotactic_angle.uniformDistribution(130, 145);
     phytomer_parameters_apple.internode.radius_initial = 0.004;
     phytomer_parameters_apple.internode.length_segments = 1;
-    phytomer_parameters_apple.internode.image_texture = "plugins/plantarchitecture/assets/textures/AppleBark.jpg";
+    phytomer_parameters_apple.internode.image_texture = helios::resolvePluginAsset("plantarchitecture", "assets/textures/AppleBark.jpg").string().c_str();
     phytomer_parameters_apple.internode.max_floral_buds_per_petiole = 1;
 
     phytomer_parameters_apple.petiole.petioles_per_internode = 1;
@@ -623,7 +623,7 @@ void PlantArchitecture::initializeBindweedShoots() {
     phytomer_parameters_bindweed.leaf.yaw = 0;
     phytomer_parameters_bindweed.leaf.roll = 90;
     phytomer_parameters_bindweed.leaf.prototype_scale = 0.05;
-    phytomer_parameters_bindweed.leaf.prototype.OBJ_model_file = "plugins/plantarchitecture/assets/obj/BindweedLeaf.obj";
+    phytomer_parameters_bindweed.leaf.prototype.OBJ_model_file = helios::resolvePluginAsset("plantarchitecture", "assets/obj/BindweedLeaf.obj").string().c_str();
 
     phytomer_parameters_bindweed.peduncle.length = 0.01;
     phytomer_parameters_bindweed.peduncle.radius = 0.0005;
@@ -711,9 +711,9 @@ void PlantArchitecture::initializeBeanShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype_trifoliate(context_ptr->getRandomGenerator());
-    leaf_prototype_trifoliate.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/BeanLeaf_tip.png";
-    leaf_prototype_trifoliate.leaf_texture_file[-1] = "plugins/plantarchitecture/assets/textures/BeanLeaf_left_centered.png";
-    leaf_prototype_trifoliate.leaf_texture_file[1] = "plugins/plantarchitecture/assets/textures/BeanLeaf_right_centered.png";
+    leaf_prototype_trifoliate.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/BeanLeaf_tip.png").string().c_str();
+    leaf_prototype_trifoliate.leaf_texture_file[-1] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/BeanLeaf_left_centered.png").string().c_str();
+    leaf_prototype_trifoliate.leaf_texture_file[1] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/BeanLeaf_right_centered.png").string().c_str();
     leaf_prototype_trifoliate.leaf_aspect_ratio = 1.f;
     leaf_prototype_trifoliate.midrib_fold_fraction = 0.2;
     leaf_prototype_trifoliate.longitudinal_curvature.uniformDistribution(-0.3f, -0.2f);
@@ -724,7 +724,7 @@ void PlantArchitecture::initializeBeanShoots() {
 
     LeafPrototype leaf_prototype_unifoliate = leaf_prototype_trifoliate;
     leaf_prototype_unifoliate.leaf_texture_file.clear();
-    leaf_prototype_unifoliate.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/BeanLeaf_unifoliate_centered.png";
+    leaf_prototype_unifoliate.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/BeanLeaf_unifoliate_centered.png").string().c_str();
     leaf_prototype_unifoliate.unique_prototypes = 2;
 
     // ---- Phytomer Parameters ---- //
@@ -866,7 +866,7 @@ void PlantArchitecture::initializeBougainvilleaShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/CapsicumLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/CapsicumLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 0.8f;
     leaf_prototype.midrib_fold_fraction = 0.2f;
     leaf_prototype.longitudinal_curvature.uniformDistribution(-0.15, -0.05f);
@@ -987,7 +987,7 @@ void PlantArchitecture::initializeCapsicumShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/CapsicumLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/CapsicumLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 0.45f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
     leaf_prototype.longitudinal_curvature.uniformDistribution(-0.15, -0.05f);
@@ -1112,7 +1112,7 @@ void PlantArchitecture::initializeCheeseweedShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.OBJ_model_file = "plugins/plantarchitecture/assets/obj/CheeseweedLeaf.obj";
+    leaf_prototype.OBJ_model_file = helios::resolvePluginAsset("plantarchitecture", "assets/obj/CheeseweedLeaf.obj").string().c_str();
 
     // ---- Phytomer Parameters ---- //
 
@@ -1185,9 +1185,9 @@ void PlantArchitecture::initializeCowpeaShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype_trifoliate(context_ptr->getRandomGenerator());
-    leaf_prototype_trifoliate.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/CowpeaLeaf_tip_centered.png";
-    leaf_prototype_trifoliate.leaf_texture_file[-1] = "plugins/plantarchitecture/assets/textures/CowpeaLeaf_left_centered.png";
-    leaf_prototype_trifoliate.leaf_texture_file[1] = "plugins/plantarchitecture/assets/textures/CowpeaLeaf_right_centered.png";
+    leaf_prototype_trifoliate.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/CowpeaLeaf_tip_centered.png").string().c_str();
+    leaf_prototype_trifoliate.leaf_texture_file[-1] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/CowpeaLeaf_left_centered.png").string().c_str();
+    leaf_prototype_trifoliate.leaf_texture_file[1] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/CowpeaLeaf_right_centered.png").string().c_str();
     leaf_prototype_trifoliate.leaf_aspect_ratio = 0.7f;
     leaf_prototype_trifoliate.midrib_fold_fraction = 0.2;
     leaf_prototype_trifoliate.longitudinal_curvature.uniformDistribution(-0.3f, -0.1f);
@@ -1198,7 +1198,7 @@ void PlantArchitecture::initializeCowpeaShoots() {
 
     LeafPrototype leaf_prototype_unifoliate = leaf_prototype_trifoliate;
     leaf_prototype_unifoliate.leaf_texture_file.clear();
-    leaf_prototype_unifoliate.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/CowpeaLeaf_unifoliate_centered.png";
+    leaf_prototype_unifoliate.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/CowpeaLeaf_unifoliate_centered.png").string().c_str();
 
     // ---- Phytomer Parameters ---- //
 
@@ -1338,7 +1338,7 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/GrapeLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/GrapeLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 1.f;
     leaf_prototype.midrib_fold_fraction = 0.3f;
     leaf_prototype.longitudinal_curvature.uniformDistribution(-0.4, 0.4);
@@ -1419,7 +1419,7 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     shoot_parameters_main.base_yaw = 0;
 
     ShootParameters shoot_parameters_cane = shoot_parameters_main;
-    //    shoot_parameters_cane.phytomer_parameters.internode.image_texture = "plugins/plantarchitecture/assets/textures/GrapeBark.jpg";
+    //    shoot_parameters_cane.phytomer_parameters.internode.image_texture = helios::resolvePluginAsset("plantarchitecture", "assets/textures/GrapeBark.jpg").string().c_str();
     shoot_parameters_cane.phytomer_parameters.internode.pitch = 0;
     shoot_parameters_cane.phytomer_parameters.internode.radial_subdivisions = 15;
     shoot_parameters_cane.phytomer_parameters.internode.max_floral_buds_per_petiole = 0;
@@ -1434,7 +1434,7 @@ void PlantArchitecture::initializeGrapevineVSPShoots() {
     shoot_parameters_cane.defineChildShootTypes({"grapevine_shoot"}, {1.f});
 
     ShootParameters shoot_parameters_trunk = shoot_parameters_main;
-    shoot_parameters_trunk.phytomer_parameters.internode.image_texture = "plugins/plantarchitecture/assets/textures/GrapeBark.jpg";
+    shoot_parameters_trunk.phytomer_parameters.internode.image_texture = helios::resolvePluginAsset("plantarchitecture", "assets/textures/GrapeBark.jpg").string().c_str();
     shoot_parameters_trunk.phytomer_parameters.internode.pitch = 0;
     shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 0;
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.05;
@@ -1485,7 +1485,7 @@ void PlantArchitecture::initializeGrapevineWyeShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/GrapeLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/GrapeLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 1.f;
     leaf_prototype.midrib_fold_fraction = 0.3f;
     leaf_prototype.longitudinal_curvature.uniformDistribution(-0.4, 0.4);
@@ -1567,7 +1567,7 @@ void PlantArchitecture::initializeGrapevineWyeShoots() {
     shoot_parameters_main.base_yaw.uniformDistribution(-50, 50);
 
     ShootParameters shoot_parameters_cordon = shoot_parameters_main;
-    shoot_parameters_cordon.phytomer_parameters.internode.image_texture = "plugins/plantarchitecture/assets/textures/GrapeBark.jpg";
+    shoot_parameters_cordon.phytomer_parameters.internode.image_texture = helios::resolvePluginAsset("plantarchitecture", "assets/textures/GrapeBark.jpg").string().c_str();
     shoot_parameters_cordon.phytomer_parameters.internode.pitch = 0;
     shoot_parameters_cordon.phytomer_parameters.internode.radial_subdivisions = 15;
     shoot_parameters_cordon.phytomer_parameters.internode.max_floral_buds_per_petiole = 0;
@@ -1582,7 +1582,7 @@ void PlantArchitecture::initializeGrapevineWyeShoots() {
     shoot_parameters_cordon.defineChildShootTypes({"grapevine_shoot"}, {1.f});
 
     ShootParameters shoot_parameters_trunk = shoot_parameters_main;
-    shoot_parameters_trunk.phytomer_parameters.internode.image_texture = "plugins/plantarchitecture/assets/textures/GrapeBark.jpg";
+    shoot_parameters_trunk.phytomer_parameters.internode.image_texture = helios::resolvePluginAsset("plantarchitecture", "assets/textures/GrapeBark.jpg").string().c_str();
     shoot_parameters_trunk.phytomer_parameters.internode.pitch = 0;
     shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle = 0;
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.05;
@@ -1671,7 +1671,7 @@ void PlantArchitecture::initializeGroundCherryWeedShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/GroundCherryLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/GroundCherryLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio.uniformDistribution(0.3, 0.5);
     leaf_prototype.midrib_fold_fraction = 0.2f;
     leaf_prototype.longitudinal_curvature = 0.1f;
@@ -1786,7 +1786,7 @@ void PlantArchitecture::initializeMaizeShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/SorghumLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/SorghumLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 0.25f;
     leaf_prototype.midrib_fold_fraction = 0.3f;
     leaf_prototype.longitudinal_curvature.uniformDistribution(-0.45, -0.3);
@@ -1905,7 +1905,7 @@ void PlantArchitecture::initializeOliveTreeShoots() {
     phytomer_parameters_olive.internode.phyllotactic_angle.uniformDistribution(80, 100);
     phytomer_parameters_olive.internode.radius_initial = 0.002;
     phytomer_parameters_olive.internode.length_segments = 1;
-    phytomer_parameters_olive.internode.image_texture = "plugins/plantarchitecture/assets/textures/OliveBark.jpg";
+    phytomer_parameters_olive.internode.image_texture = helios::resolvePluginAsset("plantarchitecture", "assets/textures/OliveBark.jpg").string().c_str();
     phytomer_parameters_olive.internode.max_floral_buds_per_petiole = 3;
 
     phytomer_parameters_olive.petiole.petioles_per_internode = 2;
@@ -2041,7 +2041,7 @@ void PlantArchitecture::initializePistachioTreeShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/PistachioLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/PistachioLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 0.6f;
     leaf_prototype.midrib_fold_fraction = 0.;
     leaf_prototype.longitudinal_curvature.uniformDistribution(-0.4, 0.4);
@@ -2059,7 +2059,7 @@ void PlantArchitecture::initializePistachioTreeShoots() {
     phytomer_parameters_pistachio.internode.phyllotactic_angle.uniformDistribution(160, 200);
     phytomer_parameters_pistachio.internode.radius_initial = 0.002;
     phytomer_parameters_pistachio.internode.length_segments = 1;
-    phytomer_parameters_pistachio.internode.image_texture = "plugins/plantarchitecture/assets/textures/OliveBark.jpg";
+    phytomer_parameters_pistachio.internode.image_texture = helios::resolvePluginAsset("plantarchitecture", "assets/textures/OliveBark.jpg").string().c_str();
     phytomer_parameters_pistachio.internode.max_floral_buds_per_petiole = 3;
 
     phytomer_parameters_pistachio.petiole.petioles_per_internode = 2;
@@ -2188,7 +2188,7 @@ void PlantArchitecture::initializePuncturevineShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/PuncturevineLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/PuncturevineLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 0.4f;
     leaf_prototype.midrib_fold_fraction = 0.2f;
     leaf_prototype.longitudinal_curvature = -0.1f;
@@ -2308,7 +2308,7 @@ void PlantArchitecture::initializeEasternRedbudShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/RedbudLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/RedbudLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 1.f;
     leaf_prototype.midrib_fold_fraction = 0.2f;
     leaf_prototype.longitudinal_curvature = -0.15f;
@@ -2326,7 +2326,7 @@ void PlantArchitecture::initializeEasternRedbudShoots() {
     phytomer_parameters_redbud.internode.pitch = 15;
     phytomer_parameters_redbud.internode.phyllotactic_angle.uniformDistribution(170, 190);
     phytomer_parameters_redbud.internode.radius_initial = 0.0015;
-    phytomer_parameters_redbud.internode.image_texture = "plugins/plantarchitecture/assets/textures/WesternRedbudBark.jpg";
+    phytomer_parameters_redbud.internode.image_texture = helios::resolvePluginAsset("plantarchitecture", "assets/textures/WesternRedbudBark.jpg").string().c_str();
     phytomer_parameters_redbud.internode.color.scale(0.3);
     phytomer_parameters_redbud.internode.length_segments = 1;
     phytomer_parameters_redbud.internode.max_floral_buds_per_petiole = 5;
@@ -2439,7 +2439,7 @@ void PlantArchitecture::initializeRiceShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/SorghumLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/SorghumLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 0.06f;
     leaf_prototype.midrib_fold_fraction = 0.3f;
     leaf_prototype.longitudinal_curvature.uniformDistribution(-0.2, 0);
@@ -2540,7 +2540,7 @@ uint PlantArchitecture::buildRicePlant(const helios::vec3 &base_position) {
 void PlantArchitecture::initializeButterLettuceShoots() {
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/RomaineLettuceLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/RomaineLettuceLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 0.85f;
     leaf_prototype.midrib_fold_fraction = 0.2f;
     leaf_prototype.longitudinal_curvature.uniformDistribution(-0.2, 0.05);
@@ -2622,7 +2622,7 @@ void PlantArchitecture::initializeSorghumShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/SorghumLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/SorghumLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 0.2f;
     leaf_prototype.midrib_fold_fraction = 0.3f;
     leaf_prototype.longitudinal_curvature.uniformDistribution(-0.4, -0.2);
@@ -2725,7 +2725,7 @@ void PlantArchitecture::initializeSoybeanShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/SoybeanLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/SoybeanLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 1.f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
     leaf_prototype.longitudinal_curvature.uniformDistribution(0.1, 0.2);
@@ -2868,7 +2868,7 @@ void PlantArchitecture::initializeStrawberryShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/StrawberryLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/StrawberryLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 1.f;
     leaf_prototype.midrib_fold_fraction = 0.2f;
     leaf_prototype.longitudinal_curvature = 0.15f;
@@ -2984,7 +2984,7 @@ void PlantArchitecture::initializeSugarbeetShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/SugarbeetLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/SugarbeetLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 0.4f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
     leaf_prototype.longitudinal_curvature = -0.2f;
@@ -3068,7 +3068,7 @@ void PlantArchitecture::initializeTomatoShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/TomatoLeaf_centered.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/TomatoLeaf_centered.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 0.5f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
     leaf_prototype.longitudinal_curvature.uniformDistribution(-0.45, -0.2f);
@@ -3185,7 +3185,7 @@ void PlantArchitecture::initializeCherryTomatoShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/CherryTomatoLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/CherryTomatoLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 0.6f;
     leaf_prototype.midrib_fold_fraction = 0.1f;
     leaf_prototype.longitudinal_curvature.uniformDistribution(-0.3, -0.15f);
@@ -3304,7 +3304,7 @@ void PlantArchitecture::initializeWalnutTreeShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/WalnutLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/WalnutLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 0.5f;
     leaf_prototype.midrib_fold_fraction = 0.15f;
     leaf_prototype.longitudinal_curvature = -0.2f;
@@ -3322,7 +3322,7 @@ void PlantArchitecture::initializeWalnutTreeShoots() {
     phytomer_parameters_walnut.internode.phyllotactic_angle.uniformDistribution(160, 200);
     phytomer_parameters_walnut.internode.radius_initial = 0.004;
     phytomer_parameters_walnut.internode.length_segments = 1;
-    phytomer_parameters_walnut.internode.image_texture = "plugins/plantarchitecture/assets/textures/AppleBark.jpg";
+    phytomer_parameters_walnut.internode.image_texture = helios::resolvePluginAsset("plantarchitecture", "assets/textures/AppleBark.jpg").string().c_str();
     phytomer_parameters_walnut.internode.max_floral_buds_per_petiole = 3;
 
     phytomer_parameters_walnut.petiole.petioles_per_internode = 2;
@@ -3461,7 +3461,7 @@ void PlantArchitecture::initializeWheatShoots() {
     // ---- Leaf Prototype ---- //
 
     LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
-    leaf_prototype.leaf_texture_file[0] = "plugins/plantarchitecture/assets/textures/SorghumLeaf.png";
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/SorghumLeaf.png").string().c_str();
     leaf_prototype.leaf_aspect_ratio = 0.1f;
     leaf_prototype.midrib_fold_fraction = 0.3f;
     leaf_prototype.longitudinal_curvature.uniformDistribution(-0.5, -0.1);

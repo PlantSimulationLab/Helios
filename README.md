@@ -2,7 +2,7 @@
 
 [![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/channel/UCUlyE4rKNGokwH5a-TioS0A)
 
-For complete documentation of this software, please consult <a href="https://baileylab.ucdavis.edu/software/helios">https://baileylab.ucdavis.edu/software/helios, or open the file doc/html/index.html in a web browser.
+For complete documentation of this software, please consult <a href="https://baileylab.ucdavis.edu/software/helios">https://baileylab.ucdavis.edu/software/helios.
 
 Helios is a C++ library for 3D physical simulation of plant and environmental systems. It can generate and manipulate plant and other geometric objects, which can feed into biophysical model plug-ins such as radiation transfer, photosynthesis, and evapotranspiration, among others. 
 

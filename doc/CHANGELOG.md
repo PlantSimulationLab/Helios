@@ -1,5 +1,21 @@
 # Changelog
 
+# [1.3.51] 2025-09-25
+
+- Added 'validation' page in documentation
+
+## Plant Architecture
+- Added collision detection documentation
+- Many assets were not properly using file resolution system
+
+## Radiation
+- Updates to camera calibration and radiation model implementations
+- Many assets were not properly using file resolution system
+
+## Visualizer
+- Font and shader assets were not properly using file resolution system
+- Further improvements to fix `Visualizer::printWindow()` producing black images in some edge cases
+
 # [1.3.50] 2025-09-22
 
 - Updated PugiXML library from version 1.7 to 1.15 with compact mode and XPath disabled for improved performance

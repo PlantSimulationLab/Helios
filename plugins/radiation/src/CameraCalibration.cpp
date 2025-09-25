@@ -209,7 +209,7 @@ std::vector<uint> CameraCalibration::addDGKColorboard(const helios::vec3 &centre
         std::cout << "WARNING (CameraCalibration::addDGKColorboard): Existing colorboard has been cleared in order to add colorboard." << std::endl;
     }
 
-    context->loadXML("plugins/radiation/spectral_data/color_board/DGK_DKK_colorboard.xml", true);
+    context->loadXML(helios::resolvePluginAsset("radiation", "spectral_data/color_board/DGK_DKK_colorboard.xml").string().c_str(), true);
 
     assert(context->doesGlobalDataExist("ColorReference_DGK_01"));
 
@@ -223,7 +223,7 @@ std::vector<uint> CameraCalibration::addCalibriteColorboard(const helios::vec3 &
         std::cout << "WARNING (CameraCalibration::addCalibriteColorboard): Existing colorboard has been cleared in order to add colorboard." << std::endl;
     }
 
-    context->loadXML("plugins/radiation/spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml", true);
+    context->loadXML(helios::resolvePluginAsset("radiation", "spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml").string().c_str(), true);
 
     assert(context->doesGlobalDataExist("ColorReference_Calibrite_01"));
 
@@ -237,7 +237,7 @@ std::vector<uint> CameraCalibration::addSpyderCHECKRColorboard(const helios::vec
         std::cout << "WARNING (CameraCalibration::addSpyderCHECKRColorboard): Existing colorboard has been cleared in order to add colorboard." << std::endl;
     }
 
-    context->loadXML("plugins/radiation/spectral_data/color_board/Datacolor_SpyderCHECKR_24_colorboard.xml", true);
+    context->loadXML(helios::resolvePluginAsset("radiation", "spectral_data/color_board/Datacolor_SpyderCHECKR_24_colorboard.xml").string().c_str(), true);
 
     assert(context->doesGlobalDataExist("ColorReference_SpyderCHECKR_01"));
 

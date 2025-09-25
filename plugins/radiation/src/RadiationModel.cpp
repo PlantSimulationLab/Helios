@@ -52,15 +52,15 @@ RadiationModel::RadiationModel(helios::Context *context_a) {
 
     periodic_flag = make_vec2(0, 0);
 
-    spectral_library_files.push_back("plugins/radiation/spectral_data/camera_spectral_library.xml");
-    spectral_library_files.push_back("plugins/radiation/spectral_data/light_spectral_library.xml");
-    spectral_library_files.push_back("plugins/radiation/spectral_data/soil_surface_spectral_library.xml");
-    spectral_library_files.push_back("plugins/radiation/spectral_data/leaf_surface_spectral_library.xml");
-    spectral_library_files.push_back("plugins/radiation/spectral_data/bark_surface_spectral_library.xml");
-    spectral_library_files.push_back("plugins/radiation/spectral_data/fruit_surface_spectral_library.xml");
-    spectral_library_files.push_back("plugins/radiation/spectral_data/solar_spectrum_ASTMG173.xml");
-    spectral_library_files.push_back("plugins/radiation/spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml");
-    spectral_library_files.push_back("plugins/radiation/spectral_data/color_board/DGK_DKK_colorboard.xml");
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/camera_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/light_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/soil_surface_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/leaf_surface_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/bark_surface_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/fruit_surface_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/solar_spectrum_ASTMG173.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/DGK_DKK_colorboard.xml").string());
 
     initializeOptiX();
 }

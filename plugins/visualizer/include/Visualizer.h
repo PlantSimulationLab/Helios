@@ -254,7 +254,7 @@ int read_JPEG_file(const char *filename, std::vector<unsigned char> &texture, ui
  * \param[in] print_messages [optional] If true, outputs status messages to the console. Defaults to false.
  * \return An integer indicating success (1) or failure (0) of the writing operation.
  */
-int write_JPEG_file(const char *filename, uint width, uint height, bool print_messages);
+int write_JPEG_file(const char *filename, uint width, uint height, bool buffers_swapped_since_render, bool print_messages);
 
 //! Writes image data to a JPEG file.
 /**
@@ -1230,6 +1230,9 @@ private:
     helios::uint2 shadow_buffer_size;
 
     uint frame_counter;
+
+    //! Track whether buffers have been swapped since last render
+    bool buffers_swapped_since_render;
 
     //! Handle to the GUI window
     /** \note This will be recast to have type GLFWwindow*.  This has to be done in order to keep library-dependent variables out of the header. */

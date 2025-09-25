@@ -87,7 +87,7 @@ void Visualizer::printWindow(const char *outfile) const {
         }
     } else {
         // In windowed mode, use the traditional framebuffer reading
-        int result = write_JPEG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, message_flag);
+        int result = write_JPEG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, buffers_swapped_since_render, message_flag);
         if (result == 0) {
             helios_runtime_error("ERROR (Visualizer::printWindow): Failed to save screenshot to " + outfile_str);
         }
@@ -475,12 +475,14 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
         glUniform1i(primaryShader.shadowmapUniform, 1);
         glActiveTexture(GL_TEXTURE0);
 
+        buffers_swapped_since_render = false;
         render(false);
 
         glfwPollEvents();
         getViewKeystrokes(camera_eye_location, camera_lookat_center);
 
         glfwSwapBuffers((GLFWwindow *) window);
+        buffers_swapped_since_render = true;
 
         glfwWaitEventsTimeout(1.0 / 30.0);
 
@@ -576,6 +578,8 @@ void Visualizer::plotOnce(bool getKeystrokes) {
     glUniform1i(primaryShader.shadowmapUniform, 1);
     glActiveTexture(GL_TEXTURE0);
 
+    // Set buffer state before rendering (plotOnce doesn't call glfwSwapBuffers)
+    buffers_swapped_since_render = false;
     render(false);
 
     // glfwPollEvents();
@@ -1197,6 +1201,7 @@ void Visualizer::plotUpdate(bool hide_window) {
     glUniform1i(primaryShader.shadowmapUniform, 1);
     glActiveTexture(GL_TEXTURE0);
 
+    buffers_swapped_since_render = false;
     render(false);
 
     // Skip window-specific operations in headless mode
@@ -1210,6 +1215,7 @@ void Visualizer::plotUpdate(bool hide_window) {
         Hframebuffer = height;
 
         glfwSwapBuffers((GLFWwindow *) window);
+        buffers_swapped_since_render = true;
     }
 
     if (message_flag) {
@@ -1602,7 +1608,8 @@ void Visualizer::updateWatermark() {
     if (watermark_ID != 0) {
         geometry_handler.deleteGeometry(watermark_ID);
     }
-    watermark_ID = addRectangleByCenter(make_vec3(0.75f * width, 0.95f, 0), make_vec2(width, 0.07), make_SphericalCoord(0, 0), "plugins/visualizer/textures/Helios_watermark.png", COORDINATES_WINDOW_NORMALIZED);
+    std::string watermarkPath = helios::resolvePluginAsset("visualizer", "textures/Helios_watermark.png").string();
+    watermark_ID = addRectangleByCenter(make_vec3(0.75f * width, 0.95f, 0), make_vec2(width, 0.07), make_SphericalCoord(0, 0), watermarkPath.c_str(), COORDINATES_WINDOW_NORMALIZED);
 }
 
 

@@ -44,7 +44,7 @@ int read_JPEG_file(const char *filename, std::vector<unsigned char> &texture, ui
     return 0;
 }
 
-int write_JPEG_file(const char *filename, uint width, uint height, bool print_messages) {
+int write_JPEG_file(const char *filename, uint width, uint height, bool buffers_swapped_since_render, bool print_messages) {
     if (print_messages) {
         std::cout << "writing JPEG image: " << filename << std::endl;
     }
@@ -52,8 +52,7 @@ int write_JPEG_file(const char *filename, uint width, uint height, bool print_me
     // Validate framebuffer completeness
     GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
-        std::cerr << "ERROR (write_JPEG_file): Framebuffer is not complete (status: " << framebuffer_status << ")" << std::endl;
-        return 0;
+        helios_runtime_error("ERROR (write_JPEG_file): Framebuffer is not complete (status: " + std::to_string(framebuffer_status) + ")");
     }
 
     // Clear any existing OpenGL errors
@@ -66,70 +65,30 @@ int write_JPEG_file(const char *filename, uint width, uint height, bool print_me
     // Set proper pixel alignment for reliable reading
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
-    // Robustly determine which buffer contains rendered content
-    // Sample multiple pixels to avoid false negatives from legitimately black pixels
-    const int num_samples = 9;
-    const uint sample_positions[][2] = {
-        {width/4, height/4}, {width/2, height/4}, {3*width/4, height/4},
-        {width/4, height/2}, {width/2, height/2}, {3*width/4, height/2},
-        {width/4, 3*height/4}, {width/2, 3*height/4}, {3*width/4, 3*height/4}
-    };
-    GLubyte test_pixels[num_samples * 3];
-
-    auto count_non_black_pixels = [](const GLubyte* pixels, int count) -> int {
-        int non_black = 0;
-        for (int i = 0; i < count * 3; i += 3) {
-            if (pixels[i] > 5 || pixels[i+1] > 5 || pixels[i+2] > 5) { // Use small threshold to account for compression artifacts
-                non_black++;
+    // Deterministic buffer selection based on swap state tracking
+    // If buffers have been swapped since last render, newest content is in GL_FRONT
+    // If buffers have NOT been swapped since last render, newest content is in GL_BACK (current render target)
+    GLenum error;
+    if (buffers_swapped_since_render) {
+        glReadBuffer(GL_FRONT);
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            // Fallback to back buffer if front buffer fails
+            glReadBuffer(GL_BACK);
+            error = glGetError();
+            if (error != GL_NO_ERROR) {
+                helios_runtime_error("ERROR (write_JPEG_file): Cannot set read buffer (error: " + std::to_string(error) + ")");
             }
         }
-        return non_black;
-    };
-
-    int back_buffer_content_score = 0;
-    int front_buffer_content_score = 0;
-
-    // Test back buffer with multiple samples
-    glReadBuffer(GL_BACK);
-    GLenum error = glGetError();
-    if (error == GL_NO_ERROR) {
-        glFinish();
-        for (int i = 0; i < num_samples; i++) {
-            glReadPixels(sample_positions[i][0], sample_positions[i][1], 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &test_pixels[i*3]);
-        }
-        if (glGetError() == GL_NO_ERROR) {
-            back_buffer_content_score = count_non_black_pixels(test_pixels, num_samples);
-        }
-    }
-
-    // Test front buffer with multiple samples
-    glReadBuffer(GL_FRONT);
-    error = glGetError();
-    if (error == GL_NO_ERROR) {
-        glFinish();
-        for (int i = 0; i < num_samples; i++) {
-            glReadPixels(sample_positions[i][0], sample_positions[i][1], 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &test_pixels[i*3]);
-        }
-        if (glGetError() == GL_NO_ERROR) {
-            front_buffer_content_score = count_non_black_pixels(test_pixels, num_samples);
-        }
-    }
-
-    // Choose the buffer with higher content score, prefer back buffer if scores are equal
-    if (back_buffer_content_score >= front_buffer_content_score && back_buffer_content_score > 0) {
-        glReadBuffer(GL_BACK);
-    } else if (front_buffer_content_score > 0) {
-        glReadBuffer(GL_FRONT);
     } else {
-        // Neither buffer has detectable content, default to back buffer
         glReadBuffer(GL_BACK);
         error = glGetError();
         if (error != GL_NO_ERROR) {
+            // Fallback to front buffer if back buffer fails
             glReadBuffer(GL_FRONT);
             error = glGetError();
             if (error != GL_NO_ERROR) {
-                std::cerr << "ERROR (write_JPEG_file): Cannot set read buffer (error: " << error << ")" << std::endl;
-                return 0;
+                helios_runtime_error("ERROR (write_JPEG_file): Cannot set read buffer (error: " + std::to_string(error) + ")");
             }
         }
     }
@@ -141,8 +100,7 @@ int write_JPEG_file(const char *filename, uint width, uint height, bool print_me
     glReadPixels(0, 0, scast<GLsizei>(width), scast<GLsizei>(height), GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
     error = glGetError();
     if (error != GL_NO_ERROR) {
-        std::cerr << "ERROR (write_JPEG_file): glReadPixels failed (error: " << error << ")" << std::endl;
-        return 0;
+        helios_runtime_error("ERROR (write_JPEG_file): glReadPixels failed (error: " + std::to_string(error) + ")");
     }
 
     // Check if we got all black pixels (common failure mode)
@@ -154,7 +112,7 @@ int write_JPEG_file(const char *filename, uint width, uint height, bool print_me
     }
 
     if (all_black) {
-        std::cerr << "WARNING (write_JPEG_file): All pixels are black - this may indicate a timing or buffer issue" << std::endl;
+        std::cout << "WARNING (write_JPEG_file): All pixels are black - this may indicate a timing or buffer issue" << std::endl;
     }
 
     // Convert to RGBcolor vector and use Context's writeJPEG
@@ -680,6 +638,8 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     frame_counter = 0;
 
+    buffers_swapped_since_render = false;
+
     camera_FOV = 45;
 
     minimum_view_radius = 0.05f;
@@ -1006,8 +966,13 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     //~~~~~~~~~~~~~ Load the Shaders ~~~~~~~~~~~~~~~~~~~//
 
-    primaryShader.initialize("plugins/visualizer/shaders/primaryShader.vert", "plugins/visualizer/shaders/primaryShader.frag", this);
-    depthShader.initialize("plugins/visualizer/shaders/shadow.vert", "plugins/visualizer/shaders/shadow.frag", this);
+    std::string primaryVertShader = helios::resolvePluginAsset("visualizer", "shaders/primaryShader.vert").string();
+    std::string primaryFragShader = helios::resolvePluginAsset("visualizer", "shaders/primaryShader.frag").string();
+    std::string shadowVertShader = helios::resolvePluginAsset("visualizer", "shaders/shadow.vert").string();
+    std::string shadowFragShader = helios::resolvePluginAsset("visualizer", "shaders/shadow.frag").string();
+
+    primaryShader.initialize(primaryVertShader.c_str(), primaryFragShader.c_str(), this);
+    depthShader.initialize(shadowVertShader.c_str(), shadowFragShader.c_str(), this);
 
     // Check for OpenGL errors after shader initialization
     if (!checkerrors()) {
