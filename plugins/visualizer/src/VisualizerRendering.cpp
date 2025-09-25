@@ -724,16 +724,24 @@ void Visualizer::transferBufferData() {
 }
 
 void Visualizer::transferTextureData() {
-    if (texArray == 0) {
-        glGenTextures(1, &texArray);
-    }
-
-    glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
 
     const size_t layers = std::max<size_t>(1, texture_manager.size());
-    if (layers != texture_array_layers) {
+
+    // Check if texture needs recreation (Windows requires deleting and recreating texture
+    // when layer count changes due to glTexStorage3D immutable format restrictions)
+    if (texArray == 0 || layers != texture_array_layers) {
+        // Delete existing texture if it exists
+        if (texArray != 0) {
+            glDeleteTextures(1, &texArray);
+        }
+
+        // Create new texture
+        glGenTextures(1, &texArray);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
         glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, maximum_texture_size.x, maximum_texture_size.y, layers);
         texture_array_layers = layers;
+    } else {
+        glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
     }
 
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

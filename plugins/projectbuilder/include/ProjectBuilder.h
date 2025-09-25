@@ -214,7 +214,7 @@ struct canopy {
 //! Object struct
 struct object{
  int index;
- int objID;
+ uint objID;
  std::string name;
  std::string file;
  std::string data_group;
@@ -242,6 +242,7 @@ struct rig {
     std::set<std::string> light_labels;
     bool write_depth;
     bool write_norm_depth;
+    bool write_segmentation_mask;
 };
 
 bool parse_distribution(const std::string &input_string, distribution &converted_distribution);
@@ -446,6 +447,8 @@ private:
  //! Set of data group names
  std::set<std::string> data_groups_set = {"All"};
 
+ std::vector<std::string> data_groups = {"All"};
+
  //! Ground area
  float ground_area;
 
@@ -520,6 +523,9 @@ private:
 
  //! Vector of bools representing whether to write norm depth images for each rig
  std::vector<bool> write_norm_depth;
+
+ //! Vector of bools representing whether to write segmentation masks for each rig
+ std::vector<bool> write_segmentation_mask;
 
  //! Rig position
  helios::vec3 camera_position = {0, 0, 0};
@@ -1100,6 +1106,8 @@ private:
  //! Dictionary containing UUIDs for every camera model
  std::map<std::string, std::vector<uint>> camera_models_dict;
 
+ void objectTab();
+
  //! Function to delete arrows denoting rig movement
  void deleteArrows();
 
@@ -1271,35 +1279,65 @@ private:
  std::map<std::string, bool> calculation_selection_primitive{{"All", false}};
 
  //! Calculation labels
- std::set<std::string> calculation_labels_primitive;
+ std::set<std::string> calculation_variable_choices;
 
  //! Calculation label
- std::string calculation_label;
+ std::string calculation_variable_global;
 
- //! Calculation labels
- std::vector<std::string> calculation_labels = {""};
+ //! Calculation labels global
+ std::vector<std::string> calculation_variables_global = {""};
 
- //! Calculation labels
- std::vector<float> calculation_scalars = {1.0};
+ //! Calculation labels by primitive
+ std::vector<std::string> calculation_variables_primitive = {""};
 
- //! Operators
- std::vector<std::string> calculation_operators = {};
+ //! Calculation scalars global
+ std::vector<float> calculation_scalars_global = {1.0};
+
+ //! Calculation scalars by primitive
+ std::vector<float> calculation_scalars_primitive = {1.0};
+
+ //! Operators for global calculation
+ std::vector<std::string> calculation_operators_global = {};
+
+ //! Operators for calculation by primitive
+ std::vector<std::string> calculation_operators_primitive = {};
 
  //! Caclulation operator choices
- std::set<std::string> calculation_operators_labels = {"+", "-", "/", "x"};
-
+ std::set<std::string> calculation_operators_choices = {"+", "-", "/", "x"};
 
  //! Operation Choices
- std::set<std::string> operation_choices = {"Mean", "Sum", "Area Weighted Mean", "Area Weighted Sum"};
+ std::set<std::string> calculation_aggregation_choices = {"None", "Mean", "Sum", "Area Weighted Mean", "Area Weighted Sum"};
+
+ //! Helios numeric types
+ // std::set<helios::HeliosDataType> heliosNumericTypes = {helios::HELIOS_TYPE_INT, helios::HELIOS_TYPE_UINT,
+ //                                                        helios::HELIOS_TYPE_FLOAT, helios::HELIOS_TYPE_DOUBLE};
+ std::set<helios::HeliosDataType> heliosNumericTypes = {helios::HELIOS_TYPE_FLOAT};
 
  //! Current operation
- std::string curr_operation = "Mean";
+ std::string curr_aggregation = "Mean";
+
+ std::vector<std::string> calculation_aggregations = {"Mean"};
+
+ bool by_primitive = false;
+
+ std::string calculation_name_primitive = "saved prim data";
+
+ std::string calculation_name_global = "saved global data";
 
  //! Calculation Result
- float calculation_result = 0.0f;
+ float calculation_result_global = 0.0f;
 
  //! Refresh list of possible objects for bounding boxes
  void refreshBoundingBoxObjectList();
+
+ //! Perform global calculation
+ void globalCalculation();
+
+ //! Save primitive calculation
+ void savePrimitiveCalculation();
+
+ //! Run radiation
+ void runRadiation();
 
 public:
     //! Context
@@ -1340,6 +1378,9 @@ public:
 
     //! Function to "record", or save camera images with bounding boxes for each rig
     void record();
+
+    //! Function to "reload" (unused)
+    void reload();
 
     //! Function to build context from XML
     void buildFromXML();
