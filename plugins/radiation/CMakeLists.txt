@@ -9,7 +9,7 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
-add_library(radiation STATIC "src/RadiationModel.cpp" "src/CameraCalibration.cpp" "tests/selfTest.cpp")
+add_library(radiation STATIC "src/RadiationModel.cpp"  "src/RadiationCamera.cpp"  "src/CameraCalibration.cpp" "tests/selfTest.cpp")
 
 target_include_directories(radiation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include )
 
