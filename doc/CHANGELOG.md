@@ -1,5 +1,16 @@
 # Changelog
 
+# [1.3.52] 2025-XX-XX
+
+## Plant Architecture
+- Fixed a bug in the maize phytomer creation function where the scale could be left uninitialized, leading to undefined behavior.
+- Removed a duplicate code block in the tomato phytomer creation function.
+
+## Project Builder
+- Merged in many project builder bug fixes and updates. 
+
+Co-authored-by: Sean Banks <smbanx@users.noreply.github.com>
+
 # [1.3.51] 2025-09-25
 
 - Added 'validation' page in documentation
