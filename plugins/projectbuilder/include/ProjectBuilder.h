@@ -187,10 +187,11 @@ struct distribution {
 };
 
 //! Band group struct
-struct bandGroup {
-    std::vector<std::string> bands;
-    bool grayscale;
-    bool norm;
+struct bandGroup{
+ std::vector<std::string> bands;
+ bool grayscale;
+ bool norm;
+ bool hdr;
 };
 
 //! Canopy struct
@@ -211,8 +212,9 @@ struct canopy {
 };
 
 //! Object struct
-struct object {
+struct object{
     int index;
+    uint objID;
     std::string name;
     std::string file;
     std::string data_group;
@@ -231,15 +233,21 @@ struct object {
 
 //! Rig struct
 struct rig {
+    int num_images;
     std::string label;
     std::vector<distribution> position_noise;
+    std::vector<distribution> lookat_noise;
     helios::RGBcolor color;
     helios::vec3 position;
     helios::vec3 lookat;
+    std::vector<helios::vec3> camera_positions;
+    std::vector<helios::vec3> camera_lookats;
+    std::vector<int> keypoint_frames;
     std::set<std::string> camera_labels;
     std::set<std::string> light_labels;
     bool write_depth;
     bool write_norm_depth;
+    bool write_segmentation_mask;
 };
 
 bool parse_distribution(const std::string &input_string, distribution &converted_distribution);
@@ -268,983 +276,1102 @@ distribution createDistribution(const std::weibull_distribution<float> &dist, bo
 
 class ProjectBuilder {
 private:
-    //! XML Document
-    pugi::xml_document xmldoc;
+ //! XML Document
+ pugi::xml_document xmldoc;
 
-    //! XML Document path
-    std::string xml_input_file = "plugins/projectbuilder/inputs/inputs.xml";
+ //! XML Document path
+ std::string xml_input_file = "plugins/projectbuilder/inputs/inputs.xml";
 
-    //! User input
-    bool user_input;
+ //! User input
+ bool user_input;
 
-    //! Light coordinates type (false = Cartesian, true = Spherical)
-    bool light_coord_type = false;
+ //! Light coordinates type (false = Cartesian, true = Spherical)
+ bool light_coord_type = false;
 
-    //! If true, the context has been updated since the last time the visualizer has been updated
-    bool is_dirty = false;
+ //! If true, the context has been updated since the last time the visualizer has been updated
+ bool is_dirty = false;
 
-    //! If true, the project has been built and `visualize()` can be run.
-    bool built = false;
+ //! If true, the project has been built and `visualize()` can be run.
+ bool built = false;
 
-    //! Absorbed PAR value
-    float PAR_absorbed;
+ //! Absorbed PAR value
+ float PAR_absorbed;
 
-    //! Absorbed NIR value
-    float NIR_absorbed;
+ //! Absorbed NIR value
+ float NIR_absorbed;
 
-    //! Absorbed LW value
-    float LW_absorbed;
+ //! Absorbed LW value
+ float LW_absorbed;
 
-    //! Turbidity
-    float turbidity;
+ //! Turbidity
+ float turbidity;
 
-    //! Diffuse extinction coefficient
-    float diffuse_extinction_coeff = 0.1;
+ //! Diffuse extinction coefficient
+ float diffuse_extinction_coeff = 0.1;
 
-    //! Enforce periodic boundary x
-    bool enforce_periodic_boundary_x = true;
+ //! Enforce periodic boundary x
+ bool enforce_periodic_boundary_x = true;
 
-    //! Enforce periodic boundary y
-    bool enforce_periodic_boundary_y = true;
+ //! Enforce periodic boundary y
+ bool enforce_periodic_boundary_y = true;
 
-    //! Sun ID
-    uint sun_ID;
+ //! Sun ID
+ uint sun_ID;
 
-    //! Band Labels
-    std::vector<std::string> bandlabels;
+ //! Band Labels
+ std::vector<std::string> bandlabels;
 
-    //! Band group names
-    std::set<std::string> band_group_names;
+ //! Band group names
+ std::set<std::string> band_group_names;
 
-    //! Band groups lookup map
-    std::map<std::string, bandGroup> band_group_lookup;
+ //! Band groups lookup map
+ std::map<std::string, bandGroup> band_group_lookup;
 
-    //! Current band group
-    std::string current_band_group;
+ //! Current band group
+ std::string current_band_group;
 
-    //! Band Labels set
-    std::set<std::string> bandlabels_set;
+ //! Band Labels set
+ std::set<std::string> bandlabels_set;
 
-    //! Set of band labels with emissivity enabled
-    std::set<std::string> bandlabels_set_emissivity;
+ //! Set of band labels with emissivity enabled
+ std::set<std::string> bandlabels_set_emissivity;
 
-    //! Set of band labels with wavelength range set
-    std::set<std::string> bandlabels_set_wavelength;
+ //! Set of band labels with wavelength range set
+ std::set<std::string> bandlabels_set_wavelength;
 
-    //! Direct ray count map keyed by band label that returns the direct ray count for the specified band.
-    std::map<std::string, int> direct_ray_count_dict;
+ //! Direct ray count map keyed by band label that returns the direct ray count for the specified band.
+ std::map<std::string, int> direct_ray_count_dict;
 
-    //! Diffuse ray count map keyed by band label that returns the diffuse ray count for the specified band.
-    std::map<std::string, int> diffuse_ray_count_dict;
+ //! Diffuse ray count map keyed by band label that returns the diffuse ray count for the specified band.
+ std::map<std::string, int> diffuse_ray_count_dict;
 
-    //! Scattering depth map keyed by band label that returns the scattering depth for the specified band.
-    std::map<std::string, int> scattering_depth_dict;
+ //! Scattering depth map keyed by band label that returns the scattering depth for the specified band.
+ std::map<std::string, int> scattering_depth_dict;
 
-    //! New band label
-    std::string new_band_label;
+ //! New band label
+ std::string new_band_label;
 
-    //! New band wavelength min
-    float wavelength_min = 400.0f;
+ //! New band wavelength min
+ float wavelength_min = 400.0f;
 
-    //! New band wavelength max
-    float wavelength_max = 700.0f;
+ //! New band wavelength max
+ float wavelength_max = 700.0f;
 
-    //! New band enable wavelength
-    bool enable_wavelength;
+ //! New band enable wavelength
+ bool enable_wavelength;
 
-    //! New band enable emission
-    bool enable_emission;
+ //! New band enable emission
+ bool enable_emission;
 
-    //! Ground UUIDs
-    std::vector<uint> ground_UUIDs;
+ //! Ground UUIDs
+ std::vector<uint> ground_UUIDs;
 
-    //! Ground object ID
-    uint ground_objID;
+ //! Ground object ID
+ uint ground_objID;
 
-    //! Leaf UUIDs
-    std::vector<uint> leaf_UUIDs;
+ //! Leaf UUIDs
+ std::vector<uint> leaf_UUIDs;
 
-    //! Petiolule UUIDs
-    std::vector<uint> petiolule_UUIDs;
+ //! Petiolule UUIDs
+ std::vector<uint> petiolule_UUIDs;
 
-    //! Petiole UUIDs
-    std::vector<uint> petiole_UUIDs;
+ //! Petiole UUIDs
+ std::vector<uint> petiole_UUIDs;
 
-    //! Internode UUIDs
-    std::vector<uint> internode_UUIDs;
+ //! Internode UUIDs
+ std::vector<uint> internode_UUIDs;
 
-    //! Peduncle UUIDs
-    std::vector<uint> peduncle_UUIDs;
+ //! Peduncle UUIDs
+ std::vector<uint> peduncle_UUIDs;
 
-    //! Petal UUIDs
-    std::vector<uint> petal_UUIDs;
+ //! Petal UUIDs
+ std::vector<uint> petal_UUIDs;
 
-    //! Flower UUIDs
-    std::vector<uint> flower_UUIDs;
+ //! Flower UUIDs
+ std::vector<uint> flower_UUIDs;
 
-    //! Sepal UUIDs
-    std::vector<uint> sepal_UUIDs;
+ //! Sepal UUIDs
+ std::vector<uint> sepal_UUIDs;
 
-    //! Pedicel UUIDs
-    std::vector<uint> pedicel_UUIDs;
+ //! Pedicel UUIDs
+ std::vector<uint> pedicel_UUIDs;
 
-    //! Fruit UUIDs
-    std::vector<uint> fruit_UUIDs;
+ //! Fruit UUIDs
+ std::vector<uint> fruit_UUIDs;
 
-    //! Primitive names vector
-    std::vector<std::string> primitive_names = {"All", "ground", "leaf", "petiolule", "petiole", "internode", "peduncle", "petal", "pedicel", "fruit"};
+ //! Primitive names vector
+ std::vector<std::string> primitive_names = {"All", "ground", "leaf", "petiolule", "petiole", "internode", "peduncle", "petal", "pedicel", "fruit"};
 
-    //! Bounding boxes
-    std::map<std::string, bool> bounding_boxes = {
-            {"plantID", false}, {"leafID", false}, {"peduncleID", false}, {"closedflowerID", false}, {"openflowerID", false}, {"fruitID", false}, {"rank", false}, {"age", false}, {"carbohydrate_concentration", false}};
+ //! Bounding boxes
+ std::map<std::string, bool> bounding_boxes = {{"plantID", false}, {"leafID", false}, {"peduncleID", false},
+                                               {"closedflowerID", false}, {"openflowerID", false}, {"fruitID", false},
+                                               {"rank", false}, {"age", false}, {"carbohydrate_concentration", false}};
 
-    //! Bounding boxes map
-    std::map<std::string, int> bounding_boxes_map;
+ //! Default bounding box objects
+ std::set<std::string> bounding_boxes_default = {"plantID", "leafID", "peduncleID", "closedflowerID", "openflowerID", "fruitID",  "rank"};
 
-    //! Primitive names set
-    std::set<std::string> primitive_names_set = {"All", "ground", "leaf", "petiolule", "petiole", "internode", "peduncle", "petal", "pedicel", "fruit"};
+ //! Bounding box objects associated with a primitive type
+ std::set<std::string> bounding_boxes_primitive;
 
-    //! Map keyed by primitive names that returns the address of a vector of UUIDs corresponding to the primitive name
-    std::map<std::string, std::vector<uint> *> primitive_addresses;
+ //! Bounding box objects associated with an object type
+ std::set<std::string> bounding_boxes_object;
 
-    //! Map keyed by primitive names that returns a vector of UUIDs corresponding to the primitive name
-    std::map<std::string, std::vector<uint>> primitive_UUIDs;
+ //! Bounding boxes map
+ std::map<std::string, int> bounding_boxes_map;
 
-    //! Map keyed by data group name that returns a map of primitive UUIDs for each primitive name in the data group
-    std::map<std::string, std::map<std::string, std::vector<uint>>> primitive_UUIDs_dict;
+ //! Primitive names set
+ std::set<std::string> primitive_names_set = {"All", "ground", "leaf", "petiolule", "petiole", "internode", "peduncle", "petal", "pedicel", "fruit"};
 
-    //! Map keyed by primitive names that returns a bool representing whether the primitive has continuous spectra (reflectivity, transmissivity, emissivity)
-    std::map<std::string, std::vector<bool>> primitive_continuous;
+ //! Map keyed by primitive names that returns the address of a vector of UUIDs corresponding to the primitive name
+ std::map<std::string, std::vector<uint> *> primitive_addresses;
 
-    //! Map keyed by primitive names that returns a bool representing whether the primitive has continuous spectra (reflectivity, transmissivity, emissivity)
-    std::map<std::string, std::map<std::string, std::vector<bool>>> primitive_continuous_dict;
+ //! Map keyed by primitive names that returns a vector of UUIDs corresponding to the primitive name
+ std::map<std::string, std::vector<uint>> primitive_UUIDs;
 
-    //! Map keyed by primitive names that returns spectra (reflectivity, transmissivity, emissivity)
-    std::map<std::string, std::vector<std::string>> primitive_spectra;
+ //! Map keyed by data group name that returns a map of primitive UUIDs for each primitive name in the data group
+ std::map<std::string, std::map<std::string, std::vector<uint>>> primitive_UUIDs_dict;
 
-    //! Map keyed by data group that returns a map of primitive spectra information for that data group
-    std::map<std::string, std::map<std::string, std::vector<std::string>>> primitive_spectra_dict;
+ //! Map keyed by primitive names that returns a bool representing whether the primitive has continuous spectra (reflectivity, transmissivity, emissivity)
+ std::map<std::string, std::vector<bool>> primitive_continuous;
 
-    //! Primitive values map: band -> primitive type -> {reflectivity, transmissivity, emissivity}
-    std::map<std::string, std::map<std::string, std::vector<float>>> primitive_values;
+ //! Map keyed by primitive names that returns a bool representing whether the primitive has continuous spectra (reflectivity, transmissivity, emissivity)
+ std::map<std::string, std::map<std::string, std::vector<bool>>> primitive_continuous_dict;
 
-    //! Primitive values map: band -> primitive type -> {reflectivity, transmissivity, emissivity}
-    std::map<std::string, std::map<std::string, std::map<std::string, std::vector<float>>>> primitive_values_dict;
+ //! Map keyed by primitive names that returns spectra (reflectivity, transmissivity, emissivity)
+ std::map<std::string, std::vector<std::string>> primitive_spectra;
 
-    //! Set of data group names
-    std::set<std::string> data_groups_set = {"All"};
+ //! Map keyed by data group that returns a map of primitive spectra information for that data group
+ std::map<std::string, std::map<std::string, std::vector<std::string>>> primitive_spectra_dict;
 
-    //! Ground area
-    float ground_area;
+ //! Primitive values map: band -> primitive type -> {reflectivity, transmissivity, emissivity}
+ std::map<std::string, std::map<std::string, std::vector<float>>> primitive_values;
 
-    //! Timeseries variables
-    std::vector<std::string> timeseries_variables;
+ //! Primitive values map: band -> primitive type -> {reflectivity, transmissivity, emissivity}
+ std::map<std::string, std::map<std::string, std::map<std::string, std::vector<float>>>> primitive_values_dict;
 
-    //! Air temperature
-    float air_temperature = 300.f;
+ //! Set of data group names
+ std::set<std::string> data_groups_set = {"All"};
 
-    //! Air humidity
-    float air_humidity = 0.5f;
+ std::vector<std::string> data_groups = {"All"};
 
-    //! Sun direction vector
-    helios::vec3 sun_dir_vec;
+ //! Ground area
+ float ground_area;
 
-    //! R PAR dir
-    float R_PAR_dir;
+ //! Timeseries variables
+ std::vector<std::string> timeseries_variables;
 
-    //! R NIR dir
-    float R_NIR_dir;
+ //! Air temperature
+ float air_temperature = 300.f;
 
-    //! fdiff
-    float fdiff;
+ //! Air humidity
+ float air_humidity = 0.5f;
 
-    //! XML Error String
-    std::string xml_error_string;
+ //! Sun direction vector
+ helios::vec3 sun_dir_vec;
 
-    //! Rig labels
-    std::vector<std::string> rig_labels;
+ //! R PAR dir
+ float R_PAR_dir;
 
-    //! Rig position noise
-    std::vector<std::vector<distribution>> rig_position_noise;
+ //! R NIR dir
+ float R_NIR_dir;
 
-    //! Rig lookat noise
-    std::vector<std::vector<distribution>> rig_lookat_noise;
+ //! fdiff
+ float fdiff;
 
-    //! Rig colors
-    std::vector<helios::RGBcolor> rig_colors;
+ //! XML Error String
+ std::string xml_error_string;
 
-    //! Camera positions
-    std::vector<helios::vec3> camera_positions;
+ rig default_rig{1, "default_rig", {}, {}, helios::RGBcolor(1, 0, 0),
+                 helios::vec3(0, 0, 1), helios::vec3(0, 0, 0), {helios::vec3(0, 0, 1)}, {helios::vec3(0, 0, 0)},
+                 {1}, {}, {}, false, false, false};
 
-    //! Camera lookats
-    std::vector<helios::vec3> camera_lookats;
+ //! Rig labels
+ std::vector<std::string> rig_labels;
 
-    //! Vector containing the *first* camera label of every rig.
-    std::vector<std::string> camera_labels;
+ //! Rig position noise
+ std::vector<std::vector<distribution>> rig_position_noise;
 
-    //! Vector of camera resolutions
-    std::vector<helios::int2> camera_resolutions;
+ //! Rig lookat noise
+ std::vector<std::vector<distribution>> rig_lookat_noise;
 
-    //! Vector of focal plane distances for every camera
-    std::vector<float> focal_plane_distances;
+ //! Rig colors
+ std::vector<helios::RGBcolor> rig_colors;
 
-    //! Vector of lens diameters for every camera
-    std::vector<float> lens_diameters;
+ //! Camera positions
+ std::vector<helios::vec3> camera_positions;
 
-    //! Vector of FOV aspect ratios for every camera
-    std::vector<float> FOV_aspect_ratios;
+ //! Camera lookats
+ std::vector<helios::vec3> camera_lookats;
 
-    //! Vector of HFOVs for every camera
-    std::vector<float> HFOVs;
+ //! Vector containing the *first* camera label of every rig.
+ std::vector<std::string> camera_labels;
 
-    //! Map keyed by rig name that returns rig index
-    std::map<std::string, int> rig_dict;
+ //! Vector of camera resolutions
+ std::vector<helios::int2> camera_resolutions;
 
-    //! Rig labels
-    std::set<std::string> rig_labels_set;
+ //! Vector of focal plane distances for every camera
+ std::vector<float> focal_plane_distances;
 
-    //! Vector of bools representing whether to write depth images for each rig
-    std::vector<bool> write_depth;
+ //! Vector of lens diameters for every camera
+ std::vector<float> lens_diameters;
 
-    //! Vector of bools representing whether to write norm depth images for each rig
-    std::vector<bool> write_norm_depth;
+ //! Vector of FOV aspect ratios for every camera
+ std::vector<float> FOV_aspect_ratios;
 
-    //! Rig position
-    helios::vec3 camera_position = {0, 0, 0};
+ //! Vector of HFOVs for every camera
+ std::vector<float> HFOVs;
 
-    //! Vector of keypoint frames for every rig
-    std::vector<std::vector<int>> keypoint_frames;
+ //! Map keyed by rig name that returns rig index
+ std::map<std::string, int> rig_dict;
 
-    //! Vector of rig positions for every rig
-    std::vector<std::vector<helios::vec3>> camera_position_vec;
+ //! Map keyed by rig name that returns the corresponding rig struct.
+ std::map<std::string, rig> rig_dict_;
 
-    //! Vector of rig lookat positions for every rig
-    std::vector<std::vector<helios::vec3>> camera_lookat_vec;
+ //! Rig labels
+ std::set<std::string> rig_labels_set;
 
-    //! Rig lookat
-    helios::vec3 camera_lookat = {0, 0, 0};
+ //! Vector of bools representing whether to write depth images for each rig
+ std::vector<bool> write_depth;
 
-    //! Camera label
-    std::string camera_label = "RGB";
+ //! Vector of bools representing whether to write norm depth images for each rig
+ std::vector<bool> write_norm_depth;
 
-    //! Number of images/frames
-    int num_images = 5;
+ //! Vector of bools representing whether to write segmentation masks for each rig
+ std::vector<bool> write_segmentation_mask;
 
-    //! Number of images/frames per rig
-    std::vector<int> num_images_vec;
+ //! Rig position
+ helios::vec3 camera_position = {0, 0, 0};
 
-    //! Vector of camera names
-    std::vector<std::string> camera_names;
+ //! Vector of keypoint frames for every rig
+ std::vector<std::vector<int>> keypoint_frames;
 
-    //! Set of camera names
-    std::set<std::string> camera_names_set;
+ //! Vector of rig positions for every rig
+ std::vector<std::vector<helios::vec3>> camera_position_vec;
 
-    //! Camera resolution
-    helios::int2 camera_resolution = {1024, 1024};
+ //! Vector of rig lookat positions for every rig
+ std::vector<std::vector<helios::vec3>> camera_lookat_vec;
 
-    //! Focal plane distance
-    float focal_plane_distance = 0.4;
+ //! Rig lookat
+ helios::vec3 camera_lookat = {0, 0, 0};
 
-    //! Lens diameter
-    float lens_diameter = 0.02;
+ //! Camera label
+ std::string camera_label = "RGB";
 
-    //! FOV aspect ratio
-    float FOV_aspect_ratio = 1.4;
+ //! Number of images/frames
+ int num_images = 5;
 
-    //! HFOV
-    float HFOV = 50.0;
+ //! Number of images/frames per rig
+ std::vector<int> num_images_vec;
 
-    //! Dictionary keyed by camera name that returns camera index.
-    std::map<std::string, int> camera_dict;
+ //! Vector of camera names
+ std::vector<std::string> camera_names;
 
-    //! Set of camera labels for every rig
-    std::vector<std::set<std::string>> rig_camera_labels;
+ //! Set of camera names
+ std::set<std::string> camera_names_set;
 
-    //! Vector of light names.
-    std::vector<std::string> light_names;
+ //! Camera resolution
+ helios::int2 camera_resolution = {1024, 1024};
 
-    //! Set of light names.
-    std::set<std::string> light_names_set;
+ //! Focal plane distance
+ float focal_plane_distance = 0.4;
 
-    //! Vector of light types (e.g. sphere, rectangle, etc.).
-    std::vector<std::string> light_types;
+ //! Lens diameter
+ float lens_diameter = 0.02;
 
-    //! Vector of all possible light types.
-    // std::vector<std::string> all_light_types = {"collimated", "sphere", "sunsphere", "rectangle", "disk"};
-    std::vector<std::string> all_light_types = {"sphere", "rectangle", "disk"};
+ //! FOV aspect ratio
+ float FOV_aspect_ratio = 1.4;
 
-    //! Vector of light positions for each light.
-    std::vector<helios::vec3> light_direction_vec;
+ //! HFOV
+ float HFOV = 50.0;
 
-    //! Vector of light spherical directions for each light.
-    std::vector<helios::SphericalCoord> light_direction_sph_vec;
+ //! Dictionary keyed by camera name that returns camera index.
+ std::map<std::string, int> camera_dict;
 
-    //! Vector of rotations for each light.
-    std::vector<helios::vec3> light_rotation_vec;
+ //! Set of camera labels for every rig
+ std::vector<std::set<std::string>> rig_camera_labels;
 
-    //! Vector of sizes for each light.
-    std::vector<helios::vec2> light_size_vec;
+ //! Vector of light names.
+ std::vector<std::string> light_names;
 
-    //! Vector of sizes for each light.
-    std::vector<float> light_radius_vec;
+ //! Set of light names.
+ std::set<std::string> light_names_set;
 
-    //! Vector of source flux for each light.
-    std::vector<float> light_flux_vec;
+ //! Vector of light types (e.g. sphere, rectangle, etc.).
+ std::vector<std::string> light_types;
 
-    //! Dictionary keyed by light name that returns light index (in light_names).
-    std::map<std::string, int> light_dict;
+ //! Vector of all possible light types.
+ // std::vector<std::string> all_light_types = {"collimated", "sphere", "sunsphere", "rectangle", "disk"};
+ std::vector<std::string> all_light_types = {"sphere", "rectangle", "disk"};
 
-    //! Vector of sets of lights. The i-th set in the vector contains the light names of the i-th rig.
-    std::vector<std::set<std::string>> rig_light_labels;
+ //! Vector of light positions for each light.
+ std::vector<helios::vec3> light_direction_vec;
 
-    //! Dictionary containing arrow UUIDs for every arrow
-    std::map<std::string, std::vector<std::vector<uint>>> arrow_dict;
+ //! Vector of light spherical directions for each light.
+ std::vector<helios::SphericalCoord> light_direction_sph_vec;
 
-    //! Arrow count
-    int arrow_count = 0;
+ //! Vector of rotations for each light.
+ std::vector<helios::vec3> light_rotation_vec;
 
-    //! Helios XML node
-    pugi::xml_node helios;
+ //! Vector of sizes for each light.
+ std::vector<helios::vec2> light_size_vec;
 
-    //! Enable coordinate axes
-    bool enable_coordinate_axes = true;
+ //! Vector of sizes for each light.
+ std::vector<float> light_radius_vec;
 
-    //! Enable colorbar
-    bool enable_colorbar = false;
+ //! Vector of source flux for each light.
+ std::vector<float> light_flux_vec;
 
-    //! Latitude
-    float latitude = 38.55;
+ //! Dictionary keyed by light name that returns light index (in light_names).
+ std::map<std::string, int> light_dict;
 
-    //! Longitude
-    float longitude = 121.76;
+ //! Vector of sets of lights. The i-th set in the vector contains the light names of the i-th rig.
+ std::vector<std::set<std::string>> rig_light_labels;
 
-    //! UTC offset
-    int UTC_offset = 8;
+ //! Dictionary containing arrow UUIDs for every arrow
+ std::map<std::string, std::vector<std::vector<uint>>> arrow_dict;
 
-    //! CSV weather file path
-    std::string csv_weather_file = "plugins/projectbuilder/inputs/weather_data.csv";
+ //! Arrow count
+ int arrow_count = 0;
 
-    //! CIMIS weather file path
-    std::string cimis_weather_file;
+ //! Helios XML node
+ pugi::xml_node helios;
 
-    //! If true, weather file is CSV file. Else, weather file is CIMIS file.
-    bool is_weather_file_csv = true;
+ //! Enable coordinate axes
+ bool enable_coordinate_axes = true;
 
-    //! Domain origin
-    helios::vec3 domain_origin = {0, 0, 0};
+ //! Enable colorbar
+ bool enable_colorbar = false;
 
-    //! Domain extent
-    helios::vec2 domain_extent = {10, 10};
+ //! Latitude
+ float latitude = 38.55;
 
-    //! Ground resolution
-    helios::int2 ground_resolution = {1, 1};
+ //! Longitude
+ float longitude = 121.76;
 
-    //! Ground texture file
+ //! UTC offset
+ int UTC_offset = 8;
+
+ //! CSV weather file path
+ std::string csv_weather_file = "plugins/projectbuilder/inputs/weather_data.csv";
+
+ //! CIMIS weather file path
+ std::string cimis_weather_file;
+
+ //! If true, weather file is CSV file. Else, weather file is CIMIS file.
+ bool is_weather_file_csv = true;
+
+ //! Domain origin
+ helios::vec3 domain_origin = {0, 0, 0};
+
+ //! Domain extent
+ helios::vec2 domain_extent = {10, 10};
+
+ //! Ground resolution
+ helios::int2 ground_resolution = {1, 1};
+
+ //! Ground texture file
     std::string ground_texture_file = "plugins/projectbuilder/inputs/dirt.jpg";
 
-    //! Use ground texture file (0 = manually enter color, 1 = texture file, 2 = model file)
-    int ground_flag = 1;
-
-    bool use_ground_texture = true;
-
-    //! Ground color
-    float ground_color[3] = {0.0, 0.0, 0.0};
-
-    //! Ground model file
-    std::string ground_model_file;
-
-    //! Vector of canopy labels
-    std::vector<std::string> canopy_labels;
-
-    //! Set of canopy labels
-    std::set<std::string> canopy_labels_set;
-
-    //! Vector of data labels for each canopy
-    std::vector<std::string> canopy_data_groups;
-
-    //! Canopy origin
-    helios::vec3 canopy_origin = {0, 0, 0};
-
-    //! Vector of canopy origins for every canopy
-    std::vector<helios::vec3> canopy_origins;
-
-    //! Plant count
-    helios::int2 plant_count = {1, 1};
-
-    //! Vector of plant counts for every canopy
-    std::vector<helios::int2> plant_counts;
-
-    //! Plant spacing
-    helios::vec2 plant_spacing = {0.5, 0.5};
-
-    //! Vector of plant spacings for every canopy
-    std::vector<helios::vec2> plant_spacings;
-
-    //! Vector of plant locations relative to the canopy origin for every canopy
-    std::vector<std::vector<helios::vec3>> individual_plant_locations;
-
-    //! Plant library name
-    std::string plant_library_name = "cowpea";
-
-    //! Long plant library name
-    std::string plant_library_name_verbose = "Cowpea (Vigna unguiculata)";
-
-    //! Vector of plant library names for every canopy
-    std::vector<std::string> plant_library_names;
-
-    //! Vector of long plant library names for every canopy
-    std::vector<std::string> plant_library_names_verbose;
-
-    //! All available plant types
-    std::set<std::string> plant_types = {"almond", "apple",     "bindweed",     "butterlettuce", "cheeseweed", "bean",    "cowpea",    "easternredbud", "grapevine_VSP", "maize",
-                                         "olive",  "pistachio", "puncturevine", "rice",          "sorghum",    "soybean", "sugarbeet", "tomato",        "walnut",        "wheat"};
-
-    //! Long names for each plant type
-    std::set<std::string> plant_types_verbose = {"Almond Tree (Prunus dulcis)",        "Apple Tree (Malus pumila)",
-                                                 "Bindweed (Convolvulus arvensis)",    "Butter Lettuce (Lactuca sativa)",
-                                                 "Cheeseweed (Malva neglecta)",        "Common Bean (Phaseolus vulgaris)",
-                                                 "Cowpea (Vigna unguiculata)",         "Eastern Redbud (Cercis canadensis)",
-                                                 "Grapevine (Vitis vinifera)",         "Maize (Zea mays)",
-                                                 "Olive Tree (Olea europaea)",         "Pistachio Tree (Pistachia vera)",
-                                                 "Puncturevine (Tribulus terrestris)", "Rice (Oryza sativa)",
-                                                 "Sorghum (Sorghum bicolor)",          "Soybean (Glycine max)",
-                                                 "Sugar Beet (Beta vulgaris)",         "Tomato (Solanum lycopersicum)",
-                                                 "Walnut Tree (Juglans regia)",        "Wheat (Triticum aestivum)"};
-
-    //! Map keyed by long plant type names that returns the plant type string argument for the plant architecture library
-    std::map<std::string, std::string> plant_type_lookup = {{"Almond Tree (Prunus dulcis)", "almond"},
-                                                            {"Apple Tree (Malus pumila)", "apple"},
-                                                            {"Bindweed (Convolvulus arvensis)", "bindweed"},
-                                                            {"Butter Lettuce (Lactuca sativa)", "butterlettuce"},
-                                                            {"Cheeseweed (Malva neglecta)", "cheeseweed"},
-                                                            {"Common Bean (Phaseolus vulgaris)", "bean"},
-                                                            {"Cowpea (Vigna unguiculata)", "cowpea"},
-                                                            {"Eastern Redbud (Cercis canadensis)", "easternredbud"},
-                                                            {"Grapevine (Vitis vinifera)", "grapevine_VSP"},
-                                                            {"Maize (Zea mays)", "maize"},
-                                                            {"Olive Tree (Olea europaea)", "olive"},
-                                                            {"Pistachio Tree (Pistachia vera)", "pistachio"},
-                                                            {"Puncturevine (Tribulus terrestris)", "puncturevine"},
-                                                            {"Rice (Oryza sativa)", "rice"},
-                                                            {"Sorghum (Sorghum bicolor)", "sorghum"},
-                                                            {"Soybean (Glycine max)", "soybean"},
-                                                            {"Sugar Beet (Beta vulgaris)", "sugarbeet"},
-                                                            {"Tomato (Solanum lycopersicum)", "tomato"},
-                                                            {"Walnut Tree (Juglans regia)", "walnut"},
-                                                            {"Wheat (Triticum aestivum)", "wheat"}};
-
-    //! Map keyed by plant type string argument that returns the corresponding long plant name
-    std::map<std::string, std::string> plant_type_verbose_lookup = {{"almond", "Almond Tree (Prunus dulcis)"},
-                                                                    {"apple", "Apple Tree (Malus pumila)"},
-                                                                    {"bindweed", "Bindweed (Convolvulus arvensis)"},
-                                                                    {"butterlettuce", "Butter Lettuce (Lactuca sativa)"},
-                                                                    {"cheeseweed", "Cheeseweed (Malva neglecta)"},
-                                                                    {"bean", "Common Bean (Phaseolus vulgaris)"},
-                                                                    {"cowpea", "Cowpea (Vigna unguiculata)"},
-                                                                    {"easternredbud", "Eastern Redbud (Cercis canadensis)"},
-                                                                    {"grapevine_VSP", "Grapevine (Vitis vinifera)"},
-                                                                    {"maize", "Maize (Zea mays)"},
-                                                                    {"olive", "Olive Tree (Olea europaea)"},
-                                                                    {"pistachio", "Pistachio Tree (Pistachia vera)"},
-                                                                    {"puncturevine", "Puncturevine (Tribulus terrestris)"},
-                                                                    {"rice", "Rice (Oryza sativa)"},
-                                                                    {"sorghum", "Sorghum (Sorghum bicolor)"},
-                                                                    {"soybean", "Soybean (Glycine max)"},
-                                                                    {"sugarbeet", "Sugar Beet (Beta vulgaris)"},
-                                                                    {"tomato", "Tomato (Solanum lycopersicum)"},
-                                                                    {"walnut", "Walnut Tree (Juglans regia)"},
-                                                                    {"wheat", "Wheat (Triticum aestivum)"}};
+ //! Use ground texture file (0 = manually enter color, 1 = texture file, 2 = model file)
+ int ground_flag = 1;
+
+ bool use_ground_texture = true;
+
+ //! Ground color
+ float ground_color[3] = {0.0, 0.0, 0.0};
+
+ //! Ground model file
+ std::string ground_model_file;
+
+ //! Vector of canopy labels
+ std::vector<std::string> canopy_labels;
+
+ //! Set of canopy labels
+ std::set<std::string> canopy_labels_set;
+
+ //! Vector of data labels for each canopy
+ std::vector<std::string> canopy_data_groups;
+
+ //! Canopy origin
+ helios::vec3 canopy_origin = {0, 0, 0};
+
+ //! Vector of canopy origins for every canopy
+ std::vector<helios::vec3> canopy_origins;
+
+ //! Plant count
+ helios::int2 plant_count = {1, 1};
+
+ //! Vector of plant counts for every canopy
+ std::vector<helios::int2> plant_counts;
+
+ //! Plant spacing
+ helios::vec2 plant_spacing = {0.5, 0.5};
+
+ //! Vector of plant spacings for every canopy
+ std::vector<helios::vec2> plant_spacings;
+
+ //! Vector of plant locations relative to the canopy origin for every canopy
+ std::vector<std::vector<helios::vec3>> individual_plant_locations;
+
+ //! Plant library name
+ std::string plant_library_name = "cowpea";
+
+ //! Long plant library name
+ std::string plant_library_name_verbose = "Cowpea (Vigna unguiculata)";
+
+ //! Vector of plant library names for every canopy
+ std::vector<std::string> plant_library_names;
+
+ //! Vector of long plant library names for every canopy
+ std::vector<std::string> plant_library_names_verbose;
+
+ //! All available plant types
+ std::set<std::string> plant_types = {"almond", "apple",     "bindweed",     "butterlettuce", "cheeseweed", "bean",    "cowpea",    "easternredbud", "grapevine_VSP", "maize",
+                                      "olive",  "pistachio", "puncturevine", "rice",          "sorghum",    "soybean", "sugarbeet", "tomato",        "walnut",        "wheat"};
+
+ //! Long names for each plant type
+ std::set<std::string> plant_types_verbose = {"Almond Tree (Prunus dulcis)",        "Apple Tree (Malus pumila)",
+                                              "Bindweed (Convolvulus arvensis)",    "Butter Lettuce (Lactuca sativa)",
+                                              "Cheeseweed (Malva neglecta)",        "Common Bean (Phaseolus vulgaris)",
+                                              "Cowpea (Vigna unguiculata)",         "Eastern Redbud (Cercis canadensis)",
+                                              "Grapevine (Vitis vinifera)",         "Maize (Zea mays)",
+                                              "Olive Tree (Olea europaea)",         "Pistachio Tree (Pistachia vera)",
+                                              "Puncturevine (Tribulus terrestris)", "Rice (Oryza sativa)",
+                                              "Sorghum (Sorghum bicolor)",          "Soybean (Glycine max)",
+                                              "Sugar Beet (Beta vulgaris)",         "Tomato (Solanum lycopersicum)",
+                                              "Walnut Tree (Juglans regia)",        "Wheat (Triticum aestivum)"};
+
+ //! Map keyed by long plant type names that returns the plant type string argument for the plant architecture library
+ std::map<std::string, std::string> plant_type_lookup = {{"Almond Tree (Prunus dulcis)", "almond"},
+                                                         {"Apple Tree (Malus pumila)", "apple"},
+                                                         {"Bindweed (Convolvulus arvensis)", "bindweed"},
+                                                         {"Butter Lettuce (Lactuca sativa)", "butterlettuce"},
+                                                         {"Cheeseweed (Malva neglecta)", "cheeseweed"},
+                                                         {"Common Bean (Phaseolus vulgaris)", "bean"},
+                                                         {"Cowpea (Vigna unguiculata)", "cowpea"},
+                                                         {"Eastern Redbud (Cercis canadensis)", "easternredbud"},
+                                                         {"Grapevine (Vitis vinifera)", "grapevine_VSP"},
+                                                         {"Maize (Zea mays)", "maize"},
+                                                         {"Olive Tree (Olea europaea)", "olive"},
+                                                         {"Pistachio Tree (Pistachia vera)", "pistachio"},
+                                                         {"Puncturevine (Tribulus terrestris)", "puncturevine"},
+                                                         {"Rice (Oryza sativa)", "rice"},
+                                                         {"Sorghum (Sorghum bicolor)", "sorghum"},
+                                                         {"Soybean (Glycine max)", "soybean"},
+                                                         {"Sugar Beet (Beta vulgaris)", "sugarbeet"},
+                                                         {"Tomato (Solanum lycopersicum)", "tomato"},
+                                                         {"Walnut Tree (Juglans regia)", "walnut"},
+                                                         {"Wheat (Triticum aestivum)", "wheat"}};
+
+ //! Map keyed by plant type string argument that returns the corresponding long plant name
+ std::map<std::string, std::string> plant_type_verbose_lookup = {{"almond", "Almond Tree (Prunus dulcis)"},
+                                                                 {"apple", "Apple Tree (Malus pumila)"},
+                                                                 {"bindweed", "Bindweed (Convolvulus arvensis)"},
+                                                                 {"butterlettuce", "Butter Lettuce (Lactuca sativa)"},
+                                                                 {"cheeseweed", "Cheeseweed (Malva neglecta)"},
+                                                                 {"bean", "Common Bean (Phaseolus vulgaris)"},
+                                                                 {"cowpea", "Cowpea (Vigna unguiculata)"},
+                                                                 {"easternredbud", "Eastern Redbud (Cercis canadensis)"},
+                                                                 {"grapevine_VSP", "Grapevine (Vitis vinifera)"},
+                                                                 {"maize", "Maize (Zea mays)"},
+                                                                 {"olive", "Olive Tree (Olea europaea)"},
+                                                                 {"pistachio", "Pistachio Tree (Pistachia vera)"},
+                                                                 {"puncturevine", "Puncturevine (Tribulus terrestris)"},
+                                                                 {"rice", "Rice (Oryza sativa)"},
+                                                                 {"sorghum", "Sorghum (Sorghum bicolor)"},
+                                                                 {"soybean", "Soybean (Glycine max)"},
+                                                                 {"sugarbeet", "Sugar Beet (Beta vulgaris)"},
+                                                                 {"tomato", "Tomato (Solanum lycopersicum)"},
+                                                                 {"walnut", "Walnut Tree (Juglans regia)"},
+                                                                 {"wheat", "Wheat (Triticum aestivum)"}};
 
-    //! Plant age
-    float plant_age = 0;
+ //! Plant age
+ float plant_age = 0;
 
-    //! Vector of plant ages for all canopies
-    std::vector<float> plant_ages;
+ //! Vector of plant ages for all canopies
+ std::vector<float> plant_ages;
 
-    //! Ground clipping height
-    float ground_clipping_height = 0;
+ //! Ground clipping height
+ float ground_clipping_height = 0;
 
-    //! Vector of ground clipping heights for all canopies
-    std::vector<float> ground_clipping_heights;
+ //! Vector of ground clipping heights for all canopies
+ std::vector<float> ground_clipping_heights;
 
-    //! Map of canopy name to canopy index
-    std::map<std::string, int> canopy_labels_dict;
+ //! Map of canopy name to canopy index
+ std::map<std::string, int> canopy_labels_dict;
 
-    //! Vector of canopy UUIDs for each canopy
-    std::vector<std::vector<uint>> canopy_IDs;
+ //! Vector of canopy UUIDs for each canopy
+ std::vector<std::vector<uint>> canopy_IDs;
 
-    //! Direct ray count
-    int direct_ray_count = 100;
+ //! Direct ray count
+ int direct_ray_count = 100;
 
-    //! Diffuse ray count
-    int diffuse_ray_count = 1000;
+ //! Diffuse ray count
+ int diffuse_ray_count = 1000;
 
-    //! Scattering depth
-    int scattering_depth = 2;
+ //! Scattering depth
+ int scattering_depth = 2;
 
-    //! Air turbidity
-    float air_turbidity = 0.05;
+ //! Air turbidity
+ float air_turbidity = 0.05;
 
-    //! Obj / Ply files
-    std::vector<std::string> obj_files;
+ //! Obj / Ply files
+ std::vector<std::string> obj_files;
 
-    //! Object UUIDs
-    std::vector<std::vector<uint>> obj_UUIDs;
+ //! Object UUIDs
+ std::vector<std::vector<uint>> obj_UUIDs;
 
-    //! Object names
-    std::vector<std::string> obj_names;
+ //! Object names
+ std::vector<std::string> obj_names;
 
-    //! Object names set
-    std::set<std::string> obj_names_set;
+ //! Object names set
+ std::set<std::string> obj_names_set;
 
-    //! Currently selected object
-    std::string current_obj;
+ //! Currently selected object
+ std::string current_obj;
 
-    //! Object names map keyed by object name returning object index (e.g. in obj_UUIDs)
-    std::map<std::string, int> obj_names_dict;
+ //! Object names map keyed by object name returning object index (e.g. in obj_UUIDs)
+ std::map<std::string, int> obj_names_dict;
 
-    //! Object positions
-    std::vector<helios::vec3> obj_positions;
+ //! Object positions
+ std::vector<helios::vec3> obj_positions;
 
-    //! Previous object positions
-    std::vector<helios::vec3> prev_obj_positions;
+ //! Previous object positions
+ std::vector<helios::vec3> prev_obj_positions;
 
-    //! Object orientations
-    std::vector<helios::vec3> obj_orientations;
+ //! Object orientations
+ std::vector<helios::vec3> obj_orientations;
 
-    //! Previous object orientations
-    std::vector<helios::vec3> prev_obj_orientations;
+ //! Previous object orientations
+ std::vector<helios::vec3> prev_obj_orientations;
 
-    //! Object data groups
-    std::vector<std::string> obj_data_groups;
+ //! Object data groups
+ std::vector<std::string> obj_data_groups;
 
-    //! Previous object scales
-    std::vector<helios::vec3> prev_obj_scales;
+ //! Previous object scales
+ std::vector<helios::vec3> prev_obj_scales;
 
-    //! Object scales
-    std::vector<helios::vec3> obj_scales;
+ //! Object scales
+ std::vector<helios::vec3> obj_scales;
 
-    //! Object colors
-    std::vector<helios::RGBcolor> obj_colors;
+ //! Object colors
+ std::vector<helios::RGBcolor> obj_colors;
 
-    //! XML spectral library files
-    std::set<std::string> xml_library_files = {"plugins/radiation/spectral_data/leaf_surface_spectral_library.xml", "plugins/radiation/spectral_data/soil_surface_spectral_library.xml"};
+ //! XML spectral library files
+ std::set<std::string> xml_library_files = {"plugins/radiation/spectral_data/leaf_surface_spectral_library.xml", "plugins/radiation/spectral_data/soil_surface_spectral_library.xml"};
 
-    //! Possible spectra vector from spectral library files
-    std::set<std::string> possible_spectra;
+ //! Possible spectra vector from spectral library files
+ std::set<std::string> possible_spectra;
 
-    //! Camera XML library files
-    std::set<std::string> camera_xml_library_files = {"plugins/radiation/spectral_data/camera_spectral_library.xml"};
+ //! Camera XML library files
+ std::set<std::string> camera_xml_library_files = {"plugins/radiation/spectral_data/camera_spectral_library.xml"};
 
-    //! Possible camera calibrations vector from camera library files
-    std::vector<std::string> possible_camera_calibrations;
+ //! Possible camera calibrations vector from camera library files
+ std::vector<std::string> possible_camera_calibrations;
 
-    //! Camera calibration selection for each camera. Each entry is a map keyed by band name that returns the camera calibration for that band.
-    std::vector<std::map<std::string, std::string>> camera_calibrations;
+ //! Camera calibration selection for each camera. Each entry is a map keyed by band name that returns the camera calibration for that band.
+ std::vector<std::map<std::string, std::string>> camera_calibrations;
 
-    //! Currently selected band for editing camera calibration
-    std::string current_calibration_band;
+ //! Currently selected band for editing camera calibration
+ std::string current_calibration_band;
 
-    //! Light XML library files
-    std::set<std::string> light_xml_library_files = {"plugins/radiation/spectral_data/light_spectral_library.xml"};
+ //! Light XML library files
+ std::set<std::string> light_xml_library_files = {"plugins/radiation/spectral_data/light_spectral_library.xml"};
 
-    //! Possible light spectra vector from light library files
-    std::vector<std::string> possible_light_spectra;
+ //! Possible light spectra vector from light library files
+ std::vector<std::string> possible_light_spectra;
 
-    //! Spectra selection for each light
-    std::vector<std::string> light_spectra;
+ //! Spectra selection for each light
+ std::vector<std::string> light_spectra;
 
-    //! Solar direct spectrum
-    std::string solar_direct_spectrum = "solar_spectrum_direct_ASTMG173";
+ //! Solar direct spectrum
+ std::string solar_direct_spectrum = "solar_spectrum_direct_ASTMG173";
 
-    //! Reflectivity (apply to all)
-    float reflectivity = 0.0;
+ //! Reflectivity (apply to all)
+ float reflectivity = 0.0;
 
-    //! Transmissivity (apply to all)
-    float transmissivity = 0.0;
+ //! Transmissivity (apply to all)
+ float transmissivity = 0.0;
 
-    //! Emissivity (apply to all)
-    float emissivity = 1.0;
+ //! Emissivity (apply to all)
+ float emissivity = 1.0;
 
-    //! Leaf reflectivity
-    float leaf_reflectivity = 0.0;
+ //! Leaf reflectivity
+ float leaf_reflectivity = 0.0;
 
-    //! Leaf transmissivity
-    float leaf_transmissivity = 0.0;
+ //! Leaf transmissivity
+ float leaf_transmissivity = 0.0;
 
-    //! Leaf emissivity
-    float leaf_emissivity = 0.0;
+ //! Leaf emissivity
+ float leaf_emissivity = 0.0;
 
-    //! Ground reflectivity
-    float ground_reflectivity = 0.0;
+ //! Ground reflectivity
+ float ground_reflectivity = 0.0;
 
-    //! Ground transmissivity
-    float ground_transmissivity = 0.0;
+ //! Ground transmissivity
+ float ground_transmissivity = 0.0;
 
-    //! Ground emissivity
-    float ground_emissivity = 1.0;
+ //! Ground emissivity
+ float ground_emissivity = 1.0;
 
-    //! Petiolule reflectivity
-    float petiolule_reflectivity = 0.0;
+ //! Petiolule reflectivity
+ float petiolule_reflectivity = 0.0;
 
-    //! Petiolule transmissivity
-    float petiolule_transmissivity = 0.0;
+ //! Petiolule transmissivity
+ float petiolule_transmissivity = 0.0;
 
-    //! Petiolule emissivity
-    float petiolule_emissivity = 0.0;
+ //! Petiolule emissivity
+ float petiolule_emissivity = 0.0;
 
-    //! Petiole reflectivity
-    float petiole_reflectivity = 0.0;
+ //! Petiole reflectivity
+ float petiole_reflectivity = 0.0;
 
-    //! Petiole transmissivity
-    float petiole_transmissivity = 0.0;
+ //! Petiole transmissivity
+ float petiole_transmissivity = 0.0;
 
-    //! Petiole emissivity
-    float petiole_emissivity = 0.0;
+ //! Petiole emissivity
+ float petiole_emissivity = 0.0;
 
-    //! Internode reflectivity
-    float internode_reflectivity = 0.0;
+ //! Internode reflectivity
+ float internode_reflectivity = 0.0;
 
-    //! Internode transmissivity
-    float internode_transmissivity = 0.0;
+ //! Internode transmissivity
+ float internode_transmissivity = 0.0;
 
-    //! Internode emissivity
-    float internode_emissivity = 0.0;
+ //! Internode emissivity
+ float internode_emissivity = 0.0;
 
-    //! Peduncle reflectivity
-    float peduncle_reflectivity = 0.0;
+ //! Peduncle reflectivity
+ float peduncle_reflectivity = 0.0;
 
-    //! Peduncle transmissivity
-    float peduncle_transmissivity = 0.0;
+ //! Peduncle transmissivity
+ float peduncle_transmissivity = 0.0;
 
-    //! Peduncle emissivity
-    float peduncle_emissivity = 0.0;
+ //! Peduncle emissivity
+ float peduncle_emissivity = 0.0;
 
-    //! Petal reflectivity
-    float petal_reflectivity = 0.0;
+ //! Petal reflectivity
+ float petal_reflectivity = 0.0;
 
-    //! Petal transmissivity
-    float petal_transmissivity = 0.0;
+ //! Petal transmissivity
+ float petal_transmissivity = 0.0;
 
-    //! Petal emissivity
-    float petal_emissivity = 0.0;
+ //! Petal emissivity
+ float petal_emissivity = 0.0;
 
-    //! Pedicel reflectivity
-    float pedicel_reflectivity = 0.0;
+ //! Pedicel reflectivity
+ float pedicel_reflectivity = 0.0;
 
-    //! Pedicel transmissivity
-    float pedicel_transmissivity = 0.0;
+ //! Pedicel transmissivity
+ float pedicel_transmissivity = 0.0;
 
-    //! Pedicel emissivity
-    float pedicel_emissivity = 0.0;
+ //! Pedicel emissivity
+ float pedicel_emissivity = 0.0;
 
-    //! Fruit reflectivity
-    float fruit_reflectivity = 0.0;
+ //! Fruit reflectivity
+ float fruit_reflectivity = 0.0;
 
-    //! Fruit transmissivity
-    float fruit_transmissivity = 0.0;
+ //! Fruit transmissivity
+ float fruit_transmissivity = 0.0;
 
-    //! Fruit emissivity
-    float fruit_emissivity = 0.0;
+ //! Fruit emissivity
+ float fruit_emissivity = 0.0;
 
-    //! Reflectivity spectrum (applies to all)
-    std::string reflectivity_spectrum;
+ //! Reflectivity spectrum (applies to all)
+ std::string reflectivity_spectrum;
 
-    //! Transmissivity spectrum (applies to all)
-    std::string transmissivity_spectrum;
+ //! Transmissivity spectrum (applies to all)
+ std::string transmissivity_spectrum;
 
-    //! Emissivity spectrum (applies to all)
-    std::string emissivity_spectrum;
+ //! Emissivity spectrum (applies to all)
+ std::string emissivity_spectrum;
 
-    //! Leaf reflectivity spectrum
-    std::string leaf_reflectivity_spectrum = "grape_leaf_reflectivity_0000";
+ //! Leaf reflectivity spectrum
+ std::string leaf_reflectivity_spectrum = "grape_leaf_reflectivity_0000";
 
-    //! Leaf transmissivity spectrum
-    std::string leaf_transmissivity_spectrum = "grape_leaf_transmissivity_0000";
+ //! Leaf transmissivity spectrum
+ std::string leaf_transmissivity_spectrum = "grape_leaf_transmissivity_0000";
 
-    //! Leaf emissivity spectrum
-    std::string leaf_emissivity_spectrum;
+ //! Leaf emissivity spectrum
+ std::string leaf_emissivity_spectrum;
 
-    //! Ground reflectivity spectrum
-    std::string ground_reflectivity_spectrum = "soil_reflectivity_0000";
+ //! Ground reflectivity spectrum
+ std::string ground_reflectivity_spectrum = "soil_reflectivity_0000";
 
-    //! Ground transmissivity spectrum
-    std::string ground_transmissivity_spectrum;
+ //! Ground transmissivity spectrum
+ std::string ground_transmissivity_spectrum;
 
-    //! Ground emissivity spectrum
-    std::string ground_emissivity_spectrum;
+ //! Ground emissivity spectrum
+ std::string ground_emissivity_spectrum;
 
-    //! Petiolule reflectivity spectrum
-    std::string petiolule_reflectivity_spectrum;
+ //! Petiolule reflectivity spectrum
+ std::string petiolule_reflectivity_spectrum;
 
-    //! Petiolule transmissivity spectrum
-    std::string petiolule_transmissivity_spectrum;
+ //! Petiolule transmissivity spectrum
+ std::string petiolule_transmissivity_spectrum;
 
-    //! Petiolule emissivity spectrum
-    std::string petiolule_emissivity_spectrum;
+ //! Petiolule emissivity spectrum
+ std::string petiolule_emissivity_spectrum;
 
-    //! Petiole reflectivity spectrum
-    std::string petiole_reflectivity_spectrum;
+ //! Petiole reflectivity spectrum
+ std::string petiole_reflectivity_spectrum;
 
-    //! Petiole transmissivity spectrum
-    std::string petiole_transmissivity_spectrum;
+ //! Petiole transmissivity spectrum
+ std::string petiole_transmissivity_spectrum;
 
-    //! Petiole emissivity spectrum
-    std::string petiole_emissivity_spectrum;
+ //! Petiole emissivity spectrum
+ std::string petiole_emissivity_spectrum;
 
-    //! Internode reflectivity spectrum
-    std::string internode_reflectivity_spectrum;
+ //! Internode reflectivity spectrum
+ std::string internode_reflectivity_spectrum;
 
-    //! Internode transmissivity spectrum
-    std::string internode_transmissivity_spectrum;
+ //! Internode transmissivity spectrum
+ std::string internode_transmissivity_spectrum;
 
-    //! Internode emissivity spectrum
-    std::string internode_emissivity_spectrum;
+ //! Internode emissivity spectrum
+ std::string internode_emissivity_spectrum;
 
-    //! Peduncle reflectivity spectrum
-    std::string peduncle_reflectivity_spectrum;
+ //! Peduncle reflectivity spectrum
+ std::string peduncle_reflectivity_spectrum;
 
-    //! Peduncle transmissivity spectrum
-    std::string peduncle_transmissivity_spectrum;
+ //! Peduncle transmissivity spectrum
+ std::string peduncle_transmissivity_spectrum;
 
-    //! Peduncle emissivity spectrum
-    std::string peduncle_emissivity_spectrum;
+ //! Peduncle emissivity spectrum
+ std::string peduncle_emissivity_spectrum;
 
-    //! Petal reflectivity spectrum
-    std::string petal_reflectivity_spectrum;
+ //! Petal reflectivity spectrum
+ std::string petal_reflectivity_spectrum;
 
-    //! Petal transmissivity spectrum
-    std::string petal_transmissivity_spectrum;
+ //! Petal transmissivity spectrum
+ std::string petal_transmissivity_spectrum;
 
-    //! Petal emissivity spectrum
-    std::string petal_emissivity_spectrum;
+ //! Petal emissivity spectrum
+ std::string petal_emissivity_spectrum;
 
-    //! Pedicel reflectivity spectrum
-    std::string pedicel_reflectivity_spectrum;
+ //! Pedicel reflectivity spectrum
+ std::string pedicel_reflectivity_spectrum;
 
-    //! Pedicel transmissivity spectrum
-    std::string pedicel_transmissivity_spectrum;
+ //! Pedicel transmissivity spectrum
+ std::string pedicel_transmissivity_spectrum;
 
-    //! Pedicel emissivity spectrum
-    std::string pedicel_emissivity_spectrum;
+ //! Pedicel emissivity spectrum
+ std::string pedicel_emissivity_spectrum;
 
-    //! Fruit reflectivity spectrum
-    std::string fruit_reflectivity_spectrum;
+ //! Fruit reflectivity spectrum
+ std::string fruit_reflectivity_spectrum;
 
-    //! Fruit transmissivity spectrum
-    std::string fruit_transmissivity_spectrum;
+ //! Fruit transmissivity spectrum
+ std::string fruit_transmissivity_spectrum;
 
-    //! Fruit emissivity spectrum
-    std::string fruit_emissivity_spectrum;
+ //! Fruit emissivity spectrum
+ std::string fruit_emissivity_spectrum;
 
-    //! All possible visualization types for primitives
-    std::set<std::string> visualization_types_primitive = {"radiation_flux_PAR", "radiation_flux_NIR", "radiation_flux_LW"};
+ //! All possible visualization types for primitives
+ std::set<std::string> visualization_types_primitive = {"radiation_flux_PAR", "radiation_flux_NIR", "radiation_flux_LW"};
 
-    //! All possible visualization types for objects
-    std::set<std::string> visualization_types_object = {};
+ //! All possible visualization types for objects
+ std::set<std::string> visualization_types_object = {};
 
-    //! Primitive data types
-    std::map<std::string, helios::HeliosDataType> primitive_data_types;
+ //! Primitive data types
+ std::map<std::string, helios::HeliosDataType> primitive_data_types;
 
-    //! Object data types
-    std::map<std::string, helios::HeliosDataType> object_data_types;
+ //! Object data types
+ std::map<std::string, helios::HeliosDataType> object_data_types;
 
-    //! Visualization type
-    std::string visualization_type = "RGB";
+ //! Visualization type
+ std::string visualization_type = "RGB";
 
-    //! Currently selected canopy in the GUI
-    std::string current_canopy;
+ //! Currently selected canopy in the GUI
+ std::string current_canopy;
 
-    //! Currently selected rig in the GUI
-    std::string current_rig;
+ //! Currently selected rig in the GUI
+ std::string current_rig;
 
-    //! Currently selected camera in the GUI
-    std::string current_cam;
+ //! Currently selected camera in the GUI
+ std::string current_cam;
 
-    //! Currently selected light in the GUI
-    std::string current_light;
+ //! Currently selected light in the GUI
+ std::string current_light;
 
-    //! Currently selected keypoint in the GUI
-    std::string current_keypoint;
+ //! Currently selected keypoint in the GUI
+ std::string current_keypoint;
 
-    //! Currently selected primitive in the GUI
-    std::string current_primitive = "All";
+ //! Currently selected primitive in the GUI
+ std::string current_primitive = "All";
 
-    //! Currently selected data group in the GUI
-    std::string current_data_group = "All";
+ //! Currently selected data group in the GUI
+ std::string current_data_group = "All";
 
-    //! Currently selected band in the GUI
-    std::string current_band = "red";
+ //! Currently selected band in the GUI
+ std::string current_band = "red";
 
-    //! Currently selected radiation band for reflectivity in the GUI
-    std::string current_band_reflectivity = "red";
+ //! Currently selected radiation band for reflectivity in the GUI
+ std::string current_band_reflectivity = "red";
 
-    //! Currently selected radiation band for transmissivity in the GUI
-    std::string current_band_transmissivity = "red";
+ //! Currently selected radiation band for transmissivity in the GUI
+ std::string current_band_transmissivity = "red";
 
-    //! Currently selected radiation band for emissivity in the GUI
-    std::string current_band_emissivity = "red";
+ //! Currently selected radiation band for emissivity in the GUI
+ std::string current_band_emissivity = "red";
 
-    //! Dictionary containing UUIDs for every camera model
-    std::map<std::string, std::vector<uint>> camera_models_dict;
+ //! Dictionary containing UUIDs for every camera model
+ std::map<std::string, std::vector<uint>> camera_models_dict;
 
-    //! Function to delete arrows denoting rig movement
-    void deleteArrows();
+ //! General tab
+ void generalTab();
 
-    //! Function to delete the selected canopy
-    /**
-     * \param[in] canopy Canopy name to delete
-     */
-    void deleteCanopy(const std::string &canopy);
+ //! Canopy tab
+ void canopyTab();
 
-    //! Function to delete the selected object
-    /**
-     * \param[in] obj Object name to delete
-     */
-    void deleteObject(const std::string &obj);
+ //! Camera tab
+ void cameraTab();
 
-    //! Function to update the selected canopy
-    /**
-     * \param[in] canopy Canopy to update
-     */
-    void updateCanopy(const std::string &canopy);
+ //! Calculation tab
+ void calculationTab();
 
-    //! Function to add a new canopy
-    void addCanopy();
+ //! Object tab
+ void objectTab();
 
-    //! Function to update arrows for rig movement
-    void updateArrows();
+ //! Radiation tab
+ void radiationTab();
 
-    //! Function to update camera models in visualization
-    void updateCameraModels();
+ //! Rig tab
+ void rigTab();
 
-    //! Function to delete camera models in visualization
-    void deleteCameraModels();
+ //! Light tab
+ void lightTab();
 
-    //! Function to update data groups
-    void updateDataGroups();
+ //! Function to delete arrows denoting rig movement
+ void deleteArrows();
 
-    //! Function to update primitive types
-    void updatePrimitiveTypes();
+ //! Function to delete the selected canopy
+ /**
+  * \param[in] canopy Canopy name to delete
+  */
+ void deleteCanopy(const std::string &canopy);
 
-    //! Dragging start position
-    helios::int2 dragging_start_position{0, 0};
+ //! Function to delete the selected object
+ /**
+  * \param[in] obj Object name to delete
+  */
+ void deleteObject(const std::string &obj);
 
-    //! Current tab being dragged
-    std::string currently_dragging;
+ //! Function to update the selected canopy
+ /**
+  * \param[in] canopy Canopy to update
+  */
+ void updateCanopy(const std::string &canopy);
 
-    //! Current type being dragged
-    std::string currently_dragging_type;
+ //! Function to add a new canopy
+ void addCanopy();
 
-    //! Bool to disable dragging in ImGUI
-    bool disable_dragging = false;
+ //! Function to update arrows for rig movement
+ void updateArrows();
 
-    //! Canopy tab
-    void canopyTab(std::string curr_canopy_name, int id);
+ //! Function to update camera models in visualization
+ void updateCameraModels();
 
-    //! Rig tab
-    void rigTab(std::string curr_rig_name, int id);
+ //! Function to delete camera models in visualization
+ void deleteCameraModels();
 
-    //! Object tab
-    void objectTab(std::string curr_obj_name, int id);
+ //! Function to update data groups
+ void updateDataGroups();
 
-    //! Save object file
-    void saveObject(std::string file_name, std::vector<uint> obj_UUID_vec, std::string file_extension);
+ //! Function to update primitive types
+ void updatePrimitiveTypes();
 
-    //! Save canopy to object file
-    void saveCanopy(std::string file_name, std::vector<uint> canopy_ID_vec, helios::vec3 position, std::string file_extension) const;
+ //! Dragging start position
+ helios::int2 dragging_start_position{0, 0};
 
-    //! Save plants in canopy individually to object file
-    void saveCanopy(std::string file_name_base, std::vector<uint> canopy_ID_vec, std::vector<helios::vec3> positions, std::string file_extension) const;
+ //! Current tab being dragged
+ std::string currently_dragging;
 
-    //! Determines whether plants are saved together (false) or individually to their own object file (true) when saving a canopy to file.
-    bool save_plants_individually = false;
+ //! Current type being dragged
+ std::string currently_dragging_type;
 
-    //! Add radiation band
-    void addBand(std::string label, float wavelength_min, float wavelength_max, bool enable_emission);
+ //! Bool to disable dragging in ImGUI
+ bool disable_dragging = false;
 
-    //! Add radiation band with no specified wavelength
-    void addBand(std::string label, bool enable_emission);
+ //! Canopy tab
+ void canopyTab(std::string curr_canopy_name, int id);
 
-    //! Distribution types
-    std::map<std::string, std::string> distribution_types;
+ //! Rig tab
+ void rigTab(std::string curr_rig_name, int id);
 
-    //! Distribution parameters
-    std::map<std::string, std::vector<float>> distribution_params;
+ //! Object tab
+ void objectTab(std::string curr_obj_name, int id);
 
-    //! Distributions dictionary keyed by distribution name with a value of the index of the distribution in the distributions vector
-    std::map<std::string, int> distribution_dict;
+ //! Save object file
+ void saveObject(std::string file_name, std::vector<uint> obj_UUID_vec, std::string file_extension);
 
-    //! Dictionary keyed by variable name with a value of the variable address
-    std::map<std::string, taggedPtr> randomized_variable_lookup;
+ //! Save canopy to object file
+ void saveCanopy(std::string file_name, std::vector<uint> canopy_ID_vec, helios::vec3 position, std::string file_extension) const;
 
-    //! Random generator
-    std::default_random_engine generator;
+ //! Save plants in canopy individually to object file
+ void saveCanopy(std::string file_name_base, std::vector<uint> canopy_ID_vec, std::vector<helios::vec3> positions, std::string file_extension) const;
 
-    //! Random distributions
-    std::string current_distribution = "Normal (Gaussian)";
+ //! Determines whether plants are saved together (false) or individually to their own object file (true) when saving a canopy to file.
+ bool save_plants_individually = false;
 
-    //! Current axis
-    std::string current_axis = "X";
+ //! Add radiation band
+ void addBand(std::string label, float wavelength_min, float wavelength_max, bool enable_emission);
 
-    //! Possible axes
-    std::set<std::string> possible_axes = {"X", "Y", "Z"};
+ //! Add radiation band with no specified wavelength
+ void addBand(std::string label, bool enable_emission);
 
-    //! Random distributions
-    std::vector<std::string> distribution_names = {"N/A", "Normal (Gaussian)", "Uniform", "Weibull"};
+ //! Distribution types
+ std::map<std::string, std::string> distribution_types;
 
-    //! Distributions
-    std::vector<distribution> distributions;
+ //! Distribution parameters
+ std::map<std::string, std::vector<float>> distribution_params;
 
-    //! Distribution parameters
-    std::vector<float> curr_distribution_params = {0.0, 0.0};
+ //! Distributions dictionary keyed by distribution name with a value of the index of the distribution in the distributions vector
+ std::map<std::string, int> distribution_dict;
 
-    //! Randomize repeatedly
-    bool randomize_repeatedly = false;
+ //! Dictionary keyed by variable name with a value of the variable address
+ std::map<std::string, taggedPtr> randomized_variable_lookup;
 
-    //!
-    std::streambuf *old_cout_stream_buf = std::cout.rdbuf();
+ //! Random generator
+ std::default_random_engine generator;
 
-    //! Stdout
-    std::stringstream captured_cout;
+ //! Random distributions
+ std::string current_distribution = "Normal (Gaussian)";
 
-    std::size_t last_console_size = 0;
+ //! Current axis
+ std::string current_axis = "X";
 
-    //! Number of recordings
-    int num_recordings = 1;
+ //! Possible axes
+ std::set<std::string> possible_axes = {"X", "Y", "Z"};
 
-    //! Set of all object structs
-    std::map<std::string, object> objects_dict;
+ //! Random distributions
+ std::vector<std::string> distribution_names = {"N/A", "Normal (Gaussian)", "Uniform", "Weibull"};
 
-    //! Set of all canopy structs
-    std::map<std::string, canopy> canopy_dict;
+ //! Distributions
+ std::vector<distribution> distributions;
 
-    //! Object index, applies a unique index to each object
-    int obj_idx = 0;
+ //! Distribution parameters
+ std::vector<float> curr_distribution_params = {0.0, 0.0};
 
-    //! Canopy index, applies a unique index to each canopy
-    int canopy_idx = 0;
+ //! Randomize repeatedly
+ bool randomize_repeatedly = false;
 
-    //! Indices of objects that need to be updated
-    std::set<int> dirty_objects = {};
+ //!
+ std::streambuf *old_cout_stream_buf = std::cout.rdbuf();
 
-    //! Indices of canopies that need to be updated
-    std::set<int> dirty_canopies = {};
+ //! Stdout
+ std::stringstream captured_cout;
 
-    //! Possible lighting models
-    std::set<std::string> lighting_models = {"None", "Phong", "Phong Shadowed"};
+ std::size_t last_console_size = 0;
 
-    //! Lighting model
-    std::string lighting_model = "None";
+ //! Number of recordings
+ int num_recordings = 1;
 
-    //! Light direction in the visualizer
-    helios::vec3 light_direction{0, 0, 1};
+ //! Set of all object structs
+ std::map<std::string, object> objects_dict;
 
-    //! Light intensity factor in the visualizer
-    float light_intensity = 1.0;
+ //! Set of all canopy structs
+ std::map<std::string, canopy> canopy_dict;
 
-    //! Number of tiles
-    helios::int2 num_tiles{5, 5};
+ //! Object index, applies a unique index to each object
+ int obj_idx = 0;
+
+ //! Canopy index, applies a unique index to each canopy
+ int canopy_idx = 0;
+
+ //! Indices of objects that need to be updated
+ std::set<int> dirty_objects = {};
+
+ //! Indices of canopies that need to be updated
+ std::set<int> dirty_canopies = {};
+
+ //! Possible lighting models
+ std::set<std::string> lighting_models = {"None", "Phong", "Phong Shadowed"};
+
+ //! Lighting model
+ std::string lighting_model = "None";
+
+ //! Light direction in the visualizer
+ helios::vec3 light_direction{0, 0, 1};
+
+ //! Light intensity factor in the visualizer
+ float light_intensity = 1.0;
+
+ //! Number of tiles
+ helios::int2 num_tiles{5, 5};
+
+ //! Calculation type
+ std::string calculation_type = "primitive";
+
+ //! Calculation types
+ std::vector<std::string> calculation_types{"primitive", "object", "data group"};
+
+ //! Calculation selection
+ std::map<std::string, bool> calculation_selection_datagroup{{"All", false}};
+
+ //! Calculation selection primitive
+ std::map<std::string, bool> calculation_selection_primitive{{"All", false}};
+
+ //! Calculation labels
+ std::set<std::string> calculation_variable_choices;
+
+ //! Calculation label
+ std::string calculation_variable_global;
+
+ //! Calculation labels global
+ std::vector<std::string> calculation_variables_global = {""};
+
+ //! Calculation labels by primitive
+ std::vector<std::string> calculation_variables_primitive = {""};
+
+ //! Calculation scalars global
+ std::vector<float> calculation_scalars_global = {1.0};
+
+ //! Calculation scalars by primitive
+ std::vector<float> calculation_scalars_primitive = {1.0};
+
+ //! Operators for global calculation
+ std::vector<std::string> calculation_operators_global = {};
+
+ //! Operators for calculation by primitive
+ std::vector<std::string> calculation_operators_primitive = {};
+
+ //! Caclulation operator choices
+ std::set<std::string> calculation_operators_choices = {"+", "-", "/", "x"};
+
+ //! Operation Choices
+ std::set<std::string> calculation_aggregation_choices = {"None", "Mean", "Sum", "Area Weighted Mean", "Area Weighted Sum"};
+
+ //! Helios numeric types
+ // std::set<helios::HeliosDataType> heliosNumericTypes = {helios::HELIOS_TYPE_INT, helios::HELIOS_TYPE_UINT,
+ //                                                        helios::HELIOS_TYPE_FLOAT, helios::HELIOS_TYPE_DOUBLE};
+ std::set<helios::HeliosDataType> heliosNumericTypes = {helios::HELIOS_TYPE_FLOAT};
+
+ //! Current operation
+ std::string curr_aggregation = "Mean";
+
+ std::vector<std::string> calculation_aggregations = {"Mean"};
+
+ bool by_primitive = false;
+
+ std::string calculation_name_primitive = "saved prim data";
+
+ std::string calculation_name_global = "saved global data";
+
+ //! Calculation Result
+ float calculation_result_global = 0.0f;
+
+ //! Refresh list of possible objects for bounding boxes
+ void refreshBoundingBoxObjectList();
+
+ //! Perform global calculation
+ void globalCalculation();
+
+ //! Save primitive calculation
+ void savePrimitiveCalculation();
+
+ //! Run radiation
+ void runRadiation();
 
 public:
     //! Context
@@ -1285,6 +1412,9 @@ public:
 
     //! Function to "record", or save camera images with bounding boxes for each rig
     void record();
+
+    //! Function to "reload" (unused)
+    void reload();
 
     //! Function to build context from XML
     void buildFromXML();
@@ -1730,9 +1860,15 @@ public:
 
     //! Delete rig
     /**
-     * \param[in] curr_rig Rig to be deleted
+     * \param[in] curr_rig Name of rig to be deleted
      */
     void deleteRig(std::string curr_rig);
+
+    //! Add rig
+    /**
+     * \param[in] new_rig_label Name of rig to be added
+     */
+    void addRig(std::string new_rig_label);
 
 #ifdef ENABLE_HELIOS_VISUALIZER
     //! Create dropdown widget
