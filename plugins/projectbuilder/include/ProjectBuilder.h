@@ -213,31 +213,36 @@ struct canopy {
 
 //! Object struct
 struct object{
- int index;
- uint objID;
- std::string name;
- std::string file;
- std::string data_group;
- std::vector<uint> UUIDs;
- helios::vec3 position;
- helios::vec3 prev_position;
- helios::vec3 orientation;
- helios::vec3 prev_orientation;
- helios::vec3 scale;
- helios::vec3 prev_scale;
- helios::RGBcolor color;
- helios::RGBcolor prev_color;
- bool use_texture_file;
- bool is_dirty;
+    int index;
+    uint objID;
+    std::string name;
+    std::string file;
+    std::string data_group;
+    std::vector<uint> UUIDs;
+    helios::vec3 position;
+    helios::vec3 prev_position;
+    helios::vec3 orientation;
+    helios::vec3 prev_orientation;
+    helios::vec3 scale;
+    helios::vec3 prev_scale;
+    helios::RGBcolor color;
+    helios::RGBcolor prev_color;
+    bool use_texture_file;
+    bool is_dirty;
 };
 
 //! Rig struct
 struct rig {
+    int num_images;
     std::string label;
     std::vector<distribution> position_noise;
+    std::vector<distribution> lookat_noise;
     helios::RGBcolor color;
     helios::vec3 position;
     helios::vec3 lookat;
+    std::vector<helios::vec3> camera_positions;
+    std::vector<helios::vec3> camera_lookats;
+    std::vector<int> keypoint_frames;
     std::set<std::string> camera_labels;
     std::set<std::string> light_labels;
     bool write_depth;
@@ -476,6 +481,10 @@ private:
  //! XML Error String
  std::string xml_error_string;
 
+ rig default_rig{1, "default_rig", {}, {}, helios::RGBcolor(1, 0, 0),
+                 helios::vec3(0, 0, 1), helios::vec3(0, 0, 0), {helios::vec3(0, 0, 1)}, {helios::vec3(0, 0, 0)},
+                 {1}, {}, {}, false, false, false};
+
  //! Rig labels
  std::vector<std::string> rig_labels;
 
@@ -514,6 +523,9 @@ private:
 
  //! Map keyed by rig name that returns rig index
  std::map<std::string, int> rig_dict;
+
+ //! Map keyed by rig name that returns the corresponding rig struct.
+ std::map<std::string, rig> rig_dict_;
 
  //! Rig labels
  std::set<std::string> rig_labels_set;
@@ -1106,7 +1118,29 @@ private:
  //! Dictionary containing UUIDs for every camera model
  std::map<std::string, std::vector<uint>> camera_models_dict;
 
+ //! General tab
+ void generalTab();
+
+ //! Canopy tab
+ void canopyTab();
+
+ //! Camera tab
+ void cameraTab();
+
+ //! Calculation tab
+ void calculationTab();
+
+ //! Object tab
  void objectTab();
+
+ //! Radiation tab
+ void radiationTab();
+
+ //! Rig tab
+ void rigTab();
+
+ //! Light tab
+ void lightTab();
 
  //! Function to delete arrows denoting rig movement
  void deleteArrows();
@@ -1826,9 +1860,15 @@ public:
 
     //! Delete rig
     /**
-     * \param[in] curr_rig Rig to be deleted
+     * \param[in] curr_rig Name of rig to be deleted
      */
     void deleteRig(std::string curr_rig);
+
+    //! Add rig
+    /**
+     * \param[in] new_rig_label Name of rig to be added
+     */
+    void addRig(std::string new_rig_label);
 
 #ifdef ENABLE_HELIOS_VISUALIZER
     //! Create dropdown widget

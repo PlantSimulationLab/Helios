@@ -506,30 +506,6 @@ void ProjectBuilder::updatePrimitiveTypes() {
 
 
 void ProjectBuilder::updateDataGroups() {
-    // context->listAllPrimitiveDataLabels();
-    // data_groups_set.clear();
-    // data_groups_set.insert("All");
-    // std::vector<uint> all_objIDs = context->getAllObjectIDs();
-    // for (uint objID: all_objIDs) {
-    //     std::string curr_data_group = "";
-    //     if (!context->doesObjectDataExist(objID, "data_group"))
-    //         continue;
-    //     context->getObjectData(objID, "data_group", curr_data_group);
-    //     if (!curr_data_group.empty()) {
-    //         data_groups_set.insert(curr_data_group);
-    //     }
-    // }
-    // for (std::string data_group: data_groups_set) { // initialize new data_groups if necessary
-    //     if (primitive_continuous_dict.find(data_group) == primitive_continuous_dict.end()) {
-    //         primitive_continuous_dict[data_group] = primitive_continuous;
-    //     }
-    //     if (primitive_spectra_dict.find(data_group) == primitive_spectra_dict.end()) {
-    //         primitive_spectra_dict[data_group] = primitive_spectra;
-    //     }
-    //     if (primitive_values_dict.find(data_group) == primitive_values_dict.end()) {
-    //         primitive_values_dict[data_group] = primitive_values;
-    //     }
-    // }
     data_groups.clear();
     context->getUniqueObjectDataValues("data_group", data_groups);
     data_groups_set.clear();
@@ -701,12 +677,6 @@ void ProjectBuilder::record() {
     setBoundingBoxObjects();
     for (int _ = 0; _ < num_recordings; _++) {
         updateContext();
-        // std::time_t now = std::time(nullptr);
-        // std::tm* tm_ptr = std::localtime(&now);
-        // std::ostringstream oss;
-        // oss << std::put_time(tm_ptr, "%Y-%m-%d %H:%M:%S");
-        // std::string image_dir = "./saved-" + oss.str() + "/";
-        // std::filesystem::create_directory("saved-" + oss.str());
         std::string image_dir = "./saved/";
         std::string image_dir_base = "./saved_";
         int image_dir_idx = 0;
@@ -2307,12 +2277,12 @@ void ProjectBuilder::visualize() {
                 updatePrimitiveTypes();
                 updateSpectra();
                 updateCameras(); // TODO: figure out why this causes an error
-                record();
-                // std::thread t1(&ProjectBuilder::record, this);
-                // t1.detach();
-                // visualizer->clearGeometry();
-                // visualizer->buildContextGeometry(context);
-                // visualizer->plotUpdate();
+                try {
+                    record();
+                } catch (const std::runtime_error &e) {
+                    std::cerr << "Record failed due to exception: " << e.what() << std::endl;
+                    visualizer->plotUpdate();
+                }
             }
         }
         recordPopup();
@@ -2327,486 +2297,14 @@ void ProjectBuilder::visualize() {
         if (ImGui::BeginTabBar("Settings#left_tabs_bar")) {
             if (ImGui::BeginTabItem("General")) {
                 current_tab = "General";
-                // ####### LOCATION ####### //
-                ImGui::SetWindowFontScale(1.25f);
-                ImGui::Text("Visualization:");
-                ImGui::SetWindowFontScale(1.0f);
-                // ####### COORDINATE AXES ####### //
-                bool enable_coords_ = enable_coordinate_axes;
-                toggle_button("##coordinate_axes", &enable_coordinate_axes);
-                if (enable_coords_ != enable_coordinate_axes) {
-                    if (enable_coordinate_axes) {
-                        visualizer->addCoordinateAxes(helios::make_vec3(0, 0, 0.05), helios::make_vec3(1, 1, 1), "positive");
-                        is_dirty = true;
-                    } else {
-                        visualizer->disableCoordinateAxes();
-                        is_dirty = true;
-                    }
-                }
-                ImGui::SameLine();
-                if (enable_coordinate_axes) {
-                    ImGui::Text("Coordinate Axes Enabled");
-                } else {
-                    ImGui::Text("Coordinate Axes Disabled");
-                }
-                // ####### COLORBAR ####### //
-                bool enable_colorbar_ = enable_colorbar;
-                toggle_button("##colorbar", &enable_colorbar);
-                if (enable_colorbar_ != enable_colorbar) {
-                    if (enable_colorbar) {
-                        visualizer->enableColorbar();
-                        is_dirty = true;
-                    } else {
-                        visualizer->disableColorbar();
-                        is_dirty = true;
-                    }
-                }
-                ImGui::SameLine();
-                if (enable_colorbar) {
-                    ImGui::Text("Colorbar Enabled");
-                } else {
-                    ImGui::Text("Colorbar Disabled");
-                }
-                // ####### LIGHTING MODEL ####### //
-                std::string prev_lighting_model = lighting_model;
-                ImGui::SetNextItemWidth(120);
-                dropDown("Lighting Model", lighting_model, lighting_models);
-                if (prev_lighting_model != lighting_model) {
-                    if (lighting_model == "None")
-                        visualizer->setLightingModel(Visualizer::LIGHTING_NONE);
-                    if (lighting_model == "Phong")
-                        visualizer->setLightingModel(Visualizer::LIGHTING_PHONG);
-                    if (lighting_model == "Phong Shadowed")
-                        visualizer->setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
-                }
-                ImGui::SetNextItemWidth(120);
-                // ####### LIGHTING INTENSITY ####### //
-                ImGui::InputFloat("Light Intensity Factor", &light_intensity);
-                visualizer->setLightIntensityFactor(light_intensity);
-                // ####### LIGHTING DIRECTION ####### //
-                toggle_button("##light_coord_type", &light_coord_type);
-                ImGui::SameLine();
-                if (light_coord_type) {
-                    SphericalCoord light_dir_sphere_ = cart2sphere(light_direction);
-                    vec2 light_dir_sphere;
-                    light_dir_sphere.x = rad2deg(light_dir_sphere_.elevation);
-                    light_dir_sphere.y = rad2deg(light_dir_sphere_.azimuth);
-                    ImGui::Text("Elevation:");
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(80);
-                    ImGui::InputFloat("##light_elevation", &light_dir_sphere.x);
-                    ImGui::SameLine();
-                    ImGui::Text("Azimuth:");
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(80);
-                    ImGui::InputFloat("##light_azimuth", &light_dir_sphere.y);
-                    ImGui::SameLine();
-                    ImGui::Text("Light Direction (Spherical)");
-                    if (light_dir_sphere.x != light_dir_sphere_.elevation || light_dir_sphere.y != light_dir_sphere_.azimuth) {
-                        SphericalCoord light_dir = make_SphericalCoord(deg2rad(light_dir_sphere.x), deg2rad(light_dir_sphere.y));
-                        light_direction = sphere2cart(light_dir);
-                    }
-                } else {
-                    float light_dir[3];
-                    light_dir[0] = light_direction.x;
-                    light_dir[1] = light_direction.y;
-                    light_dir[2] = light_direction.z;
-                    ImGui::InputFloat3("Light Direction (Cartesian)", light_dir);
-                    light_direction.x = light_dir[0];
-                    light_direction.y = light_dir[1];
-                    light_direction.z = light_dir[2];
-                }
-                visualizer->setLightDirection(light_direction);
-                // ####### LOCATION ####### //
-                ImGui::SetWindowFontScale(1.25f);
-                ImGui::Text("Location:");
-                ImGui::SetWindowFontScale(1.0f);
-                if (ImGui::Button("Update Location")) {
-                    updateLocation();
-                }
-                // ####### LATITUDE ####### //
-                ImGui::SetNextItemWidth(100);
-                ImGui::InputFloat("Latitude", &latitude);
-                randomizePopup("latitude", createTaggedPtr(&latitude));
-                randomizerParams("latitude");
-                ImGui::OpenPopupOnItemClick("randomize_latitude", ImGuiPopupFlags_MouseButtonRight);
-                ImGui::SameLine();
-                // ####### LONGITUDE ####### //
-                ImGui::SetNextItemWidth(100);
-                ImGui::InputFloat("Longitude", &longitude);
-                randomizePopup("longitude", createTaggedPtr(&longitude));
-                randomizerParams("longitude");
-                ImGui::OpenPopupOnItemClick("randomize_longitude", ImGuiPopupFlags_MouseButtonRight);
-                // ####### UTC OFFSET ####### //
-                ImGui::SetNextItemWidth(100);
-                ImGui::InputInt("UTC Offset", &UTC_offset);
-                randomizePopup("UTC_offset", createTaggedPtr(&UTC_offset));
-                randomizerParams("UTC_offset");
-                ImGui::OpenPopupOnItemClick("randomize_UTC_offset", ImGuiPopupFlags_MouseButtonRight);
-                // ####### Weather File ####### //
-                ImGui::SetNextItemWidth(60);
-                ImGui::RadioButton("CSV", is_weather_file_csv);
-                if (ImGui::IsItemClicked())
-                    is_weather_file_csv = true;
-                ImGui::SameLine();
-                ImGui::RadioButton("CIMIS", !is_weather_file_csv);
-                if (ImGui::IsItemClicked())
-                    is_weather_file_csv = false;
-                std::string prev_weather_file;
-                std::string *weather_file;
-                if (is_weather_file_csv) {
-                    ImGui::Text("CSV");
-                    weather_file = &csv_weather_file;
-                    prev_weather_file = csv_weather_file;
-                } else {
-                    ImGui::Text("CIMIS");
-                    weather_file = &cimis_weather_file;
-                    prev_weather_file = cimis_weather_file;
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("Weather File")) {
-                    std::string weather_file_ = file_dialog();
-                    if (!weather_file_.empty()) {
-                        *weather_file = weather_file_;
-                        try {
-                            if (is_weather_file_csv) {
-                                context->loadTabularTimeseriesData(*weather_file, {}, ",", "YYYYMMDD", 1);
-                            } else {
-                                context->loadTabularTimeseriesData(*weather_file, {"CIMIS"}, ",");
-                            }
-                        } catch (...) {
-                            std::cout << "Failed to load weather file: " << *weather_file << std::endl;
-                            *weather_file = prev_weather_file;
-                        }
-                    } else {
-                        *weather_file = prev_weather_file;
-                    }
-                }
-                ImGui::SameLine();
-                std::string shorten_weather_file = *weather_file;
-                for (char &c: shorten_weather_file) {
-                    if (c == '\\') {
-                        c = '/';
-                    }
-                }
-                size_t last_weather_file = shorten_weather_file.rfind('/');
-                if (last_weather_file != std::string::npos) {
-                    shorten_weather_file = shorten_weather_file.substr(last_weather_file + 1);
-                }
-                ImGui::Text("%s", shorten_weather_file.c_str());
-                // ####### GROUND ####### //
-                ImGui::SetWindowFontScale(1.25f);
-                ImGui::Text("Ground:");
-                ImGui::SetWindowFontScale(1.0f);
-                if (ImGui::Button("Update Ground")) {
-                    updateGround();
-                    updatePrimitiveTypes();
-                    updateSpectra();
-                    is_dirty = true;
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("Delete Ground")) {
-                    deleteGround();
-                    updatePrimitiveTypes();
-                    updateSpectra();
-                    is_dirty = true;
-                }
-                // ImGui::RadioButton("Manually Set Color", ground_flag == 0); if (ImGui::IsItemClicked()) ground_flag = 0;
-                // ImGui::SameLine();
-                ImGui::RadioButton("Use Texture File", ground_flag == 1);
-                if (ImGui::IsItemClicked())
-                    ground_flag = 1;
-                ImGui::SameLine();
-                ImGui::RadioButton("Use Model File", ground_flag == 2);
-                if (ImGui::IsItemClicked())
-                    ground_flag = 2;
-                if (ground_flag == 0) {
-                    // ####### GROUND COLOR ####### //
-                    ImGui::ColorEdit3("##ground_color_edit", ground_color);
-                } else if (ground_flag == 1) {
-                    // ####### GROUND TEXTURE File ####### //
-                    ImGui::SetNextItemWidth(60);
-                    if (ImGui::Button("Ground Texture File")) {
-                        std::string ground_texture_file_ = file_dialog();
-                        if (!ground_texture_file_.empty()) {
-                            ground_texture_file = ground_texture_file_;
-                        }
-                    }
-                    ImGui::SameLine();
-                    std::string shorten = ground_texture_file;
-                    for (char &c: shorten) {
-                        if (c == '\\') {
-                            c = '/';
-                        }
-                    }
-                    size_t last = shorten.rfind('/');
-                    if (last != std::string::npos) {
-                        shorten = shorten.substr(last + 1);
-                    }
-                    ImGui::Text("%s", shorten.c_str());
-                } else if (ground_flag == 2) {
-                    // ####### GROUND Model File ####### //
-                    ImGui::SetNextItemWidth(60);
-                    if (ImGui::Button("Ground Model File")) {
-                        std::string ground_model_file_ = file_dialog();
-                        if (!ground_model_file_.empty()) {
-                            ground_model_file = ground_model_file_;
-                        }
-                    }
-                    ImGui::SameLine();
-                    ImGui::Text("%s", shortenPath(ground_model_file).c_str());
-                }
-                toggle_button("##use_ground_texture_color", &use_ground_texture);
-                // ####### GROUND COLOR ####### //
-                if (use_ground_texture) {
-                    ImGui::SameLine();
-                    ImGui::Text("Use Ground Texture Color");
-                } else {
-                    ImGui::SameLine();
-                    ImGui::ColorEdit3("##ground_color_edit", ground_color);
-                    ImGui::SameLine();
-                    ImGui::Text("Manually Set Ground Color");
-                }
-                // ####### DOMAIN ORIGIN ####### //
-                ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("##domain_origin_x", &domain_origin.x);
-                randomizePopup("domain_origin_x", createTaggedPtr(&domain_origin.x));
-                randomizerParams("domain_origin_x");
-                ImGui::OpenPopupOnItemClick("randomize_domain_origin_x", ImGuiPopupFlags_MouseButtonRight);
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("##domain_origin_y", &domain_origin.y);
-                randomizePopup("domain_origin_y", createTaggedPtr(&domain_origin.y));
-                randomizerParams("domain_origin_y");
-                ImGui::OpenPopupOnItemClick("randomize_domain_origin_y", ImGuiPopupFlags_MouseButtonRight);
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(60);
-                ImGui::InputFloat("##domain_origin_z", &domain_origin.z);
-                randomizePopup("domain_origin_z", createTaggedPtr(&domain_origin.z));
-                randomizerParams("domain_origin_z");
-                ImGui::OpenPopupOnItemClick("randomize_domain_origin_z", ImGuiPopupFlags_MouseButtonRight);
-                ImGui::SameLine();
-                ImGui::Text("Domain Origin");
-                if (ground_flag == 1) {
-                    // ####### GROUND RESOLUTION ####### //
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("##ground_resolution_x", &ground_resolution.x);
-                    randomizePopup("ground_resolution_x", createTaggedPtr(&ground_resolution.x));
-                    randomizerParams("ground_resolution_x");
-                    ImGui::OpenPopupOnItemClick("randomize_ground_resolution_x", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("##ground_resolution_y", &ground_resolution.y);
-                    randomizePopup("ground_resolution_y", createTaggedPtr(&ground_resolution.y));
-                    randomizerParams("ground_resolution_y");
-                    ImGui::OpenPopupOnItemClick("randomize_ground_resolution_y", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Ground Resolution");
-                    // ####### DOMAIN EXTENT ####### //
-                    ImGui::SetNextItemWidth(50);
-                    ImGui::InputFloat("##domain_extent_x", &domain_extent.x);
-                    randomizePopup("domain_extent_x", createTaggedPtr(&domain_extent.x));
-                    randomizerParams("domain_extent_x");
-                    ImGui::OpenPopupOnItemClick("randomize_domain_extent_x", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(50);
-                    ImGui::InputFloat("##domain_extent_y", &domain_extent.y);
-                    randomizePopup("domain_extent_y", createTaggedPtr(&domain_extent.y));
-                    randomizerParams("domain_extent_y");
-                    ImGui::OpenPopupOnItemClick("randomize_domain_extent_y", ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Domain Extent");
-                    // ####### NUMBER OF TILES ####### //
-                    ImGui::SetNextItemWidth(60);
-                    int temp[2];
-                    temp[0] = num_tiles.x;
-                    temp[1] = num_tiles.y;
-                    ImGui::InputInt2("Number of Tiles", temp);
-                    num_tiles.x = temp[0];
-                    num_tiles.y = temp[1];
-                }
+                generalTab();
 
                 ImGui::EndTabItem();
             }
             // Calculation Tab
             if (ImGui::BeginTabItem("Calculation")) {
                 current_tab = "Calculation";
-                // prim
-                for(auto &prim_name : primitive_names_set) {
-                    if (calculation_selection_primitive.find(prim_name) == calculation_selection_primitive.end()) {
-                        calculation_selection_primitive[prim_name] = false;
-                    }
-                }
-                std::vector<std::string> primitive_labels = context->listAllPrimitiveDataLabels();
-                calculation_variable_choices.clear();
-                for (auto &label : primitive_labels) {
-                    HeliosDataType dtype = context->getPrimitiveDataType(label.c_str());
-                    if (heliosNumericTypes.find(dtype) != heliosNumericTypes.end())
-                        calculation_variable_choices.insert(label);
-                }
-                std::vector<std::string> global_data = context->listGlobalData();
-                for (auto &data : global_data) {
-                    HeliosDataType dtype = context->getGlobalDataType(data.c_str());
-                    if (heliosNumericTypes.find(dtype) != heliosNumericTypes.end())
-                        calculation_variable_choices.insert(data);
-                }
-
-                // data group
-                for (auto &data_group : data_groups_set) {
-                    if (calculation_selection_datagroup.find(data_group) == calculation_selection_datagroup.end()) {
-                        calculation_selection_datagroup[data_group] = false;
-                    }
-                }
-                // data group popup
-                if (ImGui::BeginPopup("calculation_select_popup_datagroup")) {
-                    for (auto &calculation_pair: calculation_selection_datagroup) {
-                        ImGui::Selectable(calculation_pair.first.c_str(), &calculation_pair.second, ImGuiSelectableFlags_DontClosePopups);
-                    }
-                    ImGui::EndPopup();
-                }
-                if (ImGui::Button("Select Data Groups")) {
-                    ImGui::OpenPopup("calculation_select_popup_datagroup");
-                }
-                ImGui::SameLine();
-                ImGui::Text("Data Groups:");
-                int idx = 0;
-                if (calculation_selection_datagroup["All"]) {
-                    ImGui::SameLine();
-                    ImGui::Text("All");
-                } else {
-                    for (auto &calculation_pair: calculation_selection_datagroup) {
-                        if (calculation_pair.second) {
-                            ImGui::SameLine(), ImGui::Text("%i. %s", idx, calculation_pair.first.c_str());
-                            idx++;
-                        }
-                    }
-                }
-
-                // prim popup
-                if (ImGui::BeginPopup("calculation_select_popup_prim")) {
-                    for (auto &calculation_pair: calculation_selection_primitive) {
-                        ImGui::Selectable(calculation_pair.first.c_str(), &calculation_pair.second, ImGuiSelectableFlags_DontClosePopups);
-                    }
-                    ImGui::EndPopup();
-                }
-                if (ImGui::Button("Select Primitives")) {
-                    ImGui::OpenPopup("calculation_select_popup_prim");
-                }
-                ImGui::SameLine();
-                ImGui::Text("Primitive Types:");
-                idx = 0;
-                if (calculation_selection_primitive["All"]) {
-                    ImGui::SameLine();
-                    ImGui::Text("All");
-                } else {
-                    for (auto &calculation_pair: calculation_selection_primitive) {
-                        if (calculation_pair.second) {
-                            ImGui::SameLine(), ImGui::Text("%i. %s", idx, calculation_pair.first.c_str());
-                            idx++;
-                        }
-                    }
-                }
-                // Global Data Calculation
-                ImGui::SetWindowFontScale(1.25f);
-                ImGui::Text("Global Data:");
-                ImGui::SetWindowFontScale(1.0f);
-                for (int i = 0; i < calculation_variables_global.size(); i++) {
-                    if (i > 0) {
-                        ImGui::SetNextItemWidth(40);
-                        dropDown("##operator" + std::to_string(i), calculation_operators_global[i - 1], calculation_operators_choices);
-                    }
-                    ImGui::Text("Scalar:");
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(50);
-                    std::string scalar_label = "##Scalar" + std::to_string(i);
-                    ImGui::InputFloat(scalar_label.c_str(), &calculation_scalars_global[i]);
-                    ImGui::SameLine();
-                    ImGui::Text("Variable:");
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(100);
-                    dropDown("##Variable" + std::to_string(i), calculation_variables_global[i], calculation_variable_choices);
-                    ImGui::SameLine();
-                    ImGui::Text("Aggregate:");
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(100);
-                    dropDown("##Operation" + std::to_string(i), calculation_aggregations[i], calculation_aggregation_choices);
-                    if (i == calculation_variables_global.size() - 1) {
-                        ImGui::SameLine();
-                        if (ImGui::Button("Add Operand")) {
-                            calculation_variables_global.push_back("");
-                            calculation_scalars_global.push_back(1.0);
-                            calculation_operators_global.push_back("+");
-                            calculation_aggregations.push_back("Mean");
-                        }
-                        if (i > 0) {
-                            ImGui::SameLine();
-                            if (ImGui::Button("Remove")) {
-                                calculation_variables_global.pop_back();
-                                calculation_scalars_global.pop_back();
-                                calculation_operators_global.pop_back();
-                                calculation_aggregations.pop_back();
-                            }
-                        }
-                    }
-                }
-                if (ImGui::Button("Calculate Result:")) {
-                    globalCalculation();
-                }
-                ImGui::SameLine();
-                ImGui::Text(std::to_string(calculation_result_global).c_str());
-                ImGui::SameLine();
-                if (ImGui::Button("Save to Global Data")) {
-                    context->setGlobalData(calculation_name_global.c_str(), calculation_result_global);
-                }
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(100);
-                ImGui::InputText("##global_data_name", &calculation_name_global);
-
-                // Primitive Data Calculation
-                ImGui::SetWindowFontScale(1.25f);
-                ImGui::Text("Primitive Data:");
-                ImGui::SetWindowFontScale(1.0f);
-                for (int i = 0; i < calculation_variables_primitive.size(); i++) {
-                    if (i > 0) {
-                        ImGui::SetNextItemWidth(40);
-                        dropDown("##operator_primitive" + std::to_string(i), calculation_operators_primitive[i - 1], calculation_operators_choices);
-                    }
-                    ImGui::Text("Scalar:");
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(50);
-                    std::string scalar_label = "##Scalar_primitive-" + std::to_string(i);
-                    ImGui::InputFloat(scalar_label.c_str(), &calculation_scalars_primitive[i]);
-                    ImGui::SameLine();
-                    ImGui::Text("Variable:");
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(100);
-                    dropDown("##Variable_primitive" + std::to_string(i), calculation_variables_primitive[i], calculation_variable_choices);
-                    if (i == calculation_variables_primitive.size() - 1) {
-                        ImGui::SameLine();
-                        if (ImGui::Button("Add Operand##primitive")) {
-                            calculation_variables_primitive.push_back("");
-                            calculation_scalars_primitive.push_back(1.0);
-                            calculation_operators_primitive.push_back("+");
-                        }
-                        if (i > 0) {
-                            ImGui::SameLine();
-                            if (ImGui::Button("Remove##primitive")) {
-                                calculation_variables_primitive.pop_back();
-                                calculation_scalars_primitive.pop_back();
-                                calculation_operators_primitive.pop_back();
-                            }
-                        }
-                    }
-                }
-                ImGui::Text("Save Primitive Data:");
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(80);
-                ImGui::InputText("##save_data_name", &calculation_name_primitive);
-                ImGui::SameLine();
-                if (ImGui::Button("Save to Primitive Data")) {
-                    savePrimitiveCalculation();
-                }
-
+                calculationTab();
 
                 ImGui::EndTabItem();
             }
@@ -2816,1514 +2314,46 @@ void ProjectBuilder::visualize() {
                 objectTab();
                 ImGui::EndTabItem();
             }
-// if (enable_plantarchitecture){
-#ifdef ENABLE_PLANT_ARCHITECTURE
             // CANOPY TAB
             if (ImGui::BeginTabItem("Canopy")) {
                 current_tab = "Canopy";
-                dropDown("##canopy_combo", current_canopy, canopy_labels_set);
-                ImGui::SameLine();
-                if (ImGui::Button("Add Canopy")) {
-                    addCanopy();
-                }
-                if (!current_canopy.empty()) {
-                    if (ImGui::Button("Update Canopy")) {
-                        updateCanopy(current_canopy);
-                        is_dirty = true;
-                        canopy_dict[current_canopy].is_dirty = false;
-                    }
-                    ImGui::SameLine();
-                    if (ImGui::Button("Delete Canopy")) {
-                        deleteCanopy(current_canopy);
-                        updatePrimitiveTypes();
-                        is_dirty = true;
-                        context->markGeometryDirty();
-                    }
-                    if (canopy_dict[current_canopy].is_dirty) {
-                        ImGui::SameLine();
-                        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255)); // Red text
-                        ImGui::Text("update required");
-                        ImGui::PopStyleColor();
-                    }
-                    ImGui::SetNextItemWidth(100);
-                    std::string prev_canopy_name = canopy_dict[current_canopy].label;
-                    ImGui::InputText("##canopy_name", &canopy_dict[current_canopy].label);
-                    if (canopy_dict[current_canopy].label != prev_canopy_name && canopy_labels_set.find(canopy_dict[current_canopy].label) == canopy_labels_set.end() && !canopy_dict[current_canopy].label.empty()) {
-                        canopy temp = canopy_dict[current_canopy];
-                        current_canopy = canopy_dict[prev_canopy_name].label;
-                        std::map<std::string, canopy>::iterator current_canopy_iter = canopy_dict.find(prev_canopy_name);
-                        if (current_canopy_iter != canopy_dict.end()) {
-                            canopy_dict.erase(current_canopy_iter);
-                        }
-                        canopy_dict[current_canopy] = temp;
+                canopyTab();
 
-                        canopy_labels_set.erase(prev_canopy_name);
-                        canopy_labels_set.insert(current_canopy);
-                    } else {
-                        canopy_dict[current_canopy].label = prev_canopy_name;
-                    }
-                    ImGui::SameLine();
-                    ImGui::Text("Canopy Name");
-                    // ####### PLANT LIBRARY NAME ####### //
-                    ImGui::SetNextItemWidth(250);
-                    // ImGui::InputText("Plant Library", &plant_library_names[canopy_labels_dict[current_canopy]]);
-                    std::string prev_lib = canopy_dict[current_canopy].library_name_verbose;
-                    dropDown("Plant Library###dropdown", canopy_dict[current_canopy].library_name_verbose, plant_types_verbose);
-                    if (canopy_dict[current_canopy].library_name_verbose != prev_lib)
-                        canopy_dict[current_canopy].is_dirty = true;
-                    canopy_dict[current_canopy].library_name = plant_type_lookup[canopy_dict[current_canopy].library_name_verbose];
-                    // ######### CANOPY DATA GROUP ####### //
-                    ImGui::SetNextItemWidth(100);
-                    std::string prev_canopy_data_group = canopy_dict[current_canopy].data_group;
-                    ImGui::InputText("##canopy_data_group", &canopy_dict[current_canopy].data_group);
-                    if (canopy_dict[current_canopy].data_group == "All" || canopy_dict[current_canopy].data_group.empty()) {
-                        canopy_dict[current_canopy].data_group = prev_canopy_data_group;
-                    }
-                    if (!canopy_dict[current_canopy].data_group.empty() && prev_canopy_data_group != canopy_dict[current_canopy].data_group) {
-                        std::string new_data_group = canopy_dict[current_canopy].data_group;
-                        for (int i = 0; i < canopy_dict[current_canopy].IDs.size(); i++) {
-                            std::vector<uint> new_canopy_objIDs = plantarchitecture->getAllPlantObjectIDs(canopy_dict[current_canopy].IDs[i]);
-                            for (auto &obj : new_canopy_objIDs) {
-                                context->clearObjectData(obj, prev_canopy_data_group.c_str());
-                                context->setObjectData(obj, "data_group", new_data_group);
-                                context->setObjectData(obj, new_data_group.c_str(), 1);
-                            }
-                            // context->clearObjectData(new_canopy_objIDs, prev_canopy_data_group.c_str());
-                            // context->setObjectData(new_canopy_objIDs, "data_group", new_data_group);
-                            // context->setObjectData(new_canopy_objIDs, new_data_group.c_str(), new_canopy_objIDs);
-                        }
-                        updateDataGroups();
-                    }
-                    ImGui::SameLine();
-                    ImGui::Text("Data Group");
-                    // ####### CANOPY ORIGIN ####### //
-                    vec3 prev_canopy_origin_ = vec3(canopy_dict[current_canopy].origin);
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##canopy_origin_x", &canopy_dict[current_canopy].origin.x);
-                    randomizePopup("canopy_origin_x_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].origin.x));
-                    randomizerParams("canopy_origin_x_" + std::to_string(canopy_dict[current_canopy].idx));
-                    ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_x_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##canopy_origin_y", &canopy_dict[current_canopy].origin.y);
-                    randomizePopup("canopy_origin_y_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].origin.y));
-                    randomizerParams("canopy_origin_y_" + std::to_string(canopy_dict[current_canopy].idx));
-                    ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_y_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(60);
-                    ImGui::InputFloat("##canopy_origin_z", &canopy_dict[current_canopy].origin.z);
-                    randomizePopup("canopy_origin_z_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].origin.z));
-                    randomizerParams("canopy_origin_z_" + std::to_string(canopy_dict[current_canopy].idx));
-                    ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_z_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Canopy Origin");
-                    if (prev_canopy_origin_ != canopy_dict[current_canopy].origin) {
-                        canopy_dict[current_canopy].is_dirty = true;
-                    }
-                    // ####### PLANT COUNT ####### //
-                    int2 prev_plant_count_ = int2(canopy_dict[current_canopy].plant_count);
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("##plant_count_x", &canopy_dict[current_canopy].plant_count.x);
-                    canopy_dict[current_canopy].plant_count.x = std::max(canopy_dict[current_canopy].plant_count.x, 1);
-                    randomizePopup("plant_count_x_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].plant_count.x));
-                    randomizerParams("plant_count_x_" + std::to_string(canopy_dict[current_canopy].idx));
-                    ImGui::OpenPopupOnItemClick(("randomize_plant_count_x_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputInt("##plant_count_y", &canopy_dict[current_canopy].plant_count.y);
-                    canopy_dict[current_canopy].plant_count.y = std::max(canopy_dict[current_canopy].plant_count.y, 1);
-                    randomizePopup("plant_count_y_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].plant_count.y));
-                    randomizerParams("plant_count_y_" + std::to_string(canopy_dict[current_canopy].idx));
-                    ImGui::OpenPopupOnItemClick(("randomize_plant_count_y_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Plant Count");
-                    if (prev_plant_count_ != canopy_dict[current_canopy].plant_count) {
-                        canopy_dict[current_canopy].is_dirty = true;
-                    }
-                    // ####### PLANT SPACING ####### //
-                    vec2 prev_plant_spacing_ = vec2(canopy_dict[current_canopy].plant_spacing);
-                    ImGui::SetNextItemWidth(50);
-                    ImGui::InputFloat("##plant_spacing_x", &canopy_dict[current_canopy].plant_spacing.x);
-                    randomizePopup("plant_spacing_x_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].plant_spacing.x));
-                    randomizerParams("plant_spacing_x_" + std::to_string(canopy_dict[current_canopy].idx));
-                    ImGui::OpenPopupOnItemClick(("randomize_plant_spacing_x_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(50);
-                    ImGui::InputFloat("##plant_spacing_y", &canopy_dict[current_canopy].plant_spacing.y);
-                    randomizePopup("plant_spacing_y_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].plant_spacing.y));
-                    randomizerParams("plant_spacing_y_" + std::to_string(canopy_dict[current_canopy].idx));
-                    ImGui::OpenPopupOnItemClick(("randomize_plant_spacing_y_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Plant Spacing");
-                    if (prev_plant_spacing_ != canopy_dict[current_canopy].plant_spacing) {
-                        canopy_dict[current_canopy].is_dirty = true;
-                    }
-                    // ####### PLANT AGE ####### //
-                    float prev_age_ = canopy_dict[current_canopy].age;
-                    ImGui::SetNextItemWidth(80);
-                    ImGui::InputFloat("Plant Age", &canopy_dict[current_canopy].age);
-                    randomizePopup("plant_age_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].age));
-                    randomizerParams("plant_age_" + std::to_string(canopy_dict[current_canopy].idx));
-                    ImGui::OpenPopupOnItemClick(("randomize_plant_age_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    if (prev_age_ != canopy_dict[current_canopy].age) {
-                        canopy_dict[current_canopy].is_dirty = true;
-                    }
-                    // ####### GROUND CLIPPING HEIGHT ####### //
-                    float prev_ground_clipping_height_ = canopy_dict[current_canopy].ground_clipping_height;
-                    ImGui::SetNextItemWidth(80);
-                    ImGui::InputFloat("Ground Clipping Height", &canopy_dict[current_canopy].ground_clipping_height);
-                    randomizePopup("ground_clipping_height_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].ground_clipping_height));
-                    randomizerParams("ground_clipping_height_" + std::to_string(canopy_dict[current_canopy].idx));
-                    ImGui::OpenPopupOnItemClick(("randomize_ground_clipping_height_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    if (prev_ground_clipping_height_ != canopy_dict[current_canopy].ground_clipping_height) {
-                        canopy_dict[current_canopy].is_dirty = true;
-                    }
-                    if (ImGui::Button("Save Canopy to OBJ/PLY File")) {
-                        std::string new_obj_file = save_as_file_dialog(std::vector<std::string>{"OBJ", "PLY"});
-                        if (!new_obj_file.empty()) {
-                            std::string file_extension = new_obj_file;
-                            size_t last_obj_file = file_extension.rfind('.');
-                            if (last_obj_file != std::string::npos) {
-                                file_extension = file_extension.substr(last_obj_file + 1);
-                            }
-                            if (file_extension == "obj" || file_extension == "ply") {
-                                if (!std::filesystem::exists(new_obj_file)) {
-                                    // Create file
-                                    std::ofstream outFile(new_obj_file);
-                                }
-                                if (!save_plants_individually) {
-                                    saveCanopy(new_obj_file, canopy_dict[current_canopy].IDs, canopy_dict[current_canopy].origin, file_extension);
-                                } else {
-                                    saveCanopy(new_obj_file, canopy_dict[current_canopy].IDs, canopy_dict[current_canopy].individual_plant_locations, file_extension);
-                                }
-                            } else {
-                                // Needs to be a obj or ply file
-                                std::cout << "Not a valid file type. Object must be saved to .obj or .ply file." << std::endl;
-                            }
-                        } else {
-                            // Not a valid file
-                            std::cout << "Not a valid file." << std::endl;
-                        }
-                    }
-                    ImGui::SameLine();
-                    ImGui::Checkbox("Save plants individually", &save_plants_individually);
-                }
                 ImGui::EndTabItem();
             }
-// } //PLANT_ARCHITECTURE
-#endif // PLANT_ARCHITECTURE
-#ifdef ENABLE_RADIATION_MODEL
             if (enable_radiation) {
                 if (ImGui::BeginTabItem("Radiation")) {
                     current_tab = "Radiation";
-                    // LOAD XML LIBRARY FILE
-                    ImGui::SetNextItemWidth(60);
-                    if (ImGui::Button("Load XML Library File")) {
-                        std::string new_xml_library_file = file_dialog();
-                        if (!new_xml_library_file.empty() && std::filesystem::exists(new_xml_library_file)) {
-                            if (xml_library_files.find(new_xml_library_file) == xml_library_files.end()) {
-                                xml_library_files.insert(new_xml_library_file);
-                                std::vector<std::string> current_spectra_file = get_xml_node_values(new_xml_library_file, "label", "globaldata_vec2");
-                                for (int i = 0; i < current_spectra_file.size(); i++) {
-                                    possible_spectra.insert(current_spectra_file[i]);
-                                }
-                            }
-                            context->loadXML(new_xml_library_file.c_str());
-                        }
-                    }
-                    // ####### GLOBAL PROPERTIES ####### //
-                    ImGui::SetWindowFontScale(1.25f);
-                    ImGui::Text("Global Properties:");
-                    ImGui::SetWindowFontScale(1.0f);
-                    // ####### ENFORCE PERIODIC BOUNDARY CONDITION ####### //
-                    ImGui::Text("Enforce Periodic Boundary Condition:");
-                    ImGui::SameLine();
-                    bool prev_cond_x = enforce_periodic_boundary_x;
-                    ImGui::Checkbox("x###periodic_boundary_x", &enforce_periodic_boundary_x);
-                    ImGui::SameLine();
-                    bool prev_cond_y = enforce_periodic_boundary_y;
-                    ImGui::Checkbox("y###periodic_boundary_y", &enforce_periodic_boundary_y);
-                    if (prev_cond_x != enforce_periodic_boundary_x || prev_cond_y != enforce_periodic_boundary_y) {
-                        if (enforce_periodic_boundary_x && enforce_periodic_boundary_y)
-                            radiation->enforcePeriodicBoundary("xy");
-                        else if (enforce_periodic_boundary_x)
-                            radiation->enforcePeriodicBoundary("x");
-                        else if (enforce_periodic_boundary_y)
-                            radiation->enforcePeriodicBoundary("y");
-                        else
-                            radiation->enforcePeriodicBoundary("");
-                    }
-                    // ####### DIFFUSE EXTINCTION COEFFICIENT ####### //
-                    ImGui::SetNextItemWidth(60);
-                    float prev_value = diffuse_extinction_coeff;
-                    ImGui::InputFloat("Diffuse Extinction Coefficient", &diffuse_extinction_coeff);
-                    if (prev_value != diffuse_extinction_coeff) {
-                        context->setGlobalData("diffuse_extinction_coeff", diffuse_extinction_coeff);
-                    }
-                    randomizePopup("diffuse_extinction_coeff", createTaggedPtr(&diffuse_extinction_coeff));
-                    randomizerParams("diffuse_extinction_coeff");
-                    ImGui::OpenPopupOnItemClick("randomize_diffuse_extinction_coeff", ImGuiPopupFlags_MouseButtonRight);
-                    // ####### AIR TURBIDITY ####### //
-                    ImGui::SetNextItemWidth(60);
-                    prev_value = air_turbidity;
-                    ImGui::InputFloat("Air Turbidity", &air_turbidity);
-                    if (prev_value != air_turbidity) {
-                        if (air_turbidity > 0) {
-                            context->setGlobalData("air_turbidity", air_turbidity);
-                        } else if (air_turbidity < 0) { // try calibration
-                            if (context->doesTimeseriesVariableExist("net_radiation")) {
-                                air_turbidity = solarposition->calibrateTurbidityFromTimeseries("net_radiation");
-                                if (air_turbidity > 0 && air_turbidity < 1) {
-                                    context->setGlobalData("air_turbidity", air_turbidity);
-                                }
-                            }
-                        }
-                    }
-                    randomizePopup("air_turbidity", createTaggedPtr(&air_turbidity));
-                    randomizerParams("air_turbidity");
-                    ImGui::OpenPopupOnItemClick("randomize_air_turbidity", ImGuiPopupFlags_MouseButtonRight);
-                    // ####### SOLAR DIRECT SPECTRUM ####### //
-                    ImGui::SetNextItemWidth(250);
-                    // ImGui::InputText("Solar Direct Spectrum", &solar_direct_spectrum);
-                    if (ImGui::BeginCombo("##combo_solar_direct_spectrum", solar_direct_spectrum.c_str())) {
-                        for (auto &spectra: possible_spectra) {
-                            bool is_solar_direct_spectrum_selected = (solar_direct_spectrum == spectra);
-                            if (ImGui::Selectable(spectra.c_str(), is_solar_direct_spectrum_selected))
-                                solar_direct_spectrum = spectra;
-                            if (is_solar_direct_spectrum_selected)
-                                ImGui::SetItemDefaultFocus();
-                        }
-                        ImGui::EndCombo();
-                    }
-                    ImGui::SameLine();
-                    ImGui::Text("Solar Direct Spectrum");
-                    // ####### BAND PROPERTIES ####### //
-                    ImGui::SetWindowFontScale(1.25f);
-                    ImGui::Text("Add Band:");
-                    ImGui::SetWindowFontScale(1.0f);
-                    // ####### ADD BAND ####### //
-                    toggle_button("##enable_wavelength", &enable_wavelength);
-                    ImGui::SameLine();
-                    if (enable_wavelength) {
-                        ImGui::Text("Wavelength Min:");
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##wavelength_min", &wavelength_min);
-                        ImGui::SameLine();
-                        ImGui::Text("Max:");
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##wavelength_max", &wavelength_max);
-                    } else {
-                        ImGui::Text("No Specified Wavelength");
-                    }
-                    //
-                    ImGui::Text("Label:");
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::InputText("##new_band_label", &new_band_label);
-                    ImGui::SameLine();
-                    ImGui::Text("Emission:");
-                    ImGui::SameLine();
-                    ImGui::Checkbox("##enable_emission", &enable_emission);
-                    ImGui::SameLine();
-                    if (ImGui::Button("Add Band")) {
-                        if (enable_wavelength) {
-                            addBand(new_band_label, wavelength_min, wavelength_max, enable_emission);
-                        } else {
-                            addBand(new_band_label, enable_emission);
-                            bandlabels_set_wavelength.insert(new_band_label);
-                        }
-                    }
-                    // ####### BAND PROPERTIES ####### //
-                    ImGui::SetWindowFontScale(1.25f);
-                    ImGui::Text("Band Properties:");
-                    ImGui::SetWindowFontScale(1.0f);
-                    // ####### SELECT BAND ####### //
-                    if (ImGui::BeginCombo("##combo_current_band", current_band.c_str())) {
-                        for (std::string band: bandlabels_set) {
-                            bool is_current_band_selected = (current_band == band);
-                            if (ImGui::Selectable(band.c_str(), is_current_band_selected))
-                                current_band = band;
-                            if (is_current_band_selected)
-                                ImGui::SetItemDefaultFocus();
-                        }
-                        ImGui::EndCombo();
-                    }
-                    ImGui::SameLine();
-                    ImGui::Text("Select Band");
-                    // ####### DIRECT RAY COUNT ####### //
-                    int prev_direct_ray_count;
-                    ImGui::SetNextItemWidth(100);
-                    if (current_band == "All") {
-                        prev_direct_ray_count = direct_ray_count;
-                        ImGui::InputInt("Direct Ray Count", &direct_ray_count);
-                        randomizePopup("direct_ray_count", createTaggedPtr(&direct_ray_count));
-                        randomizerParams("direct_ray_count");
-                        ImGui::OpenPopupOnItemClick("randomize_direct_ray_count", ImGuiPopupFlags_MouseButtonRight);
-                        if (direct_ray_count != prev_direct_ray_count) {
-                            for (std::string band: bandlabels) {
-                                radiation->setDirectRayCount(band, direct_ray_count);
-                                direct_ray_count_dict[band] = direct_ray_count;
-                            }
-                        }
-                    } else {
-                        prev_direct_ray_count = direct_ray_count_dict[current_band];
-                        ImGui::InputInt("Direct Ray Count", &direct_ray_count_dict[current_band]);
-                        randomizePopup("direct_ray_count_" + current_band, createTaggedPtr(&direct_ray_count_dict[current_band]));
-                        randomizerParams("direct_ray_count_" + current_band);
-                        ImGui::OpenPopupOnItemClick(("randomize_direct_ray_count_" + current_band).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        if (direct_ray_count_dict[current_band] != prev_direct_ray_count) {
-                            radiation->setDirectRayCount(current_band, direct_ray_count_dict[current_band]);
-                        }
-                    }
-                    // ####### DIFFUSE RAY COUNT ####### //
-                    ImGui::SetNextItemWidth(100);
-                    int prev_diffuse_ray_count;
-                    if (current_band == "All") {
-                        prev_diffuse_ray_count = diffuse_ray_count;
-                        ImGui::InputInt("Diffuse Ray Count", &diffuse_ray_count);
-                        randomizePopup("diffuse_ray_count", createTaggedPtr(&diffuse_ray_count));
-                        randomizerParams("diffuse_ray_count");
-                        ImGui::OpenPopupOnItemClick("randomize_diffuse_ray_count", ImGuiPopupFlags_MouseButtonRight);
-                        if (diffuse_ray_count != prev_diffuse_ray_count) {
-                            for (std::string band: bandlabels) {
-                                radiation->setDiffuseRayCount(band, diffuse_ray_count);
-                                diffuse_ray_count_dict[band] = diffuse_ray_count;
-                            }
-                        }
-                    } else {
-                        prev_diffuse_ray_count = diffuse_ray_count_dict[current_band];
-                        ImGui::InputInt("Diffuse Ray Count", &diffuse_ray_count_dict[current_band]);
-                        randomizePopup("diffuse_ray_count_" + current_band, createTaggedPtr(&diffuse_ray_count_dict[current_band]));
-                        randomizerParams("diffuse_ray_count_" + current_band);
-                        ImGui::OpenPopupOnItemClick(("randomize_diffuse_ray_count_" + current_band).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        if (diffuse_ray_count_dict[current_band] != prev_diffuse_ray_count) {
-                            radiation->setDiffuseRayCount(current_band, diffuse_ray_count_dict[current_band]);
-                        }
-                    }
-                    // ####### SCATTERING DEPTH ####### //
-                    ImGui::SetNextItemWidth(100);
-                    int prev_scattering_depth;
-                    if (current_band == "All") {
-                        prev_scattering_depth = scattering_depth;
-                        ImGui::InputInt("Scattering Depth", &scattering_depth);
-                        randomizePopup("scattering_depth", createTaggedPtr(&scattering_depth));
-                        randomizerParams("scattering_depth");
-                        ImGui::OpenPopupOnItemClick("randomize_scattering_depth", ImGuiPopupFlags_MouseButtonRight);
-                        if (scattering_depth <= 0) {
-                            scattering_depth = prev_scattering_depth;
-                        }
-                        if (prev_scattering_depth != scattering_depth) {
-                            for (std::string band: bandlabels) {
-                                radiation->setScatteringDepth(band, scattering_depth);
-                                scattering_depth_dict[band] = scattering_depth;
-                            }
-                        }
-                    } else {
-                        prev_scattering_depth = scattering_depth_dict[current_band];
-                        ImGui::InputInt("Scattering Depth", &scattering_depth_dict[current_band]);
-                        randomizePopup("scattering_depth_" + current_band, createTaggedPtr(&scattering_depth_dict[current_band]));
-                        randomizerParams("scattering_depth_" + current_band);
-                        ImGui::OpenPopupOnItemClick(("randomize_scattering_depth_" + current_band).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        if (scattering_depth_dict[current_band] <= 0) { // scattering depth must be >0
-                            scattering_depth_dict[current_band] = prev_scattering_depth;
-                        }
-                        if (prev_scattering_depth != scattering_depth_dict[current_band]) {
-                            radiation->setScatteringDepth(current_band, scattering_depth_dict[current_band]);
-                        }
-                    }
-                    // ####### RADIATIVE PROPERTIES ####### //
-                    ImGui::SetWindowFontScale(1.25f);
-                    ImGui::Text("Radiative Properties:");
-                    ImGui::SetWindowFontScale(1.0f);
-                    ImGui::SetNextItemWidth(100);
-                    // ######### SELECT DATA GROUP ############//
-                    // if (ImGui::Button("Refresh###data_groups_refresh")) {
-                    //     updatePrimitiveTypes();
-                    //     updateDataGroups();
-                    // }
-                    // ImGui::SameLine();
-                    ImGui::SetNextItemWidth(150);
-                    if (ImGui::BeginCombo("##data_group_primitive", current_data_group.c_str())) {
-                        for (std::string data_group: data_groups_set) {
-                            bool is_data_group_selected = (current_data_group == data_group);
-                            if (ImGui::Selectable(data_group.c_str(), is_data_group_selected))
-                                current_data_group = data_group;
-                            if (is_data_group_selected)
-                                ImGui::SetItemDefaultFocus();
-                        }
-                        ImGui::EndCombo();
-                    }
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::Text("Select Data Group");
-                    // default primitive data group
-                    // ######### SELECT PRIMITIVE ############//
-                    // if (ImGui::Button("Refresh")) {
-                    //     updatePrimitiveTypes();
-                    //     updateDataGroups();
-                    // }
-                    // ImGui::SameLine();
-                    ImGui::SetNextItemWidth(150);
-                    if (ImGui::BeginCombo("##combo_primitive", current_primitive.c_str())) {
-                        for (int m = 0; m < primitive_names.size(); m++) {
-                            bool is_primitive_selected = (current_primitive == primitive_names[m]);
-                            if (ImGui::Selectable(primitive_names[m].c_str(), is_primitive_selected))
-                                current_primitive = primitive_names[m];
-                            if (is_primitive_selected)
-                                ImGui::SetItemDefaultFocus();
-                        }
-                        ImGui::EndCombo();
-                    }
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::Text("Select Primitive Type");
-                    if (current_data_group == "All") {
-                        // REFLECTIVITY
-                        ImGui::Text("Reflectivity:");
-                        std::string toggle_display_reflectivity = "Manual Entry";
-                        bool reflectivity_continuous = primitive_continuous[current_primitive][0];
-                        toggle_button("##reflectivity_toggle", &reflectivity_continuous);
-                        if (reflectivity_continuous != primitive_continuous[current_primitive][0]) {
-                            if (current_primitive == "All") {
-                                for (auto &prim_values: primitive_continuous) {
-                                    primitive_continuous[prim_values.first][0] = reflectivity_continuous;
-                                }
-                            }
-                            primitive_continuous[current_primitive][0] = reflectivity_continuous;
-                        }
-                        if (primitive_continuous[current_primitive][0]) {
-                            toggle_display_reflectivity = "File Entry";
-                        }
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(250);
-                        if (!primitive_continuous[current_primitive][0]) {
-                            ImGui::Text("Select band:");
-                            ImGui::SameLine();
-                            ImGui::SetNextItemWidth(60);
-                            if (ImGui::BeginCombo("##combo_band_reflectivity", current_band_reflectivity.c_str())) {
-                                for (int n = 0; n < bandlabels.size(); n++) {
-                                    bool is_band_selected = (current_band_reflectivity == bandlabels[n]);
-                                    if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
-                                        current_band_reflectivity = bandlabels[n];
-                                    if (is_band_selected)
-                                        ImGui::SetItemDefaultFocus();
-                                }
-                                ImGui::EndCombo();
-                            }
-                            ImGui::SameLine();
-                            ImGui::Text("Enter value:");
-                            ImGui::SameLine();
-                            ImGui::SetNextItemWidth(80);
-                            if (current_primitive == "All") {
-                                float prev_reflectivity = reflectivity;
-                                ImGui::InputFloat("##reflectivity_all", &reflectivity);
-                                if (reflectivity != prev_reflectivity) {
-                                    for (auto &prim_values: primitive_values[current_band_reflectivity]) {
-                                        primitive_values[current_band_reflectivity][prim_values.first][0] = reflectivity;
-                                    }
-                                }
-                            } else {
-                                ImGui::InputFloat("##reflectivity", &primitive_values[current_band_reflectivity][current_primitive][0]);
-                            }
-                        } else {
-                            std::string reflectivity_prev = primitive_spectra[current_primitive][0];
-                            if (ImGui::BeginCombo("##reflectivity_combo_all", reflectivity_prev.c_str())) {
-                                for (auto &spectra: possible_spectra) {
-                                    bool is_spectra_selected = (primitive_spectra[current_primitive][0] == spectra);
-                                    if (ImGui::Selectable(spectra.c_str(), is_spectra_selected))
-                                        primitive_spectra[current_primitive][0] = spectra;
-                                    if (is_spectra_selected)
-                                        ImGui::SetItemDefaultFocus();
-                                }
-                                ImGui::EndCombo();
-                            }
-                            if (current_primitive == "All" && reflectivity_prev != primitive_spectra[current_primitive][0]) {
-                                for (auto &prim_spectrum: primitive_spectra) {
-                                    primitive_spectra[prim_spectrum.first][0] = primitive_spectra[current_primitive][0];
-                                }
-                            }
-                        }
-                        ImGui::SameLine();
-                        ImGui::Text("%s", toggle_display_reflectivity.c_str());
-                        // TRANSMISSIVITY
-                        ImGui::Text("Transmissivity:");
-                        std::string toggle_display_transmissivity = "Manual Entry";
-                        bool transmissivity_continuous = primitive_continuous[current_primitive][1];
-                        toggle_button("##transmissivity_toggle", &transmissivity_continuous);
-                        if (transmissivity_continuous != primitive_continuous[current_primitive][1]) {
-                            if (current_primitive == "All") {
-                                for (auto &prim_values: primitive_continuous) {
-                                    primitive_continuous[prim_values.first][1] = transmissivity_continuous;
-                                }
-                            }
-                            primitive_continuous[current_primitive][1] = transmissivity_continuous;
-                        }
-                        if (primitive_continuous[current_primitive][1]) {
-                            toggle_display_transmissivity = "File Entry";
-                        }
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(250);
-                        if (!primitive_continuous[current_primitive][1]) {
-                            ImGui::Text("Select band:");
-                            ImGui::SameLine();
-                            ImGui::SetNextItemWidth(60);
-                            if (ImGui::BeginCombo("##combo_band_transmissivity", current_band_transmissivity.c_str())) {
-                                for (int n = 0; n < bandlabels.size(); n++) {
-                                    bool is_band_selected = (current_band_transmissivity == bandlabels[n]);
-                                    if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
-                                        current_band_transmissivity = bandlabels[n];
-                                    if (is_band_selected)
-                                        ImGui::SetItemDefaultFocus();
-                                }
-                                ImGui::EndCombo();
-                            }
-                            ImGui::SameLine();
-                            ImGui::Text("Enter value:");
-                            ImGui::SameLine();
-                            ImGui::SetNextItemWidth(80);
-                            if (current_primitive == "All") {
-                                float prev_transmissivity = transmissivity;
-                                ImGui::InputFloat("##transmissivity_all", &transmissivity);
-                                if (transmissivity != prev_transmissivity) {
-                                    for (auto &prim_values: primitive_values[current_band_transmissivity]) {
-                                        primitive_values[current_band_transmissivity][prim_values.first][1] = transmissivity;
-                                    }
-                                }
-                            } else {
-                                ImGui::InputFloat("##transmissivity", &primitive_values[current_band_transmissivity][current_primitive][1]);
-                            }
-                        } else {
-                            std::string transmissivity_prev = primitive_spectra[current_primitive][1];
-                            if (ImGui::BeginCombo("##transmissivity_combo", transmissivity_prev.c_str())) {
-                                for (auto &spectra: possible_spectra) {
-                                    bool is_spectra_selected = (primitive_spectra[current_primitive][1] == spectra);
-                                    if (ImGui::Selectable(spectra.c_str(), is_spectra_selected))
-                                        primitive_spectra[current_primitive][1] = spectra;
-                                    if (is_spectra_selected)
-                                        ImGui::SetItemDefaultFocus();
-                                }
-                                ImGui::EndCombo();
-                            }
-                            if (current_primitive == "All" && transmissivity_prev != primitive_spectra[current_primitive][1]) {
-                                for (auto &prim_spectrum: primitive_spectra) {
-                                    primitive_spectra[prim_spectrum.first][1] = primitive_spectra[current_primitive][1];
-                                }
-                            }
-                        }
-                        ImGui::SameLine();
-                        ImGui::Text("%s", toggle_display_transmissivity.c_str());
-                        // EMISSIVITY
-                        ImGui::Text("Emissivity:");
-                        // ImGui::SetNextItemWidth(250);
-                        // ImGui::Text("");
-                        ImGui::Dummy(ImVec2(35.f, 0.f));
-                        ImGui::SameLine();
-                        ImGui::Text("Select band:");
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(60);
-                        if (ImGui::BeginCombo("##combo_band_emissivity", current_band_emissivity.c_str())) {
-                            for (std::string band: bandlabels_set_emissivity) {
-                                bool is_band_selected = (current_band_emissivity == band);
-                                if (ImGui::Selectable(band.c_str(), is_band_selected))
-                                    current_band_emissivity = band;
-                                if (is_band_selected)
-                                    ImGui::SetItemDefaultFocus();
-                            }
-                            ImGui::EndCombo();
-                        }
-                        ImGui::SameLine();
-                        ImGui::Text("Enter value:");
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(80);
-                        if (current_primitive == "All") {
-                            float prev_emissivity = emissivity;
-                            ImGui::InputFloat("##emissivity_all", &emissivity);
-                            if (emissivity != prev_emissivity) {
-                                for (auto &prim_values: primitive_values[current_band_emissivity]) {
-                                    primitive_values[current_band_emissivity][prim_values.first][2] = emissivity;
-                                }
-                            }
-                        } else {
-                            ImGui::InputFloat("##emissivity", &primitive_values[current_band_emissivity][current_primitive][2]);
-                        }
-                        ImGui::SameLine();
-                        ImGui::Text("Manual Entry");
-                    } else { // specific data group
-                        // REFLECTIVITY
-                        ImGui::Text("Reflectivity:");
-                        std::string toggle_display_reflectivity = "Manual Entry";
-                        bool reflectivity_continuous = primitive_continuous_dict[current_data_group][current_primitive][0];
-                        toggle_button("##reflectivity_toggle", &reflectivity_continuous);
-                        if (reflectivity_continuous != primitive_continuous_dict[current_data_group][current_primitive][0]) {
-                            if (current_primitive == "All") {
-                                for (auto &prim_values: primitive_continuous_dict[current_data_group]) {
-                                    primitive_continuous_dict[current_data_group][prim_values.first][0] = reflectivity_continuous;
-                                }
-                            }
-                            primitive_continuous_dict[current_data_group][current_primitive][0] = reflectivity_continuous;
-                        }
-                        if (primitive_continuous_dict[current_data_group][current_primitive][0]) {
-                            toggle_display_reflectivity = "File Entry";
-                        }
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(250);
-                        if (!primitive_continuous_dict[current_data_group][current_primitive][0]) {
-                            ImGui::Text("Select band:");
-                            ImGui::SameLine();
-                            ImGui::SetNextItemWidth(60);
-                            if (ImGui::BeginCombo("##combo_band_reflectivity", current_band_reflectivity.c_str())) {
-                                for (int n = 0; n < bandlabels.size(); n++) {
-                                    bool is_band_selected = (current_band_reflectivity == bandlabels[n]);
-                                    if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
-                                        current_band_reflectivity = bandlabels[n];
-                                    if (is_band_selected)
-                                        ImGui::SetItemDefaultFocus();
-                                }
-                                ImGui::EndCombo();
-                            }
-                            ImGui::SameLine();
-                            ImGui::Text("Enter value:");
-                            ImGui::SameLine();
-                            ImGui::SetNextItemWidth(80);
-                            if (current_primitive == "All") {
-                                float prev_reflectivity = reflectivity;
-                                ImGui::InputFloat("##reflectivity_all", &reflectivity);
-                                if (reflectivity != prev_reflectivity) {
-                                    for (auto &prim_values: primitive_values_dict[current_data_group][current_band_reflectivity]) {
-                                        primitive_values_dict[current_data_group][current_band_reflectivity][prim_values.first][0] = reflectivity;
-                                    }
-                                }
-                            } else {
-                                ImGui::InputFloat("##reflectivity", &primitive_values_dict[current_data_group][current_band_reflectivity][current_primitive][0]);
-                            }
-                        } else {
-                            std::string reflectivity_prev = primitive_spectra_dict[current_data_group][current_primitive][0];
-                            if (ImGui::BeginCombo("##reflectivity_combo", reflectivity_prev.c_str())) {
-                                for (auto &spectra: possible_spectra) {
-                                    bool is_spectra_selected = (primitive_spectra_dict[current_data_group][current_primitive][0] == spectra);
-                                    if (ImGui::Selectable(spectra.c_str(), is_spectra_selected))
-                                        primitive_spectra_dict[current_data_group][current_primitive][0] = spectra;
-                                    if (is_spectra_selected)
-                                        ImGui::SetItemDefaultFocus();
-                                }
-                                ImGui::EndCombo();
-                            }
-                            if (current_primitive == "All" && reflectivity_prev != primitive_spectra_dict[current_data_group][current_primitive][0]) {
-                                for (auto &prim_spectrum: primitive_spectra_dict[current_data_group]) {
-                                    primitive_spectra_dict[current_data_group][prim_spectrum.first][0] = primitive_spectra_dict[current_data_group][current_primitive][0];
-                                }
-                            }
-                        }
-                        ImGui::SameLine();
-                        ImGui::TextUnformatted("%s", toggle_display_reflectivity.c_str());
-                        // TRANSMISSIVITY
-                        ImGui::Text("Transmissivity:");
-                        std::string toggle_display_transmissivity = "Manual Entry";
-                        bool transmissivity_continuous = primitive_continuous_dict[current_data_group][current_primitive][1];
-                        toggle_button("##transmissivity_toggle", &transmissivity_continuous);
-                        if (transmissivity_continuous != primitive_continuous_dict[current_data_group][current_primitive][1]) {
-                            if (current_primitive == "All") {
-                                for (auto &prim_values: primitive_continuous_dict[current_data_group]) {
-                                    primitive_continuous_dict[current_data_group][prim_values.first][1] = transmissivity_continuous;
-                                }
-                            }
-                            primitive_continuous_dict[current_data_group][current_primitive][1] = transmissivity_continuous;
-                        }
-                        if (primitive_continuous_dict[current_data_group][current_primitive][1]) {
-                            toggle_display_transmissivity = "File Entry";
-                        }
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(250);
-                        if (!primitive_continuous_dict[current_data_group][current_primitive][1]) {
-                            ImGui::Text("Select band:");
-                            ImGui::SameLine();
-                            ImGui::SetNextItemWidth(60);
-                            if (ImGui::BeginCombo("##combo_band_transmissivity", current_band_transmissivity.c_str())) {
-                                for (int n = 0; n < bandlabels.size(); n++) {
-                                    bool is_band_selected = (current_band_transmissivity == bandlabels[n]);
-                                    if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
-                                        current_band_transmissivity = bandlabels[n];
-                                    if (is_band_selected)
-                                        ImGui::SetItemDefaultFocus();
-                                }
-                                ImGui::EndCombo();
-                            }
-                            ImGui::SameLine();
-                            ImGui::Text("Enter value:");
-                            ImGui::SameLine();
-                            ImGui::SetNextItemWidth(80);
-                            if (current_primitive == "All") {
-                                float prev_transmissivity = transmissivity;
-                                ImGui::InputFloat("##transmissivity_all", &transmissivity);
-                                if (transmissivity != prev_transmissivity) {
-                                    for (auto &prim_values: primitive_values_dict[current_data_group][current_band_transmissivity]) {
-                                        primitive_values_dict[current_data_group][current_band_transmissivity][prim_values.first][1] = transmissivity;
-                                    }
-                                }
-                            } else {
-                                ImGui::InputFloat("##transmissivity", &primitive_values_dict[current_data_group][current_band_transmissivity][current_primitive][1]);
-                            }
-                        } else {
-                            std::string transmissivity_prev = primitive_spectra_dict[current_data_group][current_primitive][1];
-                            if (ImGui::BeginCombo("##transmissivity_combo", transmissivity_prev.c_str())) {
-                                for (auto &spectra: possible_spectra) {
-                                    bool is_spectra_selected = (primitive_spectra_dict[current_data_group][current_primitive][1] == spectra);
-                                    if (ImGui::Selectable(spectra.c_str(), is_spectra_selected))
-                                        primitive_spectra_dict[current_data_group][current_primitive][1] = spectra;
-                                    if (is_spectra_selected)
-                                        ImGui::SetItemDefaultFocus();
-                                }
-                                ImGui::EndCombo();
-                            }
-                            if (current_primitive == "All" && transmissivity_prev != primitive_spectra_dict[current_data_group][current_primitive][1]) {
-                                for (auto &prim_spectrum: primitive_spectra_dict[current_data_group]) {
-                                    primitive_spectra_dict[current_data_group][prim_spectrum.first][1] = primitive_spectra_dict[current_data_group][current_primitive][1];
-                                }
-                            }
-                        }
-                        ImGui::SameLine();
-                        ImGui::TextUnformatted("%s", toggle_display_transmissivity.c_str());
-                        // EMISSIVITY
-                        ImGui::Text("Emissivity:");
-                        // ImGui::SetNextItemWidth(250);
-                        // ImGui::Text("");
-                        ImGui::Dummy(ImVec2(35.f, 0.f));
-                        ImGui::SameLine();
-                        ImGui::Text("Select band:");
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(60);
-                        if (ImGui::BeginCombo("##combo_band_emissivity", current_band_emissivity.c_str())) {
-                            for (std::string band: bandlabels_set_emissivity) {
-                                bool is_band_selected = (current_band_emissivity == band);
-                                if (ImGui::Selectable(band.c_str(), is_band_selected))
-                                    current_band_emissivity = band;
-                                if (is_band_selected)
-                                    ImGui::SetItemDefaultFocus();
-                            }
-                            ImGui::EndCombo();
-                        }
-                        ImGui::SameLine();
-                        ImGui::Text("Enter value:");
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(80);
-                        if (current_primitive == "All") {
-                            float prev_emissivity = emissivity;
-                            ImGui::InputFloat("##emissivity_all", &emissivity);
-                            if (emissivity != prev_emissivity) {
-                                for (auto &prim_values: primitive_values_dict[current_data_group][current_band_emissivity]) {
-                                    primitive_values_dict[current_data_group][current_band_emissivity][prim_values.first][2] = emissivity;
-                                }
-                            }
-                        } else {
-                            ImGui::InputFloat("##emissivity", &primitive_values_dict[current_data_group][current_band_emissivity][current_primitive][2]);
-                        }
-                        ImGui::SameLine();
-                        ImGui::Text("Manual Entry");
-                    }
-                    ImGui::NewLine();
-                    if (ImGui::Button("Run Radiation")) {
-                        runRadiation();
-                    }
+                    radiationTab();
 
                     ImGui::EndTabItem();
                 }
-            } // RADIATION_MODEL
-#endif // RADIATION_MODEL
+            }
             if (enable_radiation) {
                 // RIG TAB
                 if (ImGui::BeginTabItem("Rig")) {
                     current_tab = "Rig";
-                    if (ImGui::BeginCombo("##rig_combo", current_rig.c_str())) {
-                        for (auto rig_label: rig_labels_set) {
-                            bool is_rig_selected = (current_rig == rig_label);
-                            if (ImGui::Selectable(rig_label.c_str(), is_rig_selected))
-                                current_rig = rig_label;
-                            current_cam_position = "0";
-                            if (is_rig_selected)
-                                ImGui::SetItemDefaultFocus();
-                        }
-                        ImGui::EndCombo();
-                    }
-                    ImGui::SameLine();
-                    if (ImGui::Button("Add Rig")) {
-                        std::string default_rig_label = "rig";
-                        std::string new_rig_label = "rig_0";
-                        int count = 0;
-                        while (rig_dict.find(new_rig_label) != rig_dict.end()) {
-                            count++;
-                            new_rig_label = default_rig_label + "_" + std::to_string(count);
-                        }
-                        rig_dict.insert({new_rig_label, scast<int>(rig_labels.size())});
-                        camera_positions.push_back(camera_position);
-                        camera_lookats.push_back(camera_lookat);
-                        camera_labels.push_back(camera_label);
-                        camera_position_vec.push_back(camera_position_vec[rig_dict[current_rig]]);
-                        camera_lookat_vec.push_back(camera_lookat_vec[rig_dict[current_rig]]);
-                        rig_labels.push_back(new_rig_label);
-                        rig_labels_set.insert(new_rig_label);
-                        rig_camera_labels.push_back(rig_camera_labels[rig_dict[current_rig]]);
-                        rig_light_labels.push_back(rig_light_labels[rig_dict[current_rig]]);
-                        keypoint_frames.push_back(keypoint_frames[rig_dict[current_rig]]);
-                        num_images_vec.push_back(num_images_vec[rig_dict[current_rig]]);
-                        rig_colors.push_back(rig_colors[rig_dict[current_rig]]);
-                        rig_position_noise.push_back(std::vector<distribution>{distribution{}, distribution{}, distribution{}});
-                        rig_lookat_noise.push_back(std::vector<distribution>{distribution{}, distribution{}, distribution{}});
-                        // current_rig = new_rig_label;
-                        std::string parent = "rig";
-                        pugi::xml_node rig_block = helios.child(parent.c_str());
-                        pugi::xml_node new_rig_node = helios.append_copy(rig_block);
-                        std::string name = "label";
-                        pugi::xml_attribute node_label = new_rig_node.attribute(name.c_str());
-                        node_label.set_value(new_rig_label.c_str());
-                        current_rig = new_rig_label;
-                    }
-                    if (!current_rig.empty()) {
-                        // ##### UPDATE RIG ######//
-                        // if (ImGui::Button("Update Rig")){
-                        //     updateRigs();
-                        // }
-                        // ImGui::SameLine();
-                        if (ImGui::Button("Delete Rig")) {
-                            deleteRig(current_rig);
-                        }
-                        // ##### RIG NAME ######//
-                        ImGui::SetNextItemWidth(100);
-                        std::string prev_rig_name = rig_labels[rig_dict[current_rig]];
-                        ImGui::InputText("##rig_name", &rig_labels[rig_dict[current_rig]]);
-                        if (rig_labels[rig_dict[current_rig]] != prev_rig_name && rig_dict.find(rig_labels[rig_dict[current_rig]]) == rig_dict.end() && !rig_labels[rig_dict[current_rig]].empty()) {
-                            int temp = rig_dict[current_rig];
-                            current_rig = rig_labels[rig_dict[current_rig]];
-                            std::map<std::string, int>::iterator current_rig_iter = rig_dict.find(prev_rig_name);
-                            if (current_rig_iter != rig_dict.end()) {
-                                rig_dict.erase(current_rig_iter);
-                            }
-                            rig_dict[current_rig] = temp;
-                            rig_labels_set.erase(prev_rig_name);
-                            rig_labels_set.insert(rig_labels[rig_dict[current_rig]]);
-                        } else {
-                            rig_labels[rig_dict[current_rig]] = prev_rig_name;
-                        }
-                        ImGui::SameLine();
-                        ImGui::Text("Rig Name");
-                        // ####### WRITE DEPTH ####### //
-                        ImGui::Text("Write:");
-                        ImGui::SameLine();
-                        bool write_depth_ = write_depth[rig_dict[current_rig]];
-                        ImGui::Checkbox("Depth Images", &write_depth_);
-                        write_depth[rig_dict[current_rig]] = write_depth_;
-                        ImGui::SameLine();
-                        bool write_norm_depth_ = write_norm_depth[rig_dict[current_rig]];
-                        ImGui::Checkbox("Norm Depth Images", &write_norm_depth_);
-                        write_norm_depth[rig_dict[current_rig]] = write_norm_depth_;
-                        ImGui::SameLine();
-                        bool write_segmentation_ = write_segmentation_mask[rig_dict[current_rig]];
-                        ImGui::Checkbox("Segmentation Masks", &write_segmentation_);
-                        write_segmentation_mask[rig_dict[current_rig]] = write_segmentation_;
-                        // ####### BOUNDING BOXES ####### //
-                        if (ImGui::BeginPopup("multi_select_popup")) {
-                            for (auto &box_pair: bounding_boxes) {
-                                ImGui::Selectable(box_pair.first.c_str(), &box_pair.second, ImGuiSelectableFlags_DontClosePopups);
-                            }
-                            ImGui::EndPopup();
-                        }
-                        if (ImGui::Button("Select Labeled Objects")) {
-                            ImGui::OpenPopup("multi_select_popup");
-                        }
-                        ImGui::SameLine();
-                        if (ImGui::Button("Refresh List")) {
-                            refreshBoundingBoxObjectList();
-                        }
-                        // ImGui::OpenPopupOnItemClick(("rig_position_noise_" + std::to_string(rig_dict[current_rig])).c_str(), ImGuiPopupFlags_MouseButtonLeft);
-                        // Display selected items
-                        ImGui::Text("Objects:");
-                        int idx = 0;
-                        for (auto &box_pair: bounding_boxes) {
-                            if (box_pair.second) {
-                                ImGui::SameLine(), ImGui::Text("%i. %s", idx, box_pair.first.c_str());
-                                idx++;
-                            }
-                        }
-                        // ####### RIG COLOR ####### //
-                        float col[3];
-                        col[0] = rig_colors[rig_dict[current_rig]].r;
-                        col[1] = rig_colors[rig_dict[current_rig]].g;
-                        col[2] = rig_colors[rig_dict[current_rig]].b;
-                        ImGui::ColorEdit3("##rig_color_edit", col);
-                        updateColor(current_rig, "rig", col);
-                        ImGui::SameLine();
-                        ImGui::Text("Rig Color");
-                        // ####### CAMERA LABEL ####### //
-                        /* SINGLE CAMERA VERSION
-                        ImGui::SetNextItemWidth(60);
-                        // ImGui::InputText("Camera Label", &camera_labels[rig_dict[(std::string) current_rig]]);
-                        if (ImGui::BeginCombo("##cam_label_combo", camera_labels[rig_dict[(std::string) current_rig]].c_str())){
-                            for (int n = 0; n < camera_names.size(); n++){
-                                bool is_cam_label_selected = (camera_labels[rig_dict[(std::string) current_rig]] == camera_names[n]); // You can store your selection however you want, outside or inside your objects
-                                if (ImGui::Selectable(camera_names[n].c_str(), is_cam_label_selected)){
-                                    camera_labels[rig_dict[(std::string) current_rig]] = camera_names[n];
-                                }
-                                if (is_cam_label_selected)
-                                    ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
-                            }
-                            ImGui::EndCombo();
-                        }
-                        ImGui::SameLine();
-                        ImGui::Text("Camera Label");
-                        ImGui::EndTabItem();
-                        */
-                        // ####### CAMERA CHECKBOX ####### //
-                        ImGui::Text("Cameras:");
-                        for (int i = 0; i < camera_names.size(); i++) {
-                            std::string &camera_name = camera_names[i];
+                    rigTab();
 
-                            ImGui::SetNextItemWidth(60);
-
-                            std::set curr_set = rig_camera_labels[rig_dict[current_rig]];
-                            // if (i % 3 != 0){
-                            //     ImGui::SameLine();
-                            // }
-                            bool isCameraSelected = curr_set.find(camera_name) != curr_set.end();
-                            ImGui::PushID(i);
-                            if (ImGui::Checkbox(camera_name.c_str(), &isCameraSelected)) {
-                                if (isCameraSelected) {
-                                    rig_camera_labels[rig_dict[current_rig]].insert(camera_name);
-                                } else {
-                                    rig_camera_labels[rig_dict[current_rig]].erase(camera_name);
-                                }
-                            }
-                            ImGui::PopID();
-                        }
-                        // ####### LIGHT CHECKBOX ####### //
-                        ImGui::Text("Lights:");
-                        for (int i = 0; i < light_names.size(); i++) {
-                            std::string &light_name = light_names[i];
-
-                            ImGui::SetNextItemWidth(60);
-
-                            std::set curr_rig_light = rig_light_labels[rig_dict[current_rig]];
-                            bool isLightSelected = curr_rig_light.find(light_name) != curr_rig_light.end();
-                            ImGui::PushID(i);
-                            if (ImGui::Checkbox(light_name.c_str(), &isLightSelected)) {
-                                if (isLightSelected) {
-                                    rig_light_labels[rig_dict[current_rig]].insert(light_name);
-                                } else {
-                                    rig_light_labels[rig_dict[current_rig]].erase(light_name);
-                                }
-                            }
-                            ImGui::PopID();
-                        }
-                        // ####### ADD KEYPOINT ####### //
-                        std::stringstream cam_pos_value;
-                        cam_pos_value << current_cam_position.c_str();
-                        int current_cam_position_;
-                        cam_pos_value >> current_cam_position_;
-                        current_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][current_cam_position_]);
-                        std::string modified_current_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][current_cam_position_] + 1); // 1-indexed value
-                        if (ImGui::BeginCombo("##cam_combo", modified_current_keypoint.c_str())) {
-                            for (int n = 1; n <= camera_position_vec[rig_dict[current_rig]].size(); n++) {
-                                std::string select_cam_position = std::to_string(n - 1);
-                                std::string selected_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][n - 1]);
-                                bool is_pos_selected = (current_cam_position == select_cam_position);
-                                std::string modified_selected_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][n - 1] + 1); // 1-indexed value
-                                if (ImGui::Selectable(modified_selected_keypoint.c_str(), is_pos_selected)) {
-                                    current_cam_position = std::to_string(n - 1);
-                                }
-                                if (is_pos_selected)
-                                    ImGui::SetItemDefaultFocus();
-                            }
-                            ImGui::EndCombo();
-                        }
-                        cam_pos_value << current_cam_position.c_str();
-                        cam_pos_value >> current_cam_position_;
-                        ImGui::SameLine();
-                        if (ImGui::Button("Add Keypoint")) {
-                            camera_position_vec[rig_dict[current_rig]].push_back(camera_position_vec[rig_dict[current_rig]][current_cam_position_]);
-                            camera_lookat_vec[rig_dict[current_rig]].push_back(camera_lookat_vec[rig_dict[current_rig]][current_cam_position_]);
-                            keypoint_frames[rig_dict[current_rig]].push_back(keypoint_frames[rig_dict[current_rig]].back() + 1);
-                            is_dirty = true;
-                        }
-                        // ####### KEYPOINT FRAME ####### //
-                        ImGui::SetNextItemWidth(80);
-                        int modified_keypoint_frame = keypoint_frames[rig_dict[current_rig]][current_cam_position_] + 1; // 1-indexed value
-                        ImGui::InputInt("Keypoint Frame", &modified_keypoint_frame);
-                        if (modified_keypoint_frame != keypoint_frames[rig_dict[current_rig]][current_cam_position_] + 1) {
-                            keypoint_frames[rig_dict[current_rig]][current_cam_position_] = modified_keypoint_frame - 1;
-                        }
-                        // ####### CAMERA POSITION ####### //
-                        vec3 prev_rig_position_ = camera_position_vec[rig_dict[current_rig]][current_cam_position_];
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##camera_position_x", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].x);
-                        randomizePopup("camera_position_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].x));
-                        randomizerParams("camera_position_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
-                        ImGui::OpenPopupOnItemClick(("randomize_camera_position_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##camera_position_y", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].y);
-                        randomizePopup("camera_position_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].y));
-                        randomizerParams("camera_position_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
-                        ImGui::OpenPopupOnItemClick(("randomize_camera_position_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##camera_position_z", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].z);
-                        randomizePopup("camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].z));
-                        randomizerParams("camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
-                        ImGui::OpenPopupOnItemClick(("randomize_camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::Text("Rig Position");
-                        ImGui::SameLine();
-                        ImGui::Button("Add Noise###position");
-                        noisePopup("rig_position_noise_" + std::to_string(rig_dict[current_rig]), rig_lookat_noise[rig_dict[current_rig]]);
-                        ImGui::OpenPopupOnItemClick(("rig_position_noise_" + std::to_string(rig_dict[current_rig])).c_str(), ImGuiPopupFlags_MouseButtonLeft);
-                        // ####### CAMERA LOOKAT ####### //
-                        vec3 prev_rig_lookat_ = camera_lookat_vec[rig_dict[current_rig]][current_cam_position_];
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##camera_lookat_x", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].x);
-                        randomizePopup("camera_lookat_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].x));
-                        randomizerParams("camera_lookat_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
-                        ImGui::OpenPopupOnItemClick(("randomize_camera_lookat_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##camera_lookat_y", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].y);
-                        randomizePopup("camera_lookat_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].y));
-                        randomizerParams("camera_lookat_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
-                        ImGui::OpenPopupOnItemClick(("randomize_camera_lookat_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(60);
-                        ImGui::InputFloat("##camera_lookat_z", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].z);
-                        randomizePopup("camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].z));
-                        randomizerParams("camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
-                        ImGui::OpenPopupOnItemClick(("randomize_camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::Text("Rig Lookat");
-                        ImGui::SameLine();
-                        ImGui::Button("Add Noise###lookat");
-                        noisePopup("rig_lookat_noise_" + std::to_string(rig_dict[current_rig]), rig_lookat_noise[rig_dict[current_rig]]);
-                        ImGui::OpenPopupOnItemClick(("rig_lookat_noise_" + std::to_string(rig_dict[current_rig])).c_str(), ImGuiPopupFlags_MouseButtonLeft);
-                        // ####### NUMBER OF IMAGES ####### //
-                        ImGui::SetNextItemWidth(80);
-                        ImGui::InputInt("Total Number of Frames", &num_images_vec[rig_dict[current_rig]]);
-                        num_images_vec[rig_dict[current_rig]] = std::max(num_images_vec[rig_dict[current_rig]], *std::max_element(keypoint_frames[rig_dict[current_rig]].begin(), keypoint_frames[rig_dict[(std::string) current_rig]].end()) + 1);
-
-                        if (prev_rig_position_ != camera_position_vec[rig_dict[current_rig]][current_cam_position_] || prev_rig_lookat_ != camera_lookat_vec[rig_dict[current_rig]][current_cam_position_]) {
-                            updateRigs();
-                        }
-
-                        ImGui::NewLine();
-                        if (ImGui::Button("Record Images")) {
-                            if (band_group_names.empty()) {
-                                std::cout << "At least 1 band group (a group of 1 or 3 bands) must be defined to record images." << std::endl;
-                            } else {
-                                // Update reflectivity, transmissivity, & emissivity for each band / primitive_type
-                                const char *font_name = "LCD";
-                                visualizer->addTextboxByCenter("LOADING...", vec3(.5, .5, 0), make_SphericalCoord(0, 0), RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
-                                visualizer->plotUpdate();
-                                updatePrimitiveTypes();
-                                updateSpectra();
-                                updateCameras(); // TODO: figure out why this causes an error
-                                record();
-                            }
-                        }
-                    }
                     ImGui::EndTabItem();
                 }
                 // CAMERA TAB
                 if (ImGui::BeginTabItem("Camera")) {
                     current_tab = "Camera";
-                    // LOAD XML LIBRARY FILE
-                    ImGui::SetNextItemWidth(60);
-                    if (ImGui::Button("Load XML Library File")) {
-                        std::string new_xml_library_file = file_dialog();
-                        if (!new_xml_library_file.empty() && std::filesystem::exists(new_xml_library_file)) {
-                            if (camera_xml_library_files.find(new_xml_library_file) == camera_xml_library_files.end()) {
-                                camera_xml_library_files.insert(new_xml_library_file);
-                                std::vector<std::string> current_camera_file = get_xml_node_values(new_xml_library_file, "label", "globaldata_vec2");
-                                possible_camera_calibrations.insert(possible_camera_calibrations.end(), current_camera_file.begin(), current_camera_file.end());
-                            }
-                            context->loadXML(new_xml_library_file.c_str());
-                        }
-                    }
+                    cameraTab();
 
-                    // ####### ADD BAND GROUP ####### //
-                    ImGui::SetWindowFontScale(1.25f);
-                    ImGui::Text("Band Groups:");
-                    ImGui::SetWindowFontScale(1.0f);
-                    dropDown("##band_group_combo", current_band_group, band_group_names);
-                    ImGui::SameLine();
-                    if (ImGui::Button("Add Band Group")) {
-                        std::string default_band_group_label = "band_group";
-                        std::string new_band_group_label = "band_group_0";
-                        int count = 0;
-                        while (band_group_lookup.find(new_band_group_label) != band_group_lookup.end()) {
-                            count++;
-                            new_band_group_label = default_band_group_label + "_" + std::to_string(count);
-                        }
-                        std::vector<std::string> new_band_group_vector;
-                        new_band_group_vector.push_back("red");
-                        new_band_group_vector.push_back("green");
-                        new_band_group_vector.push_back("blue");
-                        bandGroup new_band_group{new_band_group_vector, false, false, false};
-                        band_group_lookup[new_band_group_label] = new_band_group;
-                        band_group_names.insert(new_band_group_label);
-                        current_band_group = new_band_group_label;
-                    }
-                    if (!current_band_group.empty()) {
-                        ImGui::SetNextItemWidth(100);
-                        std::string prev_group_name = current_band_group;
-                        ImGui::InputText("Group Name", &current_band_group);
-                        if (current_band_group.empty() || band_group_lookup.find(current_band_group) != band_group_lookup.end()) {
-                            current_band_group = prev_group_name;
-                        }
-                        if (current_band_group != prev_group_name) {
-                            bandGroup temp = band_group_lookup[prev_group_name];
-                            std::map<std::string, bandGroup>::iterator current_band_group_iter = band_group_lookup.find(prev_group_name);
-                            if (current_band_group_iter != band_group_lookup.end()) {
-                                band_group_lookup.erase(current_band_group_iter);
-                            }
-                            band_group_lookup[current_band_group] = temp;
-                            band_group_names.erase(prev_group_name);
-                            band_group_names.insert(current_band_group);
-                        }
-                        ImGui::SameLine();
-                        if (ImGui::Button("Delete Group")) {
-                            band_group_names.erase(current_band_group);
-                            band_group_lookup.erase(current_band_group);
-                            current_band_group = "";
-                        }
-                        ImGui::Checkbox("Grayscale", &band_group_lookup[current_band_group].grayscale);
-                        ImGui::SameLine();
-                        ImGui::Checkbox("Norm", &band_group_lookup[current_band_group].norm);
-                        if (std::find(band_group_lookup[current_band_group].bands.begin(), band_group_lookup[current_band_group].bands.end(), "red") != band_group_lookup[current_band_group].bands.end() &&
-                            std::find(band_group_lookup[current_band_group].bands.begin(), band_group_lookup[current_band_group].bands.end(), "green") != band_group_lookup[current_band_group].bands.end() &&
-                            std::find(band_group_lookup[current_band_group].bands.begin(), band_group_lookup[current_band_group].bands.end(), "blue") != band_group_lookup[current_band_group].bands.end()) {
-                            band_group_lookup[current_band_group].hdr = true;
-                        }
-                        // Band 1
-                        ImGui::SetNextItemWidth(100);
-                        dropDown("##band_1_combo", band_group_lookup[current_band_group].bands[0], bandlabels);
-                        if (!band_group_lookup[current_band_group].grayscale) {
-                            // Band 2
-                            ImGui::SameLine();
-                            ImGui::SetNextItemWidth(100);
-                            dropDown("##band_2_combo", band_group_lookup[current_band_group].bands[1], bandlabels);
-                            // Band 3
-                            ImGui::SameLine();
-                            ImGui::SetNextItemWidth(100);
-                            dropDown("##band_3_combo", band_group_lookup[current_band_group].bands[2], bandlabels);
-                            ImGui::SameLine();
-                            ImGui::Text("Select Bands");
-                        } else {
-                            ImGui::SameLine();
-                            ImGui::Text("Select Band");
-                        }
-                    }
-                    ImGui::SetWindowFontScale(1.25f);
-                    ImGui::Text("Edit Camera:");
-                    ImGui::SetWindowFontScale(1.0f);
-                    if (ImGui::BeginCombo("##camera_combo", current_cam.c_str())) {
-                        for (int n = 0; n < camera_names.size(); n++) {
-                            bool is_cam_selected = (current_cam == camera_names[n]);
-                            if (ImGui::Selectable(camera_names[n].c_str(), is_cam_selected))
-                                current_cam = camera_names[n];
-                            if (is_cam_selected)
-                                ImGui::SetItemDefaultFocus();
-                        }
-                        ImGui::EndCombo();
-                    }
-                    ImGui::SameLine();
-                    if (ImGui::Button("Add New Camera")) {
-                        std::string default_cam_name = "camera";
-                        std::string new_cam_name = "camera_0";
-                        int count = 0;
-                        while (camera_dict.find(new_cam_name) != camera_dict.end()) {
-                            count++;
-                            new_cam_name = default_cam_name + "_" + std::to_string(count);
-                        }
-                        camera_dict.insert({new_cam_name, scast<int>(camera_names.size())});
-                        camera_resolutions.push_back(camera_resolution);
-                        camera_calibrations.push_back(camera_calibrations[camera_dict[current_cam]]);
-                        focal_plane_distances.push_back(focal_plane_distance);
-                        lens_diameters.push_back(lens_diameter);
-                        FOV_aspect_ratios.push_back(FOV_aspect_ratio);
-                        HFOVs.push_back(HFOV);
-                        camera_names.push_back(new_cam_name);
-                        std::string parent = "camera";
-                        pugi::xml_node camera_block = helios.child(parent.c_str());
-                        pugi::xml_node new_cam_node = helios.append_copy(camera_block);
-                        std::string name = "label";
-                        pugi::xml_attribute node_label = new_cam_node.attribute(name.c_str());
-                        node_label.set_value(new_cam_name.c_str());
-                        current_cam = new_cam_name;
-                    }
-                    ImGui::SetNextItemWidth(100);
-                    std::string prev_cam_name = camera_names[camera_dict[current_cam]];
-                    ImGui::InputText("##cam_name", &camera_names[camera_dict[current_cam]]);
-                    if (camera_names[camera_dict[current_cam]] != prev_cam_name) {
-                        int temp = camera_dict[current_cam];
-                        current_cam = camera_names[camera_dict[current_cam]];
-                        std::map<std::string, int>::iterator current_cam_iter = camera_dict.find(prev_cam_name);
-                        if (current_cam_iter != camera_dict.end()) {
-                            camera_dict.erase(current_cam_iter);
-                        }
-                        camera_dict[current_cam] = temp;
-                    }
-                    ImGui::SameLine();
-                    ImGui::Text("Camera Label");
-                    // ####### CAMERA CALIBRATION ####### //
-                    ImGui::SetNextItemWidth(100);
-                    dropDown("##camera_calibration_band", current_calibration_band, bandlabels);
-                    ImGui::SameLine();
-                    ImGui::Text("Band");
-                    ImGui::SetNextItemWidth(250);
-                    ImGui::SameLine();
-                    dropDown("##camera_band_group_combo", camera_calibrations[camera_dict[current_cam]][current_calibration_band], possible_camera_calibrations);
-                    ImGui::SameLine();
-                    ImGui::Text("Calibration");
-                    // ####### CAMERA CALIBRATION ####### //
-                    // std::string prev_cam_calibration = camera_calibrations[camera_dict[current_cam]];
-                    // if (ImGui::BeginCombo("##camera_calibration_combo", camera_calibrations[camera_dict[current_cam]].c_str())){
-                    //     for (int n = 0; n < possible_camera_calibrations.size(); n++){
-                    //         bool is_cam_calibration_selected = (camera_calibrations[camera_dict[current_cam]] == possible_camera_calibrations[n]);
-                    //         if (ImGui::Selectable(possible_camera_calibrations[n].c_str(), is_cam_calibration_selected))
-                    //             camera_calibrations[camera_dict[current_cam]] = possible_camera_calibrations[n];
-                    //         if (is_cam_calibration_selected)
-                    //             ImGui::SetItemDefaultFocus();
-                    //     }
-                    //     ImGui::EndCombo();
-                    // }
-                    // ImGui::SameLine();
-                    // ImGui::Text("Camera Calibration");
-                    // ####### CAMERA RESOLUTION ####### //
-                    ImGui::SetNextItemWidth(90);
-                    ImGui::InputInt("##camera_resolution_x", &camera_resolutions[camera_dict[current_cam]].x);
-                    randomizePopup("camera_resolution_x_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&camera_resolutions[camera_dict[current_cam]].x));
-                    randomizerParams("camera_resolution_x_" + std::to_string(camera_dict[current_cam]));
-                    ImGui::OpenPopupOnItemClick(("randomize_camera_resolution_x_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(90);
-                    ImGui::InputInt("##camera_resolution_y", &camera_resolutions[camera_dict[current_cam]].y);
-                    randomizePopup("camera_resolution_y_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&camera_resolutions[camera_dict[current_cam]].y));
-                    randomizerParams("camera_resolution_y_" + std::to_string(camera_dict[current_cam]));
-                    ImGui::OpenPopupOnItemClick(("randomize_camera_resolution_y_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Camera Resolution");
-                    // ####### FOCAL PLANE DISTANCE ####### //
-                    ImGui::SetNextItemWidth(50);
-                    ImGui::InputFloat("Focal Plane Distance", &focal_plane_distances[camera_dict[current_cam]]);
-                    randomizePopup("focal_plane_distance_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&focal_plane_distances[camera_dict[current_cam]]));
-                    randomizerParams("focal_plane_distance_" + std::to_string(camera_dict[current_cam]));
-                    ImGui::OpenPopupOnItemClick(("randomize_focal_plane_distance_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    // ####### LENS DIAMETER ####### //
-                    ImGui::SetNextItemWidth(50);
-                    ImGui::InputFloat("Lens Diameter", &lens_diameters[camera_dict[current_cam]]);
-                    randomizePopup("lens_diameter_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&lens_diameters[camera_dict[current_cam]]));
-                    randomizerParams("lens_diameter_" + std::to_string(camera_dict[current_cam]));
-                    ImGui::OpenPopupOnItemClick(("randomize_lens_diameter_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    // ####### FOV ASPECT RATIO ####### //
-                    ImGui::SetNextItemWidth(50);
-                    ImGui::InputFloat("FOV Aspect Ratio", &FOV_aspect_ratios[camera_dict[current_cam]]);
-                    randomizePopup("FOV_aspect_ratio_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&FOV_aspect_ratios[camera_dict[current_cam]]));
-                    randomizerParams("FOV_aspect_ratio_" + std::to_string(camera_dict[current_cam]));
-                    ImGui::OpenPopupOnItemClick(("randomize_FOV_aspect_ratio_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    // ####### HFOV ####### //
-                    ImGui::SetNextItemWidth(50);
-                    ImGui::InputFloat("HFOV", &HFOVs[camera_dict[current_cam]]);
-                    randomizePopup("HFOV_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&HFOVs[camera_dict[current_cam]]));
-                    randomizerParams("HFOV_" + std::to_string(camera_dict[current_cam]));
-                    ImGui::OpenPopupOnItemClick(("HFOV_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    //
                     ImGui::EndTabItem();
                 }
                 // LIGHT TAB
                 if (ImGui::BeginTabItem("Light")) {
                     current_tab = "Light";
-                    // LOAD XML LIBRARY FILE
-                    ImGui::SetNextItemWidth(60);
-                    if (ImGui::Button("Load XML Library File")) {
-                        std::string new_xml_library_file = file_dialog();
-                        if (!new_xml_library_file.empty() && std::filesystem::exists(new_xml_library_file)) {
-                            if (light_xml_library_files.find(new_xml_library_file) == light_xml_library_files.end()) {
-                                light_xml_library_files.insert(new_xml_library_file);
-                                std::vector<std::string> current_light_file = get_xml_node_values(new_xml_library_file, "label", "globaldata_vec2");
-                                possible_light_spectra.insert(possible_light_spectra.end(), current_light_file.begin(), current_light_file.end());
-                            }
-                            context->loadXML(new_xml_library_file.c_str());
-                        }
-                    }
-                    if (ImGui::BeginCombo("##light_combo", current_light.c_str())) {
-                        for (int n = 0; n < light_names.size(); n++) {
-                            bool is_light_selected = (current_light == light_names[n]);
-                            if (ImGui::Selectable(light_names[n].c_str(), is_light_selected))
-                                current_light = light_names[n];
-                            if (is_light_selected)
-                                ImGui::SetItemDefaultFocus();
-                        }
-                        ImGui::EndCombo();
-                    }
-                    ImGui::SameLine();
-                    if (ImGui::Button("Add Light")) {
-                        std::string default_light_name = "light";
-                        std::string new_light_name = "light_0";
-                        int count = 0;
-                        while (light_dict.find(new_light_name) != light_dict.end()) {
-                            count++;
-                            new_light_name = default_light_name + "_" + std::to_string(count);
-                        }
-                        light_dict.insert({new_light_name, scast<int>(light_names.size())});
-                        light_spectra.push_back(light_spectra[light_dict[current_light]]);
-                        light_types.push_back(light_types[light_dict[current_light]]);
-                        light_direction_vec.push_back(light_direction_vec[light_dict[current_light]]);
-                        light_direction_sph_vec.push_back(light_direction_sph_vec[light_dict[current_light]]);
-                        light_rotation_vec.push_back(light_rotation_vec[light_dict[current_light]]);
-                        light_size_vec.push_back(light_size_vec[light_dict[current_light]]);
-                        light_radius_vec.push_back(light_radius_vec[light_dict[current_light]]);
-                        light_names.push_back(new_light_name);
-                        light_flux_vec.push_back(light_flux_vec[light_dict[current_light]]);
-                        std::string parent = "light";
-                        pugi::xml_node light_block = helios.child(parent.c_str());
-                        pugi::xml_node new_light_node = helios.append_copy(light_block);
-                        std::string name = "label";
-                        pugi::xml_attribute node_label = new_light_node.attribute(name.c_str());
-                        node_label.set_value(new_light_name.c_str());
-                        current_light = new_light_name;
-                    }
-                    ImGui::SetNextItemWidth(100);
-                    std::string prev_light_name = light_names[light_dict[current_light]];
-                    ImGui::InputText("##light_name", &light_names[light_dict[current_light]]);
-                    if (light_names[light_dict[current_light]] != prev_light_name) {
-                        int temp = light_dict[current_light];
-                        current_light = light_names[light_dict[current_light]];
-                        std::map<std::string, int>::iterator current_light_iter = light_dict.find(prev_light_name);
-                        if (current_light_iter != light_dict.end()) {
-                            light_dict.erase(current_light_iter);
-                        }
-                        light_dict[current_light] = temp;
-                    }
-                    ImGui::SameLine();
-                    ImGui::Text("Light Label");
-                    // ####### LIGHT SPECTRA ####### //
-                    std::string prev_light_spectra = light_spectra[light_dict[current_light]];
-                    if (ImGui::BeginCombo("##light_spectra_combo", light_spectra[light_dict[current_light]].c_str())) {
-                        for (int n = 0; n < possible_light_spectra.size(); n++) {
-                            bool is_light_spectra_selected = (light_spectra[light_dict[current_light]] == possible_light_spectra[n]);
-                            if (ImGui::Selectable(possible_light_spectra[n].c_str(), is_light_spectra_selected))
-                                light_spectra[light_dict[current_light]] = possible_light_spectra[n];
-                            if (is_light_spectra_selected)
-                                ImGui::SetItemDefaultFocus();
-                        }
-                        ImGui::EndCombo();
-                    }
-                    ImGui::SameLine();
-                    ImGui::Text("Light Spectrum");
-                    // ####### LIGHT TYPE ############ //
-                    if (ImGui::BeginCombo("##light_type_combo", light_types[light_dict[current_light]].c_str())) {
-                        for (int n = 0; n < all_light_types.size(); n++) {
-                            bool is_type_selected = (light_types[light_dict[current_light]] == all_light_types[n]);
-                            if (ImGui::Selectable(all_light_types[n].c_str(), is_type_selected)) {
-                                light_types[light_dict[current_light]] = all_light_types[n];
-                            }
-                            if (is_type_selected)
-                                ImGui::SetItemDefaultFocus();
-                        }
-                        ImGui::EndCombo();
-                    }
-                    ImGui::SameLine();
-                    ImGui::Text("Light Type");
-                    // collimated -> direction
-                    // disk       -> position, radius, rotation
-                    // sphere     -> position, radius
-                    // sunsphere  -> direction
-                    // rectangle  -> position, size, rotation
-                    // ####### LIGHT DIRECTION ####### //
-                    if (light_types[light_dict[(std::string) current_light]] == "collimated" || light_types[light_dict[(std::string) current_light]] == "sunsphere") {
-                        ImGui::SetNextItemWidth(90);
-                        ImGui::InputFloat("##light_direction_x", &light_direction_vec[light_dict[current_light]].x);
-                        randomizePopup("light_direction_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].x));
-                        randomizerParams("light_direction_x_" + std::to_string(light_dict[current_light]));
-                        ImGui::OpenPopupOnItemClick(("light_direction_x_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(90);
-                        ImGui::InputFloat("##light_direction_y", &light_direction_vec[light_dict[current_light]].y);
-                        randomizePopup("light_direction_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].y));
-                        randomizerParams("light_direction_y_" + std::to_string(light_dict[current_light]));
-                        ImGui::OpenPopupOnItemClick(("light_direction_y_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(90);
-                        ImGui::InputFloat("##light_direction_z", &light_direction_vec[light_dict[current_light]].z);
-                        randomizePopup("light_direction_z_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].z));
-                        randomizerParams("light_direction_z_" + std::to_string(light_dict[current_light]));
-                        ImGui::OpenPopupOnItemClick(("light_direction_z_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::Text("Light Direction");
-                    }
-                    // ####### LIGHT SOURCE FLUX ####### //
-                    ImGui::SetNextItemWidth(90);
-                    ImGui::InputFloat("##source_flux", &light_flux_vec[light_dict[current_light]]);
-                    randomizePopup("source_flux_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_flux_vec[light_dict[current_light]]));
-                    randomizerParams("source_flux_" + std::to_string(light_dict[current_light]));
-                    ImGui::OpenPopupOnItemClick(("source_flux_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                    ImGui::SameLine();
-                    ImGui::Text("Source Flux");
-                    // radiation->setSourceFlux(light_UUID, band, flux_value);
-                    // ####### LIGHT ROTATION ####### //
-                    if (light_types[light_dict[current_light]] == "disk" || light_types[light_dict[current_light]] == "rectangle") {
-                        ImGui::SetNextItemWidth(90);
-                        ImGui::InputFloat("##light_rotation_x", &light_rotation_vec[light_dict[current_light]].x);
-                        randomizePopup("light_rotation_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].x));
-                        randomizerParams("light_rotation_x_" + std::to_string(light_dict[current_light]));
-                        ImGui::OpenPopupOnItemClick(("light_rotation_x_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(90);
-                        ImGui::InputFloat("##light_rotation_y", &light_rotation_vec[light_dict[current_light]].y);
-                        randomizePopup("light_rotation_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].y));
-                        randomizerParams("light_rotation_y_" + std::to_string(light_dict[current_light]));
-                        ImGui::OpenPopupOnItemClick(("light_rotation_y_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(90);
-                        ImGui::InputFloat("##light_rotation_z", &light_rotation_vec[light_dict[current_light]].z);
-                        randomizePopup("light_rotation_z_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].z));
-                        randomizerParams("light_rotation_z_" + std::to_string(light_dict[current_light]));
-                        ImGui::OpenPopupOnItemClick(("light_rotation_z_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::Text("Light Rotation");
-                    }
-                    // ####### LIGHT SIZE ####### //
-                    if (light_types[light_dict[current_light]] == "rectangle") {
-                        ImGui::SetNextItemWidth(90);
-                        ImGui::InputFloat("##light_size_x", &light_size_vec[light_dict[current_light]].x);
-                        randomizePopup("light_size_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_size_vec[light_dict[current_light]].x));
-                        randomizerParams("light_size_x_" + std::to_string(light_dict[current_light]));
-                        ImGui::OpenPopupOnItemClick(("light_size_x_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(90);
-                        ImGui::InputFloat("##light_size_y", &light_size_vec[light_dict[current_light]].y);
-                        randomizePopup("light_size_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_size_vec[light_dict[current_light]].y));
-                        randomizerParams("light_size_y_" + std::to_string(light_dict[current_light]));
-                        ImGui::OpenPopupOnItemClick(("light_size_y_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::Text("Light Size");
-                    }
-                    // ####### LIGHT RADIUS ####### //
-                    if (light_types[light_dict[current_light]] == "disk" || light_types[light_dict[current_light]] == "sphere") {
-                        ImGui::SetNextItemWidth(90);
-                        ImGui::InputFloat("##light_radius", &light_radius_vec[light_dict[current_light]]);
-                        randomizePopup("light_radius_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_radius_vec[light_dict[current_light]]));
-                        randomizerParams("light_radius_" + std::to_string(light_dict[current_light]));
-                        ImGui::OpenPopupOnItemClick(("light_radius_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
-                        ImGui::SameLine();
-                        ImGui::Text("Light Radius");
-                    }
-                    // LIGHT END
+                    lightTab();
+
                     ImGui::EndTabItem();
                 }
             }
             ImGui::EndTabBar();
         }
-        // ImGui::Text("Hello, world %d", 123);
-        // ImGui::Button("Save");
-        // if (ImGui::Button("Save"))
-        //     std::cout << "here" << std::endl;
         last_position = current_position;
         previously_collapsed = currently_collapsed;
         ImGui::End();
@@ -4986,7 +3016,893 @@ void ProjectBuilder::xmlGetValues(std::string xml_path) {
     xmlGetValues();
 }
 
+void ProjectBuilder::calculationTab() {
+#ifdef ENABLE_HELIOS_VISUALIZER
+    // prim
+    for(auto &prim_name : primitive_names_set) {
+        if (calculation_selection_primitive.find(prim_name) == calculation_selection_primitive.end()) {
+            calculation_selection_primitive[prim_name] = false;
+        }
+    }
+    std::vector<std::string> primitive_labels = context->listAllPrimitiveDataLabels();
+    calculation_variable_choices.clear();
+    for (auto &label : primitive_labels) {
+        HeliosDataType dtype = context->getPrimitiveDataType(label.c_str());
+        if (heliosNumericTypes.find(dtype) != heliosNumericTypes.end())
+            calculation_variable_choices.insert(label);
+    }
+    std::vector<std::string> global_data = context->listGlobalData();
+    for (auto &data : global_data) {
+        HeliosDataType dtype = context->getGlobalDataType(data.c_str());
+        if (heliosNumericTypes.find(dtype) != heliosNumericTypes.end())
+            calculation_variable_choices.insert(data);
+    }
+
+    // data group
+    for (auto &data_group : data_groups_set) {
+        if (calculation_selection_datagroup.find(data_group) == calculation_selection_datagroup.end()) {
+            calculation_selection_datagroup[data_group] = false;
+        }
+    }
+    // data group popup
+    if (ImGui::BeginPopup("calculation_select_popup_datagroup")) {
+        for (auto &calculation_pair: calculation_selection_datagroup) {
+            ImGui::Selectable(calculation_pair.first.c_str(), &calculation_pair.second, ImGuiSelectableFlags_DontClosePopups);
+        }
+        ImGui::EndPopup();
+    }
+    if (ImGui::Button("Select Data Groups")) {
+        ImGui::OpenPopup("calculation_select_popup_datagroup");
+    }
+    ImGui::SameLine();
+    ImGui::Text("Data Groups:");
+    int idx = 0;
+    if (calculation_selection_datagroup["All"]) {
+        ImGui::SameLine();
+        ImGui::Text("All");
+    } else {
+        for (auto &calculation_pair: calculation_selection_datagroup) {
+            if (calculation_pair.second) {
+                ImGui::SameLine(), ImGui::Text("%i. %s", idx, calculation_pair.first.c_str());
+                idx++;
+            }
+        }
+    }
+
+    // prim popup
+    if (ImGui::BeginPopup("calculation_select_popup_prim")) {
+        for (auto &calculation_pair: calculation_selection_primitive) {
+            ImGui::Selectable(calculation_pair.first.c_str(), &calculation_pair.second, ImGuiSelectableFlags_DontClosePopups);
+        }
+        ImGui::EndPopup();
+    }
+    if (ImGui::Button("Select Primitives")) {
+        ImGui::OpenPopup("calculation_select_popup_prim");
+    }
+    ImGui::SameLine();
+    ImGui::Text("Primitive Types:");
+    idx = 0;
+    if (calculation_selection_primitive["All"]) {
+        ImGui::SameLine();
+        ImGui::Text("All");
+    } else {
+        for (auto &calculation_pair: calculation_selection_primitive) {
+            if (calculation_pair.second) {
+                ImGui::SameLine(), ImGui::Text("%i. %s", idx, calculation_pair.first.c_str());
+                idx++;
+            }
+        }
+    }
+    // Global Data Calculation
+    ImGui::SetWindowFontScale(1.25f);
+    ImGui::Text("Global Data:");
+    ImGui::SetWindowFontScale(1.0f);
+    for (int i = 0; i < calculation_variables_global.size(); i++) {
+        if (i > 0) {
+            ImGui::SetNextItemWidth(40);
+            dropDown("##operator" + std::to_string(i), calculation_operators_global[i - 1], calculation_operators_choices);
+        }
+        ImGui::Text("Scalar:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(50);
+        std::string scalar_label = "##Scalar" + std::to_string(i);
+        ImGui::InputFloat(scalar_label.c_str(), &calculation_scalars_global[i]);
+        ImGui::SameLine();
+        ImGui::Text("Variable:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(100);
+        dropDown("##Variable" + std::to_string(i), calculation_variables_global[i], calculation_variable_choices);
+        ImGui::SameLine();
+        ImGui::Text("Aggregate:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(100);
+        dropDown("##Operation" + std::to_string(i), calculation_aggregations[i], calculation_aggregation_choices);
+        if (i == calculation_variables_global.size() - 1) {
+            ImGui::SameLine();
+            if (ImGui::Button("Add Operand")) {
+                calculation_variables_global.push_back("");
+                calculation_scalars_global.push_back(1.0);
+                calculation_operators_global.push_back("+");
+                calculation_aggregations.push_back("Mean");
+            }
+            if (i > 0) {
+                ImGui::SameLine();
+                if (ImGui::Button("Remove")) {
+                    calculation_variables_global.pop_back();
+                    calculation_scalars_global.pop_back();
+                    calculation_operators_global.pop_back();
+                    calculation_aggregations.pop_back();
+                }
+            }
+        }
+    }
+    if (ImGui::Button("Calculate Result:")) {
+        globalCalculation();
+    }
+    ImGui::SameLine();
+    ImGui::Text(std::to_string(calculation_result_global).c_str());
+    ImGui::SameLine();
+    if (ImGui::Button("Save to Global Data")) {
+        context->setGlobalData(calculation_name_global.c_str(), calculation_result_global);
+    }
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(100);
+    ImGui::InputText("##global_data_name", &calculation_name_global);
+
+    // Primitive Data Calculation
+    ImGui::SetWindowFontScale(1.25f);
+    ImGui::Text("Primitive Data:");
+    ImGui::SetWindowFontScale(1.0f);
+    for (int i = 0; i < calculation_variables_primitive.size(); i++) {
+        if (i > 0) {
+            ImGui::SetNextItemWidth(40);
+            dropDown("##operator_primitive" + std::to_string(i), calculation_operators_primitive[i - 1], calculation_operators_choices);
+        }
+        ImGui::Text("Scalar:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(50);
+        std::string scalar_label = "##Scalar_primitive-" + std::to_string(i);
+        ImGui::InputFloat(scalar_label.c_str(), &calculation_scalars_primitive[i]);
+        ImGui::SameLine();
+        ImGui::Text("Variable:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(100);
+        dropDown("##Variable_primitive" + std::to_string(i), calculation_variables_primitive[i], calculation_variable_choices);
+        if (i == calculation_variables_primitive.size() - 1) {
+            ImGui::SameLine();
+            if (ImGui::Button("Add Operand##primitive")) {
+                calculation_variables_primitive.push_back("");
+                calculation_scalars_primitive.push_back(1.0);
+                calculation_operators_primitive.push_back("+");
+            }
+            if (i > 0) {
+                ImGui::SameLine();
+                if (ImGui::Button("Remove##primitive")) {
+                    calculation_variables_primitive.pop_back();
+                    calculation_scalars_primitive.pop_back();
+                    calculation_operators_primitive.pop_back();
+                }
+            }
+        }
+    }
+    ImGui::Text("Save Primitive Data:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(80);
+    ImGui::InputText("##save_data_name", &calculation_name_primitive);
+    ImGui::SameLine();
+    if (ImGui::Button("Save to Primitive Data")) {
+        savePrimitiveCalculation();
+    }
+#endif
+}
+
+void ProjectBuilder::cameraTab() {
+#if defined(ENABLE_HELIOS_VISUALIZER) && defined(ENABLE_RADIATION_MODEL)
+    // LOAD XML LIBRARY FILE
+    ImGui::SetNextItemWidth(60);
+    if (ImGui::Button("Load XML Library File")) {
+        std::string new_xml_library_file = file_dialog();
+        if (!new_xml_library_file.empty() && std::filesystem::exists(new_xml_library_file)) {
+            if (camera_xml_library_files.find(new_xml_library_file) == camera_xml_library_files.end()) {
+                camera_xml_library_files.insert(new_xml_library_file);
+                std::vector<std::string> current_camera_file = get_xml_node_values(new_xml_library_file, "label", "globaldata_vec2");
+                possible_camera_calibrations.insert(possible_camera_calibrations.end(), current_camera_file.begin(), current_camera_file.end());
+            }
+            context->loadXML(new_xml_library_file.c_str());
+        }
+    }
+
+    // ####### ADD BAND GROUP ####### //
+    ImGui::SetWindowFontScale(1.25f);
+    ImGui::Text("Band Groups:");
+    ImGui::SetWindowFontScale(1.0f);
+    dropDown("##band_group_combo", current_band_group, band_group_names);
+    ImGui::SameLine();
+    if (ImGui::Button("Add Band Group")) {
+        std::string default_band_group_label = "band_group";
+        std::string new_band_group_label = "band_group_0";
+        int count = 0;
+        while (band_group_lookup.find(new_band_group_label) != band_group_lookup.end()) {
+            count++;
+            new_band_group_label = default_band_group_label + "_" + std::to_string(count);
+        }
+        std::vector<std::string> new_band_group_vector;
+        new_band_group_vector.push_back("red");
+        new_band_group_vector.push_back("green");
+        new_band_group_vector.push_back("blue");
+        bandGroup new_band_group{new_band_group_vector, false, false, false};
+        band_group_lookup[new_band_group_label] = new_band_group;
+        band_group_names.insert(new_band_group_label);
+        current_band_group = new_band_group_label;
+    }
+    if (!current_band_group.empty()) {
+        ImGui::SetNextItemWidth(100);
+        std::string prev_group_name = current_band_group;
+        ImGui::InputText("Group Name", &current_band_group);
+        if (current_band_group.empty() || band_group_lookup.find(current_band_group) != band_group_lookup.end()) {
+            current_band_group = prev_group_name;
+        }
+        if (current_band_group != prev_group_name) {
+            bandGroup temp = band_group_lookup[prev_group_name];
+            std::map<std::string, bandGroup>::iterator current_band_group_iter = band_group_lookup.find(prev_group_name);
+            if (current_band_group_iter != band_group_lookup.end()) {
+                band_group_lookup.erase(current_band_group_iter);
+            }
+            band_group_lookup[current_band_group] = temp;
+            band_group_names.erase(prev_group_name);
+            band_group_names.insert(current_band_group);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Delete Group")) {
+            band_group_names.erase(current_band_group);
+            band_group_lookup.erase(current_band_group);
+            current_band_group = "";
+        }
+        ImGui::Checkbox("Grayscale", &band_group_lookup[current_band_group].grayscale);
+        ImGui::SameLine();
+        ImGui::Checkbox("Norm", &band_group_lookup[current_band_group].norm);
+        if (std::find(band_group_lookup[current_band_group].bands.begin(), band_group_lookup[current_band_group].bands.end(), "red") != band_group_lookup[current_band_group].bands.end() &&
+            std::find(band_group_lookup[current_band_group].bands.begin(), band_group_lookup[current_band_group].bands.end(), "green") != band_group_lookup[current_band_group].bands.end() &&
+            std::find(band_group_lookup[current_band_group].bands.begin(), band_group_lookup[current_band_group].bands.end(), "blue") != band_group_lookup[current_band_group].bands.end()) {
+            band_group_lookup[current_band_group].hdr = true;
+        }
+        // Band 1
+        ImGui::SetNextItemWidth(100);
+        dropDown("##band_1_combo", band_group_lookup[current_band_group].bands[0], bandlabels);
+        if (!band_group_lookup[current_band_group].grayscale) {
+            // Band 2
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(100);
+            dropDown("##band_2_combo", band_group_lookup[current_band_group].bands[1], bandlabels);
+            // Band 3
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(100);
+            dropDown("##band_3_combo", band_group_lookup[current_band_group].bands[2], bandlabels);
+            ImGui::SameLine();
+            ImGui::Text("Select Bands");
+        } else {
+            ImGui::SameLine();
+            ImGui::Text("Select Band");
+        }
+    }
+    ImGui::SetWindowFontScale(1.25f);
+    ImGui::Text("Edit Camera:");
+    ImGui::SetWindowFontScale(1.0f);
+    if (ImGui::BeginCombo("##camera_combo", current_cam.c_str())) {
+        for (int n = 0; n < camera_names.size(); n++) {
+            bool is_cam_selected = (current_cam == camera_names[n]);
+            if (ImGui::Selectable(camera_names[n].c_str(), is_cam_selected))
+                current_cam = camera_names[n];
+            if (is_cam_selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Add New Camera")) {
+        std::string default_cam_name = "camera";
+        std::string new_cam_name = "camera_0";
+        int count = 0;
+        while (camera_dict.find(new_cam_name) != camera_dict.end()) {
+            count++;
+            new_cam_name = default_cam_name + "_" + std::to_string(count);
+        }
+        camera_dict.insert({new_cam_name, scast<int>(camera_names.size())});
+        camera_resolutions.push_back(camera_resolution);
+        camera_calibrations.push_back(camera_calibrations[camera_dict[current_cam]]);
+        focal_plane_distances.push_back(focal_plane_distance);
+        lens_diameters.push_back(lens_diameter);
+        FOV_aspect_ratios.push_back(FOV_aspect_ratio);
+        HFOVs.push_back(HFOV);
+        camera_names.push_back(new_cam_name);
+        std::string parent = "camera";
+        pugi::xml_node camera_block = helios.child(parent.c_str());
+        pugi::xml_node new_cam_node = helios.append_copy(camera_block);
+        std::string name = "label";
+        pugi::xml_attribute node_label = new_cam_node.attribute(name.c_str());
+        node_label.set_value(new_cam_name.c_str());
+        current_cam = new_cam_name;
+    }
+    ImGui::SetNextItemWidth(100);
+    std::string prev_cam_name = camera_names[camera_dict[current_cam]];
+    ImGui::InputText("##cam_name", &camera_names[camera_dict[current_cam]]);
+    if (camera_names[camera_dict[current_cam]] != prev_cam_name) {
+        int temp = camera_dict[current_cam];
+        current_cam = camera_names[camera_dict[current_cam]];
+        std::map<std::string, int>::iterator current_cam_iter = camera_dict.find(prev_cam_name);
+        if (current_cam_iter != camera_dict.end()) {
+            camera_dict.erase(current_cam_iter);
+        }
+        camera_dict[current_cam] = temp;
+    }
+    ImGui::SameLine();
+    ImGui::Text("Camera Label");
+    // ####### CAMERA CALIBRATION ####### //
+    ImGui::SetNextItemWidth(100);
+    dropDown("##camera_calibration_band", current_calibration_band, bandlabels);
+    ImGui::SameLine();
+    ImGui::Text("Band");
+    ImGui::SetNextItemWidth(250);
+    ImGui::SameLine();
+    dropDown("##camera_band_group_combo", camera_calibrations[camera_dict[current_cam]][current_calibration_band], possible_camera_calibrations);
+    ImGui::SameLine();
+    ImGui::Text("Calibration");
+    // ####### CAMERA CALIBRATION ####### //
+    // std::string prev_cam_calibration = camera_calibrations[camera_dict[current_cam]];
+    // if (ImGui::BeginCombo("##camera_calibration_combo", camera_calibrations[camera_dict[current_cam]].c_str())){
+    //     for (int n = 0; n < possible_camera_calibrations.size(); n++){
+    //         bool is_cam_calibration_selected = (camera_calibrations[camera_dict[current_cam]] == possible_camera_calibrations[n]);
+    //         if (ImGui::Selectable(possible_camera_calibrations[n].c_str(), is_cam_calibration_selected))
+    //             camera_calibrations[camera_dict[current_cam]] = possible_camera_calibrations[n];
+    //         if (is_cam_calibration_selected)
+    //             ImGui::SetItemDefaultFocus();
+    //     }
+    //     ImGui::EndCombo();
+    // }
+    // ImGui::SameLine();
+    // ImGui::Text("Camera Calibration");
+    // ####### CAMERA RESOLUTION ####### //
+    ImGui::SetNextItemWidth(90);
+    ImGui::InputInt("##camera_resolution_x", &camera_resolutions[camera_dict[current_cam]].x);
+    randomizePopup("camera_resolution_x_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&camera_resolutions[camera_dict[current_cam]].x));
+    randomizerParams("camera_resolution_x_" + std::to_string(camera_dict[current_cam]));
+    ImGui::OpenPopupOnItemClick(("randomize_camera_resolution_x_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(90);
+    ImGui::InputInt("##camera_resolution_y", &camera_resolutions[camera_dict[current_cam]].y);
+    randomizePopup("camera_resolution_y_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&camera_resolutions[camera_dict[current_cam]].y));
+    randomizerParams("camera_resolution_y_" + std::to_string(camera_dict[current_cam]));
+    ImGui::OpenPopupOnItemClick(("randomize_camera_resolution_y_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+    ImGui::SameLine();
+    ImGui::Text("Camera Resolution");
+    // ####### FOCAL PLANE DISTANCE ####### //
+    ImGui::SetNextItemWidth(50);
+    ImGui::InputFloat("Focal Plane Distance", &focal_plane_distances[camera_dict[current_cam]]);
+    randomizePopup("focal_plane_distance_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&focal_plane_distances[camera_dict[current_cam]]));
+    randomizerParams("focal_plane_distance_" + std::to_string(camera_dict[current_cam]));
+    ImGui::OpenPopupOnItemClick(("randomize_focal_plane_distance_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+    // ####### LENS DIAMETER ####### //
+    ImGui::SetNextItemWidth(50);
+    ImGui::InputFloat("Lens Diameter", &lens_diameters[camera_dict[current_cam]]);
+    randomizePopup("lens_diameter_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&lens_diameters[camera_dict[current_cam]]));
+    randomizerParams("lens_diameter_" + std::to_string(camera_dict[current_cam]));
+    ImGui::OpenPopupOnItemClick(("randomize_lens_diameter_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+    // ####### FOV ASPECT RATIO ####### //
+    ImGui::SetNextItemWidth(50);
+    ImGui::InputFloat("FOV Aspect Ratio", &FOV_aspect_ratios[camera_dict[current_cam]]);
+    randomizePopup("FOV_aspect_ratio_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&FOV_aspect_ratios[camera_dict[current_cam]]));
+    randomizerParams("FOV_aspect_ratio_" + std::to_string(camera_dict[current_cam]));
+    ImGui::OpenPopupOnItemClick(("randomize_FOV_aspect_ratio_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+    // ####### HFOV ####### //
+    ImGui::SetNextItemWidth(50);
+    ImGui::InputFloat("HFOV", &HFOVs[camera_dict[current_cam]]);
+    randomizePopup("HFOV_" + std::to_string(camera_dict[current_cam]), createTaggedPtr(&HFOVs[camera_dict[current_cam]]));
+    randomizerParams("HFOV_" + std::to_string(camera_dict[current_cam]));
+    ImGui::OpenPopupOnItemClick(("HFOV_" + std::to_string(camera_dict[current_cam])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+    //
+#endif
+}
+
+
+void ProjectBuilder::canopyTab() {
+#if defined(ENABLE_HELIOS_VISUALIZER) && defined(ENABLE_PLANT_ARCHITECTURE)
+    dropDown("##canopy_combo", current_canopy, canopy_labels_set);
+    ImGui::SameLine();
+    if (ImGui::Button("Add Canopy")) {
+        addCanopy();
+    }
+    if (!current_canopy.empty()) {
+        if (ImGui::Button("Update Canopy")) {
+            updateCanopy(current_canopy);
+            is_dirty = true;
+            canopy_dict[current_canopy].is_dirty = false;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Delete Canopy")) {
+            deleteCanopy(current_canopy);
+            updatePrimitiveTypes();
+            is_dirty = true;
+            context->markGeometryDirty();
+        }
+        if (canopy_dict[current_canopy].is_dirty) {
+            ImGui::SameLine();
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255)); // Red text
+            ImGui::Text("update required");
+            ImGui::PopStyleColor();
+        }
+        ImGui::SetNextItemWidth(100);
+        std::string prev_canopy_name = canopy_dict[current_canopy].label;
+        ImGui::InputText("##canopy_name", &canopy_dict[current_canopy].label);
+        if (canopy_dict[current_canopy].label != prev_canopy_name && canopy_labels_set.find(canopy_dict[current_canopy].label) == canopy_labels_set.end() && !canopy_dict[current_canopy].label.empty()) {
+            canopy temp = canopy_dict[current_canopy];
+            current_canopy = canopy_dict[prev_canopy_name].label;
+            std::map<std::string, canopy>::iterator current_canopy_iter = canopy_dict.find(prev_canopy_name);
+            if (current_canopy_iter != canopy_dict.end()) {
+                canopy_dict.erase(current_canopy_iter);
+            }
+            canopy_dict[current_canopy] = temp;
+
+            canopy_labels_set.erase(prev_canopy_name);
+            canopy_labels_set.insert(current_canopy);
+        } else {
+            canopy_dict[current_canopy].label = prev_canopy_name;
+        }
+        ImGui::SameLine();
+        ImGui::Text("Canopy Name");
+        // ####### PLANT LIBRARY NAME ####### //
+        ImGui::SetNextItemWidth(250);
+        // ImGui::InputText("Plant Library", &plant_library_names[canopy_labels_dict[current_canopy]]);
+        std::string prev_lib = canopy_dict[current_canopy].library_name_verbose;
+        dropDown("Plant Library###dropdown", canopy_dict[current_canopy].library_name_verbose, plant_types_verbose);
+        if (canopy_dict[current_canopy].library_name_verbose != prev_lib)
+            canopy_dict[current_canopy].is_dirty = true;
+        canopy_dict[current_canopy].library_name = plant_type_lookup[canopy_dict[current_canopy].library_name_verbose];
+        // ######### CANOPY DATA GROUP ####### //
+        ImGui::SetNextItemWidth(100);
+        std::string prev_canopy_data_group = canopy_dict[current_canopy].data_group;
+        ImGui::InputText("##canopy_data_group", &canopy_dict[current_canopy].data_group);
+        if (canopy_dict[current_canopy].data_group == "All" || canopy_dict[current_canopy].data_group.empty()) {
+            canopy_dict[current_canopy].data_group = prev_canopy_data_group;
+        }
+        if (!canopy_dict[current_canopy].data_group.empty() && prev_canopy_data_group != canopy_dict[current_canopy].data_group) {
+            std::string new_data_group = canopy_dict[current_canopy].data_group;
+            for (int i = 0; i < canopy_dict[current_canopy].IDs.size(); i++) {
+                std::vector<uint> new_canopy_objIDs = plantarchitecture->getAllPlantObjectIDs(canopy_dict[current_canopy].IDs[i]);
+                for (auto &obj : new_canopy_objIDs) {
+                    context->clearObjectData(obj, prev_canopy_data_group.c_str());
+                    context->setObjectData(obj, "data_group", new_data_group);
+                    context->setObjectData(obj, new_data_group.c_str(), 1);
+                }
+                // context->clearObjectData(new_canopy_objIDs, prev_canopy_data_group.c_str());
+                // context->setObjectData(new_canopy_objIDs, "data_group", new_data_group);
+                // context->setObjectData(new_canopy_objIDs, new_data_group.c_str(), new_canopy_objIDs);
+            }
+            updateDataGroups();
+        }
+        ImGui::SameLine();
+        ImGui::Text("Data Group");
+        // ####### CANOPY ORIGIN ####### //
+        vec3 prev_canopy_origin_ = vec3(canopy_dict[current_canopy].origin);
+        ImGui::SetNextItemWidth(60);
+        ImGui::InputFloat("##canopy_origin_x", &canopy_dict[current_canopy].origin.x);
+        randomizePopup("canopy_origin_x_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].origin.x));
+        randomizerParams("canopy_origin_x_" + std::to_string(canopy_dict[current_canopy].idx));
+        ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_x_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(60);
+        ImGui::InputFloat("##canopy_origin_y", &canopy_dict[current_canopy].origin.y);
+        randomizePopup("canopy_origin_y_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].origin.y));
+        randomizerParams("canopy_origin_y_" + std::to_string(canopy_dict[current_canopy].idx));
+        ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_y_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(60);
+        ImGui::InputFloat("##canopy_origin_z", &canopy_dict[current_canopy].origin.z);
+        randomizePopup("canopy_origin_z_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].origin.z));
+        randomizerParams("canopy_origin_z_" + std::to_string(canopy_dict[current_canopy].idx));
+        ImGui::OpenPopupOnItemClick(("randomize_canopy_origin_z_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::Text("Canopy Origin");
+        if (prev_canopy_origin_ != canopy_dict[current_canopy].origin) {
+            canopy_dict[current_canopy].is_dirty = true;
+        }
+        // ####### PLANT COUNT ####### //
+        int2 prev_plant_count_ = int2(canopy_dict[current_canopy].plant_count);
+        ImGui::SetNextItemWidth(100);
+        ImGui::InputInt("##plant_count_x", &canopy_dict[current_canopy].plant_count.x);
+        canopy_dict[current_canopy].plant_count.x = std::max(canopy_dict[current_canopy].plant_count.x, 1);
+        randomizePopup("plant_count_x_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].plant_count.x));
+        randomizerParams("plant_count_x_" + std::to_string(canopy_dict[current_canopy].idx));
+        ImGui::OpenPopupOnItemClick(("randomize_plant_count_x_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(100);
+        ImGui::InputInt("##plant_count_y", &canopy_dict[current_canopy].plant_count.y);
+        canopy_dict[current_canopy].plant_count.y = std::max(canopy_dict[current_canopy].plant_count.y, 1);
+        randomizePopup("plant_count_y_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].plant_count.y));
+        randomizerParams("plant_count_y_" + std::to_string(canopy_dict[current_canopy].idx));
+        ImGui::OpenPopupOnItemClick(("randomize_plant_count_y_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::Text("Plant Count");
+        if (prev_plant_count_ != canopy_dict[current_canopy].plant_count) {
+            canopy_dict[current_canopy].is_dirty = true;
+        }
+        // ####### PLANT SPACING ####### //
+        vec2 prev_plant_spacing_ = vec2(canopy_dict[current_canopy].plant_spacing);
+        ImGui::SetNextItemWidth(50);
+        ImGui::InputFloat("##plant_spacing_x", &canopy_dict[current_canopy].plant_spacing.x);
+        randomizePopup("plant_spacing_x_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].plant_spacing.x));
+        randomizerParams("plant_spacing_x_" + std::to_string(canopy_dict[current_canopy].idx));
+        ImGui::OpenPopupOnItemClick(("randomize_plant_spacing_x_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(50);
+        ImGui::InputFloat("##plant_spacing_y", &canopy_dict[current_canopy].plant_spacing.y);
+        randomizePopup("plant_spacing_y_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].plant_spacing.y));
+        randomizerParams("plant_spacing_y_" + std::to_string(canopy_dict[current_canopy].idx));
+        ImGui::OpenPopupOnItemClick(("randomize_plant_spacing_y_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::Text("Plant Spacing");
+        if (prev_plant_spacing_ != canopy_dict[current_canopy].plant_spacing) {
+            canopy_dict[current_canopy].is_dirty = true;
+        }
+        // ####### PLANT AGE ####### //
+        float prev_age_ = canopy_dict[current_canopy].age;
+        ImGui::SetNextItemWidth(80);
+        ImGui::InputFloat("Plant Age", &canopy_dict[current_canopy].age);
+        randomizePopup("plant_age_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].age));
+        randomizerParams("plant_age_" + std::to_string(canopy_dict[current_canopy].idx));
+        ImGui::OpenPopupOnItemClick(("randomize_plant_age_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        if (prev_age_ != canopy_dict[current_canopy].age) {
+            canopy_dict[current_canopy].is_dirty = true;
+        }
+        // ####### GROUND CLIPPING HEIGHT ####### //
+        float prev_ground_clipping_height_ = canopy_dict[current_canopy].ground_clipping_height;
+        ImGui::SetNextItemWidth(80);
+        ImGui::InputFloat("Ground Clipping Height", &canopy_dict[current_canopy].ground_clipping_height);
+        randomizePopup("ground_clipping_height_" + std::to_string(canopy_dict[current_canopy].idx), createTaggedPtr(&canopy_dict[current_canopy].ground_clipping_height));
+        randomizerParams("ground_clipping_height_" + std::to_string(canopy_dict[current_canopy].idx));
+        ImGui::OpenPopupOnItemClick(("randomize_ground_clipping_height_" + std::to_string(canopy_dict[current_canopy].idx)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        if (prev_ground_clipping_height_ != canopy_dict[current_canopy].ground_clipping_height) {
+            canopy_dict[current_canopy].is_dirty = true;
+        }
+        if (ImGui::Button("Save Canopy to OBJ/PLY File")) {
+            std::string new_obj_file = save_as_file_dialog(std::vector<std::string>{"OBJ", "PLY"});
+            if (!new_obj_file.empty()) {
+                std::string file_extension = new_obj_file;
+                size_t last_obj_file = file_extension.rfind('.');
+                if (last_obj_file != std::string::npos) {
+                    file_extension = file_extension.substr(last_obj_file + 1);
+                }
+                if (file_extension == "obj" || file_extension == "ply") {
+                    if (!std::filesystem::exists(new_obj_file)) {
+                        // Create file
+                        std::ofstream outFile(new_obj_file);
+                    }
+                    if (!save_plants_individually) {
+                        saveCanopy(new_obj_file, canopy_dict[current_canopy].IDs, canopy_dict[current_canopy].origin, file_extension);
+                    } else {
+                        saveCanopy(new_obj_file, canopy_dict[current_canopy].IDs, canopy_dict[current_canopy].individual_plant_locations, file_extension);
+                    }
+                } else {
+                    // Needs to be a obj or ply file
+                    std::cout << "Not a valid file type. Object must be saved to .obj or .ply file." << std::endl;
+                }
+            } else {
+                // Not a valid file
+                std::cout << "Not a valid file." << std::endl;
+            }
+        }
+        ImGui::SameLine();
+        ImGui::Checkbox("Save plants individually", &save_plants_individually);
+    }
+#endif
+}
+
+
+void ProjectBuilder::generalTab() {
+#ifdef ENABLE_HELIOS_VISUALIZER
+    // ####### LOCATION ####### //
+    ImGui::SetWindowFontScale(1.25f);
+    ImGui::Text("Visualization:");
+    ImGui::SetWindowFontScale(1.0f);
+    // ####### COORDINATE AXES ####### //
+    bool enable_coords_ = enable_coordinate_axes;
+    toggle_button("##coordinate_axes", &enable_coordinate_axes);
+    if (enable_coords_ != enable_coordinate_axes) {
+        if (enable_coordinate_axes) {
+            visualizer->addCoordinateAxes(helios::make_vec3(0, 0, 0.05), helios::make_vec3(1, 1, 1), "positive");
+            is_dirty = true;
+        } else {
+            visualizer->disableCoordinateAxes();
+            is_dirty = true;
+        }
+    }
+    ImGui::SameLine();
+    if (enable_coordinate_axes) {
+        ImGui::Text("Coordinate Axes Enabled");
+    } else {
+        ImGui::Text("Coordinate Axes Disabled");
+    }
+    // ####### COLORBAR ####### //
+    bool enable_colorbar_ = enable_colorbar;
+    toggle_button("##colorbar", &enable_colorbar);
+    if (enable_colorbar_ != enable_colorbar) {
+        if (enable_colorbar) {
+            visualizer->enableColorbar();
+            is_dirty = true;
+        } else {
+            visualizer->disableColorbar();
+            is_dirty = true;
+        }
+    }
+    ImGui::SameLine();
+    if (enable_colorbar) {
+        ImGui::Text("Colorbar Enabled");
+    } else {
+        ImGui::Text("Colorbar Disabled");
+    }
+    // ####### LIGHTING MODEL ####### //
+    std::string prev_lighting_model = lighting_model;
+    ImGui::SetNextItemWidth(120);
+    dropDown("Lighting Model", lighting_model, lighting_models);
+    if (prev_lighting_model != lighting_model) {
+        if (lighting_model == "None")
+            visualizer->setLightingModel(Visualizer::LIGHTING_NONE);
+        if (lighting_model == "Phong")
+            visualizer->setLightingModel(Visualizer::LIGHTING_PHONG);
+        if (lighting_model == "Phong Shadowed")
+            visualizer->setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
+    }
+    ImGui::SetNextItemWidth(120);
+    // ####### LIGHTING INTENSITY ####### //
+    ImGui::InputFloat("Light Intensity Factor", &light_intensity);
+    visualizer->setLightIntensityFactor(light_intensity);
+    // ####### LIGHTING DIRECTION ####### //
+    toggle_button("##light_coord_type", &light_coord_type);
+    ImGui::SameLine();
+    if (light_coord_type) {
+        SphericalCoord light_dir_sphere_ = cart2sphere(light_direction);
+        vec2 light_dir_sphere;
+        light_dir_sphere.x = rad2deg(light_dir_sphere_.elevation);
+        light_dir_sphere.y = rad2deg(light_dir_sphere_.azimuth);
+        ImGui::Text("Elevation:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(80);
+        ImGui::InputFloat("##light_elevation", &light_dir_sphere.x);
+        ImGui::SameLine();
+        ImGui::Text("Azimuth:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(80);
+        ImGui::InputFloat("##light_azimuth", &light_dir_sphere.y);
+        ImGui::SameLine();
+        ImGui::Text("Light Direction (Spherical)");
+        if (light_dir_sphere.x != light_dir_sphere_.elevation || light_dir_sphere.y != light_dir_sphere_.azimuth) {
+            SphericalCoord light_dir = make_SphericalCoord(deg2rad(light_dir_sphere.x), deg2rad(light_dir_sphere.y));
+            light_direction = sphere2cart(light_dir);
+        }
+    } else {
+        float light_dir[3];
+        light_dir[0] = light_direction.x;
+        light_dir[1] = light_direction.y;
+        light_dir[2] = light_direction.z;
+        ImGui::InputFloat3("Light Direction (Cartesian)", light_dir);
+        light_direction.x = light_dir[0];
+        light_direction.y = light_dir[1];
+        light_direction.z = light_dir[2];
+    }
+    visualizer->setLightDirection(light_direction);
+    // ####### LOCATION ####### //
+    ImGui::SetWindowFontScale(1.25f);
+    ImGui::Text("Location:");
+    ImGui::SetWindowFontScale(1.0f);
+    if (ImGui::Button("Update Location")) {
+        updateLocation();
+    }
+    // ####### LATITUDE ####### //
+    ImGui::SetNextItemWidth(100);
+    ImGui::InputFloat("Latitude", &latitude);
+    randomizePopup("latitude", createTaggedPtr(&latitude));
+    randomizerParams("latitude");
+    ImGui::OpenPopupOnItemClick("randomize_latitude", ImGuiPopupFlags_MouseButtonRight);
+    ImGui::SameLine();
+    // ####### LONGITUDE ####### //
+    ImGui::SetNextItemWidth(100);
+    ImGui::InputFloat("Longitude", &longitude);
+    randomizePopup("longitude", createTaggedPtr(&longitude));
+    randomizerParams("longitude");
+    ImGui::OpenPopupOnItemClick("randomize_longitude", ImGuiPopupFlags_MouseButtonRight);
+    // ####### UTC OFFSET ####### //
+    ImGui::SetNextItemWidth(100);
+    ImGui::InputInt("UTC Offset", &UTC_offset);
+    randomizePopup("UTC_offset", createTaggedPtr(&UTC_offset));
+    randomizerParams("UTC_offset");
+    ImGui::OpenPopupOnItemClick("randomize_UTC_offset", ImGuiPopupFlags_MouseButtonRight);
+    // ####### Weather File ####### //
+    ImGui::SetNextItemWidth(60);
+    ImGui::RadioButton("CSV", is_weather_file_csv);
+    if (ImGui::IsItemClicked())
+        is_weather_file_csv = true;
+    ImGui::SameLine();
+    ImGui::RadioButton("CIMIS", !is_weather_file_csv);
+    if (ImGui::IsItemClicked())
+        is_weather_file_csv = false;
+    std::string prev_weather_file;
+    std::string *weather_file;
+    if (is_weather_file_csv) {
+        ImGui::Text("CSV");
+        weather_file = &csv_weather_file;
+        prev_weather_file = csv_weather_file;
+    } else {
+        ImGui::Text("CIMIS");
+        weather_file = &cimis_weather_file;
+        prev_weather_file = cimis_weather_file;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Weather File")) {
+        std::string weather_file_ = file_dialog();
+        if (!weather_file_.empty()) {
+            *weather_file = weather_file_;
+            try {
+                if (is_weather_file_csv) {
+                    context->loadTabularTimeseriesData(*weather_file, {}, ",", "YYYYMMDD", 1);
+                } else {
+                    context->loadTabularTimeseriesData(*weather_file, {"CIMIS"}, ",");
+                }
+            } catch (...) {
+                std::cout << "Failed to load weather file: " << *weather_file << std::endl;
+                *weather_file = prev_weather_file;
+            }
+        } else {
+            *weather_file = prev_weather_file;
+        }
+    }
+    ImGui::SameLine();
+    std::string shorten_weather_file = *weather_file;
+    for (char &c: shorten_weather_file) {
+        if (c == '\\') {
+            c = '/';
+        }
+    }
+    size_t last_weather_file = shorten_weather_file.rfind('/');
+    if (last_weather_file != std::string::npos) {
+        shorten_weather_file = shorten_weather_file.substr(last_weather_file + 1);
+    }
+    ImGui::Text("%s", shorten_weather_file.c_str());
+    // ####### GROUND ####### //
+    ImGui::SetWindowFontScale(1.25f);
+    ImGui::Text("Ground:");
+    ImGui::SetWindowFontScale(1.0f);
+    if (ImGui::Button("Update Ground")) {
+        updateGround();
+        updatePrimitiveTypes();
+        updateSpectra();
+        is_dirty = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Delete Ground")) {
+        deleteGround();
+        updatePrimitiveTypes();
+        updateSpectra();
+        is_dirty = true;
+    }
+    // ImGui::RadioButton("Manually Set Color", ground_flag == 0); if (ImGui::IsItemClicked()) ground_flag = 0;
+    // ImGui::SameLine();
+    ImGui::RadioButton("Use Texture File", ground_flag == 1);
+    if (ImGui::IsItemClicked())
+        ground_flag = 1;
+    ImGui::SameLine();
+    ImGui::RadioButton("Use Model File", ground_flag == 2);
+    if (ImGui::IsItemClicked())
+        ground_flag = 2;
+    if (ground_flag == 0) {
+        // ####### GROUND COLOR ####### //
+        ImGui::ColorEdit3("##ground_color_edit", ground_color);
+    } else if (ground_flag == 1) {
+        // ####### GROUND TEXTURE File ####### //
+        ImGui::SetNextItemWidth(60);
+        if (ImGui::Button("Ground Texture File")) {
+            std::string ground_texture_file_ = file_dialog();
+            if (!ground_texture_file_.empty()) {
+                ground_texture_file = ground_texture_file_;
+            }
+        }
+        ImGui::SameLine();
+        std::string shorten = ground_texture_file;
+        for (char &c: shorten) {
+            if (c == '\\') {
+                c = '/';
+            }
+        }
+        size_t last = shorten.rfind('/');
+        if (last != std::string::npos) {
+            shorten = shorten.substr(last + 1);
+        }
+        ImGui::Text("%s", shorten.c_str());
+    } else if (ground_flag == 2) {
+        // ####### GROUND Model File ####### //
+        ImGui::SetNextItemWidth(60);
+        if (ImGui::Button("Ground Model File")) {
+            std::string ground_model_file_ = file_dialog();
+            if (!ground_model_file_.empty()) {
+                ground_model_file = ground_model_file_;
+            }
+        }
+        ImGui::SameLine();
+        ImGui::Text("%s", shortenPath(ground_model_file).c_str());
+    }
+    toggle_button("##use_ground_texture_color", &use_ground_texture);
+    // ####### GROUND COLOR ####### //
+    if (use_ground_texture) {
+        ImGui::SameLine();
+        ImGui::Text("Use Ground Texture Color");
+    } else {
+        ImGui::SameLine();
+        ImGui::ColorEdit3("##ground_color_edit", ground_color);
+        ImGui::SameLine();
+        ImGui::Text("Manually Set Ground Color");
+    }
+    // ####### DOMAIN ORIGIN ####### //
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat("##domain_origin_x", &domain_origin.x);
+    randomizePopup("domain_origin_x", createTaggedPtr(&domain_origin.x));
+    randomizerParams("domain_origin_x");
+    ImGui::OpenPopupOnItemClick("randomize_domain_origin_x", ImGuiPopupFlags_MouseButtonRight);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat("##domain_origin_y", &domain_origin.y);
+    randomizePopup("domain_origin_y", createTaggedPtr(&domain_origin.y));
+    randomizerParams("domain_origin_y");
+    ImGui::OpenPopupOnItemClick("randomize_domain_origin_y", ImGuiPopupFlags_MouseButtonRight);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60);
+    ImGui::InputFloat("##domain_origin_z", &domain_origin.z);
+    randomizePopup("domain_origin_z", createTaggedPtr(&domain_origin.z));
+    randomizerParams("domain_origin_z");
+    ImGui::OpenPopupOnItemClick("randomize_domain_origin_z", ImGuiPopupFlags_MouseButtonRight);
+    ImGui::SameLine();
+    ImGui::Text("Domain Origin");
+    if (ground_flag == 1) {
+        // ####### GROUND RESOLUTION ####### //
+        ImGui::SetNextItemWidth(100);
+        ImGui::InputInt("##ground_resolution_x", &ground_resolution.x);
+        randomizePopup("ground_resolution_x", createTaggedPtr(&ground_resolution.x));
+        randomizerParams("ground_resolution_x");
+        ImGui::OpenPopupOnItemClick("randomize_ground_resolution_x", ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(100);
+        ImGui::InputInt("##ground_resolution_y", &ground_resolution.y);
+        randomizePopup("ground_resolution_y", createTaggedPtr(&ground_resolution.y));
+        randomizerParams("ground_resolution_y");
+        ImGui::OpenPopupOnItemClick("randomize_ground_resolution_y", ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::Text("Ground Resolution");
+        // ####### DOMAIN EXTENT ####### //
+        ImGui::SetNextItemWidth(50);
+        ImGui::InputFloat("##domain_extent_x", &domain_extent.x);
+        randomizePopup("domain_extent_x", createTaggedPtr(&domain_extent.x));
+        randomizerParams("domain_extent_x");
+        ImGui::OpenPopupOnItemClick("randomize_domain_extent_x", ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(50);
+        ImGui::InputFloat("##domain_extent_y", &domain_extent.y);
+        randomizePopup("domain_extent_y", createTaggedPtr(&domain_extent.y));
+        randomizerParams("domain_extent_y");
+        ImGui::OpenPopupOnItemClick("randomize_domain_extent_y", ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::Text("Domain Extent");
+        // ####### NUMBER OF TILES ####### //
+        ImGui::SetNextItemWidth(60);
+        int temp[2];
+        temp[0] = num_tiles.x;
+        temp[1] = num_tiles.y;
+        ImGui::InputInt2("Number of Tiles", temp);
+        num_tiles.x = temp[0];
+        num_tiles.y = temp[1];
+    }
+#endif
+}
+
+
 void ProjectBuilder::objectTab() {
+#ifdef ENABLE_HELIOS_VISUALIZER
     if (ImGui::Button("Load Object File")) {
         std::string new_obj_file = file_dialog();
         if (!new_obj_file.empty() && std::filesystem::exists(new_obj_file)) {
@@ -5195,6 +4111,7 @@ void ProjectBuilder::objectTab() {
             }
         }
     }
+#endif
 }
 
 
@@ -5299,9 +4216,917 @@ void ProjectBuilder::objectTab(std::string curr_obj_name, int id) {
     if (objects_dict[current_obj].is_dirty && !ImGui::IsAnyItemActive() && !ImGui::IsAnyItemFocused()) {
         updateObject(current_obj);
     }
+#endif
 }
 
+void ProjectBuilder::radiationTab() {
+#if defined(ENABLE_HELIOS_VISUALIZER) && defined(ENABLE_RADIATION_MODEL)
+    // LOAD XML LIBRARY FILE
+    ImGui::SetNextItemWidth(60);
+    if (ImGui::Button("Load XML Library File")) {
+        std::string new_xml_library_file = file_dialog();
+        if (!new_xml_library_file.empty() && std::filesystem::exists(new_xml_library_file)) {
+            if (xml_library_files.find(new_xml_library_file) == xml_library_files.end()) {
+                xml_library_files.insert(new_xml_library_file);
+                std::vector<std::string> current_spectra_file = get_xml_node_values(new_xml_library_file, "label", "globaldata_vec2");
+                for (int i = 0; i < current_spectra_file.size(); i++) {
+                    possible_spectra.insert(current_spectra_file[i]);
+                }
+            }
+            context->loadXML(new_xml_library_file.c_str());
+        }
+    }
+    // ####### GLOBAL PROPERTIES ####### //
+    ImGui::SetWindowFontScale(1.25f);
+    ImGui::Text("Global Properties:");
+    ImGui::SetWindowFontScale(1.0f);
+    // ####### ENFORCE PERIODIC BOUNDARY CONDITION ####### //
+    ImGui::Text("Enforce Periodic Boundary Condition:");
+    ImGui::SameLine();
+    bool prev_cond_x = enforce_periodic_boundary_x;
+    ImGui::Checkbox("x###periodic_boundary_x", &enforce_periodic_boundary_x);
+    ImGui::SameLine();
+    bool prev_cond_y = enforce_periodic_boundary_y;
+    ImGui::Checkbox("y###periodic_boundary_y", &enforce_periodic_boundary_y);
+    if (prev_cond_x != enforce_periodic_boundary_x || prev_cond_y != enforce_periodic_boundary_y) {
+        if (enforce_periodic_boundary_x && enforce_periodic_boundary_y)
+            radiation->enforcePeriodicBoundary("xy");
+        else if (enforce_periodic_boundary_x)
+            radiation->enforcePeriodicBoundary("x");
+        else if (enforce_periodic_boundary_y)
+            radiation->enforcePeriodicBoundary("y");
+        else
+            radiation->enforcePeriodicBoundary("");
+    }
+    // ####### DIFFUSE EXTINCTION COEFFICIENT ####### //
+    ImGui::SetNextItemWidth(60);
+    float prev_value = diffuse_extinction_coeff;
+    ImGui::InputFloat("Diffuse Extinction Coefficient", &diffuse_extinction_coeff);
+    if (prev_value != diffuse_extinction_coeff) {
+        context->setGlobalData("diffuse_extinction_coeff", diffuse_extinction_coeff);
+    }
+    randomizePopup("diffuse_extinction_coeff", createTaggedPtr(&diffuse_extinction_coeff));
+    randomizerParams("diffuse_extinction_coeff");
+    ImGui::OpenPopupOnItemClick("randomize_diffuse_extinction_coeff", ImGuiPopupFlags_MouseButtonRight);
+    // ####### AIR TURBIDITY ####### //
+    ImGui::SetNextItemWidth(60);
+    prev_value = air_turbidity;
+    ImGui::InputFloat("Air Turbidity", &air_turbidity);
+    if (prev_value != air_turbidity) {
+        if (air_turbidity > 0) {
+            context->setGlobalData("air_turbidity", air_turbidity);
+        } else if (air_turbidity < 0) { // try calibration
+            if (context->doesTimeseriesVariableExist("net_radiation")) {
+                air_turbidity = solarposition->calibrateTurbidityFromTimeseries("net_radiation");
+                if (air_turbidity > 0 && air_turbidity < 1) {
+                    context->setGlobalData("air_turbidity", air_turbidity);
+                }
+            }
+        }
+    }
+    randomizePopup("air_turbidity", createTaggedPtr(&air_turbidity));
+    randomizerParams("air_turbidity");
+    ImGui::OpenPopupOnItemClick("randomize_air_turbidity", ImGuiPopupFlags_MouseButtonRight);
+    // ####### SOLAR DIRECT SPECTRUM ####### //
+    ImGui::SetNextItemWidth(250);
+    // ImGui::InputText("Solar Direct Spectrum", &solar_direct_spectrum);
+    if (ImGui::BeginCombo("##combo_solar_direct_spectrum", solar_direct_spectrum.c_str())) {
+        for (auto &spectra: possible_spectra) {
+            bool is_solar_direct_spectrum_selected = (solar_direct_spectrum == spectra);
+            if (ImGui::Selectable(spectra.c_str(), is_solar_direct_spectrum_selected))
+                solar_direct_spectrum = spectra;
+            if (is_solar_direct_spectrum_selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    ImGui::Text("Solar Direct Spectrum");
+    // ####### BAND PROPERTIES ####### //
+    ImGui::SetWindowFontScale(1.25f);
+    ImGui::Text("Add Band:");
+    ImGui::SetWindowFontScale(1.0f);
+    // ####### ADD BAND ####### //
+    toggle_button("##enable_wavelength", &enable_wavelength);
+    ImGui::SameLine();
+    if (enable_wavelength) {
+        ImGui::Text("Wavelength Min:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(60);
+        ImGui::InputFloat("##wavelength_min", &wavelength_min);
+        ImGui::SameLine();
+        ImGui::Text("Max:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(60);
+        ImGui::InputFloat("##wavelength_max", &wavelength_max);
+    } else {
+        ImGui::Text("No Specified Wavelength");
+    }
+    //
+    ImGui::Text("Label:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(100);
+    ImGui::InputText("##new_band_label", &new_band_label);
+    ImGui::SameLine();
+    ImGui::Text("Emission:");
+    ImGui::SameLine();
+    ImGui::Checkbox("##enable_emission", &enable_emission);
+    ImGui::SameLine();
+    if (ImGui::Button("Add Band")) {
+        if (enable_wavelength) {
+            addBand(new_band_label, wavelength_min, wavelength_max, enable_emission);
+        } else {
+            addBand(new_band_label, enable_emission);
+            bandlabels_set_wavelength.insert(new_band_label);
+        }
+    }
+    // ####### BAND PROPERTIES ####### //
+    ImGui::SetWindowFontScale(1.25f);
+    ImGui::Text("Band Properties:");
+    ImGui::SetWindowFontScale(1.0f);
+    // ####### SELECT BAND ####### //
+    if (ImGui::BeginCombo("##combo_current_band", current_band.c_str())) {
+        for (std::string band: bandlabels_set) {
+            bool is_current_band_selected = (current_band == band);
+            if (ImGui::Selectable(band.c_str(), is_current_band_selected))
+                current_band = band;
+            if (is_current_band_selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    ImGui::Text("Select Band");
+    // ####### DIRECT RAY COUNT ####### //
+    int prev_direct_ray_count;
+    ImGui::SetNextItemWidth(100);
+    if (current_band == "All") {
+        prev_direct_ray_count = direct_ray_count;
+        ImGui::InputInt("Direct Ray Count", &direct_ray_count);
+        randomizePopup("direct_ray_count", createTaggedPtr(&direct_ray_count));
+        randomizerParams("direct_ray_count");
+        ImGui::OpenPopupOnItemClick("randomize_direct_ray_count", ImGuiPopupFlags_MouseButtonRight);
+        if (direct_ray_count != prev_direct_ray_count) {
+            for (std::string band: bandlabels) {
+                radiation->setDirectRayCount(band, direct_ray_count);
+                direct_ray_count_dict[band] = direct_ray_count;
+            }
+        }
+    } else {
+        prev_direct_ray_count = direct_ray_count_dict[current_band];
+        ImGui::InputInt("Direct Ray Count", &direct_ray_count_dict[current_band]);
+        randomizePopup("direct_ray_count_" + current_band, createTaggedPtr(&direct_ray_count_dict[current_band]));
+        randomizerParams("direct_ray_count_" + current_band);
+        ImGui::OpenPopupOnItemClick(("randomize_direct_ray_count_" + current_band).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        if (direct_ray_count_dict[current_band] != prev_direct_ray_count) {
+            radiation->setDirectRayCount(current_band, direct_ray_count_dict[current_band]);
+        }
+    }
+    // ####### DIFFUSE RAY COUNT ####### //
+    ImGui::SetNextItemWidth(100);
+    int prev_diffuse_ray_count;
+    if (current_band == "All") {
+        prev_diffuse_ray_count = diffuse_ray_count;
+        ImGui::InputInt("Diffuse Ray Count", &diffuse_ray_count);
+        randomizePopup("diffuse_ray_count", createTaggedPtr(&diffuse_ray_count));
+        randomizerParams("diffuse_ray_count");
+        ImGui::OpenPopupOnItemClick("randomize_diffuse_ray_count", ImGuiPopupFlags_MouseButtonRight);
+        if (diffuse_ray_count != prev_diffuse_ray_count) {
+            for (std::string band: bandlabels) {
+                radiation->setDiffuseRayCount(band, diffuse_ray_count);
+                diffuse_ray_count_dict[band] = diffuse_ray_count;
+            }
+        }
+    } else {
+        prev_diffuse_ray_count = diffuse_ray_count_dict[current_band];
+        ImGui::InputInt("Diffuse Ray Count", &diffuse_ray_count_dict[current_band]);
+        randomizePopup("diffuse_ray_count_" + current_band, createTaggedPtr(&diffuse_ray_count_dict[current_band]));
+        randomizerParams("diffuse_ray_count_" + current_band);
+        ImGui::OpenPopupOnItemClick(("randomize_diffuse_ray_count_" + current_band).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        if (diffuse_ray_count_dict[current_band] != prev_diffuse_ray_count) {
+            radiation->setDiffuseRayCount(current_band, diffuse_ray_count_dict[current_band]);
+        }
+    }
+    // ####### SCATTERING DEPTH ####### //
+    ImGui::SetNextItemWidth(100);
+    int prev_scattering_depth;
+    if (current_band == "All") {
+        prev_scattering_depth = scattering_depth;
+        ImGui::InputInt("Scattering Depth", &scattering_depth);
+        randomizePopup("scattering_depth", createTaggedPtr(&scattering_depth));
+        randomizerParams("scattering_depth");
+        ImGui::OpenPopupOnItemClick("randomize_scattering_depth", ImGuiPopupFlags_MouseButtonRight);
+        if (scattering_depth <= 0) {
+            scattering_depth = prev_scattering_depth;
+        }
+        if (prev_scattering_depth != scattering_depth) {
+            for (std::string band: bandlabels) {
+                radiation->setScatteringDepth(band, scattering_depth);
+                scattering_depth_dict[band] = scattering_depth;
+            }
+        }
+    } else {
+        prev_scattering_depth = scattering_depth_dict[current_band];
+        ImGui::InputInt("Scattering Depth", &scattering_depth_dict[current_band]);
+        randomizePopup("scattering_depth_" + current_band, createTaggedPtr(&scattering_depth_dict[current_band]));
+        randomizerParams("scattering_depth_" + current_band);
+        ImGui::OpenPopupOnItemClick(("randomize_scattering_depth_" + current_band).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        if (scattering_depth_dict[current_band] <= 0) { // scattering depth must be >0
+            scattering_depth_dict[current_band] = prev_scattering_depth;
+        }
+        if (prev_scattering_depth != scattering_depth_dict[current_band]) {
+            radiation->setScatteringDepth(current_band, scattering_depth_dict[current_band]);
+        }
+    }
+    // ####### RADIATIVE PROPERTIES ####### //
+    ImGui::SetWindowFontScale(1.25f);
+    ImGui::Text("Radiative Properties:");
+    ImGui::SetWindowFontScale(1.0f);
+    ImGui::SetNextItemWidth(100);
+    // ######### SELECT DATA GROUP ############//
+    // if (ImGui::Button("Refresh###data_groups_refresh")) {
+    //     updatePrimitiveTypes();
+    //     updateDataGroups();
+    // }
+    // ImGui::SameLine();
+    ImGui::SetNextItemWidth(150);
+    if (ImGui::BeginCombo("##data_group_primitive", current_data_group.c_str())) {
+        for (std::string data_group: data_groups_set) {
+            bool is_data_group_selected = (current_data_group == data_group);
+            if (ImGui::Selectable(data_group.c_str(), is_data_group_selected))
+                current_data_group = data_group;
+            if (is_data_group_selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(100);
+    ImGui::Text("Select Data Group");
+    // default primitive data group
+    // ######### SELECT PRIMITIVE ############//
+    // if (ImGui::Button("Refresh")) {
+    //     updatePrimitiveTypes();
+    //     updateDataGroups();
+    // }
+    // ImGui::SameLine();
+    ImGui::SetNextItemWidth(150);
+    if (ImGui::BeginCombo("##combo_primitive", current_primitive.c_str())) {
+        for (int m = 0; m < primitive_names.size(); m++) {
+            bool is_primitive_selected = (current_primitive == primitive_names[m]);
+            if (ImGui::Selectable(primitive_names[m].c_str(), is_primitive_selected))
+                current_primitive = primitive_names[m];
+            if (is_primitive_selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(100);
+    ImGui::Text("Select Primitive Type");
+    if (current_data_group == "All") {
+        // REFLECTIVITY
+        ImGui::Text("Reflectivity:");
+        std::string toggle_display_reflectivity = "Manual Entry";
+        bool reflectivity_continuous = primitive_continuous[current_primitive][0];
+        toggle_button("##reflectivity_toggle", &reflectivity_continuous);
+        if (reflectivity_continuous != primitive_continuous[current_primitive][0]) {
+            if (current_primitive == "All") {
+                for (auto &prim_values: primitive_continuous) {
+                    primitive_continuous[prim_values.first][0] = reflectivity_continuous;
+                }
+            }
+            primitive_continuous[current_primitive][0] = reflectivity_continuous;
+        }
+        if (primitive_continuous[current_primitive][0]) {
+            toggle_display_reflectivity = "File Entry";
+        }
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(250);
+        if (!primitive_continuous[current_primitive][0]) {
+            ImGui::Text("Select band:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(60);
+            if (ImGui::BeginCombo("##combo_band_reflectivity", current_band_reflectivity.c_str())) {
+                for (int n = 0; n < bandlabels.size(); n++) {
+                    bool is_band_selected = (current_band_reflectivity == bandlabels[n]);
+                    if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
+                        current_band_reflectivity = bandlabels[n];
+                    if (is_band_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            ImGui::SameLine();
+            ImGui::Text("Enter value:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(80);
+            if (current_primitive == "All") {
+                float prev_reflectivity = reflectivity;
+                ImGui::InputFloat("##reflectivity_all", &reflectivity);
+                if (reflectivity != prev_reflectivity) {
+                    for (auto &prim_values: primitive_values[current_band_reflectivity]) {
+                        primitive_values[current_band_reflectivity][prim_values.first][0] = reflectivity;
+                    }
+                }
+            } else {
+                ImGui::InputFloat("##reflectivity", &primitive_values[current_band_reflectivity][current_primitive][0]);
+            }
+        } else {
+            std::string reflectivity_prev = primitive_spectra[current_primitive][0];
+            if (ImGui::BeginCombo("##reflectivity_combo_all", reflectivity_prev.c_str())) {
+                for (auto &spectra: possible_spectra) {
+                    bool is_spectra_selected = (primitive_spectra[current_primitive][0] == spectra);
+                    if (ImGui::Selectable(spectra.c_str(), is_spectra_selected))
+                        primitive_spectra[current_primitive][0] = spectra;
+                    if (is_spectra_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            if (current_primitive == "All" && reflectivity_prev != primitive_spectra[current_primitive][0]) {
+                for (auto &prim_spectrum: primitive_spectra) {
+                    primitive_spectra[prim_spectrum.first][0] = primitive_spectra[current_primitive][0];
+                }
+            }
+        }
+        ImGui::SameLine();
+        ImGui::Text("%s", toggle_display_reflectivity.c_str());
+        // TRANSMISSIVITY
+        ImGui::Text("Transmissivity:");
+        std::string toggle_display_transmissivity = "Manual Entry";
+        bool transmissivity_continuous = primitive_continuous[current_primitive][1];
+        toggle_button("##transmissivity_toggle", &transmissivity_continuous);
+        if (transmissivity_continuous != primitive_continuous[current_primitive][1]) {
+            if (current_primitive == "All") {
+                for (auto &prim_values: primitive_continuous) {
+                    primitive_continuous[prim_values.first][1] = transmissivity_continuous;
+                }
+            }
+            primitive_continuous[current_primitive][1] = transmissivity_continuous;
+        }
+        if (primitive_continuous[current_primitive][1]) {
+            toggle_display_transmissivity = "File Entry";
+        }
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(250);
+        if (!primitive_continuous[current_primitive][1]) {
+            ImGui::Text("Select band:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(60);
+            if (ImGui::BeginCombo("##combo_band_transmissivity", current_band_transmissivity.c_str())) {
+                for (int n = 0; n < bandlabels.size(); n++) {
+                    bool is_band_selected = (current_band_transmissivity == bandlabels[n]);
+                    if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
+                        current_band_transmissivity = bandlabels[n];
+                    if (is_band_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            ImGui::SameLine();
+            ImGui::Text("Enter value:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(80);
+            if (current_primitive == "All") {
+                float prev_transmissivity = transmissivity;
+                ImGui::InputFloat("##transmissivity_all", &transmissivity);
+                if (transmissivity != prev_transmissivity) {
+                    for (auto &prim_values: primitive_values[current_band_transmissivity]) {
+                        primitive_values[current_band_transmissivity][prim_values.first][1] = transmissivity;
+                    }
+                }
+            } else {
+                ImGui::InputFloat("##transmissivity", &primitive_values[current_band_transmissivity][current_primitive][1]);
+            }
+        } else {
+            std::string transmissivity_prev = primitive_spectra[current_primitive][1];
+            if (ImGui::BeginCombo("##transmissivity_combo", transmissivity_prev.c_str())) {
+                for (auto &spectra: possible_spectra) {
+                    bool is_spectra_selected = (primitive_spectra[current_primitive][1] == spectra);
+                    if (ImGui::Selectable(spectra.c_str(), is_spectra_selected))
+                        primitive_spectra[current_primitive][1] = spectra;
+                    if (is_spectra_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            if (current_primitive == "All" && transmissivity_prev != primitive_spectra[current_primitive][1]) {
+                for (auto &prim_spectrum: primitive_spectra) {
+                    primitive_spectra[prim_spectrum.first][1] = primitive_spectra[current_primitive][1];
+                }
+            }
+        }
+        ImGui::SameLine();
+        ImGui::Text("%s", toggle_display_transmissivity.c_str());
+        // EMISSIVITY
+        ImGui::Text("Emissivity:");
+        // ImGui::SetNextItemWidth(250);
+        // ImGui::Text("");
+        ImGui::Dummy(ImVec2(35.f, 0.f));
+        ImGui::SameLine();
+        ImGui::Text("Select band:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(60);
+        if (ImGui::BeginCombo("##combo_band_emissivity", current_band_emissivity.c_str())) {
+            for (std::string band: bandlabels_set_emissivity) {
+                bool is_band_selected = (current_band_emissivity == band);
+                if (ImGui::Selectable(band.c_str(), is_band_selected))
+                    current_band_emissivity = band;
+                if (is_band_selected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+        ImGui::Text("Enter value:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(80);
+        if (current_primitive == "All") {
+            float prev_emissivity = emissivity;
+            ImGui::InputFloat("##emissivity_all", &emissivity);
+            if (emissivity != prev_emissivity) {
+                for (auto &prim_values: primitive_values[current_band_emissivity]) {
+                    primitive_values[current_band_emissivity][prim_values.first][2] = emissivity;
+                }
+            }
+        } else {
+            ImGui::InputFloat("##emissivity", &primitive_values[current_band_emissivity][current_primitive][2]);
+        }
+        ImGui::SameLine();
+        ImGui::Text("Manual Entry");
+    } else { // specific data group
+        // REFLECTIVITY
+        ImGui::Text("Reflectivity:");
+        std::string toggle_display_reflectivity = "Manual Entry";
+        bool reflectivity_continuous = primitive_continuous_dict[current_data_group][current_primitive][0];
+        toggle_button("##reflectivity_toggle", &reflectivity_continuous);
+        if (reflectivity_continuous != primitive_continuous_dict[current_data_group][current_primitive][0]) {
+            if (current_primitive == "All") {
+                for (auto &prim_values: primitive_continuous_dict[current_data_group]) {
+                    primitive_continuous_dict[current_data_group][prim_values.first][0] = reflectivity_continuous;
+                }
+            }
+            primitive_continuous_dict[current_data_group][current_primitive][0] = reflectivity_continuous;
+        }
+        if (primitive_continuous_dict[current_data_group][current_primitive][0]) {
+            toggle_display_reflectivity = "File Entry";
+        }
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(250);
+        if (!primitive_continuous_dict[current_data_group][current_primitive][0]) {
+            ImGui::Text("Select band:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(60);
+            if (ImGui::BeginCombo("##combo_band_reflectivity", current_band_reflectivity.c_str())) {
+                for (int n = 0; n < bandlabels.size(); n++) {
+                    bool is_band_selected = (current_band_reflectivity == bandlabels[n]);
+                    if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
+                        current_band_reflectivity = bandlabels[n];
+                    if (is_band_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            ImGui::SameLine();
+            ImGui::Text("Enter value:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(80);
+            if (current_primitive == "All") {
+                float prev_reflectivity = reflectivity;
+                ImGui::InputFloat("##reflectivity_all", &reflectivity);
+                if (reflectivity != prev_reflectivity) {
+                    for (auto &prim_values: primitive_values_dict[current_data_group][current_band_reflectivity]) {
+                        primitive_values_dict[current_data_group][current_band_reflectivity][prim_values.first][0] = reflectivity;
+                    }
+                }
+            } else {
+                ImGui::InputFloat("##reflectivity", &primitive_values_dict[current_data_group][current_band_reflectivity][current_primitive][0]);
+            }
+        } else {
+            std::string reflectivity_prev = primitive_spectra_dict[current_data_group][current_primitive][0];
+            if (ImGui::BeginCombo("##reflectivity_combo", reflectivity_prev.c_str())) {
+                for (auto &spectra: possible_spectra) {
+                    bool is_spectra_selected = (primitive_spectra_dict[current_data_group][current_primitive][0] == spectra);
+                    if (ImGui::Selectable(spectra.c_str(), is_spectra_selected))
+                        primitive_spectra_dict[current_data_group][current_primitive][0] = spectra;
+                    if (is_spectra_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            if (current_primitive == "All" && reflectivity_prev != primitive_spectra_dict[current_data_group][current_primitive][0]) {
+                for (auto &prim_spectrum: primitive_spectra_dict[current_data_group]) {
+                    primitive_spectra_dict[current_data_group][prim_spectrum.first][0] = primitive_spectra_dict[current_data_group][current_primitive][0];
+                }
+            }
+        }
+        ImGui::SameLine();
+        ImGui::TextUnformatted("%s", toggle_display_reflectivity.c_str());
+        // TRANSMISSIVITY
+        ImGui::Text("Transmissivity:");
+        std::string toggle_display_transmissivity = "Manual Entry";
+        bool transmissivity_continuous = primitive_continuous_dict[current_data_group][current_primitive][1];
+        toggle_button("##transmissivity_toggle", &transmissivity_continuous);
+        if (transmissivity_continuous != primitive_continuous_dict[current_data_group][current_primitive][1]) {
+            if (current_primitive == "All") {
+                for (auto &prim_values: primitive_continuous_dict[current_data_group]) {
+                    primitive_continuous_dict[current_data_group][prim_values.first][1] = transmissivity_continuous;
+                }
+            }
+            primitive_continuous_dict[current_data_group][current_primitive][1] = transmissivity_continuous;
+        }
+        if (primitive_continuous_dict[current_data_group][current_primitive][1]) {
+            toggle_display_transmissivity = "File Entry";
+        }
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(250);
+        if (!primitive_continuous_dict[current_data_group][current_primitive][1]) {
+            ImGui::Text("Select band:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(60);
+            if (ImGui::BeginCombo("##combo_band_transmissivity", current_band_transmissivity.c_str())) {
+                for (int n = 0; n < bandlabels.size(); n++) {
+                    bool is_band_selected = (current_band_transmissivity == bandlabels[n]);
+                    if (ImGui::Selectable(bandlabels[n].c_str(), is_band_selected))
+                        current_band_transmissivity = bandlabels[n];
+                    if (is_band_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            ImGui::SameLine();
+            ImGui::Text("Enter value:");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(80);
+            if (current_primitive == "All") {
+                float prev_transmissivity = transmissivity;
+                ImGui::InputFloat("##transmissivity_all", &transmissivity);
+                if (transmissivity != prev_transmissivity) {
+                    for (auto &prim_values: primitive_values_dict[current_data_group][current_band_transmissivity]) {
+                        primitive_values_dict[current_data_group][current_band_transmissivity][prim_values.first][1] = transmissivity;
+                    }
+                }
+            } else {
+                ImGui::InputFloat("##transmissivity", &primitive_values_dict[current_data_group][current_band_transmissivity][current_primitive][1]);
+            }
+        } else {
+            std::string transmissivity_prev = primitive_spectra_dict[current_data_group][current_primitive][1];
+            if (ImGui::BeginCombo("##transmissivity_combo", transmissivity_prev.c_str())) {
+                for (auto &spectra: possible_spectra) {
+                    bool is_spectra_selected = (primitive_spectra_dict[current_data_group][current_primitive][1] == spectra);
+                    if (ImGui::Selectable(spectra.c_str(), is_spectra_selected))
+                        primitive_spectra_dict[current_data_group][current_primitive][1] = spectra;
+                    if (is_spectra_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            if (current_primitive == "All" && transmissivity_prev != primitive_spectra_dict[current_data_group][current_primitive][1]) {
+                for (auto &prim_spectrum: primitive_spectra_dict[current_data_group]) {
+                    primitive_spectra_dict[current_data_group][prim_spectrum.first][1] = primitive_spectra_dict[current_data_group][current_primitive][1];
+                }
+            }
+        }
+        ImGui::SameLine();
+        ImGui::TextUnformatted("%s", toggle_display_transmissivity.c_str());
+        // EMISSIVITY
+        ImGui::Text("Emissivity:");
+        // ImGui::SetNextItemWidth(250);
+        // ImGui::Text("");
+        ImGui::Dummy(ImVec2(35.f, 0.f));
+        ImGui::SameLine();
+        ImGui::Text("Select band:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(60);
+        if (ImGui::BeginCombo("##combo_band_emissivity", current_band_emissivity.c_str())) {
+            for (std::string band: bandlabels_set_emissivity) {
+                bool is_band_selected = (current_band_emissivity == band);
+                if (ImGui::Selectable(band.c_str(), is_band_selected))
+                    current_band_emissivity = band;
+                if (is_band_selected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+        ImGui::Text("Enter value:");
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(80);
+        if (current_primitive == "All") {
+            float prev_emissivity = emissivity;
+            ImGui::InputFloat("##emissivity_all", &emissivity);
+            if (emissivity != prev_emissivity) {
+                for (auto &prim_values: primitive_values_dict[current_data_group][current_band_emissivity]) {
+                    primitive_values_dict[current_data_group][current_band_emissivity][prim_values.first][2] = emissivity;
+                }
+            }
+        } else {
+            ImGui::InputFloat("##emissivity", &primitive_values_dict[current_data_group][current_band_emissivity][current_primitive][2]);
+        }
+        ImGui::SameLine();
+        ImGui::Text("Manual Entry");
+    }
+    ImGui::NewLine();
+    if (ImGui::Button("Run Radiation")) {
+        const char *font_name = "LCD";
+        visualizer->addTextboxByCenter("LOADING...", vec3(.5, .5, 0), make_SphericalCoord(0, 0), RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
+        visualizer->plotUpdate();
+        runRadiation();
+        visualizer->plotUpdate();
+    }
+#endif
+}
+
+
+void ProjectBuilder::rigTab() {
+#if defined(ENABLE_HELIOS_VISUALIZER) && defined(ENABLE_RADIATION_MODEL)
+    std::string current_cam_position = "0";
+    if (ImGui::BeginCombo("##rig_combo", current_rig.c_str())) {
+        for (auto rig_label: rig_labels_set) {
+            bool is_rig_selected = (current_rig == rig_label);
+            if (ImGui::Selectable(rig_label.c_str(), is_rig_selected))
+                current_rig = rig_label;
+            current_cam_position = "0";
+            if (is_rig_selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Add Rig")) {
+        std::string default_rig_label = "rig";
+        std::string new_rig_label = "rig_0";
+        int count = 0;
+        while (rig_dict.find(new_rig_label) != rig_dict.end()) {
+            count++;
+            new_rig_label = default_rig_label + "_" + std::to_string(count);
+        }
+        addRig(new_rig_label);
+    }
+    if (!current_rig.empty()) {
+        // ##### UPDATE RIG ######//
+        // if (ImGui::Button("Update Rig")){
+        //     updateRigs();
+        // }
+        // ImGui::SameLine();
+        if (ImGui::Button("Delete Rig")) {
+            deleteRig(current_rig);
+        }
+        // ##### RIG NAME ######//
+        ImGui::SetNextItemWidth(100);
+        std::string prev_rig_name = rig_labels[rig_dict[current_rig]];
+        ImGui::InputText("##rig_name", &rig_labels[rig_dict[current_rig]]);
+        if (rig_labels[rig_dict[current_rig]] != prev_rig_name && rig_dict.find(rig_labels[rig_dict[current_rig]]) == rig_dict.end() && !rig_labels[rig_dict[current_rig]].empty()) {
+            int temp = rig_dict[current_rig];
+            current_rig = rig_labels[rig_dict[current_rig]];
+            std::map<std::string, int>::iterator current_rig_iter = rig_dict.find(prev_rig_name);
+            if (current_rig_iter != rig_dict.end()) {
+                rig_dict.erase(current_rig_iter);
+            }
+            rig_dict[current_rig] = temp;
+            rig_labels_set.erase(prev_rig_name);
+            rig_labels_set.insert(rig_labels[rig_dict[current_rig]]);
+
+            std::string new_name = rig_labels[rig_dict[current_rig]];
+            rig renamed_rig = rig_dict_.at(prev_rig_name);
+            rig_dict_.erase(prev_rig_name);
+            rig_dict_.insert({new_name, renamed_rig});
+        } else {
+            rig_labels[rig_dict[current_rig]] = prev_rig_name;
+        }
+        ImGui::SameLine();
+        ImGui::Text("Rig Name");
+        // ####### WRITE DEPTH ####### //
+        ImGui::Text("Write:");
+        ImGui::SameLine();
+        bool write_depth_ = write_depth[rig_dict[current_rig]];
+        ImGui::Checkbox("Depth Images", &write_depth_);
+        write_depth[rig_dict[current_rig]] = write_depth_;
+        ImGui::SameLine();
+        bool write_norm_depth_ = write_norm_depth[rig_dict[current_rig]];
+        ImGui::Checkbox("Norm Depth Images", &write_norm_depth_);
+        write_norm_depth[rig_dict[current_rig]] = write_norm_depth_;
+        ImGui::SameLine();
+        bool write_segmentation_ = write_segmentation_mask[rig_dict[current_rig]];
+        ImGui::Checkbox("Segmentation Masks", &write_segmentation_);
+        write_segmentation_mask[rig_dict[current_rig]] = write_segmentation_;
+        // ####### BOUNDING BOXES ####### //
+        if (ImGui::BeginPopup("multi_select_popup")) {
+            for (auto &box_pair: bounding_boxes) {
+                ImGui::Selectable(box_pair.first.c_str(), &box_pair.second, ImGuiSelectableFlags_DontClosePopups);
+            }
+            ImGui::EndPopup();
+        }
+        if (ImGui::Button("Select Labeled Objects")) {
+            ImGui::OpenPopup("multi_select_popup");
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Refresh List")) {
+            refreshBoundingBoxObjectList();
+        }
+        // ImGui::OpenPopupOnItemClick(("rig_position_noise_" + std::to_string(rig_dict[current_rig])).c_str(), ImGuiPopupFlags_MouseButtonLeft);
+        // Display selected items
+        ImGui::Text("Objects:");
+        int idx = 0;
+        for (auto &box_pair: bounding_boxes) {
+            if (box_pair.second) {
+                ImGui::SameLine(), ImGui::Text("%i. %s", idx, box_pair.first.c_str());
+                idx++;
+            }
+        }
+        // ####### RIG COLOR ####### //
+        float col[3];
+        col[0] = rig_colors[rig_dict[current_rig]].r;
+        col[1] = rig_colors[rig_dict[current_rig]].g;
+        col[2] = rig_colors[rig_dict[current_rig]].b;
+        ImGui::ColorEdit3("##rig_color_edit", col);
+        updateColor(current_rig, "rig", col);
+        ImGui::SameLine();
+        ImGui::Text("Rig Color");
+        // ####### CAMERA LABEL ####### //
+        /* SINGLE CAMERA VERSION
+        ImGui::SetNextItemWidth(60);
+        // ImGui::InputText("Camera Label", &camera_labels[rig_dict[(std::string) current_rig]]);
+        if (ImGui::BeginCombo("##cam_label_combo", camera_labels[rig_dict[(std::string) current_rig]].c_str())){
+            for (int n = 0; n < camera_names.size(); n++){
+                bool is_cam_label_selected = (camera_labels[rig_dict[(std::string) current_rig]] == camera_names[n]); // You can store your selection however you want, outside or inside your objects
+                if (ImGui::Selectable(camera_names[n].c_str(), is_cam_label_selected)){
+                    camera_labels[rig_dict[(std::string) current_rig]] = camera_names[n];
+                }
+                if (is_cam_label_selected)
+                    ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+        ImGui::Text("Camera Label");
+        ImGui::EndTabItem();
+        */
+        // ####### CAMERA CHECKBOX ####### //
+        ImGui::Text("Cameras:");
+        for (int i = 0; i < camera_names.size(); i++) {
+            std::string &camera_name = camera_names[i];
+
+            ImGui::SetNextItemWidth(60);
+
+            std::set curr_set = rig_camera_labels[rig_dict[current_rig]];
+            // if (i % 3 != 0){
+            //     ImGui::SameLine();
+            // }
+            bool isCameraSelected = curr_set.find(camera_name) != curr_set.end();
+            ImGui::PushID(i);
+            if (ImGui::Checkbox(camera_name.c_str(), &isCameraSelected)) {
+                if (isCameraSelected) {
+                    rig_camera_labels[rig_dict[current_rig]].insert(camera_name);
+                } else {
+                    rig_camera_labels[rig_dict[current_rig]].erase(camera_name);
+                }
+            }
+            ImGui::PopID();
+        }
+        // ####### LIGHT CHECKBOX ####### //
+        ImGui::Text("Lights:");
+        for (int i = 0; i < light_names.size(); i++) {
+            std::string &light_name = light_names[i];
+
+            ImGui::SetNextItemWidth(60);
+
+            std::set curr_rig_light = rig_light_labels[rig_dict[current_rig]];
+            bool isLightSelected = curr_rig_light.find(light_name) != curr_rig_light.end();
+            ImGui::PushID(i);
+            if (ImGui::Checkbox(light_name.c_str(), &isLightSelected)) {
+                if (isLightSelected) {
+                    rig_light_labels[rig_dict[current_rig]].insert(light_name);
+                } else {
+                    rig_light_labels[rig_dict[current_rig]].erase(light_name);
+                }
+            }
+            ImGui::PopID();
+        }
+        // ####### ADD KEYPOINT ####### //
+        std::stringstream cam_pos_value;
+        cam_pos_value << current_cam_position.c_str();
+        int current_cam_position_;
+        cam_pos_value >> current_cam_position_;
+        current_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][current_cam_position_]);
+        std::string modified_current_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][current_cam_position_] + 1); // 1-indexed value
+        if (ImGui::BeginCombo("##cam_combo", modified_current_keypoint.c_str())) {
+            for (int n = 1; n <= camera_position_vec[rig_dict[current_rig]].size(); n++) {
+                std::string select_cam_position = std::to_string(n - 1);
+                std::string selected_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][n - 1]);
+                bool is_pos_selected = (current_cam_position == select_cam_position);
+                std::string modified_selected_keypoint = std::to_string(keypoint_frames[rig_dict[current_rig]][n - 1] + 1); // 1-indexed value
+                if (ImGui::Selectable(modified_selected_keypoint.c_str(), is_pos_selected)) {
+                    current_cam_position = std::to_string(n - 1);
+                }
+                if (is_pos_selected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        cam_pos_value << current_cam_position.c_str();
+        cam_pos_value >> current_cam_position_;
+        ImGui::SameLine();
+        if (ImGui::Button("Add Keypoint")) {
+            camera_position_vec[rig_dict[current_rig]].push_back(camera_position_vec[rig_dict[current_rig]][current_cam_position_]);
+            camera_lookat_vec[rig_dict[current_rig]].push_back(camera_lookat_vec[rig_dict[current_rig]][current_cam_position_]);
+            keypoint_frames[rig_dict[current_rig]].push_back(keypoint_frames[rig_dict[current_rig]].back() + 1);
+            is_dirty = true;
+        }
+        // ####### KEYPOINT FRAME ####### //
+        ImGui::SetNextItemWidth(80);
+        int modified_keypoint_frame = keypoint_frames[rig_dict[current_rig]][current_cam_position_] + 1; // 1-indexed value
+        ImGui::InputInt("Keypoint Frame", &modified_keypoint_frame);
+        if (modified_keypoint_frame != keypoint_frames[rig_dict[current_rig]][current_cam_position_] + 1) {
+            keypoint_frames[rig_dict[current_rig]][current_cam_position_] = modified_keypoint_frame - 1;
+        }
+        // ####### CAMERA POSITION ####### //
+        vec3 prev_rig_position_ = camera_position_vec[rig_dict[current_rig]][current_cam_position_];
+        ImGui::SetNextItemWidth(60);
+        ImGui::InputFloat("##camera_position_x", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].x);
+        randomizePopup("camera_position_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].x));
+        randomizerParams("camera_position_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
+        ImGui::OpenPopupOnItemClick(("randomize_camera_position_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(60);
+        ImGui::InputFloat("##camera_position_y", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].y);
+        randomizePopup("camera_position_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].y));
+        randomizerParams("camera_position_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
+        ImGui::OpenPopupOnItemClick(("randomize_camera_position_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(60);
+        ImGui::InputFloat("##camera_position_z", &camera_position_vec[rig_dict[current_rig]][current_cam_position_].z);
+        randomizePopup("camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_position_vec[rig_dict[current_rig]][current_cam_position_].z));
+        randomizerParams("camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
+        ImGui::OpenPopupOnItemClick(("randomize_camera_position_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::Text("Rig Position");
+        ImGui::SameLine();
+        ImGui::Button("Add Noise###position");
+        noisePopup("rig_position_noise_" + std::to_string(rig_dict[current_rig]), rig_lookat_noise[rig_dict[current_rig]]);
+        ImGui::OpenPopupOnItemClick(("rig_position_noise_" + std::to_string(rig_dict[current_rig])).c_str(), ImGuiPopupFlags_MouseButtonLeft);
+        // ####### CAMERA LOOKAT ####### //
+        vec3 prev_rig_lookat_ = camera_lookat_vec[rig_dict[current_rig]][current_cam_position_];
+        ImGui::SetNextItemWidth(60);
+        ImGui::InputFloat("##camera_lookat_x", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].x);
+        randomizePopup("camera_lookat_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].x));
+        randomizerParams("camera_lookat_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
+        ImGui::OpenPopupOnItemClick(("randomize_camera_lookat_x_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(60);
+        ImGui::InputFloat("##camera_lookat_y", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].y);
+        randomizePopup("camera_lookat_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].y));
+        randomizerParams("camera_lookat_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
+        ImGui::OpenPopupOnItemClick(("randomize_camera_lookat_y_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(60);
+        ImGui::InputFloat("##camera_lookat_z", &camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].z);
+        randomizePopup("camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_), createTaggedPtr(&camera_lookat_vec[rig_dict[current_rig]][current_cam_position_].z));
+        randomizerParams("camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_));
+        ImGui::OpenPopupOnItemClick(("randomize_camera_lookat_z_" + std::to_string(rig_dict[current_rig]) + std::to_string(current_cam_position_)).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::Text("Rig Lookat");
+        ImGui::SameLine();
+        ImGui::Button("Add Noise###lookat");
+        noisePopup("rig_lookat_noise_" + std::to_string(rig_dict[current_rig]), rig_lookat_noise[rig_dict[current_rig]]);
+        ImGui::OpenPopupOnItemClick(("rig_lookat_noise_" + std::to_string(rig_dict[current_rig])).c_str(), ImGuiPopupFlags_MouseButtonLeft);
+        // ####### NUMBER OF IMAGES ####### //
+        ImGui::SetNextItemWidth(80);
+        ImGui::InputInt("Total Number of Frames", &num_images_vec[rig_dict[current_rig]]);
+        num_images_vec[rig_dict[current_rig]] = std::max(num_images_vec[rig_dict[current_rig]], *std::max_element(keypoint_frames[rig_dict[current_rig]].begin(), keypoint_frames[rig_dict[(std::string) current_rig]].end()) + 1);
+
+        if (prev_rig_position_ != camera_position_vec[rig_dict[current_rig]][current_cam_position_] || prev_rig_lookat_ != camera_lookat_vec[rig_dict[current_rig]][current_cam_position_]) {
+            updateRigs();
+        }
+
+        ImGui::NewLine();
+        if (ImGui::Button("Record Images")) {
+            if (band_group_names.empty()) {
+                std::cout << "At least 1 band group (a group of 1 or 3 bands) must be defined to record images." << std::endl;
+            } else {
+                // Update reflectivity, transmissivity, & emissivity for each band / primitive_type
+                const char *font_name = "LCD";
+                visualizer->addTextboxByCenter("LOADING...", vec3(.5, .5, 0), make_SphericalCoord(0, 0), RGB::red, 40, font_name, Visualizer::COORDINATES_WINDOW_NORMALIZED);
+                visualizer->plotUpdate();
+                updatePrimitiveTypes();
+                updateSpectra();
+                updateCameras();
+                try {
+                    record();
+                } catch (const std::runtime_error &e) {
+                    std::cerr << "Record failed due to exception: " << e.what() << std::endl;
+                    visualizer->plotUpdate();
+                }
+            }
+        }
+    }
+#endif
+}
+
+
 void ProjectBuilder::rigTab(std::string curr_rig_name, int id) {
+#if defined(ENABLE_HELIOS_VISUALIZER) && defined(ENABLE_RADIATION_MODEL)
     ImGui::SetNextItemWidth(100);
     std::string prev_rig_name = rig_labels[rig_dict[curr_rig_name]];
     ImGui::InputText("##rig_name", &rig_labels[rig_dict[curr_rig_name]]);
@@ -5354,6 +5179,189 @@ void ProjectBuilder::rigTab(std::string curr_rig_name, int id) {
     }
 #endif
 }
+
+void ProjectBuilder::lightTab() {
+#if defined(ENABLE_HELIOS_VISUALIZER) && defined(ENABLE_RADIATION_MODEL)
+    // LOAD XML LIBRARY FILE
+    ImGui::SetNextItemWidth(60);
+    if (ImGui::Button("Load XML Library File")) {
+        std::string new_xml_library_file = file_dialog();
+        if (!new_xml_library_file.empty() && std::filesystem::exists(new_xml_library_file)) {
+            if (light_xml_library_files.find(new_xml_library_file) == light_xml_library_files.end()) {
+                light_xml_library_files.insert(new_xml_library_file);
+                std::vector<std::string> current_light_file = get_xml_node_values(new_xml_library_file, "label", "globaldata_vec2");
+                possible_light_spectra.insert(possible_light_spectra.end(), current_light_file.begin(), current_light_file.end());
+            }
+            context->loadXML(new_xml_library_file.c_str());
+        }
+    }
+    if (ImGui::BeginCombo("##light_combo", current_light.c_str())) {
+        for (int n = 0; n < light_names.size(); n++) {
+            bool is_light_selected = (current_light == light_names[n]);
+            if (ImGui::Selectable(light_names[n].c_str(), is_light_selected))
+                current_light = light_names[n];
+            if (is_light_selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Add Light")) {
+        std::string default_light_name = "light";
+        std::string new_light_name = "light_0";
+        int count = 0;
+        while (light_dict.find(new_light_name) != light_dict.end()) {
+            count++;
+            new_light_name = default_light_name + "_" + std::to_string(count);
+        }
+        light_dict.insert({new_light_name, scast<int>(light_names.size())});
+        light_spectra.push_back(light_spectra[light_dict[current_light]]);
+        light_types.push_back(light_types[light_dict[current_light]]);
+        light_direction_vec.push_back(light_direction_vec[light_dict[current_light]]);
+        light_direction_sph_vec.push_back(light_direction_sph_vec[light_dict[current_light]]);
+        light_rotation_vec.push_back(light_rotation_vec[light_dict[current_light]]);
+        light_size_vec.push_back(light_size_vec[light_dict[current_light]]);
+        light_radius_vec.push_back(light_radius_vec[light_dict[current_light]]);
+        light_names.push_back(new_light_name);
+        light_flux_vec.push_back(light_flux_vec[light_dict[current_light]]);
+        std::string parent = "light";
+        pugi::xml_node light_block = helios.child(parent.c_str());
+        pugi::xml_node new_light_node = helios.append_copy(light_block);
+        std::string name = "label";
+        pugi::xml_attribute node_label = new_light_node.attribute(name.c_str());
+        node_label.set_value(new_light_name.c_str());
+        current_light = new_light_name;
+    }
+    ImGui::SetNextItemWidth(100);
+    std::string prev_light_name = light_names[light_dict[current_light]];
+    ImGui::InputText("##light_name", &light_names[light_dict[current_light]]);
+    if (light_names[light_dict[current_light]] != prev_light_name) {
+        int temp = light_dict[current_light];
+        current_light = light_names[light_dict[current_light]];
+        std::map<std::string, int>::iterator current_light_iter = light_dict.find(prev_light_name);
+        if (current_light_iter != light_dict.end()) {
+            light_dict.erase(current_light_iter);
+        }
+        light_dict[current_light] = temp;
+    }
+    ImGui::SameLine();
+    ImGui::Text("Light Label");
+    // ####### LIGHT SPECTRA ####### //
+    std::string prev_light_spectra = light_spectra[light_dict[current_light]];
+    if (ImGui::BeginCombo("##light_spectra_combo", light_spectra[light_dict[current_light]].c_str())) {
+        for (int n = 0; n < possible_light_spectra.size(); n++) {
+            bool is_light_spectra_selected = (light_spectra[light_dict[current_light]] == possible_light_spectra[n]);
+            if (ImGui::Selectable(possible_light_spectra[n].c_str(), is_light_spectra_selected))
+                light_spectra[light_dict[current_light]] = possible_light_spectra[n];
+            if (is_light_spectra_selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    ImGui::Text("Light Spectrum");
+    // ####### LIGHT TYPE ############ //
+    if (ImGui::BeginCombo("##light_type_combo", light_types[light_dict[current_light]].c_str())) {
+        for (int n = 0; n < all_light_types.size(); n++) {
+            bool is_type_selected = (light_types[light_dict[current_light]] == all_light_types[n]);
+            if (ImGui::Selectable(all_light_types[n].c_str(), is_type_selected)) {
+                light_types[light_dict[current_light]] = all_light_types[n];
+            }
+            if (is_type_selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    ImGui::Text("Light Type");
+    // collimated -> direction
+    // disk       -> position, radius, rotation
+    // sphere     -> position, radius
+    // sunsphere  -> direction
+    // rectangle  -> position, size, rotation
+    // ####### LIGHT DIRECTION ####### //
+    if (light_types[light_dict[(std::string) current_light]] == "collimated" || light_types[light_dict[(std::string) current_light]] == "sunsphere") {
+        ImGui::SetNextItemWidth(90);
+        ImGui::InputFloat("##light_direction_x", &light_direction_vec[light_dict[current_light]].x);
+        randomizePopup("light_direction_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].x));
+        randomizerParams("light_direction_x_" + std::to_string(light_dict[current_light]));
+        ImGui::OpenPopupOnItemClick(("light_direction_x_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(90);
+        ImGui::InputFloat("##light_direction_y", &light_direction_vec[light_dict[current_light]].y);
+        randomizePopup("light_direction_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].y));
+        randomizerParams("light_direction_y_" + std::to_string(light_dict[current_light]));
+        ImGui::OpenPopupOnItemClick(("light_direction_y_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(90);
+        ImGui::InputFloat("##light_direction_z", &light_direction_vec[light_dict[current_light]].z);
+        randomizePopup("light_direction_z_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_direction_vec[light_dict[current_light]].z));
+        randomizerParams("light_direction_z_" + std::to_string(light_dict[current_light]));
+        ImGui::OpenPopupOnItemClick(("light_direction_z_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::Text("Light Direction");
+    }
+    // ####### LIGHT SOURCE FLUX ####### //
+    ImGui::SetNextItemWidth(90);
+    ImGui::InputFloat("##source_flux", &light_flux_vec[light_dict[current_light]]);
+    randomizePopup("source_flux_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_flux_vec[light_dict[current_light]]));
+    randomizerParams("source_flux_" + std::to_string(light_dict[current_light]));
+    ImGui::OpenPopupOnItemClick(("source_flux_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+    ImGui::SameLine();
+    ImGui::Text("Source Flux");
+    // radiation->setSourceFlux(light_UUID, band, flux_value);
+    // ####### LIGHT ROTATION ####### //
+    if (light_types[light_dict[current_light]] == "disk" || light_types[light_dict[current_light]] == "rectangle") {
+        ImGui::SetNextItemWidth(90);
+        ImGui::InputFloat("##light_rotation_x", &light_rotation_vec[light_dict[current_light]].x);
+        randomizePopup("light_rotation_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].x));
+        randomizerParams("light_rotation_x_" + std::to_string(light_dict[current_light]));
+        ImGui::OpenPopupOnItemClick(("light_rotation_x_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(90);
+        ImGui::InputFloat("##light_rotation_y", &light_rotation_vec[light_dict[current_light]].y);
+        randomizePopup("light_rotation_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].y));
+        randomizerParams("light_rotation_y_" + std::to_string(light_dict[current_light]));
+        ImGui::OpenPopupOnItemClick(("light_rotation_y_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(90);
+        ImGui::InputFloat("##light_rotation_z", &light_rotation_vec[light_dict[current_light]].z);
+        randomizePopup("light_rotation_z_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_rotation_vec[light_dict[current_light]].z));
+        randomizerParams("light_rotation_z_" + std::to_string(light_dict[current_light]));
+        ImGui::OpenPopupOnItemClick(("light_rotation_z_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::Text("Light Rotation");
+    }
+    // ####### LIGHT SIZE ####### //
+    if (light_types[light_dict[current_light]] == "rectangle") {
+        ImGui::SetNextItemWidth(90);
+        ImGui::InputFloat("##light_size_x", &light_size_vec[light_dict[current_light]].x);
+        randomizePopup("light_size_x_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_size_vec[light_dict[current_light]].x));
+        randomizerParams("light_size_x_" + std::to_string(light_dict[current_light]));
+        ImGui::OpenPopupOnItemClick(("light_size_x_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(90);
+        ImGui::InputFloat("##light_size_y", &light_size_vec[light_dict[current_light]].y);
+        randomizePopup("light_size_y_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_size_vec[light_dict[current_light]].y));
+        randomizerParams("light_size_y_" + std::to_string(light_dict[current_light]));
+        ImGui::OpenPopupOnItemClick(("light_size_y_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::Text("Light Size");
+    }
+    // ####### LIGHT RADIUS ####### //
+    if (light_types[light_dict[current_light]] == "disk" || light_types[light_dict[current_light]] == "sphere") {
+        ImGui::SetNextItemWidth(90);
+        ImGui::InputFloat("##light_radius", &light_radius_vec[light_dict[current_light]]);
+        randomizePopup("light_radius_" + std::to_string(light_dict[current_light]), createTaggedPtr(&light_radius_vec[light_dict[current_light]]));
+        randomizerParams("light_radius_" + std::to_string(light_dict[current_light]));
+        ImGui::OpenPopupOnItemClick(("light_radius_" + std::to_string(light_dict[current_light])).c_str(), ImGuiPopupFlags_MouseButtonRight);
+        ImGui::SameLine();
+        ImGui::Text("Light Radius");
+    }
+    // LIGHT END
+#endif
+}
+
 
 void ProjectBuilder::canopyTab(std::string curr_canopy_name, int id) {
     #ifdef ENABLE_PLANT_ARCHITECTURE
@@ -6119,6 +6127,67 @@ void ProjectBuilder::deleteRig(std::string curr_rig) {
 }
 
 
+void ProjectBuilder::addRig(std::string new_rig_label) {
+    rig new_rig;
+        new_rig.label = new_rig_label;
+
+    if (current_rig.empty()) {
+        // If there is no currently selected rig, use default values.
+        new_rig.position = default_rig.position;
+        new_rig.lookat = default_rig.position;
+        new_rig.camera_labels = default_rig.camera_labels;
+        new_rig.position_noise = default_rig.position_noise;
+        new_rig.lookat_noise = default_rig.lookat_noise;
+        new_rig.camera_positions = default_rig.camera_positions;
+        new_rig.camera_lookats = default_rig.camera_lookats;
+        new_rig.color = default_rig.color;
+        new_rig.num_images = default_rig.num_images;
+        new_rig.keypoint_frames = default_rig.keypoint_frames;
+    } else {
+        // If there is a currently selected rig, copy current values.
+        rig curr_rig = rig_dict_.at(current_rig);
+
+        new_rig.label = curr_rig.label;
+        new_rig.position = curr_rig.position;
+        new_rig.lookat = curr_rig.lookat;
+        new_rig.camera_labels = curr_rig.camera_labels;
+        new_rig.position_noise = curr_rig.position_noise;
+        new_rig.lookat_noise = curr_rig.lookat_noise;
+        new_rig.camera_positions = curr_rig.camera_positions;
+        new_rig.camera_lookats = curr_rig.camera_lookats;
+        new_rig.color = curr_rig.color;
+        new_rig.num_images = curr_rig.num_images;
+        new_rig.keypoint_frames = curr_rig.keypoint_frames;
+    }
+
+    rig_dict_.insert({new_rig_label, new_rig});
+
+    rig_dict.insert({new_rig_label, scast<int>(rig_labels.size())});
+    camera_positions.push_back(camera_position);
+    camera_lookats.push_back(camera_lookat);
+    camera_labels.push_back(camera_label);
+    camera_position_vec.push_back(camera_position_vec[rig_dict[current_rig]]);
+    camera_lookat_vec.push_back(camera_lookat_vec[rig_dict[current_rig]]);
+    rig_labels.push_back(new_rig_label);
+    rig_labels_set.insert(new_rig_label);
+    rig_camera_labels.push_back(rig_camera_labels[rig_dict[current_rig]]);
+    rig_light_labels.push_back(rig_light_labels[rig_dict[current_rig]]);
+    keypoint_frames.push_back(keypoint_frames[rig_dict[current_rig]]);
+    num_images_vec.push_back(num_images_vec[rig_dict[current_rig]]);
+    rig_colors.push_back(rig_colors[rig_dict[current_rig]]);
+    rig_position_noise.push_back(std::vector<distribution>{distribution{}, distribution{}, distribution{}});
+    rig_lookat_noise.push_back(std::vector<distribution>{distribution{}, distribution{}, distribution{}});
+    // current_rig = new_rig_label;
+    std::string parent = "rig";
+    pugi::xml_node rig_block = helios.child(parent.c_str());
+    pugi::xml_node new_rig_node = helios.append_copy(rig_block);
+    std::string name = "label";
+    pugi::xml_attribute node_label = new_rig_node.attribute(name.c_str());
+    node_label.set_value(new_rig_label.c_str());
+    current_rig = new_rig_label;
+}
+
+
 #ifdef ENABLE_HELIOS_VISUALIZER
 void ProjectBuilder::dropDown(std::string widget_name, std::string &selected, std::vector<std::string> choices) {
     if (ImGui::BeginCombo(widget_name.c_str(), selected.c_str())) {
@@ -6280,6 +6349,7 @@ void ProjectBuilder::recordPopup() {
     if (ImGui::BeginPopup("repeat_record")) {
         ImGui::SetNextItemWidth(100);
         ImGui::InputInt("Number of Recordings", &num_recordings);
+        num_recordings = std::max(num_recordings, 1);
         ImGui::EndPopup();
     }
 }
