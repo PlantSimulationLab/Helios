@@ -1,18 +1,9 @@
 #!/usr/bin/env python3
 import sys
-import os
-import numpy as np
-
-# Set matplotlib backend FIRST
-import matplotlib
-matplotlib.use('Qt5Agg')  # or 'TkAgg', 'GTK3Agg'
-
-# Now import pyplot
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
-
 
 def read_data():
     """Read irrigation system data from stdin"""
@@ -57,105 +48,68 @@ def read_data():
 
     return nodes, links
 
-def visualize_complete_system(nodes, links):
-    """Visualize the irrigation system with pressures and optional color-coding"""
-    plt.figure(figsize=(18, 14))
+
+def visualize_complete_system(nodes, links, use_psi=True):
+    """Visualize the irrigation system with pressure-based coloring and legend"""
+    plt.figure(figsize=(18,12))
     ax = plt.gca()
 
-    # Visual styles for all components
-    styles = {
-        'nodes': {
-            'lateral_sprinkler_jn': {'color': '#2ecc71', 'marker': 'o', 'size': 100, 'zorder': 5},
-            'lateral_sub_jn': {'color': '#f39c12', 'marker': 'o', 'size': 120, 'zorder': 5},
-            'barb': {'color': '#9b59b6', 'marker': 's', 'size': 80, 'zorder': 5},
-            'emitter': {'color': '#e74c3c', 'marker': '^', 'size': 80, 'zorder': 5},
-            'submain': {'color': '#c0392b', 'marker': 'D', 'size': 100, 'zorder': 4},
-            'waterSource': {'color': '#3498db', 'marker': '*', 'size': 150, 'zorder': 6}
-        },
-        'links': {
-            'lateral': {'color': '#3498db', 'lw': 2, 'zorder': 1},
-            'lateralTobarb': {'color': '#16a085', 'lw': 2.5, 'zorder': 2},
-            'barbToemitter': {'color': '#8e44ad', 'lw': 2, 'ls': '--', 'zorder': 3},
-            'lateralToSubmain': {'color': '#f39c12', 'lw': 3, 'zorder': 2},
-            'submainConnection': {'color': '#d35400', 'lw': 3, 'zorder': 2},
-            'submain': {'color': '#c0392b', 'lw': 4, 'zorder': 1},
-            'mainline': {'color': '#2c3e50', 'lw': 4, 'zorder': 1}
-        }
-    }
-
-    # --- Pressure Color Mapping (Optional) ---
-    pressures = [node['pressure'] for node in nodes.values() if node['pressure'] > 0]
+    # --- Pressure color mapping ---
+    pressures = [n['pressure'] for n in nodes.values() if n['pressure'] > 0]
     if pressures:
         min_p, max_p = min(pressures), max(pressures)
         norm = Normalize(min_p, max_p)
-        cmap = plt.cm.plasma  # Alternative: plt.cm.viridis
+        cmap = plt.cm.plasma
         sm = ScalarMappable(norm=norm, cmap=cmap)
         sm.set_array([])
-        plt.colorbar(sm, ax=ax, label='Pressure (Pa)', shrink=0.8)
+        units = "psi" if use_psi else "Pa"
+        plt.colorbar(sm, ax=ax, label=f'Pressure ({units})', shrink=0.8, pad=0.02)
+    else:
+        cmap = plt.cm.plasma
+        norm = None
+        units = "psi" if use_psi else "Pa"
 
-    # Draw all links as straight lines
+    # --- Draw pipes ---
     for link in links:
         if link['from'] in nodes and link['to'] in nodes:
-            from_node = nodes[link['from']]
-            to_node = nodes[link['to']]
-            style = styles['links'].get(link['type'], {})
+            n1 = nodes[link['from']]
+            n2 = nodes[link['to']]
+            x = [n1['x'], n2['x']]
+            y = [n1['y'], n2['y']]
+            avg_p = 0.5 * (n1['pressure'] + n2['pressure'])
+            color = cmap(norm(avg_p)) if norm else 'gray'
+            ax.plot(x, y, color=color, linewidth=2, alpha=0.9)
 
-            # Draw straight line
-            ax.plot([from_node['x'], to_node['x']],
-                    [from_node['y'], to_node['y']],
-                    **style)
+    # --- Node markers ---
+    type_markers = {
+        "lateral_sprinkler_jn": ("o", 80),
+        "lateral_sub_jn": ("o", 60),
+        "barb": ("s", 50),
+        "emitter": ("^", 50),
+        "submain": ("D", 80),
+        "waterSource": ("*", 200),
+        "junction": ("o", 60),
+    }
 
-            # Label with length
-            mid_x = (from_node['x'] + to_node['x']) / 2
-            mid_y = (from_node['y'] + to_node['y']) / 2
-  #          ax.text(mid_x, mid_y, f"{link['length']:.2f}m",
-   #                 ha='center', va='center', fontsize=9,
-   #                 bbox=dict(facecolor='white', alpha=0.7, edgecolor='none'))
+    for nid, n in nodes.items():
+        marker, size = type_markers.get(n['type'], ("o", 50))
+        node_color = cmap(norm(n['pressure'])) if norm else 'gray'
+        ax.scatter(n['x'], n['y'], s=size, c=[node_color], marker=marker,
+                   edgecolors='black', linewidths=0.8, zorder=3)
 
-    # Draw nodes with pressure labels
-    for node_id, node in nodes.items():
-        style = styles['nodes'].get(node['type'], {'color': 'gray', 'marker': 'o', 'size': 80})
+        ax.text(n['x'], n['y'] + 0.8, f"ID: {nid}",
+                ha='center', va='bottom', fontsize=8, fontweight='bold',
+                bbox=dict(facecolor='white', alpha=0.8, edgecolor='black', boxstyle='round,pad=0.2'))
 
-        # Dynamic color if pressure > 0
-        node_color = cmap(norm(node['pressure'])) if ('cmap' in locals() and node['pressure'] > 0) else style['color']
 
-        ax.scatter(node['x'], node['y'],
-                   marker=style['marker'],
-                   color=node_color,
-                   s=style['size'],
-                   zorder=style.get('zorder', 2),
-                   edgecolors='k',
-                   linewidths=0.8)
+        #  label water source and emitter nodes
+        if n['type'] in ['waterSource', 'emitter']:
+            ax.text(n['x'], n['y'] + 0.5, f"{n['pressure']:.1f} {units}",
+                    fontsize=8, ha='center', va='bottom')
 
-        # Add pressure label (convert Pa to psi)
-        pressure_psi = node['pressure'] / 6894.76 if node['pressure'] != 0 else 0
-        label = f"{pressure_psi:.1f} psi"
 
-        # Smart label positioning
-        offset_x, offset_y = 0, 0
-        if node['type'] == 'emitter':
-            offset_y = -0.4
-        elif node['type'] == 'barb':
-            offset_y = 0.4
-        elif node['type'] == 'lateral_sprinkler_jn':
-            offset_x = 0.4
 
-      #  ax.text(node['x'] + offset_x,
-        #        node['y'] + offset_y,
-        #        label,
-         #       ha='center', va='center', fontsize=8,
-         #       bbox=dict(facecolor='white', alpha=0.7, pad=2, edgecolor='none'),
-          #      zorder=10)
-
-        # Label key nodes
-        #if node['type'] in ['waterSource', 'lateral_sub_jn']:
-        #    offset = 0.4 if node['type'] == 'waterSource' else 0.3
-           # ax.text(node['x'], node['y'] + offset, node['type'],
-           #         ha='center', va='bottom', fontsize=10,
-           #         weight='bold', zorder=10,
-           #         bbox=dict(facecolor='white', alpha=0.8, pad=2, edgecolor='none'))
-
-    # Legend
+    # --- Legend ---
     legend_elements = [
         Line2D([0], [0], marker='o', color='w', label='Sprinkler Junction',
                markerfacecolor='#2ecc71', markersize=12),
@@ -175,19 +129,23 @@ def visualize_complete_system(nodes, links):
         Line2D([0], [0], color='#2c3e50', lw=4, label='Mainline')
     ]
 
-    ax.legend(handles=legend_elements, loc='upper right',
-              bbox_to_anchor=(1.35, 1), fontsize=10, title="System Components",
-              title_fontsize=11, framealpha=0.9)
 
-    plt.title("Irrigation System Hydraulic Analysis\n(Pressures in psi, Pipe Lengths in meters)",
-              pad=20, fontsize=14, weight='bold')
-    plt.xlabel("X Position (meters)", fontsize=12)
-    plt.ylabel("Y Position (meters)", fontsize=12)
-    plt.grid(True, linestyle=':', alpha=0.3)
+
+    plt.title("Irrigation System Hydraulic Analysis Pressure Map", pad=20, fontsize=14, weight='bold')
+    plt.xlabel("X Position (meters)")
+    plt.ylabel("Y Position (meters)")
+    plt.grid(True, linestyle='--', alpha=0.4)
     plt.axis('equal')
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0, 0.85, 1])
     plt.show()
+
+    # --- Print only water source and emitter pressures ---
+    print("\n--- Selected Node Pressures ---")
+    for nid, n in nodes.items():
+        if n['type'] in ['waterSource', 'emitter']:
+            print(f"Node {nid} ({n['type']}): {n['pressure']:.2f} {units}")
+
 
 if __name__ == "__main__":
     nodes, links = read_data()
-    visualize_complete_system(nodes, links)
+    visualize_complete_system(nodes, links, use_psi=True)
