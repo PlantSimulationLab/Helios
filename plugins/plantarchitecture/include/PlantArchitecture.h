@@ -2883,6 +2883,10 @@ protected:
 
     uint buildAppleTree(const helios::vec3 &base_position);
 
+    void initializeAppleFruitingWallShoots();
+
+    uint buildAppleFruitingWall(const helios::vec3 &base_position);
+
     void initializeAsparagusShoots();
 
     uint buildAsparagusPlant(const helios::vec3 &base_position);

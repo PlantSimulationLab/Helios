@@ -24,6 +24,8 @@ void PlantArchitecture::initializePlantModelRegistrations() {
 
     registerPlantModel("apple", [this]() { initializeAppleTreeShoots(); }, [this](const helios::vec3 &pos) { return buildAppleTree(pos); });
 
+    registerPlantModel("apple_fruitingwall", [this]() { initializeAppleFruitingWallShoots(); }, [this](const helios::vec3 &pos) { return buildAppleFruitingWall(pos); });
+
     registerPlantModel("asparagus", [this]() { initializeAsparagusShoots(); }, [this](const helios::vec3 &pos) { return buildAsparagusPlant(pos); });
 
     registerPlantModel("bindweed", [this]() { initializeBindweedShoots(); }, [this](const helios::vec3 &pos) { return buildBindweedPlant(pos); });
@@ -489,6 +491,166 @@ uint PlantArchitecture::buildAppleTree(const helios::vec3 &base_position) {
 
     setPlantPhenologicalThresholds(plantID, 165, -1, 3, 7, 30, 200, false);
     plant_instances.at(plantID).max_age = 1460;
+
+    return plantID;
+}
+
+void PlantArchitecture::initializeAppleFruitingWallShoots() {
+
+    // ---- Leaf Prototype ---- //
+
+    LeafPrototype leaf_prototype(context_ptr->getRandomGenerator());
+    leaf_prototype.leaf_texture_file[0] = helios::resolvePluginAsset("plantarchitecture", "assets/textures/AppleLeaf.png").string().c_str();
+    leaf_prototype.leaf_aspect_ratio = 0.6f;
+    leaf_prototype.midrib_fold_fraction = 0.4f;
+    leaf_prototype.longitudinal_curvature = -0.3f;
+    leaf_prototype.lateral_curvature = 0.1f;
+    leaf_prototype.subdivisions = 3;
+    leaf_prototype.unique_prototypes = 1;
+
+    // ---- Phytomer Parameters ---- //
+
+    PhytomerParameters phytomer_parameters_apple(context_ptr->getRandomGenerator());
+
+    phytomer_parameters_apple.internode.pitch = 0;
+    phytomer_parameters_apple.internode.phyllotactic_angle.uniformDistribution(130, 145);
+    phytomer_parameters_apple.internode.radius_initial = 0.004;
+    phytomer_parameters_apple.internode.length_segments = 1;
+    phytomer_parameters_apple.internode.image_texture = helios::resolvePluginAsset("plantarchitecture", "assets/textures/AppleBark.jpg").string().c_str();
+    phytomer_parameters_apple.internode.max_floral_buds_per_petiole = 1;
+
+    phytomer_parameters_apple.petiole.petioles_per_internode = 1;
+    phytomer_parameters_apple.petiole.pitch.uniformDistribution(-40, -25);
+    phytomer_parameters_apple.petiole.taper = 0.1;
+    phytomer_parameters_apple.petiole.curvature = 0;
+    phytomer_parameters_apple.petiole.length = 0.04;
+    phytomer_parameters_apple.petiole.radius = 0.00075;
+    phytomer_parameters_apple.petiole.length_segments = 1;
+    phytomer_parameters_apple.petiole.radial_subdivisions = 3;
+    phytomer_parameters_apple.petiole.color = make_RGBcolor(0.61, 0.5, 0.24);
+
+    phytomer_parameters_apple.leaf.leaves_per_petiole = 1;
+    phytomer_parameters_apple.leaf.prototype_scale = 0.12;
+    phytomer_parameters_apple.leaf.prototype = leaf_prototype;
+
+    phytomer_parameters_apple.peduncle.length = 0.04;
+    phytomer_parameters_apple.peduncle.radius = 0.001;
+    phytomer_parameters_apple.peduncle.pitch = 90;
+    phytomer_parameters_apple.peduncle.roll = 90;
+    phytomer_parameters_apple.peduncle.length_segments = 1;
+
+    phytomer_parameters_apple.inflorescence.flowers_per_peduncle = 1;
+    phytomer_parameters_apple.inflorescence.pitch = 0;
+    phytomer_parameters_apple.inflorescence.roll = 0;
+    phytomer_parameters_apple.inflorescence.flower_prototype_scale = 0.03;
+    phytomer_parameters_apple.inflorescence.flower_prototype_function = AppleFlowerPrototype;
+    phytomer_parameters_apple.inflorescence.fruit_prototype_scale = 0.1;
+    phytomer_parameters_apple.inflorescence.fruit_prototype_function = AppleFruitPrototype;
+    phytomer_parameters_apple.inflorescence.fruit_gravity_factor_fraction = 0.5;
+
+    // ---- Shoot Parameters ---- //
+
+    // Trunk
+    ShootParameters shoot_parameters_trunk(context_ptr->getRandomGenerator());
+    shoot_parameters_trunk.phytomer_parameters = phytomer_parameters_apple;
+    shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(175,185);
+    shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.01;
+    shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
+    shoot_parameters_trunk.max_nodes = 30;
+    shoot_parameters_trunk.girth_area_factor = 5.f;
+    shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
+    shoot_parameters_trunk.vegetative_bud_break_time = 0;
+    shoot_parameters_trunk.tortuosity = 0.5;
+    shoot_parameters_trunk.internode_length_max = 0.05;
+    shoot_parameters_trunk.internode_length_decay_rate = 0;
+    shoot_parameters_trunk.defineChildShootTypes({"lateral"}, {1});
+
+    // Proleptic shoots
+    ShootParameters shoot_parameters_proleptic(context_ptr->getRandomGenerator());
+    shoot_parameters_proleptic.phytomer_parameters = phytomer_parameters_apple;
+    shoot_parameters_proleptic.phytomer_parameters.internode.color = make_RGBcolor(0.3, 0.2, 0.2);
+    shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = ApplePhytomerCreationFunction;
+    shoot_parameters_proleptic.max_nodes = 20;
+    shoot_parameters_proleptic.max_nodes_per_season = 20;
+    shoot_parameters_proleptic.phyllochron_min = 2.0;
+    shoot_parameters_proleptic.elongation_rate_max = 0.15;
+    shoot_parameters_proleptic.girth_area_factor = 7.f;
+    shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.1;
+    shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.4;
+    shoot_parameters_proleptic.vegetative_bud_break_time = 0;
+    shoot_parameters_proleptic.gravitropic_curvature.uniformDistribution(550, 700);
+    shoot_parameters_proleptic.tortuosity = 3;
+    shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution(70, 110);
+    shoot_parameters_proleptic.insertion_angle_decay_rate = 20;
+    shoot_parameters_proleptic.internode_length_max = 0.04;
+    shoot_parameters_proleptic.internode_length_min = 0.01;
+    shoot_parameters_proleptic.internode_length_decay_rate = 0.004;
+    shoot_parameters_proleptic.fruit_set_probability = 0.3;
+    shoot_parameters_proleptic.flower_bud_break_probability = 0.3;
+    shoot_parameters_proleptic.max_terminal_floral_buds = 1;
+    shoot_parameters_proleptic.flowers_require_dormancy = true;
+    shoot_parameters_proleptic.growth_requires_dormancy = true;
+    shoot_parameters_proleptic.determinate_shoot_growth = false;
+    shoot_parameters_proleptic.defineChildShootTypes({"proleptic"}, {1.0});
+
+    //lateral shoots
+    ShootParameters shoot_parameters_lateral = shoot_parameters_proleptic;
+    shoot_parameters_lateral.gravitropic_curvature = 0;
+    shoot_parameters_lateral.phytomer_parameters.internode.phyllotactic_angle = 360;
+
+    defineShootType("trunk", shoot_parameters_trunk);
+    defineShootType("proleptic", shoot_parameters_proleptic);
+    defineShootType("lateral", shoot_parameters_lateral);
+}
+
+uint PlantArchitecture::buildAppleFruitingWall(const helios::vec3 &base_position) {
+
+    if (shoot_types.empty()) {
+        // automatically initialize apple tree shoots
+        initializeAppleFruitingWallShoots();
+    }
+
+    std::vector<std::vector<vec3>> trellis_points;
+
+    std::vector<float> wire_heights{0.75, 1.6, 2.25, 2.8};
+    float tree_spacing = 1.2;
+
+    trellis_points.reserve(wire_heights.size());
+    for ( int i=0; i<wire_heights.size(); i++ ) {
+        trellis_points.push_back(linspace(make_vec3(0, -0.5f * tree_spacing, wire_heights.at(i)), make_vec3(0, 0.5f * tree_spacing, wire_heights.at(i)), 8));
+        //context_ptr->addTube( 4, {base_position+trellis_points.back().at(0), base_position+trellis_points.back().back()}, {0.005, 0.005}, {RGB::silver, RGB::silver});
+    }
+
+    for (int j = 0; j < trellis_points.size(); j++) {
+        for (int i = 0; i < trellis_points[j].size(); i++) {
+            trellis_points.at(j).at(i) += base_position;
+        }
+    }
+
+    uint plantID = addPlantInstance(base_position, 0);
+
+    uint uID_leader = addBaseStemShoot(plantID, std::ceil(wire_heights.back()/0.1), make_AxisRotation(context_ptr->randu(0, 0.05 * M_PI), 0, 0), shoot_types.at("trunk").phytomer_parameters.internode.radius_initial.val(), 0.09, 1, 1, 0.1, "trunk");
+    plant_instances.at(plantID).shoot_tree.at(uID_leader)->meristem_is_alive = false;
+    removeShootLeaves(plantID, uID_leader);
+    removeShootVegetativeBuds(plantID, uID_leader);
+    removeShootFloralBuds(plantID, uID_leader);
+
+    for ( int i=0; i<8; i++ ) {
+        float z;
+        if ( i==0 ) {
+            z = wire_heights.front()-0.1;
+        }else {
+            z = context_ptr->randu(wire_heights.front()-0.1, wire_heights.at(wire_heights.size()-1));
+        }
+        int node = std::round(z/0.1)-1;
+        addChildShoot(plantID, uID_leader, node, 8, make_AxisRotation(context_ptr->randu(float(0.45f * M_PI), 0.52f * M_PI), context_ptr->randu(0,1)*M_PI, M_PI), 0.005, 0.05, 1, 1, 0.5, "lateral");
+    }
+
+    // Set plant-specific attraction points for this grapevine's trellis system
+    setPlantAttractionPoints(plantID, flatten(trellis_points), 45.f, 1.f, 0.8);
+
+    setPlantPhenologicalThresholds(plantID, 165, -1, 3, 7, 30, 200, false);
+    plant_instances.at(plantID).max_age = 730;
 
     return plantID;
 }
@@ -2093,7 +2255,7 @@ void PlantArchitecture::initializePistachioTreeShoots() {
     phytomer_parameters_pistachio.inflorescence.pitch.uniformDistribution(50, 70);
     phytomer_parameters_pistachio.inflorescence.roll.uniformDistribution(0, 360);
     phytomer_parameters_pistachio.inflorescence.flower_prototype_scale = 0.025;
-    //    phytomer_parameters_pistachio.inflorescence.flower_prototype_function = PistachioFlowerPrototype;
+    // phytomer_parameters_pistachio.inflorescence.flower_prototype_function = PistachioFlowerPrototype;
     phytomer_parameters_pistachio.inflorescence.fruit_prototype_scale = 0.025;
     phytomer_parameters_pistachio.inflorescence.fruit_prototype_function = PistachioFruitPrototype;
 
@@ -2106,10 +2268,10 @@ void PlantArchitecture::initializePistachioTreeShoots() {
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.015;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 20;
     shoot_parameters_trunk.max_nodes = 20;
-    shoot_parameters_trunk.girth_area_factor = 3.f;
+    shoot_parameters_trunk.girth_area_factor = 5.f;
     shoot_parameters_trunk.vegetative_bud_break_probability_min = 0;
     shoot_parameters_trunk.vegetative_bud_break_time = 0;
-    shoot_parameters_trunk.tortuosity = 1;
+    shoot_parameters_trunk.tortuosity = 0.75;
     shoot_parameters_trunk.internode_length_max = 0.05;
     shoot_parameters_trunk.internode_length_decay_rate = 0;
     shoot_parameters_trunk.defineChildShootTypes({"proleptic"}, {1});
@@ -2119,24 +2281,25 @@ void PlantArchitecture::initializePistachioTreeShoots() {
     shoot_parameters_proleptic.phytomer_parameters = phytomer_parameters_pistachio;
     shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = PistachioPhytomerCreationFunction;
     shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = PistachioPhytomerCallbackFunction;
-    shoot_parameters_proleptic.max_nodes.uniformDistribution(16, 24);
-    shoot_parameters_proleptic.max_nodes_per_season.uniformDistribution(8, 12);
+    shoot_parameters_proleptic.phytomer_parameters.internode.pitch.uniformDistribution(-15,15);
+    shoot_parameters_proleptic.max_nodes = 12;//.uniformDistribution(16, 24);
+    shoot_parameters_proleptic.max_nodes_per_season.uniformDistribution(8, 10);
     shoot_parameters_proleptic.phyllochron_min = 2.0;
     shoot_parameters_proleptic.elongation_rate_max = 0.25;
-    shoot_parameters_proleptic.girth_area_factor = 8.f;
-    shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.025;
+    shoot_parameters_proleptic.girth_area_factor = 7.f;
+    shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.05;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.7;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
-    shoot_parameters_proleptic.gravitropic_curvature = 500;
-    shoot_parameters_proleptic.tortuosity = 10;
+    shoot_parameters_proleptic.gravitropic_curvature = 350;
+    shoot_parameters_proleptic.tortuosity = 2;
     shoot_parameters_proleptic.insertion_angle_tip.uniformDistribution(45, 55);
     shoot_parameters_proleptic.insertion_angle_decay_rate = 10;
     shoot_parameters_proleptic.internode_length_max = 0.06;
-    shoot_parameters_proleptic.internode_length_min = 0.03;
-    shoot_parameters_proleptic.internode_length_decay_rate = 0.005;
-    shoot_parameters_proleptic.fruit_set_probability = 0.35;
+    shoot_parameters_proleptic.internode_length_min = 0.02;
+    shoot_parameters_proleptic.internode_length_decay_rate = 0.06;
+    shoot_parameters_proleptic.fruit_set_probability = 0.2;
     shoot_parameters_proleptic.flower_bud_break_probability = 0.35;
-    shoot_parameters_proleptic.max_terminal_floral_buds = 4;
+    shoot_parameters_proleptic.max_terminal_floral_buds = 2;
     shoot_parameters_proleptic.flowers_require_dormancy = true;
     shoot_parameters_proleptic.growth_requires_dormancy = true;
     shoot_parameters_proleptic.determinate_shoot_growth = false;
@@ -2167,17 +2330,20 @@ uint PlantArchitecture::buildPistachioTree(const helios::vec3 &base_position) {
         phytomer->setFloralBudState(BUD_DEAD);
     }
 
-    uint Nscaffolds = 4; // context_ptr->randu(4,5);
+    float pitch = deg2rad(50);
+    // addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 1, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), 0, context_ptr->randu(0.f,0.5*M_PI)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
+    // addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 1, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), M_PI, context_ptr->randu(0.f,0.5*M_PI)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
+    // addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 2, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), 0.5*M_PI, context_ptr->randu(0.f,0.5*M_PI)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
+    // addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 2, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), 1.5*M_PI, context_ptr->randu(0.f,0.5*M_PI)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
+    addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 1, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), 0, 0.5*M_PI+context_ptr->randu(-0.2f,0.2f)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
+    addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 1, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), M_PI, 0.5*M_PI+context_ptr->randu(-0.2f,0.2f)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
+    addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 2, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), 0.5*M_PI, 0.5*M_PI+context_ptr->randu(-0.2f,0.2f)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
+    addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 2, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), 1.5*M_PI, 0.5*M_PI+context_ptr->randu(-0.2f,0.2f)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
 
-    for (int i = 0; i < Nscaffolds; i++) {
-        float pitch = context_ptr->randu(deg2rad(65), deg2rad(80));
-        uint uID_shoot = addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - i - 1, 1, make_AxisRotation(pitch, (float(i) + context_ptr->randu(-0.1f, 0.1f)) / float(Nscaffolds) * 2 * M_PI, 0.5 * M_PI), 0.007, 0.06, 1.f, 1.f,
-                                       0.5, "proleptic", 0);
-    }
 
     makePlantDormant(plantID);
 
-    setPlantPhenologicalThresholds(plantID, 165, -1, 3, 7, 20, 200, false);
+    setPlantPhenologicalThresholds(plantID, 165, -1, -1, 7, 20, 200, false);
     plant_instances.at(plantID).max_age = 1095;
 
     return plantID;

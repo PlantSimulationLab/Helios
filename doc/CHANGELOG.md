@@ -1,5 +1,22 @@
 # Changelog
 
+# [1.3.52] 2025-10-02
+
+## Plant Architecture
+- Fixed a bug in the maize phytomer creation function where the scale could be left uninitialized, leading to undefined behavior.
+- Removed a duplicate code block in the tomato phytomer creation function.
+- Added new apple fruiting wall plant model (`apple_fruitingwall`)
+- Fixed fruit set probability calculation when skipping flower stages - now applies compound probability (flower bud break × fruit set) when jumping directly from BUD_ACTIVE to BUD_FRUITING
+- Fixed child shoot insertion angle calculation to properly account for parent petiole position using angular offset
+- Updated pistachio tree parameters for improved canopy structure
+
+## Project Builder
+- Fixed vector bounds checking for write flags (`write_depth`, `write_norm_depth`, `write_segmentation_mask`)
+- Fixed initialization of write flag vectors in `xmlGetValues()` - vectors are now properly sized when no XML values are present
+- Fixed initialization of write flag vectors when adding new rigs via `addRig()`
+- Updated bounding box writing calls to include `classes.txt` filename parameter matching new Radiation API
+- Merged in many project builder bug fixes and updates
+
 # [1.3.51] 2025-09-25
 
 - Added 'validation' page in documentation

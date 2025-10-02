@@ -12,17 +12,17 @@ The Helios radiation model plug-in has automated verification tests that are run
 
 The radiation model has been verified against analytical solutions for several simple geometric configurations that do not involve complex canopy structures. These "toy problem" tests verify fundamental radiation transport physics including view factors, emission, reflection, and scattering.
 
-<b>90-Degree Common-Edge Squares</b>: Two perpendicular square patches sharing a common edge are tested with both shortwave (collimated solar radiation) and longwave (thermal emission) bands. The test verifies proper handling of geometric view factors and reflection between surfaces at right angles (plugins/radiation/tests/selfTest.cpp:14).
+<b>90-Degree Common-Edge Squares</b>: Two perpendicular square patches sharing a common edge are tested with both shortwave (collimated solar radiation) and longwave (thermal emission) bands. The test verifies proper handling of geometric view factors and reflection between surfaces at right angles.
 
-<b>Black Parallel Rectangles</b>: Two parallel black rectangular patches separated by a known distance are used to test diffuse radiation exchange. The model results are compared against the analytical view factor solution for parallel rectangles, validating the Monte Carlo ray tracing accuracy for view factor calculations (plugins/radiation/tests/selfTest.cpp:99).
+<b>Black Parallel Rectangles</b>: Two parallel black rectangular patches separated by a known distance are used to test diffuse radiation exchange. The model results are compared against the analytical view factor solution for parallel rectangles, validating the Monte Carlo ray tracing accuracy for view factor calculations.
 
-<b>Gray Parallel Rectangles</b>: An extension of the black rectangle test that includes non-unity emissivity and reflectivity values to verify proper handling of gray body radiation exchange and multiple scattering between surfaces (plugins/radiation/tests/selfTest.cpp:160).
+<b>Gray Parallel Rectangles</b>: An extension of the black rectangle test that includes non-unity emissivity and reflectivity values to verify proper handling of gray body radiation exchange and multiple scattering between surfaces.
 
-<b>Sphere Radiation Source</b>: A spherical radiation source positioned above a rectangular patch tests the implementation of spherical radiation sources and verifies the geometric view factor calculation between a sphere and a planar surface using analytical solutions (plugins/radiation/tests/selfTest.cpp:238).
+<b>Sphere Radiation Source</b>: A spherical radiation source positioned above a rectangular patch tests the implementation of spherical radiation sources and verifies the geometric view factor calculation between a sphere and a planar surface using analytical solutions.
 
-<b>Second Law Equilibrium Test</b>: An enclosed box with uniform temperature is used to verify that the radiation model satisfies the second law of thermodynamics. All surfaces in thermal equilibrium should emit exactly their black-body radiation times their emissivity, regardless of the complexity of multiple reflections within the enclosure (plugins/radiation/tests/selfTest.cpp:490).
+<b>Second Law Equilibrium Test</b>: An enclosed box with uniform temperature is used to verify that the radiation model satisfies the second law of thermodynamics. All surfaces in thermal equilibrium should emit exactly their black-body radiation times their emissivity, regardless of the complexity of multiple reflections within the enclosure.
 
-<b>Anisotropic Diffuse Radiation</b>: Tests verify that horizontal patches receive the correct amount of diffuse radiation when anisotropic extinction coefficients are applied, ensuring proper implementation of directionally-dependent radiation attenuation (plugins/radiation/tests/selfTest.cpp:1188).
+<b>Anisotropic Diffuse Radiation</b>: Tests verify that horizontal patches receive the correct amount of diffuse radiation when anisotropic extinction coefficients are applied, ensuring proper implementation of directionally-dependent radiation attenuation.
 
 All toy problem tests achieve Monte Carlo convergence with relative errors below 0.5% when averaged over 500 ensemble runs, demonstrating the accuracy of the fundamental radiation transport implementation.
 
@@ -30,90 +30,76 @@ All toy problem tests achieve Monte Carlo convergence with relative errors below
 
 For simplified canopy architectures, theoretical solutions exist for 
 
--# <b>Canopy Light Interception</b>: The homogeneous canopy patch test validates light interception calculations against Beer's law analytical solutions. A synthetic canopy is constructed with randomly positioned and oriented square leaf patches distributed throughout a 3D domain. The test compares both direct and diffuse radiation interception between model predictions and theoretical expectations.
+1 - <b>Canopy Light Interception</b>: The homogeneous canopy patch test validates light interception calculations against Beer's law analytical solutions. A synthetic canopy is constructed with randomly positioned and oriented square leaf patches distributed throughout a 3D domain. The test compares both direct and diffuse radiation interception between model predictions and theoretical expectations.
 
-    For direct radiation at solar zenith angle \f$\theta_s\f$, the theoretical canopy light interception follows:
-    \f[I_{direct} = 1 - \exp\left(-\frac{0.5 \times LAI}{\cos(\theta_s)}\right)\f]
+   For direct radiation at solar zenith angle \f$\theta_s\f$, the theoretical canopy light interception follows:
+   \f[I_{direct} = 1 - \exp\left(-\frac{0.5 \times LAI}{\cos(\theta_s)}\right)\f]
 
-    For diffuse radiation, the theoretical interception integrates over all sky directions:
-    \f[I_{diffuse} = \int_0^{\pi/2} 2\left(1 - \exp\left(-\frac{0.5 \times LAI}{\cos(\theta)}\right)\right) \cos(\theta) \sin(\theta) d\theta\f]
+   For diffuse radiation, the theoretical interception integrates over all sky directions:
+   \f[I_{diffuse} = \int_0^{\pi/2} 2\left(1 - \exp\left(-\frac{0.5 \times LAI}{\cos(\theta)}\right)\right) \cos(\theta) \sin(\theta) d\theta\f]
 
-    The test creates a canopy with leaf area index (LAI) = 2.0, distributed over a 50m × 50m domain with 3m height. Ground-based radiation measurements and leaf-intercepted radiation are calculated within a central 40m × 40m area to minimize edge effects. Both direct (solar zenith angle = 36°) and diffuse radiation scenarios are tested.
+   The test creates a canopy with leaf area index (LAI) = 2.0, distributed over a 50m × 50m domain with 3m height. Ground-based radiation measurements and leaf-intercepted radiation are calculated within a central 40m × 40m area to minimize edge effects. Both direct (solar zenith angle = 36°) and diffuse radiation scenarios are tested.
 
-    Model results demonstrate excellent agreement with theoretical predictions, with relative errors below 1% for both direct and diffuse radiation interception. This validates the accuracy of the Monte Carlo ray tracing implementation for randomly oriented surfaces in complex 3D canopy geometries (plugins/radiation/tests/selfTest.cpp:731).
+   Model results demonstrate excellent agreement with theoretical predictions, with relative errors below 1% for both direct and diffuse radiation interception. This validates the accuracy of the Monte Carlo ray tracing implementation for randomly oriented surfaces in complex 3D canopy geometries (plugins/radiation/tests/selfTest.cpp:731).
 
--# Canopy Sunlit/Shaded Leaf Area Fraction
+2 - <b>Canopy Sunlit/Shaded Leaf Area Fraction</b>
 
-    Analytical expressions are available for calculating the fraction of sunlit and shaded leaf area, both in homogeneous canopies and in heterogeneous canopies. The equations for which are given in <a href="https://doi.org/10.1016/j.agrformet.2025.110680">Bailey (2025)</a>.
+   Analytical expressions are available for calculating the fraction of sunlit and shaded leaf area, both in homogeneous canopies and in heterogeneous canopies. The equations for which are given in <a href="https://doi.org/10.1016/j.agrformet.2025.110680">Bailey (2025)</a>.
 
-    \ref radiation_BeersLaw_tutorial "Tutorial 11" provides a detailed walkthrough of the sunlit-shaded leaf area calculation for a homogeneous canopy, which yields an agreement between Helios and the analytical solution with relative errors around 1%.
+   \ref radiation_BeersLaw_tutorial "Tutorial 11" provides a detailed walkthrough of the sunlit-shaded leaf area calculation for a homogeneous canopy, which yields an agreement between Helios and the analytical solution with relative errors around 1%.
 
-    The figure below from <a href="https://doi.org/10.1016/j.agrformet.2025.110680">Bailey (2025)</a> shows the result for 3 different crown types. I should be noted that the theoretical solution has some error, particularly for the conical crown shape since it results in very short radiative path lengths that violate the assumptions of a turbid medium.
+   The figure below from <a href="https://doi.org/10.1016/j.agrformet.2025.110680">Bailey (2025)</a> shows the result for 3 different crown types. I should be noted that the theoretical solution has some error, particularly for the conical crown shape since it results in very short radiative path lengths that violate the assumptions of a turbid medium.
 
-    \image html fsun_Bailey_2025.jpg width=600
-    <b>Figure.</b> Comparison of theoretical model for \f$f_{sun}\f$ and the value computed by the 3D model for four different single, isolated crown shapes: (a) spherical crown, (b) ellipsoidal crown, and (c) conical crown. Three different leaf angle distributions were simulated (spherical \f$\circ\f$, planophile \f$\triangle\f$, and erectophile \f$\square\f$). The dotted diagonal line corresponds to perfect 1:1 agreement.
+   \image html fsun_Bailey_2025.jpg width=600
+   <b>Figure.</b> Comparison of theoretical model for \f$f_{sun}\f$ and the value computed by the 3D model for four different single, isolated crown shapes: (a) spherical crown, (b) ellipsoidal crown, and (c) conical crown. Three different leaf angle distributions were simulated (spherical \f$\circ\f$, planophile \f$\triangle\f$, and erectophile \f$\square\f$). The dotted diagonal line corresponds to perfect 1:1 agreement.
 
--# Canopy Absorbed Flux Probability Distributions
+3 - <b>Canopy Absorbed Flux Probability Distributions</b>
 
-    Analytical expresssions for the probability distribution of absorbed direct, diffuse, and scattered radiation fluxes within a horizontally homogeneous canopy are given in <a href="https://doi.org/10.1016/j.agrformet.2022.109034">Bailey and Fu (2022)</a>. This is a particularly strong verification test of the radiation model because it shows that it not only produces correct integrated fluxes, but also correcly predicts the probability distribution of fluxes across the canopy.
+   Analytical expressions for the probability distribution of absorbed direct, diffuse, and scattered radiation fluxes within a horizontally homogeneous canopy are given in <a href="https://doi.org/10.1016/j.agrformet.2022.109034">Bailey and Fu (2022)</a>. This is a particularly strong verification test of the radiation model because it shows that it not only produces correct integrated fluxes, but also correcly predicts the probability distribution of fluxes across the canopy.
 
-    \image html directPDF_BaileyFu_2022.jpg width=600
-    <b>Figure.</b> Probability density function of absorbed direct radiation flux within a horizontally homogeneous canopy of \f$LAI = 1\f$. The absorbed direct radiation flux, \f$R_{L,dir}\f$, is normalized by the incoming direct radiation flux on a surface perpendicular to the sun direction, \f$R_{0,dir}\f$. Azimuthally isotropic leaf angle distributions of spherical, uniform, planophile, and erectophile are shown in each pane as indicated by the title. Each line corresponds to a different solar zenith angle. Open symbols correspond to the distribution obtained from 3D simulation.
+   \image html directPDF_BaileyFu_2022.jpg width=600
+   <b>Figure.</b> Probability density function of absorbed direct radiation flux within a horizontally homogeneous canopy of \f$LAI = 1\f$. The absorbed direct radiation flux, \f$R_{L,dir}\f$, is normalized by the incoming direct radiation flux on a surface perpendicular to the sun direction, \f$R_{0,dir}\f$. Azimuthally isotropic leaf angle distributions of spherical, uniform, planophile, and erectophile are shown in each pane as indicated by the title. Each line corresponds to a different solar zenith angle. Open symbols correspond to the distribution obtained from 3D simulation.
 
-    \image html diffusePDF_BaileyFu_2022.jpg width=600
-    <b>Figure.</b> Probability density function of absorbed diffuse radiation flux within a horizontally homogeneous canopy of \f$LAI = 1\f$. The absorbed diffuse radiation flux, \f$R_{L,diff}\f$, is normalized by the incoming diffuse radiation flux on a surface perpendicular to the sun direction, \f$R_{0,diff}\f$. Azimuthally isotropic leaf angle distributions of spherical, uniform, planophile, and erectophile are shown in each pane as indicated by the title.  Each line corresponds to a different angular distribution of incoming diffuse radiation. Open symbols correspond to the distribution obtained from 3D simulation. In all cases shown, the solar zenith angle was 0 (vertical).
+   \image html diffusePDF_BaileyFu_2022.jpg width=600
+   <b>Figure.</b> Probability density function of absorbed diffuse radiation flux within a horizontally homogeneous canopy of \f$LAI = 1\f$. The absorbed diffuse radiation flux, \f$R_{L,diff}\f$, is normalized by the incoming diffuse radiation flux on a surface perpendicular to the sun direction, \f$R_{0,diff}\f$. Azimuthally isotropic leaf angle distributions of spherical, uniform, planophile, and erectophile are shown in each pane as indicated by the title.  Each line corresponds to a different angular distribution of incoming diffuse radiation. Open symbols correspond to the distribution obtained from 3D simulation. In all cases shown, the solar zenith angle was 0 (vertical).
 
-    \image html scatterPDF_BaileyFu_2022.jpg width=600
-    <b>Figure.</b> Probability density function of absorbed scattered radiation flux within a horizontally homogeneous canopy of \f$LAI = 1\f$. Azimuthally isotropic leaf angle distributions of spherical, uniform, planophile, and erectophile are shown in each pane as indicated by the title. Each line corresponds to a different solar zenith angle. Open symbols correspond to the distribution obtained from 3D simulation. In all cases, the diffuse radiation fraction was \f$f_{diff}\f$.
+   \image html scatterPDF_BaileyFu_2022.jpg width=600
+   <b>Figure.</b> Probability density function of absorbed scattered radiation flux within a horizontally homogeneous canopy of \f$LAI = 1\f$. Azimuthally isotropic leaf angle distributions of spherical, uniform, planophile, and erectophile are shown in each pane as indicated by the title. Each line corresponds to a different solar zenith angle. Open symbols correspond to the distribution obtained from 3D simulation. In all cases, the diffuse radiation fraction was \f$f_{diff}\f$.
 
--# ROMC Radiation Camera Tests
+4 - <b>ROMC Radiation Camera Tests</b>
 
-    The radiation camera model has been verified against several tests from the <a href="https://romc.jrc.ec.europa.eu">ROMC benchmark suite</a>. These tests involve comparing synthetic images generated by the radiation camera model against reference images for a variety of geometric and radiometric scenarios. Select results are given below, with more detailed description and analysis given in <a href="https://doi.org/10.34133/plantphenomics.0189">Lei et al. (2024)</a>.
+   The radiation camera model has been verified against several tests from the <a href="https://romc.jrc.ec.europa.eu">ROMC benchmark suite</a>. These tests involve comparing synthetic images generated by the radiation camera model against reference images for a variety of geometric and radiometric scenarios. Select results are given below, with more detailed description and analysis given in <a href="https://doi.org/10.34133/plantphenomics.0189">Lei et al. (2024)</a>.
 
-    | ROMC Test    | SKILL Score |
-    |--------------|-------------|
-    | brfpp_uc_sgl | 98.00       |
-    | brfpp_co_sgl | 92.65       |  
-    | brfop        | 97.52       |
-    | fabs         | 99.98       |
+   | ROMC Test    | SKILL Score |
+   |--------------|-------------|
+   | brfpp_uc_sgl | 98.00       |
+   | brfpp_co_sgl | 92.65       |  
+   | brfop        | 97.52       |
+   | fabs         | 99.98       |
 
-    \image html ROMC_HET51_DIS_UNI_NIR_00.jpg width=700
-    <b>Figure.</b> The bi-directional reflectance factor (BRF) curve of experiment HET51_DIS_UNI_NIR_00 measured in the ROMC case brfop and corresponding synthetic images captured by simulated cameras at multiple viewing zenith angles (red numbers below images).
+   \image html ROMC_HET51_DIS_UNI_NIR_00.jpg width=700
+   <b>Figure.</b> The bi-directional reflectance factor (BRF) curve of experiment HET51_DIS_UNI_NIR_00 measured in the ROMC case brfop and corresponding synthetic images captured by simulated cameras at multiple viewing zenith angles (red numbers below images).
 
-    \image html ROMC_Wellington.jpeg width=450
-    <b>Figure.</b> The BRF (brfpp) curves of the actual scene “Wellington Citrus Orchard” obtained by RAMI IV benchmark models and the present ray-tracing model (Helios-RT).
+   \image html ROMC_Wellington.jpeg width=450 
+   <b>Figure.</b> The BRF (brfpp) curves of the actual scene “Wellington Citrus Orchard” obtained by RAMI IV benchmark models and the present ray-tracing model (Helios-RT).
 
 \subsection RadiationModelValidation Field Validation
 
--# Vineyard Canopy Light Interception
+1 - <b>Vineyard Canopy Light Interception</b>
 
-    <a href="">Ponce de León et al. (2025)</a> conducted a field validation of the Helios radiation model in five different vineyard designs. Measurements consisted of differential measurements of all-wave solar radiation flux above and below the canopy. Results are summarized in the figure below.
+   <a href="">Ponce de León et al. (2025)</a> conducted a field validation of the Helios radiation model in five different vineyard designs. Measurements consisted of differential measurements of all-wave solar radiation flux above and below the canopy. Results are summarized in the figure below.
 
-    \image html vineyard_radiation_validation.jpg width=800
-    <b>Figure.</b> Measured and simulated radiation flux reaching the inter-row in the PAR and NIR band (\f$R_{inter-row}\f$) in five different vineyard designs. This includes split grape canopy cases with rows orientated NE-SW (Site 1) and NW-SE (Site 2) at Barrelli Creek, Cloverdale CA; a double vertical grape canopy case with rows oriented E-W (Site 3) and a split canopy case with rows oriented E-W (Site 4) at Madera, CA; and a split grape canopy with rows oriented E-W in Lodi, CA (Site 5). Measurements and simulations were conducted every 1 min (Sites 1, 2, and 4) and every 15 min (Sites 3 and 5). The dashed magenta line is the measurement, and the solid black like is the Helios simulation. \f$Q_0\f$ indicates the incoming radiation flux.
+   \image html vineyard_radiation_validation.jpg width=800
+   <b>Figure.</b> Measured and simulated radiation flux reaching the inter-row in the PAR and NIR band (\f$R_{inter-row}\f$) in five different vineyard designs. This includes split grape canopy cases with rows orientated NE-SW (Site 1) and NW-SE (Site 2) at Barrelli Creek, Cloverdale CA; a double vertical grape canopy case with rows oriented E-W (Site 3) and a split canopy case with rows oriented E-W (Site 4) at Madera, CA; and a split grape canopy with rows oriented E-W in Lodi, CA (Site 5). Measurements and simulations were conducted every 1 min (Sites 1, 2, and 4) and every 15 min (Sites 3 and 5). The dashed magenta line is the measurement, and the solid black like is the Helios simulation. \f$Q_0\f$ indicates the incoming radiation flux.
 
--# Orchard Canopy Light Interception
+2 - <b>Orchard Canopy Light Interception</b>
 
-    Ponce de León et al. (under review) conducted a field validation of the Helios radiation model in an almond and olive orchard canopy. Measurements consisted of differential measurements of all-wave solar radiation flux above and below the canopy. Results are summarized in the figure below.
+   Ponce de León et al. (under review) conducted a field validation of the Helios radiation model in an almond and olive orchard canopy. Measurements consisted of differential measurements of all-wave solar radiation flux above and below the canopy. Results are summarized in the figure below.
 
-    \image html orchard_radiation_validation.png width=600
+   \image html orchard_radiation_validation.png width=600
     <b>Figure.</b> Measured and simulated 15-minute radiation flux reaching the inter-row in the PAR and NIR band (\f$R_{inter-row}\f$, W m<sup>-2</sup>) in an (a) almond orchard with rows orientated: NE-SW at Solano, CA on July 18, 2023 and in an (b) olive orchard with rows oriented N-S at Glenn, CA on July 18, 2024.
 
 \section EnergyBalanceTemperature Energy Balance Surface Temperature Model Validation
-
--# Grape Berry Temperature Measurements
-
-    <a href="https://doi.org/10.1016/j.agrformet.2021.108431">Ponce de León and Bailey (2021)</a>
-
-    \image html berry_temperature_validation.jpg width=700
-    <b>Figure.</b> Daily course of simulated and average measured grape berry temperature in the east and west side of the vine for trellis systems (a) VSP, (b) Wye, (c) Goblet and (d) Unilateral.
-
--# Cowpea Leaf Temperature Measurements
-
-    <a href="https://doi.org/10.34133/plantphenomics.0169">Mayanja et al. (2024)</a>
-
-    \image html cowpea_leaf_temperature_validation.png width=400
-    <b>Figure.</b> Measured and simulated cowpea leaf temperature (T<sub>leaf</sub>, °C) for four different cowpea genotypes.
 
 \subsection EnergyBalanceTemperatureVerification Verification Tests
 
@@ -121,11 +107,30 @@ An important verification test of the energy balance model, aside from verifying
 
 \subsection EnergyBalanceTemperatureValidation Field Validation
 
+1 - <b>Grape Berry Temperature Measurements</b>
+
+<a href="https://doi.org/10.1016/j.agrformet.2021.108431">Ponce de León and Bailey (2021)</a>
+
+\image html berry_temperature_validation.jpg width=700
+<b>Figure.</b> Daily course of simulated and average measured grape berry temperature in the east and west side of the vine for trellis systems (a) VSP, (b) Wye, (c) Goblet and (d) Unilateral.
+
+2 - <b>Cowpea Leaf Temperature Measurements</b>
+
+<a href="https://doi.org/10.34133/plantphenomics.0169">Mayanja et al. (2024)</a>
+
+\image html cowpea_leaf_temperature_validation.png width=400
+<b>Figure.</b> Measured and simulated cowpea leaf temperature (T<sub>leaf</sub>, °C) for four different cowpea genotypes.
+
+3 - <b>Redbud Tree Leaf Temperature Measurements</b>
+
+\image html redbud_leaf_temperature_validation.png width=600
+<b>Figure.</b> Comparison between simulated leaf temperature and an ensemble of measurements using a LICOR LI-600 porometer across a day.
+
 \section ETValidation Canopy Evapotranspiration Validation
 
--# Almond Lysimeter Measurements
+1 - <b>Almond Lysimeter Measurements</b>
 
--# Almond Eddy Covariance Measurements
+2 - <b>Almond Eddy Covariance Measurements</b>
 
 \section PhotosynthesisValidation Canopy Photosynthesis Validation
 

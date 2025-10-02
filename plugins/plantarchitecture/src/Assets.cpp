@@ -565,7 +565,7 @@ uint MaizeEarPrototype(helios::Context *context_ptr, uint subdivisions) {
 void MaizePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoot_node_index, uint parent_shoot_node_index, uint shoot_max_nodes, float plant_age) {
 
     // set leaf scale based on position along the shoot
-    float scale;
+    float scale = 1.f;
     if (shoot_node_index <= 5) {
         scale = fmin(1.f, 0.7 + 0.3 * float(shoot_node_index) / 5.f);
         phytomer->scaleInternodeMaxLength(scale);
@@ -882,10 +882,6 @@ void TomatoPhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint sho
 
     if (shoot_node_index < 8 && phytomer->rank == 0) {
         phytomer->setFloralBudState(BUD_DEAD);
-    }
-    if (phytomer->rank > 1) {
-        phytomer->setFloralBudState(BUD_DEAD);
-        phytomer->setVegetativeBudState(BUD_DEAD);
     }
     if (phytomer->rank > 1) {
         phytomer->setFloralBudState(BUD_DEAD);

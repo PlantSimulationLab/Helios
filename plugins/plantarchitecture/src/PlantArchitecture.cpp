@@ -4598,13 +4598,19 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                             if (shoot->shoot_parameters.phytomer_parameters.inflorescence.fruit_prototype_function != nullptr) {
                                 if ((fbud.state == BUD_FLOWER_OPEN && plant_instance.dd_to_fruit_set >= 0.f) ||
                                     // flower opened and fruit set is enabled
-                                    (fbud.state == BUD_ACTIVE && plant_instance.dd_to_flower_initiation < 0.f && plant_instance.dd_to_flower_opening < 0.f && plant_instance.dd_to_fruit_set >= 0.f) ||
-                                    // jumped straight to fruit set with no flowering
+                                    (fbud.state == BUD_ACTIVE && plant_instance.dd_to_flower_initiation < 0.f && (plant_instance.dd_to_flower_opening < 0.f || shoot->shoot_parameters.phytomer_parameters.inflorescence.flower_prototype_function == nullptr) && plant_instance.dd_to_fruit_set >= 0.f) ||
+                                    // jumped straight to fruit set with no flowering (either flower opening disabled OR no flower prototype defined)
                                     (fbud.state == BUD_FLOWER_CLOSED && plant_instance.dd_to_flower_opening < 0.f && plant_instance.dd_to_fruit_set >= 0.f)) {
                                     // jumped from closed flower to fruit set with no flower opening
                                     if (fbud.time_counter >= plant_instance.dd_to_fruit_set) {
                                         fbud.time_counter = 0;
-                                        if (context_ptr->randu() < shoot->shoot_parameters.fruit_set_probability.val()) {
+                                        // When skipping flowering entirely (BUD_ACTIVE -> BUD_FRUITING), apply compound probability
+                                        float fruit_set_prob = shoot->shoot_parameters.fruit_set_probability.val();
+                                        if (fbud.state == BUD_ACTIVE) {
+                                            // Apply compound probability: flower_bud_break_probability * fruit_set_probability
+                                            fruit_set_prob *= shoot->shoot_parameters.flower_bud_break_probability.val();
+                                        }
+                                        if (context_ptr->randu() < fruit_set_prob) {
                                             phytomer->setFloralBudState(BUD_FRUITING, fbud);
                                         } else {
                                             phytomer->setFloralBudState(BUD_DEAD, fbud);
@@ -4697,7 +4703,9 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                                 //                                new_shoot_parameters->insertion_angle_tip.resample();
                                 //                            }
                                 float insertion_angle_adjustment = fmin(shoot->shoot_parameters.insertion_angle_tip.val() + shoot->shoot_parameters.insertion_angle_decay_rate.val() * float(parent_node_count - phytomer->shoot_index.x - 1), 90.f);
-                                AxisRotation base_rotation = make_AxisRotation(deg2rad(insertion_angle_adjustment), deg2rad(new_shoot_parameters->base_yaw.val()), deg2rad(new_shoot_parameters->base_roll.val()));
+                                // Calculate angular offset for child shoot based on parent petiole position
+                                float budrot = float(parent_petiole_index) * 2.f * PI_F / float(phytomer->axillary_vegetative_buds.size());
+                                AxisRotation base_rotation = make_AxisRotation(deg2rad(insertion_angle_adjustment), deg2rad(new_shoot_parameters->base_yaw.val()) + budrot, deg2rad(new_shoot_parameters->base_roll.val()));
                                 new_shoot_parameters->base_yaw.resample();
                                 if (shoot->shoot_parameters.insertion_angle_decay_rate.val() == 0) {
                                     shoot->shoot_parameters.insertion_angle_tip.resample();
