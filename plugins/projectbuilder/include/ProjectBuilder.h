@@ -74,6 +74,7 @@ struct ImVec2;
 struct ImVec4;
 struct ImGuiIO;
 struct ImFont;
+#include <nfd.h>
 #endif // HELIOS_VISUALIZER
 
 

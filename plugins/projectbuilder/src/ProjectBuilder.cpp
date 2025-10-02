@@ -14,6 +14,8 @@
 #ifdef ENABLE_HELIOS_VISUALIZER
 #include <nfd.h>
 #endif
+#include <cstring>
+#include <cstdlib>
 #endif
 
 // OpenGL/ImGui includes - must come after Windows headers but before ProjectBuilder.h
@@ -157,6 +159,9 @@ void toggle_button(const char *str_id, bool *v) {
     draw_list->AddCircleFilled(ImVec2(p.x + radius + t * (width - radius * 2.0f), p.y + radius), radius - 1.5f, IM_COL32(255, 255, 255, 255));
 #endif // HELIOS_VISUALIZER
 }
+
+// Global flag to track NFD corruption
+static bool nfd_corrupted_imgui = false;
 
 std::string file_dialog() {
     std::string file_name;
@@ -781,12 +786,12 @@ void ProjectBuilder::record() {
                         }
                         for (auto &box_pair: bounding_boxes_map) {
                             if (bounding_boxes_object.find(box_pair.first) != bounding_boxes_object.end() ) {
-                                radiation->writeImageBoundingBoxes_ObjectData(cameralabel, box_pair.first, box_pair.second, band_group_ + std::to_string(i) + "_bbox", image_dir + rig_label + '/', true);
+                                radiation->writeImageBoundingBoxes_ObjectData(cameralabel, box_pair.first, box_pair.second, band_group_ + std::to_string(i) + "_bbox", "classes.txt", image_dir + rig_label + '/');
                                 if (write_segmentation_mask[rig_dict[current_rig]]) {
                                     radiation->writeImageSegmentationMasks_ObjectData(camera_label, box_pair.first, box_pair.second, band_group_ + std::to_string(i) + "_mask", image_dir + rig_label + '/', true);
                                 }
                             } else if (bounding_boxes_primitive.find(box_pair.first) == bounding_boxes_object.end()) {
-                                radiation->writeImageBoundingBoxes(cameralabel, box_pair.first, box_pair.second, band_group_ + std::to_string(i) + "_bbox", image_dir + rig_label + '/', true);
+                                radiation->writeImageBoundingBoxes(cameralabel, box_pair.first, box_pair.second, band_group_ + std::to_string(i) + "_bbox", "classes.txt", image_dir + rig_label + '/');
                                 if (write_segmentation_mask[rig_dict[current_rig]]) {
                                     radiation->writeImageSegmentationMasks(camera_label, box_pair.first, box_pair.second, band_group_ + std::to_string(i) + "_mask", image_dir + rig_label + '/', true);
                                 }
@@ -1951,7 +1956,6 @@ void ProjectBuilder::visualize() {
 
     // GLFWwindow* window = glfwCreateWindow(640, 480, "My Title", nullptr, nullptr);
     GLFWwindow *window = (GLFWwindow *) visualizer->getWindow();
-
     glfwShowWindow(window);
 
     bool show_demo_window = false;
@@ -2380,7 +2384,10 @@ void ProjectBuilder::visualize() {
         // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         visualizer->plotOnce(!io.WantCaptureMouse);
         ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        ImDrawData* draw_data = ImGui::GetDrawData();
+
+        ImGui_ImplOpenGL3_RenderDrawData(draw_data);
         glfwSwapBuffers(window);
         if (!io.WantCaptureMouse && !ImGui::IsAnyItemHovered()) {
             glfwWaitEvents();
@@ -2832,11 +2839,17 @@ void ProjectBuilder::xmlGetValues() {
 #ifdef ENABLE_RADIATION_MODEL
     rig_labels.clear();
     rig_labels_set.clear();
+    write_depth.clear();
+    write_norm_depth.clear();
+    write_segmentation_mask.clear();
     rig_dict = getNodeLabels("label", "rig", rig_labels);
     for (auto rig: rig_labels) {
         rig_labels_set.insert(rig);
         rig_position_noise.push_back(std::vector<distribution>{distribution{}, distribution{}, distribution{}});
         rig_lookat_noise.push_back(std::vector<distribution>{distribution{}, distribution{}, distribution{}});
+        write_depth.push_back(false);
+        write_norm_depth.push_back(false);
+        write_segmentation_mask.push_back(false);
     }
     current_rig = rig_labels[0];
     xmlGetValues("color", "rig", rig_colors);
@@ -2885,6 +2898,12 @@ void ProjectBuilder::xmlGetValues() {
         } else {
             write_segmentation_mask.push_back(false);
         }
+    }
+    // Ensure write vectors are properly sized even if no XML values were found
+    while (write_depth.size() < rig_labels.size()) {
+        write_depth.push_back(false);
+        write_norm_depth.push_back(false);
+        write_segmentation_mask.push_back(false);
     }
     // CAMERA BLOCK
     camera_names.clear();
@@ -4906,7 +4925,11 @@ void ProjectBuilder::rigTab() {
         // ####### WRITE DEPTH ####### //
         ImGui::Text("Write:");
         ImGui::SameLine();
-        bool write_depth_ = write_depth[rig_dict[current_rig]];
+        int rig_index = rig_dict[current_rig];
+        if (rig_index >= write_depth.size()) {
+            helios_runtime_error("ERROR (ProjectBuilder::rigTab): rig_dict[" + current_rig + "] = " + std::to_string(rig_index) + " is out of bounds for write_depth vector of size " + std::to_string(write_depth.size()));
+        }
+        bool write_depth_ = write_depth[rig_index];
         ImGui::Checkbox("Depth Images", &write_depth_);
         write_depth[rig_dict[current_rig]] = write_depth_;
         ImGui::SameLine();
@@ -6183,6 +6206,12 @@ void ProjectBuilder::addRig(std::string new_rig_label) {
     rig_colors.push_back(rig_colors[rig_dict[current_rig]]);
     rig_position_noise.push_back(std::vector<distribution>{distribution{}, distribution{}, distribution{}});
     rig_lookat_noise.push_back(std::vector<distribution>{distribution{}, distribution{}, distribution{}});
+
+    // Add default values for write flags
+    write_depth.push_back(false);
+    write_norm_depth.push_back(false);
+    write_segmentation_mask.push_back(false);
+
     // current_rig = new_rig_label;
     std::string parent = "rig";
     pugi::xml_node rig_block = helios.child(parent.c_str());
