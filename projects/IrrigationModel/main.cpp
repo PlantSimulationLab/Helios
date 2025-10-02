@@ -16,7 +16,7 @@ int main(){
     // - Lateral spacing: 12m
     // - Connection type: "vertical" (could also be "horizontal")
 
-    double Pw = 30.0;
+    double Pw = 35.0;
         // system.createCompleteSystem(
         //     Pw,    // Pw (psi)
         //     44.0 * IrrigationModel::FEET_TO_METER,   // fieldLength (m)
@@ -35,9 +35,9 @@ int main(){
     double lineSpacing = 22.0* FEET_TO_METER;
     double sprinklerSpacing = 16.0* FEET_TO_METER;
     double fieldWidth = 3*sprinklerSpacing;
-    double fieldLength = 2*lineSpacing;
+    double fieldLength = 3*lineSpacing;
     std::vector<Position> Boundary = { //rectangular field
-         {0, 0}, {0,fieldWidth}, {fieldLength, fieldWidth}, {fieldLength,0} //coordinates need to be in anti-clockwise
+         {0, 0}, {fieldLength,0}, {fieldLength, fieldWidth}, {0,fieldWidth} //coordinates need to be in anti-clockwise
     };
 
    // Example of how to use the irregular system
@@ -48,8 +48,10 @@ int main(){
         {0, 0}, {100, 0}, {140, 50}, {100, 100}, {50, 150}, {0, 100}
     };
 
-  system.createIrregularSystem(Pw, Boundary, lineSpacing, sprinklerSpacing, "vertical", "NPC_Nelson_flat_barb",
-                             SubmainPosition::NORTH);
+  // system.createIrregularSystem(Pw, Boundary, sprinklerSpacing, lineSpacing, "vertical", "NPC_Nelson_flat_barb"
+  //                            SubmainPosition::NORTH);
+    system.createIrregularSystem(Pw, Boundary, sprinklerSpacing, lineSpacing, "vertical", "NPC_Toro_sharp_barb",
+                           SubmainPosition::NORTH);
    // system.createIrregularSystem(Pw, Boundary, sprinklerSpacing, lineSpacing, "vertical",
                           //     SubmainPosition::MIDDLE);
     // system.createIrregularSystem(Pw, irregularBoundary, 16.0, 16.0, "vertical", SubmainPosition::MIDDLE);
@@ -82,8 +84,8 @@ int main(){
     std::cout << "Total nodes: " << system.nodes.size() << "\n";
     std::cout << "Total links: " << system.links.size() << "\n";
 
-    const double Q_specified = system.calculateEmitterFlow("NPC_Nelson_flat_barb", Pw);
-    HydraulicResults results = system.calculateHydraulics(true, "NPC_Nelson_flat_barb",Q_specified, Pw, 1.5, 2.0);     std::cout << "NodalPressures: ";
+    const double Q_specified = system.calculateEmitterFlow("NPC_Toro_sharp_barb", Pw);
+    HydraulicResults results = system.calculateHydraulics(false, "NPC_Toro_sharp_barb",Q_specified, Pw, 1.5, 2.0);     std::cout << "NodalPressures: ";
 
    // HydraulicResults results = system.calculateHydraulics(false, "NPC_Nelson_flat_barb", Q_specified, Pw, 1.5, 2.0);
    // std::cout << "NodalPressures: ";
@@ -114,6 +116,7 @@ int main(){
         out << id << " "
             << node.position.x << " "
             << node.position.y << " "
+            << node.position.z << " "
             << node.type << " "
             << node.pressure << " "
             << (node.is_fixed ? 1 : 0) << " "
@@ -135,6 +138,12 @@ int main(){
     out.close();
 
     std::cout << "Hydraulic results written to hydraulics_output.txt\n";
+
+    std::vector<PressureLossResult> barbToEmitterLosses = system.getBarbToEmitterPressureLosses();
+    system.printPressureLossAnalysis(system);
+    system.writePressureLossesToFile(system, "/home/yuanzzzy/CLionProjects/Helios/plugins/irrigation/utilities/pressure_losses.txt");
+
+
 
     return 0;
 

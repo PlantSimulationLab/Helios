@@ -39,6 +39,7 @@ struct SprinklerAssembly {
     std:: string emitterType;
     double emitter_x;  // flow power
     double emitter_k; // flow coefficient
+    double stakeHeight;
     std:: string barbType;
 };
 
@@ -68,6 +69,7 @@ public:
 struct Position {
     double x;
     double y;
+    double z; //elevation
 
     // distance calculation
     double distanceTo(const Position& other) const {
@@ -113,6 +115,15 @@ struct HydraulicResults {
     int iterations = 0;
 };
 
+
+struct PressureLossResult {
+    int fromNode;
+    int toNode;
+    double pressureLoss;
+};
+
+
+
 enum class SubmainPosition {
     NORTH,
     SOUTH,
@@ -155,7 +166,15 @@ public:
      * \return 0 if test was successful, 1 if test failed.
      */
     static int selfTest(int argc = 0, char** argv = nullptr);
+    std::vector<PressureLossResult> getBarbToEmitterPressureLosses() const;
+    std::vector<PressureLossResult> getLateralToBarbPressureLosses() const;
+    void printPressureLossAnalysis(const IrrigationModel& system);
+    void writePressureLossesToFile(const IrrigationModel& system, const std::string& filename);
 
+ //   std::vector<double> getBarbToEmitterPressureLosses() const;
+ //   std::vector<double> getLateralToBarbPressureLosses() const;
+    double getPressureDifference(int nodeId1, int nodeId2) const;
+    std::vector<std::pair<int, int>> findConnectedNodePairs(const std::string& type1, const std::string& type2) const;
 
 private:
 
@@ -198,8 +217,8 @@ private:
     void validateSubmainConnectivity() const;
     void validateMinimumSprinklersPerRow() const;
     void validateCompleteSprinklerUnits() const;
-    void  addMissingSprinklerUnits(double rowX, const std::vector<int>& existingSprinklers, int count);
-    void ensureMinimumSprinklersPerRow();
+    void addMissingSprinklerUnits(double rowX, const std::vector<int>& existingSprinklers, int count, const std::string& sprinklerConfig);
+    void ensureMinimumSprinklersPerRow(const std::string& sprinklerConfig);
     void ensureAllRowsConnected();
     Position calculateLateralMidpoint(const Link* lateral) const;
     bool hasCompleteSprinklerUnit(int junctionId) const;

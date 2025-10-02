@@ -98,7 +98,7 @@ void IrrigationModel::createSprinklerSystemGeneral(double fieldLength, double fi
                                           const std::string& sprinklerConfig) {
     std::cout<<"Sprinkler Config: " <<sprinklerConfig<<"\n";
     const SprinklerAssembly& config = sprinklerLibrary.getSprinklerType(sprinklerConfig);
-
+    double stake_height = config.stakeHeight;
 
     const int num_laterals = static_cast<int>(std::ceil(fieldLength / lineSpacing)) + 1;//x direction
     const int num_sprinklers_perline = static_cast<int>(std::ceil(fieldWidth /sprinklerSpacing)) + 1; // y direction
@@ -136,7 +136,7 @@ void IrrigationModel::createSprinklerSystemGeneral(double fieldLength, double fi
 
             double emitterX = barbX + emitterOffset * cos(M_PI/4);
             double emitterY = barbY + emitterOffset * sin(M_PI/4);
-            nodes[nodeId] = {nodeId, "emitter", {emitterX, emitterY}, 0.0, false};
+            nodes[nodeId] = {nodeId, "emitter", {emitterX, emitterY, stake_height}, 0.0, false};
             int emitterId = nodeId++;
 
             // Connect barb to emitter
@@ -185,15 +185,15 @@ void IrrigationModel::createSprinklerSystemGeneral(double fieldLength, double fi
             }
         }
     }
-    ensureMinimumSprinklersPerRow();
+    ensureMinimumSprinklersPerRow(sprinklerConfig);
 
     // Validate the sprinkler system
      validateMinimumSprinklersPerRow();
 }
 
 
-void IrrigationModel::ensureMinimumSprinklersPerRow() {
-    // Organize sprinkler junctions by lateral row
+void IrrigationModel::ensureMinimumSprinklersPerRow(const std::string& sprinklerConfig) {
+    // arrange sprinkler junctions by lateral row
     std::map<double, std::vector<int>> sprinklersByLateralRow;
 
     for (const auto& [id, node] : nodes) {
@@ -203,16 +203,19 @@ void IrrigationModel::ensureMinimumSprinklersPerRow() {
         }
     }
 
-    // Add missing sprinkler units to rows with less than 2
+    // add missing sprinkler units to rows with less than 2
     for (auto& [row, sprinklerIds] : sprinklersByLateralRow) {
         if (sprinklerIds.size() < 2) {
             std::cout << "Adding missing sprinkler units to row at x = " << row << std::endl;
-            addMissingSprinklerUnits(row, sprinklerIds, 2 - sprinklerIds.size());
+            addMissingSprinklerUnits(row, sprinklerIds, 2 - sprinklerIds.size(), sprinklerConfig);
         }
     }
 }
 
-void IrrigationModel::addMissingSprinklerUnits(double rowX, const std::vector<int>& existingSprinklers, int count) {
+void IrrigationModel::addMissingSprinklerUnits(double rowX, const std::vector<int>& existingSprinklers, int count, const std::string& sprinklerConfig) {
+
+    const SprinklerAssembly& config = sprinklerLibrary.getSprinklerType(sprinklerConfig);
+    double stake_height = config.stakeHeight;
     if (existingSprinklers.empty()) return;
 
     // get y of existing sprinklers to determine spacing
@@ -266,7 +269,7 @@ void IrrigationModel::addMissingSprinklerUnits(double rowX, const std::vector<in
         double emitterX = barbX + 0.0 * cos(M_PI/4);
         double emitterY = barbY + 0.0 * sin(M_PI/4);
         int emitterId = getNextNodeId();
-        nodes[emitterId] = {emitterId, "emitter", {emitterX, emitterY}, 0.0, false};
+        nodes[emitterId] = {emitterId, "emitter", {emitterX, emitterY, stake_height}, 0.0, false};
 
         // Connect
         links.push_back({junctionId, barbId, 0.12 * INCH_TO_METER, 0.5 * INCH_TO_METER, "lateralTobarb"});
@@ -281,6 +284,212 @@ int IrrigationModel::getNextNodeId() const {
     if (nodes.empty()) return 1;
     return std::max_element(nodes.begin(), nodes.end(),
         [](const auto& a, const auto& b) { return a.first < b.first; })->first + 1;
+}
+
+
+std::vector<PressureLossResult> IrrigationModel::getBarbToEmitterPressureLosses() const {
+
+
+    std::vector<PressureLossResult> results;
+
+    std::vector<std::pair<int, int>> connectedPairs = findConnectedNodePairs("barb", "emitter");
+    for (const auto& pair : connectedPairs) {
+        int barbNodeId = pair.first;
+        int emitterNodeId = pair.second;
+        double pressureLoss = std::abs(getPressureDifference(barbNodeId, emitterNodeId));
+
+        results.push_back({barbNodeId, emitterNodeId, pressureLoss});
+    }
+
+    return results;
+}
+
+std::vector<PressureLossResult> IrrigationModel::getLateralToBarbPressureLosses() const {
+    std::vector<PressureLossResult> results;
+    std::vector<std::pair<int, int>> connectedPairs = findConnectedNodePairs("lateral_sprinkler_jn", "barb");
+    for (const auto& pair : connectedPairs) {
+        int barbNodeId = pair.first;
+        int emitterNodeId = pair.second;
+        double pressureLoss = std::abs(getPressureDifference(barbNodeId, emitterNodeId));
+
+        results.push_back({barbNodeId, emitterNodeId, pressureLoss});
+    }
+
+    return results;
+}
+
+
+double IrrigationModel::getPressureDifference(int nodeId1, int nodeId2) const {
+    // Check if nodes exist
+    if (nodes.find(nodeId1) == nodes.end() || nodes.find(nodeId2) == nodes.end()) {
+        helios::helios_runtime_error("ERROR (IrrigationModel::getPressureDifference(): One or both node IDs not found: " +
+                                   std::to_string(nodeId1) + ", " + std::to_string(nodeId2));
+    }
+    double pressure1 = nodes.at(nodeId1).pressure;
+    double pressure2 = nodes.at(nodeId2).pressure;
+
+    return pressure1 - pressure2;
+}
+
+std::vector<std::pair<int, int>> IrrigationModel::findConnectedNodePairs(const std::string& type1, const std::string& type2) const {
+    std::vector<std::pair<int, int>> connectedPairs;
+
+    // iterate through all nodes of type1 and check their neighbors
+    for (const auto& [nodeId, node] : nodes) {
+        if (node.type == type1) {
+            // Check all neighbors of this node
+            for (int neighborId : node.neighbors) {
+                const Node& neighbor = nodes.at(neighborId);
+                if (neighbor.type == type2) {
+                    connectedPairs.emplace_back(nodeId, neighborId);
+                }
+            }
+        }
+    }
+
+    return connectedPairs;
+}
+
+void IrrigationModel::printPressureLossAnalysis(const IrrigationModel& system) {
+    // Barb to Emitter analysis
+    auto barbEmitterPairs = system.findConnectedNodePairs("barb", "emitter");
+
+    std::cout << "\n" << std::string(60, '=') << "\n";
+    std::cout << "BARB TO EMITTER PRESSURE LOSS ANALYSIS\n";
+    std::cout << std::string(60, '=') << "\n";
+    std::cout << "Total connections found: " << barbEmitterPairs.size() << "\n\n";
+
+    if (barbEmitterPairs.empty()) {
+        std::cout << "No barb-to-emitter connections found in the system.\n";
+        return;
+    }
+
+    std::vector<double> losses;
+    int outOfRangeCount = 0;
+
+    std::cout << "DETAILED CONNECTION ANALYSIS:\n";
+    std::cout << std::string(60, '-') << "\n";
+
+    for (size_t i = 0; i < barbEmitterPairs.size(); ++i) {
+        int barbId = barbEmitterPairs[i].first;
+        int emitterId = barbEmitterPairs[i].second;
+        double loss = std::abs(system.getPressureDifference(barbId, emitterId));
+        losses.push_back(loss);
+
+        // Get node details
+        const auto& barbNode = system.nodes.at(barbId);
+        const auto& emitterNode = system.nodes.at(emitterId);
+
+        std::cout << "Connection " << (i + 1) << ":\n";
+        std::cout << "  Barb Node " << barbId << " → Emitter Node " << emitterId << "\n";
+        std::cout << "  Pressure Loss: " << loss << " psi";
+
+        // Range validation
+        bool inRange = (loss >= 0.8 && loss <= 1.5);
+        if (!inRange) {
+            std::cout << " [OUT OF RANGE: 0.8-1.5 psi]";
+            outOfRangeCount++;
+        }
+        std::cout << "\n";
+
+        std::cout << "  Barb Pressure: " << barbNode.pressure << " psi";
+        std::cout << "  |  Emitter Pressure: " << emitterNode.pressure << " psi";
+        std::cout << "  |  Delta: " << (barbNode.pressure - emitterNode.pressure) << " psi\n";
+        std::cout << "  Positions: Barb(" << barbNode.position.x << "," << barbNode.position.y << ")";
+        std::cout << " → Emitter(" << emitterNode.position.x << "," << emitterNode.position.y << ")\n";
+        std::cout << std::string(40, '-') << "\n";
+    }
+
+    // Statistics
+    double minLoss = *std::min_element(losses.begin(), losses.end());
+    double maxLoss = *std::max_element(losses.begin(), losses.end());
+    double avgLoss = std::accumulate(losses.begin(), losses.end(), 0.0) / losses.size();
+
+    std::cout << "\nSTATISTICAL SUMMARY:\n";
+    std::cout << std::string(40, '-') << "\n";
+    std::cout << "Minimum loss: " << minLoss << " psi\n";
+    std::cout << "Maximum loss: " << maxLoss << " psi\n";
+    std::cout << "Average loss: " << avgLoss << " psi\n";
+    std::cout << "Connections within range: " << (losses.size() - outOfRangeCount) << "/" << losses.size() << "\n";
+    std::cout << "Out of range: " << outOfRangeCount << "/" << losses.size() << "\n";
+
+    if (avgLoss >= 0.8 && avgLoss <= 1.5 && outOfRangeCount == 0) {
+        std::cout << "✓ ALL connections are within expected range (0.8-1.5 psi)!\n";
+    } else {
+        std::cout << "✗ Some connections are outside expected range!\n";
+    }
+}
+
+
+void IrrigationModel::writePressureLossesToFile(const IrrigationModel& system, const std::string& filename) {
+    std::ofstream outFile(filename);
+
+    if (!outFile.is_open()) {
+        std::cerr << "Error: Could not open file " << filename << " for writing\n";
+        return;
+    }
+
+    // Write header with metadata
+    outFile << "# Pressure Loss Comparison Data\n";
+  //  outFile << "# System: " << system.getSystemSummary() << "\n";
+    outFile << "# Format: ConnectionType,FromNode,ToNode,PressureLoss,FromPressure,ToPressure\n\n";
+
+    // Barb to Emitter section
+    outFile << "BARB_TO_EMITTER_START\n";
+    auto barbEmitterPairs = system.findConnectedNodePairs("barb", "emitter");
+
+    for (const auto& pair : barbEmitterPairs) {
+        int barbId = pair.first;
+        int emitterId = pair.second;
+        double loss = std::abs(system.getPressureDifference(barbId, emitterId));
+
+        const auto& barbNode = system.nodes.at(barbId);
+        const auto& emitterNode = system.nodes.at(emitterId);
+
+        outFile << "barbToemitter,"
+                << barbId << ","
+                << emitterId << ","
+                << loss << ","
+                << barbNode.pressure << ","
+                << emitterNode.pressure << "\n";
+    }
+    outFile << "BARB_TO_EMITTER_END\n\n";
+
+    // Lateral to Barb section
+    outFile << "LATERAL_TO_BARB_START\n";
+    auto lateralBarbPairs = system.findConnectedNodePairs("lateral_sprinkler_jn", "barb");
+
+    for (const auto& pair : lateralBarbPairs) {
+        int lateralId = pair.first;
+        int barbId = pair.second;
+        double loss = std::abs(system.getPressureDifference(lateralId, barbId));
+
+        const auto& lateralNode = system.nodes.at(lateralId);
+        const auto& barbNode = system.nodes.at(barbId);
+
+        outFile << "lateralTobarb,"
+                << lateralId << ","
+                << barbId << ","
+                << loss << ","
+                << lateralNode.pressure << ","
+                << barbNode.pressure << "\n";
+    }
+    outFile << "LATERAL_TO_BARB_END\n";
+
+    outFile.close();
+    std::cout << "Pressure losses written to: " << filename << "\n";
+}
+
+// Also add for lateral to barb
+void printLateralToBarbAnalysis(const IrrigationModel& system) {
+    auto lateralBarbPairs = system.findConnectedNodePairs("lateral_sprinkler_jn", "barb");
+
+    std::cout << "\n" << std::string(60, '=') << "\n";
+    std::cout << "LATERAL TO BARB PRESSURE LOSS ANALYSIS\n";
+    std::cout << std::string(60, '=') << "\n";
+
+    // Similar implementation as above but for lateral→barb
+    // Expected range: 0.4-0.9 psi
 }
 
 
@@ -430,7 +639,7 @@ void IrrigationModel::addSubmainAndWaterSource(double fieldLength, double fieldW
             submainNodeId++;
         }
     } else {
-        // North/South positions - connect edge nodes directly
+        // North/South positions then connect edge nodes directly
         std::sort(connectingNodes.begin(), connectingNodes.end(), [this](int a, int b) {
             return nodes[a].position.x < nodes[b].position.x;
         });
@@ -687,6 +896,7 @@ bool IrrigationModel::isPointInsidePolygon(const Position& point) const {
 
 void IrrigationModel::setBoundaryPolygon(const std::vector<Position>& polygon) {
     boundaryPolygon = polygon;
+
 }
 
 void IrrigationModel::createIrregularSystem(double Pw, const std::vector<Position>& boundary,
@@ -698,10 +908,26 @@ void IrrigationModel::createIrregularSystem(double Pw, const std::vector<Positio
     nodes.clear();
     links.clear();
 
-    // Set the boundary polygon
     setBoundaryPolygon(boundary);
 
-    // Calculate bounding box for grid generation
+    if (Pw <= 0) {
+        helios::helios_runtime_error("ERROR (IrrigationModel::createIrregularSystem(): Water source pressure must be positive");
+     //   throw std::invalid_argument("Water source pressure must be positive. Got: " + std::to_string(Pw));
+    }
+
+    // Validate boundary area is reasonable
+    if (boundary.size() < 3) {
+        helios::helios_runtime_error("ERROR (IrrigationModel::createIrregularSystem(): invalid Boundary size");
+    //    throw std::invalid_argument("Boundary must have at least 3 points");
+    }
+
+    if (connectionType != "vertical" && connectionType != "horizontal") {
+        helios::helios_runtime_error("ERROR (IrrigationModel::createSprinklerSystemGeneral(): invalid lateral connection orientation");
+     //   throw std::invalid_argument("Invalid lateral connection orientation: " + connectionType);
+
+    }
+
+    // bounding box for grid generation
     double minX = std::numeric_limits<double>::max();
     double maxX = std::numeric_limits<double>::lowest();
     double minY = std::numeric_limits<double>::max();
@@ -718,7 +944,7 @@ void IrrigationModel::createIrregularSystem(double Pw, const std::vector<Positio
     double fieldWidth = maxY - minY;
 
     // Create sprinkler system within the boundary
-  createSprinklerSystemGeneral(fieldLength, fieldWidth, sprinklerSpacing, lineSpacing, connectionType,  sprinklerConfig);
+    createSprinklerSystemGeneral(fieldLength, fieldWidth, sprinklerSpacing, lineSpacing, connectionType,  sprinklerConfig);
 
     // Add submain and water source (modified to handle irregular layouts)
     addSubmainAndWaterSourceIrregular(fieldLength, fieldWidth, connectionType, submainPos);
@@ -1636,14 +1862,14 @@ void IrrigationModel::validateMinimumSprinklersPerRow() const {
     // Check each row has at least 2 sprinkler junctions
     for (const auto& [row, sprinklerIds] : sprinklersByLateralRow) {
         if (sprinklerIds.size() < 2) {
-            std::cerr << "Warning: Lateral row at x = " << row
-                      << " has only " << sprinklerIds.size()
-                      << " sprinkler junction(s). Minimum 2 required." << std::endl;
+            helios::helios_runtime_error("ERROR (IrrigationModel::validateMinimumSprinklersPerRow()) Minimum sprinkler numbers not met");
+
         }
     }
+   // ensureMinimumSprinklersPerRow();
 
     // Also validate complete sprinkler units (junction + barb + emitter)
-    validateCompleteSprinklerUnits();
+   validateCompleteSprinklerUnits();
 }
 
 void IrrigationModel::validateCompleteSprinklerUnits() const {
@@ -1930,14 +2156,42 @@ HydraulicResults IrrigationModel::calculateHydraulics(bool doPreSize, const std:
                 A[orderedIndex][neighborIdx] = 1.0 / Rval;
             }
         }
-        // Update RHS
+
+        // Update RHS with elevation effect
         for (int n = 0; n < numNodes; ++n) {
             if (n == waterSourceIndex) continue;
+
             int nodeId = orderedNodeIds[n];
             RHS[n] = nodes[nodeId].flow;
-        //    RHS[n] = currentSources[n];
+
+            //    RHS[n] = currentSources[n];
             std::cout << RHS[n] << "\n";
+            // Add elevation contribution to RHS
+            // For each neighbor connection, add elevation difference term
+            const auto& node = nodes[nodeId];
+            double elevation_contribution = 0.0;
+
+            for (size_t j = 0; j < node.neighbors.size(); ++j) {
+                int neighborId = node.neighbors[j];
+                if (!nodeIndexMap.count(neighborId)) continue;
+
+                const Link* link = findLink(nodeId, neighborId);
+                if (!link) continue;
+
+                const auto& neighborNode = nodes[neighborId];
+                double elevation_diff = node.position.z - neighborNode.position.z;
+
+                // elevation effect rho*g*h in Pa
+                double elevation_pressure_diff = rho * 9.81 * elevation_diff;
+
+                // Distribute elevation contribution
+                // include rho*g*h in pressure difference calculation?
+                elevation_contribution += elevation_pressure_diff / R[nodeId][j];
+            }
+
+            RHS[n] += elevation_contribution;
         }
+
         //  output
         std::cout << "Matrix A (water source at " << waterSourceIndex << "):\n";
         for (int i = 0; i < numNodes; i++) {
@@ -2467,10 +2721,13 @@ double IrrigationModel::minorLoss_kf(const double Re, const std::string& sprinkl
     } else if (barbType == "PC_Toro_sharp_barb") {
         kf = 2.86;
     } else if (barbType  == "NPC_Nelson_flat_barb") {
+        std::cout<<"reading the minor loss of NelsonFlat" <<std::endl;
+
         kf = 1.73;
     } else if (barbType  == "NPC_Toro_flat_barb") {
         kf = 1.48; //1.50 for half tube
     } else if (barbType  == "NPC_Toro_sharp_barb") {
+        std::cout<<"reading the minor loss of ToroSharp" <<std::endl;
         kf = 3.12;
     } else if (barbType  == "Standard elbow, 45 deg") { //need to add a function for valve
         if (Re <= 50) {
@@ -2509,8 +2766,9 @@ double IrrigationModel::minorLoss_kf(const double Re, const std::string& sprinkl
             kf = 3.2;
         }
     } else {
-        // handle unknown names
+        // other unknown names
         std::cerr << "Warning: Unknown component name '" << barbType  << "'. Returning 0." << std::endl;
+        helios::helios_runtime_error("ERROR (IrrigationModel::minorLoss_kf): Unknown minor loss");
         kf = 0;
     }
 
@@ -2585,6 +2843,7 @@ SprinklerAssembly SprinklerConfigLibrary:: create_NPC_Nelson_flat() {
     type.emitterType = "NPC";
     type.emitter_x = 0.477;
     type.emitter_k = 3.317;
+    type.stakeHeight = 0.1; //10cm above ground
     type.barbType =  "NPC_Nelson_flat_barb";
     return type;
 }
@@ -2597,6 +2856,7 @@ SprinklerAssembly SprinklerConfigLibrary:: create_NPC_Toro_flat() {
     type.emitterType = "NPC";
     type.emitter_x = 0.477;
     type.emitter_k = 3.317;
+    type.stakeHeight = 0.1; //10cm above ground
     type.barbType = "NPC_Toro_flat_barb";
     return type;
 }
@@ -2609,6 +2869,7 @@ SprinklerAssembly SprinklerConfigLibrary:: create_NPC_Toro_sharp() {
     type.emitterType = "NPC";
     type.emitter_x = 0.477;
     type.emitter_k = 3.317;
+    type.stakeHeight = 0.1; //10cm above ground
     type.barbType =  "NPC_Toro_sharp_barb";
     return type;
 }
@@ -2621,6 +2882,7 @@ SprinklerAssembly SprinklerConfigLibrary:: create_PC_Nelson_flat() {
     type.emitterType = "PC";
     type.emitter_x = 0.0;
     type.emitter_k = 3.317;
+    type.stakeHeight = 0.1; //10cm above ground
     type.barbType =  "PC_Nelson_flat_barb";
     return type;
 }
@@ -2633,6 +2895,7 @@ SprinklerAssembly SprinklerConfigLibrary:: create_PC_Toro_flat() {
     type.emitterType = "PC";
     type.emitter_x = 0.0;
     type.emitter_k = 3.317;
+    type.stakeHeight = 0.1; //10cm above ground
     type.barbType = "PC_Toro_flat_barb";
     return type;
 }
@@ -2645,6 +2908,7 @@ SprinklerAssembly SprinklerConfigLibrary:: create_PC_Toro_sharp() {
     type.emitterType = "PC";
     type.emitter_x = 0.0;
     type.emitter_k = 3.317;
+    type.stakeHeight = 0.1; //10cm above ground
     type.barbType =  "PC_Toro_sharp_barb";
     return type;
 }

@@ -16,8 +16,13 @@ const float err_tol = 1e-3f; // Error tolerance for floating-point comparisons
     }
 
     SUBCASE("Complete System Creation") {
-        DOCTEST_CHECK_NOTHROW(model.createCompleteSystem(30.0, 100.0, 50.0, 10.0, 5.0,
-                                               "vertical", SubmainPosition::MIDDLE));
+        std::vector<Position> boundary = {
+            {0.0, 0.0}, {100.0, 0.0}, {100.0, 50.0}, {0.0, 50.0}
+        };
+
+        DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(25.0, boundary, 10.0, 5.0,
+                                         "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+
         auto summary = model.getSystemSummary();
         DOCTEST_CHECK(summary.find("waterSource") != std::string::npos);
         DOCTEST_CHECK(summary.find("lateral") != std::string::npos);
@@ -26,232 +31,322 @@ const float err_tol = 1e-3f; // Error tolerance for floating-point comparisons
 }
 
 DOCTEST_TEST_CASE("Parameter Validation") {
+    IrrigationModel model;
+
+    SUBCASE("Valid Parameters") {
+        std::vector<Position> rectangularBoundary = {
+            {0.0, 0.0}, {100.0, 0.0}, {100.0, 50.0}, {0.0, 50.0}
+        };
+
+        DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(25.0, rectangularBoundary, 10.0, 5.0,
+                                         "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+    }
+
+    SUBCASE("Invalid Water Source Pressure") {
+        std::vector<Position> boundary = {
+            {0.0, 0.0}, {100.0, 0.0}, {100.0, 50.0}, {0.0, 50.0}
+        };
+
+        DOCTEST_CHECK_THROWS(model.createIrregularSystem(0.0, boundary, 10.0, 5.0,
+                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+        DOCTEST_CHECK_THROWS(model.createIrregularSystem(-5.0, boundary, 10.0, 5.0,
+                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+    }
+
+    SUBCASE("Invalid Boundary") {
+        std::vector<Position> emptyBoundary;
+        std::vector<Position> singlePoint = {{0.0, 0.0}};
+        std::vector<Position> twoPoints = {{0.0, 0.0}, {10.0, 0.0}};
+
+        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, emptyBoundary, 10.0, 5.0,
+                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, singlePoint, 10.0, 5.0,
+                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, twoPoints, 10.0, 5.0,
+                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+    }
+
+    SUBCASE("Invalid Spacing Values") {
+        std::vector<Position> boundary = {
+            {0.0, 0.0}, {100.0, 0.0}, {100.0, 50.0}, {0.0, 50.0}
+        };
+
+        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, boundary, 0.0, 5.0,
+                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, boundary, 10.0, -2.0,
+                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+    }
+
+    SUBCASE("Spacing Exceeds Field Dimensions") {
+        std::vector<Position> smallBoundary = {
+            {0.0, 0.0}, {10.0, 0.0}, {10.0, 5.0}, {0.0, 5.0}
+        };
+
+        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, smallBoundary, 20.0, 5.0,
+                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, smallBoundary, 10.0, 10.0,
+                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+    }
+
+    SUBCASE("Invalid Connection Type") {
+        std::vector<Position> boundary = {
+            {0.0, 0.0}, {100.0, 0.0}, {100.0, 50.0}, {0.0, 50.0}
+        };
+
+        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, boundary, 10.0, 5.0,
+                                        "diagonal", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, boundary, 10.0, 5.0,
+                                        "", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+    }
+
+    SUBCASE("Invalid Sprinkler Assembly Type") {
+        std::vector<Position> boundary = {
+            {0.0, 0.0}, {100.0, 0.0}, {100.0, 50.0}, {0.0, 50.0}
+        };
+
+        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, boundary, 10.0, 5.0,
+                                        "vertical", "Invalid_Sprinkler_Type", SubmainPosition::MIDDLE));
+        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, boundary, 10.0, 5.0,
+                                        "vertical", "", SubmainPosition::MIDDLE));
+    }
+}
+
+  DOCTEST_TEST_CASE("Submain Position Variations") {
+      IrrigationModel model;
+      std::vector<Position> boundary = {
+          {0.0, 0.0}, {100.0, 0.0}, {100.0, 50.0}, {0.0, 50.0}
+      };
+
+      SUBCASE("Submain at Beginning") {
+          DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(25.0, boundary, 10.0, 5.0,
+                                           "vertical", "NPC_Nelson_flat_barb", SubmainPosition::NORTH));
+      }
+
+      SUBCASE("Submain at Middle") {
+          DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(25.0, boundary, 10.0, 5.0,
+                                           "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+      }
+
+      SUBCASE("Submain at South") {
+          DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(25.0, boundary, 10.0, 5.0,
+                                           "vertical", "NPC_Nelson_flat_barb", SubmainPosition::SOUTH));
+      }
+  }
+
+ DOCTEST_TEST_CASE("System Properties for Irregular Systems") {
      IrrigationModel model;
 
-     SUBCASE("Valid Parameters") {
-         DOCTEST_CHECK_NOTHROW(model.createCompleteSystem(25, 100.0, 50.0, 10.0, 5.0,
-                                                "vertical", SubmainPosition::MIDDLE));
+     SUBCASE("Node and Link Counts") {
+         std::vector<Position> boundary = {
+             {0.0, 0.0}, {100.0, 0.0}, {100.0, 50.0}, {0.0, 50.0}
+         };
+
+         model.createIrregularSystem(25.0, boundary, 10.0, 5.0, "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE);
+
+         auto summary = model.getSystemSummary();
+
+         // Should have more than 0 nodes and links
+         DOCTEST_CHECK(summary.find("Total nodes: 0") == std::string::npos);
+         DOCTEST_CHECK(summary.find("Total links: 0") == std::string::npos);
+
+         // Check for specific component types
+         DOCTEST_CHECK(summary.find("emitter") != std::string::npos);
+         DOCTEST_CHECK(summary.find("barb") != std::string::npos);
+         DOCTEST_CHECK(summary.find("lateral_sprinkler_jn") != std::string::npos);
      }
 
-     SUBCASE("Invalid Field Dimensions") {
-         DOCTEST_CHECK_THROWS(model.createCompleteSystem(25, 0.0, 50.0, 10.0, 5.0,
-                                               "vertical", SubmainPosition::MIDDLE));
-         DOCTEST_CHECK_THROWS(model.createCompleteSystem(25, 100.0, -5.0, 10.0, 5.0,
-                                               "vertical", SubmainPosition::MIDDLE));
+     SUBCASE("Different Sprinkler Types") {
+         std::vector<Position> boundary = {
+             {0.0, 0.0}, {80.0, 0.0}, {80.0, 40.0}, {0.0, 40.0}
+         };
+
+         DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(20.0, boundary, 8.0, 4.0,
+                                          "horizontal", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+         DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(30.0, boundary, 12.0, 6.0,
+                                          "vertical", "NPC_Toro_flat_barb",SubmainPosition::MIDDLE));
+     }
+}
+
+  DOCTEST_TEST_CASE("Irregular System Creation") {
+         IrrigationModel model;
+         double Pw = 25.0;
+         double lineSpacing = 22.0 * FEET_TO_METER;
+         double sprinklerSpacing = 16.0 * FEET_TO_METER;
+         double fieldWidth = 3 * sprinklerSpacing;
+         double fieldLength = 3 * lineSpacing;
+
+         std::vector<Position> rectangularBoundary = {
+             {0, 0}, {0, fieldWidth}, {fieldLength, fieldWidth}, {fieldLength, 0}
+         };
+
+         std::vector<Position> irregularBoundary = {
+             {0, 0}, {50, 0}, {75, 25}, {50, 50}, {25, 75}, {0, 50}
+         };
+
+         SUBCASE("Rectangular Boundary") {
+             DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(Pw, rectangularBoundary,
+                                                     lineSpacing, sprinklerSpacing,
+                                                     "vertical", "NPC_Nelson_flat_barb", SubmainPosition::NORTH));
+
+             DOCTEST_CHECK(model.nodes.size() > 0);
+             DOCTEST_CHECK(model.links.size() > 0);
+             DOCTEST_CHECK(model.getWaterSourceId() != -1);
+         }
+
+         SUBCASE("Irregular Boundary") {
+             DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(Pw, irregularBoundary,
+                                                     16.0, 16.0,
+                                                     "vertical", "NPC_Nelson_flat_barb", SubmainPosition::NORTH));
+
+             DOCTEST_CHECK(model.nodes.size() > 0);
+             DOCTEST_CHECK(model.links.size() > 0);
+         }
+
+         SUBCASE("Different Submain Positions") {
+             SUBCASE("North Position") {
+                 CHECK_NOTHROW(model.createIrregularSystem(Pw, rectangularBoundary,
+                                                         lineSpacing, sprinklerSpacing,
+                                                         "vertical", "NPC_Nelson_flat_barb", SubmainPosition::NORTH));
+             }
+
+             SUBCASE("South Position") {
+                 DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(Pw, rectangularBoundary,
+                                                         lineSpacing, sprinklerSpacing,
+                                                         "vertical", "NPC_Nelson_flat_barb", SubmainPosition::SOUTH));
+             }
+
+             DOCTEST_SUBCASE("Middle Position") {
+                 DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(Pw, rectangularBoundary,
+                                                         lineSpacing, sprinklerSpacing,
+                                                         "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+             }
+         }
      }
 
-     SUBCASE("Invalid Spacing Values") {
-         DOCTEST_CHECK_THROWS(model.createCompleteSystem(25, 100.0, 50.0, 0.0, 5.0,
-                                               "vertical", SubmainPosition::MIDDLE));
-         DOCTEST_CHECK_THROWS(model.createCompleteSystem(25, 100.0, 50.0, 10.0, -2.0,
-                                               "vertical", SubmainPosition::MIDDLE));
+  DOCTEST_TEST_CASE("Node and Link Types") {
+         IrrigationModel model;
+         double Pw = 25.0;
+         double lineSpacing = 22.0 * FEET_TO_METER;
+         double sprinklerSpacing = 16.0 * FEET_TO_METER;
+         double fieldWidth = 3 * sprinklerSpacing;
+         double fieldLength = 3 * lineSpacing;
+
+         std::vector<Position> boundary = {
+             {0, 0}, {0, fieldWidth}, {fieldLength, fieldWidth}, {fieldLength, 0}
+         };
+
+         model.createIrregularSystem(Pw, boundary, lineSpacing, sprinklerSpacing,
+                                   "vertical", "NPC_Nelson_flat_barb", SubmainPosition::NORTH);
+
+         SUBCASE("Node Type Counts") {
+             int lateralJunctions = 0;
+             int barbs = 0;
+             int emitters = 0;
+             int submainJunctions = 0;
+             int waterSources = 0;
+
+             for (const auto& [id, node] : model.nodes) {
+                 if (node.type == "lateral_sprinkler_jn") lateralJunctions++;
+                 else if (node.type == "barb") barbs++;
+                 else if (node.type == "emitter") emitters++;
+                 else if (node.type == "submain_junction") submainJunctions++;
+                 else if (node.type == "waterSource") waterSources++;
+             }
+
+             DOCTEST_CHECK(lateralJunctions > 0);
+             DOCTEST_CHECK(barbs > 0);
+             DOCTEST_CHECK(emitters > 0);
+             DOCTEST_CHECK(submainJunctions > 0);
+             DOCTEST_CHECK(waterSources == 1);
+             DOCTEST_CHECK(lateralJunctions == barbs);
+             DOCTEST_CHECK(barbs == emitters);
+         }
+
+         SUBCASE("Link Type Counts") {
+             int laterals = 0;
+             int barbToEmitter = 0;
+             int lateralToBarb = 0;
+             int submain = 0;
+             int mainline = 0;
+
+             for (const auto& link : model.links) {
+                 if (link.type == "lateral") laterals++;
+                 else if (link.type == "barbToemitter") barbToEmitter++;
+                 else if (link.type == "lateralTobarb") lateralToBarb++;
+                 else if (link.type == "submain") submain++;
+                 else if (link.type == "mainline") mainline++;
+             }
+
+             DOCTEST_CHECK(laterals > 0);
+             DOCTEST_CHECK(barbToEmitter > 0);
+             DOCTEST_CHECK(lateralToBarb > 0);
+             DOCTEST_CHECK(submain > 0);
+             DOCTEST_CHECK(mainline >= 1);
+         }
      }
 
-     SUBCASE("Spacing Exceeds Field Dimensions") {
-         DOCTEST_CHECK_THROWS(model.createCompleteSystem(25, 100.0, 50.0, 150.0, 5.0,
-                                               "vertical", SubmainPosition::MIDDLE));
-         DOCTEST_CHECK_THROWS(model.createCompleteSystem(25, 100.0, 50.0, 10.0, 60.0,
-                                               "vertical", SubmainPosition::MIDDLE));
+
+  DOCTEST_TEST_CASE("Water Source Configuration") {
+      IrrigationModel model;
+      double Pw = 25.0;
+      double lineSpacing = 22.0 * FEET_TO_METER;
+      double sprinklerSpacing = 16.0 * FEET_TO_METER;
+      double fieldWidth = 3 * sprinklerSpacing;
+      double fieldLength = 3 * lineSpacing;
+
+      std::vector<Position> boundary = {
+          {0, 0}, {0, fieldWidth}, {fieldLength, fieldWidth}, {fieldLength, 0}
+      };
+
+      model.createIrregularSystem(Pw, boundary, lineSpacing, sprinklerSpacing,
+                                "vertical", "NPC_Nelson_flat_barb", SubmainPosition::NORTH);
+
+      SUBCASE("Water Source Properties") {
+          int wsID = model.getWaterSourceId();
+          REQUIRE(wsID != -1);
+
+          const auto& wsNode = model.nodes.at(wsID);
+          DOCTEST_CHECK(wsNode.type == "waterSource");
+          DOCTEST_CHECK(wsNode.is_fixed == true);
+          DOCTEST_CHECK(wsNode.pressure == doctest::Approx(Pw));
+
+          // Water source should be connected to the system
+          bool isConnected = false;
+          for (const auto& link : model.links) {
+              if (link.from == wsID || link.to == wsID) {
+                  isConnected = true;
+                  break;
+              }
+          }
+          DOCTEST_CHECK(isConnected == true);
+      }
+  }
+
+DOCTEST_TEST_CASE("Help Functions") {
+     IrrigationModel model;
+
+     SUBCASE("Next Node ID") {
+         DOCTEST_CHECK(model.getNextNodeId() == 1);
+
+         // Add some nodes and check ID generation
+         model.nodes[1] = {1, "test", {0, 0}, 0.0, false};
+         DOCTEST_CHECK(model.getNextNodeId() == 2);
+
+         model.nodes[5] = {5, "test", {0, 0}, 0.0, false};
+         DOCTEST_CHECK(model.getNextNodeId() == 6);
+     }
+
+     SUBCASE("Distance Calculations") {
+         Position p1 = {0, 0};
+         Position p2 = {3, 4};
+         Position p3 = {0, 5};
+         Position p4 = {5, 0};
+
+         DOCTEST_CHECK(p1.distanceTo(p2) == doctest::Approx(5.0));
+       //  CHECK(model.pointToSegmentDistance(p1, p3, p4) == doctest::Approx(0.0));
      }
  }
 
-//
-//  DOCTEST_TEST_CASE("Irregular System Creation") {
-//         IrrigationModel model;
-//         double Pw = 25.0;
-//         double lineSpacing = 22.0 * IrrigationModel::FEET_TO_METER;
-//         double sprinklerSpacing = 16.0 * IrrigationModel::FEET_TO_METER;
-//         double fieldWidth = 3 * sprinklerSpacing;
-//         double fieldLength = 3 * lineSpacing;
-//
-//         std::vector<Position> rectangularBoundary = {
-//             {0, 0}, {0, fieldWidth}, {fieldLength, fieldWidth}, {fieldLength, 0}
-//         };
-//
-//         std::vector<Position> irregularBoundary = {
-//             {0, 0}, {50, 0}, {75, 25}, {50, 50}, {25, 75}, {0, 50}
-//         };
-//
-//         SUBCASE("Rectangular Boundary") {
-//             DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(Pw, rectangularBoundary,
-//                                                     lineSpacing, sprinklerSpacing,
-//                                                     "vertical", SubmainPosition::NORTH));
-//
-//             DOCTEST_CHECK(model.nodes.size() > 0);
-//             DOCTEST_CHECK(model.links.size() > 0);
-//             DOCTEST_CHECK(model.getWaterSourceId() != -1);
-//         }
-//
-//         SUBCASE("Irregular Boundary") {
-//             DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(Pw, irregularBoundary,
-//                                                     16.0, 16.0,
-//                                                     "vertical", SubmainPosition::NORTH));
-//
-//             DOCTEST_CHECK(model.nodes.size() > 0);
-//             DOCTEST_CHECK(model.links.size() > 0);
-//         }
-//
-//         SUBCASE("Different Submain Positions") {
-//             SUBCASE("North Position") {
-//                 CHECK_NOTHROW(model.createIrregularSystem(Pw, rectangularBoundary,
-//                                                         lineSpacing, sprinklerSpacing,
-//                                                         "vertical", SubmainPosition::NORTH));
-//             }
-//
-//             SUBCASE("South Position") {
-//                 DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(Pw, rectangularBoundary,
-//                                                         lineSpacing, sprinklerSpacing,
-//                                                         "vertical", SubmainPosition::SOUTH));
-//             }
-//
-//             DOCTEST_SUBCASE("Middle Position") {
-//                 DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(Pw, rectangularBoundary,
-//                                                         lineSpacing, sprinklerSpacing,
-//                                                         "vertical", SubmainPosition::MIDDLE));
-//             }
-//         }
-//     }
-//
-//  DOCTEST_TEST_CASE("Node and Link Types") {
-//         IrrigationModel model;
-//         double Pw = 25.0;
-//         double lineSpacing = 22.0 * IrrigationModel::FEET_TO_METER;
-//         double sprinklerSpacing = 16.0 * IrrigationModel::FEET_TO_METER;
-//         double fieldWidth = 3 * sprinklerSpacing;
-//         double fieldLength = 3 * lineSpacing;
-//
-//         std::vector<Position> boundary = {
-//             {0, 0}, {0, fieldWidth}, {fieldLength, fieldWidth}, {fieldLength, 0}
-//         };
-//
-//         model.createIrregularSystem(Pw, boundary, lineSpacing, sprinklerSpacing,
-//                                   "vertical", SubmainPosition::NORTH);
-//
-//         SUBCASE("Node Type Counts") {
-//             int lateralJunctions = 0;
-//             int barbs = 0;
-//             int emitters = 0;
-//             int submainJunctions = 0;
-//             int waterSources = 0;
-//
-//             for (const auto& [id, node] : model.nodes) {
-//                 if (node.type == "lateral_sprinkler_jn") lateralJunctions++;
-//                 else if (node.type == "barb") barbs++;
-//                 else if (node.type == "emitter") emitters++;
-//                 else if (node.type == "submain_junction") submainJunctions++;
-//                 else if (node.type == "waterSource") waterSources++;
-//             }
-//
-//             DOCTEST_CHECK(lateralJunctions > 0);
-//             DOCTEST_CHECK(barbs > 0);
-//             DOCTEST_CHECK(emitters > 0);
-//             DOCTEST_CHECK(submainJunctions > 0);
-//             DOCTEST_CHECK(waterSources == 1);
-//             DOCTEST_CHECK(lateralJunctions == barbs);
-//             DOCTEST_CHECK(barbs == emitters);
-//         }
-//
-//         SUBCASE("Link Type Counts") {
-//             int laterals = 0;
-//             int barbToEmitter = 0;
-//             int lateralToBarb = 0;
-//             int submain = 0;
-//             int mainline = 0;
-//
-//             for (const auto& link : model.links) {
-//                 if (link.type == "lateral") laterals++;
-//                 else if (link.type == "barbToemitter") barbToEmitter++;
-//                 else if (link.type == "lateralTobarb") lateralToBarb++;
-//                 else if (link.type == "submain") submain++;
-//                 else if (link.type == "mainline") mainline++;
-//             }
-//
-//             DOCTEST_CHECK(laterals > 0);
-//             DOCTEST_CHECK(barbToEmitter > 0);
-//             DOCTEST_CHECK(lateralToBarb > 0);
-//             DOCTEST_CHECK(submain > 0);
-//             DOCTEST_CHECK(mainline >= 1);
-//         }
-//     }
-//
-//
-//  DOCTEST_TEST_CASE("Water Source Configuration") {
-//      IrrigationModel model;
-//      double Pw = 25.0;
-//      double lineSpacing = 22.0 * IrrigationModel::FEET_TO_METER;
-//      double sprinklerSpacing = 16.0 * IrrigationModel::FEET_TO_METER;
-//      double fieldWidth = 3 * sprinklerSpacing;
-//      double fieldLength = 3 * lineSpacing;
-//
-//      std::vector<Position> boundary = {
-//          {0, 0}, {0, fieldWidth}, {fieldLength, fieldWidth}, {fieldLength, 0}
-//      };
-//
-//      model.createIrregularSystem(Pw, boundary, lineSpacing, sprinklerSpacing,
-//                                "vertical", SubmainPosition::NORTH);
-//
-//      SUBCASE("Water Source Properties") {
-//          int wsID = model.getWaterSourceId();
-//          REQUIRE(wsID != -1);
-//
-//          const auto& wsNode = model.nodes.at(wsID);
-//          CHECK(wsNode.type == "waterSource");
-//          CHECK(wsNode.is_fixed == true);
-//          CHECK(wsNode.pressure == doctest::Approx(Pw));
-//
-//          // Water source should be connected to the system
-//          bool isConnected = false;
-//          for (const auto& link : model.links) {
-//              if (link.from == wsID || link.to == wsID) {
-//                  isConnected = true;
-//                  break;
-//              }
-//          }
-//          CHECK(isConnected == true);
-//      }
-//  }
-//
-// TEST_CASE("System Validation") {
-//      IrrigationModel model;
-//      double Pw = 25.0;
-//      double lineSpacing = 22.0 * IrrigationModel::FEET_TO_METER;
-//      double sprinklerSpacing = 16.0 * IrrigationModel::FEET_TO_METER;
-//      double fieldWidth = 3 * sprinklerSpacing;
-//      double fieldLength = 3 * lineSpacing;
-//
-//      std::vector<Position> boundary = {
-//          {0, 0}, {0, fieldWidth}, {fieldLength, fieldWidth}, {fieldLength, 0}
-//      };
-//
-//      model.createIrregularSystem(Pw, boundary, lineSpacing, sprinklerSpacing,
-//                                "vertical", SubmainPosition::NORTH);
-//  }
-//
-// DOCTEST_TEST_CASE("Utility Functions") {
-//      IrrigationModel model;
-//
-//      SUBCASE("Next Node ID") {
-//          DOCTEST_CHECK(model.getNextNodeId() == 1);
-//
-//          // Add some nodes and check ID generation
-//          model.nodes[1] = {1, "test", {0, 0}, 0.0, false};
-//          DOCTEST_CHECK(model.getNextNodeId() == 2);
-//
-//          model.nodes[5] = {5, "test", {0, 0}, 0.0, false};
-//          DOCTEST_CHECK(model.getNextNodeId() == 6);
-//      }
-//
-//      SUBCASE("Distance Calculations") {
-//          Position p1 = {0, 0};
-//          Position p2 = {3, 4};
-//          Position p3 = {0, 5};
-//          Position p4 = {5, 0};
-//
-//          DOCTEST_CHECK(p1.distanceTo(p2) == doctest::Approx(5.0));
-//        //  CHECK(model.pointToSegmentDistance(p1, p3, p4) == doctest::Approx(0.0));
-//      }
-//  }
-//
 // DOCTEST_TEST_CASE("Hydraulic Calculations") {
 //      IrrigationModel model;
 //      double Pw = 25.0;
@@ -290,44 +385,6 @@ DOCTEST_TEST_CASE("Parameter Validation") {
 
 
 
-
-// DOCTEST_TEST_CASE("System Creation and Parameter Validation") {
-//     IrrigationModel model;
-//
-//     SUBCASE("Empty System") {
-//         auto summary = model.getSystemSummary();
-//         DOCTEST_CHECK(summary.find("Total nodes: 0") != std::string::npos);
-//         DOCTEST_CHECK(summary.find("Total links: 0") != std::string::npos);
-//     }
-//
-//     SUBCASE("Complete System Creation") {
-//         DOCTEST_CHECK_NOTHROW(model.createCompleteSystem(30.0, 100.0, 50.0, 10.0, 5.0, "vertical", SubmainPosition::MIDDLE));
-//
-//         auto summary = model.getSystemSummary();
-//         DOCTEST_CHECK(summary.find("waterSource") != std::string::npos);
-//         DOCTEST_CHECK(summary.find("lateral") != std::string::npos);
-//     }
-//
-//
-//     SUBCASE("Valid Parameters") {
-//         DOCTEST_CHECK_NOTHROW(model.createCompleteSystem(25, 100.0, 50.0, 10.0, 5.0, "vertical", SubmainPosition::MIDDLE));
-//     }
-//
-//     SUBCASE("Invalid Field Dimensions") {
-//         DOCTEST_CHECK_THROWS(model.createCompleteSystem(25, 0.0, 50.0, 10.0, 5.0, "vertical", SubmainPosition::MIDDLE));
-//         DOCTEST_CHECK_THROWS(model.createCompleteSystem(25, 100.0, -5.0, 10.0, 5.0, "vertical", SubmainPosition::MIDDLE));
-//     }
-//
-//     SUBCASE("Invalid Spacing Values") {
-//         DOCTEST_CHECK_THROWS(model.createCompleteSystem(25, 100.0, 50.0, 0.0, 5.0, "vertical", SubmainPosition::MIDDLE));
-//         DOCTEST_CHECK_THROWS(model.createCompleteSystem(25, 100.0, 50.0, 10.0, -2.0, "vertical", SubmainPosition::MIDDLE));
-//     }
-//
-//     SUBCASE("Spacing Exceeds Field Dimensions") {
-//         DOCTEST_CHECK_THROWS(model.createCompleteSystem(25, 100.0, 50.0, 150.0, 5.0, "vertical", SubmainPosition::MIDDLE));
-//         DOCTEST_CHECK_THROWS(model.createCompleteSystem(25, 100.0, 50.0, 10.0, 60.0, "vertical", SubmainPosition::MIDDLE));
-//     }
-// }
 
 // private function
 // DOCTEST_TEST_CASE("Water Source Position Calculation") {

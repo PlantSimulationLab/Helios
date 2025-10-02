@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# command: python3 visualize_network.py < hydraulics_output.txt
 import sys
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
@@ -32,9 +33,10 @@ def read_data():
             nodes[node_id] = {
                 'x': float(parts[1]),
                 'y': float(parts[2]),
-                'type': parts[3],
-                'pressure': float(parts[4]),
-                'is_fixed': bool(int(parts[5]))
+                'z': float(parts[3]),
+                'type': parts[4],
+                'pressure': float(parts[5]),
+                'is_fixed': bool(int(parts[6]))
             }
         elif current_section == "LINKS":
             parts = line.split()
@@ -76,6 +78,7 @@ def visualize_complete_system(nodes, links, use_psi=True):
             n2 = nodes[link['to']]
             x = [n1['x'], n2['x']]
             y = [n1['y'], n2['y']]
+            z = [n1['z'], n2['z']]
             avg_p = 0.5 * (n1['pressure'] + n2['pressure'])
             color = cmap(norm(avg_p)) if norm else 'gray'
             ax.plot(x, y, color=color, linewidth=2, alpha=0.9)
