@@ -8,6 +8,7 @@ in vec2 texcoord;
 uniform isamplerBuffer texture_flag_texture_object;
 uniform isamplerBuffer texture_ID_texture_object;
 uniform isamplerBuffer coordinate_flag_texture_object;
+uniform isamplerBuffer sky_geometry_flag_texture_object;
 uniform isamplerBuffer hidden_flag_texture_object;
 
 uniform sampler2DArray textureSampler;
@@ -15,7 +16,7 @@ uniform sampler2DArray textureSampler;
 out vec3 color;
 
 flat in int faceID;
- 
+
 void main(){
 
   // Delete hidden/deleted primitives
@@ -26,8 +27,14 @@ void main(){
   int textureFlag = texelFetch(texture_flag_texture_object, faceID).r;
   int textureID = texelFetch(texture_ID_texture_object, faceID).r;
   int coordinateFlag = texelFetch(coordinate_flag_texture_object, faceID).r;
+  int skyGeometryFlag = texelFetch(sky_geometry_flag_texture_object, faceID).r;
 
   vec3 texcoord3 = vec3(texcoord, textureID);
+
+  // Exclude sky geometry from shadow rendering
+  if( skyGeometryFlag == 1 ){
+    discard;
+  }
 
   if( coordinateFlag==0 || coordinateFlag==2 ){
     // If this is a 2D projected primitive, don't consider for shadows

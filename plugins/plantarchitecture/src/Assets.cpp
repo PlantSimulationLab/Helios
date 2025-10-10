@@ -593,10 +593,10 @@ void MaizePhytomerCreationFunction(std::shared_ptr<Phytomer> phytomer, uint shoo
 
 uint OliveLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype_parameters, int compound_leaf_index) {
 
-    std::vector<uint> UUIDs_upper =
-            context_ptr->addTile(make_vec3(0.5, 0, 0), make_vec2(1, 0.2), nullrotation, make_int2(prototype_parameters->subdivisions, prototype_parameters->subdivisions), helios::resolvePluginAsset("plantarchitecture", "assets/textures/OliveLeaf_upper.png").string().c_str());
-    std::vector<uint> UUIDs_lower =
-            context_ptr->addTile(make_vec3(0.5, 0, -1e-4), make_vec2(1, 0.2), nullrotation, make_int2(prototype_parameters->subdivisions, prototype_parameters->subdivisions), helios::resolvePluginAsset("plantarchitecture", "assets/textures/OliveLeaf_lower.png").string().c_str());
+    std::vector<uint> UUIDs_upper = context_ptr->addTile(make_vec3(0.5, 0, 0), make_vec2(1, 0.2), nullrotation, make_int2(prototype_parameters->subdivisions, prototype_parameters->subdivisions),
+                                                         helios::resolvePluginAsset("plantarchitecture", "assets/textures/OliveLeaf_upper.png").string().c_str());
+    std::vector<uint> UUIDs_lower = context_ptr->addTile(make_vec3(0.5, 0, -1e-4), make_vec2(1, 0.2), nullrotation, make_int2(prototype_parameters->subdivisions, prototype_parameters->subdivisions),
+                                                         helios::resolvePluginAsset("plantarchitecture", "assets/textures/OliveLeaf_lower.png").string().c_str());
     context_ptr->rotatePrimitive(UUIDs_lower, M_PI, "x");
 
     UUIDs_upper.insert(UUIDs_upper.end(), UUIDs_lower.begin(), UUIDs_lower.end());

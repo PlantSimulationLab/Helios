@@ -14,8 +14,8 @@
 #ifdef ENABLE_HELIOS_VISUALIZER
 #include <nfd.h>
 #endif
-#include <cstring>
 #include <cstdlib>
+#include <cstring>
 #endif
 
 // OpenGL/ImGui includes - must come after Windows headers but before ProjectBuilder.h
@@ -23,7 +23,7 @@
 // IMPORTANT: glew.h must be included before any OpenGL headers (including GLFW)
 #include "glew.h"
 // IMGUI
-#define GLFW_INCLUDE_NONE  // Prevent GLFW from including OpenGL headers
+#define GLFW_INCLUDE_NONE // Prevent GLFW from including OpenGL headers
 #include "GLFW/glfw3.h"
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
@@ -33,7 +33,6 @@
 #endif // HELIOS_VISUALIZER
 
 #include "ProjectBuilder.h"
-
 
 
 #ifdef ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
@@ -515,7 +514,7 @@ void ProjectBuilder::updateDataGroups() {
     context->getUniqueObjectDataValues("data_group", data_groups);
     data_groups_set.clear();
     data_groups_set.insert("All");
-    for (auto &group : data_groups) {
+    for (auto &group: data_groups) {
         data_groups_set.insert(group);
     }
 }
@@ -573,7 +572,7 @@ void ProjectBuilder::updateSpectra() {
     std::vector<uint> all_UUIDs = context->getAllUUIDs();
     for (uint UUID: all_UUIDs) {
         uint parentObjID = context->getPrimitiveParentObjectID(UUID);
-        if ( !context->doesObjectExist(parentObjID) || !context->doesObjectDataExist(parentObjID, "data_group"))
+        if (!context->doesObjectExist(parentObjID) || !context->doesObjectDataExist(parentObjID, "data_group"))
             continue;
         // Get data group of UUID
         std::string curr_data_group;
@@ -785,7 +784,7 @@ void ProjectBuilder::record() {
                             }
                         }
                         for (auto &box_pair: bounding_boxes_map) {
-                            if (bounding_boxes_object.find(box_pair.first) != bounding_boxes_object.end() ) {
+                            if (bounding_boxes_object.find(box_pair.first) != bounding_boxes_object.end()) {
                                 radiation->writeImageBoundingBoxes_ObjectData(cameralabel, box_pair.first, box_pair.second, band_group_ + std::to_string(i) + "_bbox", "classes.txt", image_dir + rig_label + '/');
                                 if (write_segmentation_mask[rig_dict[current_rig]]) {
                                     radiation->writeImageSegmentationMasks_ObjectData(camera_label, box_pair.first, box_pair.second, band_group_ + std::to_string(i) + "_mask", image_dir + rig_label + '/', true);
@@ -828,37 +827,36 @@ void ProjectBuilder::reload() {
     visualizer->clearGeometry();
 #endif // HELIOS_VISUALIZER
     delete context;
-    #ifdef ENABLE_PLANT_ARCHITECTURE
+#ifdef ENABLE_PLANT_ARCHITECTURE
     delete plantarchitecture;
-    #endif // PLANT_ARCHITECTURE
-    #ifdef ENABLE_RADIATION_MODEL
+#endif // PLANT_ARCHITECTURE
+#ifdef ENABLE_RADIATION_MODEL
     delete radiation;
-    #endif // RADIATION_MODEL
-    #ifdef ENABLE_SOLARPOSITION
+#endif // RADIATION_MODEL
+#ifdef ENABLE_SOLARPOSITION
     delete solarposition;
-    #endif // SOLARPOSITION
-    #ifdef ENABLE_ENERGYBALANCEMODEL
+#endif // SOLARPOSITION
+#ifdef ENABLE_ENERGYBALANCEMODEL
     delete energybalancemodel;
-    #endif // ENERGYBALANCEMODEL
-    #ifdef ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
+#endif // ENERGYBALANCEMODEL
+#ifdef ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
     delete boundarylayerconductance;
-    #endif // BOUNDARYLAYERCONDUCTANCEMODEL
-    #ifdef ENABLE_RADIATION_MODEL
+#endif // BOUNDARYLAYERCONDUCTANCEMODEL
+#ifdef ENABLE_RADIATION_MODEL
     delete cameraproperties;
-    #endif // RADIATION_MODEL
+#endif // RADIATION_MODEL
     buildFromXML();
     // #ifdef ENABLE_RADIATION_MODEL
     // radiation->enableCameraModelVisualization();
     // #endif //RADIATION_MODEL
 #ifdef ENABLE_HELIOS_VISUALIZER
-    #ifdef ENABLE_PLANT_ARCHITECTURE
+#ifdef ENABLE_PLANT_ARCHITECTURE
     visualizer->buildContextGeometry(context);
-    #endif // PLANT_ARCHITECTURE
+#endif // PLANT_ARCHITECTURE
     visualizer->addCoordinateAxes(helios::make_vec3(0, 0, 0.05), helios::make_vec3(1, 1, 1), "positive");
     visualizer->plotUpdate();
 #endif // HELIOS_VISUALIZER
 }
-
 
 
 void ProjectBuilder::buildFromXML() {
@@ -2230,7 +2228,7 @@ void ProjectBuilder::visualize() {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Visualization")) {
-                    refreshVisualizationTypes();
+                refreshVisualizationTypes();
                 refreshVisualizationTypes();
                 if (ImGui::MenuItem("RGB (Default)") && visualization_type != "RGB") {
                     visualization_type = "RGB";
@@ -2385,7 +2383,7 @@ void ProjectBuilder::visualize() {
         visualizer->plotOnce(!io.WantCaptureMouse);
         ImGui::Render();
 
-        ImDrawData* draw_data = ImGui::GetDrawData();
+        ImDrawData *draw_data = ImGui::GetDrawData();
 
         ImGui_ImplOpenGL3_RenderDrawData(draw_data);
         glfwSwapBuffers(window);
@@ -3044,27 +3042,27 @@ void ProjectBuilder::xmlGetValues(std::string xml_path) {
 void ProjectBuilder::calculationTab() {
 #ifdef ENABLE_HELIOS_VISUALIZER
     // prim
-    for(auto &prim_name : primitive_names_set) {
+    for (auto &prim_name: primitive_names_set) {
         if (calculation_selection_primitive.find(prim_name) == calculation_selection_primitive.end()) {
             calculation_selection_primitive[prim_name] = false;
         }
     }
     std::vector<std::string> primitive_labels = context->listAllPrimitiveDataLabels();
     calculation_variable_choices.clear();
-    for (auto &label : primitive_labels) {
+    for (auto &label: primitive_labels) {
         HeliosDataType dtype = context->getPrimitiveDataType(label.c_str());
         if (heliosNumericTypes.find(dtype) != heliosNumericTypes.end())
             calculation_variable_choices.insert(label);
     }
     std::vector<std::string> global_data = context->listGlobalData();
-    for (auto &data : global_data) {
+    for (auto &data: global_data) {
         HeliosDataType dtype = context->getGlobalDataType(data.c_str());
         if (heliosNumericTypes.find(dtype) != heliosNumericTypes.end())
             calculation_variable_choices.insert(data);
     }
 
     // data group
-    for (auto &data_group : data_groups_set) {
+    for (auto &data_group: data_groups_set) {
         if (calculation_selection_datagroup.find(data_group) == calculation_selection_datagroup.end()) {
             calculation_selection_datagroup[data_group] = false;
         }
@@ -3493,7 +3491,7 @@ void ProjectBuilder::canopyTab() {
             std::string new_data_group = canopy_dict[current_canopy].data_group;
             for (int i = 0; i < canopy_dict[current_canopy].IDs.size(); i++) {
                 std::vector<uint> new_canopy_objIDs = plantarchitecture->getAllPlantObjectIDs(canopy_dict[current_canopy].IDs[i]);
-                for (auto &obj : new_canopy_objIDs) {
+                for (auto &obj: new_canopy_objIDs) {
                     context->clearObjectData(obj, prev_canopy_data_group.c_str());
                     context->setObjectData(obj, "data_group", new_data_group);
                     context->setObjectData(obj, new_data_group.c_str(), 1);
@@ -4031,7 +4029,7 @@ void ProjectBuilder::objectTab() {
                 objects_dict[current_obj].data_group = prev_obj_data_group;
             }
             if (!objects_dict[current_obj].data_group.empty() && prev_obj_data_group != objects_dict[current_obj].data_group) {
-                if ( context->doesObjectDataExist(objects_dict[current_obj].objID, prev_obj_data_group.c_str()) ) {
+                if (context->doesObjectDataExist(objects_dict[current_obj].objID, prev_obj_data_group.c_str())) {
                     context->clearObjectData(objects_dict[current_obj].objID, prev_obj_data_group.c_str());
                 }
                 std::string new_data_group = objects_dict[current_obj].data_group;
@@ -5393,7 +5391,7 @@ void ProjectBuilder::lightTab() {
 
 
 void ProjectBuilder::canopyTab(std::string curr_canopy_name, int id) {
-    #ifdef ENABLE_PLANT_ARCHITECTURE
+#ifdef ENABLE_PLANT_ARCHITECTURE
     if (ImGui::Button("Update Canopy")) {
         updateCanopy(curr_canopy_name);
         is_dirty = true;
@@ -5474,7 +5472,7 @@ void ProjectBuilder::canopyTab(std::string curr_canopy_name, int id) {
         prev_plant_library_ != canopy_dict[curr_canopy_name].library_name || prev_plant_age_ != canopy_dict[curr_canopy_name].age || prev_ground_clipping_height_ != canopy_dict[curr_canopy_name].ground_clipping_height) {
         canopy_dict[curr_canopy_name].is_dirty = true;
     }
-    #endif // PLANT_ARCHITECTURE
+#endif // PLANT_ARCHITECTURE
 }
 
 void ProjectBuilder::saveCanopy(std::string file_name, std::vector<uint> canopy_ID_vec, vec3 position, std::string file_extension) const {
@@ -6158,7 +6156,7 @@ void ProjectBuilder::deleteRig(std::string curr_rig) {
 
 void ProjectBuilder::addRig(std::string new_rig_label) {
     rig new_rig;
-        new_rig.label = new_rig_label;
+    new_rig.label = new_rig_label;
 
     if (current_rig.empty()) {
         // If there is no currently selected rig, use default values.
@@ -6293,7 +6291,7 @@ void ProjectBuilder::deleteObject(const std::string &obj) {
 
 
 void ProjectBuilder::updateCanopy(const std::string &canopy) {
-    #ifdef ENABLE_PLANT_ARCHITECTURE
+#ifdef ENABLE_PLANT_ARCHITECTURE
     for (auto plant_instance: canopy_dict[canopy].IDs) {
         plantarchitecture->deletePlantInstance(plant_instance);
     }
@@ -6326,7 +6324,7 @@ void ProjectBuilder::updateCanopy(const std::string &canopy) {
 
     canopy_dict[canopy].IDs = new_canopy_IDs;
     canopy_dict[canopy].is_dirty = false;
-    #endif
+#endif
 }
 
 
@@ -6602,16 +6600,15 @@ void ProjectBuilder::buildTiledGround(const vec3 &ground_origin, const vec2 &gro
 void ProjectBuilder::refreshBoundingBoxObjectList() {
     // Collect all unique primitive data labels
     std::set<std::string> primitive_data_labels;
-    for (auto &primitive_UUID : context->getAllUUIDs()) {
-        for (std::string data : context->listPrimitiveData(primitive_UUID)) {
+    for (auto &primitive_UUID: context->getAllUUIDs()) {
+        for (std::string data: context->listPrimitiveData(primitive_UUID)) {
             primitive_data_labels.insert(data);
         }
     }
     // Check data types for unique primitive labels
-    for (const std::string& data : primitive_data_labels) {
-        if ( context->getPrimitiveDataType( data.c_str() ) == HELIOS_TYPE_INT ||
-            context->getPrimitiveDataType( data.c_str() ) == HELIOS_TYPE_UINT ) {
-            if ( bounding_boxes.find( data ) == bounding_boxes.end() ) {
+    for (const std::string &data: primitive_data_labels) {
+        if (context->getPrimitiveDataType(data.c_str()) == HELIOS_TYPE_INT || context->getPrimitiveDataType(data.c_str()) == HELIOS_TYPE_UINT) {
+            if (bounding_boxes.find(data) == bounding_boxes.end()) {
                 bounding_boxes.insert({data, false});
                 bounding_boxes_primitive.insert(data);
             }
@@ -6620,16 +6617,15 @@ void ProjectBuilder::refreshBoundingBoxObjectList() {
 
     // Collect all unique object data labels
     std::set<std::string> object_data_labels;
-    for (auto &object_UUID : context->getAllObjectIDs()) {
-        for (std::string data : context->listObjectData(object_UUID)) {
+    for (auto &object_UUID: context->getAllObjectIDs()) {
+        for (std::string data: context->listObjectData(object_UUID)) {
             object_data_labels.insert(data);
         }
     }
     // Check data types for unique object labels
-    for (const std::string& data : object_data_labels) {
-        if ( context->getObjectDataType( data.c_str() ) == HELIOS_TYPE_INT ||
-            context->getObjectDataType( data.c_str() ) == HELIOS_TYPE_UINT ) {
-            if ( bounding_boxes.find( data ) == bounding_boxes.end() ) {
+    for (const std::string &data: object_data_labels) {
+        if (context->getObjectDataType(data.c_str()) == HELIOS_TYPE_INT || context->getObjectDataType(data.c_str()) == HELIOS_TYPE_UINT) {
+            if (bounding_boxes.find(data) == bounding_boxes.end()) {
                 bounding_boxes.insert({data, false});
                 bounding_boxes_object.insert(data);
             }
@@ -6642,15 +6638,15 @@ void ProjectBuilder::globalCalculation() {
     // Get all relevant primitives
     std::vector<uint> relevant_UUIDs{};
     if (calculation_selection_datagroup["All"]) {
-        for (auto &prim_pair : primitive_UUIDs) {
+        for (auto &prim_pair: primitive_UUIDs) {
             if (calculation_selection_primitive[prim_pair.first] || calculation_selection_primitive["All"]) {
                 relevant_UUIDs.insert(relevant_UUIDs.end(), prim_pair.second.begin(), prim_pair.second.end());
             }
         }
     } else {
-        for (auto &obj : objects_dict) {
+        for (auto &obj: objects_dict) {
             if (calculation_selection_datagroup[obj.second.data_group]) {
-                for (auto &prim_pair : calculation_selection_primitive) {
+                for (auto &prim_pair: calculation_selection_primitive) {
                     if (prim_pair.second || calculation_selection_primitive["All"]) {
                         std::vector<uint> new_UUIDs = context->filterPrimitivesByData(obj.second.UUIDs, "object_label", prim_pair.first);
                         relevant_UUIDs.insert(relevant_UUIDs.end(), new_UUIDs.begin(), new_UUIDs.end());
@@ -6658,16 +6654,16 @@ void ProjectBuilder::globalCalculation() {
                 }
             }
         }
-        for (auto &canopy : canopy_dict) {
+        for (auto &canopy: canopy_dict) {
             if (calculation_selection_datagroup[canopy.second.data_group]) {
                 std::vector<uint> canopy_UUIDs;
-                for (auto &plant_id : canopy.second.IDs) {
+                for (auto &plant_id: canopy.second.IDs) {
 #ifdef ENABLE_PLANT_ARCHITECTURE
-                    std::vector<uint> plant_UUIDs =context->getObjectPrimitiveUUIDs( plantarchitecture->getAllPlantObjectIDs(plant_id) );
+                    std::vector<uint> plant_UUIDs = context->getObjectPrimitiveUUIDs(plantarchitecture->getAllPlantObjectIDs(plant_id));
                     canopy_UUIDs.insert(canopy_UUIDs.end(), plant_UUIDs.begin(), plant_UUIDs.end());
 #endif // PLANT_ARCHITECTURE
                 }
-                for (auto &prim_pair : calculation_selection_primitive) {
+                for (auto &prim_pair: calculation_selection_primitive) {
                     if (prim_pair.second || calculation_selection_primitive["All"]) {
                         std::vector<uint> new_UUIDs = context->filterPrimitivesByData(canopy_UUIDs, "object_label", prim_pair.first);
                         relevant_UUIDs.insert(relevant_UUIDs.end(), new_UUIDs.begin(), new_UUIDs.end());
@@ -6714,20 +6710,19 @@ void ProjectBuilder::globalCalculation() {
 }
 
 
-
 void ProjectBuilder::savePrimitiveCalculation() {
     // Get all relevant primitives
     std::vector<uint> relevant_UUIDs{};
     if (calculation_selection_datagroup["All"]) {
-        for (auto &prim_pair : primitive_UUIDs) {
+        for (auto &prim_pair: primitive_UUIDs) {
             if (calculation_selection_primitive[prim_pair.first] || calculation_selection_primitive["All"]) {
                 relevant_UUIDs.insert(relevant_UUIDs.end(), prim_pair.second.begin(), prim_pair.second.end());
             }
         }
     } else {
-        for (auto &obj : objects_dict) {
+        for (auto &obj: objects_dict) {
             if (calculation_selection_datagroup[obj.second.data_group]) {
-                for (auto &prim_pair : calculation_selection_primitive) {
+                for (auto &prim_pair: calculation_selection_primitive) {
                     if (prim_pair.second || calculation_selection_primitive["All"]) {
                         std::vector<uint> new_UUIDs = context->filterPrimitivesByData(obj.second.UUIDs, "object_label", prim_pair.first);
                         relevant_UUIDs.insert(relevant_UUIDs.end(), new_UUIDs.begin(), new_UUIDs.end());
@@ -6735,16 +6730,16 @@ void ProjectBuilder::savePrimitiveCalculation() {
                 }
             }
         }
-        for (auto &canopy : canopy_dict) {
+        for (auto &canopy: canopy_dict) {
             if (calculation_selection_datagroup[canopy.second.data_group]) {
                 std::vector<uint> canopy_UUIDs;
-                for (auto &plant_id : canopy.second.IDs) {
+                for (auto &plant_id: canopy.second.IDs) {
 #ifdef ENABLE_PLANT_ARCHITECTURE
-                    std::vector<uint> plant_UUIDs =context->getObjectPrimitiveUUIDs( plantarchitecture->getAllPlantObjectIDs(plant_id) );
+                    std::vector<uint> plant_UUIDs = context->getObjectPrimitiveUUIDs(plantarchitecture->getAllPlantObjectIDs(plant_id));
                     canopy_UUIDs.insert(canopy_UUIDs.end(), plant_UUIDs.begin(), plant_UUIDs.end());
 #endif // PLANT_ARCHITECTURE
                 }
-                for (auto &prim_pair : calculation_selection_primitive) {
+                for (auto &prim_pair: calculation_selection_primitive) {
                     if (prim_pair.second || calculation_selection_primitive["All"]) {
                         std::vector<uint> new_UUIDs = context->filterPrimitivesByData(canopy_UUIDs, "object_label", prim_pair.first);
                         relevant_UUIDs.insert(relevant_UUIDs.end(), new_UUIDs.begin(), new_UUIDs.end());
@@ -6753,7 +6748,7 @@ void ProjectBuilder::savePrimitiveCalculation() {
             }
         }
     }
-    for (auto &UUID : relevant_UUIDs) {
+    for (auto &UUID: relevant_UUIDs) {
         context->setPrimitiveData(UUID, calculation_name_primitive.c_str(), calculation_result_global);
     }
     refreshVisualizationTypes();
@@ -6772,5 +6767,3 @@ void ProjectBuilder::runRadiation() {
     }
 #endif // RADIATION_MODEL
 }
-
-

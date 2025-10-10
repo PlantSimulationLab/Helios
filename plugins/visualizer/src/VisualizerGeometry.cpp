@@ -426,10 +426,16 @@ size_t Visualizer::addLine(const vec3 &start, const vec3 &end, const RGBcolor &c
 }
 
 size_t Visualizer::addLine(const vec3 &start, const vec3 &end, const RGBAcolor &color, float line_width, CoordinateSystem coordFlag) {
-    // Basic validation - ensure positive line width
+    // Validate line width
     if (line_width <= 0.0f) {
-        std::cerr << "WARNING (Visualizer::addLine): Line width must be positive. Setting to 1.0." << std::endl;
-        line_width = 1.0f;
+        helios_runtime_error("ERROR (Visualizer::addLine): Line width must be positive (got " + std::to_string(line_width) + "). Please specify a positive line width value.");
+    }
+
+    // Reasonable maximum line width to prevent rendering issues
+    // Lines are rendered using geometry shaders which expand line primitives into quads
+    const float MAX_LINE_WIDTH = 100.0f;
+    if (line_width > MAX_LINE_WIDTH) {
+        helios_runtime_error("ERROR (Visualizer::addLine): Line width " + std::to_string(line_width) + " exceeds maximum supported width (" + std::to_string(MAX_LINE_WIDTH) + "). Please specify a smaller line width value.");
     }
 
     const std::vector<vec3> vertices{start, end};
@@ -528,6 +534,10 @@ void Visualizer::addSkyDomeByCenter(float radius, const vec3 &center, uint Ndivi
 }
 
 std::vector<size_t> Visualizer::addSkyDomeByCenter(float radius, const vec3 &center, uint Ndivisions, const char *texture_file) {
+    std::cerr << "WARNING (Visualizer::addSkyDomeByCenter): This method is deprecated and will be removed in a future version. "
+              << "Please use Visualizer::setBackgroundSkyTexture() instead, which provides a more robust sky rendering solution "
+              << "that dynamically scales with camera movement and avoids the need to pre-specify a radius." << std::endl;
+
     float thetaStart = -0.1f * PI_F;
 
     float dtheta = (0.5f * PI_F - thetaStart) / float(Ndivisions - 1);
@@ -831,22 +841,41 @@ void Visualizer::deleteGeometry(size_t geometry_id) {
     }
 }
 
+std::vector<helios::vec3> Visualizer::getGeometryVertices(size_t geometry_id) const {
+    return geometry_handler.getVertices(geometry_id);
+}
+
+void Visualizer::setGeometryVertices(size_t geometry_id, const std::vector<helios::vec3> &vertices) {
+    geometry_handler.setVertices(geometry_id, vertices);
+}
+
 std::vector<size_t> Visualizer::addColorbarByCenter(const char *title, const helios::vec2 &size, const helios::vec3 &center, const helios::RGBcolor &font_color, const Colormap &colormap) {
     uint Ndivs = 50;
 
-    uint Nticks = 4;
+    float cmin = clamp(colormap.getLowerLimit(), -1e7f, 1e7f);
+    float cmax = clamp(colormap.getUpperLimit(), -1e7f, 1e7f);
+
+    // Generate tick values - either user-specified or auto-generated
+    std::vector<float> tick_values;
+    if (!colorbar_ticks.empty()) {
+        tick_values = colorbar_ticks;
+    } else {
+        // Auto-generate nice tick values with adaptive count based on colorbar size
+        // Estimate: need ~0.04 normalized units per tick label vertically (based on font size)
+        // This accounts for font size, spacing, and readability
+        float estimated_tick_spacing = 0.04f * (colorbar_fontsize / 12.0f); // Scale with font size
+        int max_ticks = std::max(3, static_cast<int>(size.y / estimated_tick_spacing));
+        max_ticks = std::min(max_ticks, 8); // Cap at 8 ticks maximum
+
+        tick_values = generateNiceTicks(cmin, cmax, colorbar_integer_data, max_ticks);
+    }
+
+    uint Nticks = tick_values.size();
 
     std::vector<size_t> UUIDs;
     UUIDs.reserve(Ndivs + 2 * Nticks + 20);
 
-    if (!colorbar_ticks.empty()) {
-        Nticks = colorbar_ticks.size();
-    }
-
     float dx = size.x / float(Ndivs);
-
-    float cmin = clamp(colormap.getLowerLimit(), -1e7f, 1e7f);
-    float cmax = clamp(colormap.getUpperLimit(), -1e7f, 1e7f);
 
     for (uint i = 0; i < Ndivs; i++) {
         float x = center.x - 0.5f * size.x + (float(i) + 0.5f) * dx;
@@ -868,40 +897,23 @@ std::vector<size_t> Visualizer::addColorbarByCenter(const char *title, const hel
         UUIDs.push_back(addLine(border.at(i), border.at(i + 1), font_color, COORDINATES_WINDOW_NORMALIZED));
     }
 
-    dx = size.x / float(Nticks - 1);
+    // Calculate tick spacing for formatting
+    double tick_spacing = 1.0;
+    if (Nticks > 1) {
+        tick_spacing = std::fabs(tick_values[1] - tick_values[0]);
+    }
 
     std::vector<vec3> ticks;
     ticks.resize(2);
     for (uint i = 0; i < Nticks; i++) {
-        /** \todo Need to use the more sophisticated formatting of tick strings */
-        char textstr[10], precision[10];
+        float value = tick_values.at(i);
+        float x = center.x - 0.5f * size.x + (value - cmin) / (cmax - cmin) * size.x;
 
-        float x;
-        float value;
-        if (colorbar_ticks.empty()) {
-            x = center.x - 0.5f * size.x + float(i) * dx;
-            value = cmin + float(i) / float(Nticks - 1) * (cmax - cmin);
-        } else {
-            value = colorbar_ticks.at(i);
-            x = center.x - 0.5f * size.x + (value - cmin) / (cmax - cmin) * size.x;
-        }
-
-        if (std::fabs(floor(value) - value) < 1e-4) { // value is an integer
-            std::snprintf(precision, 10, "%%d");
-            std::snprintf(textstr, 10, precision, int(floor(value)));
-        } else if (value != 0.f) {
-            // value needs decimal formatting
-            int d1 = floor(log10(std::fabs(value)));
-            int d2 = -d1 + 1;
-            if (d2 < 1) {
-                d2 = 1;
-            }
-            std::snprintf(precision, 10, "%%%u.%uf", (char) abs(d1) + 1, (char) d2);
-            std::snprintf(textstr, 10, precision, value);
-        }
+        // Format tick label using new formatting function
+        std::string label = formatTickLabel(value, tick_spacing, colorbar_integer_data);
 
         // tick labels
-        std::vector<size_t> UUIDs_text = addTextboxByCenter(textstr, make_vec3(x, center.y - 0.4f * size.y, center.z), make_SphericalCoord(0, 0), font_color, colorbar_fontsize, "OpenSans-Regular", COORDINATES_WINDOW_NORMALIZED);
+        std::vector<size_t> UUIDs_text = addTextboxByCenter(label.c_str(), make_vec3(x, center.y - 0.4f * size.y, center.z), make_SphericalCoord(0, 0), font_color, colorbar_fontsize, "OpenSans-Regular", COORDINATES_WINDOW_NORMALIZED);
         UUIDs.insert(UUIDs.end(), UUIDs_text.begin(), UUIDs_text.end());
 
         if (i > 0 && i < Nticks - 1) {
@@ -1003,4 +1015,188 @@ void Visualizer::addGridWireFrame(const helios::vec3 &center, const helios::vec3
     if (primitiveColorsNeedUpdate) {
         updateContextPrimitiveColors();
     }
+}
+
+void Visualizer::updateNavigationGizmo() {
+    // If disabled, clean up and return
+    if (!navigation_gizmo_enabled) {
+        if (!navigation_gizmo_IDs.empty()) {
+            geometry_handler.deleteGeometry(navigation_gizmo_IDs);
+            navigation_gizmo_IDs.clear();
+        }
+        return;
+    }
+
+    // Delete existing gizmo geometry
+    if (!navigation_gizmo_IDs.empty()) {
+        geometry_handler.deleteGeometry(navigation_gizmo_IDs);
+        navigation_gizmo_IDs.clear();
+    }
+
+    // Gizmo parameters
+    const float axis_length = 0.04f; // Length of each axis line
+    const float bubble_size = 0.025f; // Size of letter bubbles
+    const float line_width = 3.f;
+
+    // Calculate aspect ratio to maintain proper gizmo proportions in non-square windows
+    float aspect_ratio = static_cast<float>(Wdisplay) / static_cast<float>(Hdisplay);
+
+    // Gizmo center position - keep fixed regardless of aspect ratio
+    const vec3 gizmo_center = make_vec3(0.9f, 0.1f, 0.01f); // Lower-right corner, slightly in front
+
+    // Compute camera view matrix directly from current camera position
+    // This avoids relying on potentially uninitialized cameraViewMatrix
+    glm::mat4 view_matrix = glm::lookAt(glm_vec3(camera_eye_location), glm_vec3(camera_lookat_center), glm::vec3(0, 0, 1));
+
+    // Extract camera right, up, and forward vectors from the view matrix
+    // The view matrix transforms world coordinates to camera coordinates
+    // We need the inverse to transform camera axes to world axes
+    glm::mat3 rotation = glm::transpose(glm::mat3(view_matrix));
+
+    vec3 camera_right = make_vec3(rotation[0][0], rotation[0][1], rotation[0][2]);
+    vec3 camera_up = make_vec3(rotation[1][0], rotation[1][1], rotation[1][2]);
+
+    // Define world axes
+    vec3 world_x = make_vec3(1, 0, 0);
+    vec3 world_y = make_vec3(0, 1, 0);
+    vec3 world_z = make_vec3(0, 0, 1);
+
+    // Project world axes onto camera's screen plane
+    // For each world axis, we want to know how it appears on the 2D screen
+    auto projectAxisToScreen = [&](const vec3 &world_axis) -> vec3 {
+        // Project world axis onto camera's right and up vectors to get 2D screen coordinates
+        float x_component = world_axis.x * camera_right.x + world_axis.y * camera_right.y + world_axis.z * camera_right.z;
+        float y_component = world_axis.x * camera_up.x + world_axis.y * camera_up.y + world_axis.z * camera_up.z;
+
+        // Calculate foreshortening based on uncorrected projection
+        vec3 screen_dir_uncorrected = make_vec3(x_component, y_component, 0);
+        float mag = screen_dir_uncorrected.magnitude();
+
+        if (mag > 1e-6f) {
+            // Apply foreshortening: the projected magnitude represents how much of the axis
+            // is visible from the current viewing angle (1.0 = fully visible, 0.0 = end-on)
+            float foreshortening_factor = mag;
+
+            // Apply a minimum visibility threshold to prevent axes from becoming too small
+            // This ensures axes remain somewhat visible even at extreme viewing angles
+            const float min_visibility = 0.05f;
+            foreshortening_factor = std::max(foreshortening_factor, min_visibility);
+
+            // Normalize direction
+            vec3 normalized_dir = screen_dir_uncorrected / mag;
+
+            // Apply aspect ratio correction to maintain proper proportions
+            // Key insight: keep Y-dimension constant (maintains height), adjust X-dimension
+            if (aspect_ratio >= 1.0f) {
+                // Wide window: compress X to compensate for wider pixels
+                normalized_dir.x /= aspect_ratio;
+            } else {
+                // Tall window: expand Y to compensate for taller pixels
+                // This maintains constant visual height while preventing skew
+                normalized_dir.y *= aspect_ratio;
+            }
+
+            // Renormalize after aspect correction to maintain consistent visual size
+            // Without this, the gizmo would shrink in wide windows and grow in tall windows
+            float corrected_mag = normalized_dir.magnitude();
+            if (corrected_mag > 1e-6f) {
+                normalized_dir = normalized_dir / corrected_mag;
+            }
+
+            vec3 screen_dir = normalized_dir * (axis_length * foreshortening_factor);
+            return screen_dir;
+        } else {
+            // If axis is perpendicular to screen (magnitude too small), make it invisible
+            return make_vec3(0, 0, 0);
+        }
+    };
+
+    vec3 x_screen_dir = projectAxisToScreen(world_x);
+    vec3 y_screen_dir = projectAxisToScreen(world_y);
+    vec3 z_screen_dir = projectAxisToScreen(world_z);
+
+    // Calculate end points for each axis
+    vec3 x_end = gizmo_center + x_screen_dir;
+    vec3 y_end = gizmo_center + y_screen_dir;
+    vec3 z_end = gizmo_center + z_screen_dir;
+
+    // Add axis lines with appropriate colors
+    RGBcolor x_color = make_RGBcolor(0.8, 0.26, 0.23); // Red
+    RGBcolor y_color = make_RGBcolor(0.37, 0.59, 0.29); // Green
+    RGBcolor z_color = make_RGBcolor(0.24, 0.39, 0.83); // Blue
+
+    navigation_gizmo_IDs.push_back(addLine(gizmo_center, x_end, x_color, line_width, COORDINATES_WINDOW_NORMALIZED));
+    navigation_gizmo_IDs.push_back(addLine(gizmo_center, y_end, y_color, line_width, COORDINATES_WINDOW_NORMALIZED));
+    navigation_gizmo_IDs.push_back(addLine(gizmo_center, z_end, z_color, line_width, COORDINATES_WINDOW_NORMALIZED));
+
+    // Calculate bubble positions - extend beyond axis endpoints and offset in z to render in front
+    // Extension prevents axis lines from showing through transparent parts of the letter textures
+    const float z_offset = 0.001f; // Z offset to ensure bubbles render in front of lines
+
+    // Extension needs to account for aspect ratio to match the corrected bubble size
+    // Use the average of the corrected bubble dimensions for a consistent extension
+    float bubble_extension_base = bubble_size * 0.4f;
+
+    auto extendBubblePosition = [&](const vec3 &end_pos, const vec3 &direction) -> vec3 {
+        float dir_mag = direction.magnitude();
+        vec3 extended_pos = end_pos;
+        if (dir_mag > 1e-6f) {
+            vec3 unit_dir = direction / dir_mag;
+
+            // Calculate aspect-corrected extension distance based on direction
+            // This ensures bubbles stay aligned with axis lines at all aspect ratios
+            float extension_x = bubble_extension_base;
+            float extension_y = bubble_extension_base;
+
+            if (aspect_ratio >= 1.0f) {
+                // Wide window: X is compressed, so use smaller X extension
+                extension_x /= aspect_ratio;
+            } else {
+                // Tall window: Y is expanded, so use larger Y extension
+                extension_y /= aspect_ratio;
+            }
+
+            // Use the component-wise corrected extension
+            vec3 corrected_extension = make_vec3(unit_dir.x * extension_x, unit_dir.y * extension_y, 0.0f);
+
+            extended_pos = end_pos + corrected_extension;
+        }
+        extended_pos.z += z_offset; // Move slightly toward camera for proper rendering order
+        return extended_pos;
+    };
+
+    vec3 x_bubble_pos = extendBubblePosition(x_end, x_screen_dir);
+    vec3 y_bubble_pos = extendBubblePosition(y_end, y_screen_dir);
+    vec3 z_bubble_pos = extendBubblePosition(z_end, z_screen_dir);
+
+    // Add textured bubbles at the extended positions, rendering in front of axis lines
+    // Apply aspect ratio correction to maintain circular shape in non-square windows
+    // Keep height constant, adjust width based on aspect ratio
+    // Apply 25% size increase for hovered bubble
+    const float hover_size_multiplier = 1.25f;
+
+    auto calculateBubbleSize = [this, bubble_size, aspect_ratio, hover_size_multiplier](int bubble_index) -> vec2 {
+        float effective_bubble_size = bubble_size;
+        if (bubble_index == hovered_gizmo_bubble) {
+            effective_bubble_size *= hover_size_multiplier;
+        }
+
+        if (aspect_ratio >= 1.0f) {
+            // Wide window: reduce bubble width to compensate
+            return make_vec2(effective_bubble_size / aspect_ratio, effective_bubble_size);
+        } else {
+            // Tall window: increase bubble height to maintain proportions
+            return make_vec2(effective_bubble_size, effective_bubble_size / aspect_ratio);
+        }
+    };
+
+    SphericalCoord no_rotation = make_SphericalCoord(0, 0);
+
+    size_t x_bubble_id = addRectangleByCenter(x_bubble_pos, calculateBubbleSize(0), no_rotation, "plugins/visualizer/textures/nav_gizmo_x.png", COORDINATES_WINDOW_NORMALIZED);
+    size_t y_bubble_id = addRectangleByCenter(y_bubble_pos, calculateBubbleSize(1), no_rotation, "plugins/visualizer/textures/nav_gizmo_y.png", COORDINATES_WINDOW_NORMALIZED);
+    size_t z_bubble_id = addRectangleByCenter(z_bubble_pos, calculateBubbleSize(2), no_rotation, "plugins/visualizer/textures/nav_gizmo_z.png", COORDINATES_WINDOW_NORMALIZED);
+
+    navigation_gizmo_IDs.push_back(x_bubble_id);
+    navigation_gizmo_IDs.push_back(y_bubble_id);
+    navigation_gizmo_IDs.push_back(z_bubble_id);
 }

@@ -1053,7 +1053,7 @@ bool helios::open_xml_file(const std::string &xml_file, pugi::xml_document &xmld
         error_string = std::string(e.what());
         return false;
     }
-    
+
     // load file
     pugi::xml_parse_result load_result = xmldoc.load_file(resolvedPath.string().c_str());
 
@@ -2597,7 +2597,7 @@ bool helios::isDirectoryPath(const std::string &path) {
 
         // Handle special cases: dotfiles are usually files, not directories
         if (filename.front() == '.' && filename != "." && filename != "..") {
-            return false;  // .bashrc, .gitignore, .hidden files, etc.
+            return false; // .bashrc, .gitignore, .hidden files, etc.
         }
 
         // For other cases without extension, assume it's a directory

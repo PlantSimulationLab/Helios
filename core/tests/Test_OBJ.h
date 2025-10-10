@@ -701,7 +701,7 @@ TEST_CASE("OBJ File I/O - Correctness Validation") {
 
         // Load the written file
         std::vector<uint> roundtrip_uuids;
-        DOCTEST_CHECK_NOTHROW(roundtrip_uuids = ctx2.loadOBJ(intermediate_file.c_str(),  true));
+        DOCTEST_CHECK_NOTHROW(roundtrip_uuids = ctx2.loadOBJ(intermediate_file.c_str(), true));
 
         // Write again
         std::string final_file = "lib/models/test_roundtrip2.obj";
@@ -1227,7 +1227,7 @@ map_d lib/images/solid.jpg
         // Load the OBJ file with a default color (green) to ensure materials override it properly
         std::vector<uint> UUIDs;
         RGBcolor default_color = RGB::green;
-        DOCTEST_CHECK_NOTHROW(UUIDs = ctx.loadOBJ("lib/models/test_material_color.obj", make_vec3(0,0,0), make_vec3(1,1,1), nullrotation, default_color, "ZUP", true));
+        DOCTEST_CHECK_NOTHROW(UUIDs = ctx.loadOBJ("lib/models/test_material_color.obj", make_vec3(0, 0, 0), make_vec3(1, 1, 1), nullrotation, default_color, "ZUP", true));
         DOCTEST_CHECK(UUIDs.size() == 1);
 
         // Verify that the triangle was loaded

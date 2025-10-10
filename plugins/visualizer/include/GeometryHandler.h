@@ -44,6 +44,7 @@ public:
             coordinate_flag_data[geometry_type] = {};
             visible_flag_data[geometry_type] = {};
             context_geometry_flag_data[geometry_type] = {};
+            sky_geometry_flag_data[geometry_type] = {};
             delete_flag_data[geometry_type] = {};
             size_data[geometry_type] = {};
         }
@@ -85,10 +86,11 @@ public:
      * \param[in] coordinate_system Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
      * \param[in] visible_flag Boolean flag to determine if the geometry is initially visible.
      * \param[in] iscontextgeometry True if geometry is from the Context, false if geometry is added manually through the visualizer
+     * \param[in] isskygeometry True if geometry is part of the sky background (rendered with special transformations)
      * \param[in] size [optional] Size of the point or line in pixel units. This is ignored for GEOMETRY_TYPE_PATCH and GEOMETRY_TYPE_TRIANGLE.
      */
     void addGeometry(size_t UUID, const VisualizerGeometryType &geometry_type, const std::vector<helios::vec3> &vertices, const helios::RGBAcolor &color, const std::vector<helios::vec2> &uvs, int textureID, bool override_texture_color,
-                     bool has_glyph_texture, uint coordinate_system, bool visible_flag, bool iscontextgeometry, int size = 0);
+                     bool has_glyph_texture, uint coordinate_system, bool visible_flag, bool iscontextgeometry, bool isskygeometry = false, int size = 0);
 
     //! Mark a geometry primitive as modified
     void markDirty(size_t UUID);
@@ -327,6 +329,22 @@ public:
     [[nodiscard]] const std::vector<int> *getCoordinateFlagData_ptr(VisualizerGeometryType geometry_type) const;
 
     /**
+     * \brief Checks if a primitive with the given UUID is marked as sky geometry.
+     *
+     * \param[in] UUID The unique identifier of the primitive to check.
+     * \return True if the primitive is sky geometry, otherwise false.
+     */
+    [[nodiscard]] bool isSkyGeometry(size_t UUID) const;
+
+    /**
+     * \brief Retrieves a pointer to the sky geometry flag data associated with the specified geometry type.
+     *
+     * \param[in] geometry_type The type of visualizer geometry for which the sky geometry flag data is requested.
+     * \return A constant pointer to a vector of booleans representing the sky geometry flags for the given geometry type.
+     */
+    [[nodiscard]] const std::vector<char> *getSkyGeometryFlagData_ptr(VisualizerGeometryType geometry_type) const;
+
+    /**
      * \brief Sets the size for a geometry element identified by its UUID.
      *
      * \param[in] UUID The unique identifier of the geometry element.
@@ -424,6 +442,7 @@ private:
         size_t coordinate_flag_index;
         size_t visible_index;
         size_t context_geometry_flag_index;
+        size_t sky_geometry_flag_index;
         size_t delete_flag_index;
         size_t size_index;
     };
@@ -442,6 +461,7 @@ private:
     std::unordered_map<VisualizerGeometryType, std::vector<int>> coordinate_flag_data;
     std::unordered_map<VisualizerGeometryType, std::vector<char>> visible_flag_data;
     std::unordered_map<VisualizerGeometryType, std::vector<bool>> context_geometry_flag_data;
+    std::unordered_map<VisualizerGeometryType, std::vector<char>> sky_geometry_flag_data;
     std::unordered_map<VisualizerGeometryType, std::vector<bool>> delete_flag_data;
     std::unordered_map<VisualizerGeometryType, std::vector<float>> size_data;
 

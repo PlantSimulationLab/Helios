@@ -1,5 +1,21 @@
 # Changelog
 
+# [1.3.53] 2025-10-10
+
+# Visualizer
+- The visualizer can now render images with a transparent background. This is enabled with `Visualizer::setBackgroundTransparent`
+- `Visualizer::printWindow` can now write images in PNG format (necessary for transparent backgrounds)
+- Added navigation gizmo to visualizer window to make it easier to orient the view. This can be disabled with `Visualizer::hideNavigationGizmo()`.
+- The line width argument to `Visualizer::addLine()` now works properly on all platforms.
+- Fixed a bug where rectangle vertices were not returning the correct values when queried due to improper application of transformations.
+- By default, the visualizer now uses a gradient background texture image. The user can also manually set their own using `Visualizer::setBackgroundImage()`.
+- Added `Visualizer::setBackgroundSkyTexture()` to add a skybox background that automatically scales with the scene size.
+- Deprecated `Visualizer::addSkyDomeByCenter()` in favor of `Visualizer::setBackgroundSkyTexture()`.
+- Implemented Heckbert's "Nice Numbers" algorithm that generates clean, evenly-spaced tick values for the colorbar.
+
+## Plant Architecture
+- Implemented more efficient setting of optional object data `age`, which yields a huge speedup when setting age for many thousands of compound objects.
+
 # [1.3.52] 2025-10-02
 
 ## Plant Architecture

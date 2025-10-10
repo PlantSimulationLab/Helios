@@ -651,7 +651,7 @@ TEST_CASE("Object Management") {
         Context ctx;
 
         // Create a tile with texture
-        std::vector<uint> UUIDs = ctx.addTile(nullorigin, make_vec2(1,1), nullrotation, make_int2(2,2), "lib/images/disk_texture.png");
+        std::vector<uint> UUIDs = ctx.addTile(nullorigin, make_vec2(1, 1), nullrotation, make_int2(2, 2), "lib/images/disk_texture.png");
 
         // Set color and override texture
         RGBcolor green_color = make_RGBcolor(0, 1, 0);
@@ -674,8 +674,7 @@ TEST_CASE("Object Management") {
         DOCTEST_CHECK(ctx.isPrimitiveTextureColorOverridden(UUIDs_copy[0]));
 
         // Test with Triangle as well
-        uint triangle = ctx.addTriangle(make_vec3(0,0,0), make_vec3(1,0,0), make_vec3(0,1,0), "lib/images/disk_texture.png",
-                                      make_vec2(0,0), make_vec2(1,0), make_vec2(0,1));
+        uint triangle = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0), "lib/images/disk_texture.png", make_vec2(0, 0), make_vec2(1, 0), make_vec2(0, 1));
         RGBcolor blue_color = make_RGBcolor(0, 0, 1);
         ctx.setPrimitiveColor(triangle, blue_color);
         ctx.overridePrimitiveTextureColor(triangle);

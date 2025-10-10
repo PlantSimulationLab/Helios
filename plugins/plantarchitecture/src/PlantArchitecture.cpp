@@ -4300,7 +4300,8 @@ uint PlantArchitecture::duplicatePlantInstance(uint plantID, const helios::vec3 
                 }
             } else {
                 // each phytomer needs to be added one-by-one to account for possible internodes/leaves that are not fully elongated
-                appendPhytomerToShoot(plantID_new, shootID_new, plant_instances.at(plantID).shoot_types_snapshot.at(shoot->shoot_type_label).phytomer_parameters, internode_radius, internode_length_max, internode_scale_factor_fraction, leaf_scale_factor_fraction);
+                appendPhytomerToShoot(plantID_new, shootID_new, plant_instances.at(plantID).shoot_types_snapshot.at(shoot->shoot_type_label).phytomer_parameters, internode_radius, internode_length_max, internode_scale_factor_fraction,
+                                      leaf_scale_factor_fraction);
             }
             auto phytomer_new = plant_instances.at(plantID_new).shoot_tree.at(shootID_new)->phytomers.back();
             for (uint petiole_index = 0; petiole_index < phytomer->petiole_objIDs.size(); petiole_index++) {
@@ -4598,7 +4599,8 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                             if (shoot->shoot_parameters.phytomer_parameters.inflorescence.fruit_prototype_function != nullptr) {
                                 if ((fbud.state == BUD_FLOWER_OPEN && plant_instance.dd_to_fruit_set >= 0.f) ||
                                     // flower opened and fruit set is enabled
-                                    (fbud.state == BUD_ACTIVE && plant_instance.dd_to_flower_initiation < 0.f && (plant_instance.dd_to_flower_opening < 0.f || shoot->shoot_parameters.phytomer_parameters.inflorescence.flower_prototype_function == nullptr) && plant_instance.dd_to_fruit_set >= 0.f) ||
+                                    (fbud.state == BUD_ACTIVE && plant_instance.dd_to_flower_initiation < 0.f &&
+                                     (plant_instance.dd_to_flower_opening < 0.f || shoot->shoot_parameters.phytomer_parameters.inflorescence.flower_prototype_function == nullptr) && plant_instance.dd_to_fruit_set >= 0.f) ||
                                     // jumped straight to fruit set with no flowering (either flower opening disabled OR no flower prototype defined)
                                     (fbud.state == BUD_FLOWER_CLOSED && plant_instance.dd_to_flower_opening < 0.f && plant_instance.dd_to_fruit_set >= 0.f)) {
                                     // jumped from closed flower to fruit set with no flower opening
@@ -4671,7 +4673,7 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                             float leaf_scale = fmin(1.f, (leaf_length + dL_leaf) / phytomer->phytomer_parameters.leaf.prototype_scale.val());
 
                             // Use the minimum of petiole and leaf scaling to keep them synchronized
-                            //float scale = fmin(petiole_scale, leaf_scale);
+                            // float scale = fmin(petiole_scale, leaf_scale);
                             float scale = fmin(1.f, (leaf_length + dL_leaf) / phytomer->phytomer_parameters.leaf.prototype_scale.val());
                             phytomer->phytomer_parameters.leaf.prototype_scale.resample();
                             phytomer->setLeafScaleFraction(petiole_index, scale);
@@ -4730,19 +4732,6 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                             }
                         }
                         parent_petiole_index++;
-                    }
-
-                    if (output_object_data.at("age")) {
-                        if (shoot->build_context_geometry_internode) {
-                            //\todo This is redundant and only needs to be done once per shoot
-                            if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
-                                context_ptr->setObjectData(shoot->internode_tube_objID, "age", phytomer->age);
-                            }
-                        }
-                        if (phytomer->build_context_geometry_petiole) {
-                            context_ptr->setObjectData(phytomer->petiole_objIDs, "age", phytomer->age);
-                        }
-                        context_ptr->setObjectData(phytomer->leaf_objIDs, "age", phytomer->age);
                     }
 
                     node_index++;
@@ -4855,6 +4844,37 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
         for (uint plantID: plantIDs) {
             if (plant_instances.find(plantID) != plant_instances.end()) {
                 plant_instances.at(plantID).shoot_tree.front()->updateShootNodes(true);
+            }
+        }
+    }
+
+    // Update age object data once at the end for performance
+    // This avoids updating age data every timestep (which would be ~100x more calls)
+    if (output_object_data.at("age")) {
+        for (uint plantID: plantIDs) {
+            if (plant_instances.find(plantID) == plant_instances.end()) {
+                continue;
+            }
+
+            auto shoot_tree = &plant_instances.at(plantID).shoot_tree;
+            for (auto &shoot: *shoot_tree) {
+                // Update internode age once per shoot (fixes redundancy noted in previous TODO)
+                // All phytomers in a shoot share the same internode tube object
+                if (shoot->build_context_geometry_internode && !shoot->phytomers.empty()) {
+                    if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
+                        // Use the age of the youngest (last) phytomer as the shoot age
+                        float shoot_age = shoot->phytomers.back()->age;
+                        context_ptr->setObjectData(shoot->internode_tube_objID, "age", shoot_age);
+                    }
+                }
+
+                // Update each phytomer's petiole and leaf age
+                for (auto &phytomer: shoot->phytomers) {
+                    if (phytomer->build_context_geometry_petiole) {
+                        context_ptr->setObjectData(phytomer->petiole_objIDs, "age", phytomer->age);
+                    }
+                    context_ptr->setObjectData(phytomer->leaf_objIDs, "age", phytomer->age);
+                }
             }
         }
     }
@@ -5256,10 +5276,10 @@ std::vector<uint> makeTubeFromCones(uint radial_subdivisions, const std::vector<
         helios_runtime_error("ERROR (makeTubeFromCones): Length of vertex vectors is not consistent.");
     }
 
-    //Check if tube is too small to create geometry - check both radii and total length
+    // Check if tube is too small to create geometry - check both radii and total length
     bool all_radii_too_small = true;
     float max_radius = 0.0f;
-    for (float radius : radii) {
+    for (float radius: radii) {
         max_radius = std::max(max_radius, radius);
         if (radius >= MIN_TUBE_RADIUS_FOR_GEOMETRY) {
             all_radii_too_small = false;
@@ -5883,10 +5903,6 @@ void PlantArchitecture::setPlantAttractionPoints(uint plantID, const std::vector
     plant.attraction_cone_height = look_ahead_distance;
     plant.attraction_weight = attraction_weight_input;
     plant.attraction_obstacle_reduction_factor = obstacle_reduction_factor;
-
-    if (printmessages) {
-        std::cout << "Set attraction points for plant " << plantID << " with " << attraction_points_input.size() << " target positions (internal library call)" << std::endl;
-    }
 }
 
 void PlantArchitecture::disableMessages() {

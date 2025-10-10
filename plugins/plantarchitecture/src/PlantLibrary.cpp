@@ -553,7 +553,7 @@ void PlantArchitecture::initializeAppleFruitingWallShoots() {
     // Trunk
     ShootParameters shoot_parameters_trunk(context_ptr->getRandomGenerator());
     shoot_parameters_trunk.phytomer_parameters = phytomer_parameters_apple;
-    shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(175,185);
+    shoot_parameters_trunk.phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(175, 185);
     shoot_parameters_trunk.phytomer_parameters.internode.radius_initial = 0.01;
     shoot_parameters_trunk.phytomer_parameters.internode.radial_subdivisions = 24;
     shoot_parameters_trunk.max_nodes = 30;
@@ -593,7 +593,7 @@ void PlantArchitecture::initializeAppleFruitingWallShoots() {
     shoot_parameters_proleptic.determinate_shoot_growth = false;
     shoot_parameters_proleptic.defineChildShootTypes({"proleptic"}, {1.0});
 
-    //lateral shoots
+    // lateral shoots
     ShootParameters shoot_parameters_lateral = shoot_parameters_proleptic;
     shoot_parameters_lateral.gravitropic_curvature = 0;
     shoot_parameters_lateral.phytomer_parameters.internode.phyllotactic_angle = 360;
@@ -616,9 +616,9 @@ uint PlantArchitecture::buildAppleFruitingWall(const helios::vec3 &base_position
     float tree_spacing = 1.2;
 
     trellis_points.reserve(wire_heights.size());
-    for ( int i=0; i<wire_heights.size(); i++ ) {
+    for (int i = 0; i < wire_heights.size(); i++) {
         trellis_points.push_back(linspace(make_vec3(0, -0.5f * tree_spacing, wire_heights.at(i)), make_vec3(0, 0.5f * tree_spacing, wire_heights.at(i)), 8));
-        //context_ptr->addTube( 4, {base_position+trellis_points.back().at(0), base_position+trellis_points.back().back()}, {0.005, 0.005}, {RGB::silver, RGB::silver});
+        // context_ptr->addTube( 4, {base_position+trellis_points.back().at(0), base_position+trellis_points.back().back()}, {0.005, 0.005}, {RGB::silver, RGB::silver});
     }
 
     for (int j = 0; j < trellis_points.size(); j++) {
@@ -629,21 +629,21 @@ uint PlantArchitecture::buildAppleFruitingWall(const helios::vec3 &base_position
 
     uint plantID = addPlantInstance(base_position, 0);
 
-    uint uID_leader = addBaseStemShoot(plantID, std::ceil(wire_heights.back()/0.1), make_AxisRotation(context_ptr->randu(0, 0.05 * M_PI), 0, 0), shoot_types.at("trunk").phytomer_parameters.internode.radius_initial.val(), 0.09, 1, 1, 0.1, "trunk");
+    uint uID_leader = addBaseStemShoot(plantID, std::ceil(wire_heights.back() / 0.1), make_AxisRotation(context_ptr->randu(0, 0.05 * M_PI), 0, 0), shoot_types.at("trunk").phytomer_parameters.internode.radius_initial.val(), 0.09, 1, 1, 0.1, "trunk");
     plant_instances.at(plantID).shoot_tree.at(uID_leader)->meristem_is_alive = false;
     removeShootLeaves(plantID, uID_leader);
     removeShootVegetativeBuds(plantID, uID_leader);
     removeShootFloralBuds(plantID, uID_leader);
 
-    for ( int i=0; i<8; i++ ) {
+    for (int i = 0; i < 8; i++) {
         float z;
-        if ( i==0 ) {
-            z = wire_heights.front()-0.1;
-        }else {
-            z = context_ptr->randu(wire_heights.front()-0.1, wire_heights.at(wire_heights.size()-1));
+        if (i == 0) {
+            z = wire_heights.front() - 0.1;
+        } else {
+            z = context_ptr->randu(wire_heights.front() - 0.1, wire_heights.at(wire_heights.size() - 1));
         }
-        int node = std::round(z/0.1)-1;
-        addChildShoot(plantID, uID_leader, node, 8, make_AxisRotation(context_ptr->randu(float(0.45f * M_PI), 0.52f * M_PI), context_ptr->randu(0,1)*M_PI, M_PI), 0.005, 0.05, 1, 1, 0.5, "lateral");
+        int node = std::round(z / 0.1) - 1;
+        addChildShoot(plantID, uID_leader, node, 8, make_AxisRotation(context_ptr->randu(float(0.45f * M_PI), 0.52f * M_PI), context_ptr->randu(0, 1) * M_PI, M_PI), 0.005, 0.05, 1, 1, 0.5, "lateral");
     }
 
     // Set plant-specific attraction points for this grapevine's trellis system
@@ -1043,7 +1043,7 @@ void PlantArchitecture::initializeBougainvilleaShoots() {
     PhytomerParameters phytomer_parameters(context_ptr->getRandomGenerator());
 
     phytomer_parameters.internode.pitch = 10;
-    phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(160,190);
+    phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(160, 190);
     phytomer_parameters.internode.radius_initial = 0.001;
     phytomer_parameters.internode.color = make_RGBcolor(0.213, 0.270, 0.056);
     phytomer_parameters.internode.length_segments = 1;
@@ -1068,7 +1068,7 @@ void PlantArchitecture::initializeBougainvilleaShoots() {
     phytomer_parameters.peduncle.radius = 0.0015;
     phytomer_parameters.peduncle.pitch.uniformDistribution(70, 90);
     phytomer_parameters.peduncle.roll.uniformDistribution(0, 180);
-    phytomer_parameters.peduncle.curvature.uniformDistribution(-200,200);
+    phytomer_parameters.peduncle.curvature.uniformDistribution(-200, 200);
     phytomer_parameters.peduncle.color = phytomer_parameters.internode.color;
     phytomer_parameters.peduncle.length_segments = 3;
     phytomer_parameters.peduncle.radial_subdivisions = 6;
@@ -1108,7 +1108,7 @@ void PlantArchitecture::initializeBougainvilleaShoots() {
     shoot_parameters.growth_requires_dormancy = false;
     shoot_parameters.determinate_shoot_growth = false;
 
-    shoot_parameters.defineChildShootTypes( {"secondary"}, {1.0});
+    shoot_parameters.defineChildShootTypes({"secondary"}, {1.0});
 
     defineShootType("mainstem", shoot_parameters);
 
@@ -1116,7 +1116,6 @@ void PlantArchitecture::initializeBougainvilleaShoots() {
     shoot_parameters_secondary.max_nodes = 15;
 
     defineShootType("secondary", shoot_parameters_secondary);
-
 }
 
 uint PlantArchitecture::buildBougainvilleaPlant(const helios::vec3 &base_position) {
@@ -2281,8 +2280,8 @@ void PlantArchitecture::initializePistachioTreeShoots() {
     shoot_parameters_proleptic.phytomer_parameters = phytomer_parameters_pistachio;
     shoot_parameters_proleptic.phytomer_parameters.phytomer_creation_function = PistachioPhytomerCreationFunction;
     shoot_parameters_proleptic.phytomer_parameters.phytomer_callback_function = PistachioPhytomerCallbackFunction;
-    shoot_parameters_proleptic.phytomer_parameters.internode.pitch.uniformDistribution(-15,15);
-    shoot_parameters_proleptic.max_nodes = 12;//.uniformDistribution(16, 24);
+    shoot_parameters_proleptic.phytomer_parameters.internode.pitch.uniformDistribution(-15, 15);
+    shoot_parameters_proleptic.max_nodes = 12; //.uniformDistribution(16, 24);
     shoot_parameters_proleptic.max_nodes_per_season.uniformDistribution(8, 10);
     shoot_parameters_proleptic.phyllochron_min = 2.0;
     shoot_parameters_proleptic.elongation_rate_max = 0.25;
@@ -2335,10 +2334,10 @@ uint PlantArchitecture::buildPistachioTree(const helios::vec3 &base_position) {
     // addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 1, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), M_PI, context_ptr->randu(0.f,0.5*M_PI)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
     // addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 2, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), 0.5*M_PI, context_ptr->randu(0.f,0.5*M_PI)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
     // addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 2, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), 1.5*M_PI, context_ptr->randu(0.f,0.5*M_PI)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
-    addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 1, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), 0, 0.5*M_PI+context_ptr->randu(-0.2f,0.2f)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
-    addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 1, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), M_PI, 0.5*M_PI+context_ptr->randu(-0.2f,0.2f)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
-    addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 2, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), 0.5*M_PI, 0.5*M_PI+context_ptr->randu(-0.2f,0.2f)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
-    addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 2, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), 1.5*M_PI, 0.5*M_PI+context_ptr->randu(-0.2f,0.2f)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
+    addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 1, 5, make_AxisRotation(pitch + context_ptr->randu(-0.15f, 0.15f), 0, 0.5 * M_PI + context_ptr->randu(-0.2f, 0.2f)), 0.007, 0.03, 1.f, 1.f, 0.5, "proleptic", 0);
+    addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 1, 5, make_AxisRotation(pitch + context_ptr->randu(-0.15f, 0.15f), M_PI, 0.5 * M_PI + context_ptr->randu(-0.2f, 0.2f)), 0.007, 0.03, 1.f, 1.f, 0.5, "proleptic", 0);
+    addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 2, 5, make_AxisRotation(pitch + context_ptr->randu(-0.15f, 0.15f), 0.5 * M_PI, 0.5 * M_PI + context_ptr->randu(-0.2f, 0.2f)), 0.007, 0.03, 1.f, 1.f, 0.5, "proleptic", 0);
+    addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 2, 5, make_AxisRotation(pitch + context_ptr->randu(-0.15f, 0.15f), 1.5 * M_PI, 0.5 * M_PI + context_ptr->randu(-0.2f, 0.2f)), 0.007, 0.03, 1.f, 1.f, 0.5, "proleptic", 0);
 
 
     makePlantDormant(plantID);

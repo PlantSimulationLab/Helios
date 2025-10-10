@@ -296,9 +296,9 @@ struct CarbohydrateParameters {
 
     // -- Respiration Parameters -- //
     //! maintenance respiration rate of stem (mol C respired/mol C in pool/day)
-    float stem_maintainance_respiration_rate = 3.5024e-05;
+    float stem_maintenance_respiration_rate = 3.5024e-05;
     //! maintenance respiration rate of root (mol C respired/mol C in pool/day)
-    float root_maintainance_respiration_rate = 3.5024e-05;
+    float root_maintenance_respiration_rate = 3.5024e-05;
     //! growth respiration cost (fraction of total carbon used during growth that goes toward respiration rather than structure)
     float growth_respiration_fraction = 0.28;
 

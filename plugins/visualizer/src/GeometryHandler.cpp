@@ -29,11 +29,12 @@ void GeometryHandler::allocateBufferSize(size_t primitive_count, VisualizerGeome
     coordinate_flag_data[geometry_type].reserve(coordinate_flag_data[geometry_type].size() + primitive_count);
     delete_flag_data[geometry_type].reserve(delete_flag_data[geometry_type].size() + primitive_count);
     context_geometry_flag_data[geometry_type].reserve(context_geometry_flag_data[geometry_type].size() + primitive_count);
+    sky_geometry_flag_data[geometry_type].reserve(sky_geometry_flag_data[geometry_type].size() + primitive_count);
     size_data[geometry_type].reserve(size_data[geometry_type].size() + primitive_count);
 }
 
 void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geometry_type, const std::vector<helios::vec3> &vertices, const helios::RGBAcolor &color, const std::vector<helios::vec2> &uvs, int textureID, bool override_texture_color,
-                                  bool has_glyph_texture, uint coordinate_system, bool visible_flag, bool iscontextgeometry, int size) {
+                                  bool has_glyph_texture, uint coordinate_system, bool visible_flag, bool iscontextgeometry, bool isskygeometry, int size) {
 
     char vertex_count = getVertexCount(geometry_type);
 
@@ -174,6 +175,8 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
 
         context_geometry_flag_data[geometry_type].push_back(iscontextgeometry);
 
+        sky_geometry_flag_data[geometry_type].push_back(isskygeometry ? 1 : 0);
+
         size_data[geometry_type].push_back(static_cast<float>(size));
     } else {
         normal_data[geometry_type].at(normal_index) = normal.x;
@@ -282,22 +285,33 @@ void GeometryHandler::setVertices(size_t UUID, const std::vector<helios::vec3> &
     assert(vertices.size() == vertex_count);
 #endif
 
+    // Apply transformation for window-normalized coordinates (same as addGeometry does)
+    std::vector<helios::vec3> vertices_to_store = vertices;
+    const uint coordinate_system = coordinate_flag_data.at(index_map.geometry_type).at(index_map.coordinate_flag_index);
+    if (coordinate_system == 0) { // COORDINATES_WINDOW_NORMALIZED
+        // Transform: [0,1] → [-1,1]
+        for (auto &vertex: vertices_to_store) {
+            vertex.x = 2.f * vertex.x - 1.f;
+            vertex.y = 2.f * vertex.y - 1.f;
+        }
+    }
+
     const size_t vertex_ind = index_map.vertex_index;
 
     int ii = 0;
     for (int i = 0; i < vertex_count; i++) {
-        vertex_data[index_map.geometry_type].at(vertex_ind + ii + 0) = vertices.at(i).x;
-        vertex_data[index_map.geometry_type].at(vertex_ind + ii + 1) = vertices.at(i).y;
-        vertex_data[index_map.geometry_type].at(vertex_ind + ii + 2) = vertices.at(i).z;
+        vertex_data[index_map.geometry_type].at(vertex_ind + ii + 0) = vertices_to_store.at(i).x;
+        vertex_data[index_map.geometry_type].at(vertex_ind + ii + 1) = vertices_to_store.at(i).y;
+        vertex_data[index_map.geometry_type].at(vertex_ind + ii + 2) = vertices_to_store.at(i).z;
         ii += 3;
     }
 
     const size_t normal_ind = index_map.normal_index;
 
-    const helios::vec3 normal = normalize(cross(vertices.at(1) - vertices.at(0), vertices.at(2) - vertices.at(0)));
-    normal_data[index_map.geometry_type].at(normal_ind + ii + 0) = normal.x;
-    normal_data[index_map.geometry_type].at(normal_ind + ii + 1) = normal.y;
-    normal_data[index_map.geometry_type].at(normal_ind + ii + 2) = normal.z;
+    const helios::vec3 normal = normalize(cross(vertices_to_store.at(1) - vertices_to_store.at(0), vertices_to_store.at(2) - vertices_to_store.at(0)));
+    normal_data[index_map.geometry_type].at(normal_ind + 0) = normal.x;
+    normal_data[index_map.geometry_type].at(normal_ind + 1) = normal.y;
+    normal_data[index_map.geometry_type].at(normal_ind + 2) = normal.z;
 
     markDirty(UUID);
 }
@@ -320,6 +334,17 @@ std::vector<helios::vec3> GeometryHandler::getVertices(size_t UUID) const {
         vertices.at(i).x = vertex_data.at(index_map.geometry_type).at(vertex_ind + i * 3 + 0);
         vertices.at(i).y = vertex_data.at(index_map.geometry_type).at(vertex_ind + i * 3 + 1);
         vertices.at(i).z = vertex_data.at(index_map.geometry_type).at(vertex_ind + i * 3 + 2);
+    }
+
+    // Apply inverse transformation for window-normalized coordinates
+    // Internal storage is in OpenGL space [-1,1], so we need to convert back to [0,1]
+    const uint coordinate_system = coordinate_flag_data.at(index_map.geometry_type).at(index_map.coordinate_flag_index);
+    if (coordinate_system == 0) { // COORDINATES_WINDOW_NORMALIZED
+        // Inverse transform: [-1,1] → [0,1]
+        for (auto &vertex: vertices) {
+            vertex.x = (vertex.x + 1.f) * 0.5f;
+            vertex.y = (vertex.y + 1.f) * 0.5f;
+        }
     }
 
     return vertices;
@@ -593,6 +618,24 @@ const std::vector<int> *GeometryHandler::getCoordinateFlagData_ptr(VisualizerGeo
     return &coordinate_flag_data.at(geometry_type);
 }
 
+bool GeometryHandler::isSkyGeometry(size_t UUID) const {
+#ifdef HELIOS_DEBUG
+    assert(UUID_map.find(UUID) != UUID_map.end());
+#endif
+
+    const PrimitiveIndexMap &index_map = UUID_map.at(UUID);
+    const size_t sky_ind = index_map.sky_geometry_flag_index;
+
+    return static_cast<bool>(sky_geometry_flag_data.at(index_map.geometry_type).at(sky_ind));
+}
+
+const std::vector<char> *GeometryHandler::getSkyGeometryFlagData_ptr(VisualizerGeometryType geometry_type) const {
+#ifdef HELIOS_DEBUG
+    assert(sky_geometry_flag_data.find(geometry_type) != sky_geometry_flag_data.end());
+#endif
+    return &sky_geometry_flag_data.at(geometry_type);
+}
+
 void GeometryHandler::setSize(size_t UUID, float size) {
 
 #ifdef HELIOS_DEBUG
@@ -683,6 +726,7 @@ void GeometryHandler::clearAllGeometry() {
         coordinate_flag_data.at(geometry_type).clear();
         visible_flag_data.at(geometry_type).clear();
         context_geometry_flag_data.at(geometry_type).clear();
+        sky_geometry_flag_data.at(geometry_type).clear();
         delete_flag_data.at(geometry_type).clear();
         size_data.at(geometry_type).clear();
     }
@@ -802,6 +846,7 @@ void GeometryHandler::defragmentBuffers() {
         auto &oldCoordFlag = coordinate_flag_data.at(geometry_type);
         auto &oldVisible = visible_flag_data.at(geometry_type);
         auto &oldContextFlag = context_geometry_flag_data.at(geometry_type);
+        auto &oldSkyFlag = sky_geometry_flag_data.at(geometry_type);
         auto &oldDeleteFlag = delete_flag_data.at(geometry_type);
         auto &oldSize = size_data.at(geometry_type);
 
@@ -810,7 +855,7 @@ void GeometryHandler::defragmentBuffers() {
         std::vector<float> newVertex, newNormal, newUV, newColor, newSize;
         std::vector<int> newFace, newTexFlag, newTexID, newCoordFlag;
         std::vector<bool> newDeleteFlag, newContextFlag;
-        std::vector<char> newVisible;
+        std::vector<char> newVisible, newSkyFlag;
 
         // Collect UUIDs to drop
         std::vector<size_t> toErase;
@@ -843,6 +888,7 @@ void GeometryHandler::defragmentBuffers() {
             const size_t cfi = newCoordFlag.size();
             const size_t vi2 = newVisible.size();
             const size_t cfi2 = newContextFlag.size();
+            const size_t sfi = newSkyFlag.size();
             const size_t dfi = newDeleteFlag.size();
             const size_t si = newSize.size();
 
@@ -862,6 +908,7 @@ void GeometryHandler::defragmentBuffers() {
             newCoordFlag.push_back(oldCoordFlag[prim.coordinate_flag_index]);
             newVisible.push_back(oldVisible[prim.visible_index]);
             newContextFlag.push_back(oldContextFlag[prim.context_geometry_flag_index]);
+            newSkyFlag.push_back(oldSkyFlag[prim.sky_geometry_flag_index]);
             newDeleteFlag.push_back(oldDeleteFlag[prim.delete_flag_index]);
             newSize.push_back(oldSize[prim.size_index]);
 
@@ -876,6 +923,7 @@ void GeometryHandler::defragmentBuffers() {
             prim.coordinate_flag_index = cfi;
             prim.visible_index = vi2;
             prim.context_geometry_flag_index = cfi2;
+            prim.sky_geometry_flag_index = sfi;
             prim.delete_flag_index = dfi;
             prim.size_index = si;
         }
@@ -896,6 +944,7 @@ void GeometryHandler::defragmentBuffers() {
         oldCoordFlag.swap(newCoordFlag);
         oldVisible.swap(newVisible);
         oldContextFlag.swap(newContextFlag);
+        oldSkyFlag.swap(newSkyFlag);
         oldDeleteFlag.swap(newDeleteFlag);
         oldSize.swap(newSize);
     }
@@ -917,6 +966,7 @@ void GeometryHandler::registerUUID(size_t UUID, const VisualizerGeometryType &ge
                       coordinate_flag_data.at(geometry_type).size(),
                       visible_flag_data.at(geometry_type).size(),
                       context_geometry_flag_data.at(geometry_type).size(),
+                      sky_geometry_flag_data.at(geometry_type).size(),
                       delete_flag_data.at(geometry_type).size(),
                       size_data.at(geometry_type).size()};
 }

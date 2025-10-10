@@ -171,18 +171,77 @@
 
   \subsection Background Window background
 
- The window background can be set to a constant color via the command \ref Visualizer::setBackgroundColor( const helios::RGBcolor & ) "setBackgroundColor( RGBcolor color )".  Alternatively, a three-dimensional `sky' background can be set using the \ref Visualizer::addSkyDomeByCenter "addSkyDomeByCenter" command.  This adds a hemispherical dome with a sky texture image mapped to its surface.  The default sky texture is `SkyDome_clouds.jpg' located in the plugins/visualizer/textures directory.  The following example shows how to add a sky dome:
+ The %Visualizer provides multiple options for customizing the window background:
+
+ <b>Default Gradient Background</b>
+
+ By default, the %Visualizer displays a subtle vertical gradient background that transitions from a neutral blue at the bottom to white at the top. This provides a clean, professional appearance without requiring any configuration.
+
+ <b>Solid Color Background</b>
+
+ The window background can be set to a constant color using the \ref Visualizer::setBackgroundColor( const helios::RGBcolor & ) "setBackgroundColor( RGBcolor color )" command:
 
   ~~~~~~{.cpp}
    #include "Visualizer.h"
-	
+
    int main(){
       Visualizer vis( 1200 );
-      vis.addSkyDomeByCenter( 100, make_vec3(0,0,0), 20, "plugins/visualizer/textures/SkyDome_clouds.jpg", 0 );
+      vis.setBackgroundColor( RGB::white );  // Set background to white
    }
   ~~~~~~
 
-  In the example, we have created a sky dome with a radius of 100 centered at the origin (0,0,0), 20 divisions in the spherical coordinate directions (elevation,azimuth), and on layer 0.
+ <b>Transparent Background</b>
+
+ For creating visualizations with transparent backgrounds (useful for overlaying on other images or presentations), use the \ref Visualizer::setBackgroundTransparent() "setBackgroundTransparent()" command. When rendering to the screen, a checkerboard pattern indicates transparency. When exporting to PNG format via \ref Visualizer::printWindow() "printWindow()", the background will have true alpha channel transparency:
+
+  ~~~~~~{.cpp}
+   #include "Visualizer.h"
+
+   int main(){
+      Visualizer vis( 1200 );
+      vis.setBackgroundTransparent();
+      vis.plotUpdate();
+      vis.printWindow("output.png", "png");  // Saves with transparent background
+   }
+  ~~~~~~
+
+ Note: Transparent backgrounds only work with PNG output format. JPEG output will have an opaque background.
+
+ <b>Custom Image Background</b>
+
+ You can set a custom texture image as the background using the \ref Visualizer::setBackgroundImage( const char* ) "setBackgroundImage( const char* texture_file )" command:
+
+  ~~~~~~{.cpp}
+   #include "Visualizer.h"
+
+   int main(){
+      Visualizer vis( 1200 );
+      vis.setBackgroundImage( "path/to/custom_background.jpg" );
+   }
+  ~~~~~~
+
+ The image will be stretched to fill the window while maintaining the aspect ratio to avoid distortion. Both JPEG and PNG formats are supported.
+
+ <b>Sky Texture Background</b>
+
+ For outdoor scenes, a three-dimensional sky background can be added using the \ref Visualizer::setBackgroundSkyTexture "setBackgroundSkyTexture" command. This creates a dynamically scaling sky sphere that uses shader-based transformations to keep the camera always inside, eliminating the need to manually specify a radius. The sky appears infinitely distant regardless of camera position or zoom level:
+
+  ~~~~~~{.cpp}
+   #include "Visualizer.h"
+
+   int main(){
+      Visualizer vis( 1200 );
+      // Use default sky texture (SkyDome_clouds.jpg)
+      vis.setBackgroundSkyTexture();
+
+      // Or specify a custom texture
+      // vis.setBackgroundSkyTexture( "path/to/custom_sky.jpg" );
+   }
+  ~~~~~~
+
+  The method automatically uses the default sky texture (`plugins/visualizer/textures/SkyDome_clouds.jpg`) if no texture file is specified. The sky can be toggled on/off like other background modes using \ref Visualizer::setBackgroundColor "setBackgroundColor", \ref Visualizer::setBackgroundTransparent "setBackgroundTransparent", or \ref Visualizer::setBackgroundImage "setBackgroundImage".
+
+  \note The older \ref Visualizer::addSkyDomeByCenter "addSkyDomeByCenter" method is deprecated and will be removed in a future version. It required manual specification of radius and center, which could break when zooming out beyond the dome's boundaries. The new \ref Visualizer::setBackgroundSkyTexture "setBackgroundSkyTexture" method provides a more robust solution that works correctly at all zoom levels.
   
   \subsection AddGeom Adding Geometry
 
@@ -548,23 +607,23 @@
    </tr>
    <tr>
       <td>\ref Visualizer::COLORMAP_COOL</td>
-      <td>\image html colormap_cool.png</td>
+      <td>\image html colormap_cool.png
    </tr>
    <tr>
       <td>\ref Visualizer::COLORMAP_RAINBOW</td>
-      <td>\image html colormap_rainbow.png</td>
+      <td>\image html colormap_rainbow.png
    </tr>
    <tr>
       <td>\ref Visualizer::COLORMAP_LAVA</td>
-      <td>\image html colormap_lava.png</td>
+      <td>\image html colormap_lava.png
    </tr>
    <tr>
       <td>\ref Visualizer::COLORMAP_PARULA</td>
-      <td>\image html colormap_parula.png</td>
+      <td>\image html colormap_parula.png
    </tr>
    <tr>
       <td>\ref Visualizer::COLORMAP_GRAY</td>
-      <td>\image html colormap_gray.png</td>
+      <td>\image html colormap_gray.png
    </tr>
    <tr>
       <td>\ref Visualizer::COLORMAP_CUSTOM</td>
@@ -675,6 +734,24 @@
       <td>Set the size of the colorbar text in points.</td>
    </tr>
  </table>
+
+  \paragraph auto_ticks Automatic Tick Generation
+
+  When custom ticks are not specified using \ref Visualizer::setColorbarTicks, the visualizer automatically generates tick positions and labels using Heckbert's "nice numbers" algorithm. This algorithm selects tick values that are "clean" multiples of 1, 2, or 5 times a power of 10, making the colorbar easier to read.
+
+  <b>Adaptive Tick Count:</b> The number of ticks is automatically determined based on the colorbar size and font size to prevent overcrowding. Smaller colorbars will have fewer ticks to maintain readability.
+
+  For example:
+  - A colorbar ranging from 0 to 1 will generate ticks at 0.0, 0.2, 0.4, 0.6, 0.8, 1.0
+  - A colorbar ranging from 0 to 600 (with limited space) will generate ticks at 0, 200, 400, 600
+  - A colorbar ranging from 0 to 20 with integer data will generate ticks at 0, 5, 10, 15, 20
+
+  The tick label formatting automatically adapts based on the data type and range:
+  - <b>Integer data</b>: Tick labels are formatted as integers with no decimal places (e.g., 0, 5, 10). For values ≥10,000, scientific notation is used (e.g., 1e+04)
+  - <b>Floating-point data</b>: Tick labels show an appropriate number of decimal places based on the tick spacing (e.g., 0.0, 0.2, 0.4). Scientific notation is used for values ≥10,000 or <0.001
+  - <b>Scientific notation</b>: Automatically used for very large (≥10,000) or very small (<0.001) values to maintain readability
+
+  The data type (integer vs. float) is automatically detected when calling \ref Visualizer::colorContextPrimitivesByData or \ref Visualizer::colorContextPrimitivesByObjectData.
 
   \image html vineyard_PAR_cmap.png
   

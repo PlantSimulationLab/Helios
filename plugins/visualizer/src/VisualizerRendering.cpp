@@ -46,22 +46,54 @@ void Visualizer::printWindow() {
     printWindow(outfile);
 }
 
-void Visualizer::printWindow(const char *outfile) const {
-    std::string outfile_str = outfile;
+void Visualizer::printWindow(const char *outfile, const std::string &image_format) {
 
-    std::string ext = getFileExtension(outfile_str);
-    if (ext.empty()) {
-        outfile_str += ".jpeg";
+    // Save current navigation gizmo state and temporarily hide it for screenshot
+    bool gizmo_was_visible = navigation_gizmo_enabled;
+    if (gizmo_was_visible) {
+        hideNavigationGizmo();
     }
 
-    if (!validateOutputPath(outfile_str, {".jpeg", ".jpg", ".JPEG", ".JPG"})) {
-        helios_runtime_error("ERROR (Visualizer::printWindow): Output path is not valid or does not have a valid image extension (.jpeg, .jpg).");
+    // Update the plot window to ensure latest rendering
+    this->plotUpdate(true);
+
+    std::string outfile_str = outfile;
+
+    // Validate image format
+    std::string format_lower = image_format;
+    std::transform(format_lower.begin(), format_lower.end(), format_lower.begin(), ::tolower);
+
+    bool is_png = (format_lower == "png");
+    bool is_jpeg = (format_lower == "jpeg" || format_lower == "jpg");
+
+    if (!is_png && !is_jpeg) {
+        helios_runtime_error("ERROR (Visualizer::printWindow): Invalid image_format '" + image_format + "'. Must be 'jpeg', 'jpg', or 'png'.");
+    }
+
+    // Add or verify file extension
+    std::string ext = getFileExtension(outfile_str);
+    if (ext.empty()) {
+        outfile_str += is_png ? ".png" : ".jpeg";
+    } else {
+        // Validate extension matches format (getFileExtension returns extension with leading dot, e.g., ".jpg")
+        std::string ext_lower = ext;
+        std::transform(ext_lower.begin(), ext_lower.end(), ext_lower.begin(), ::tolower);
+        if (is_png && ext_lower != ".png") {
+            helios_runtime_error("ERROR (Visualizer::printWindow): File extension '" + ext + "' does not match image_format 'png'.");
+        } else if (is_jpeg && ext_lower != ".jpg" && ext_lower != ".jpeg") {
+            helios_runtime_error("ERROR (Visualizer::printWindow): File extension '" + ext + "' does not match image_format 'jpeg'.");
+        }
+    }
+
+    // Warn if transparent background requested with JPEG format
+    if (background_is_transparent && is_jpeg && message_flag) {
+        std::cerr << "WARNING (Visualizer::printWindow): Transparent background requested but JPEG format does not support transparency. Output will have opaque background." << std::endl;
     }
 
     // Ensure window is visible and rendering is complete
     if (window != nullptr && !headless) {
         // Check if window is minimized or occluded
-        int window_attrib = glfwGetWindowAttrib((GLFWwindow*)window, GLFW_ICONIFIED);
+        int window_attrib = glfwGetWindowAttrib((GLFWwindow *) window, GLFW_ICONIFIED);
         if (window_attrib == GLFW_TRUE) {
             std::cerr << "WARNING (printWindow): Window is minimized - screenshot may be unreliable" << std::endl;
         }
@@ -69,28 +101,129 @@ void Visualizer::printWindow(const char *outfile) const {
         glfwPollEvents();
     }
 
+    // Temporarily delete the transparent background checkerboard rectangle for screenshot
+    // (we want the actual scene with transparent background, not the checkerboard)
+    bool had_transparent_background = background_is_transparent && background_rectangle_ID != 0;
+    if (had_transparent_background) {
+        // Delete the checkerboard completely
+        geometry_handler.deleteGeometry(background_rectangle_ID);
+        background_rectangle_ID = 0;
+
+        // Update buffers to reflect the defragmentation
+        transferBufferData();
+
+        // Ensure GPU has finished processing before rendering
+        glFinish();
+
+        // Bind the appropriate framebuffer
+        if (headless && offscreenFramebufferID != 0) {
+            glBindFramebuffer(GL_FRAMEBUFFER, offscreenFramebufferID);
+            glViewport(0, 0, Wframebuffer, Hframebuffer);
+        } else {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glViewport(0, 0, Wframebuffer, Hframebuffer);
+            // In windowed mode, explicitly set draw buffer to back buffer
+            glDrawBuffer(GL_BACK);
+        }
+
+        // Clear with transparent background
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // Set up shader and render
+        primaryShader.useShader();
+        updatePerspectiveTransformation(false);
+        primaryShader.setTransformationMatrix(perspectiveTransformationMatrix);
+        primaryShader.setViewMatrix(cameraViewMatrix);
+        primaryShader.setProjectionMatrix(cameraProjectionMatrix);
+        primaryShader.enableTextureMaps();
+        primaryShader.enableTextureMasks();
+        primaryShader.setLightingModel(primaryLightingModel);
+        primaryShader.setLightIntensity(lightintensity);
+
+        render(false);
+
+        // After re-rendering, the content is in the BACK buffer (not swapped yet)
+        // Force read buffer to BACK for the screenshot
+        if (!headless) {
+            glReadBuffer(GL_BACK);
+        }
+        buffers_swapped_since_render = false;
+    }
+
     // Additional safety: ensure all OpenGL commands have completed
     glFinish();
 
-    // Handle screenshot differently based on headless mode
-    if (headless && offscreenFramebufferID != 0) {
-        // In headless mode, read pixels from the offscreen framebuffer
-        std::vector<helios::RGBcolor> pixels = readOffscreenPixels();
-        if (pixels.empty()) {
-            helios_runtime_error("ERROR (Visualizer::printWindow): Failed to read pixels from offscreen framebuffer.");
-        }
+    // Handle screenshot based on format and headless mode
+    if (is_png) {
+        // PNG output
+        if (headless && offscreenFramebufferID != 0) {
+            // In headless mode, read pixels from the offscreen framebuffer
+            std::vector<helios::RGBAcolor> pixels = readOffscreenPixelsRGBA(background_is_transparent);
+            if (pixels.empty()) {
+                helios_runtime_error("ERROR (Visualizer::printWindow): Failed to read pixels from offscreen framebuffer.");
+            }
 
-        // Use the overloaded write_JPEG_file that accepts RGBcolor data
-        int result = write_JPEG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, pixels, message_flag);
-        if (result == 0) {
-            helios_runtime_error("ERROR (Visualizer::printWindow): Failed to save screenshot to " + outfile_str);
+            int result = write_PNG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, pixels, message_flag);
+            if (result == 0) {
+                helios_runtime_error("ERROR (Visualizer::printWindow): Failed to save screenshot to " + outfile_str);
+            }
+        } else {
+            // In windowed mode, use the traditional framebuffer reading
+            int result = write_PNG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, buffers_swapped_since_render, background_is_transparent, message_flag);
+            if (result == 0) {
+                helios_runtime_error("ERROR (Visualizer::printWindow): Failed to save screenshot to " + outfile_str);
+            }
         }
     } else {
-        // In windowed mode, use the traditional framebuffer reading
-        int result = write_JPEG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, buffers_swapped_since_render, message_flag);
-        if (result == 0) {
-            helios_runtime_error("ERROR (Visualizer::printWindow): Failed to save screenshot to " + outfile_str);
+        // JPEG output
+        if (headless && offscreenFramebufferID != 0) {
+            // In headless mode, read pixels from the offscreen framebuffer
+            std::vector<helios::RGBcolor> pixels = readOffscreenPixels();
+            if (pixels.empty()) {
+                helios_runtime_error("ERROR (Visualizer::printWindow): Failed to read pixels from offscreen framebuffer.");
+            }
+
+            int result = write_JPEG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, pixels, message_flag);
+            if (result == 0) {
+                helios_runtime_error("ERROR (Visualizer::printWindow): Failed to save screenshot to " + outfile_str);
+            }
+        } else {
+            // In windowed mode, use the traditional framebuffer reading
+            int result = write_JPEG_file(outfile_str.c_str(), Wframebuffer, Hframebuffer, buffers_swapped_since_render, message_flag);
+            if (result == 0) {
+                helios_runtime_error("ERROR (Visualizer::printWindow): Failed to save screenshot to " + outfile_str);
+            }
         }
+    }
+
+    // Restore the transparent background checkerboard rectangle if it was active
+    if (had_transparent_background) {
+        // Define rectangle vertices in normalized window coordinates
+        std::vector<helios::vec3> vertices = {
+                helios::make_vec3(0.f, 0.f, 0.99f), // Bottom-left
+                helios::make_vec3(1.f, 0.f, 0.99f), // Bottom-right
+                helios::make_vec3(1.f, 1.f, 0.99f), // Top-right
+                helios::make_vec3(0.f, 1.f, 0.99f) // Top-left
+        };
+
+        // Calculate aspect ratio and adjust UV coordinates to maintain square checkerboard pattern
+        float aspect_ratio = static_cast<float>(Wframebuffer) / static_cast<float>(Hframebuffer);
+        std::vector<helios::vec2> uvs;
+        if (aspect_ratio > 1.f) {
+            // Window is wider than tall - stretch UV in x-direction
+            uvs = {helios::make_vec2(0.f, 0.f), helios::make_vec2(aspect_ratio, 0.f), helios::make_vec2(aspect_ratio, 1.f), helios::make_vec2(0.f, 1.f)};
+        } else {
+            // Window is taller than wide - stretch UV in y-direction
+            uvs = {helios::make_vec2(0.f, 0.f), helios::make_vec2(1.f, 0.f), helios::make_vec2(1.f, 1.f / aspect_ratio), helios::make_vec2(0.f, 1.f / aspect_ratio)};
+        }
+
+        background_rectangle_ID = addRectangleByVertices(vertices, "plugins/visualizer/textures/transparent.jpg", uvs, COORDINATES_WINDOW_NORMALIZED);
+    }
+
+    // Restore navigation gizmo state
+    if (gizmo_was_visible) {
+        showNavigationGizmo();
     }
 }
 
@@ -185,17 +318,15 @@ void Visualizer::getWindowPixelsRGB(uint *buffer) const {
         // In windowed mode, robustly determine which buffer contains rendered content
         // Sample multiple pixels to avoid false negatives from legitimately black pixels
         const int num_samples = 9;
-        const uint sample_positions[][2] = {
-            {Wframebuffer/4, Hframebuffer/4}, {Wframebuffer/2, Hframebuffer/4}, {3*Wframebuffer/4, Hframebuffer/4},
-            {Wframebuffer/4, Hframebuffer/2}, {Wframebuffer/2, Hframebuffer/2}, {3*Wframebuffer/4, Hframebuffer/2},
-            {Wframebuffer/4, 3*Hframebuffer/4}, {Wframebuffer/2, 3*Hframebuffer/4}, {3*Wframebuffer/4, 3*Hframebuffer/4}
-        };
+        const uint sample_positions[][2] = {{Wframebuffer / 4, Hframebuffer / 4},     {Wframebuffer / 2, Hframebuffer / 4},     {3 * Wframebuffer / 4, Hframebuffer / 4},
+                                            {Wframebuffer / 4, Hframebuffer / 2},     {Wframebuffer / 2, Hframebuffer / 2},     {3 * Wframebuffer / 4, Hframebuffer / 2},
+                                            {Wframebuffer / 4, 3 * Hframebuffer / 4}, {Wframebuffer / 2, 3 * Hframebuffer / 4}, {3 * Wframebuffer / 4, 3 * Hframebuffer / 4}};
         GLubyte test_pixels[num_samples * 3];
 
-        auto count_non_black_pixels = [](const GLubyte* pixels, int count) -> int {
+        auto count_non_black_pixels = [](const GLubyte *pixels, int count) -> int {
             int non_black = 0;
             for (int i = 0; i < count * 3; i += 3) {
-                if (pixels[i] > 5 || pixels[i+1] > 5 || pixels[i+2] > 5) { // Use small threshold to account for compression artifacts
+                if (pixels[i] > 5 || pixels[i + 1] > 5 || pixels[i + 2] > 5) { // Use small threshold to account for compression artifacts
                     non_black++;
                 }
             }
@@ -211,7 +342,7 @@ void Visualizer::getWindowPixelsRGB(uint *buffer) const {
         if (error == GL_NO_ERROR) {
             glFinish();
             for (int i = 0; i < num_samples; i++) {
-                glReadPixels(sample_positions[i][0], sample_positions[i][1], 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &test_pixels[i*3]);
+                glReadPixels(sample_positions[i][0], sample_positions[i][1], 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &test_pixels[i * 3]);
             }
             if (glGetError() == GL_NO_ERROR) {
                 back_buffer_content_score = count_non_black_pixels(test_pixels, num_samples);
@@ -224,7 +355,7 @@ void Visualizer::getWindowPixelsRGB(uint *buffer) const {
         if (error == GL_NO_ERROR) {
             glFinish();
             for (int i = 0; i < num_samples; i++) {
-                glReadPixels(sample_positions[i][0], sample_positions[i][1], 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &test_pixels[i*3]);
+                glReadPixels(sample_positions[i][0], sample_positions[i][1], 1, 1, GL_RGB, GL_UNSIGNED_BYTE, &test_pixels[i * 3]);
             }
             if (glGetError() == GL_NO_ERROR) {
                 front_buffer_content_score = count_non_black_pixels(test_pixels, num_samples);
@@ -393,17 +524,18 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
     // Watermark
     updateWatermark();
 
+    // Navigation gizmo - initialize before entering render loop
+    if (navigation_gizmo_enabled) {
+        updateNavigationGizmo();
+        previous_camera_eye_location = camera_eye_location;
+        previous_camera_lookat_center = camera_lookat_center;
+    }
+
     transferBufferData();
 
     assert(checkerrors());
 
-    bool shadow_flag = false;
-    for (const auto &model: primaryLightingModel) {
-        if (model == Visualizer::LIGHTING_PHONG_SHADOWED) {
-            shadow_flag = true;
-            break;
-        }
-    }
+    bool shadow_flag = (primaryLightingModel == Visualizer::LIGHTING_PHONG_SHADOWED);
 
     glm::mat4 depthMVP;
 
@@ -414,6 +546,15 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
     glfwShowWindow((GLFWwindow *) window);
 
     do {
+        // Update navigation gizmo if camera has changed
+        if (navigation_gizmo_enabled && cameraHasChanged()) {
+            updateNavigationGizmo();
+            previous_camera_eye_location = camera_eye_location;
+            previous_camera_lookat_center = camera_lookat_center;
+            // Transfer updated geometry to GPU immediately after updating gizmo
+            transferBufferData();
+        }
+
         if (shadow_flag) {
             assert(checkerrors());
             // Depth buffer for shadows
@@ -450,7 +591,11 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, Wframebuffer, Hframebuffer);
 
-        glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, 0.0f);
+        if (background_is_transparent) {
+            glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        } else {
+            glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, 1.0f);
+        }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -463,11 +608,13 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
         updatePerspectiveTransformation(false);
 
         primaryShader.setTransformationMatrix(perspectiveTransformationMatrix);
+        primaryShader.setViewMatrix(cameraViewMatrix);
+        primaryShader.setProjectionMatrix(cameraProjectionMatrix);
 
         primaryShader.enableTextureMaps();
         primaryShader.enableTextureMasks();
 
-        primaryShader.setLightingModel(primaryLightingModel.at(0));
+        primaryShader.setLightingModel(primaryLightingModel);
         primaryShader.setLightIntensity(lightintensity);
 
         glActiveTexture(GL_TEXTURE1);
@@ -477,6 +624,8 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 
         buffers_swapped_since_render = false;
         render(false);
+
+        assert(checkerrors());
 
         glfwPollEvents();
         getViewKeystrokes(camera_eye_location, camera_lookat_center);
@@ -508,13 +657,7 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
 
 void Visualizer::plotOnce(bool getKeystrokes) {
 
-    bool shadow_flag = false;
-    for (const auto &model: primaryLightingModel) {
-        if (model == Visualizer::LIGHTING_PHONG_SHADOWED) {
-            shadow_flag = true;
-            break;
-        }
-    }
+    bool shadow_flag = (primaryLightingModel == Visualizer::LIGHTING_PHONG_SHADOWED);
 
     glm::mat4 depthMVP;
 
@@ -553,7 +696,11 @@ void Visualizer::plotOnce(bool getKeystrokes) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, Wframebuffer, Hframebuffer);
 
-    glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, 0.0f);
+    if (background_is_transparent) {
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    } else {
+        glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, 1.0f);
+    }
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -566,11 +713,13 @@ void Visualizer::plotOnce(bool getKeystrokes) {
     updatePerspectiveTransformation(false);
 
     primaryShader.setTransformationMatrix(perspectiveTransformationMatrix);
+    primaryShader.setViewMatrix(cameraViewMatrix);
+    primaryShader.setProjectionMatrix(cameraProjectionMatrix);
 
     primaryShader.enableTextureMaps();
     primaryShader.enableTextureMasks();
 
-    primaryShader.setLightingModel(primaryLightingModel.at(0));
+    primaryShader.setLightingModel(primaryLightingModel);
     primaryShader.setLightIntensity(lightintensity);
 
     glActiveTexture(GL_TEXTURE1);
@@ -585,6 +734,15 @@ void Visualizer::plotOnce(bool getKeystrokes) {
     // glfwPollEvents();
     if (getKeystrokes) {
         getViewKeystrokes(camera_eye_location, camera_lookat_center);
+
+        // Update navigation gizmo if camera has changed
+        if (navigation_gizmo_enabled && cameraHasChanged()) {
+            updateNavigationGizmo();
+            previous_camera_eye_location = camera_eye_location;
+            previous_camera_lookat_center = camera_lookat_center;
+            // Transfer updated geometry to GPU
+            transferBufferData();
+        }
     }
 
     int width, height;
@@ -607,6 +765,10 @@ void Visualizer::transferBufferData() {
         glGetBufferParameteriv(target, GL_BUFFER_SIZE, &current_size);
         if (current_size != size) {
             glBufferData(target, size, data, GL_STATIC_DRAW);
+        } else {
+            // Buffer size matches, but data may have changed
+            // Update the buffer contents
+            glBufferSubData(target, 0, size, data);
         }
     };
 
@@ -616,6 +778,10 @@ void Visualizer::transferBufferData() {
         glGetBufferParameteriv(GL_TEXTURE_BUFFER, GL_BUFFER_SIZE, &current_size);
         if (current_size != size) {
             glBufferData(GL_TEXTURE_BUFFER, size, data, GL_STATIC_DRAW);
+        } else {
+            // Buffer size matches, but data may have changed (e.g., visibility flags)
+            // Update the buffer contents
+            glBufferSubData(GL_TEXTURE_BUFFER, 0, size, data);
         }
         glBindTexture(GL_TEXTURE_BUFFER, tex);
         glTexBuffer(GL_TEXTURE_BUFFER, format, buf);
@@ -632,6 +798,7 @@ void Visualizer::transferBufferData() {
         const auto *texture_flag_data = geometry_handler.getTextureFlagData_ptr(geometry_type);
         const auto *texture_ID_data = geometry_handler.getTextureIDData_ptr(geometry_type);
         const auto *coordinate_flag_data = geometry_handler.getCoordinateFlagData_ptr(geometry_type);
+        const auto *sky_geometry_flag_data = geometry_handler.getSkyGeometryFlagData_ptr(geometry_type);
         const auto *visible_flag_data = geometry_handler.getVisibilityFlagData_ptr(geometry_type);
 
         ensureArrayBuffer(vertex_buffer.at(gi), GL_ARRAY_BUFFER, vertex_data->size() * sizeof(GLfloat), vertex_data->data());
@@ -642,6 +809,7 @@ void Visualizer::transferBufferData() {
         ensureTextureBuffer(texture_flag_buffer.at(gi), texture_flag_texture_object.at(gi), GL_R32I, texture_flag_data->size() * sizeof(GLint), texture_flag_data->data());
         ensureTextureBuffer(texture_ID_buffer.at(gi), texture_ID_texture_object.at(gi), GL_R32I, texture_ID_data->size() * sizeof(GLint), texture_ID_data->data());
         ensureTextureBuffer(coordinate_flag_buffer.at(gi), coordinate_flag_texture_object.at(gi), GL_R32I, coordinate_flag_data->size() * sizeof(GLint), coordinate_flag_data->data());
+        ensureTextureBuffer(sky_geometry_flag_buffer.at(gi), sky_geometry_flag_texture_object.at(gi), GL_R8I, sky_geometry_flag_data->size() * sizeof(GLbyte), sky_geometry_flag_data->data());
         ensureTextureBuffer(hidden_flag_buffer.at(gi), hidden_flag_texture_object.at(gi), GL_R8I, visible_flag_data->size() * sizeof(GLbyte), visible_flag_data->data());
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -693,6 +861,11 @@ void Visualizer::transferBufferData() {
         glBufferSubData(GL_ARRAY_BUFFER, index_map.coordinate_flag_index * sizeof(GLint), sizeof(GLint), geometry_handler.getCoordinateFlagData_ptr(geometry_type)->data() + index_map.coordinate_flag_index);
         glBindTexture(GL_TEXTURE_BUFFER, coordinate_flag_texture_object.at(i));
         glTexBuffer(GL_TEXTURE_BUFFER, GL_R32I, coordinate_flag_buffer.at(i));
+
+        glBindBuffer(GL_ARRAY_BUFFER, sky_geometry_flag_buffer.at(i));
+        glBufferSubData(GL_ARRAY_BUFFER, index_map.sky_geometry_flag_index * sizeof(GLbyte), sizeof(GLbyte), geometry_handler.getSkyGeometryFlagData_ptr(geometry_type)->data() + index_map.sky_geometry_flag_index);
+        glBindTexture(GL_TEXTURE_BUFFER, sky_geometry_flag_texture_object.at(i));
+        glTexBuffer(GL_TEXTURE_BUFFER, GL_R8I, sky_geometry_flag_buffer.at(i));
 
         glBindBuffer(GL_ARRAY_BUFFER, hidden_flag_buffer.at(i));
         glBufferSubData(GL_ARRAY_BUFFER, index_map.visible_index * sizeof(GLbyte), sizeof(GLbyte), geometry_handler.getVisibilityFlagData_ptr(geometry_type)->data() + index_map.visible_index);
@@ -842,6 +1015,10 @@ void Visualizer::render(bool shadow) const {
         glBindTexture(GL_TEXTURE_BUFFER, coordinate_flag_texture_object.at(triangle_ind));
         // Note: Uniform location already set during shader initialization
 
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_BUFFER, sky_geometry_flag_texture_object.at(triangle_ind));
+        // Note: Uniform location already set during shader initialization
+
         glActiveTexture(GL_TEXTURE8);
         glBindTexture(GL_TEXTURE_BUFFER, hidden_flag_texture_object.at(triangle_ind));
         // Note: Uniform location already set during shader initialization
@@ -876,6 +1053,10 @@ void Visualizer::render(bool shadow) const {
         glBindTexture(GL_TEXTURE_BUFFER, coordinate_flag_texture_object.at(rectangle_ind));
         // Note: Uniform location already set during shader initialization
 
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_BUFFER, sky_geometry_flag_texture_object.at(rectangle_ind));
+        // Note: Uniform location already set during shader initialization
+
         glActiveTexture(GL_TEXTURE8);
         glBindTexture(GL_TEXTURE_BUFFER, hidden_flag_texture_object.at(rectangle_ind));
         // Note: Uniform location already set during shader initialization
@@ -893,12 +1074,18 @@ void Visualizer::render(bool shadow) const {
         const auto &texFlags = *geometry_handler.getTextureFlagData_ptr(GeometryHandler::GEOMETRY_TYPE_RECTANGLE);
         const auto &colors = *geometry_handler.getColorData_ptr(GeometryHandler::GEOMETRY_TYPE_RECTANGLE);
         const auto &verts = *geometry_handler.getVertexData_ptr(GeometryHandler::GEOMETRY_TYPE_RECTANGLE);
+        const auto &visibilityFlags = *geometry_handler.getVisibilityFlagData_ptr(GeometryHandler::GEOMETRY_TYPE_RECTANGLE);
 
         opaque_firsts.reserve(rectangle_count);
         opaque_counts.reserve(rectangle_count);
         transparent_rects.reserve(rectangle_count);
 
         for (size_t i = 0; i < rectangle_count; ++i) {
+            // Skip invisible rectangles
+            if (!visibilityFlags.at(i)) {
+                continue;
+            }
+
             bool isGlyph = texFlags.at(i) == 3;
             float alpha = colors.at(i * 4 + 3);
             if (!isGlyph && alpha >= 1.f) {
@@ -940,6 +1127,25 @@ void Visualizer::render(bool shadow) const {
         //--- Lines ---//
 
         if (line_count > 0) {
+            // Switch to line shader which uses geometry shader for wide lines
+            lineShader.useShader();
+            lineShader.setTransformationMatrix(perspectiveTransformationMatrix);
+            lineShader.setDepthBiasMatrix(computeShadowDepthMVP());
+            lineShader.setLightDirection(light_direction);
+            lineShader.setLightingModel(primaryLightingModel);
+            lineShader.setLightIntensity(lightintensity);
+
+            // Set viewport size for geometry shader
+            GLint viewportSizeLoc = glGetUniformLocation(lineShader.shaderID, "viewportSize");
+            glUniform2f(viewportSizeLoc, static_cast<float>(Wframebuffer), static_cast<float>(Hframebuffer));
+
+            // Rebind texture array and uv_rescale for line shader
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
+            glActiveTexture(GL_TEXTURE9);
+            glBindTexture(GL_TEXTURE_BUFFER, uv_rescale_texture_object);
+            glUniform1i(glGetUniformLocation(lineShader.shaderID, "uv_rescale"), 9);
+
             glActiveTexture(GL_TEXTURE3);
             glBindTexture(GL_TEXTURE_BUFFER, color_texture_object.at(line_ind));
             // Note: Uniform location already set during shader initialization
@@ -960,11 +1166,15 @@ void Visualizer::render(bool shadow) const {
             glBindTexture(GL_TEXTURE_BUFFER, coordinate_flag_texture_object.at(line_ind));
             // Note: Uniform location already set during shader initialization
 
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_BUFFER, sky_geometry_flag_texture_object.at(line_ind));
+            // Note: Uniform location already set during shader initialization
+
             glActiveTexture(GL_TEXTURE8);
             glBindTexture(GL_TEXTURE_BUFFER, hidden_flag_texture_object.at(line_ind));
             // Note: Uniform location already set during shader initialization
 
-            glBindVertexArray(primaryShader.vertex_array_IDs.at(line_ind));
+            glBindVertexArray(lineShader.vertex_array_IDs.at(line_ind));
 
             // Group lines by width and render each group separately
             const std::vector<float> *size_data = geometry_handler.getSizeData_ptr(GeometryHandler::GEOMETRY_TYPE_LINE);
@@ -978,25 +1188,46 @@ void Visualizer::render(bool shadow) const {
                     width_groups[width].push_back(i);
                 }
 
+                // Get the uniform location for line width
+                GLint lineWidthLoc = glGetUniformLocation(lineShader.shaderID, "lineWidth");
+
                 // Render each width group separately
                 for (const auto &group: width_groups) {
                     float width = group.first;
                     const std::vector<size_t> &line_indices = group.second;
 
-                    glLineWidth(width);
+                    // Set line width uniform for geometry shader
+                    glUniform1f(lineWidthLoc, width);
 
-                    // For simplicity, render each line individually
-                    // In a more optimized implementation, we would batch lines with same width
+                    // Render each line individually
+                    // The geometry shader will expand each line into a quad
                     for (size_t line_idx: line_indices) {
-                        glDrawArrays(GL_LINES, line_idx * 2, 2);
+                        glDrawArrays(GL_LINES, static_cast<GLint>(line_idx * 2), 2);
                     }
                 }
             } else {
-                // Fallback to default behavior if no size data available
-                glLineWidth(1);
+                // Fallback to default width of 1.0 if no size data available
+                GLint lineWidthLoc = glGetUniformLocation(lineShader.shaderID, "lineWidth");
+                glUniform1f(lineWidthLoc, 1.0f);
                 glDrawArrays(GL_LINES, 0, line_count * 2);
             }
+
+            // Switch back to primary shader for subsequent rendering
+            primaryShader.useShader();
+            primaryShader.setTransformationMatrix(perspectiveTransformationMatrix);
+            primaryShader.setDepthBiasMatrix(computeShadowDepthMVP());
+            primaryShader.setLightDirection(light_direction);
+            primaryShader.setLightIntensity(lightintensity);
+
+            // Rebind texture array and uv_rescale for primary shader
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
+            glActiveTexture(GL_TEXTURE9);
+            glBindTexture(GL_TEXTURE_BUFFER, uv_rescale_texture_object);
+            glUniform1i(glGetUniformLocation(primaryShader.shaderID, "uv_rescale"), 9);
         }
+
+        assert(checkerrors());
 
         //--- Points ---//
 
@@ -1019,6 +1250,10 @@ void Visualizer::render(bool shadow) const {
 
             glActiveTexture(GL_TEXTURE7);
             glBindTexture(GL_TEXTURE_BUFFER, coordinate_flag_texture_object.at(point_ind));
+            // Note: Uniform location already set during shader initialization
+
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_BUFFER, sky_geometry_flag_texture_object.at(point_ind));
             // Note: Uniform location already set during shader initialization
 
             glActiveTexture(GL_TEXTURE8);
@@ -1069,6 +1304,8 @@ void Visualizer::render(bool shadow) const {
     // Clean up texture units to prevent macOS OpenGL warnings
     // This helps prevent texture unit binding issues in headless mode
     glActiveTexture(GL_TEXTURE0);
+
+    assert(checkerrors());
 }
 
 void Visualizer::plotUpdate() {
@@ -1130,15 +1367,18 @@ void Visualizer::plotUpdate(bool hide_window) {
     // Watermark
     updateWatermark();
 
-    transferBufferData();
-
-    bool shadow_flag = false;
-    for (const auto &model: primaryLightingModel) {
-        if (model == Visualizer::LIGHTING_PHONG_SHADOWED) {
-            shadow_flag = true;
-            break;
+    // Navigation gizmo - update if camera has changed or create initial geometry if needed
+    if (navigation_gizmo_enabled) {
+        if (navigation_gizmo_IDs.empty() || cameraHasChanged()) {
+            updateNavigationGizmo();
+            previous_camera_eye_location = camera_eye_location;
+            previous_camera_lookat_center = camera_lookat_center;
         }
     }
+
+    transferBufferData();
+
+    bool shadow_flag = (primaryLightingModel == Visualizer::LIGHTING_PHONG_SHADOWED);
 
     glm::mat4 depthMVP;
 
@@ -1184,7 +1424,11 @@ void Visualizer::plotUpdate(bool hide_window) {
         glViewport(0, 0, Wframebuffer, Hframebuffer);
     }
 
-    glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, 0.0f);
+    if (background_is_transparent) {
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    } else {
+        glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, 1.0f);
+    }
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -1197,11 +1441,13 @@ void Visualizer::plotUpdate(bool hide_window) {
     updatePerspectiveTransformation(false);
 
     primaryShader.setTransformationMatrix(perspectiveTransformationMatrix);
+    primaryShader.setViewMatrix(cameraViewMatrix);
+    primaryShader.setProjectionMatrix(cameraProjectionMatrix);
 
     primaryShader.enableTextureMaps();
     primaryShader.enableTextureMasks();
 
-    primaryShader.setLightingModel(primaryLightingModel.at(0));
+    primaryShader.setLightingModel(primaryLightingModel);
     primaryShader.setLightIntensity(lightintensity);
 
     glActiveTexture(GL_TEXTURE1);
@@ -1216,6 +1462,15 @@ void Visualizer::plotUpdate(bool hide_window) {
     if (!headless && window != nullptr) {
         glfwPollEvents();
         getViewKeystrokes(camera_eye_location, camera_lookat_center);
+
+        // Update navigation gizmo if camera has changed
+        if (navigation_gizmo_enabled && cameraHasChanged()) {
+            updateNavigationGizmo();
+            previous_camera_eye_location = camera_eye_location;
+            previous_camera_lookat_center = camera_lookat_center;
+            // Transfer updated geometry to GPU
+            transferBufferData();
+        }
 
         int width, height;
         glfwGetFramebufferSize((GLFWwindow *) window, &width, &height);
@@ -1318,7 +1573,7 @@ void Visualizer::plotDepthMap() {
     }
 }
 
-void Shader::initialize(const char *vertex_shader_file, const char *fragment_shader_file, Visualizer *visualizer_ptr) {
+void Shader::initialize(const char *vertex_shader_file, const char *fragment_shader_file, Visualizer *visualizer_ptr, const char *geometry_shader_file) {
     // ~~~~~~~~~~~~~~~ COMPILE SHADERS ~~~~~~~~~~~~~~~~~~~~~~~~~//
 
     assert(checkerrors());
@@ -1326,6 +1581,7 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
     // Create the shaders
     unsigned int VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
     unsigned int FragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
+    unsigned int GeometryShaderID = 0;
 
     // Read the Vertex Shader code from the file
     std::string VertexShaderCode;
@@ -1344,6 +1600,19 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
     while (getline(FragmentShaderStream, Line))
         FragmentShaderCode += "\n" + Line;
     FragmentShaderStream.close();
+
+    // Read the Geometry Shader code from the file (if provided)
+    std::string GeometryShaderCode;
+    bool hasGeometryShader = (geometry_shader_file != nullptr);
+    if (hasGeometryShader) {
+        GeometryShaderID = glCreateShader(GL_GEOMETRY_SHADER);
+        std::ifstream GeometryShaderStream(geometry_shader_file, std::ios::in);
+        assert(GeometryShaderStream.is_open());
+        Line = "";
+        while (getline(GeometryShaderStream, Line))
+            GeometryShaderCode += "\n" + Line;
+        GeometryShaderStream.close();
+    }
 
     // Compile Vertex Shader
     char const *VertexSourcePointer = VertexShaderCode.c_str();
@@ -1383,10 +1652,34 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
         throw std::runtime_error("fragment shader compile error");
     }
 
+    // Compile Geometry Shader (if provided)
+    if (hasGeometryShader) {
+        char const *GeometrySourcePointer = GeometryShaderCode.c_str();
+        glShaderSource(GeometryShaderID, 1, &GeometrySourcePointer, nullptr);
+        glCompileShader(GeometryShaderID);
+
+        assert(checkerrors());
+
+        // check geometry‐shader compile status
+        compileOK = GL_FALSE;
+        glGetShaderiv(GeometryShaderID, GL_COMPILE_STATUS, &compileOK);
+        if (compileOK != GL_TRUE) {
+            GLint logLen = 0;
+            glGetShaderiv(GeometryShaderID, GL_INFO_LOG_LENGTH, &logLen);
+            std::vector<char> log(logLen);
+            glGetShaderInfoLog(GeometryShaderID, logLen, nullptr, log.data());
+            fprintf(stderr, "Geometry shader compilation failed:\n%s\n", log.data());
+            throw std::runtime_error("geometry shader compile error");
+        }
+    }
+
     // Link the program
     shaderID = glCreateProgram();
     glAttachShader(shaderID, VertexShaderID);
     glAttachShader(shaderID, FragmentShaderID);
+    if (hasGeometryShader) {
+        glAttachShader(shaderID, GeometryShaderID);
+    }
     glLinkProgram(shaderID);
 
     assert(checkerrors());
@@ -1406,6 +1699,9 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
 
     glDeleteShader(VertexShaderID);
     glDeleteShader(FragmentShaderID);
+    if (hasGeometryShader) {
+        glDeleteShader(GeometryShaderID);
+    }
 
     assert(checkerrors());
 
@@ -1452,6 +1748,10 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
     // Transformation Matrix
     transformMatrixUniform = glGetUniformLocation(shaderID, "MVP");
 
+    // View and Projection Matrices (for sky geometry transformations)
+    viewMatrixUniform = glGetUniformLocation(shaderID, "view");
+    projectionMatrixUniform = glGetUniformLocation(shaderID, "projection");
+
     // Depth Bias Matrix (for shadows)
     depthBiasUniform = glGetUniformLocation(shaderID, "DepthBiasMVP");
 
@@ -1487,15 +1787,24 @@ void Shader::initialize(const char *vertex_shader_file, const char *fragment_sha
     textureFlagTextureObjectUniform = glGetUniformLocation(shaderID, "texture_flag_texture_object");
     textureIDTextureObjectUniform = glGetUniformLocation(shaderID, "texture_ID_texture_object");
     coordinateFlagTextureObjectUniform = glGetUniformLocation(shaderID, "coordinate_flag_texture_object");
+    skyGeometryFlagTextureObjectUniform = glGetUniformLocation(shaderID, "sky_geometry_flag_texture_object");
     hiddenFlagTextureObjectUniform = glGetUniformLocation(shaderID, "hidden_flag_texture_object");
 
     // Set the texture unit assignments for texture buffers
-    if (colorTextureObjectUniform >= 0) glUniform1i(colorTextureObjectUniform, 3);
-    if (normalTextureObjectUniform >= 0) glUniform1i(normalTextureObjectUniform, 4);
-    if (textureFlagTextureObjectUniform >= 0) glUniform1i(textureFlagTextureObjectUniform, 5);
-    if (textureIDTextureObjectUniform >= 0) glUniform1i(textureIDTextureObjectUniform, 6);
-    if (coordinateFlagTextureObjectUniform >= 0) glUniform1i(coordinateFlagTextureObjectUniform, 7);
-    if (hiddenFlagTextureObjectUniform >= 0) glUniform1i(hiddenFlagTextureObjectUniform, 8);
+    if (colorTextureObjectUniform >= 0)
+        glUniform1i(colorTextureObjectUniform, 3);
+    if (normalTextureObjectUniform >= 0)
+        glUniform1i(normalTextureObjectUniform, 4);
+    if (textureFlagTextureObjectUniform >= 0)
+        glUniform1i(textureFlagTextureObjectUniform, 5);
+    if (textureIDTextureObjectUniform >= 0)
+        glUniform1i(textureIDTextureObjectUniform, 6);
+    if (coordinateFlagTextureObjectUniform >= 0)
+        glUniform1i(coordinateFlagTextureObjectUniform, 7);
+    if (skyGeometryFlagTextureObjectUniform >= 0)
+        glUniform1i(skyGeometryFlagTextureObjectUniform, 2);
+    if (hiddenFlagTextureObjectUniform >= 0)
+        glUniform1i(hiddenFlagTextureObjectUniform, 8);
 
     assert(checkerrors());
 
@@ -1547,6 +1856,14 @@ void Shader::setTransformationMatrix(const glm::mat4 &matrix) const {
     glUniformMatrix4fv(transformMatrixUniform, 1, GL_FALSE, &matrix[0][0]);
 }
 
+void Shader::setViewMatrix(const glm::mat4 &matrix) const {
+    glUniformMatrix4fv(viewMatrixUniform, 1, GL_FALSE, &matrix[0][0]);
+}
+
+void Shader::setProjectionMatrix(const glm::mat4 &matrix) const {
+    glUniformMatrix4fv(projectionMatrixUniform, 1, GL_FALSE, &matrix[0][0]);
+}
+
 void Shader::setDepthBiasMatrix(const glm::mat4 &matrix) const {
     glUniformMatrix4fv(depthBiasUniform, 1, GL_FALSE, &matrix[0][0]);
 }
@@ -1596,6 +1913,7 @@ void Visualizer::windowResizeCallback(GLFWwindow *window, int width, int height)
         viz->Wframebuffer = static_cast<uint>(fbw);
         viz->Hframebuffer = static_cast<uint>(fbh);
         viz->updateWatermark();
+        viz->updateNavigationGizmo();
         viz->transferBufferData();
     }
 }
@@ -1628,6 +1946,11 @@ double startX, startY;
 double scrollX, scrollY;
 bool scroll = false;
 
+// Click detection state for navigation gizmo
+double click_startX = 0.0, click_startY = 0.0;
+bool potential_click = false;
+const double click_threshold = 5.0; // Maximum mouse movement in pixels to register as click
+
 
 void mouseCallback(GLFWwindow *window, int button, int action, int mods) {
     if (action == GLFW_PRESS) {
@@ -1636,8 +1959,28 @@ void mouseCallback(GLFWwindow *window, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
         if (GLFW_PRESS == action) {
             lbutton_down = true;
+            // Track potential click for gizmo interaction
+            glfwGetCursorPos(window, &click_startX, &click_startY);
+            potential_click = true;
         } else if (GLFW_RELEASE == action) {
             lbutton_down = false;
+            // Check if this was a click (minimal movement) rather than a drag
+            if (potential_click) {
+                double releaseX, releaseY;
+                glfwGetCursorPos(window, &releaseX, &releaseY);
+                double dx_click = releaseX - click_startX;
+                double dy_click = releaseY - click_startY;
+                double movement = std::sqrt(dx_click * dx_click + dy_click * dy_click);
+
+                if (movement < click_threshold) {
+                    // This is a click - check if it hit the navigation gizmo
+                    auto *visualizer = static_cast<Visualizer *>(glfwGetWindowUserPointer(window));
+                    if (visualizer != nullptr) {
+                        visualizer->handleGizmoClick(releaseX, releaseY);
+                    }
+                }
+                potential_click = false;
+            }
         }
     } else if (button == GLFW_MOUSE_BUTTON_MIDDLE) {
         if (GLFW_PRESS == action) {
@@ -1662,8 +2005,24 @@ void cursorCallback(GLFWwindow *window, double xpos, double ypos) {
     } else if (lbutton_down || mbutton_down) {
         dphi = scast<float>(xpos - startX);
         dtheta = scast<float>(ypos - startY);
+
+        // If mouse moved too much during left button press, invalidate potential click
+        if (potential_click && lbutton_down) {
+            double dx_click = xpos - click_startX;
+            double dy_click = ypos - click_startY;
+            double movement = std::sqrt(dx_click * dx_click + dy_click * dy_click);
+            if (movement >= click_threshold) {
+                potential_click = false;
+            }
+        }
     } else {
         dphi = dtheta = 0.f;
+
+        // Check for hover over navigation gizmo bubbles when no buttons are pressed
+        auto *visualizer = static_cast<Visualizer *>(glfwGetWindowUserPointer(window));
+        if (visualizer != nullptr) {
+            visualizer->handleGizmoHover(xpos, ypos);
+        }
     }
     startX = xpos;
     startY = ypos;

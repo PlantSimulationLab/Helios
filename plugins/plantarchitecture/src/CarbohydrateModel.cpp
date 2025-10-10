@@ -193,11 +193,11 @@ void PlantArchitecture::subtractShootMaintenanceCarbon(float dt) const {
         for (auto &shoot: *shoot_tree) {
             if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
                 if (shoot->isdormant && shoot->old_shoot_volume >= 0.f) {
-                    shoot->carbohydrate_pool_molC -= shoot->old_shoot_volume * rho_cw * carbohydrate_params.stem_maintainance_respiration_rate * 0.2f * dt; // remove shoot maintenance respiration
-                    shoot->carbohydrate_pool_molC -= shoot->old_shoot_volume * rho_cw * carbohydrate_params.root_maintainance_respiration_rate / carbohydrate_params.shoot_root_ratio * 0.2f * dt; // remove root maintenance respiration portion
+                    shoot->carbohydrate_pool_molC -= shoot->old_shoot_volume * rho_cw * carbohydrate_params.stem_maintenance_respiration_rate * 0.2f * dt; // remove shoot maintenance respiration
+                    shoot->carbohydrate_pool_molC -= shoot->old_shoot_volume * rho_cw * carbohydrate_params.root_maintenance_respiration_rate / carbohydrate_params.shoot_root_ratio * 0.2f * dt; // remove root maintenance respiration portion
                 } else if (shoot->old_shoot_volume >= 0.f) {
-                    shoot->carbohydrate_pool_molC -= shoot->old_shoot_volume * rho_cw * carbohydrate_params.stem_maintainance_respiration_rate * dt; // remove shoot maintenance respiration
-                    shoot->carbohydrate_pool_molC -= shoot->old_shoot_volume * rho_cw * carbohydrate_params.root_maintainance_respiration_rate / carbohydrate_params.shoot_root_ratio * dt; // remove root maintenance respiration portion
+                    shoot->carbohydrate_pool_molC -= shoot->old_shoot_volume * rho_cw * carbohydrate_params.stem_maintenance_respiration_rate * dt; // remove shoot maintenance respiration
+                    shoot->carbohydrate_pool_molC -= shoot->old_shoot_volume * rho_cw * carbohydrate_params.root_maintenance_respiration_rate / carbohydrate_params.shoot_root_ratio * dt; // remove root maintenance respiration portion
                 }
             }
         }

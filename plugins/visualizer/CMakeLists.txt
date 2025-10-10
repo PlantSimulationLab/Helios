@@ -78,7 +78,7 @@ add_dependencies( visualizer helios )
 
 file( COPY fonts DESTINATION ${CMAKE_BINARY_DIR}/plugins/visualizer/ )
 
-file(GLOB_RECURSE SHADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vert"  "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag")
+file(GLOB_RECURSE SHADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vert"  "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag" "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.geom")
 file(GLOB_RECURSE TEXTURE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/textures/*")
 
 add_custom_command(

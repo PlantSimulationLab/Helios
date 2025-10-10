@@ -79,6 +79,12 @@ struct Shader {
     //! Set the shader transformation matrix, i.e., the Affine transformation applied to all vertices
     void setTransformationMatrix(const glm::mat4 &matrix) const;
 
+    //! Set the view matrix for camera transformations
+    void setViewMatrix(const glm::mat4 &matrix) const;
+
+    //! Set the projection matrix for camera perspective
+    void setProjectionMatrix(const glm::mat4 &matrix) const;
+
     //! Set the depth bias matrix for shadows
     void setDepthBiasMatrix(const glm::mat4 &matrix) const;
 
@@ -99,8 +105,9 @@ struct Shader {
      * \param[in] vertex_shader_file Name of vertex shader file to be used by OpenGL in rendering graphics
      * \param[in] fragment_shader_file Name of fragment shader file to be used by OpenGL in rendering graphics
      * \param[in] visualizer_ptr Pointer to the Visualizer class
+     * \param[in] geometry_shader_file [optional] Name of geometry shader file to be used by OpenGL in rendering graphics (default is nullptr for no geometry shader)
      */
-    void initialize(const char *vertex_shader_file, const char *fragment_shader_file, Visualizer *visualizer_ptr);
+    void initialize(const char *vertex_shader_file, const char *fragment_shader_file, Visualizer *visualizer_ptr, const char *geometry_shader_file = nullptr);
 
     ~Shader();
 
@@ -109,6 +116,8 @@ struct Shader {
     GLint textureUniform;
     GLint shadowmapUniform;
     GLint transformMatrixUniform;
+    GLint viewMatrixUniform;
+    GLint projectionMatrixUniform;
     GLint depthBiasUniform;
     GLint lightDirectionUniform;
     GLint lightingModelUniform;
@@ -123,6 +132,7 @@ struct Shader {
     GLint textureFlagTextureObjectUniform;
     GLint textureIDTextureObjectUniform;
     GLint coordinateFlagTextureObjectUniform;
+    GLint skyGeometryFlagTextureObjectUniform;
     GLint hiddenFlagTextureObjectUniform;
 
     //! Indicates whether initialize() has been successfully called
@@ -271,6 +281,36 @@ int write_JPEG_file(const char *filename, uint width, uint height, bool buffers_
  */
 int write_JPEG_file(const char *filename, uint width, uint height, const std::vector<helios::RGBcolor> &data, bool print_messages);
 
+//! Writes an image to a PNG file.
+/**
+ * This function captures the current framebuffer content, converts it into a PNG-compatible
+ * data structure, and writes it to the specified file.
+ *
+ * \param[in] filename The path to the output PNG file.
+ * \param[in] width The width of the image to be written.
+ * \param[in] height The height of the image to be written.
+ * \param[in] buffers_swapped_since_render Flag indicating whether buffers have been swapped since last render.
+ * \param[in] transparent_background If true, writes with alpha transparency; if false, writes opaque RGB data.
+ * \param[in] print_messages [optional] If true, outputs status messages to the console. Defaults to false.
+ * \return An integer indicating success (1) or failure (0) of the writing operation.
+ */
+int write_PNG_file(const char *filename, uint width, uint height, bool buffers_swapped_since_render, bool transparent_background, bool print_messages);
+
+//! Writes image data to a PNG file.
+/**
+ * This function saves the given image data as a PNG file to the specified filename,
+ * with the provided width and height. Optionally, it can print status messages
+ * to the console during the process.
+ *
+ * \param[in] filename The name of the file where the image will be saved.
+ * \param[in] width The width of the image in pixels.
+ * \param[in] height The height of the image in pixels.
+ * \param[in] data A vector containing the RGBA color data for the image.
+ * \param[in] print_messages [optional] Whether to print status messages to the console. Defaults to false.
+ * \return Returns 1 if the file was successfully written.
+ */
+int write_PNG_file(const char *filename, uint width, uint height, const std::vector<helios::RGBAcolor> &data, bool print_messages);
+
 //! Reads a PNG file and extracts its pixel data.
 /**
  * This function loads a PNG file and processes its pixel data into a texture format.
@@ -358,7 +398,9 @@ public:
         //! "Gray" colormap
         COLORMAP_GRAY = 5,
         //! Custom colormap
-        COLORMAP_CUSTOM = 6
+        COLORMAP_CUSTOM = 6,
+        //! "Lines" colormap with distinct colors
+        COLORMAP_LINES = 7
     };
 
     //! Set camera position
@@ -427,6 +469,38 @@ public:
      * \param[in] color Background color
      */
     void setBackgroundColor(const helios::RGBcolor &color);
+
+    //! Set the background to be transparent
+    /**
+     * This method enables transparent background mode. When rendering to the screen (via plotUpdate() or plotInteractive()),
+     * a checkerboard pattern is displayed to indicate transparency. When saving to a PNG file (via printWindow() with
+     * image_format="png"), the background will have true alpha channel transparency.
+     * \note This only affects PNG output. JPEG output will still have an opaque background.
+     * \sa setBackgroundColor()
+     */
+    void setBackgroundTransparent();
+
+    //! Set a custom background image
+    /**
+     * This method sets a custom texture image as the background. The image will be stretched to fill the window
+     * while maintaining the aspect ratio of the window to avoid distortion.
+     * \param[in] texture_file Path to the texture image file to use as background
+     * \note Supported formats include JPEG and PNG files
+     * \sa setBackgroundColor(), setBackgroundTransparent()
+     */
+    void setBackgroundImage(const char *texture_file);
+
+    //! Set a sky sphere texture as background
+    /**
+     * \brief Creates a dynamically scaling full sky sphere that keeps the camera always inside using shader-based transformations
+     * \param[in] texture_file Path to the spherical/equirectangular texture image file. If nullptr, uses default sky texture (plugins/visualizer/textures/SkyDome_clouds.jpg)
+     * \param[in] Ndivisions Number of divisions for sphere tessellation (default: 50)
+     * \note This method creates a complete sphere (not just a hemisphere) that surrounds the camera in all directions
+     * \note Uses shader transformations to make the sky appear infinitely distant and always contain the camera
+     * \note Can be toggled with other background methods (setBackgroundColor, setBackgroundImage, setBackgroundTransparent)
+     * \sa setBackgroundColor(), setBackgroundImage(), setBackgroundTransparent()
+     */
+    void setBackgroundSkyTexture(const char *texture_file = nullptr, uint Ndivisions = 50);
 
     //! Add a rectangle by giving the coordinates of its center
     /**
@@ -641,8 +715,9 @@ public:
      * \param[in] start (x,y,z) coordinates of line starting position
      * \param[in] end (x,y,z) coordinates of line ending position
      * \param[in] color R-G-B color of the line
-     * \param[in] line_width Width of the line in pixels
+     * \param[in] line_width Width of the line in pixels (rendered using geometry shaders for cross-platform wide line support)
      * \param[in] coordinate_system Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+     * \note Line widths are rendered using geometry shaders which expand line primitives into screen-aligned quads, providing consistent wide line rendering across all platforms including macOS.
      */
     size_t addLine(const helios::vec3 &start, const helios::vec3 &end, const helios::RGBcolor &color, float line_width, CoordinateSystem coordinate_system);
 
@@ -651,8 +726,9 @@ public:
      * \param[in] start (x,y,z) coordinates of line starting position
      * \param[in] end (x,y,z) coordinates of line ending position
      * \param[in] color R-G-B-A color of the line
-     * \param[in] line_width Width of the line in pixels
+     * \param[in] line_width Width of the line in pixels (rendered using geometry shaders for cross-platform wide line support)
      * \param[in] coordFlag Coordinate system to be used when specifying spatial coordinates. Should be one of "Visualizer::COORDINATES_WINDOW_NORMALIZED" or "Visualizer::COORDINATES_CARTESIAN".
+     * \note Line widths are rendered using geometry shaders which expand line primitives into screen-aligned quads, providing consistent wide line rendering across all platforms including macOS.
      */
     size_t addLine(const helios::vec3 &start, const helios::vec3 &end, const helios::RGBAcolor &color, float line_width, CoordinateSystem coordFlag);
 
@@ -696,12 +772,14 @@ public:
 
     //! Add a Sky Dome, which is a hemispherical dome colored by a sky texture map
     /**
+     * \deprecated This method is deprecated and will be removed in a future version. Use setBackgroundSkyTexture() instead, which provides a more robust sky rendering solution that dynamically scales with camera movement.
      * \param[in] radius Radius of the dome
      * \param[in] center (x,y,z) location of dome center
      * \param[in] Ndivisions Number of discrete divisions in making hemisphere
      * \param[in] texture_file Name of the texture map file
+     * \sa setBackgroundSkyTexture()
      */
-    std::vector<size_t> addSkyDomeByCenter(float radius, const helios::vec3 &center, uint Ndivisions, const char *texture_file);
+    DEPRECATED(std::vector<size_t> addSkyDomeByCenter(float radius, const helios::vec3 &center, uint Ndivisions, const char *texture_file));
 
     //! Add a Sky Dome, which is a hemispherical dome colored by a sky texture map
     /** \note This function has been deprecated, as layers are no longer supported. */
@@ -723,6 +801,22 @@ public:
      * \param[in] geometry_id The unique identifier of the geometry to delete.
      */
     void deleteGeometry(size_t geometry_id);
+
+    //! Get the vertices of a geometry primitive
+    /**
+     * \param[in] geometry_id The unique identifier of the geometry
+     * \return Vector of vertices in the same coordinate system they were added with
+     * \note For COORDINATES_WINDOW_NORMALIZED, returns vertices in [0,1] range. For COORDINATES_CARTESIAN, returns vertices in world coordinates.
+     */
+    [[nodiscard]] std::vector<helios::vec3> getGeometryVertices(size_t geometry_id) const;
+
+    //! Set the vertices of a geometry primitive
+    /**
+     * \param[in] geometry_id The unique identifier of the geometry
+     * \param[in] vertices New vertex positions in the same coordinate system the geometry was created with
+     * \note For COORDINATES_WINDOW_NORMALIZED, provide vertices in [0,1] range. For COORDINATES_CARTESIAN, provide vertices in world coordinates.
+     */
+    void setGeometryVertices(size_t geometry_id, const std::vector<helios::vec3> &vertices);
 
     //! Add a coordinate axis with at the origin with unit length
     void addCoordinateAxes();
@@ -799,7 +893,7 @@ public:
     //! Set the colormap used in Colorbar/visualization based on pre-defined colormaps
     /**
      * \param[in] colormap_name Name of a colormap.
-     * \note Valid colormaps are "COLORMAP_HOT", "COLORMAP_COOL", "COLORMAP_LAVA", "COLORMAP_RAINBOW", "COLORMAP_PARULA", "COLORMAP_GRAY".
+     * \note Valid colormaps are "COLORMAP_HOT", "COLORMAP_COOL", "COLORMAP_LAVA", "COLORMAP_RAINBOW", "COLORMAP_PARULA", "COLORMAP_GRAY", "COLORMAP_LINES".
      */
     void setColormap(Ctable colormap_name);
 
@@ -812,6 +906,33 @@ public:
 
     //! Get the current colormap used in Colorbar/visualization
     [[nodiscard]] Colormap getCurrentColormap() const;
+
+    //! Helper function to round a value to a "nice" number (1, 2, or 5 times a power of 10)
+    /**
+     * \param[in] value The value to round
+     * \param[in] round If true, round to nearest nice number; if false, round up
+     * \return The rounded "nice" number
+     */
+    static double niceNumber(double value, bool round);
+
+    //! Helper function to format a tick label with appropriate precision
+    /**
+     * \param[in] value The tick value to format
+     * \param[in] spacing The spacing between ticks
+     * \param[in] isIntegerData Whether the data represents integer values
+     * \return The formatted label string
+     */
+    static std::string formatTickLabel(double value, double spacing, bool isIntegerData);
+
+    //! Generate optimal tick values using nice numbers algorithm
+    /**
+     * \param[in] dataMin Minimum data value
+     * \param[in] dataMax Maximum data value
+     * \param[in] isIntegerData Whether the data represents integer values
+     * \param[in] targetTicks Target number of ticks (default 5)
+     * \return Vector of tick values
+     */
+    static std::vector<float> generateNiceTicks(float dataMin, float dataMax, bool isIntegerData, int targetTicks = 5);
 
     //! Add all geometry from the Context to the visualizer
     /**
@@ -898,6 +1019,26 @@ public:
     //! Update watermark geometry to match current window size
     void updateWatermark();
 
+    //! Make navigation gizmo (coordinate axes indicator) invisible
+    void hideNavigationGizmo();
+
+    //! Make navigation gizmo (coordinate axes indicator) visible
+    void showNavigationGizmo();
+
+    //! Handle mouse click for navigation gizmo interaction
+    /**
+     * \param[in] screen_x Mouse x-coordinate in screen space
+     * \param[in] screen_y Mouse y-coordinate in screen space
+     */
+    void handleGizmoClick(double screen_x, double screen_y);
+
+    //! Handle mouse hover for navigation gizmo interaction
+    /**
+     * \param[in] screen_x Mouse x-coordinate in screen space
+     * \param[in] screen_y Mouse y-coordinate in screen space
+     */
+    void handleGizmoHover(double screen_x, double screen_y);
+
     //! Plot current geometry into an interactive graphics window
     std::vector<helios::vec3> plotInteractive();
 
@@ -925,12 +1066,14 @@ public:
     //! Print the current graphics window to a JPEG image file. File will be given a default filename and saved to the current directory from which the executable was run.
     void printWindow();
 
-    //! Print the current graphics window to a JPEG image file
+    //! Print the current graphics window to an image file
     /**
      * \param[in] outfile Path to file where image should be saved.
-     * \note If outfile does not have extension `.jpg', it will be appended to the file name.
+     * \param[in] image_format Format of the output image: "jpeg" (default) or "png".
+     * \note If using PNG format with transparent background mode (setBackgroundTransparent()), the output will have alpha channel transparency.
+     * \note If outfile does not have an appropriate extension, it will be appended based on image_format.
      */
-    void printWindow(const char *outfile) const;
+    void printWindow(const char *outfile, const std::string &image_format = "jpeg");
 
     /**
      * \brief Displays an image using the provided pixel data and dimensions.
@@ -1069,6 +1212,13 @@ private:
     //! Read pixels from offscreen framebuffer for internal use by printWindow
     std::vector<helios::RGBcolor> readOffscreenPixels() const;
 
+    //! Read RGBA pixels from offscreen framebuffer for internal use by printWindow (with optional transparency)
+    /**
+     * \param[in] read_alpha If true, reads RGBA pixels; if false, reads RGB pixels with opaque alpha
+     * \return Vector of RGBA color values
+     */
+    std::vector<helios::RGBAcolor> readOffscreenPixelsRGBA(bool read_alpha) const;
+
     /**
      * \brief Sets the size of the frame buffer.
      *
@@ -1094,9 +1244,9 @@ private:
     /**
      * \brief Retrieves the primary lighting model of the visualizer.
      *
-     * \return A vector containing the primary lighting model(s).
+     * \return The primary lighting model.
      */
-    [[nodiscard]] std::vector<LightingModel> getPrimaryLightingModel();
+    [[nodiscard]] LightingModel getPrimaryLightingModel();
 
     /**
      * \brief Retrieves the depth texture identifier.
@@ -1108,6 +1258,12 @@ private:
     void openWindow();
 
     void createOffscreenContext();
+
+    //! Remove background rectangle (helper for background mode switching)
+    void removeBackgroundRectangle();
+
+    //! Set background to use gradient texture (default background mode)
+    void setBackgroundGradient();
 
     //! Callback when the window framebuffer is resized
     static void framebufferResizeCallback(GLFWwindow *window, int width, int height);
@@ -1253,6 +1409,9 @@ private:
     //! Handle to the OpenGL shader (depth buffer for shadows)
     Shader depthShader;
 
+    //! Handle to the OpenGL shader for wide lines (uses geometry shader)
+    Shader lineShader;
+
     Shader *currentShader;
 
     uint framebufferID;
@@ -1264,7 +1423,7 @@ private:
     uint offscreenDepthTexture;
 
     //! Lighting model for Context object primitives (default is LIGHTING_NONE)
-    std::vector<LightingModel> primaryLightingModel;
+    LightingModel primaryLightingModel;
 
     float lightintensity = 1.f;
 
@@ -1276,11 +1435,36 @@ private:
     //! Color of the window background
     helios::RGBcolor backgroundColor;
 
+    //! Flag indicating whether background is transparent (uses checkerboard texture for display, alpha transparency for PNG output)
+    bool background_is_transparent;
+
+    //! Track whether watermark was visible before transparent background was enabled (to restore it when switching back to solid color)
+    bool watermark_was_visible_before_transparent;
+
+    //! UUID associated with the background rectangle (used for gradient, transparent checkerboard, or custom image backgrounds)
+    size_t background_rectangle_ID;
+    std::vector<size_t> background_sky_IDs;
+
     //! Vector pointing from the light source to the scene
     helios::vec3 light_direction;
 
     //! Vector containing UUIDs of the coordinate axes
     std::vector<size_t> coordinate_axes_IDs;
+
+    //! Flag indicating whether navigation gizmo is enabled
+    bool navigation_gizmo_enabled;
+
+    //! Previous camera eye location for change detection
+    helios::vec3 previous_camera_eye_location;
+
+    //! Previous camera lookat center for change detection
+    helios::vec3 previous_camera_lookat_center;
+
+    //! Vector containing UUIDs of the navigation gizmo geometry
+    std::vector<size_t> navigation_gizmo_IDs;
+
+    //! Index of currently hovered navigation gizmo bubble (-1 = no hover, 0 = X, 1 = Y, 2 = Z)
+    int hovered_gizmo_bubble;
 
     //! Flag indicating whether colorbar is enabled
     /** colorbar_flag=0 means the colorbar is off and no enable/disable functions have been called, colorbar_flag=1 means the colorbar is off and disableColorbar() was explicitly called and thus the colorbar should remain off, colorbar_flag=2 means
@@ -1322,9 +1506,9 @@ private:
     //! Buffer objects to hold per-vertex data
     std::vector<GLuint> face_index_buffer, vertex_buffer, uv_buffer;
     //! Buffer objects to hold per-primitive data. We will use textures to hold this data.
-    std::vector<GLuint> color_buffer, normal_buffer, texture_flag_buffer, texture_ID_buffer, coordinate_flag_buffer, hidden_flag_buffer;
+    std::vector<GLuint> color_buffer, normal_buffer, texture_flag_buffer, texture_ID_buffer, coordinate_flag_buffer, sky_geometry_flag_buffer, hidden_flag_buffer;
     //! Texture objects to hold per-primitive data.
-    std::vector<GLuint> color_texture_object, normal_texture_object, texture_flag_texture_object, texture_ID_texture_object, coordinate_flag_texture_object, hidden_flag_texture_object;
+    std::vector<GLuint> color_texture_object, normal_texture_object, texture_flag_texture_object, texture_ID_texture_object, coordinate_flag_texture_object, sky_geometry_flag_texture_object, hidden_flag_texture_object;
 
     //! Rescaling factor for texture (u,v)'s for when the texture size is smaller than the maximum texture size
     GLuint uv_rescale_buffer;
@@ -1370,9 +1554,30 @@ private:
     //! Function to actually update Context geometry (if needed), which is called by the visualizer before plotting
     void buildContextGeometry_private();
 
+    //! Update navigation gizmo geometry to match current camera orientation
+    void updateNavigationGizmo();
+
+    //! Test if a normalized window coordinate hits a navigation gizmo bubble
+    /**
+     * \param[in] normalized_pos Position in normalized window coordinates (0-1)
+     * \param[in] bubble_index Index of the bubble to test (0=X, 1=Y, 2=Z)
+     * \return True if the position intersects with the bubble bounds
+     */
+    [[nodiscard]] bool testGizmoBubbleHit(const helios::vec2 &normalized_pos, int bubble_index) const;
+
+    //! Reorient the camera to face along a specific axis
+    /**
+     * \param[in] axis_index Index of the axis (0=X, 1=Y, 2=Z)
+     */
+    void reorientCameraToAxis(int axis_index);
+
+    //! Check if the camera position or orientation has changed since last update
+    [[nodiscard]] bool cameraHasChanged() const;
+
     float colorbar_min;
     float colorbar_max;
     std::vector<float> colorbar_ticks;
+    bool colorbar_integer_data;
 
     //! Current colormap used in visualization
     Colormap colormap_current;
@@ -1394,6 +1599,9 @@ private:
 
     //! "gray" colormap used in visualization
     Colormap colormap_gray;
+
+    //! "lines" colormap used in visualization
+    Colormap colormap_lines;
 
     bool message_flag;
 

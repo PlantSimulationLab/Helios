@@ -457,7 +457,7 @@ TEST_CASE("String, File Path, and Parsing Utilities") {
     }
     SUBCASE("Directory path detection") {
         // Test cases that should be detected as directories
-        DOCTEST_CHECK(isDirectoryPath("./annotations") == true);  // The bug case
+        DOCTEST_CHECK(isDirectoryPath("./annotations") == true); // The bug case
         DOCTEST_CHECK(isDirectoryPath("./output") == true);
         DOCTEST_CHECK(isDirectoryPath("results") == true);
         DOCTEST_CHECK(isDirectoryPath("data/") == true);
@@ -477,7 +477,7 @@ TEST_CASE("String, File Path, and Parsing Utilities") {
         DOCTEST_CHECK(isDirectoryPath(".bashrc") == false);
 
         // Edge cases
-        DOCTEST_CHECK(isDirectoryPath("") == false);  // empty path
+        DOCTEST_CHECK(isDirectoryPath("") == false); // empty path
 
         // Test with existing directories if they exist
         if (std::filesystem::exists("core/tests")) {

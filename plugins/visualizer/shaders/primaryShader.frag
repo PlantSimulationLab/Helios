@@ -23,6 +23,7 @@ uniform samplerBuffer normal_texture_object;
 uniform isamplerBuffer texture_flag_texture_object;
 uniform isamplerBuffer texture_ID_texture_object;
 uniform isamplerBuffer coordinate_flag_texture_object;
+uniform isamplerBuffer sky_geometry_flag_texture_object;
 uniform isamplerBuffer hidden_flag_texture_object;
 
 flat in int faceID;
@@ -39,6 +40,7 @@ void main(){
     int textureFlag = texelFetch(texture_flag_texture_object, faceID).r;
     int textureID = texelFetch(texture_ID_texture_object, faceID).r;
     int coordinateFlag = texelFetch(coordinate_flag_texture_object, faceID).r;
+    int skyGeometryFlag = texelFetch(sky_geometry_flag_texture_object, faceID).r;
 
     //There are several confusing flags that determine how this shader colors fragments
     // textureFlag:
@@ -113,7 +115,8 @@ void main(){
         }
     }
 
-    if( lightingModel>0 && coordinateFlag==1 ){ //Simplified Phong lighting model
+    // Apply lighting only to non-sky geometry
+    if( lightingModel>0 && coordinateFlag==1 && skyGeometryFlag==0 ){ //Simplified Phong lighting model
         vec3 intensity = lightIntensity*vec3(1.0,0.9,0.8);
         color = vec4( intensity*( 0.75*color.rgb + visibility*max(0,dot(normal,ld))*color.rgb ) , color.a );
     }

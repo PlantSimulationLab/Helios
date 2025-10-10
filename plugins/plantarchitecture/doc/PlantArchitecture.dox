@@ -894,6 +894,10 @@ for (uint descendant : descendants) {
 
 The \\ref PlantArchitecture::getShootIDsByRank() method is particularly useful as it organizes shoots into a vector of vectors where the index represents the branching rank, making it easy to implement systematic pruning based on plant architecture principles.
 
+\section PlantArchCarbohydrate Carbohydrate Model
+
+The PlantArchitecture plugin includes an optional carbohydrate model that simulates carbon allocation and its effects on plant growth dynamics. This model tracks photosynthate accumulation, maintenance and growth respiration, carbon transfer between shoots, and dynamically adjusts growth rates based on carbon availability. For detailed information on using the carbohydrate model, see the \subpage CarbohydrateModelDoc.
+
 \section PlantArchQuery Retrieving Information from the Model
 
 \subsection PlantArchQueryobjIDs Getting Object IDs and Primitive UUIDs of Model Geometry

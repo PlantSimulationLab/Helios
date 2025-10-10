@@ -56,7 +56,8 @@ int write_JPEG_file(const char *filename, uint width, uint height, bool buffers_
     }
 
     // Clear any existing OpenGL errors
-    while (glGetError() != GL_NO_ERROR) {}
+    while (glGetError() != GL_NO_ERROR) {
+    }
 
     const size_t bsize = 3 * width * height;
     std::vector<GLubyte> screen_shot_trans;
@@ -137,6 +138,107 @@ int write_JPEG_file(const char *filename, uint width, uint height, const std::ve
     return 1;
 }
 
+int write_PNG_file(const char *filename, uint width, uint height, bool buffers_swapped_since_render, bool transparent_background, bool print_messages) {
+    if (print_messages) {
+        std::cout << "writing PNG image: " << filename << std::endl;
+    }
+
+    // Validate framebuffer completeness
+    GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
+        helios_runtime_error("ERROR (write_PNG_file): Framebuffer is not complete (status: " + std::to_string(framebuffer_status) + ")");
+    }
+
+    // Clear any existing OpenGL errors
+    while (glGetError() != GL_NO_ERROR) {
+    }
+
+    // Set proper pixel alignment for reliable reading
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+    // Deterministic buffer selection based on swap state tracking
+    GLenum error;
+    if (buffers_swapped_since_render) {
+        glReadBuffer(GL_FRONT);
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            // Fallback to back buffer if front buffer fails
+            glReadBuffer(GL_BACK);
+            error = glGetError();
+            if (error != GL_NO_ERROR) {
+                helios_runtime_error("ERROR (write_PNG_file): Cannot set read buffer (error: " + std::to_string(error) + ")");
+            }
+        }
+    } else {
+        glReadBuffer(GL_BACK);
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            // Fallback to front buffer if back buffer fails
+            glReadBuffer(GL_FRONT);
+            error = glGetError();
+            if (error != GL_NO_ERROR) {
+                helios_runtime_error("ERROR (write_PNG_file): Cannot set read buffer (error: " + std::to_string(error) + ")");
+            }
+        }
+    }
+
+    // Ensure all rendering commands complete before reading
+    glFinish();
+
+    std::vector<helios::RGBAcolor> rgba_data;
+    rgba_data.reserve(width * height);
+
+    if (transparent_background) {
+        // Read RGBA pixels for transparency
+        const size_t bsize = 4 * width * height;
+        std::vector<GLubyte> screen_shot_trans(bsize);
+
+        glReadPixels(0, 0, scast<GLsizei>(width), scast<GLsizei>(height), GL_RGBA, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (write_PNG_file): glReadPixels failed (error: " + std::to_string(error) + ")");
+        }
+
+        // Convert to RGBAcolor vector (glReadPixels returns bottom-to-top, so we need to flip vertically)
+        for (int row = height - 1; row >= 0; row--) {
+            for (size_t col = 0; col < width; col++) {
+                size_t byte_idx = (row * width + col) * 4;
+                rgba_data.emplace_back(screen_shot_trans[byte_idx] / 255.0f, screen_shot_trans[byte_idx + 1] / 255.0f, screen_shot_trans[byte_idx + 2] / 255.0f, screen_shot_trans[byte_idx + 3] / 255.0f);
+            }
+        }
+    } else {
+        // Read RGB pixels for opaque background
+        const size_t bsize = 3 * width * height;
+        std::vector<GLubyte> screen_shot_trans(bsize);
+
+        glReadPixels(0, 0, scast<GLsizei>(width), scast<GLsizei>(height), GL_RGB, GL_UNSIGNED_BYTE, &screen_shot_trans[0]);
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (write_PNG_file): glReadPixels failed (error: " + std::to_string(error) + ")");
+        }
+
+        // Convert to RGBAcolor vector with opaque alpha (glReadPixels returns bottom-to-top, so we need to flip vertically)
+        for (int row = height - 1; row >= 0; row--) {
+            for (size_t col = 0; col < width; col++) {
+                size_t byte_idx = (row * width + col) * 3;
+                rgba_data.emplace_back(screen_shot_trans[byte_idx] / 255.0f, screen_shot_trans[byte_idx + 1] / 255.0f, screen_shot_trans[byte_idx + 2] / 255.0f, 1.0f);
+            }
+        }
+    }
+
+    helios::writePNG(filename, width, height, rgba_data);
+    return 1;
+}
+
+int write_PNG_file(const char *filename, uint width, uint height, const std::vector<helios::RGBAcolor> &data, bool print_messages) {
+    if (print_messages) {
+        std::cout << "writing PNG image: " << filename << std::endl;
+    }
+
+    helios::writePNG(filename, width, height, data);
+    return 1;
+}
+
 void read_png_file(const char *filename, std::vector<unsigned char> &texture, uint &height, uint &width) {
     std::vector<helios::RGBAcolor> rgba_data;
     helios::readPNG(filename, width, height, rgba_data);
@@ -152,19 +254,20 @@ void read_png_file(const char *filename, std::vector<unsigned char> &texture, ui
     }
 }
 
-Visualizer::Visualizer(uint Wdisplay) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
+Visualizer::Visualizer(uint Wdisplay) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray(), colormap_lines() {
     initialize(Wdisplay, uint(std::round(Wdisplay * 0.8)), 16, true, false);
 }
 
-Visualizer::Visualizer(uint Wdisplay, uint Hdisplay) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray(), colormap_lines() {
     initialize(Wdisplay, Hdisplay, 16, true, false);
 }
 
-Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray(), colormap_lines() {
     initialize(Wdisplay, Hdisplay, aliasing_samples, true, false);
 }
 
-Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations, bool headless) : colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray() {
+Visualizer::Visualizer(uint Wdisplay, uint Hdisplay, int aliasing_samples, bool window_decorations, bool headless) :
+    colormap_current(), colormap_hot(), colormap_cool(), colormap_lava(), colormap_rainbow(), colormap_parula(), colormap_gray(), colormap_lines() {
     initialize(Wdisplay, Hdisplay, aliasing_samples, window_decorations, headless);
 }
 
@@ -223,7 +326,7 @@ void Visualizer::openWindow() {
     GLenum glew_result = glewInit();
     if (glew_result != GLEW_OK) {
         std::string error_msg = "ERROR (Visualizer): Failed to initialize GLEW. ";
-        error_msg += "GLEW error: " + std::string((const char*)glewGetErrorString(glew_result));
+        error_msg += "GLEW error: " + std::string((const char *) glewGetErrorString(glew_result));
         helios_runtime_error(error_msg);
     }
 
@@ -246,9 +349,9 @@ void Visualizer::createOffscreenContext() {
     // This is a known macOS OpenGL driver warning in headless mode and is harmless.
 
     // Check for environment variables that indicate CI/headless operation
-    const char* ci_env = std::getenv("CI");
-    const char* display_env = std::getenv("DISPLAY");
-    const char* force_offscreen = std::getenv("HELIOS_FORCE_OFFSCREEN");
+    const char *ci_env = std::getenv("CI");
+    const char *display_env = std::getenv("DISPLAY");
+    const char *force_offscreen = std::getenv("HELIOS_FORCE_OFFSCREEN");
 
     bool is_ci = (ci_env != nullptr && std::string(ci_env) == "true");
     bool has_display = (display_env != nullptr && std::strlen(display_env) > 0);
@@ -260,7 +363,7 @@ void Visualizer::createOffscreenContext() {
 
 #if __APPLE__
     // On macOS, configure for better CI compatibility
-    glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_FALSE);  // Disable double buffering for offscreen
+    glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_FALSE); // Disable double buffering for offscreen
     if (is_ci || force_software) {
         // In CI environments, prefer compatibility profile for better software rendering support
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
@@ -270,7 +373,7 @@ void Visualizer::createOffscreenContext() {
     if (is_ci && !has_display) {
         // Likely a headless CI environment - use software rendering hints
         glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_FALSE);
-        glfwWindowHint(GLFW_SAMPLES, 0);  // Disable multisampling for software rendering
+        glfwWindowHint(GLFW_SAMPLES, 0); // Disable multisampling for software rendering
     }
 #elif _WIN32
     // On Windows, configure for CI environments
@@ -281,7 +384,7 @@ void Visualizer::createOffscreenContext() {
 
     // Create a minimal 1x1 window for the OpenGL context
     // This window will be invisible but provides the necessary OpenGL context
-    GLFWwindow* _window = glfwCreateWindow(1, 1, "Helios Offscreen", nullptr, nullptr);
+    GLFWwindow *_window = glfwCreateWindow(1, 1, "Helios Offscreen", nullptr, nullptr);
 
     if (_window == nullptr) {
         // Failed to create even an offscreen context - provide platform-specific guidance
@@ -311,10 +414,10 @@ void Visualizer::createOffscreenContext() {
     }
 
     glfwMakeContextCurrent(_window);
-    window = (void*)_window;
+    window = (void *) _window;
 
     // Verify the context is current and functional
-    const char* gl_version = (const char*)glGetString(GL_VERSION);
+    const char *gl_version = (const char *) glGetString(GL_VERSION);
     if (gl_version == nullptr) {
         glfwDestroyWindow(_window);
         helios_runtime_error("ERROR (Visualizer::createOffscreenContext): Failed to obtain OpenGL version. Context creation failed.");
@@ -336,7 +439,7 @@ void Visualizer::setupOffscreenFramebuffer() {
     // This enables full OpenGL testing in CI environments
 
     // Validate OpenGL context and required extensions are available
-    const char* gl_version = (const char*)glGetString(GL_VERSION);
+    const char *gl_version = (const char *) glGetString(GL_VERSION);
     if (gl_version == nullptr) {
         helios_runtime_error("ERROR (Visualizer::setupOffscreenFramebuffer): OpenGL context is not valid - unable to retrieve version string.");
     }
@@ -355,7 +458,8 @@ void Visualizer::setupOffscreenFramebuffer() {
     GLint max_texture_size;
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_texture_size);
     if (static_cast<GLint>(Wframebuffer) > max_texture_size || static_cast<GLint>(Hframebuffer) > max_texture_size) {
-        helios_runtime_error("ERROR (Visualizer::setupOffscreenFramebuffer): Requested framebuffer size (" + std::to_string(Wframebuffer) + "x" + std::to_string(Hframebuffer) + ") exceeds maximum texture size (" + std::to_string(max_texture_size) + ").");
+        helios_runtime_error("ERROR (Visualizer::setupOffscreenFramebuffer): Requested framebuffer size (" + std::to_string(Wframebuffer) + "x" + std::to_string(Hframebuffer) + ") exceeds maximum texture size (" + std::to_string(max_texture_size) +
+                             ").");
     }
 
     // Ensure we start with a clean OpenGL state
@@ -389,7 +493,7 @@ void Visualizer::setupOffscreenFramebuffer() {
     }
 
     glBindTexture(GL_TEXTURE_2D, offscreenColorTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, static_cast<GLsizei>(Wframebuffer), static_cast<GLsizei>(Hframebuffer), 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, static_cast<GLsizei>(Wframebuffer), static_cast<GLsizei>(Hframebuffer), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     error = glGetError();
     if (error != GL_NO_ERROR) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -503,42 +607,39 @@ std::vector<helios::RGBcolor> Visualizer::readOffscreenPixels() const {
 
     if (offscreenFramebufferID == 0) {
         helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): No offscreen framebuffer available. "
-                           "Ensure setupOffscreenFramebuffer() was called successfully in headless mode.");
+                             "Ensure setupOffscreenFramebuffer() was called successfully in headless mode.");
     }
 
     // Validate framebuffer dimensions
     if (Wframebuffer == 0 || Hframebuffer == 0) {
-        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Invalid framebuffer dimensions (" +
-                           std::to_string(Wframebuffer) + "x" + std::to_string(Hframebuffer) +
-                           "). This indicates the offscreen framebuffer was not properly initialized.");
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Invalid framebuffer dimensions (" + std::to_string(Wframebuffer) + "x" + std::to_string(Hframebuffer) +
+                             "). This indicates the offscreen framebuffer was not properly initialized.");
     }
 
     // Check that we have a valid OpenGL context
-    const char* gl_version = (const char*)glGetString(GL_VERSION);
+    const char *gl_version = (const char *) glGetString(GL_VERSION);
     if (gl_version == nullptr) {
         helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Invalid OpenGL context. "
-                           "This indicates OpenGL initialization failed or the context was lost.");
+                             "This indicates OpenGL initialization failed or the context was lost.");
     }
 
     // Clear any existing OpenGL errors
-    while (glGetError() != GL_NO_ERROR) {}
+    while (glGetError() != GL_NO_ERROR) {
+    }
 
     // Bind the offscreen framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, offscreenFramebufferID);
     GLenum error = glGetError();
     if (error != GL_NO_ERROR) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Failed to bind offscreen framebuffer (OpenGL error: " +
-                           std::to_string(error) + "). This indicates graphics driver issues or corrupted framebuffer.");
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Failed to bind offscreen framebuffer (OpenGL error: " + std::to_string(error) + "). This indicates graphics driver issues or corrupted framebuffer.");
     }
 
     // Verify framebuffer is complete
     GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Framebuffer is not complete (status: " +
-                           std::to_string(framebuffer_status) +
-                           "). This indicates missing attachments or graphics driver incompatibility.");
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Framebuffer is not complete (status: " + std::to_string(framebuffer_status) + "). This indicates missing attachments or graphics driver incompatibility.");
     }
 
     // Calculate pixel data size with overflow protection
@@ -548,9 +649,7 @@ std::vector<helios::RGBcolor> Visualizer::readOffscreenPixels() const {
     // Check for potential overflow
     if (pixel_count > SIZE_MAX / 3 || data_size > SIZE_MAX / sizeof(unsigned char)) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Framebuffer dimensions too large (" +
-                           std::to_string(Wframebuffer) + "x" + std::to_string(Hframebuffer) +
-                           "). This would cause memory allocation overflow.");
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Framebuffer dimensions too large (" + std::to_string(Wframebuffer) + "x" + std::to_string(Hframebuffer) + "). This would cause memory allocation overflow.");
     }
 
     std::vector<helios::RGBcolor> pixels;
@@ -562,8 +661,7 @@ std::vector<helios::RGBcolor> Visualizer::readOffscreenPixels() const {
         error = glGetError();
         if (error != GL_NO_ERROR) {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Failed to read pixels from framebuffer (OpenGL error: " +
-                               std::to_string(error) + "). This indicates graphics driver issues or framebuffer format problems.");
+            helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Failed to read pixels from framebuffer (OpenGL error: " + std::to_string(error) + "). This indicates graphics driver issues or framebuffer format problems.");
         }
 
         // Convert to RGBcolor format with bounds checking
@@ -574,10 +672,111 @@ std::vector<helios::RGBcolor> Visualizer::readOffscreenPixels() const {
             float b = pixel_data[i + 2] / 255.0f;
             pixels.emplace_back(make_RGBcolor(r, g, b));
         }
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Memory allocation or conversion failed: " +
-                           std::string(e.what()) + ". This may indicate insufficient memory or data corruption.");
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixels): Memory allocation or conversion failed: " + std::string(e.what()) + ". This may indicate insufficient memory or data corruption.");
+    }
+
+    // Restore default framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    return pixels;
+}
+
+std::vector<helios::RGBAcolor> Visualizer::readOffscreenPixelsRGBA(bool read_alpha) const {
+    // Read pixels from the offscreen framebuffer for PNG output with optional transparency
+
+    if (offscreenFramebufferID == 0) {
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixelsRGBA): No offscreen framebuffer available. "
+                             "Ensure setupOffscreenFramebuffer() was called successfully in headless mode.");
+    }
+
+    // Validate framebuffer dimensions
+    if (Wframebuffer == 0 || Hframebuffer == 0) {
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixelsRGBA): Invalid framebuffer dimensions (" + std::to_string(Wframebuffer) + "x" + std::to_string(Hframebuffer) +
+                             "). This indicates the offscreen framebuffer was not properly initialized.");
+    }
+
+    // Check that we have a valid OpenGL context
+    const char *gl_version = (const char *) glGetString(GL_VERSION);
+    if (gl_version == nullptr) {
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixelsRGBA): Invalid OpenGL context. "
+                             "This indicates OpenGL initialization failed or the context was lost.");
+    }
+
+    // Clear any existing OpenGL errors
+    while (glGetError() != GL_NO_ERROR) {
+    }
+
+    // Bind the offscreen framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, offscreenFramebufferID);
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixelsRGBA): Failed to bind offscreen framebuffer (OpenGL error: " + std::to_string(error) + "). This indicates graphics driver issues or corrupted framebuffer.");
+    }
+
+    // Verify framebuffer is complete
+    GLenum framebuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (framebuffer_status != GL_FRAMEBUFFER_COMPLETE) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixelsRGBA): Framebuffer is not complete (status: " + std::to_string(framebuffer_status) + "). This indicates missing attachments or graphics driver incompatibility.");
+    }
+
+    // Calculate pixel data size with overflow protection
+    const size_t pixel_count = static_cast<size_t>(Wframebuffer) * static_cast<size_t>(Hframebuffer);
+    const size_t channels = read_alpha ? 4 : 3;
+    const size_t data_size = pixel_count * channels;
+
+    // Check for potential overflow
+    if (pixel_count > SIZE_MAX / 4 || data_size > SIZE_MAX / sizeof(unsigned char)) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixelsRGBA): Framebuffer dimensions too large (" + std::to_string(Wframebuffer) + "x" + std::to_string(Hframebuffer) + "). This would cause memory allocation overflow.");
+    }
+
+    std::vector<helios::RGBAcolor> pixels;
+    try {
+        // Read pixels from the color attachment
+        std::vector<unsigned char> pixel_data(data_size);
+        if (read_alpha) {
+            glReadPixels(0, 0, static_cast<GLsizei>(Wframebuffer), static_cast<GLsizei>(Hframebuffer), GL_RGBA, GL_UNSIGNED_BYTE, pixel_data.data());
+        } else {
+            glReadPixels(0, 0, static_cast<GLsizei>(Wframebuffer), static_cast<GLsizei>(Hframebuffer), GL_RGB, GL_UNSIGNED_BYTE, pixel_data.data());
+        }
+
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            helios_runtime_error("ERROR (Visualizer::readOffscreenPixelsRGBA): Failed to read pixels from framebuffer (OpenGL error: " + std::to_string(error) + "). This indicates graphics driver issues or framebuffer format problems.");
+        }
+
+        // Convert to RGBAcolor format with bounds checking (glReadPixels returns bottom-to-top, so we need to flip vertically)
+        pixels.reserve(pixel_count);
+        if (read_alpha) {
+            for (int row = Hframebuffer - 1; row >= 0; row--) {
+                for (size_t col = 0; col < Wframebuffer; col++) {
+                    size_t byte_idx = (row * Wframebuffer + col) * 4;
+                    float r = pixel_data[byte_idx] / 255.0f;
+                    float g = pixel_data[byte_idx + 1] / 255.0f;
+                    float b = pixel_data[byte_idx + 2] / 255.0f;
+                    float a = pixel_data[byte_idx + 3] / 255.0f;
+                    pixels.emplace_back(make_RGBAcolor(r, g, b, a));
+                }
+            }
+        } else {
+            for (int row = Hframebuffer - 1; row >= 0; row--) {
+                for (size_t col = 0; col < Wframebuffer; col++) {
+                    size_t byte_idx = (row * Wframebuffer + col) * 3;
+                    float r = pixel_data[byte_idx] / 255.0f;
+                    float g = pixel_data[byte_idx + 1] / 255.0f;
+                    float b = pixel_data[byte_idx + 2] / 255.0f;
+                    pixels.emplace_back(make_RGBAcolor(r, g, b, 1.0f));
+                }
+            }
+        }
+    } catch (const std::exception &e) {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        helios_runtime_error("ERROR (Visualizer::readOffscreenPixelsRGBA): Memory allocation or conversion failed: " + std::string(e.what()) + ". This may indicate insufficient memory or data corruption.");
     }
 
     // Restore default framebuffer
@@ -599,9 +798,9 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     Hdisplay = window_height_pixels;
 
     // Check environment variables for automatic headless mode detection
-    const char* force_offscreen = std::getenv("HELIOS_FORCE_OFFSCREEN");
-    const char* ci_env = std::getenv("CI");
-    const char* display_env = std::getenv("DISPLAY");
+    const char *force_offscreen = std::getenv("HELIOS_FORCE_OFFSCREEN");
+    const char *ci_env = std::getenv("CI");
+    const char *display_env = std::getenv("DISPLAY");
 
     bool should_force_headless = false;
     if (force_offscreen != nullptr && std::string(force_offscreen) == "1") {
@@ -610,11 +809,11 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         // In CI environment, check if we have a display
 #if __linux__
         if (display_env == nullptr || std::strlen(display_env) == 0) {
-            should_force_headless = true;  // Linux CI without DISPLAY
+            should_force_headless = true; // Linux CI without DISPLAY
         }
 #elif __APPLE__ || _WIN32
         // On macOS and Windows CI, graphics might not be available
-        should_force_headless = true;  // Can be overridden by explicit headless=false
+        should_force_headless = true; // Can be overridden by explicit headless=false
 #endif
     }
 
@@ -650,10 +849,21 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     isWatermarkVisible = true;
     watermark_ID = 0;
 
+    navigation_gizmo_enabled = true;
+    previous_camera_eye_location = make_vec3(0, 0, 0);
+    previous_camera_lookat_center = make_vec3(0, 0, 0);
+    navigation_gizmo_IDs.clear();
+    hovered_gizmo_bubble = -1; // -1 = no hover
+
+    background_is_transparent = false;
+    watermark_was_visible_before_transparent = false;
+    background_rectangle_ID = 0;
+
     colorbar_flag = 0;
 
     colorbar_min = 0.f;
     colorbar_max = 0.f;
+    colorbar_integer_data = false;
 
     colorbar_title = "";
     colorbar_fontsize = 12;
@@ -711,7 +921,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     GLenum glew_result = glewInit();
     if (glew_result != GLEW_OK) {
         std::string error_msg = "ERROR (Visualizer::initialize): Failed to initialize GLEW. ";
-        error_msg += "GLEW error: " + std::string((const char*)glewGetErrorString(glew_result));
+        error_msg += "GLEW error: " + std::string((const char *) glewGetErrorString(glew_result));
 
         if (headless) {
             error_msg += "\nIn headless mode, this usually indicates:";
@@ -737,9 +947,9 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     }
 
     // Validate basic OpenGL functionality after GLEW initialization
-    const char* gl_version = (const char*)glGetString(GL_VERSION);
-    const char* gl_vendor = (const char*)glGetString(GL_VENDOR);
-    const char* gl_renderer = (const char*)glGetString(GL_RENDERER);
+    const char *gl_version = (const char *) glGetString(GL_VERSION);
+    const char *gl_vendor = (const char *) glGetString(GL_VENDOR);
+    const char *gl_renderer = (const char *) glGetString(GL_RENDERER);
 
     if (gl_version == nullptr || gl_vendor == nullptr || gl_renderer == nullptr) {
         helios_runtime_error("ERROR (Visualizer::initialize): OpenGL context is not functional - unable to query basic GL information. "
@@ -758,14 +968,14 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_texture_size);
     GLenum validation_error = glGetError();
     if (validation_error != GL_NO_ERROR) {
-        helios_runtime_error("ERROR (Visualizer::initialize): Basic OpenGL query operations failed (error: " + std::to_string(validation_error) + "). "
+        helios_runtime_error("ERROR (Visualizer::initialize): Basic OpenGL query operations failed (error: " + std::to_string(validation_error) +
+                             "). "
                              "This indicates the OpenGL context is not properly initialized or lacks required functionality.");
     }
 
     // Warn if texture size is unusually small (indicates software rendering or limited drivers)
     if (max_texture_size < 1024 && headless) {
-        std::cerr << "WARNING (Visualizer::initialize): Maximum texture size is very small (" << max_texture_size
-                  << "x" << max_texture_size << "). This may indicate software rendering or limited driver support." << std::endl;
+        std::cerr << "WARNING (Visualizer::initialize): Maximum texture size is very small (" << max_texture_size << "x" << max_texture_size << "). This may indicate software rendering or limited driver support." << std::endl;
     }
 
     // Final verification that we don't have accumulated OpenGL errors
@@ -778,7 +988,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     // Enable relevant parameters for both regular and headless modes
 
     glEnable(GL_DEPTH_TEST); // Enable depth test
-    glDepthFunc(GL_LESS); // Accept fragment if it closer to the camera than the former one
+    glDepthFunc(GL_LEQUAL); // Accept fragment if it closer to or equal to the camera than the former one (required for sky rendering)
     // glEnable(GL_DEPTH_CLAMP);
 
     if (aliasing_samples <= 0) {
@@ -824,7 +1034,8 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     // Validate that we have a reasonable number of geometry types to prevent memory issues
     if (Ntypes == 0 || Ntypes > 1000) {
-        helios_runtime_error("ERROR (Visualizer::initialize): Invalid number of geometry types (" + std::to_string(Ntypes) + "). "
+        helios_runtime_error("ERROR (Visualizer::initialize): Invalid number of geometry types (" + std::to_string(Ntypes) +
+                             "). "
                              "This indicates a configuration issue with GeometryHandler.");
     }
 
@@ -866,6 +1077,8 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         coordinate_flag_texture_object.resize(Ntypes);
         hidden_flag_buffer.resize(Ntypes);
         hidden_flag_texture_object.resize(Ntypes);
+        sky_geometry_flag_buffer.resize(Ntypes);
+        sky_geometry_flag_texture_object.resize(Ntypes);
 
         // Generate per-primitive buffers and textures with comprehensive error checking
         glGenBuffers((GLsizei) color_buffer.size(), color_buffer.data());
@@ -940,6 +1153,18 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
             helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate hidden flag texture objects. OpenGL error: " + std::to_string(error));
         }
 
+        glGenBuffers((GLsizei) sky_geometry_flag_buffer.size(), sky_geometry_flag_buffer.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate sky geometry flag buffers. OpenGL error: " + std::to_string(error));
+        }
+
+        glGenTextures((GLsizei) sky_geometry_flag_texture_object.size(), sky_geometry_flag_texture_object.data());
+        error = glGetError();
+        if (error != GL_NO_ERROR) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate sky geometry flag texture objects. OpenGL error: " + std::to_string(error));
+        }
+
         // Generate UV rescaling buffers
         glGenBuffers(1, &uv_rescale_buffer);
         error = glGetError();
@@ -953,9 +1178,8 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
             helios_runtime_error("ERROR (Visualizer::initialize): Failed to generate UV rescale texture object. OpenGL error: " + std::to_string(error));
         }
 
-    } catch (const std::exception& e) {
-        helios_runtime_error("ERROR (Visualizer::initialize): Exception during buffer allocation: " + std::string(e.what()) +
-                             ". This may indicate insufficient memory or OpenGL driver issues.");
+    } catch (const std::exception &e) {
+        helios_runtime_error("ERROR (Visualizer::initialize): Exception during buffer allocation: " + std::string(e.what()) + ". This may indicate insufficient memory or OpenGL driver issues.");
     }
 
     // Final verification that all buffer operations completed successfully
@@ -970,9 +1194,12 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     std::string primaryFragShader = helios::resolvePluginAsset("visualizer", "shaders/primaryShader.frag").string();
     std::string shadowVertShader = helios::resolvePluginAsset("visualizer", "shaders/shadow.vert").string();
     std::string shadowFragShader = helios::resolvePluginAsset("visualizer", "shaders/shadow.frag").string();
+    std::string lineVertShader = helios::resolvePluginAsset("visualizer", "shaders/line.vert").string();
+    std::string lineGeomShader = helios::resolvePluginAsset("visualizer", "shaders/line.geom").string();
 
     primaryShader.initialize(primaryVertShader.c_str(), primaryFragShader.c_str(), this);
     depthShader.initialize(shadowVertShader.c_str(), shadowFragShader.c_str(), this);
+    lineShader.initialize(lineVertShader.c_str(), primaryFragShader.c_str(), this, lineGeomShader.c_str());
 
     // Check for OpenGL errors after shader initialization
     if (!checkerrors()) {
@@ -1072,12 +1299,12 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
         primaryShader.setLightDirection(light_direction);
     }
 
-    primaryLightingModel.push_back(Visualizer::LIGHTING_NONE);
+    primaryLightingModel = Visualizer::LIGHTING_NONE;
 
     camera_lookat_center = make_vec3(0, 0, 0);
     camera_eye_location = camera_lookat_center + sphere2cart(make_SphericalCoord(2.f, 90.f * PI_F / 180.f, 0));
 
-    backgroundColor = make_RGBcolor(0.8, 0.8, 0.8);
+    backgroundColor = make_RGBcolor(0.4, 0.4, 0.4);
 
     // colormaps
 
@@ -1123,6 +1350,21 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     colormap_gray.set(ctable_c, clocs_c, 100, 0, 1);
 
+    // LINES (MATLAB-style distinct colors)
+    ctable_c = {
+            {0.f, 0.4470f, 0.7410f}, // blue
+            {0.8500f, 0.3250f, 0.0980f}, // orange
+            {0.9290f, 0.6940f, 0.1250f}, // yellow
+            {0.4940f, 0.1840f, 0.5560f}, // purple
+            {0.4660f, 0.6740f, 0.1880f}, // green
+            {0.3010f, 0.7450f, 0.9330f}, // cyan
+            {0.6350f, 0.0780f, 0.1840f} // dark red
+    };
+
+    clocs_c = {0.f, 1.f / 6.f, 2.f / 6.f, 3.f / 6.f, 4.f / 6.f, 5.f / 6.f, 1.f};
+
+    colormap_lines.set(ctable_c, clocs_c, 100, 0, 1);
+
     colormap_current = colormap_hot;
 
     if (!headless) {
@@ -1136,6 +1378,9 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
                                  "The OpenGL context may be in an invalid state or missing required extensions.");
         }
     }
+
+    // Set gradient background as the default background
+    setBackgroundGradient();
 }
 
 Visualizer::~Visualizer() {
@@ -1170,6 +1415,8 @@ Visualizer::~Visualizer() {
         glDeleteTextures((GLsizei) coordinate_flag_texture_object.size(), coordinate_flag_texture_object.data());
         glDeleteBuffers((GLsizei) hidden_flag_buffer.size(), hidden_flag_buffer.data());
         glDeleteTextures((GLsizei) hidden_flag_texture_object.size(), hidden_flag_texture_object.data());
+        glDeleteBuffers((GLsizei) sky_geometry_flag_buffer.size(), sky_geometry_flag_buffer.data());
+        glDeleteTextures((GLsizei) sky_geometry_flag_texture_object.size(), sky_geometry_flag_texture_object.data());
 
         // Clean up texture array and UV rescaling resources
         if (texArray != 0) {
@@ -1211,17 +1458,258 @@ void Visualizer::setLightDirection(const helios::vec3 &direction) {
 }
 
 void Visualizer::setLightingModel(LightingModel lightingmodel) {
-    for (auto &i: primaryLightingModel) {
-        i = lightingmodel;
-    }
+    primaryLightingModel = lightingmodel;
 }
 
 void Visualizer::setLightIntensityFactor(float lightintensityfactor) {
     lightintensity = lightintensityfactor;
 }
 
+void Visualizer::removeBackgroundRectangle() {
+    // Remove background rectangle if it exists
+    if (background_rectangle_ID != 0) {
+        geometry_handler.deleteGeometry(background_rectangle_ID);
+        background_rectangle_ID = 0;
+    }
+
+    // Remove background sky geometry if it exists
+    for (size_t id: background_sky_IDs) {
+        geometry_handler.deleteGeometry(id);
+    }
+    background_sky_IDs.clear();
+}
+
 void Visualizer::setBackgroundColor(const helios::RGBcolor &color) {
     backgroundColor = color;
+    background_is_transparent = false;
+
+    // Remove background rectangle if it exists
+    removeBackgroundRectangle();
+
+    // Restore watermark if it was visible before transparent background was enabled
+    if (watermark_was_visible_before_transparent) {
+        this->showWatermark();
+        watermark_was_visible_before_transparent = false; // Reset the flag
+    }
+}
+
+void Visualizer::setBackgroundGradient() {
+    background_is_transparent = false;
+
+    // Remove any existing background rectangle
+    removeBackgroundRectangle();
+
+    // Create full-screen rectangle with gradient texture as background
+    // Define rectangle vertices in normalized window coordinates
+    std::vector<helios::vec3> vertices = {
+            helios::make_vec3(0.f, 0.f, 0.99f), // Bottom-left
+            helios::make_vec3(1.f, 0.f, 0.99f), // Bottom-right
+            helios::make_vec3(1.f, 1.f, 0.99f), // Top-right
+            helios::make_vec3(0.f, 1.f, 0.99f) // Top-left
+    };
+
+    // Use standard UV coordinates - gradient texture will stretch to fill window
+    std::vector<helios::vec2> uvs = {
+            helios::make_vec2(0.f, 0.f), // Bottom-left
+            helios::make_vec2(1.f, 0.f), // Bottom-right
+            helios::make_vec2(1.f, 1.f), // Top-right
+            helios::make_vec2(0.f, 1.f) // Top-left
+    };
+
+    // Add the textured rectangle as background
+    background_rectangle_ID = addRectangleByVertices(vertices, "plugins/visualizer/textures/gradient_background.jpg", uvs, COORDINATES_WINDOW_NORMALIZED);
+}
+
+void Visualizer::setBackgroundTransparent() {
+    background_is_transparent = true;
+
+    // Save watermark visibility state before hiding it (so we can restore it if user switches back to solid color)
+    watermark_was_visible_before_transparent = isWatermarkVisible;
+    this->hideWatermark();
+
+    // Remove any existing background rectangle
+    removeBackgroundRectangle();
+
+    // Create full-screen rectangle with checkerboard texture as background
+    // Define rectangle vertices in normalized window coordinates
+    std::vector<helios::vec3> vertices = {
+            helios::make_vec3(0.f, 0.f, 0.99f), // Bottom-left
+            helios::make_vec3(1.f, 0.f, 0.99f), // Bottom-right
+            helios::make_vec3(1.f, 1.f, 0.99f), // Top-right
+            helios::make_vec3(0.f, 1.f, 0.99f) // Top-left
+    };
+
+    // Calculate aspect ratio and adjust UV coordinates to maintain square checkerboard pattern
+    float aspect_ratio = static_cast<float>(Wframebuffer) / static_cast<float>(Hframebuffer);
+    std::vector<helios::vec2> uvs;
+    if (aspect_ratio > 1.f) {
+        // Window is wider than tall - stretch UV in x-direction
+        uvs = {helios::make_vec2(0.f, 0.f), helios::make_vec2(aspect_ratio, 0.f), helios::make_vec2(aspect_ratio, 1.f), helios::make_vec2(0.f, 1.f)};
+    } else {
+        // Window is taller than wide - stretch UV in y-direction
+        uvs = {helios::make_vec2(0.f, 0.f), helios::make_vec2(1.f, 0.f), helios::make_vec2(1.f, 1.f / aspect_ratio), helios::make_vec2(0.f, 1.f / aspect_ratio)};
+    }
+
+    // Add the textured rectangle as background
+    background_rectangle_ID = addRectangleByVertices(vertices, "plugins/visualizer/textures/transparent.jpg", uvs, COORDINATES_WINDOW_NORMALIZED);
+}
+
+void Visualizer::setBackgroundImage(const char *texture_file) {
+    background_is_transparent = false;
+
+    // Remove any existing background rectangle
+    removeBackgroundRectangle();
+
+    // Create full-screen rectangle with custom texture as background
+    // Define rectangle vertices in normalized window coordinates
+    std::vector<helios::vec3> vertices = {
+            helios::make_vec3(0.f, 0.f, 0.99f), // Bottom-left
+            helios::make_vec3(1.f, 0.f, 0.99f), // Bottom-right
+            helios::make_vec3(1.f, 1.f, 0.99f), // Top-right
+            helios::make_vec3(0.f, 1.f, 0.99f) // Top-left
+    };
+
+    // Use standard UV coordinates - texture will stretch to fill window
+    std::vector<helios::vec2> uvs = {
+            helios::make_vec2(0.f, 0.f), // Bottom-left
+            helios::make_vec2(1.f, 0.f), // Bottom-right
+            helios::make_vec2(1.f, 1.f), // Top-right
+            helios::make_vec2(0.f, 1.f) // Top-left
+    };
+
+    // Add the textured rectangle as background
+    background_rectangle_ID = addRectangleByVertices(vertices, texture_file, uvs, COORDINATES_WINDOW_NORMALIZED);
+
+    // Restore watermark if it was visible before transparent background was enabled
+    if (watermark_was_visible_before_transparent) {
+        this->showWatermark();
+        watermark_was_visible_before_transparent = false; // Reset the flag
+    }
+}
+
+void Visualizer::setBackgroundSkyTexture(const char *texture_file, uint Ndivisions) {
+    using namespace helios;
+
+    background_is_transparent = false;
+
+    // Remove any existing background (rectangle or sky)
+    removeBackgroundRectangle();
+
+    // Use default sky texture if none specified
+    std::string texture_path;
+    if (texture_file == nullptr) {
+        texture_path = resolvePluginAsset("visualizer", "textures/SkyDome_clouds.jpg").string();
+    } else {
+        texture_path = texture_file;
+    }
+
+    // Load the texture
+    uint textureID = registerTextureImage(texture_path.c_str());
+
+    // Create sky sphere geometry centered at origin
+    // The shader will handle making it appear infinitely distant
+    float radius = 1.0f; // Unit sphere - actual size doesn't matter due to shader transformations
+
+    // Full sphere from nadir (-π/2) to zenith (+π/2)
+    float thetaStart = -0.5f * M_PI;
+    float dtheta = (0.5f * M_PI - thetaStart) / float(Ndivisions - 1);
+    float dphi = 2.f * M_PI / float(Ndivisions - 1);
+
+    vec3 center = make_vec3(0, 0, 0);
+
+    // Reserve space for all triangles
+    background_sky_IDs.reserve(2u * Ndivisions * Ndivisions);
+
+    // Top cap
+    for (int j = 0; j < scast<int>(Ndivisions - 1); j++) {
+        vec3 cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * M_PI, 0));
+        vec3 v0 = center + radius * cart;
+        cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * M_PI - dtheta, float(j + 1) * dphi));
+        vec3 v1 = center + radius * cart;
+        cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * M_PI - dtheta, float(j) * dphi));
+        vec3 v2 = center + radius * cart;
+
+        vec3 n0 = v0 - center;
+        n0.normalize();
+        vec3 n1 = v1 - center;
+        n1.normalize();
+        vec3 n2 = v2 - center;
+        n2.normalize();
+
+        vec2 uv0 = make_vec2(1.f - atan2f(sinf((float(j) + 0.5f) * dphi), -cosf((float(j) + 0.5f) * dphi)) / (2.f * M_PI) - 0.5f, n0.z * 0.5f + 0.5f);
+        vec2 uv1 = make_vec2(1.f - atan2f(n1.x, -n1.y) / (2.f * M_PI) - 0.5f, n1.z * 0.5f + 0.5f);
+        vec2 uv2 = make_vec2(1.f - atan2f(n2.x, -n2.y) / (2.f * M_PI) - 0.5f, n2.z * 0.5f + 0.5f);
+
+        // Fix seam at wrap boundary
+        if (j == scast<int>(Ndivisions - 2)) {
+            uv2.x = 1;
+        }
+
+        std::vector<vec3> vertices = {v0, v1, v2};
+        std::vector<vec2> uvs = {uv0, uv1, uv2};
+
+        size_t UUID = geometry_handler.sampleUUID();
+        geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_TRIANGLE, vertices, make_RGBAcolor(1, 1, 1, 1), uvs, textureID, false, false, 1, true, false, true, 0);
+        background_sky_IDs.push_back(UUID);
+    }
+
+    // Main body
+    for (int i = 1; i < scast<int>(Ndivisions - 1); i++) {
+        for (int j = 0; j < scast<int>(Ndivisions - 1); j++) {
+            vec3 cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * M_PI - float(i) * dtheta, float(j) * dphi));
+            vec3 v0 = center + radius * cart;
+            cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * M_PI - float(i + 1) * dtheta, float(j) * dphi));
+            vec3 v1 = center + radius * cart;
+            cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * M_PI - float(i) * dtheta, float(j + 1) * dphi));
+            vec3 v2 = center + radius * cart;
+            cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * M_PI - float(i + 1) * dtheta, float(j + 1) * dphi));
+            vec3 v3 = center + radius * cart;
+
+            vec3 n0 = v0 - center;
+            n0.normalize();
+            vec3 n1 = v1 - center;
+            n1.normalize();
+            vec3 n2 = v2 - center;
+            n2.normalize();
+            vec3 n3 = v3 - center;
+            n3.normalize();
+
+            vec2 uv0 = make_vec2(1.f - atan2f(n0.x, -n0.y) / (2.f * M_PI) - 0.5f, n0.z * 0.5f + 0.5f);
+            vec2 uv1 = make_vec2(1.f - atan2f(n1.x, -n1.y) / (2.f * M_PI) - 0.5f, n1.z * 0.5f + 0.5f);
+            vec2 uv2 = make_vec2(1.f - atan2f(n2.x, -n2.y) / (2.f * M_PI) - 0.5f, n2.z * 0.5f + 0.5f);
+            vec2 uv3 = make_vec2(1.f - atan2f(n3.x, -n3.y) / (2.f * M_PI) - 0.5f, n3.z * 0.5f + 0.5f);
+
+            // Fix seam at wrap boundary
+            if (j == scast<int>(Ndivisions - 2)) {
+                uv2.x = 1;
+                uv3.x = 1;
+            }
+
+            // First triangle
+            {
+                std::vector<vec3> vertices = {v0, v1, v2};
+                std::vector<vec2> uvs = {uv0, uv1, uv2};
+                size_t UUID = geometry_handler.sampleUUID();
+                geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_TRIANGLE, vertices, make_RGBAcolor(1, 1, 1, 1), uvs, textureID, false, false, 1, true, false, true, 0);
+                background_sky_IDs.push_back(UUID);
+            }
+
+            // Second triangle
+            {
+                std::vector<vec3> vertices = {v2, v1, v3};
+                std::vector<vec2> uvs = {uv2, uv1, uv3};
+                size_t UUID = geometry_handler.sampleUUID();
+                geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_TRIANGLE, vertices, make_RGBAcolor(1, 1, 1, 1), uvs, textureID, false, false, 1, true, false, true, 0);
+                background_sky_IDs.push_back(UUID);
+            }
+        }
+    }
+
+    // Restore watermark if it was visible before transparent background was enabled
+    if (watermark_was_visible_before_transparent) {
+        this->showWatermark();
+        watermark_was_visible_before_transparent = false;
+    }
 }
 
 void Visualizer::hideWatermark() {
@@ -1235,6 +1723,133 @@ void Visualizer::hideWatermark() {
 void Visualizer::showWatermark() {
     isWatermarkVisible = true;
     updateWatermark();
+}
+
+void Visualizer::hideNavigationGizmo() {
+    navigation_gizmo_enabled = false;
+    hovered_gizmo_bubble = -1; // Reset hover state
+    if (!navigation_gizmo_IDs.empty()) {
+        geometry_handler.deleteGeometry(navigation_gizmo_IDs);
+        navigation_gizmo_IDs.clear();
+    }
+}
+
+void Visualizer::showNavigationGizmo() {
+    navigation_gizmo_enabled = true;
+    updateNavigationGizmo();
+}
+
+bool Visualizer::testGizmoBubbleHit(const helios::vec2 &normalized_pos, int bubble_index) const {
+    if (!navigation_gizmo_enabled || navigation_gizmo_IDs.empty() || bubble_index < 0 || bubble_index > 2) {
+        return false;
+    }
+
+    // Get the bubble vertices directly from geometry (in normalized window coordinates [0,1])
+    // Bubbles are at indices 3, 4, 5 (after the 3 axis lines at 0, 1, 2)
+    size_t bubble_id = navigation_gizmo_IDs[3 + bubble_index];
+    std::vector<helios::vec3> vertices = getGeometryVertices(bubble_id);
+
+    if (vertices.size() != 4) {
+        return false;
+    }
+
+    // Calculate bounding box from vertices
+    float min_x = std::min({vertices[0].x, vertices[1].x, vertices[2].x, vertices[3].x});
+    float max_x = std::max({vertices[0].x, vertices[1].x, vertices[2].x, vertices[3].x});
+    float min_y = std::min({vertices[0].y, vertices[1].y, vertices[2].y, vertices[3].y});
+    float max_y = std::max({vertices[0].y, vertices[1].y, vertices[2].y, vertices[3].y});
+
+    // Test if click position is within bubble bounds
+    return (normalized_pos.x >= min_x && normalized_pos.x <= max_x && normalized_pos.y >= min_y && normalized_pos.y <= max_y);
+}
+
+void Visualizer::handleGizmoClick(double screen_x, double screen_y) {
+    if (!navigation_gizmo_enabled) {
+        return;
+    }
+
+    // Convert screen coordinates to normalized window coordinates (0 to 1)
+    // Note: Screen Y is top-to-bottom, but normalized window Y is bottom-to-top
+    float normalized_x = static_cast<float>(screen_x) / static_cast<float>(Wdisplay);
+    float normalized_y = 1.0f - (static_cast<float>(screen_y) / static_cast<float>(Hdisplay));
+    helios::vec2 normalized_pos = make_vec2(normalized_x, normalized_y);
+
+    // Test each axis bubble for hit
+    for (int axis = 0; axis < 3; axis++) {
+        if (testGizmoBubbleHit(normalized_pos, axis)) {
+            reorientCameraToAxis(axis);
+            break; // Only process the first hit
+        }
+    }
+}
+
+void Visualizer::handleGizmoHover(double screen_x, double screen_y) {
+    if (!navigation_gizmo_enabled) {
+        return;
+    }
+
+    // Don't test for hover if geometry doesn't exist yet or is being updated
+    // Expected size: 3 lines + 3 bubbles = 6 elements
+    if (navigation_gizmo_IDs.size() != 6) {
+        return;
+    }
+
+    // Convert screen coordinates to normalized window coordinates (0 to 1)
+    // Note: Screen Y is top-to-bottom, but normalized window Y is bottom-to-top
+    float normalized_x = static_cast<float>(screen_x) / static_cast<float>(Wdisplay);
+    float normalized_y = 1.0f - (static_cast<float>(screen_y) / static_cast<float>(Hdisplay));
+    helios::vec2 normalized_pos = make_vec2(normalized_x, normalized_y);
+
+    // Test each axis bubble for hover
+    int new_hovered_bubble = -1;
+    for (int axis = 0; axis < 3; axis++) {
+        if (testGizmoBubbleHit(normalized_pos, axis)) {
+            new_hovered_bubble = axis;
+            break; // Only process the first hit
+        }
+    }
+
+    // Only update if hover state changed
+    if (new_hovered_bubble != hovered_gizmo_bubble) {
+        hovered_gizmo_bubble = new_hovered_bubble;
+        updateNavigationGizmo();
+        // Transfer updated geometry to GPU immediately
+        transferBufferData();
+    }
+}
+
+void Visualizer::reorientCameraToAxis(int axis_index) {
+    if (axis_index < 0 || axis_index > 2) {
+        return;
+    }
+
+    // Calculate current camera radius (distance from eye to lookat center)
+    helios::SphericalCoord current_spherical = cart2sphere(camera_eye_location - camera_lookat_center);
+    float radius = current_spherical.radius;
+
+    // Define standard viewing angles for each axis
+    // axis_index: 0 = X, 1 = Y, 2 = Z
+    helios::SphericalCoord new_spherical;
+
+    switch (axis_index) {
+        case 0: // +X axis - swap azimuth with Y since azimuth=0 points along Y in Helios
+            new_spherical = make_SphericalCoord(radius, 0.0f, 0.5f * M_PI);
+            break;
+        case 1: // +Y axis - swap azimuth with X since azimuth=0 points along Y in Helios
+            new_spherical = make_SphericalCoord(radius, 0.0f, 0.0f);
+            break;
+        case 2: // +Z axis (top view)
+            new_spherical = make_SphericalCoord(radius, 0.49f * M_PI, 0.0f); // Slightly below 90 degrees to avoid singularity
+            break;
+    }
+
+    // Set the new camera position
+    setCameraPosition(new_spherical, camera_lookat_center);
+}
+
+bool Visualizer::cameraHasChanged() const {
+    constexpr float epsilon = 1e-6f;
+    return (camera_eye_location - previous_camera_eye_location).magnitude() > epsilon || (camera_lookat_center - previous_camera_lookat_center).magnitude() > epsilon;
 }
 
 void Visualizer::updatePerspectiveTransformation(bool shadow) {
@@ -1318,6 +1933,156 @@ void Visualizer::setColorbarTicks(const std::vector<float> &ticks) {
     colorbar_ticks = ticks;
 }
 
+double Visualizer::niceNumber(double value, bool round) {
+    // Handle special cases
+    if (value == 0.0 || !std::isfinite(value)) {
+        return value;
+    }
+
+    // Calculate the exponent (power of 10)
+    double exp = std::floor(std::log10(std::fabs(value)));
+    // Calculate the fraction (normalized value between 1 and 10)
+    double frac = std::fabs(value) / std::pow(10.0, exp);
+    double niceFrac;
+
+    if (round) {
+        // Round to nearest nice number
+        if (frac < 1.5) {
+            niceFrac = 1.0;
+        } else if (frac < 3.0) {
+            niceFrac = 2.0;
+        } else if (frac < 7.0) {
+            niceFrac = 5.0;
+        } else {
+            niceFrac = 10.0;
+        }
+    } else {
+        // Round up to next nice number
+        if (frac <= 1.0) {
+            niceFrac = 1.0;
+        } else if (frac <= 2.0) {
+            niceFrac = 2.0;
+        } else if (frac <= 5.0) {
+            niceFrac = 5.0;
+        } else {
+            niceFrac = 10.0;
+        }
+    }
+
+    // Restore the sign
+    double result = niceFrac * std::pow(10.0, exp);
+    return value < 0.0 ? -result : result;
+}
+
+std::string Visualizer::formatTickLabel(double value, double spacing, bool isIntegerData) {
+    std::ostringstream oss;
+
+    // Handle special values
+    if (!std::isfinite(value)) {
+        return "0";
+    }
+
+    // For integer data, always format as integer (unless very large)
+    if (isIntegerData) {
+        // Use scientific notation for very large integers to save space
+        if (std::fabs(value) >= 10000) {
+            oss << std::scientific << std::setprecision(0) << value;
+            return oss.str();
+        }
+        oss << static_cast<int>(std::round(value));
+        return oss.str();
+    }
+
+    // Determine if we should use scientific notation
+    // Use scientific notation for large values (>=10000) or very small values
+    bool useScientific = (std::fabs(value) >= 1e4 || (std::fabs(value) < 1e-3 && value != 0.0));
+
+    if (useScientific) {
+        // Use scientific notation
+        int decimalPlaces = std::max(0, static_cast<int>(-std::floor(std::log10(std::fabs(spacing)))));
+        decimalPlaces = std::min(decimalPlaces, 6); // Cap at 6 decimal places
+        oss << std::scientific << std::setprecision(decimalPlaces) << value;
+    } else {
+        // Use fixed-point notation
+        // Calculate decimal places based on spacing
+        int decimalPlaces;
+        if (spacing >= 1.0) {
+            decimalPlaces = 0;
+        } else {
+            decimalPlaces = std::max(0, static_cast<int>(-std::floor(std::log10(spacing))));
+            decimalPlaces = std::min(decimalPlaces, 6); // Cap at 6 decimal places
+        }
+
+        oss << std::fixed << std::setprecision(decimalPlaces) << value;
+    }
+
+    return oss.str();
+}
+
+std::vector<float> Visualizer::generateNiceTicks(float dataMin, float dataMax, bool isIntegerData, int targetTicks) {
+    std::vector<float> ticks;
+
+    // Handle edge cases
+    if (!std::isfinite(dataMin) || !std::isfinite(dataMax) || dataMax <= dataMin) {
+        // Return default ticks
+        ticks.push_back(dataMin);
+        ticks.push_back(dataMax);
+        return ticks;
+    }
+
+    // Handle zero or very small range
+    double range = dataMax - dataMin;
+    if (range < 1e-10) {
+        ticks.push_back(dataMin);
+        return ticks;
+    }
+
+    // Calculate nice range
+    double niceRange = niceNumber(range / (targetTicks - 1), true);
+
+    // For integer data, ensure spacing is at least 1
+    if (isIntegerData && niceRange < 1.0) {
+        niceRange = 1.0;
+    }
+
+    // Calculate nice bounds
+    double graphMin = std::floor(dataMin / niceRange) * niceRange;
+    double graphMax = std::ceil(dataMax / niceRange) * niceRange;
+
+    // For integer data, round to integers
+    if (isIntegerData) {
+        graphMin = std::floor(graphMin);
+        graphMax = std::ceil(graphMax);
+        niceRange = std::max(1.0, niceRange);
+    }
+
+    // Generate tick positions
+    // Use a small epsilon to handle floating-point precision issues
+    double epsilon = niceRange * 0.5;
+    for (double tick = graphMin; tick <= graphMax + epsilon; tick += niceRange) {
+        double tickValue = tick;
+
+        // For integer data, round to nearest integer
+        if (isIntegerData) {
+            tickValue = std::round(tick);
+        }
+
+        // Avoid duplicates due to floating-point precision
+        if (ticks.empty() || std::fabs(tickValue - ticks.back()) > niceRange * 0.01) {
+            ticks.push_back(static_cast<float>(tickValue));
+        }
+    }
+
+    // Ensure we have at least 2 ticks
+    if (ticks.size() < 2) {
+        ticks.clear();
+        ticks.push_back(dataMin);
+        ticks.push_back(dataMax);
+    }
+
+    return ticks;
+}
+
 void Visualizer::setColorbarTitle(const char *title) {
     colorbar_title = title;
 }
@@ -1346,6 +2111,8 @@ void Visualizer::setColormap(Ctable colormap_name) {
         colormap_current = colormap_parula;
     } else if (colormap_name == COLORMAP_GRAY) {
         colormap_current = colormap_gray;
+    } else if (colormap_name == COLORMAP_LINES) {
+        colormap_current = colormap_lines;
     } else if (colormap_name == COLORMAP_CUSTOM) {
         helios_runtime_error("ERROR (Visualizer::setColormap): Setting a custom colormap requires calling setColormap with additional arguments defining the colormap.");
     } else {
@@ -1689,7 +2456,7 @@ glm::mat4 Visualizer::getViewMatrix() const {
     return glm::lookAt(camera_pos, lookat_pos, up_vec);
 }
 
-std::vector<Visualizer::LightingModel> Visualizer::getPrimaryLightingModel() {
+Visualizer::LightingModel Visualizer::getPrimaryLightingModel() {
     return primaryLightingModel;
 }
 
