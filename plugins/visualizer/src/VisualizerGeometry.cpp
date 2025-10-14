@@ -530,7 +530,84 @@ std::vector<size_t> Visualizer::addSphereByCenter(float radius, const vec3 &cent
 }
 
 void Visualizer::addSkyDomeByCenter(float radius, const vec3 &center, uint Ndivisions, const char *texture_file, int layer) {
-    addSkyDomeByCenter(radius, center, Ndivisions, texture_file);
+    // This deprecated overload with layer parameter simply ignores the layer argument
+    // and calls the implementation directly to avoid cascading deprecation warnings
+    std::cerr << "WARNING (Visualizer::addSkyDomeByCenter): This method is deprecated and will be removed in a future version. "
+              << "Please use Visualizer::setBackgroundSkyTexture() instead, which provides a more robust sky rendering solution "
+              << "that dynamically scales with camera movement and avoids the need to pre-specify a radius." << std::endl;
+
+    float thetaStart = -0.1f * PI_F;
+
+    float dtheta = (0.5f * PI_F - thetaStart) / float(Ndivisions - 1);
+    float dphi = 2.f * PI_F / float(Ndivisions - 1);
+
+    std::vector<size_t> UUIDs;
+    UUIDs.reserve(2u * Ndivisions * Ndivisions);
+
+    vec3 cart;
+
+    // top cap
+    for (int j = 0; j < scast<int>(Ndivisions - 1); j++) {
+        cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * PI_F, 0));
+        vec3 v0 = center + radius * cart;
+        cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * PI_F - dtheta, float(j + 1) * dphi));
+        vec3 v1 = center + radius * cart;
+        cart = sphere2cart(make_SphericalCoord(1.f, 0.5f * PI_F - dtheta, float(j) * dphi));
+        vec3 v2 = center + radius * cart;
+
+        vec3 n0 = v0 - center;
+        n0.normalize();
+        vec3 n1 = v1 - center;
+        n1.normalize();
+        vec3 n2 = v2 - center;
+        n2.normalize();
+
+        vec2 uv0 = make_vec2(1.f - atan2f(sinf((float(j) + 0.5f) * dphi), -cosf((float(j) + 0.5f) * dphi)) / (2.f * PI_F) - 0.5f, 1.f - n0.z * 0.5f - 0.5f);
+        vec2 uv1 = make_vec2(1.f - atan2f(n1.x, -n1.y) / (2.f * PI_F) - 0.5f, 1.f - n1.z * 0.5f - 0.5f);
+        vec2 uv2 = make_vec2(1.f - atan2f(n2.x, -n2.y) / (2.f * PI_F) - 0.5f, 1.f - n2.z * 0.5f - 0.5f);
+
+        if (j == scast<int>(Ndivisions - 2)) {
+            uv2.x = 1;
+        }
+
+        UUIDs.push_back(addTriangle(v0, v1, v2, texture_file, uv0, uv1, uv2, scast<CoordinateSystem>(2)));
+    }
+
+    // middle
+    for (int j = 0; j < scast<int>(Ndivisions - 1); j++) {
+        for (int i = 0; i < scast<int>(Ndivisions - 1); i++) {
+            cart = sphere2cart(make_SphericalCoord(1.f, float(i) * dtheta, float(j) * dphi));
+            vec3 v0 = center + radius * cart;
+            cart = sphere2cart(make_SphericalCoord(1.f, float(i + 1) * dtheta, float(j) * dphi));
+            vec3 v1 = center + radius * cart;
+            cart = sphere2cart(make_SphericalCoord(1.f, float(i + 1) * dtheta, float(j + 1) * dphi));
+            vec3 v2 = center + radius * cart;
+            cart = sphere2cart(make_SphericalCoord(1.f, float(i) * dtheta, float(j + 1) * dphi));
+            vec3 v3 = center + radius * cart;
+
+            vec3 n0 = v0 - center;
+            n0.normalize();
+            vec3 n1 = v1 - center;
+            n1.normalize();
+            vec3 n2 = v2 - center;
+            n2.normalize();
+            vec3 n3 = v3 - center;
+            n3.normalize();
+
+            vec2 uv0 = make_vec2(1.f - atan2f(n0.x, -n0.y) / (2.f * PI_F) - 0.5f, 1.f - n0.z * 0.5f - 0.5f);
+            vec2 uv1 = make_vec2(1.f - atan2f(n1.x, -n1.y) / (2.f * PI_F) - 0.5f, 1.f - n1.z * 0.5f - 0.5f);
+            vec2 uv2 = make_vec2(1.f - atan2f(n2.x, -n2.y) / (2.f * PI_F) - 0.5f, 1.f - n2.z * 0.5f - 0.5f);
+            vec2 uv3 = make_vec2(1.f - atan2f(n3.x, -n3.y) / (2.f * PI_F) - 0.5f, 1.f - n3.z * 0.5f - 0.5f);
+
+            if (j == scast<int>(Ndivisions - 2)) {
+                uv2.x = 1;
+                uv3.x = 1;
+            }
+
+            UUIDs.push_back(addTriangle(v0, v1, v2, texture_file, uv0, uv1, uv2, scast<CoordinateSystem>(2)));
+            UUIDs.push_back(addTriangle(v0, v2, v3, texture_file, uv0, uv2, uv3, scast<CoordinateSystem>(2)));
+        }
+    }
 }
 
 std::vector<size_t> Visualizer::addSkyDomeByCenter(float radius, const vec3 &center, uint Ndivisions, const char *texture_file) {

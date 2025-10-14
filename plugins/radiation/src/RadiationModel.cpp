@@ -2564,7 +2564,7 @@ void RadiationModel::updateRadiativeProperties() {
             // Check if the query data exists for this primitive and has correct type
             if (context->doesPrimitiveDataExist(uuid, config.query_data_label.c_str())) {
                 // Check that query data is of type float
-                if (context->getPrimitiveDataType(uuid, config.query_data_label.c_str()) != helios::HELIOS_TYPE_FLOAT) {
+                if (context->getPrimitiveDataType(config.query_data_label.c_str()) != helios::HELIOS_TYPE_FLOAT) {
                     helios_runtime_error("ERROR (RadiationModel::updateRadiativeProperties): Primitive data '" + config.query_data_label + "' for UUID " + std::to_string(uuid) + " must be of type HELIOS_TYPE_FLOAT for spectral interpolation.");
                 }
 
