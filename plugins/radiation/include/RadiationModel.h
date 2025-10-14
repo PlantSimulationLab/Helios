@@ -868,6 +868,43 @@ public:
      */
     void blendSpectraRandomly(const std::string &new_spectrum_label, const std::vector<std::string> &spectrum_labels) const;
 
+    //! Configure automatic spectral interpolation based on primitive data values
+    /**
+     * This function sets up automatic interpolation between different spectra based on the value of a primitive data field. When \ref updateRadiativeProperties() is called, for each primitive specified,
+     * it will query the value of the primitive data field specified by primitive_data_query_label, perform nearest-neighbor interpolation to find the closest spectrum from the spectra vector,
+     * and set the primitive data field specified by primitive_data_radprop_label to the label of the selected spectrum.
+     * \param[in] primitive_UUIDs Vector of primitive UUIDs to apply interpolation to
+     * \param[in] spectra Vector of global data labels containing spectral data (type std::vector<helios::vec2>). Each label must reference valid global data.
+     * \param[in] values Vector of primitive data values mapping to each spectrum. Must be the same length as spectra vector.
+     * \param[in] primitive_data_query_label Name of existing primitive data field to query for interpolation (e.g., "age")
+     * \param[in] primitive_data_radprop_label Name of primitive data field to set with interpolated spectrum label (e.g., "reflectivity_spectrum" or "transmissivity_spectrum")
+     * \note This function must be called before \ref updateRadiativeProperties(). The interpolation uses nearest-neighbor selection based on the absolute distance between the queried value and the provided mapping values.
+     */
+    void interpolateSpectrumFromPrimitiveData(const std::vector<uint> &primitive_UUIDs,
+                                              const std::vector<std::string> &spectra,
+                                              const std::vector<float> &values,
+                                              const std::string &primitive_data_query_label,
+                                              const std::string &primitive_data_radprop_label);
+
+    //! Configure automatic spectral interpolation based on object data values
+    /**
+     * This function sets up automatic interpolation between different spectra based on the value of an object data field. When \ref updateRadiativeProperties() is called, for each object specified,
+     * it will query the value of the object data field specified by object_data_query_label, perform nearest-neighbor interpolation to find the closest spectrum from the spectra vector,
+     * and set the primitive data field specified by primitive_data_radprop_label to the label of the selected spectrum for all primitives belonging to that object.
+     * \param[in] object_IDs Vector of object IDs to apply interpolation to
+     * \param[in] spectra Vector of global data labels containing spectral data (type std::vector<helios::vec2>). Each label must reference valid global data.
+     * \param[in] values Vector of object data values mapping to each spectrum. Must be the same length as spectra vector.
+     * \param[in] object_data_query_label Name of existing object data field to query for interpolation (e.g., "age")
+     * \param[in] primitive_data_radprop_label Name of primitive data field to set with interpolated spectrum label (e.g., "reflectivity_spectrum" or "transmissivity_spectrum")
+     * \note This function must be called before \ref updateRadiativeProperties(). The interpolation uses nearest-neighbor selection based on the absolute distance between the queried value and the provided mapping values.
+     * \note Although this function reads object data, it sets primitive data because radiative properties are defined per-primitive. All primitives belonging to the object will have their primitive data set.
+     */
+    void interpolateSpectrumFromObjectData(const std::vector<uint> &object_IDs,
+                                          const std::vector<std::string> &spectra,
+                                          const std::vector<float> &values,
+                                          const std::string &object_data_query_label,
+                                          const std::string &primitive_data_radprop_label);
+
     //! Set the number of scattering iterations for a certain band
     /**
      * \param[in] label Label used to reference the band
@@ -1518,6 +1555,18 @@ protected:
 
     //! Primitive spectral transmissivity data references
     std::map<std::string, std::vector<uint>> spectral_transmissivity_data;
+
+    //! Storage for spectral interpolation configurations
+    struct SpectrumInterpolationConfig {
+        std::unordered_set<uint> primitive_UUIDs;     // Primitive UUIDs to apply this config to
+        std::unordered_set<uint> object_IDs;          // Object IDs to apply this config to
+        std::vector<std::string> spectra_labels;      // Global data labels for spectra
+        std::vector<float> mapping_values;            // Values corresponding to each spectrum
+        std::string query_data_label;                 // Primitive/object data to query (e.g., "age")
+        std::string target_data_label;                // Primitive data to set (e.g., "reflectivity_spectrum")
+    };
+
+    std::vector<SpectrumInterpolationConfig> spectrum_interpolation_configs;
 
     std::vector<helios::vec2> generateGaussianCameraResponse(float FWHM, float mu, float centrawavelength, const helios::int2 &wavebanrange);
 

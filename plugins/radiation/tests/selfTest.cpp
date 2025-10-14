@@ -2495,3 +2495,933 @@ DOCTEST_TEST_CASE("RadiationModel CCM Error Handling") {
         std::remove(ccm_file_path.c_str());
     }
 }
+
+DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
+
+    Context context;
+    RadiationModel radiationmodel(&context);
+    radiationmodel.disableMessages();
+
+    // Create test spectra as global data
+    std::vector<vec2> spectrum_young = {{400, 0.1}, {500, 0.15}, {600, 0.2}, {700, 0.25}};
+    std::vector<vec2> spectrum_mature = {{400, 0.3}, {500, 0.35}, {600, 0.4}, {700, 0.45}};
+    std::vector<vec2> spectrum_old = {{400, 0.5}, {500, 0.55}, {600, 0.6}, {700, 0.65}};
+
+    context.setGlobalData("spectrum_age_0", spectrum_young);
+    context.setGlobalData("spectrum_age_5", spectrum_mature);
+    context.setGlobalData("spectrum_age_10", spectrum_old);
+
+    // Create test primitives
+    uint uuid0 = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    uint uuid1 = context.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+    uint uuid2 = context.addPatch(make_vec3(4, 0, 0), make_vec2(1, 1));
+    uint uuid3 = context.addPatch(make_vec3(6, 0, 0), make_vec2(1, 1));
+    uint uuid4 = context.addPatch(make_vec3(8, 0, 0), make_vec2(1, 1));
+
+    // Set age primitive data
+    context.setPrimitiveData(uuid0, "age", 0.0f);  // Exact match to first spectrum
+    context.setPrimitiveData(uuid1, "age", 2.0f);  // Between first and second, closer to first
+    context.setPrimitiveData(uuid2, "age", 5.0f);  // Exact match to second spectrum
+    context.setPrimitiveData(uuid3, "age", 8.0f);  // Between second and third, closer to third
+    context.setPrimitiveData(uuid4, "age", 12.0f); // Beyond last value
+
+    // Test basic interpolation with reflectivity
+    DOCTEST_SUBCASE("Basic interpolation with 3 spectra") {
+        std::vector<uint> uuids = {uuid0, uuid1, uuid2, uuid3, uuid4};
+        std::vector<std::string> spectra = {"spectrum_age_0", "spectrum_age_5", "spectrum_age_10"};
+        std::vector<float> values = {0.0f, 5.0f, 10.0f};
+
+        radiationmodel.interpolateSpectrumFromPrimitiveData(uuids, spectra, values, "age", "reflectivity_spectrum");
+
+        // Add band, sources, and run to trigger interpolation via updateRadiativeProperties()
+        radiationmodel.addRadiationBand("PAR");
+        uint source = radiationmodel.addCollimatedRadiationSource();
+        radiationmodel.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel.updateGeometry();
+        radiationmodel.runBand("PAR");
+
+        // Verify that the correct spectra were assigned
+        std::string assigned_spectrum;
+        context.getPrimitiveData(uuid0, "reflectivity_spectrum", assigned_spectrum);
+        DOCTEST_CHECK(assigned_spectrum == "spectrum_age_0");
+
+        context.getPrimitiveData(uuid1, "reflectivity_spectrum", assigned_spectrum);
+        DOCTEST_CHECK(assigned_spectrum == "spectrum_age_0"); // 2.0 is closer to 0.0 than 5.0
+
+        context.getPrimitiveData(uuid2, "reflectivity_spectrum", assigned_spectrum);
+        DOCTEST_CHECK(assigned_spectrum == "spectrum_age_5");
+
+        context.getPrimitiveData(uuid3, "reflectivity_spectrum", assigned_spectrum);
+        DOCTEST_CHECK(assigned_spectrum == "spectrum_age_10"); // 8.0 is closer to 10.0 than 5.0
+
+        context.getPrimitiveData(uuid4, "reflectivity_spectrum", assigned_spectrum);
+        DOCTEST_CHECK(assigned_spectrum == "spectrum_age_10"); // 12.0 is closest to 10.0
+    }
+
+    // Test with transmissivity spectrum
+    DOCTEST_SUBCASE("Interpolation with transmissivity_spectrum") {
+        Context context2;
+        RadiationModel radiationmodel2(&context2);
+        radiationmodel2.disableMessages();
+
+        context2.setGlobalData("trans_young", spectrum_young);
+        context2.setGlobalData("trans_old", spectrum_old);
+
+        uint uuid_a = context2.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint uuid_b = context2.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+
+        context2.setPrimitiveData(uuid_a, "leaf_age", 1.0f);
+        context2.setPrimitiveData(uuid_b, "leaf_age", 9.0f);
+
+        std::vector<uint> uuids = {uuid_a, uuid_b};
+        std::vector<std::string> spectra = {"trans_young", "trans_old"};
+        std::vector<float> values = {0.0f, 10.0f};
+
+        radiationmodel2.interpolateSpectrumFromPrimitiveData(uuids, spectra, values, "leaf_age", "transmissivity_spectrum");
+
+        radiationmodel2.addRadiationBand("PAR");
+        uint source = radiationmodel2.addCollimatedRadiationSource();
+        radiationmodel2.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel2.updateGeometry();
+        radiationmodel2.runBand("PAR");
+
+        std::string assigned_spectrum;
+        context2.getPrimitiveData(uuid_a, "transmissivity_spectrum", assigned_spectrum);
+        DOCTEST_CHECK(assigned_spectrum == "trans_young");
+
+        context2.getPrimitiveData(uuid_b, "transmissivity_spectrum", assigned_spectrum);
+        DOCTEST_CHECK(assigned_spectrum == "trans_old");
+    }
+
+    // Test error handling - mismatched vector lengths
+    DOCTEST_SUBCASE("Error: mismatched vector lengths") {
+        Context context3;
+        RadiationModel radiationmodel3(&context3);
+        radiationmodel3.disableMessages();
+
+        context3.setGlobalData("spec1", spectrum_young);
+        context3.setGlobalData("spec2", spectrum_old);
+
+        uint uuid = context3.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+        std::vector<uint> uuids = {uuid};
+        std::vector<std::string> spectra = {"spec1", "spec2"};
+        std::vector<float> values = {0.0f}; // Length mismatch!
+
+        bool exception_thrown = false;
+        try {
+            radiationmodel3.interpolateSpectrumFromPrimitiveData(uuids, spectra, values, "age", "reflectivity_spectrum");
+        } catch (const std::runtime_error &e) {
+            exception_thrown = true;
+            std::string error_msg(e.what());
+            DOCTEST_CHECK(error_msg.find("must have the same length") != std::string::npos);
+        }
+        DOCTEST_CHECK(exception_thrown);
+    }
+
+    // Test error handling - empty vectors
+    DOCTEST_SUBCASE("Error: empty vectors") {
+        Context context4;
+        RadiationModel radiationmodel4(&context4);
+        radiationmodel4.disableMessages();
+
+        uint uuid = context4.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+        std::vector<uint> uuids = {uuid};
+        std::vector<std::string> spectra;
+        std::vector<float> values;
+
+        bool exception_thrown = false;
+        try {
+            radiationmodel4.interpolateSpectrumFromPrimitiveData(uuids, spectra, values, "age", "reflectivity_spectrum");
+        } catch (const std::runtime_error &e) {
+            exception_thrown = true;
+            std::string error_msg(e.what());
+            DOCTEST_CHECK(error_msg.find("cannot be empty") != std::string::npos);
+        }
+        DOCTEST_CHECK(exception_thrown);
+    }
+
+    // Test error handling - invalid global data (caught during runBand/updateRadiativeProperties)
+    DOCTEST_SUBCASE("Error: invalid global data label") {
+        Context context5;
+        RadiationModel radiationmodel5(&context5);
+        radiationmodel5.disableMessages();
+
+        uint uuid = context5.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context5.setPrimitiveData(uuid, "age", 5.0f);
+
+        std::vector<uint> uuids = {uuid};
+        std::vector<std::string> spectra = {"nonexistent_spectrum"};
+        std::vector<float> values = {0.0f};
+
+        // This should succeed - validation happens later
+        radiationmodel5.interpolateSpectrumFromPrimitiveData(uuids, spectra, values, "age", "reflectivity_spectrum");
+
+        radiationmodel5.addRadiationBand("PAR");
+        uint source = radiationmodel5.addCollimatedRadiationSource();
+        radiationmodel5.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel5.updateGeometry();
+
+        // Error should occur when running the band (which calls updateRadiativeProperties)
+        bool exception_thrown = false;
+        try {
+            radiationmodel5.runBand("PAR");
+        } catch (const std::runtime_error &e) {
+            exception_thrown = true;
+            std::string error_msg(e.what());
+            DOCTEST_CHECK(error_msg.find("does not exist") != std::string::npos);
+        }
+        DOCTEST_CHECK(exception_thrown);
+    }
+
+    // Test error handling - wrong global data type (caught during runBand/updateRadiativeProperties)
+    DOCTEST_SUBCASE("Error: wrong global data type") {
+        Context context6;
+        RadiationModel radiationmodel6(&context6);
+        radiationmodel6.disableMessages();
+
+        context6.setGlobalData("wrong_type", 42.0f); // Float instead of vec2
+
+        uint uuid = context6.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context6.setPrimitiveData(uuid, "age", 5.0f);
+
+        std::vector<uint> uuids = {uuid};
+        std::vector<std::string> spectra = {"wrong_type"};
+        std::vector<float> values = {0.0f};
+
+        // This should succeed - validation happens later
+        radiationmodel6.interpolateSpectrumFromPrimitiveData(uuids, spectra, values, "age", "reflectivity_spectrum");
+
+        radiationmodel6.addRadiationBand("PAR");
+        uint source = radiationmodel6.addCollimatedRadiationSource();
+        radiationmodel6.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel6.updateGeometry();
+
+        // Error should occur when running the band
+        bool exception_thrown = false;
+        try {
+            radiationmodel6.runBand("PAR");
+        } catch (const std::runtime_error &e) {
+            exception_thrown = true;
+            std::string error_msg(e.what());
+            DOCTEST_CHECK(error_msg.find("HELIOS_TYPE_VEC2") != std::string::npos);
+        }
+        DOCTEST_CHECK(exception_thrown);
+    }
+
+    // Test with invalid UUID (should be silently skipped during updateRadiativeProperties)
+    DOCTEST_SUBCASE("Invalid UUID is silently skipped") {
+        Context context7;
+        RadiationModel radiationmodel7(&context7);
+        radiationmodel7.disableMessages();
+
+        context7.setGlobalData("spec", spectrum_young);
+
+        uint valid_uuid = context7.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context7.setPrimitiveData(valid_uuid, "age", 5.0f);
+
+        std::vector<uint> uuids = {valid_uuid, 99999}; // One valid, one invalid UUID
+        std::vector<std::string> spectra = {"spec"};
+        std::vector<float> values = {0.0f};
+
+        // This should succeed - invalid UUIDs are skipped during updateRadiativeProperties
+        radiationmodel7.interpolateSpectrumFromPrimitiveData(uuids, spectra, values, "age", "reflectivity_spectrum");
+
+        radiationmodel7.addRadiationBand("PAR");
+        uint source = radiationmodel7.addCollimatedRadiationSource();
+        radiationmodel7.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel7.updateGeometry();
+
+        // Should run successfully - invalid UUID is skipped
+        radiationmodel7.runBand("PAR");
+
+        // Valid UUID should have spectrum assigned
+        std::string assigned_spectrum;
+        context7.getPrimitiveData(valid_uuid, "reflectivity_spectrum", assigned_spectrum);
+        DOCTEST_CHECK(assigned_spectrum == "spec");
+    }
+
+    // Test error handling - wrong primitive data type for query data
+    DOCTEST_SUBCASE("Error: wrong primitive data type for query") {
+        Context context8;
+        RadiationModel radiationmodel8(&context8);
+        radiationmodel8.disableMessages();
+
+        context8.setGlobalData("spec", spectrum_young);
+
+        uint uuid = context8.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        context8.setPrimitiveData(uuid, "age", 5); // int instead of float
+
+        std::vector<uint> uuids = {uuid};
+        std::vector<std::string> spectra = {"spec"};
+        std::vector<float> values = {0.0f};
+
+        // This should succeed - validation happens later
+        radiationmodel8.interpolateSpectrumFromPrimitiveData(uuids, spectra, values, "age", "reflectivity_spectrum");
+
+        radiationmodel8.addRadiationBand("PAR");
+        uint source = radiationmodel8.addCollimatedRadiationSource();
+        radiationmodel8.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel8.updateGeometry();
+
+        // Error should occur when running the band
+        bool exception_thrown = false;
+        try {
+            radiationmodel8.runBand("PAR");
+        } catch (const std::runtime_error &e) {
+            exception_thrown = true;
+            std::string error_msg(e.what());
+            DOCTEST_CHECK(error_msg.find("HELIOS_TYPE_FLOAT") != std::string::npos);
+        }
+        DOCTEST_CHECK(exception_thrown);
+    }
+
+    // Test with primitive missing query data (should not crash, just skip)
+    DOCTEST_SUBCASE("Primitive without query data is skipped") {
+        Context context9;
+        RadiationModel radiationmodel9(&context9);
+        radiationmodel9.disableMessages();
+
+        context9.setGlobalData("spec1", spectrum_young);
+        context9.setGlobalData("spec2", spectrum_old);
+
+        uint uuid_with_data = context9.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint uuid_without_data = context9.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+
+        context9.setPrimitiveData(uuid_with_data, "age", 2.0f);
+        // uuid_without_data does not have "age" data
+
+        std::vector<uint> uuids = {uuid_with_data, uuid_without_data};
+        std::vector<std::string> spectra = {"spec1", "spec2"};
+        std::vector<float> values = {0.0f, 10.0f};
+
+        radiationmodel9.interpolateSpectrumFromPrimitiveData(uuids, spectra, values, "age", "reflectivity_spectrum");
+
+        radiationmodel9.addRadiationBand("PAR");
+        uint source = radiationmodel9.addCollimatedRadiationSource();
+        radiationmodel9.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel9.updateGeometry();
+        radiationmodel9.runBand("PAR");
+
+        // uuid_with_data should have spectrum assigned
+        std::string assigned_spectrum;
+        context9.getPrimitiveData(uuid_with_data, "reflectivity_spectrum", assigned_spectrum);
+        DOCTEST_CHECK(assigned_spectrum == "spec1");
+
+        // uuid_without_data should not have spectrum assigned (or may not exist)
+        if (context9.doesPrimitiveDataExist(uuid_without_data, "reflectivity_spectrum")) {
+            // If it exists, it should not be one of our test spectra (could be empty or default)
+            context9.getPrimitiveData(uuid_without_data, "reflectivity_spectrum", assigned_spectrum);
+            // It's OK if it doesn't have a value, or has an empty value
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
+
+    Context context;
+    RadiationModel radiationmodel(&context);
+    radiationmodel.disableMessages();
+
+    // Create test spectra as global data
+    std::vector<vec2> spectrum_young = {{400, 0.1}, {500, 0.15}, {600, 0.2}, {700, 0.25}};
+    std::vector<vec2> spectrum_mature = {{400, 0.3}, {500, 0.35}, {600, 0.4}, {700, 0.45}};
+    std::vector<vec2> spectrum_old = {{400, 0.5}, {500, 0.55}, {600, 0.6}, {700, 0.65}};
+
+    context.setGlobalData("spectrum_age_0", spectrum_young);
+    context.setGlobalData("spectrum_age_5", spectrum_mature);
+    context.setGlobalData("spectrum_age_10", spectrum_old);
+
+    // Create test objects with primitives
+    uint obj0 = context.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+    uint obj1 = context.addTileObject(make_vec3(2, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+    uint obj2 = context.addTileObject(make_vec3(4, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+    uint obj3 = context.addTileObject(make_vec3(6, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+    uint obj4 = context.addTileObject(make_vec3(8, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+
+    // Set age object data
+    context.setObjectData(obj0, "age", 0.0f);  // Exact match to first spectrum
+    context.setObjectData(obj1, "age", 2.0f);  // Between first and second, closer to first
+    context.setObjectData(obj2, "age", 5.0f);  // Exact match to second spectrum
+    context.setObjectData(obj3, "age", 8.0f);  // Between second and third, closer to third
+    context.setObjectData(obj4, "age", 12.0f); // Beyond last value
+
+    // Test basic interpolation with reflectivity
+    DOCTEST_SUBCASE("Basic interpolation with 3 spectra") {
+        std::vector<uint> obj_ids = {obj0, obj1, obj2, obj3, obj4};
+        std::vector<std::string> spectra = {"spectrum_age_0", "spectrum_age_5", "spectrum_age_10"};
+        std::vector<float> values = {0.0f, 5.0f, 10.0f};
+
+        radiationmodel.interpolateSpectrumFromObjectData(obj_ids, spectra, values, "age", "reflectivity_spectrum");
+
+        // Add band, sources, and run to trigger interpolation via updateRadiativeProperties()
+        radiationmodel.addRadiationBand("PAR");
+        uint source = radiationmodel.addCollimatedRadiationSource();
+        radiationmodel.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel.updateGeometry();
+        radiationmodel.runBand("PAR");
+
+        // Verify that the correct spectra were assigned to all primitives of each object
+        std::string assigned_spectrum;
+        std::vector<uint> prim_uuids0 = context.getObjectPrimitiveUUIDs(obj0);
+        for (uint uuid : prim_uuids0) {
+            context.getPrimitiveData(uuid, "reflectivity_spectrum", assigned_spectrum);
+            DOCTEST_CHECK(assigned_spectrum == "spectrum_age_0");
+        }
+
+        std::vector<uint> prim_uuids1 = context.getObjectPrimitiveUUIDs(obj1);
+        for (uint uuid : prim_uuids1) {
+            context.getPrimitiveData(uuid, "reflectivity_spectrum", assigned_spectrum);
+            DOCTEST_CHECK(assigned_spectrum == "spectrum_age_0"); // 2.0 is closer to 0.0 than 5.0
+        }
+
+        std::vector<uint> prim_uuids2 = context.getObjectPrimitiveUUIDs(obj2);
+        for (uint uuid : prim_uuids2) {
+            context.getPrimitiveData(uuid, "reflectivity_spectrum", assigned_spectrum);
+            DOCTEST_CHECK(assigned_spectrum == "spectrum_age_5");
+        }
+
+        std::vector<uint> prim_uuids3 = context.getObjectPrimitiveUUIDs(obj3);
+        for (uint uuid : prim_uuids3) {
+            context.getPrimitiveData(uuid, "reflectivity_spectrum", assigned_spectrum);
+            DOCTEST_CHECK(assigned_spectrum == "spectrum_age_10"); // 8.0 is closer to 10.0 than 5.0
+        }
+
+        std::vector<uint> prim_uuids4 = context.getObjectPrimitiveUUIDs(obj4);
+        for (uint uuid : prim_uuids4) {
+            context.getPrimitiveData(uuid, "reflectivity_spectrum", assigned_spectrum);
+            DOCTEST_CHECK(assigned_spectrum == "spectrum_age_10"); // 12.0 is closest to 10.0
+        }
+    }
+
+    // Test with transmissivity spectrum
+    DOCTEST_SUBCASE("Interpolation with transmissivity_spectrum") {
+        Context context2;
+        RadiationModel radiationmodel2(&context2);
+        radiationmodel2.disableMessages();
+
+        context2.setGlobalData("trans_young", spectrum_young);
+        context2.setGlobalData("trans_old", spectrum_old);
+
+        uint obj_a = context2.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+        uint obj_b = context2.addTileObject(make_vec3(2, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+
+        context2.setObjectData(obj_a, "leaf_age", 1.0f);
+        context2.setObjectData(obj_b, "leaf_age", 9.0f);
+
+        std::vector<uint> obj_ids = {obj_a, obj_b};
+        std::vector<std::string> spectra = {"trans_young", "trans_old"};
+        std::vector<float> values = {0.0f, 10.0f};
+
+        radiationmodel2.interpolateSpectrumFromObjectData(obj_ids, spectra, values, "leaf_age", "transmissivity_spectrum");
+
+        radiationmodel2.addRadiationBand("PAR");
+        uint source = radiationmodel2.addCollimatedRadiationSource();
+        radiationmodel2.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel2.updateGeometry();
+        radiationmodel2.runBand("PAR");
+
+        std::string assigned_spectrum;
+        std::vector<uint> prim_uuids_a = context2.getObjectPrimitiveUUIDs(obj_a);
+        for (uint uuid : prim_uuids_a) {
+            context2.getPrimitiveData(uuid, "transmissivity_spectrum", assigned_spectrum);
+            DOCTEST_CHECK(assigned_spectrum == "trans_young");
+        }
+
+        std::vector<uint> prim_uuids_b = context2.getObjectPrimitiveUUIDs(obj_b);
+        for (uint uuid : prim_uuids_b) {
+            context2.getPrimitiveData(uuid, "transmissivity_spectrum", assigned_spectrum);
+            DOCTEST_CHECK(assigned_spectrum == "trans_old");
+        }
+    }
+
+    // Test error handling - mismatched vector lengths
+    DOCTEST_SUBCASE("Error: mismatched vector lengths") {
+        Context context3;
+        RadiationModel radiationmodel3(&context3);
+        radiationmodel3.disableMessages();
+
+        uint obj_test = context3.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+        std::vector<uint> obj_ids = {obj_test};
+        std::vector<std::string> spectra = {"spec1", "spec2"};
+        std::vector<float> values = {0.0f}; // Wrong size
+
+        bool caught_error = false;
+        try {
+            radiationmodel3.interpolateSpectrumFromObjectData(obj_ids, spectra, values, "age", "reflectivity_spectrum");
+        } catch (const std::exception &e) {
+            caught_error = true;
+        }
+        DOCTEST_CHECK(caught_error);
+    }
+
+    // Test error handling - empty spectra vector
+    DOCTEST_SUBCASE("Error: empty spectra vector") {
+        Context context4;
+        RadiationModel radiationmodel4(&context4);
+        radiationmodel4.disableMessages();
+
+        uint obj_test = context4.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+        std::vector<uint> obj_ids = {obj_test};
+        std::vector<std::string> spectra;
+        std::vector<float> values;
+
+        bool caught_error = false;
+        try {
+            radiationmodel4.interpolateSpectrumFromObjectData(obj_ids, spectra, values, "age", "reflectivity_spectrum");
+        } catch (const std::exception &e) {
+            caught_error = true;
+        }
+        DOCTEST_CHECK(caught_error);
+    }
+
+    // Test error handling - empty object_IDs vector
+    DOCTEST_SUBCASE("Error: empty object_IDs vector") {
+        Context context5;
+        RadiationModel radiationmodel5(&context5);
+        radiationmodel5.disableMessages();
+
+        std::vector<uint> obj_ids;
+        std::vector<std::string> spectra = {"spec1"};
+        std::vector<float> values = {0.0f};
+
+        bool caught_error = false;
+        try {
+            radiationmodel5.interpolateSpectrumFromObjectData(obj_ids, spectra, values, "age", "reflectivity_spectrum");
+        } catch (const std::exception &e) {
+            caught_error = true;
+        }
+        DOCTEST_CHECK(caught_error);
+    }
+
+    // Test error handling - empty query label
+    DOCTEST_SUBCASE("Error: empty query label") {
+        Context context6;
+        RadiationModel radiationmodel6(&context6);
+        radiationmodel6.disableMessages();
+
+        uint obj_test = context6.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+        std::vector<uint> obj_ids = {obj_test};
+        std::vector<std::string> spectra = {"spec1"};
+        std::vector<float> values = {0.0f};
+
+        bool caught_error = false;
+        try {
+            radiationmodel6.interpolateSpectrumFromObjectData(obj_ids, spectra, values, "", "reflectivity_spectrum");
+        } catch (const std::exception &e) {
+            caught_error = true;
+        }
+        DOCTEST_CHECK(caught_error);
+    }
+
+    // Test error handling - empty target label
+    DOCTEST_SUBCASE("Error: empty target label") {
+        Context context7;
+        RadiationModel radiationmodel7(&context7);
+        radiationmodel7.disableMessages();
+
+        uint obj_test = context7.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+        std::vector<uint> obj_ids = {obj_test};
+        std::vector<std::string> spectra = {"spec1"};
+        std::vector<float> values = {0.0f};
+
+        bool caught_error = false;
+        try {
+            radiationmodel7.interpolateSpectrumFromObjectData(obj_ids, spectra, values, "age", "");
+        } catch (const std::exception &e) {
+            caught_error = true;
+        }
+        DOCTEST_CHECK(caught_error);
+    }
+
+    // Test graceful handling - object doesn't have the data field
+    DOCTEST_SUBCASE("Graceful skip: object without query data") {
+        Context context8;
+        RadiationModel radiationmodel8(&context8);
+        radiationmodel8.disableMessages();
+
+        context8.setGlobalData("spec1", spectrum_young);
+
+        uint obj_with_data = context8.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+        uint obj_without_data = context8.addTileObject(make_vec3(2, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+
+        context8.setObjectData(obj_with_data, "age", 5.0f);
+        // obj_without_data doesn't have "age" data
+
+        std::vector<uint> obj_ids = {obj_with_data, obj_without_data};
+        std::vector<std::string> spectra = {"spec1"};
+        std::vector<float> values = {5.0f};
+
+        radiationmodel8.interpolateSpectrumFromObjectData(obj_ids, spectra, values, "age", "reflectivity_spectrum");
+
+        radiationmodel8.addRadiationBand("PAR");
+        uint source = radiationmodel8.addCollimatedRadiationSource();
+        radiationmodel8.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel8.updateGeometry();
+        radiationmodel8.runBand("PAR");
+
+        std::string assigned_spectrum;
+        std::vector<uint> prim_uuids_with = context8.getObjectPrimitiveUUIDs(obj_with_data);
+        for (uint uuid : prim_uuids_with) {
+            context8.getPrimitiveData(uuid, "reflectivity_spectrum", assigned_spectrum);
+            DOCTEST_CHECK(assigned_spectrum == "spec1");
+        }
+
+        // obj_without_data's primitives should not have spectrum assigned
+        std::vector<uint> prim_uuids_without = context8.getObjectPrimitiveUUIDs(obj_without_data);
+        for (uint uuid : prim_uuids_without) {
+            if (context8.doesPrimitiveDataExist(uuid, "reflectivity_spectrum")) {
+                context8.getPrimitiveData(uuid, "reflectivity_spectrum", assigned_spectrum);
+            }
+        }
+    }
+
+    // Test graceful handling - invalid object ID (deleted object)
+    DOCTEST_SUBCASE("Graceful skip: invalid object ID") {
+        Context context9;
+        RadiationModel radiationmodel9(&context9);
+        radiationmodel9.disableMessages();
+
+        context9.setGlobalData("spec1", spectrum_young);
+
+        uint obj_valid = context9.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+        uint obj_to_delete = context9.addTileObject(make_vec3(2, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+
+        context9.setObjectData(obj_valid, "age", 5.0f);
+        context9.setObjectData(obj_to_delete, "age", 5.0f);
+
+        std::vector<uint> obj_ids = {obj_valid, obj_to_delete};
+        std::vector<std::string> spectra = {"spec1"};
+        std::vector<float> values = {5.0f};
+
+        radiationmodel9.interpolateSpectrumFromObjectData(obj_ids, spectra, values, "age", "reflectivity_spectrum");
+
+        // Delete the object before running
+        context9.deleteObject(obj_to_delete);
+
+        radiationmodel9.addRadiationBand("PAR");
+        uint source = radiationmodel9.addCollimatedRadiationSource();
+        radiationmodel9.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel9.updateGeometry();
+        radiationmodel9.runBand("PAR");
+
+        std::string assigned_spectrum;
+        std::vector<uint> prim_uuids_valid = context9.getObjectPrimitiveUUIDs(obj_valid);
+        for (uint uuid : prim_uuids_valid) {
+            context9.getPrimitiveData(uuid, "reflectivity_spectrum", assigned_spectrum);
+            DOCTEST_CHECK(assigned_spectrum == "spec1");
+        }
+    }
+
+    // Test error handling - wrong object data type (int instead of float)
+    DOCTEST_SUBCASE("Error: wrong object data type") {
+        Context context10;
+        RadiationModel radiationmodel10(&context10);
+        radiationmodel10.disableMessages();
+
+        context10.setGlobalData("spec1", spectrum_young);
+
+        uint obj_test = context10.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+        context10.setObjectData(obj_test, "age", 5); // int, not float
+
+        std::vector<uint> obj_ids = {obj_test};
+        std::vector<std::string> spectra = {"spec1"};
+        std::vector<float> values = {5.0f};
+
+        radiationmodel10.interpolateSpectrumFromObjectData(obj_ids, spectra, values, "age", "reflectivity_spectrum");
+
+        radiationmodel10.addRadiationBand("PAR");
+        uint source = radiationmodel10.addCollimatedRadiationSource();
+        radiationmodel10.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel10.updateGeometry();
+
+        bool caught_error = false;
+        try {
+            radiationmodel10.runBand("PAR");
+        } catch (const std::exception &e) {
+            caught_error = true;
+        }
+        DOCTEST_CHECK(caught_error);
+    }
+
+    // Test error handling - invalid global data (doesn't exist)
+    DOCTEST_SUBCASE("Error: invalid global data") {
+        Context context11;
+        RadiationModel radiationmodel11(&context11);
+        radiationmodel11.disableMessages();
+
+        uint obj_test = context11.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+        context11.setObjectData(obj_test, "age", 5.0f);
+
+        std::vector<uint> obj_ids = {obj_test};
+        std::vector<std::string> spectra = {"nonexistent_spectrum"};
+        std::vector<float> values = {5.0f};
+
+        radiationmodel11.interpolateSpectrumFromObjectData(obj_ids, spectra, values, "age", "reflectivity_spectrum");
+
+        radiationmodel11.addRadiationBand("PAR");
+        uint source = radiationmodel11.addCollimatedRadiationSource();
+        radiationmodel11.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel11.updateGeometry();
+
+        bool caught_error = false;
+        try {
+            radiationmodel11.runBand("PAR");
+        } catch (const std::exception &e) {
+            caught_error = true;
+        }
+        DOCTEST_CHECK(caught_error);
+    }
+
+    // Test error handling - wrong global data type
+    DOCTEST_SUBCASE("Error: wrong global data type") {
+        Context context12;
+        RadiationModel radiationmodel12(&context12);
+        radiationmodel12.disableMessages();
+
+        context12.setGlobalData("wrong_type", 42.0f); // float, not vec2 vector
+
+        uint obj_test = context12.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+        context12.setObjectData(obj_test, "age", 5.0f);
+
+        std::vector<uint> obj_ids = {obj_test};
+        std::vector<std::string> spectra = {"wrong_type"};
+        std::vector<float> values = {5.0f};
+
+        radiationmodel12.interpolateSpectrumFromObjectData(obj_ids, spectra, values, "age", "reflectivity_spectrum");
+
+        radiationmodel12.addRadiationBand("PAR");
+        uint source = radiationmodel12.addCollimatedRadiationSource();
+        radiationmodel12.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel12.updateGeometry();
+
+        bool caught_error = false;
+        try {
+            radiationmodel12.runBand("PAR");
+        } catch (const std::exception &e) {
+            caught_error = true;
+        }
+        DOCTEST_CHECK(caught_error);
+    }
+}
+
+DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation - Duplicate Handling") {
+
+    // Test merging of duplicate primitive UUIDs with same spectra/values
+    DOCTEST_SUBCASE("Primitive: Merge duplicates with matching spectra") {
+        Context context;
+        RadiationModel radiationmodel(&context);
+        radiationmodel.disableMessages();
+
+        std::vector<vec2> spectrum1 = {{400, 0.1}, {500, 0.15}};
+        std::vector<vec2> spectrum2 = {{400, 0.3}, {500, 0.35}};
+        context.setGlobalData("spec1", spectrum1);
+        context.setGlobalData("spec2", spectrum2);
+
+        uint uuid0 = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint uuid1 = context.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+        uint uuid2 = context.addPatch(make_vec3(4, 0, 0), make_vec2(1, 1));
+
+        context.setPrimitiveData(uuid0, "age", 1.0f);
+        context.setPrimitiveData(uuid1, "age", 1.0f);
+        context.setPrimitiveData(uuid2, "age", 9.0f);
+
+        // First call with uuid0 and uuid1
+        radiationmodel.interpolateSpectrumFromPrimitiveData({uuid0, uuid1}, {"spec1", "spec2"}, {0.0f, 10.0f}, "age", "reflectivity_spectrum");
+
+        // Second call with uuid1 (duplicate) and uuid2 (new) - same spectra/values
+        radiationmodel.interpolateSpectrumFromPrimitiveData({uuid1, uuid2}, {"spec1", "spec2"}, {0.0f, 10.0f}, "age", "reflectivity_spectrum");
+
+        radiationmodel.addRadiationBand("PAR");
+        uint source = radiationmodel.addCollimatedRadiationSource();
+        radiationmodel.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel.updateGeometry();
+        radiationmodel.runBand("PAR");
+
+        // All three should be processed correctly (uuid1 appears only once due to set deduplication)
+        std::string assigned_spectrum;
+        context.getPrimitiveData(uuid0, "reflectivity_spectrum", assigned_spectrum);
+        DOCTEST_CHECK(assigned_spectrum == "spec1");
+
+        context.getPrimitiveData(uuid1, "reflectivity_spectrum", assigned_spectrum);
+        DOCTEST_CHECK(assigned_spectrum == "spec1");
+
+        context.getPrimitiveData(uuid2, "reflectivity_spectrum", assigned_spectrum);
+        DOCTEST_CHECK(assigned_spectrum == "spec2");
+    }
+
+    // Test replacement when spectra/values change
+    DOCTEST_SUBCASE("Primitive: Replace config with different spectra") {
+        Context context2;
+        RadiationModel radiationmodel2(&context2);
+        radiationmodel2.disableMessages();
+
+        std::vector<vec2> spectrum1 = {{400, 0.1}, {500, 0.15}};
+        std::vector<vec2> spectrum2 = {{400, 0.3}, {500, 0.35}};
+        std::vector<vec2> spectrum3 = {{400, 0.5}, {500, 0.55}};
+        context2.setGlobalData("spec1", spectrum1);
+        context2.setGlobalData("spec2", spectrum2);
+        context2.setGlobalData("spec3", spectrum3);
+
+        uint uuid0 = context2.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint uuid1 = context2.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+
+        context2.setPrimitiveData(uuid0, "age", 1.0f);
+        context2.setPrimitiveData(uuid1, "age", 15.0f);
+
+        // First call with 2 spectra
+        radiationmodel2.interpolateSpectrumFromPrimitiveData({uuid0, uuid1}, {"spec1", "spec2"}, {0.0f, 10.0f}, "age", "reflectivity_spectrum");
+
+        // Second call with same labels but 3 spectra (should replace)
+        radiationmodel2.interpolateSpectrumFromPrimitiveData({uuid0, uuid1}, {"spec1", "spec2", "spec3"}, {0.0f, 10.0f, 20.0f}, "age", "reflectivity_spectrum");
+
+        radiationmodel2.addRadiationBand("PAR");
+        uint source = radiationmodel2.addCollimatedRadiationSource();
+        radiationmodel2.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel2.updateGeometry();
+        radiationmodel2.runBand("PAR");
+
+        // Should use the new 3-spectrum config
+        std::string assigned_spectrum;
+        context2.getPrimitiveData(uuid0, "reflectivity_spectrum", assigned_spectrum);
+        DOCTEST_CHECK(assigned_spectrum == "spec1");
+
+        context2.getPrimitiveData(uuid1, "reflectivity_spectrum", assigned_spectrum);
+        DOCTEST_CHECK(assigned_spectrum == "spec2");  // 15.0 is closer to 10.0 than 20.0
+    }
+
+    // Test merging of duplicate object IDs with same spectra/values
+    DOCTEST_SUBCASE("Object: Merge duplicates with matching spectra") {
+        Context context3;
+        RadiationModel radiationmodel3(&context3);
+        radiationmodel3.disableMessages();
+
+        std::vector<vec2> spectrum1 = {{400, 0.1}, {500, 0.15}};
+        std::vector<vec2> spectrum2 = {{400, 0.3}, {500, 0.35}};
+        context3.setGlobalData("spec1", spectrum1);
+        context3.setGlobalData("spec2", spectrum2);
+
+        uint obj0 = context3.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+        uint obj1 = context3.addTileObject(make_vec3(2, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+        uint obj2 = context3.addTileObject(make_vec3(4, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+
+        context3.setObjectData(obj0, "age", 1.0f);
+        context3.setObjectData(obj1, "age", 1.0f);
+        context3.setObjectData(obj2, "age", 9.0f);
+
+        // First call with obj0 and obj1
+        radiationmodel3.interpolateSpectrumFromObjectData({obj0, obj1}, {"spec1", "spec2"}, {0.0f, 10.0f}, "age", "reflectivity_spectrum");
+
+        // Second call with obj1 (duplicate) and obj2 (new) - same spectra/values
+        radiationmodel3.interpolateSpectrumFromObjectData({obj1, obj2}, {"spec1", "spec2"}, {0.0f, 10.0f}, "age", "reflectivity_spectrum");
+
+        radiationmodel3.addRadiationBand("PAR");
+        uint source = radiationmodel3.addCollimatedRadiationSource();
+        radiationmodel3.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel3.updateGeometry();
+        radiationmodel3.runBand("PAR");
+
+        // All three objects' primitives should be processed correctly
+        std::string assigned_spectrum;
+        std::vector<uint> prim_uuids0 = context3.getObjectPrimitiveUUIDs(obj0);
+        for (uint uuid : prim_uuids0) {
+            context3.getPrimitiveData(uuid, "reflectivity_spectrum", assigned_spectrum);
+            DOCTEST_CHECK(assigned_spectrum == "spec1");
+        }
+
+        std::vector<uint> prim_uuids1 = context3.getObjectPrimitiveUUIDs(obj1);
+        for (uint uuid : prim_uuids1) {
+            context3.getPrimitiveData(uuid, "reflectivity_spectrum", assigned_spectrum);
+            DOCTEST_CHECK(assigned_spectrum == "spec1");
+        }
+
+        std::vector<uint> prim_uuids2 = context3.getObjectPrimitiveUUIDs(obj2);
+        for (uint uuid : prim_uuids2) {
+            context3.getPrimitiveData(uuid, "reflectivity_spectrum", assigned_spectrum);
+            DOCTEST_CHECK(assigned_spectrum == "spec2");
+        }
+    }
+
+    // Test replacement when spectra/values change for objects
+    DOCTEST_SUBCASE("Object: Replace config with different spectra") {
+        Context context4;
+        RadiationModel radiationmodel4(&context4);
+        radiationmodel4.disableMessages();
+
+        std::vector<vec2> spectrum1 = {{400, 0.1}, {500, 0.15}};
+        std::vector<vec2> spectrum2 = {{400, 0.3}, {500, 0.35}};
+        std::vector<vec2> spectrum3 = {{400, 0.5}, {500, 0.55}};
+        context4.setGlobalData("spec1", spectrum1);
+        context4.setGlobalData("spec2", spectrum2);
+        context4.setGlobalData("spec3", spectrum3);
+
+        uint obj0 = context4.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+        uint obj1 = context4.addTileObject(make_vec3(2, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
+
+        context4.setObjectData(obj0, "age", 1.0f);
+        context4.setObjectData(obj1, "age", 15.0f);
+
+        // First call with 2 spectra
+        radiationmodel4.interpolateSpectrumFromObjectData({obj0, obj1}, {"spec1", "spec2"}, {0.0f, 10.0f}, "age", "reflectivity_spectrum");
+
+        // Second call with same labels but 3 spectra (should replace)
+        radiationmodel4.interpolateSpectrumFromObjectData({obj0, obj1}, {"spec1", "spec2", "spec3"}, {0.0f, 10.0f, 20.0f}, "age", "reflectivity_spectrum");
+
+        radiationmodel4.addRadiationBand("PAR");
+        uint source = radiationmodel4.addCollimatedRadiationSource();
+        radiationmodel4.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel4.updateGeometry();
+        radiationmodel4.runBand("PAR");
+
+        // Should use the new 3-spectrum config
+        std::string assigned_spectrum;
+        std::vector<uint> prim_uuids0 = context4.getObjectPrimitiveUUIDs(obj0);
+        for (uint uuid : prim_uuids0) {
+            context4.getPrimitiveData(uuid, "reflectivity_spectrum", assigned_spectrum);
+            DOCTEST_CHECK(assigned_spectrum == "spec1");
+        }
+
+        std::vector<uint> prim_uuids1 = context4.getObjectPrimitiveUUIDs(obj1);
+        for (uint uuid : prim_uuids1) {
+            context4.getPrimitiveData(uuid, "reflectivity_spectrum", assigned_spectrum);
+            DOCTEST_CHECK(assigned_spectrum == "spec2");  // 15.0 is closer to 10.0 than 20.0
+        }
+    }
+
+    // Test that different query/target label pairs create separate configs
+    DOCTEST_SUBCASE("Primitive: Separate configs for different labels") {
+        Context context5;
+        RadiationModel radiationmodel5(&context5);
+        radiationmodel5.disableMessages();
+
+        std::vector<vec2> spectrum1 = {{400, 0.1}, {500, 0.15}};
+        std::vector<vec2> spectrum2 = {{400, 0.3}, {500, 0.35}};
+        context5.setGlobalData("spec1", spectrum1);
+        context5.setGlobalData("spec2", spectrum2);
+
+        uint uuid0 = context5.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+        context5.setPrimitiveData(uuid0, "age", 1.0f);
+        context5.setPrimitiveData(uuid0, "maturity", 9.0f);
+
+        // Two different configs with different query labels
+        radiationmodel5.interpolateSpectrumFromPrimitiveData({uuid0}, {"spec1", "spec2"}, {0.0f, 10.0f}, "age", "reflectivity_spectrum");
+        radiationmodel5.interpolateSpectrumFromPrimitiveData({uuid0}, {"spec1", "spec2"}, {0.0f, 10.0f}, "maturity", "transmissivity_spectrum");
+
+        radiationmodel5.addRadiationBand("PAR");
+        uint source = radiationmodel5.addCollimatedRadiationSource();
+        radiationmodel5.setSourceFlux(source, "PAR", 1000.f);
+        radiationmodel5.updateGeometry();
+        radiationmodel5.runBand("PAR");
+
+        // Both should be set independently
+        std::string assigned_spectrum_rho;
+        std::string assigned_spectrum_tau;
+        context5.getPrimitiveData(uuid0, "reflectivity_spectrum", assigned_spectrum_rho);
+        context5.getPrimitiveData(uuid0, "transmissivity_spectrum", assigned_spectrum_tau);
+
+        DOCTEST_CHECK(assigned_spectrum_rho == "spec1");   // age=1.0 -> spec1
+        DOCTEST_CHECK(assigned_spectrum_tau == "spec2");   // maturity=9.0 -> spec2
+    }
+}
