@@ -1775,12 +1775,12 @@ std::vector<std::map<std::string, std::vector<float>>> RadiationModel::generateA
     return annotations;
 }
 
-void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel, const std::string &primitive_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, const std::string &data_attribute_label, bool append_file) {
-    writeImageSegmentationMasks(cameralabel, std::vector<std::string>{primitive_data_label}, std::vector<uint>{object_class_ID}, json_filename, image_file, data_attribute_label, append_file);
+void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel, const std::string &primitive_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, const std::vector<std::string> &data_attribute_labels, bool append_file) {
+    writeImageSegmentationMasks(cameralabel, std::vector<std::string>{primitive_data_label}, std::vector<uint>{object_class_ID}, json_filename, image_file, data_attribute_labels, append_file);
 }
 
 void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel, const std::vector<std::string> &primitive_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file,
-                                                 const std::string &data_attribute_label, bool append_file) {
+                                                 const std::vector<std::string> &data_attribute_labels, bool append_file) {
 
     if (cameras.find(cameralabel) == cameras.end()) {
         helios_runtime_error("ERROR (RadiationModel::writeImageSegmentationMasks): Camera '" + cameralabel + "' does not exist.");
@@ -1825,22 +1825,38 @@ void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel,
     int image_id = coco_json_pair.second;
     addCategoryToCOCO(coco_json, object_class_ID, primitive_data_label);
 
-    // Check if data_attribute_label exists in primitive or object data
-    bool use_attributes = false;
-    bool attribute_is_primitive_data = false;
-    if (!data_attribute_label.empty()) {
+    // Check which data_attribute_labels exist in primitive or object data
+    struct AttributeInfo {
+        std::string label;
+        bool is_primitive_data;
+        bool exists;
+    };
+    std::vector<AttributeInfo> attribute_info;
+
+    if (!data_attribute_labels.empty()) {
         std::vector<std::string> all_primitive_data = context->listAllPrimitiveDataLabels();
-        if (std::find(all_primitive_data.begin(), all_primitive_data.end(), data_attribute_label) != all_primitive_data.end()) {
-            use_attributes = true;
-            attribute_is_primitive_data = true;
-        } else {
-            std::vector<std::string> all_object_data = context->listAllObjectDataLabels();
-            if (std::find(all_object_data.begin(), all_object_data.end(), data_attribute_label) != all_object_data.end()) {
-                use_attributes = true;
-                attribute_is_primitive_data = false;
+        std::vector<std::string> all_object_data = context->listAllObjectDataLabels();
+
+        for (const auto &attr_label : data_attribute_labels) {
+            AttributeInfo info;
+            info.label = attr_label;
+            info.exists = false;
+
+            if (std::find(all_primitive_data.begin(), all_primitive_data.end(), attr_label) != all_primitive_data.end()) {
+                info.is_primitive_data = true;
+                info.exists = true;
+            } else if (std::find(all_object_data.begin(), all_object_data.end(), attr_label) != all_object_data.end()) {
+                info.is_primitive_data = false;
+                info.exists = true;
+            }
+
+            if (info.exists) {
+                attribute_info.push_back(info);
             }
         }
     }
+
+    bool use_attributes = !attribute_info.empty();
 
     // Get pixel UUID data
     std::vector<uint> pixel_UUIDs;
@@ -1856,9 +1872,9 @@ void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel,
         std::vector<std::map<std::string, std::vector<float>>> annotations = generateAnnotationsFromMasks(label_masks, object_class_ID[i], camera_resolution, image_id);
 
         // Calculate mean attribute values for each mask if requested
-        std::vector<double> mean_attribute_values;
+        std::vector<std::map<std::string, double>> mean_attribute_values_per_component;
         if (use_attributes) {
-            // For each label mask, find connected components and calculate mean attribute value
+            // For each label mask, find connected components and calculate mean attribute values
             for (const auto &label_pair: label_masks) {
                 const auto &mask = label_pair.second;
                 std::vector<std::vector<bool>> visited(camera_resolution.y, std::vector<bool>(camera_resolution.x, false));
@@ -1891,66 +1907,72 @@ void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel,
                                 }
                             }
 
-                            // Calculate mean attribute value for this component
-                            double sum = 0.0;
-                            int count = 0;
-                            for (const auto &[px_i, px_j] : component_pixels) {
-                                uint ii = camera_resolution.x - px_i - 1;
-                                uint UUID = pixel_UUIDs.at(px_j * camera_resolution.x + ii) - 1;
+                            // Calculate mean attribute values for this component (for all attributes)
+                            std::map<std::string, double> component_attributes;
+                            for (const auto &attr : attribute_info) {
+                                double sum = 0.0;
+                                int count = 0;
 
-                                if (context->doesPrimitiveExist(UUID)) {
-                                    double value = 0.0;
-                                    bool has_value = false;
+                                for (const auto &[px_i, px_j] : component_pixels) {
+                                    uint ii = camera_resolution.x - px_i - 1;
+                                    uint UUID = pixel_UUIDs.at(px_j * camera_resolution.x + ii) - 1;
 
-                                    if (attribute_is_primitive_data) {
-                                        if (context->doesPrimitiveDataExist(UUID, data_attribute_label.c_str())) {
-                                            HeliosDataType datatype = context->getPrimitiveDataType(data_attribute_label.c_str());
-                                            if (datatype == HELIOS_TYPE_INT) {
-                                                int val; context->getPrimitiveData(UUID, data_attribute_label.c_str(), val);
-                                                value = static_cast<double>(val); has_value = true;
-                                            } else if (datatype == HELIOS_TYPE_UINT) {
-                                                uint val; context->getPrimitiveData(UUID, data_attribute_label.c_str(), val);
-                                                value = static_cast<double>(val); has_value = true;
-                                            } else if (datatype == HELIOS_TYPE_FLOAT) {
-                                                float val; context->getPrimitiveData(UUID, data_attribute_label.c_str(), val);
-                                                value = static_cast<double>(val); has_value = true;
-                                            } else if (datatype == HELIOS_TYPE_DOUBLE) {
-                                                context->getPrimitiveData(UUID, data_attribute_label.c_str(), value);
-                                                has_value = true;
+                                    if (context->doesPrimitiveExist(UUID)) {
+                                        double value = 0.0;
+                                        bool has_value = false;
+
+                                        if (attr.is_primitive_data) {
+                                            if (context->doesPrimitiveDataExist(UUID, attr.label.c_str())) {
+                                                HeliosDataType datatype = context->getPrimitiveDataType(attr.label.c_str());
+                                                if (datatype == HELIOS_TYPE_INT) {
+                                                    int val; context->getPrimitiveData(UUID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val); has_value = true;
+                                                } else if (datatype == HELIOS_TYPE_UINT) {
+                                                    uint val; context->getPrimitiveData(UUID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val); has_value = true;
+                                                } else if (datatype == HELIOS_TYPE_FLOAT) {
+                                                    float val; context->getPrimitiveData(UUID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val); has_value = true;
+                                                } else if (datatype == HELIOS_TYPE_DOUBLE) {
+                                                    context->getPrimitiveData(UUID, attr.label.c_str(), value);
+                                                    has_value = true;
+                                                }
+                                            }
+                                        } else {
+                                            uint objID = context->getPrimitiveParentObjectID(UUID);
+                                            if (objID != 0 && context->doesObjectDataExist(objID, attr.label.c_str())) {
+                                                HeliosDataType datatype = context->getObjectDataType(attr.label.c_str());
+                                                if (datatype == HELIOS_TYPE_INT) {
+                                                    int val; context->getObjectData(objID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val); has_value = true;
+                                                } else if (datatype == HELIOS_TYPE_UINT) {
+                                                    uint val; context->getObjectData(objID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val); has_value = true;
+                                                } else if (datatype == HELIOS_TYPE_FLOAT) {
+                                                    float val; context->getObjectData(objID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val); has_value = true;
+                                                } else if (datatype == HELIOS_TYPE_DOUBLE) {
+                                                    context->getObjectData(objID, attr.label.c_str(), value);
+                                                    has_value = true;
+                                                }
                                             }
                                         }
-                                    } else {
-                                        uint objID = context->getPrimitiveParentObjectID(UUID);
-                                        if (objID != 0 && context->doesObjectDataExist(objID, data_attribute_label.c_str())) {
-                                            HeliosDataType datatype = context->getObjectDataType(data_attribute_label.c_str());
-                                            if (datatype == HELIOS_TYPE_INT) {
-                                                int val; context->getObjectData(objID, data_attribute_label.c_str(), val);
-                                                value = static_cast<double>(val); has_value = true;
-                                            } else if (datatype == HELIOS_TYPE_UINT) {
-                                                uint val; context->getObjectData(objID, data_attribute_label.c_str(), val);
-                                                value = static_cast<double>(val); has_value = true;
-                                            } else if (datatype == HELIOS_TYPE_FLOAT) {
-                                                float val; context->getObjectData(objID, data_attribute_label.c_str(), val);
-                                                value = static_cast<double>(val); has_value = true;
-                                            } else if (datatype == HELIOS_TYPE_DOUBLE) {
-                                                context->getObjectData(objID, data_attribute_label.c_str(), value);
-                                                has_value = true;
-                                            }
+
+                                        if (has_value) {
+                                            sum += value;
+                                            count++;
                                         }
                                     }
+                                }
 
-                                    if (has_value) {
-                                        sum += value;
-                                        count++;
-                                    }
+                                if (count > 0) {
+                                    component_attributes[attr.label] = sum / count;
+                                } else {
+                                    component_attributes[attr.label] = 0.0; // Default if no valid data
                                 }
                             }
 
-                            if (count > 0) {
-                                mean_attribute_values.push_back(sum / count);
-                            } else {
-                                mean_attribute_values.push_back(0.0); // Default if no valid data
-                            }
+                            mean_attribute_values_per_component.push_back(component_attributes);
                         }
                     }
                 }
@@ -1986,8 +2008,8 @@ void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel,
             json_annotation["iscrowd"] = (int) ann.at("iscrowd")[0];
 
             // Add attributes if requested
-            if (use_attributes && ann_idx < mean_attribute_values.size()) {
-                json_annotation["attributes"] = {{data_attribute_label, mean_attribute_values[ann_idx]}};
+            if (use_attributes && ann_idx < mean_attribute_values_per_component.size()) {
+                json_annotation["attributes"] = mean_attribute_values_per_component[ann_idx];
             }
 
             coco_json["annotations"].push_back(json_annotation);
@@ -2000,12 +2022,12 @@ void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel,
     writeCOCOJson(coco_json, outfile);
 }
 
-void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::string &object_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, const std::string &data_attribute_label, bool append_file) {
-    writeImageSegmentationMasks_ObjectData(cameralabel, std::vector<std::string>{object_data_label}, std::vector<uint>{object_class_ID}, json_filename, image_file, data_attribute_label, append_file);
+void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::string &object_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, const std::vector<std::string> &data_attribute_labels, bool append_file) {
+    writeImageSegmentationMasks_ObjectData(cameralabel, std::vector<std::string>{object_data_label}, std::vector<uint>{object_class_ID}, json_filename, image_file, data_attribute_labels, append_file);
 }
 
 void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file,
-                                                            const std::string &data_attribute_label, bool append_file) {
+                                                            const std::vector<std::string> &data_attribute_labels, bool append_file) {
 
     if (cameras.find(cameralabel) == cameras.end()) {
         helios_runtime_error("ERROR (RadiationModel::writeImageSegmentationMasks_ObjectData): Camera '" + cameralabel + "' does not exist.");
@@ -2050,22 +2072,38 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
     int image_id = coco_json_pair.second;
     addCategoryToCOCO(coco_json, object_class_ID, object_data_label);
 
-    // Check if data_attribute_label exists in primitive or object data
-    bool use_attributes = false;
-    bool attribute_is_primitive_data = false;
-    if (!data_attribute_label.empty()) {
+    // Check which data_attribute_labels exist in primitive or object data
+    struct AttributeInfo {
+        std::string label;
+        bool is_primitive_data;
+        bool exists;
+    };
+    std::vector<AttributeInfo> attribute_info;
+
+    if (!data_attribute_labels.empty()) {
         std::vector<std::string> all_primitive_data = context->listAllPrimitiveDataLabels();
-        if (std::find(all_primitive_data.begin(), all_primitive_data.end(), data_attribute_label) != all_primitive_data.end()) {
-            use_attributes = true;
-            attribute_is_primitive_data = true;
-        } else {
-            std::vector<std::string> all_object_data = context->listAllObjectDataLabels();
-            if (std::find(all_object_data.begin(), all_object_data.end(), data_attribute_label) != all_object_data.end()) {
-                use_attributes = true;
-                attribute_is_primitive_data = false;
+        std::vector<std::string> all_object_data = context->listAllObjectDataLabels();
+
+        for (const auto &attr_label : data_attribute_labels) {
+            AttributeInfo info;
+            info.label = attr_label;
+            info.exists = false;
+
+            if (std::find(all_primitive_data.begin(), all_primitive_data.end(), attr_label) != all_primitive_data.end()) {
+                info.is_primitive_data = true;
+                info.exists = true;
+            } else if (std::find(all_object_data.begin(), all_object_data.end(), attr_label) != all_object_data.end()) {
+                info.is_primitive_data = false;
+                info.exists = true;
+            }
+
+            if (info.exists) {
+                attribute_info.push_back(info);
             }
         }
     }
+
+    bool use_attributes = !attribute_info.empty();
 
     // Get pixel UUID data
     std::vector<uint> pixel_UUIDs;
@@ -2081,9 +2119,9 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
         std::vector<std::map<std::string, std::vector<float>>> annotations = generateAnnotationsFromMasks(label_masks, object_class_ID[i], camera_resolution, image_id);
 
         // Calculate mean attribute values for each mask if requested
-        std::vector<double> mean_attribute_values;
+        std::vector<std::map<std::string, double>> mean_attribute_values_per_component;
         if (use_attributes) {
-            // For each label mask, find connected components and calculate mean attribute value
+            // For each label mask, find connected components and calculate mean attribute values
             for (const auto &label_pair: label_masks) {
                 const auto &mask = label_pair.second;
                 std::vector<std::vector<bool>> visited(camera_resolution.y, std::vector<bool>(camera_resolution.x, false));
@@ -2116,66 +2154,72 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
                                 }
                             }
 
-                            // Calculate mean attribute value for this component
-                            double sum = 0.0;
-                            int count = 0;
-                            for (const auto &[px_i, px_j] : component_pixels) {
-                                uint ii = camera_resolution.x - px_i - 1;
-                                uint UUID = pixel_UUIDs.at(px_j * camera_resolution.x + ii) - 1;
+                            // Calculate mean attribute values for this component (for all attributes)
+                            std::map<std::string, double> component_attributes;
+                            for (const auto &attr : attribute_info) {
+                                double sum = 0.0;
+                                int count = 0;
 
-                                if (context->doesPrimitiveExist(UUID)) {
-                                    double value = 0.0;
-                                    bool has_value = false;
+                                for (const auto &[px_i, px_j] : component_pixels) {
+                                    uint ii = camera_resolution.x - px_i - 1;
+                                    uint UUID = pixel_UUIDs.at(px_j * camera_resolution.x + ii) - 1;
 
-                                    if (attribute_is_primitive_data) {
-                                        if (context->doesPrimitiveDataExist(UUID, data_attribute_label.c_str())) {
-                                            HeliosDataType datatype = context->getPrimitiveDataType(data_attribute_label.c_str());
-                                            if (datatype == HELIOS_TYPE_INT) {
-                                                int val; context->getPrimitiveData(UUID, data_attribute_label.c_str(), val);
-                                                value = static_cast<double>(val); has_value = true;
-                                            } else if (datatype == HELIOS_TYPE_UINT) {
-                                                uint val; context->getPrimitiveData(UUID, data_attribute_label.c_str(), val);
-                                                value = static_cast<double>(val); has_value = true;
-                                            } else if (datatype == HELIOS_TYPE_FLOAT) {
-                                                float val; context->getPrimitiveData(UUID, data_attribute_label.c_str(), val);
-                                                value = static_cast<double>(val); has_value = true;
-                                            } else if (datatype == HELIOS_TYPE_DOUBLE) {
-                                                context->getPrimitiveData(UUID, data_attribute_label.c_str(), value);
-                                                has_value = true;
+                                    if (context->doesPrimitiveExist(UUID)) {
+                                        double value = 0.0;
+                                        bool has_value = false;
+
+                                        if (attr.is_primitive_data) {
+                                            if (context->doesPrimitiveDataExist(UUID, attr.label.c_str())) {
+                                                HeliosDataType datatype = context->getPrimitiveDataType(attr.label.c_str());
+                                                if (datatype == HELIOS_TYPE_INT) {
+                                                    int val; context->getPrimitiveData(UUID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val); has_value = true;
+                                                } else if (datatype == HELIOS_TYPE_UINT) {
+                                                    uint val; context->getPrimitiveData(UUID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val); has_value = true;
+                                                } else if (datatype == HELIOS_TYPE_FLOAT) {
+                                                    float val; context->getPrimitiveData(UUID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val); has_value = true;
+                                                } else if (datatype == HELIOS_TYPE_DOUBLE) {
+                                                    context->getPrimitiveData(UUID, attr.label.c_str(), value);
+                                                    has_value = true;
+                                                }
+                                            }
+                                        } else {
+                                            uint objID = context->getPrimitiveParentObjectID(UUID);
+                                            if (objID != 0 && context->doesObjectDataExist(objID, attr.label.c_str())) {
+                                                HeliosDataType datatype = context->getObjectDataType(attr.label.c_str());
+                                                if (datatype == HELIOS_TYPE_INT) {
+                                                    int val; context->getObjectData(objID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val); has_value = true;
+                                                } else if (datatype == HELIOS_TYPE_UINT) {
+                                                    uint val; context->getObjectData(objID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val); has_value = true;
+                                                } else if (datatype == HELIOS_TYPE_FLOAT) {
+                                                    float val; context->getObjectData(objID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val); has_value = true;
+                                                } else if (datatype == HELIOS_TYPE_DOUBLE) {
+                                                    context->getObjectData(objID, attr.label.c_str(), value);
+                                                    has_value = true;
+                                                }
                                             }
                                         }
-                                    } else {
-                                        uint objID = context->getPrimitiveParentObjectID(UUID);
-                                        if (objID != 0 && context->doesObjectDataExist(objID, data_attribute_label.c_str())) {
-                                            HeliosDataType datatype = context->getObjectDataType(data_attribute_label.c_str());
-                                            if (datatype == HELIOS_TYPE_INT) {
-                                                int val; context->getObjectData(objID, data_attribute_label.c_str(), val);
-                                                value = static_cast<double>(val); has_value = true;
-                                            } else if (datatype == HELIOS_TYPE_UINT) {
-                                                uint val; context->getObjectData(objID, data_attribute_label.c_str(), val);
-                                                value = static_cast<double>(val); has_value = true;
-                                            } else if (datatype == HELIOS_TYPE_FLOAT) {
-                                                float val; context->getObjectData(objID, data_attribute_label.c_str(), val);
-                                                value = static_cast<double>(val); has_value = true;
-                                            } else if (datatype == HELIOS_TYPE_DOUBLE) {
-                                                context->getObjectData(objID, data_attribute_label.c_str(), value);
-                                                has_value = true;
-                                            }
+
+                                        if (has_value) {
+                                            sum += value;
+                                            count++;
                                         }
                                     }
+                                }
 
-                                    if (has_value) {
-                                        sum += value;
-                                        count++;
-                                    }
+                                if (count > 0) {
+                                    component_attributes[attr.label] = sum / count;
+                                } else {
+                                    component_attributes[attr.label] = 0.0; // Default if no valid data
                                 }
                             }
 
-                            if (count > 0) {
-                                mean_attribute_values.push_back(sum / count);
-                            } else {
-                                mean_attribute_values.push_back(0.0); // Default if no valid data
-                            }
+                            mean_attribute_values_per_component.push_back(component_attributes);
                         }
                     }
                 }
@@ -2211,8 +2255,8 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
             json_annotation["iscrowd"] = (int) ann.at("iscrowd")[0];
 
             // Add attributes if requested
-            if (use_attributes && ann_idx < mean_attribute_values.size()) {
-                json_annotation["attributes"] = {{data_attribute_label, mean_attribute_values[ann_idx]}};
+            if (use_attributes && ann_idx < mean_attribute_values_per_component.size()) {
+                json_annotation["attributes"] = mean_attribute_values_per_component[ann_idx];
             }
 
             coco_json["annotations"].push_back(json_annotation);

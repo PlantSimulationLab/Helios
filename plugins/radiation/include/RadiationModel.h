@@ -1341,11 +1341,11 @@ public:
      * \param[in] object_class_ID Object class ID to write for the labels in this group.
      * \param[in] json_filename Name of the output JSON file. Can include a relative path. If no extension is provided, ".json" will be added.
      * \param[in] image_file Name of the image file corresponding to these labels
-     * \param[in] data_attribute_label [optional] Label of primitive or object data to calculate mean value within each mask and write as an attribute. If empty or data doesn't exist, no attributes are added. By default, it is an empty string.
+     * \param[in] data_attribute_labels [optional] Vector of primitive or object data labels to calculate mean values within each mask and write as attributes. If empty or data doesn't exist, no attributes are added. By default, it is an empty vector.
      * \param[in] append_file [optional] If true, the data will be appended to the existing COCO JSON file. If false, a new file will be created. By default, it is false.
      * \note The lengths of primitive_data_label and object_class_ID vectors must be the same.
      */
-    void writeImageSegmentationMasks(const std::string &cameralabel, const std::string &primitive_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, const std::string &data_attribute_label = "", bool append_file = false);
+    void writeImageSegmentationMasks(const std::string &cameralabel, const std::string &primitive_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, const std::vector<std::string> &data_attribute_labels = {}, bool append_file = false);
 
     //! Write segmentation masks for primitive data in COCO JSON format. Primitive data must have type of 'uint' or 'int'.
     /**
@@ -1354,12 +1354,12 @@ public:
      * \param[in] object_class_ID Object class ID to write for the labels in this group.
      * \param[in] json_filename Name of the output JSON file. Can include a relative path. If no extension is provided, ".json" will be added.
      * \param[in] image_file Name of the image file corresponding to these labels
-     * \param[in] data_attribute_label [optional] Label of primitive or object data to calculate mean value within each mask and write as an attribute. If empty or data doesn't exist, no attributes are added. By default, it is an empty string.
+     * \param[in] data_attribute_labels [optional] Vector of primitive or object data labels to calculate mean values within each mask and write as attributes. If empty or data doesn't exist, no attributes are added. By default, it is an empty vector.
      * \param[in] append_file [optional] If true, the data will be appended to the existing COCO JSON file. If false, a new file will be created. By default, it is false.
      * \note The lengths of primitive_data_label and object_class_ID vectors must be the same.
      */
     void writeImageSegmentationMasks(const std::string &cameralabel, const std::vector<std::string> &primitive_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file,
-                                     const std::string &data_attribute_label = "", bool append_file = false);
+                                     const std::vector<std::string> &data_attribute_labels = {}, bool append_file = false);
 
     //! Write segmentation masks for object data in COCO JSON format. Object data must have type of 'uint' or 'int'.
     /**
@@ -1368,11 +1368,11 @@ public:
      * \param[in] object_class_ID Object class ID to write for the labels in this group.
      * \param[in] json_filename Name of the output JSON file. Can include a relative path. If no extension is provided, ".json" will be added.
      * \param[in] image_file Name of the image file corresponding to these labels
-     * \param[in] data_attribute_label [optional] Label of primitive or object data to calculate mean value within each mask and write as an attribute. If empty or data doesn't exist, no attributes are added. By default, it is an empty string.
+     * \param[in] data_attribute_labels [optional] Vector of primitive or object data labels to calculate mean values within each mask and write as attributes. If empty or data doesn't exist, no attributes are added. By default, it is an empty vector.
      * \param[in] append_file [optional] If true, the data will be appended to the existing COCO JSON file. If false, a new file will be created. By default, it is false.
      * \note The lengths of object_data_label and object_class_ID vectors must be the same.
      */
-    void writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::string &object_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, const std::string &data_attribute_label = "", bool append_file = false);
+    void writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::string &object_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, const std::vector<std::string> &data_attribute_labels = {}, bool append_file = false);
 
     //! Write segmentation masks for object data in COCO JSON format. Object data must have type of 'uint' or 'int'.
     /**
@@ -1381,12 +1381,12 @@ public:
      * \param[in] object_class_ID Object class ID to write for the labels in this group.
      * \param[in] json_filename Name of the output JSON file. Can include a relative path. If no extension is provided, ".json" will be added.
      * \param[in] image_file Name of the image file corresponding to these labels
-     * \param[in] data_attribute_label [optional] Label of primitive or object data to calculate mean value within each mask and write as an attribute. If empty or data doesn't exist, no attributes are added. By default, it is an empty string.
+     * \param[in] data_attribute_labels [optional] Vector of primitive or object data labels to calculate mean values within each mask and write as attributes. If empty or data doesn't exist, no attributes are added. By default, it is an empty vector.
      * \param[in] append_file [optional] If true, the data will be appended to the existing COCO JSON file. If false, a new file will be created. By default, it is false.
      * \note The lengths of object_data_label and object_class_ID vectors must be the same.
      */
     void writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::vector<std::string> &object_data_label, const std::vector<uint> &object_class_ID, const std::string &json_filename, const std::string &image_file,
-                                                const std::string &data_attribute_label = "", bool append_file = false);
+                                                const std::vector<std::string> &data_attribute_labels = {}, bool append_file = false);
 
 private:
     // Helper functions for COCO JSON handling
