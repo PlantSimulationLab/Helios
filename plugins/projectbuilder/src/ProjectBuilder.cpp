@@ -787,12 +787,12 @@ void ProjectBuilder::record() {
                             if (bounding_boxes_object.find(box_pair.first) != bounding_boxes_object.end()) {
                                 radiation->writeImageBoundingBoxes_ObjectData(cameralabel, box_pair.first, box_pair.second, band_group_ + std::to_string(i) + "_bbox", "classes.txt", image_dir + rig_label + '/');
                                 if (write_segmentation_mask[rig_dict[current_rig]]) {
-                                    radiation->writeImageSegmentationMasks_ObjectData(camera_label, box_pair.first, box_pair.second, band_group_ + std::to_string(i) + "_mask", image_dir + rig_label + '/', true);
+                                    radiation->writeImageSegmentationMasks_ObjectData(camera_label, box_pair.first, box_pair.second, band_group_ + std::to_string(i) + "_mask", image_dir + rig_label + '/', {}, true);
                                 }
                             } else if (bounding_boxes_primitive.find(box_pair.first) == bounding_boxes_object.end()) {
                                 radiation->writeImageBoundingBoxes(cameralabel, box_pair.first, box_pair.second, band_group_ + std::to_string(i) + "_bbox", "classes.txt", image_dir + rig_label + '/');
                                 if (write_segmentation_mask[rig_dict[current_rig]]) {
-                                    radiation->writeImageSegmentationMasks(camera_label, box_pair.first, box_pair.second, band_group_ + std::to_string(i) + "_mask", image_dir + rig_label + '/', true);
+                                    radiation->writeImageSegmentationMasks(camera_label, box_pair.first, box_pair.second, band_group_ + std::to_string(i) + "_mask", image_dir + rig_label + '/', {}, true);
                                 }
                             }
                         }
@@ -3163,7 +3163,7 @@ void ProjectBuilder::calculationTab() {
         globalCalculation();
     }
     ImGui::SameLine();
-    ImGui::Text(std::to_string(calculation_result_global).c_str());
+    ImGui::Text("%s", std::to_string(calculation_result_global).c_str());
     ImGui::SameLine();
     if (ImGui::Button("Save to Global Data")) {
         context->setGlobalData(calculation_name_global.c_str(), calculation_result_global);

@@ -1500,6 +1500,9 @@ private:
     //! x- and y- dimensions of colorbar in normalized window coordinates
     helios::vec2 colorbar_size;
 
+    //! Intended aspect ratio (width/height) of the colorbar for maintaining proportions across window sizes
+    float colorbar_intended_aspect_ratio;
+
     //! UUIDs associated with the current colorbar geometry
     std::vector<size_t> colorbar_IDs;
 
@@ -1556,6 +1559,9 @@ private:
 
     //! Update navigation gizmo geometry to match current camera orientation
     void updateNavigationGizmo();
+
+    //! Update colorbar geometry to match current window aspect ratio
+    void updateColorbar();
 
     //! Test if a normalized window coordinate hits a navigation gizmo bubble
     /**

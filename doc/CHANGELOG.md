@@ -1,5 +1,27 @@
 # Changelog
 
+# [1.3.54] 2025-10-16
+
+## Radiation
+- Added automatic spectral interpolation methods for dynamic radiative property assignment:
+  - `RadiationModel::interpolateSpectrumFromPrimitiveData()` - Interpolates spectra based on primitive data values using nearest-neighbor selection
+  - `RadiationModel::interpolateSpectrumFromObjectData()` - Interpolates spectra based on object data values for all primitives in objects
+- Enhanced image segmentation mask with optional parameter to calculate and write mean values of specified primitive/object data labels as mask attributes
+
+## Visualizer
+- Fixed colorbar aspect ratio distortion that occurred when window aspect ratio changed - colorbar now maintains intended proportions across different window sizes
+- Added `colorbar_intended_aspect_ratio` member variable to track design proportions
+- Added `updateColorbar()` method to apply aspect ratio corrections during rendering
+- Fixed cascading deprecation warnings in `addSkyDomeByCenter()` by implementing the deprecated overload directly with appropriate warning message
+
+## Collision Detection
+- Enhanced GPU acceleration fallback handling to gracefully disable GPU mode when CUDA is unavailable at runtime instead of crashing
+- Added runtime device count check before attempting GPU memory allocation
+- GPU memory allocation failures now fall back to CPU-only mode with informative warnings instead of throwing fatal errors
+
+## Project Builder
+- Updated segmentation mask writing to reflect the new Radiation API changes above
+
 # [1.3.53] 2025-10-10
 
 # Visualizer

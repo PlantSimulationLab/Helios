@@ -871,6 +871,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     colorbar_position = make_vec3(0.65, 0.1, 0.1);
     colorbar_size = make_vec2(0.15, 0.1);
+    colorbar_intended_aspect_ratio = 1.5f; // width/height = 0.15/0.1
     colorbar_IDs.clear();
 
     point_width = 1;
@@ -1894,6 +1895,12 @@ void Visualizer::setColorbarSize(vec2 size) {
         helios_runtime_error("ERROR (Visualizer::setColorbarSize): Size must be greater than 0 and less than the window size (i.e., 1).");
     }
     colorbar_size = size;
+    // Store the intended aspect ratio (width/height) to maintain proportions across window aspect ratios
+    if (size.y > 0) {
+        colorbar_intended_aspect_ratio = size.x / size.y;
+    } else {
+        colorbar_intended_aspect_ratio = 0.1f; // Default thin bar aspect ratio
+    }
 }
 
 void Visualizer::setColorbarRange(float cmin, float cmax) {

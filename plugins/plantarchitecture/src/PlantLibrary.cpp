@@ -2286,7 +2286,7 @@ void PlantArchitecture::initializePistachioTreeShoots() {
     shoot_parameters_proleptic.phyllochron_min = 2.0;
     shoot_parameters_proleptic.elongation_rate_max = 0.25;
     shoot_parameters_proleptic.girth_area_factor = 7.f;
-    shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.05;
+    shoot_parameters_proleptic.vegetative_bud_break_probability_min = 0.04;
     shoot_parameters_proleptic.vegetative_bud_break_probability_decay_rate = 0.7;
     shoot_parameters_proleptic.vegetative_bud_break_time = 0;
     shoot_parameters_proleptic.gravitropic_curvature = 350;

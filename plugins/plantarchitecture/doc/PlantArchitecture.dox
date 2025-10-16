@@ -632,7 +632,7 @@ The probability that a vegetative bud will break and produce a new shoot can var
 
 Special Cases: If \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_decay_rate</span>\endhtmlonly=0, the probability of bud break is always 100% along the shoot. If \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_decay_rate</span>\endhtmlonly>0 and \htmlonly<span style="font-family: Courier, monospace; color: blue;">growth_requires_dormancy</span>\endhtmlonly is false, the probability of bud break is always equal to \htmlonly<span style="font-family: Courier, monospace; color: blue;">vegetative_bud_break_probability_min</span>\endhtmlonly.
 
-\image html vegetative_bud_break_schematic.jpeg
+\image html vegetative_bud_break_schematic.jpeg width=900px
 
 \subsubsection ShootParam_gravitropic gravitropic_curvature
 

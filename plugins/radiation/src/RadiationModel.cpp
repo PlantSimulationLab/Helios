@@ -1070,6 +1070,142 @@ void RadiationModel::blendSpectraRandomly(const std::string &new_spectrum_label,
     blendSpectra(new_spectrum_label, spectrum_labels, weights);
 }
 
+void RadiationModel::interpolateSpectrumFromPrimitiveData(const std::vector<uint> &primitive_UUIDs,
+                                                          const std::vector<std::string> &spectra,
+                                                          const std::vector<float> &values,
+                                                          const std::string &primitive_data_query_label,
+                                                          const std::string &primitive_data_radprop_label) {
+
+    // Validate that spectra and values have the same length
+    if (spectra.size() != values.size()) {
+        helios_runtime_error("ERROR (RadiationModel::interpolateSpectrumFromPrimitiveData): The 'spectra' vector (size=" + std::to_string(spectra.size()) +
+                             ") and 'values' vector (size=" + std::to_string(values.size()) + ") must have the same length.");
+    }
+
+    // Validate that vectors are not empty
+    if (spectra.empty()) {
+        helios_runtime_error("ERROR (RadiationModel::interpolateSpectrumFromPrimitiveData): The 'spectra' and 'values' vectors cannot be empty.");
+    }
+
+    // Validate that primitive_UUIDs is not empty
+    if (primitive_UUIDs.empty()) {
+        helios_runtime_error("ERROR (RadiationModel::interpolateSpectrumFromPrimitiveData): The 'primitive_UUIDs' vector cannot be empty.");
+    }
+
+    // Validate that query and target data labels are not empty
+    if (primitive_data_query_label.empty()) {
+        helios_runtime_error("ERROR (RadiationModel::interpolateSpectrumFromPrimitiveData): The 'primitive_data_query_label' cannot be empty.");
+    }
+
+    if (primitive_data_radprop_label.empty()) {
+        helios_runtime_error("ERROR (RadiationModel::interpolateSpectrumFromPrimitiveData): The 'primitive_data_radprop_label' cannot be empty.");
+    }
+
+    // Search for existing config with matching query and target labels
+    SpectrumInterpolationConfig* existing_config = nullptr;
+    for (auto &config : spectrum_interpolation_configs) {
+        if (config.query_data_label == primitive_data_query_label &&
+            config.target_data_label == primitive_data_radprop_label) {
+            existing_config = &config;
+            break;
+        }
+    }
+
+    if (existing_config != nullptr) {
+        // Check if spectra/values match the existing config
+        bool spectra_match = (existing_config->spectra_labels == spectra && existing_config->mapping_values == values);
+
+        if (spectra_match) {
+            // Merge UUIDs into existing config (unordered_set handles duplicates automatically)
+            existing_config->primitive_UUIDs.insert(primitive_UUIDs.begin(), primitive_UUIDs.end());
+        } else {
+            // Replace entire config with new spectra/values and UUIDs
+            existing_config->spectra_labels = spectra;
+            existing_config->mapping_values = values;
+            existing_config->primitive_UUIDs.clear();
+            existing_config->primitive_UUIDs.insert(primitive_UUIDs.begin(), primitive_UUIDs.end());
+        }
+    } else {
+        // Create new config
+        SpectrumInterpolationConfig config;
+        config.primitive_UUIDs.insert(primitive_UUIDs.begin(), primitive_UUIDs.end());
+        config.spectra_labels = spectra;
+        config.mapping_values = values;
+        config.query_data_label = primitive_data_query_label;
+        config.target_data_label = primitive_data_radprop_label;
+
+        spectrum_interpolation_configs.push_back(config);
+    }
+}
+
+void RadiationModel::interpolateSpectrumFromObjectData(const std::vector<uint> &object_IDs,
+                                                       const std::vector<std::string> &spectra,
+                                                       const std::vector<float> &values,
+                                                       const std::string &object_data_query_label,
+                                                       const std::string &primitive_data_radprop_label) {
+
+    // Validate that spectra and values have the same length
+    if (spectra.size() != values.size()) {
+        helios_runtime_error("ERROR (RadiationModel::interpolateSpectrumFromObjectData): The 'spectra' vector (size=" + std::to_string(spectra.size()) +
+                             ") and 'values' vector (size=" + std::to_string(values.size()) + ") must have the same length.");
+    }
+
+    // Validate that vectors are not empty
+    if (spectra.empty()) {
+        helios_runtime_error("ERROR (RadiationModel::interpolateSpectrumFromObjectData): The 'spectra' and 'values' vectors cannot be empty.");
+    }
+
+    // Validate that object_IDs is not empty
+    if (object_IDs.empty()) {
+        helios_runtime_error("ERROR (RadiationModel::interpolateSpectrumFromObjectData): The 'object_IDs' vector cannot be empty.");
+    }
+
+    // Validate that query and target data labels are not empty
+    if (object_data_query_label.empty()) {
+        helios_runtime_error("ERROR (RadiationModel::interpolateSpectrumFromObjectData): The 'object_data_query_label' cannot be empty.");
+    }
+
+    if (primitive_data_radprop_label.empty()) {
+        helios_runtime_error("ERROR (RadiationModel::interpolateSpectrumFromObjectData): The 'primitive_data_radprop_label' cannot be empty.");
+    }
+
+    // Search for existing config with matching query and target labels
+    SpectrumInterpolationConfig* existing_config = nullptr;
+    for (auto &config : spectrum_interpolation_configs) {
+        if (config.query_data_label == object_data_query_label &&
+            config.target_data_label == primitive_data_radprop_label) {
+            existing_config = &config;
+            break;
+        }
+    }
+
+    if (existing_config != nullptr) {
+        // Check if spectra/values match the existing config
+        bool spectra_match = (existing_config->spectra_labels == spectra && existing_config->mapping_values == values);
+
+        if (spectra_match) {
+            // Merge object IDs into existing config (unordered_set handles duplicates automatically)
+            existing_config->object_IDs.insert(object_IDs.begin(), object_IDs.end());
+        } else {
+            // Replace entire config with new spectra/values and object IDs
+            existing_config->spectra_labels = spectra;
+            existing_config->mapping_values = values;
+            existing_config->object_IDs.clear();
+            existing_config->object_IDs.insert(object_IDs.begin(), object_IDs.end());
+        }
+    } else {
+        // Create new config
+        SpectrumInterpolationConfig config;
+        config.object_IDs.insert(object_IDs.begin(), object_IDs.end());
+        config.spectra_labels = spectra;
+        config.mapping_values = values;
+        config.query_data_label = object_data_query_label;
+        config.target_data_label = primitive_data_radprop_label;
+
+        spectrum_interpolation_configs.push_back(config);
+    }
+}
+
 void RadiationModel::setSourcePosition(uint source_ID, const vec3 &position) {
 
     if (source_ID >= radiation_sources.size()) {
@@ -2406,6 +2542,87 @@ void RadiationModel::updateRadiativeProperties() {
 
         return (Etot != 0.0f) ? E / Etot : 0.0f;
     };
+
+    // Apply spectral interpolation based on primitive data values
+    for (const auto &config : spectrum_interpolation_configs) {
+        // Validate that all spectra in this config exist in global data and have correct type
+        for (const auto &spectrum_label : config.spectra_labels) {
+            if (!context->doesGlobalDataExist(spectrum_label.c_str())) {
+                helios_runtime_error("ERROR (RadiationModel::updateRadiativeProperties): Spectral interpolation config references global data '" + spectrum_label + "' which does not exist.");
+            }
+            if (context->getGlobalDataType(spectrum_label.c_str()) != helios::HELIOS_TYPE_VEC2) {
+                helios_runtime_error("ERROR (RadiationModel::updateRadiativeProperties): Spectral interpolation config references global data '" + spectrum_label + "' which must be of type HELIOS_TYPE_VEC2 (std::vector<helios::vec2>).");
+            }
+        }
+
+        for (uint uuid : config.primitive_UUIDs) {
+            // Check if primitive still exists in context (it may have been deleted)
+            if (!context->doesPrimitiveExist(uuid)) {
+                continue;
+            }
+
+            // Check if the query data exists for this primitive and has correct type
+            if (context->doesPrimitiveDataExist(uuid, config.query_data_label.c_str())) {
+                // Check that query data is of type float
+                if (context->getPrimitiveDataType(config.query_data_label.c_str()) != helios::HELIOS_TYPE_FLOAT) {
+                    helios_runtime_error("ERROR (RadiationModel::updateRadiativeProperties): Primitive data '" + config.query_data_label + "' for UUID " + std::to_string(uuid) + " must be of type HELIOS_TYPE_FLOAT for spectral interpolation.");
+                }
+
+                // Get the query value
+                float query_value;
+                context->getPrimitiveData(uuid, config.query_data_label.c_str(), query_value);
+
+                // Perform nearest-neighbor interpolation
+                size_t nearest_idx = 0;
+                float min_distance = std::abs(query_value - config.mapping_values[0]);
+                for (size_t i = 1; i < config.mapping_values.size(); i++) {
+                    float distance = std::abs(query_value - config.mapping_values[i]);
+                    if (distance < min_distance) {
+                        min_distance = distance;
+                        nearest_idx = i;
+                    }
+                }
+
+                // Set the target primitive data to the selected spectrum label
+                context->setPrimitiveData(uuid, config.target_data_label.c_str(), config.spectra_labels[nearest_idx]);
+            }
+        }
+
+        // Apply spectral interpolation based on object data values
+        for (uint objID : config.object_IDs) {
+            // Check if object still exists in context (it may have been deleted)
+            if (!context->doesObjectExist(objID)) {
+                continue;
+            }
+
+            // Check if the query data exists for this object and has correct type
+            if (context->doesObjectDataExist(objID, config.query_data_label.c_str())) {
+                // Check that query data is of type float
+                if (context->getObjectDataType(config.query_data_label.c_str()) != helios::HELIOS_TYPE_FLOAT) {
+                    helios_runtime_error("ERROR (RadiationModel::updateRadiativeProperties): Object data '" + config.query_data_label + "' for object ID " + std::to_string(objID) + " must be of type HELIOS_TYPE_FLOAT for spectral interpolation.");
+                }
+
+                // Get the query value
+                float query_value;
+                context->getObjectData(objID, config.query_data_label.c_str(), query_value);
+
+                // Perform nearest-neighbor interpolation
+                size_t nearest_idx = 0;
+                float min_distance = std::abs(query_value - config.mapping_values.at(0));
+                for (size_t i = 1; i < config.mapping_values.size(); i++) {
+                    float distance = std::abs(query_value - config.mapping_values.at(i));
+                    if (distance < min_distance) {
+                        min_distance = distance;
+                        nearest_idx = i;
+                    }
+                }
+
+                // Get object's primitive UUIDs and set their primitive data using vector overload
+                std::vector<uint> prim_uuids = context->getObjectPrimitiveUUIDs(objID);
+                context->setPrimitiveData(prim_uuids, config.target_data_label.c_str(), config.spectra_labels.at(nearest_idx));
+            }
+        }
+    }
 
     // Cache all unique primitive reflectivity and transmissivity spectra before assigning to primitives
 

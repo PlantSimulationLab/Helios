@@ -836,7 +836,7 @@ The above example assumes that we have already added some geometry to the Contex
 
  2\. \ref RadiationModel::writeImageSegmentationMasks_ObjectData() - Creates segmentation masks based on object data labels.
 
- Both methods take the following arguments: 1) a string denoting the camera label, 2) a string denoting the primitive/object data label to use for segmentation, 3) an integer object class ID for COCO annotations, 4) a string denoting the base filename for the JSON output, 5) an optional string specifying the output directory path (defaults to current directory), 6) an optional boolean flag to append to existing JSON files (defaults to false for new files), and 7) an optional frame number for time series data.
+ Both methods take the following arguments: 1) a string denoting the camera label, 2) a string denoting the primitive/object data label to use for segmentation, 3) an integer object class ID for COCO annotations, 4) a string denoting the JSON output filename (can include a relative path), 5) a string denoting the image file corresponding to these labels, 6) an optional vector of strings specifying primitive or object data labels whose mean values will be calculated for each mask and written as attributes (defaults to empty vector), and 7) an optional boolean flag to append to existing JSON files (defaults to false for new files).
 
  The segmentation masks are generated using boundary tracing algorithms that identify connected regions of pixels with the same data label values. Each unique label value becomes a separate annotation in the COCO JSON output, with precise polygon boundaries traced around the object regions.
 

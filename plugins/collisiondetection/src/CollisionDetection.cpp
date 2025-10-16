@@ -1706,6 +1706,19 @@ void CollisionDetection::allocateGPUMemory() {
     d_bvh_nodes = nullptr;
     d_primitive_indices = nullptr;
 
+    // Check if CUDA is actually available at runtime
+    int deviceCount = 0;
+    cudaError_t err = cudaGetDeviceCount(&deviceCount);
+    if (err != cudaSuccess || deviceCount == 0) {
+        // CUDA not available - disable GPU acceleration and fall back to CPU
+        if (printmessages) {
+            std::cout << "WARNING (CollisionDetection::allocateGPUMemory): CUDA runtime unavailable ("
+                      << cudaGetErrorString(err) << "). Falling back to CPU-only mode." << std::endl;
+        }
+        gpu_acceleration_enabled = false;
+        return;
+    }
+
     // Calculate sizes
     size_t bvh_size = bvh_nodes.size() * sizeof(GPUBVHNode);
     size_t indices_size = primitive_indices.size() * sizeof(uint);
@@ -1716,17 +1729,29 @@ void CollisionDetection::allocateGPUMemory() {
     }
 
     // Allocate BVH nodes
-    cudaError_t err = cudaMalloc(&d_bvh_nodes, bvh_size);
+    err = cudaMalloc(&d_bvh_nodes, bvh_size);
     if (err != cudaSuccess) {
-        helios_runtime_error("CUDA error allocating BVH nodes: " + std::string(cudaGetErrorString(err)));
+        // GPU allocation failed - fall back to CPU instead of crashing
+        if (printmessages) {
+            std::cout << "WARNING (CollisionDetection::allocateGPUMemory): Failed to allocate GPU memory ("
+                      << cudaGetErrorString(err) << "). Falling back to CPU-only mode." << std::endl;
+        }
+        gpu_acceleration_enabled = false;
+        return;
     }
 
     // Allocate primitive indices
     err = cudaMalloc((void **) &d_primitive_indices, indices_size);
     if (err != cudaSuccess) {
+        // GPU allocation failed - clean up and fall back to CPU
         cudaFree(d_bvh_nodes);
         d_bvh_nodes = nullptr;
-        helios_runtime_error("CUDA error allocating primitive indices: " + std::string(cudaGetErrorString(err)));
+        if (printmessages) {
+            std::cout << "WARNING (CollisionDetection::allocateGPUMemory): Failed to allocate primitive indices ("
+                      << cudaGetErrorString(err) << "). Falling back to CPU-only mode." << std::endl;
+        }
+        gpu_acceleration_enabled = false;
+        return;
     }
 
     // Mark as allocated only after both allocations succeeded
