@@ -228,6 +228,111 @@ TEST_CASE("Object Data") {
         DOCTEST_CHECK_THROWS(ctx.renameObjectData(bad_oid, "old", "new"));
         DOCTEST_CHECK_THROWS(ctx.duplicateObjectData(bad_oid, "old", "new"));
     }
+
+    SUBCASE("setObjectDataFromPrimitiveDataMean") {
+        Context ctx;
+
+        // Test with float data
+        uint tile_obj = ctx.addTileObject(nullorigin, make_vec2(2, 2), nullrotation, make_int2(2, 2));
+        std::vector<uint> prims = ctx.getObjectPrimitiveUUIDs(tile_obj);
+        DOCTEST_CHECK(prims.size() == 4);
+
+        ctx.setPrimitiveData(prims[0], "temperature", 10.0f);
+        ctx.setPrimitiveData(prims[1], "temperature", 20.0f);
+        ctx.setPrimitiveData(prims[2], "temperature", 30.0f);
+        ctx.setPrimitiveData(prims[3], "temperature", 40.0f);
+
+        ctx.setObjectDataFromPrimitiveDataMean(tile_obj, "temperature");
+
+        DOCTEST_CHECK(ctx.doesObjectDataExist(tile_obj, "temperature"));
+        float temp_mean;
+        ctx.getObjectData(tile_obj, "temperature", temp_mean);
+        DOCTEST_CHECK(temp_mean == doctest::Approx(25.0f));
+
+        // Test with double data
+        uint box_obj = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
+        std::vector<uint> box_prims = ctx.getObjectPrimitiveUUIDs(box_obj);
+
+        ctx.setPrimitiveData(box_prims[0], "value", 1.5);
+        ctx.setPrimitiveData(box_prims[1], "value", 2.5);
+        ctx.setPrimitiveData(box_prims[2], "value", 3.5);
+        ctx.setPrimitiveData(box_prims[3], "value", 4.5);
+        ctx.setPrimitiveData(box_prims[4], "value", 5.5);
+        ctx.setPrimitiveData(box_prims[5], "value", 6.5);
+
+        ctx.setObjectDataFromPrimitiveDataMean(box_obj, "value");
+
+        double value_mean;
+        ctx.getObjectData(box_obj, "value", value_mean);
+        DOCTEST_CHECK(value_mean == doctest::Approx(4.0));
+
+        // Test with vec2 data
+        uint cone_obj = ctx.addConeObject(10, make_vec3(0, 0, 0), make_vec3(0, 0, 1), 1.0f, 0.5f);
+        std::vector<uint> cone_prims = ctx.getObjectPrimitiveUUIDs(cone_obj);
+
+        for (size_t i = 0; i < cone_prims.size(); ++i) {
+            ctx.setPrimitiveData(cone_prims[i], "vec2_data", make_vec2(float(i), float(i) * 2.0f));
+        }
+
+        ctx.setObjectDataFromPrimitiveDataMean(cone_obj, "vec2_data");
+
+        vec2 vec2_mean;
+        ctx.getObjectData(cone_obj, "vec2_data", vec2_mean);
+        float expected_x = float(cone_prims.size() - 1) / 2.0f;
+        DOCTEST_CHECK(vec2_mean.x == doctest::Approx(expected_x));
+        DOCTEST_CHECK(vec2_mean.y == doctest::Approx(expected_x * 2.0f));
+
+        // Test with vec3 data
+        ctx.setPrimitiveData(prims[0], "color", make_vec3(1.0f, 0.0f, 0.0f));
+        ctx.setPrimitiveData(prims[1], "color", make_vec3(0.0f, 1.0f, 0.0f));
+        ctx.setPrimitiveData(prims[2], "color", make_vec3(0.0f, 0.0f, 1.0f));
+        ctx.setPrimitiveData(prims[3], "color", make_vec3(1.0f, 1.0f, 1.0f));
+
+        ctx.setObjectDataFromPrimitiveDataMean(tile_obj, "color");
+
+        vec3 color_mean;
+        ctx.getObjectData(tile_obj, "color", color_mean);
+        DOCTEST_CHECK(color_mean.x == doctest::Approx(0.5f));
+        DOCTEST_CHECK(color_mean.y == doctest::Approx(0.5f));
+        DOCTEST_CHECK(color_mean.z == doctest::Approx(0.5f));
+
+        // Test with vec4 data
+        ctx.setPrimitiveData(prims[0], "rgba", make_vec4(1.0f, 0.0f, 0.0f, 1.0f));
+        ctx.setPrimitiveData(prims[1], "rgba", make_vec4(0.0f, 1.0f, 0.0f, 0.8f));
+
+        ctx.setObjectDataFromPrimitiveDataMean(tile_obj, "rgba");
+
+        vec4 rgba_mean;
+        ctx.getObjectData(tile_obj, "rgba", rgba_mean);
+        DOCTEST_CHECK(rgba_mean.x == doctest::Approx(0.5f));
+        DOCTEST_CHECK(rgba_mean.y == doctest::Approx(0.5f));
+        DOCTEST_CHECK(rgba_mean.z == doctest::Approx(0.0f));
+        DOCTEST_CHECK(rgba_mean.w == doctest::Approx(0.9f));
+
+        // Test with partial data (not all primitives have the data)
+        ctx.setPrimitiveData(prims[0], "partial", 100.0f);
+        ctx.setPrimitiveData(prims[2], "partial", 200.0f);
+
+        ctx.setObjectDataFromPrimitiveDataMean(tile_obj, "partial");
+
+        float partial_mean;
+        ctx.getObjectData(tile_obj, "partial", partial_mean);
+        DOCTEST_CHECK(partial_mean == doctest::Approx(150.0f));
+
+        // Error condition: invalid object ID
+        DOCTEST_CHECK_THROWS(ctx.setObjectDataFromPrimitiveDataMean(999, "temperature"));
+
+        // Error condition: no primitives have the data
+        DOCTEST_CHECK_THROWS(ctx.setObjectDataFromPrimitiveDataMean(tile_obj, "nonexistent_data"));
+
+        // Error condition: unsupported data type (int)
+        ctx.setPrimitiveData(prims[0], "int_data", 42);
+        DOCTEST_CHECK_THROWS(ctx.setObjectDataFromPrimitiveDataMean(tile_obj, "int_data"));
+
+        // Error condition: unsupported data type (string)
+        ctx.setPrimitiveData(prims[0], "string_data", "hello");
+        DOCTEST_CHECK_THROWS(ctx.setObjectDataFromPrimitiveDataMean(tile_obj, "string_data"));
+    }
 }
 
 TEST_CASE("Primitive Data") {

@@ -164,6 +164,9 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties 
     context->setPrimitiveData(UUIDs, "reflectivity_spectrum", leaf_reflectivity_label);
     context->setPrimitiveData(UUIDs, "transmissivity_spectrum", leaf_transmissivity_label);
     setProperties(UUIDs, leafproperties);
+
+    // Store parameters in map for later retrieval
+    spectrum_parameters_map[label] = leafproperties;
 }
 
 void LeafOptics::run(const LeafOpticsProperties &leafproperties, const std::string &label) {
@@ -175,6 +178,9 @@ void LeafOptics::run(const LeafOpticsProperties &leafproperties, const std::stri
     std::string leaf_transmissivity_label = "leaf_transmissivity_" + label;
     context->setGlobalData(leaf_reflectivity_label.c_str(), reflectivities_fit);
     context->setGlobalData(leaf_transmissivity_label.c_str(), transmissivities_fit);
+
+    // Store parameters in map for later retrieval
+    spectrum_parameters_map[label] = leafproperties;
 }
 
 
@@ -398,6 +404,57 @@ void LeafOptics::setProperties(const std::vector<uint> &UUIDs, const LeafOpticsP
         context->setPrimitiveData(UUIDs, "protein", leafproperties.protein);
         context->setPrimitiveData(UUIDs, "cellulose", leafproperties.carbonconstituents);
     }
+}
+
+void LeafOptics::getPropertiesFromSpectrum(const std::vector<uint> &UUIDs) {
+    const std::string prefix = "leaf_reflectivity_";
+
+    for (uint UUID : UUIDs) {
+        // Check if primitive has reflectivity_spectrum data
+        if (!context->doesPrimitiveDataExist(UUID, "reflectivity_spectrum")) {
+            continue; // Skip silently if no spectrum data
+        }
+
+        // Get the spectrum label
+        std::string spectrum_label;
+        context->getPrimitiveData(UUID, "reflectivity_spectrum", spectrum_label);
+
+        // Check if this is a LeafOptics-generated spectrum (starts with prefix)
+        if (spectrum_label.find(prefix) != 0) {
+            continue; // Not a LeafOptics spectrum, skip silently
+        }
+
+        // Extract the user label by removing the prefix
+        std::string user_label = spectrum_label.substr(prefix.length());
+
+        // Check if we have parameters stored for this label
+        auto it = spectrum_parameters_map.find(user_label);
+        if (it == spectrum_parameters_map.end()) {
+            continue; // No parameters found, skip silently
+        }
+
+        // Retrieve the stored parameters
+        const LeafOpticsProperties &props = it->second;
+
+        // Assign primitive data using the same logic as setProperties()
+        context->setPrimitiveData(UUID, "chlorophyll", props.chlorophyllcontent);
+        context->setPrimitiveData(UUID, "carotenoid", props.carotenoidcontent);
+        context->setPrimitiveData(UUID, "anthocyanin", props.anthocyancontent);
+        if (props.brownpigments > 0.0) {
+            context->setPrimitiveData(UUID, "brown", props.brownpigments);
+        }
+        context->setPrimitiveData(UUID, "water", props.watermass);
+        if (props.drymass > 0.0) {
+            context->setPrimitiveData(UUID, "drymass", props.drymass);
+        } else {
+            context->setPrimitiveData(UUID, "protein", props.protein);
+            context->setPrimitiveData(UUID, "cellulose", props.carbonconstituents);
+        }
+    }
+}
+
+void LeafOptics::getPropertiesFromSpectrum(uint UUID) {
+    getPropertiesFromSpectrum(std::vector<uint>{UUID});
 }
 
 void LeafOptics::disableMessages() {

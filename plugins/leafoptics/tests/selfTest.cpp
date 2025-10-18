@@ -513,6 +513,255 @@ DOCTEST_TEST_CASE("LeafOptics Multiple Runs Data Consistency") {
     }
 }
 
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - Basic Functionality") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    // Create test primitives
+    std::vector<uint> UUIDs;
+    UUIDs.push_back(context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1)));
+    UUIDs.push_back(context_test.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0)));
+
+    // Create custom properties
+    LeafOpticsProperties props;
+    props.chlorophyllcontent = 45.0f;
+    props.carotenoidcontent = 12.0f;
+    props.anthocyancontent = 3.0f;
+    props.watermass = 0.018f;
+    props.drymass = 0.085f;
+
+    std::string label = "test_get_props";
+
+    // Generate spectra and assign to primitives
+    leafoptics.run(UUIDs, props, label);
+
+    // Clear existing parameter data from primitives (run() calls setProperties())
+    for (uint UUID : UUIDs) {
+        context_test.clearPrimitiveData(UUID, "chlorophyll");
+        context_test.clearPrimitiveData(UUID, "carotenoid");
+        context_test.clearPrimitiveData(UUID, "anthocyanin");
+        context_test.clearPrimitiveData(UUID, "water");
+        context_test.clearPrimitiveData(UUID, "drymass");
+    }
+
+    // Verify parameters were cleared
+    DOCTEST_CHECK(!context_test.doesPrimitiveDataExist(UUIDs[0], "chlorophyll"));
+
+    // Now retrieve parameters from spectrum
+    DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromSpectrum(UUIDs));
+
+    // Verify all parameters were correctly assigned
+    for (uint UUID : UUIDs) {
+        float chl, car, ant, water, dry;
+
+        DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "chlorophyll", chl));
+        DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "carotenoid", car));
+        DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "anthocyanin", ant));
+        DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "water", water));
+        DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "drymass", dry));
+
+        DOCTEST_CHECK(chl == doctest::Approx(props.chlorophyllcontent).epsilon(err_tol));
+        DOCTEST_CHECK(car == doctest::Approx(props.carotenoidcontent).epsilon(err_tol));
+        DOCTEST_CHECK(ant == doctest::Approx(props.anthocyancontent).epsilon(err_tol));
+        DOCTEST_CHECK(water == doctest::Approx(props.watermass).epsilon(err_tol));
+        DOCTEST_CHECK(dry == doctest::Approx(props.drymass).epsilon(err_tol));
+    }
+}
+
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - Single UUID Overload") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    LeafOpticsProperties props;
+    props.chlorophyllcontent = 55.0f;
+    props.carotenoidcontent = 14.0f;
+
+    std::string label = "test_single_uuid";
+
+    // Generate spectrum
+    leafoptics.run(std::vector<uint>{UUID}, props, label);
+
+    // Clear parameters
+    context_test.clearPrimitiveData(UUID, "chlorophyll");
+    context_test.clearPrimitiveData(UUID, "carotenoid");
+
+    // Retrieve using single UUID overload
+    DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromSpectrum(UUID));
+
+    // Verify parameters were assigned
+    float chl, car;
+    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "chlorophyll", chl));
+    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "carotenoid", car));
+
+    DOCTEST_CHECK(chl == doctest::Approx(props.chlorophyllcontent).epsilon(err_tol));
+    DOCTEST_CHECK(car == doctest::Approx(props.carotenoidcontent).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - Non-LeafOptics Spectrum") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    // Assign a spectrum label that doesn't match LeafOptics pattern
+    context_test.setPrimitiveData(UUID, "reflectivity_spectrum", "custom_spectrum");
+
+    // Should not crash, just skip silently
+    DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromSpectrum(UUID));
+
+    // No parameters should be set
+    DOCTEST_CHECK(!context_test.doesPrimitiveDataExist(UUID, "chlorophyll"));
+}
+
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - Missing Spectrum") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    // Primitive has no reflectivity_spectrum data
+    // Should not crash, just skip silently
+    DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromSpectrum(UUID));
+
+    // No parameters should be set
+    DOCTEST_CHECK(!context_test.doesPrimitiveDataExist(UUID, "chlorophyll"));
+}
+
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - Unknown Label") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    // Assign a LeafOptics-style label that wasn't generated by this instance
+    context_test.setPrimitiveData(UUID, "reflectivity_spectrum", "leaf_reflectivity_unknown");
+
+    // Should not crash, just skip silently
+    DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromSpectrum(UUID));
+
+    // No parameters should be set (or they might remain from previous operations)
+}
+
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - With Brown Pigments") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    LeafOpticsProperties props;
+    props.chlorophyllcontent = 20.0f;
+    props.brownpigments = 0.4f; // Non-zero brown pigments
+
+    std::string label = "test_brown";
+
+    leafoptics.run(std::vector<uint>{UUID}, props, label);
+
+    // Clear parameters
+    context_test.clearPrimitiveData(UUID, "chlorophyll");
+    context_test.clearPrimitiveData(UUID, "brown");
+
+    // Retrieve parameters
+    leafoptics.getPropertiesFromSpectrum(UUID);
+
+    // Verify brown pigments were assigned
+    float brown;
+    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "brown", brown));
+    DOCTEST_CHECK(brown == doctest::Approx(props.brownpigments).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - PROSPECT-PRO Mode") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    LeafOpticsProperties props;
+    props.chlorophyllcontent = 40.0f;
+    props.drymass = 0.0f; // Zero dry mass
+    props.protein = 0.002f;
+    props.carbonconstituents = 0.008f;
+
+    std::string label = "test_pro_mode";
+
+    leafoptics.run(std::vector<uint>{UUID}, props, label);
+
+    // Clear parameters
+    context_test.clearPrimitiveData(UUID, "chlorophyll");
+    context_test.clearPrimitiveData(UUID, "protein");
+    context_test.clearPrimitiveData(UUID, "cellulose");
+
+    // Retrieve parameters
+    leafoptics.getPropertiesFromSpectrum(UUID);
+
+    // Verify protein and carbon were assigned (not dry mass)
+    float protein, carbon;
+    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "protein", protein));
+    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "cellulose", carbon));
+
+    DOCTEST_CHECK(protein == doctest::Approx(props.protein).epsilon(err_tol));
+    DOCTEST_CHECK(carbon == doctest::Approx(props.carbonconstituents).epsilon(err_tol));
+
+    // Should not have dry mass data
+    DOCTEST_CHECK(!context_test.doesPrimitiveDataExist(UUID, "drymass"));
+}
+
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - Multiple Spectra") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    // Create two primitives with different spectra
+    uint UUID1 = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    uint UUID2 = context_test.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+
+    LeafOpticsProperties props1;
+    props1.chlorophyllcontent = 30.0f;
+    props1.carotenoidcontent = 8.0f;
+
+    LeafOpticsProperties props2;
+    props2.chlorophyllcontent = 60.0f;
+    props2.carotenoidcontent = 16.0f;
+
+    // Generate different spectra
+    leafoptics.run(std::vector<uint>{UUID1}, props1, "spectrum1");
+    leafoptics.run(std::vector<uint>{UUID2}, props2, "spectrum2");
+
+    // Clear parameters
+    context_test.clearPrimitiveData(UUID1, "chlorophyll");
+    context_test.clearPrimitiveData(UUID2, "chlorophyll");
+
+    // Retrieve parameters for both
+    leafoptics.getPropertiesFromSpectrum(std::vector<uint>{UUID1, UUID2});
+
+    // Verify each primitive got its correct parameters
+    float chl1, chl2;
+    context_test.getPrimitiveData(UUID1, "chlorophyll", chl1);
+    context_test.getPrimitiveData(UUID2, "chlorophyll", chl2);
+
+    DOCTEST_CHECK(chl1 == doctest::Approx(props1.chlorophyllcontent).epsilon(err_tol));
+    DOCTEST_CHECK(chl2 == doctest::Approx(props2.chlorophyllcontent).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - Empty UUID Vector") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    std::vector<uint> empty_UUIDs;
+
+    // Should not crash with empty vector
+    DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromSpectrum(empty_UUIDs));
+}
+
 int LeafOptics::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

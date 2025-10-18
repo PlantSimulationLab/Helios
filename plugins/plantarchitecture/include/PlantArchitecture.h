@@ -815,9 +815,9 @@ struct ShootParameters {
     RandomParameter_int max_nodes_per_season;
     //! Cross-sectional area of internode in cm² branch area per m² downstream leaf area; set 0 to disable girth scaling
     RandomParameter_float girth_area_factor;
-    //! Angle (deg) of the child shoot with respect to the parent shoot at the tip of the parent shoot
+    //! Angle (deg) at which child shoots emerge from this parent shoot at the tip of the parent shoot
     RandomParameter_float insertion_angle_tip;
-    //! Rate (deg/node) at which the child insertion angle increases moving down the parent shoot
+    //! Rate (deg/node) at which the child shoot insertion angle increases moving down this parent shoot
     RandomParameter_float insertion_angle_decay_rate;
     //! Maximum internode length (m) of a child shoot
     RandomParameter_float internode_length_max;

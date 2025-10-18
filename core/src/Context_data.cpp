@@ -537,6 +537,127 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
     }
 }
 
+void Context::setObjectDataFromPrimitiveDataMean(uint objID, const std::string &label) {
+#ifdef HELIOS_DEBUG
+    if (!doesObjectExist(objID)) {
+        helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): Object ID of " + std::to_string(objID) + " does not exist in the Context.");
+    }
+#endif
+
+    // Get primitive UUIDs for this object
+    std::vector<uint> UUIDs = getObjectPrimitiveUUIDs(objID);
+
+    if (UUIDs.empty()) {
+        helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): Object ID " + std::to_string(objID) + " has no primitive children.");
+    }
+
+    // Determine the data type by checking the first primitive that has this data
+    HeliosDataType data_type = HELIOS_TYPE_UNKNOWN;
+    for (uint UUID : UUIDs) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
+            data_type = getPrimitiveDataType(label.c_str());
+            break;
+        }
+    }
+
+    if (data_type == HELIOS_TYPE_UNKNOWN) {
+        helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): Primitive data '" + label + "' does not exist for any primitives in object " + std::to_string(objID) + ".");
+    }
+
+    // Validate data type is supported for mean calculation
+    if (data_type != HELIOS_TYPE_FLOAT && data_type != HELIOS_TYPE_DOUBLE &&
+        data_type != HELIOS_TYPE_VEC2 && data_type != HELIOS_TYPE_VEC3 && data_type != HELIOS_TYPE_VEC4) {
+        helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): Cannot calculate mean for primitive data type. Only float, double, vec2, vec3, and vec4 are supported.");
+    }
+
+    // Calculate mean based on data type
+    if (data_type == HELIOS_TYPE_FLOAT) {
+        float value;
+        float sum = 0.f;
+        size_t count = 0;
+        for (uint UUID : UUIDs) {
+            if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
+                getPrimitiveData(UUID, label.c_str(), value);
+                sum += value;
+                count++;
+            }
+        }
+        if (count == 0) {
+            helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): No primitives in object " + std::to_string(objID) + " have primitive data '" + label + "'.");
+        }
+        float mean = sum / float(count);
+        setObjectData(objID, label.c_str(), mean);
+
+    } else if (data_type == HELIOS_TYPE_DOUBLE) {
+        double value;
+        double sum = 0.0;
+        size_t count = 0;
+        for (uint UUID : UUIDs) {
+            if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
+                getPrimitiveData(UUID, label.c_str(), value);
+                sum += value;
+                count++;
+            }
+        }
+        if (count == 0) {
+            helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): No primitives in object " + std::to_string(objID) + " have primitive data '" + label + "'.");
+        }
+        double mean = sum / double(count);
+        setObjectData(objID, label.c_str(), mean);
+
+    } else if (data_type == HELIOS_TYPE_VEC2) {
+        vec2 value;
+        vec2 sum(0.f, 0.f);
+        size_t count = 0;
+        for (uint UUID : UUIDs) {
+            if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
+                getPrimitiveData(UUID, label.c_str(), value);
+                sum = sum + value;
+                count++;
+            }
+        }
+        if (count == 0) {
+            helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): No primitives in object " + std::to_string(objID) + " have primitive data '" + label + "'.");
+        }
+        vec2 mean = sum / float(count);
+        setObjectData(objID, label.c_str(), mean);
+
+    } else if (data_type == HELIOS_TYPE_VEC3) {
+        vec3 value;
+        vec3 sum(0.f, 0.f, 0.f);
+        size_t count = 0;
+        for (uint UUID : UUIDs) {
+            if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
+                getPrimitiveData(UUID, label.c_str(), value);
+                sum = sum + value;
+                count++;
+            }
+        }
+        if (count == 0) {
+            helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): No primitives in object " + std::to_string(objID) + " have primitive data '" + label + "'.");
+        }
+        vec3 mean = sum / float(count);
+        setObjectData(objID, label.c_str(), mean);
+
+    } else if (data_type == HELIOS_TYPE_VEC4) {
+        vec4 value;
+        vec4 sum(0.f, 0.f, 0.f, 0.f);
+        size_t count = 0;
+        for (uint UUID : UUIDs) {
+            if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
+                getPrimitiveData(UUID, label.c_str(), value);
+                sum = sum + value;
+                count++;
+            }
+        }
+        if (count == 0) {
+            helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): No primitives in object " + std::to_string(objID) + " have primitive data '" + label + "'.");
+        }
+        vec4 mean = sum / float(count);
+        setObjectData(objID, label.c_str(), mean);
+    }
+}
+
 void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UUIDs, const std::string &label, float &awt_mean) const {
     float value, A;
     float sum = 0.f;

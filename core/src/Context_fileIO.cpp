@@ -3082,59 +3082,41 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             }
             outfile << "</globaldata_double>" << std::endl;
         } else if (type == HELIOS_TYPE_VEC2) {
-            outfile << "   <globaldata_vec2 label=\"" << label << "\">" << std::flush;
+            outfile << "   <globaldata_vec2 label=\"" << label << "\">" << std::endl;
             for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_vec2.at(i).x << " " << data.global_data_vec2.at(i).y << std::flush;
-                if (i != data.size - 1) {
-                    outfile << " " << std::flush;
-                }
+                outfile << "      " << data.global_data_vec2.at(i).x << " " << data.global_data_vec2.at(i).y << std::endl;
             }
-            outfile << "</globaldata_vec2>" << std::endl;
+            outfile << "   </globaldata_vec2>" << std::endl;
         } else if (type == HELIOS_TYPE_VEC3) {
-            outfile << "   <globaldata_vec3 label=\"" << label << "\">" << std::flush;
+            outfile << "   <globaldata_vec3 label=\"" << label << "\">" << std::endl;
             for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_vec3.at(i).x << " " << data.global_data_vec3.at(i).y << " " << data.global_data_vec3.at(i).z << std::flush;
-                if (i != data.size - 1) {
-                    outfile << " " << std::flush;
-                }
+                outfile << "      " << data.global_data_vec3.at(i).x << " " << data.global_data_vec3.at(i).y << " " << data.global_data_vec3.at(i).z << std::endl;
             }
-            outfile << "</globaldata_vec3>" << std::endl;
+            outfile << "   </globaldata_vec3>" << std::endl;
         } else if (type == HELIOS_TYPE_VEC4) {
-            outfile << "   <globaldata_vec4 label=\"" << label << "\">" << std::flush;
+            outfile << "   <globaldata_vec4 label=\"" << label << "\">" << std::endl;
             for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_vec4.at(i).x << " " << data.global_data_vec4.at(i).y << " " << data.global_data_vec4.at(i).z << " " << data.global_data_vec4.at(i).w << std::flush;
-                if (i != data.size - 1) {
-                    outfile << " " << std::flush;
-                }
+                outfile << "      " << data.global_data_vec4.at(i).x << " " << data.global_data_vec4.at(i).y << " " << data.global_data_vec4.at(i).z << " " << data.global_data_vec4.at(i).w << std::endl;
             }
-            outfile << "</globaldata_vec4>" << std::endl;
+            outfile << "   </globaldata_vec4>" << std::endl;
         } else if (type == HELIOS_TYPE_INT2) {
-            outfile << "   <globaldata_int2 label=\"" << label << "\">" << std::flush;
+            outfile << "   <globaldata_int2 label=\"" << label << "\">" << std::endl;
             for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_int2.at(i).x << " " << data.global_data_int2.at(i).y << std::flush;
-                if (i != data.size - 1) {
-                    outfile << " " << std::flush;
-                }
+                outfile << "      " << data.global_data_int2.at(i).x << " " << data.global_data_int2.at(i).y << std::endl;
             }
-            outfile << "</globaldata_int2>" << std::endl;
+            outfile << "   </globaldata_int2>" << std::endl;
         } else if (type == HELIOS_TYPE_INT3) {
-            outfile << "   <globaldata_int3 label=\"" << label << "\">" << std::flush;
+            outfile << "   <globaldata_int3 label=\"" << label << "\">" << std::endl;
             for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_int3.at(i).x << " " << data.global_data_int3.at(i).y << data.global_data_int3.at(i).z << std::flush;
-                if (i != data.size - 1) {
-                    outfile << " " << std::flush;
-                }
+                outfile << "      " << data.global_data_int3.at(i).x << " " << data.global_data_int3.at(i).y << " " << data.global_data_int3.at(i).z << std::endl;
             }
-            outfile << "</globaldata_int3>" << std::endl;
+            outfile << "   </globaldata_int3>" << std::endl;
         } else if (type == HELIOS_TYPE_INT4) {
-            outfile << "   <globaldata_int4 label=\"" << label << "\">" << std::flush;
+            outfile << "   <globaldata_int4 label=\"" << label << "\">" << std::endl;
             for (size_t i = 0; i < data.size; i++) {
-                outfile << data.global_data_int4.at(i).x << " " << data.global_data_int4.at(i).y << data.global_data_int4.at(i).z << data.global_data_int4.at(i).w << std::flush;
-                if (i != data.size - 1) {
-                    outfile << " " << std::flush;
-                }
+                outfile << "      " << data.global_data_int4.at(i).x << " " << data.global_data_int4.at(i).y << " " << data.global_data_int4.at(i).z << " " << data.global_data_int4.at(i).w << std::endl;
             }
-            outfile << "</globaldata_int4>" << std::endl;
+            outfile << "   </globaldata_int4>" << std::endl;
         } else if (type == HELIOS_TYPE_STRING) {
             outfile << "   <globaldata_string label=\"" << label << "\">" << std::flush;
             for (size_t i = 0; i < data.size; i++) {

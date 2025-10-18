@@ -979,13 +979,42 @@ int Shoot::appendPhytomer(float internode_radius, float internode_length_max, fl
             // first phytomer of a new shoot
             assert(parent_shoot_ID < shoot_tree_ptr->size() && parent_node_index < shoot_tree_ptr->at(parent_shoot_ID)->phytomers.size());
             parent_internode_axis = shoot_tree_ptr->at(parent_shoot_ID)->phytomers.at(parent_node_index)->getInternodeAxisVector(1.f);
-            parent_petiole_axis = shoot_tree_ptr->at(parent_shoot_ID)->phytomers.at(parent_node_index)->getPetioleAxisVector(0.f, parent_petiole_index);
+            // If the parent phytomer has no petioles, create a ghost petiole perpendicular to the internode
+            if (shoot_tree_ptr->at(parent_shoot_ID)->phytomers.at(parent_node_index)->petiole_vertices.empty()) {
+                parent_petiole_axis = cross(parent_internode_axis, make_vec3(0, 0, 1));
+                if (parent_petiole_axis.magnitude() < 0.01f) {
+                    // Internode is nearly vertical
+                    parent_petiole_axis = make_vec3(0, 1, 0);
+                }
+                parent_petiole_axis.normalize();
+                // Rotate ghost petiole by cumulative phyllotactic angle to match phyllotactic patterning
+                float phyllotactic_angle = shoot_tree_ptr->at(parent_shoot_ID)->phytomers.at(parent_node_index)->internode_phyllotactic_angle;
+                float cumulative_rotation = float(parent_node_index) * phyllotactic_angle;
+                parent_petiole_axis = rotatePointAboutLine(parent_petiole_axis, make_vec3(0, 0, 0), parent_internode_axis, cumulative_rotation);
+            } else {
+                parent_petiole_axis = shoot_tree_ptr->at(parent_shoot_ID)->phytomers.at(parent_node_index)->getPetioleAxisVector(0.f, parent_petiole_index);
+            }
         }
         internode_base_position = base_position;
     } else {
         // additional phytomer being added to an existing shoot
         parent_internode_axis = phytomers.back()->getInternodeAxisVector(1.f);
-        parent_petiole_axis = phytomers.back()->getPetioleAxisVector(0.f, 0);
+        // If the parent phytomer has no petioles, create a ghost petiole perpendicular to the internode
+        if (phytomers.back()->petiole_vertices.empty()) {
+            parent_petiole_axis = cross(parent_internode_axis, make_vec3(0, 0, 1));
+            if (parent_petiole_axis.magnitude() < 0.01f) {
+                // Internode is nearly vertical
+                parent_petiole_axis = make_vec3(0, 1, 0);
+            }
+            parent_petiole_axis.normalize();
+            // Rotate ghost petiole by cumulative phyllotactic angle to match phyllotactic patterning
+            uint prev_phytomer_index = phytomers.size() - 1;
+            float phyllotactic_angle = phytomers.back()->internode_phyllotactic_angle;
+            float cumulative_rotation = float(prev_phytomer_index) * phyllotactic_angle;
+            parent_petiole_axis = rotatePointAboutLine(parent_petiole_axis, make_vec3(0, 0, 0), parent_internode_axis, cumulative_rotation);
+        } else {
+            parent_petiole_axis = phytomers.back()->getPetioleAxisVector(0.f, 0);
+        }
         internode_base_position = shoot_internode_vertices.back().back();
     }
 
@@ -1395,14 +1424,14 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         build_context_geometry_petiole = false;
     }
 
-    if (phytomer_parameters.petiole.petioles_per_internode < 1) {
+    if (phytomer_parameters.petiole.petioles_per_internode == 0) {
+        // Allow 0 petioles per internode, but ensure no leaves are created
         build_context_geometry_petiole = false;
-        phytomer_parameters.petiole.petioles_per_internode = 1;
         phytomer_parameters.leaf.leaves_per_petiole = 0;
     }
 
-    if (phytomer_parameters.petiole.petioles_per_internode == 0) {
-        helios_runtime_error("ERROR (PlantArchitecture::Phytomer): Number of petioles per internode must be greater than zero.");
+    if (phytomer_parameters.petiole.petioles_per_internode < 0) {
+        helios_runtime_error("ERROR (PlantArchitecture::Phytomer): Number of petioles per internode cannot be negative.");
     }
 
     current_internode_scale_factor = internode_length_scale_factor_fraction;
@@ -1957,6 +1986,19 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             inflorescence_bending_axis = cross(make_vec3(0, 0, 1), petiole_axis_actual);
         }
     }
+
+    // Special case: if there are no petioles, still create vegetative buds directly on the internode
+    if (phytomer_parameters.petiole.petioles_per_internode == 0) {
+        std::vector<VegetativeBud> vegetative_buds_new;
+        vegetative_buds_new.resize(phytomer_parameters.internode.max_vegetative_buds_per_petiole.val());
+        phytomer_parameters.internode.max_vegetative_buds_per_petiole.resample();
+        axillary_vegetative_buds.push_back(vegetative_buds_new);
+
+        std::vector<FloralBud> floral_buds_new;
+        floral_buds_new.resize(phytomer_parameters.internode.max_floral_buds_per_petiole.val());
+        phytomer_parameters.internode.max_floral_buds_per_petiole.resample();
+        floral_buds.push_back(floral_buds_new);
+    }
 }
 
 float Phytomer::calculatePhytomerVolume(uint node_number) const {
@@ -2008,7 +2050,13 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
 
     // rotate peduncle to azimuth of petiole and apply peduncle base yaw rotation
     vec3 internode_axis = getAxisVector(1.f, getInternodeNodePositions());
-    vec3 parent_petiole_base_axis = getPetioleAxisVector(0.f, fbud.parent_index);
+    vec3 parent_petiole_base_axis;
+    if (petiole_vertices.empty()) {
+        // No petioles - use internode axis instead
+        parent_petiole_base_axis = internode_axis;
+    } else {
+        parent_petiole_base_axis = getPetioleAxisVector(0.f, fbud.parent_index);
+    }
     float parent_petiole_azimuth = -std::atan2(parent_petiole_base_axis.y, parent_petiole_base_axis.x);
     float current_peduncle_azimuth = -std::atan2(peduncle_axis.y, peduncle_axis.x);
     peduncle_axis = rotatePointAboutLine(peduncle_axis, nullorigin, internode_axis, (current_peduncle_azimuth - parent_petiole_azimuth));
@@ -2248,6 +2296,11 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
 }
 
 void Phytomer::setPetioleBase(const helios::vec3 &base_position) {
+    // If there are no petioles, nothing to update
+    if (petiole_vertices.empty()) {
+        return;
+    }
+
     vec3 old_base = petiole_vertices.front().front();
     vec3 shift = base_position - old_base;
 
@@ -2440,9 +2493,15 @@ void Phytomer::setLeafScaleFraction(uint petiole_index, float leaf_scale_factor_
             node++;
         }
     } else if (build_context_geometry_petiole) {
-        // Petiole geometry doesn't exist - scale the radii data and try to create geometry
+        // Petiole geometry doesn't exist - scale the radii AND vertices data and try to create geometry
+        vec3 base = petiole_vertices.at(petiole_index).at(0);
         for (uint node = 0; node < petiole_radii.at(petiole_index).size(); node++) {
             petiole_radii.at(petiole_index).at(node) *= delta_scale;
+        }
+        // Scale vertices relative to base point to match the scaling of existing geometry
+        for (uint node = 1; node < petiole_vertices.at(petiole_index).size(); node++) {
+            vec3 offset = petiole_vertices.at(petiole_index).at(node) - base;
+            petiole_vertices.at(petiole_index).at(node) = base + offset * delta_scale;
         }
 
         uint Ndiv_petiole_radius = std::max(uint(3), phytomer_parameters.petiole.radial_subdivisions);
@@ -2897,8 +2956,14 @@ uint PlantArchitecture::addChildShoot(uint plantID, int parent_shoot_ID, uint pa
     vec3 shoot_base_position = parent_shoot_ptr->shoot_internode_vertices.at(parent_node_index).back();
 
     // Shift the shoot base position outward by the parent internode radius
-    vec3 petiole_axis = parent_shoot_ptr->phytomers.at(parent_node_index)->getPetioleAxisVector(0, petiole_index);
-    shoot_base_position += 0.9f * petiole_axis * parent_shoot_ptr->phytomers.at(parent_node_index)->getInternodeRadius(1.f);
+    vec3 axis_vector;
+    if (parent_shoot_ptr->phytomers.at(parent_node_index)->petiole_vertices.empty()) {
+        // No petioles - use internode axis instead
+        axis_vector = parent_shoot_ptr->phytomers.at(parent_node_index)->getInternodeAxisVector(1.f);
+    } else {
+        axis_vector = parent_shoot_ptr->phytomers.at(parent_node_index)->getPetioleAxisVector(0, petiole_index);
+    }
+    shoot_base_position += 0.9f * axis_vector * parent_shoot_ptr->phytomers.at(parent_node_index)->getInternodeRadius(1.f);
 
     // Create the new shoot
     auto *shoot_new = (new Shoot(plantID, childID, parent_shoot_ID, parent_node_index, petiole_index, parent_rank + 1, shoot_base_position, shoot_base_rotation, current_node_number, internode_length_max, shoot_parameters, shoot_type_label, this));
@@ -2925,10 +2990,16 @@ uint PlantArchitecture::addEpicormicShoot(uint plantID, int parent_shoot_ID, flo
         parent_node_index = std::ceil(parent_position_fraction * float(parent_shoot->phytomers.size())) - 1;
     }
 
-    vec3 petiole_axis = plant_instances.at(plantID).shoot_tree.at(parent_shoot_ID)->phytomers.at(parent_node_index)->getPetioleAxisVector(0, 0);
+    vec3 axis_vector;
+    if (plant_instances.at(plantID).shoot_tree.at(parent_shoot_ID)->phytomers.at(parent_node_index)->petiole_vertices.empty()) {
+        // No petioles - use internode axis instead
+        axis_vector = plant_instances.at(plantID).shoot_tree.at(parent_shoot_ID)->phytomers.at(parent_node_index)->getInternodeAxisVector(1.f);
+    } else {
+        axis_vector = plant_instances.at(plantID).shoot_tree.at(parent_shoot_ID)->phytomers.at(parent_node_index)->getPetioleAxisVector(0, 0);
+    }
 
     //\todo Figuring out how to set this correctly to make the shoot vertical, which avoids having to write a child shoot function.
-    AxisRotation base_rotation = make_AxisRotation(0, acos_safe(petiole_axis.z), 0);
+    AxisRotation base_rotation = make_AxisRotation(0, acos_safe(axis_vector.z), 0);
 
     return addChildShoot(plantID, parent_shoot_ID, parent_node_index, current_node_number, base_rotation, internode_radius, internode_length_max, internode_length_scale_factor_fraction, leaf_scale_factor_fraction, radius_taper, shoot_type_label, 0);
 }
@@ -4699,18 +4770,17 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                                 ShootParameters *new_shoot_parameters = &plant_instance.shoot_types_snapshot.at(vbud.shoot_type_label);
                                 int parent_node_count = shoot->current_node_number;
 
-                                //                            float insertion_angle_adjustment = fmin(new_shoot_parameters->insertion_angle_tip.val() + new_shoot_parameters->insertion_angle_decay_rate.val() * float(parent_node_count -
-                                //                            phytomer->shoot_index.x - 1), 90.f); AxisRotation base_rotation = make_AxisRotation(deg2rad(insertion_angle_adjustment), deg2rad(new_shoot_parameters->base_yaw.val()),
-                                //                            deg2rad(new_shoot_parameters->base_roll.val())); new_shoot_parameters->base_yaw.resample(); if( new_shoot_parameters->insertion_angle_decay_rate.val()==0 ){
-                                //                                new_shoot_parameters->insertion_angle_tip.resample();
-                                //                            }
-                                float insertion_angle_adjustment = fmin(shoot->shoot_parameters.insertion_angle_tip.val() + shoot->shoot_parameters.insertion_angle_decay_rate.val() * float(parent_node_count - phytomer->shoot_index.x - 1), 90.f);
+                                float insertion_angle_adjustment = fmin(new_shoot_parameters->insertion_angle_tip.val() + new_shoot_parameters->insertion_angle_decay_rate.val() * float(parent_node_count - phytomer->shoot_index.x - 1), 90.f);
                                 // Calculate angular offset for child shoot based on parent petiole position
-                                float budrot = float(parent_petiole_index) * 2.f * PI_F / float(phytomer->axillary_vegetative_buds.size());
+                                // Only apply when there are multiple petioles that need circumferential distribution
+                                float budrot = 0.f;
+                                if (phytomer->axillary_vegetative_buds.size() > 1) {
+                                    budrot = float(parent_petiole_index) * 2.f * PI_F / float(phytomer->axillary_vegetative_buds.size());
+                                }
                                 AxisRotation base_rotation = make_AxisRotation(deg2rad(insertion_angle_adjustment), deg2rad(new_shoot_parameters->base_yaw.val()) + budrot, deg2rad(new_shoot_parameters->base_roll.val()));
                                 new_shoot_parameters->base_yaw.resample();
-                                if (shoot->shoot_parameters.insertion_angle_decay_rate.val() == 0) {
-                                    shoot->shoot_parameters.insertion_angle_tip.resample();
+                                if (new_shoot_parameters->insertion_angle_decay_rate.val() == 0) {
+                                    new_shoot_parameters->insertion_angle_tip.resample();
                                 }
 
                                 // scale the shoot internode length based on proximity from the tip

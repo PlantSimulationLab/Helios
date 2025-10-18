@@ -4221,6 +4221,16 @@ namespace helios {
             }
         }
 
+        //! Set object data from mean of primitive data values for all child primitives
+        /**
+         * \param[in] objID Unique identifier of compound object
+         * \param[in] label Name of primitive data to aggregate and resulting object data label
+         * \note The data type is automatically detected from the primitive data (supports float, double, vec2, vec3, vec4)
+         * \note Only primitives that have the specified primitive data are included in the calculation
+         * \note Raises error if no primitives have the specified primitive data
+         */
+        void setObjectDataFromPrimitiveDataMean(uint objID, const std::string &label);
+
         //! Get data value associated with a compound object
         /**
          * \tparam T Object data type

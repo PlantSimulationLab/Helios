@@ -1119,7 +1119,8 @@ void Visualizer::updateNavigationGizmo() {
     float aspect_ratio = static_cast<float>(Wdisplay) / static_cast<float>(Hdisplay);
 
     // Gizmo center position - keep fixed regardless of aspect ratio
-    const vec3 gizmo_center = make_vec3(0.9f, 0.1f, 0.01f); // Lower-right corner, slightly in front
+    // Use -0.9999 to ensure visibility even when scene geometry is extremely close to camera
+    const vec3 gizmo_center = make_vec3(0.9f, 0.1f, -0.9999f); // Lower-right corner, as close as possible to near plane
 
     // Compute camera view matrix directly from current camera position
     // This avoids relying on potentially uninitialized cameraViewMatrix

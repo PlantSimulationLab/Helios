@@ -822,6 +822,7 @@ void PlantArchitecture::initializeBindweedShoots() {
     ShootParameters shoot_parameters_base = shoot_parameters_primary;
     shoot_parameters_base.phytomer_parameters = phytomer_parameters_bindweed;
     shoot_parameters_base.phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(137.5 - 10, 137.5 + 10);
+    shoot_parameters_base.phytomer_parameters.petiole.petioles_per_internode = 0;
     shoot_parameters_base.phytomer_parameters.internode.pitch = 0;
     shoot_parameters_base.phytomer_parameters.petiole.pitch = 0;
     shoot_parameters_base.vegetative_bud_break_probability_min = 1.0;
@@ -2410,19 +2411,21 @@ void PlantArchitecture::initializePuncturevineShoots() {
     shoot_parameters_primary.girth_area_factor = 0.f;
     shoot_parameters_primary.internode_length_max = 0.02;
     shoot_parameters_primary.internode_length_decay_rate = 0;
-    shoot_parameters_primary.insertion_angle_tip.uniformDistribution(50, 80);
+    shoot_parameters_primary.insertion_angle_tip.uniformDistribution(75, 85);
+    shoot_parameters_primary.insertion_angle_decay_rate = 0;
     shoot_parameters_primary.flowers_require_dormancy = false;
     shoot_parameters_primary.growth_requires_dormancy = false;
     shoot_parameters_primary.flower_bud_break_probability = 0.2;
     shoot_parameters_primary.determinate_shoot_growth = false;
     shoot_parameters_primary.max_nodes = 15;
-    shoot_parameters_primary.gravitropic_curvature = 50;
+    shoot_parameters_primary.gravitropic_curvature = 25;
     shoot_parameters_primary.tortuosity = 0;
     shoot_parameters_primary.defineChildShootTypes({"secondary_puncturevine"}, {1.f});
 
     ShootParameters shoot_parameters_base = shoot_parameters_primary;
     shoot_parameters_base.phytomer_parameters = phytomer_parameters_puncturevine;
     shoot_parameters_base.phytomer_parameters.internode.phyllotactic_angle.uniformDistribution(137.5 - 10, 137.5 + 10);
+    shoot_parameters_base.phytomer_parameters.petiole.petioles_per_internode = 0;
     shoot_parameters_base.phytomer_parameters.internode.pitch = 0;
     shoot_parameters_base.phytomer_parameters.petiole.pitch = 0;
     shoot_parameters_base.vegetative_bud_break_probability_min = 1;

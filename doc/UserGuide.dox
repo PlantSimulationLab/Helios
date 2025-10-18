@@ -38,6 +38,14 @@
     <iframe width="560" height="315" src="https://www.youtube.com/embed/pPoAfE69VcI?si=13mwnedvYq_ekuk-" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
   \endhtmlonly
 
+ <p></p>
+
+ <b>NEW</b>: Helios now has a Python API! Please see the [PyHelios API documentation](https://plantsimulationlab.github.io/PyHelios/) for more information.
+
+ <div align="center">
+   <img src="https://raw.githubusercontent.com/PlantSimulationLab/PyHelios/master/docs/images/PyHelios_logo_whiteborder.png"  alt="" width="100" />
+ </div>
+
  <p> <br><br><br><br> </p>
 
  <div align="center">

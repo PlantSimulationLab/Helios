@@ -1319,12 +1319,6 @@
 		710 0.000478
 		720 0.000199
 	</globaldata_vec2>
-
-	<!-- Camera:Canon 20D -->
-	<!-- Source:camspec_database.txt, http://www.gujinwei.org/research/camspec/db.html -->
-	<!-- MeasurementMethod:Monochromator -->
-	<!-- Copyright:Rochester Institute of Technology, all rights reserved. -->
-	<!-- License:Creative Commons BY-NC-SA 4.0, https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode -->
 	<globaldata_vec2 label="Canon_20D_green">
 		400 0.001769
 		410 0.002598
@@ -1360,12 +1354,6 @@
 		710 0.000155
 		720 0.000087
 	</globaldata_vec2>
-
-	<!-- Camera:Canon 20D -->
-	<!-- Source:camspec_database.txt, http://www.gujinwei.org/research/camspec/db.html -->
-	<!-- MeasurementMethod:Monochromator -->
-	<!-- Copyright:Rochester Institute of Technology, all rights reserved. -->
-	<!-- License:Creative Commons BY-NC-SA 4.0, https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode -->
 	<globaldata_vec2 label="Canon_20D_blue">
 		400 0.004222
 		410 0.014449
@@ -1442,12 +1430,6 @@
 		710 0.001117
 		720 0.000471
 	</globaldata_vec2>
-
-	<!-- Camera:Nikon D700 -->
-	<!-- Source:camspec_database.txt, http://www.gujinwei.org/research/camspec/db.html -->
-	<!-- MeasurementMethod:Monochromator -->
-	<!-- Copyright:Rochester Institute of Technology, all rights reserved. -->
-	<!-- License:Creative Commons BY-NC-SA 4.0, https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode -->
 	<globaldata_vec2 label="Nikon_D700_green">
 		400 0.001434
 		410 0.001874
@@ -1483,12 +1465,6 @@
 		710 0.000238
 		720 0.000118
 	</globaldata_vec2>
-
-	<!-- Camera:Nikon D700 -->
-	<!-- Source:camspec_database.txt, http://www.gujinwei.org/research/camspec/db.html -->
-	<!-- MeasurementMethod:Monochromator -->
-	<!-- Copyright:Rochester Institute of Technology, all rights reserved. -->
-	<!-- License:Creative Commons BY-NC-SA 4.0, https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode -->
 	<globaldata_vec2 label="Nikon_D700_blue">
 		400 0.005916
 		410 0.014395
@@ -1565,12 +1541,6 @@
 		710 0.020863
 		720 0.013428
 	</globaldata_vec2>
-
-	<!-- Camera:Nikon D50 -->
-	<!-- Source:camspec_database.txt, http://www.gujinwei.org/research/camspec/db.html -->
-	<!-- MeasurementMethod:Monochromator -->
-	<!-- Copyright:Rochester Institute of Technology, all rights reserved. -->
-	<!-- License:Creative Commons BY-NC-SA 4.0,https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode -->
 	<globaldata_vec2 label="Nikon_D50_green">
 		400 0.037561
 		410 0.041006
@@ -1606,12 +1576,6 @@
 		710 0.004048
 		720 0.002517
 	</globaldata_vec2>
-
-	<!-- Camera:Nikon D50 -->
-	<!-- Source:camspec_database.txt, http://www.gujinwei.org/research/camspec/db.html -->
-	<!-- MeasurementMethod:Monochromator -->
-	<!-- Copyright:Rochester Institute of Technology, all rights reserved. -->
-	<!-- License:Creative Commons BY-NC-SA 4.0,https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode -->
 	<globaldata_vec2 label="Nikon_D50_blue">
 		400 0.271390
 		410 0.359290
@@ -1688,12 +1652,6 @@
 		710 0.000745
 		720 0.000242
 	</globaldata_vec2>
-
-	<!-- Camera:SONY NEX-5N -->
-	<!-- Source:camspec_database.txt, http://www.gujinwei.org/research/camspec/db.html -->
-	<!-- MeasurementMethod:Monochromator -->
-	<!-- Copyright:Rochester Institute of Technology, all rights reserved. -->
-	<!-- License:Creative Commons BY-NC-SA 4.0, https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode -->
 	<globaldata_vec2 label="SONY_NEX5N_green">
 		400 0.008747
 		410 0.075143
@@ -1729,12 +1687,6 @@
 		710 0.000329
 		720 0.000133
 	</globaldata_vec2>
-
-	<!-- Camera:SONY NEX-5N -->
-	<!-- Source:camspec_database.txt, http://www.gujinwei.org/research/camspec/db.html -->
-	<!-- MeasurementMethod:Monochromator -->
-	<!-- Copyright:Rochester Institute of Technology, all rights reserved. -->
-	<!-- License:Creative Commons BY-NC-SA 4.0, https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode -->
 	<globaldata_vec2 label="SONY_NEX5N_blue">
 		400 0.033016
 		410 0.352540

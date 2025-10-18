@@ -1790,6 +1790,12 @@ void CollisionDetection::transferBVHToGPU() {
     }
     allocateGPUMemory();
 
+    // Re-check if GPU acceleration is still enabled after allocation attempt
+    // allocateGPUMemory() may have disabled it due to lack of GPU hardware
+    if (!gpu_acceleration_enabled) {
+        return;  // Gracefully fall back to CPU mode
+    }
+
     // Verify allocation succeeded
     if (!gpu_memory_allocated || d_bvh_nodes == nullptr || d_primitive_indices == nullptr) {
         helios_runtime_error("ERROR: Failed to allocate GPU memory for BVH transfer");
