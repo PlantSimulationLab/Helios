@@ -2179,8 +2179,8 @@ DOCTEST_TEST_CASE("CameraCalibration Basic Functionality") {
     std::vector<uint> calibrite_UUIDs = calibration.addCalibriteColorboard(make_vec3(0, 0.5, 0.001), 0.05);
     DOCTEST_CHECK(calibrite_UUIDs.size() == 24); // Calibrite ColorChecker Classic has 24 patches
 
-    // Test 2: getColorBoardUUIDs should return the added colorboard
-    std::vector<uint> all_colorboard_UUIDs = calibration.getColorBoardUUIDs();
+    // Test 2: getAllColorBoardUUIDs should return the added colorboard
+    std::vector<uint> all_colorboard_UUIDs = calibration.getAllColorBoardUUIDs();
     DOCTEST_CHECK(all_colorboard_UUIDs.size() == 24); // Only the Calibrite colorboard
 
     // Test 3: Verify context has the colorboard primitives
@@ -2233,7 +2233,7 @@ DOCTEST_TEST_CASE("CameraCalibration DGK Integration") {
     // We can't directly test the Lab values since they're protected methods
     // But we can verify that the implementation compiles and basic methods work
 
-    std::vector<uint> colorboard_UUIDs = calibration.getColorBoardUUIDs();
+    std::vector<uint> colorboard_UUIDs = calibration.getAllColorBoardUUIDs();
     // Initially empty since no colorboard has been added
     DOCTEST_CHECK(colorboard_UUIDs.size() == 0);
 
@@ -2261,6 +2261,58 @@ DOCTEST_TEST_CASE("CameraCalibration DGK Integration") {
 
     // Note: The old CameraCalibration::autoCalibrateCameraImage() method has been removed
     // Auto-calibration is now handled by RadiationModel::autoCalibrateCameraImage()
+}
+
+DOCTEST_TEST_CASE("CameraCalibration Multiple Colorboards") {
+    Context context;
+    CameraCalibration calibration(&context);
+
+    // Test 1: Add multiple different colorboard types
+    std::vector<uint> dgk_UUIDs = calibration.addDGKColorboard(make_vec3(0, 0, 0.001), 0.05);
+    DOCTEST_CHECK(dgk_UUIDs.size() == 18); // DGK has 18 patches
+
+    std::vector<uint> calibrite_UUIDs = calibration.addCalibriteColorboard(make_vec3(0.5, 0, 0.001), 0.05);
+    DOCTEST_CHECK(calibrite_UUIDs.size() == 24); // Calibrite has 24 patches
+
+    std::vector<uint> spyder_UUIDs = calibration.addSpyderCHECKRColorboard(make_vec3(1.0, 0, 0.001), 0.05);
+    DOCTEST_CHECK(spyder_UUIDs.size() == 24); // SpyderCHECKR has 24 patches
+
+    // Test 2: getAllColorBoardUUIDs should return all colorboards combined
+    std::vector<uint> all_UUIDs = calibration.getAllColorBoardUUIDs();
+    DOCTEST_CHECK(all_UUIDs.size() == 66); // 18 + 24 + 24 = 66 total patches
+
+    // Test 3: detectColorBoardTypes should find all three types
+    std::vector<std::string> detected_types = calibration.detectColorBoardTypes();
+    DOCTEST_CHECK(detected_types.size() == 3);
+    DOCTEST_CHECK(std::find(detected_types.begin(), detected_types.end(), "DGK") != detected_types.end());
+    DOCTEST_CHECK(std::find(detected_types.begin(), detected_types.end(), "Calibrite") != detected_types.end());
+    DOCTEST_CHECK(std::find(detected_types.begin(), detected_types.end(), "SpyderCHECKR") != detected_types.end());
+
+    // Test 4: Adding the same type again should replace it (with warning)
+    std::vector<uint> dgk_UUIDs_2 = calibration.addDGKColorboard(make_vec3(0, 0.5, 0.001), 0.05);
+    DOCTEST_CHECK(dgk_UUIDs_2.size() == 18);
+
+    // Should still have 66 patches total (18 + 24 + 24), since the old DGK was replaced
+    std::vector<uint> all_UUIDs_2 = calibration.getAllColorBoardUUIDs();
+    DOCTEST_CHECK(all_UUIDs_2.size() == 66);
+
+    // Test 5: Verify each colorboard has correct primitive data labels
+    int dgk_labeled = 0, calibrite_labeled = 0, spyder_labeled = 0;
+    std::vector<uint> context_UUIDs = context.getAllUUIDs();
+    for (uint UUID : context_UUIDs) {
+        if (context.doesPrimitiveDataExist(UUID, "colorboard_DGK")) {
+            dgk_labeled++;
+        }
+        if (context.doesPrimitiveDataExist(UUID, "colorboard_Calibrite")) {
+            calibrite_labeled++;
+        }
+        if (context.doesPrimitiveDataExist(UUID, "colorboard_SpyderCHECKR")) {
+            spyder_labeled++;
+        }
+    }
+    DOCTEST_CHECK(dgk_labeled == 18);
+    DOCTEST_CHECK(calibrite_labeled == 24);
+    DOCTEST_CHECK(spyder_labeled == 24);
 }
 
 DOCTEST_TEST_CASE("RadiationModel CCM Export and Import") {

@@ -107,11 +107,11 @@ struct CameraCalibration {
     std::vector<uint> addSpyderCHECKRColorboard(const helios::vec3 &centrelocation, float patchsize = 0.5, const helios::vec3 &rotationrad = helios::make_vec3(0, 0, 0));
 
     /**
-     * \brief Retrieves a list of color board UUIDs.
+     * \brief Retrieves all color board UUIDs from all colorboards.
      *
-     * \return A vector containing the UUIDs of color boards.
+     * \return A vector containing the UUIDs of all color board patches from all colorboards.
      */
-    std::vector<uint> getColorBoardUUIDs();
+    std::vector<uint> getAllColorBoardUUIDs() const;
 
     //! Write XML file from spectral vectors containing both wavelengths and spectral values
     /**
@@ -220,8 +220,8 @@ struct CameraCalibration {
         }
     };
 
-    //! Detect which colorboard type is present in the scene
-    std::string detectColorBoardType() const;
+    //! Detect which colorboard types are present in the scene
+    std::vector<std::string> detectColorBoardTypes() const;
 
     //! Get reference Lab values for DGK colorboard (18 patches)
     std::vector<LabColor> getReferenceLab_DGK() const;
@@ -261,8 +261,8 @@ protected:
      */
     std::vector<float> expandSpectrum(const std::vector<helios::vec2> &targetspectrum, float scale);
 
-    //! UUIDs of colorboard patches
-    std::vector<uint> UUIDs_colorboard;
+    //! UUIDs of colorboard patches organized by type
+    std::map<std::string, std::vector<uint>> UUIDs_colorboards;
 
     std::vector<uint> UUIDs_black;
 

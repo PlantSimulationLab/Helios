@@ -393,7 +393,7 @@ void RadiationModel::updateCameraResponse(const std::string &orginalcameralabel,
     cameraproperties.lens_diameter = calibratecamera.lens_diameter;
     cameraproperties.FOV_aspect_ratio = calibratecamera.FOV_aspect_ratio;
 
-    std::vector<uint> UUIDs_target = cameracalibration->getColorBoardUUIDs();
+    std::vector<uint> UUIDs_target = cameracalibration->getAllColorBoardUUIDs();
     std::string cameralabel = "calibration";
     std::map<uint, std::vector<vec2>> simulatedcolorboardspectra;
     for (uint UUID: UUIDs_target) {
@@ -484,7 +484,7 @@ void RadiationModel::updateCameraResponse(const std::string &orginalcameralabel,
     // Update camera response spectra
     cameracalibration->updateCameraResponseSpectra(cameraresponselabels, calibratedmark, simulatedcolorboardspectra, truevalues);
     // Reset color board spectra
-    std::vector<uint> UUIDs_colorbd = cameracalibration->getColorBoardUUIDs();
+    std::vector<uint> UUIDs_colorbd = cameracalibration->getAllColorBoardUUIDs();
     for (uint UUID: UUIDs_colorbd) {
         std::string colorboardspectra;
         context->getPrimitiveData(UUID, "reflectivity_spectrum", colorboardspectra);
