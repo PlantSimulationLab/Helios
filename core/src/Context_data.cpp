@@ -553,7 +553,7 @@ void Context::setObjectDataFromPrimitiveDataMean(uint objID, const std::string &
 
     // Determine the data type by checking the first primitive that has this data
     HeliosDataType data_type = HELIOS_TYPE_UNKNOWN;
-    for (uint UUID : UUIDs) {
+    for (uint UUID: UUIDs) {
         if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
             data_type = getPrimitiveDataType(label.c_str());
             break;
@@ -565,8 +565,7 @@ void Context::setObjectDataFromPrimitiveDataMean(uint objID, const std::string &
     }
 
     // Validate data type is supported for mean calculation
-    if (data_type != HELIOS_TYPE_FLOAT && data_type != HELIOS_TYPE_DOUBLE &&
-        data_type != HELIOS_TYPE_VEC2 && data_type != HELIOS_TYPE_VEC3 && data_type != HELIOS_TYPE_VEC4) {
+    if (data_type != HELIOS_TYPE_FLOAT && data_type != HELIOS_TYPE_DOUBLE && data_type != HELIOS_TYPE_VEC2 && data_type != HELIOS_TYPE_VEC3 && data_type != HELIOS_TYPE_VEC4) {
         helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): Cannot calculate mean for primitive data type. Only float, double, vec2, vec3, and vec4 are supported.");
     }
 
@@ -575,7 +574,7 @@ void Context::setObjectDataFromPrimitiveDataMean(uint objID, const std::string &
         float value;
         float sum = 0.f;
         size_t count = 0;
-        for (uint UUID : UUIDs) {
+        for (uint UUID: UUIDs) {
             if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
                 getPrimitiveData(UUID, label.c_str(), value);
                 sum += value;
@@ -592,7 +591,7 @@ void Context::setObjectDataFromPrimitiveDataMean(uint objID, const std::string &
         double value;
         double sum = 0.0;
         size_t count = 0;
-        for (uint UUID : UUIDs) {
+        for (uint UUID: UUIDs) {
             if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
                 getPrimitiveData(UUID, label.c_str(), value);
                 sum += value;
@@ -609,7 +608,7 @@ void Context::setObjectDataFromPrimitiveDataMean(uint objID, const std::string &
         vec2 value;
         vec2 sum(0.f, 0.f);
         size_t count = 0;
-        for (uint UUID : UUIDs) {
+        for (uint UUID: UUIDs) {
             if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
                 getPrimitiveData(UUID, label.c_str(), value);
                 sum = sum + value;
@@ -626,7 +625,7 @@ void Context::setObjectDataFromPrimitiveDataMean(uint objID, const std::string &
         vec3 value;
         vec3 sum(0.f, 0.f, 0.f);
         size_t count = 0;
-        for (uint UUID : UUIDs) {
+        for (uint UUID: UUIDs) {
             if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
                 getPrimitiveData(UUID, label.c_str(), value);
                 sum = sum + value;
@@ -643,7 +642,7 @@ void Context::setObjectDataFromPrimitiveDataMean(uint objID, const std::string &
         vec4 value;
         vec4 sum(0.f, 0.f, 0.f, 0.f);
         size_t count = 0;
-        for (uint UUID : UUIDs) {
+        for (uint UUID: UUIDs) {
             if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
                 getPrimitiveData(UUID, label.c_str(), value);
                 sum = sum + value;

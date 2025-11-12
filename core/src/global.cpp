@@ -2543,6 +2543,12 @@ bool helios::validateOutputPath(std::string &output_path, const std::vector<std:
         if (output_dir.find_last_of('/') != output_dir.length() - 1) {
             output_path += "/";
         }
+    } else if (isDirectoryPath(output_path)) {
+        // Path is a directory (either exists as one or is clearly intended to be one)
+        // Ensure it has a trailing slash so file concatenation works correctly
+        if (output_path.back() != '/' && output_path.back() != '\\') {
+            output_path += "/";
+        }
     }
 
     // Create the output directory if it does not exist

@@ -487,6 +487,48 @@ TEST_CASE("String, File Path, and Parsing Utilities") {
             DOCTEST_CHECK(isDirectoryPath("core/include/global.h") == false);
         }
     }
+    SUBCASE("validateOutputPath adds trailing slash to directories") {
+        // Test that validateOutputPath adds trailing slash to directory paths without one
+        // This is a regression test for the radiation plugin image_path bug
+
+        // Create a temporary directory for testing
+        std::filesystem::path temp_dir = std::filesystem::temp_directory_path() / "helios_test_validatepath";
+        std::filesystem::create_directories(temp_dir);
+
+        // Test 1: Directory path without trailing slash (existing directory)
+        std::string path1 = temp_dir.string();
+        // Remove trailing slash if present
+        if (!path1.empty() && (path1.back() == '/' || path1.back() == '\\')) {
+            path1.pop_back();
+        }
+        DOCTEST_CHECK(validateOutputPath(path1) == true);
+        DOCTEST_CHECK(path1.back() == '/'); // Should now have trailing slash
+
+        // Test 2: Directory path with trailing slash (should remain unchanged)
+        std::string path2 = temp_dir.string() + "/";
+        DOCTEST_CHECK(validateOutputPath(path2) == true);
+        DOCTEST_CHECK(path2.back() == '/');
+
+        // Test 3: Non-existent directory without trailing slash that is detected as directory
+        // Note: "../somedir" pattern from the bug report
+        std::string path3 = temp_dir.string() + "_nonexistent";
+        if (!path3.empty() && (path3.back() == '/' || path3.back() == '\\')) {
+            path3.pop_back();
+        }
+        // This path doesn't exist but should be detected as a directory and get trailing slash
+        bool result3 = validateOutputPath(path3);
+        DOCTEST_CHECK(result3 == true); // Should succeed (creates directory)
+        DOCTEST_CHECK(path3.back() == '/'); // Should have trailing slash
+
+        // Test 4: File path should not get trailing slash
+        std::string path4 = temp_dir.string() + "/test.txt";
+        DOCTEST_CHECK(validateOutputPath(path4, {".txt"}) == true);
+        DOCTEST_CHECK(path4.back() != '/'); // Should NOT have trailing slash (it's a file)
+
+        // Clean up
+        std::filesystem::remove_all(temp_dir);
+        std::filesystem::remove_all(temp_dir.string() + "_nonexistent");
+    }
     SUBCASE("Primitive Type Parsing") {
         float f;
         DOCTEST_CHECK(parse_float("1.23", f));

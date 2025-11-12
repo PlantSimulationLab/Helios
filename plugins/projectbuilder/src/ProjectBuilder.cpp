@@ -3,7 +3,7 @@
 #define NOMINMAX
 #endif
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <windows.h> //This header must come first!!!
 #include <commdlg.h>
 #include <thread>
 #elif defined(__APPLE__)

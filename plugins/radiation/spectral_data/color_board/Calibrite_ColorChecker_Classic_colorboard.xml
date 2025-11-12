@@ -1,7 +1,7 @@
 <!-- Calibrite ColorChecker Classic color calibration board -->
 <helios>
 
-	<!-- brown -->
+	<!-- dark skin -->
 	<globaldata_vec2  label="ColorReference_Calibrite_01">
 		350 0.357443
 		351 0.355438
@@ -2156,7 +2156,7 @@
 		2500 0.066318
 	</globaldata_vec2>
 
-	<!-- peach -->
+	<!-- light skin -->
 	<globaldata_vec2  label="ColorReference_Calibrite_02">
 		350 0.636127
 		351 0.630987
@@ -4311,7 +4311,7 @@
 		2500 0.270524
 	</globaldata_vec2>
 
-	<!-- blue gray -->
+	<!-- blue sky -->
 	<globaldata_vec2  label="ColorReference_Calibrite_03">
 		350 0.407921
 		351 0.411294
@@ -6466,7 +6466,7 @@
 		2500 0.291973
 	</globaldata_vec2>
 
-	<!-- olive -->
+	<!-- foliage -->
 	<globaldata_vec2  label="ColorReference_Calibrite_04">
 		350 0.315864
 		351 0.313611
@@ -8621,7 +8621,7 @@
 		2500 0.305052
 	</globaldata_vec2>
 
-	<!-- light purple -->
+	<!-- blue flower -->
 	<globaldata_vec2  label="ColorReference_Calibrite_05">
 		350 0.430980
 		351 0.428187
@@ -10776,7 +10776,7 @@
 		2500 0.422306
 	</globaldata_vec2>
 
-	<!-- cyan -->
+	<!-- bluish green -->
 	<globaldata_vec2  label="ColorReference_Calibrite_06">
 		350 0.382912
 		351 0.387693
@@ -15086,7 +15086,7 @@
 		2500 0.414158
 	</globaldata_vec2>
 
-	<!-- medium blue -->
+	<!-- purplish blue -->
 	<globaldata_vec2  label="ColorReference_Calibrite_08">
 		350 0.342660
 		351 0.340130
@@ -17241,7 +17241,7 @@
 		2500 0.208764
 	</globaldata_vec2>
 
-	<!-- salmon -->
+	<!-- moderate red -->
 	<globaldata_vec2  label="ColorReference_Calibrite_09">
 		350 0.534299
 		351 0.519489
@@ -21551,7 +21551,7 @@
 		2500 0.114321
 	</globaldata_vec2>
 
-	<!-- lime green -->
+	<!-- yellow green -->
 	<globaldata_vec2  label="ColorReference_Calibrite_11">
 		350 0.446615
 		351 0.442460
@@ -23706,7 +23706,7 @@
 		2500 0.414681
 	</globaldata_vec2>
 
-	<!-- goldenrod -->
+	<!-- orange yellow -->
 	<globaldata_vec2  label="ColorReference_Calibrite_12">
 		350 0.570010
 		351 0.566595
@@ -25861,7 +25861,7 @@
 		2500 0.246967
 	</globaldata_vec2>
 
-	<!-- dark blue -->
+	<!-- blue -->
 	<globaldata_vec2  label="ColorReference_Calibrite_13">
 		350 0.237026
 		351 0.235421
@@ -36636,7 +36636,7 @@
 		2500 0.406912
 	</globaldata_vec2>
 
-	<!-- sky blue -->
+	<!-- cyan -->
 	<globaldata_vec2  label="ColorReference_Calibrite_18">
 		350 0.271427
 		351 0.275528
@@ -38791,7 +38791,7 @@
 		2500 0.241023
 	</globaldata_vec2>
 
-	<!-- white  -->
+	<!-- white 9.5 (.05 D) -->
 	<globaldata_vec2  label="ColorReference_Calibrite_19">
 		350 0.814152
 		351 0.813087
@@ -40946,7 +40946,7 @@
 		2500 0.342854
 	</globaldata_vec2>
 
-	<!-- light gray -->
+	<!-- neutral 8 (.23 D) -->
 	<globaldata_vec2  label="ColorReference_Calibrite_20">
 		350 0.532984
 		351 0.522820
@@ -43101,7 +43101,7 @@
 		2500 0.297385
 	</globaldata_vec2>
 
-	<!-- medium light gray -->
+	<!-- neutral 6.5 (.44 D) -->
 	<globaldata_vec2  label="ColorReference_Calibrite_21">
 		350 0.279912
 		351 0.274659
@@ -45256,7 +45256,7 @@
 		2500 0.271089
 	</globaldata_vec2>
 
-	<!-- medium dark gray -->
+	<!-- neutral 5 (.70 D) -->
 	<globaldata_vec2  label="ColorReference_Calibrite_22">
 		350 0.172251
 		351 0.173998
@@ -47411,7 +47411,7 @@
 		2500 0.126266
 	</globaldata_vec2>
 
-	<!-- dark gray -->
+	<!-- neutral 3.5 (1.05 D) -->
 	<globaldata_vec2  label="ColorReference_Calibrite_23">
 		350 0.101721
 		351 0.096207
@@ -49566,7 +49566,7 @@
 		2500 0.101386
 	</globaldata_vec2>
 
-	<!-- black -->
+	<!-- black 2 (1.5 D) -->
 	<globaldata_vec2  label="ColorReference_Calibrite_24">
 		350 0.078164
 		351 0.065354

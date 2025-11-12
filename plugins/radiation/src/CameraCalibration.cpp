@@ -133,7 +133,7 @@ std::vector<uint> CameraCalibration::addColorboard(const helios::vec3 &centreloc
     context->rotatePrimitive(UUIDs, rotationrad.x, "x"); // rotate color board
     context->rotatePrimitive(UUIDs, rotationrad.y, "y");
     context->rotatePrimitive(UUIDs, rotationrad.z, "z");
-    UUIDs_colorboard = UUIDs;
+    // Note: This version does not track colorboards in the map (no type specified)
     return UUIDs;
 }
 
@@ -181,7 +181,8 @@ std::vector<uint> CameraCalibration::addColorboard(const helios::vec3 &centreloc
     context->rotatePrimitive(UUIDs, rotationrad.x, "x"); // rotate color board
     context->rotatePrimitive(UUIDs, rotationrad.y, "y");
     context->rotatePrimitive(UUIDs, rotationrad.z, "z");
-    UUIDs_colorboard = UUIDs;
+    // Store colorboard UUIDs in map by type
+    UUIDs_colorboards[colorboard_type] = UUIDs;
     return UUIDs;
 }
 
@@ -204,9 +205,10 @@ std::vector<uint> CameraCalibration::addDefaultColorboard(const helios::vec3 &ce
 
 std::vector<uint> CameraCalibration::addDGKColorboard(const helios::vec3 &centrelocation, float patchsize, const helios::vec3 &rotationrad) {
 
-    if (!UUIDs_colorboard.empty()) {
-        context->deletePrimitive(UUIDs_colorboard);
-        std::cout << "WARNING (CameraCalibration::addDGKColorboard): Existing colorboard has been cleared in order to add colorboard." << std::endl;
+    // Check if a DGK colorboard already exists
+    if (UUIDs_colorboards.find("DGK") != UUIDs_colorboards.end()) {
+        context->deletePrimitive(UUIDs_colorboards["DGK"]);
+        std::cout << "WARNING (CameraCalibration::addDGKColorboard): Replacing existing DGK colorboard." << std::endl;
     }
 
     context->loadXML(helios::resolvePluginAsset("radiation", "spectral_data/color_board/DGK_DKK_colorboard.xml").string().c_str(), true);
@@ -218,9 +220,10 @@ std::vector<uint> CameraCalibration::addDGKColorboard(const helios::vec3 &centre
 
 std::vector<uint> CameraCalibration::addCalibriteColorboard(const helios::vec3 &centrelocation, float patchsize, const helios::vec3 &rotationrad) {
 
-    if (!UUIDs_colorboard.empty()) {
-        context->deletePrimitive(UUIDs_colorboard);
-        std::cout << "WARNING (CameraCalibration::addCalibriteColorboard): Existing colorboard has been cleared in order to add colorboard." << std::endl;
+    // Check if a Calibrite colorboard already exists
+    if (UUIDs_colorboards.find("Calibrite") != UUIDs_colorboards.end()) {
+        context->deletePrimitive(UUIDs_colorboards["Calibrite"]);
+        std::cout << "WARNING (CameraCalibration::addCalibriteColorboard): Replacing existing Calibrite colorboard." << std::endl;
     }
 
     context->loadXML(helios::resolvePluginAsset("radiation", "spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml").string().c_str(), true);
@@ -232,9 +235,10 @@ std::vector<uint> CameraCalibration::addCalibriteColorboard(const helios::vec3 &
 
 std::vector<uint> CameraCalibration::addSpyderCHECKRColorboard(const helios::vec3 &centrelocation, float patchsize, const helios::vec3 &rotationrad) {
 
-    if (!UUIDs_colorboard.empty()) {
-        context->deletePrimitive(UUIDs_colorboard);
-        std::cout << "WARNING (CameraCalibration::addSpyderCHECKRColorboard): Existing colorboard has been cleared in order to add colorboard." << std::endl;
+    // Check if a SpyderCHECKR colorboard already exists
+    if (UUIDs_colorboards.find("SpyderCHECKR") != UUIDs_colorboards.end()) {
+        context->deletePrimitive(UUIDs_colorboards["SpyderCHECKR"]);
+        std::cout << "WARNING (CameraCalibration::addSpyderCHECKRColorboard): Replacing existing SpyderCHECKR colorboard." << std::endl;
     }
 
     context->loadXML(helios::resolvePluginAsset("radiation", "spectral_data/color_board/Datacolor_SpyderCHECKR_24_colorboard.xml").string().c_str(), true);
@@ -244,8 +248,12 @@ std::vector<uint> CameraCalibration::addSpyderCHECKRColorboard(const helios::vec
     return CameraCalibration::addColorboard(centrelocation, patchsize, rotationrad, colorassignment_SpyderCHECKR, spectrumassignment_SpyderCHECKR, "SpyderCHECKR");
 }
 
-std::vector<uint> CameraCalibration::getColorBoardUUIDs() {
-    return UUIDs_colorboard;
+std::vector<uint> CameraCalibration::getAllColorBoardUUIDs() const {
+    std::vector<uint> all_UUIDs;
+    for (const auto &[type, UUIDs]: UUIDs_colorboards) {
+        all_UUIDs.insert(all_UUIDs.end(), UUIDs.begin(), UUIDs.end());
+    }
+    return all_UUIDs;
 }
 
 bool CameraCalibration::writeSpectralXMLfile(const std::string &filename, const std::string &note, const std::string &label, std::vector<vec2> *spectrum) {
@@ -673,6 +681,12 @@ float CameraCalibration::getCameraResponseScale(const std::string &cameralabel, 
     std::string global_UUID_label = "camera_" + cameralabel + "_pixel_UUID";
     context->getGlobalData(global_UUID_label.c_str(), camera_UUIDs);
 
+    // Collect all colorboard UUIDs from all colorboards
+    std::vector<uint> all_colorboard_UUIDs;
+    for (const auto &[type, UUIDs]: UUIDs_colorboards) {
+        all_colorboard_UUIDs.insert(all_colorboard_UUIDs.end(), UUIDs.begin(), UUIDs.end());
+    }
+
     float dotsimreal = 0;
     float dotsimsim = 0;
     for (int ib = 0; ib < bandlabels.size(); ib++) {
@@ -681,14 +695,14 @@ float CameraCalibration::getCameraResponseScale(const std::string &cameralabel, 
         std::string global_data_label = "camera_" + cameralabel + "_" + bandlabels.at(ib);
         context->getGlobalData(global_data_label.c_str(), camera_data);
 
-        for (int icu = 0; icu < UUIDs_colorboard.size(); icu++) {
+        for (int icu = 0; icu < all_colorboard_UUIDs.size(); icu++) {
 
             float count = 0;
             float sum = 0;
             for (uint j = 0; j < cameraresolution.y; j++) {
                 for (uint i = 0; i < cameraresolution.x; i++) {
                     uint UUID = camera_UUIDs.at(j * cameraresolution.x + i) - 1;
-                    if (UUID == UUIDs_colorboard.at(icu)) {
+                    if (UUID == all_colorboard_UUIDs.at(icu)) {
                         float value = camera_data.at(j * cameraresolution.x + i);
                         sum += value;
                         count += 1;
@@ -829,24 +843,36 @@ std::vector<CameraCalibration::LabColor> CameraCalibration::getReferenceLab_Spyd
     };
 }
 
-std::string CameraCalibration::detectColorBoardType() const {
+std::vector<std::string> CameraCalibration::detectColorBoardTypes() const {
     // Check for each colorboard type by looking for primitive data
     std::vector<uint> all_UUIDs = context->getAllUUIDs();
+    std::vector<std::string> detected_types;
+    bool found_DGK = false, found_Calibrite = false, found_SpyderCHECKR = false;
 
     for (uint UUID: all_UUIDs) {
-        if (context->doesPrimitiveDataExist(UUID, "colorboard_DGK")) {
-            return "DGK";
+        if (!found_DGK && context->doesPrimitiveDataExist(UUID, "colorboard_DGK")) {
+            detected_types.push_back("DGK");
+            found_DGK = true;
         }
-        if (context->doesPrimitiveDataExist(UUID, "colorboard_Calibrite")) {
-            return "Calibrite";
+        if (!found_Calibrite && context->doesPrimitiveDataExist(UUID, "colorboard_Calibrite")) {
+            detected_types.push_back("Calibrite");
+            found_Calibrite = true;
         }
-        if (context->doesPrimitiveDataExist(UUID, "colorboard_SpyderCHECKR")) {
-            return "SpyderCHECKR";
+        if (!found_SpyderCHECKR && context->doesPrimitiveDataExist(UUID, "colorboard_SpyderCHECKR")) {
+            detected_types.push_back("SpyderCHECKR");
+            found_SpyderCHECKR = true;
+        }
+        // Early exit if all types have been found
+        if (found_DGK && found_Calibrite && found_SpyderCHECKR) {
+            break;
         }
     }
 
-    helios_runtime_error("ERROR (CameraCalibration::detectColorBoardType): No colorboard detected in the scene. Make sure to add a colorboard using addDGKColorboard(), addCalibriteColorboard(), or addSpyderCHECKRColorboard().");
-    return "";
+    if (detected_types.empty()) {
+        helios_runtime_error("ERROR (CameraCalibration::detectColorBoardTypes): No colorboard detected in the scene. Make sure to add a colorboard using addDGKColorboard(), addCalibriteColorboard(), or addSpyderCHECKRColorboard().");
+    }
+
+    return detected_types;
 }
 
 std::map<int, std::vector<std::vector<bool>>> CameraCalibration::generateColorBoardSegmentationMasks(const std::string &camera_label, const std::string &colorboard_type) const {

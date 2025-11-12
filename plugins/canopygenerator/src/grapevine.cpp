@@ -133,8 +133,8 @@ std::vector<uint> leafPrototype(const int2 leaf_subdivisions, const char *leaf_t
             uv2 = make_vec2(1.f - x - dx, 0.5f - dj_plus);
             uv3 = make_vec2(1.f - x, 0.5f - dj_plus);
 
-            UUIDs.push_back(context->addTriangle(v0, v2, v1, leaf_texture_file, uv0, uv2, uv1));
-            UUIDs.push_back(context->addTriangle(v0, v3, v2, leaf_texture_file, uv0, uv3, uv2));
+            UUIDs.push_back(context->addTriangle(v0, v1, v2, leaf_texture_file, uv0, uv1, uv2));
+            UUIDs.push_back(context->addTriangle(v0, v2, v3, leaf_texture_file, uv0, uv2, uv3));
         }
     }
 
@@ -260,7 +260,7 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
 
     //------- primary shoots ---------//
 
-    // uint ID0 = context->addTileObject( make_vec3(0,0,0), make_vec2(1,1), make_SphericalCoord(0,0), params.leaf_subdivisions, params.leaf_texture_file.c_str() );
+    // uint ID0 = context->addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), params.leaf_subdivisions, params.leaf_texture_file.c_str());
 
     std::vector<uint> leaf_ptype = leafPrototype(params.leaf_subdivisions, params.leaf_texture_file.c_str(), context);
 
@@ -422,8 +422,9 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
                 vec3 position = origin + pos_leaf + leaf_offset;
 
                 std::vector<uint> UUID_leaf = context->copyPrimitive(leaf_ptype);
-                //                context->addPolymeshObject( UUID_leaf );
+
                 context->scalePrimitive(UUID_leaf, make_vec3(lsize, lsize, lsize));
+
                 context->rotatePrimitive(UUID_leaf, -Rtheta, "y");
                 context->rotatePrimitive(UUID_leaf, Rphi, "z");
                 context->translatePrimitive(UUID_leaf, position);
@@ -433,15 +434,10 @@ uint CanopyGenerator::grapevineVSP(const VSPGrapevineParameters &params, const v
                 lfrac = lfrac - leaf_spacing_fraction * lsize * (1.f + getVariation(0.25f, generator));
 
                 flip++;
-
-                if (enable_element_labels) {
-                    context->setPrimitiveData(UUID_leaf, "element_label", "leaf");
-                }
             }
         }
     }
 
-    // context->deleteObject(ID0);
     context->deletePrimitive(leaf_ptype);
 
     UUID_trunk.push_back(UUID_trunk_plant);

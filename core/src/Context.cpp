@@ -174,8 +174,9 @@ float Texture::getSolidFraction(const std::vector<helios::vec2> &uvs) {
 
 float Texture::computeSolidFraction(const std::vector<helios::vec2> &uvs) const {
     // Early out for opaque textures or degenerate UVs
-    if (!hasTransparencyChannel() || uvs.size() < 3)
+    if (!hasTransparencyChannel() || uvs.size() < 3) {
         return 1.0f;
+    }
 
     // Fetch alpha mask and dimensions
     const auto *alpha2D = getTransparencyData(); // vector<vector<bool>>
@@ -216,6 +217,22 @@ float Texture::computeSolidFraction(const std::vector<helios::vec2> &uvs) const 
         C[i] = a.x * b.y - a.y * b.x;
     }
 
+    // Check winding order using signed area (shoelace formula)
+    // If area is negative, triangle has clockwise winding - flip all coefficients
+    float signed_area = 0.0f;
+    for (int i = 0; i < N; ++i) {
+        int j = (i + 1) % N;
+        signed_area += uvs[i].x * uvs[j].y - uvs[j].x * uvs[i].y;
+    }
+    if (signed_area < 0.0f) {
+        // Clockwise winding - negate all half-space coefficients
+        for (int i = 0; i < N; ++i) {
+            A[i] = -A[i];
+            B[i] = -B[i];
+            C[i] = -C[i];
+        }
+    }
+
     // Raster‐scan, test each pixel center
     int64_t countTotal = 0, countOpaque = 0;
     float invWm1 = 1.0f / float(W - 1);
@@ -244,7 +261,8 @@ float Texture::computeSolidFraction(const std::vector<helios::vec2> &uvs) const 
         }
     }
 
-    return countTotal == 0 ? 0.0f : float(countOpaque) / float(countTotal);
+    float result = countTotal == 0 ? 0.0f : float(countOpaque) / float(countTotal);
+    return result;
 }
 
 void Context::markGeometryClean() {

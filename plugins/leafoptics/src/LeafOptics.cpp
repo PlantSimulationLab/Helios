@@ -409,7 +409,7 @@ void LeafOptics::setProperties(const std::vector<uint> &UUIDs, const LeafOpticsP
 void LeafOptics::getPropertiesFromSpectrum(const std::vector<uint> &UUIDs) {
     const std::string prefix = "leaf_reflectivity_";
 
-    for (uint UUID : UUIDs) {
+    for (uint UUID: UUIDs) {
         // Check if primitive has reflectivity_spectrum data
         if (!context->doesPrimitiveDataExist(UUID, "reflectivity_spectrum")) {
             continue; // Skip silently if no spectrum data

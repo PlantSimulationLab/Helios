@@ -537,7 +537,7 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - Basic Functionality") 
     leafoptics.run(UUIDs, props, label);
 
     // Clear existing parameter data from primitives (run() calls setProperties())
-    for (uint UUID : UUIDs) {
+    for (uint UUID: UUIDs) {
         context_test.clearPrimitiveData(UUID, "chlorophyll");
         context_test.clearPrimitiveData(UUID, "carotenoid");
         context_test.clearPrimitiveData(UUID, "anthocyanin");
@@ -552,7 +552,7 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - Basic Functionality") 
     DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromSpectrum(UUIDs));
 
     // Verify all parameters were correctly assigned
-    for (uint UUID : UUIDs) {
+    for (uint UUID: UUIDs) {
         float chl, car, ant, water, dry;
 
         DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "chlorophyll", chl));

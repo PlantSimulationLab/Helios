@@ -90,7 +90,7 @@ public:
      * \param[in] size [optional] Size of the point or line in pixel units. This is ignored for GEOMETRY_TYPE_PATCH and GEOMETRY_TYPE_TRIANGLE.
      */
     void addGeometry(size_t UUID, const VisualizerGeometryType &geometry_type, const std::vector<helios::vec3> &vertices, const helios::RGBAcolor &color, const std::vector<helios::vec2> &uvs, int textureID, bool override_texture_color,
-                     bool has_glyph_texture, uint coordinate_system, bool visible_flag, bool iscontextgeometry, bool isskygeometry = false, int size = 0);
+                     bool has_glyph_texture, uint coordinate_system, bool visible_flag, bool iscontextgeometry, bool isskygeometry = false, float size = 0);
 
     //! Mark a geometry primitive as modified
     void markDirty(size_t UUID);

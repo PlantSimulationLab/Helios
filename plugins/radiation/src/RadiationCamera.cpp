@@ -26,9 +26,7 @@ using namespace helios;
 
 void RadiationModel::addRadiationCamera(const std::string &camera_label, const std::vector<std::string> &band_label, const helios::vec3 &position, const helios::vec3 &lookat, const CameraProperties &camera_properties, uint antialiasing_samples) {
 
-    if (camera_properties.FOV_aspect_ratio <= 0) {
-        helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Field of view aspect ratio must be greater than 0.");
-    } else if (antialiasing_samples == 0) {
+    if (antialiasing_samples == 0) {
         helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): The model requires at least 1 antialiasing sample to run.");
     } else if (camera_properties.camera_resolution.x <= 0 || camera_properties.camera_resolution.y <= 0) {
         helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera resolution must be at least 1x1.");
@@ -36,7 +34,14 @@ void RadiationModel::addRadiationCamera(const std::string &camera_label, const s
         helios_runtime_error("ERROR (RadiationModel::addRadiationCamera): Camera horizontal field of view must be between 0 and 180 degrees.");
     }
 
-    RadiationCamera camera(camera_label, band_label, position, lookat, camera_properties, antialiasing_samples);
+    // Auto-calculate FOV_aspect_ratio from camera resolution to ensure square pixels
+    CameraProperties modified_properties = camera_properties;
+    if (camera_properties.FOV_aspect_ratio != 0.f) {
+        std::cerr << "WARNING (RadiationModel::addRadiationCamera): FOV_aspect_ratio is deprecated and will be ignored. The value is auto-calculated from camera_resolution to ensure square pixels." << std::endl;
+    }
+    modified_properties.FOV_aspect_ratio = float(camera_properties.camera_resolution.x) / float(camera_properties.camera_resolution.y);
+
+    RadiationCamera camera(camera_label, band_label, position, lookat, modified_properties, antialiasing_samples);
     if (cameras.find(camera_label) == cameras.end()) {
         cameras.emplace(camera_label, camera);
     } else {
@@ -271,7 +276,18 @@ std::string RadiationModel::writeCameraImage(const std::string &camera, const st
 
     writeJPEG(outfile.str(), camera_resolution.x, camera_resolution.y, pixel_data_RGB);
 
-    return outfile.str();
+    std::string image_filepath = outfile.str();
+
+    // Write JSON metadata if it exists for this camera
+    if (camera_metadata.find(camera) != camera_metadata.end()) {
+        // Extract just the filename (without directory path) for portability
+        size_t last_slash = image_filepath.find_last_of("/\\");
+        std::string filename_only = (last_slash != std::string::npos) ? image_filepath.substr(last_slash + 1) : image_filepath;
+        camera_metadata.at(camera).path = filename_only;
+        writeCameraMetadataFile(camera, output_path);
+    }
+
+    return image_filepath;
 }
 
 std::string RadiationModel::writeNormCameraImage(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path, int frame) {
@@ -393,7 +409,7 @@ void RadiationModel::updateCameraResponse(const std::string &orginalcameralabel,
     cameraproperties.lens_diameter = calibratecamera.lens_diameter;
     cameraproperties.FOV_aspect_ratio = calibratecamera.FOV_aspect_ratio;
 
-    std::vector<uint> UUIDs_target = cameracalibration->getColorBoardUUIDs();
+    std::vector<uint> UUIDs_target = cameracalibration->getAllColorBoardUUIDs();
     std::string cameralabel = "calibration";
     std::map<uint, std::vector<vec2>> simulatedcolorboardspectra;
     for (uint UUID: UUIDs_target) {
@@ -484,7 +500,7 @@ void RadiationModel::updateCameraResponse(const std::string &orginalcameralabel,
     // Update camera response spectra
     cameracalibration->updateCameraResponseSpectra(cameraresponselabels, calibratedmark, simulatedcolorboardspectra, truevalues);
     // Reset color board spectra
-    std::vector<uint> UUIDs_colorbd = cameracalibration->getColorBoardUUIDs();
+    std::vector<uint> UUIDs_colorbd = cameracalibration->getAllColorBoardUUIDs();
     for (uint UUID: UUIDs_colorbd) {
         std::string colorboardspectra;
         context->getPrimitiveData(UUID, "reflectivity_spectrum", colorboardspectra);
@@ -1775,7 +1791,8 @@ std::vector<std::map<std::string, std::vector<float>>> RadiationModel::generateA
     return annotations;
 }
 
-void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel, const std::string &primitive_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, const std::vector<std::string> &data_attribute_labels, bool append_file) {
+void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel, const std::string &primitive_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file,
+                                                 const std::vector<std::string> &data_attribute_labels, bool append_file) {
     writeImageSegmentationMasks(cameralabel, std::vector<std::string>{primitive_data_label}, std::vector<uint>{object_class_ID}, json_filename, image_file, data_attribute_labels, append_file);
 }
 
@@ -1837,7 +1854,7 @@ void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel,
         std::vector<std::string> all_primitive_data = context->listAllPrimitiveDataLabels();
         std::vector<std::string> all_object_data = context->listAllObjectDataLabels();
 
-        for (const auto &attr_label : data_attribute_labels) {
+        for (const auto &attr_label: data_attribute_labels) {
             AttributeInfo info;
             info.label = attr_label;
             info.exists = false;
@@ -1896,7 +1913,8 @@ void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel,
                                 // Check 4-connected neighbors
                                 for (int di = -1; di <= 1; di++) {
                                     for (int dj = -1; dj <= 1; dj++) {
-                                        if (abs(di) + abs(dj) != 1) continue;
+                                        if (abs(di) + abs(dj) != 1)
+                                            continue;
                                         int ni = ci + di;
                                         int nj = cj + dj;
                                         if (ni >= 0 && ni < camera_resolution.x && nj >= 0 && nj < camera_resolution.y && mask[nj][ni] && !visited[nj][ni]) {
@@ -1909,11 +1927,11 @@ void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel,
 
                             // Calculate mean attribute values for this component (for all attributes)
                             std::map<std::string, double> component_attributes;
-                            for (const auto &attr : attribute_info) {
+                            for (const auto &attr: attribute_info) {
                                 double sum = 0.0;
                                 int count = 0;
 
-                                for (const auto &[px_i, px_j] : component_pixels) {
+                                for (const auto &[px_i, px_j]: component_pixels) {
                                     uint ii = camera_resolution.x - px_i - 1;
                                     uint UUID = pixel_UUIDs.at(px_j * camera_resolution.x + ii) - 1;
 
@@ -1925,14 +1943,20 @@ void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel,
                                             if (context->doesPrimitiveDataExist(UUID, attr.label.c_str())) {
                                                 HeliosDataType datatype = context->getPrimitiveDataType(attr.label.c_str());
                                                 if (datatype == HELIOS_TYPE_INT) {
-                                                    int val; context->getPrimitiveData(UUID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val); has_value = true;
+                                                    int val;
+                                                    context->getPrimitiveData(UUID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val);
+                                                    has_value = true;
                                                 } else if (datatype == HELIOS_TYPE_UINT) {
-                                                    uint val; context->getPrimitiveData(UUID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val); has_value = true;
+                                                    uint val;
+                                                    context->getPrimitiveData(UUID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val);
+                                                    has_value = true;
                                                 } else if (datatype == HELIOS_TYPE_FLOAT) {
-                                                    float val; context->getPrimitiveData(UUID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val); has_value = true;
+                                                    float val;
+                                                    context->getPrimitiveData(UUID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val);
+                                                    has_value = true;
                                                 } else if (datatype == HELIOS_TYPE_DOUBLE) {
                                                     context->getPrimitiveData(UUID, attr.label.c_str(), value);
                                                     has_value = true;
@@ -1943,14 +1967,20 @@ void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel,
                                             if (objID != 0 && context->doesObjectDataExist(objID, attr.label.c_str())) {
                                                 HeliosDataType datatype = context->getObjectDataType(attr.label.c_str());
                                                 if (datatype == HELIOS_TYPE_INT) {
-                                                    int val; context->getObjectData(objID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val); has_value = true;
+                                                    int val;
+                                                    context->getObjectData(objID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val);
+                                                    has_value = true;
                                                 } else if (datatype == HELIOS_TYPE_UINT) {
-                                                    uint val; context->getObjectData(objID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val); has_value = true;
+                                                    uint val;
+                                                    context->getObjectData(objID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val);
+                                                    has_value = true;
                                                 } else if (datatype == HELIOS_TYPE_FLOAT) {
-                                                    float val; context->getObjectData(objID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val); has_value = true;
+                                                    float val;
+                                                    context->getObjectData(objID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val);
+                                                    has_value = true;
                                                 } else if (datatype == HELIOS_TYPE_DOUBLE) {
                                                     context->getObjectData(objID, attr.label.c_str(), value);
                                                     has_value = true;
@@ -2022,7 +2052,8 @@ void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel,
     writeCOCOJson(coco_json, outfile);
 }
 
-void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::string &object_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file, const std::vector<std::string> &data_attribute_labels, bool append_file) {
+void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &cameralabel, const std::string &object_data_label, const uint &object_class_ID, const std::string &json_filename, const std::string &image_file,
+                                                            const std::vector<std::string> &data_attribute_labels, bool append_file) {
     writeImageSegmentationMasks_ObjectData(cameralabel, std::vector<std::string>{object_data_label}, std::vector<uint>{object_class_ID}, json_filename, image_file, data_attribute_labels, append_file);
 }
 
@@ -2084,7 +2115,7 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
         std::vector<std::string> all_primitive_data = context->listAllPrimitiveDataLabels();
         std::vector<std::string> all_object_data = context->listAllObjectDataLabels();
 
-        for (const auto &attr_label : data_attribute_labels) {
+        for (const auto &attr_label: data_attribute_labels) {
             AttributeInfo info;
             info.label = attr_label;
             info.exists = false;
@@ -2143,7 +2174,8 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
                                 // Check 4-connected neighbors
                                 for (int di = -1; di <= 1; di++) {
                                     for (int dj = -1; dj <= 1; dj++) {
-                                        if (abs(di) + abs(dj) != 1) continue;
+                                        if (abs(di) + abs(dj) != 1)
+                                            continue;
                                         int ni = ci + di;
                                         int nj = cj + dj;
                                         if (ni >= 0 && ni < camera_resolution.x && nj >= 0 && nj < camera_resolution.y && mask[nj][ni] && !visited[nj][ni]) {
@@ -2156,11 +2188,11 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
 
                             // Calculate mean attribute values for this component (for all attributes)
                             std::map<std::string, double> component_attributes;
-                            for (const auto &attr : attribute_info) {
+                            for (const auto &attr: attribute_info) {
                                 double sum = 0.0;
                                 int count = 0;
 
-                                for (const auto &[px_i, px_j] : component_pixels) {
+                                for (const auto &[px_i, px_j]: component_pixels) {
                                     uint ii = camera_resolution.x - px_i - 1;
                                     uint UUID = pixel_UUIDs.at(px_j * camera_resolution.x + ii) - 1;
 
@@ -2172,14 +2204,20 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
                                             if (context->doesPrimitiveDataExist(UUID, attr.label.c_str())) {
                                                 HeliosDataType datatype = context->getPrimitiveDataType(attr.label.c_str());
                                                 if (datatype == HELIOS_TYPE_INT) {
-                                                    int val; context->getPrimitiveData(UUID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val); has_value = true;
+                                                    int val;
+                                                    context->getPrimitiveData(UUID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val);
+                                                    has_value = true;
                                                 } else if (datatype == HELIOS_TYPE_UINT) {
-                                                    uint val; context->getPrimitiveData(UUID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val); has_value = true;
+                                                    uint val;
+                                                    context->getPrimitiveData(UUID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val);
+                                                    has_value = true;
                                                 } else if (datatype == HELIOS_TYPE_FLOAT) {
-                                                    float val; context->getPrimitiveData(UUID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val); has_value = true;
+                                                    float val;
+                                                    context->getPrimitiveData(UUID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val);
+                                                    has_value = true;
                                                 } else if (datatype == HELIOS_TYPE_DOUBLE) {
                                                     context->getPrimitiveData(UUID, attr.label.c_str(), value);
                                                     has_value = true;
@@ -2190,14 +2228,20 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
                                             if (objID != 0 && context->doesObjectDataExist(objID, attr.label.c_str())) {
                                                 HeliosDataType datatype = context->getObjectDataType(attr.label.c_str());
                                                 if (datatype == HELIOS_TYPE_INT) {
-                                                    int val; context->getObjectData(objID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val); has_value = true;
+                                                    int val;
+                                                    context->getObjectData(objID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val);
+                                                    has_value = true;
                                                 } else if (datatype == HELIOS_TYPE_UINT) {
-                                                    uint val; context->getObjectData(objID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val); has_value = true;
+                                                    uint val;
+                                                    context->getObjectData(objID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val);
+                                                    has_value = true;
                                                 } else if (datatype == HELIOS_TYPE_FLOAT) {
-                                                    float val; context->getObjectData(objID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val); has_value = true;
+                                                    float val;
+                                                    context->getObjectData(objID, attr.label.c_str(), val);
+                                                    value = static_cast<double>(val);
+                                                    has_value = true;
                                                 } else if (datatype == HELIOS_TYPE_DOUBLE) {
                                                     context->getObjectData(objID, attr.label.c_str(), value);
                                                     has_value = true;
@@ -2419,23 +2463,20 @@ void RadiationModel::applyImageProcessingPipeline(const std::string &cameralabel
     // Step 1: Smart Auto-Exposure (percentile-based normalization)
     camera.autoExposure(red_band_label, green_band_label, blue_band_label, gain_adjustment);
 
-    // Step 2: Camera spectral correction
-    camera.applyCameraSpectralCorrection(red_band_label, green_band_label, blue_band_label, this->context);
+    // Step 2: Spectral-based white balance
+    camera.whiteBalanceSpectral(red_band_label, green_band_label, blue_band_label, this->context);
 
-    // Step 3: Scene-adaptive white balance
-    camera.whiteBalanceAuto(red_band_label, green_band_label, blue_band_label);
-
-    // Step 4: Brightness and contrast adjustments in linear space
+    // Step 3: Brightness and contrast adjustments in linear space
     if (brightness_adjustment != 1.f || contrast_adjustment != 1.f) {
         camera.adjustBrightnessContrast(red_band_label, green_band_label, blue_band_label, brightness_adjustment, contrast_adjustment);
     }
 
-    // Step 5: Saturation adjustment
+    // Step 4: Saturation adjustment
     if (saturation_adjustment != 1.f) {
         camera.adjustSaturation(red_band_label, green_band_label, blue_band_label, saturation_adjustment);
     }
 
-    // Step 6: Gamma compression (final step)
+    // Step 5: Gamma compression (final step)
     camera.gammaCompress(red_band_label, green_band_label, blue_band_label);
 }
 
@@ -2693,80 +2734,18 @@ void RadiationCamera::whiteBalanceWhitePatch(const std::string &red_band_label, 
     }
 }
 
-void RadiationCamera::whiteBalanceAuto(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label) {
+
+void RadiationCamera::whiteBalanceSpectral(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, helios::Context *context) {
 
 #ifdef HELIOS_DEBUG
     if (pixel_data.find(red_band_label) == pixel_data.end() || pixel_data.find(green_band_label) == pixel_data.end() || pixel_data.find(blue_band_label) == pixel_data.end()) {
-        helios_runtime_error("ERROR (RadiationModel::whiteBalanceAuto): One or more specified band labels do not exist for the camera pixel data.");
-    }
-#endif
-
-    const auto &data_red = pixel_data.at(red_band_label);
-    const auto &data_green = pixel_data.at(green_band_label);
-    const auto &data_blue = pixel_data.at(blue_band_label);
-
-    const std::size_t N = data_red.size();
-    const int width = resolution.x;
-    const int height = resolution.y;
-
-    // Analyze scene characteristics
-
-    // 1. Check for green dominance (vegetation indicator)
-    float mean_r = 0.0f, mean_g = 0.0f, mean_b = 0.0f;
-    for (std::size_t i = 0; i < N; ++i) {
-        mean_r += data_red[i];
-        mean_g += data_green[i];
-        mean_b += data_blue[i];
-    }
-    mean_r /= N;
-    mean_g /= N;
-    mean_b /= N;
-
-    float green_dominance = mean_g / (mean_r + mean_g + mean_b + 1e-6f);
-
-    // 2. Check for bright pixels (white patch candidates)
-    float bright_threshold = 0.9f;
-    int bright_pixels = 0;
-    for (std::size_t i = 0; i < N; ++i) {
-        float max_val = std::max({data_red[i], data_green[i], data_blue[i]});
-        if (max_val > bright_threshold) {
-            bright_pixels++;
-        }
-    }
-    float bright_ratio = static_cast<float>(bright_pixels) / N;
-
-    // 3. Compute edge density (texture indicator)
-    float edge_density = 0.0f;
-    for (int y = 1; y < height - 1; ++y) {
-        for (int x = 1; x < width - 1; ++x) {
-            int idx = y * width + x;
-
-            // Simple gradient magnitude
-            float dx = std::abs(data_green[idx + 1] - data_green[idx - 1]);
-            float dy = std::abs(data_green[idx + width] - data_green[idx - width]);
-            edge_density += std::sqrt(dx * dx + dy * dy);
-        }
-    }
-    edge_density /= ((width - 2) * (height - 2));
-
-    // Select algorithm based on scene characteristics
-
-    // For LED-lit simulation scenes, avoid White Patch since bright pixels are colored LED lights
-    // Gray Edge works better for controlled lighting scenarios with known spectral bias
-    whiteBalanceGrayEdge(red_band_label, green_band_label, blue_band_label, 1, 5.0f);
-}
-
-void RadiationCamera::applyCameraSpectralCorrection(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, helios::Context *context) {
-
-#ifdef HELIOS_DEBUG
-    if (pixel_data.find(red_band_label) == pixel_data.end() || pixel_data.find(green_band_label) == pixel_data.end() || pixel_data.find(blue_band_label) == pixel_data.end()) {
-        helios_runtime_error("ERROR (RadiationCamera::applyCameraSpectralCorrection): One or more specified band labels do not exist for the camera pixel data.");
+        helios_runtime_error("ERROR (RadiationCamera::whiteBalanceSpectral): One or more specified band labels do not exist for the camera pixel data.");
     }
 #endif
 
     // Check if spectral response data exists for all bands
     if (band_spectral_response.find(red_band_label) == band_spectral_response.end() || band_spectral_response.find(green_band_label) == band_spectral_response.end() || band_spectral_response.find(blue_band_label) == band_spectral_response.end()) {
-        return;
+        helios_runtime_error("ERROR (RadiationCamera::whiteBalanceSpectral): Spectral response data not found for one or more bands. Ensure camera spectral responses are properly initialized.");
     }
 
     // Get spectral response identifiers
@@ -2774,76 +2753,72 @@ void RadiationCamera::applyCameraSpectralCorrection(const std::string &red_band_
     std::string green_response_id = band_spectral_response.at(green_band_label);
     std::string blue_response_id = band_spectral_response.at(blue_band_label);
 
-    // Skip if using uniform response (no spectral bias to correct)
+    // Skip if using uniform response (cannot apply spectral white balance)
     if (red_response_id == "uniform" && green_response_id == "uniform" && blue_response_id == "uniform") {
         return;
     }
 
-    try {
-        // Access spectral response data from global data (assuming vec2 format: wavelength, response)
-        std::vector<helios::vec2> red_spectrum, green_spectrum, blue_spectrum;
+    // Access spectral response data from global data (assuming vec2 format: wavelength, response)
+    std::vector<helios::vec2> red_spectrum, green_spectrum, blue_spectrum;
 
-        if (red_response_id != "uniform" && context->doesGlobalDataExist(red_response_id.c_str())) {
-            context->getGlobalData(red_response_id.c_str(), red_spectrum);
-        }
-        if (green_response_id != "uniform" && context->doesGlobalDataExist(green_response_id.c_str())) {
-            context->getGlobalData(green_response_id.c_str(), green_spectrum);
-        }
-        if (blue_response_id != "uniform" && context->doesGlobalDataExist(blue_response_id.c_str())) {
-            context->getGlobalData(blue_response_id.c_str(), blue_spectrum);
-        }
+    if (red_response_id != "uniform" && context->doesGlobalDataExist(red_response_id.c_str())) {
+        context->getGlobalData(red_response_id.c_str(), red_spectrum);
+    }
+    if (green_response_id != "uniform" && context->doesGlobalDataExist(green_response_id.c_str())) {
+        context->getGlobalData(green_response_id.c_str(), green_spectrum);
+    }
+    if (blue_response_id != "uniform" && context->doesGlobalDataExist(blue_response_id.c_str())) {
+        context->getGlobalData(blue_response_id.c_str(), blue_spectrum);
+    }
 
-        // If we don't have spectral data for all channels, skip correction
-        if (red_spectrum.empty() || green_spectrum.empty() || blue_spectrum.empty()) {
-            return;
-        }
+    // Verify we have spectral data for all channels
+    if (red_spectrum.empty() || green_spectrum.empty() || blue_spectrum.empty()) {
+        helios_runtime_error("ERROR (RadiationCamera::whiteBalanceSpectral): Could not retrieve spectral response curves for all bands from global data.");
+    }
 
-        // Compute integrated response (area under curve) for each channel
-        // This represents the total sensitivity of each channel
-        float red_integrated = 0.0f, green_integrated = 0.0f, blue_integrated = 0.0f;
+    // Compute integrated response (area under curve) for each channel using trapezoidal integration
+    // This represents the total sensitivity of each channel assuming a flat light source spectrum
+    float red_integrated = 0.0f, green_integrated = 0.0f, blue_integrated = 0.0f;
 
-        // Simple trapezoidal integration
-        for (size_t i = 1; i < red_spectrum.size(); ++i) {
-            float dw = red_spectrum[i].x - red_spectrum[i - 1].x;
-            red_integrated += 0.5f * (red_spectrum[i].y + red_spectrum[i - 1].y) * dw;
-        }
-        for (size_t i = 1; i < green_spectrum.size(); ++i) {
-            float dw = green_spectrum[i].x - green_spectrum[i - 1].x;
-            green_integrated += 0.5f * (green_spectrum[i].y + green_spectrum[i - 1].y) * dw;
-        }
-        for (size_t i = 1; i < blue_spectrum.size(); ++i) {
-            float dw = blue_spectrum[i].x - blue_spectrum[i - 1].x;
-            blue_integrated += 0.5f * (blue_spectrum[i].y + blue_spectrum[i - 1].y) * dw;
-        }
+    for (size_t i = 1; i < red_spectrum.size(); ++i) {
+        float dw = red_spectrum[i].x - red_spectrum[i - 1].x;
+        red_integrated += 0.5f * (red_spectrum[i].y + red_spectrum[i - 1].y) * dw;
+    }
+    for (size_t i = 1; i < green_spectrum.size(); ++i) {
+        float dw = green_spectrum[i].x - green_spectrum[i - 1].x;
+        green_integrated += 0.5f * (green_spectrum[i].y + green_spectrum[i - 1].y) * dw;
+    }
+    for (size_t i = 1; i < blue_spectrum.size(); ++i) {
+        float dw = blue_spectrum[i].x - blue_spectrum[i - 1].x;
+        blue_integrated += 0.5f * (blue_spectrum[i].y + blue_spectrum[i - 1].y) * dw;
+    }
 
-        // Avoid division by zero
-        if (red_integrated <= 0 || green_integrated <= 0 || blue_integrated <= 0) {
-            return;
-        }
+    // Check for valid integrated values
+    if (red_integrated <= 0 || green_integrated <= 0 || blue_integrated <= 0) {
+        helios_runtime_error("ERROR (RadiationCamera::whiteBalanceSpectral): Invalid integrated spectral response (non-positive value). Check spectral response data.");
+    }
 
-        // Compute correction factors to normalize channels relative to their integrated sensitivity
-        // Use the minimum integrated response as reference to avoid amplifying noise
-        float reference_response = std::min({red_integrated, green_integrated, blue_integrated});
+    // Compute white balance factors relative to each channel's integrated spectral response
+    // Normalize relative to the maximum integrated response to preserve brightness
+    // This ensures that an object with flat spectral reflectance appears correctly white balanced
+    // while keeping the brightest channel at unity gain (factor = 1.0)
+    float max_integrated = std::max({red_integrated, green_integrated, blue_integrated});
 
-        helios::vec3 correction_factors;
-        correction_factors.x = reference_response / red_integrated; // Red correction
-        correction_factors.y = reference_response / green_integrated; // Green correction
-        correction_factors.z = reference_response / blue_integrated; // Blue correction
+    helios::vec3 white_balance_factors;
+    white_balance_factors.x = max_integrated / red_integrated;
+    white_balance_factors.y = max_integrated / green_integrated;
+    white_balance_factors.z = max_integrated / blue_integrated;
 
-        // Apply correction factors to pixel data
-        auto &data_red = pixel_data.at(red_band_label);
-        auto &data_green = pixel_data.at(green_band_label);
-        auto &data_blue = pixel_data.at(blue_band_label);
+    // Apply white balance factors to pixel data
+    auto &data_red = pixel_data.at(red_band_label);
+    auto &data_green = pixel_data.at(green_band_label);
+    auto &data_blue = pixel_data.at(blue_band_label);
 
-        const std::size_t N = data_red.size();
-        for (std::size_t i = 0; i < N; ++i) {
-            data_red[i] *= correction_factors.x;
-            data_green[i] *= correction_factors.y;
-            data_blue[i] *= correction_factors.z;
-        }
-
-    } catch (const std::exception &e) {
-        return;
+    const std::size_t N = data_red.size();
+    for (std::size_t i = 0; i < N; ++i) {
+        data_red[i] *= white_balance_factors.x;
+        data_green[i] *= white_balance_factors.y;
+        data_blue[i] *= white_balance_factors.z;
     }
 }
 
@@ -3170,4 +3145,185 @@ void RadiationCamera::adjustSaturation(const std::string &red_band_label, const 
         data_green[i] = lum + saturation * (g - lum);
         data_blue[i] = lum + saturation * (b - lum);
     }
+}
+
+// -------------------- Camera Metadata Export Methods -------------------- //
+
+std::string RadiationModel::detectLightingType() const {
+    if (radiation_sources.empty()) {
+        return "none";
+    }
+
+    bool has_sun = false;
+    bool has_artificial = false;
+
+    for (const auto &source: radiation_sources) {
+        if (source.source_type == RADIATION_SOURCE_TYPE_COLLIMATED || source.source_type == RADIATION_SOURCE_TYPE_SUN_SPHERE) {
+            has_sun = true;
+        } else if (source.source_type == RADIATION_SOURCE_TYPE_SPHERE || source.source_type == RADIATION_SOURCE_TYPE_RECTANGLE || source.source_type == RADIATION_SOURCE_TYPE_DISK) {
+            has_artificial = true;
+        }
+    }
+
+    if (has_sun && has_artificial) {
+        return "mixed";
+    } else if (has_sun) {
+        return "sunlight";
+    } else if (has_artificial) {
+        return "artificial";
+    } else {
+        return "none";
+    }
+}
+
+float RadiationModel::calculateCameraTiltAngle(const helios::vec3 &position, const helios::vec3 &lookat) const {
+    // Calculate viewing direction vector
+    helios::vec3 direction = lookat - position;
+    direction.normalize();
+
+    // Calculate tilt from horizontal (0 = horizontal, 90 = straight down, -90 = straight up)
+    // The z component gives us the vertical component of the direction
+    // Tilt angle = -asin(direction.z) in degrees
+    float tilt_angle_deg = -asin(direction.z) * 180.0f / M_PI;
+
+    return tilt_angle_deg;
+}
+
+void RadiationModel::populateCameraMetadata(const std::string &camera_label, CameraMetadata &metadata) const {
+    // Validate camera exists
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::populateCameraMetadata): Camera '" + camera_label + "' does not exist.");
+    }
+
+    const auto &cam = cameras.at(camera_label);
+
+    // --- Camera Properties --- //
+    metadata.camera_properties.width = cam.resolution.x;
+    metadata.camera_properties.height = cam.resolution.y;
+    metadata.camera_properties.channels = static_cast<int>(cam.band_labels.size());
+
+    // Calculate sensor dimensions from HFOV and sensor_width_mm
+    // sensor_width is already in mm, stored in the camera
+    metadata.camera_properties.sensor_width = cam.sensor_width_mm;
+
+    // Calculate VFOV from HFOV and aspect ratio
+    float VFOV_degrees = cam.HFOV_degrees / cam.FOV_aspect_ratio;
+
+    // Calculate sensor height from sensor width and aspect ratio
+    metadata.camera_properties.sensor_height = cam.sensor_width_mm / cam.FOV_aspect_ratio;
+
+    // Calculate optical focal length from HFOV and sensor width
+    // focal_length = sensor_width / (2 * tan(HFOV/2))
+    float HFOV_rad = cam.HFOV_degrees * M_PI / 180.0f;
+    metadata.camera_properties.focal_length = cam.sensor_width_mm / (2.0f * tan(HFOV_rad / 2.0f));
+
+    // Calculate aperture (f-number = focal_length / aperture_diameter)
+    if (cam.lens_diameter > 0) {
+        float lens_diameter_mm = cam.lens_diameter * 1000.0f; // Convert meters to mm
+        float f_number = metadata.camera_properties.focal_length / lens_diameter_mm;
+        std::ostringstream aperture_str;
+        aperture_str << "f/" << std::fixed << std::setprecision(1) << f_number;
+        metadata.camera_properties.aperture = aperture_str.str();
+    } else {
+        metadata.camera_properties.aperture = "pinhole";
+    }
+
+    // Camera model
+    metadata.camera_properties.model = cam.model;
+
+    // --- Location Properties --- //
+    helios::Location loc = context->getLocation();
+    metadata.location_properties.latitude = loc.latitude_deg;
+    metadata.location_properties.longitude = loc.longitude_deg;
+
+    // --- Acquisition Properties --- //
+    helios::Date date = context->getDate();
+    helios::Time time = context->getTime();
+
+    // Format date as YYYY-MM-DD
+    std::ostringstream date_str;
+    date_str << date.year << "-" << std::setw(2) << std::setfill('0') << date.month << "-" << std::setw(2) << std::setfill('0') << date.day;
+    metadata.acquisition_properties.date = date_str.str();
+
+    // Format time as HH:MM:SS
+    std::ostringstream time_str;
+    time_str << std::setw(2) << std::setfill('0') << time.hour << ":" << std::setw(2) << std::setfill('0') << time.minute << ":" << std::setw(2) << std::setfill('0') << time.second;
+    metadata.acquisition_properties.time = time_str.str();
+
+    metadata.acquisition_properties.UTC_offset = loc.UTC_offset;
+    metadata.acquisition_properties.camera_height_m = cam.position.z;
+    metadata.acquisition_properties.camera_angle_deg = calculateCameraTiltAngle(cam.position, cam.lookat);
+    metadata.acquisition_properties.light_source = detectLightingType();
+
+    // Note: path field is left empty and will be set when image is written
+    metadata.path = "";
+}
+
+void RadiationModel::setCameraMetadata(const std::string &camera_label, const CameraMetadata &metadata) {
+    // Validate camera exists
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::setCameraMetadata): Camera '" + camera_label + "' does not exist.");
+    }
+
+    camera_metadata[camera_label] = metadata;
+}
+
+std::string RadiationModel::writeCameraMetadataFile(const std::string &camera_label, const std::string &output_path) const {
+    // Validate camera has metadata
+    if (camera_metadata.find(camera_label) == camera_metadata.end()) {
+        helios_runtime_error("ERROR (RadiationModel::writeCameraMetadataFile): No metadata set for camera '" + camera_label + "'.");
+    }
+
+    const auto &metadata = camera_metadata.at(camera_label);
+
+    // Helper lambda to round floats to a specific number of decimal places for clean JSON output
+    auto round_to_precision = [](float value, int decimals) -> float {
+        float multiplier = std::pow(10.0f, decimals);
+        return std::round(value * multiplier) / multiplier;
+    };
+
+    // Build JSON structure matching schema
+    nlohmann::json j;
+    j["path"] = metadata.path;
+
+    j["camera_properties"]["height"] = metadata.camera_properties.height;
+    j["camera_properties"]["width"] = metadata.camera_properties.width;
+    j["camera_properties"]["channels"] = metadata.camera_properties.channels;
+    j["camera_properties"]["focal_length"] = round_to_precision(metadata.camera_properties.focal_length, 2);
+    j["camera_properties"]["aperture"] = metadata.camera_properties.aperture;
+    j["camera_properties"]["sensor_width"] = round_to_precision(metadata.camera_properties.sensor_width, 2);
+    j["camera_properties"]["sensor_height"] = round_to_precision(metadata.camera_properties.sensor_height, 2);
+    j["camera_properties"]["model"] = metadata.camera_properties.model;
+
+    j["location_properties"]["latitude"] = round_to_precision(metadata.location_properties.latitude, 6);
+    j["location_properties"]["longitude"] = round_to_precision(metadata.location_properties.longitude, 6);
+
+    j["acquisition_properties"]["date"] = metadata.acquisition_properties.date;
+    j["acquisition_properties"]["time"] = metadata.acquisition_properties.time;
+    j["acquisition_properties"]["UTC_offset"] = round_to_precision(metadata.acquisition_properties.UTC_offset, 1);
+    j["acquisition_properties"]["camera_height_m"] = round_to_precision(metadata.acquisition_properties.camera_height_m, 2);
+    j["acquisition_properties"]["camera_angle_deg"] = round_to_precision(metadata.acquisition_properties.camera_angle_deg, 2);
+    j["acquisition_properties"]["light_source"] = metadata.acquisition_properties.light_source;
+
+    // Generate JSON filename (replace image extension with .json)
+    std::string json_filename = metadata.path;
+    size_t ext_pos = json_filename.find_last_of(".");
+    if (ext_pos != std::string::npos) {
+        json_filename = json_filename.substr(0, ext_pos) + ".json";
+    } else {
+        json_filename += ".json";
+    }
+
+    // Construct full path with output directory
+    std::string json_path = output_path + json_filename;
+
+    // Write to file
+    std::ofstream json_file(json_path);
+    if (!json_file.is_open()) {
+        helios_runtime_error("ERROR (RadiationModel::writeCameraMetadataFile): Failed to open file '" + json_path + "' for writing.");
+    }
+    json_file << j.dump(2) << std::endl; // Pretty print with 2-space indentation
+    json_file.close();
+
+    return json_path;
 }

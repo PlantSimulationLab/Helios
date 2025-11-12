@@ -34,7 +34,7 @@ void GeometryHandler::allocateBufferSize(size_t primitive_count, VisualizerGeome
 }
 
 void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geometry_type, const std::vector<helios::vec3> &vertices, const helios::RGBAcolor &color, const std::vector<helios::vec2> &uvs, int textureID, bool override_texture_color,
-                                  bool has_glyph_texture, uint coordinate_system, bool visible_flag, bool iscontextgeometry, bool isskygeometry, int size) {
+                                  bool has_glyph_texture, uint coordinate_system, bool visible_flag, bool iscontextgeometry, bool isskygeometry, float size) {
 
     char vertex_count = getVertexCount(geometry_type);
 
@@ -66,6 +66,7 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
     size_t color_index = UUID_map.at(UUID).color_index;
     size_t texture_flag_index = UUID_map.at(UUID).texture_flag_index;
     size_t texture_ID_index = UUID_map.at(UUID).texture_ID_index;
+    size_t size_index = UUID_map.at(UUID).size_index;
 
     for (char i = 0; i < vertex_count; i++) {
 
@@ -177,7 +178,7 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
 
         sky_geometry_flag_data[geometry_type].push_back(isskygeometry ? 1 : 0);
 
-        size_data[geometry_type].push_back(static_cast<float>(size));
+        size_data[geometry_type].push_back(size);
     } else {
         normal_data[geometry_type].at(normal_index) = normal.x;
         normal_data[geometry_type].at(normal_index + 1) = normal.y;
@@ -187,6 +188,8 @@ void GeometryHandler::addGeometry(size_t UUID, const VisualizerGeometryType &geo
         color_data[geometry_type].at(color_index + 1) = color.g;
         color_data[geometry_type].at(color_index + 2) = color.b;
         color_data[geometry_type].at(color_index + 3) = color.a;
+
+        size_data[geometry_type].at(size_index) = size;
     }
 
     markDirty(UUID);

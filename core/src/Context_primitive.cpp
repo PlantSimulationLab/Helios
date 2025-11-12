@@ -531,9 +531,8 @@ uint Context::copyPrimitive(uint UUID) {
             tri_new = (new Triangle(vertices.at(0), vertices.at(1), vertices.at(2), p->getColorRGBA(), parentID, currentUUID));
         } else {
             const std::string &texture_file = p->getTextureFile();
-            float solid_fraction = p->getArea() / calculateTriangleArea(vertices.at(0), vertices.at(1), vertices.at(2));
+            float solid_fraction = p->getSolidFraction();
             tri_new = (new Triangle(vertices.at(0), vertices.at(1), vertices.at(2), texture_file.c_str(), uv, solid_fraction, parentID, currentUUID));
-            tri_new->setSolidFraction(solid_fraction);
             // Preserve the color from the original triangle
             tri_new->setColor(p->getColorRGBA());
         }

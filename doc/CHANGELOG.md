@@ -1,5 +1,52 @@
 # Changelog
 
+# [1.3.56] 2025-11-12
+
+- Made a change to `.clang-format` to not sort header includes, which was persistently causing issues in the project builder plug-in
+
+## Core
+- Fixed critical bug in `Texture::computeSolidFraction()` where triangle winding order (clockwise vs counter-clockwise) was not handled correctly. The half-space test for point-in-triangle determination assumed counter-clockwise winding, causing all pixels in clockwise-wound triangles to be rejected, resulting in zero solid fraction values. Now uses shoelace formula to detect winding order and flip half-space coefficients as needed.
+- Fixed bug in `Context::copyPrimitive()` for textured triangles where solid fraction was incorrectly recalculated using geometric area instead of being directly copied from the source primitive. This caused zero solid fractions to perpetuate through primitive copying operations.
+- Fixed bug in `Context::addTubeObject()` where very small or zero radii at tube ends created degenerate triangles with near-zero surface area, generating numerous warnings. Now clamps radii to a minimum threshold (1e-5) that is large enough to avoid degenerate triangles but small enough to appear as a point visually.
+- Fixed bug in `validateOutputPath()` where directory paths without trailing slashes were not properly handled. Now ensures directory paths always end with a trailing slash for consistent path concatenation behavior. Added regression test for this fix.
+
+## CanopyGenerator
+- Fixed incorrect triangle winding order in VSP grapevine `leafPrototype()` function. The bottom half of leaves (y<0) had reversed vertex ordering, causing normals to point in the opposite direction from the top half. Both halves now use consistent counter-clockwise winding order following the right-hand rule.
+
+## Plant Architecture
+- Fixed bug where child shoot insertion angles were incorrect when using multiple petioles per internode. The angular offset calculation now properly accounts for the number of petioles per internode rather than the number of axillary buds. Added regression test for this fix.
+- Added comprehensive support for exact geometry restoration from XML files:
+  - Added `Phytomer::scalePetioleGeometry()` method to restore exact petiole dimensions that may differ from parameter-based values
+  - Added `PlantArchitecture::comparePlantGeometry()` debugging method for validating XML read/write operations by comparing geometry between original and loaded plants
+  - Inflorescence rotation parameters (pitch, yaw, roll, azimuth, peduncle_axis) are now stored in `FloralBud::inflorescence_rotation` and restored from XML
+  - Individual flower/fruit base scales are now stored in `FloralBud::inflorescence_base_scales` and restored from XML
+  - Peduncle radii are now stored alongside vertices in `Phytomer::peduncle_radii` for exact reconstruction
+  - Refactored inflorescence geometry creation into `Phytomer::createInflorescenceGeometry()` helper method to enable deterministic reproduction during XML restoration
+- Made `RandomParameter` distribution members (`distribution`, `distribution_parameters`) public to support XML serialization
+- Optimized all parameter assignment operators to check if distribution is constant before resampling, avoiding unnecessary random number generation
+- Fixed peduncle curvature calculation to bend toward or away from vertical axis using horizontal bending plane, preventing incorrect curvature behavior when peduncle orientation changes
+- Fixed bug where peduncle vertices were not being updated when phytomer position was translated via `setPetioleBase()`
+
+## Radiation
+- Enhanced camera calibration to support multiple colorboards simultaneously in the same scene. `CameraCalibration::detectColorBoardType()` has been replaced with `CameraCalibration::detectColorBoardTypes()` which returns a vector of all detected colorboard types. The internal storage has been updated from a single vector to a map organized by colorboard type.
+- `CameraCalibration::getColorBoardUUIDs()` has been renamed to `CameraCalibration::getAllColorBoardUUIDs()` and made const. It now returns UUIDs from all colorboards in the scene.
+- `RadiationModel::autoCalibrateCameraImage()` now processes all colorboards in the scene for calibration, combining patches from multiple colorboards (e.g., DGK, Calibrite, SpyderCHECKR) to improve calibration accuracy when multiple colorboards are present.
+- Adding a colorboard of the same type now replaces the previous colorboard of that type with a warning message, rather than clearing all colorboards.
+- Added UTF-8 encoding compiler flag (`/utf-8`) for MSVC in CMakeLists.txt to properly handle Unicode characters in source files
+- Fixed Unicode em-dash characters in `RayTracing.cuh` comment headers by replacing with ASCII dashes to avoid encoding issues
+- Updated Calibrite ColorChecker Classic colorboard spectral data
+- Updated leaf surface spectral library with expanded spectral measurements
+- Added automatic JSON metadata export for camera images. When `RadiationModel::setCameraMetadata()` is called for a camera, a JSON metadata file is automatically written alongside the image when `RadiationModel::writeCameraImage()` is called. The metadata includes camera properties (resolution, focal length, aperture, sensor dimensions, model name), geographic location, acquisition date/time, and lighting conditions.
+- Added `RadiationModel::populateCameraMetadata()` method to automatically populate camera metadata from camera parameters and simulation context (date, time, location, lighting sources). Optical focal length, sensor dimensions, aperture f-stop, camera tilt angle, and light source type are all calculated automatically.
+- Added `CameraProperties::sensor_width_mm` parameter to specify physical sensor width in mm (default 35mm for full-frame sensors). This is used to calculate optical focal length when metadata is auto-populated.
+- Added `CameraProperties::model` parameter to specify camera model name (e.g., "Nikon D700", "Canon EOS 5D") for documentation purposes in exported metadata.
+- **BREAKING CHANGE:** `CameraProperties::FOV_aspect_ratio` is now deprecated and automatically calculated from `camera_resolution` to ensure square pixels (FOV_aspect_ratio = horizontal_resolution / vertical_resolution). Explicitly setting this parameter will trigger a warning and the value will be ignored.
+- Renamed `RadiationCamera::applyCameraSpectralCorrection()` to `RadiationCamera::whiteBalanceSpectral()` to better reflect its purpose as a spectral-based white balance method. The method now requires spectral response data and will throw an error if not available, rather than silently returning.
+- Removed `RadiationCamera::whiteBalanceAuto()` method. Image processing pipeline now uses `whiteBalanceSpectral()` for more consistent and physically-based white balance.
+
+## Visualizer
+- Fixed error causing line widths from `Visualizer::addLine` to be fixed at 1.0 regardless of the line width passed
+
 # [1.3.55] 2025-10-18
 
 ## Core

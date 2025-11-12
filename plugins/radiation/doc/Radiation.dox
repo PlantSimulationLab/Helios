@@ -552,7 +552,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
    <tr>
       <td>FOV_aspect_ratio</td>
       <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td>
-      <td>Ratio of horizontal to vertical camera field of view.</td>
+      <td><b>DEPRECATED:</b> This parameter is automatically calculated from camera_resolution to ensure square pixels. The value is set to FOV_aspect_ratio = horizontal_resolution / vertical_resolution. Explicitly setting this parameter will trigger a warning and the value will be ignored.</td>
    </tr>
    <tr>
      <td>camera_resolution</td>
@@ -651,6 +651,148 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  3\. Set up the scene in Helios based on the geometry, radiative conditions, and camera(s) that will be present in the simulations. You must specify the spectral distribution of any radiation sources using \ref RadiationModel::setSourceSpectrum(), and specify an initial guess for the camera channel spectral distribution(s) using \ref RadiationModel::setCameraSpectralResponse().
 
  4\. Add a simulated color calibration board to the scene. You can add the default color board (DGK Color Tools DKK Color Calibration Chart) using the method ef CameraCalibration::addDefaultColorboard(), or a custom color board ef CameraCalibration::addColorboard().
+
+ \subsubsection RadCamMetadata Exporting Camera Metadata
+
+ The radiation model can automatically export JSON metadata files alongside camera images. This metadata includes camera properties (resolution, focal length, aperture, sensor dimensions), geographic location, acquisition time/date, and lighting conditions. This is useful for documentation, machine learning applications, and archival purposes.
+
+ \paragraph RadCamMetadataStruct Camera Metadata Structure
+
+ Camera metadata is stored in the \ref CameraMetadata struct, which contains three nested structures:
+
+ - <b>camera_properties</b>: Intrinsic camera parameters including image resolution, number of channels, optical focal length (mm), aperture (f-stop), and physical sensor dimensions (mm)
+ - <b>location_properties</b>: Geographic coordinates (latitude/longitude in degrees)
+ - <b>acquisition_properties</b>: Capture information including date (YYYY-MM-DD), time (HH:MM:SS), UTC offset, camera height above ground (meters), camera tilt angle from horizontal (degrees), and light source type ("sunlight", "artificial", "mixed", or "none")
+
+ \paragraph RadCamMetadataAuto Auto-populating Metadata
+
+ The easiest way to populate camera metadata is to use the \ref RadiationModel::populateCameraMetadata() method, which automatically fills all fields from the camera parameters and simulation context:
+
+ ~~~~~~{.cpp}
+ // Assume camera has already been added with label "RGB_camera"
+ CameraMetadata metadata;
+ radiationmodel.populateCameraMetadata("RGB_camera", metadata);
+
+ // Set the metadata for this camera
+ radiationmodel.setCameraMetadata("RGB_camera", metadata);
+ ~~~~~~
+
+ The auto-population calculates:
+ - <b>Optical focal length</b>: Derived from sensor width and horizontal field of view using \f$f = \frac{w}{2 \tan(\theta/2)}\f$, where \f$w\f$ is sensor width and \f$\theta\f$ is HFOV
+ - <b>Sensor dimensions</b>: Sensor width is specified via the \ref CameraProperties::sensor_width_mm parameter (default 35mm), and sensor height is calculated as \f$h = w / \mathrm{aspect\_ratio}\f$
+ - <b>Aperture (f-stop)</b>: Calculated from focal length and lens diameter as \f$N = f / D\f$, formatted as "f/X.X". For pinhole cameras (lens_diameter = 0), aperture is set to "pinhole"
+ - <b>Camera tilt angle</b>: Angle from horizontal computed from the camera viewing direction, where 0° is horizontal, 90° is pointing straight down, and -90° is pointing straight up
+ - <b>Light source type</b>: Automatically detected based on radiation sources:
+   - "sunlight" if only collimated or sun sphere sources are present
+   - "artificial" if only sphere, rectangle, or disk sources are present
+   - "mixed" if both natural and artificial sources are present
+   - "none" if no sources are present
+ - <b>Location and date/time</b>: Retrieved from the simulation Context
+
+ \paragraph RadCamMetadataManual Manual Metadata Population
+
+ You can also manually populate metadata fields if you want to override auto-calculated values or provide custom information:
+
+ ~~~~~~{.cpp}
+ CameraMetadata metadata;
+
+ // Manually set camera properties
+ metadata.camera_properties.width = 1024;
+ metadata.camera_properties.height = 1024;
+ metadata.camera_properties.channels = 3;
+ metadata.camera_properties.focal_length = 50.0f;  // mm
+ metadata.camera_properties.aperture = "f/2.8";
+ metadata.camera_properties.sensor_width = 36.0f;  // mm (full-frame)
+ metadata.camera_properties.sensor_height = 24.0f; // mm
+
+ // Set location
+ metadata.location_properties.latitude = 34.0522f;
+ metadata.location_properties.longitude = -118.2437f;
+
+ // Set acquisition properties
+ metadata.acquisition_properties.date = "2025-09-30";
+ metadata.acquisition_properties.time = "14:30:00";
+ metadata.acquisition_properties.UTC_offset = 8.0f;
+ metadata.acquisition_properties.camera_height_m = 50.0f;
+ metadata.acquisition_properties.camera_angle_deg = 15.0f;
+ metadata.acquisition_properties.light_source = "sunlight";
+
+ radiationmodel.setCameraMetadata("RGB_camera", metadata);
+ ~~~~~~
+
+ \paragraph RadCamMetadataExport Automatic JSON Export
+
+ Once metadata has been set for a camera using \ref RadiationModel::setCameraMetadata(), a JSON metadata file will be automatically written whenever \ref RadiationModel::writeCameraImage() is called for that camera. The JSON file will have the same base name as the image but with a .json extension.
+
+ ~~~~~~{.cpp}
+ // After running simulation...
+ std::string image_path = radiationmodel.writeCameraImage("RGB_camera", {"red","green","blue"}, "scene");
+ // This writes both "RGB_camera_scene.jpeg" and "RGB_camera_scene.json"
+ ~~~~~~
+
+ The JSON file follows this structure:
+
+ ~~~~~~{.json}
+ {
+   "path": "RGB_camera_scene.jpeg",
+   "camera_properties": {
+     "height": 1024,
+     "width": 1024,
+     "channels": 3,
+     "focal_length": 28.5,
+     "aperture": "f/2.8",
+     "sensor_width": 35.0,
+     "sensor_height": 35.0,
+     "model": "generic"
+   },
+   "location_properties": {
+     "latitude": 34.0522,
+     "longitude": -118.2437
+   },
+   "acquisition_properties": {
+     "date": "2025-09-30",
+     "time": "14:30:00",
+     "UTC_offset": 8.0,
+     "camera_height_m": 50.0,
+     "camera_angle_deg": 15.0,
+     "light_source": "sunlight"
+   }
+ }
+ ~~~~~~
+
+ \paragraph RadCamMetadataSensor Sensor Width Parameter
+
+ The physical sensor width can be specified when defining camera properties using the \ref CameraProperties::sensor_width_mm parameter (default is 35mm for full-frame):
+
+ ~~~~~~{.cpp}
+ CameraProperties properties;
+ properties.camera_resolution = make_int2(1920, 1280);  // 3:2 aspect ratio
+ properties.sensor_width_mm = 24.0f;  // APS-C sensor size
+ properties.HFOV = 45.0f;
+ // FOV_aspect_ratio is automatically calculated from camera_resolution (1920/1280 = 1.5)
+ properties.model = "Canon EOS 70D";  // Optional camera model name
+
+ radiationmodel.addRadiationCamera("APS-C_camera", {"red","green","blue"},
+                                   camera_position, camera_lookat,
+                                   properties, antialiasing_samples);
+ ~~~~~~
+
+ This sensor width is used to calculate the optical focal length when metadata is auto-populated. Common sensor sizes include:
+ - Full-frame: 36mm × 24mm (sensor_width_mm = 36.0)
+ - APS-C: 24mm × 16mm (sensor_width_mm = 24.0)
+ - Micro Four Thirds: 17.3mm × 13mm (sensor_width_mm = 17.3)
+
+ \paragraph RadCamMetadataModel Camera Model Name
+
+ The camera model name can be specified using the \ref CameraProperties::model parameter (default is "generic"). This is useful for documentation and distinguishing between different camera types in your simulation:
+
+ ~~~~~~{.cpp}
+ CameraProperties properties;
+ properties.model = "Nikon D700";
+ // ... other properties ...
+ ~~~~~~
+
+ The model name will be automatically included in the exported JSON metadata.
 
  \subsection RadRun Running Simulations
 

@@ -1070,16 +1070,13 @@ void RadiationModel::blendSpectraRandomly(const std::string &new_spectrum_label,
     blendSpectra(new_spectrum_label, spectrum_labels, weights);
 }
 
-void RadiationModel::interpolateSpectrumFromPrimitiveData(const std::vector<uint> &primitive_UUIDs,
-                                                          const std::vector<std::string> &spectra,
-                                                          const std::vector<float> &values,
-                                                          const std::string &primitive_data_query_label,
+void RadiationModel::interpolateSpectrumFromPrimitiveData(const std::vector<uint> &primitive_UUIDs, const std::vector<std::string> &spectra, const std::vector<float> &values, const std::string &primitive_data_query_label,
                                                           const std::string &primitive_data_radprop_label) {
 
     // Validate that spectra and values have the same length
     if (spectra.size() != values.size()) {
-        helios_runtime_error("ERROR (RadiationModel::interpolateSpectrumFromPrimitiveData): The 'spectra' vector (size=" + std::to_string(spectra.size()) +
-                             ") and 'values' vector (size=" + std::to_string(values.size()) + ") must have the same length.");
+        helios_runtime_error("ERROR (RadiationModel::interpolateSpectrumFromPrimitiveData): The 'spectra' vector (size=" + std::to_string(spectra.size()) + ") and 'values' vector (size=" + std::to_string(values.size()) +
+                             ") must have the same length.");
     }
 
     // Validate that vectors are not empty
@@ -1102,10 +1099,9 @@ void RadiationModel::interpolateSpectrumFromPrimitiveData(const std::vector<uint
     }
 
     // Search for existing config with matching query and target labels
-    SpectrumInterpolationConfig* existing_config = nullptr;
-    for (auto &config : spectrum_interpolation_configs) {
-        if (config.query_data_label == primitive_data_query_label &&
-            config.target_data_label == primitive_data_radprop_label) {
+    SpectrumInterpolationConfig *existing_config = nullptr;
+    for (auto &config: spectrum_interpolation_configs) {
+        if (config.query_data_label == primitive_data_query_label && config.target_data_label == primitive_data_radprop_label) {
             existing_config = &config;
             break;
         }
@@ -1138,16 +1134,12 @@ void RadiationModel::interpolateSpectrumFromPrimitiveData(const std::vector<uint
     }
 }
 
-void RadiationModel::interpolateSpectrumFromObjectData(const std::vector<uint> &object_IDs,
-                                                       const std::vector<std::string> &spectra,
-                                                       const std::vector<float> &values,
-                                                       const std::string &object_data_query_label,
+void RadiationModel::interpolateSpectrumFromObjectData(const std::vector<uint> &object_IDs, const std::vector<std::string> &spectra, const std::vector<float> &values, const std::string &object_data_query_label,
                                                        const std::string &primitive_data_radprop_label) {
 
     // Validate that spectra and values have the same length
     if (spectra.size() != values.size()) {
-        helios_runtime_error("ERROR (RadiationModel::interpolateSpectrumFromObjectData): The 'spectra' vector (size=" + std::to_string(spectra.size()) +
-                             ") and 'values' vector (size=" + std::to_string(values.size()) + ") must have the same length.");
+        helios_runtime_error("ERROR (RadiationModel::interpolateSpectrumFromObjectData): The 'spectra' vector (size=" + std::to_string(spectra.size()) + ") and 'values' vector (size=" + std::to_string(values.size()) + ") must have the same length.");
     }
 
     // Validate that vectors are not empty
@@ -1170,10 +1162,9 @@ void RadiationModel::interpolateSpectrumFromObjectData(const std::vector<uint> &
     }
 
     // Search for existing config with matching query and target labels
-    SpectrumInterpolationConfig* existing_config = nullptr;
-    for (auto &config : spectrum_interpolation_configs) {
-        if (config.query_data_label == object_data_query_label &&
-            config.target_data_label == primitive_data_radprop_label) {
+    SpectrumInterpolationConfig *existing_config = nullptr;
+    for (auto &config: spectrum_interpolation_configs) {
+        if (config.query_data_label == object_data_query_label && config.target_data_label == primitive_data_radprop_label) {
             existing_config = &config;
             break;
         }
@@ -2544,9 +2535,9 @@ void RadiationModel::updateRadiativeProperties() {
     };
 
     // Apply spectral interpolation based on primitive data values
-    for (const auto &config : spectrum_interpolation_configs) {
+    for (const auto &config: spectrum_interpolation_configs) {
         // Validate that all spectra in this config exist in global data and have correct type
-        for (const auto &spectrum_label : config.spectra_labels) {
+        for (const auto &spectrum_label: config.spectra_labels) {
             if (!context->doesGlobalDataExist(spectrum_label.c_str())) {
                 helios_runtime_error("ERROR (RadiationModel::updateRadiativeProperties): Spectral interpolation config references global data '" + spectrum_label + "' which does not exist.");
             }
@@ -2555,7 +2546,7 @@ void RadiationModel::updateRadiativeProperties() {
             }
         }
 
-        for (uint uuid : config.primitive_UUIDs) {
+        for (uint uuid: config.primitive_UUIDs) {
             // Check if primitive still exists in context (it may have been deleted)
             if (!context->doesPrimitiveExist(uuid)) {
                 continue;
@@ -2589,7 +2580,7 @@ void RadiationModel::updateRadiativeProperties() {
         }
 
         // Apply spectral interpolation based on object data values
-        for (uint objID : config.object_IDs) {
+        for (uint objID: config.object_IDs) {
             // Check if object still exists in context (it may have been deleted)
             if (!context->doesObjectExist(objID)) {
                 continue;
@@ -5191,61 +5182,89 @@ std::string RadiationModel::autoCalibrateCameraImage(const std::string &camera_l
         helios_runtime_error("ERROR (RadiationModel::autoCalibrateCameraImage): Camera pixel UUID data '" + pixel_UUID_label + "' does not exist for camera '" + camera_label + "'. Make sure the radiation model has been run.");
     }
 
-    // Step 2: Detect colorboard type using CameraCalibration helper
+    // Step 2: Detect all colorboard types using CameraCalibration helper
     CameraCalibration calibration(context);
-    std::string colorboard_type;
+    std::vector<std::string> colorboard_types;
     try {
-        colorboard_type = calibration.detectColorBoardType();
+        colorboard_types = calibration.detectColorBoardTypes();
     } catch (const std::exception &e) {
-        helios_runtime_error("ERROR (RadiationModel::autoCalibrateCameraImage): Failed to detect colorboard type. " + std::string(e.what()));
+        helios_runtime_error("ERROR (RadiationModel::autoCalibrateCameraImage): Failed to detect colorboard types. " + std::string(e.what()));
     }
 
-    // Step 3: Get reference Lab values for the detected colorboard
+    // Step 3: Get reference Lab values for all detected colorboards
     std::vector<CameraCalibration::LabColor> reference_lab_values;
-    if (colorboard_type == "DGK") {
-        reference_lab_values = calibration.getReferenceLab_DGK();
-    } else if (colorboard_type == "Calibrite") {
-        reference_lab_values = calibration.getReferenceLab_Calibrite();
-    } else if (colorboard_type == "SpyderCHECKR") {
-        reference_lab_values = calibration.getReferenceLab_SpyderCHECKR();
-    } else {
-        helios_runtime_error("ERROR (RadiationModel::autoCalibrateCameraImage): Unsupported colorboard type '" + colorboard_type + "'.");
+    std::vector<std::string> colorboard_type_per_patch; // Track which colorboard each patch belongs to
+
+    for (const auto &colorboard_type: colorboard_types) {
+        std::vector<CameraCalibration::LabColor> current_reference_values;
+
+        if (colorboard_type == "DGK") {
+            current_reference_values = calibration.getReferenceLab_DGK();
+        } else if (colorboard_type == "Calibrite") {
+            current_reference_values = calibration.getReferenceLab_Calibrite();
+        } else if (colorboard_type == "SpyderCHECKR") {
+            current_reference_values = calibration.getReferenceLab_SpyderCHECKR();
+        } else {
+            helios_runtime_error("ERROR (RadiationModel::autoCalibrateCameraImage): Unsupported colorboard type '" + colorboard_type + "'.");
+        }
+
+        // Add to combined list
+        reference_lab_values.insert(reference_lab_values.end(), current_reference_values.begin(), current_reference_values.end());
+
+        // Track which colorboard type each patch belongs to
+        for (size_t i = 0; i < current_reference_values.size(); i++) {
+            colorboard_type_per_patch.push_back(colorboard_type);
+        }
     }
 
-    // Step 4: Generate segmentation masks for colorboard patches
+    // Step 4: Generate segmentation masks for all colorboard patches
     std::vector<uint> pixel_UUIDs;
     context->getGlobalData(pixel_UUID_label.c_str(), pixel_UUIDs);
     int2 camera_resolution = cameras.at(camera_label).resolution;
 
     // Create segmentation masks by finding pixels that belong to colorboard patches
     std::map<int, std::vector<std::vector<bool>>> patch_masks;
-    for (int patch_idx = 0; patch_idx < (int) reference_lab_values.size(); patch_idx++) {
-        std::vector<std::vector<bool>> mask(camera_resolution.y, std::vector<bool>(camera_resolution.x, false));
+    int global_patch_idx = 0; // Global patch index across all colorboards
 
-        // Find pixels that correspond to this colorboard patch
-        for (int y = 0; y < camera_resolution.y; y++) {
-            for (int x = 0; x < camera_resolution.x; x++) {
-                int pixel_index = y * camera_resolution.x + x;
-                uint pixel_UUID = pixel_UUIDs[pixel_index];
+    for (const auto &colorboard_type: colorboard_types) {
+        // Get the number of patches for this colorboard type
+        int num_patches = 0;
+        if (colorboard_type == "DGK") {
+            num_patches = 18;
+        } else if (colorboard_type == "Calibrite" || colorboard_type == "SpyderCHECKR") {
+            num_patches = 24;
+        }
 
-                if (pixel_UUID > 0) { // Valid primitive
-                    pixel_UUID--; // Convert from 1-based to 0-based indexing
+        // Generate masks for each patch in this colorboard
+        for (int local_patch_idx = 0; local_patch_idx < num_patches; local_patch_idx++) {
+            std::vector<std::vector<bool>> mask(camera_resolution.y, std::vector<bool>(camera_resolution.x, false));
 
-                    // Check if this primitive belongs to the colorboard patch
-                    std::string colorboard_data_label = "colorboard_" + colorboard_type;
-                    if (context->doesPrimitiveDataExist(pixel_UUID, colorboard_data_label.c_str())) {
-                        uint patch_id;
-                        context->getPrimitiveData(pixel_UUID, colorboard_data_label.c_str(), patch_id);
-                        // Patch indices are 0-based, compare directly
-                        if ((int) patch_id == patch_idx) {
-                            mask[y][x] = true;
+            // Find pixels that correspond to this colorboard patch
+            for (int y = 0; y < camera_resolution.y; y++) {
+                for (int x = 0; x < camera_resolution.x; x++) {
+                    int pixel_index = y * camera_resolution.x + x;
+                    uint pixel_UUID = pixel_UUIDs[pixel_index];
+
+                    if (pixel_UUID > 0) { // Valid primitive
+                        pixel_UUID--; // Convert from 1-based to 0-based indexing
+
+                        // Check if this primitive belongs to this specific colorboard patch
+                        std::string colorboard_data_label = "colorboard_" + colorboard_type;
+                        if (context->doesPrimitiveDataExist(pixel_UUID, colorboard_data_label.c_str())) {
+                            uint patch_id;
+                            context->getPrimitiveData(pixel_UUID, colorboard_data_label.c_str(), patch_id);
+                            // Patch indices are 0-based, compare directly
+                            if ((int) patch_id == local_patch_idx) {
+                                mask[y][x] = true;
+                            }
                         }
                     }
                 }
             }
-        }
 
-        patch_masks[patch_idx] = mask;
+            patch_masks[global_patch_idx] = mask;
+            global_patch_idx++;
+        }
     }
 
     // Step 5: Extract RGB colors from processed camera data (same source as writeCameraImage)
@@ -5653,7 +5672,14 @@ std::string RadiationModel::autoCalibrateCameraImage(const std::string &camera_l
     // Generate quality of fit report if requested
     if (print_quality_report) {
         std::cout << "\n========== COLOR CALIBRATION QUALITY REPORT ==========" << std::endl;
-        std::cout << "Colorboard type: " << colorboard_type << std::endl;
+        std::cout << "Colorboard types: ";
+        for (size_t i = 0; i < colorboard_types.size(); i++) {
+            std::cout << colorboard_types[i];
+            if (i < colorboard_types.size() - 1) {
+                std::cout << ", ";
+            }
+        }
+        std::cout << std::endl;
         std::cout << "Number of patches analyzed: " << visible_patches << std::endl;
         std::cout << "Algorithm used: " << algorithm_name << std::endl;
 
@@ -5829,7 +5855,15 @@ std::string RadiationModel::autoCalibrateCameraImage(const std::string &camera_l
             double mean_delta_e = (valid_patches > 0) ? (total_delta_e / valid_patches) : -1.0;
 
             // Export CCM to XML file
-            exportColorCorrectionMatrixXML(ccm_export_file_path, camera_label, correction_matrix, output_path, colorboard_type, (float) mean_delta_e);
+            // Concatenate all colorboard types into a single string
+            std::string colorboard_types_str;
+            for (size_t i = 0; i < colorboard_types.size(); i++) {
+                colorboard_types_str += colorboard_types[i];
+                if (i < colorboard_types.size() - 1) {
+                    colorboard_types_str += ", ";
+                }
+            }
+            exportColorCorrectionMatrixXML(ccm_export_file_path, camera_label, correction_matrix, output_path, colorboard_types_str, (float) mean_delta_e);
 
             std::cout << "Exported color correction matrix to: " << ccm_export_file_path << std::endl;
         } catch (const std::exception &e) {

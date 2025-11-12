@@ -412,6 +412,25 @@ TEST_CASE("Visualizer::addLine with line width") {
     size_t UUID4;
     DOCTEST_CHECK_NOTHROW(UUID4 = visualizer.addLine(make_vec3(4, 0, 0), make_vec3(5, 1, 1), RGB::yellow, 10.0f, Visualizer::COORDINATES_CARTESIAN));
     DOCTEST_CHECK(UUID4 != 0);
+
+    // Test with maximum valid width (should work)
+    size_t UUID5;
+    DOCTEST_CHECK_NOTHROW(UUID5 = visualizer.addLine(make_vec3(6, 0, 0), make_vec3(7, 1, 1), RGB::white, 100.0f, Visualizer::COORDINATES_CARTESIAN));
+    DOCTEST_CHECK(UUID5 != 0);
+
+    // Test with zero width (should throw error)
+    DOCTEST_CHECK_THROWS_AS(visualizer.addLine(make_vec3(8, 0, 0), make_vec3(9, 1, 1), RGB::red, 0.0f, Visualizer::COORDINATES_CARTESIAN), std::runtime_error);
+
+    // Test with negative width (should throw error)
+    DOCTEST_CHECK_THROWS_AS(visualizer.addLine(make_vec3(10, 0, 0), make_vec3(11, 1, 1), RGB::green, -1.0f, Visualizer::COORDINATES_CARTESIAN), std::runtime_error);
+
+    // Test with width exceeding maximum (should throw error)
+    DOCTEST_CHECK_THROWS_AS(visualizer.addLine(make_vec3(12, 0, 0), make_vec3(13, 1, 1), RGB::blue, 101.0f, Visualizer::COORDINATES_CARTESIAN), std::runtime_error);
+
+    // Test with normalized window coordinates and custom width (user's specific case)
+    size_t UUID6;
+    DOCTEST_CHECK_NOTHROW(UUID6 = visualizer.addLine(make_vec3(0, 0.5, 0), make_vec3(1, 0.5, 0), RGB::red, 20.0f, Visualizer::COORDINATES_WINDOW_NORMALIZED));
+    DOCTEST_CHECK(UUID6 != 0);
 }
 
 TEST_CASE("Visualizer::validateTextureFile") {

@@ -1712,8 +1712,7 @@ void CollisionDetection::allocateGPUMemory() {
     if (err != cudaSuccess || deviceCount == 0) {
         // CUDA not available - disable GPU acceleration and fall back to CPU
         if (printmessages) {
-            std::cout << "WARNING (CollisionDetection::allocateGPUMemory): CUDA runtime unavailable ("
-                      << cudaGetErrorString(err) << "). Falling back to CPU-only mode." << std::endl;
+            std::cout << "WARNING (CollisionDetection::allocateGPUMemory): CUDA runtime unavailable (" << cudaGetErrorString(err) << "). Falling back to CPU-only mode." << std::endl;
         }
         gpu_acceleration_enabled = false;
         return;
@@ -1733,8 +1732,7 @@ void CollisionDetection::allocateGPUMemory() {
     if (err != cudaSuccess) {
         // GPU allocation failed - fall back to CPU instead of crashing
         if (printmessages) {
-            std::cout << "WARNING (CollisionDetection::allocateGPUMemory): Failed to allocate GPU memory ("
-                      << cudaGetErrorString(err) << "). Falling back to CPU-only mode." << std::endl;
+            std::cout << "WARNING (CollisionDetection::allocateGPUMemory): Failed to allocate GPU memory (" << cudaGetErrorString(err) << "). Falling back to CPU-only mode." << std::endl;
         }
         gpu_acceleration_enabled = false;
         return;
@@ -1747,8 +1745,7 @@ void CollisionDetection::allocateGPUMemory() {
         cudaFree(d_bvh_nodes);
         d_bvh_nodes = nullptr;
         if (printmessages) {
-            std::cout << "WARNING (CollisionDetection::allocateGPUMemory): Failed to allocate primitive indices ("
-                      << cudaGetErrorString(err) << "). Falling back to CPU-only mode." << std::endl;
+            std::cout << "WARNING (CollisionDetection::allocateGPUMemory): Failed to allocate primitive indices (" << cudaGetErrorString(err) << "). Falling back to CPU-only mode." << std::endl;
         }
         gpu_acceleration_enabled = false;
         return;
@@ -1793,7 +1790,7 @@ void CollisionDetection::transferBVHToGPU() {
     // Re-check if GPU acceleration is still enabled after allocation attempt
     // allocateGPUMemory() may have disabled it due to lack of GPU hardware
     if (!gpu_acceleration_enabled) {
-        return;  // Gracefully fall back to CPU mode
+        return; // Gracefully fall back to CPU mode
     }
 
     // Verify allocation succeeded

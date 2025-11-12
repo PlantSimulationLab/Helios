@@ -216,11 +216,12 @@ public:
         return constval;
     }
 
+    std::string distribution;
+    std::vector<int> distribution_parameters;
+
 private:
     bool sampled;
     int constval;
-    std::string distribution;
-    std::vector<int> distribution_parameters;
     std::minstd_rand0 *generator;
 };
 
@@ -230,17 +231,23 @@ public:
         pitch = 0;
         yaw = 0;
         roll = 0;
+        azimuth = 0;
+        peduncle_axis = helios::make_vec3(0, 0, 1);
     }
 
     AxisRotation(float a_pitch, float a_yaw, float a_roll) {
         pitch = a_pitch;
         yaw = a_yaw;
         roll = a_roll;
+        azimuth = 0;
+        peduncle_axis = helios::make_vec3(0, 0, 1);
     }
 
     float pitch;
     float yaw;
     float roll;
+    float azimuth; // azimuth rotation for inflorescences (aligns to peduncle orientation)
+    helios::vec3 peduncle_axis; // direction vector of peduncle at attachment point (for compound yaw rotation)
 
     AxisRotation operator+(const AxisRotation &a) const;
     AxisRotation operator-(const AxisRotation &a) const;
@@ -372,6 +379,8 @@ struct FloralBud {
     helios::vec3 bending_axis;
 
     std::vector<helios::vec3> inflorescence_bases;
+    std::vector<AxisRotation> inflorescence_rotation; // pitch, yaw, roll for each flower/fruit
+    std::vector<float> inflorescence_base_scales; // individual base scale for each flower/fruit (before growth scaling)
     std::vector<uint> peduncle_objIDs;
     std::vector<uint> inflorescence_objIDs;
 };
@@ -467,23 +476,32 @@ public:
             this->leaf_texture_file = a.leaf_texture_file;
             this->OBJ_model_file = a.OBJ_model_file;
             this->leaf_aspect_ratio = a.leaf_aspect_ratio;
-            this->leaf_aspect_ratio.resample();
+            if (a.leaf_aspect_ratio.distribution != "constant")
+                this->leaf_aspect_ratio.resample();
             this->midrib_fold_fraction = a.midrib_fold_fraction;
-            this->midrib_fold_fraction.resample();
+            if (a.midrib_fold_fraction.distribution != "constant")
+                this->midrib_fold_fraction.resample();
             this->longitudinal_curvature = a.longitudinal_curvature;
-            this->longitudinal_curvature.resample();
+            if (a.longitudinal_curvature.distribution != "constant")
+                this->longitudinal_curvature.resample();
             this->lateral_curvature = a.lateral_curvature;
-            this->lateral_curvature.resample();
+            if (a.lateral_curvature.distribution != "constant")
+                this->lateral_curvature.resample();
             this->petiole_roll = a.petiole_roll;
-            this->petiole_roll.resample();
+            if (a.petiole_roll.distribution != "constant")
+                this->petiole_roll.resample();
             this->wave_period = a.wave_period;
-            this->wave_period.resample();
+            if (a.wave_period.distribution != "constant")
+                this->wave_period.resample();
             this->wave_amplitude = a.wave_amplitude;
-            this->wave_amplitude.resample();
+            if (a.wave_amplitude.distribution != "constant")
+                this->wave_amplitude.resample();
             this->leaf_buckle_length = a.leaf_buckle_length;
-            this->leaf_buckle_length.resample();
+            if (a.leaf_buckle_length.distribution != "constant")
+                this->leaf_buckle_length.resample();
             this->leaf_buckle_angle = a.leaf_buckle_angle;
-            this->leaf_buckle_angle.resample();
+            if (a.leaf_buckle_angle.distribution != "constant")
+                this->leaf_buckle_angle.resample();
             this->leaf_offset = a.leaf_offset;
             this->subdivisions = a.subdivisions;
             this->unique_prototypes = a.unique_prototypes;
@@ -534,15 +552,20 @@ private:
         InternodeParameters &operator=(const InternodeParameters &a) {
             if (this != &a) {
                 this->pitch = a.pitch;
-                this->pitch.resample();
+                if (a.pitch.distribution != "constant")
+                    this->pitch.resample();
                 this->phyllotactic_angle = a.phyllotactic_angle;
-                this->phyllotactic_angle.resample();
+                if (a.phyllotactic_angle.distribution != "constant")
+                    this->phyllotactic_angle.resample();
                 this->radius_initial = a.radius_initial;
-                this->radius_initial.resample();
+                if (a.radius_initial.distribution != "constant")
+                    this->radius_initial.resample();
                 this->max_vegetative_buds_per_petiole = a.max_vegetative_buds_per_petiole;
-                this->max_vegetative_buds_per_petiole.resample();
+                if (a.max_vegetative_buds_per_petiole.distribution != "constant")
+                    this->max_vegetative_buds_per_petiole.resample();
                 this->max_floral_buds_per_petiole = a.max_floral_buds_per_petiole;
-                this->max_floral_buds_per_petiole.resample();
+                if (a.max_floral_buds_per_petiole.distribution != "constant")
+                    this->max_floral_buds_per_petiole.resample();
                 this->color = a.color;
                 this->image_texture = a.image_texture;
                 this->length_segments = a.length_segments;
@@ -577,15 +600,20 @@ private:
             if (this != &a) {
                 this->petioles_per_internode = a.petioles_per_internode;
                 this->pitch = a.pitch;
-                this->pitch.resample();
+                if (a.pitch.distribution != "constant")
+                    this->pitch.resample();
                 this->radius = a.radius;
-                this->radius.resample();
+                if (a.radius.distribution != "constant")
+                    this->radius.resample();
                 this->length = a.length;
-                this->length.resample();
+                if (a.length.distribution != "constant")
+                    this->length.resample();
                 this->curvature = a.curvature;
-                this->curvature.resample();
+                if (a.curvature.distribution != "constant")
+                    this->curvature.resample();
                 this->taper = a.taper;
-                this->taper.resample();
+                if (a.taper.distribution != "constant")
+                    this->taper.resample();
                 this->color = a.color;
                 this->length_segments = a.length_segments;
                 this->radial_subdivisions = a.radial_subdivisions;
@@ -615,19 +643,26 @@ private:
         LeafParameters &operator=(const LeafParameters &a) {
             if (this != &a) {
                 this->leaves_per_petiole = a.leaves_per_petiole;
-                this->leaves_per_petiole.resample();
+                if (a.leaves_per_petiole.distribution != "constant")
+                    this->leaves_per_petiole.resample();
                 this->pitch = a.pitch;
-                this->pitch.resample();
+                if (a.pitch.distribution != "constant")
+                    this->pitch.resample();
                 this->yaw = a.yaw;
-                this->yaw.resample();
+                if (a.yaw.distribution != "constant")
+                    this->yaw.resample();
                 this->roll = a.roll;
-                this->roll.resample();
+                if (a.roll.distribution != "constant")
+                    this->roll.resample();
                 this->leaflet_offset = a.leaflet_offset;
-                this->leaflet_offset.resample();
+                if (a.leaflet_offset.distribution != "constant")
+                    this->leaflet_offset.resample();
                 this->leaflet_scale = a.leaflet_scale;
-                this->leaflet_scale.resample();
+                if (a.leaflet_scale.distribution != "constant")
+                    this->leaflet_scale.resample();
                 this->prototype_scale = a.prototype_scale;
-                this->prototype_scale.resample();
+                if (a.prototype_scale.distribution != "constant")
+                    this->prototype_scale.resample();
                 this->prototype.duplicate(a.prototype);
             }
             return *this;
@@ -655,15 +690,20 @@ private:
         PeduncleParameters &operator=(const PeduncleParameters &a) {
             if (this != &a) {
                 this->length = a.length;
-                this->length.resample();
+                if (a.length.distribution != "constant")
+                    this->length.resample();
                 this->radius = a.radius;
-                this->radius.resample();
+                if (a.radius.distribution != "constant")
+                    this->radius.resample();
                 this->pitch = a.pitch;
-                this->pitch.resample();
+                if (a.pitch.distribution != "constant")
+                    this->pitch.resample();
                 this->roll = a.roll;
-                this->roll.resample();
+                if (a.roll.distribution != "constant")
+                    this->roll.resample();
                 this->curvature = a.curvature;
-                this->curvature.resample();
+                if (a.curvature.distribution != "constant")
+                    this->curvature.resample();
                 this->color = a.color;
                 this->length_segments = a.length_segments;
                 this->radial_subdivisions = a.radial_subdivisions;
@@ -1127,6 +1167,16 @@ public:
      */
     void scaleLeafPrototypeScale(float scale_factor);
 
+    //! Scale petiole geometry to match target length and radius
+    /**
+     * This function rescales an existing petiole's 3D geometry (vertices and radii) to match the specified target dimensions.
+     * Used during XML deserialization to restore actual petiole sizes that may differ from parameter-based values.
+     * \param petiole_index Index of the petiole to scale
+     * \param target_length Target total length of the petiole in meters
+     * \param target_base_radius Target radius at the petiole base in meters
+     */
+    void scalePetioleGeometry(uint petiole_index, float target_length, float target_base_radius);
+
     /**
      * \brief Sets the scaling fraction for the inflorescence of a floral bud.
      *
@@ -1295,6 +1345,7 @@ public:
     std::vector<std::vector<helios::vec3>> petiole_vertices; // first index is petiole within internode, second index is tube segment within petiole tube
     std::vector<std::vector<helios::vec3>> leaf_bases; // first index is petiole within internode, second index is leaf within petiole
     std::vector<std::vector<std::vector<helios::vec3>>> peduncle_vertices; // first index is petiole within internode, second index is floral bud within petiole, third index is tube segment within peduncle
+    std::vector<std::vector<std::vector<float>>> peduncle_radii; // first index is petiole within internode, second index is floral bud within petiole, third index is tube segment within peduncle
     float internode_pitch, internode_phyllotactic_angle;
 
     std::vector<std::vector<float>> petiole_radii; // first index is petiole within internode, second index is segment within petiole tube
@@ -1349,6 +1400,24 @@ protected:
     PlantArchitecture *plantarchitecture_ptr;
 
     void updateInflorescence(FloralBud &fbud);
+
+    /**
+     * \brief Create and position a single flower or fruit with specified rotation parameters.
+     *
+     * This function creates flower/fruit geometry and applies transformations. It is called by updateInflorescence()
+     * during normal growth with randomly sampled parameters, and by XML restoration with saved deterministic parameters.
+     *
+     * \param[in,out] fbud FloralBud to add the flower/fruit to
+     * \param[in] fruit_base Position on peduncle where flower/fruit attaches
+     * \param[in] peduncle_axis Direction vector of peduncle at attachment point
+     * \param[in] pitch Pitch rotation angle (radians) - rotates about Y-axis
+     * \param[in] roll Roll rotation angle (radians) - rotates about X-axis
+     * \param[in] azimuth Azimuth rotation angle (radians) - rotates about Z-axis to align with peduncle
+     * \param[in] yaw_compound Compound yaw rotation angle (radians) - rotates about peduncle axis
+     * \param[in] scale_factor Scale factor to apply to the flower/fruit prototype
+     * \param[in] is_open_flower For flowers: true=open, false=closed. Ignored for fruit.
+     */
+    void createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &fruit_base, const helios::vec3 &peduncle_axis, float pitch, float roll, float azimuth, float yaw_compound, float scale_factor, bool is_open_flower);
 
     /**
      * Calculate the total carbon cost (mol C) required for the construction of a phytomer's total leaf area.
@@ -2656,6 +2725,21 @@ public:
      * \note Throws an exception if the file cannot be parsed or is missing required tags.
      */
     std::vector<uint> readPlantStructureXML(const std::string &filename, bool quiet = false);
+
+    /**
+     * \brief Compares geometry between two plant instances and writes detailed comparison to CSV files.
+     *
+     * Compares tube vertices and radii for internodes and petioles between an original and loaded plant.
+     * Writes separate CSV files for internode and petiole comparisons with per-segment position and radius deltas.
+     * Also prints summary statistics to console showing maximum and average discrepancies.
+     *
+     * \param[in] plantID_original Identifier of the original plant instance.
+     * \param[in] plantID_loaded Identifier of the loaded plant instance to compare against.
+     * \param[in] output_prefix Prefix for output CSV files (e.g., "comparison" creates "comparison_internodes.csv" and "comparison_petioles.csv").
+     * \throws helios::runtime_error Throws an error if either plant ID does not exist.
+     * \note This function is primarily intended for debugging and validation of XML read/write operations.
+     */
+    void comparePlantGeometry(uint plantID_original, uint plantID_loaded, const std::string &output_prefix) const;
 
     //! Disable standard output from this plug-in
     void disableMessages();

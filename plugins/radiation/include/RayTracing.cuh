@@ -590,7 +590,7 @@ static __host__ __device__ __inline__ float asin_safe(float x) {
     return asin(x);
 }
 
-// ––––– auxiliary helpers ––––––––––––––––––––––––––––––––––––––
+// ----- auxiliary helpers --------------------------------------
 static __forceinline__ __device__ uint32_t reverseBits32(uint32_t v) {
     // bitwise reverse (Van-der-Corput direction numbers for dim0)
     v = (v << 16) | (v >> 16);
@@ -636,7 +636,7 @@ static __forceinline__ __device__ float sobolDim1(uint32_t idx, uint32_t scrambl
     return uint32ToUnitFloat(res);
 }
 
-// ––––– public entry point –––––––––––––––––––––––––––––––––––––
+// ----- public entry point -------------------------------------
 static __forceinline__ __device__ float2 sobol2D(uint32_t sampleIdx) {
     // Independent Owen scrambles for each dimension
     uint32_t scramble0 = pcgHash(sampleIdx);

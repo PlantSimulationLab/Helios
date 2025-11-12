@@ -1393,24 +1393,24 @@ void PlantArchitecture::initializeCowpeaShoots() {
     phytomer_parameters_trifoliate.leaf.prototype_scale.uniformDistribution(0.09, 0.12);
     phytomer_parameters_trifoliate.leaf.prototype = leaf_prototype_trifoliate;
 
-    phytomer_parameters_trifoliate.peduncle.length.uniformDistribution(0.3, 0.35);
-    phytomer_parameters_trifoliate.peduncle.radius = 0.003;
+    phytomer_parameters_trifoliate.peduncle.length.uniformDistribution(0.3, 0.4);
+    phytomer_parameters_trifoliate.peduncle.radius = 0.00225;
     phytomer_parameters_trifoliate.peduncle.pitch.uniformDistribution(0, 30);
     phytomer_parameters_trifoliate.peduncle.roll = 90;
-    phytomer_parameters_trifoliate.peduncle.curvature.uniformDistribution(50, 250);
+    phytomer_parameters_trifoliate.peduncle.curvature.uniformDistribution(125, 200);
     phytomer_parameters_trifoliate.peduncle.color = make_RGBcolor(0.17, 0.213, 0.051);
     phytomer_parameters_trifoliate.peduncle.length_segments = 6;
     phytomer_parameters_trifoliate.peduncle.radial_subdivisions = 6;
 
     phytomer_parameters_trifoliate.inflorescence.flowers_per_peduncle.uniformDistribution(1, 3);
-    phytomer_parameters_trifoliate.inflorescence.flower_offset = 0.025;
-    phytomer_parameters_trifoliate.inflorescence.pitch.uniformDistribution(50, 70);
+    phytomer_parameters_trifoliate.inflorescence.flower_offset = 0.05;
+    phytomer_parameters_trifoliate.inflorescence.pitch.uniformDistribution(40, 60);
     phytomer_parameters_trifoliate.inflorescence.roll.uniformDistribution(-20, 20);
     phytomer_parameters_trifoliate.inflorescence.flower_prototype_scale = 0.03;
     phytomer_parameters_trifoliate.inflorescence.flower_prototype_function = CowpeaFlowerPrototype;
     phytomer_parameters_trifoliate.inflorescence.fruit_prototype_scale.uniformDistribution(0.09, 0.1);
     phytomer_parameters_trifoliate.inflorescence.fruit_prototype_function = CowpeaFruitPrototype;
-    phytomer_parameters_trifoliate.inflorescence.fruit_gravity_factor_fraction.uniformDistribution(0.3, 0.5);
+    phytomer_parameters_trifoliate.inflorescence.fruit_gravity_factor_fraction.uniformDistribution(0.5, 0.7);
 
     PhytomerParameters phytomer_parameters_unifoliate = phytomer_parameters_trifoliate;
     phytomer_parameters_unifoliate.internode.pitch = 0;
