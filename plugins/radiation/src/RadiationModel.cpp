@@ -66,7 +66,9 @@ RadiationModel::RadiationModel(helios::Context *context_a) {
 }
 
 RadiationModel::~RadiationModel() {
-    RT_CHECK_ERROR(rtContextDestroy(OptiX_Context));
+    // Use NOEXIT version in destructor to avoid exit() being called during cleanup
+    // Destructors must never call exit() as it prevents proper cleanup and error reporting
+    RT_CHECK_ERROR_NOEXIT(rtContextDestroy(OptiX_Context));
 }
 
 void RadiationModel::disableMessages() {
@@ -527,9 +529,6 @@ void RadiationModel::setSourceFlux(uint source_ID, const std::string &label, flo
         helios_runtime_error("ERROR (RadiationModel::setSourceFlux): Source ID out of bounds. Only " + std::to_string(radiation_sources.size() - 1) + " radiation sources have been created.");
     } else if (flux < 0) {
         helios_runtime_error("ERROR (RadiationModel::setSourceFlux): Source flux must be non-negative.");
-        //    }else if( !radiation_sources.at(source_ID).source_spectrum.empty() ){
-        //        std::cerr << "WARNING (RadiationModel::setSourceFlux): Source spectrum has previously been set for radiation source by calling RadiationModel::setSourceSpectrum(). The source spectrum will be ignored and overridden based on this
-        //        call to RadiationModel::setSourceFlux()." << std::endl;
     }
 
     radiation_sources.at(source_ID).source_fluxes[label] = flux * radiation_sources.at(source_ID).source_flux_scaling_factor;
@@ -1445,6 +1444,16 @@ void RadiationModel::initializeOptiX() {
     // Diffuse distribution normalization factor
     addBuffer("diffuse_dist_norm", diffuse_dist_norm_RTbuffer, diffuse_dist_norm_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
 
+    // Atmospheric sky radiance parameters for camera miss rays
+    addBuffer("sky_radiance_params", sky_radiance_params_RTbuffer, sky_radiance_params_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT4, 1);
+
+    // Base sky radiance for camera atmospheric model (separate from diffuse_flux)
+    addBuffer("camera_sky_radiance", camera_sky_radiance_RTbuffer, camera_sky_radiance_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
+
+    // Sun direction for atmospheric sky radiance evaluation
+    RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "sun_direction", &sun_direction_RTvariable));
+    RT_CHECK_ERROR(rtVariableSet3f(sun_direction_RTvariable, 0.f, 0.f, 1.f)); // Default to zenith
+
     // Bounding Box
     addBuffer("bbox_UUID", bbox_UUID_RTbuffer, bbox_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
     addBuffer("bbox_vertices", bbox_vertices_RTbuffer, bbox_vertices_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT3, 2);
@@ -1485,6 +1494,8 @@ void RadiationModel::initializeOptiX() {
     RT_CHECK_ERROR(rtVariableSet1f(camera_focal_length_RTvariable, 0.f));
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "camera_viewplane_length", &camera_viewplane_length_RTvariable));
     RT_CHECK_ERROR(rtVariableSet1f(camera_viewplane_length_RTvariable, 0.f));
+    RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "camera_pixel_solid_angle", &camera_pixel_solid_angle_RTvariable));
+    RT_CHECK_ERROR(rtVariableSet1f(camera_pixel_solid_angle_RTvariable, 0.f));
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "Ncameras", &Ncameras_RTvariable));
     RT_CHECK_ERROR(rtVariableSet1ui(Ncameras_RTvariable, 0));
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "camera_ID", &camera_ID_RTvariable));
@@ -1765,14 +1776,6 @@ void RadiationModel::initializeOptiX() {
     zeroBuffer1D(max_scatters_RTbuffer, 1);
 
     // RTsize device_memory;
-    // RT_CHECK_ERROR( rtContextGetAttribute( OptiX_Context, RT_CONTEXT_ATTRIBUTE_AVAILABLE_DEVICE_MEMORY, sizeof(RTsize), &device_memory ) );
-
-    // device_memory *= 1e-6;
-    // if( device_memory < 1000 ){
-    //   printf("available device memory at end of OptiX initialization: %6.3f MB\n",device_memory);
-    // }else{
-    //   printf("available device memory at end of OptiX initialization: %6.3f GB\n",device_memory*1e-3);
-    // }
 }
 
 void RadiationModel::updateGeometry() {
@@ -2677,8 +2680,6 @@ void RadiationModel::updateRadiativeProperties() {
         }
     }
 
-    //    printf("%d (rho) %d (tau) unique surface spectra loaded\n", surface_spectra_rho.size(),surface_spectra_tau.size());
-
     // second, calculate unique values of rho and tau for all sources and bands
     std::map<std::string, std::vector<std::vector<float>>> rho_unique;
     std::map<std::string, std::vector<std::vector<float>>> tau_unique;
@@ -2910,63 +2911,6 @@ void RadiationModel::updateRadiativeProperties() {
         helios::PrimitiveType type = context->getPrimitiveType(UUID);
 
         if (type == helios::PRIMITIVE_TYPE_VOXEL) {
-
-            //                // NOTE: This is a little confusing - for volumes of participating media, we're going to use the "rho" variable to store the absorption coefficient and use the "tau" variable to store the scattering coefficient.  This is
-            //                to save on memory so we don't have to define separate arrays.
-            //
-            //                // Absorption coefficient
-            //
-            //                prop = "attenuation_coefficient_" + band;
-            //
-            //                if (context->doesPrimitiveDataExist(UUID, prop.c_str())) {
-            //                    context->getPrimitiveData(UUID, prop.c_str(), rho.at(u).at(b));
-            //                } else {
-            //                    rho.at(u).at(b) = kappa_default;
-            //                    context->setPrimitiveData(UUID, prop.c_str(), kappa_default);
-            //                }
-            //
-            //                if (rho.at(u).at(b) < 0) {
-            //                    rho.at(u).at(b) = 0.f;
-            //                    if (message_flag) {
-            //                        std::cout
-            //                                << "WARNING (RadiationModel): absorption coefficient cannot be less than 0.  Clamping to 0 for band "
-            //                                << band << "." << std::endl;
-            //                    }
-            //                } else if (rho.at(u).at(b) > 1.f) {
-            //                    rho.at(u).at(b) = 1.f;
-            //                    if (message_flag) {
-            //                        std::cout
-            //                                << "WARNING (RadiationModel): absorption coefficient cannot be greater than 1.  Clamping to 1 for band "
-            //                                << band << "." << std::endl;
-            //                    }
-            //                }
-            //
-            //                // Scattering coefficient
-            //
-            //                prop = "scattering_coefficient_" + band;
-            //
-            //                if (context->doesPrimitiveDataExist(UUID, prop.c_str())) {
-            //                    context->getPrimitiveData(UUID, prop.c_str(), tau[u]);
-            //                } else {
-            //                    tau.at(u).at(b) = sigmas_default;
-            //                    context->setPrimitiveData(UUID, prop.c_str(), sigmas_default);
-            //                }
-            //
-            //                if (tau.at(u).at(b) < 0) {
-            //                    tau.at(u).at(b) = 0.f;
-            //                    if (message_flag) {
-            //                        std::cout
-            //                                << "WARNING (RadiationModel): scattering coefficient cannot be less than 0.  Clamping to 0 for band "
-            //                                << band << "." << std::endl;
-            //                    }
-            //                } else if (tau.at(u).at(b) > 1.f) {
-            //                    tau.at(u).at(b) = 1.f;
-            //                    if (message_flag) {
-            //                        std::cout
-            //                                << "WARNING (RadiationModel): scattering coefficient cannot be greater than 1.  Clamping to 1 for band "
-            //                                << band << "." << std::endl;
-            //                    }
-            //                }
 
         } else { // other than voxels
 
@@ -3206,6 +3150,231 @@ void RadiationModel::updateRadiativeProperties() {
     }
 }
 
+std::vector<float> RadiationModel::updateAtmosphericSkyModel(const std::vector<std::string> &band_labels, const RadiationCamera &camera) {
+    // Prague Sky Model implementation for atmospheric sky radiance
+    // Uses validated spectral radiance from brute-force atmospheric simulations
+    // (Wilkie et al. 2021, Vévoda et al. 2022)
+
+    size_t Nbands_launch = band_labels.size();
+    std::vector<float> sky_base_radiances(Nbands_launch, 0.0f);
+
+    // Only run atmospheric sky model if user has explicitly enabled it by setting atmospheric parameters
+    // This prevents the model from running with default values in tests/scripts that don't want it
+    bool has_atmospheric_data = context->doesGlobalDataExist("atmosphere_pressure_Pa") ||
+                               context->doesGlobalDataExist("atmosphere_temperature_K") ||
+                               context->doesGlobalDataExist("atmosphere_humidity_rel") ||
+                               context->doesGlobalDataExist("atmosphere_turbidity");
+
+    if (!has_atmospheric_data) {
+        // No atmospheric parameters set - return zeros (camera will use user-set diffuse flux or 0)
+        return sky_base_radiances;
+    }
+
+    // Read atmospheric parameters from Context global data (set by SolarPosition plugin)
+    // Default values match SolarPosition::getAtmosphericConditions() defaults
+    float pressure_Pa = 101325.f;      // Standard atmosphere (1 atm)
+    float temperature_K = 300.f;       // 27°C
+    float humidity_rel = 0.5f;         // 50% relative humidity
+    float turbidity = 0.02f;           // Clear sky - Ångström's aerosol turbidity coefficient (AOD at 500nm)
+
+    if (context->doesGlobalDataExist("atmosphere_pressure_Pa")) {
+        context->getGlobalData("atmosphere_pressure_Pa", pressure_Pa);
+    }
+    if (context->doesGlobalDataExist("atmosphere_temperature_K")) {
+        context->getGlobalData("atmosphere_temperature_K", temperature_K);
+    }
+    if (context->doesGlobalDataExist("atmosphere_humidity_rel")) {
+        context->getGlobalData("atmosphere_humidity_rel", humidity_rel);
+    }
+    if (context->doesGlobalDataExist("atmosphere_turbidity")) {
+        context->getGlobalData("atmosphere_turbidity", turbidity);
+    }
+
+    // Initialize Prague Sky Model if not already initialized
+    if (!prague_sky_model.isInitialized()) {
+        // Use reduced visible-range dataset (~26 MB) optimized for typical atmospheric conditions
+        std::string dataset_path = "plugins/radiation/spectral_data/prague_sky_model/PragueSkyModelReduced.dat";
+        prague_sky_model.initialize(dataset_path);
+    }
+
+    // Convert turbidity (AOD) to visibility (km) for Prague model
+    // Uses Koschmieder formula: V ≈ 3.9 / turbidity
+    float visibility_km = helios::PragueSkyModelInterface::turbidityToVisibility(turbidity);
+
+    // Get sun direction from first radiation source (assumed to be sun)
+    helios::vec3 sun_dir(0, 0, 1); // Default zenith
+    if (!radiation_sources.empty()) {
+        sun_dir = radiation_sources[0].source_position;
+        sun_dir.normalize();
+    }
+
+    // Set sun direction GPU variable
+    RT_CHECK_ERROR(rtVariableSet3f(sun_direction_RTvariable, sun_dir.x, sun_dir.y, sun_dir.z));
+
+    // Compute per-band sky radiance parameters
+    std::vector<optix::float4> sky_params(Nbands_launch);
+
+    for (size_t b = 0; b < Nbands_launch; b++) {
+        const std::string &band_label = band_labels[b];
+        if (radiation_bands.find(band_label) == radiation_bands.end()) {
+            continue;
+        }
+
+        const RadiationBand &band = radiation_bands.at(band_label);
+
+        // Skip thermal/longwave bands - Prague Sky Model only handles shortwave radiation
+        // Thermal bands have emission enabled (emissionFlag = true)
+        if (band.emissionFlag) {
+            continue;
+        }
+
+        // Get camera spectral response for this band
+        std::string spectral_response_label = "uniform";
+        if (camera.band_spectral_response.find(band_label) != camera.band_spectral_response.end()) {
+            spectral_response_label = camera.band_spectral_response.at(band_label);
+            // If the label is empty or whitespace-only, treat as uniform
+            if (spectral_response_label.empty() || trim_whitespace(spectral_response_label).empty()) {
+                spectral_response_label = "uniform";
+            }
+        }
+
+        // Get camera spectral response data
+        std::vector<helios::vec2> camera_response;
+
+        if (spectral_response_label == "uniform") {
+            // Uniform spectral response - use wavelength bounds from band
+            helios::vec2 wavelength_range = band.wavebandBounds;
+
+            if (wavelength_range.x <= 0.f || wavelength_range.y <= 0.f) {
+                // No wavelength bounds set - infer from band name or use diffuse spectrum
+                bool bounds_inferred = false;
+
+                // Try to infer wavelength range from band name (common RGB bands)
+                if (band_label == "red" || band_label == "R") {
+                    wavelength_range = helios::make_vec2(620.f, 750.f);  // Red: 620-750 nm
+                    bounds_inferred = true;
+                } else if (band_label == "green" || band_label == "G") {
+                    wavelength_range = helios::make_vec2(495.f, 570.f);  // Green: 495-570 nm
+                    bounds_inferred = true;
+                } else if (band_label == "blue" || band_label == "B") {
+                    wavelength_range = helios::make_vec2(450.f, 495.f);  // Blue: 450-495 nm
+                    bounds_inferred = true;
+                }
+
+                if (!bounds_inferred) {
+                    // Check if diffuse spectrum is set - use that for wavelength range
+                    if (!band.diffuse_spectrum.empty()) {
+                        wavelength_range.x = band.diffuse_spectrum.front().x;
+                        wavelength_range.y = band.diffuse_spectrum.back().x;
+                    } else {
+                        helios_runtime_error("ERROR (RadiationModel::updateAtmosphericSkyModel): Camera '" + camera.label +
+                            "' band '" + band_label + "' has uniform spectral response but no wavelength bounds set. " +
+                            "Either set wavelength bounds via addRadiationBand(label, lambda_min, lambda_max) or set camera spectral response via setCameraSpectralResponse().");
+                    }
+                }
+            }
+
+            // Create uniform response over wavelength range
+            camera_response.push_back(helios::make_vec2(wavelength_range.x, 1.0f));
+            camera_response.push_back(helios::make_vec2(wavelength_range.y, 1.0f));
+
+        } else {
+            // Non-uniform spectral response - load from global data
+            camera_response = loadSpectralData(spectral_response_label);
+
+            if (camera_response.empty()) {
+                helios_runtime_error("ERROR (RadiationModel::updateAtmosphericSkyModel): Camera spectral response '" +
+                    spectral_response_label + "' not found for camera '" + camera.label + "' band '" + band_label + "'.");
+            }
+        }
+
+        // --- Query Prague Sky Model ---
+
+        // Sample Prague at multiple directions to understand magnitude and distribution
+        helios::vec3 zenith_dir(0, 0, 1);
+        helios::vec3 horizon_dir(1, 0, 0);  // Toward horizon
+        helios::vec3 sun_45deg_dir = sun_dir;  // Toward sun at 45 deg from it
+        sun_45deg_dir.z = 0.707f;  // Adjust to be 45 deg from zenith
+        sun_45deg_dir.normalize();
+
+        float zenith_radiance = prague_sky_model.computeIntegratedSkyRadiance(
+            zenith_dir, sun_dir, visibility_km, camera_response
+        );
+
+        float horizon_radiance = prague_sky_model.computeIntegratedSkyRadiance(
+            horizon_dir, sun_dir, visibility_km, camera_response
+        );
+
+        // --- Fit Parametric Angular Distribution ---
+        // Using simplified model: L(θ,γ) = L_zen * (1 + A*exp(-γ/B)) * (1 + C*(1-cosθ)) / norm
+        // where θ = zenith angle, γ = angle from sun
+
+        // For initial implementation, use reasonable defaults based on visibility
+        // These could be improved by sampling Prague at multiple directions and fitting
+        float mie_fraction = std::min(1.0f, turbidity / 0.1f);  // Rough estimate
+
+        float circumsolar_strength = 0.5f + 3.0f * mie_fraction;
+        float circumsolar_width = 15.0f + 10.0f * mie_fraction;
+        float horizon_brightness = 1.5f + 0.5f * mie_fraction;
+
+        // Compute normalization factor
+        float zenith_luminance = 1.0f;
+        int N_norm = 50;  // Reduced resolution for faster computation
+        float norm = 0.f;
+
+        for (int j = 0; j < N_norm; j++) {
+            for (int i = 0; i < N_norm; i++) {
+                float theta_norm = 0.5f * M_PI / float(N_norm) * (0.5f + float(i));
+                float phi_norm = 2.f * M_PI / float(N_norm) * (0.5f + float(j));
+
+                helios::vec3 n = sphere2cart(make_SphericalCoord(0.5f * M_PI - theta_norm, phi_norm));
+
+                float cos_gamma_norm = n * sun_dir;
+                float gamma_norm = std::acos(std::max(-1.0f, std::min(1.0f, cos_gamma_norm)));
+                float gamma_deg_norm = gamma_norm * 180.0f / float(M_PI);
+
+                float cos_theta_norm = std::max(0.0f, n.z);
+
+                float radiance_norm = zenith_luminance;
+                radiance_norm *= (1.0f + circumsolar_strength * std::exp(-gamma_deg_norm / circumsolar_width));
+                radiance_norm *= (1.0f + (horizon_brightness - 1.0f) * (1.0f - cos_theta_norm));
+
+                norm += radiance_norm * std::cos(theta_norm) * std::sin(theta_norm) * M_PI / float(N_norm * N_norm);
+            }
+        }
+
+        float normalization = 1.0f / norm;
+
+        // CRITICAL FIX: The GPU multiplies sky_radiance = base_flux × angular_distribution × normalization
+        // The normalization factor (0.647) is meant to normalize the INTEGRAL, but it ends up
+        // REDUCING individual ray radiances, making the sky too dark.
+        //
+        // To compensate, we pre-divide by normalization here, so it cancels out on the GPU:
+        // GPU: sky_radiance = (zenith_radiance / normalization) × pattern × normalization
+        //                   = zenith_radiance × pattern
+        //
+        // This ensures zenith rays get the full Prague radiance value.
+
+        // NEW APPROACH: Keep radiance as-is (don't convert to hemispherical flux)
+        // The GPU will multiply radiance by pixel solid angle to get flux per ray
+        // Camera equation: Flux_pixel = Radiance × Ω_pixel × (1/N_rays)
+        //
+        // For uniform camera response (no spectral weighting), we use the Prague zenith radiance directly
+        float base_radiance_for_gpu = zenith_radiance; // W/m²/sr
+
+        // Store the base radiance for this band (to be used by caller to set diffuse_flux buffer temporarily)
+        sky_base_radiances[b] = base_radiance_for_gpu;
+
+        // Pack into float4: (circumsolar_strength, circumsolar_width, horizon_brightness, normalization)
+        sky_params[b] = optix::make_float4(circumsolar_strength, circumsolar_width, horizon_brightness, normalization);
+    }
+
+    // Upload to GPU buffer
+    initializeBuffer1Dfloat4(sky_radiance_params_RTbuffer, sky_params);
+
+    return sky_base_radiances;
+}
+
 std::vector<helios::vec2> RadiationModel::loadSpectralData(const std::string &global_data_label) const {
 
     std::vector<helios::vec2> spectrum;
@@ -3338,6 +3507,9 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     uint Ncameras = cameras.size();
     RT_CHECK_ERROR(rtVariableSet1ui(Ncameras_RTvariable, Ncameras));
 
+    // Note: Atmospheric sky radiance model is updated per-camera (see camera trace loop below)
+    // This allows us to use camera-specific spectral responses for each band
+
     // Set scattering depth for each band
     std::vector<uint> scattering_depth(Nbands_launch);
     bool scatteringenabled = false;
@@ -3367,6 +3539,10 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         }
     }
     initializeBuffer1Df(diffuse_flux_RTbuffer, diffuse_flux);
+
+    // Initialize camera sky radiance buffer to zeros (will be set per-camera if atmospheric model is used)
+    std::vector<float> camera_sky_radiance(Nbands_launch, 0.0f);
+    initializeBuffer1Df(camera_sky_radiance_RTbuffer, camera_sky_radiance);
 
     // Set diffuse extinction coefficient for each band
     std::vector<float> diffuse_extinction(Nbands_launch, 0);
@@ -3768,6 +3944,21 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     // **** CAMERA RAY TRACE **** //
     if (Ncameras > 0) {
 
+        // Setup atmospheric sky radiance model for all cameras (must run before any camera rendering)
+        // This computes and uploads sky radiance parameters independently for each camera
+        uint cam = 0;
+        for (auto &camera: cameras) {
+            // Update atmospheric sky radiance model for this camera's spectral bands
+            // Returns the base sky radiance values that should be used for this camera
+            std::vector<float> sky_base_radiances = updateAtmosphericSkyModel(band_labels, camera.second);
+
+            // Upload sky base radiances to separate camera sky radiance buffer
+            // This is completely independent from the diffuse_flux buffer used for radiation transfer
+            initializeBuffer1Df(camera_sky_radiance_RTbuffer, sky_base_radiances);
+
+            cam++;
+        }
+
         if (scatteringenabled && (emissionenabled || diffuseenabled || rundirect)) {
             // re-set outgoing radiation buffers
             copyBuffer1D(scatter_buff_top_cam_RTbuffer, radiation_out_top_RTbuffer);
@@ -3784,7 +3975,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
             size_t n = ceil(sqrt(double(diffuseRayCount)));
 
-            uint cam = 0;
+            cam = 0;
             for (auto &camera: cameras) {
 
                 // set variable values
@@ -3795,6 +3986,16 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 RT_CHECK_ERROR(rtVariableSet1f(FOV_aspect_RTvariable, camera.second.FOV_aspect_ratio));
                 RT_CHECK_ERROR(rtVariableSet1f(camera_focal_length_RTvariable, camera.second.focal_length));
                 RT_CHECK_ERROR(rtVariableSet1f(camera_viewplane_length_RTvariable, 0.5f / tanf(0.5f * camera.second.HFOV_degrees * M_PI / 180.f)));
+
+                // Calculate pixel solid angle: Ω_pixel ≈ (angular_size_horizontal) × (angular_size_vertical)
+                // For small angles: Ω ≈ (HFOV/width) × (VFOV/height) in steradians
+                float HFOV_rad = camera.second.HFOV_degrees * M_PI / 180.f;
+                float VFOV_rad = HFOV_rad / camera.second.FOV_aspect_ratio;
+                float pixel_angle_horizontal = HFOV_rad / float(camera.second.resolution.x);
+                float pixel_angle_vertical = VFOV_rad / float(camera.second.resolution.y);
+                float pixel_solid_angle = pixel_angle_horizontal * pixel_angle_vertical; // steradians
+                RT_CHECK_ERROR(rtVariableSet1f(camera_pixel_solid_angle_RTvariable, pixel_solid_angle));
+
                 RT_CHECK_ERROR(rtVariableSet1ui(camera_ID_RTvariable, cam));
 
                 zeroBuffer1D(radiation_in_camera_RTbuffer, camera.second.resolution.x * camera.second.resolution.y * Nbands_launch);
@@ -4071,6 +4272,16 @@ void RadiationModel::zeroBuffer1D(RTbuffer &buffer, size_t bsize) {
         }
 
         initializeBuffer1Dfloat3(buffer, array);
+
+    } else if (format == RT_FORMAT_FLOAT4) {
+
+        std::vector<optix::float4> array;
+        array.resize(bsize);
+        for (int i = 0; i < bsize; i++) {
+            array.at(i) = optix::make_float4(0, 0, 0, 0);
+        }
+
+        initializeBuffer1Dfloat4(buffer, array);
 
     } else if (format == RT_FORMAT_INT) {
 

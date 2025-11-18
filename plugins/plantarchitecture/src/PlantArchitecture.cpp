@@ -102,6 +102,10 @@ PlantArchitecture::PlantArchitecture(helios::Context *context_ptr) : context_ptr
     output_object_data["age"] = false;
     output_object_data["rank"] = false;
     output_object_data["plantID"] = false;
+    output_object_data["plant_name"] = false;
+    output_object_data["plant_height"] = false;
+    output_object_data["plant_type"] = false;
+    output_object_data["phenology_stage"] = false;
     output_object_data["leafID"] = false;
     output_object_data["peduncleID"] = false;
     output_object_data["closedflowerID"] = false;
@@ -1091,6 +1095,9 @@ int Shoot::appendPhytomer(float internode_radius, float internode_length_max, fl
         if (plantarchitecture_ptr->output_object_data.at("plantID")) {
             context_ptr->setObjectData(internode_tube_objID, "plantID", (int) plantID);
         }
+        if (plantarchitecture_ptr->output_object_data.at("plant_name")) {
+            context_ptr->setObjectData(internode_tube_objID, "plant_name", plantarchitecture_ptr->plant_instances.at(plantID).plant_name);
+        }
     }
     if (plantarchitecture_ptr->build_context_geometry_petiole) {
         if (plantarchitecture_ptr->output_object_data.at("age")) {
@@ -1102,6 +1109,9 @@ int Shoot::appendPhytomer(float internode_radius, float internode_length_max, fl
         if (plantarchitecture_ptr->output_object_data.at("plantID")) {
             context_ptr->setObjectData(phytomer->petiole_objIDs, "plantID", (int) plantID);
         }
+        if (plantarchitecture_ptr->output_object_data.at("plant_name")) {
+            context_ptr->setObjectData(phytomer->petiole_objIDs, "plant_name", plantarchitecture_ptr->plant_instances.at(plantID).plant_name);
+        }
     }
     if (plantarchitecture_ptr->output_object_data.at("age")) {
         context_ptr->setObjectData(phytomer->leaf_objIDs, "age", phytomer->age);
@@ -1111,6 +1121,9 @@ int Shoot::appendPhytomer(float internode_radius, float internode_length_max, fl
     }
     if (plantarchitecture_ptr->output_object_data.at("plantID")) {
         context_ptr->setObjectData(phytomer->leaf_objIDs, "plantID", (int) plantID);
+    }
+    if (plantarchitecture_ptr->output_object_data.at("plant_name")) {
+        context_ptr->setObjectData(phytomer->leaf_objIDs, "plant_name", plantarchitecture_ptr->plant_instances.at(plantID).plant_name);
     }
 
     if (plantarchitecture_ptr->output_object_data.at("leafID")) {
@@ -2094,6 +2107,41 @@ void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &
     assert(fbud.inflorescence_rotation.size() == fbud.inflorescence_base_scales.size());
 }
 
+void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerParameters &params) {
+    if (params.inflorescence.unique_prototypes > 0) {
+        // Initialize closed flower prototypes
+        if (params.inflorescence.flower_prototype_function != nullptr &&
+            unique_closed_flower_prototype_objIDs.find(params.inflorescence.flower_prototype_function) == unique_closed_flower_prototype_objIDs.end()) {
+            unique_closed_flower_prototype_objIDs[params.inflorescence.flower_prototype_function].resize(params.inflorescence.unique_prototypes);
+            for (int prototype = 0; prototype < params.inflorescence.unique_prototypes; prototype++) {
+                uint objID_flower = params.inflorescence.flower_prototype_function(context_ptr, 1, false);
+                unique_closed_flower_prototype_objIDs.at(params.inflorescence.flower_prototype_function).at(prototype) = objID_flower;
+                context_ptr->hideObject(objID_flower);
+            }
+        }
+        // Initialize open flower prototypes
+        if (params.inflorescence.flower_prototype_function != nullptr &&
+            unique_open_flower_prototype_objIDs.find(params.inflorescence.flower_prototype_function) == unique_open_flower_prototype_objIDs.end()) {
+            unique_open_flower_prototype_objIDs[params.inflorescence.flower_prototype_function].resize(params.inflorescence.unique_prototypes);
+            for (int prototype = 0; prototype < params.inflorescence.unique_prototypes; prototype++) {
+                uint objID_flower = params.inflorescence.flower_prototype_function(context_ptr, 1, true);
+                unique_open_flower_prototype_objIDs.at(params.inflorescence.flower_prototype_function).at(prototype) = objID_flower;
+                context_ptr->hideObject(objID_flower);
+            }
+        }
+        // Initialize fruit prototypes
+        if (params.inflorescence.fruit_prototype_function != nullptr &&
+            unique_fruit_prototype_objIDs.find(params.inflorescence.fruit_prototype_function) == unique_fruit_prototype_objIDs.end()) {
+            unique_fruit_prototype_objIDs[params.inflorescence.fruit_prototype_function].resize(params.inflorescence.unique_prototypes);
+            for (int prototype = 0; prototype < params.inflorescence.unique_prototypes; prototype++) {
+                uint objID_fruit = params.inflorescence.fruit_prototype_function(context_ptr, 1);
+                unique_fruit_prototype_objIDs.at(params.inflorescence.fruit_prototype_function).at(prototype) = objID_fruit;
+                context_ptr->hideObject(objID_fruit);
+            }
+        }
+    }
+}
+
 void Phytomer::updateInflorescence(FloralBud &fbud) {
     bool build_context_geometry_peduncle = plantarchitecture_ptr->build_context_geometry_peduncle;
 
@@ -2246,39 +2294,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     }
 
     // Create unique inflorescence prototypes for each shoot type so we can simply copy them for each leaf
-    std::string parent_shoot_type_label = plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_tree.at(parent_shoot_ID)->shoot_type_label;
-    if (phytomer_parameters.inflorescence.unique_prototypes > 0) {
-        // closed flowers
-        if (phytomer_parameters.inflorescence.flower_prototype_function != nullptr &&
-            plantarchitecture_ptr->unique_closed_flower_prototype_objIDs.find(phytomer_parameters.inflorescence.flower_prototype_function) == plantarchitecture_ptr->unique_closed_flower_prototype_objIDs.end()) {
-            plantarchitecture_ptr->unique_closed_flower_prototype_objIDs[phytomer_parameters.inflorescence.flower_prototype_function].resize(phytomer_parameters.inflorescence.unique_prototypes);
-            for (int prototype = 0; prototype < phytomer_parameters.inflorescence.unique_prototypes; prototype++) {
-                uint objID_flower = phytomer_parameters.inflorescence.flower_prototype_function(context_ptr, 1, false);
-                plantarchitecture_ptr->unique_closed_flower_prototype_objIDs.at(phytomer_parameters.inflorescence.flower_prototype_function).at(prototype) = objID_flower;
-                context_ptr->hideObject(objID_flower);
-            }
-        }
-        // open flowers
-        if (phytomer_parameters.inflorescence.flower_prototype_function != nullptr &&
-            plantarchitecture_ptr->unique_open_flower_prototype_objIDs.find(phytomer_parameters.inflorescence.flower_prototype_function) == plantarchitecture_ptr->unique_open_flower_prototype_objIDs.end()) {
-            plantarchitecture_ptr->unique_open_flower_prototype_objIDs[phytomer_parameters.inflorescence.flower_prototype_function].resize(phytomer_parameters.inflorescence.unique_prototypes);
-            for (int prototype = 0; prototype < phytomer_parameters.inflorescence.unique_prototypes; prototype++) {
-                uint objID_flower = phytomer_parameters.inflorescence.flower_prototype_function(context_ptr, 1, true);
-                plantarchitecture_ptr->unique_open_flower_prototype_objIDs.at(phytomer_parameters.inflorescence.flower_prototype_function).at(prototype) = objID_flower;
-                context_ptr->hideObject(objID_flower);
-            }
-        }
-        // fruit
-        if (phytomer_parameters.inflorescence.fruit_prototype_function != nullptr &&
-            plantarchitecture_ptr->unique_fruit_prototype_objIDs.find(phytomer_parameters.inflorescence.fruit_prototype_function) == plantarchitecture_ptr->unique_fruit_prototype_objIDs.end()) {
-            plantarchitecture_ptr->unique_fruit_prototype_objIDs[phytomer_parameters.inflorescence.fruit_prototype_function].resize(phytomer_parameters.inflorescence.unique_prototypes);
-            for (int prototype = 0; prototype < phytomer_parameters.inflorescence.unique_prototypes; prototype++) {
-                uint objID_fruit = phytomer_parameters.inflorescence.fruit_prototype_function(context_ptr, 1);
-                plantarchitecture_ptr->unique_fruit_prototype_objIDs.at(phytomer_parameters.inflorescence.fruit_prototype_function).at(prototype) = objID_fruit;
-                context_ptr->hideObject(objID_fruit);
-            }
-        }
-    }
+    plantarchitecture_ptr->ensureInflorescencePrototypesInitialized(phytomer_parameters);
 
     int flowers_per_peduncle = phytomer_parameters.inflorescence.flowers_per_peduncle.val();
     float flower_offset_val = clampOffset(flowers_per_peduncle, phytomer_parameters.inflorescence.flower_offset.val());
@@ -2356,6 +2372,11 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     if (plantarchitecture_ptr->output_object_data.at("rank")) {
         context_ptr->setObjectData(fbud.peduncle_objIDs, "rank", rank);
         context_ptr->setObjectData(fbud.inflorescence_objIDs, "rank", rank);
+    }
+
+    if (plantarchitecture_ptr->output_object_data.at("plant_name")) {
+        context_ptr->setObjectData(fbud.peduncle_objIDs, "plant_name", plantarchitecture_ptr->plant_instances.at(plantID).plant_name);
+        context_ptr->setObjectData(fbud.inflorescence_objIDs, "plant_name", plantarchitecture_ptr->plant_instances.at(plantID).plant_name);
     }
 
     if (plantarchitecture_ptr->output_object_data.at("peduncleID")) {
@@ -3734,6 +3755,36 @@ bool PlantArchitecture::isPlantDormant(uint plantID) const {
     return true;
 }
 
+std::string PlantArchitecture::determinePhenologyStage(uint plantID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::determinePhenologyStage): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    // Check if plant is dormant
+    if (isPlantDormant(plantID)) {
+        return "dormant";
+    }
+
+    // Check if plant has flowers or fruits (reproductive stage)
+    std::vector<uint> flowers = getPlantFlowerObjectIDs(plantID);
+    std::vector<uint> fruits = getPlantFruitObjectIDs(plantID);
+    if (!flowers.empty() || !fruits.empty()) {
+        return "reproductive";
+    }
+
+    // Check if plant is approaching senescence
+    const auto &plant_instance = plant_instances.at(plantID);
+    if (plant_instance.dd_to_dormancy > 0) {
+        float senescence_threshold = plant_instance.dd_to_dormancy_break + plant_instance.dd_to_dormancy * 0.9f;
+        if (plant_instance.time_since_dormancy > senescence_threshold) {
+            return "senescent";
+        }
+    }
+
+    // Default to vegetative stage
+    return "vegetative";
+}
+
 void PlantArchitecture::writePlantMeshVertices(uint plantID, const std::string &filename) const {
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::writePlantMeshVertices): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -5058,6 +5109,17 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 float shoot_volume = plant_instances.at(plantID).shoot_tree.at(shoot->ID)->calculateShootInternodeVolume();
                 // Find current volume for each shoot in the plant
                 shoot->old_shoot_volume = shoot_volume; // Set old volume to the current volume for the next timestep
+            }
+
+            // Update plant-level dynamic object data
+            std::vector<uint> plant_primitives = getAllPlantObjectIDs(plantID);
+            if (!plant_primitives.empty()) {
+                if (output_object_data.at("plant_height")) {
+                    context_ptr->setObjectData(plant_primitives, "plant_height", getPlantHeight(plantID));
+                }
+                if (output_object_data.at("phenology_stage")) {
+                    context_ptr->setObjectData(plant_primitives, "phenology_stage", determinePhenologyStage(plantID));
+                }
             }
         }
 

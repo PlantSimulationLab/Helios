@@ -12,7 +12,6 @@ DOCTEST_TEST_CASE("ProjectBuilder - Constructor") {
 
 DOCTEST_TEST_CASE("ProjectBuilder - buildFromXML") {
     ProjectBuilder projectbuilder;
-    capture_cerr cerr_buffer;
     DOCTEST_CHECK_NOTHROW(projectbuilder.buildFromXML());
 }
 

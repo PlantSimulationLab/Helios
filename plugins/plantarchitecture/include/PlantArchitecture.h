@@ -2514,6 +2514,13 @@ public:
      */
     [[nodiscard]] bool isPlantDormant(uint plantID) const;
 
+    //! Determine the phenological stage of a plant
+    /**
+     * \param[in] plantID The ID of the plant to check.
+     * \return Phenological stage: "dormant", "vegetative", "reproductive", or "senescent".
+     */
+    [[nodiscard]] std::string determinePhenologyStage(uint plantID) const;
+
     //! Write all vertices in the plant to a file for external processing (e.g., bounding volume, convex hull)
     /**
      * \param[in] plantID ID of the plant instance.
@@ -2726,21 +2733,6 @@ public:
      */
     std::vector<uint> readPlantStructureXML(const std::string &filename, bool quiet = false);
 
-    /**
-     * \brief Compares geometry between two plant instances and writes detailed comparison to CSV files.
-     *
-     * Compares tube vertices and radii for internodes and petioles between an original and loaded plant.
-     * Writes separate CSV files for internode and petiole comparisons with per-segment position and radius deltas.
-     * Also prints summary statistics to console showing maximum and average discrepancies.
-     *
-     * \param[in] plantID_original Identifier of the original plant instance.
-     * \param[in] plantID_loaded Identifier of the loaded plant instance to compare against.
-     * \param[in] output_prefix Prefix for output CSV files (e.g., "comparison" creates "comparison_internodes.csv" and "comparison_petioles.csv").
-     * \throws helios::runtime_error Throws an error if either plant ID does not exist.
-     * \note This function is primarily intended for debugging and validation of XML read/write operations.
-     */
-    void comparePlantGeometry(uint plantID_original, uint plantID_loaded, const std::string &output_prefix) const;
-
     //! Disable standard output from this plug-in
     void disableMessages();
 
@@ -2770,6 +2762,15 @@ private:
      */
     void setPlantAttractionPoints(uint plantID, const std::vector<helios::vec3> &attraction_points, float view_half_angle_deg = 80.0f, float look_ahead_distance = 0.1f, float attraction_weight = 0.6f, float obstacle_reduction_factor = 0.75f);
 
+    //! Ensure inflorescence prototype maps are initialized for given phytomer parameters
+    /**
+     * This method checks if unique inflorescence prototypes (flowers and fruit) have been created and cached.
+     * If not, it creates and hides the prototype objects. This is necessary before calling createInflorescenceGeometry()
+     * when unique_prototypes > 0, otherwise map::at() will throw an out_of_range exception.
+     * \param[in] params Phytomer parameters containing inflorescence configuration
+     */
+    void ensureInflorescencePrototypesInitialized(const PhytomerParameters &params);
+
 protected:
     helios::Context *context_ptr;
 
@@ -2782,6 +2783,7 @@ protected:
     // Function pointer maps for plant model registration
     std::map<std::string, std::function<void()>> shoot_initializers;
     std::map<std::string, std::function<uint(const helios::vec3 &)>> plant_builders;
+    std::map<std::string, std::string> plant_type_map;
 
     std::map<uint, PlantInstance> plant_instances;
 
@@ -2809,7 +2811,7 @@ protected:
     void validateShootTypes(ShootParameters &shoot_parameters, const std::map<std::string, ShootParameters> &shoot_types_ref) const;
 
     //! Register a plant model with its initialization and build functions
-    void registerPlantModel(const std::string &name, std::function<void()> shoot_init, std::function<uint(const helios::vec3 &)> plant_build);
+    void registerPlantModel(const std::string &name, std::function<void()> shoot_init, std::function<uint(const helios::vec3 &)> plant_build, const std::string &plant_type = "herbaceous");
 
     //! Initialize all plant model registrations
     void initializePlantModelRegistrations();

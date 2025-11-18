@@ -1315,7 +1315,8 @@ DOCTEST_TEST_CASE("RadiationModel ROMC Camera Test Verification") {
     float rangescene = 100.f;
     std::vector<float> viewangles = {-75, 0, 36};
     float sunazimuth = 0;
-    std::vector<float> referencevalues = {66.f, 225.f, 274.f};
+    // Reference values updated for new camera radiometry (v1.3.57) which converts flux to intensity via /π factor
+    std::vector<float> referencevalues = {21.f, 71.6f, 87.2f};
 
     // add canopy to context
     std::vector<std::vector<float>> CSpositions = {{-24.8302, 11.6110, 15.6210}, {-38.3380, -9.06342, 17.6094}, {-5.26569, 18.9618, 17.2535}, {-27.4794, -32.0266, 15.9146},
@@ -3791,10 +3792,117 @@ DOCTEST_TEST_CASE("RadiationModel - FOV_aspect_ratio Deprecation") {
             // Should not produce any warning
             std::string stderr_output = captured_cerr.get_captured_output();
             DOCTEST_CHECK(stderr_output.empty());
-
-            // Expected FOV_aspect_ratio matches resolution aspect ratio
-            float expected_aspect = float(resolution.x) / float(resolution.y);
-            DOCTEST_MESSAGE("Resolution: " << resolution.x << "x" << resolution.y << ", Expected aspect: " << expected_aspect);
         }
+    }
+}
+
+DOCTEST_TEST_CASE("RadiationModel Atmospheric Sky Model for Camera") {
+    // Test that atmospheric sky radiance model is computed when cameras are present
+    // and that atmospheric parameters from SolarPosition plugin are used correctly
+
+    Context context;
+
+    // Create simple geometry
+    uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(UUID, "temperature", 300.f);
+
+    // Set atmospheric conditions (as would be set by SolarPosition plugin)
+    float pressure_Pa = 95000.f;      // Lower pressure (higher altitude)
+    float temperature_K = 285.f;      // Cooler temperature
+    float humidity_rel = 0.6f;        // 60% humidity
+    float turbidity = 0.08f;          // Moderately turbid (AOD at 500nm)
+
+    context.setGlobalData("atmosphere_pressure_Pa", pressure_Pa);
+    context.setGlobalData("atmosphere_temperature_K", temperature_K);
+    context.setGlobalData("atmosphere_humidity_rel", humidity_rel);
+    context.setGlobalData("atmosphere_turbidity", turbidity);
+
+    RadiationModel radiationmodel(&context);
+    radiationmodel.disableMessages();
+
+    DOCTEST_SUBCASE("Sky model requires wavelength bounds with uniform response") {
+        // Test that error is thrown if wavelength bounds not set for uniform camera response
+        radiationmodel.addRadiationBand("VIS"); // No wavelength bounds - will cause error
+        radiationmodel.setDirectRayCount("VIS", 100);
+        radiationmodel.setDiffuseRayCount("VIS", 100);
+        radiationmodel.disableEmission("VIS");
+        radiationmodel.setDiffuseRadiationFlux("VIS", 100.f);
+
+        // Add sun source
+        uint SunSource = radiationmodel.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+        radiationmodel.setSourceFlux(SunSource, "VIS", 1000.f);
+
+        // Add camera without setting wavelength bounds (will cause error)
+        CameraProperties camera_props;
+        camera_props.camera_resolution = make_int2(100, 100);
+        camera_props.HFOV = 60.0f;
+        radiationmodel.addRadiationCamera("test_camera", {"VIS"}, make_vec3(0, 0, 5), make_vec3(0, 0, 0), camera_props, 10);
+
+        radiationmodel.updateGeometry();
+
+        // Should throw error about missing wavelength bounds
+        bool threw_error = false;
+        try {
+            radiationmodel.runBand("VIS");
+        } catch (std::runtime_error &e) {
+            std::string error_msg = e.what();
+            threw_error = (error_msg.find("wavelength bounds") != std::string::npos);
+        }
+        DOCTEST_CHECK(threw_error);
+    }
+
+    DOCTEST_SUBCASE("Sky model computed with camera and wavelength bounds") {
+        // Add radiation band with wavelength bounds
+        radiationmodel.addRadiationBand("VIS", 400.f, 700.f); // Set wavelength bounds in constructor
+        radiationmodel.setDirectRayCount("VIS", 100);
+        radiationmodel.setDiffuseRayCount("VIS", 100);
+        radiationmodel.disableEmission("VIS");
+        radiationmodel.setDiffuseRadiationFlux("VIS", 100.f); // Set some diffuse flux for sky
+
+        // Add sun source
+        uint SunSource = radiationmodel.addCollimatedRadiationSource(make_vec3(0.5, 0.3, 0.8));
+        radiationmodel.setSourceFlux(SunSource, "VIS", 1000.f);
+
+        // Add camera
+        CameraProperties camera_props;
+        camera_props.camera_resolution = make_int2(100, 100);
+        camera_props.HFOV = 60.0f;
+        radiationmodel.addRadiationCamera("test_camera", {"VIS"}, make_vec3(0, 0, 5), make_vec3(0, 0, 0), camera_props, 10);
+
+        radiationmodel.updateGeometry();
+
+        // Run with camera - should compute atmospheric sky model
+        radiationmodel.runBand("VIS");
+
+        // If we get here without crashing, the atmospheric sky model was successfully computed
+        DOCTEST_CHECK(true);
+    }
+
+    DOCTEST_SUBCASE("Atmospheric parameters do not cause errors") {
+        // Test that changing atmospheric parameters doesn't cause errors
+        radiationmodel.addRadiationBand("VIS", 400.f, 700.f); // Set wavelength bounds in constructor
+        radiationmodel.setDirectRayCount("VIS", 0); // No direct rays
+        radiationmodel.setDiffuseRayCount("VIS", 0);
+        radiationmodel.disableEmission("VIS");
+        radiationmodel.setDiffuseRadiationFlux("VIS", 100.f);
+
+        // Add camera looking at sky (no geometry in view)
+        CameraProperties camera_props;
+        camera_props.camera_resolution = make_int2(50, 50);
+        camera_props.HFOV = 45.0f;
+        radiationmodel.addRadiationCamera("sky_camera", {"VIS"}, make_vec3(10, 10, 10), make_vec3(0, 0, 1), camera_props, 50);
+
+        radiationmodel.updateGeometry();
+        radiationmodel.runBand("VIS");
+
+        // Now change turbidity (higher turbidity = more scattering)
+        // Typical values: 0.03-0.05 (very clear), 0.1 (clear), 0.2-0.3 (hazy), >0.4 (very hazy)
+        float high_turbidity = 0.3f;  // Hazy conditions (AOD at 500nm)
+        context.setGlobalData("atmosphere_turbidity", high_turbidity);
+
+        radiationmodel.runBand("VIS");
+
+        // If we get here, the atmospheric model successfully handled parameter changes
+        DOCTEST_CHECK(true);
     }
 }

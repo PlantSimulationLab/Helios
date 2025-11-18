@@ -295,13 +295,13 @@ private:
     bool built = false;
 
     //! Absorbed PAR value
-    float PAR_absorbed;
+    float PAR_absorbed = 0.f;
 
     //! Absorbed NIR value
-    float NIR_absorbed;
+    float NIR_absorbed = 0.f;
 
     //! Absorbed LW value
-    float LW_absorbed;
+    float LW_absorbed = 0.f;
 
     //! Turbidity
     float turbidity;
@@ -1996,28 +1996,28 @@ public:
 
 #ifdef HELIOS_VISUALIZER
         delete visualizer;
-#endif // HELIOS_VISUALIZER
+#endif // ENABLE_HELIOS_VISUALIZER
 
-#ifdef PLANT_ARCHITECTURE
+#ifdef ENABLE_PLANT_ARCHITECTURE
         delete plantarchitecture;
-#endif // PLANT_ARCHITECTURE
+#endif // ENABLE_PLANT_ARCHITECTURE
 
-#ifdef RADIATION_MODEL
+#ifdef ENABLE_RADIATION_MODEL
         delete radiation;
         delete cameraproperties;
-#endif // RADIATION_MODEL
+#endif // ENABLE_RADIATION_MODEL
 
-#ifdef SOLARPOSITION
+#ifdef ENABLE_SOLARPOSITION
         delete solarposition;
-#endif // SOLARPOSITION
+#endif // ENABLE_SOLARPOSITION
 
-#ifdef ENERGYBALANCEMODEL
+#ifdef ENABLE_ENERGYBALANCEMODEL
         delete energybalancemodel;
-#endif // ENERGYBALANCEMODEL
+#endif // ENABLE_ENERGYBALANCEMODEL
 
-#ifdef BOUNDARYLAYERCONDUCTANCEMODEL
+#ifdef ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
         delete boundarylayerconductance;
-#endif // BOUNDARYLAYERCONDUCTANCEMODEL
+#endif // ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
     }
 };
 

@@ -1032,9 +1032,11 @@ void ProjectBuilder::buildFromXML() {
                 radiation->setDiffuseRadiationExtinctionCoeff("NIR", diffuse_extinction_coeff, sun_dir_vec);
             }
 
-            R_PAR_dir = solarposition->getSolarFluxPAR(101000, air_temperature, air_humidity, turbidity);
-            R_NIR_dir = solarposition->getSolarFluxNIR(101000, air_temperature, air_humidity, turbidity);
-            fdiff = solarposition->getDiffuseFraction(101000, air_temperature, air_humidity, turbidity);
+            // Set atmospheric conditions first, then use parameter-free getters
+            solarposition->setAtmosphericConditions(101000, air_temperature, air_humidity, turbidity);
+            R_PAR_dir = solarposition->getSolarFluxPAR();
+            R_NIR_dir = solarposition->getSolarFluxNIR();
+            fdiff = solarposition->getDiffuseFraction();
 
             radiation->setSourceFlux(sun_ID, "PAR", R_PAR_dir * (1.f - fdiff));
             radiation->setDiffuseRadiationFlux("PAR", R_PAR_dir * fdiff);
@@ -1048,7 +1050,6 @@ void ProjectBuilder::buildFromXML() {
             bandGroup new_band_group{new_band_group_vector, false, false, false};
             band_group_lookup.insert({"default", new_band_group});
             band_group_names.insert("default");
-#endif // SOLARPOSITION && RADIATION_MODEL
 
             context->calculatePrimitiveDataAreaWeightedSum(leaf_UUIDs, "radiation_flux_PAR", PAR_absorbed);
             PAR_absorbed /= ground_area;
@@ -1062,6 +1063,7 @@ void ProjectBuilder::buildFromXML() {
             std::cout << "Absorbed PAR: " << PAR_absorbed << " W/m^2" << std::endl;
             std::cout << "Absorbed NIR: " << NIR_absorbed << " W/m^2" << std::endl;
             std::cout << "Absorbed LW: " << LW_absorbed << " W/m^2" << std::endl;
+#endif // ENABLE_RADIATION_MODEL
         }
         // RIG BLOCK
         // *** Loading any XML files needed for cameras *** //
@@ -1444,8 +1446,8 @@ void ProjectBuilder::xmlGetValues(const std::string &name, const std::string &pa
             std::cout << "WARNING: No value given for '" << name << "'.";
         } else {
             const char *node_str = node.child_value();
-            std::string default_value = node_str;
-            default_vec.push_back(default_value);
+            std::string default_value = trim_whitespace(std::string(node_str));
+            default_vec.push_back(default_value);  // Always push to maintain vector size consistency
         }
     }
 }
@@ -5391,7 +5393,7 @@ void ProjectBuilder::lightTab() {
 
 
 void ProjectBuilder::canopyTab(std::string curr_canopy_name, int id) {
-#ifdef ENABLE_PLANT_ARCHITECTURE
+#if defined(ENABLE_PLANT_ARCHITECTURE) && defined(ENABLE_HELIOS_VISUALIZER)
     if (ImGui::Button("Update Canopy")) {
         updateCanopy(curr_canopy_name);
         is_dirty = true;

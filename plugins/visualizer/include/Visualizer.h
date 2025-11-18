@@ -1441,6 +1441,9 @@ private:
     //! Track whether watermark was visible before transparent background was enabled (to restore it when switching back to solid color)
     bool watermark_was_visible_before_transparent;
 
+    //! Track whether navigation gizmo was enabled before displaying an image (to restore it when building geometry)
+    bool navigation_gizmo_was_enabled_before_image_display;
+
     //! UUID associated with the background rectangle (used for gradient, transparent checkerboard, or custom image backgrounds)
     size_t background_rectangle_ID;
     std::vector<size_t> background_sky_IDs;

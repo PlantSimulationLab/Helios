@@ -212,15 +212,6 @@ std::string RadiationModel::writeCameraImage(const std::string &camera, const st
             return "";
         }
 
-        // std::string global_data_label = "camera_" + camera + "_" + bands.at(b);
-        //
-        // if (!context->doesGlobalDataExist(global_data_label.c_str())) {
-        //     std::cout << "ERROR (RadiationModel::writeCameraImage): image data for camera " << camera << ", band " << bands.at(b) << " has not been created. Did you run the radiation model? Skipping image write for this camera." << std::endl;
-        //     return;
-        // }
-        //
-        // context->getGlobalData(global_data_label.c_str(), camera_data.at(b));
-
         camera_data.at(b) = cameras.at(camera).pixel_data.at(band);
 
         b++;

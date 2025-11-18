@@ -149,6 +149,172 @@ LeafOptics::LeafOptics(helios::Context *a_context) {
 
     LeafOptics::surface(90.0, R_spec_diffuse);
     // 0..90° degrees range from the vertical = diffuse incidence on a perfectly smooth leaf
+
+    // Initialize the species library with PROSPECT-D parameters from LOPEX93 dataset
+    initializeSpeciesLibrary();
+}
+
+void LeafOptics::initializeSpeciesLibrary() {
+    // PROSPECT-D parameters fitted to LOPEX93 spectral library samples
+    // All species use PROSPECT-D mode (drymass > 0, protein = 0, carbonconstituents = 0)
+    // Fitted using fit_prospect_visrobust.py with --no-calib flag
+
+    LeafOpticsProperties props;
+
+    // Default species (original Helios default values)
+    props.numberlayers = 1.5f;
+    props.chlorophyllcontent = 30.0f;
+    props.carotenoidcontent = 7.0f;
+    props.anthocyancontent = 1.0f;
+    props.brownpigments = 0.0f;
+    props.watermass = 0.015f;
+    props.drymass = 0.09f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["default"] = props;
+
+    // Garden lettuce (Lactuca sativa L.) - LOPEX93 sample 0021
+    // RMSE: 0.008355
+    props.numberlayers = 2.00517f;
+    props.chlorophyllcontent = 30.2697f;
+    props.carotenoidcontent = 6.9869f;
+    props.anthocyancontent = 1.35975f;
+    props.brownpigments = 0.107067f;
+    props.watermass = 0.0281985f;
+    props.drymass = 0.0052668f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["garden_lettuce"] = props;
+
+    // Alfalfa (Medicago sativa L.) - LOPEX93 sample 0036
+    // RMSE: 0.007743
+    props.numberlayers = 2.00758f;
+    props.chlorophyllcontent = 43.6375f;
+    props.carotenoidcontent = 10.3145f;
+    props.anthocyancontent = 1.33894f;
+    props.brownpigments = 0.0f;
+    props.watermass = 0.0189936f;
+    props.drymass = 0.00473702f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["alfalfa"] = props;
+
+    // Corn (Zea mays L.) - LOPEX93 sample 0041
+    // RMSE: 0.015966
+    props.numberlayers = 1.59203f;
+    props.chlorophyllcontent = 22.8664f;
+    props.carotenoidcontent = 3.9745f;
+    props.anthocyancontent = 0.0f;
+    props.brownpigments = 0.72677f;
+    props.watermass = 0.0149645f;
+    props.drymass = 0.00441283f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["corn"] = props;
+
+    // Sunflower (Helianthus annuus L.) - LOPEX93 sample 0081
+    // RMSE: 0.007353
+    props.numberlayers = 1.76358f;
+    props.chlorophyllcontent = 54.0514f;
+    props.carotenoidcontent = 12.9027f;
+    props.anthocyancontent = 1.75194f;
+    props.brownpigments = 0.0112026f;
+    props.watermass = 0.0185557f;
+    props.drymass = 0.00644855f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["sunflower"] = props;
+
+    // English walnut (Juglans regia L.) - LOPEX93 sample 0091
+    // RMSE: 0.007828
+    props.numberlayers = 1.56274f;
+    props.chlorophyllcontent = 55.9211f;
+    props.carotenoidcontent = 12.4596f;
+    props.anthocyancontent = 1.73981f;
+    props.brownpigments = 0.0f;
+    props.watermass = 0.0127743f;
+    props.drymass = 0.00583351f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["english_walnut"] = props;
+
+    // Rice (Oryza sativa L.) - LOPEX93 sample 0106
+    // RMSE: 0.004041
+    props.numberlayers = 1.67081f;
+    props.chlorophyllcontent = 37.233f;
+    props.carotenoidcontent = 9.98756f;
+    props.anthocyancontent = 0.0f;
+    props.brownpigments = 0.0275106f;
+    props.watermass = 0.0100962f;
+    props.drymass = 0.00484587f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["rice"] = props;
+
+    // Soybean (Glycine max L.) - LOPEX93 sample 0116
+    // RMSE: 0.005875
+    props.numberlayers = 1.5375f;
+    props.chlorophyllcontent = 46.4121f;
+    props.carotenoidcontent = 12.1394f;
+    props.anthocyancontent = 0.648353f;
+    props.brownpigments = 0.0f;
+    props.watermass = 0.0101049f;
+    props.drymass = 0.00292814f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["soybean"] = props;
+
+    // Wine grape (Vitis vinifera L.) - LOPEX93 sample 0276
+    // RMSE: 0.005585
+    props.numberlayers = 1.42673f;
+    props.chlorophyllcontent = 50.918f;
+    props.carotenoidcontent = 12.5466f;
+    props.anthocyancontent = 1.43905f;
+    props.brownpigments = 0.0798702f;
+    props.watermass = 0.010922f;
+    props.drymass = 0.00599315f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["wine_grape"] = props;
+
+    // Tomato (Lycopersicum esculentum) - LOPEX93 sample 0316
+    // RMSE: 0.005524
+    props.numberlayers = 1.40304f;
+    props.chlorophyllcontent = 48.3467f;
+    props.carotenoidcontent = 11.604f;
+    props.anthocyancontent = 1.45113f;
+    props.brownpigments = 0.0f;
+    props.watermass = 0.0155627f;
+    props.drymass = 0.00261571f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["tomato"] = props;
+
+    // Common bean (Phaseolus vulgaris L.) - GEMINI field experiments, day 35
+    // RMSE: 0.009479
+    props.numberlayers = 1.44041f;
+    props.chlorophyllcontent = 42.3619f;
+    props.carotenoidcontent = 15.6263f;
+    props.anthocyancontent = 0.844536f;
+    props.brownpigments = 0.0f;
+    props.watermass = 0.0150048f;
+    props.drymass = 0.00196285f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["common_bean"] = props;
+
+    // Cowpea (Vigna unguiculata L.) - GEMINI field experiments, day 48
+    // RMSE: 0.010680
+    props.numberlayers = 1.22669f;
+    props.chlorophyllcontent = 61.5204f;
+    props.carotenoidcontent = 25.6171f;
+    props.anthocyancontent = 2.51899f;
+    props.brownpigments = 0.0f;
+    props.watermass = 0.0221158f;
+    props.drymass = 0.00108066f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["cowpea"] = props;
 }
 
 void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties &leafproperties, const std::string &label) {
@@ -455,6 +621,28 @@ void LeafOptics::getPropertiesFromSpectrum(const std::vector<uint> &UUIDs) {
 
 void LeafOptics::getPropertiesFromSpectrum(uint UUID) {
     getPropertiesFromSpectrum(std::vector<uint>{UUID});
+}
+
+void LeafOptics::getPropertiesFromLibrary(const std::string &species, LeafOpticsProperties &leafproperties) {
+    // Convert species name to lowercase for case-insensitive lookup
+    std::string species_lower = species;
+    std::transform(species_lower.begin(), species_lower.end(), species_lower.begin(), ::tolower);
+
+    // Look up species in library
+    auto it = species_library.find(species_lower);
+    if (it != species_library.end()) {
+        // Species found in library
+        leafproperties = it->second;
+        if (message_flag) {
+            std::cout << "Setting Leaf Optics Properties to species: " << species << std::endl;
+        }
+    } else {
+        // Species not found - use default and issue warning
+        if (message_flag) {
+            std::cerr << "WARNING (LeafOptics): unknown species \"" << species << "\". Using default properties." << std::endl;
+        }
+        leafproperties = species_library["default"];
+    }
 }
 
 void LeafOptics::disableMessages() {

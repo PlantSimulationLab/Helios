@@ -183,6 +183,7 @@ void SolarPosition::setSunDirection(const helios::SphericalCoord &sundirection) 
 }
 
 float SolarPosition::getSolarFlux(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const {
+    // Deprecated method - kept for backward compatibility
     float Eb_PAR, Eb_NIR, fdiff;
     GueymardSolarModel(pressure_Pa, temperature_K, humidity_rel, turbidity, Eb_PAR, Eb_NIR, fdiff);
     float Eb = Eb_PAR + Eb_NIR;
@@ -193,6 +194,7 @@ float SolarPosition::getSolarFlux(float pressure_Pa, float temperature_K, float 
 }
 
 float SolarPosition::getSolarFluxPAR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const {
+    // Deprecated method - kept for backward compatibility
     float Eb_PAR, Eb_NIR, fdiff;
     GueymardSolarModel(pressure_Pa, temperature_K, humidity_rel, turbidity, Eb_PAR, Eb_NIR, fdiff);
     if (!cloudcalibrationlabel.empty()) {
@@ -202,6 +204,7 @@ float SolarPosition::getSolarFluxPAR(float pressure_Pa, float temperature_K, flo
 }
 
 float SolarPosition::getSolarFluxNIR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const {
+    // Deprecated method - kept for backward compatibility
     float Eb_PAR, Eb_NIR, fdiff;
     GueymardSolarModel(pressure_Pa, temperature_K, humidity_rel, turbidity, Eb_PAR, Eb_NIR, fdiff);
     if (!cloudcalibrationlabel.empty()) {
@@ -211,6 +214,7 @@ float SolarPosition::getSolarFluxNIR(float pressure_Pa, float temperature_K, flo
 }
 
 float SolarPosition::getDiffuseFraction(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const {
+    // Deprecated method - kept for backward compatibility
     float Eb_PAR, Eb_NIR, fdiff;
     GueymardSolarModel(pressure_Pa, temperature_K, humidity_rel, turbidity, Eb_PAR, Eb_NIR, fdiff);
     if (!cloudcalibrationlabel.empty()) {
@@ -352,13 +356,10 @@ void SolarPosition::GueymardSolarModel(float pressure, float temperature, float 
 }
 
 float SolarPosition::getAmbientLongwaveFlux(float temperature_K, float humidity_rel) const {
-
+    // Deprecated method - kept for backward compatibility
     // Model from Prata (1996) Q. J. R. Meteorol. Soc.
-
     float e0 = 611.f * exp(17.502f * (temperature_K - 273.f) / ((temperature_K - 273.f) + 240.9f)) * humidity_rel; // Pascals
-
     float K = 0.465f; // cm-K/Pa
-
     float xi = e0 / temperature_K * K;
     float eps = 1.f - (1.f + xi) * exp(-sqrt(1.2f + 3.f * xi));
 
@@ -374,7 +375,14 @@ float SolarPosition::turbidityResidualFunction(float turbidity, std::vector<floa
     float humidity = parameters.at(2);
     float flux_target = parameters.at(3);
 
-    float flux_model = solarpositionmodel->getSolarFlux(pressure, temperature, humidity, turbidity) * cosf(solarpositionmodel->getSunZenith());
+    // Clamp turbidity to minimum positive value (optimization can try negative values)
+    float turbidity_clamped = std::max(1e-5f, turbidity);
+
+    // Use new API: set atmospheric conditions, then get flux
+    // Note: const_cast is needed here because this is an optimization callback that needs to modify internal state
+    auto *mutable_model = const_cast<SolarPosition*>(solarpositionmodel);
+    mutable_model->setAtmosphericConditions(pressure, temperature, humidity, turbidity_clamped);
+    float flux_model = mutable_model->getSolarFlux() * cosf(mutable_model->getSunZenith());
     return flux_model - flux_target;
 }
 
@@ -430,6 +438,123 @@ void SolarPosition::enableCloudCalibration(const std::string &timeseries_shortwa
 
 void SolarPosition::disableCloudCalibration() {
     cloudcalibrationlabel = "";
+}
+
+void SolarPosition::setAtmosphericConditions(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) {
+    // Validate input parameters
+    if (pressure_Pa <= 0.f) {
+        helios_runtime_error("ERROR (SolarPosition::setAtmosphericConditions): Atmospheric pressure must be positive. Got " + std::to_string(pressure_Pa) + " Pa.");
+    }
+    if (temperature_K <= 0.f) {
+        helios_runtime_error("ERROR (SolarPosition::setAtmosphericConditions): Temperature must be positive Kelvin. Got " + std::to_string(temperature_K) + " K.");
+    }
+    if (humidity_rel < 0.f || humidity_rel > 1.f) {
+        helios_runtime_error("ERROR (SolarPosition::setAtmosphericConditions): Relative humidity must be between 0 and 1. Got " + std::to_string(humidity_rel) + ".");
+    }
+    if (turbidity < 0.f) {
+        helios_runtime_error("ERROR (SolarPosition::setAtmosphericConditions): Turbidity must be non-negative. Got " + std::to_string(turbidity) + ".");
+    }
+
+    // Set global data in the Context
+    context->setGlobalData("atmosphere_pressure_Pa", pressure_Pa);
+    context->setGlobalData("atmosphere_temperature_K", temperature_K);
+    context->setGlobalData("atmosphere_humidity_rel", humidity_rel);
+    context->setGlobalData("atmosphere_turbidity", turbidity);
+}
+
+void SolarPosition::getAtmosphericConditions(float &pressure_Pa, float &temperature_K, float &humidity_rel, float &turbidity) const {
+    // Default values
+    const float default_pressure = 101325.f;    // 1 atm in Pa
+    const float default_temperature = 300.f;    // 27°C in K
+    const float default_humidity = 0.5f;        // 50%
+    const float default_turbidity = 0.02f;      // clear sky
+
+    static bool warning_issued = false;
+
+    // Check if global data exists and retrieve it, otherwise use defaults
+    bool all_exist = context->doesGlobalDataExist("atmosphere_pressure_Pa") &&
+                     context->doesGlobalDataExist("atmosphere_temperature_K") &&
+                     context->doesGlobalDataExist("atmosphere_humidity_rel") &&
+                     context->doesGlobalDataExist("atmosphere_turbidity");
+
+    if (all_exist) {
+        context->getGlobalData("atmosphere_pressure_Pa", pressure_Pa);
+        context->getGlobalData("atmosphere_temperature_K", temperature_K);
+        context->getGlobalData("atmosphere_humidity_rel", humidity_rel);
+        context->getGlobalData("atmosphere_turbidity", turbidity);
+    } else {
+        if (!warning_issued) {
+            std::cerr << "WARNING (SolarPosition::getAtmosphericConditions): Atmospheric conditions have not been set via setAtmosphericConditions(). Using default values: pressure="
+                      << default_pressure << " Pa, temperature=" << default_temperature << " K, humidity=" << default_humidity << ", turbidity=" << default_turbidity << std::endl;
+            warning_issued = true;
+        }
+        pressure_Pa = default_pressure;
+        temperature_K = default_temperature;
+        humidity_rel = default_humidity;
+        turbidity = default_turbidity;
+    }
+}
+
+float SolarPosition::getSolarFlux() const {
+    float pressure, temperature, humidity, turbidity;
+    getAtmosphericConditions(pressure, temperature, humidity, turbidity);
+
+    float Eb_PAR, Eb_NIR, fdiff;
+    GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
+    float Eb = Eb_PAR + Eb_NIR;
+    if (!cloudcalibrationlabel.empty()) {
+        applyCloudCalibration(Eb, fdiff);
+    }
+    return Eb;
+}
+
+float SolarPosition::getSolarFluxPAR() const {
+    float pressure, temperature, humidity, turbidity;
+    getAtmosphericConditions(pressure, temperature, humidity, turbidity);
+
+    float Eb_PAR, Eb_NIR, fdiff;
+    GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
+    if (!cloudcalibrationlabel.empty()) {
+        applyCloudCalibration(Eb_PAR, fdiff);
+    }
+    return Eb_PAR;
+}
+
+float SolarPosition::getSolarFluxNIR() const {
+    float pressure, temperature, humidity, turbidity;
+    getAtmosphericConditions(pressure, temperature, humidity, turbidity);
+
+    float Eb_PAR, Eb_NIR, fdiff;
+    GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
+    if (!cloudcalibrationlabel.empty()) {
+        applyCloudCalibration(Eb_NIR, fdiff);
+    }
+    return Eb_NIR;
+}
+
+float SolarPosition::getDiffuseFraction() const {
+    float pressure, temperature, humidity, turbidity;
+    getAtmosphericConditions(pressure, temperature, humidity, turbidity);
+
+    float Eb_PAR, Eb_NIR, fdiff;
+    GueymardSolarModel(pressure, temperature, humidity, turbidity, Eb_PAR, Eb_NIR, fdiff);
+    if (!cloudcalibrationlabel.empty()) {
+        applyCloudCalibration(Eb_PAR, fdiff);
+    }
+    return fdiff;
+}
+
+float SolarPosition::getAmbientLongwaveFlux() const {
+    float pressure, temperature, humidity, turbidity;
+    getAtmosphericConditions(pressure, temperature, humidity, turbidity);
+
+    // Model from Prata (1996) Q. J. R. Meteorol. Soc.
+    float e0 = 611.f * exp(17.502f * (temperature - 273.f) / ((temperature - 273.f) + 240.9f)) * humidity; // Pascals
+    float K = 0.465f; // cm-K/Pa
+    float xi = e0 / temperature * K;
+    float eps = 1.f - (1.f + xi) * exp(-sqrt(1.2f + 3.f * xi));
+
+    return eps * 5.67e-8 * pow(temperature, 4);
 }
 
 void SolarPosition::applyCloudCalibration(float &R_calc_Wm2, float &fdiff_calc) const {

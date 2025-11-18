@@ -857,6 +857,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     background_is_transparent = false;
     watermark_was_visible_before_transparent = false;
+    navigation_gizmo_was_enabled_before_image_display = false;
     background_rectangle_ID = 0;
 
     colorbar_flag = 0;

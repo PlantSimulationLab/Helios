@@ -262,6 +262,11 @@ void Visualizer::displayImage(const std::vector<unsigned char> &pixel_data, uint
     geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, vertices, RGBA::black, uvs, textureID, false, false, COORDINATES_WINDOW_NORMALIZED, true, false);
 
     hideWatermark();
+
+    // Save navigation gizmo state before hiding it (so we can restore it when building geometry)
+    navigation_gizmo_was_enabled_before_image_display = navigation_gizmo_enabled;
+    hideNavigationGizmo();
+
     plotInteractive();
 }
 

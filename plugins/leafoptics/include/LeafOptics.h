@@ -115,6 +115,13 @@ public:
      */
     void getPropertiesFromSpectrum(uint UUID);
 
+    //! Get leaf optical properties from the built-in species library
+    /**
+     * \param[in] species Name of the species to retrieve properties for (e.g., "default"). Species names are case-insensitive.
+     * \param[out] leafproperties LeafOpticsProperties struct to be populated with the species-specific properties. If the species is not found in the library, default properties are used and a warning is issued.
+     */
+    void getPropertiesFromLibrary(const std::string &species, LeafOpticsProperties &leafproperties);
+
     //! Disable command-line output messages from this plug-in
     void disableMessages();
 
@@ -131,6 +138,10 @@ private:
     helios::Context *context;
     //! Map to track spectrum labels and their corresponding PROSPECT parameters
     std::map<std::string, LeafOpticsProperties> spectrum_parameters_map;
+    //! Built-in species library containing PROSPECT-D parameters for common plant species
+    std::map<std::string, LeafOpticsProperties> species_library;
+    //! Initialize the species library with PROSPECT-D parameters from LOPEX93 dataset
+    void initializeSpeciesLibrary();
     //! Default input values for grasses (*_g) and non-grasses (estimated medians from Lopex and Angers datasets)
     //! These are used for gap-filling for primitives with missing input values
     float chlorophyll_default = 43.0; //! Total chlorophyll (micro_g/cm^2)

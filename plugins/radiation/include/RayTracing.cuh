@@ -71,6 +71,11 @@ rtBuffer<float3, 1> diffuse_peak_dir;
 rtBuffer<float, 1> diffuse_dist_norm;
 rtBuffer<float, 1> Rsky;
 
+// Atmospheric sky radiance parameters (for camera miss rays)
+rtBuffer<float4, 1> sky_radiance_params; // Per-band: (circumsolar_strength, circumsolar_width, horizon_coeff, zenith_scale)
+rtBuffer<float, 1> camera_sky_radiance; // Per-band: base sky radiance (W/m²/sr) for camera atmospheric model
+rtDeclareVariable(float3, sun_direction, , ); // Sun direction vector for sky radiance evaluation
+
 //--- Patches ---//
 rtBuffer<float3, 2> patch_vertices;
 rtBuffer<unsigned int, 1> patch_UUID;
@@ -126,6 +131,7 @@ rtDeclareVariable(float, camera_lens_diameter, , );
 rtDeclareVariable(float, FOV_aspect_ratio, , );
 rtDeclareVariable(float, camera_focal_length, , );
 rtDeclareVariable(float, camera_viewplane_length, , );
+rtDeclareVariable(float, camera_pixel_solid_angle, , ); // Solid angle subtended by a single pixel (steradians)
 
 
 void queryGPUMemory(void);

@@ -81,6 +81,7 @@ int main() {
 
     // Set diffuse sky spectrum for all bands
     radiation.setDiffuseSpectrum(bandlabels, "solar_spectrum_ASTMG173");
+    radiation.setDiffuseSpectrumIntegral(100.f);
 
     // STEP 5: Configure the radiation camera for synthetic image generation
     std::string cameralabel = "bunnycam";
@@ -94,7 +95,6 @@ int main() {
     cameraproperties.camera_resolution = make_int2(1024, 1024); // Square 1024x1024 resolution
     cameraproperties.focal_plane_distance = 0.5; // Focus distance
     cameraproperties.lens_diameter = 0.002f; // Small aperture for sharp focus
-    cameraproperties.FOV_aspect_ratio = 1; // Square aspect ratio
     cameraproperties.HFOV = 50.f; // 50-degree horizontal field of view
 
     // Add the camera to the radiation model with 100 rays per pixel for quality

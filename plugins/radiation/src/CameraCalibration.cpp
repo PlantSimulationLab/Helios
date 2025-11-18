@@ -607,7 +607,6 @@ void CameraCalibration::preprocessSpectra(const std::vector<std::string> &source
             if (context->doesGlobalDataExist(spectralreflectivitylabel.c_str())) {
                 if (std::find(objectlabels.begin(), objectlabels.end(), spectralreflectivitylabel) == objectlabels.end()) {
                     objectlabels.push_back(spectralreflectivitylabel);
-                    //                    std::cout << "WARNING: Spectrum (" << spectralreflectivitylabel << ") has been added to UUID (" << UUID << ") but is not in the provided object spectral labels" << std::endl;
                     std::vector<vec2> Object_spectrum;
                     context->getGlobalData(spectralreflectivitylabel.c_str(), Object_spectrum);
                     Object_spectra.emplace(spectralreflectivitylabel, Object_spectrum);

@@ -57,11 +57,104 @@ jobs:
       run: |
         # Build documentation with Doxygen
         doxygen doc/Doxyfile
-        
+
+        # Create .nojekyll file to disable Jekyll processing on GitHub Pages
+        # This is critical because Jekyll ignores files starting with underscores
+        # which breaks Doxygen navigation (many generated files start with _)
+        touch doc/html/.nojekyll
+
         # Verify documentation was generated
         ls -la doc/html/
         echo "✓ Documentation built successfully"
-        
+
+    - name: Validate Doxygen artifacts
+      run: |
+        echo "=== Doxygen Documentation Validation ==="
+
+        VALIDATION_FAILED=0
+        DOC_DIR="doc/html"
+
+        # 1. Check critical files
+        echo ""
+        echo "[1/5] Checking critical files..."
+        REQUIRED_FILES=(
+          "index.html"
+          "doxygen-awesome.css"
+          ".nojekyll"
+          "search/search.js"
+        )
+
+        for file in "${REQUIRED_FILES[@]}"; do
+          if [ ! -f "$DOC_DIR/$file" ]; then
+            echo "  ERROR: MISSING: $file"
+            VALIDATION_FAILED=1
+          else
+            size=$(stat -c%s "$DOC_DIR/$file" 2>/dev/null)
+            echo "  OK: $file (${size} bytes)"
+          fi
+        done
+
+        # 2. Validate index.html structure
+        echo ""
+        echo "[2/5] Validating index.html structure..."
+        if [ -f "$DOC_DIR/index.html" ]; then
+          if grep -q "<title>" "$DOC_DIR/index.html" && \
+             grep -q "</body>" "$DOC_DIR/index.html"; then
+            echo "  OK: index.html appears well-formed"
+          else
+            echo "  ERROR: index.html appears malformed"
+            VALIDATION_FAILED=1
+          fi
+        fi
+
+        # 3. Check for underscore files (should work with .nojekyll)
+        echo ""
+        echo "[3/5] Checking for Doxygen underscore files..."
+        UNDERSCORE_COUNT=$(find "$DOC_DIR" -name "_*.js" -o -name "_*.html" | wc -l)
+        if [ "$UNDERSCORE_COUNT" -gt 0 ]; then
+          echo "  OK: Found $UNDERSCORE_COUNT underscore files (normal for Doxygen)"
+          if [ ! -f "$DOC_DIR/.nojekyll" ]; then
+            echo "  ERROR: .nojekyll missing - these files will be ignored by Jekyll!"
+            VALIDATION_FAILED=1
+          fi
+        fi
+
+        # 4. Verify directory structure
+        echo ""
+        echo "[4/5] Checking directory structure..."
+        for dir in "search" "classes" "files"; do
+          if [ -d "$DOC_DIR/$dir" ]; then
+            count=$(find "$DOC_DIR/$dir" -type f | wc -l)
+            echo "  OK: $dir/ ($count files)"
+          fi
+        done
+
+        # 5. Size check (GitHub Pages limit: 1GB recommended, 10GB max)
+        echo ""
+        echo "[5/5] Checking total size..."
+        TOTAL_SIZE=$(du -sk "$DOC_DIR" | cut -f1)
+        TOTAL_MB=$((TOTAL_SIZE / 1024))
+        echo "  Total size: ${TOTAL_MB} MB"
+
+        if [ "$TOTAL_SIZE" -gt 1048576 ]; then  # 1GB in KB
+          echo "  WARNING: Size exceeds 1GB (GitHub Pages recommended limit)"
+        elif [ "$TOTAL_SIZE" -gt 10485760 ]; then  # 10GB in KB
+          echo "  ERROR: Size exceeds 10GB (GitHub Pages absolute limit)"
+          VALIDATION_FAILED=1
+        else
+          echo "  OK: Size within limits"
+        fi
+
+        # Final verdict
+        echo ""
+        echo "=== Validation Complete ==="
+        if [ $VALIDATION_FAILED -eq 1 ]; then
+          echo "VALIDATION FAILED"
+          exit 1
+        else
+          echo "ALL CHECKS PASSED"
+        fi
+
     - name: Setup Pages
       if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
       uses: actions/configure-pages@v4
@@ -74,6 +167,8 @@ jobs:
         
   deploy-docs:
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -84,3 +179,98 @@ jobs:
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v4
+
+  verify-deployment:
+    name: Verify Deployment
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: deploy-docs
+
+    steps:
+    - name: Wait for GitHub Pages propagation and verify
+      timeout-minutes: 10
+      continue-on-error: true
+      id: verify
+      run: |
+        SITE_URL="${{ needs.deploy-docs.outputs.page_url }}"
+        echo "=== GitHub Pages Deployment Verification ==="
+        echo "Target URL: $SITE_URL"
+        echo ""
+
+        MAX_ATTEMPTS=15
+        RETRY_DELAY=30
+        ATTEMPT=0
+
+        echo "Note: GitHub Pages CDN propagation typically takes 1-10 minutes"
+        echo "Will retry up to $MAX_ATTEMPTS times with ${RETRY_DELAY}s delays"
+        echo ""
+
+        while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+          ATTEMPT=$((ATTEMPT + 1))
+          echo "[$ATTEMPT/$MAX_ATTEMPTS] Checking site accessibility..."
+
+          # Attempt to fetch the site
+          HTTP_CODE=$(curl -s -o /tmp/page.html -w "%{http_code}" \
+                      --connect-timeout 10 \
+                      --max-time 30 \
+                      "$SITE_URL" || echo "000")
+
+          case "$HTTP_CODE" in
+            200)
+              echo "  OK: Site returned HTTP 200"
+
+              # Verify it's actually our documentation
+              if grep -q "doxygen" /tmp/page.html || grep -q "Helios" /tmp/page.html; then
+                echo "  OK: Content verified (Helios documentation detected)"
+
+                # Check for common Doxygen elements
+                if grep -q "search" /tmp/page.html; then
+                  echo "  OK: Search functionality present"
+                fi
+
+                echo ""
+                echo "DEPLOYMENT VERIFIED SUCCESSFULLY"
+                exit 0
+              else
+                echo "  WARNING: Page returned 200 but doesn't appear to be Helios docs"
+                echo "  Continuing retries..."
+              fi
+              ;;
+            404)
+              echo "  Site not found (HTTP 404) - waiting for propagation..."
+              ;;
+            000)
+              echo "  Connection failed - waiting for deployment..."
+              ;;
+            *)
+              echo "  Received HTTP $HTTP_CODE - waiting..."
+              ;;
+          esac
+
+          if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+            echo "  Waiting ${RETRY_DELAY}s before retry..."
+            echo ""
+            sleep $RETRY_DELAY
+          fi
+        done
+
+        echo ""
+        echo "VERIFICATION FAILED"
+        echo "Site did not become accessible after $MAX_ATTEMPTS attempts"
+        echo ""
+        echo "This may indicate:"
+        echo "  - Deployment is still propagating (can take up to 20-30 minutes)"
+        echo "  - GitHub Pages service issues"
+        echo "  - Intermittent CDN problems (try re-running the workflow)"
+        echo ""
+        echo "Manual verification recommended: $SITE_URL"
+        exit 1
+
+    - name: Report verification result
+      if: always()
+      run: |
+        if [ "${{ steps.verify.outcome }}" == "success" ]; then
+          echo "::notice::Documentation successfully deployed and verified at ${{ needs.deploy-docs.outputs.page_url }}"
+        else
+          echo "::warning::Deployment verification failed or timed out. Site may still be propagating. Manual check: ${{ needs.deploy-docs.outputs.page_url }}"
+        fi

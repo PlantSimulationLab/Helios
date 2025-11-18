@@ -286,11 +286,6 @@ RT_PROGRAM void diffuse_raygen() {
             float Rx = rnd(prd.seed);
             float Ry = rnd(prd.seed);
 
-            if (ptype > 4) {
-                printf("objID = %d\n", objID);
-                printf("Invalid primitive type in diffuse ray launch.\n");
-            }
-
             if (ptype == 0 || ptype == 3) { // Patch or Tile
 
                 // calculate rectangle normal vector (world coordinates)

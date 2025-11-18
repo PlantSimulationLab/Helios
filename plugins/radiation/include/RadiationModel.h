@@ -18,6 +18,7 @@
 
 #include "CameraCalibration.h"
 #include "Context.h"
+#include "PragueSkyModelInterface.h"
 #include "json.hpp"
 
 // NVIDIA OptiX Includes
@@ -1585,6 +1586,9 @@ protected:
     //! Radiation camera distance between lens and sensor plane - RTvariable
     RTvariable camera_viewplane_length_RTvariable;
 
+    //! Solid angle subtended by a single camera pixel (steradians) - RTvariable
+    RTvariable camera_pixel_solid_angle_RTvariable;
+
     //! Number of radiation cameras
     RTvariable Ncameras_RTvariable;
 
@@ -1659,6 +1663,25 @@ protected:
         \note \ref RadiationModel::updateRadiativeProperties() must be called before simulation can be run
     */
     void updateRadiativeProperties();
+
+    //! Update atmospheric sky radiance model for camera radiation calculations
+    /** This function computes spectral sky radiance based on atmospheric conditions from SolarPosition plugin.
+     *  Integrates atmospheric sky spectrum weighted by camera spectral response for each band.
+     *  Uses analytical atmospheric physics model (independent implementation based on Rayleigh/Mie scattering).
+     *
+     *  Reads atmospheric parameters from Context global data:
+     *  - atmosphere_pressure_Pa: Atmospheric pressure in Pascals
+     *  - atmosphere_temperature_K: Air temperature in Kelvin
+     *  - atmosphere_humidity_rel: Relative humidity (0-1)
+     *  - atmosphere_turbidity: Ångström's aerosol turbidity coefficient (AOD at 500nm)
+     *
+     * \param[in] band_labels Labels for all bands to be launched
+     * \param[in] camera Reference to the camera being traced
+     * \note Turbidity uses the same convention as SolarPosition plugin (AOD at 500nm, NOT Linke turbidity)
+     * \note If camera spectral response is "uniform", wavelength bounds from the band must be set
+     * \return Vector of base sky radiance values (W/m²/sr) for each band, to be used for camera rendering
+     */
+    std::vector<float> updateAtmosphericSkyModel(const std::vector<std::string> &band_labels, const RadiationCamera &camera);
 
     //! Load Context global data corresponding to spectral data
     /**
@@ -1911,6 +1934,17 @@ protected:
     RTvariable diffuse_dist_norm_RTvariable;
     RTbuffer diffuse_dist_norm_RTbuffer;
 
+    //! Atmospheric sky radiance parameters for camera miss rays
+    RTvariable sky_radiance_params_RTvariable;
+    RTbuffer sky_radiance_params_RTbuffer;
+
+    //! Base sky radiance for camera atmospheric model (separate from diffuse_flux used for radiation transfer)
+    RTvariable camera_sky_radiance_RTvariable;
+    RTbuffer camera_sky_radiance_RTbuffer;
+
+    //! Sun direction for atmospheric sky radiance evaluation
+    RTvariable sun_direction_RTvariable;
+
     //! Radiation emission flag
     RTvariable emission_flag_RTvariable;
     RTbuffer emission_flag_RTbuffer;
@@ -2160,6 +2194,9 @@ protected:
     std::vector<std::string> output_prim_data;
 
     std::vector<std::string> spectral_library_files;
+
+    //! Prague Sky Model interface for atmospheric sky radiance calculations
+    helios::PragueSkyModelInterface prague_sky_model;
 };
 
 void sutilHandleError(RTcontext context, RTresult code, const char *file, int line);
@@ -2172,6 +2209,18 @@ void sutilReportError(const char *message);
         RTresult code = func;                                                                                                                                                                                                                            \
         if (code != RT_SUCCESS)                                                                                                                                                                                                                          \
             sutilHandleError(OptiX_Context, code, __FILE__, __LINE__);                                                                                                                                                                                   \
+    } while (0)
+
+/* Destructor-safe version: logs errors but does not call exit() */
+/* Use this ONLY in destructors to avoid exit() being called during cleanup */
+#define RT_CHECK_ERROR_NOEXIT(func)                                                                                                                                                                                                                      \
+    do {                                                                                                                                                                                                                                                 \
+        RTresult code = func;                                                                                                                                                                                                                            \
+        if (code != RT_SUCCESS) {                                                                                                                                                                                                                        \
+            const char *message;                                                                                                                                                                                                                         \
+            rtContextGetErrorString(OptiX_Context, code, &message);                                                                                                                                                                                      \
+            std::cerr << "WARNING (OptiX cleanup): " << message << " (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;                                                                                                                             \
+        }                                                                                                                                                                                                                                                \
     } while (0)
 
 #endif

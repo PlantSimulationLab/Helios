@@ -265,7 +265,7 @@ void SyntheticAnnotation::render(const char *outputdir) {
     vis_RGB.buildContextGeometry(context);
     vis_RGB.hideWatermark();
     vis_RGB.setBackgroundColor(background_color);
-    vis_RGB.addSkyDomeByCenter(20, make_vec3(0, 0, 0), 30, "plugins/visualizer/textures/SkyDome_clouds.jpg");
+    vis_RGB.setBackgroundSkyTexture("plugins/visualizer/textures/SkyDome_clouds.jpg", 30);
     vis_RGB.setLightDirection(sphere2cart(make_SphericalCoord(30 * M_PI / 180.f, 205 * M_PI / 180.f)));
     vis_RGB.setLightingModel(Visualizer::LIGHTING_PHONG_SHADOWED);
 

@@ -156,20 +156,94 @@
   }
  ~~~~~~
 
+ \subsection AtmosphericConditions Setting Atmospheric Conditions Globally
+
+ The SolarPosition plugin supports setting atmospheric conditions globally in the Context, which allows them to be easily shared across different plugins. This is the recommended approach for setting atmospheric parameters.
+
+ To use this approach, first set the atmospheric conditions using the \ref SolarPosition::setAtmosphericConditions() method. This stores the atmospheric parameters as global data in the Context with the labels: atmosphere_pressure_Pa, atmosphere_temperature_K, atmosphere_humidity_rel, and atmosphere_turbidity.
+
+ ~~~~~~
+  #include "SolarPosition.h"
+
+  int main(){
+      Context context; //declare the context
+
+      //Set the current time and date
+      context.setDate(1,5,2015); //May 1, 2015
+      context.setTime(30,12); //12:30
+
+      //Initialize the SolarPosition class
+      SolarPosition sun( 7, 31.256, 119.947, &context );
+
+      //Set atmospheric conditions globally
+      sun.setAtmosphericConditions( 101000, 300, 0.6, 0.05 ); //pressure, temperature, humidity, turbidity
+
+      //Calculate solar flux using stored atmospheric conditions
+      float R = sun.getSolarFlux(); //flux perpendicular to sun (W/m^2)
+      float zenith = sun.getSunZenith(); //zenithal angle (radians)
+      float R_horiz = R*cos(zenith);  //flux on horizontal surface
+
+      float f_diff = sun.getDiffuseFraction(); //fraction of diffuse radiation
+
+      float R_dir = R*(1.f-f_diff); //direct component of flux (W/m^2)
+
+  }
+ ~~~~~~
+
+ The atmospheric conditions can be retrieved at any time using \ref SolarPosition::getAtmosphericConditions().
+
+ \subsubsection TurbidityDefinition Understanding the Turbidity Parameter
+
+ The turbidity parameter used in the SolarPosition plugin is <b>Ångström's aerosol turbidity coefficient (β)</b>, which represents the <b>aerosol optical depth (AOD) at 500 nm reference wavelength</b>. This parameter quantifies the amount of aerosols (dust, pollution, haze) in the atmosphere that scatter and absorb solar radiation.
+
+ <b>Important:</b> This turbidity definition is NOT the same as "Linke turbidity" (T<sub>L</sub>), which is commonly used in some other solar radiation models. Linke turbidity typically ranges from 2-6, while Ångström turbidity (AOD) typically ranges from 0.02-0.4. The two are related but use different scales.
+
+ The turbidity value is used in the Ångström turbidity formula:
+ \f[
+ \tau_{aerosol}(\lambda) = \beta \left(\frac{\lambda_{ref}}{\lambda}\right)^{\alpha}
+ \f]
+ where β is the turbidity parameter (AOD at 500 nm), λ is wavelength, λ<sub>ref</sub> = 500 nm, and α is the Ångström exponent (typically ~1.3).
+
+ <b>Guidance for selecting turbidity values:</b>
+ - 0.02: Very clear sky (remote/clean atmosphere) - <b>default value</b>
+ - 0.03-0.05: Clear sky (typical for rural areas)
+ - 0.1: Light haze or light pollution
+ - 0.2-0.3: Hazy conditions (urban/polluted atmosphere)
+ - >0.4: Very hazy or heavily polluted atmosphere
+
+ Higher turbidity values result in:
+ - Reduced direct solar radiation
+ - Increased fraction of diffuse radiation
+ - Whitening of the sky (reduced blue color)
+ - Enhanced circumsolar brightening (bright region around the sun)
+
+ <table>
+ <caption>Atmospheric condition parameters</caption>
+ <tr><th>Parameter</th><th>Description</th><th>Validation</th><th>Example Value</th></tr>
+ <tr><td>pressure_Pa</td><td>Atmospheric pressure in Pascals (near the ground)</td><td>Must be > 0</td><td>101,325 Pa (1 atm)</td></tr>
+ <tr><td>temperature_K</td><td>Air temperature in Kelvin (near the ground)</td><td>Must be > 0</td><td>300 K (27°C)</td></tr>
+ <tr><td>humidity_rel</td><td>Air relative humidity (near the ground)</td><td>Must be 0-1</td><td>0.6 (60%)</td></tr>
+ <tr><td>turbidity</td><td>Ångström's aerosol turbidity coefficient (β), which represents the aerosol optical depth (AOD) at 500 nm reference wavelength. <b>Note:</b> This is NOT Linke turbidity, which uses a different scale (typically 2-6). Typical values: 0.02 (very clear sky), 0.05 (clear sky), 0.1 (light haze), 0.2-0.3 (hazy), >0.4 (very hazy/polluted). Higher values indicate more aerosols in the atmosphere, which reduces direct solar flux and increases diffuse fraction.</td><td>Must be ≥ 0</td><td>0.02 (default clear sky)</td></tr>
+ </table>
+
  \subsection SolarFlux Getting the Solar Flux
 
  The solar flux can be calculated using the REST-2 model of <a href="https://www.sciencedirect.com/science/article/pii/S0038092X07000990?casa_token=BAJYGez71awAAAAA:CfmA4oT9MLiHGvpD6oUkkDu4EJ1S9uRabZq4-wM07jtcmviZ12jvhD8VVcAkjLWoGNMtg8hDaqo">Gueymard (2008)</a> using the \ref SolarPosition::getSolarFlux() function. IT IS CRITICAL TO NOTE THAT THE CALCULATED FLUX IS FOR A SURFACE PERPENDICULAR TO THE SUN DIRECTION. To get the flux on a horizontal surface, multiply by the cosine of the solar zenith angle.
 
- Methods are available to get the incoming solar radiation flux perpendicular to the direction of the sun 1) for the entire solar spectrum (\ref SolarPosition::getSolarFlux()), 2) for the PAR band (\ref SolarPosition::getSolarFluxPAR()), and 3) (\ref SolarPosition::getSolarFluxNIR()).
+ Methods are available to get the incoming solar radiation flux perpendicular to the direction of the sun 1) for the entire solar spectrum (\ref SolarPosition::getSolarFlux()), 2) for the PAR band (\ref SolarPosition::getSolarFluxPAR()), and 3) for the NIR band (\ref SolarPosition::getSolarFluxNIR()).
 
- These functions takes several arguments needed for the model, which are listed in the table below.
+ \note As of version 1.3.57, the recommended approach is to set atmospheric conditions using \ref SolarPosition::setAtmosphericConditions() and then call the parameter-free versions of these methods (see \ref AtmosphericConditions). The methods that take atmospheric parameters as arguments are deprecated but still supported for backward compatibility.
+
+ \subsubsection DeprecatedFluxMethods Deprecated Method: Passing Atmospheric Parameters Directly
+
+ The original approach of passing atmospheric parameters directly to each flux method is still supported for backward compatibility, but is deprecated. These functions take several arguments needed for the model, which are listed in the table below.
 
  <table>
  <tr><th>Argument</th><th>Description</th><th>Example Value</th></tr>
  <tr><td>pressure</td><td>Atmospheric pressure in Pascals (near the ground).</td><td>101,000 Pa</td></tr>
  <tr><td>temperature</td><td>Air temperature in Kelvin (near the ground).</td><td>300 K</td></tr>
  <tr><td>humidity</td><td>Air relative humidity (near the ground).</td><td>0.6</td></tr>
- <tr><td>turbidity</td><td>Angstrom's aerosol turbidity coefficient.</td><td>0.05</td></tr>
+ <tr><td>turbidity</td><td>Ångström's aerosol turbidity coefficient (AOD at 500 nm). Typical values: 0.02 (very clear), 0.05 (clear), 0.1 (hazy).</td><td>0.05</td></tr>
  </table>
 
  The very similar function \ref SolarPosition::getDiffuseFraction() calculates the fraction of the total flux that is diffuse. The fraction that is direct is simply one minus the diffuse fraction. This function takes the same arguments as \ref SolarPosition::getSolarFlux().

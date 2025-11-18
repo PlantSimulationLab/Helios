@@ -34,6 +34,12 @@ void Visualizer::buildContextGeometry(helios::Context *context_ptr) {
     // Asset directory registration removed - now using HELIOS_BUILD resolution
 
     build_all_context_geometry = true;
+
+    // Restore navigation gizmo if it was enabled before displaying an image
+    if (navigation_gizmo_was_enabled_before_image_display) {
+        this->showNavigationGizmo();
+        navigation_gizmo_was_enabled_before_image_display = false; // Reset the flag
+    }
 }
 
 void Visualizer::buildContextGeometry(helios::Context *context_ptr, const std::vector<uint> &UUIDs) {
@@ -48,6 +54,12 @@ void Visualizer::buildContextGeometry(helios::Context *context_ptr, const std::v
 
     build_all_context_geometry = false;
     contextUUIDs_build = UUIDs;
+
+    // Restore navigation gizmo if it was enabled before displaying an image
+    if (navigation_gizmo_was_enabled_before_image_display) {
+        this->showNavigationGizmo();
+        navigation_gizmo_was_enabled_before_image_display = false; // Reset the flag
+    }
 }
 
 void Visualizer::buildContextGeometry_private() {

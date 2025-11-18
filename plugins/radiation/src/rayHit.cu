@@ -340,7 +340,7 @@ RT_PROGRAM void closest_hit_camera() {
 
             // absorption
 
-            atomicAdd(&radiation_in_camera[Nbands_launch * prd.origin_UUID + b], strength + strength_spec);
+            atomicAdd(&radiation_in_camera[Nbands_launch * prd.origin_UUID + b], (strength + strength_spec)/M_PI); //note: pi factor is to convert from flux to intensity assuming surface is Lambertian. We don't multiply by the solid angle by convention to avoid very small numbers.
         }
     }
 }
@@ -521,24 +521,55 @@ RT_PROGRAM void miss_diffuse() {
     }
 }
 
+// Device function to evaluate atmospheric sky radiance based on ray direction
+// Independent analytical implementation based on standard atmospheric scattering physics
+// Following simplified multiplicative formulation similar to Perez/Hosek-Wilkie models
+__device__ float evaluateSkyRadiance(const float3 &ray_dir, const float3 &sun_dir, const float4 &params, float base_radiance) {
+    // params: (circumsolar_strength, circumsolar_width, horizon_brightness, normalization_factor)
+    // base_radiance: Zenith sky radiance in W/m²/sr
+
+    // Angular distance from sun (radians)
+    float cos_gamma = dot(ray_dir, sun_dir);
+    float gamma = acos_safe(cos_gamma);
+
+    // Zenith angle (radians) - z is up
+    float cos_theta = fmaxf(ray_dir.z, 0.0f); // Clamp to avoid below horizon
+
+    // Start with baseline radiance pattern
+    float pattern = 1.0f;
+
+    // Circumsolar brightening: Multiplicative factor that increases radiance near sun
+    // Exponential decay with angular distance from sun (in degrees)
+    float gamma_deg = gamma * 180.0f / float(M_PI);
+    float circumsolar_factor = 1.0f + params.x * expf(-gamma_deg / params.y);
+    pattern *= circumsolar_factor;
+
+    // Horizon brightening: Multiplicative factor that increases radiance toward horizon
+    // Linear interpolation: at zenith (cos_theta=1) factor=1.0, at horizon (cos_theta=0) factor=horizon_brightness
+    float horizon_factor = 1.0f + (params.z - 1.0f) * (1.0f - cos_theta);
+    pattern *= horizon_factor;
+
+    // Apply normalization to ensure energy conservation
+    pattern *= params.w; // normalization_factor
+
+    // Return directional sky radiance (W/m²/sr)
+    return base_radiance * pattern;
+}
+
 RT_PROGRAM void miss_camera() {
 
     for (size_t b = 0; b < Nbands_launch; b++) {
 
-        if (diffuse_flux[b] > 0.f) {
+        if (camera_sky_radiance[b] > 0.f) {
 
-            float fd = 1.f;
-            if (diffuse_extinction[b] > 0.f) {
-                float psi = acos_safe(dot(diffuse_peak_dir[b], ray.direction));
-                if (psi < M_PI / 180.f) {
-                    fd = powf(float(M_PI) / 180.f, -diffuse_extinction[b]) * diffuse_dist_norm[b];
-                } else {
-                    fd = powf(psi, -diffuse_extinction[b]) * diffuse_dist_norm[b];
-                }
-            }
+            // Evaluate directional sky radiance using atmospheric distribution model
+            // camera_sky_radiance[b] contains the base zenith sky radiance (W/m²/sr) from Prague model
+            float sky_radiance = evaluateSkyRadiance(ray.direction, sun_direction, sky_radiance_params[b], camera_sky_radiance[b]);
 
-            // absorption
-            atomicAdd(&radiation_in_camera[Nbands_launch * prd.origin_UUID + b], fd * diffuse_flux[b] * prd.strength);
+            // Accumulate radiance directly (same as surface hits accumulate radiation_out)
+            // Units: W/m²/sr
+            // Monte Carlo averaging: prd.strength = 1/N_rays
+            atomicAdd(&radiation_in_camera[Nbands_launch * prd.origin_UUID + b], sky_radiance * prd.strength);
         }
     }
 }

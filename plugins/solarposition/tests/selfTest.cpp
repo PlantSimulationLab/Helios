@@ -27,11 +27,11 @@ TEST_CASE("SolarPosition ambient longwave model") {
 
     SolarPosition sp(6, 36.5289f, 97.4439f, &context_s);
 
-    float temperature = 290.f;
-    float humidity = 0.5f;
+    // Set atmospheric conditions
+    sp.setAtmosphericConditions(101325.f, 290.f, 0.5f, 0.02f);
 
     float LW;
-    DOCTEST_CHECK_NOTHROW(LW = sp.getAmbientLongwaveFlux(temperature, humidity));
+    DOCTEST_CHECK_NOTHROW(LW = sp.getAmbientLongwaveFlux());
 
     DOCTEST_CHECK(doctest::Approx(310.03192f).epsilon(1e-6f) == LW);
 }
@@ -77,21 +77,24 @@ TEST_CASE("SolarPosition flux and fractions") {
     Context context_s;
     SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
 
+    // Set atmospheric conditions
+    sp.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.02f);
+
     float flux;
-    DOCTEST_CHECK_NOTHROW(flux = sp.getSolarFlux(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK_NOTHROW(flux = sp.getSolarFlux());
     DOCTEST_CHECK(flux > 0.f);
 
     float diffuse_fraction;
-    DOCTEST_CHECK_NOTHROW(diffuse_fraction = sp.getDiffuseFraction(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK_NOTHROW(diffuse_fraction = sp.getDiffuseFraction());
     DOCTEST_CHECK(diffuse_fraction >= 0.f);
     DOCTEST_CHECK(diffuse_fraction <= 1.f);
 
     float flux_par;
-    DOCTEST_CHECK_NOTHROW(flux_par = sp.getSolarFluxPAR(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK_NOTHROW(flux_par = sp.getSolarFluxPAR());
     DOCTEST_CHECK(flux_par > 0.f);
 
     float flux_nir;
-    DOCTEST_CHECK_NOTHROW(flux_nir = sp.getSolarFluxNIR(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK_NOTHROW(flux_nir = sp.getSolarFluxNIR());
     DOCTEST_CHECK(flux_nir > 0.f);
 }
 
@@ -145,10 +148,13 @@ TEST_CASE("SolarPosition invalid solar angle") {
     Context context_s;
     SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
 
+    // Set atmospheric conditions
+    sp.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.02f);
+
     DOCTEST_CHECK_NOTHROW(sp.setSunDirection(make_SphericalCoord(0.75 * M_PI, M_PI / 2.f)));
 
     float flux;
-    DOCTEST_CHECK_NOTHROW(flux = sp.getSolarFlux(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK_NOTHROW(flux = sp.getSolarFlux());
     DOCTEST_CHECK(flux == 0.f);
 }
 
@@ -190,23 +196,26 @@ TEST_CASE("SolarPosition cloud calibration") {
     context_s.setDate(make_Date(13, 7, 2023));
     context_s.setTime(make_Time(12, 0, 0));
 
+    // Set atmospheric conditions
+    sp.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.02f);
+
     DOCTEST_CHECK_NOTHROW(sp.enableCloudCalibration("net_radiation"));
 
     float flux;
-    DOCTEST_CHECK_NOTHROW(flux = sp.getSolarFlux(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK_NOTHROW(flux = sp.getSolarFlux());
     DOCTEST_CHECK(flux > 0.f);
 
     float diffuse_fraction;
-    DOCTEST_CHECK_NOTHROW(diffuse_fraction = sp.getDiffuseFraction(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK_NOTHROW(diffuse_fraction = sp.getDiffuseFraction());
     DOCTEST_CHECK(diffuse_fraction >= 0.f);
     DOCTEST_CHECK(diffuse_fraction <= 1.f);
 
     float flux_par;
-    DOCTEST_CHECK_NOTHROW(flux_par = sp.getSolarFluxPAR(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK_NOTHROW(flux_par = sp.getSolarFluxPAR());
     DOCTEST_CHECK(flux_par > 0.f);
 
     float flux_nir;
-    DOCTEST_CHECK_NOTHROW(flux_nir = sp.getSolarFluxNIR(101325.f, 300.f, 0.5f, 0.02f));
+    DOCTEST_CHECK_NOTHROW(flux_nir = sp.getSolarFluxNIR());
     DOCTEST_CHECK(flux_nir > 0.f);
 
     DOCTEST_CHECK_NOTHROW(sp.disableCloudCalibration());
@@ -227,6 +236,154 @@ TEST_CASE("SolarPosition turbidity calculation") {
 
     capture_cerr cerr_buffer;
     DOCTEST_CHECK_THROWS_AS(turbidity = sp.calibrateTurbidityFromTimeseries("non_existent_timeseries"), std::runtime_error);
+}
+
+TEST_CASE("SolarPosition setAtmosphericConditions valid inputs") {
+    Context context_s;
+    SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
+
+    // Test setting valid atmospheric conditions
+    DOCTEST_CHECK_NOTHROW(sp.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.02f));
+
+    // Verify global data was set correctly
+    float pressure, temperature, humidity, turbidity;
+    DOCTEST_CHECK_NOTHROW(context_s.getGlobalData("atmosphere_pressure_Pa", pressure));
+    DOCTEST_CHECK_NOTHROW(context_s.getGlobalData("atmosphere_temperature_K", temperature));
+    DOCTEST_CHECK_NOTHROW(context_s.getGlobalData("atmosphere_humidity_rel", humidity));
+    DOCTEST_CHECK_NOTHROW(context_s.getGlobalData("atmosphere_turbidity", turbidity));
+
+    DOCTEST_CHECK(doctest::Approx(101325.f).epsilon(1e-6f) == pressure);
+    DOCTEST_CHECK(doctest::Approx(300.f).epsilon(1e-6f) == temperature);
+    DOCTEST_CHECK(doctest::Approx(0.5f).epsilon(1e-6f) == humidity);
+    DOCTEST_CHECK(doctest::Approx(0.02f).epsilon(1e-6f) == turbidity);
+}
+
+TEST_CASE("SolarPosition setAtmosphericConditions validation") {
+    Context context_s;
+    SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
+
+    // Test invalid pressure (negative)
+    DOCTEST_CHECK_THROWS_AS(sp.setAtmosphericConditions(-1000.f, 300.f, 0.5f, 0.02f), std::runtime_error);
+
+    // Test invalid pressure (zero)
+    DOCTEST_CHECK_THROWS_AS(sp.setAtmosphericConditions(0.f, 300.f, 0.5f, 0.02f), std::runtime_error);
+
+    // Test invalid temperature (negative)
+    DOCTEST_CHECK_THROWS_AS(sp.setAtmosphericConditions(101325.f, -10.f, 0.5f, 0.02f), std::runtime_error);
+
+    // Test invalid temperature (zero)
+    DOCTEST_CHECK_THROWS_AS(sp.setAtmosphericConditions(101325.f, 0.f, 0.5f, 0.02f), std::runtime_error);
+
+    // Test invalid humidity (negative)
+    DOCTEST_CHECK_THROWS_AS(sp.setAtmosphericConditions(101325.f, 300.f, -0.1f, 0.02f), std::runtime_error);
+
+    // Test invalid humidity (> 1)
+    DOCTEST_CHECK_THROWS_AS(sp.setAtmosphericConditions(101325.f, 300.f, 1.5f, 0.02f), std::runtime_error);
+
+    // Test invalid turbidity (negative)
+    DOCTEST_CHECK_THROWS_AS(sp.setAtmosphericConditions(101325.f, 300.f, 0.5f, -0.01f), std::runtime_error);
+
+    // Test boundary values (should succeed)
+    DOCTEST_CHECK_NOTHROW(sp.setAtmosphericConditions(0.001f, 0.001f, 0.f, 0.f));
+    DOCTEST_CHECK_NOTHROW(sp.setAtmosphericConditions(200000.f, 400.f, 1.f, 1.f));
+}
+
+TEST_CASE("SolarPosition getAtmosphericConditions retrieval") {
+    Context context_s;
+    SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
+
+    // Set atmospheric conditions
+    sp.setAtmosphericConditions(98000.f, 295.f, 0.65f, 0.05f);
+
+    // Retrieve atmospheric conditions
+    float pressure, temperature, humidity, turbidity;
+    DOCTEST_CHECK_NOTHROW(sp.getAtmosphericConditions(pressure, temperature, humidity, turbidity));
+
+    // Verify retrieved values match what was set
+    DOCTEST_CHECK(doctest::Approx(98000.f).epsilon(1e-6f) == pressure);
+    DOCTEST_CHECK(doctest::Approx(295.f).epsilon(1e-6f) == temperature);
+    DOCTEST_CHECK(doctest::Approx(0.65f).epsilon(1e-6f) == humidity);
+    DOCTEST_CHECK(doctest::Approx(0.05f).epsilon(1e-6f) == turbidity);
+}
+
+TEST_CASE("SolarPosition getAtmosphericConditions defaults") {
+    Context context_s;
+    SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
+
+    // Get atmospheric conditions without setting them first
+    float pressure, temperature, humidity, turbidity;
+
+    capture_cerr cerr_buffer;
+    DOCTEST_CHECK_NOTHROW(sp.getAtmosphericConditions(pressure, temperature, humidity, turbidity));
+
+    // Verify warning was issued
+    DOCTEST_CHECK(cerr_buffer.has_output());
+
+    // Verify default values are used
+    DOCTEST_CHECK(doctest::Approx(101325.f).epsilon(1e-6f) == pressure);
+    DOCTEST_CHECK(doctest::Approx(300.f).epsilon(1e-6f) == temperature);
+    DOCTEST_CHECK(doctest::Approx(0.5f).epsilon(1e-6f) == humidity);
+    DOCTEST_CHECK(doctest::Approx(0.02f).epsilon(1e-6f) == turbidity);
+}
+
+TEST_CASE("SolarPosition parameter-free flux methods") {
+    Context context_s;
+    context_s.setDate(make_Date(1, 6, 2023));
+    context_s.setTime(make_Time(12, 0, 0));
+
+    SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
+
+    // Set atmospheric conditions
+    sp.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.02f);
+
+    // Test parameter-free getSolarFlux()
+    float flux;
+    DOCTEST_CHECK_NOTHROW(flux = sp.getSolarFlux());
+    DOCTEST_CHECK(flux > 0.f);
+
+    // Test parameter-free getSolarFluxPAR()
+    float flux_par;
+    DOCTEST_CHECK_NOTHROW(flux_par = sp.getSolarFluxPAR());
+    DOCTEST_CHECK(flux_par > 0.f);
+
+    // Test parameter-free getSolarFluxNIR()
+    float flux_nir;
+    DOCTEST_CHECK_NOTHROW(flux_nir = sp.getSolarFluxNIR());
+    DOCTEST_CHECK(flux_nir > 0.f);
+
+    // Test parameter-free getDiffuseFraction()
+    float diffuse_fraction;
+    DOCTEST_CHECK_NOTHROW(diffuse_fraction = sp.getDiffuseFraction());
+    DOCTEST_CHECK(diffuse_fraction >= 0.f);
+    DOCTEST_CHECK(diffuse_fraction <= 1.f);
+
+    // Test parameter-free getAmbientLongwaveFlux()
+    float lw_flux;
+    DOCTEST_CHECK_NOTHROW(lw_flux = sp.getAmbientLongwaveFlux());
+    DOCTEST_CHECK(lw_flux > 0.f);
+}
+
+TEST_CASE("SolarPosition parameter-free methods with defaults") {
+    Context context_s;
+    context_s.setDate(make_Date(1, 6, 2023));
+    context_s.setTime(make_Time(12, 0, 0));
+
+    SolarPosition sp(7, 40.125f, 105.2369f, &context_s);
+
+    // Call parameter-free methods without setting atmospheric conditions
+    // Should use default values
+    float flux;
+    DOCTEST_CHECK_NOTHROW(flux = sp.getSolarFlux());
+    DOCTEST_CHECK(flux > 0.f);
+
+    // Verify defaults are being used
+    float pressure, temperature, humidity, turbidity;
+    capture_cerr cerr_buffer;
+    sp.getAtmosphericConditions(pressure, temperature, humidity, turbidity);
+    DOCTEST_CHECK(doctest::Approx(101325.f).epsilon(1e-6f) == pressure);
+    DOCTEST_CHECK(doctest::Approx(300.f).epsilon(1e-6f) == temperature);
+    DOCTEST_CHECK(doctest::Approx(0.5f).epsilon(1e-6f) == humidity);
+    DOCTEST_CHECK(doctest::Approx(0.02f).epsilon(1e-6f) == turbidity);
 }
 
 int SolarPosition::selfTest(int argc, char **argv) {

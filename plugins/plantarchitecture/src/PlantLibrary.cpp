@@ -20,15 +20,15 @@ using namespace helios;
 
 void PlantArchitecture::initializePlantModelRegistrations() {
     // Register all available plant models
-    registerPlantModel("almond", [this]() { initializeAlmondTreeShoots(); }, [this](const helios::vec3 &pos) { return buildAlmondTree(pos); });
+    registerPlantModel("almond", [this]() { initializeAlmondTreeShoots(); }, [this](const helios::vec3 &pos) { return buildAlmondTree(pos); }, "tree");
 
-    registerPlantModel("apple", [this]() { initializeAppleTreeShoots(); }, [this](const helios::vec3 &pos) { return buildAppleTree(pos); });
+    registerPlantModel("apple", [this]() { initializeAppleTreeShoots(); }, [this](const helios::vec3 &pos) { return buildAppleTree(pos); }, "tree");
 
-    registerPlantModel("apple_fruitingwall", [this]() { initializeAppleFruitingWallShoots(); }, [this](const helios::vec3 &pos) { return buildAppleFruitingWall(pos); });
+    registerPlantModel("apple_fruitingwall", [this]() { initializeAppleFruitingWallShoots(); }, [this](const helios::vec3 &pos) { return buildAppleFruitingWall(pos); }, "tree");
 
     registerPlantModel("asparagus", [this]() { initializeAsparagusShoots(); }, [this](const helios::vec3 &pos) { return buildAsparagusPlant(pos); });
 
-    registerPlantModel("bindweed", [this]() { initializeBindweedShoots(); }, [this](const helios::vec3 &pos) { return buildBindweedPlant(pos); });
+    registerPlantModel("bindweed", [this]() { initializeBindweedShoots(); }, [this](const helios::vec3 &pos) { return buildBindweedPlant(pos); }, "weed");
 
     registerPlantModel("bean", [this]() { initializeBeanShoots(); }, [this](const helios::vec3 &pos) { return buildBeanPlant(pos); });
 
@@ -36,7 +36,7 @@ void PlantArchitecture::initializePlantModelRegistrations() {
 
     registerPlantModel("capsicum", [this]() { initializeCapsicumShoots(); }, [this](const helios::vec3 &pos) { return buildCapsicumPlant(pos); });
 
-    registerPlantModel("cheeseweed", [this]() { initializeCheeseweedShoots(); }, [this](const helios::vec3 &pos) { return buildCheeseweedPlant(pos); });
+    registerPlantModel("cheeseweed", [this]() { initializeCheeseweedShoots(); }, [this](const helios::vec3 &pos) { return buildCheeseweedPlant(pos); }, "weed");
 
     registerPlantModel("cowpea", [this]() { initializeCowpeaShoots(); }, [this](const helios::vec3 &pos) { return buildCowpeaPlant(pos); });
 
@@ -44,17 +44,17 @@ void PlantArchitecture::initializePlantModelRegistrations() {
 
     registerPlantModel("grapevine_Wye", [this]() { initializeGrapevineWyeShoots(); }, [this](const helios::vec3 &pos) { return buildGrapevineWye(pos); });
 
-    registerPlantModel("groundcherryweed", [this]() { initializeGroundCherryWeedShoots(); }, [this](const helios::vec3 &pos) { return buildGroundCherryWeedPlant(pos); });
+    registerPlantModel("groundcherryweed", [this]() { initializeGroundCherryWeedShoots(); }, [this](const helios::vec3 &pos) { return buildGroundCherryWeedPlant(pos); }, "weed");
 
     registerPlantModel("maize", [this]() { initializeMaizeShoots(); }, [this](const helios::vec3 &pos) { return buildMaizePlant(pos); });
 
-    registerPlantModel("olive", [this]() { initializeOliveTreeShoots(); }, [this](const helios::vec3 &pos) { return buildOliveTree(pos); });
+    registerPlantModel("olive", [this]() { initializeOliveTreeShoots(); }, [this](const helios::vec3 &pos) { return buildOliveTree(pos); }, "tree");
 
-    registerPlantModel("pistachio", [this]() { initializePistachioTreeShoots(); }, [this](const helios::vec3 &pos) { return buildPistachioTree(pos); });
+    registerPlantModel("pistachio", [this]() { initializePistachioTreeShoots(); }, [this](const helios::vec3 &pos) { return buildPistachioTree(pos); }, "tree");
 
-    registerPlantModel("puncturevine", [this]() { initializePuncturevineShoots(); }, [this](const helios::vec3 &pos) { return buildPuncturevinePlant(pos); });
+    registerPlantModel("puncturevine", [this]() { initializePuncturevineShoots(); }, [this](const helios::vec3 &pos) { return buildPuncturevinePlant(pos); }, "weed");
 
-    registerPlantModel("easternredbud", [this]() { initializeEasternRedbudShoots(); }, [this](const helios::vec3 &pos) { return buildEasternRedbudPlant(pos); });
+    registerPlantModel("easternredbud", [this]() { initializeEasternRedbudShoots(); }, [this](const helios::vec3 &pos) { return buildEasternRedbudPlant(pos); }, "tree");
 
     registerPlantModel("rice", [this]() { initializeRiceShoots(); }, [this](const helios::vec3 &pos) { return buildRicePlant(pos); });
 
@@ -72,7 +72,7 @@ void PlantArchitecture::initializePlantModelRegistrations() {
 
     registerPlantModel("cherrytomato", [this]() { initializeCherryTomatoShoots(); }, [this](const helios::vec3 &pos) { return buildCherryTomatoPlant(pos); });
 
-    registerPlantModel("walnut", [this]() { initializeWalnutTreeShoots(); }, [this](const helios::vec3 &pos) { return buildWalnutTree(pos); });
+    registerPlantModel("walnut", [this]() { initializeWalnutTreeShoots(); }, [this](const helios::vec3 &pos) { return buildWalnutTree(pos); }, "tree");
 
     registerPlantModel("wheat", [this]() { initializeWheatShoots(); }, [this](const helios::vec3 &pos) { return buildWheatPlant(pos); });
 }
@@ -108,6 +108,27 @@ uint PlantArchitecture::buildPlantInstanceFromLibrary(const helios::vec3 &base_p
     uint plantID = builder_it->second(base_position);
 
     plant_instances.at(plantID).plant_name = current_plant_model;
+
+    // Update plant_name object data if enabled (geometry was built with temporary "custom" name)
+    if (output_object_data.at("plant_name")) {
+        std::vector<uint> plant_primitives = getAllPlantObjectIDs(plantID);
+        for (uint objID : plant_primitives) {
+            if (context_ptr->doesObjectDataExist(objID, "plant_name")) {
+                context_ptr->setObjectData(objID, "plant_name", current_plant_model);
+            }
+        }
+    }
+
+    // Set plant_type object data if enabled
+    if (output_object_data.at("plant_type")) {
+        std::string plant_type = "herbaceous";  // Default type
+        auto type_it = plant_type_map.find(current_plant_model);
+        if (type_it != plant_type_map.end()) {
+            plant_type = type_it->second;
+        }
+        std::vector<uint> plant_primitives = getAllPlantObjectIDs(plantID);
+        context_ptr->setObjectData(plant_primitives, "plant_type", plant_type);
+    }
 
     // Register plant with per-tree BVH collision detection if enabled
     if (collision_detection_enabled && collision_detection_ptr != nullptr && collision_detection_ptr->isTreeBasedBVHEnabled()) {
@@ -178,9 +199,10 @@ void PlantArchitecture::initializeDefaultShoots(const std::string &plant_label) 
     init_it->second();
 }
 
-void PlantArchitecture::registerPlantModel(const std::string &name, std::function<void()> shoot_init, std::function<uint(const helios::vec3 &)> plant_build) {
+void PlantArchitecture::registerPlantModel(const std::string &name, std::function<void()> shoot_init, std::function<uint(const helios::vec3 &)> plant_build, const std::string &plant_type) {
     shoot_initializers[name] = shoot_init;
     plant_builders[name] = plant_build;
+    plant_type_map[name] = plant_type;
 }
 
 void PlantArchitecture::initializeAlmondTreeShoots() {

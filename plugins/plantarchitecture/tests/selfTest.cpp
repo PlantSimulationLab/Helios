@@ -1291,6 +1291,205 @@ DOCTEST_TEST_CASE("PlantArchitecture child shoot rotation with multiple petioles
     // more complex geometric analysis that is beyond the scope of a unit test
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture plant_name optional object data") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Enable plant_name optional object data
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("plant_name"));
+
+    // Load and build a bean plant
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("bean"));
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    DOCTEST_CHECK(plantID != uint(-1));
+
+    // Verify plant name is set correctly
+    std::string plant_name = plantarchitecture.getPlantName(plantID);
+    DOCTEST_CHECK(plant_name == "bean");
+
+    // Advance time to create more organs
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 10.0f));
+
+    // Get all object IDs
+    std::vector<uint> all_primitives = plantarchitecture.getAllObjectIDs();
+    DOCTEST_CHECK(all_primitives.size() > 0);
+
+    // Verify plant_name object data is set on primitives
+    bool found_plant_name_data = false;
+    for (uint objID : all_primitives) {
+        if (context.doesObjectDataExist(objID, "plant_name")) {
+            std::string obj_plant_name;
+            context.getObjectData(objID, "plant_name", obj_plant_name);
+            DOCTEST_CHECK(obj_plant_name == "bean");
+            found_plant_name_data = true;
+        }
+    }
+    DOCTEST_CHECK(found_plant_name_data);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture plant_type tree classification") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Enable plant_type optional object data
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("plant_type"));
+
+    // Test tree classification
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("almond"));
+    uint treeID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    DOCTEST_CHECK(treeID != uint(-1));
+
+    std::vector<uint> tree_primitives = plantarchitecture.getAllObjectIDs();
+    DOCTEST_CHECK(tree_primitives.size() > 0);
+    bool found_tree_type = false;
+    for (uint objID : tree_primitives) {
+        if (context.doesObjectDataExist(objID, "plant_type")) {
+            std::string plant_type;
+            context.getObjectData(objID, "plant_type", plant_type);
+            DOCTEST_CHECK(plant_type == "tree");
+            found_tree_type = true;
+        }
+    }
+    DOCTEST_CHECK(found_tree_type);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture plant_type weed classification") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Enable plant_type optional object data
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("plant_type"));
+
+    // Test weed classification
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("bindweed"));
+    uint weedID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    DOCTEST_CHECK(weedID != uint(-1));
+
+    std::vector<uint> weed_primitives = plantarchitecture.getAllObjectIDs();
+    DOCTEST_CHECK(weed_primitives.size() > 0);
+    bool found_weed_type = false;
+    for (uint objID : weed_primitives) {
+        if (context.doesObjectDataExist(objID, "plant_type")) {
+            std::string plant_type;
+            context.getObjectData(objID, "plant_type", plant_type);
+            DOCTEST_CHECK(plant_type == "weed");
+            found_weed_type = true;
+        }
+    }
+    DOCTEST_CHECK(found_weed_type);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture plant_type herbaceous classification") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Enable plant_type optional object data
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("plant_type"));
+
+    // Test herbaceous classification (default)
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("bean"));
+    uint herbaceousID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    DOCTEST_CHECK(herbaceousID != uint(-1));
+
+    std::vector<uint> herbaceous_primitives = plantarchitecture.getAllObjectIDs();
+    DOCTEST_CHECK(herbaceous_primitives.size() > 0);
+    bool found_herbaceous_type = false;
+    for (uint objID : herbaceous_primitives) {
+        if (context.doesObjectDataExist(objID, "plant_type")) {
+            std::string plant_type;
+            context.getObjectData(objID, "plant_type", plant_type);
+            DOCTEST_CHECK(plant_type == "herbaceous");
+            found_herbaceous_type = true;
+        }
+    }
+    DOCTEST_CHECK(found_herbaceous_type);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture plant_height optional object data") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Enable plant_height optional object data
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("plant_height"));
+
+    // Build a bean plant
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("bean"));
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    DOCTEST_CHECK(plantID != uint(-1));
+
+    // Get initial height
+    float initial_height = plantarchitecture.getPlantHeight(plantID);
+    DOCTEST_CHECK(initial_height > 0);
+
+    // Advance time to allow growth
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 10.0f));
+
+    // Verify height increased
+    float final_height = plantarchitecture.getPlantHeight(plantID);
+    DOCTEST_CHECK(final_height > initial_height);
+
+    // Verify plant_height object data was set and is reasonable
+    std::vector<uint> all_primitives = plantarchitecture.getAllObjectIDs();
+    DOCTEST_CHECK(all_primitives.size() > 0);
+    bool found_height_data = false;
+    for (uint objID : all_primitives) {
+        if (context.doesObjectDataExist(objID, "plant_height")) {
+            float obj_height;
+            context.getObjectData(objID, "plant_height", obj_height);
+            // Check height is within reasonable range (close to final_height)
+            DOCTEST_CHECK(obj_height > initial_height);
+            DOCTEST_CHECK(std::abs(obj_height - final_height) < 0.01f);
+            found_height_data = true;
+            break;  // Only need to check one primitive
+        }
+    }
+    DOCTEST_CHECK(found_height_data);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture phenology_stage optional object data") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Enable phenology_stage optional object data
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("phenology_stage"));
+
+    // Build a bean plant
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("bean"));
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    DOCTEST_CHECK(plantID != uint(-1));
+
+    // Initially should be vegetative (no flowers, not dormant)
+    std::string initial_stage = plantarchitecture.determinePhenologyStage(plantID);
+    DOCTEST_CHECK(initial_stage == "vegetative");
+
+    // Advance time to allow growth and potential flowering
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 20.0f));
+
+    // Get current phenology stage
+    std::string current_stage = plantarchitecture.determinePhenologyStage(plantID);
+    DOCTEST_CHECK((current_stage == "vegetative" || current_stage == "reproductive" || current_stage == "senescent" || current_stage == "dormant"));
+
+    // Verify phenology_stage object data was set
+    std::vector<uint> all_primitives = plantarchitecture.getAllObjectIDs();
+    DOCTEST_CHECK(all_primitives.size() > 0);
+    bool found_stage_data = false;
+    for (uint objID : all_primitives) {
+        if (context.doesObjectDataExist(objID, "phenology_stage")) {
+            std::string obj_stage;
+            context.getObjectData(objID, "phenology_stage", obj_stage);
+            DOCTEST_CHECK(obj_stage == current_stage);
+            found_stage_data = true;
+        }
+    }
+    DOCTEST_CHECK(found_stage_data);
+}
+
 int PlantArchitecture::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

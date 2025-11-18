@@ -1113,7 +1113,7 @@ void Visualizer::updateNavigationGizmo() {
     // Gizmo parameters
     const float axis_length = 0.03f; // Length of each axis line
     const float bubble_size = 0.025f; // Size of letter bubbles
-    const float line_width = 4.f;
+    const float line_width = 3.f;
 
     // Calculate aspect ratio to maintain proper gizmo proportions in non-square windows
     float aspect_ratio = static_cast<float>(Wdisplay) / static_cast<float>(Hdisplay);

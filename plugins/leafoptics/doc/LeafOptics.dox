@@ -81,6 +81,66 @@ This command creates global data labeled
 computed spectra.  The spectra labels are also stored as primitive data for the
 specified UUIDs together with the biochemical property values.
 
+\section LOLibrary Using the Built-in Species Library
+
+The LeafOptics class includes a built-in species library that provides pre-configured optical properties for common plant species. This simplifies model usage by eliminating the need to manually specify biochemical parameters.
+
+\subsection LOLibraryBasic Basic Usage
+
+Use the \ref LeafOptics::getPropertiesFromLibrary() method to populate a \ref LeafOpticsProperties structure with species-specific values:
+
+~~~~~~{.cpp}
+#include "LeafOptics.h"
+
+Context context;
+LeafOptics leafoptics( &context );
+
+LeafOpticsProperties props;
+leafoptics.getPropertiesFromLibrary( "default", props );
+
+std::vector<uint> leafIDs = ...; //UUIDs for leaf primitives
+leafoptics.run( leafIDs, props, "example" );
+~~~~~~
+
+The method populates all nine parameters in the \ref LeafOpticsProperties structure (numberlayers, chlorophyllcontent, carotenoidcontent, anthocyancontent, brownpigments, watermass, drymass, protein, carbonconstituents).
+
+\subsection LOLibrarySpecies Available Species
+
+The library contains PROSPECT-D parameters fitted to LOPEX93 spectral library samples using the `fit_prospect_visrobust.py` script with robust optimization. All species use PROSPECT-D mode (drymass > 0, protein = 0, carbonconstituents = 0).
+
+<table>
+ <tr><th>Species Label</th><th>Scientific Name</th><th>N</th><th>Cab<br>(µg/cm²)</th><th>Car<br>(µg/cm²)</th><th>Ant<br>(µg/cm²)</th><th>Cbrown</th><th>Cw<br>(g/cm²)</th><th>Cm<br>(g/cm²)</th><th>R²</th><th>Source</th></tr>
+ <tr><td>"default"</td><td>-</td><td>1.50</td><td>30.0</td><td>7.00</td><td>1.00</td><td>0.000</td><td>0.0150</td><td>0.0900</td><td>-</td><td>Original Helios defaults</td></tr>
+ <tr><td>"garden_lettuce"</td><td>Lactuca sativa L.</td><td>2.01</td><td>30.3</td><td>6.99</td><td>1.36</td><td>0.107</td><td>0.0282</td><td>0.0053</td><td>0.993</td><td>LOPEX93 sample 0021</td></tr>
+ <tr><td>"alfalfa"</td><td>Medicago sativa L.</td><td>2.01</td><td>43.6</td><td>10.3</td><td>1.34</td><td>0.000</td><td>0.0190</td><td>0.0047</td><td>0.994</td><td>LOPEX93 sample 0036</td></tr>
+ <tr><td>"corn"</td><td>Zea mays L.</td><td>1.59</td><td>22.9</td><td>3.97</td><td>0.00</td><td>0.727</td><td>0.0150</td><td>0.0044</td><td>0.975</td><td>LOPEX93 sample 0041</td></tr>
+ <tr><td>"sunflower"</td><td>Helianthus annuus L.</td><td>1.76</td><td>54.1</td><td>12.9</td><td>1.75</td><td>0.011</td><td>0.0186</td><td>0.0064</td><td>0.995</td><td>LOPEX93 sample 0081</td></tr>
+ <tr><td>"english_walnut"</td><td>Juglans regia L.</td><td>1.56</td><td>55.9</td><td>12.5</td><td>1.74</td><td>0.000</td><td>0.0128</td><td>0.0058</td><td>0.994</td><td>LOPEX93 sample 0091</td></tr>
+ <tr><td>"rice"</td><td>Oryza sativa L.</td><td>1.67</td><td>37.2</td><td>10.0</td><td>0.00</td><td>0.028</td><td>0.0101</td><td>0.0048</td><td>0.998</td><td>LOPEX93 sample 0106</td></tr>
+ <tr><td>"soybean"</td><td>Glycine max L.</td><td>1.54</td><td>46.4</td><td>12.1</td><td>0.65</td><td>0.000</td><td>0.0101</td><td>0.0029</td><td>0.997</td><td>LOPEX93 sample 0116</td></tr>
+ <tr><td>"wine_grape"</td><td>Vitis vinifera L.</td><td>1.43</td><td>50.9</td><td>12.5</td><td>1.44</td><td>0.080</td><td>0.0109</td><td>0.0060</td><td>0.997</td><td>LOPEX93 sample 0276</td></tr>
+ <tr><td>"tomato"</td><td>Lycopersicum esculentum</td><td>1.40</td><td>48.3</td><td>11.6</td><td>1.45</td><td>0.000</td><td>0.0156</td><td>0.0026</td><td>0.997</td><td>LOPEX93 sample 0316</td></tr>
+</table>
+
+**Notes:**
+- Species names are case-insensitive (e.g., "corn" and "CORN" are equivalent).
+- R² values computed as 1 - (RMSE² / variance), indicating goodness-of-fit to measured spectra.
+- All parameters were fitted without affine calibration using visible-robust optimization.
+- LOPEX93 dataset: Hosgood B. et al. (1994), Leaf Optical Properties Experiment 93 (LOPEX93), EUR 16095 EN.
+
+\subsection LOLibraryError Error Handling
+
+If an unknown species name is provided, the method:
+1. Issues a warning message (if messages are enabled)
+2. Populates the properties structure with default values
+3. Does not throw an error
+
+This ensures that code continues to run even if a species name is misspelled or not yet in the library.
+
+\subsection LOLibraryExtend Extending the Species Library
+
+To add new species to the library, edit the \ref LeafOptics::getPropertiesFromLibrary() method in `plugins/leafoptics/src/LeafOptics.cpp`. Follow the existing if-else pattern to add new species entries. The library supports both PROSPECT-D mode (using drymass) and PROSPECT-PRO mode (using protein and carbonconstituents).
+
 \section LORetrieve Retrieving PROSPECT Parameters from Spectra
 
 The LeafOptics class maintains an internal mapping between spectrum labels and the PROSPECT parameters used to generate them. This allows users to retrieve the original model parameters from primitives that have been assigned LeafOptics-generated spectra.

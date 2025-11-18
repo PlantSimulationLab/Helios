@@ -762,6 +762,222 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - Empty UUID Vector") {
     DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromSpectrum(empty_UUIDs));
 }
 
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - Default Species") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    LeafOpticsProperties props;
+
+    // Test with "default" species
+    DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromLibrary("default", props));
+
+    // Verify all parameters match expected default values
+    DOCTEST_CHECK(props.numberlayers == doctest::Approx(1.5f).epsilon(err_tol));
+    DOCTEST_CHECK(props.chlorophyllcontent == doctest::Approx(30.0f).epsilon(err_tol));
+    DOCTEST_CHECK(props.carotenoidcontent == doctest::Approx(7.0f).epsilon(err_tol));
+    DOCTEST_CHECK(props.anthocyancontent == doctest::Approx(1.0f).epsilon(err_tol));
+    DOCTEST_CHECK(props.brownpigments == doctest::Approx(0.0f).epsilon(err_tol));
+    DOCTEST_CHECK(props.watermass == doctest::Approx(0.015f).epsilon(err_tol));
+    DOCTEST_CHECK(props.drymass == doctest::Approx(0.09f).epsilon(err_tol));
+    DOCTEST_CHECK(props.protein == doctest::Approx(0.0f).epsilon(err_tol));
+    DOCTEST_CHECK(props.carbonconstituents == doctest::Approx(0.0f).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - Case Insensitivity") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    LeafOpticsProperties props_lower, props_upper;
+
+    // Test case insensitivity
+    DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromLibrary("default", props_lower));
+    DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromLibrary("Default", props_upper));
+
+    // Both should have identical values
+    DOCTEST_CHECK(props_lower.chlorophyllcontent == doctest::Approx(props_upper.chlorophyllcontent).epsilon(err_tol));
+    DOCTEST_CHECK(props_lower.watermass == doctest::Approx(props_upper.watermass).epsilon(err_tol));
+    DOCTEST_CHECK(props_lower.drymass == doctest::Approx(props_upper.drymass).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - Unknown Species") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    LeafOpticsProperties props;
+
+    // Test with unknown species - should use default without crashing
+    DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromLibrary("UnknownSpecies", props));
+
+    // Should have default values
+    DOCTEST_CHECK(props.chlorophyllcontent == doctest::Approx(30.0f).epsilon(err_tol));
+    DOCTEST_CHECK(props.watermass == doctest::Approx(0.015f).epsilon(err_tol));
+    DOCTEST_CHECK(props.drymass == doctest::Approx(0.09f).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - Integration with Run") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    // Create test primitives
+    std::vector<uint> UUIDs;
+    UUIDs.push_back(context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1)));
+
+    // Get properties from library
+    LeafOpticsProperties props;
+    leafoptics.getPropertiesFromLibrary("default", props);
+
+    // Use properties to run the model
+    std::string label = "test_library_integration";
+    DOCTEST_CHECK_NOTHROW(leafoptics.run(UUIDs, props, label));
+
+    // Verify spectra were created
+    std::string refl_label = "leaf_reflectivity_" + label;
+    std::string trans_label = "leaf_transmissivity_" + label;
+
+    DOCTEST_CHECK(context_test.doesGlobalDataExist(refl_label.c_str()));
+    DOCTEST_CHECK(context_test.doesGlobalDataExist(trans_label.c_str()));
+
+    // Verify primitive data was set with correct values
+    float chl, water, dry;
+    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUIDs[0], "chlorophyll", chl));
+    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUIDs[0], "water", water));
+    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUIDs[0], "drymass", dry));
+
+    DOCTEST_CHECK(chl == doctest::Approx(30.0f).epsilon(err_tol));
+    DOCTEST_CHECK(water == doctest::Approx(0.015f).epsilon(err_tol));
+    DOCTEST_CHECK(dry == doctest::Approx(0.09f).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - LOPEX93 Species Library") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    // Test all 9 LOPEX93 species in the library
+    struct SpeciesTestData {
+        std::string name;
+        float expected_N;
+        float expected_Cab;
+        float expected_drymass;
+    };
+
+    std::vector<SpeciesTestData> species_data = {
+        {"garden_lettuce", 2.00517f, 30.2697f, 0.0052668f},
+        {"alfalfa", 2.00758f, 43.6375f, 0.00473702f},
+        {"corn", 1.59203f, 22.8664f, 0.00441283f},
+        {"sunflower", 1.76358f, 54.0514f, 0.00644855f},
+        {"english_walnut", 1.56274f, 55.9211f, 0.00583351f},
+        {"rice", 1.67081f, 37.233f, 0.00484587f},
+        {"soybean", 1.5375f, 46.4121f, 0.00292814f},
+        {"wine_grape", 1.42673f, 50.918f, 0.00599315f},
+        {"tomato", 1.40304f, 48.3467f, 0.00261571f}
+    };
+
+    for (const auto& species : species_data) {
+        LeafOpticsProperties props;
+        DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromLibrary(species.name, props));
+
+        // Check key parameters match fitted values
+        DOCTEST_CHECK(props.numberlayers == doctest::Approx(species.expected_N).epsilon(err_tol));
+        DOCTEST_CHECK(props.chlorophyllcontent == doctest::Approx(species.expected_Cab).epsilon(err_tol));
+        DOCTEST_CHECK(props.drymass == doctest::Approx(species.expected_drymass).epsilon(err_tol));
+
+        // All LOPEX93 species should use PROSPECT-D mode
+        DOCTEST_CHECK(props.drymass > 0.0f);
+        DOCTEST_CHECK(props.protein == doctest::Approx(0.0f).epsilon(err_tol));
+        DOCTEST_CHECK(props.carbonconstituents == doctest::Approx(0.0f).epsilon(err_tol));
+    }
+}
+
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - LOPEX93 Species Case Insensitivity") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    LeafOpticsProperties props_lower, props_upper, props_mixed;
+
+    // Test case insensitivity for specific species
+    DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromLibrary("corn", props_lower));
+    DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromLibrary("CORN", props_upper));
+    DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromLibrary("Corn", props_mixed));
+
+    // All three should have identical values
+    DOCTEST_CHECK(props_lower.chlorophyllcontent == doctest::Approx(props_upper.chlorophyllcontent).epsilon(err_tol));
+    DOCTEST_CHECK(props_lower.chlorophyllcontent == doctest::Approx(props_mixed.chlorophyllcontent).epsilon(err_tol));
+    DOCTEST_CHECK(props_lower.drymass == doctest::Approx(props_upper.drymass).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - LOPEX93 Complete Parameter Check") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    // Test one species with all parameters explicitly checked (sunflower)
+    LeafOpticsProperties props;
+    leafoptics.getPropertiesFromLibrary("sunflower", props);
+
+    DOCTEST_CHECK(props.numberlayers == doctest::Approx(1.76358f).epsilon(err_tol));
+    DOCTEST_CHECK(props.chlorophyllcontent == doctest::Approx(54.0514f).epsilon(err_tol));
+    DOCTEST_CHECK(props.carotenoidcontent == doctest::Approx(12.9027f).epsilon(err_tol));
+    DOCTEST_CHECK(props.anthocyancontent == doctest::Approx(1.75194f).epsilon(err_tol));
+    DOCTEST_CHECK(props.brownpigments == doctest::Approx(0.0112026f).epsilon(err_tol));
+    DOCTEST_CHECK(props.watermass == doctest::Approx(0.0185557f).epsilon(err_tol));
+    DOCTEST_CHECK(props.drymass == doctest::Approx(0.00644855f).epsilon(err_tol));
+    DOCTEST_CHECK(props.protein == doctest::Approx(0.0f).epsilon(err_tol));
+    DOCTEST_CHECK(props.carbonconstituents == doctest::Approx(0.0f).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - LOPEX93 Integration Test") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    // Create test primitives
+    std::vector<uint> UUIDs;
+    UUIDs.push_back(context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1)));
+    UUIDs.push_back(context_test.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1)));
+
+    // Get properties for soybean from library
+    LeafOpticsProperties soybean_props;
+    leafoptics.getPropertiesFromLibrary("soybean", soybean_props);
+
+    // Run model with library properties
+    std::string label = "test_soybean";
+    DOCTEST_CHECK_NOTHROW(leafoptics.run(UUIDs, soybean_props, label));
+
+    // Verify spectra were created
+    DOCTEST_CHECK(context_test.doesGlobalDataExist("leaf_reflectivity_test_soybean"));
+    DOCTEST_CHECK(context_test.doesGlobalDataExist("leaf_transmissivity_test_soybean"));
+
+    // Verify primitive data matches library values
+    for (uint UUID : UUIDs) {
+        float chl;
+        context_test.getPrimitiveData(UUID, "chlorophyll", chl);
+        DOCTEST_CHECK(chl == doctest::Approx(46.4121f).epsilon(err_tol)); // Soybean chlorophyll
+    }
+}
+
+DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - LOPEX93 Species Comparison") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    LeafOpticsProperties lettuce_props, walnut_props;
+    leafoptics.getPropertiesFromLibrary("garden_lettuce", lettuce_props);
+    leafoptics.getPropertiesFromLibrary("english_walnut", walnut_props);
+
+    // Verify species have different properties
+    DOCTEST_CHECK(lettuce_props.chlorophyllcontent != doctest::Approx(walnut_props.chlorophyllcontent).epsilon(err_tol));
+    DOCTEST_CHECK(lettuce_props.numberlayers != doctest::Approx(walnut_props.numberlayers).epsilon(err_tol));
+
+    // English walnut should have higher chlorophyll than lettuce
+    DOCTEST_CHECK(walnut_props.chlorophyllcontent > lettuce_props.chlorophyllcontent);
+}
+
 int LeafOptics::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

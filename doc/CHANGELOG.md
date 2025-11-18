@@ -1,5 +1,30 @@
 # Changelog
 
+# [1.3.57] 2025-11-18
+
+## Radiation
+- **NEW FEATURE:** Integrated Prague Sky Model for physically-based atmospheric sky radiance in camera rendering. When camera "miss" rays don't hit any geometry, sky radiance is now computed using the advanced atmospheric physics model from Wilkie et al. (ACM SIGGRAPH 2021, CGF 2022) based on Rayleigh and Mie scattering.
+- Prague Sky Model data file (27 MB) and Apache 2.0 license added to `plugins/radiation/spectral_data/prague_sky_model/`
+
+## Solar Position
+- Clarified turbidity parameter documentation across all methods to explicitly state it represents Ångström's aerosol turbidity coefficient (β), which is aerosol optical depth (AOD) at 500 nm wavelength
+- Updated documentation for `setAtmosphericConditions()`, `getAtmosphericConditions()`, `getSolarFlux()`, `getSolarFluxPAR()`, `getSolarFluxNIR()`, and `getDiffuseFraction()` to include typical turbidity values and clarify the difference from Linke turbidity.
+
+## Leaf Optics
+- Added built-in species library with pre-configured optical properties for common plant species to simplify model usage and eliminate the need to manually specify PROSPECT-D biochemical parameters
+- Added `LeafOptics::getPropertiesFromLibrary()` method to populate `LeafOpticsProperties` structures with species-specific PROSPECT-D parameters. The method accepts case-insensitive species names (e.g., "corn", "CORN", "Corn" are equivalent) and gracefully falls back to default values with a warning if an unknown species is provided.
+- Species library includes 11 species fitted to LOPEX93 spectral library samples using robust optimization: default (original Helios defaults), garden_lettuce, alfalfa, corn, sunflower, english_walnut, rice, soybean, wine_grape, tomato, common_bean (from GEMINI field experiments), and cowpea (from GEMINI field experiments)
+- All species use PROSPECT-D mode with fitted parameters for numberlayers (N), chlorophyllcontent (Cab), carotenoidcontent (Car), anthocyancontent (Ant), brownpigments (Cbrown), watermass (Cw), and drymass (Cm)
+
+## Plant Architecture
+- Added `PlantArchitecture::determinePhenologyStage()` method to determine if a plant is in dormant, vegetative, reproductive, or senescent phenological stage based on the presence and state of floral buds and leaf senescence
+- Added optional object data output fields for improved plant identification and analysis: `plant_name` (string), `plant_height` (float), `plant_type` (string: "herbaceous", "deciduous", or "evergreen"), and `phenology_stage` (string: "dormant", "vegetative", "reproductive", or "senescent")
+- Plant type classification (herbaceous, deciduous, evergreen) is now tracked internally via `plant_type_map` and automatically set during plant model registration, enabling proper phenological stage determination and classification
+- Fixed bug when generating plant from XML, caused by not re-generating prototype models
+
+## Visualizer
+- Fixed bug where navigation gizmo would not reappear after calling `Visualizer::displayImage()` followed by `Visualizer::buildContextGeometry()`. The gizmo's enabled state is now tracked and properly restored when building geometry.
+
 # [1.3.56] 2025-11-12
 
 - Made a change to `.clang-format` to not sort header includes, which was persistently causing issues in the project builder plug-in

@@ -70,11 +70,13 @@ public:
      * \param[in] pressure_Pa Atmospheric pressure near ground surface in Pascals
      * \param[in] temperature_K Air temperature near the ground surface in Kelvin
      * \param[in] humidity_rel Air relative humidity near the ground surface
-     * \param[in] turbidity Angstrom's aerosol turbidity coefficient
+     * \param[in] turbidity Ångström's aerosol turbidity coefficient (AOD at 500 nm). Typical values: 0.02 (very clear), 0.05 (clear), 0.1 (hazy)
      * \note The flux given by this function is the flux normal to the sun direction. To get the flux on a horizontal surface, multiply the returned value by cos(theta), where theta can be found by calling the \ref getSunZenith() function.
      * \note The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>.
      * \return Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
+     * \deprecated Use setAtmosphericConditions() and the parameter-free getSolarFlux() instead
      */
+    [[deprecated("Use setAtmosphericConditions() and parameter-free getSolarFlux() instead")]]
     [[nodiscard]] float getSolarFlux(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const;
 
     //! Get the photosynthetically active (PAR) component of solar radiation flux perpendicular to the sun direction.
@@ -82,11 +84,13 @@ public:
      * \param[in] pressure_Pa Atmospheric pressure near ground surface in Pascals
      * \param[in] temperature_K Air temperature near the ground surface in Kelvin
      * \param[in] humidity_rel Air relative humidity near the ground surface
-     * \param[in] turbidity Angstrom's aerosol turbidity coefficient
+     * \param[in] turbidity Ångström's aerosol turbidity coefficient (AOD at 500 nm). Typical values: 0.02 (very clear), 0.05 (clear), 0.1 (hazy)
      * \note The flux given by this function is the flux normal to the sun direction. To get the flux on a horizontal surface, multiply the returned value by cos(theta), where theta can be found by calling the \ref getSunZenith() function.
      * \note The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>.
      * \return Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
+     * \deprecated Use setAtmosphericConditions() and the parameter-free getSolarFluxPAR() instead
      */
+    [[deprecated("Use setAtmosphericConditions() and parameter-free getSolarFluxPAR() instead")]]
     [[nodiscard]] float getSolarFluxPAR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const;
 
     //! Get the near-infrared (NIR) component of solar radiation flux perpendicular to the sun direction.
@@ -94,11 +98,13 @@ public:
      * \param[in] pressure_Pa Atmospheric pressure near ground surface in Pascals
      * \param[in] temperature_K Air temperature near the ground surface in Kelvin
      * \param[in] humidity_rel Air relative humidity near the ground surface
-     * \param[in] turbidity Angstrom's aerosol turbidity coefficient
+     * \param[in] turbidity Ångström's aerosol turbidity coefficient (AOD at 500 nm). Typical values: 0.02 (very clear), 0.05 (clear), 0.1 (hazy)
      * \note The flux given by this function is the flux normal to the sun direction. To get the flux on a horizontal surface, multiply the returned value by cos(theta), where theta can be found by calling the \ref getSunZenith() function.
      * \note The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>.
      * \return Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
+     * \deprecated Use setAtmosphericConditions() and the parameter-free getSolarFluxNIR() instead
      */
+    [[deprecated("Use setAtmosphericConditions() and parameter-free getSolarFluxNIR() instead")]]
     [[nodiscard]] float getSolarFluxNIR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const;
 
     //! Get the fraction of solar radiation flux that is diffuse
@@ -106,9 +112,11 @@ public:
      * \param[in] pressure_Pa Atmospheric pressure near ground surface in Pascals
      * \param[in] temperature_K Air temperature near the ground surface in Kelvin
      * \param[in] humidity_rel Air relative humidity near the ground surface
-     * \param[in] turbidity Angstrom's aerosol turbidity coefficient
+     * \param[in] turbidity Ångström's aerosol turbidity coefficient (AOD at 500 nm). Typical values: 0.02 (very clear), 0.05 (clear), 0.1 (hazy)
      * \return Fraction of global radiation that is diffuse
+     * \deprecated Use setAtmosphericConditions() and the parameter-free getDiffuseFraction() instead
      */
+    [[deprecated("Use setAtmosphericConditions() and parameter-free getDiffuseFraction() instead")]]
     [[nodiscard]] float getDiffuseFraction(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const;
 
     //! Calculate the ambient (sky) longwave radiation flux
@@ -117,7 +125,9 @@ public:
      * \param[in] humidity_rel Air relative humidity near the ground surface
      * \return Ambient longwave flux in W/m^2
      * \note The longwave flux model is based on <a href="http://onlinelibrary.wiley.com/doi/10.1002/qj.49712253306/full">Prata (1996)</a>.
+     * \deprecated Use setAtmosphericConditions() and the parameter-free getAmbientLongwaveFlux() instead
      */
+    [[deprecated("Use setAtmosphericConditions() and parameter-free getAmbientLongwaveFlux() instead")]]
     [[nodiscard]] float getAmbientLongwaveFlux(float temperature_K, float humidity_rel) const;
 
     //! Calculate the turbidity value based on a timeseries of net radiation measurements
@@ -136,6 +146,69 @@ public:
 
     //! Disable calibration of solar flux and diffuse fraction for clouds
     void disableCloudCalibration();
+
+    //! Set atmospheric conditions globally in the Context
+    /**
+     * \param[in] pressure_Pa Atmospheric pressure near ground surface in Pascals (must be > 0)
+     * \param[in] temperature_K Air temperature near the ground surface in Kelvin (must be > 0)
+     * \param[in] humidity_rel Air relative humidity near the ground surface (must be between 0 and 1)
+     * \param[in] turbidity Ångström's aerosol turbidity coefficient (β), representing aerosol optical depth (AOD) at 500 nm reference wavelength (must be >= 0). Typical values: 0.02 (very clear sky), 0.05 (clear sky), 0.1 (light haze), 0.2-0.3 (hazy), >0.4 (very hazy/polluted). <b>Note:</b> This is NOT Linke turbidity, which uses a different scale (typically 2-6).
+     * \note This method sets global data in the Context with labels: atmosphere_pressure_Pa, atmosphere_temperature_K, atmosphere_humidity_rel, atmosphere_turbidity
+     * \note Input values are validated. Invalid values will throw helios_runtime_error.
+     */
+    void setAtmosphericConditions(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity);
+
+    //! Get atmospheric conditions from the Context
+    /**
+     * \param[out] pressure_Pa Atmospheric pressure near ground surface in Pascals
+     * \param[out] temperature_K Air temperature near the ground surface in Kelvin
+     * \param[out] humidity_rel Air relative humidity near the ground surface
+     * \param[out] turbidity Ångström's aerosol turbidity coefficient (β), representing aerosol optical depth (AOD) at 500 nm
+     * \note If atmospheric conditions have not been set via setAtmosphericConditions(), reasonable defaults are used: pressure=101325 Pa (1 atm), temperature=300 K (27°C), humidity=0.5 (50%), turbidity=0.02 (clear sky AOD)
+     */
+    void getAtmosphericConditions(float &pressure_Pa, float &temperature_K, float &humidity_rel, float &turbidity) const;
+
+    //! Get the solar radiation flux perpendicular to the sun direction using atmospheric conditions from the Context.
+    /**
+     * \note The flux given by this function is the flux normal to the sun direction. To get the flux on a horizontal surface, multiply the returned value by cos(theta), where theta can be found by calling the \ref getSunZenith() function.
+     * \note The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>.
+     * \note Atmospheric conditions must be set using \ref setAtmosphericConditions() before calling this method. If not set, default values are used with a warning.
+     * \return Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
+     */
+    [[nodiscard]] float getSolarFlux() const;
+
+    //! Get the photosynthetically active (PAR) component of solar radiation flux perpendicular to the sun direction using atmospheric conditions from the Context.
+    /**
+     * \note The flux given by this function is the flux normal to the sun direction. To get the flux on a horizontal surface, multiply the returned value by cos(theta), where theta can be found by calling the \ref getSunZenith() function.
+     * \note The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>.
+     * \note Atmospheric conditions must be set using \ref setAtmosphericConditions() before calling this method. If not set, default values are used with a warning.
+     * \return PAR component of solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
+     */
+    [[nodiscard]] float getSolarFluxPAR() const;
+
+    //! Get the near-infrared (NIR) component of solar radiation flux perpendicular to the sun direction using atmospheric conditions from the Context.
+    /**
+     * \note The flux given by this function is the flux normal to the sun direction. To get the flux on a horizontal surface, multiply the returned value by cos(theta), where theta can be found by calling the \ref getSunZenith() function.
+     * \note The solar flux model is based on <a href="http://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>.
+     * \note Atmospheric conditions must be set using \ref setAtmosphericConditions() before calling this method. If not set, default values are used with a warning.
+     * \return NIR component of solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
+     */
+    [[nodiscard]] float getSolarFluxNIR() const;
+
+    //! Get the fraction of solar radiation flux that is diffuse using atmospheric conditions from the Context.
+    /**
+     * \note Atmospheric conditions must be set using \ref setAtmosphericConditions() before calling this method. If not set, default values are used with a warning.
+     * \return Fraction of global radiation that is diffuse
+     */
+    [[nodiscard]] float getDiffuseFraction() const;
+
+    //! Calculate the ambient (sky) longwave radiation flux using atmospheric conditions from the Context.
+    /**
+     * \note The longwave flux model is based on <a href="http://onlinelibrary.wiley.com/doi/10.1002/qj.49712253306/full">Prata (1996)</a>.
+     * \note Atmospheric conditions must be set using \ref setAtmosphericConditions() before calling this method. If not set, default values are used with a warning.
+     * \return Ambient longwave flux in W/m^2
+     */
+    [[nodiscard]] float getAmbientLongwaveFlux() const;
 
 private:
     helios::Context *context;
