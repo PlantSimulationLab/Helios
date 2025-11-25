@@ -471,6 +471,162 @@ int XMLparser::parse_radius(const pugi::xml_node &node, std::vector<float> &radi
     return 0;
 }
 
+void Context::loadMaterialData(pugi::xml_node mat_node, const std::string &material_label) {
+    // Load uint data
+    for (pugi::xml_node data = mat_node.child("data_uint"); data; data = data.next_sibling("data_uint")) {
+        const char *label = data.attribute("label").value();
+        std::vector<uint> datav;
+        if (XMLparser::parse_data_uint(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_uint> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load int data
+    for (pugi::xml_node data = mat_node.child("data_int"); data; data = data.next_sibling("data_int")) {
+        const char *label = data.attribute("label").value();
+        std::vector<int> datav;
+        if (XMLparser::parse_data_int(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_int> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load float data
+    for (pugi::xml_node data = mat_node.child("data_float"); data; data = data.next_sibling("data_float")) {
+        const char *label = data.attribute("label").value();
+        std::vector<float> datav;
+        if (XMLparser::parse_data_float(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_float> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load double data
+    for (pugi::xml_node data = mat_node.child("data_double"); data; data = data.next_sibling("data_double")) {
+        const char *label = data.attribute("label").value();
+        std::vector<double> datav;
+        if (XMLparser::parse_data_double(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_double> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load vec2 data
+    for (pugi::xml_node data = mat_node.child("data_vec2"); data; data = data.next_sibling("data_vec2")) {
+        const char *label = data.attribute("label").value();
+        std::vector<vec2> datav;
+        if (XMLparser::parse_data_vec2(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_vec2> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load vec3 data
+    for (pugi::xml_node data = mat_node.child("data_vec3"); data; data = data.next_sibling("data_vec3")) {
+        const char *label = data.attribute("label").value();
+        std::vector<vec3> datav;
+        if (XMLparser::parse_data_vec3(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_vec3> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load vec4 data
+    for (pugi::xml_node data = mat_node.child("data_vec4"); data; data = data.next_sibling("data_vec4")) {
+        const char *label = data.attribute("label").value();
+        std::vector<vec4> datav;
+        if (XMLparser::parse_data_vec4(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_vec4> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load int2 data
+    for (pugi::xml_node data = mat_node.child("data_int2"); data; data = data.next_sibling("data_int2")) {
+        const char *label = data.attribute("label").value();
+        std::vector<int2> datav;
+        if (XMLparser::parse_data_int2(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_int2> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load int3 data
+    for (pugi::xml_node data = mat_node.child("data_int3"); data; data = data.next_sibling("data_int3")) {
+        const char *label = data.attribute("label").value();
+        std::vector<int3> datav;
+        if (XMLparser::parse_data_int3(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_int3> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load int4 data
+    for (pugi::xml_node data = mat_node.child("data_int4"); data; data = data.next_sibling("data_int4")) {
+        const char *label = data.attribute("label").value();
+        std::vector<int4> datav;
+        if (XMLparser::parse_data_int4(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_int4> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+
+    // Load string data
+    for (pugi::xml_node data = mat_node.child("data_string"); data; data = data.next_sibling("data_string")) {
+        const char *label = data.attribute("label").value();
+        std::vector<std::string> datav;
+        if (XMLparser::parse_data_string(data, datav) != 0 || datav.empty()) {
+            helios_runtime_error("ERROR (Context::loadXML): Material data tag <data_string> with label " + std::string(label) + " contained invalid data.");
+        }
+        if (datav.size() == 1) {
+            setMaterialData(material_label, label, datav.front());
+        } else if (datav.size() > 1) {
+            setMaterialData(material_label, label, datav);
+        }
+    }
+}
+
 void Context::loadPData(pugi::xml_node p, uint UUID) {
     for (pugi::xml_node data = p.child("data_int"); data; data = data.next_sibling("data_int")) {
         const char *label = data.attribute("label").value();
@@ -1208,6 +1364,107 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         setTime(second, minute, hour);
     }
 
+    //-------------- MATERIALS ---------------//
+    // Map to track legacy numeric material IDs to labels for backward compatibility
+    std::map<uint, std::string> legacy_material_id_to_label;
+
+    for (pugi::xml_node m = helios.child("materials"); m; m = m.next_sibling("materials")) {
+        for (pugi::xml_node mat = m.child("material"); mat; mat = mat.next_sibling("material")) {
+            std::string material_label;
+            RGBAcolor color = make_RGBAcolor(0, 0, 0, 1);
+            std::string texture_file;
+            bool texture_override = false;
+
+            // Check for v3 format (label="...") first
+            pugi::xml_attribute label_attr = mat.attribute("label");
+            if (!label_attr.empty()) {
+                material_label = label_attr.value();
+            } else {
+                // Check for v2 format (id="N")
+                pugi::xml_attribute id_attr = mat.attribute("id");
+                if (!id_attr.empty()) {
+                    uint matID = 0;
+                    const char *id_str = id_attr.value();
+                    if (!parse_uint(id_str, matID)) {
+                        helios_runtime_error("ERROR (Context::loadXML): Material ID must be an unsigned integer value.");
+                    }
+                    // Generate label from numeric ID for backward compatibility
+                    material_label = "__auto_material_" + std::to_string(matID);
+                    legacy_material_id_to_label[matID] = material_label;
+                } else {
+                    helios_runtime_error("ERROR (Context::loadXML): Material must have either a 'label' or 'id' attribute.");
+                }
+            }
+
+            // Color
+            pugi::xml_node color_node = mat.child("color");
+            if (!color_node.empty()) {
+                const char *color_str = color_node.child_value();
+                std::istringstream color_stream(color_str);
+                std::vector<float> color_vec;
+                float tmp;
+                while (color_stream >> tmp) {
+                    color_vec.push_back(tmp);
+                }
+                if (color_vec.size() == 3) {
+                    color = make_RGBAcolor(color_vec.at(0), color_vec.at(1), color_vec.at(2), 1.f);
+                } else if (color_vec.size() == 4) {
+                    color = make_RGBAcolor(color_vec.at(0), color_vec.at(1), color_vec.at(2), color_vec.at(3));
+                }
+            }
+
+            // Texture
+            pugi::xml_node texture_node = mat.child("texture");
+            if (!texture_node.empty()) {
+                texture_file = deblank(texture_node.child_value());
+                if (!texture_file.empty()) {
+                    addTexture(texture_file.c_str());
+                }
+            }
+
+            // Texture override
+            pugi::xml_node override_node = mat.child("texture_override");
+            if (!override_node.empty()) {
+                const char *override_str = override_node.child_value();
+                int override_val;
+                if (parse_int(override_str, override_val)) {
+                    texture_override = (override_val != 0);
+                }
+            }
+
+            // Twosided flag
+            uint twosided = 1;  // default: two-sided
+            pugi::xml_node twosided_node = mat.child("twosided_flag");
+            if (!twosided_node.empty()) {
+                const char *twosided_str = twosided_node.child_value();
+                int twosided_val;
+                if (parse_int(twosided_str, twosided_val) && twosided_val >= 0) {
+                    twosided = (uint)twosided_val;
+                }
+            }
+
+            // Create the material using the new label-based API
+            // Use internal method to bypass reserved label check for __auto_ labels
+            if (!doesMaterialExist(material_label)) {
+                uint newID = currentMaterialID++;
+                Material loaded_mat(newID, material_label, color, texture_file, texture_override, twosided);
+                materials[newID] = loaded_mat;
+                material_label_to_id[material_label] = newID;
+            } else {
+                // Material already exists, update its properties
+                setMaterialColor(material_label, color);
+                if (!texture_file.empty()) {
+                    setMaterialTexture(material_label, texture_file);
+                }
+                setMaterialTextureColorOverride(material_label, texture_override);
+                setMaterialTwosidedFlag(material_label, twosided);
+            }
+
+            // Load material data
+            loadMaterialData(mat, material_label);
+        }
+    }
+
     //-------------- PATCHES ---------------//
     for (pugi::xml_node p = helios.child("patch"); p; p = p.next_sibling("patch")) {
         // * Patch Object ID * //
@@ -1241,38 +1498,74 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Solid fraction given in 'patch' block contains invalid data.");
         }
 
-        // * Patch Diffuse Colors * //
-        RGBAcolor color;
-        pugi::xml_node color_node = p.child("color");
+        // * Check for v3 material format (string label) vs v2 (numeric ID) vs legacy (color/texture) * //
+        pugi::xml_node material_node = p.child("material");
+        pugi::xml_node material_id_node = p.child("material_id");
+        std::string material_label_from_xml;
+        bool has_material = false;
 
-        const char *color_str = color_node.child_value();
-        if (strlen(color_str) == 0) {
-            color = make_RGBAcolor(0, 0, 0, 1); // assume default color of black
-        } else {
-            color = string2RGBcolor(color_str);
+        if (!material_node.empty()) {
+            // v3 format: <material>label</material>
+            material_label_from_xml = deblank(material_node.child_value());
+            if (!material_label_from_xml.empty() && doesMaterialExist(material_label_from_xml)) {
+                has_material = true;
+                ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBAcolor(0, 0, 0, 1));
+            }
+        } else if (!material_id_node.empty()) {
+            // v2 format: <material_id>N</material_id>
+            uint materialID_from_xml = 0;
+            const char *mat_id_str = material_id_node.child_value();
+            if (parse_uint(mat_id_str, materialID_from_xml)) {
+                // Look up the label for this legacy numeric ID
+                auto it = legacy_material_id_to_label.find(materialID_from_xml);
+                if (it != legacy_material_id_to_label.end()) {
+                    material_label_from_xml = it->second;
+                    has_material = true;
+                    ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBAcolor(0, 0, 0, 1));
+                }
+            }
         }
 
-        // * Add the Patch * //
-        if (strcmp(texture_file.c_str(), "none") == 0) { // no texture file was given
-            ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), color);
-        } else { // has a texture file
-            std::string texture_file_copy;
-            if (solid_fraction < 1.f && solid_fraction >= 0.f) { // solid fraction was given in the XML, and is not equal to 1.0
-                texture_file_copy = texture_file;
-                texture_file = "lib/images/solid.jpg"; // load dummy solid texture to avoid re-calculating the solid fraction
-            }
-            if (uv.empty()) { // custom (u,v) coordinates were not given
-                ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), texture_file.c_str());
+        if (!has_material) {
+            // Legacy format: parse color and texture
+            RGBAcolor color;
+            pugi::xml_node color_node = p.child("color");
+
+            const char *color_str = color_node.child_value();
+            if (strlen(color_str) == 0) {
+                color = make_RGBAcolor(0, 0, 0, 1); // assume default color of black
             } else {
-                ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), texture_file.c_str(), 0.5 * (uv.at(2) + uv.at(0)), uv.at(2) - uv.at(0));
+                color = string2RGBcolor(color_str);
             }
-            if (solid_fraction < 1.f && solid_fraction >= 0.f) { // replace dummy texture and set the solid fraction
-                getPrimitivePointer_private(ID)->setTextureFile(texture_file_copy.c_str());
-                addTexture(texture_file_copy.c_str());
-                getPrimitivePointer_private(ID)->setSolidFraction(solid_fraction);
+
+            // * Add the Patch * //
+            if (strcmp(texture_file.c_str(), "none") == 0) { // no texture file was given
+                ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), color);
+            } else { // has a texture file
+                std::string texture_file_copy;
+                if (solid_fraction < 1.f && solid_fraction >= 0.f) { // solid fraction was given in the XML, and is not equal to 1.0
+                    texture_file_copy = texture_file;
+                    texture_file = "lib/images/solid.jpg"; // load dummy solid texture to avoid re-calculating the solid fraction
+                }
+                if (uv.empty()) { // custom (u,v) coordinates were not given
+                    ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), texture_file.c_str());
+                } else {
+                    ID = addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), texture_file.c_str(), 0.5 * (uv.at(2) + uv.at(0)), uv.at(2) - uv.at(0));
+                }
+                if (solid_fraction < 1.f && solid_fraction >= 0.f) { // replace dummy texture and set the solid fraction
+                    getPrimitivePointer_private(ID)->setTextureFile(texture_file_copy.c_str());
+                    addTexture(texture_file_copy.c_str());
+                    getPrimitivePointer_private(ID)->setSolidFraction(solid_fraction);
+                }
             }
         }
+
         getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
+
+        // Assign material if using material format
+        if (has_material && !material_label_from_xml.empty()) {
+            assignMaterialToPrimitive(ID, material_label_from_xml);
+        }
 
         if (objID > 0) {
             object_prim_UUIDs[objID].push_back(ID);
@@ -1322,15 +1615,30 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Solid fraction given in 'triangle' block contains invalid data.");
         }
 
-        // * Triangle Diffuse Colors * //
-        RGBAcolor color;
-        pugi::xml_node color_node = tri.child("color");
+        // * Check for v3 material format (string label) vs v2 (numeric ID) vs legacy (color/texture) * //
+        pugi::xml_node material_node_tri = tri.child("material");
+        pugi::xml_node material_id_node_tri = tri.child("material_id");
+        std::string material_label_from_xml_tri;
+        bool has_material_tri = false;
 
-        const char *color_str = color_node.child_value();
-        if (strlen(color_str) == 0) {
-            color = make_RGBAcolor(0, 0, 0, 1); // assume default color of black
-        } else {
-            color = string2RGBcolor(color_str);
+        if (!material_node_tri.empty()) {
+            // v3 format: <material>label</material>
+            material_label_from_xml_tri = deblank(material_node_tri.child_value());
+            if (!material_label_from_xml_tri.empty() && doesMaterialExist(material_label_from_xml_tri)) {
+                has_material_tri = true;
+            }
+        } else if (!material_id_node_tri.empty()) {
+            // v2 format: <material_id>N</material_id>
+            uint materialID_from_xml_tri = 0;
+            const char *mat_id_str = material_id_node_tri.child_value();
+            if (parse_uint(mat_id_str, materialID_from_xml_tri)) {
+                // Look up the label for this legacy numeric ID
+                auto it = legacy_material_id_to_label.find(materialID_from_xml_tri);
+                if (it != legacy_material_id_to_label.end()) {
+                    material_label_from_xml_tri = it->second;
+                    has_material_tri = true;
+                }
+            }
         }
 
         std::vector<vec3> vert_pos;
@@ -1339,23 +1647,45 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         vert_pos.at(1) = make_vec3(0.f, 1.f, 0.f);
         vert_pos.at(2) = make_vec3(1.f, 1.f, 0.f);
 
-        // * Add the Triangle * //
-        if (strcmp(texture_file.c_str(), "none") == 0 || uv.empty()) {
-            ID = addTriangle(vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), color);
+        if (has_material_tri) {
+            // Material format: create triangle with default color, will assign material below
+            ID = addTriangle(vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), make_RGBAcolor(0, 0, 0, 1));
         } else {
-            std::string texture_file_copy;
-            if (solid_fraction < 1.f && solid_fraction >= 0.f) { // solid fraction was given in the XML, and is not equal to 1.0
-                texture_file_copy = texture_file;
-                texture_file = "lib/images/solid.jpg"; // load dummy solid texture to avoid re-calculating the solid fraction
+            // Legacy format: parse color and texture
+            RGBAcolor color;
+            pugi::xml_node color_node = tri.child("color");
+
+            const char *color_str = color_node.child_value();
+            if (strlen(color_str) == 0) {
+                color = make_RGBAcolor(0, 0, 0, 1); // assume default color of black
+            } else {
+                color = string2RGBcolor(color_str);
             }
-            ID = addTriangle(vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), texture_file.c_str(), uv.at(0), uv.at(1), uv.at(2));
-            if (solid_fraction < 1.f && solid_fraction >= 0.f) {
-                getPrimitivePointer_private(ID)->setTextureFile(texture_file_copy.c_str());
-                addTexture(texture_file_copy.c_str());
-                getPrimitivePointer_private(ID)->setSolidFraction(solid_fraction);
+
+            // * Add the Triangle * //
+            if (strcmp(texture_file.c_str(), "none") == 0 || uv.empty()) {
+                ID = addTriangle(vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), color);
+            } else {
+                std::string texture_file_copy;
+                if (solid_fraction < 1.f && solid_fraction >= 0.f) { // solid fraction was given in the XML, and is not equal to 1.0
+                    texture_file_copy = texture_file;
+                    texture_file = "lib/images/solid.jpg"; // load dummy solid texture to avoid re-calculating the solid fraction
+                }
+                ID = addTriangle(vert_pos.at(0), vert_pos.at(1), vert_pos.at(2), texture_file.c_str(), uv.at(0), uv.at(1), uv.at(2));
+                if (solid_fraction < 1.f && solid_fraction >= 0.f) {
+                    getPrimitivePointer_private(ID)->setTextureFile(texture_file_copy.c_str());
+                    addTexture(texture_file_copy.c_str());
+                    getPrimitivePointer_private(ID)->setSolidFraction(solid_fraction);
+                }
             }
         }
+
         getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
+
+        // Assign material if using material format
+        if (has_material_tri && !material_label_from_xml_tri.empty()) {
+            assignMaterialToPrimitive(ID, material_label_from_xml_tri);
+        }
 
         if (objID > 0) {
             object_prim_UUIDs[objID].push_back(ID);
@@ -1393,20 +1723,57 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             helios_runtime_error("ERROR (Context::loadXML): Solid fraction given in 'voxel' block contains invalid data.");
         }
 
-        // * Voxel Diffuse Colors * //
-        RGBAcolor color;
-        pugi::xml_node color_node = p.child("color");
+        // * Check for v3 material format (string label) vs v2 (numeric ID) vs legacy (color/texture) * //
+        pugi::xml_node material_node_vox = p.child("material");
+        pugi::xml_node material_id_node_vox = p.child("material_id");
+        std::string material_label_from_xml_vox;
+        bool has_material_vox = false;
 
-        const char *color_str = color_node.child_value();
-        if (strlen(color_str) == 0) {
-            color = make_RGBAcolor(0, 0, 0, 1); // assume default color of black
-        } else {
-            color = string2RGBcolor(color_str);
+        if (!material_node_vox.empty()) {
+            // v3 format: <material>label</material>
+            material_label_from_xml_vox = deblank(material_node_vox.child_value());
+            if (!material_label_from_xml_vox.empty() && doesMaterialExist(material_label_from_xml_vox)) {
+                has_material_vox = true;
+            }
+        } else if (!material_id_node_vox.empty()) {
+            // v2 format: <material_id>N</material_id>
+            uint materialID_from_xml_vox = 0;
+            const char *mat_id_str = material_id_node_vox.child_value();
+            if (parse_uint(mat_id_str, materialID_from_xml_vox)) {
+                // Look up the label for this legacy numeric ID
+                auto it = legacy_material_id_to_label.find(materialID_from_xml_vox);
+                if (it != legacy_material_id_to_label.end()) {
+                    material_label_from_xml_vox = it->second;
+                    has_material_vox = true;
+                }
+            }
         }
 
-        // * Add the Voxel * //
-        ID = addVoxel(make_vec3(0, 0, 0), make_vec3(0, 0, 0), 0, color);
+        if (has_material_vox) {
+            // Material format: create voxel with default color, will assign material below
+            ID = addVoxel(make_vec3(0, 0, 0), make_vec3(0, 0, 0), 0, make_RGBAcolor(0, 0, 0, 1));
+        } else {
+            // Legacy format: parse color
+            RGBAcolor color;
+            pugi::xml_node color_node = p.child("color");
+
+            const char *color_str = color_node.child_value();
+            if (strlen(color_str) == 0) {
+                color = make_RGBAcolor(0, 0, 0, 1); // assume default color of black
+            } else {
+                color = string2RGBcolor(color_str);
+            }
+
+            // * Add the Voxel * //
+            ID = addVoxel(make_vec3(0, 0, 0), make_vec3(0, 0, 0), 0, color);
+        }
+
         getPrimitivePointer_private(ID)->setTransformationMatrix(transform);
+
+        // Assign material if using material format
+        if (has_material_vox && !material_label_from_xml_vox.empty()) {
+            assignMaterialToPrimitive(ID, material_label_from_xml_vox);
+        }
 
         if (objID > 0) {
             object_prim_UUIDs[objID].push_back(ID);
@@ -2295,10 +2662,12 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
             dtype = ((Primitive *) ptr)->getPrimitiveDataType(label.c_str());
         } else if (strcmp(data_group, "object") == 0) {
             dtype = ((CompoundObject *) ptr)->getObjectDataType(label.c_str());
+        } else if (strcmp(data_group, "material") == 0) {
+            dtype = ((Material *) ptr)->getMaterialDataType(label.c_str());
         } else if (strcmp(data_group, "global") == 0) {
             dtype = getGlobalDataType(label.c_str());
         } else {
-            helios_runtime_error("ERROR (Context::writeDataToXMLstream): unknown data group argument of " + std::string(data_group) + ". Must be one of primitive, object, or global.");
+            helios_runtime_error("ERROR (Context::writeDataToXMLstream): unknown data group argument of " + std::string(data_group) + ". Must be one of primitive, object, material, or global.");
         }
 
         if (dtype == HELIOS_TYPE_UINT) {
@@ -2308,6 +2677,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2325,6 +2696,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2342,6 +2715,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2359,6 +2734,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2376,6 +2753,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2393,6 +2772,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2410,6 +2791,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2427,6 +2810,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2444,6 +2829,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2461,6 +2848,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2478,6 +2867,8 @@ void Context::writeDataToXMLstream(const char *data_group, const std::vector<std
                 ((Primitive *) ptr)->getPrimitiveData(label.c_str(), data);
             } else if (strcmp(data_group, "object") == 0) {
                 ((CompoundObject *) ptr)->getObjectData(label.c_str(), data);
+            } else if (strcmp(data_group, "material") == 0) {
+                ((Material *) ptr)->getMaterialData(label.c_str(), data);
             } else {
                 getGlobalData(label.c_str(), data);
             }
@@ -2533,6 +2924,47 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
     outfile << "<?xml version=\"1.0\"?>\n\n";
 
     outfile << "<helios>\n\n";
+
+    // -- materials -- //
+
+    // Collect unique material labels used by the primitives being written
+    std::set<std::string> material_labels_used;
+    for (uint UUID : UUIDs) {
+        if (doesPrimitiveExist(UUID)) {
+            uint matID = getPrimitivePointer_private(UUID)->materialID;
+            if (materials.find(matID) != materials.end()) {
+                material_labels_used.insert(materials.at(matID).label);
+            }
+        }
+    }
+
+    if (!material_labels_used.empty()) {
+        outfile << "   <materials>" << std::endl;
+        for (const std::string &label : material_labels_used) {
+            if (doesMaterialExist(label)) {
+                uint matID = getMaterialIDFromLabel(label);
+                const Material &mat = materials.at(matID);
+                outfile << "\t<material label=\"" << mat.label << "\">" << std::endl;
+                outfile << "\t\t<color>" << mat.color.r << " " << mat.color.g << " " << mat.color.b << " " << mat.color.a << "</color>" << std::endl;
+                if (!mat.texture_file.empty()) {
+                    outfile << "\t\t<texture>" << mat.texture_file << "</texture>" << std::endl;
+                }
+                if (mat.texture_color_overridden) {
+                    outfile << "\t\t<texture_override>1</texture_override>" << std::endl;
+                }
+                if (mat.twosided_flag != 1) {  // Only write if non-default
+                    outfile << "\t\t<twosided_flag>" << mat.twosided_flag << "</twosided_flag>" << std::endl;
+                }
+                // Write material data
+                std::vector<std::string> mdata = mat.listMaterialData();
+                if (!mdata.empty()) {
+                    writeDataToXMLstream("material", mdata, const_cast<Material*>(&mat), outfile);
+                }
+                outfile << "\t</material>" << std::endl;
+            }
+        }
+        outfile << "   </materials>\n" << std::endl;
+    }
 
     // -- time/date -- //
 
@@ -2599,9 +3031,9 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
             outfile << "\t<objID>" << parent_objID << "</objID>" << std::endl;
         }
 
-        outfile << "\t<color>" << color.r << " " << color.g << " " << color.b << " " << color.a << "</color>" << std::endl;
-        if (prim->hasTexture()) {
-            outfile << "\t<texture>" << texture_file << "</texture>" << std::endl;
+        // Write material label (v3 format)
+        if (materials.find(prim->materialID) != materials.end()) {
+            outfile << "\t<material>" << materials.at(prim->materialID).label << "</material>" << std::endl;
         }
 
         if (!pdata.empty()) {

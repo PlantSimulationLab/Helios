@@ -115,12 +115,30 @@ void BLConductanceModel::run(const std::vector<uint> &UUIDs) {
         }
 
         // Number of primitive faces
-        char Nsides = 2; // default is 2
-        if (context->doesPrimitiveDataExist(UUID, "twosided_flag") && context->getPrimitiveDataType("twosided_flag") == HELIOS_TYPE_UINT) {
-            uint flag;
-            context->getPrimitiveData(UUID, "twosided_flag", flag);
-            if (flag == 0) {
+        char Nsides = 2; // default is 2 (two-sided)
+
+        // Check if primitive has a user-assigned material (not auto-generated)
+        std::string mat_label = context->getPrimitiveMaterialLabel(UUID);
+        bool has_user_material = (mat_label.substr(0, 7) != "__auto_" && mat_label != "__default__");
+
+        if (has_user_material) {
+            // Use material's twosided_flag (defaults to 1 = two-sided)
+            uint mat_flag = context->getMaterialTwosidedFlag(mat_label);
+            if (mat_flag == 0) {
                 Nsides = 1;
+            }
+        } else {
+            // No user-assigned material - fall back to primitive data
+            if (context->doesPrimitiveDataExist(UUID, "twosided_flag")) {
+                try {
+                    uint flag;
+                    context->getPrimitiveData(UUID, "twosided_flag", flag);
+                    if (flag == 0) {
+                        Nsides = 1;
+                    }
+                } catch (const std::exception &) {
+                    // Type mismatch or other error - use default (two-sided)
+                }
             }
         }
 

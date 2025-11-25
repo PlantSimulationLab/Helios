@@ -413,6 +413,14 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
             patch_new->translate(center);
 
             primitives[currentUUID] = patch_new;
+
+            // Set context pointer
+            patch_new->context_ptr = this;
+
+            // Create material with specified texture
+            std::string mat_label = "__auto_primitive_" + std::to_string(currentUUID);
+            patch_new->materialID = addMaterial_internal(mat_label, make_RGBAcolor(0, 0, 0, 1), texturefile);
+
             currentUUID++;
             UUID.push_back(currentUUID - 1);
         }

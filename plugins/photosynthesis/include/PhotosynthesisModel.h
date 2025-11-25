@@ -516,6 +516,27 @@ public:
      */
     FarquharModelCoefficients getFarquharCoefficientsFromLibrary(const std::string &species);
 
+    //! Set empirical model coefficients for a material by label
+    /**
+     * \param[in] material_label String identifier for the material
+     * \param[in] coeffs Model coefficient values
+     */
+    void setModelCoefficients(const std::string &material_label, const EmpiricalModelCoefficients &coeffs);
+
+    //! Set Farquhar model coefficients for a material by label
+    /**
+     * \param[in] material_label String identifier for the material
+     * \param[in] coeffs Model coefficient values
+     */
+    void setModelCoefficients(const std::string &material_label, const FarquharModelCoefficients &coeffs);
+
+    //! Set Farquhar model coefficients from species library for a material
+    /**
+     * \param[in] species Name of species
+     * \param[in] material_label String identifier for the material
+     */
+    void setFarquharCoefficientsFromLibrary(const std::string &species, const std::string &material_label);
+
     //! Run the model for all UUIDs in the Context
     void run();
 
@@ -570,6 +591,14 @@ private:
 
     std::unordered_map<uint, EmpiricalModelCoefficients> empiricalmodel_coefficients;
     std::unordered_map<uint, FarquharModelCoefficients> farquharmodel_coefficients;
+
+    // Cache to avoid repeated Context lookups during run()
+    mutable std::unordered_map<uint, EmpiricalModelCoefficients> material_coefficient_cache_empirical;
+    mutable std::unordered_map<uint, FarquharModelCoefficients> material_coefficient_cache_farquhar;
+
+    // Helper to retrieve coefficients with caching
+    EmpiricalModelCoefficients getCoefficientsForPrimitive_Empirical(uint UUID) const;
+    FarquharModelCoefficients getCoefficientsForPrimitive_Farquhar(uint UUID) const;
 
     //! Storage for previous timestep Ci values for temporal continuity (O(1) lookup performance)
     std::unordered_map<uint, float> previous_Ci;

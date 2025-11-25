@@ -1,5 +1,26 @@
 # Changelog
 
+# [1.3.58] 2025-XX-XX
+
+## Core
+- Added materials to avoid duplicating surface-level data. This Phase 1 implementation focused only on the primitive/object color or texture.
+
+## Plant Architecture
+- Users can now configure canopy-level plant parameters, such as trellis dimensions, number of tree scaffolds, etc.
+
+## Stomatal Conductance
+- Model parameters can now be set on a per-material basis
+
+## Photosynthesis
+- Model parameters can now be set on a per-material basis
+- `twosided_flag` is now managed as part of materials
+
+## Boundary-layer Conductance
+- `twosided_flag` is now managed as part of materials
+
+## Visualizer
+- Fix to a visualizer test that was causing a segmentation fault when tests are run in non-headless mode
+
 # [1.3.57] 2025-11-18
 
 ## Radiation

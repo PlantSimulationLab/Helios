@@ -253,7 +253,7 @@ void ShootParameters::defineChildShootTypes(const std::vector<std::string> &a_ch
     this->child_shoot_type_probabilities = a_child_shoot_type_probabilities;
 }
 
-std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, const float age, const float germination_rate) {
+std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, const float age, const float germination_rate, const std::map<std::string, float> &build_parameters) {
     if (plant_count_xy.x <= 0 || plant_count_xy.y <= 0) {
         helios_runtime_error("ERROR (PlantArchitecture::buildPlantCanopyFromLibrary): Plant count must be greater than zero.");
     }
@@ -265,7 +265,7 @@ std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::v
     for (int j = 0; j < plant_count_xy.y; j++) {
         for (int i = 0; i < plant_count_xy.x; i++) {
             if (context_ptr->randu() < germination_rate) {
-                plantIDs.push_back(buildPlantInstanceFromLibrary(canopy_center_position + make_vec3(-0.5f * canopy_extent.x + float(i) * plant_spacing_xy.x, -0.5f * canopy_extent.y + float(j) * plant_spacing_xy.y, 0), 0));
+                plantIDs.push_back(buildPlantInstanceFromLibrary(canopy_center_position + make_vec3(-0.5f * canopy_extent.x + float(i) * plant_spacing_xy.x, -0.5f * canopy_extent.y + float(j) * plant_spacing_xy.y, 0), 0, build_parameters));
             }
         }
     }
@@ -277,12 +277,12 @@ std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::v
     return plantIDs;
 }
 
-std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &canopy_extent_xy, const uint plant_count, const float age) {
+std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &canopy_extent_xy, const uint plant_count, const float age, const std::map<std::string, float> &build_parameters) {
     std::vector<uint> plantIDs;
     plantIDs.reserve(plant_count);
     for (int i = 0; i < plant_count; i++) {
         vec3 plant_origin = canopy_center_position + make_vec3((-0.5f + context_ptr->randu()) * canopy_extent_xy.x, (-0.5f + context_ptr->randu()) * canopy_extent_xy.y, 0);
-        plantIDs.push_back(buildPlantInstanceFromLibrary(plant_origin, age));
+        plantIDs.push_back(buildPlantInstanceFromLibrary(plant_origin, age, build_parameters));
     }
 
     return plantIDs;

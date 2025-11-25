@@ -41,6 +41,10 @@
 <table>
     <tr><th>Object Data Label</th><th>Data Type</th><th>Description</th></tr>
     <tr><td>plantID</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Object ID of plant the primitive belongs to (used for image labeling).</td></tr>
+    <tr><td>plant_name</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">string</span>\endhtmlonly</td><td>Name of the plant species/model (e.g., "almond", "tomato").</td></tr>
+    <tr><td>plant_type</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">string</span>\endhtmlonly</td><td>Type/species of the plant as defined in the PlantLibrary.</td></tr>
+    <tr><td>plant_height</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Current height of the plant.</td></tr>
+    <tr><td>phenology_stage</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Current phenological stage of the plant (e.g., vegetative, flowering, fruiting, senescent).</td></tr>
     <tr><td>leafID</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Object ID of leaf the primitive belongs to (used for image labeling).</td></tr>
     <tr><td>peduncleID</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Object ID of peduncle the primitive belongs to (used for image labeling). Not defined if there are no peduncles.</td></tr>
     <tr><td>closedflowerID</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Object ID of flower (closed) the primitive belongs to (used for image labeling). Not defined if there are no closed flowers.</td></tr>
@@ -48,7 +52,8 @@
     <tr><td>fruitID</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Object ID of fruit the primitive belongs to (used for image labeling). Not defined if there are no fruits.</td></tr>
     <tr><td>rank</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Rank of shoot object belongs to.</td></tr>
     <tr><td>age</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Age of the organ that the object belongs to (e.g., a leaf).</td></tr>
-    <tr><td>carbohydrate_concentration</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Concentration of carbohydrates in the shoot. Value is constant along the shoot, and zero for non-internode organs.</td></tr>
+    <tr><td>carbohydrate_concentration</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Concentration of carbohydrates in the shoot (mol C/m³). Value is constant along the shoot, and zero for non-internode organs.</td></tr>
+    <tr><td>leaf_area</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Total leaf area associated with the shoot (m²).</td></tr>
 </table>
 
 To enable optional output object data, use:
@@ -146,6 +151,123 @@ int main(){
 
     return 0;
 }
+~~~~~~
+
+\subsection PlantArchBuildParams Customizing Plant Training System Parameters
+
+The plant library supports customizable training system parameters that allow you to specify species-specific architectural features without modifying the source code. These parameters control aspects like trunk height, trellis dimensions, scaffold branch configuration, and other training-related characteristics.
+
+\subsubsection PlantArchBuildParamsAPI Using Build Parameters
+
+Build parameters are specified as an optional `std::map<std::string, float>` argument to the build functions:
+
+~~~~~~
+#include "PlantArchitecture.h"
+using namespace helios;
+
+int main(){
+
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+
+    plantarchitecture.loadPlantModelFromLibrary( "grapevine_VSP" );
+
+    // Customize training parameters
+    std::map<std::string, float> build_params = {
+        {"vine_spacing", 3.0},       // 3.0 m vine spacing (canes auto-sized)
+        {"trunk_height", 0.15}       // 15 cm trunk height
+    };
+
+    vec3 base_position = nullorigin;
+    float age = 0;
+    plantarchitecture.buildPlantInstanceFromLibrary( base_position, age, build_params );
+
+    return 0;
+}
+~~~~~~
+
+Build parameters can also be used with the canopy building methods:
+
+~~~~~~
+std::map<std::string, float> build_params = {
+    {"trunk_height", 0.9},         // 90 cm tall trunk
+    {"num_scaffolds", 5.0},        // 5 scaffold branches
+    {"scaffold_angle", 45.0}       // 45 degree scaffold angle
+};
+
+plantarchitecture.buildPlantCanopyFromLibrary( canopy_center, plant_spacing, plant_count, age, 1.0, build_params );
+~~~~~~
+
+\subsubsection PlantArchBuildParamsAvailable Available Parameters by Species
+
+<b>Grapevine VSP (grapevine_VSP)</b>
+
+The VSP grapevine model uses vine spacing to automatically calculate appropriate cane length and node counts.
+
+| Parameter | Default | Valid Range | Units | Description |
+|-----------|---------|-------------|-------|-------------|
+| vine_spacing | 2.4 | 0.5-5.0 | m | Plant-to-plant spacing (cane nodes auto-calculated to span half this distance) |
+| trunk_height | 0.1 | 0.05-1.0 | m | Total trunk height |
+
+<b>Grapevine Wye (grapevine_Wye)</b>
+
+The Wye grapevine model parameters control the trellis system geometry.
+
+| Parameter | Default | Valid Range | Units | Description |
+|-----------|---------|-------------|-------|-------------|
+| trunk_height | 0.165 | 0.05-1.0 | m | Total trunk height |
+| cordon_spacing | 0.6 | 0.2-2.0 | m | Spacing between cordon rows (fruiting wires) |
+| vine_spacing | 1.8 | 0.5-5.0 | m | Plant-to-plant spacing along row |
+| catch_wire_height | 2.1 | 0.5-4.0 | m | Absolute height of catch wires |
+
+<b>Tree Species (almond, apple, walnut, pistachio)</b>
+
+Tree species use a simplified height-based training system. The code automatically calculates trunk node counts based on species-specific internode lengths (almond: 3cm, apple: 4cm, walnut: 4cm, pistachio: 5cm).
+
+| Parameter | Default | Valid Range | Units | Description |
+|-----------|---------|-------------|-------|-------------|
+| trunk_height | 0.6-1.0* | 0.1-3.0 | m | Total desired trunk height |
+| num_scaffolds | 4 | 2-8 | - | Number of scaffold branches |
+| scaffold_angle | 40-50* | 20-70 | deg | Scaffold branch angle from vertical |
+
+*Default values: almond/apple: 0.6m trunk, 40° scaffolds; walnut: 0.8m trunk, 50° scaffolds; pistachio: 1.0m trunk, 50° scaffolds
+
+\subsubsection PlantArchBuildParamsValidation Parameter Validation
+
+All build parameters are validated to ensure they fall within acceptable ranges. If a parameter value is outside the valid range, a `helios_runtime_error` will be thrown with a clear error message indicating the parameter name, the provided value, and the valid range.
+
+Parameters specified as floats will be automatically cast to unsigned integers where appropriate (e.g., node counts, scaffold counts).
+
+\subsubsection PlantArchBuildParamsExamples Common Use Case Examples
+
+<b>Example 1: Grapevine VSP with Custom Spacing</b>
+~~~~~~
+std::map<std::string, float> params = {
+    {"vine_spacing", 3.0},        // 3.0 m between plants (canes auto-sized to span 1.5 m each)
+    {"trunk_height", 0.15}        // 15 cm trunk height
+};
+plantarchitecture.buildPlantInstanceFromLibrary( position, age, params );
+~~~~~~
+
+<b>Example 2: Almond Tree with Custom Training</b>
+~~~~~~
+std::map<std::string, float> params = {
+    {"trunk_height", 0.9},        // 90 cm tall trunk
+    {"num_scaffolds", 5},         // 5 scaffold branches
+    {"scaffold_angle", 35.0}      // 35 degree scaffold angle
+};
+plantarchitecture.buildPlantInstanceFromLibrary( position, 5000, params );  // 5000 days old
+~~~~~~
+
+<b>Example 3: Grapevine Wye with Modified Trellis</b>
+~~~~~~
+std::map<std::string, float> params = {
+    {"trunk_height", 0.2},          // 20 cm trunk height
+    {"cordon_spacing", 0.8},        // 80 cm between cordon rows
+    {"vine_spacing", 2.2},          // 2.2 m between plants
+    {"catch_wire_height", 2.5}      // 2.5 m catch wire height
+};
+plantarchitecture.buildPlantInstanceFromLibrary( position, age, params );
 ~~~~~~
 
 \subsection PlantArchGrowth Growing the Model over Time

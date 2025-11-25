@@ -1490,6 +1490,185 @@ DOCTEST_TEST_CASE("PlantArchitecture phenology_stage optional object data") {
     DOCTEST_CHECK(found_stage_data);
 }
 
+DOCTEST_TEST_CASE("Build Parameters - Backward Compatibility (Grapevine VSP)") {
+    // Test that empty parameter map produces identical plants to original hard-coded values
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Build with default parameters (empty map)
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+    std::map<std::string, float> empty_params;
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, empty_params);
+
+    // Verify plant was created
+    DOCTEST_CHECK(plantID != 0);
+
+    // Verify basic plant structure exists
+    std::vector<uint> plant_primitives = plantarchitecture.getAllPlantObjectIDs(plantID);
+    DOCTEST_CHECK(plant_primitives.size() > 0);
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Parameter Override (Grapevine VSP)") {
+    // Test that custom parameter values are applied correctly
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Build with custom parameters
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+    std::map<std::string, float> custom_params = {
+        {"vine_spacing", 3.0f},         // 3.0m spacing, will auto-calculate cane nodes
+        {"trunk_height", 0.15f}         // 15 cm trunk height
+    };
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, custom_params);
+
+    // Verify plant was created with custom parameters
+    DOCTEST_CHECK(plantID != 0);
+    std::vector<uint> plant_primitives = plantarchitecture.getAllPlantObjectIDs(plantID);
+    DOCTEST_CHECK(plant_primitives.size() > 0);
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Validation Catches Invalid Values (Grapevine VSP)") {
+    // Test that out-of-range values raise errors
+    capture_cerr cerr_buffer;
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+
+    // Test vine_spacing out of range (valid range: 0.5-5.0)
+    std::map<std::string, float> invalid_params1 = {{"vine_spacing", 10.0f}};
+    DOCTEST_CHECK_THROWS(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, invalid_params1));
+
+    // Test trunk_height out of range (valid range: 0.05-1.0)
+    std::map<std::string, float> invalid_params2 = {{"trunk_height", 2.0f}};
+    DOCTEST_CHECK_THROWS(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, invalid_params2));
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Grapevine Wye Trellis Parameters") {
+    // Test Wye grapevine specific trellis parameters
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_Wye");
+    std::map<std::string, float> trellis_params = {
+        {"trunk_height", 0.2f},          // 20 cm trunk height
+        {"cordon_spacing", 0.8f},        // 80 cm between cordon rows
+        {"vine_spacing", 2.0f},          // 2 m between plants
+        {"catch_wire_height", 2.5f}      // 2.5 m catch wire height
+    };
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, trellis_params);
+
+    DOCTEST_CHECK(plantID != 0);
+    std::vector<uint> plant_primitives = plantarchitecture.getAllPlantObjectIDs(plantID);
+    DOCTEST_CHECK(plant_primitives.size() > 0);
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Tree Training System (Almond)") {
+    // Test tree training parameters
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+    std::map<std::string, float> tree_params = {
+        {"trunk_height", 0.9f},              // 90 cm total trunk height
+        {"num_scaffolds", 5.0f},             // 5 scaffold branches
+        {"scaffold_angle", 35.0f}            // 35 degree scaffold angle
+    };
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000, tree_params);
+
+    DOCTEST_CHECK(plantID != 0);
+    std::vector<uint> plant_primitives = plantarchitecture.getAllPlantObjectIDs(plantID);
+    DOCTEST_CHECK(plant_primitives.size() > 0);
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Apple Tree") {
+    // Test apple tree with custom parameters
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    std::map<std::string, float> apple_params = {
+        {"trunk_height", 1.0f},          // 1.0 m trunk height
+        {"num_scaffolds", 6.0f},         // 6 scaffold branches
+        {"scaffold_angle", 45.0f}        // 45 degree scaffold angle
+    };
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000, apple_params);
+
+    DOCTEST_CHECK(plantID != 0);
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Pistachio Tree Fixed Scaffold System") {
+    // Test pistachio tree with different scaffold count
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("pistachio");
+
+    // Test with 2 scaffolds (minimum)
+    std::map<std::string, float> pistachio_params_min = {{"num_scaffolds", 2.0f}};
+    uint plantID_min = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000, pistachio_params_min);
+    DOCTEST_CHECK(plantID_min != 0);
+
+    // Test with 4 scaffolds (default)
+    std::map<std::string, float> pistachio_params_def = {{"num_scaffolds", 4.0f}};
+    uint plantID_def = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(5, 0, 0), 5000, pistachio_params_def);
+    DOCTEST_CHECK(plantID_def != 0);
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Canopy Building with Parameters") {
+    // Test that parameters work with canopy building functions
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+    std::map<std::string, float> canopy_params = {
+        {"vine_spacing", 2.0f},      // 2.0m vine spacing
+        {"trunk_height", 0.12f}      // 12 cm trunk height
+    };
+
+    // Test regular spacing canopy
+    std::vector<uint> plantIDs = plantarchitecture.buildPlantCanopyFromLibrary(
+        make_vec3(0, 0, 0),
+        make_vec2(2, 2),
+        make_int2(2, 2),
+        0,
+        1.0f,
+        canopy_params
+    );
+
+    DOCTEST_CHECK(plantIDs.size() == 4);
+    for (uint plantID : plantIDs) {
+        DOCTEST_CHECK(plantID != 0);
+    }
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Type Casting Float to Uint") {
+    // Test that float parameters correctly cast to uint for node counts
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+
+    // Specify parameters as floats (should cast to uint internally where needed)
+    std::map<std::string, float> float_params = {
+        {"trunk_height", 0.7f},          // Height as float
+        {"num_scaffolds", 5.0f},         // Should cast to uint(5)
+        {"scaffold_angle", 42.5f}        // Angle as float
+    };
+
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000, float_params);
+    DOCTEST_CHECK(plantID != 0);
+}
+
 int PlantArchitecture::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

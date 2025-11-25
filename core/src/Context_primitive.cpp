@@ -17,6 +17,14 @@
 
 using namespace helios;
 
+// Shared static flags for Primitive deprecation warnings (one per function name, not per overload)
+namespace {
+    bool Primitive_setColor_warning_shown = false;
+    bool Primitive_setTextureFile_warning_shown = false;
+    bool Primitive_overrideTextureColor_warning_shown = false;
+    bool Primitive_useTextureColor_warning_shown = false;
+}
+
 uint Context::addPatch() {
     return addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBAcolor(0, 0, 0, 1));
 }
@@ -56,6 +64,14 @@ uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoor
     patch_new->translate(center);
 
     primitives[currentUUID] = patch_new;
+
+    // Set context pointer
+    patch_new->context_ptr = this;
+
+    // Create material with specified color
+    std::string mat_label = "__auto_primitive_" + std::to_string(currentUUID);
+    patch_new->materialID = addMaterial_internal(mat_label, color, "");
+
     currentUUID++;
     invalidateAllUUIDsCache();
     return currentUUID - 1;
@@ -86,6 +102,14 @@ uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoor
     patch_new->translate(center);
 
     primitives[currentUUID] = patch_new;
+
+    // Set context pointer
+    patch_new->context_ptr = this;
+
+    // Create material with specified texture
+    std::string mat_label = "__auto_primitive_" + std::to_string(currentUUID);
+    patch_new->materialID = addMaterial_internal(mat_label, make_RGBAcolor(0, 0, 0, 1), texture_file);
+
     currentUUID++;
     invalidateAllUUIDsCache();
     return currentUUID - 1;
@@ -124,6 +148,14 @@ uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoor
     patch_new->translate(center);
 
     primitives[currentUUID] = patch_new;
+
+    // Set context pointer
+    patch_new->context_ptr = this;
+
+    // Create material with specified texture
+    std::string mat_label = "__auto_primitive_" + std::to_string(currentUUID);
+    patch_new->materialID = addMaterial_internal(mat_label, make_RGBAcolor(0, 0, 0, 1), texture_file);
+
     currentUUID++;
     invalidateAllUUIDsCache();
     return currentUUID - 1;
@@ -147,6 +179,14 @@ uint Context::addTriangle(const vec3 &vertex0, const vec3 &vertex1, const vec3 &
 #endif
 
     primitives[currentUUID] = tri_new;
+
+    // Set context pointer
+    tri_new->context_ptr = this;
+
+    // Create material with specified color
+    std::string mat_label = "__auto_primitive_" + std::to_string(currentUUID);
+    tri_new->materialID = addMaterial_internal(mat_label, color, "");
+
     currentUUID++;
     invalidateAllUUIDsCache();
     return currentUUID - 1;
@@ -166,6 +206,14 @@ uint Context::addTriangle(const helios::vec3 &vertex0, const helios::vec3 &verte
 #endif
 
     primitives[currentUUID] = tri_new;
+
+    // Set context pointer
+    tri_new->context_ptr = this;
+
+    // Create material with specified texture
+    std::string mat_label = "__auto_primitive_" + std::to_string(currentUUID);
+    tri_new->materialID = addMaterial_internal(mat_label, make_RGBAcolor(0, 0, 0, 1), texture_file);
+
     currentUUID++;
     invalidateAllUUIDsCache();
     return currentUUID - 1;
@@ -199,6 +247,14 @@ uint Context::addVoxel(const vec3 &center, const vec3 &size, const float &rotati
     voxel_new->translate(center);
 
     primitives[currentUUID] = voxel_new;
+
+    // Set context pointer
+    voxel_new->context_ptr = this;
+
+    // Create material with specified color
+    std::string mat_label = "__auto_primitive_" + std::to_string(currentUUID);
+    voxel_new->materialID = addMaterial_internal(mat_label, color, "");
+
     currentUUID++;
     invalidateAllUUIDsCache();
     return currentUUID - 1;
@@ -515,8 +571,7 @@ uint Context::copyPrimitive(uint UUID) {
             } else {
                 patch_new = (new Patch(texture_file.c_str(), solid_fraction, parentID, currentUUID));
             }
-            // Preserve the color from the original patch
-            patch_new->setColor(p->getColorRGBA());
+            // Color will be preserved by copying the material below
         }
         float transform[16];
         p->getTransformationMatrix(transform);
@@ -533,8 +588,7 @@ uint Context::copyPrimitive(uint UUID) {
             const std::string &texture_file = p->getTextureFile();
             float solid_fraction = p->getSolidFraction();
             tri_new = (new Triangle(vertices.at(0), vertices.at(1), vertices.at(2), texture_file.c_str(), uv, solid_fraction, parentID, currentUUID));
-            // Preserve the color from the original triangle
-            tri_new->setColor(p->getColorRGBA());
+            // Color will be preserved by copying the material below
         }
         float transform[16];
         p->getTransformationMatrix(transform);
@@ -554,6 +608,11 @@ uint Context::copyPrimitive(uint UUID) {
         voxel_new->setTransformationMatrix(transform);
         primitives[currentUUID] = voxel_new;
     }
+
+    // Set context pointer and copy material from source primitive
+    Primitive *new_prim = getPrimitivePointer_private(currentUUID);
+    new_prim->context_ptr = this;
+    new_prim->materialID = primitives.at(UUID)->materialID;
 
     copyPrimitiveData(UUID, currentUUID);
 
@@ -828,51 +887,81 @@ std::vector<vec3> Voxel::getVertices() const {
 }
 
 RGBcolor Primitive::getColor() const {
-    return {color.r, color.g, color.b};
+    if (context_ptr == nullptr) {
+        helios_runtime_error("ERROR (Primitive::getColor): Primitive not associated with a Context. Use Context::getPrimitiveColor() instead.");
+    }
+    const Material &mat = context_ptr->materials.at(materialID);
+    return {mat.color.r, mat.color.g, mat.color.b};
 }
 
 RGBcolor Primitive::getColorRGB() const {
-    return {color.r, color.g, color.b};
+    if (context_ptr == nullptr) {
+        helios_runtime_error("ERROR (Primitive::getColorRGB): Primitive not associated with a Context. Use Context::getPrimitiveColor() instead.");
+    }
+    const Material &mat = context_ptr->materials.at(materialID);
+    return {mat.color.r, mat.color.g, mat.color.b};
 }
 
 RGBAcolor Primitive::getColorRGBA() const {
-    return color;
+    if (context_ptr == nullptr) {
+        helios_runtime_error("ERROR (Primitive::getColorRGBA): Primitive not associated with a Context. Use Context::getPrimitiveColorRGBA() instead.");
+    }
+    const Material &mat = context_ptr->materials.at(materialID);
+    return mat.color;
 }
 
 void Primitive::setColor(const helios::RGBcolor &newcolor) {
-    // if( parent_object_ID!=0 ){
-    //   std::cout << "WARNING (Primitive::setColor): Cannot set the color of individual primitives within a compound object. Use the setter function for objects." << std::endl;
-    //   return;
-    // }
-
-    color = make_RGBAcolor(newcolor, 1.f);
+    if (context_ptr == nullptr) {
+        helios_runtime_error("ERROR (Primitive::setColor): Primitive not associated with a Context. Use Context::setPrimitiveColor() instead.");
+    }
+    if (!Primitive_setColor_warning_shown) {
+        std::cerr << "WARNING (Primitive::setColor): This method is deprecated. Use Context::addMaterial() and Context::assignMaterialToPrimitive() instead." << std::endl;
+        Primitive_setColor_warning_shown = true;
+    }
+    // Directly modify the material's color
+    context_ptr->materials.at(materialID).color = make_RGBAcolor(newcolor, 1.f);
     dirty_flag = true;
 }
 
 void Primitive::setColor(const helios::RGBAcolor &newcolor) {
-    // if( parent_object_ID!=0 ){
-    //   std::cout << "WARNING (Primitive::setColor): Cannot set the color of individual primitives within a compound object. Use the setter function for objects." << std::endl;
-    //   return;
-    // }
-
-    color = newcolor;
+    if (context_ptr == nullptr) {
+        helios_runtime_error("ERROR (Primitive::setColor): Primitive not associated with a Context. Use Context::setPrimitiveColor() instead.");
+    }
+    if (!Primitive_setColor_warning_shown) {
+        std::cerr << "WARNING (Primitive::setColor): This method is deprecated. Use Context::addMaterial() and Context::assignMaterialToPrimitive() instead." << std::endl;
+        Primitive_setColor_warning_shown = true;
+    }
+    // Directly modify the material's color
+    context_ptr->materials.at(materialID).color = newcolor;
     dirty_flag = true;
 }
 
 bool Primitive::hasTexture() const {
-    if (texturefile.empty()) {
-        return false;
-    } else {
-        return true;
+    if (context_ptr == nullptr) {
+        helios_runtime_error("ERROR (Primitive::hasTexture): Primitive not associated with a Context.");
     }
+    const Material &mat = context_ptr->materials.at(materialID);
+    return !mat.texture_file.empty();
 }
 
 std::string Primitive::getTextureFile() const {
-    return texturefile;
+    if (context_ptr == nullptr) {
+        helios_runtime_error("ERROR (Primitive::getTextureFile): Primitive not associated with a Context. Use Context::getPrimitiveTextureFile() instead.");
+    }
+    const Material &mat = context_ptr->materials.at(materialID);
+    return mat.texture_file;
 }
 
 void Primitive::setTextureFile(const char *texture) {
-    texturefile = texture;
+    if (context_ptr == nullptr) {
+        helios_runtime_error("ERROR (Primitive::setTextureFile): Primitive not associated with a Context. Use Context::setPrimitiveTextureFile() instead.");
+    }
+    if (!Primitive_setTextureFile_warning_shown) {
+        std::cerr << "WARNING (Primitive::setTextureFile): This method is deprecated. Use Context::addMaterial() and Context::assignMaterialToPrimitive() instead." << std::endl;
+        Primitive_setTextureFile_warning_shown = true;
+    }
+    // Directly modify the material's texture
+    context_ptr->materials.at(materialID).texture_file = texture;
     dirty_flag = true;
 }
 
@@ -886,27 +975,37 @@ void Primitive::setTextureUV(const std::vector<vec2> &a_uv) {
 }
 
 void Primitive::overrideTextureColor() {
-    // if( parent_object_ID!=0 ){
-    //   std::cout << "WARNING (Primitive::overrideTextureColor): Cannot set the texture options of individual primitives within a compound object. Use the setter function for objects." << std::endl;
-    //   return;
-    // }
-
-    texturecoloroverridden = true;
+    if (context_ptr == nullptr) {
+        helios_runtime_error("ERROR (Primitive::overrideTextureColor): Primitive not associated with a Context. Use Context::overridePrimitiveTextureColor() instead.");
+    }
+    if (!Primitive_overrideTextureColor_warning_shown) {
+        std::cerr << "WARNING (Primitive::overrideTextureColor): This method is deprecated. Use Context::addMaterial() and Context::assignMaterialToPrimitive() instead." << std::endl;
+        Primitive_overrideTextureColor_warning_shown = true;
+    }
+    // Directly modify the material's texture color override flag
+    context_ptr->materials.at(materialID).texture_color_overridden = true;
     dirty_flag = true;
 }
 
 void Primitive::useTextureColor() {
-    // if( parent_object_ID!=0 ){
-    //   std::cout << "WARNING (Primitive::useTextureColor): Cannot set the texture options of individual primitives within a compound object. Use the setter function for objects." << std::endl;
-    //   return;
-    // }
-
-    texturecoloroverridden = false;
+    if (context_ptr == nullptr) {
+        helios_runtime_error("ERROR (Primitive::useTextureColor): Primitive not associated with a Context. Use Context::usePrimitiveTextureColor() instead.");
+    }
+    if (!Primitive_useTextureColor_warning_shown) {
+        std::cerr << "WARNING (Primitive::useTextureColor): This method is deprecated. Use Context::addMaterial() and Context::assignMaterialToPrimitive() instead." << std::endl;
+        Primitive_useTextureColor_warning_shown = true;
+    }
+    // Directly modify the material's texture color override flag
+    context_ptr->materials.at(materialID).texture_color_overridden = false;
     dirty_flag = true;
 }
 
 bool Primitive::isTextureColorOverridden() const {
-    return texturecoloroverridden;
+    if (context_ptr == nullptr) {
+        helios_runtime_error("ERROR (Primitive::isTextureColorOverridden): Primitive not associated with a Context. Use Context::isPrimitiveTextureColorOverridden() instead.");
+    }
+    const Material &mat = context_ptr->materials.at(materialID);
+    return mat.texture_color_overridden;
 }
 
 float Primitive::getSolidFraction() const {
@@ -1279,14 +1378,13 @@ void Triangle::makeTransformationMatrix(const helios::vec3 &vert0, const helios:
 Patch::Patch(const RGBAcolor &a_color, uint a_parent_objID, uint a_UUID) {
     makeIdentityMatrix(transform);
 
-    color = a_color;
-    assert(color.r >= 0 && color.r <= 1 && color.g >= 0 && color.g <= 1 && color.b >= 0 && color.b <= 1);
+    assert(a_color.r >= 0 && a_color.r <= 1 && a_color.g >= 0 && a_color.g <= 1 && a_color.b >= 0 && a_color.b <= 1);
     parent_object_ID = a_parent_objID;
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_PATCH;
     solid_fraction = 1.f;
-    texturefile = "";
-    texturecoloroverridden = false;
+    materialID = 0; // Will be set by Context after construction
+    context_ptr = nullptr; // Will be set by Context after construction
     dirty_flag = true;
 }
 
@@ -1296,9 +1394,9 @@ Patch::Patch(const char *a_texturefile, float a_solid_fraction, uint a_parent_ob
     parent_object_ID = a_parent_objID;
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_PATCH;
-    texturefile = a_texturefile;
     solid_fraction = a_solid_fraction;
-    texturecoloroverridden = false;
+    materialID = 0; // Will be set by Context after construction
+    context_ptr = nullptr; // Will be set by Context after construction
     dirty_flag = true;
 }
 
@@ -1309,15 +1407,15 @@ Patch::Patch(const char *a_texturefile, const std::vector<helios::vec2> &a_uv, s
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_PATCH;
 
-    texturefile = a_texturefile;
     uv = a_uv;
     for (auto &uv_vert: uv) {
         uv_vert.x = std::min(uv_vert.x, 1.f);
         uv_vert.y = std::min(uv_vert.y, 1.f);
     }
-    texturecoloroverridden = false;
 
-    solid_fraction = textures.at(texturefile).getSolidFraction(uv);
+    solid_fraction = textures.at(a_texturefile).getSolidFraction(uv);
+    materialID = 0; // Will be set by Context after construction
+    context_ptr = nullptr; // Will be set by Context after construction
     dirty_flag = true;
 }
 
@@ -1334,48 +1432,45 @@ helios::vec3 Patch::getCenter() const {
 
 Triangle::Triangle(const helios::vec3 &a_vertex0, const helios::vec3 &a_vertex1, const helios::vec3 &a_vertex2, const helios::RGBAcolor &a_color, uint a_parent_objID, uint a_UUID) {
     makeTransformationMatrix(a_vertex0, a_vertex1, a_vertex2);
-    color = a_color;
     parent_object_ID = a_parent_objID;
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_TRIANGLE;
-    texturefile = "";
     solid_fraction = 1.f;
-    texturecoloroverridden = false;
+    materialID = 0; // Will be set by Context after construction
+    context_ptr = nullptr; // Will be set by Context after construction
     dirty_flag = true;
 }
 
 Triangle::Triangle(const helios::vec3 &a_vertex0, const helios::vec3 &a_vertex1, const helios::vec3 &a_vertex2, const char *a_texturefile, const std::vector<helios::vec2> &a_uv, float solid_fraction, uint a_parent_objID, uint a_UUID) {
     makeTransformationMatrix(a_vertex0, a_vertex1, a_vertex2);
-    color = make_RGBAcolor(RGB::red, 1);
     parent_object_ID = a_parent_objID;
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_TRIANGLE;
 
-    texturefile = a_texturefile;
     uv = a_uv;
     this->solid_fraction = solid_fraction;
-    texturecoloroverridden = false;
+    materialID = 0; // Will be set by Context after construction
+    context_ptr = nullptr; // Will be set by Context after construction
     dirty_flag = true;
 }
 
 Triangle::Triangle(const helios::vec3 &a_vertex0, const helios::vec3 &a_vertex1, const helios::vec3 &a_vertex2, const char *a_texturefile, const std::vector<helios::vec2> &a_uv, std::map<std::string, Texture> &textures, uint a_parent_objID,
                    uint a_UUID) {
     makeTransformationMatrix(a_vertex0, a_vertex1, a_vertex2);
-    color = make_RGBAcolor(RGB::red, 1);
     parent_object_ID = a_parent_objID;
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_TRIANGLE;
 
-    texturefile = a_texturefile;
     uv = a_uv;
     for (auto &uv_vert: uv) {
         uv_vert.x = std::min(uv_vert.x, 1.f);
         uv_vert.y = std::min(uv_vert.y, 1.f);
     }
     solid_fraction = 1.f;
-    texturecoloroverridden = false;
 
-    solid_fraction = textures.at(texturefile).getSolidFraction(uv);
+    solid_fraction = textures.at(a_texturefile).getSolidFraction(uv);
+    materialID = 0; // Will be set by Context after construction
+    context_ptr = nullptr; // Will be set by Context after construction
     dirty_flag = true;
 }
 
@@ -1413,14 +1508,13 @@ vec3 Triangle::getCenter() const {
 Voxel::Voxel(const RGBAcolor &a_color, uint a_parent_objID, uint a_UUID) {
     makeIdentityMatrix(transform);
 
-    color = a_color;
-    assert(color.r >= 0 && color.r <= 1 && color.g >= 0 && color.g <= 1 && color.b >= 0 && color.b <= 1);
+    assert(a_color.r >= 0 && a_color.r <= 1 && a_color.g >= 0 && a_color.g <= 1 && a_color.b >= 0 && a_color.b <= 1);
     solid_fraction = 1.f;
     parent_object_ID = a_parent_objID;
     UUID = a_UUID;
     prim_type = PRIMITIVE_TYPE_VOXEL;
-    texturefile = "";
-    texturecoloroverridden = false;
+    materialID = 0; // Will be set by Context after construction
+    context_ptr = nullptr; // Will be set by Context after construction
     dirty_flag = true;
 }
 

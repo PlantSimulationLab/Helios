@@ -618,7 +618,13 @@ TEST_CASE("Visualizer::printWindow after plotUpdate regression test") {
 
     // Add some geometry to render (a simple sphere)
     std::vector<uint> sphere_uuids = context.addSphere(10, make_vec3(0, 0, 0), 1.0f);
-    context.setPrimitiveColor(sphere_uuids, RGB::red);
+    // Use material system for test geometry
+    std::string test_material = "test_visualizer_red_sphere";
+    if (!context.doesMaterialExist(test_material)) {
+        context.addMaterial(test_material);
+        context.setMaterialColor(test_material, make_RGBAcolor(RGB::red, 1.0f));
+    }
+    context.assignMaterialToPrimitive(sphere_uuids, test_material);
 
     // Build geometry in visualizer
     visualizer.buildContextGeometry(&context);
@@ -691,7 +697,13 @@ TEST_CASE("Visualizer::printWindow after plotUpdate non-headless regression test
 
     // Add some geometry to render (a simple sphere)
     std::vector<uint> sphere_uuids = context.addSphere(10, make_vec3(0, 0, 0), 1.0f);
-    context.setPrimitiveColor(sphere_uuids, RGB::red);
+    // Use material system for test geometry
+    std::string test_material = "test_visualizer_red_sphere";
+    if (!context.doesMaterialExist(test_material)) {
+        context.addMaterial(test_material);
+        context.setMaterialColor(test_material, make_RGBAcolor(RGB::red, 1.0f));
+    }
+    context.assignMaterialToPrimitive(sphere_uuids, test_material);
 
     // Build geometry in visualizer
     visualizer.buildContextGeometry(&context);
@@ -733,7 +745,7 @@ TEST_CASE("Visualizer::printWindow after plotUpdate non-headless regression test
 
 TEST_CASE("Visualizer::PNG with transparent background") {
     // Test that PNG output with transparent background correctly renders geometry with transparency
-    Visualizer visualizer(200, 200, 16, false, true); // headless mode
+    Visualizer visualizer(200, 200, 16, true, true); // headless mode
     visualizer.disableMessages();
 
     // Add a red rectangle in the center
@@ -794,8 +806,15 @@ TEST_CASE("Visualizer::PNG with transparent background (windowed mode)") {
 
     // Add a red patch via the Context (matching user's workflow)
     uint patch_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.6, 0.6), nullrotation, "plugins/visualizer/textures/AlmondLeaf.png");
-    context.setPrimitiveColor(patch_UUID, make_RGBcolor(1.f, 0.f, 0.f));
-    context.overridePrimitiveTextureColor(patch_UUID); // Required to use vertex color instead of texture color
+    // Use material system for test geometry with texture override
+    std::string test_material = "test_visualizer_red_patch";
+    if (!context.doesMaterialExist(test_material)) {
+        context.addMaterial(test_material);
+        context.setMaterialColor(test_material, make_RGBAcolor(1.f, 0.f, 0.f, 1.f));
+        context.setMaterialTexture(test_material, "plugins/visualizer/textures/AlmondLeaf.png");
+        context.setMaterialTextureColorOverride(test_material, true);
+    }
+    context.assignMaterialToPrimitive(patch_UUID, test_material); // Required to use vertex color instead of texture color
 
     Visualizer visualizer(200, 200, 16, false, true);
     visualizer.disableMessages();
@@ -868,8 +887,15 @@ TEST_CASE("Visualizer::Transparent background with non-square window") {
 
     // Add a small patch to have some geometry
     uint patch_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.3, 0.3), nullrotation, "plugins/visualizer/textures/AlmondLeaf.png");
-    context.setPrimitiveColor(patch_UUID, make_RGBcolor(1.f, 0.f, 0.f));
-    context.overridePrimitiveTextureColor(patch_UUID);
+    // Use material system for test geometry with texture override
+    std::string test_material = "test_visualizer_red_patch_small";
+    if (!context.doesMaterialExist(test_material)) {
+        context.addMaterial(test_material);
+        context.setMaterialColor(test_material, make_RGBAcolor(1.f, 0.f, 0.f, 1.f));
+        context.setMaterialTexture(test_material, "plugins/visualizer/textures/AlmondLeaf.png");
+        context.setMaterialTextureColorOverride(test_material, true);
+    }
+    context.assignMaterialToPrimitive(patch_UUID, test_material);
 
     // Test with a non-square window (800x600, aspect ratio 4:3)
     Visualizer visualizer(800, 600, 16, false, true);
@@ -922,8 +948,15 @@ TEST_CASE("Visualizer::Background color/transparent switching") {
 
     Context context;
     uint patch_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.3, 0.3), nullrotation, "plugins/visualizer/textures/AlmondLeaf.png");
-    context.setPrimitiveColor(patch_UUID, make_RGBcolor(1.f, 0.f, 0.f));
-    context.overridePrimitiveTextureColor(patch_UUID);
+    // Use material system for test geometry with texture override
+    std::string test_material = "test_visualizer_red_patch_small";
+    if (!context.doesMaterialExist(test_material)) {
+        context.addMaterial(test_material);
+        context.setMaterialColor(test_material, make_RGBAcolor(1.f, 0.f, 0.f, 1.f));
+        context.setMaterialTexture(test_material, "plugins/visualizer/textures/AlmondLeaf.png");
+        context.setMaterialTextureColorOverride(test_material, true);
+    }
+    context.assignMaterialToPrimitive(patch_UUID, test_material);
 
     SUBCASE("Watermark visible → transparent → solid color (should restore watermark)") {
         Visualizer visualizer(200, 200, 16, false, true);
