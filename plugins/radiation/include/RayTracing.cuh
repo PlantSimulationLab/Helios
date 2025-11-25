@@ -28,6 +28,9 @@ typedef unsigned int uint;
 rtDeclareVariable(rtObject, top_object, , );
 rtDeclareVariable(unsigned int, random_seed, , );
 rtDeclareVariable(unsigned int, launch_offset, , );
+rtDeclareVariable(unsigned int, camera_pixel_offset_x, , );
+rtDeclareVariable(unsigned int, camera_pixel_offset_y, , );
+rtDeclareVariable(optix::int2, camera_resolution_full, , );
 rtDeclareVariable(unsigned int, launch_face, , );
 rtDeclareVariable(unsigned int, Nbands_launch, , );
 rtDeclareVariable(unsigned int, Nbands_global, , );
@@ -129,7 +132,7 @@ rtDeclareVariable(float3, camera_position, , );
 rtDeclareVariable(float2, camera_direction, , );
 rtDeclareVariable(float, camera_lens_diameter, , );
 rtDeclareVariable(float, FOV_aspect_ratio, , );
-rtDeclareVariable(float, camera_focal_length, , );
+rtDeclareVariable(float, camera_focal_length, , ); // Focal plane distance (working distance for ray generation), NOT lens optical focal length
 rtDeclareVariable(float, camera_viewplane_length, , );
 rtDeclareVariable(float, camera_pixel_solid_angle, , ); // Solid angle subtended by a single pixel (steradians)
 

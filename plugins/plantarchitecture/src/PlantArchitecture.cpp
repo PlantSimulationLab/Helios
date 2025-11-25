@@ -5650,20 +5650,31 @@ bool PlantArchitecture::detectGroundCollision(const std::vector<uint> &objID) co
 }
 
 void PlantArchitecture::optionalOutputObjectData(const std::string &object_data_label) {
-    if (output_object_data.find(object_data_label) == output_object_data.end()) {
-        std::cerr << "WARNING (PlantArchitecture::optionalOutputObjectData): Output object data of '" << object_data_label << "' is not a valid option." << std::endl;
+    // Convert label to lowercase for case-insensitive comparison
+    std::string label_lower = object_data_label;
+    std::transform(label_lower.begin(), label_lower.end(), label_lower.begin(), ::tolower);
+
+    // Check if "all" was requested
+    if (label_lower == "all") {
+        // Enable all optional output object data
+        for (auto &item : output_object_data) {
+            item.second = true;
+        }
         return;
     }
+
+    // Check if the label is valid
+    if (output_object_data.find(object_data_label) == output_object_data.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::optionalOutputObjectData): Output object data of '" + object_data_label + "' is not a valid option.");
+    }
+
     output_object_data.at(object_data_label) = true;
 }
 
 void PlantArchitecture::optionalOutputObjectData(const std::vector<std::string> &object_data_labels) {
-    for (auto &label: object_data_labels) {
-        if (output_object_data.find(label) == output_object_data.end()) {
-            std::cerr << "WARNING (PlantArchitecture::optionalOutputObjectData): Output object data of '" << label << "' is not a valid option." << std::endl;
-            continue;
-        }
-        output_object_data.at(label) = true;
+    for (const auto &label: object_data_labels) {
+        // Call the single-string overload which handles "all" and error checking
+        optionalOutputObjectData(label);
     }
 }
 

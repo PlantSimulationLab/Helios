@@ -1669,6 +1669,165 @@ DOCTEST_TEST_CASE("Build Parameters - Type Casting Float to Uint") {
     DOCTEST_CHECK(plantID != 0);
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture optionalOutputObjectData 'all' keyword") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Test that "all" (lowercase) enables all 13 optional output data labels
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("all"));
+
+    // Build a bean plant to verify data is actually being output
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("bean"));
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    DOCTEST_CHECK(plantID != uint(-1));
+
+    // Advance time to create more organs
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 10.0f));
+
+    // Get all object IDs
+    std::vector<uint> all_primitives = plantarchitecture.getAllObjectIDs();
+    DOCTEST_CHECK(all_primitives.size() > 0);
+
+    // Verify that all 13 optional output data labels are present on at least one primitive
+    std::vector<std::string> expected_labels = {
+        "age", "rank", "plantID", "plant_name", "plant_height", "plant_type",
+        "phenology_stage", "leafID", "peduncleID", "closedflowerID",
+        "openflowerID", "fruitID", "carbohydrate_concentration"
+    };
+
+    for (const auto& label : expected_labels) {
+        bool found = false;
+        for (uint objID : all_primitives) {
+            if (context.doesObjectDataExist(objID, label.c_str())) {
+                found = true;
+                break;
+            }
+        }
+        DOCTEST_CHECK_MESSAGE(found, "Label '" << label << "' was not found on any primitive");
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture optionalOutputObjectData 'all' case-insensitive") {
+    // Test "ALL" (uppercase)
+    {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("ALL"));
+    }
+
+    // Test "All" (mixed case)
+    {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("All"));
+    }
+
+    // Test "aLl" (random mixed case)
+    {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("aLl"));
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture optionalOutputObjectData invalid label throws error") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Capture stderr to check for helios_runtime_error
+    capture_cerr capture;
+
+    // Test that an invalid label throws a helios_runtime_error
+    bool caught_error = false;
+    try {
+        plantarchitecture.optionalOutputObjectData("invalid_label");
+    } catch (const std::exception& e) {
+        caught_error = true;
+        std::string error_msg(e.what());
+        DOCTEST_CHECK(error_msg.find("invalid_label") != std::string::npos);
+        DOCTEST_CHECK(error_msg.find("not a valid option") != std::string::npos);
+    }
+    DOCTEST_CHECK(caught_error);
+
+    // Check that stderr contains the error message
+    std::string stderr_output = capture.get_captured_output();
+    DOCTEST_CHECK(stderr_output.find("invalid_label") != std::string::npos);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture optionalOutputObjectData vector with 'all'") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Test that "all" works in a vector of labels
+    std::vector<std::string> labels = {"all"};
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData(labels));
+
+    // Build a bean plant to verify data is actually being output
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("bean"));
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    DOCTEST_CHECK(plantID != uint(-1));
+
+    // Advance time to create more organs
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 10.0f));
+
+    // Get all object IDs
+    std::vector<uint> all_primitives = plantarchitecture.getAllObjectIDs();
+    DOCTEST_CHECK(all_primitives.size() > 0);
+
+    // Verify that at least a few optional output data labels are present
+    bool found_age = false;
+    bool found_rank = false;
+    bool found_plant_name = false;
+    for (uint objID : all_primitives) {
+        if (context.doesObjectDataExist(objID, "age")) found_age = true;
+        if (context.doesObjectDataExist(objID, "rank")) found_rank = true;
+        if (context.doesObjectDataExist(objID, "plant_name")) found_plant_name = true;
+    }
+    DOCTEST_CHECK(found_age);
+    DOCTEST_CHECK(found_rank);
+    DOCTEST_CHECK(found_plant_name);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture optionalOutputObjectData normal labels still work") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Test that individual labels still work as expected
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("age"));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("rank"));
+
+    // Build a bean plant
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("bean"));
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    DOCTEST_CHECK(plantID != uint(-1));
+
+    // Advance time
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 5.0f));
+
+    // Verify that age and rank data exist, but other optional data does not
+    std::vector<uint> all_primitives = plantarchitecture.getAllObjectIDs();
+    DOCTEST_CHECK(all_primitives.size() > 0);
+
+    bool found_age = false;
+    bool found_rank = false;
+    bool found_plant_name = false;  // This should NOT be found
+    for (uint objID : all_primitives) {
+        if (context.doesObjectDataExist(objID, "age")) found_age = true;
+        if (context.doesObjectDataExist(objID, "rank")) found_rank = true;
+        if (context.doesObjectDataExist(objID, "plant_name")) found_plant_name = true;
+    }
+    DOCTEST_CHECK(found_age);
+    DOCTEST_CHECK(found_rank);
+    DOCTEST_CHECK_FALSE(found_plant_name);  // Should NOT be enabled
+}
+
 int PlantArchitecture::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

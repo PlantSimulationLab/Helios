@@ -758,7 +758,7 @@ void ProjectBuilder::record() {
                         if (std::find(curr_band_group.bands.begin(), curr_band_group.bands.end(), "red") != curr_band_group.bands.end() &&
                             std::find(curr_band_group.bands.begin(), curr_band_group.bands.end(), "green") != curr_band_group.bands.end() &&
                             std::find(curr_band_group.bands.begin(), curr_band_group.bands.end(), "blue") != curr_band_group.bands.end()) {
-                            radiation->applyImageProcessingPipeline(cameralabel, "red", "green", "blue", curr_band_group.hdr);
+                            radiation->applyImageProcessingPipeline(cameralabel, "red", "green", "blue");
                         }
                         std::vector<std::string> band_group_vec;
                         if (!curr_band_group.grayscale) {
