@@ -4235,6 +4235,16 @@ namespace helios {
          */
         void setMaterialTwosidedFlag(const std::string &material_label, uint twosided_flag);
 
+        //! Get the twosided flag for a primitive, checking material first, then primitive data
+        /**
+         * \param[in] UUID Unique universal identifier of primitive
+         * \param[in] default_value Default value if neither material nor primitive data exists (default: 1 = two-sided)
+         * \return The twosided flag value (0=one-sided, 1=two-sided, 2=transparent, 3=special)
+         * \note If the primitive has a user-assigned material (not __auto_ or __default__),
+         *       the material's twosided_flag is used. Otherwise, primitive data is checked.
+         */
+        [[nodiscard]] uint getPrimitiveTwosidedFlag(uint UUID, uint default_value = 1) const;
+
         //! Assign a material to a primitive
         /**
          * \param[in] UUID Unique universal identifier of primitive

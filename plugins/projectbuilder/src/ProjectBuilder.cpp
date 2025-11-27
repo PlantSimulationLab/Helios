@@ -758,7 +758,7 @@ void ProjectBuilder::record() {
                         if (std::find(curr_band_group.bands.begin(), curr_band_group.bands.end(), "red") != curr_band_group.bands.end() &&
                             std::find(curr_band_group.bands.begin(), curr_band_group.bands.end(), "green") != curr_band_group.bands.end() &&
                             std::find(curr_band_group.bands.begin(), curr_band_group.bands.end(), "blue") != curr_band_group.bands.end()) {
-                            radiation->applyImageProcessingPipeline(cameralabel, "red", "green", "blue");
+                            radiation->applyCameraImageCorrections(cameralabel, "red", "green", "blue");
                         }
                         std::vector<std::string> band_group_vec;
                         if (!curr_band_group.grayscale) {
@@ -2757,7 +2757,7 @@ void ProjectBuilder::xmlGetValues() {
         } else {
             new_object.use_texture_file = false;
             // Use material system for object color
-            std::string obj_material = "projectbuilder_obj_" + std::to_string(new_object.ID);
+            std::string obj_material = "projectbuilder_obj_" + std::to_string(i);
             if (!context->doesMaterialExist(obj_material)) {
                 context->addMaterial(obj_material);
             }

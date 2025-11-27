@@ -201,6 +201,8 @@ RT_PROGRAM void closest_hit_diffuse() {
                             atomicFloatAdd(&scatter_buff_top_cam[ind_origin], strength * t_tau_cam); // transmission
                         }
                     }
+                    // Note: Don't accumulate scattered radiation to radiation_specular
+                    // Specular should only reflect DIRECT source radiation (accumulated in miss_direct)
                 }
             }
 
@@ -303,38 +305,48 @@ RT_PROGRAM void closest_hit_camera() {
             }
 
             // specular reflection
+            // Only compute specular on iteration 0 to prevent accumulation across scattering iterations.
+            // radiation_specular contains per-source, camera-weighted incident radiation
 
             double strength_spec = 0;
-            if (specular_reflection_enabled > 0 && specular_exponent[objID] > 0.f) {
+            if (specular_reflection_enabled > 0 && specular_exponent[objID] > 0.f && scattering_iteration == 0) {
+
+                // For each source, compute specular contribution
                 for (int rr = 0; rr < Nsources; rr++) {
 
-                    // light direction
-                    float3 light_direction;
-                    float spec = 0;
-                    if (source_types[rr] == 0 || source_types[rr] == 2) { // collimated source or sunsphere source
+                    // Get camera-weighted incident radiation from this source
+                    // Already has source color and camera response weighting applied
+                    size_t ind_specular = rr * Ncameras * Nprimitives * Nbands_launch + camera_ID * Nprimitives * Nbands_launch + UUID * Nbands_launch + b;
+                    float spec = radiation_specular[ind_specular];
 
-                        light_direction = normalize(source_positions[rr]);
-                        if (face) {
-                            spec = radiation_out_top[Nbands_launch * UUID + b];
+                    // Apply default 0.25 scaling factor (typical Fresnel reflectance for dielectrics is ~4%,
+                    // but this accounts for specular lobe concentration and typical surface roughness)
+                    spec *= 0.25f;
+
+                    if (spec > 0) {
+                        // Determine light direction based on source type
+                        float3 light_direction;
+                        if (source_types[rr] == 0 || source_types[rr] == 2) {
+                            // Collimated or sunsphere: parallel rays from source direction
+                            light_direction = normalize(source_positions[rr]);
                         } else {
-                            spec = radiation_out_bottom[Nbands_launch * UUID + b];
+                            // Sphere, disk, or rectangle: direction from hit point to source center
+                            float3 hit_point = ray.origin + t_hit * ray.direction;
+                            light_direction = normalize(source_positions[rr] - hit_point);
                         }
 
-                    } else { // sphere, disk or rectangular source
-                        //\todo Need to add generic functions to sample points on sphere, disk and rectangle source surfaces
-                    }
+                        // Blinn-Phong specular direction (half-vector)
+                        float3 specular_direction = normalize(light_direction - ray.direction);
 
-                    // float3 specular_direction = normalize(2 * fabs(dot(light_direction, normal)) * normal - light_direction);
-                    float3 specular_direction = normalize(light_direction - ray.direction);
+                        float exponent = specular_exponent[objID];
+                        double scale_coefficient = 1.0;
+                        if (specular_reflection_enabled == 2) { // if we are using the scale coefficient
+                            scale_coefficient = specular_scale[objID];
+                        }
 
-                    // specular reflection
-                    float exponent = specular_exponent[objID];
-                    double scale_coefficient = 1.0;
-                    if (specular_reflection_enabled == 2) { // if we are using the scale coefficient
-                        scale_coefficient = specular_scale[objID];
+                        strength_spec += spec * scale_coefficient * pow(max(0.f, dot(specular_direction, normal)), exponent) * (exponent + 2.f) /
+                                         (double(launch_dim.x) * 2.f * M_PI); // launch_dim.x is the number of rays launched per pixel, so we divide by it to get the average flux per ray. (exponent+2)/2pi normalizes reflected distribution to unity.
                     }
-                    strength_spec += spec * scale_coefficient * pow(max(0.f, dot(specular_direction, normal)), exponent) * (exponent + 2.f) /
-                                     (double(launch_dim.x) * 2.f * M_PI); // launch_dim.x is the number of rays launched per pixel, so we divide by it to get the average flux per ray. (exponent+2)/2pi normalizes reflected distribution to unity.
                 }
             }
 
@@ -433,6 +445,14 @@ RT_PROGRAM void miss_direct() {
                     atomicFloatAdd(&scatter_buff_top_cam[ind_origin], strength * t_tau_cam); // transmission
                 }
             }
+            // Accumulate incident radiation for specular (per source, camera-weighted)
+            // Apply camera spectral response weighting: ∫(source × camera) / ∫(source)
+            if (strength > 0) {
+                size_t weight_ind = prd.source_ID * Nbands_launch * Ncameras + b * Ncameras + camera_ID;
+                float camera_weight = source_fluxes_cam[weight_ind];
+                size_t ind_specular = prd.source_ID * Ncameras * Nprimitives * Nbands_launch + camera_ID * Nprimitives * Nbands_launch + prd.origin_UUID * Nbands_launch + b;
+                atomicFloatAdd(&radiation_specular[ind_specular], strength * camera_weight);
+            }
         }
     }
 }
@@ -515,6 +535,8 @@ RT_PROGRAM void miss_diffuse() {
                             atomicFloatAdd(&scatter_buff_top_cam[ind_origin], strength * t_tau_cam); // transmission
                         }
                     }
+                    // Note: Don't accumulate diffuse sky radiation to radiation_specular
+                    // Specular should only reflect DIRECT source radiation (accumulated in miss_direct)
                 }
             }
         }

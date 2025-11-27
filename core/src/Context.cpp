@@ -3811,6 +3811,23 @@ void Context::setMaterialTwosidedFlag(const std::string &material_label, uint tw
     materials[matID].twosided_flag = twosided_flag;
 }
 
+uint Context::getPrimitiveTwosidedFlag(uint UUID, uint default_value) const {
+    std::string mat_label = getPrimitiveMaterialLabel(UUID);
+    bool has_user_material = (mat_label.substr(0, 7) != "__auto_" && mat_label != DEFAULT_MATERIAL_LABEL);
+
+    if (has_user_material) {
+        return getMaterialTwosidedFlag(mat_label);
+    }
+
+    if (doesPrimitiveDataExist(UUID, "twosided_flag")) {
+        uint flag;
+        getPrimitiveData(UUID, "twosided_flag", flag);
+        return flag;
+    }
+
+    return default_value;
+}
+
 void Context::assignMaterialToPrimitive(uint UUID, const std::string &material_label) {
     uint materialID = getMaterialIDFromLabel(material_label);
     Primitive *prim = getPrimitivePointer_private(UUID);

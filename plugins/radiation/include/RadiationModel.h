@@ -1757,6 +1757,10 @@ protected:
     RTbuffer source_fluxes_RTbuffer;
     //! Fluxes of external radiation sources - RTvariable
     RTvariable source_fluxes_RTvariable;
+    //! Camera-weighted fluxes of external radiation sources for specular - RTbuffer object
+    RTbuffer source_fluxes_cam_RTbuffer;
+    //! Camera-weighted fluxes of external radiation sources for specular - RTvariable
+    RTvariable source_fluxes_cam_RTvariable;
 
     //! Widths of external radiation sources - RTbuffer object
     RTbuffer source_widths_RTbuffer;
@@ -2213,6 +2217,9 @@ protected:
      */
     RTvariable specular_reflection_enabled_RTvariable;
 
+    //! Current scattering iteration (0-based) for camera ray tracing
+    RTvariable scattering_iteration_RTvariable;
+
     //! Primitive type - RTbuffer object
     RTbuffer primitive_type_RTbuffer;
     //! Primitive type - RTvariable
@@ -2319,6 +2326,10 @@ protected:
     RTbuffer scatter_buff_bottom_RTbuffer;
     //! "to-be-scattered" radiative energy (reflected/emitted) for bottom surface each object - RTvariable
     RTvariable scatter_buff_bottom_RTvariable;
+    //! Incident radiative energy for specular reflection (without rho/tau applied) - RTbuffer object
+    RTbuffer radiation_specular_RTbuffer;
+    //! Incident radiative energy for specular reflection - RTvariable
+    RTvariable radiation_specular_RTvariable;
 
     //! Incoming radiative energy for each camera pixel - RTbuffer
     RTbuffer radiation_in_camera_RTbuffer;

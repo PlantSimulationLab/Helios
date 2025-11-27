@@ -17,14 +17,6 @@
 
 using namespace helios;
 
-// Shared static flags for Primitive deprecation warnings (one per function name, not per overload)
-namespace {
-    bool Primitive_setColor_warning_shown = false;
-    bool Primitive_setTextureFile_warning_shown = false;
-    bool Primitive_overrideTextureColor_warning_shown = false;
-    bool Primitive_useTextureColor_warning_shown = false;
-}
-
 uint Context::addPatch() {
     return addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBAcolor(0, 0, 0, 1));
 }
@@ -914,10 +906,6 @@ void Primitive::setColor(const helios::RGBcolor &newcolor) {
     if (context_ptr == nullptr) {
         helios_runtime_error("ERROR (Primitive::setColor): Primitive not associated with a Context. Use Context::setPrimitiveColor() instead.");
     }
-    if (!Primitive_setColor_warning_shown) {
-        std::cerr << "WARNING (Primitive::setColor): This method is deprecated. Use Context::addMaterial() and Context::assignMaterialToPrimitive() instead." << std::endl;
-        Primitive_setColor_warning_shown = true;
-    }
     // Directly modify the material's color
     context_ptr->materials.at(materialID).color = make_RGBAcolor(newcolor, 1.f);
     dirty_flag = true;
@@ -926,10 +914,6 @@ void Primitive::setColor(const helios::RGBcolor &newcolor) {
 void Primitive::setColor(const helios::RGBAcolor &newcolor) {
     if (context_ptr == nullptr) {
         helios_runtime_error("ERROR (Primitive::setColor): Primitive not associated with a Context. Use Context::setPrimitiveColor() instead.");
-    }
-    if (!Primitive_setColor_warning_shown) {
-        std::cerr << "WARNING (Primitive::setColor): This method is deprecated. Use Context::addMaterial() and Context::assignMaterialToPrimitive() instead." << std::endl;
-        Primitive_setColor_warning_shown = true;
     }
     // Directly modify the material's color
     context_ptr->materials.at(materialID).color = newcolor;
@@ -956,10 +940,6 @@ void Primitive::setTextureFile(const char *texture) {
     if (context_ptr == nullptr) {
         helios_runtime_error("ERROR (Primitive::setTextureFile): Primitive not associated with a Context. Use Context::setPrimitiveTextureFile() instead.");
     }
-    if (!Primitive_setTextureFile_warning_shown) {
-        std::cerr << "WARNING (Primitive::setTextureFile): This method is deprecated. Use Context::addMaterial() and Context::assignMaterialToPrimitive() instead." << std::endl;
-        Primitive_setTextureFile_warning_shown = true;
-    }
     // Directly modify the material's texture
     context_ptr->materials.at(materialID).texture_file = texture;
     dirty_flag = true;
@@ -978,10 +958,6 @@ void Primitive::overrideTextureColor() {
     if (context_ptr == nullptr) {
         helios_runtime_error("ERROR (Primitive::overrideTextureColor): Primitive not associated with a Context. Use Context::overridePrimitiveTextureColor() instead.");
     }
-    if (!Primitive_overrideTextureColor_warning_shown) {
-        std::cerr << "WARNING (Primitive::overrideTextureColor): This method is deprecated. Use Context::addMaterial() and Context::assignMaterialToPrimitive() instead." << std::endl;
-        Primitive_overrideTextureColor_warning_shown = true;
-    }
     // Directly modify the material's texture color override flag
     context_ptr->materials.at(materialID).texture_color_overridden = true;
     dirty_flag = true;
@@ -990,10 +966,6 @@ void Primitive::overrideTextureColor() {
 void Primitive::useTextureColor() {
     if (context_ptr == nullptr) {
         helios_runtime_error("ERROR (Primitive::useTextureColor): Primitive not associated with a Context. Use Context::usePrimitiveTextureColor() instead.");
-    }
-    if (!Primitive_useTextureColor_warning_shown) {
-        std::cerr << "WARNING (Primitive::useTextureColor): This method is deprecated. Use Context::addMaterial() and Context::assignMaterialToPrimitive() instead." << std::endl;
-        Primitive_useTextureColor_warning_shown = true;
     }
     // Directly modify the material's texture color override flag
     context_ptr->materials.at(materialID).texture_color_overridden = false;

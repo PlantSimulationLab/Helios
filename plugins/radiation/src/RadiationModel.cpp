@@ -1334,6 +1334,10 @@ void RadiationModel::initializeOptiX() {
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "specular_reflection_enabled", &specular_reflection_enabled_RTvariable));
     RT_CHECK_ERROR(rtVariableSet1ui(specular_reflection_enabled_RTvariable, 0));
 
+    // scattering iteration counter for camera ray tracing (specular only computed on iteration 0)
+    RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "scattering_iteration", &scattering_iteration_RTvariable));
+    RT_CHECK_ERROR(rtVariableSet1ui(scattering_iteration_RTvariable, 0));
+
     // primitive transformation matrix buffer
     addBuffer("transform_matrix", transform_matrix_RTbuffer, transform_matrix_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 2);
 
@@ -1397,6 +1401,9 @@ void RadiationModel::initializeOptiX() {
     // - bottom - //
     addBuffer("scatter_buff_bottom", scatter_buff_bottom_RTbuffer, scatter_buff_bottom_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
 
+    // incident radiation for specular reflection (without rho/tau applied)
+    addBuffer("radiation_specular", radiation_specular_RTbuffer, radiation_specular_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
+
     // Energy absorbed by "sky"
     addBuffer("Rsky", Rsky_RTbuffer, Rsky_RTvariable, RT_BUFFER_INPUT_OUTPUT, RT_FORMAT_FLOAT, 1);
 
@@ -1418,6 +1425,9 @@ void RadiationModel::initializeOptiX() {
 
     // External radiation source fluxes
     addBuffer("source_fluxes", source_fluxes_RTbuffer, source_fluxes_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
+
+    // Camera-weighted source fluxes for specular reflection
+    addBuffer("source_fluxes_cam", source_fluxes_cam_RTbuffer, source_fluxes_cam_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
 
     // number of radiation bands
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "Nbands_global", &Nbands_global_RTvariable));
@@ -1928,10 +1938,7 @@ void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
 
     m_global.resize(Nobjects);
     ptype_global.resize(Nobjects);
-    twosided_flag_global.resize(Nobjects); // initialize to be two-sided
-    for (size_t i = 0; i < Nobjects; i++) {
-        twosided_flag_global.at(i) = 1;
-    }
+    twosided_flag_global.resize(Nobjects);
 
     // Populate attributes for each primitive in the pointer vector 'primitives'
     for (std::size_t u = 0; u < Nobjects; u++) {
@@ -1947,12 +1954,8 @@ void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
 
         assert(ptype_global.at(u) >= 0 && ptype_global.at(u) <= 4);
 
-        // primitive twosided flag
-        if (context->doesPrimitiveDataExist(p, "twosided_flag")) {
-            uint flag;
-            context->getPrimitiveData(p, "twosided_flag", flag);
-            twosided_flag_global.at(u) = char(flag);
-        }
+        // primitive twosided flag - check material first, then primitive data
+        twosided_flag_global.at(u) = char(context->getPrimitiveTwosidedFlag(p, 1));
 
         uint parentID = context->getPrimitiveParentObjectID(p);
 
@@ -3624,6 +3627,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     if (Ncameras > 0) {
         zeroBuffer1D(scatter_buff_top_cam_RTbuffer, Nbands_launch * Nprimitives);
         zeroBuffer1D(scatter_buff_bottom_cam_RTbuffer, Nbands_launch * Nprimitives);
+        zeroBuffer1D(radiation_specular_RTbuffer, Nsources * Ncameras * Nprimitives * Nbands_launch);
     }
 
     std::vector<float> TBS_top, TBS_bottom;
@@ -3681,6 +3685,62 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         initializeBuffer1Dfloat2(source_widths_RTbuffer, widths);
         initializeBuffer1Dfloat3(source_rotations_RTbuffer, rotations);
         initializeBuffer1Dui(source_types_RTbuffer, types);
+
+        // Compute camera response weighting factors for specular reflection (if cameras exist)
+        // Factor = ∫(source_spectrum × camera_response) / ∫(source_spectrum)
+        // This must be done before ray tracing so the weights are available during miss_direct()
+        if (Ncameras > 0) {
+            std::vector<float> source_fluxes_cam;
+            source_fluxes_cam.resize(Nsources * Nbands_launch * Ncameras, 1.0f);
+
+            for (uint s = 0; s < Nsources; s++) {
+                const RadiationSource &source = radiation_sources.at(s);
+
+                uint cam = 0;
+                for (const auto &camera: cameras) {
+                    for (uint b = 0; b < Nbands_launch; b++) {
+                        std::string band_label = band_labels.at(b);
+
+                        // Default weighting factor (no camera response)
+                        float weight = 1.0f;
+
+                        // Check if camera has spectral response for this band
+                        if (camera.second.band_spectral_response.find(band_label) != camera.second.band_spectral_response.end()) {
+                            std::string response_label = camera.second.band_spectral_response.at(band_label);
+
+                            if (!response_label.empty() && response_label != "uniform" &&
+                                context->doesGlobalDataExist(response_label.c_str()) &&
+                                context->getGlobalDataType(response_label.c_str()) == helios::HELIOS_TYPE_VEC2 &&
+                                source.source_spectrum.size() > 0) {
+
+                                // Load camera spectral response
+                                std::vector<helios::vec2> camera_response;
+                                context->getGlobalData(response_label.c_str(), camera_response);
+
+                                // Get band wavelength range
+                                helios::vec2 wavelength_range = radiation_bands.at(band_label).wavebandBounds;
+
+                                // If no wavelength bounds, use overlapping range of source and camera
+                                if (wavelength_range.x == 0 && wavelength_range.y == 0) {
+                                    wavelength_range.x = fmax(source.source_spectrum.front().x, camera_response.front().x);
+                                    wavelength_range.y = fmin(source.source_spectrum.back().x, camera_response.back().x);
+                                }
+
+                                // Integrate source_spectrum × camera_response over band
+                                // Note: integrateSpectrum already returns ratio: ∫(source × camera) / ∫(source)
+                                weight = integrateSpectrum(s, camera_response, wavelength_range.x, wavelength_range.y);
+                            }
+                        }
+
+                        source_fluxes_cam[s * Nbands_launch * Ncameras + b * Ncameras + cam] = weight;
+                    }
+                    cam++;
+                }
+            }
+
+            // Upload camera-weighted source fluxes to GPU BEFORE ray tracing
+            initializeBuffer1Df(source_fluxes_cam_RTbuffer, source_fluxes_cam);
+        }
 
         // -- Ray Trace -- //
 
@@ -3789,19 +3849,12 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                         if (Ncameras > 0) {
                             scatter_buff_top_cam_data[ind] += out_top;
                         }
-                        if (!context->doesPrimitiveDataExist(p, "twosided_flag")) { // if does not exist, assume two-sided
+                        // Check twosided_flag - check material first, then primitive data
+                        uint twosided_flag = context->getPrimitiveTwosidedFlag(p, 1);
+                        if (twosided_flag != 0) {  // If two-sided, emit from bottom face too
                             flux_bottom.at(ind) += flux_top.at(ind);
                             if (Ncameras > 0) {
                                 scatter_buff_bottom_cam_data[ind] += out_top;
-                            }
-                        } else {
-                            uint flag;
-                            context->getPrimitiveData(p, "twosided_flag", flag);
-                            if (flag) {
-                                flux_bottom.at(ind) += flux_top.at(ind);
-                                if (Ncameras > 0) {
-                                    scatter_buff_bottom_cam_data[ind] += out_top;
-                                }
                             }
                         }
                     }
@@ -3815,6 +3868,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
         initializeBuffer1Df(radiation_out_top_RTbuffer, flux_top);
         initializeBuffer1Df(radiation_out_bottom_RTbuffer, flux_bottom);
+        // Note: radiation_specular_RTbuffer is populated on GPU via atomicFloatAdd during ray tracing, don't overwrite it here
 
         // Compute diffuse launch dimension
         size_t n = ceil(sqrt(double(diffuseRayCount)));
@@ -3954,6 +4008,9 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
     // **** CAMERA RAY TRACE **** //
     if (Ncameras > 0) {
+
+        // Set scattering iteration to 0 for specular calculation (specular only computed on first iteration)
+        RT_CHECK_ERROR(rtVariableSet1ui(scattering_iteration_RTvariable, 0));
 
         // Setup atmospheric sky radiance model for all cameras (must run before any camera rendering)
         // This computes and uploads sky radiance parameters independently for each camera

@@ -2552,11 +2552,11 @@ TEST_CASE("File path resolution priority") {
         ctx.assignMaterialToPrimitive(p4, "onesided_mat");
 
         // Write to XML
-        ctx.writeXML("test_materials.xml", {p1, p2, p3, p4});
+        ctx.writeXML("test_materials.xml", {p1, p2, p3, p4}, true);
 
         // Load into new context
         Context ctx2;
-        std::vector<uint> loaded_UUIDs = ctx2.loadXML("test_materials.xml");
+        std::vector<uint> loaded_UUIDs = ctx2.loadXML("test_materials.xml", true);
 
         DOCTEST_CHECK(loaded_UUIDs.size() == 4);
 
@@ -2577,6 +2577,58 @@ TEST_CASE("File path resolution priority") {
 
         // Clean up
         std::filesystem::remove("test_materials.xml");
+    }
+
+    SUBCASE("getPrimitiveTwosidedFlag helper function") {
+        Context ctx;
+
+        // Create materials with different twosided_flag values
+        ctx.addMaterial("onesided_mat");
+        ctx.setMaterialTwosidedFlag("onesided_mat", 0);
+
+        ctx.addMaterial("twosided_mat");
+        ctx.setMaterialTwosidedFlag("twosided_mat", 1);
+
+        ctx.addMaterial("transparent_mat");
+        ctx.setMaterialTwosidedFlag("transparent_mat", 2);
+
+        // Create primitives
+        uint UUID_mat_onesided = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint UUID_mat_twosided = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+        uint UUID_mat_transparent = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+        uint UUID_prim_data = ctx.addPatch(make_vec3(3, 0, 0), make_vec2(1, 1));
+        uint UUID_default = ctx.addPatch(make_vec3(4, 0, 0), make_vec2(1, 1));
+
+        // Assign materials
+        ctx.assignMaterialToPrimitive(UUID_mat_onesided, "onesided_mat");
+        ctx.assignMaterialToPrimitive(UUID_mat_twosided, "twosided_mat");
+        ctx.assignMaterialToPrimitive(UUID_mat_transparent, "transparent_mat");
+
+        // Set primitive data on one primitive (no user material assigned)
+        ctx.setPrimitiveData(UUID_prim_data, "twosided_flag", uint(0));
+
+        // Test: Material takes precedence - one-sided material
+        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(UUID_mat_onesided) == 0);
+
+        // Test: Material takes precedence - two-sided material
+        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(UUID_mat_twosided) == 1);
+
+        // Test: Material supports values > 1 (transparent)
+        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(UUID_mat_transparent) == 2);
+
+        // Test: Primitive data fallback (no user material)
+        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(UUID_prim_data) == 0);
+
+        // Test: Default value when no material or primitive data
+        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(UUID_default) == 1);
+
+        // Test: Custom default value
+        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(UUID_default, 2) == 2);
+
+        // Test: Material takes precedence over primitive data
+        // First, set primitive data on a primitive with a material
+        ctx.setPrimitiveData(UUID_mat_onesided, "twosided_flag", uint(1));  // Try to override with primitive data
+        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(UUID_mat_onesided) == 0);  // Should still return material value (0)
     }
 
     SUBCASE("Material Data - Setting and Getting with Labels") {

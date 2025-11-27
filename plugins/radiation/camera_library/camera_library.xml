@@ -505,7 +505,7 @@
         <resolution_height>4032</resolution_height>
         <focal_length_mm>5.1</focal_length_mm>
         <lens_diameter_mm>3.19</lens_diameter_mm>
-        <exposure>ISO100</exposure>
+        <exposure>auto</exposure>
         <shutter_speed>0.00769</shutter_speed>
         <focal_plane_distance_m>0.5</focal_plane_distance_m>
         <!-- Data from Ohtera Lab: https://ohlab.kic.ac.jp/index/mobilespec_database -->

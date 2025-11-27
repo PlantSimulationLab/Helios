@@ -177,7 +177,19 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
   A primitive with "twosided_flag" set to 0 will not absorb any radiation from the back face of the primitive, but it will attenuate radiation. So if a ray hits the back face, the ray trajectory will be terminated, but no energy will be deposited.
 
-  Example: If we had a single patch and a diffuse radiation source with a flux of 1.0, with default behavior the absorbed flux on the patch would be 2.0 because it would absorb energy from both faces, but the end flux would be expressed on a single-sided area basis. If "twosided_flag" was set to 0 for that patch (non-default behavior), then the absorbed flux on the patch would be 1.0. 
+  Example: If we had a single patch and a diffuse radiation source with a flux of 1.0, with default behavior the absorbed flux on the patch would be 2.0 because it would absorb energy from both faces, but the end flux would be expressed on a single-sided area basis. If "twosided_flag" was set to 0 for that patch (non-default behavior), then the absorbed flux on the patch would be 1.0.
+
+ <b>Material-based Configuration (Recommended)</b>
+
+ The twosided_flag can also be set at the material level using Context::setMaterialTwosidedFlag(). When a primitive has a user-assigned material, the material's twosided_flag setting takes precedence over primitive data. This allows configuring sidedness once on a material and having it automatically apply to all primitives using that material:
+
+  ~~~~~~{.cpp}
+  context.addMaterial("ground_material");
+  context.setMaterialTwosidedFlag("ground_material", 0);  // One-sided
+  context.assignMaterialToPrimitive(ground_UUIDs, "ground_material");
+  ~~~~~~
+
+ If no user-assigned material exists (or the material is auto-generated), the radiation model falls back to checking for "twosided_flag" primitive data.
 
  \subsection RadBands Defining Wavelength Bands
 
@@ -689,9 +701,11 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \subsubsection RadCamSpecular Radiation Camera Specular Reflection
 
- Specular reflection causes a surface to look "shiny". Waxy leaves or polished objects have high specular reflection, causing glancing light angles to appear very bright. Specular reflection is modeled using a Blinn-Phong-style approach, which provides a simple approximation to the full specular BRDF.
+ Specular reflection causes a surface to look "shiny". Waxy leaves or polished objects have high specular reflection, causing glancing light angles to appear very bright. Specular reflection is modeled using a Blinn-Phong-style approach, which provides a simple approximation to Fresnel reflection at the air-material interface.
 
- Specular reflection effects can be included in simulated images by setting the value of the primitive data "specular_exponent" and/or "specular_scale" for each primitive. By default, if this primitive data is not set for any primitives specular reflection will be disabled entirely. Furthermore, if the specular exponent is set to a negative value for a given primitive, or the primitive data "specular_exponent" does not exist for a given primitive, specular reflection will be disabled for that primitive.
+ Physically, specular reflection occurs at the surface interface before light penetrates the material. For dielectric materials like leaves and plastics, the specular highlight reflects the color of the incident light source (typically white for sunlight), not the material's diffuse color. This is why shiny leaves have white highlights rather than green ones.
+
+ Specular reflection effects can be included in simulated images by setting the value of the primitive data "specular_exponent" and/or "specular_scale" for each primitive. By default, if this primitive data is not set for any primitives specular reflection will be disabled entirely. Furthermore, if the specular exponent is set to a negative value for a given primitive, or the primitive data "specular_exponent" does not exist for a given primitive, specular reflection will be disabled for that primitive. Specular reflection is supported for all radiation source types (collimated, sunsphere, sphere, disk, and rectangle).
 
  The strength of specular reflection is calculated according to the following equation:
 
@@ -699,7 +713,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
     I_{spec} = I_{s} \, k_s \, \mathrm{max}\left(0, \vec{n}_{spec} \cdot \vec{n}_p \right)^k\left(\frac{k+2}{2\pi}\right),
  \f]
 
- where \f$I_{spec}\f$ is the specular flux contribution, \f$I_s\f$ is the outgoing flux of the sampled primitive, \f$k_s\f$ is the specular scaling coefficient, \f$\vec{n}_p\f$ is the surface normal, \f$\vec{n}_s\f$ is the source direction, \f$\vec{n}_{ray}\f$ is the ray direction, and \f$k\f$ is the specular exponent. \f$\vec{n}_{spec}\f$ is the specular reflection direction, which is calculated as:
+ where \f$I_{spec}\f$ is the specular flux contribution, \f$I_s\f$ is the incident flux from the radiation source, \f$k_s\f$ is the specular scaling coefficient, \f$\vec{n}_p\f$ is the surface normal, \f$\vec{n}_s\f$ is the source direction, \f$\vec{n}_{ray}\f$ is the ray direction, and \f$k\f$ is the specular exponent. \f$\vec{n}_{spec}\f$ is the specular reflection direction, which is calculated as:
 
  \f[
     \vec{n}_{spec} = \frac{\vec{n}_s - \vec{n}_{ray}}{|| \vec{n}_s + \vec{n}_{ray} ||}.

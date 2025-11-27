@@ -556,15 +556,10 @@ void EnergyBalanceModel::printDefaultValueReport(const std::vector<uint> &UUIDs)
             assumed_default_Qother++;
         }
 
-        // two-sided flag
-        if (context->doesPrimitiveDataExist(UUID, "twosided_flag") && context->getPrimitiveDataType("twosided_flag") == HELIOS_TYPE_UINT) {
-            uint twosided;
-            context->getPrimitiveData(UUID, "twosided_flag", twosided);
-            if (twosided == 0) {
-                twosided_0++;
-            } else if (twosided == 1) {
-                twosided_1++;
-            }
+        // two-sided flag - check material first, then primitive data
+        uint twosided = context->getPrimitiveTwosidedFlag(UUID, 1);
+        if (twosided == 0) {
+            twosided_0++;
         } else {
             twosided_1++;
         }

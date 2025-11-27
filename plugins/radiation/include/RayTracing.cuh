@@ -62,6 +62,7 @@ rtBuffer<uint, 1> primitiveID;
 // Radiation sources buffers
 rtDeclareVariable(unsigned int, Nsources, , );
 rtBuffer<float, 1> source_fluxes;
+rtBuffer<float, 1> source_fluxes_cam;  // Camera-weighted source fluxes for specular [source * Nbands * Ncameras]
 rtBuffer<float3, 1> source_positions;
 rtBuffer<float3, 1> source_rotations;
 rtBuffer<float2, 1> source_widths;
@@ -112,6 +113,7 @@ rtBuffer<float, 1> rho_cam, tau_cam;
 rtBuffer<float, 1> specular_exponent;
 rtBuffer<float, 1> specular_scale;
 rtDeclareVariable(unsigned int, specular_reflection_enabled, , );
+rtDeclareVariable(unsigned int, scattering_iteration, , );  // Current scattering iteration (0-based)
 
 // Output buffers
 rtBuffer<float, 1> radiation_in;
@@ -122,6 +124,7 @@ rtBuffer<float, 1> scatter_buff_top;
 rtBuffer<float, 1> scatter_buff_bottom;
 rtBuffer<float, 1> scatter_buff_top_cam;
 rtBuffer<float, 1> scatter_buff_bottom_cam;
+rtBuffer<float, 1> radiation_specular;  // Incident radiation for specular (per source, camera-weighted) [source * Ncameras * Nprimitives * Nbands + camera * Nprimitives * Nbands + primitive * Nbands + band]
 
 // Camera variables
 rtBuffer<unsigned int, 1> camera_pixel_label;
