@@ -19,6 +19,7 @@ DOCTEST_TEST_CASE("VoxelIntersection - Patch with no slices") {
     vec3 grid_size = make_vec3(10, 10, 10);
 
     VoxelIntersection voxelintersection(&context);
+    voxelintersection.disableMessages();
 
     std::vector<uint> voxel_UUIDs = voxelintersection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(2, 2, 2));
 
@@ -38,6 +39,7 @@ DOCTEST_TEST_CASE("VoxelIntersection - Patch with one slice") {
     vec3 grid_size = make_vec3(1, 10, 10);
 
     VoxelIntersection voxelintersection(&context);
+    voxelintersection.disableMessages();
 
     std::vector<uint> voxel_UUIDs = voxelintersection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(2, 1, 1));
 
@@ -57,6 +59,7 @@ DOCTEST_TEST_CASE("VoxelIntersection - Patch with 2 slices") {
     vec3 grid_size = make_vec3(2, 10, 1);
 
     VoxelIntersection voxelintersection(&context);
+    voxelintersection.disableMessages();
 
     std::vector<uint> voxel_UUIDs = voxelintersection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(3, 1, 1));
 
@@ -76,6 +79,7 @@ DOCTEST_TEST_CASE("VoxelIntersection - Patch with 3 slices and no vertices insid
     vec3 grid_size = make_vec3(4, 10, 10);
 
     VoxelIntersection voxelintersection(&context);
+    voxelintersection.disableMessages();
 
     std::vector<uint> voxel_UUIDs = voxelintersection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(4, 1, 1));
 
@@ -97,6 +101,7 @@ DOCTEST_TEST_CASE("VoxelIntersection - Areas after slicing (non-textured)") {
     vec3 grid_size = make_vec3(2, 10, 2);
 
     VoxelIntersection voxelintersection(&context);
+    voxelintersection.disableMessages();
 
     std::vector<uint> voxel_UUIDs = voxelintersection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(2, 1, 2));
 
@@ -123,6 +128,7 @@ DOCTEST_TEST_CASE("VoxelIntersection - Textured areas after slicing") {
     vec3 grid_size = make_vec3(2, 10, 2);
 
     VoxelIntersection voxelintersection(&context);
+    voxelintersection.disableMessages();
 
     std::vector<uint> voxel_UUIDs = voxelintersection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(2, 1, 2));
 
@@ -146,6 +152,7 @@ DOCTEST_TEST_CASE("VoxelIntersection - Cropping non-textured primitives") {
     vec3 grid_size = make_vec3(1, 10, 1);
 
     VoxelIntersection voxelintersection(&context);
+    voxelintersection.disableMessages();
 
     // Test slicing the primitive within the voxel bounds
     std::vector<uint> voxel_UUIDs = voxelintersection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(1, 1, 1));
@@ -166,6 +173,7 @@ DOCTEST_TEST_CASE("VoxelIntersection - Cropping textured primitives") {
     vec3 grid_size = make_vec3(1, 10, 1);
 
     VoxelIntersection voxelintersection(&context);
+    voxelintersection.disableMessages();
 
     // Test slicing the textured primitive within the voxel bounds
     std::vector<uint> voxel_UUIDs = voxelintersection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(1, 1, 1));
@@ -183,6 +191,7 @@ DOCTEST_TEST_CASE("VoxelIntersection - Basic functionality test") {
     uint prim_UUID = context.addPatch(patch_center, patch_size);
 
     VoxelIntersection voxelintersection(&context);
+    voxelintersection.disableMessages();
 
     // Test slicing the primitive within a grid
     vec3 grid_center = make_vec3(0, 0, 0);

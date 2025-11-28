@@ -492,16 +492,18 @@ RT_PROGRAM void camera_raygen() {
     uint dimx = launch_dim.x * launch_dim.y; // x number of ray, y width, z length
     uint indx = launch_dim.x * launch_index.y + launch_index.x;
 
-    optix::int2 camera_resolution = optix::make_int2(launch_dim.y, launch_dim.z);
+    // Use full camera resolution (not tile size) for correct pixel calculations
+    optix::int2 camera_resolution = camera_resolution_full;
 
     PerRayData prd;
     prd.seed = tea<16>(indx + dimx * launch_index.z, random_seed);
 
     float3 sp;
 
-    uint ii = launch_index.y; // x-pixel
-    uint jj = launch_index.z; // y-pixel
-    size_t origin_ID = jj * launch_dim.y + ii; // global pixel index
+    // Calculate global pixel coordinates including tile offsets
+    uint ii = camera_pixel_offset_x + launch_index.y; // global x-pixel
+    uint jj = camera_pixel_offset_y + launch_index.z; // global y-pixel
+    size_t origin_ID = jj * camera_resolution_full.x + ii; // global pixel index
 
 
     // distortion
@@ -535,6 +537,7 @@ RT_PROGRAM void camera_raygen() {
     sp.x = camera_viewplane_length;
 
     // *** Determine point 'p' on focal plane that passes through the lens center (0,0) and pixel sample (view direction coordinate aligned) *** //
+    // Note: camera_focal_length is the focal plane distance (working distance), not the lens optical focal length
 
     float3 p = make_float3(camera_focal_length, sp.y / camera_viewplane_length * camera_focal_length, sp.z / camera_viewplane_length * camera_focal_length);
 
@@ -584,18 +587,20 @@ RT_PROGRAM void pixel_label_raygen() {
 
     uint indx = launch_dim.y * launch_index.z + launch_index.y;
 
-    optix::int2 camera_resolution = optix::make_int2(launch_dim.y, launch_dim.z);
+    // Use full camera resolution (not tile size) for correct pixel calculations
+    optix::int2 camera_resolution = camera_resolution_full;
 
     PerRayData prd;
     prd.seed = tea<16>(indx, random_seed);
 
     float3 sp;
 
-    uint ii = launch_index.y; // x-pixel
+    // Calculate global pixel coordinates including tile offsets
+    uint ii = camera_pixel_offset_x + launch_index.y; // global x-pixel
 
-    uint jj = launch_index.z; // y-pixel
+    uint jj = camera_pixel_offset_y + launch_index.z; // global y-pixel
 
-    size_t origin_ID = jj * launch_dim.y + ii; // global pixel index
+    size_t origin_ID = jj * camera_resolution_full.x + ii; // global pixel index
 
     // Map sample to center of pixel
     // Calculate VFOV scaling factor directly from aspect ratio
@@ -608,6 +613,7 @@ RT_PROGRAM void pixel_label_raygen() {
 
 
     // *** Determine point 'p' on focal plane that passes through the lens center (0,0) and pixel sample (view direction coordinate aligned) *** //
+    // Note: camera_focal_length is the focal plane distance (working distance), not the lens optical focal length
 
     float3 p = make_float3(camera_focal_length, sp.y / camera_viewplane_length * camera_focal_length, sp.z / camera_viewplane_length * camera_focal_length);
 

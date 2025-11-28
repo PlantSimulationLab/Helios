@@ -280,15 +280,9 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance(const std::vector<uint> &U
             pressure[u] = pressure_default;
         }
 
-        // Number of sides emitting radiation
-        Nsides[u] = 2; // default is 2
-        if (context->doesPrimitiveDataExist(p, "twosided_flag") && context->getPrimitiveDataType("twosided_flag") == helios::HELIOS_TYPE_UINT) {
-            uint flag;
-            context->getPrimitiveData(p, "twosided_flag", flag);
-            if (flag == 0) {
-                Nsides[u] = 1;
-            }
-        }
+        // Number of sides emitting radiation - check material first, then primitive data
+        uint twosided_flag = context->getPrimitiveTwosidedFlag(p, 1);
+        Nsides[u] = (twosided_flag == 0) ? 1 : 2;
 
         // Number of evaporating/transpiring faces
         stomatal_sidedness[u] = 0.f; // if Nsides=1, force this to be 0 (all stomata on upper surface)

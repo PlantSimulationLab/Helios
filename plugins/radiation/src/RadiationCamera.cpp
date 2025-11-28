@@ -19,6 +19,8 @@ Copyright (C) 2016-2025 Brian Bailey
 #include <queue>
 #include <set>
 #include <stack>
+#include <sstream>
+#include <filesystem>
 
 #include "global.h"
 
@@ -55,6 +57,11 @@ void RadiationModel::addRadiationCamera(const std::string &camera_label, const s
     if (iscameravisualizationenabled) {
         buildCameraModelGeometry(camera_label);
     }
+
+    // Auto-populate camera metadata (does not enable JSON writing)
+    CameraMetadata metadata;
+    populateCameraMetadata(camera_label, metadata);
+    camera_metadata[camera_label] = metadata;
 
     radiativepropertiesneedupdate = true;
 }
@@ -100,6 +107,272 @@ void RadiationModel::setCameraSpectralResponseFromLibrary(const std::string &cam
     }
 
     radiativepropertiesneedupdate = true;
+}
+
+void RadiationModel::addRadiationCameraFromLibrary(const std::string &camera_label,
+                                                   const std::string &library_camera_label,
+                                                   const helios::vec3 &position,
+                                                   const helios::vec3 &lookat,
+                                                   uint antialiasing_samples) {
+    // Call the overloaded version with empty band_labels to use XML labels
+    addRadiationCameraFromLibrary(camera_label, library_camera_label, position, lookat, antialiasing_samples, std::vector<std::string>());
+}
+
+void RadiationModel::addRadiationCameraFromLibrary(const std::string &camera_label,
+                                                   const std::string &library_camera_label,
+                                                   const helios::vec3 &position,
+                                                   const helios::vec3 &lookat,
+                                                   uint antialiasing_samples,
+                                                   const std::vector<std::string> &custom_band_labels) {
+
+    // Resolve library file path
+    std::filesystem::path library_path = helios::resolvePluginAsset("radiation", "camera_library/camera_library.xml");
+
+    // Load and parse XML file using pugixml
+    pugi::xml_document xmldoc;
+    pugi::xml_parse_result result = xmldoc.load_file(library_path.string().c_str());
+
+    if (!result) {
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCameraFromLibrary): Failed to load camera library file '" +
+                           library_path.string() + "'. " + result.description());
+    }
+
+    pugi::xml_node helios_node = xmldoc.child("helios");
+    if (helios_node.empty()) {
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCameraFromLibrary): Camera library XML must have '<helios>' root tag.");
+    }
+
+    // Find the camera node with matching label
+    pugi::xml_node camera_node;
+    for (pugi::xml_node cam = helios_node.child("camera"); cam; cam = cam.next_sibling("camera")) {
+        std::string label = cam.attribute("label").value();
+        if (label == library_camera_label) {
+            camera_node = cam;
+            break;
+        }
+    }
+
+    if (camera_node.empty()) {
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCameraFromLibrary): Camera '" +
+                           library_camera_label + "' not found in camera library.");
+    }
+
+    // Parse camera parameters
+    std::string manufacturer = camera_node.child("manufacturer").child_value();
+    std::string model = camera_node.child("model").child_value();
+
+    // Parse camera type (required field)
+    std::string camera_type = camera_node.child("type").child_value();
+    if (camera_type.empty()) {
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCameraFromLibrary): Missing required 'type' field for camera '" +
+                           library_camera_label + "'.");
+    }
+    if (camera_type != "rgb" && camera_type != "spectral" && camera_type != "thermal") {
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCameraFromLibrary): Invalid camera type '" + camera_type +
+                           "' for camera '" + library_camera_label + "'. Must be one of: 'rgb', 'spectral', or 'thermal'.");
+    }
+
+    float sensor_width_mm;
+    if (!helios::parse_float(camera_node.child("sensor_width_mm").child_value(), sensor_width_mm)) {
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCameraFromLibrary): Invalid or missing sensor_width_mm for camera '" +
+                           library_camera_label + "'.");
+    }
+
+    int resolution_width;
+    if (!helios::parse_int(camera_node.child("resolution_width").child_value(), resolution_width)) {
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCameraFromLibrary): Invalid or missing resolution_width for camera '" +
+                           library_camera_label + "'.");
+    }
+
+    int resolution_height;
+    if (!helios::parse_int(camera_node.child("resolution_height").child_value(), resolution_height)) {
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCameraFromLibrary): Invalid or missing resolution_height for camera '" +
+                           library_camera_label + "'.");
+    }
+
+    // Parse lens optical focal length (physical focal length, not 35mm equivalent)
+    float focal_length_mm;
+    if (!helios::parse_float(camera_node.child("focal_length_mm").child_value(), focal_length_mm)) {
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCameraFromLibrary): Invalid or missing focal_length_mm for camera '" +
+                           library_camera_label + "'.");
+    }
+
+    float lens_diameter_mm;
+    if (!helios::parse_float(camera_node.child("lens_diameter_mm").child_value(), lens_diameter_mm)) {
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCameraFromLibrary): Invalid or missing lens_diameter_mm for camera '" +
+                           library_camera_label + "'.");
+    }
+
+    // Parse optional focal plane distance (working distance), default to 2.0m if not specified
+    float focal_plane_distance_m = 2.0f;
+    if (camera_node.child("focal_plane_distance_m")) {
+        if (!helios::parse_float(camera_node.child("focal_plane_distance_m").child_value(), focal_plane_distance_m)) {
+            helios_runtime_error("ERROR (RadiationModel::addRadiationCameraFromLibrary): Invalid focal_plane_distance_m for camera '" +
+                               library_camera_label + "'.");
+        }
+    }
+
+    // Parse optional lens metadata
+    std::string lens_make = camera_node.child("lens_make").child_value();
+    std::string lens_model = camera_node.child("lens_model").child_value();
+    std::string lens_specification = camera_node.child("lens_specification").child_value();
+
+    // Parse optional exposure mode (default: "auto")
+    std::string exposure_mode = camera_node.child("exposure").child_value();
+    if (exposure_mode.empty()) {
+        exposure_mode = "auto"; // Default to auto exposure
+    }
+
+    // Parse optional shutter speed (default: 1/125 second)
+    float shutter_speed = 1.0f / 125.0f;
+    if (camera_node.child("shutter_speed")) {
+        if (!helios::parse_float(camera_node.child("shutter_speed").child_value(), shutter_speed)) {
+            std::cerr << "WARNING (RadiationModel::addRadiationCameraFromLibrary): Invalid shutter_speed for camera '"
+                      << library_camera_label << "'. Using default 1/125 second." << std::endl;
+            shutter_speed = 1.0f / 125.0f;
+        }
+    }
+
+    // Parse optional white balance mode (default: "auto")
+    std::string white_balance_mode = camera_node.child("white_balance").child_value();
+    if (white_balance_mode.empty()) {
+        white_balance_mode = "auto"; // Default to auto white balance
+    } else if (white_balance_mode != "auto" && white_balance_mode != "off") {
+        std::cerr << "WARNING (RadiationModel::addRadiationCameraFromLibrary): Invalid white_balance mode '"
+                  << white_balance_mode << "' for camera '" << library_camera_label
+                  << "'. Must be 'auto' or 'off'. Using default 'auto'." << std::endl;
+        white_balance_mode = "auto";
+    }
+
+    // Build CameraProperties struct
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = helios::make_int2(resolution_width, resolution_height);
+    camera_properties.sensor_width_mm = sensor_width_mm;
+
+    // Calculate HFOV from lens optical focal length and sensor width
+    // HFOV = 2 * atan(sensor_width / (2 * optical_focal_length))
+    float HFOV_rad = 2.0f * atan(sensor_width_mm / (2.0f * focal_length_mm));
+    camera_properties.HFOV = HFOV_rad * 180.0f / M_PI;
+
+    // Set focal plane distance (working distance for ray generation)
+    camera_properties.focal_plane_distance = focal_plane_distance_m;
+
+    // Convert lens optical focal length from mm to meters (for f-number calculations)
+    camera_properties.lens_focal_length = focal_length_mm / 1000.0f;
+
+    // Convert lens diameter from mm to meters
+    camera_properties.lens_diameter = lens_diameter_mm / 1000.0f;
+
+    // FOV aspect ratio will be auto-calculated
+    camera_properties.FOV_aspect_ratio = 0.0f;
+
+    // Set model name
+    camera_properties.model = manufacturer + " " + model;
+
+    // Set lens metadata
+    camera_properties.lens_make = lens_make;
+    camera_properties.lens_model = lens_model;
+    camera_properties.lens_specification = lens_specification;
+
+    // Set exposure settings
+    camera_properties.exposure = exposure_mode;
+    camera_properties.shutter_speed = shutter_speed;
+
+    // Set white balance mode
+    camera_properties.white_balance = white_balance_mode;
+
+    // Parse spectral response data and store in global data
+    // xml_band_labels stores the band labels from the XML file (used for global data naming)
+    std::vector<std::string> xml_band_labels;
+    // spectral_wavelength_ranges stores the wavelength range for each band (for auto-creating bands)
+    std::vector<std::pair<float, float>> spectral_wavelength_ranges;
+
+    for (pugi::xml_node spectral_node = camera_node.child("spectral_response");
+         spectral_node;
+         spectral_node = spectral_node.next_sibling("spectral_response")) {
+
+        std::string xml_band_label = spectral_node.attribute("label").value();
+        if (xml_band_label.empty()) {
+            helios_runtime_error("ERROR (RadiationModel::addRadiationCameraFromLibrary): spectral_response node missing 'label' attribute for camera '" +
+                               library_camera_label + "'.");
+        }
+
+        xml_band_labels.push_back(xml_band_label);
+
+        // Parse wavelength-response pairs
+        std::vector<helios::vec2> spectral_data;
+        std::string data_str = spectral_node.child_value();
+
+        if (!data_str.empty()) {
+            std::istringstream data_stream(data_str);
+            float wavelength, response;
+            while (data_stream >> wavelength >> response) {
+                spectral_data.push_back(helios::make_vec2(wavelength, response));
+            }
+        }
+
+        if (spectral_data.empty()) {
+            helios_runtime_error("ERROR (RadiationModel::addRadiationCameraFromLibrary): Empty spectral response data for band '" +
+                               xml_band_label + "' in camera '" + library_camera_label + "'.");
+        }
+
+        // Store wavelength range for potential band creation
+        spectral_wavelength_ranges.emplace_back(spectral_data.front().x, spectral_data.back().x);
+
+        // Store spectral response in global data with naming convention using XML labels
+        std::string global_data_label = library_camera_label + "_" + xml_band_label;
+        context->setGlobalData(global_data_label.c_str(), spectral_data);
+    }
+
+    if (xml_band_labels.empty()) {
+        helios_runtime_error("ERROR (RadiationModel::addRadiationCameraFromLibrary): No spectral response data found for camera '" +
+                           library_camera_label + "'.");
+    }
+
+    // Determine effective band labels: use custom labels if provided, otherwise use XML labels
+    std::vector<std::string> effective_band_labels;
+    if (!custom_band_labels.empty()) {
+        if (custom_band_labels.size() != xml_band_labels.size()) {
+            helios_runtime_error("ERROR (RadiationModel::addRadiationCameraFromLibrary): custom_band_labels size (" +
+                               std::to_string(custom_band_labels.size()) + ") does not match number of spectral responses in library (" +
+                               std::to_string(xml_band_labels.size()) + ") for camera '" + library_camera_label + "'.");
+        }
+        effective_band_labels = custom_band_labels;
+    } else {
+        effective_band_labels = xml_band_labels;
+    }
+
+    // Add radiation bands if they don't exist (using effective band labels)
+    for (size_t i = 0; i < effective_band_labels.size(); i++) {
+        const std::string &band_label = effective_band_labels[i];
+        if (!doesBandExist(band_label)) {
+            float min_wavelength = spectral_wavelength_ranges[i].first;
+            float max_wavelength = spectral_wavelength_ranges[i].second;
+            addRadiationBand(band_label, min_wavelength, max_wavelength);
+
+            // Disable emission for camera bands
+            disableEmission(band_label);
+
+            // Set scattering depth
+            setScatteringDepth(band_label, 3);
+
+            std::cout << "WARNING (RadiationModel::addRadiationCameraFromLibrary): Band '" << band_label
+                     << "' did not exist and was automatically created with wavelength range ["
+                     << min_wavelength << ", " << max_wavelength << "] nm." << std::endl;
+        }
+    }
+
+    // Create the camera using existing addRadiationCamera method (with effective band labels)
+    addRadiationCamera(camera_label, effective_band_labels, position, lookat, camera_properties, antialiasing_samples);
+
+    // Set the camera type
+    cameras.at(camera_label).camera_type = camera_type;
+
+    // Set spectral responses from the global data we created (mapping effective labels to XML labels)
+    for (size_t i = 0; i < effective_band_labels.size(); i++) {
+        std::string global_data_label = library_camera_label + "_" + xml_band_labels[i];
+        setCameraSpectralResponse(camera_label, effective_band_labels[i], global_data_label);
+    }
 }
 
 void RadiationModel::setCameraPosition(const std::string &camera_label, const helios::vec3 &position) {
@@ -179,6 +452,77 @@ void RadiationModel::setCameraOrientation(const std::string &camera_label, const
     }
 }
 
+CameraProperties RadiationModel::getCameraParameters(const std::string &camera_label) const {
+
+    // Validate camera exists
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::getCameraParameters): Camera '" + camera_label + "' does not exist.");
+    }
+
+    // Get reference to camera
+    const auto &camera = cameras.at(camera_label);
+
+    // Create and populate CameraProperties struct
+    CameraProperties camera_properties;
+    camera_properties.camera_resolution = camera.resolution;
+    camera_properties.HFOV = camera.HFOV_degrees;
+    camera_properties.lens_diameter = camera.lens_diameter;
+    camera_properties.focal_plane_distance = camera.focal_length;
+    camera_properties.lens_focal_length = camera.lens_focal_length;
+    camera_properties.sensor_width_mm = camera.sensor_width_mm;
+    camera_properties.model = camera.model;
+    camera_properties.lens_make = camera.lens_make;
+    camera_properties.lens_model = camera.lens_model;
+    camera_properties.lens_specification = camera.lens_specification;
+    camera_properties.exposure = camera.exposure;
+    camera_properties.shutter_speed = camera.shutter_speed;
+    camera_properties.white_balance = camera.white_balance;
+    camera_properties.FOV_aspect_ratio = camera.FOV_aspect_ratio;
+
+    return camera_properties;
+}
+
+void RadiationModel::updateCameraParameters(const std::string &camera_label, const CameraProperties &camera_properties) {
+
+    // Validate camera exists
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::updateCameraParameters): Camera '" + camera_label + "' does not exist.");
+    }
+
+    // Validate camera properties
+    if (camera_properties.camera_resolution.x <= 0 || camera_properties.camera_resolution.y <= 0) {
+        helios_runtime_error("ERROR (RadiationModel::updateCameraParameters): Camera resolution must be at least 1x1.");
+    } else if (camera_properties.HFOV <= 0 || camera_properties.HFOV >= 180.f) {
+        helios_runtime_error("ERROR (RadiationModel::updateCameraParameters): Camera horizontal field of view must be between 0 and 180 degrees.");
+    }
+
+    // Get reference to camera
+    auto &camera = cameras.at(camera_label);
+
+    // Update camera parameters
+    camera.resolution = camera_properties.camera_resolution;
+    camera.HFOV_degrees = camera_properties.HFOV;
+    camera.lens_diameter = camera_properties.lens_diameter;
+    camera.focal_length = camera_properties.focal_plane_distance;
+    camera.lens_focal_length = camera_properties.lens_focal_length;
+    camera.sensor_width_mm = camera_properties.sensor_width_mm;
+    camera.model = camera_properties.model;
+    camera.exposure = camera_properties.exposure;
+    camera.shutter_speed = camera_properties.shutter_speed;
+    camera.white_balance = camera_properties.white_balance;
+
+    // Recalculate FOV_aspect_ratio to ensure square pixels
+    camera.FOV_aspect_ratio = float(camera.resolution.x) / float(camera.resolution.y);
+
+    // Flag that radiative properties need to be updated
+    radiativepropertiesneedupdate = true;
+
+    // Update camera visualization if enabled
+    if (iscameravisualizationenabled) {
+        updateCameraModelPosition(camera_label);
+    }
+}
+
 std::vector<std::string> RadiationModel::getAllCameraLabels() {
     std::vector<std::string> labels(cameras.size());
     uint cam = 0;
@@ -215,6 +559,17 @@ std::string RadiationModel::writeCameraImage(const std::string &camera, const st
         camera_data.at(b) = cameras.at(camera).pixel_data.at(band);
 
         b++;
+    }
+
+    // Apply sRGB gamma compression for 3-channel (RGB) images
+    // This is done on the copy, preserving the original linear data
+    bool is_rgb = (camera_data.size() == 3);
+    if (is_rgb) {
+        for (auto &band_data : camera_data) {
+            for (float &v : band_data) {
+                v = RadiationCamera::lin_to_srgb(std::fmaxf(0.0f, v));
+            }
+        }
     }
 
     std::string frame_str;
@@ -269,12 +624,31 @@ std::string RadiationModel::writeCameraImage(const std::string &camera, const st
 
     std::string image_filepath = outfile.str();
 
-    // Write JSON metadata if it exists for this camera
-    if (camera_metadata.find(camera) != camera_metadata.end()) {
+    // Write JSON metadata if enabled for this camera
+    if (metadata_enabled_cameras.find(camera) != metadata_enabled_cameras.end()) {
+        // Preserve any existing image_processing parameters (e.g., from applyCameraImageCorrections)
+        CameraMetadata::ImageProcessingProperties saved_image_processing;
+        if (camera_metadata.find(camera) != camera_metadata.end()) {
+            saved_image_processing = camera_metadata.at(camera).image_processing;
+        }
+
+        // Re-populate metadata to capture any new data (e.g., agronomic properties)
+        CameraMetadata metadata;
+        populateCameraMetadata(camera, metadata);
+
+        // Restore image_processing parameters
+        metadata.image_processing = saved_image_processing;
+
+        // Set color space based on channel count (sRGB for RGB, linear for grayscale)
+        metadata.image_processing.color_space = is_rgb ? "sRGB" : "linear";
+
         // Extract just the filename (without directory path) for portability
         size_t last_slash = image_filepath.find_last_of("/\\");
         std::string filename_only = (last_slash != std::string::npos) ? image_filepath.substr(last_slash + 1) : image_filepath;
-        camera_metadata.at(camera).path = filename_only;
+        metadata.path = filename_only;
+
+        // Store updated metadata and write JSON file
+        camera_metadata[camera] = metadata;
         writeCameraMetadataFile(camera, output_path);
     }
 
@@ -396,9 +770,12 @@ void RadiationModel::updateCameraResponse(const std::string &orginalcameralabel,
     CameraProperties cameraproperties;
     cameraproperties.HFOV = calibratecamera.HFOV_degrees;
     cameraproperties.camera_resolution = calibratecamera.resolution;
-    cameraproperties.focal_plane_distance = calibratecamera.focal_length;
+    cameraproperties.focal_plane_distance = calibratecamera.focal_length; // Working distance for ray generation
+    cameraproperties.lens_focal_length = calibratecamera.lens_focal_length; // Optical focal length for aperture
     cameraproperties.lens_diameter = calibratecamera.lens_diameter;
     cameraproperties.FOV_aspect_ratio = calibratecamera.FOV_aspect_ratio;
+    cameraproperties.exposure = calibratecamera.exposure;
+    cameraproperties.shutter_speed = calibratecamera.shutter_speed;
 
     std::vector<uint> UUIDs_target = cameracalibration->getAllColorBoardUUIDs();
     std::string cameralabel = "calibration";
@@ -590,9 +967,12 @@ float RadiationModel::getCameraResponseScale(const std::string &orginalcameralab
     CameraProperties cameraproperties;
     cameraproperties.HFOV = calibratecamera.HFOV_degrees;
     cameraproperties.camera_resolution = calibratecamera.resolution;
-    cameraproperties.focal_plane_distance = calibratecamera.focal_length;
+    cameraproperties.focal_plane_distance = calibratecamera.focal_length; // Working distance for ray generation
+    cameraproperties.lens_focal_length = calibratecamera.lens_focal_length; // Optical focal length for aperture
     cameraproperties.lens_diameter = calibratecamera.lens_diameter;
     cameraproperties.FOV_aspect_ratio = calibratecamera.FOV_aspect_ratio;
+    cameraproperties.exposure = calibratecamera.exposure;
+    cameraproperties.shutter_speed = calibratecamera.shutter_speed;
 
     std::string cameralabel = orginalcameralabel + "Scale";
     RadiationModel::addRadiationCamera(cameralabel, bandlabels, calibratecamera.position, calibratecamera.lookat, cameraproperties, 20);
@@ -2418,17 +2798,17 @@ void RadiationModel::calibrateCamera(const std::string &originalcameralabel, con
     cameracalibration->writeCalibratedCameraResponses(cameraresplabels_raw, calibratedmark, camerascale * scalefactor);
 }
 
-std::vector<helios::vec2> RadiationModel::generateGaussianCameraResponse(float FWHM, float mu, float centrawavelength, const helios::int2 &wavebanrange) {
+std::vector<helios::vec2> RadiationModel::generateGaussianCameraResponse(float FWHM, float mu, float centrawavelength, const helios::int2 &wavebandrange) {
 
     // Convert FWHM to sigma
     float sigma = FWHM / (2 * std::sqrt(2 * std::log(2)));
 
-    size_t lenspectra = wavebanrange.y - wavebanrange.x;
+    size_t lenspectra = wavebandrange.y - wavebandrange.x;
     std::vector<helios::vec2> cameraresponse(lenspectra);
 
 
     for (int i = 0; i < lenspectra; ++i) {
-        cameraresponse.at(i).x = float(wavebanrange.x + i);
+        cameraresponse.at(i).x = float(wavebandrange.x + i);
     }
 
     // Gaussian function
@@ -2440,35 +2820,43 @@ std::vector<helios::vec2> RadiationModel::generateGaussianCameraResponse(float F
     return cameraresponse;
 }
 
-void RadiationModel::applyImageProcessingPipeline(const std::string &cameralabel, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float saturation_adjustment, float brightness_adjustment,
-                                                  float contrast_adjustment, float gain_adjustment) {
+void RadiationModel::applyCameraImageCorrections(const std::string &cameralabel, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float saturation_adjustment, float brightness_adjustment,
+                                                 float contrast_adjustment) {
 
     if (cameras.find(cameralabel) == cameras.end()) {
-        helios_runtime_error("ERROR (RadiationModel::applyImageProcessingPipeline): Camera '" + cameralabel + "' does not exist.");
+        helios_runtime_error("ERROR (RadiationModel::applyCameraImageCorrections): Camera '" + cameralabel + "' does not exist.");
     }
     RadiationCamera &camera = cameras.at(cameralabel);
     if (camera.pixel_data.find(red_band_label) == camera.pixel_data.end() || camera.pixel_data.find(green_band_label) == camera.pixel_data.end() || camera.pixel_data.find(blue_band_label) == camera.pixel_data.end()) {
-        helios_runtime_error("ERROR (RadiationModel::applyImageProcessingPipeline): One or more specified band labels do not exist for the camera pixel data.");
+        helios_runtime_error("ERROR (RadiationModel::applyCameraImageCorrections): One or more specified band labels do not exist for the camera pixel data.");
     }
 
-    // Step 1: Smart Auto-Exposure (percentile-based normalization)
-    camera.autoExposure(red_band_label, green_band_label, blue_band_label, gain_adjustment);
+    // Store parameters for metadata output
+    if (camera_metadata.find(cameralabel) == camera_metadata.end()) {
+        camera_metadata[cameralabel] = CameraMetadata();
+    }
+    camera_metadata[cameralabel].image_processing.saturation_adjustment = saturation_adjustment;
+    camera_metadata[cameralabel].image_processing.brightness_adjustment = brightness_adjustment;
+    camera_metadata[cameralabel].image_processing.contrast_adjustment = contrast_adjustment;
 
-    // Step 2: Spectral-based white balance
-    camera.whiteBalanceSpectral(red_band_label, green_band_label, blue_band_label, this->context);
+    // NOTE: Auto-exposure is now automatically applied during rendering based on camera exposure setting
+    // NOTE: White balance is now automatically applied during rendering based on camera white_balance setting
+    // NOTE: sRGB gamma compression is now applied during image export in writeCameraImage()
 
-    // Step 3: Brightness and contrast adjustments in linear space
+    // Step 1: Brightness and contrast adjustments in linear space
     if (brightness_adjustment != 1.f || contrast_adjustment != 1.f) {
         camera.adjustBrightnessContrast(red_band_label, green_band_label, blue_band_label, brightness_adjustment, contrast_adjustment);
     }
 
-    // Step 4: Saturation adjustment
+    // Step 2: Saturation adjustment
     if (saturation_adjustment != 1.f) {
         camera.adjustSaturation(red_band_label, green_band_label, blue_band_label, saturation_adjustment);
     }
+}
 
-    // Step 5: Gamma compression (final step)
-    camera.gammaCompress(red_band_label, green_band_label, blue_band_label);
+void RadiationModel::applyImageProcessingPipeline(const std::string &cameralabel, const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float saturation_adjustment, float brightness_adjustment,
+                                                  float contrast_adjustment, float gain_adjustment) {
+    applyCameraImageCorrections(cameralabel, red_band_label, green_band_label, blue_band_label, saturation_adjustment, brightness_adjustment, contrast_adjustment);
 }
 
 void RadiationCamera::normalizePixels() {
@@ -3079,6 +3467,232 @@ void RadiationCamera::autoExposure(const std::string &red_band_label, const std:
     }
 }
 
+void RadiationCamera::applyCameraExposure(helios::Context *context) {
+    // Skip if pixel_data is empty (camera hasn't been rendered yet)
+    if (pixel_data.empty()) {
+        return;
+    }
+
+    // Verify that all expected bands exist in pixel_data
+    for (const auto &band : band_labels) {
+        if (pixel_data.find(band) == pixel_data.end()) {
+            return; // Skip exposure if not all bands are populated yet
+        }
+    }
+
+    // Parse exposure mode
+    std::string exposure_mode = exposure;
+
+    // Manual mode: no automatic exposure scaling
+    if (exposure_mode == "manual") {
+        return;
+    }
+
+    // Auto mode: apply automatic exposure based on camera type
+    if (exposure_mode == "auto") {
+        // Determine camera type: if not set explicitly, infer from band count
+        std::string cam_type;
+        if (!camera_type.empty()) {
+            cam_type = camera_type;
+        } else {
+            // Infer type for manually created cameras
+            cam_type = (band_labels.size() >= 3) ? "rgb" : "spectral";
+        }
+
+        if (cam_type == "thermal") {
+            // Thermal cameras: skip exposure adjustment
+            return;
+        } else if (cam_type == "rgb" && band_labels.size() >= 3) {
+            // RGB cameras: luminance-based auto-exposure (18% gray target)
+
+            // Use the first 3 bands as RGB (or find bands named "red", "green", "blue")
+            std::string red_band, green_band, blue_band;
+            for (const auto &band : band_labels) {
+                if (band.find("red") != std::string::npos || band.find("Red") != std::string::npos || band.find("RED") != std::string::npos) {
+                    red_band = band;
+                } else if (band.find("green") != std::string::npos || band.find("Green") != std::string::npos || band.find("GREEN") != std::string::npos) {
+                    green_band = band;
+                } else if (band.find("blue") != std::string::npos || band.find("Blue") != std::string::npos || band.find("BLUE") != std::string::npos) {
+                    blue_band = band;
+                }
+            }
+
+            // Fallback to first 3 bands if named bands not found
+            if (red_band.empty()) red_band = band_labels[0];
+            if (green_band.empty()) green_band = band_labels[1];
+            if (blue_band.empty()) blue_band = band_labels[2];
+
+            auto &data_red = pixel_data.at(red_band);
+            auto &data_green = pixel_data.at(green_band);
+            auto &data_blue = pixel_data.at(blue_band);
+
+            const std::size_t N = data_red.size();
+
+            // Calculate luminance for each pixel
+            std::vector<float> luminance_values(N);
+            for (std::size_t i = 0; i < N; ++i) {
+                luminance_values[i] = luminance(data_red[i], data_green[i], data_blue[i]);
+            }
+
+            // Sort to find median
+            std::vector<float> sorted_luminance = luminance_values;
+            std::sort(sorted_luminance.begin(), sorted_luminance.end());
+
+            std::size_t median_idx = N / 2;
+            float median_luminance = sorted_luminance[median_idx];
+
+            // Target 18% gray
+            float target_median = 0.18f;
+            float auto_gain = target_median / std::max(median_luminance, 1e-6f);
+
+            // Apply gain to all bands
+            for (auto &band_pair : pixel_data) {
+                auto &data = band_pair.second;
+                for (std::size_t i = 0; i < N; ++i) {
+                    data[i] *= auto_gain;
+                }
+            }
+
+        } else if (cam_type == "spectral") {
+            // Spectral cameras: per-band normalization
+            for (auto &band_pair : pixel_data) {
+                auto &data = band_pair.second;
+                const std::size_t N = data.size();
+
+                // Calculate median for this band
+                std::vector<float> sorted_data = data;
+                std::sort(sorted_data.begin(), sorted_data.end());
+
+                std::size_t median_idx = N / 2;
+                float median_value = sorted_data[median_idx];
+
+                // Target 18% gray for each band independently
+                float target_median = 0.18f;
+                float band_gain = target_median / std::max(median_value, 1e-6f);
+
+                // Apply gain to this band
+                for (std::size_t i = 0; i < N; ++i) {
+                    data[i] *= band_gain;
+                }
+            }
+        } else {
+            helios_runtime_error("ERROR (RadiationCamera::applyCameraExposure): Unknown camera_type '" + cam_type + "'. Must be 'rgb', 'spectral', or 'thermal'.");
+        }
+        return;
+    }
+
+    // ISO mode: "ISOXXX" (e.g., "ISO100", "ISO200", etc.)
+    if (exposure_mode.substr(0, 3) == "ISO" || exposure_mode.substr(0, 3) == "iso") {
+        // Parse ISO value
+        int iso_value;
+        try {
+            iso_value = std::stoi(exposure_mode.substr(3));
+        } catch (...) {
+            helios_runtime_error("ERROR (RadiationCamera::applyCameraExposure): Invalid ISO format '" + exposure_mode + "'. Expected format: 'ISOXXX' (e.g., 'ISO100').");
+        }
+
+        if (iso_value <= 0) {
+            helios_runtime_error("ERROR (RadiationCamera::applyCameraExposure): ISO value must be positive. Got: " + std::to_string(iso_value));
+        }
+
+        // Validate that lens_focal_length is set (required for ISO mode)
+        if (lens_focal_length <= 0) {
+            helios_runtime_error("ERROR (RadiationCamera::applyCameraExposure): ISO mode requires lens_focal_length to be set. Camera '" + label + "' has lens_focal_length = " + std::to_string(lens_focal_length) + ". Either set it explicitly or use 'auto' or 'manual' exposure mode.");
+        }
+
+        // Calculate f-number from lens diameter and optical focal length
+        // f-number = lens_focal_length / lens_diameter
+        float f_number = lens_focal_length / std::max(lens_diameter, 1e-6f);
+
+        // Reference camera settings (chosen to match typical photography)
+        const float ref_iso = 100.0f;
+        const float ref_shutter = 1.0f / 125.0f;
+        const float ref_f_number = 2.8f;
+
+        // Calibration to match auto-exposure behavior
+        // Typical Helios scenes have raw median ~10, auto-exposure targets 0.18
+        // At reference settings (ISO 100, 1/125s, f/2.8), we want the same result as auto
+        const float typical_scene_median = 10.0f;
+        const float target_median = 0.18f;
+
+        // Calculate exposure from camera settings (proportional to ISO × t / N²)
+        // Higher ISO → brighter, longer shutter → brighter, wider aperture (smaller N) → brighter
+        float exposure = (float(iso_value) * shutter_speed) / (f_number * f_number);
+        float ref_exposure = (ref_iso * ref_shutter) / (ref_f_number * ref_f_number);
+
+        // Calibration: at reference settings with typical scene, achieve target_median
+        // Required gain at reference: target_median / typical_scene_median
+        // This gain must equal: ref_exposure × calibration_factor
+        // Therefore: calibration_factor = (target_median / typical_scene_median) / ref_exposure
+        float ref_gain = target_median / typical_scene_median;
+        float calibration_factor = ref_gain / ref_exposure;
+
+        // Final exposure multiplier
+        float exposure_multiplier = exposure * calibration_factor;
+
+        // Apply exposure to all bands
+        const std::size_t N = pixel_data.begin()->second.size();
+        for (auto &band_pair : pixel_data) {
+            auto &data = band_pair.second;
+            for (std::size_t i = 0; i < N; ++i) {
+                data[i] *= exposure_multiplier;
+            }
+        }
+        return;
+    }
+
+    // Unknown exposure mode
+    helios_runtime_error("ERROR (RadiationCamera::applyCameraExposure): Unknown exposure mode '" + exposure_mode + "'. Must be 'auto', 'ISOXXX' (e.g., 'ISO100'), or 'manual'.");
+}
+
+void RadiationCamera::applyCameraWhiteBalance(helios::Context *context) {
+    // Skip if pixel_data is empty (camera hasn't been rendered yet)
+    if (pixel_data.empty()) {
+        return;
+    }
+
+    // Verify that all expected bands exist in pixel_data
+    for (const auto &band : band_labels) {
+        if (pixel_data.find(band) == pixel_data.end()) {
+            return; // Skip white balance if not all bands are populated yet
+        }
+    }
+
+    // Parse white balance mode
+    std::string wb_mode = white_balance;
+
+    // "off" mode: no white balance correction
+    if (wb_mode == "off") {
+        return;
+    }
+
+    // Skip white balance for single-channel images (grayscale/thermal)
+    if (band_labels.size() < 3) {
+        return;
+    }
+
+    // "auto" mode: apply spectral white balance
+    if (wb_mode == "auto") {
+        // For 3+ channel images, apply white balance to first 3 channels
+        // Assume standard RGB ordering for the first 3 bands
+        std::string red_band = band_labels[0];
+        std::string green_band = band_labels[1];
+        std::string blue_band = band_labels[2];
+
+        try {
+            whiteBalanceSpectral(red_band, green_band, blue_band, context);
+        } catch (const std::exception &e) {
+            // If spectral white balance fails (e.g., no spectral data), silently skip
+            // This matches the behavior of whiteBalanceSpectral which returns early
+            // when all bands use "uniform" response
+        }
+        return;
+    }
+
+    // Unknown white balance mode
+    helios_runtime_error("ERROR (RadiationCamera::applyCameraWhiteBalance): Unknown white_balance mode '" + wb_mode + "'. Must be 'auto' or 'off'.");
+}
+
 void RadiationCamera::adjustBrightnessContrast(const std::string &red_band_label, const std::string &green_band_label, const std::string &blue_band_label, float brightness, float contrast) {
 #ifdef HELIOS_DEBUG
     if (pixel_data.find(red_band_label) == pixel_data.end() || pixel_data.find(green_band_label) == pixel_data.end() || pixel_data.find(blue_band_label) == pixel_data.end()) {
@@ -3180,6 +3794,296 @@ float RadiationModel::calculateCameraTiltAngle(const helios::vec3 &position, con
     return tilt_angle_deg;
 }
 
+void RadiationModel::computeAgronomicProperties(const std::string &camera_label, CameraMetadata::AgronomicProperties &props) const {
+    // Validate camera exists
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::computeAgronomicProperties): Camera '" + camera_label + "' does not exist.");
+    }
+
+    const auto &cam = cameras.at(camera_label);
+
+    // Clear any existing data
+    props.plant_species.clear();
+    props.plant_count.clear();
+    props.plant_height_m.clear();
+    props.plant_age_days.clear();
+    props.plant_stage.clear();
+    props.leaf_area_m2.clear();
+    props.weed_pressure = "";
+
+    // Load pixel UUID map from global data
+    std::vector<uint> pixel_UUIDs;
+    std::string pixel_UUID_label = "camera_" + camera_label + "_pixel_UUID";
+    if (!context->doesGlobalDataExist(pixel_UUID_label.c_str())) {
+        // No pixel UUID data available - skip agronomic properties
+        return;
+    }
+    context->getGlobalData(pixel_UUID_label.c_str(), pixel_UUIDs);
+
+    // Map: species_name -> set of unique plantIDs for that species
+    std::map<std::string, std::set<int>> species_to_plantIDs;
+
+    // Set of all plantIDs that are weeds
+    std::set<int> weed_plantIDs;
+
+    // Set of all unique plantIDs (for weed pressure calculation)
+    std::set<int> all_plantIDs;
+
+    // Maps for new agronomic properties (per species, per plantID)
+    std::map<std::string, std::map<int, float>> species_plant_heights; // species -> (plantID -> height)
+    std::map<std::string, std::map<int, float>> species_plant_ages; // species -> (plantID -> age)
+    std::map<std::string, std::map<int, std::string>> species_plant_stages; // species -> (plantID -> stage)
+    std::map<std::string, std::map<int, float>> species_plant_leaf_areas; // species -> (plantID -> leaf area)
+    std::map<std::string, std::map<int, int>> species_plant_pixel_counts; // species -> (plantID -> pixel count) for weighted averaging
+
+    // Iterate through all pixels to find unique objects and query their data
+    for (uint j = 0; j < cam.resolution.y; j++) {
+        for (uint i = 0; i < cam.resolution.x; i++) {
+            // Apply horizontal flip (same as in segmentation mask code)
+            uint ii = cam.resolution.x - i - 1;
+            uint pixel_index = j * cam.resolution.x + ii;
+
+            if (pixel_index >= pixel_UUIDs.size()) {
+                continue;
+            }
+
+            uint UUID_plus_one = pixel_UUIDs.at(pixel_index);
+            if (UUID_plus_one == 0) {
+                // Sky pixel, skip
+                continue;
+            }
+
+            uint UUID = UUID_plus_one - 1;
+
+            // Check if primitive exists
+            if (!context->doesPrimitiveExist(UUID)) {
+                continue;
+            }
+
+            // Get parent object ID
+            uint objID = context->getPrimitiveParentObjectID(UUID);
+            if (objID == 0) {
+                // Primitive has no parent object, skip
+                continue;
+            }
+
+            // Query plant_name (species)
+            std::string plant_name;
+            bool has_plant_name = false;
+            if (context->doesObjectDataExist(objID, "plant_name")) {
+                HeliosDataType datatype = context->getObjectDataType("plant_name");
+                if (datatype == HELIOS_TYPE_STRING) {
+                    context->getObjectData(objID, "plant_name", plant_name);
+                    has_plant_name = true;
+                }
+            }
+
+            // Query plantID
+            int plantID = -1;
+            bool has_plantID = false;
+            if (context->doesObjectDataExist(objID, "plantID")) {
+                HeliosDataType datatype = context->getObjectDataType("plantID");
+                if (datatype == HELIOS_TYPE_INT) {
+                    context->getObjectData(objID, "plantID", plantID);
+                    has_plantID = true;
+                } else if (datatype == HELIOS_TYPE_UINT) {
+                    uint plantID_uint;
+                    context->getObjectData(objID, "plantID", plantID_uint);
+                    plantID = static_cast<int>(plantID_uint);
+                    has_plantID = true;
+                }
+            }
+
+            // Query plant_type (to identify weeds)
+            std::string plant_type;
+            bool has_plant_type = false;
+            if (context->doesObjectDataExist(objID, "plant_type")) {
+                HeliosDataType datatype = context->getObjectDataType("plant_type");
+                if (datatype == HELIOS_TYPE_STRING) {
+                    context->getObjectData(objID, "plant_type", plant_type);
+                    has_plant_type = true;
+                }
+            }
+
+            // Query plant_height (for new agronomic metadata)
+            float plant_height = 0.0f;
+            bool has_plant_height = false;
+            if (context->doesObjectDataExist(objID, "plant_height")) {
+                HeliosDataType datatype = context->getObjectDataType("plant_height");
+                if (datatype == HELIOS_TYPE_FLOAT) {
+                    context->getObjectData(objID, "plant_height", plant_height);
+                    has_plant_height = true;
+                }
+            }
+
+            // Query age (for new agronomic metadata)
+            float age = 0.0f;
+            bool has_age = false;
+            if (context->doesObjectDataExist(objID, "age")) {
+                HeliosDataType datatype = context->getObjectDataType("age");
+                if (datatype == HELIOS_TYPE_FLOAT) {
+                    context->getObjectData(objID, "age", age);
+                    has_age = true;
+                }
+            }
+
+            // Query phenology_stage (for new agronomic metadata)
+            std::string phenology_stage;
+            bool has_phenology_stage = false;
+            if (context->doesObjectDataExist(objID, "phenology_stage")) {
+                HeliosDataType datatype = context->getObjectDataType("phenology_stage");
+                if (datatype == HELIOS_TYPE_STRING) {
+                    context->getObjectData(objID, "phenology_stage", phenology_stage);
+                    has_phenology_stage = true;
+                }
+            }
+
+            // Get primitive surface area (for leaf area calculation)
+            float primitive_area = context->getPrimitiveArea(UUID);
+
+            // Only process if we have the required data
+            if (has_plant_name && has_plantID) {
+                // Add plantID to the species set
+                species_to_plantIDs[plant_name].insert(plantID);
+
+                // Add to all plantIDs set
+                all_plantIDs.insert(plantID);
+
+                // Check if this plant is a weed
+                if (has_plant_type && plant_type == "weed") {
+                    weed_plantIDs.insert(plantID);
+                }
+
+                // Accumulate new agronomic data per species and plantID
+                if (has_plant_height) {
+                    species_plant_heights[plant_name][plantID] = plant_height;
+                }
+                if (has_age) {
+                    species_plant_ages[plant_name][plantID] = age;
+                }
+                if (has_phenology_stage) {
+                    species_plant_stages[plant_name][plantID] = phenology_stage;
+                }
+
+                // Accumulate leaf area for this plant
+                species_plant_leaf_areas[plant_name][plantID] += primitive_area;
+
+                // Track pixel count for weighted averaging
+                species_plant_pixel_counts[plant_name][plantID]++;
+            }
+        }
+    }
+
+    // If no valid data was found, leave properties empty
+    if (species_to_plantIDs.empty()) {
+        return;
+    }
+
+    // Build plant_species and plant_count vectors
+    for (const auto &species_pair : species_to_plantIDs) {
+        props.plant_species.push_back(species_pair.first);
+        props.plant_count.push_back(static_cast<int>(species_pair.second.size()));
+    }
+
+    // Compute new agronomic properties per species (parallel to plant_species vector)
+    for (const auto &species_pair : species_to_plantIDs) {
+        const std::string &species = species_pair.first;
+        const std::set<int> &plantIDs = species_pair.second;
+
+        // --- Plant Height (weighted average by pixel count) ---
+        if (species_plant_heights.find(species) != species_plant_heights.end()) {
+            float total_weighted_height = 0.0f;
+            int total_pixels = 0;
+            for (int plantID : plantIDs) {
+                if (species_plant_heights.at(species).find(plantID) != species_plant_heights.at(species).end()) {
+                    float height = species_plant_heights.at(species).at(plantID);
+                    int pixel_count = species_plant_pixel_counts.at(species).at(plantID);
+                    total_weighted_height += height * static_cast<float>(pixel_count);
+                    total_pixels += pixel_count;
+                }
+            }
+            if (total_pixels > 0) {
+                props.plant_height_m.push_back(total_weighted_height / static_cast<float>(total_pixels));
+            } else {
+                props.plant_height_m.push_back(0.0f);
+            }
+        } else {
+            props.plant_height_m.push_back(0.0f);
+        }
+
+        // --- Plant Age (weighted average by pixel count) ---
+        if (species_plant_ages.find(species) != species_plant_ages.end()) {
+            float total_weighted_age = 0.0f;
+            int total_pixels = 0;
+            for (int plantID : plantIDs) {
+                if (species_plant_ages.at(species).find(plantID) != species_plant_ages.at(species).end()) {
+                    float age = species_plant_ages.at(species).at(plantID);
+                    int pixel_count = species_plant_pixel_counts.at(species).at(plantID);
+                    total_weighted_age += age * static_cast<float>(pixel_count);
+                    total_pixels += pixel_count;
+                }
+            }
+            if (total_pixels > 0) {
+                props.plant_age_days.push_back(total_weighted_age / static_cast<float>(total_pixels));
+            } else {
+                props.plant_age_days.push_back(0.0f);
+            }
+        } else {
+            props.plant_age_days.push_back(0.0f);
+        }
+
+        // --- Plant Stage (mode - most common stage) ---
+        if (species_plant_stages.find(species) != species_plant_stages.end()) {
+            std::map<std::string, int> stage_counts;
+            for (int plantID : plantIDs) {
+                if (species_plant_stages.at(species).find(plantID) != species_plant_stages.at(species).end()) {
+                    std::string stage = species_plant_stages.at(species).at(plantID);
+                    stage_counts[stage]++;
+                }
+            }
+            // Find most common stage
+            std::string mode_stage;
+            int max_count = 0;
+            for (const auto &stage_pair : stage_counts) {
+                if (stage_pair.second > max_count) {
+                    max_count = stage_pair.second;
+                    mode_stage = stage_pair.first;
+                }
+            }
+            props.plant_stage.push_back(mode_stage);
+        } else {
+            props.plant_stage.push_back("");
+        }
+
+        // --- Leaf Area (sum of all leaf areas for this species) ---
+        if (species_plant_leaf_areas.find(species) != species_plant_leaf_areas.end()) {
+            float total_leaf_area = 0.0f;
+            for (int plantID : plantIDs) {
+                if (species_plant_leaf_areas.at(species).find(plantID) != species_plant_leaf_areas.at(species).end()) {
+                    total_leaf_area += species_plant_leaf_areas.at(species).at(plantID);
+                }
+            }
+            props.leaf_area_m2.push_back(total_leaf_area);
+        } else {
+            props.leaf_area_m2.push_back(0.0f);
+        }
+    }
+
+    // Calculate weed pressure
+    if (!all_plantIDs.empty()) {
+        float weed_fraction = static_cast<float>(weed_plantIDs.size()) / static_cast<float>(all_plantIDs.size());
+        float weed_percentage = weed_fraction * 100.0f;
+
+        if (weed_percentage <= 20.0f) {
+            props.weed_pressure = "low";
+        } else if (weed_percentage <= 40.0f) {
+            props.weed_pressure = "moderate";
+        } else {
+            props.weed_pressure = "high";
+        }
+    }
+}
+
 void RadiationModel::populateCameraMetadata(const std::string &camera_label, CameraMetadata &metadata) const {
     // Validate camera exists
     if (cameras.find(camera_label) == cameras.end()) {
@@ -3192,6 +4096,7 @@ void RadiationModel::populateCameraMetadata(const std::string &camera_label, Cam
     metadata.camera_properties.width = cam.resolution.x;
     metadata.camera_properties.height = cam.resolution.y;
     metadata.camera_properties.channels = static_cast<int>(cam.band_labels.size());
+    metadata.camera_properties.type = cam.camera_type;
 
     // Calculate sensor dimensions from HFOV and sensor_width_mm
     // sensor_width is already in mm, stored in the camera
@@ -3203,15 +4108,17 @@ void RadiationModel::populateCameraMetadata(const std::string &camera_label, Cam
     // Calculate sensor height from sensor width and aspect ratio
     metadata.camera_properties.sensor_height = cam.sensor_width_mm / cam.FOV_aspect_ratio;
 
-    // Calculate optical focal length from HFOV and sensor width
-    // focal_length = sensor_width / (2 * tan(HFOV/2))
+    // Back-calculate optical focal length from HFOV and sensor width for metadata export
+    // This ensures metadata accurately reflects the configured camera geometry (HFOV)
+    // Note: For ISO exposure calculations, we use lens_focal_length which may differ from this value
     float HFOV_rad = cam.HFOV_degrees * M_PI / 180.0f;
-    metadata.camera_properties.focal_length = cam.sensor_width_mm / (2.0f * tan(HFOV_rad / 2.0f));
+    float optical_focal_length_mm = cam.sensor_width_mm / (2.0f * tan(HFOV_rad / 2.0f));
+    metadata.camera_properties.focal_length = optical_focal_length_mm;
 
-    // Calculate aperture (f-number = focal_length / aperture_diameter)
+    // Calculate aperture (f-number = optical_focal_length / lens_diameter)
     if (cam.lens_diameter > 0) {
         float lens_diameter_mm = cam.lens_diameter * 1000.0f; // Convert meters to mm
-        float f_number = metadata.camera_properties.focal_length / lens_diameter_mm;
+        float f_number = optical_focal_length_mm / lens_diameter_mm;
         std::ostringstream aperture_str;
         aperture_str << "f/" << std::fixed << std::setprecision(1) << f_number;
         metadata.camera_properties.aperture = aperture_str.str();
@@ -3221,6 +4128,18 @@ void RadiationModel::populateCameraMetadata(const std::string &camera_label, Cam
 
     // Camera model
     metadata.camera_properties.model = cam.model;
+
+    // Lens metadata
+    metadata.camera_properties.lens_make = cam.lens_make;
+    metadata.camera_properties.lens_model = cam.lens_model;
+    metadata.camera_properties.lens_specification = cam.lens_specification;
+
+    // Exposure settings
+    metadata.camera_properties.exposure = cam.exposure;
+    metadata.camera_properties.shutter_speed = cam.shutter_speed;
+
+    // White balance mode
+    metadata.camera_properties.white_balance = cam.white_balance;
 
     // --- Location Properties --- //
     helios::Location loc = context->getLocation();
@@ -3246,8 +4165,55 @@ void RadiationModel::populateCameraMetadata(const std::string &camera_label, Cam
     metadata.acquisition_properties.camera_angle_deg = calculateCameraTiltAngle(cam.position, cam.lookat);
     metadata.acquisition_properties.light_source = detectLightingType();
 
+    // --- Agronomic Properties --- //
+    computeAgronomicProperties(camera_label, metadata.agronomic_properties);
+
     // Note: path field is left empty and will be set when image is written
     metadata.path = "";
+}
+
+void RadiationModel::enableCameraMetadata(const std::string &camera_label) {
+    // Validate camera exists
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::enableCameraMetadata): Camera '" + camera_label + "' does not exist.");
+    }
+
+    // Preserve any existing image_processing parameters (e.g., from applyCameraImageCorrections)
+    CameraMetadata::ImageProcessingProperties saved_image_processing;
+    if (camera_metadata.find(camera_label) != camera_metadata.end()) {
+        saved_image_processing = camera_metadata.at(camera_label).image_processing;
+    }
+
+    // Populate metadata from camera properties and context
+    CameraMetadata metadata;
+    populateCameraMetadata(camera_label, metadata);
+
+    // Restore image_processing parameters
+    metadata.image_processing = saved_image_processing;
+
+    // Store metadata and mark camera as enabled for metadata writing
+    camera_metadata[camera_label] = metadata;
+    metadata_enabled_cameras.insert(camera_label);
+}
+
+void RadiationModel::enableCameraMetadata(const std::vector<std::string> &camera_labels) {
+    // Enable metadata for each camera in the vector
+    for (const auto &camera_label : camera_labels) {
+        enableCameraMetadata(camera_label);
+    }
+}
+
+CameraMetadata RadiationModel::getCameraMetadata(const std::string &camera_label) const {
+    // Validate camera exists
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::getCameraMetadata): Camera '" + camera_label + "' does not exist.");
+    }
+
+    // Re-populate metadata to ensure it reflects current state (e.g., light sources, updated context data)
+    CameraMetadata metadata;
+    populateCameraMetadata(camera_label, metadata);
+
+    return metadata;
 }
 
 void RadiationModel::setCameraMetadata(const std::string &camera_label, const CameraMetadata &metadata) {
@@ -3267,10 +4233,12 @@ std::string RadiationModel::writeCameraMetadataFile(const std::string &camera_la
 
     const auto &metadata = camera_metadata.at(camera_label);
 
-    // Helper lambda to round floats to a specific number of decimal places for clean JSON output
-    auto round_to_precision = [](float value, int decimals) -> float {
-        float multiplier = std::pow(10.0f, decimals);
-        return std::round(value * multiplier) / multiplier;
+    // Helper lambda to format floats with specific decimal precision for clean JSON output
+    // Converts to string with fixed precision, then parses as double to avoid float representation artifacts
+    auto format_float = [](float value, int decimals) -> double {
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(decimals) << value;
+        return std::stod(oss.str());
     };
 
     // Build JSON structure matching schema
@@ -3280,21 +4248,84 @@ std::string RadiationModel::writeCameraMetadataFile(const std::string &camera_la
     j["camera_properties"]["height"] = metadata.camera_properties.height;
     j["camera_properties"]["width"] = metadata.camera_properties.width;
     j["camera_properties"]["channels"] = metadata.camera_properties.channels;
-    j["camera_properties"]["focal_length"] = round_to_precision(metadata.camera_properties.focal_length, 2);
+    j["camera_properties"]["type"] = metadata.camera_properties.type;
+    j["camera_properties"]["focal_length"] = format_float(metadata.camera_properties.focal_length, 2);
     j["camera_properties"]["aperture"] = metadata.camera_properties.aperture;
-    j["camera_properties"]["sensor_width"] = round_to_precision(metadata.camera_properties.sensor_width, 2);
-    j["camera_properties"]["sensor_height"] = round_to_precision(metadata.camera_properties.sensor_height, 2);
+    j["camera_properties"]["sensor_width"] = format_float(metadata.camera_properties.sensor_width, 2);
+    j["camera_properties"]["sensor_height"] = format_float(metadata.camera_properties.sensor_height, 2);
     j["camera_properties"]["model"] = metadata.camera_properties.model;
 
-    j["location_properties"]["latitude"] = round_to_precision(metadata.location_properties.latitude, 6);
-    j["location_properties"]["longitude"] = round_to_precision(metadata.location_properties.longitude, 6);
+    // Only include lens fields if they're not empty
+    if (!metadata.camera_properties.lens_make.empty()) {
+        j["camera_properties"]["lens_make"] = metadata.camera_properties.lens_make;
+    }
+    if (!metadata.camera_properties.lens_model.empty()) {
+        j["camera_properties"]["lens_model"] = metadata.camera_properties.lens_model;
+    }
+    if (!metadata.camera_properties.lens_specification.empty()) {
+        j["camera_properties"]["lens_specification"] = metadata.camera_properties.lens_specification;
+    }
+
+    // Exposure settings
+    j["camera_properties"]["exposure"] = metadata.camera_properties.exposure;
+    j["camera_properties"]["shutter_speed"] = format_float(metadata.camera_properties.shutter_speed, 6);
+
+    // White balance mode
+    j["camera_properties"]["white_balance"] = metadata.camera_properties.white_balance;
+
+    j["location_properties"]["latitude"] = format_float(metadata.location_properties.latitude, 6);
+    j["location_properties"]["longitude"] = format_float(metadata.location_properties.longitude, 6);
 
     j["acquisition_properties"]["date"] = metadata.acquisition_properties.date;
     j["acquisition_properties"]["time"] = metadata.acquisition_properties.time;
-    j["acquisition_properties"]["UTC_offset"] = round_to_precision(metadata.acquisition_properties.UTC_offset, 1);
-    j["acquisition_properties"]["camera_height_m"] = round_to_precision(metadata.acquisition_properties.camera_height_m, 2);
-    j["acquisition_properties"]["camera_angle_deg"] = round_to_precision(metadata.acquisition_properties.camera_angle_deg, 2);
+    j["acquisition_properties"]["UTC_offset"] = format_float(metadata.acquisition_properties.UTC_offset, 1);
+    j["acquisition_properties"]["camera_height_m"] = format_float(metadata.acquisition_properties.camera_height_m, 2);
+    j["acquisition_properties"]["camera_angle_deg"] = format_float(metadata.acquisition_properties.camera_angle_deg, 2);
     j["acquisition_properties"]["light_source"] = metadata.acquisition_properties.light_source;
+
+    // Always include image_processing section with color_space
+    const auto &img_proc = metadata.image_processing;
+    j["image_processing"]["saturation_adjustment"] = format_float(img_proc.saturation_adjustment, 2);
+    j["image_processing"]["brightness_adjustment"] = format_float(img_proc.brightness_adjustment, 2);
+    j["image_processing"]["contrast_adjustment"] = format_float(img_proc.contrast_adjustment, 2);
+    j["image_processing"]["color_space"] = img_proc.color_space;
+
+    // Only include agronomic_properties if data is available
+    if (!metadata.agronomic_properties.plant_species.empty()) {
+        j["agronomic_properties"]["plant_species"] = metadata.agronomic_properties.plant_species;
+        j["agronomic_properties"]["plant_count"] = metadata.agronomic_properties.plant_count;
+
+        // Format new agronomic fields with appropriate precision
+        if (!metadata.agronomic_properties.plant_height_m.empty()) {
+            std::vector<double> formatted_heights;
+            for (float height : metadata.agronomic_properties.plant_height_m) {
+                formatted_heights.push_back(format_float(height, 2));
+            }
+            j["agronomic_properties"]["plant_height_m"] = formatted_heights;
+        }
+
+        if (!metadata.agronomic_properties.plant_age_days.empty()) {
+            std::vector<double> formatted_ages;
+            for (float age : metadata.agronomic_properties.plant_age_days) {
+                formatted_ages.push_back(format_float(age, 1));
+            }
+            j["agronomic_properties"]["plant_age_days"] = formatted_ages;
+        }
+
+        if (!metadata.agronomic_properties.plant_stage.empty()) {
+            j["agronomic_properties"]["plant_stage"] = metadata.agronomic_properties.plant_stage;
+        }
+
+        if (!metadata.agronomic_properties.leaf_area_m2.empty()) {
+            std::vector<double> formatted_leaf_areas;
+            for (float area : metadata.agronomic_properties.leaf_area_m2) {
+                formatted_leaf_areas.push_back(format_float(area, 4));
+            }
+            j["agronomic_properties"]["leaf_area_m2"] = formatted_leaf_areas;
+        }
+
+        j["agronomic_properties"]["weed_pressure"] = metadata.agronomic_properties.weed_pressure;
+    }
 
     // Generate JSON filename (replace image extension with .json)
     std::string json_filename = metadata.path;

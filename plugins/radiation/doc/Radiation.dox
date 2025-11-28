@@ -177,7 +177,19 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
   A primitive with "twosided_flag" set to 0 will not absorb any radiation from the back face of the primitive, but it will attenuate radiation. So if a ray hits the back face, the ray trajectory will be terminated, but no energy will be deposited.
 
-  Example: If we had a single patch and a diffuse radiation source with a flux of 1.0, with default behavior the absorbed flux on the patch would be 2.0 because it would absorb energy from both faces, but the end flux would be expressed on a single-sided area basis. If "twosided_flag" was set to 0 for that patch (non-default behavior), then the absorbed flux on the patch would be 1.0. 
+  Example: If we had a single patch and a diffuse radiation source with a flux of 1.0, with default behavior the absorbed flux on the patch would be 2.0 because it would absorb energy from both faces, but the end flux would be expressed on a single-sided area basis. If "twosided_flag" was set to 0 for that patch (non-default behavior), then the absorbed flux on the patch would be 1.0.
+
+ <b>Material-based Configuration (Recommended)</b>
+
+ The twosided_flag can also be set at the material level using Context::setMaterialTwosidedFlag(). When a primitive has a user-assigned material, the material's twosided_flag setting takes precedence over primitive data. This allows configuring sidedness once on a material and having it automatically apply to all primitives using that material:
+
+  ~~~~~~{.cpp}
+  context.addMaterial("ground_material");
+  context.setMaterialTwosidedFlag("ground_material", 0);  // One-sided
+  context.assignMaterialToPrimitive(ground_UUIDs, "ground_material");
+  ~~~~~~
+
+ If no user-assigned material exists (or the material is auto-generated), the radiation model falls back to checking for "twosided_flag" primitive data.
 
  \subsection RadBands Defining Wavelength Bands
 
@@ -578,11 +590,122 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  This will add a 3-band RGB camera, and assumes that radiation bands with labels "red", "green", and "blue" have been added based on a call to \ref RadiationModel::addRadiationBand().
 
+ \subsubsection RadCamLibrary Adding a Camera from the Camera Library
+
+ For convenience, a library of real-world cameras with pre-configured intrinsic parameters and spectral response data is provided. This allows you to quickly set up cameras with realistic properties without manually specifying all camera parameters.
+
+ The camera library is located at <tt>plugins/radiation/camera_library/camera_library.xml</tt> and currently includes the following cameras:
+
+ <table>
+   <tr>
+     <th>Camera Label</th>
+     <th>Manufacturer</th>
+     <th>Model</th>
+     <th>Sensor Width</th>
+     <th>Resolution</th>
+     <th>Focal Length</th>
+     <th>Lens Diameter</th>
+   </tr>
+   <tr>
+     <td>Canon_20D</td>
+     <td>Canon</td>
+     <td>EOS 20D</td>
+     <td>22.5 mm</td>
+     <td>3504 x 2236</td>
+     <td>31.0 mm</td>
+     <td>6.9 mm</td>
+   </tr>
+   <tr>
+     <td>Nikon_D700</td>
+     <td>Nikon</td>
+     <td>D700</td>
+     <td>36.0 mm</td>
+     <td>3008 x 2000</td>
+     <td>50.0 mm</td>
+     <td>27.8 mm</td>
+   </tr>
+   <tr>
+     <td>Nikon_D50</td>
+     <td>Nikon</td>
+     <td>D50</td>
+     <td>23.7 mm</td>
+     <td>3008 x 2000</td>
+     <td>33.9 mm</td>
+     <td>7.53 mm</td>
+   </tr>
+   <tr>
+     <td>iPhone11</td>
+     <td>Apple</td>
+     <td>iPhone 11</td>
+     <td>4.29 mm</td>
+     <td>3024 x 4032</td>
+     <td>4.25 mm</td>
+     <td>2.36 mm</td>
+   </tr>
+   <tr>
+     <td>iPhone12ProMAX</td>
+     <td>Apple</td>
+     <td>iPhone 12 Pro Max</td>
+     <td>5.1 mm</td>
+     <td>3024 x 4032</td>
+     <td>5.1 mm</td>
+     <td>3.19 mm</td>
+   </tr>
+ </table>
+
+ \note Sensor height is automatically calculated from sensor width and resolution to ensure square pixels: <tt>sensor_height = sensor_width × (resolution_height / resolution_width)</tt>.
+
+ Each camera in the library includes manufacturer-measured spectral response curves for red, green, and blue channels. The spectral response data sources are documented in the XML file comments.
+
+ To add a camera from the library, use the \ref RadiationModel::addRadiationCameraFromLibrary() method:
+
+ ~~~~~~{.cpp}
+ vec3 camera_position(0,0,3);
+ vec3 camera_lookat(0,0,0);
+ uint antialiasing_samples = 100;
+
+ // Add an iPhone 11 camera from the library
+ radiationmodel.addRadiationCameraFromLibrary("myiphone", "iPhone11", camera_position, camera_lookat, antialiasing_samples);
+ ~~~~~~
+
+ This method automatically:
+ - Loads all intrinsic camera parameters (sensor dimensions, resolution, field of view, focal length, lens diameter)
+ - Creates radiation bands for red, green, and blue channels if they don't already exist
+ - Sets the spectral response for each band based on the manufacturer's measured data
+ - Stores the spectral response data in global data with labels like <tt>iPhone11_red</tt>, <tt>iPhone11_green</tt>, <tt>iPhone11_blue</tt>
+
+ \paragraph RadCamLibraryCustomBands Custom Band Names
+
+ You can also specify custom band names when loading a camera from the library. This is useful when you want to use different band names than the default "red", "green", "blue" labels defined in the XML file:
+
+ ~~~~~~{.cpp}
+ // Use custom band names instead of default "red", "green", "blue"
+ std::vector<std::string> custom_bands = {"R", "G", "B"};
+ radiationmodel.addRadiationCameraFromLibrary("myiphone", "iPhone11", camera_position, camera_lookat, antialiasing_samples, custom_bands);
+ ~~~~~~
+
+ The custom band names are mapped to the spectral responses in the order they appear in the camera library XML file. For example, if the XML defines spectral responses in order "red", "green", "blue" and you provide <tt>custom_bands = {"R", "G", "B"}</tt>, then "R" will use the "red" spectral response, "G" will use "green", and "B" will use "blue".
+
+ The number of custom band names must exactly match the number of spectral responses defined in the camera library entry. If the sizes don't match, an error will be raised.
+
+ \note When using custom band names, the global data storing spectral response curves still uses the XML labels (e.g., <tt>iPhone11_red</tt>). Only the band names used for radiation model operations are customized.
+
+ If the radiation bands (red, green, blue) don't exist when loading a camera from the library, they will be automatically created with:
+ - Wavelength ranges determined from the spectral response data (typically 400-720 nm)
+ - Emission disabled (cameras measure, not emit radiation)
+ - Scattering depth set to 3
+
+ A warning message will be printed if bands are auto-created.
+
+ \note The working distance (focal plane distance) for cameras loaded from the library is set to a default value of 2.0 meters. This is the distance at which objects will be in focus.
+
  \subsubsection RadCamSpecular Radiation Camera Specular Reflection
 
- Specular reflection causes a surface to look "shiny". Waxy leaves or polished objects have high specular reflection, causing glancing light angles to appear very bright. Specular reflection is modeled using a Blinn-Phong-style approach, which provides a simple approximation to the full specular BRDF.
+ Specular reflection causes a surface to look "shiny". Waxy leaves or polished objects have high specular reflection, causing glancing light angles to appear very bright. Specular reflection is modeled using a Blinn-Phong-style approach, which provides a simple approximation to Fresnel reflection at the air-material interface.
 
- Specular reflection effects can be included in simulated images by setting the value of the primitive data "specular_exponent" and/or "specular_scale" for each primitive. By default, if this primitive data is not set for any primitives specular reflection will be disabled entirely. Furthermore, if the specular exponent is set to a negative value for a given primitive, or the primitive data "specular_exponent" does not exist for a given primitive, specular reflection will be disabled for that primitive.
+ Physically, specular reflection occurs at the surface interface before light penetrates the material. For dielectric materials like leaves and plastics, the specular highlight reflects the color of the incident light source (typically white for sunlight), not the material's diffuse color. This is why shiny leaves have white highlights rather than green ones.
+
+ Specular reflection effects can be included in simulated images by setting the value of the primitive data "specular_exponent" and/or "specular_scale" for each primitive. By default, if this primitive data is not set for any primitives specular reflection will be disabled entirely. Furthermore, if the specular exponent is set to a negative value for a given primitive, or the primitive data "specular_exponent" does not exist for a given primitive, specular reflection will be disabled for that primitive. Specular reflection is supported for all radiation source types (collimated, sunsphere, sphere, disk, and rectangle).
 
  The strength of specular reflection is calculated according to the following equation:
 
@@ -590,7 +713,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
     I_{spec} = I_{s} \, k_s \, \mathrm{max}\left(0, \vec{n}_{spec} \cdot \vec{n}_p \right)^k\left(\frac{k+2}{2\pi}\right),
  \f]
 
- where \f$I_{spec}\f$ is the specular flux contribution, \f$I_s\f$ is the outgoing flux of the sampled primitive, \f$k_s\f$ is the specular scaling coefficient, \f$\vec{n}_p\f$ is the surface normal, \f$\vec{n}_s\f$ is the source direction, \f$\vec{n}_{ray}\f$ is the ray direction, and \f$k\f$ is the specular exponent. \f$\vec{n}_{spec}\f$ is the specular reflection direction, which is calculated as:
+ where \f$I_{spec}\f$ is the specular flux contribution, \f$I_s\f$ is the incident flux from the radiation source, \f$k_s\f$ is the specular scaling coefficient, \f$\vec{n}_p\f$ is the surface normal, \f$\vec{n}_s\f$ is the source direction, \f$\vec{n}_{ray}\f$ is the ray direction, and \f$k\f$ is the specular exponent. \f$\vec{n}_{spec}\f$ is the specular reflection direction, which is calculated as:
 
  \f[
     \vec{n}_{spec} = \frac{\vec{n}_s - \vec{n}_{ray}}{|| \vec{n}_s + \vec{n}_{ray} ||}.
@@ -663,6 +786,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  - <b>camera_properties</b>: Intrinsic camera parameters including image resolution, number of channels, optical focal length (mm), aperture (f-stop), and physical sensor dimensions (mm)
  - <b>location_properties</b>: Geographic coordinates (latitude/longitude in degrees)
  - <b>acquisition_properties</b>: Capture information including date (YYYY-MM-DD), time (HH:MM:SS), UTC offset, camera height above ground (meters), camera tilt angle from horizontal (degrees), and light source type ("sunlight", "artificial", "mixed", or "none")
+ - <b>image_processing</b>: (optional) Any applied image corrections including saturation, brightness, contrast adjustments and gamma compression flag
 
  \paragraph RadCamMetadataAuto Auto-populating Metadata
 
@@ -756,6 +880,12 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
      "camera_height_m": 50.0,
      "camera_angle_deg": 15.0,
      "light_source": "sunlight"
+   },
+   "image_processing": {
+     "saturation_adjustment": 1.5,
+     "brightness_adjustment": 1.2,
+     "contrast_adjustment": 1.1,
+     "color_space": "sRGB"
    }
  }
  ~~~~~~
@@ -967,6 +1097,26 @@ The above example assumes that we have already added some geometry to the Contex
  Simulated camera data can be written to file as a JPEG image, or the raw pixel data can be queried from the Context.
 
  JPEG images are written either as a grayscale image (1 spectral band) or and RGB image (3 spectral bands) using the \ref RadiationModel::writeCameraImage() method. This method takes three required arguments and two optional arguments: 1) a string denoting the label of a camera that was added through the \ref RadiationModel::addRadiationCamera() method, 2) a vector of strings denoting the label(s) of radiation bands to be written to the image(s), which must contain exactly 1 element (grayscale image) or 3 elements (RGB image), and 3) a string denoting the base of the image filename, which may be appended with information like a radiation band label or frame count. The two optional arguments are: 1) the relative path to the directory where the images should be stored, and 2) a numerical integer identifier to be appended to the image file name (e.g., "camera_thermal_00001.jpeg"). Note that this value must be less than or equal to 99,9999. By default, images are stored in the current working directory, and the numerical identifier is omitted unless a value is provided.
+
+ \paragraph RadCamImageCorrections Applying Camera Image Corrections
+
+ Before writing RGB camera images, you can apply post-processing corrections using the \ref RadiationModel::applyCameraImageCorrections() method. This method applies brightness/contrast adjustment, saturation adjustment, and gamma compression to produce more realistic camera-like output. The correction parameters are automatically saved to camera metadata if metadata export is enabled via \ref RadiationModel::enableCameraMetadata().
+
+ ~~~~~~{.cpp}
+ // After running radiation simulation...
+ radiationmodel.runBand({"red","green","blue"});
+
+ // Apply image corrections before writing
+ radiationmodel.applyCameraImageCorrections("visible", "red", "green", "blue",
+                                            1.5f,  // saturation adjustment (1.0 = no change)
+                                            1.2f,  // brightness adjustment
+                                            1.1f); // contrast adjustment
+
+ // Write corrected image (metadata JSON will include image_processing parameters if enabled)
+ radiationmodel.writeCameraImage("visible", {"red","green","blue"}, "myimage");
+ ~~~~~~
+
+ \note The older method \ref RadiationModel::applyImageProcessingPipeline() is deprecated. Use \ref RadiationModel::applyCameraImageCorrections() instead.
 
  \subsubsection RadCamSegmentation Writing Camera Image Segmentation Masks
 

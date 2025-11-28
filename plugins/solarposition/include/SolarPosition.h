@@ -210,6 +210,33 @@ public:
      */
     [[nodiscard]] float getAmbientLongwaveFlux() const;
 
+    //! Calculate direct beam solar spectrum and store in global data
+    /**
+     * \param[in] label User-defined label for storing spectral data in Context global data
+     * \param[in] resolution_nm Wavelength resolution in nm (default: 1 nm). Must be >= 1 nm and <= 2300 nm.
+     * \note Computes spectral irradiance normal to sun direction from 300-2600 nm using the SSolar-GOA model (Cachorro et al. 2022).
+     * \note Stores result in Context global data as std::vector<helios::vec2> (wavelength_nm, W/m²/nm) with the specified label.
+     */
+    void calculateDirectSolarSpectrum(const std::string& label, float resolution_nm = 1.0f);
+
+    //! Calculate diffuse solar spectrum and store in global data
+    /**
+     * \param[in] label User-defined label for storing spectral data in Context global data
+     * \param[in] resolution_nm Wavelength resolution in nm (default: 1 nm). Must be >= 1 nm and <= 2300 nm.
+     * \note Computes diffuse spectral irradiance on horizontal surface from 300-2600 nm using the SSolar-GOA model (Cachorro et al. 2022).
+     * \note Stores result in Context global data as std::vector<helios::vec2> (wavelength_nm, W/m²/nm) with the specified label.
+     */
+    void calculateDiffuseSolarSpectrum(const std::string& label, float resolution_nm = 1.0f);
+
+    //! Calculate global (total) solar spectrum and store in global data
+    /**
+     * \param[in] label User-defined label for storing spectral data in Context global data
+     * \param[in] resolution_nm Wavelength resolution in nm (default: 1 nm). Must be >= 1 nm and <= 2300 nm.
+     * \note Computes global spectral irradiance on horizontal surface from 300-2600 nm using the SSolar-GOA model (Cachorro et al. 2022).
+     * \note Stores result in Context global data as std::vector<helios::vec2> (wavelength_nm, W/m²/nm) with the specified label.
+     */
+    void calculateGlobalSolarSpectrum(const std::string& label, float resolution_nm = 1.0f);
+
 private:
     helios::Context *context;
 
@@ -229,6 +256,99 @@ private:
     void applyCloudCalibration(float &R_calc_Wm2, float &fdiff_calc) const;
 
     static float turbidityResidualFunction(float turbidity, std::vector<float> &parameters, const void *a_solarpositionmodel);
+
+    // ===== SSolar-GOA Spectral Solar Radiation Model =====
+
+    //! Spectral data for SSolar-GOA model (TOA spectrum and absorption coefficients)
+    struct SpectralData {
+        std::vector<float> wavelengths_nm;      // 300-2600 nm (2301 points)
+        std::vector<float> toa_irradiance;      // Top-of-atmosphere irradiance in W/m²/nm
+        std::vector<float> h2o_coef;            // Water vapor absorption coefficient
+        std::vector<float> h2o_exp;             // Water vapor absorption exponent
+        std::vector<float> o3_xsec;             // Ozone cross section in cm²/molecule
+        std::vector<float> o2_coef;             // Oxygen absorption coefficient
+
+        //! Load spectral data from directory
+        void loadFromDirectory(const std::string& data_path);
+
+        //! Linear interpolation for wavelength data
+        [[nodiscard]] static float interpolate(const std::vector<float>& x, const std::vector<float>& y, float x_val);
+    };
+
+    //! Calculate geometric factor (Earth-Sun distance correction) for a given Julian day
+    [[nodiscard]] float calculateGeometricFactor(int julian_day) const;
+
+    //! Calculate Rayleigh scattering transmittance (Bates formula + Sobolev approximation)
+    void calculateRayleighTransmittance(
+        const std::vector<float>& wavelengths_um,
+        float mu0,
+        float pressure_ratio,
+        std::vector<float>& tdir,
+        std::vector<float>& tglb,
+        std::vector<float>& tdif,
+        std::vector<float>& atm_albedo
+    ) const;
+
+    //! Calculate aerosol extinction transmittance (Ångström law + Ambartsumian solution)
+    void calculateAerosolTransmittance(
+        const std::vector<float>& wavelengths_um,
+        float mu0,
+        float alpha,
+        float beta,
+        float w0,
+        float g,
+        std::vector<float>& tdir,
+        std::vector<float>& tglb,
+        std::vector<float>& tdif,
+        std::vector<float>& atm_albedo
+    ) const;
+
+    //! Calculate combined Rayleigh-aerosol mixture transmittance with coupling
+    void calculateMixtureTransmittance(
+        const std::vector<float>& wavelengths_um,
+        float mu0,
+        float pressure_Pa,
+        float turbidity_beta,
+        float angstrom_alpha,
+        float aerosol_ssa,
+        float aerosol_g,
+        bool coupling,
+        std::vector<float>& tglb,
+        std::vector<float>& tdir,
+        std::vector<float>& tdif,
+        std::vector<float>& atm_albedo
+    ) const;
+
+    //! Calculate water vapor absorption transmittance
+    void calculateWaterVaporTransmittance(
+        const SpectralData& data,
+        float mu0,
+        float water_vapor_cm,
+        std::vector<float>& transmittance
+    ) const;
+
+    //! Calculate ozone absorption transmittance
+    void calculateOzoneTransmittance(
+        const SpectralData& data,
+        float mu0,
+        float ozone_DU,
+        std::vector<float>& transmittance
+    ) const;
+
+    //! Calculate oxygen absorption transmittance
+    void calculateOxygenTransmittance(
+        const SpectralData& data,
+        float mu0,
+        std::vector<float>& transmittance
+    ) const;
+
+    //! Helper method to calculate all three spectral components
+    void calculateSpectralIrradianceComponents(
+        std::vector<helios::vec2>& global_spectrum,
+        std::vector<helios::vec2>& direct_spectrum,
+        std::vector<helios::vec2>& diffuse_spectrum,
+        float resolution_nm
+    ) const;
 };
 
 #endif

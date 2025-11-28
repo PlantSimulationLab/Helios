@@ -255,13 +255,13 @@ void VoxelIntersection::calculatePrimitiveVoxelIntersection(std::vector<uint> UU
     if (Nvoxels == 0) {
         if (printmessages) {
             std::cout << "done. ";
+            std::cout << "WARNING: no voxels found in Context, nothing to intersect." << std::endl;
         }
-        std::cout << "WARNING: no voxels found in Context, nothing to intersect." << std::endl;
     } else if (Nprims == 0) {
         if (printmessages) {
             std::cout << "done. ";
+            std::cout << "WARNING: no planar primitives found in Context, nothing to intersect." << std::endl;
         }
-        std::cout << "WARNING: no planar primitives found in Context, nothing to intersect." << std::endl;
     }
 
     UUIDs_voxels.resize(Nvoxels);

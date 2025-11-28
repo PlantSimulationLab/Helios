@@ -1,5 +1,41 @@
 # Changelog
 
+# [1.3.58] 2025-11-28
+
+## Core
+- Added materials to avoid duplicating surface-level data. This Phase 1 implementation focused only on the primitive/object color or texture.
+- Added `WarningAggregator` class, a thread-safe utility for aggregating repetitive warnings to prevent console flooding when processing large numbers of primitives. Used throughout core functions like `fzero()`, `incrementPrimitiveData()`, and `rotatePrimitive()` to collect and report warning summaries instead of per-iteration messages.
+
+## Plant Architecture
+- Users can now configure canopy-level plant parameters, such as trellis dimensions, number of tree scaffolds, etc.
+- Added support for "all" keyword in `optionalOutputObjectData()` to enable all optional output data fields simultaneously (case-insensitive). Invalid data labels now throw `helios_runtime_error` instead of printing warnings.
+
+## Radiation
+- Added camera library with pre-configured real-world cameras including intrinsic parameters and manufacturer-measured spectral response curves. Library includes Canon EOS 20D, Nikon D700, Nikon D50, Apple iPhone 11, and Apple iPhone 12 Pro Max with full spectral response data for RGB channels.
+- Added `addRadiationCameraFromLibrary()` method to create cameras directly from library entries, automatically loading all camera properties, spectral responses, and creating radiation bands if needed. Supports custom band name mapping.
+- Enhanced camera metadata with lens properties (make, model, specification), exposure settings (mode, shutter speed), white balance mode, and agronomic properties (plant species, counts, heights, phenological stages, leaf area). Metadata now includes image_processing parameters when `applyCameraImageCorrections()` is applied.
+- Added `updateCameraParameters()` and `getCameraParameters()` methods for runtime modification and retrieval of camera intrinsic parameters.
+- Added automatic exposure and white balance application during rendering based on camera settings. New `applyCameraExposure()` and `applyCameraWhiteBalance()` methods are called automatically. Supports "auto", "manual", and ISO-based exposure modes (e.g., "ISO100") calibrated to match auto-exposure at reference settings.
+- Enhanced metadata API with `enableCameraMetadata()` and `getCameraMetadata()` methods for better control over automatic JSON metadata export alongside camera images.
+- Renamed `applyImageProcessingPipeline()` to `applyCameraImageCorrections()` for clarity. Old method is deprecated but still functional for backward compatibility.
+- Fixed camera ray generation pixel coordinate calculations when using camera tiling. Now correctly computes global pixel coordinates using `camera_pixel_offset_x`, `camera_pixel_offset_y`, and `camera_resolution_full` variables in OptiX kernel.
+
+## Stomatal Conductance
+- Model parameters can now be set on a per-material basis
+
+## Photosynthesis
+- Model parameters can now be set on a per-material basis
+- `twosided_flag` is now managed as part of materials
+
+## Boundary-layer Conductance
+- `twosided_flag` is now managed as part of materials
+
+## Visualizer
+- Fix to a visualizer test that was causing a segmentation fault when tests are run in non-headless mode
+
+##	Solar Position
+- Implemented SSolar-SOA model to predict full solar spectrum as a function of atmospheric conditions
+
 # [1.3.57] 2025-11-18
 
 ## Radiation

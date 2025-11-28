@@ -1729,9 +1729,10 @@ public:
     /**
      * \param[in] base_position Cartesian coordinates of the base of the plant.
      * \param[in] age Age of the plant in days.
+     * \param[in] build_parameters [optional] Map of parameter names to values for overriding default training system parameters (e.g., trunk height, scaffold count, trellis dimensions). Parameter names are species-specific and documented in the plant library documentation.
      * \return ID of the plant instance.
      */
-    uint buildPlantInstanceFromLibrary(const helios::vec3 &base_position, float age);
+    uint buildPlantInstanceFromLibrary(const helios::vec3 &base_position, float age, const std::map<std::string, float> &build_parameters = {});
 
     //! Build a canopy of regularly spaced plants based on the model currently loaded from the library
     /**
@@ -1740,9 +1741,10 @@ public:
      * \param[in] plant_count_xy Number of plants in the canopy in the x- and y-directions.
      * \param[in] age Age of the plants in the canopy in days.
      * \param[in] germination_rate [optional] Probability that a plant in the canopy germinates and a plant is created.
+     * \param[in] build_parameters [optional] Map of parameter names to values for overriding default training system parameters (e.g., trunk height, scaffold count, trellis dimensions). Parameter names are species-specific and documented in the plant library documentation.
      * \return Vector of plant instance IDs.
      */
-    std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, float age, float germination_rate = 1.f);
+    std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, float age, float germination_rate = 1.f, const std::map<std::string, float> &build_parameters = {});
 
     //! Build a canopy of randomly scattered plants based on the model currently loaded from the library
     /**
@@ -1750,9 +1752,10 @@ public:
      * \param[in] canopy_extent_xy Size/extent of the canopy boundaries in the x- and y-directions.
      * \param[in] plant_count Number of plants to randomly generate inside canopy bounds.
      * \param[in] age Age of the plants in the canopy in days.
+     * \param[in] build_parameters [optional] Map of parameter names to values for overriding default training system parameters (e.g., trunk height, scaffold count, trellis dimensions). Parameter names are species-specific and documented in the plant library documentation.
      * \return Vector of plant instance IDs.
      */
-    std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &canopy_extent_xy, uint plant_count, float age);
+    std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &canopy_extent_xy, uint plant_count, float age, const std::map<std::string, float> &build_parameters = {});
 
     //! Get the shoot parameters structure for a specific shoot type in the current plant model
     /**
@@ -2743,6 +2746,19 @@ public:
     friend struct Shoot;
 
 private:
+    //! Get a validated parameter value from the build parameters map
+    /**
+     * \param[in] build_parameters Map of parameter names to values
+     * \param[in] parameter_name Name of the parameter to retrieve
+     * \param[in] default_value Default value to use if parameter not specified
+     * \param[in] min_value Minimum valid value for the parameter
+     * \param[in] max_value Maximum valid value for the parameter
+     * \param[in] parameter_description Description of the parameter for error messages
+     * \return The parameter value from the map if specified, otherwise the default value
+     * \throws helios_runtime_error if the parameter value is outside the valid range
+     */
+    float getParameterValue(const std::map<std::string, float> &build_parameters, const std::string &parameter_name, float default_value, float min_value, float max_value, const std::string &parameter_description) const;
+
     //! Clear BVH cache (called at start of each growth cycle)
     void clearBVHCache() const;
 
@@ -2779,6 +2795,9 @@ protected:
     uint plant_count = 0;
 
     std::string current_plant_model;
+
+    // Current build parameters for plant construction (set before calling builder functions)
+    std::map<std::string, float> current_build_parameters;
 
     // Function pointer maps for plant model registration
     std::map<std::string, std::function<void()>> shoot_initializers;

@@ -117,6 +117,445 @@ namespace helios {
         [[nodiscard]] float computeSolidFraction(const std::vector<vec2> &uvs) const;
     };
 
+    //! Material data structure
+    /** \brief Structure to store surface rendering properties that can be shared across multiple primitives.
+     *
+     * Materials store visualization properties such as color and texture information. Multiple primitives can reference the same material
+     * to reduce memory usage when many primitives share the same appearance properties.
+     *
+     * Each material is assigned a unique string label that users use to reference the material. Internally, materials also have a
+     * numeric ID for efficient primitive storage.
+     */
+    struct Material {
+        //! Unique identifier for this material (internal use)
+        uint materialID;
+
+        //! String label for this material (user-facing identifier)
+        std::string label;
+
+        //! Diffuse RGBA color of the material
+        RGBAcolor color;
+
+        //! Path to texture image file (empty string if no texture)
+        std::string texture_file;
+
+        //! Flag indicating whether texture color should be overridden with the color value
+        /** If true, primitives will use the color value even when a texture is present */
+        bool texture_color_overridden;
+
+        //! Flag indicating one-sided (0) or two-sided (1) radiation absorption/emission
+        /** Value of 1 (default) means primitive absorbs/emits from both faces.
+            Value of 0 means one-sided (absorb/emit from front face only). */
+        uint twosided_flag;
+
+        //! Material primitive data storage - type registry
+        std::map<std::string, HeliosDataType> material_data_types;
+        //! Material primitive data storage - integer data
+        std::map<std::string, std::vector<int>> material_data_int;
+        //! Material primitive data storage - unsigned integer data
+        std::map<std::string, std::vector<uint>> material_data_uint;
+        //! Material primitive data storage - float data
+        std::map<std::string, std::vector<float>> material_data_float;
+        //! Material primitive data storage - double data
+        std::map<std::string, std::vector<double>> material_data_double;
+        //! Material primitive data storage - vec2 data
+        std::map<std::string, std::vector<vec2>> material_data_vec2;
+        //! Material primitive data storage - vec3 data
+        std::map<std::string, std::vector<vec3>> material_data_vec3;
+        //! Material primitive data storage - vec4 data
+        std::map<std::string, std::vector<vec4>> material_data_vec4;
+        //! Material primitive data storage - int2 data
+        std::map<std::string, std::vector<int2>> material_data_int2;
+        //! Material primitive data storage - int3 data
+        std::map<std::string, std::vector<int3>> material_data_int3;
+        //! Material primitive data storage - int4 data
+        std::map<std::string, std::vector<int4>> material_data_int4;
+        //! Material primitive data storage - string data
+        std::map<std::string, std::vector<std::string>> material_data_string;
+        //! Material primitive data storage - bool data
+        std::map<std::string, std::vector<bool>> material_data_bool;
+
+        //! Default constructor
+        Material() : materialID(0), label(""), color(make_RGBAcolor(0, 0, 0, 1)), texture_file(""), texture_color_overridden(false), twosided_flag(1) {}
+
+        //! Constructor with parameters
+        Material(uint ID, const std::string &lbl, const RGBAcolor &c, const std::string &tex, bool override, uint twosided = 1)
+            : materialID(ID), label(lbl), color(c), texture_file(tex), texture_color_overridden(override), twosided_flag(twosided) {}
+
+        //-------- Material Data Methods ---------- //
+
+        //! Add scalar data value associated with this material
+        /**
+         * \tparam T Material data type
+         * \param[in] label Name/label associated with data
+         * \param[in] data Material data value (scalar)
+         */
+        template<typename T>
+        void setMaterialData(const char *label, const T &data) {
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Material::setMaterialData() was called with an unsupported type.");
+
+            if constexpr (std::is_same_v<T, int>) {
+                material_data_int[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_INT;
+            } else if constexpr (std::is_same_v<T, uint>) {
+                material_data_uint[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_UINT;
+            } else if constexpr (std::is_same_v<T, float>) {
+                material_data_float[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_FLOAT;
+            } else if constexpr (std::is_same_v<T, double>) {
+                material_data_double[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_DOUBLE;
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                material_data_vec2[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_VEC2;
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                material_data_vec3[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_VEC3;
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                material_data_vec4[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_VEC4;
+            } else if constexpr (std::is_same_v<T, int2>) {
+                material_data_int2[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_INT2;
+            } else if constexpr (std::is_same_v<T, int3>) {
+                material_data_int3[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_INT3;
+            } else if constexpr (std::is_same_v<T, int4>) {
+                material_data_int4[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_INT4;
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                material_data_string[label] = {data};
+                material_data_types[label] = HELIOS_TYPE_STRING;
+            }
+        }
+
+        //! Add vector data associated with this material
+        /**
+         * \tparam T Material data type
+         * \param[in] label Name/label associated with data
+         * \param[in] data Material data (vector)
+         */
+        template<typename T>
+        void setMaterialData(const char *label, const std::vector<T> &data) {
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Material::setMaterialData() was called with an unsupported type.");
+
+            if constexpr (std::is_same_v<T, int>) {
+                material_data_int[label] = data;
+                material_data_types[label] = HELIOS_TYPE_INT;
+            } else if constexpr (std::is_same_v<T, uint>) {
+                material_data_uint[label] = data;
+                material_data_types[label] = HELIOS_TYPE_UINT;
+            } else if constexpr (std::is_same_v<T, float>) {
+                material_data_float[label] = data;
+                material_data_types[label] = HELIOS_TYPE_FLOAT;
+            } else if constexpr (std::is_same_v<T, double>) {
+                material_data_double[label] = data;
+                material_data_types[label] = HELIOS_TYPE_DOUBLE;
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                material_data_vec2[label] = data;
+                material_data_types[label] = HELIOS_TYPE_VEC2;
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                material_data_vec3[label] = data;
+                material_data_types[label] = HELIOS_TYPE_VEC3;
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                material_data_vec4[label] = data;
+                material_data_types[label] = HELIOS_TYPE_VEC4;
+            } else if constexpr (std::is_same_v<T, int2>) {
+                material_data_int2[label] = data;
+                material_data_types[label] = HELIOS_TYPE_INT2;
+            } else if constexpr (std::is_same_v<T, int3>) {
+                material_data_int3[label] = data;
+                material_data_types[label] = HELIOS_TYPE_INT3;
+            } else if constexpr (std::is_same_v<T, int4>) {
+                material_data_int4[label] = data;
+                material_data_types[label] = HELIOS_TYPE_INT4;
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                material_data_string[label] = data;
+                material_data_types[label] = HELIOS_TYPE_STRING;
+            }
+        }
+
+        //! Get scalar data associated with this material
+        /**
+         * \tparam T Material data type
+         * \param[in] label Name/label associated with data
+         * \param[out] data Material data structure
+         */
+        template<typename T>
+        void getMaterialData(const char *label, T &data) const {
+            if (!doesMaterialDataExist(label)) {
+                helios_runtime_error("ERROR (Material::getMaterialData): Material data " + std::string(label) + " does not exist for material " + std::to_string(materialID));
+            }
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Material::getMaterialData() was called with an unsupported type.");
+
+            HeliosDataType type = material_data_types.at(label);
+
+            if constexpr (std::is_same_v<T, int>) {
+                if (type == HELIOS_TYPE_INT) {
+                    data = material_data_int.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type int, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type int.");
+                }
+            } else if constexpr (std::is_same_v<T, uint>) {
+                if (type == HELIOS_TYPE_UINT) {
+                    data = material_data_uint.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type uint, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type uint.");
+                }
+            } else if constexpr (std::is_same_v<T, float>) {
+                if (type == HELIOS_TYPE_FLOAT) {
+                    data = material_data_float.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type float, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type float.");
+                }
+            } else if constexpr (std::is_same_v<T, double>) {
+                if (type == HELIOS_TYPE_DOUBLE) {
+                    data = material_data_double.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type double, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type double.");
+                }
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                if (type == HELIOS_TYPE_VEC2) {
+                    data = material_data_vec2.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type vec2, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type vec2.");
+                }
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                if (type == HELIOS_TYPE_VEC3) {
+                    data = material_data_vec3.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type vec3, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type vec3.");
+                }
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                if (type == HELIOS_TYPE_VEC4) {
+                    data = material_data_vec4.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type vec4, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type vec4.");
+                }
+            } else if constexpr (std::is_same_v<T, int2>) {
+                if (type == HELIOS_TYPE_INT2) {
+                    data = material_data_int2.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type int2, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type int2.");
+                }
+            } else if constexpr (std::is_same_v<T, int3>) {
+                if (type == HELIOS_TYPE_INT3) {
+                    data = material_data_int3.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type int3, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type int3.");
+                }
+            } else if constexpr (std::is_same_v<T, int4>) {
+                if (type == HELIOS_TYPE_INT4) {
+                    data = material_data_int4.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type int4, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type int4.");
+                }
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                if (type == HELIOS_TYPE_STRING) {
+                    data = material_data_string.at(label).front();
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type string, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type string.");
+                }
+            }
+        }
+
+        //! Get vector data associated with this material
+        /**
+         * \tparam T Material data type
+         * \param[in] label Name/label associated with data
+         * \param[out] data Material data structure
+         */
+        template<typename T>
+        void getMaterialData(const char *label, std::vector<T> &data) const {
+            if (!doesMaterialDataExist(label)) {
+                helios_runtime_error("ERROR (Material::getMaterialData): Material data " + std::string(label) + " does not exist for material " + std::to_string(materialID));
+            }
+            static_assert(std::is_same_v<T, int> || std::is_same_v<T, uint> || std::is_same_v<T, float> || std::is_same_v<T, double> || std::is_same_v<T, vec2> || std::is_same_v<T, vec3> || std::is_same_v<T, vec4> || std::is_same_v<T, int2> ||
+                                  std::is_same_v<T, int3> || std::is_same_v<T, int4> || std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>,
+                          "Material::getMaterialData() was called with an unsupported type.");
+
+            HeliosDataType type = material_data_types.at(label);
+
+            if constexpr (std::is_same_v<T, int>) {
+                if (type == HELIOS_TYPE_INT) {
+                    data = material_data_int.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type int, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type int.");
+                }
+            } else if constexpr (std::is_same_v<T, uint>) {
+                if (type == HELIOS_TYPE_UINT) {
+                    data = material_data_uint.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type uint, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type uint.");
+                }
+            } else if constexpr (std::is_same_v<T, float>) {
+                if (type == HELIOS_TYPE_FLOAT) {
+                    data = material_data_float.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type float, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type float.");
+                }
+            } else if constexpr (std::is_same_v<T, double>) {
+                if (type == HELIOS_TYPE_DOUBLE) {
+                    data = material_data_double.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type double, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type double.");
+                }
+            } else if constexpr (std::is_same_v<T, vec2>) {
+                if (type == HELIOS_TYPE_VEC2) {
+                    data = material_data_vec2.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type vec2, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type vec2.");
+                }
+            } else if constexpr (std::is_same_v<T, vec3>) {
+                if (type == HELIOS_TYPE_VEC3) {
+                    data = material_data_vec3.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type vec3, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type vec3.");
+                }
+            } else if constexpr (std::is_same_v<T, vec4>) {
+                if (type == HELIOS_TYPE_VEC4) {
+                    data = material_data_vec4.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type vec4, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type vec4.");
+                }
+            } else if constexpr (std::is_same_v<T, int2>) {
+                if (type == HELIOS_TYPE_INT2) {
+                    data = material_data_int2.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type int2, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type int2.");
+                }
+            } else if constexpr (std::is_same_v<T, int3>) {
+                if (type == HELIOS_TYPE_INT3) {
+                    data = material_data_int3.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type int3, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type int3.");
+                }
+            } else if constexpr (std::is_same_v<T, int4>) {
+                if (type == HELIOS_TYPE_INT4) {
+                    data = material_data_int4.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type int4, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type int4.");
+                }
+            } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<std::decay_t<T>, const char *> || std::is_same_v<std::decay_t<T>, char *>) {
+                if (type == HELIOS_TYPE_STRING) {
+                    data = material_data_string.at(label);
+                } else {
+                    helios_runtime_error("ERROR (Material::getMaterialData): Attempted to get data for type string, but data " + std::string(label) + " for material " + std::to_string(materialID) + " does not have type string.");
+                }
+            }
+        }
+
+        //! Check if material data 'label' exists
+        /**
+         * \param[in] label Name/label associated with data
+         * \return True if data exists, false otherwise
+         */
+        bool doesMaterialDataExist(const char *label) const {
+            return material_data_types.find(label) != material_data_types.end();
+        }
+
+        //! Get the Helios data type of material data
+        /**
+         * \param[in] label Name/label associated with data
+         * \return Helios data type of material data
+         * \sa HeliosDataType
+         */
+        HeliosDataType getMaterialDataType(const char *label) const {
+            if (!doesMaterialDataExist(label)) {
+                helios_runtime_error("ERROR (Material::getMaterialDataType): Material data " + std::string(label) + " does not exist for material " + std::to_string(materialID));
+            }
+            return material_data_types.at(label);
+        }
+
+        //! Get the size/length of material data
+        /**
+         * \param[in] label Name/label associated with data
+         * \return Size/length of material data array
+         */
+        uint getMaterialDataSize(const char *label) const {
+            if (!doesMaterialDataExist(label)) {
+                helios_runtime_error("ERROR (Material::getMaterialDataSize): Material data " + std::string(label) + " does not exist for material " + std::to_string(materialID));
+            }
+            HeliosDataType type = material_data_types.at(label);
+            if (type == HELIOS_TYPE_INT) {
+                return material_data_int.at(label).size();
+            } else if (type == HELIOS_TYPE_UINT) {
+                return material_data_uint.at(label).size();
+            } else if (type == HELIOS_TYPE_FLOAT) {
+                return material_data_float.at(label).size();
+            } else if (type == HELIOS_TYPE_DOUBLE) {
+                return material_data_double.at(label).size();
+            } else if (type == HELIOS_TYPE_VEC2) {
+                return material_data_vec2.at(label).size();
+            } else if (type == HELIOS_TYPE_VEC3) {
+                return material_data_vec3.at(label).size();
+            } else if (type == HELIOS_TYPE_VEC4) {
+                return material_data_vec4.at(label).size();
+            } else if (type == HELIOS_TYPE_INT2) {
+                return material_data_int2.at(label).size();
+            } else if (type == HELIOS_TYPE_INT3) {
+                return material_data_int3.at(label).size();
+            } else if (type == HELIOS_TYPE_INT4) {
+                return material_data_int4.at(label).size();
+            } else if (type == HELIOS_TYPE_STRING) {
+                return material_data_string.at(label).size();
+            }
+            return 0;
+        }
+
+        //! Clear the material data for this material
+        /**
+         * \param[in] label Name/label associated with data
+         */
+        void clearMaterialData(const char *label) {
+            if (!doesMaterialDataExist(label)) {
+                helios_runtime_error("ERROR (Material::clearMaterialData): Material data " + std::string(label) + " does not exist for material " + std::to_string(materialID));
+            }
+            HeliosDataType type = material_data_types.at(label);
+            if (type == HELIOS_TYPE_INT) {
+                material_data_int.erase(label);
+            } else if (type == HELIOS_TYPE_UINT) {
+                material_data_uint.erase(label);
+            } else if (type == HELIOS_TYPE_FLOAT) {
+                material_data_float.erase(label);
+            } else if (type == HELIOS_TYPE_DOUBLE) {
+                material_data_double.erase(label);
+            } else if (type == HELIOS_TYPE_VEC2) {
+                material_data_vec2.erase(label);
+            } else if (type == HELIOS_TYPE_VEC3) {
+                material_data_vec3.erase(label);
+            } else if (type == HELIOS_TYPE_VEC4) {
+                material_data_vec4.erase(label);
+            } else if (type == HELIOS_TYPE_INT2) {
+                material_data_int2.erase(label);
+            } else if (type == HELIOS_TYPE_INT3) {
+                material_data_int3.erase(label);
+            } else if (type == HELIOS_TYPE_INT4) {
+                material_data_int4.erase(label);
+            } else if (type == HELIOS_TYPE_STRING) {
+                material_data_string.erase(label);
+            }
+            material_data_types.erase(label);
+        }
+
+        //! Return labels for all material data for this particular material
+        std::vector<std::string> listMaterialData() const {
+            std::vector<std::string> data_labels;
+            data_labels.reserve(material_data_types.size());
+            for (const auto &data : material_data_types) {
+                data_labels.push_back(data.first);
+            }
+            return data_labels;
+        }
+    };
+
     //! \brief Structure for Global Data Entities
     struct GlobalData {
 
@@ -1508,11 +1947,13 @@ namespace helios {
         //! Identifier of parent object (default is object 0)
         uint parent_object_ID;
 
-        //! Diffuse RGB color
-        helios::RGBAcolor color;
+        //! Reference to material containing color and texture properties
+        /** Material ID 0 is the default material. Use Context methods to query/modify material properties. */
+        uint materialID;
 
-        //! Path to texture image
-        std::string texturefile;
+        //! Pointer to the parent Context (for material access in deprecated member methods)
+        Context *context_ptr;
+
         //! Affine transformation matrix
         float transform[16];
 
@@ -1538,8 +1979,6 @@ namespace helios {
         std::map<std::string, std::vector<int4>> primitive_data_int4;
         std::map<std::string, std::vector<std::string>> primitive_data_string;
         std::map<std::string, std::vector<bool>> primitive_data_bool;
-
-        bool texturecoloroverridden = false;
 
         bool ishidden = false;
 
@@ -2031,6 +2470,8 @@ namespace helios {
      * be initialized via a call to initializeContext(), after which geometry and models can be added and simulated.
      */
     class Context {
+        friend class Primitive;  // Allow Primitive methods to access private material data
+
     private:
         //---------- PRIMITIVE/OBJECT HELIOS::VECTORS ----------------//
 
@@ -2135,6 +2576,9 @@ namespace helios {
         //! Flag indicating whether the getAllUUIDs cache is valid
         mutable bool all_uuids_cache_valid = false;
 
+        //! Warning aggregator for API design warnings (e.g., inefficient API usage)
+        mutable WarningAggregator api_warnings;
+
         //! List of primitives that have been modified since geometry was last set as clean
         std::vector<uint> dirty_deleted_primitives;
 
@@ -2158,6 +2602,33 @@ namespace helios {
         bool doesTextureFileExist(const char *texture_file) const;
 
         bool validateTextureFileExtenstion(const char *texture_file) const;
+
+        //------------ MATERIALS ----------------//
+
+        //! Reserved label for the default material
+        static constexpr const char* DEFAULT_MATERIAL_LABEL = "__default__";
+
+        //! Map containing all materials indexed by material ID
+        std::map<uint, Material> materials;
+
+        //! Map from material label to material ID for efficient lookup
+        std::map<std::string, uint> material_label_to_id;
+
+        //! Auto-incrementing material ID counter
+        uint currentMaterialID;
+
+        //! Internal method to add material (allows reserved __ prefix labels)
+        /**
+         * \param[in] label Material label
+         * \param[in] color Initial color
+         * \param[in] texture Initial texture file (optional)
+         * \return Material ID of the newly created material
+         * \note This is an internal method that bypasses the __ prefix restriction
+         */
+        uint addMaterial_internal(const std::string &label, const RGBAcolor &color, const std::string &texture = "");
+
+        //! Generate material label from properties for automatic de-duplication
+        std::string generateMaterialLabel(const RGBAcolor &color, const std::string &texture, bool texture_override) const;
 
         //----------- GLOBAL DATA -------------//
 
@@ -2263,6 +2734,8 @@ namespace helios {
         };
 
         std::map<std::string, OBJmaterial> loadMTL(const std::string &filebase, const std::string &material_file, const RGBcolor &default_color);
+
+        void loadMaterialData(pugi::xml_node mat_node, const std::string &material_label);
 
         void loadPData(pugi::xml_node p, uint UUID);
 
@@ -3166,7 +3639,8 @@ namespace helios {
          * \return Helios data type of primitive data
          * \sa HeliosDataType
          */
-        DEPRECATED(HeliosDataType getPrimitiveDataType(uint UUID, const char *label) const);
+        [[deprecated]]
+        HeliosDataType getPrimitiveDataType(uint UUID, const char *label) const;
 
         //! Get the expected data type for a primitive data label (cached lookup)
         /**
@@ -3684,6 +4158,296 @@ namespace helios {
          * \param[in] UUID Universal unique identifier of primitive.
          */
         void printPrimitiveInfo(uint UUID) const;
+
+        //! Report accumulated API design warnings and clear the aggregator
+        /**
+         * \brief Reports warnings about inefficient API usage (e.g., per-primitive materials).
+         * \note These warnings aggregate across multiple calls and are reported once with counts.
+         */
+        void reportAPIWarnings() const;
+
+        //-------- Material Management Methods ---------- //
+
+        //! Add a new material with the given label
+        /**
+         * \param[in] material_label Unique string identifier for the material
+         * \note Creates a material with default properties (black color, no texture).
+         *       If a material with this label already exists, it will be overwritten with a warning.
+         */
+        void addMaterial(const std::string &material_label);
+
+        //! Check if a material with the given label exists
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return True if material exists, false otherwise
+         */
+        [[nodiscard]] bool doesMaterialExist(const std::string &material_label) const;
+
+        //! Get list of all material labels
+        /**
+         * \return Vector of all user-defined material labels (excludes internal default material)
+         */
+        [[nodiscard]] std::vector<std::string> listMaterials() const;
+
+        //! Get the color of a material
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return RGBA color of the material
+         */
+        [[nodiscard]] RGBAcolor getMaterialColor(const std::string &material_label) const;
+
+        //! Get the texture file path of a material
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return Path to texture file (empty string if no texture)
+         */
+        [[nodiscard]] std::string getMaterialTexture(const std::string &material_label) const;
+
+        //! Check if material texture color is overridden
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return True if texture color is overridden with solid color
+         */
+        [[nodiscard]] bool isMaterialTextureColorOverridden(const std::string &material_label) const;
+
+        //! Set the color of a material
+        /**
+         * \param[in] material_label String identifier for the material
+         * \param[in] color New RGBA color for the material
+         * \note This will affect all primitives that reference this material
+         */
+        void setMaterialColor(const std::string &material_label, const RGBAcolor &color);
+
+        //! Set the texture of a material
+        /**
+         * \param[in] material_label String identifier for the material
+         * \param[in] texture_file Path to texture image file
+         * \note This will affect all primitives that reference this material
+         */
+        void setMaterialTexture(const std::string &material_label, const std::string &texture_file);
+
+        //! Set whether the material should override texture color with solid color
+        /**
+         * \param[in] material_label String identifier for the material
+         * \param[in] override If true, use solid color even when texture is present
+         * \note This will affect all primitives that reference this material
+         */
+        void setMaterialTextureColorOverride(const std::string &material_label, bool override);
+
+        //! Get the twosided flag of a material
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return The twosided flag value (0=one-sided, 1=two-sided)
+         */
+        [[nodiscard]] uint getMaterialTwosidedFlag(const std::string &material_label) const;
+
+        //! Set the twosided flag of a material
+        /**
+         * \param[in] material_label String identifier for the material
+         * \param[in] twosided_flag 0=one-sided, 1=two-sided
+         * \note This will affect all primitives that reference this material
+         */
+        void setMaterialTwosidedFlag(const std::string &material_label, uint twosided_flag);
+
+        //! Get the twosided flag for a primitive, checking material first, then primitive data
+        /**
+         * \param[in] UUID Unique universal identifier of primitive
+         * \param[in] default_value Default value if neither material nor primitive data exists (default: 1 = two-sided)
+         * \return The twosided flag value (0=one-sided, 1=two-sided, 2=transparent, 3=special)
+         * \note If the primitive has a user-assigned material (not __auto_ or __default__),
+         *       the material's twosided_flag is used. Otherwise, primitive data is checked.
+         */
+        [[nodiscard]] uint getPrimitiveTwosidedFlag(uint UUID, uint default_value = 1) const;
+
+        //! Assign a material to a primitive
+        /**
+         * \param[in] UUID Unique universal identifier of primitive
+         * \param[in] material_label String identifier for the material to assign
+         * \note Throws helios_runtime_error if material label does not exist
+         */
+        void assignMaterialToPrimitive(uint UUID, const std::string &material_label);
+
+        //! Assign a material to multiple primitives
+        /**
+         * \param[in] UUIDs Vector of primitive unique universal identifiers
+         * \param[in] material_label String identifier for the material to assign
+         * \note Throws helios_runtime_error if material label does not exist
+         */
+        void assignMaterialToPrimitive(const std::vector<uint> &UUIDs, const std::string &material_label);
+
+        //! Assign a material to all primitives in a compound object
+        /**
+         * \param[in] ObjID Unique identifier for the compound object
+         * \param[in] material_label String identifier for the material to assign
+         * \note Throws helios_runtime_error if material label does not exist
+         */
+        void assignMaterialToObject(uint ObjID, const std::string &material_label);
+
+        //! Assign a material to all primitives in multiple compound objects
+        /**
+         * \param[in] ObjIDs Vector of compound object identifiers
+         * \param[in] material_label String identifier for the material to assign
+         * \note Throws helios_runtime_error if material label does not exist
+         */
+        void assignMaterialToObject(const std::vector<uint> &ObjIDs, const std::string &material_label);
+
+        //! Get the material label assigned to a primitive
+        /**
+         * \param[in] UUID Unique universal identifier of primitive
+         * \return Material label (empty string if primitive uses the default material)
+         */
+        [[nodiscard]] std::string getPrimitiveMaterialLabel(uint UUID) const;
+
+        //! Get all primitives that use a given material
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return Vector of UUIDs for all primitives using this material
+         */
+        [[nodiscard]] std::vector<uint> getPrimitivesUsingMaterial(const std::string &material_label) const;
+
+        //! Delete a material by label
+        /**
+         * \param[in] material_label String identifier for the material to delete
+         * \note Primitives currently using this material will be reassigned to the default material.
+         *       Emits a warning if the material is still in use.
+         */
+        void deleteMaterial(const std::string &material_label);
+
+        //! Set scalar data value for a material
+        /**
+         * \tparam T Data type (int, uint, float, double, vec2, vec3, vec4, int2, int3, int4, string)
+         * \param[in] material_label String identifier for the material
+         * \param[in] data_label Name/label associated with data
+         * \param[in] data Scalar data value
+         * \note This will affect all primitives that reference this material
+         */
+        template<typename T>
+        void setMaterialData(const std::string &material_label, const char *data_label, const T &data) {
+            uint matID = getMaterialIDFromLabel(material_label);
+            materials[matID].setMaterialData(data_label, data);
+        }
+
+        //! Set vector data for a material
+        /**
+         * \tparam T Data type (int, uint, float, double, vec2, vec3, vec4, int2, int3, int4, string)
+         * \param[in] material_label String identifier for the material
+         * \param[in] data_label Name/label associated with data
+         * \param[in] data Vector of data values
+         * \note This will affect all primitives that reference this material
+         */
+        template<typename T>
+        void setMaterialData(const std::string &material_label, const char *data_label, const std::vector<T> &data) {
+            uint matID = getMaterialIDFromLabel(material_label);
+            materials[matID].setMaterialData(data_label, data);
+        }
+
+        //! Get scalar data value from a material
+        /**
+         * \tparam T Data type (int, uint, float, double, vec2, vec3, vec4, int2, int3, int4, string)
+         * \param[in] material_label String identifier for the material
+         * \param[in] data_label Name/label associated with data
+         * \param[out] data Scalar data value
+         */
+        template<typename T>
+        void getMaterialData(const std::string &material_label, const char *data_label, T &data) const {
+            uint matID = getMaterialIDFromLabel(material_label);
+            materials.at(matID).getMaterialData(data_label, data);
+        }
+
+        //! Get vector data from a material
+        /**
+         * \tparam T Data type (int, uint, float, double, vec2, vec3, vec4, int2, int3, int4, string)
+         * \param[in] material_label String identifier for the material
+         * \param[in] data_label Name/label associated with data
+         * \param[out] data Vector of data values
+         */
+        template<typename T>
+        void getMaterialData(const std::string &material_label, const char *data_label, std::vector<T> &data) const {
+            uint matID = getMaterialIDFromLabel(material_label);
+            materials.at(matID).getMaterialData(data_label, data);
+        }
+
+        //! Check if material data exists for a given label
+        /**
+         * \param[in] material_label String identifier for the material
+         * \param[in] data_label Name/label associated with data
+         * \return True if data exists, false otherwise
+         */
+        [[nodiscard]] bool doesMaterialDataExist(const std::string &material_label, const char *data_label) const;
+
+        //! Get the data type of material data
+        /**
+         * \param[in] material_label String identifier for the material
+         * \param[in] data_label Name/label associated with data
+         * \return Helios data type of the material data
+         */
+        [[nodiscard]] HeliosDataType getMaterialDataType(const std::string &material_label, const char *data_label) const;
+
+        //! Clear material data for a given label
+        /**
+         * \param[in] material_label String identifier for the material
+         * \param[in] data_label Name/label associated with data
+         */
+        void clearMaterialData(const std::string &material_label, const char *data_label);
+
+        //! Get data value with material fallback (checks material data first, then primitive data)
+        /**
+         * \tparam T Data type (int, uint, float, double, vec2, vec3, vec4, int2, int3, int4, string)
+         * \param[in] UUID Unique universal identifier of primitive
+         * \param[in] data_label Name/label associated with data
+         * \param[out] data Data value
+         * \note This method first checks if the primitive's material has data with the given label. If so, it retrieves
+         *       the data from the material. Otherwise, it checks if the primitive itself has data with the given label.
+         *       If neither the material nor primitive has the data, an error is thrown. This provides backward compatibility
+         *       while allowing material-based data specification.
+         */
+        template<typename T>
+        void getDataWithMaterialFallback(uint UUID, const char *data_label, T &data) const {
+            Primitive *prim = getPrimitivePointer_private(UUID);
+            uint materialID = prim->materialID;
+
+            // First check if material has this data
+            if (materials.find(materialID) != materials.end() && materials.at(materialID).doesMaterialDataExist(data_label)) {
+                materials.at(materialID).getMaterialData(data_label, data);
+            }
+            // Otherwise check if primitive has this data
+            else if (prim->doesPrimitiveDataExist(data_label)) {
+                prim->getPrimitiveData(data_label, data);
+            }
+            // If neither has the data, throw error
+            else {
+                helios_runtime_error("ERROR (Context::getDataWithMaterialFallback): Data " + std::string(data_label) +
+                                   " does not exist for primitive " + std::to_string(UUID) +
+                                   " (neither in its material nor as primitive data).");
+            }
+        }
+
+        //! Get the material ID of a primitive
+        /**
+         * \param[in] UUID Unique universal identifier of primitive
+         * \return Material ID assigned to the primitive
+         */
+        [[nodiscard]] uint getPrimitiveMaterialID(uint UUID) const;
+
+        //! Get material struct by material ID
+        /**
+         * \param[in] materialID Unique identifier of the material
+         * \return Constant reference to the Material struct
+         */
+        [[nodiscard]] const Material& getMaterial(uint materialID) const;
+
+        //! Get material ID from material label
+        /**
+         * \param[in] material_label String identifier for the material
+         * \return Material ID corresponding to the label
+         */
+        [[nodiscard]] uint getMaterialIDFromLabel(const std::string &material_label) const;
+
+        //! Get the total number of user-defined materials
+        /**
+         * \return Number of materials (excludes the internal default material)
+         */
+        [[nodiscard]] uint getMaterialCount() const;
 
         //-------- Compound Object Data Methods ---------- //
 
@@ -4279,7 +5043,8 @@ namespace helios {
          * \return Helios data type of primitive data
          * \sa HeliosDataType
          */
-        DEPRECATED(HeliosDataType getObjectDataType(uint objID, const char *label) const);
+        [[deprecated]]
+        HeliosDataType getObjectDataType(uint objID, const char *label) const;
 
         //! Get the expected data type for an object data label (cached lookup)
         /**

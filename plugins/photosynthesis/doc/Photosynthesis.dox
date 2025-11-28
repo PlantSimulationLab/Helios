@@ -29,7 +29,7 @@
  <tr><td>air\_CO2</td><td>\f$C_a\f$</td><td>\f$\mu\f$mol CO<sub>2</sub>/mol air</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>CO<sub>2</sub> concentration of air outside of primitive boundary-layer.</td><td>N/A</td><td>390 \f$\mu\f$mol/mol</td></tr>
  <tr><td>moisture\_conductance</td><td>\f$g_S\f$</td><td>mol air/m<sup>2</sup>-s</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Conductance to moisture between sub-stomatal cells and leaf surface (i.e., stomatal conductance).</td><td>Can be computed by \ref StomatalConductanceModel plug-in.</td><td>0.25 mol/m<sup>2</sup>-s</td></tr>
  <tr><td>boundarylayer\_conductance**</td><td>\f$g_H\f$</td><td>mol air/m<sup>2</sup>-s</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Conductance to heat between leaf surface and outside of the boundary-layer (i.e., boundary-layer conductance).</td><td>Can be computed by \ref BLConductanceModel plug-in, or by \ref EnergyBalanceModel plug-in if optional output primitive data "boundarylayer_conductance_out" is enabled.</td><td>1.0 mol/m<sup>2</sup>-s</td></tr>
- <tr><td>twosided\_flag <td>N/A <td>N/A <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly <td>Flag indicating the number of primitive faces with heat transfer (twosided\_flag = 0 for one-sided heat transfer; twosided\_flag = 1 for two-sided heat transfer). <td>N/A <td>1 </tr>
+ <tr><td>twosided\_flag <td>N/A <td>N/A <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">uint</span>\endhtmlonly <td>Flag indicating the number of primitive faces with heat transfer (twosided\_flag = 0 for one-sided heat transfer; twosided\_flag = 1 for two-sided heat transfer). This value is retrieved from the primitive's assigned material when available (see Context::getMaterialTwosidedFlag()), with fallback to primitive data if no user-assigned material exists. <td>N/A <td>1 </tr>
  <tr><td>stomatal\_sidedness <td>\f$\zeta\f$ <td>unitless <td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly <td>Ratio of stomatal density on the upper leaf surface to the sum of the stomatal density on upper and lower leaf surfaces. Note: if "twosided_flag" is equal to 0, stomatal\_sidedness will be automatically set to 0.<td>N/A <td>0  </tr>
  </table>
 
@@ -127,7 +127,7 @@
 
  \f$g_M = 1.08g_Hg_S\left[\dfrac{\zeta}{1.08g_H+g_S\zeta}+\dfrac{(1-\zeta)}{1.08g_H+g_S(1-\zeta)}\right]\f$,
 
- where \f$g_H\f$ is the boundary-layer conductance to heat, and \f$1.08g_H\f$ gives the boundary-layer conductance to moisture considering the differences in diffusivity between water vapor and heat. \f$n_s\f$ is the number of primitive faces, which is determined by the value of primitive data "twosided_flag" (twosided\_flag=0 is single-sided and \f$n_s=1\f$, twosided\_flag=1 is two-sided and \f$n_s=2\f$).
+ where \f$g_H\f$ is the boundary-layer conductance to heat, and \f$1.08g_H\f$ gives the boundary-layer conductance to moisture considering the differences in diffusivity between water vapor and heat. \f$n_s\f$ is the number of primitive faces, which is determined by the value of "twosided_flag" retrieved from the primitive's assigned material when available (see Context::getMaterialTwosidedFlag()), with fallback to primitive data if no user-assigned material exists (twosided\_flag=0 is single-sided and \f$n_s=1\f$, twosided\_flag=1 is two-sided and \f$n_s=2\f$).
 
  \f$\zeta=\dfrac{D_{upper}}{D_{lower}+D_{upper}}\f$
 
@@ -248,6 +248,38 @@ Note that the parameter sets in the library vary in terms of which response func
 	photosynthesismodel.run();
 
 ~~~~~~
+
+\subsection PhotoMaterialBasedCoeffs Material-Based Coefficients (Recommended)
+
+The recommended approach for setting photosynthesis model coefficients is to use materials:
+
+```cpp
+Context context;
+PhotosynthesisModel photo_model(&context);
+
+// 1. Create materials for different species
+context.addMaterial("almond_leaf");
+context.addMaterial("grape_leaf");
+
+// 2. Set coefficients from species library
+photo_model.setFarquharCoefficientsFromLibrary("Almond", "almond_leaf");
+photo_model.setFarquharCoefficientsFromLibrary("Grape", "grape_leaf");
+
+// 3. Create primitives and assign materials
+std::vector<uint> almond_leaves = context.addPatch(...);
+context.assignMaterialToPrimitive(almond_leaves, "almond_leaf");
+
+// 4. Run model - coefficients automatically applied based on material
+photo_model.run();
+```
+
+**Advantages of material-based approach:**
+- Memory efficient: Coefficients stored once per material
+- Automatic XML serialization with Context
+- Simplified canopy management: Update one material to change entire plant/organ
+- Performance: Caching minimizes Context lookups
+
+**Temperature Response Handling**: The material-based approach properly serializes and deserializes the PhotosyntheticTemperatureResponseParameters objects, preserving all temperature response settings (constant, Arrhenius, or optimum-based).
 
   \section EmpiricalDescription Empirical Model Description
 

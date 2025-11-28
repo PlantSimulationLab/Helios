@@ -1150,7 +1150,7 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
     float resulting_area = context->sumPrimitiveSurfaceArea(resulting_UUIDs);
     float pdiff_area = (resulting_area - original_area) / original_area * 100.0;
     float pdiff_area_abs = fabs(pdiff_area);
-    if (pdiff_area_abs > 1) {
+    if (pdiff_area_abs > 1 && printmessages) {
         std::cout << "WARNING: sum of slice areas does not equal area of original primitive (UUID = " << UUID << ")" << std::endl;
         std::cout << "original area = " << original_area << std::endl;
         std::cout << "resulting_area = " << resulting_area << std::endl;
@@ -1164,7 +1164,7 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
     for (uint aa = 0; aa < resulting_UUIDs.size(); aa++) {
         helios::vec3 this_normal = context->getPrimitiveNormal(resulting_UUIDs.at(aa));
         this_normal.normalize();
-        if (!approxSame(primitive_normal.x, this_normal.x, absTol, relTol) || !approxSame(primitive_normal.y, this_normal.y, absTol, relTol) || !approxSame(primitive_normal.z, this_normal.z, absTol, relTol)) {
+        if (printmessages && (!approxSame(primitive_normal.x, this_normal.x, absTol, relTol) || !approxSame(primitive_normal.y, this_normal.y, absTol, relTol) || !approxSame(primitive_normal.z, this_normal.z, absTol, relTol))) {
             std::cout << "WARNING: UUID " << resulting_UUIDs.at(aa) << " normal " << this_normal << " does not match original normal " << primitive_normal << std::endl;
         }
     }
@@ -1483,12 +1483,6 @@ helios::vec2 VoxelIntersection::interpolate_texture_UV_to_slice_point(helios::ve
         // get the v coordinate
         float vs_a = slope * us_a + offset;
         float vs_b = slope * us_b + offset;
-
-        std::cout << "slope = " << slope << ", offset = " << offset << std::endl;
-        std::cout << "a = " << a << ", b = " << b << ", c = " << c << std::endl;
-        std::cout << "us_a = " << us_a << ", vs_a = " << vs_a << std::endl;
-        std::cout << "us_b = " << us_b << ", vs_b = " << vs_b << std::endl;
-
 
         // determine which of the roots is the right one
         if (((us_a >= uv1.x && us_a <= uv2.x) || (us_a <= uv1.x && us_a >= uv2.x)) && ((vs_a >= uv1.y && vs_a <= uv2.y) || (vs_a <= uv1.y && vs_a >= uv2.y))) {

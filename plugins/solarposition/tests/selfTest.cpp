@@ -128,8 +128,18 @@ TEST_CASE("SolarPosition turbidity calibration") {
     }
 
     float turbidity;
-    DOCTEST_CHECK_NOTHROW(turbidity = sp.calibrateTurbidityFromTimeseries(label));
+    std::string captured_warnings;
+    {
+        capture_cerr cerr_buffer;
+        DOCTEST_CHECK_NOTHROW(turbidity = sp.calibrateTurbidityFromTimeseries(label));
+        captured_warnings = cerr_buffer.get_captured_output();
+    } // Capture goes out of scope before assertions
+
     DOCTEST_CHECK(turbidity > 0.f);
+
+    // Turbidity calibration may produce fzero warnings due to the nature of the optimization problem
+    // This is expected behavior and should not be considered a test failure
+    // Just verify the function completes and returns a valid result
 }
 
 TEST_CASE("SolarPosition invalid lat/long") {
@@ -384,6 +394,151 @@ TEST_CASE("SolarPosition parameter-free methods with defaults") {
     DOCTEST_CHECK(doctest::Approx(300.f).epsilon(1e-6f) == temperature);
     DOCTEST_CHECK(doctest::Approx(0.5f).epsilon(1e-6f) == humidity);
     DOCTEST_CHECK(doctest::Approx(0.02f).epsilon(1e-6f) == turbidity);
+}
+
+TEST_CASE("SSolar-GOA spectral irradiance") {
+    Context context_s;
+
+    DOCTEST_CHECK_NOTHROW(context_s.setDate(make_Date(16, 7, 2023)));
+    DOCTEST_CHECK_NOTHROW(context_s.setTime(make_Time(12, 0, 0)));
+
+    SolarPosition sp(0, 36.93f, 3.33f, &context_s);
+    sp.setAtmosphericConditions(87700.f, 298.f, 0.5f, 0.026f);
+
+    DOCTEST_CHECK_NOTHROW(sp.calculateGlobalSolarSpectrum("global_test"));
+    DOCTEST_CHECK_NOTHROW(sp.calculateDirectSolarSpectrum("direct_test"));
+    DOCTEST_CHECK_NOTHROW(sp.calculateDiffuseSolarSpectrum("diffuse_test"));
+
+    std::vector<vec2> global_spectrum, direct_spectrum, diffuse_spectrum;
+    DOCTEST_CHECK_NOTHROW(context_s.getGlobalData("global_test", global_spectrum));
+    DOCTEST_CHECK_NOTHROW(context_s.getGlobalData("direct_test", direct_spectrum));
+    DOCTEST_CHECK_NOTHROW(context_s.getGlobalData("diffuse_test", diffuse_spectrum));
+
+    DOCTEST_CHECK(global_spectrum.size() == 2301);
+    DOCTEST_CHECK(direct_spectrum.size() == 2301);
+    DOCTEST_CHECK(diffuse_spectrum.size() == 2301);
+
+    DOCTEST_CHECK(doctest::Approx(300.f).epsilon(0.1f) == global_spectrum.front().x);
+    DOCTEST_CHECK(doctest::Approx(2600.f).epsilon(0.1f) == global_spectrum.back().x);
+
+    for (const auto& point : global_spectrum) {
+        DOCTEST_CHECK(point.y >= 0.f);
+        DOCTEST_CHECK(std::isfinite(point.y));
+    }
+
+    // Verify integrated PAR flux is reasonable for clear sky at solar noon
+    float par_flux = 0.f;
+    for (size_t i = 1; i < global_spectrum.size(); ++i) {
+        float wl = global_spectrum[i].x;
+        if (wl >= 400.f && wl <= 700.f) {
+            float dw = global_spectrum[i].x - global_spectrum[i-1].x;
+            float avg_irr = 0.5f * (global_spectrum[i].y + global_spectrum[i-1].y);
+            par_flux += avg_irr * dw;
+        }
+    }
+    DOCTEST_CHECK(par_flux > 400.f);
+    DOCTEST_CHECK(par_flux < 500.f);
+}
+
+TEST_CASE("SSolar-GOA spectral resolution") {
+    Context context_s;
+
+    DOCTEST_CHECK_NOTHROW(context_s.setDate(make_Date(16, 7, 2023)));
+    DOCTEST_CHECK_NOTHROW(context_s.setTime(make_Time(12, 0, 0)));
+
+    SolarPosition sp(0, 36.93f, 3.33f, &context_s);
+    sp.setAtmosphericConditions(87700.f, 298.f, 0.5f, 0.026f);
+
+    // Test default 1 nm resolution
+    DOCTEST_CHECK_NOTHROW(sp.calculateGlobalSolarSpectrum("res_1nm", 1.0f));
+    std::vector<vec2> spectrum_1nm;
+    DOCTEST_CHECK_NOTHROW(context_s.getGlobalData("res_1nm", spectrum_1nm));
+    DOCTEST_CHECK(spectrum_1nm.size() == 2301);
+
+    // Test 10 nm resolution
+    DOCTEST_CHECK_NOTHROW(sp.calculateGlobalSolarSpectrum("res_10nm", 10.0f));
+    std::vector<vec2> spectrum_10nm;
+    DOCTEST_CHECK_NOTHROW(context_s.getGlobalData("res_10nm", spectrum_10nm));
+    DOCTEST_CHECK(spectrum_10nm.size() == 231);  // (2600-300)/10 + 1 = 231
+
+    // Test 50 nm resolution
+    DOCTEST_CHECK_NOTHROW(sp.calculateGlobalSolarSpectrum("res_50nm", 50.0f));
+    std::vector<vec2> spectrum_50nm;
+    DOCTEST_CHECK_NOTHROW(context_s.getGlobalData("res_50nm", spectrum_50nm));
+    DOCTEST_CHECK(spectrum_50nm.size() == 47);  // (2600-300)/50 + 1 = 47
+
+    // Verify wavelength spacing
+    DOCTEST_CHECK(doctest::Approx(300.f).epsilon(0.5f) == spectrum_10nm.front().x);
+    DOCTEST_CHECK(doctest::Approx(310.f).epsilon(0.5f) == spectrum_10nm[1].x);
+
+    // Verify irradiance values are still reasonable
+    for (const auto& point : spectrum_10nm) {
+        DOCTEST_CHECK(point.y >= 0.f);
+        DOCTEST_CHECK(std::isfinite(point.y));
+    }
+}
+
+TEST_CASE("SSolar-GOA validation against Python reference") {
+    Context context_s;
+
+    DOCTEST_CHECK_NOTHROW(context_s.setDate(make_Date(16, 7, 2023)));
+    DOCTEST_CHECK_NOTHROW(context_s.setTime(make_Time(12, 0, 0)));
+
+    SolarPosition sp(0, 36.93f, 3.33f, &context_s);
+    sp.setAtmosphericConditions(87700.f, 298.f, 0.5f, 0.026f);
+
+    DOCTEST_CHECK_NOTHROW(sp.calculateGlobalSolarSpectrum("validation"));
+
+    std::vector<vec2> global_spectrum;
+    DOCTEST_CHECK_NOTHROW(context_s.getGlobalData("validation", global_spectrum));
+
+    // Compare against Python reference if available
+    std::ifstream ref_file("plugins/solarposition/tests/validate_reference_global.txt");
+    if (ref_file.is_open()) {
+        std::string header_line;
+        std::getline(ref_file, header_line);  // Skip header
+
+        std::vector<float> ref_wavelengths, ref_irradiances;
+        std::string line;
+        while (std::getline(ref_file, line)) {
+            if (line.empty() || line[0] == '#') continue;
+
+            std::istringstream iss(line);
+            float wl, irr;
+            if (iss >> wl >> irr) {
+                ref_wavelengths.push_back(wl);
+                ref_irradiances.push_back(irr);
+            }
+        }
+        ref_file.close();
+
+        DOCTEST_CHECK(ref_wavelengths.size() == 2301);
+
+        float max_rel_error = 0.f;
+        float sum_sq_error = 0.f;
+        size_t n_compared = 0;
+
+        for (size_t i = 0; i < std::min(global_spectrum.size(), ref_wavelengths.size()); ++i) {
+            DOCTEST_CHECK(doctest::Approx(ref_wavelengths[i]).epsilon(1e-6f) == global_spectrum[i].x);
+
+            float cpp_irr = global_spectrum[i].y;
+            float ref_irr = ref_irradiances[i];
+            float abs_error = std::fabs(cpp_irr - ref_irr);
+            float rel_error = abs_error / (ref_irr + 1e-10f);
+
+            max_rel_error = std::max(max_rel_error, rel_error);
+            sum_sq_error += abs_error * abs_error;
+            n_compared++;
+        }
+
+        float rms_error = std::sqrt(sum_sq_error / n_compared);
+
+        DOCTEST_CHECK(max_rel_error < 0.01f);
+        DOCTEST_CHECK(rms_error < 0.01f);
+
+    } else {
+        DOCTEST_WARN("Python reference file not found - run validate_detailed.py to enable detailed validation");
+    }
 }
 
 int SolarPosition::selfTest(int argc, char **argv) {

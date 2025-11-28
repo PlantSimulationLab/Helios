@@ -1,0 +1,724 @@
+<helios>
+
+    <camera label="Canon_20D">
+        <manufacturer>Canon</manufacturer>
+        <model>EOS 20D</model>
+        <type>rgb</type>
+        <lens_make>Canon</lens_make>
+        <lens_model>Canon EF-S 18-55mm f/3.5-5.6</lens_model>
+        <lens_specification>18-55mm f/3.5-5.6</lens_specification>
+        <sensor_width_mm>22.5</sensor_width_mm>
+        <resolution_width>3504</resolution_width>
+        <resolution_height>2236</resolution_height>
+        <focal_length_mm>31.0</focal_length_mm>
+        <lens_diameter_mm>6.9</lens_diameter_mm>
+        <exposure>ISO100</exposure>
+        <shutter_speed>0.008</shutter_speed>
+        <focal_plane_distance_m>2.0</focal_plane_distance_m>
+        <!-- Source:camspec_database.txt, http://www.gujinwei.org/research/camspec/db.html -->
+        <!-- MeasurementMethod:Monochromator -->
+        <!-- Copyright:Rochester Institute of Technology, all rights reserved. -->
+        <!-- License:Creative Commons BY-NC-SA 4.0, https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode -->
+        <spectral_response label="red">
+            400 0.001237
+            410 0.003011
+            420 0.011758
+            430 0.025271
+            440 0.010475
+            450 0.004932
+            460 0.003796
+            470 0.003684
+            480 0.005474
+            490 0.007877
+            500 0.014220
+            510 0.033682
+            520 0.066095
+            530 0.122610
+            540 0.131970
+            550 0.109570
+            560 0.135000
+            570 0.273590
+            580 0.434350
+            590 0.572730
+            600 0.584010
+            610 0.559050
+            620 0.456500
+            630 0.414150
+            640 0.311240
+            650 0.278410
+            660 0.199710
+            670 0.115550
+            680 0.020638
+            690 0.006060
+            700 0.001797
+            710 0.000478
+            720 0.000199
+        </spectral_response>
+        <spectral_response label="green">
+            400 0.001769
+            410 0.002598
+            420 0.012201
+            430 0.048114
+            440 0.062590
+            450 0.100330
+            460 0.126500
+            470 0.171660
+            480 0.311690
+            490 0.453740
+            500 0.624000
+            510 0.832670
+            520 0.877690
+            530 1.000000
+            540 0.892330
+            550 0.911220
+            560 0.743530
+            570 0.670420
+            580 0.503500
+            590 0.360990
+            600 0.205830
+            610 0.109900
+            620 0.054814
+            630 0.038684
+            640 0.025423
+            650 0.020145
+            660 0.015219
+            670 0.011671
+            680 0.003024
+            690 0.001258
+            700 0.000474
+            710 0.000155
+            720 0.000087
+        </spectral_response>
+        <spectral_response label="blue">
+            400 0.004222
+            410 0.014449
+            420 0.101980
+            430 0.490200
+            440 0.566970
+            450 0.680240
+            460 0.764520
+            470 0.770470
+            480 0.766530
+            490 0.634520
+            500 0.486360
+            510 0.350110
+            520 0.175350
+            530 0.092933
+            540 0.051083
+            550 0.031774
+            560 0.014149
+            570 0.009654
+            580 0.006942
+            590 0.005207
+            600 0.003176
+            610 0.002548
+            620 0.002204
+            630 0.002411
+            640 0.001900
+            650 0.002523
+            660 0.002817
+            670 0.002004
+            680 0.000451
+            690 0.000181
+            700 0.000105
+            710 0.000089
+            720 0.000082
+        </spectral_response>
+    </camera>
+
+    <camera label="Nikon_D700">
+        <manufacturer>Nikon</manufacturer>
+        <model>D700</model>
+        <type>rgb</type>
+        <lens_make>Nikon</lens_make>
+        <lens_model>AF-S NIKKOR 50mm f/1.8G</lens_model>
+        <lens_specification>50mm f/1.8</lens_specification>
+        <sensor_width_mm>36.0</sensor_width_mm>
+        <resolution_width>3008</resolution_width>
+        <resolution_height>2000</resolution_height>
+        <focal_length_mm>50.0</focal_length_mm>
+        <lens_diameter_mm>27.8</lens_diameter_mm>
+        <exposure>ISO100</exposure>
+        <shutter_speed>0.008</shutter_speed>
+        <focal_plane_distance_m>2.0</focal_plane_distance_m>
+        <!-- Camera:Nikon D700 -->
+        <!-- Source:camspec_database.txt, http://www.gujinwei.org/research/camspec/db.html -->
+        <!-- MeasurementMethod:Monochromator -->
+        <!-- Copyright:Rochester Institute of Technology, all rights reserved. -->
+        <!-- License:Creative Commons BY-NC-SA 4.0, https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode -->
+        <spectral_response label="red">
+            400 0.001778
+            410 0.002744
+            420 0.048766
+            430 0.055650
+            440 0.039817
+            450 0.031348
+            460 0.026632
+            470 0.028110
+            480 0.032437
+            490 0.029863
+            500 0.031673
+            510 0.038347
+            520 0.062150
+            530 0.075373
+            540 0.039432
+            550 0.021926
+            560 0.025260
+            570 0.095391
+            580 0.494610
+            590 0.743720
+            600 0.711720
+            610 0.617520
+            620 0.512360
+            630 0.411280
+            640 0.319800
+            650 0.242360
+            660 0.165470
+            670 0.082116
+            680 0.026280
+            690 0.007394
+            700 0.002857
+            710 0.001117
+            720 0.000471
+        </spectral_response>
+        <spectral_response label="green">
+            400 0.001434
+            410 0.001874
+            420 0.023080
+            430 0.043356
+            440 0.059914
+            450 0.082364
+            460 0.133560
+            470 0.244980
+            480 0.359610
+            490 0.409370
+            500 0.576990
+            510 0.766190
+            520 0.900610
+            530 1.000000
+            540 0.954950
+            550 0.887280
+            560 0.747140
+            570 0.624900
+            580 0.451150
+            590 0.286900
+            600 0.144890
+            610 0.065037
+            620 0.031947
+            630 0.019449
+            640 0.012242
+            650 0.008143
+            660 0.005936
+            670 0.004227
+            680 0.002057
+            690 0.000881
+            700 0.000480
+            710 0.000238
+            720 0.000118
+        </spectral_response>
+        <spectral_response label="blue">
+            400 0.005916
+            410 0.014395
+            420 0.374550
+            430 0.652710
+            440 0.753090
+            450 0.902180
+            460 0.911670
+            470 0.867870
+            480 0.815770
+            490 0.644030
+            500 0.460410
+            510 0.277860
+            520 0.130720
+            530 0.064085
+            540 0.031748
+            550 0.015075
+            560 0.007431
+            570 0.005366
+            580 0.004116
+            590 0.002657
+            600 0.001269
+            610 0.000757
+            620 0.000506
+            630 0.000332
+            640 0.000305
+            650 0.000392
+            660 0.000235
+            670 0.000188
+            680 0.000080
+            690 0.000046
+            700 0.000035
+            710 0.000028
+            720 0.000025
+        </spectral_response>
+    </camera>
+
+    <camera label="Nikon_D50">
+        <manufacturer>Nikon</manufacturer>
+        <model>D50</model>
+        <type>rgb</type>
+        <lens_make>Nikon</lens_make>
+        <lens_model>AF-S DX Zoom-Nikkor 18-55mm f/3.5-5.6G ED</lens_model>
+        <lens_specification>18-55mm f/3.5-5.6</lens_specification>
+        <sensor_width_mm>23.7</sensor_width_mm>
+        <resolution_width>3008</resolution_width>
+        <resolution_height>2000</resolution_height>
+        <focal_length_mm>33.9</focal_length_mm>
+        <lens_diameter_mm>7.53</lens_diameter_mm>
+        <exposure>ISO100</exposure>
+        <shutter_speed>0.008</shutter_speed>
+        <focal_plane_distance_m>2.0</focal_plane_distance_m>
+        <!-- Camera:Nikon D50 -->
+        <!-- Source:camspec_database.txt, http://www.gujinwei.org/research/camspec/db.html -->
+        <!-- MeasurementMethod:Monochromator -->
+        <!-- Copyright:Rochester Institute of Technology, all rights reserved. -->
+        <!-- License:Creative Commons BY-NC-SA 4.0,https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode -->
+        <spectral_response label="red">
+            400 0.030947
+            410 0.020803
+            420 0.015320
+            430 0.012161
+            440 0.010524
+            450 0.008952
+            460 0.009215
+            470 0.012548
+            480 0.017491
+            490 0.015130
+            500 0.018700
+            510 0.031169
+            520 0.057046
+            530 0.091871
+            540 0.055080
+            550 0.030477
+            560 0.029048
+            570 0.078283
+            580 0.361760
+            590 0.626730
+            600 0.582720
+            610 0.504660
+            620 0.371920
+            630 0.321530
+            640 0.232190
+            650 0.180520
+            660 0.120250
+            670 0.089647
+            680 0.063347
+            690 0.044492
+            700 0.028755
+            710 0.020863
+            720 0.013428
+        </spectral_response>
+        <spectral_response label="green">
+            400 0.037561
+            410 0.041006
+            420 0.051260
+            430 0.068434
+            440 0.090222
+            450 0.114070
+            460 0.168320
+            470 0.255560
+            480 0.384310
+            490 0.398320
+            500 0.510160
+            510 0.719380
+            520 0.825270
+            530 1.000000
+            540 0.915950
+            550 0.895100
+            560 0.735800
+            570 0.627850
+            580 0.440290
+            590 0.294590
+            600 0.141200
+            610 0.054981
+            620 0.019834
+            630 0.011132
+            640 0.006313
+            650 0.003865
+            660 0.002701
+            670 0.003250
+            680 0.004078
+            690 0.004806
+            700 0.004563
+            710 0.004048
+            720 0.002517
+        </spectral_response>
+        <spectral_response label="blue">
+            400 0.271390
+            410 0.359290
+            420 0.448430
+            430 0.575820
+            440 0.682630
+            450 0.776890
+            460 0.850430
+            470 0.792440
+            480 0.766170
+            490 0.572930
+            500 0.392910
+            510 0.245890
+            520 0.101500
+            530 0.045772
+            540 0.023081
+            550 0.012789
+            560 0.006206
+            570 0.004057
+            580 0.003031
+            590 0.002014
+            600 0.001341
+            610 0.000704
+            620 0.000506
+            630 0.000429
+            640 0.000406
+            650 0.000526
+            660 0.000583
+            670 0.000545
+            680 0.000474
+            690 0.000364
+            700 0.000269
+            710 0.000193
+            720 0.000096
+        </spectral_response>
+    </camera>
+
+    <camera label="iPhone11">
+        <manufacturer>Apple</manufacturer>
+        <model>iPhone 11</model>
+        <type>rgb</type>
+        <lens_model>iPhone 11 back dual wide camera 4.25mm f/1.8</lens_model>
+        <sensor_width_mm>4.29</sensor_width_mm>
+        <resolution_width>3024</resolution_width>
+        <resolution_height>4032</resolution_height>
+        <focal_length_mm>4.25</focal_length_mm>
+        <lens_diameter_mm>2.36</lens_diameter_mm>
+        <exposure>auto</exposure>
+        <shutter_speed>0.00769</shutter_speed>
+        <focal_plane_distance_m>0.5</focal_plane_distance_m>
+        <!-- Data from Ohtera Lab: https://ohlab.kic.ac.jp/index/mobilespec_database -->
+        <spectral_response label="red">
+            400 0.016800
+            410 0.010700
+            420 0.013700
+            430 0.019300
+            440 0.021100
+            450 0.018300
+            460 0.017200
+            470 0.020200
+            480 0.026200
+            490 0.030200
+            500 0.035000
+            510 0.044600
+            520 0.066300
+            530 0.081700
+            540 0.065100
+            550 0.050000
+            560 0.049300
+            570 0.064600
+            580 0.316000
+            590 0.738000
+            600 0.769000
+            610 0.685000
+            620 0.587000
+            630 0.480000
+            640 0.371000
+            650 0.286000
+            660 0.211000
+            670 0.128000
+            680 0.058400
+            690 0.021300
+            700 0.010100
+        </spectral_response>
+        <spectral_response label="green">
+            400 0.024600
+            410 0.014900
+            420 0.015800
+            430 0.021400
+            440 0.032400
+            450 0.037700
+            460 0.047200
+            470 0.148000
+            480 0.433000
+            490 0.686000
+            500 0.846000
+            510 0.932000
+            520 0.970000
+            530 1.000000
+            540 0.997000
+            550 0.952000
+            560 0.883000
+            570 0.790000
+            580 0.681000
+            590 0.535000
+            600 0.380000
+            610 0.236000
+            620 0.151000
+            630 0.102000
+            640 0.071400
+            650 0.052600
+            660 0.041300
+            670 0.031700
+            680 0.021300
+            690 0.012600
+            700 0.009040
+        </spectral_response>
+        <spectral_response label="blue">
+            400 0.025000
+            410 0.038300
+            420 0.121000
+            430 0.296000
+            440 0.447000
+            450 0.550000
+            460 0.599000
+            470 0.615000
+            480 0.597000
+            490 0.570000
+            500 0.468000
+            510 0.355000
+            520 0.239000
+            530 0.168000
+            540 0.131000
+            550 0.092500
+            560 0.065100
+            570 0.048800
+            580 0.043400
+            590 0.039900
+            600 0.034200
+            610 0.027900
+            620 0.024100
+            630 0.022400
+            640 0.022100
+            650 0.021700
+            660 0.020600
+            670 0.016100
+            680 0.009490
+            690 0.005090
+            700 0.003800
+        </spectral_response>
+    </camera>
+
+    <camera label="iPhone12ProMAX">
+        <manufacturer>Apple</manufacturer>
+        <model>iPhone 12 Pro Max</model>
+        <type>rgb</type>
+        <lens_model>iPhone 12 Pro Max back camera 5.1mm f/1.6</lens_model>
+        <sensor_width_mm>5.1</sensor_width_mm>
+        <resolution_width>3024</resolution_width>
+        <resolution_height>4032</resolution_height>
+        <focal_length_mm>5.1</focal_length_mm>
+        <lens_diameter_mm>3.19</lens_diameter_mm>
+        <exposure>auto</exposure>
+        <shutter_speed>0.00769</shutter_speed>
+        <focal_plane_distance_m>0.5</focal_plane_distance_m>
+        <!-- Data from Ohtera Lab: https://ohlab.kic.ac.jp/index/mobilespec_database -->
+        <spectral_response label="red">
+            400 0.022100
+            410 0.020600
+            420 0.028200
+            430 0.029300
+            440 0.026600
+            450 0.021400
+            460 0.019500
+            470 0.022100
+            480 0.027200
+            490 0.028800
+            500 0.032600
+            510 0.041600
+            520 0.062700
+            530 0.079200
+            540 0.061200
+            550 0.045900
+            560 0.045900
+            570 0.060200
+            580 0.322000
+            590 0.756000
+            600 0.774000
+            610 0.687000
+            620 0.592000
+            630 0.484000
+            640 0.374000
+            650 0.293000
+            660 0.216000
+            670 0.134000
+            680 0.064000
+            690 0.023700
+            700 0.012600
+        </spectral_response>
+        <spectral_response label="green">
+            400 0.035300
+            410 0.026000
+            420 0.029600
+            430 0.031000
+            440 0.039900
+            450 0.043500
+            460 0.050400
+            470 0.157000
+            480 0.465000
+            490 0.693000
+            500 0.848000
+            510 0.948000
+            520 0.974000
+            530 1.000000
+            540 0.997000
+            550 0.956000
+            560 0.893000
+            570 0.808000
+            580 0.712000
+            590 0.555000
+            600 0.399000
+            610 0.253000
+            620 0.166000
+            630 0.114000
+            640 0.080500
+            650 0.060300
+            660 0.047400
+            670 0.037300
+            680 0.026400
+            690 0.016300
+            700 0.012700
+        </spectral_response>
+        <spectral_response label="blue">
+            400 0.031800
+            410 0.101000
+            420 0.271000
+            430 0.440000
+            440 0.526000
+            450 0.599000
+            460 0.635000
+            470 0.660000
+            480 0.637000
+            490 0.576000
+            500 0.476000
+            510 0.363000
+            520 0.237000
+            530 0.167000
+            540 0.131000
+            550 0.091800
+            560 0.063200
+            570 0.047300
+            580 0.041900
+            590 0.036000
+            600 0.030000
+            610 0.024000
+            620 0.020800
+            630 0.019400
+            640 0.019500
+            650 0.019800
+            660 0.018800
+            670 0.015100
+            680 0.009890
+            690 0.005710
+            700 0.004420
+        </spectral_response>
+    </camera>
+
+    <camera label="TestCamera_Manual">
+        <manufacturer>Test</manufacturer>
+        <model>Manual Parameters</model>
+        <sensor_width_mm>24.0</sensor_width_mm>
+        <resolution_width>1024</resolution_width>
+        <resolution_height>1024</resolution_height>
+        <focal_length_mm>25.73</focal_length_mm>
+        <lens_diameter_mm>2.0</lens_diameter_mm>
+        <focal_plane_distance_m>0.5</focal_plane_distance_m>
+        <!-- iPhone 12 Pro Max spectral response data -->
+        <spectral_response label="red">
+            400 0.022100
+            410 0.020600
+            420 0.028200
+            430 0.029300
+            440 0.026600
+            450 0.021400
+            460 0.019500
+            470 0.022100
+            480 0.027200
+            490 0.028800
+            500 0.032600
+            510 0.041600
+            520 0.062700
+            530 0.079200
+            540 0.061200
+            550 0.045900
+            560 0.045900
+            570 0.060200
+            580 0.322000
+            590 0.756000
+            600 0.774000
+            610 0.687000
+            620 0.592000
+            630 0.484000
+            640 0.374000
+            650 0.293000
+            660 0.216000
+            670 0.134000
+            680 0.064000
+            690 0.023700
+            700 0.012600
+        </spectral_response>
+        <spectral_response label="green">
+            400 0.035300
+            410 0.026000
+            420 0.029600
+            430 0.031000
+            440 0.039900
+            450 0.043500
+            460 0.050400
+            470 0.157000
+            480 0.465000
+            490 0.693000
+            500 0.848000
+            510 0.948000
+            520 0.974000
+            530 1.000000
+            540 0.997000
+            550 0.956000
+            560 0.893000
+            570 0.808000
+            580 0.712000
+            590 0.555000
+            600 0.399000
+            610 0.253000
+            620 0.166000
+            630 0.114000
+            640 0.080500
+            650 0.060300
+            660 0.047400
+            670 0.037300
+            680 0.026400
+            690 0.016300
+            700 0.012700
+        </spectral_response>
+        <spectral_response label="blue">
+            400 0.031800
+            410 0.101000
+            420 0.271000
+            430 0.440000
+            440 0.526000
+            450 0.599000
+            460 0.635000
+            470 0.660000
+            480 0.637000
+            490 0.576000
+            500 0.476000
+            510 0.363000
+            520 0.237000
+            530 0.167000
+            540 0.131000
+            550 0.091800
+            560 0.063200
+            570 0.047300
+            580 0.041900
+            590 0.036000
+            600 0.030000
+            610 0.024000
+            620 0.020800
+            630 0.019400
+            640 0.019500
+            650 0.019800
+            660 0.018800
+            670 0.015100
+            680 0.009890
+            690 0.005710
+            700 0.004420
+        </spectral_response>
+    </camera>
+
+</helios>

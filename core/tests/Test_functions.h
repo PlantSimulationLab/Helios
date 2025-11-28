@@ -165,10 +165,13 @@ TEST_CASE("Mathematical and Geometric Helpers") {
         DOCTEST_CHECK(res_end.z == doctest::Approx(p1.z));
 
         // Test clamping
-        capture_cerr cerr_buffer;
-        vec3 res_low = spline_interp3(-0.5f, p0, t0, p1, t1);
+        vec3 res_low, res_high;
+        {
+            capture_cerr cerr_buffer;
+            res_low = spline_interp3(-0.5f, p0, t0, p1, t1);
+            res_high = spline_interp3(1.5f, p0, t0, p1, t1);
+        }
         DOCTEST_CHECK(res_low.x == doctest::Approx(p0.x));
-        vec3 res_high = spline_interp3(1.5f, p0, t0, p1, t1);
         DOCTEST_CHECK(res_high.x == doctest::Approx(p1.x));
     }
     SUBCASE("Angle conversion helpers") {
@@ -244,7 +247,6 @@ TEST_CASE("Matrix and Transformation Helpers") {
     }
 
     SUBCASE("makeRotationMatrix invalid axis") {
-        capture_cerr cerr_buffer;
         float T[16];
         DOCTEST_CHECK_THROWS(makeRotationMatrix(0.5f, "w", T));
     }
@@ -367,8 +369,10 @@ TEST_CASE("String, File Path, and Parsing Utilities") {
         DOCTEST_CHECK_NOTHROW(result = separate_string_by_delimiter("", ","));
         DOCTEST_CHECK(result.size() == 1);
 
-        capture_cerr cerr_buffer;
-        DOCTEST_CHECK_THROWS(result = separate_string_by_delimiter("a,b,c", ""));
+        {
+            capture_cerr cerr_buffer;
+            DOCTEST_CHECK_THROWS(result = separate_string_by_delimiter("a,b,c", ""));
+        }
 
         DOCTEST_CHECK_NOTHROW(result = separate_string_by_delimiter(",", ","));
         DOCTEST_CHECK(result.size() == 2);
@@ -386,13 +390,13 @@ TEST_CASE("String, File Path, and Parsing Utilities") {
         DOCTEST_CHECK(string2int4("1 2 3 4") == int4(1, 2, 3, 4));
     }
     SUBCASE("string to vector conversions with invalid input") {
-        capture_cerr cerr_buffer;
         vec2 result_vec2;
         vec3 result_vec3;
         vec4 result_vec4;
         int2 result_int2;
         int3 result_int3;
         int4 result_int4;
+        // Error messages from invalid input are expected - don't suppress them
         DOCTEST_CHECK_THROWS(result_vec2 = string2vec2("1.5"));
         DOCTEST_CHECK_THROWS(result_vec3 = string2vec3("1.5 2.5"));
         DOCTEST_CHECK_THROWS(result_vec4 = string2vec4("1.5 2.5 3.5"));
@@ -416,8 +420,8 @@ TEST_CASE("String, File Path, and Parsing Utilities") {
         DOCTEST_CHECK(color.a == doctest::Approx(1.0f));
     }
     SUBCASE("string2RGBcolor with invalid input") {
-        capture_cerr cerr_buffer;
         RGBAcolor result;
+        // Error messages from invalid input are expected - don't suppress them
         DOCTEST_CHECK_THROWS(result = string2RGBcolor("0.1 0.2"));
         DOCTEST_CHECK_THROWS(result = string2RGBcolor("0.1 0.2 0.3 0.4 0.5"));
         DOCTEST_CHECK_THROWS(result = string2RGBcolor("a b c"));
@@ -587,7 +591,7 @@ TEST_CASE("String, File Path, and Parsing Utilities") {
         DOCTEST_CHECK(f == doctest::Approx(1.23f));
     }
     SUBCASE("parse_* invalid input") {
-        capture_cerr cerr_buffer;
+        // Error messages from invalid input are expected - don't suppress them
         int i;
         DOCTEST_CHECK(!parse_int("1.5", i));
         float f;
@@ -711,9 +715,9 @@ TEST_CASE("Miscellaneous Utilities") {
         DOCTEST_CHECK(res == doctest::Approx(0.f));
     }
     SUBCASE("interp1 edge cases") {
-        capture_cerr cerr_buffer;
         float result;
         std::vector<vec2> empty_points;
+        // Error from empty input is expected - don't suppress it
         DOCTEST_CHECK_THROWS(result = interp1(empty_points, 0.5f));
 
         std::vector<vec2> single_point = {{1, 5}};
@@ -788,39 +792,42 @@ static float near_singular(float x, std::vector<float> &, const void *) {
 TEST_CASE("fzero") {
     SUBCASE("fzero finds positive quadratic root") {
         std::vector<float> v;
-        float root = helios::fzero(quadratic, v, nullptr, 1.0f, 1e-5f, 50);
+        float root = helios::fzero(quadratic, v, nullptr, 1.0f, 1e-5f, 50, nullptr);
         DOCTEST_CHECK(root == doctest::Approx(2.0f).epsilon(errtol));
     }
 
     SUBCASE("fzero finds root far from initial guess") {
         std::vector<float> v;
-        float root = helios::fzero(linear, v, nullptr, -10.0f, 1e-6f, 50);
+        float root = helios::fzero(linear, v, nullptr, -10.0f, 1e-6f, 50, nullptr);
         DOCTEST_CHECK(root == doctest::Approx(3.5f).epsilon(errtol));
     }
 
     SUBCASE("fzero handles function without zero") {
         std::vector<float> v;
-        capture_cerr cerr_buffer;
-        float root = helios::fzero(flat, v, nullptr, 0.0f, 1e-6f, 10);
+        WarningAggregator warnings;
+        float root = helios::fzero(flat, v, nullptr, 0.0f, 1e-6f, 10, &warnings);
         DOCTEST_CHECK(std::isfinite(root));
-        DOCTEST_CHECK(cerr_buffer.has_output());
+        // Should have a stagnation or convergence warning
+        bool has_stagnation = warnings.getCount("fzero_stagnation") > 0;
+        bool has_convergence = warnings.getCount("fzero_convergence_failure") > 0;
+        DOCTEST_CHECK((has_stagnation || has_convergence));
     }
 
     SUBCASE("fzero returns exact root at initial guess") {
         std::vector<float> v;
-        float root = helios::fzero(quadratic, v, nullptr, 2.0f, 1e-6f, 5);
+        float root = helios::fzero(quadratic, v, nullptr, 2.0f, 1e-6f, 5, nullptr);
         DOCTEST_CHECK(root == doctest::Approx(2.0f).epsilon(errtol));
     }
 
     SUBCASE("fzero finds a cubic root") {
         std::vector<float> v;
-        float root = helios::fzero(cubic, v, nullptr, 3.5f, 1e-5f, 80);
+        float root = helios::fzero(cubic, v, nullptr, 3.5f, 1e-5f, 80, nullptr);
         DOCTEST_CHECK(root == doctest::Approx(4.0f).epsilon(errtol));
     }
 
     SUBCASE("fzero copes with near-singular derivative") {
         std::vector<float> v;
-        float root = helios::fzero(near_singular, v, nullptr, 0.01f, 1e-4f, 50);
+        float root = helios::fzero(near_singular, v, nullptr, 0.01f, 1e-4f, 50, nullptr);
         DOCTEST_CHECK(std::fabs(near_singular(root, v, nullptr)) < 1e-4f);
     }
 }
@@ -879,8 +886,8 @@ TEST_CASE("linspace - Linearly Spaced Values") {
     }
 
     SUBCASE("linspace float error handling") {
-        capture_cerr cerr_buffer;
         std::vector<float> result;
+        // Error messages from invalid input are expected - don't suppress them
         DOCTEST_CHECK_THROWS(result = linspace(0.f, 1.f, 0));
         DOCTEST_CHECK_THROWS(result = linspace(0.f, 1.f, -1));
     }
@@ -910,10 +917,10 @@ TEST_CASE("linspace - Linearly Spaced Values") {
     }
 
     SUBCASE("linspace vec2 error handling") {
-        capture_cerr cerr_buffer;
         std::vector<vec2> result;
         vec2 start(0.f, 0.f);
         vec2 end(1.f, 1.f);
+        // Error messages from invalid input are expected - don't suppress them
         DOCTEST_CHECK_THROWS(result = linspace(start, end, 0));
         DOCTEST_CHECK_THROWS(result = linspace(start, end, -5));
     }
@@ -953,10 +960,10 @@ TEST_CASE("linspace - Linearly Spaced Values") {
     }
 
     SUBCASE("linspace vec3 error handling") {
-        capture_cerr cerr_buffer;
         std::vector<vec3> result;
         vec3 start(0.f, 0.f, 0.f);
         vec3 end(1.f, 1.f, 1.f);
+        // Error messages from invalid input are expected - don't suppress them
         DOCTEST_CHECK_THROWS(result = linspace(start, end, 0));
         DOCTEST_CHECK_THROWS(result = linspace(start, end, -10));
     }
@@ -992,10 +999,10 @@ TEST_CASE("linspace - Linearly Spaced Values") {
     }
 
     SUBCASE("linspace vec4 error handling") {
-        capture_cerr cerr_buffer;
         std::vector<vec4> result;
         vec4 start(0.f, 0.f, 0.f, 0.f);
         vec4 end(1.f, 1.f, 1.f, 1.f);
+        // Error messages from invalid input are expected - don't suppress them
         DOCTEST_CHECK_THROWS(result = linspace(start, end, 0));
         DOCTEST_CHECK_THROWS(result = linspace(start, end, -1));
     }
@@ -1259,5 +1266,190 @@ TEST_CASE("Project-based File Resolution") {
             // Clean up
             std::filesystem::remove(test_file_path);
         }
+    }
+}
+
+TEST_CASE("WarningAggregator") {
+
+    SUBCASE("Basic accumulation") {
+        WarningAggregator agg;
+        agg.addWarning("test_category", "test message 1");
+        agg.addWarning("test_category", "test message 2");
+        agg.addWarning("test_category", "test message 3");
+
+        DOCTEST_CHECK(agg.getCount("test_category") == 3);
+        DOCTEST_CHECK(agg.getCount("nonexistent_category") == 0);
+    }
+
+    SUBCASE("Multiple categories") {
+        WarningAggregator agg;
+        agg.addWarning("category_a", "message A1");
+        agg.addWarning("category_a", "message A2");
+        agg.addWarning("category_b", "message B1");
+        agg.addWarning("category_b", "message B2");
+        agg.addWarning("category_b", "message B3");
+
+        DOCTEST_CHECK(agg.getCount("category_a") == 2);
+        DOCTEST_CHECK(agg.getCount("category_b") == 3);
+    }
+
+    SUBCASE("Enable and disable") {
+        WarningAggregator agg;
+
+        // Should be enabled by default
+        DOCTEST_CHECK(agg.isEnabled());
+
+        agg.addWarning("test", "message 1");
+        DOCTEST_CHECK(agg.getCount("test") == 1);
+
+        // Disable and add more warnings
+        agg.setEnabled(false);
+        DOCTEST_CHECK(!agg.isEnabled());
+        agg.addWarning("test", "message 2");
+        agg.addWarning("test", "message 3");
+
+        // Count should not increase when disabled
+        DOCTEST_CHECK(agg.getCount("test") == 1);
+
+        // Re-enable
+        agg.setEnabled(true);
+        agg.addWarning("test", "message 4");
+        DOCTEST_CHECK(agg.getCount("test") == 2);
+    }
+
+    SUBCASE("Clear warnings") {
+        WarningAggregator agg;
+        agg.addWarning("test", "message 1");
+        agg.addWarning("test", "message 2");
+        DOCTEST_CHECK(agg.getCount("test") == 2);
+
+        agg.clear();
+        DOCTEST_CHECK(agg.getCount("test") == 0);
+    }
+
+    SUBCASE("Report to stream") {
+        WarningAggregator agg;
+        agg.addWarning("convergence_failure", "fzero did not converge after 100 iterations.");
+        agg.addWarning("convergence_failure", "fzero did not converge after 100 iterations.");
+        agg.addWarning("convergence_failure", "fzero did not converge after 100 iterations.");
+
+        // Capture output using capture_cerr utility
+        std::ostringstream oss;
+        agg.report(oss);
+
+        std::string output = oss.str();
+
+        // Check that output contains key information
+        DOCTEST_CHECK(output.find("WARNING:") != std::string::npos);
+        DOCTEST_CHECK(output.find("3 instances") != std::string::npos);
+        DOCTEST_CHECK(output.find("convergence_failure") != std::string::npos);
+        DOCTEST_CHECK(output.find("showing first 3") != std::string::npos);
+
+        // After reporting, warnings should be cleared
+        DOCTEST_CHECK(agg.getCount("convergence_failure") == 0);
+    }
+
+    SUBCASE("Report with many warnings") {
+        WarningAggregator agg;
+
+        // Add more than 3 warnings to test "showing first 3" behavior
+        for (int i = 0; i < 10; i++) {
+            agg.addWarning("test_many", "Warning message " + std::to_string(i));
+        }
+
+        std::ostringstream oss;
+        agg.report(oss);
+
+        std::string output = oss.str();
+
+        DOCTEST_CHECK(output.find("10 instances") != std::string::npos);
+        DOCTEST_CHECK(output.find("showing first 3") != std::string::npos);
+
+        // Should show first 3 messages
+        DOCTEST_CHECK(output.find("Warning message 0") != std::string::npos);
+        DOCTEST_CHECK(output.find("Warning message 1") != std::string::npos);
+        DOCTEST_CHECK(output.find("Warning message 2") != std::string::npos);
+
+        // Should not show later messages in detail
+        DOCTEST_CHECK(output.find("Warning message 9") == std::string::npos);
+    }
+
+    SUBCASE("Empty report") {
+        WarningAggregator agg;
+
+        std::ostringstream oss;
+        agg.report(oss);
+
+        // Empty aggregator should produce no output
+        DOCTEST_CHECK(oss.str().empty());
+    }
+
+    SUBCASE("Thread safety with OpenMP") {
+#ifdef USE_OPENMP
+        WarningAggregator agg;
+
+        const int num_threads = 4;
+        const int warnings_per_thread = 250;
+
+        #pragma omp parallel for num_threads(num_threads)
+        for (int i = 0; i < num_threads * warnings_per_thread; i++) {
+            agg.addWarning("parallel_test", "message from thread");
+        }
+
+        // All warnings should be accumulated correctly
+        DOCTEST_CHECK(agg.getCount("parallel_test") == num_threads * warnings_per_thread);
+#endif
+    }
+
+    SUBCASE("Maximum examples limit") {
+        WarningAggregator agg;
+
+        // Add more than MAX_EXAMPLES (100) warnings
+        for (int i = 0; i < 150; i++) {
+            agg.addWarning("many_warnings", "Warning " + std::to_string(i));
+        }
+
+        // Should count all warnings even though only MAX_EXAMPLES are stored
+        DOCTEST_CHECK(agg.getCount("many_warnings") == 150);
+
+        std::ostringstream oss;
+        agg.report(oss);
+
+        std::string output = oss.str();
+
+        // Output should indicate all 150 warnings were encountered
+        DOCTEST_CHECK(output.find("150 instances") != std::string::npos);
+        // Should also note that more than MAX_EXAMPLES were encountered
+        DOCTEST_CHECK(output.find("More than 100 warnings") != std::string::npos);
+    }
+
+    SUBCASE("Report with single vs multiple instances") {
+        WarningAggregator agg;
+
+        // Single instance
+        agg.addWarning("single", "Only one warning");
+
+        std::ostringstream oss1;
+        agg.report(oss1);
+        std::string output1 = oss1.str();
+
+        // Should say "1 instance" (singular)
+        DOCTEST_CHECK(output1.find("1 instance") != std::string::npos);
+        // Check it doesn't say "instances" in plural form after "1"
+        auto instances_pos = output1.find(" instances");
+        auto one_instance_pos = output1.find("1 instance");
+        bool is_singular = (instances_pos == std::string::npos) || (one_instance_pos < instances_pos);
+        DOCTEST_CHECK(is_singular);
+
+        // Multiple instances
+        agg.addWarning("multiple", "Warning 1");
+        agg.addWarning("multiple", "Warning 2");
+
+        std::ostringstream oss2;
+        agg.report(oss2);
+        std::string output2 = oss2.str();
+
+        // Should say "2 instances" (plural)
+        DOCTEST_CHECK(output2.find("2 instances") != std::string::npos);
     }
 }

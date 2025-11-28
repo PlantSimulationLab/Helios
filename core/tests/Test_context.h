@@ -648,12 +648,13 @@ TEST_CASE("Object Management") {
     }
 
     SUBCASE("copy object with texture override preserves color") {
+        capture_cerr cerr_buffer; // Capture deprecation warnings from setPrimitiveColor/overridePrimitiveTextureColor
         Context ctx;
 
         // Create a tile with texture
         std::vector<uint> UUIDs = ctx.addTile(nullorigin, make_vec2(1, 1), nullrotation, make_int2(2, 2), "lib/images/disk_texture.png");
 
-        // Set color and override texture
+        // Set color and override texture - these trigger deprecation warnings (once per execution)
         RGBcolor green_color = make_RGBcolor(0, 1, 0);
         ctx.setPrimitiveColor(UUIDs, green_color);
         ctx.overridePrimitiveTextureColor(UUIDs);
@@ -896,6 +897,7 @@ TEST_CASE("Data and Object Management") {
     }
 
     SUBCASE("Primitive color and parent object") {
+        capture_cerr cerr_buffer; // Capture deprecation warnings from setPrimitiveColor/usePrimitiveTextureColor
         Context ctx;
         uint p = ctx.addPatch();
         ctx.setPrimitiveColor(p, RGB::red);
@@ -904,6 +906,7 @@ TEST_CASE("Data and Object Management") {
         DOCTEST_CHECK(ctx.isPrimitiveTextureColorOverridden(p));
         ctx.usePrimitiveTextureColor(p);
         DOCTEST_CHECK(!ctx.isPrimitiveTextureColorOverridden(p));
+
         uint obj = ctx.addBoxObject(nullorigin, make_vec3(1, 1, 1), make_int3(2, 3, 2));
         ctx.setPrimitiveParentObjectID(p, obj);
         DOCTEST_CHECK(ctx.getPrimitiveParentObjectID(p) == obj);
@@ -1233,6 +1236,7 @@ TEST_CASE("Voxel Management") {
 
 TEST_CASE("Texture Management") {
     SUBCASE("texture validation and properties") {
+        capture_cerr cerr_buffer; // Capture deprecation warnings from setPrimitiveTextureFile
         Context ctx;
 
         uint patch = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/solid.jpg");
@@ -1423,6 +1427,7 @@ TEST_CASE("Edge Cases and Additional Coverage") {
     }
 
     SUBCASE("texture edge cases") {
+        capture_cerr cerr_buffer; // Capture deprecation warnings from overridePrimitiveTextureColor/usePrimitiveTextureColor
         Context ctx;
         uint patch = ctx.addPatch();
 
@@ -1524,6 +1529,7 @@ TEST_CASE("Edge Cases and Additional Coverage") {
     }
 
     SUBCASE("primitive color operations") {
+        capture_cerr cerr_buffer; // Suppress deprecation warnings from setPrimitiveColor
         Context ctx;
         uint p = ctx.addPatch();
 
@@ -1545,6 +1551,7 @@ TEST_CASE("Edge Cases and Additional Coverage") {
     }
 
     SUBCASE("object color operations") {
+        capture_cerr cerr_buffer; // Suppress deprecation warnings from setObjectColor (calls setPrimitiveColor internally)
         Context ctx;
         uint obj = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
 
@@ -2379,5 +2386,445 @@ TEST_CASE("File path resolution priority") {
             std::filesystem::remove(testTexturePath);
             std::filesystem::remove("test_models");
         }
+    }
+
+    SUBCASE("Material System - Label-Based Creation") {
+        Context ctx;
+
+        // Default material should exist (but not counted in getMaterialCount or listMaterials)
+        DOCTEST_CHECK(ctx.doesMaterialExist("__default__"));
+        DOCTEST_CHECK(ctx.getMaterialCount() == 0); // No user-created materials yet
+
+        // Create materials with labels
+        ctx.addMaterial("leaf_material");
+        DOCTEST_CHECK(ctx.doesMaterialExist("leaf_material"));
+        DOCTEST_CHECK(ctx.getMaterialCount() == 1);
+
+        ctx.addMaterial("bark_material");
+        DOCTEST_CHECK(ctx.doesMaterialExist("bark_material"));
+        DOCTEST_CHECK(ctx.getMaterialCount() == 2);
+
+        // List materials (only user-created, not default or auto-generated)
+        std::vector<std::string> labels = ctx.listMaterials();
+        DOCTEST_CHECK(labels.size() == 2);
+
+        // Reserved labels should fail
+        DOCTEST_CHECK_THROWS(ctx.addMaterial("__reserved"));
+    }
+
+    SUBCASE("Material System - Properties") {
+        Context ctx;
+
+        // Create and set material properties
+        ctx.addMaterial("test_mat");
+
+        RGBAcolor purple = make_RGBAcolor(0.5f, 0, 0.5f, 1);
+        ctx.setMaterialColor("test_mat", purple);
+
+        RGBAcolor color = ctx.getMaterialColor("test_mat");
+        DOCTEST_CHECK(color.r == doctest::Approx(0.5f).epsilon(0.001));
+        DOCTEST_CHECK(color.g == doctest::Approx(0.0f).epsilon(0.001));
+        DOCTEST_CHECK(color.b == doctest::Approx(0.5f).epsilon(0.001));
+
+        // Set texture
+        ctx.setMaterialTexture("test_mat", "lib/images/disk_texture.png");
+        std::string tex = ctx.getMaterialTexture("test_mat");
+        DOCTEST_CHECK(tex == "lib/images/disk_texture.png");
+
+        // Texture override
+        ctx.setMaterialTextureColorOverride("test_mat", true);
+        DOCTEST_CHECK(ctx.isMaterialTextureColorOverridden("test_mat"));
+
+        ctx.setMaterialTextureColorOverride("test_mat", false);
+        DOCTEST_CHECK(!ctx.isMaterialTextureColorOverridden("test_mat"));
+
+        // Twosided flag - test default value
+        DOCTEST_CHECK(ctx.getMaterialTwosidedFlag("test_mat") == 1);  // Default is 1 (two-sided)
+
+        // Twosided flag - set to 0 (one-sided)
+        ctx.setMaterialTwosidedFlag("test_mat", 0);
+        DOCTEST_CHECK(ctx.getMaterialTwosidedFlag("test_mat") == 0);
+
+        // Twosided flag - set back to 1 (two-sided)
+        ctx.setMaterialTwosidedFlag("test_mat", 1);
+        DOCTEST_CHECK(ctx.getMaterialTwosidedFlag("test_mat") == 1);
+    }
+
+    SUBCASE("Material System - Assignment to Primitives") {
+        Context ctx;
+
+        // Create material
+        ctx.addMaterial("red_mat");
+        ctx.setMaterialColor("red_mat", make_RGBAcolor(1, 0, 0, 1));
+
+        // Create primitives with default color
+        uint p1 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 0, 0));
+        uint p2 = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 0, 0));
+
+        // Assign material
+        ctx.assignMaterialToPrimitive(p1, "red_mat");
+        ctx.assignMaterialToPrimitive(p2, "red_mat");
+
+        // Check primitive material label
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(p1) == "red_mat");
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(p2) == "red_mat");
+
+        // Check primitive color reflects material
+        RGBcolor c1 = ctx.getPrimitiveColor(p1);
+        DOCTEST_CHECK(c1.r == doctest::Approx(1.0f).epsilon(0.001));
+        DOCTEST_CHECK(c1.g == doctest::Approx(0.0f).epsilon(0.001));
+
+        // Modify material - should affect both primitives
+        ctx.setMaterialColor("red_mat", make_RGBAcolor(0, 1, 0, 1)); // Green
+
+        c1 = ctx.getPrimitiveColor(p1);
+        RGBcolor c2 = ctx.getPrimitiveColor(p2);
+        DOCTEST_CHECK(c1.g == doctest::Approx(1.0f).epsilon(0.001));
+        DOCTEST_CHECK(c2.g == doctest::Approx(1.0f).epsilon(0.001));
+
+        // Reverse lookup
+        std::vector<uint> users = ctx.getPrimitivesUsingMaterial("red_mat");
+        DOCTEST_CHECK(users.size() == 2);
+    }
+
+    SUBCASE("Material System - Batch Assignment") {
+        Context ctx;
+
+        ctx.addMaterial("batch_mat");
+        ctx.setMaterialColor("batch_mat", make_RGBAcolor(0.5f, 0.5f, 0.5f, 1));
+
+        std::vector<uint> UUIDs;
+        for (int i = 0; i < 10; i++) {
+            UUIDs.push_back(ctx.addPatch(make_vec3(i, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 0, 0)));
+        }
+
+        // Batch assign
+        ctx.assignMaterialToPrimitive(UUIDs, "batch_mat");
+
+        // Verify all have the material
+        for (uint uuid : UUIDs) {
+            DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(uuid) == "batch_mat");
+        }
+    }
+
+    SUBCASE("Material System - Deletion") {
+        Context ctx;
+
+        ctx.addMaterial("temp_mat");
+        ctx.setMaterialColor("temp_mat", make_RGBAcolor(1, 0, 0, 1));
+
+        uint p1 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 0, 0));
+        ctx.assignMaterialToPrimitive(p1, "temp_mat");
+
+        // Delete material - primitive should revert to default
+        capture_cerr c; // Capture warning about material in use
+        ctx.deleteMaterial("temp_mat");
+
+        DOCTEST_CHECK(!ctx.doesMaterialExist("temp_mat"));
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(p1) == "__default__");
+    }
+
+    SUBCASE("Material System - XML Round-Trip") {
+        Context ctx;
+
+        // Create materials
+        ctx.addMaterial("red_mat");
+        ctx.setMaterialColor("red_mat", make_RGBAcolor(1, 0, 0, 1));
+
+        ctx.addMaterial("textured_mat");
+        ctx.setMaterialColor("textured_mat", make_RGBAcolor(0, 1, 0, 1));
+        ctx.setMaterialTexture("textured_mat", "lib/images/disk_texture.png");
+
+        // Create a material with non-default twosided_flag
+        ctx.addMaterial("onesided_mat");
+        ctx.setMaterialColor("onesided_mat", make_RGBAcolor(0, 0, 1, 1));
+        ctx.setMaterialTwosidedFlag("onesided_mat", 0);  // One-sided
+
+        // Create and assign primitives
+        uint p1 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 0, 0));
+        uint p2 = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 0, 0));
+        uint p3 = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 0, 0));
+        uint p4 = ctx.addPatch(make_vec3(3, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 0, 0));
+
+        ctx.assignMaterialToPrimitive(p1, "red_mat");
+        ctx.assignMaterialToPrimitive(p2, "textured_mat");
+        ctx.assignMaterialToPrimitive(p3, "red_mat");
+        ctx.assignMaterialToPrimitive(p4, "onesided_mat");
+
+        // Write to XML
+        ctx.writeXML("test_materials.xml", {p1, p2, p3, p4}, true);
+
+        // Load into new context
+        Context ctx2;
+        std::vector<uint> loaded_UUIDs = ctx2.loadXML("test_materials.xml", true);
+
+        DOCTEST_CHECK(loaded_UUIDs.size() == 4);
+
+        // Verify materials were preserved
+        DOCTEST_CHECK(ctx2.doesMaterialExist("red_mat"));
+        DOCTEST_CHECK(ctx2.doesMaterialExist("textured_mat"));
+        DOCTEST_CHECK(ctx2.doesMaterialExist("onesided_mat"));
+
+        RGBcolor loaded_color1 = ctx2.getPrimitiveColor(loaded_UUIDs[0]);
+        DOCTEST_CHECK(loaded_color1.r == doctest::Approx(1.0f).epsilon(0.001));
+
+        DOCTEST_CHECK(ctx2.getPrimitiveTextureFile(loaded_UUIDs[1]) == "lib/images/disk_texture.png");
+
+        // Verify twosided_flag was preserved
+        DOCTEST_CHECK(ctx2.getMaterialTwosidedFlag("red_mat") == 1);      // Default
+        DOCTEST_CHECK(ctx2.getMaterialTwosidedFlag("textured_mat") == 1); // Default
+        DOCTEST_CHECK(ctx2.getMaterialTwosidedFlag("onesided_mat") == 0); // Non-default
+
+        // Clean up
+        std::filesystem::remove("test_materials.xml");
+    }
+
+    SUBCASE("getPrimitiveTwosidedFlag helper function") {
+        Context ctx;
+
+        // Create materials with different twosided_flag values
+        ctx.addMaterial("onesided_mat");
+        ctx.setMaterialTwosidedFlag("onesided_mat", 0);
+
+        ctx.addMaterial("twosided_mat");
+        ctx.setMaterialTwosidedFlag("twosided_mat", 1);
+
+        ctx.addMaterial("transparent_mat");
+        ctx.setMaterialTwosidedFlag("transparent_mat", 2);
+
+        // Create primitives
+        uint UUID_mat_onesided = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint UUID_mat_twosided = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+        uint UUID_mat_transparent = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+        uint UUID_prim_data = ctx.addPatch(make_vec3(3, 0, 0), make_vec2(1, 1));
+        uint UUID_default = ctx.addPatch(make_vec3(4, 0, 0), make_vec2(1, 1));
+
+        // Assign materials
+        ctx.assignMaterialToPrimitive(UUID_mat_onesided, "onesided_mat");
+        ctx.assignMaterialToPrimitive(UUID_mat_twosided, "twosided_mat");
+        ctx.assignMaterialToPrimitive(UUID_mat_transparent, "transparent_mat");
+
+        // Set primitive data on one primitive (no user material assigned)
+        ctx.setPrimitiveData(UUID_prim_data, "twosided_flag", uint(0));
+
+        // Test: Material takes precedence - one-sided material
+        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(UUID_mat_onesided) == 0);
+
+        // Test: Material takes precedence - two-sided material
+        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(UUID_mat_twosided) == 1);
+
+        // Test: Material supports values > 1 (transparent)
+        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(UUID_mat_transparent) == 2);
+
+        // Test: Primitive data fallback (no user material)
+        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(UUID_prim_data) == 0);
+
+        // Test: Default value when no material or primitive data
+        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(UUID_default) == 1);
+
+        // Test: Custom default value
+        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(UUID_default, 2) == 2);
+
+        // Test: Material takes precedence over primitive data
+        // First, set primitive data on a primitive with a material
+        ctx.setPrimitiveData(UUID_mat_onesided, "twosided_flag", uint(1));  // Try to override with primitive data
+        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(UUID_mat_onesided) == 0);  // Should still return material value (0)
+    }
+
+    SUBCASE("Material Data - Setting and Getting with Labels") {
+        Context ctx;
+
+        // Create a material
+        ctx.addMaterial("data_mat");
+
+        // Test uint data
+        ctx.setMaterialData("data_mat", "twosided_flag", 1u);
+        DOCTEST_CHECK(ctx.doesMaterialDataExist("data_mat", "twosided_flag"));
+        DOCTEST_CHECK(ctx.getMaterialDataType("data_mat", "twosided_flag") == HELIOS_TYPE_UINT);
+        uint flag_val;
+        ctx.getMaterialData("data_mat", "twosided_flag", flag_val);
+        DOCTEST_CHECK(flag_val == 1u);
+
+        // Test int data
+        ctx.setMaterialData("data_mat", "test_int", -42);
+        int int_val;
+        ctx.getMaterialData("data_mat", "test_int", int_val);
+        DOCTEST_CHECK(int_val == -42);
+
+        // Test float data
+        ctx.setMaterialData("data_mat", "test_float", 3.14f);
+        float float_val;
+        ctx.getMaterialData("data_mat", "test_float", float_val);
+        DOCTEST_CHECK(float_val == doctest::Approx(3.14f).epsilon(0.001));
+
+        // Test vec3 data
+        vec3 test_vec = make_vec3(1, 2, 3);
+        ctx.setMaterialData("data_mat", "test_vec3", test_vec);
+        vec3 vec_val;
+        ctx.getMaterialData("data_mat", "test_vec3", vec_val);
+        DOCTEST_CHECK(vec_val.x == doctest::Approx(1.0f).epsilon(0.001));
+        DOCTEST_CHECK(vec_val.y == doctest::Approx(2.0f).epsilon(0.001));
+        DOCTEST_CHECK(vec_val.z == doctest::Approx(3.0f).epsilon(0.001));
+
+        // Test string data
+        ctx.setMaterialData("data_mat", "test_string", std::string("hello"));
+        std::string str_val;
+        ctx.getMaterialData("data_mat", "test_string", str_val);
+        DOCTEST_CHECK(str_val == "hello");
+
+        // Test clearing data
+        ctx.clearMaterialData("data_mat", "test_int");
+        DOCTEST_CHECK(!ctx.doesMaterialDataExist("data_mat", "test_int"));
+    }
+
+    SUBCASE("Material Data - Fallback Helper Method") {
+        Context ctx;
+
+        // Create material with data
+        ctx.addMaterial("fallback_mat");
+        ctx.setMaterialData("fallback_mat", "twosided_flag", 0u);
+
+        // Create primitive with this material
+        uint p1 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 0, 0));
+        ctx.assignMaterialToPrimitive(p1, "fallback_mat");
+
+        // Test getDataWithMaterialFallback - should get data from material
+        uint flag_val;
+        ctx.getDataWithMaterialFallback(p1, "twosided_flag", flag_val);
+        DOCTEST_CHECK(flag_val == 0u);
+
+        // Create another primitive with material but add primitive-specific data
+        uint p2 = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 0, 0));
+        ctx.assignMaterialToPrimitive(p2, "fallback_mat");
+        ctx.setPrimitiveData(p2, "custom_data", 42);
+
+        // Test fallback - should get data from primitive since material doesn't have it
+        int custom_val;
+        ctx.getDataWithMaterialFallback(p2, "custom_data", custom_val);
+        DOCTEST_CHECK(custom_val == 42);
+
+        // Create third primitive with no special data
+        uint p3 = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 0, 0));
+        ctx.assignMaterialToPrimitive(p3, "fallback_mat");
+
+        // Test fallback - should throw error for non-existent data
+        int nonexistent_val;
+        DOCTEST_CHECK_THROWS(ctx.getDataWithMaterialFallback(p3, "nonexistent", nonexistent_val));
+    }
+
+    SUBCASE("Material Data - XML Round-Trip with Labels") {
+        Context ctx;
+
+        // Create material with data
+        ctx.addMaterial("data_round_trip_mat");
+        ctx.setMaterialColor("data_round_trip_mat", make_RGBAcolor(0.5f, 0.25f, 0.75f, 1));
+        ctx.setMaterialData("data_round_trip_mat", "twosided_flag", 1u);
+        ctx.setMaterialData("data_round_trip_mat", "reflectance", 0.8f);
+        ctx.setMaterialData("data_round_trip_mat", "normal", make_vec3(0, 0, 1));
+
+        // Create primitives with this material
+        uint p1 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 0, 0));
+        uint p2 = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 0, 0));
+        ctx.assignMaterialToPrimitive(p1, "data_round_trip_mat");
+        ctx.assignMaterialToPrimitive(p2, "data_round_trip_mat");
+
+        // Write to XML
+        ctx.writeXML("test_material_data.xml", true);
+
+        // Load into new context
+        Context ctx2;
+        ctx2.loadXML("test_material_data.xml", true);
+
+        // Verify material and data were preserved
+        DOCTEST_CHECK(ctx2.doesMaterialExist("data_round_trip_mat"));
+
+        DOCTEST_CHECK(ctx2.doesMaterialDataExist("data_round_trip_mat", "twosided_flag"));
+        uint flag_val;
+        ctx2.getMaterialData("data_round_trip_mat", "twosided_flag", flag_val);
+        DOCTEST_CHECK(flag_val == 1u);
+
+        DOCTEST_CHECK(ctx2.doesMaterialDataExist("data_round_trip_mat", "reflectance"));
+        float refl_val;
+        ctx2.getMaterialData("data_round_trip_mat", "reflectance", refl_val);
+        DOCTEST_CHECK(refl_val == doctest::Approx(0.8f).epsilon(0.001));
+
+        DOCTEST_CHECK(ctx2.doesMaterialDataExist("data_round_trip_mat", "normal"));
+        vec3 norm_val;
+        ctx2.getMaterialData("data_round_trip_mat", "normal", norm_val);
+        DOCTEST_CHECK(norm_val.x == doctest::Approx(0.0f).epsilon(0.001));
+        DOCTEST_CHECK(norm_val.y == doctest::Approx(0.0f).epsilon(0.001));
+        DOCTEST_CHECK(norm_val.z == doctest::Approx(1.0f).epsilon(0.001));
+
+        // Clean up
+        std::filesystem::remove("test_material_data.xml");
+    }
+
+    SUBCASE("Material Methods - getPrimitiveMaterialID and getMaterial") {
+        Context ctx;
+
+        // Create materials
+        ctx.addMaterial("test_mat_1");
+        ctx.setMaterialColor("test_mat_1", make_RGBAcolor(1, 0, 0, 1));
+        uint mat1_id = ctx.getMaterialIDFromLabel("test_mat_1");
+
+        ctx.addMaterial("test_mat_2");
+        ctx.setMaterialColor("test_mat_2", make_RGBAcolor(0, 1, 0, 1));
+        uint mat2_id = ctx.getMaterialIDFromLabel("test_mat_2");
+
+        // Create primitives and assign materials
+        uint p1 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint p2 = ctx.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+        uint p3 = ctx.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+
+        ctx.assignMaterialToPrimitive(p1, "test_mat_1");
+        ctx.assignMaterialToPrimitive(p2, "test_mat_2");
+        ctx.assignMaterialToPrimitive(p3, "test_mat_1");
+
+        // Test getPrimitiveMaterialID
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialID(p1) == mat1_id);
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialID(p2) == mat2_id);
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialID(p3) == mat1_id);
+
+        // Test getMaterial
+        const Material& mat1 = ctx.getMaterial(mat1_id);
+        DOCTEST_CHECK(mat1.label == "test_mat_1");
+        DOCTEST_CHECK(mat1.color.r == doctest::Approx(1.0f));
+        DOCTEST_CHECK(mat1.color.g == doctest::Approx(0.0f));
+        DOCTEST_CHECK(mat1.color.b == doctest::Approx(0.0f));
+
+        const Material& mat2 = ctx.getMaterial(mat2_id);
+        DOCTEST_CHECK(mat2.label == "test_mat_2");
+        DOCTEST_CHECK(mat2.color.r == doctest::Approx(0.0f));
+        DOCTEST_CHECK(mat2.color.g == doctest::Approx(1.0f));
+        DOCTEST_CHECK(mat2.color.b == doctest::Approx(0.0f));
+
+        // Test getMaterial with invalid ID throws error
+        DOCTEST_CHECK_THROWS((void)ctx.getMaterial(99999));
+    }
+
+    SUBCASE("Material Methods - getMaterialIDFromLabel") {
+        Context ctx;
+
+        // Create several materials
+        ctx.addMaterial("material_a");
+        ctx.addMaterial("material_b");
+        ctx.addMaterial("material_c");
+
+        // Test getting IDs from labels
+        uint id_a = ctx.getMaterialIDFromLabel("material_a");
+        uint id_b = ctx.getMaterialIDFromLabel("material_b");
+        uint id_c = ctx.getMaterialIDFromLabel("material_c");
+
+        // IDs should be unique
+        DOCTEST_CHECK(id_a != id_b);
+        DOCTEST_CHECK(id_b != id_c);
+        DOCTEST_CHECK(id_a != id_c);
+
+        // Getting same label should return same ID
+        DOCTEST_CHECK(ctx.getMaterialIDFromLabel("material_a") == id_a);
+        DOCTEST_CHECK(ctx.getMaterialIDFromLabel("material_b") == id_b);
+
+        // Non-existent label should throw error
+        DOCTEST_CHECK_THROWS((void)ctx.getMaterialIDFromLabel("nonexistent_material"));
     }
 }

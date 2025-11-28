@@ -39,6 +39,16 @@ Context::Context() {
     currentUUID = 0;
 
     currentObjectID = 1; // object ID of 0 is reserved for default object
+
+    // --- Initialize Material System --- //
+
+    currentMaterialID = 0;
+
+    // Create default material (ID = 0) with reserved label
+    Material default_material(0, DEFAULT_MATERIAL_LABEL, make_RGBAcolor(0, 0, 0, 1), "", false);
+    materials[0] = default_material;
+    material_label_to_id[DEFAULT_MATERIAL_LABEL] = 0;
+    currentMaterialID = 1; // Next material will be ID 1
 }
 
 void Context::seedRandomGenerator(uint seed) {
@@ -2070,6 +2080,11 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
             patch_new->translate(center);
 
             primitives[currentUUID] = patch_new;
+
+            // Set context pointer and use default material
+            patch_new->context_ptr = this;
+            patch_new->materialID = 0;  // Default material
+
             currentUUID++;
             UUID.push_back(currentUUID - 1);
         }
@@ -2848,11 +2863,12 @@ void Context::colorPrimitiveByDataPseudocolor(const std::vector<uint> &UUIDs, co
 void Context::colorPrimitiveByDataPseudocolor(const std::vector<uint> &UUIDs, const std::string &primitive_data, const std::string &colormap, uint Ncolors, float data_min, float data_max) {
     std::map<uint, float> pcolor_data;
 
+    helios::WarningAggregator warnings;
     float data_min_new = 9999999;
     float data_max_new = -9999999;
     for (uint UUID: UUIDs) {
         if (!doesPrimitiveExist(UUID)) {
-            std::cerr << "WARNING (Context::colorPrimitiveDataPseudocolor): primitive for UUID " << std::to_string(UUID) << " does not exist. Skipping this primitive." << std::endl;
+            warnings.addWarning("primitive_does_not_exist", "Primitive for UUID " + std::to_string(UUID) + " does not exist. Skipping this primitive.");
             continue;
         }
 
@@ -2860,7 +2876,7 @@ void Context::colorPrimitiveByDataPseudocolor(const std::vector<uint> &UUIDs, co
         if (doesPrimitiveDataExist(UUID, primitive_data.c_str())) {
             if (getPrimitiveDataType(primitive_data.c_str()) != HELIOS_TYPE_FLOAT && getPrimitiveDataType(primitive_data.c_str()) != HELIOS_TYPE_INT && getPrimitiveDataType(primitive_data.c_str()) != HELIOS_TYPE_UINT &&
                 getPrimitiveDataType(primitive_data.c_str()) != HELIOS_TYPE_DOUBLE) {
-                std::cerr << "WARNING (Context::colorPrimitiveDataPseudocolor): Only primitive data types of int, uint, float, and double are supported for this function. Skipping this primitive." << std::endl;
+                warnings.addWarning("unsupported_data_type", "Only primitive data types of int, uint, float, and double are supported for this function. Skipping this primitive.");
                 continue;
             }
 
@@ -2928,6 +2944,8 @@ void Context::colorPrimitiveByDataPseudocolor(const std::vector<uint> &UUIDs, co
             setPrimitiveColor(UUID, colormap_data.at(cmap_ind));
         }
     }
+
+    warnings.report(std::cerr);
 }
 
 std::vector<RGBcolor> Context::generateColormap(const std::vector<helios::RGBcolor> &ctable, const std::vector<float> &cfrac, uint Ncolors) {
@@ -3308,20 +3326,28 @@ helios::RGBAcolor Context::getPrimitiveColorRGBA(uint UUID) const {
 }
 
 void Context::setPrimitiveColor(uint UUID, const RGBcolor &color) const {
+    api_warnings.addWarning("setPrimitiveColor_inefficient_api",
+                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     getPrimitivePointer_private(UUID)->setColor(color);
 }
 
 void Context::setPrimitiveColor(const std::vector<uint> &UUIDs, const RGBcolor &color) const {
+    api_warnings.addWarning("setPrimitiveColor_inefficient_api",
+                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     for (uint UUID: UUIDs) {
         getPrimitivePointer_private(UUID)->setColor(color);
     }
 }
 
 void Context::setPrimitiveColor(uint UUID, const RGBAcolor &color) const {
+    api_warnings.addWarning("setPrimitiveColor_inefficient_api",
+                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     getPrimitivePointer_private(UUID)->setColor(color);
 }
 
 void Context::setPrimitiveColor(const std::vector<uint> &UUIDs, const RGBAcolor &color) const {
+    api_warnings.addWarning("setPrimitiveColor_inefficient_api",
+                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     for (uint UUID: UUIDs) {
         getPrimitivePointer_private(UUID)->setColor(color);
     }
@@ -3332,6 +3358,8 @@ std::string Context::getPrimitiveTextureFile(uint UUID) const {
 }
 
 void Context::setPrimitiveTextureFile(uint UUID, const std::string &texturefile) const {
+    api_warnings.addWarning("setPrimitiveTextureFile_inefficient_api",
+                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     getPrimitivePointer_private(UUID)->setTextureFile(texturefile.c_str());
 }
 
@@ -3366,20 +3394,28 @@ const std::vector<std::vector<bool>> *Context::getPrimitiveTextureTransparencyDa
 }
 
 void Context::overridePrimitiveTextureColor(uint UUID) const {
+    api_warnings.addWarning("overridePrimitiveTextureColor_inefficient_api",
+                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     getPrimitivePointer_private(UUID)->overrideTextureColor();
 }
 
 void Context::overridePrimitiveTextureColor(const std::vector<uint> &UUIDs) const {
+    api_warnings.addWarning("overridePrimitiveTextureColor_inefficient_api",
+                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     for (uint UUID: UUIDs) {
         getPrimitivePointer_private(UUID)->overrideTextureColor();
     }
 }
 
 void Context::usePrimitiveTextureColor(uint UUID) const {
+    api_warnings.addWarning("usePrimitiveTextureColor_inefficient_api",
+                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     getPrimitivePointer_private(UUID)->useTextureColor();
 }
 
 void Context::usePrimitiveTextureColor(const std::vector<uint> &UUIDs) const {
+    api_warnings.addWarning("usePrimitiveTextureColor_inefficient_api",
+                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     for (uint UUID: UUIDs) {
         getPrimitivePointer_private(UUID)->useTextureColor();
     }
@@ -3635,6 +3671,264 @@ void Context::printPrimitiveInfo(uint UUID) const {
         }
     }
     std::cout << "-------------------------------------------" << std::endl;
+}
+
+//========== MATERIAL MANAGEMENT METHODS ==========//
+
+uint Context::getMaterialIDFromLabel(const std::string &material_label) const {
+    auto it = material_label_to_id.find(material_label);
+    if (it == material_label_to_id.end()) {
+        helios_runtime_error("ERROR (Context::getMaterialIDFromLabel): Material with label '" + material_label + "' does not exist.");
+    }
+    return it->second;
+}
+
+void Context::addMaterial(const std::string &material_label) {
+    if (material_label.empty()) {
+        helios_runtime_error("ERROR (Context::addMaterial): Material label cannot be empty.");
+    }
+
+    // Check for reserved label prefix
+    if (material_label.substr(0, 2) == "__" && material_label != DEFAULT_MATERIAL_LABEL) {
+        helios_runtime_error("ERROR (Context::addMaterial): Material labels starting with '__' are reserved for internal use.");
+    }
+
+    // Check if label already exists - overwrite with warning
+    if (material_label_to_id.find(material_label) != material_label_to_id.end()) {
+        std::cerr << "WARNING (Context::addMaterial): Material with label '" << material_label << "' already exists. Overwriting." << std::endl;
+        // Remove old material
+        uint oldID = material_label_to_id[material_label];
+        materials.erase(oldID);
+    }
+
+    // Create new material with default properties
+    uint newID = currentMaterialID++;
+    Material newMaterial(newID, material_label, make_RGBAcolor(0, 0, 0, 1), "", false);
+    materials[newID] = newMaterial;
+    material_label_to_id[material_label] = newID;
+}
+
+uint Context::addMaterial_internal(const std::string &label, const RGBAcolor &color, const std::string &texture) {
+    // Internal method - no check for __ prefix reservation
+    if (label.empty()) {
+        helios_runtime_error("ERROR (Context::addMaterial_internal): Material label cannot be empty.");
+    }
+
+    // Check if label already exists - silently overwrite for internal use
+    if (material_label_to_id.find(label) != material_label_to_id.end()) {
+        uint oldID = material_label_to_id[label];
+        materials.erase(oldID);
+    }
+
+    // Create new material with specified properties
+    uint newID = currentMaterialID++;
+    Material newMaterial(newID, label, color, texture, false);
+    materials[newID] = newMaterial;
+    material_label_to_id[label] = newID;
+    return newID;
+}
+
+std::string Context::generateMaterialLabel(const RGBAcolor &color, const std::string &texture, bool texture_override) const {
+    // Generate hash from all material properties for de-duplication
+    size_t hash = 0;
+    hash ^= std::hash<float>{}(color.r) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash ^= std::hash<float>{}(color.g) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash ^= std::hash<float>{}(color.b) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash ^= std::hash<float>{}(color.a) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash ^= std::hash<std::string>{}(texture) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash ^= std::hash<bool>{}(texture_override) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    return "__auto_" + std::to_string(hash);
+}
+
+bool Context::doesMaterialExist(const std::string &material_label) const {
+    return material_label_to_id.find(material_label) != material_label_to_id.end();
+}
+
+std::vector<std::string> Context::listMaterials() const {
+    std::vector<std::string> labels;
+    labels.reserve(material_label_to_id.size());
+    for (const auto &pair : material_label_to_id) {
+        // Don't include the default material or auto-generated materials in the list
+        if (pair.first != DEFAULT_MATERIAL_LABEL && pair.first.substr(0, 7) != "__auto_") {
+            labels.push_back(pair.first);
+        }
+    }
+    return labels;
+}
+
+RGBAcolor Context::getMaterialColor(const std::string &material_label) const {
+    uint matID = getMaterialIDFromLabel(material_label);
+    return materials.at(matID).color;
+}
+
+std::string Context::getMaterialTexture(const std::string &material_label) const {
+    uint matID = getMaterialIDFromLabel(material_label);
+    return materials.at(matID).texture_file;
+}
+
+bool Context::isMaterialTextureColorOverridden(const std::string &material_label) const {
+    uint matID = getMaterialIDFromLabel(material_label);
+    return materials.at(matID).texture_color_overridden;
+}
+
+void Context::setMaterialColor(const std::string &material_label, const RGBAcolor &color) {
+    uint matID = getMaterialIDFromLabel(material_label);
+    materials[matID].color = color;
+}
+
+void Context::setMaterialTexture(const std::string &material_label, const std::string &texture_file) {
+    uint matID = getMaterialIDFromLabel(material_label);
+    // Add texture to context if it has a file
+    if (!texture_file.empty()) {
+        addTexture(texture_file.c_str());
+    }
+    materials[matID].texture_file = texture_file;
+}
+
+void Context::setMaterialTextureColorOverride(const std::string &material_label, bool override) {
+    uint matID = getMaterialIDFromLabel(material_label);
+    materials[matID].texture_color_overridden = override;
+}
+
+uint Context::getMaterialTwosidedFlag(const std::string &material_label) const {
+    uint matID = getMaterialIDFromLabel(material_label);
+    return materials.at(matID).twosided_flag;
+}
+
+void Context::setMaterialTwosidedFlag(const std::string &material_label, uint twosided_flag) {
+    uint matID = getMaterialIDFromLabel(material_label);
+    materials[matID].twosided_flag = twosided_flag;
+}
+
+uint Context::getPrimitiveTwosidedFlag(uint UUID, uint default_value) const {
+    std::string mat_label = getPrimitiveMaterialLabel(UUID);
+    bool has_user_material = (mat_label.substr(0, 7) != "__auto_" && mat_label != DEFAULT_MATERIAL_LABEL);
+
+    if (has_user_material) {
+        return getMaterialTwosidedFlag(mat_label);
+    }
+
+    if (doesPrimitiveDataExist(UUID, "twosided_flag")) {
+        uint flag;
+        getPrimitiveData(UUID, "twosided_flag", flag);
+        return flag;
+    }
+
+    return default_value;
+}
+
+void Context::assignMaterialToPrimitive(uint UUID, const std::string &material_label) {
+    uint materialID = getMaterialIDFromLabel(material_label);
+    Primitive *prim = getPrimitivePointer_private(UUID);
+    prim->materialID = materialID;
+}
+
+void Context::assignMaterialToPrimitive(const std::vector<uint> &UUIDs, const std::string &material_label) {
+    uint materialID = getMaterialIDFromLabel(material_label);
+    for (uint UUID : UUIDs) {
+        Primitive *prim = getPrimitivePointer_private(UUID);
+        prim->materialID = materialID;
+    }
+}
+
+void Context::assignMaterialToObject(uint ObjID, const std::string &material_label) {
+    std::vector<uint> UUIDs = getObjectPrimitiveUUIDs(ObjID);
+    assignMaterialToPrimitive(UUIDs, material_label);
+}
+
+void Context::assignMaterialToObject(const std::vector<uint> &ObjIDs, const std::string &material_label) {
+    for (uint ObjID : ObjIDs) {
+        assignMaterialToObject(ObjID, material_label);
+    }
+}
+
+std::string Context::getPrimitiveMaterialLabel(uint UUID) const {
+    Primitive *prim = getPrimitivePointer_private(UUID);
+    uint materialID = prim->materialID;
+    // Find the label for this material ID
+    if (materials.find(materialID) != materials.end()) {
+        return materials.at(materialID).label;
+    }
+    return DEFAULT_MATERIAL_LABEL;
+}
+
+std::vector<uint> Context::getPrimitivesUsingMaterial(const std::string &material_label) const {
+    uint materialID = getMaterialIDFromLabel(material_label);
+    std::vector<uint> result;
+    for (const auto &pair : primitives) {
+        if (pair.second->materialID == materialID) {
+            result.push_back(pair.first);
+        }
+    }
+    return result;
+}
+
+void Context::deleteMaterial(const std::string &material_label) {
+    if (material_label == DEFAULT_MATERIAL_LABEL) {
+        helios_runtime_error("ERROR (Context::deleteMaterial): Cannot delete the default material.");
+    }
+
+    auto it = material_label_to_id.find(material_label);
+    if (it == material_label_to_id.end()) {
+        helios_runtime_error("ERROR (Context::deleteMaterial): Material with label '" + material_label + "' does not exist.");
+    }
+
+    uint materialID = it->second;
+
+    // Check if any primitives are using this material
+    std::vector<uint> users = getPrimitivesUsingMaterial(material_label);
+    if (!users.empty()) {
+        std::cerr << "WARNING (Context::deleteMaterial): Material '" << material_label << "' is in use by "
+                  << users.size() << " primitives. They will be reassigned to the default material." << std::endl;
+        // Reassign primitives to default material
+        for (uint UUID : users) {
+            Primitive *prim = getPrimitivePointer_private(UUID);
+            prim->materialID = 0; // Default material ID
+        }
+    }
+
+    // Remove the material
+    materials.erase(materialID);
+    material_label_to_id.erase(material_label);
+}
+
+bool Context::doesMaterialDataExist(const std::string &material_label, const char *data_label) const {
+    uint matID = getMaterialIDFromLabel(material_label);
+    return materials.at(matID).doesMaterialDataExist(data_label);
+}
+
+HeliosDataType Context::getMaterialDataType(const std::string &material_label, const char *data_label) const {
+    uint matID = getMaterialIDFromLabel(material_label);
+    return materials.at(matID).getMaterialDataType(data_label);
+}
+
+void Context::clearMaterialData(const std::string &material_label, const char *data_label) {
+    uint matID = getMaterialIDFromLabel(material_label);
+    materials[matID].clearMaterialData(data_label);
+}
+
+uint Context::getPrimitiveMaterialID(uint UUID) const {
+    Primitive *prim = getPrimitivePointer_private(UUID);
+    return prim->materialID;
+}
+
+const Material& Context::getMaterial(uint materialID) const {
+    if (materials.find(materialID) == materials.end()) {
+        helios_runtime_error("ERROR (Context::getMaterial): Material ID " + std::to_string(materialID) + " does not exist.");
+    }
+    return materials.at(materialID);
+}
+
+uint Context::getMaterialCount() const {
+    // Don't count the default material or auto-generated primitive materials
+    uint count = 0;
+    for (const auto &pair : material_label_to_id) {
+        // Skip default and auto-generated materials
+        if (pair.first != DEFAULT_MATERIAL_LABEL && pair.first.substr(0, 7) != "__auto_") {
+            count++;
+        }
+    }
+    return count;
 }
 
 void Context::printObjectInfo(uint ObjID) const {
@@ -4523,4 +4817,8 @@ float Context::getConeObjectVolume(uint ObjID) const {
 
 float Context::getPolymeshObjectVolume(uint ObjID) const {
     return getPolymeshObjectPointer_private(ObjID)->getVolume();
+}
+
+void Context::reportAPIWarnings() const {
+    api_warnings.report(std::cerr);
 }

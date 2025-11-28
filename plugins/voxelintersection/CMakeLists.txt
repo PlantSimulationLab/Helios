@@ -59,7 +59,7 @@ endif()
 add_library(voxelintersection STATIC "src/VoxelIntersection.cu" "src/VoxelIntersection.cpp" "tests/selfTest.cpp")
 
 # Set CUDA properties for the target
-set_target_properties(voxelintersection PROPERTIES CUDA_RUNTIME_LIBRARY Static CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+set_target_properties(voxelintersection PROPERTIES CUDA_RUNTIME_LIBRARY Static CUDA_RESOLVE_DEVICE_SYMBOLS ON POSITION_INDEPENDENT_CODE ON)
 
 # Windows-specific: Clear any inherited global compile options that cause nvcc issues
 if(WIN32 AND MSVC)

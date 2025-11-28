@@ -1329,8 +1329,14 @@ public:
     //! Toggle off primitive data element type labels
     void disableElementLabels();
 
+    //! Report any accumulated warnings and clear the warning aggregator
+    void reportWarnings();
+
 private:
     helios::Context *context;
+
+    //! Warning aggregator for collecting and reporting fzero convergence warnings
+    helios::WarningAggregator warnings;
 
     //! List of stored canopy parameters, which can then be used to build individual plants or whole canopies
     std::vector<std::shared_ptr<BaseCanopyParameters>> canopy_parameters_list;

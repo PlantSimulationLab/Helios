@@ -18,6 +18,25 @@
 
 using namespace helios;
 
+float PlantArchitecture::getParameterValue(const std::map<std::string, float> &build_parameters, const std::string &parameter_name, float default_value, float min_value, float max_value, const std::string &parameter_description) const {
+
+    // Check if parameter is specified in the map
+    auto it = build_parameters.find(parameter_name);
+    if (it == build_parameters.end()) {
+        // Parameter not specified, use default
+        return default_value;
+    }
+
+    float value = it->second;
+
+    // Validate parameter is within valid range
+    if (value < min_value || value > max_value) {
+        helios_runtime_error("ERROR (PlantArchitecture::getParameterValue): build parameter '" + parameter_name + "' (" + parameter_description + ") has value " + std::to_string(value) + " which is outside the valid range [" + std::to_string(min_value) + ", " + std::to_string(max_value) + "].");
+    }
+
+    return value;
+}
+
 void PlantArchitecture::initializePlantModelRegistrations() {
     // Register all available plant models
     registerPlantModel("almond", [this]() { initializeAlmondTreeShoots(); }, [this](const helios::vec3 &pos) { return buildAlmondTree(pos); }, "tree");
@@ -92,7 +111,7 @@ std::vector<std::string> PlantArchitecture::getAvailablePlantModels() const {
     return models;
 }
 
-uint PlantArchitecture::buildPlantInstanceFromLibrary(const helios::vec3 &base_position, float age) {
+uint PlantArchitecture::buildPlantInstanceFromLibrary(const helios::vec3 &base_position, float age, const std::map<std::string, float> &build_parameters) {
 
     if (current_plant_model.empty()) {
         helios_runtime_error("ERROR (PlantArchitecture::buildPlantInstanceFromLibrary): current plant model has not been initialized from library. You must call loadPlantModelFromLibrary() first.");
@@ -104,8 +123,14 @@ uint PlantArchitecture::buildPlantInstanceFromLibrary(const helios::vec3 &base_p
         helios_runtime_error("ERROR (PlantArchitecture::buildPlantInstanceFromLibrary): plant label of " + current_plant_model + " does not exist in the library.");
     }
 
+    // Set current build parameters so builder functions can access them
+    current_build_parameters = build_parameters;
+
     // Call the builder function
     uint plantID = builder_it->second(base_position);
+
+    // Clear build parameters after use
+    current_build_parameters.clear();
 
     plant_instances.at(plantID).plant_name = current_plant_model;
 
@@ -346,11 +371,26 @@ uint PlantArchitecture::buildAlmondTree(const helios::vec3 &base_position) {
         initializeAlmondTreeShoots();
     }
 
+    // Get training system parameters (with defaults matching original hard-coded values)
+    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 0.6f, 0.1f, 3.f, "total trunk height in meters");
+    auto num_scaffolds = uint(getParameterValue(current_build_parameters, "num_scaffolds", 4.f, 2.f, 8.f, "number of scaffold branches"));
+    auto scaffold_angle = getParameterValue(current_build_parameters, "scaffold_angle", 40.f, 20.f, 70.f, "scaffold branch angle in degrees");
+
+    // Calculate trunk nodes based on desired height and internode length
+    float trunk_internode_length = 0.03f;  // Default internode length for almond
+    uint trunk_nodes = uint(trunk_height / trunk_internode_length);
+    if (trunk_nodes < 1) trunk_nodes = 1;
+
+    // Fixed training parameters (not user-customizable)
+    float trunk_radius = 0.015f;
+    float scaffold_radius = 0.007f;
+    float scaffold_length = 0.06f;
+
     uint plantID = addPlantInstance(base_position, 0);
 
     //    enableEpicormicChildShoots(plantID,"sylleptic",0.001);
 
-    uint uID_trunk = addBaseStemShoot(plantID, 19, make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), 0.f * M_PI), 0.015, 0.03, 1.f, 1.f, 0, "trunk");
+    uint uID_trunk = addBaseStemShoot(plantID, trunk_nodes, make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), 0.f * M_PI), trunk_radius, trunk_internode_length, 1.f, 1.f, 0, "trunk");
     appendPhytomerToShoot(plantID, uID_trunk, shoot_types.at("trunk").phytomer_parameters, 0.01, 0.01, 1, 1);
 
     plant_instances.at(plantID).shoot_tree.at(uID_trunk)->meristem_is_alive = false;
@@ -362,11 +402,14 @@ uint PlantArchitecture::buildAlmondTree(const helios::vec3 &base_position) {
         phytomer->setFloralBudState(BUD_DEAD);
     }
 
-    uint Nscaffolds = 4; // context_ptr->randu(4,5);
+    // Hard-coded scaffold node range (not user-customizable)
+    uint scaffold_nodes_min = 7;
+    uint scaffold_nodes_max = 9;
 
-    for (int i = 0; i < Nscaffolds; i++) {
-        float pitch = context_ptr->randu(deg2rad(35), deg2rad(45));
-        uint uID_shoot = addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - i - 1, context_ptr->randu(7, 9), make_AxisRotation(pitch, (float(i) + context_ptr->randu(-0.2f, 0.2f)) / float(Nscaffolds) * 2 * M_PI, 0), 0.007, 0.06,
+    for (int i = 0; i < num_scaffolds; i++) {
+        float pitch = deg2rad(scaffold_angle) + context_ptr->randu(-0.1f, 0.1f);  // Small randomness around specified angle
+        uint scaffold_nodes = context_ptr->randu(int(scaffold_nodes_min), int(scaffold_nodes_max));
+        uint uID_shoot = addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - i - 1, scaffold_nodes, make_AxisRotation(pitch, (float(i) + context_ptr->randu(-0.2f, 0.2f)) / float(num_scaffolds) * 2 * M_PI, 0), scaffold_radius, scaffold_length,
                                        1.f, 1.f, 0.5, "scaffold", 0);
     }
 
@@ -487,9 +530,24 @@ uint PlantArchitecture::buildAppleTree(const helios::vec3 &base_position) {
         initializeAppleTreeShoots();
     }
 
+    // Get training system parameters (with defaults matching original hard-coded values)
+    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 0.8f, 0.1f, 3.f, "total trunk height in meters");
+    auto num_scaffolds = uint(getParameterValue(current_build_parameters, "num_scaffolds", 4.f, 2.f, 8.f, "number of scaffold branches"));
+    auto scaffold_angle = getParameterValue(current_build_parameters, "scaffold_angle", 40.f, 20.f, 70.f, "scaffold branch angle in degrees");
+
+    // Calculate trunk nodes based on desired height and internode length
+    float trunk_internode_length = 0.04f;  // Default internode length for apple
+    uint trunk_nodes = uint(trunk_height / trunk_internode_length);
+    if (trunk_nodes < 1) trunk_nodes = 1;
+
+    // Fixed training parameters (not user-customizable)
+    float trunk_radius = 0.015f;
+    float scaffold_radius = 0.005f;
+    float scaffold_length = 0.04f;
+
     uint plantID = addPlantInstance(base_position, 0);
 
-    uint uID_trunk = addBaseStemShoot(plantID, 19, make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), 0.f * M_PI), 0.015, 0.04, 1.f, 1.f, 0, "trunk");
+    uint uID_trunk = addBaseStemShoot(plantID, trunk_nodes, make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), 0.f * M_PI), trunk_radius, trunk_internode_length, 1.f, 1.f, 0, "trunk");
     appendPhytomerToShoot(plantID, uID_trunk, shoot_types.at("trunk").phytomer_parameters, 0, 0.01, 1, 1);
 
     plant_instances.at(plantID).shoot_tree.at(uID_trunk)->meristem_is_alive = false;
@@ -501,11 +559,14 @@ uint PlantArchitecture::buildAppleTree(const helios::vec3 &base_position) {
         phytomer->setFloralBudState(BUD_DEAD);
     }
 
-    uint Nscaffolds = 4; // context_ptr->randu(4,5);
+    // Hard-coded scaffold node range (not user-customizable)
+    uint scaffold_nodes_min = 7;
+    uint scaffold_nodes_max = 9;
 
-    for (int i = 0; i < Nscaffolds; i++) {
-        float pitch = context_ptr->randu(deg2rad(35), deg2rad(45));
-        uint uID_shoot = addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - i - 1, context_ptr->randu(7, 9), make_AxisRotation(pitch, (float(i) + context_ptr->randu(-0.2f, 0.2f)) / float(Nscaffolds) * 2 * M_PI, 0), 0.005, 0.04,
+    for (int i = 0; i < num_scaffolds; i++) {
+        float pitch = deg2rad(scaffold_angle) + context_ptr->randu(-0.1f, 0.1f);  // Small randomness around specified angle
+        uint scaffold_nodes = context_ptr->randu(int(scaffold_nodes_min), int(scaffold_nodes_max));
+        uint uID_shoot = addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - i - 1, scaffold_nodes, make_AxisRotation(pitch, (float(i) + context_ptr->randu(-0.2f, 0.2f)) / float(num_scaffolds) * 2 * M_PI, 0), scaffold_radius, scaffold_length,
                                        1.f, 1.f, 0.5, "proleptic", 0);
     }
 
@@ -1644,12 +1705,32 @@ uint PlantArchitecture::buildGrapevineVSP(const helios::vec3 &base_position) {
         initializeGrapevineVSPShoots();
     }
 
+    // Get training system parameters
+    auto vine_spacing = getParameterValue(current_build_parameters, "vine_spacing", 2.4f, 0.5f, 5.f, "plant-to-plant spacing in meters");
+    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 0.1f, 0.05f, 1.f, "total trunk height in meters");
+
+    // Calculate trunk nodes based on desired height
+    float trunk_internode_length = 0.1f;
+    uint trunk_nodes = uint(trunk_height / trunk_internode_length);
+    if (trunk_nodes < 1) trunk_nodes = 1;
+
+    // Calculate cane nodes to span to neighboring plant
+    float cane_internode_length = 0.15f;
+    float cane_total_length = vine_spacing / 2.f;  // Cane extends from center to next plant
+    uint cane_nodes = uint(cane_total_length / cane_internode_length);
+    if (cane_nodes < 1) cane_nodes = 1;
+
+    // Fixed training parameters (not user-customizable)
+    float cane_radius = 0.005f;
+    float cane_pitch_min = float(0.45f * M_PI);
+    float cane_pitch_max = float(0.52f * M_PI);
+
     uint plantID = addPlantInstance(base_position, 0);
 
-    uint uID_stem = addBaseStemShoot(plantID, 8, make_AxisRotation(context_ptr->randu(0, 0.05 * M_PI), 0, 0), shoot_types.at("grapevine_trunk").phytomer_parameters.internode.radius_initial.val(), 0.1, 1, 1, 0.1, "grapevine_trunk");
+    uint uID_stem = addBaseStemShoot(plantID, trunk_nodes, make_AxisRotation(context_ptr->randu(0, 0.05 * M_PI), 0, 0), shoot_types.at("grapevine_trunk").phytomer_parameters.internode.radius_initial.val(), trunk_internode_length, 1, 1, 0.1, "grapevine_trunk");
 
-    uint uID_cane_L = appendShoot(plantID, uID_stem, 8, make_AxisRotation(context_ptr->randu(float(0.45f * M_PI), 0.52f * M_PI), 0, M_PI), 0.005, 0.15, 1, 1, 0.5, "grapevine_cane");
-    uint uID_cane_R = appendShoot(plantID, uID_stem, 8, make_AxisRotation(context_ptr->randu(float(0.45f * M_PI), 0.52f * M_PI), M_PI, M_PI), 0.005, 0.15, 1, 1, 0.5, "grapevine_cane");
+    uint uID_cane_L = appendShoot(plantID, uID_stem, cane_nodes, make_AxisRotation(context_ptr->randu(cane_pitch_min, cane_pitch_max), 0, M_PI), cane_radius, cane_internode_length, 1, 1, 0.5, "grapevine_cane");
+    uint uID_cane_R = appendShoot(plantID, uID_stem, cane_nodes, make_AxisRotation(context_ptr->randu(cane_pitch_min, cane_pitch_max), M_PI, M_PI), cane_radius, cane_internode_length, 1, 1, 0.5, "grapevine_cane");
 
     //    makePlantDormant(plantID);
 
@@ -1792,23 +1873,45 @@ uint PlantArchitecture::buildGrapevineWye(const helios::vec3 &base_position) {
         initializeGrapevineWyeShoots();
     }
 
+    // Get training system parameters
+    auto trunk_height_total = getParameterValue(current_build_parameters, "trunk_height", 0.165f, 0.05f, 1.f, "total trunk height in meters");
+    auto cordon_spacing = getParameterValue(current_build_parameters, "cordon_spacing", 0.6f, 0.2f, 2.f, "spacing between cordon rows in meters");
+    auto vine_spacing = getParameterValue(current_build_parameters, "vine_spacing", 1.8f, 0.5f, 5.f, "plant-to-plant spacing in meters");
+    auto catch_wire_height = getParameterValue(current_build_parameters, "catch_wire_height", 2.1f, 0.5f, 4.f, "absolute height of catch wires in meters");
+
+    // Calculate trunk nodes based on desired height
+    float trunk_internode_length = 0.165f / 8.f;  // Original was 8 nodes * 0.165m total
+    uint trunk_nodes = uint(trunk_height_total / trunk_internode_length);
+    if (trunk_nodes < 1) trunk_nodes = 1;
+
+    // Calculate trellis head height from catch wire height (catch wires above fruiting wires)
+    float head_height = catch_wire_height - 0.35f;  // Offset to match original geometry
+
+    // Fixed training parameters (not user-customizable)
+    uint upright_nodes = 3;
+    float upright_pitch_min = 42.f;
+    float upright_pitch_max = 48.f;
+    float upright_radius = 0.03f;
+    float upright_length = 0.14f;
+    uint cordon_nodes = 8;
+    float cordon_radius = 0.02f;
+    float cordon_length = 0.11f;
+    float catch_wire_offset_1 = 0.15f;
+    float catch_wire_offset_2 = 0.35f;
+
     std::vector<std::vector<vec3>> trellis_points;
 
-    float wire_spacing = 0.6f;
-    float head_height = 1.6;
-    float vine_spacing = 1.8;
-
     // fruiting wires
-    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, -0.5f * wire_spacing, head_height), make_vec3(0.5f * vine_spacing, -0.5f * wire_spacing, head_height), 8));
-    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, 0.5f * wire_spacing, head_height), make_vec3(0.5f * vine_spacing, 0.5f * wire_spacing, head_height), 8));
+    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, -0.5f * cordon_spacing, head_height), make_vec3(0.5f * vine_spacing, -0.5f * cordon_spacing, head_height), 8));
+    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, 0.5f * cordon_spacing, head_height), make_vec3(0.5f * vine_spacing, 0.5f * cordon_spacing, head_height), 8));
 
     // first catch wires (these don't exist in a real Wye trellis, but are needed to keep the vines from falling through the wires)
-    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, -0.5f * wire_spacing - 0.15f, head_height + 0.15f), make_vec3(0.5f * vine_spacing, -0.5f * wire_spacing - 0.15f, head_height + 0.15f), 8));
-    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, 0.5f * wire_spacing + 0.15f, head_height + 0.15f), make_vec3(0.5f * vine_spacing, 0.5f * wire_spacing + 0.15f, head_height + 0.15f), 8));
+    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, -0.5f * cordon_spacing - catch_wire_offset_1, catch_wire_height - catch_wire_offset_2), make_vec3(0.5f * vine_spacing, -0.5f * cordon_spacing - catch_wire_offset_1, catch_wire_height - catch_wire_offset_2), 8));
+    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, 0.5f * cordon_spacing + catch_wire_offset_1, catch_wire_height - catch_wire_offset_2), make_vec3(0.5f * vine_spacing, 0.5f * cordon_spacing + catch_wire_offset_1, catch_wire_height - catch_wire_offset_2), 8));
 
-    // second catch wires
-    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, -0.5f * wire_spacing - 0.35f, head_height + 0.35f), make_vec3(0.5f * vine_spacing, -0.5f * wire_spacing - 0.35f, head_height + 0.35f), 8));
-    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, 0.5f * wire_spacing + 0.35f, head_height + 0.35f), make_vec3(0.5f * vine_spacing, 0.5f * wire_spacing + 0.35f, head_height + 0.35f), 8));
+    // second catch wires (at specified height)
+    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, -0.5f * cordon_spacing - catch_wire_offset_2, catch_wire_height), make_vec3(0.5f * vine_spacing, -0.5f * cordon_spacing - catch_wire_offset_2, catch_wire_height), 8));
+    trellis_points.push_back(linspace(make_vec3(-0.5f * vine_spacing, 0.5f * cordon_spacing + catch_wire_offset_2, catch_wire_height), make_vec3(0.5f * vine_spacing, 0.5f * cordon_spacing + catch_wire_offset_2, catch_wire_height), 8));
 
     for (int j = 0; j < trellis_points.size(); j++) {
         for (int i = 0; i < trellis_points[j].size(); i++) {
@@ -1821,16 +1924,16 @@ uint PlantArchitecture::buildGrapevineWye(const helios::vec3 &base_position) {
     // Set plant-specific attraction points for this grapevine's trellis system
     setPlantAttractionPoints(plantID, flatten(trellis_points), 45.f, 0.5f, 0.5);
 
-    uint uID_stem = addBaseStemShoot(plantID, 8, make_AxisRotation(0., 0, 0), shoot_types.at("grapevine_trunk").phytomer_parameters.internode.radius_initial.val(), 0.165, 1, 1, 0.1, "grapevine_trunk");
+    uint uID_stem = addBaseStemShoot(plantID, trunk_nodes, make_AxisRotation(0., 0, 0), shoot_types.at("grapevine_trunk").phytomer_parameters.internode.radius_initial.val(), trunk_internode_length, 1, 1, 0.1, "grapevine_trunk");
 
-    uint uID_upright_L = appendShoot(plantID, uID_stem, 3, make_AxisRotation(deg2rad(context_ptr->randu(42.f, 48.f)), 0, M_PI), 0.03, 0.14, 1, 1, 0.2, "grapevine_trunk");
-    uint uID_upright_R = appendShoot(plantID, uID_stem, 3, make_AxisRotation(deg2rad(context_ptr->randu(42.f, 48.f)), M_PI, M_PI), 0.03, 0.14, 1, 1, 0.2, "grapevine_trunk");
+    uint uID_upright_L = appendShoot(plantID, uID_stem, upright_nodes, make_AxisRotation(deg2rad(context_ptr->randu(upright_pitch_min, upright_pitch_max)), 0, M_PI), upright_radius, upright_length, 1, 1, 0.2, "grapevine_trunk");
+    uint uID_upright_R = appendShoot(plantID, uID_stem, upright_nodes, make_AxisRotation(deg2rad(context_ptr->randu(upright_pitch_min, upright_pitch_max)), M_PI, M_PI), upright_radius, upright_length, 1, 1, 0.2, "grapevine_trunk");
 
-    uint uID_cordon_L1 = appendShoot(plantID, uID_upright_L, 8, make_AxisRotation(deg2rad(-90), 0.5 * M_PI, -0.2), 0.02, 0.11, 1, 1, 0.5, "grapevine_cordon");
-    uint uID_cordon_L2 = appendShoot(plantID, uID_upright_L, 8, make_AxisRotation(deg2rad(-90), -0.5 * M_PI, 0.2), 0.02, 0.11, 1, 1, 0.5, "grapevine_cordon");
+    uint uID_cordon_L1 = appendShoot(plantID, uID_upright_L, cordon_nodes, make_AxisRotation(deg2rad(-90), 0.5 * M_PI, -0.2), cordon_radius, cordon_length, 1, 1, 0.5, "grapevine_cordon");
+    uint uID_cordon_L2 = appendShoot(plantID, uID_upright_L, cordon_nodes, make_AxisRotation(deg2rad(-90), -0.5 * M_PI, 0.2), cordon_radius, cordon_length, 1, 1, 0.5, "grapevine_cordon");
 
-    uint uID_cordon_R1 = appendShoot(plantID, uID_upright_R, 8, make_AxisRotation(deg2rad(-90), 0.5 * M_PI, 0.2), 0.02, 0.11, 1, 1, 0.5, "grapevine_cordon");
-    uint uID_cordon_R2 = appendShoot(plantID, uID_upright_R, 8, make_AxisRotation(deg2rad(-90), -0.5 * M_PI, -0.2), 0.02, 0.11, 1, 1, 0.5, "grapevine_cordon");
+    uint uID_cordon_R1 = appendShoot(plantID, uID_upright_R, cordon_nodes, make_AxisRotation(deg2rad(-90), 0.5 * M_PI, 0.2), cordon_radius, cordon_length, 1, 1, 0.5, "grapevine_cordon");
+    uint uID_cordon_R2 = appendShoot(plantID, uID_upright_R, cordon_nodes, make_AxisRotation(deg2rad(-90), -0.5 * M_PI, -0.2), cordon_radius, cordon_length, 1, 1, 0.5, "grapevine_cordon");
 
     removeShootLeaves(plantID, uID_stem);
     removeShootLeaves(plantID, uID_upright_L);
@@ -2337,10 +2440,25 @@ uint PlantArchitecture::buildPistachioTree(const helios::vec3 &base_position) {
         initializePistachioTreeShoots();
     }
 
+    // Get training system parameters (with defaults matching original hard-coded values)
+    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 1.0f, 0.1f, 3.f, "total trunk height in meters");
+    auto num_scaffolds = uint(getParameterValue(current_build_parameters, "num_scaffolds", 4.f, 2.f, 8.f, "number of scaffold branches"));
+    auto scaffold_angle = getParameterValue(current_build_parameters, "scaffold_angle", 50.f, 20.f, 70.f, "scaffold branch angle in degrees");
+
+    // Calculate trunk nodes based on desired height and internode length
+    float trunk_internode_length = 0.05f;  // Default internode length for pistachio
+    uint trunk_nodes = uint(trunk_height / trunk_internode_length);
+    if (trunk_nodes < 1) trunk_nodes = 1;
+
+    // Fixed training parameters (not user-customizable)
+    float scaffold_radius = 0.007f;
+    float scaffold_length = 0.03f;
+    uint scaffold_nodes = 5;
+
     uint plantID = addPlantInstance(base_position, 0);
 
-    uint uID_trunk = addBaseStemShoot(plantID, 19, make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI)),
-                                      shoot_types.at("trunk").phytomer_parameters.internode.radius_initial.val(), 0.05, 1.f, 1.f, 0, "trunk");
+    uint uID_trunk = addBaseStemShoot(plantID, trunk_nodes, make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), context_ptr->randu(0.f, 2.f * M_PI)),
+                                      shoot_types.at("trunk").phytomer_parameters.internode.radius_initial.val(), trunk_internode_length, 1.f, 1.f, 0, "trunk");
     appendPhytomerToShoot(plantID, uID_trunk, shoot_types.at("trunk").phytomer_parameters, 0, 0.01, 1, 1);
 
     plant_instances.at(plantID).shoot_tree.at(uID_trunk)->meristem_is_alive = false;
@@ -2352,15 +2470,20 @@ uint PlantArchitecture::buildPistachioTree(const helios::vec3 &base_position) {
         phytomer->setFloralBudState(BUD_DEAD);
     }
 
-    float pitch = deg2rad(50);
-    // addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 1, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), 0, context_ptr->randu(0.f,0.5*M_PI)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
-    // addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 1, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), M_PI, context_ptr->randu(0.f,0.5*M_PI)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
-    // addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 2, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), 0.5*M_PI, context_ptr->randu(0.f,0.5*M_PI)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
-    // addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 2, 5, make_AxisRotation(pitch+context_ptr->randu(-0.15f,0.15f), 1.5*M_PI, context_ptr->randu(0.f,0.5*M_PI)), 0.007, 0.03, 1.f, 1.f,0.5, "proleptic", 0);
-    addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 1, 5, make_AxisRotation(pitch + context_ptr->randu(-0.15f, 0.15f), 0, 0.5 * M_PI + context_ptr->randu(-0.2f, 0.2f)), 0.007, 0.03, 1.f, 1.f, 0.5, "proleptic", 0);
-    addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 1, 5, make_AxisRotation(pitch + context_ptr->randu(-0.15f, 0.15f), M_PI, 0.5 * M_PI + context_ptr->randu(-0.2f, 0.2f)), 0.007, 0.03, 1.f, 1.f, 0.5, "proleptic", 0);
-    addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 2, 5, make_AxisRotation(pitch + context_ptr->randu(-0.15f, 0.15f), 0.5 * M_PI, 0.5 * M_PI + context_ptr->randu(-0.2f, 0.2f)), 0.007, 0.03, 1.f, 1.f, 0.5, "proleptic", 0);
-    addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 2, 5, make_AxisRotation(pitch + context_ptr->randu(-0.15f, 0.15f), 1.5 * M_PI, 0.5 * M_PI + context_ptr->randu(-0.2f, 0.2f)), 0.007, 0.03, 1.f, 1.f, 0.5, "proleptic", 0);
+    float pitch = deg2rad(scaffold_angle);
+    // Four-scaffold training system in cardinal directions
+    if (num_scaffolds >= 1) {
+        addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 1, scaffold_nodes, make_AxisRotation(pitch + context_ptr->randu(-0.15f, 0.15f), 0, 0.5 * M_PI + context_ptr->randu(-0.2f, 0.2f)), scaffold_radius, scaffold_length, 1.f, 1.f, 0.5, "proleptic", 0);
+    }
+    if (num_scaffolds >= 2) {
+        addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 1, scaffold_nodes, make_AxisRotation(pitch + context_ptr->randu(-0.15f, 0.15f), M_PI, 0.5 * M_PI + context_ptr->randu(-0.2f, 0.2f)), scaffold_radius, scaffold_length, 1.f, 1.f, 0.5, "proleptic", 0);
+    }
+    if (num_scaffolds >= 3) {
+        addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 2, scaffold_nodes, make_AxisRotation(pitch + context_ptr->randu(-0.15f, 0.15f), 0.5 * M_PI, 0.5 * M_PI + context_ptr->randu(-0.2f, 0.2f)), scaffold_radius, scaffold_length, 1.f, 1.f, 0.5, "proleptic", 0);
+    }
+    if (num_scaffolds >= 4) {
+        addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - 2, scaffold_nodes, make_AxisRotation(pitch + context_ptr->randu(-0.15f, 0.15f), 1.5 * M_PI, 0.5 * M_PI + context_ptr->randu(-0.2f, 0.2f)), scaffold_radius, scaffold_length, 1.f, 1.f, 0.5, "proleptic", 0);
+    }
 
 
     makePlantDormant(plantID);
@@ -3613,9 +3736,23 @@ uint PlantArchitecture::buildWalnutTree(const helios::vec3 &base_position) {
         initializeWalnutTreeShoots();
     }
 
+    // Get training system parameters (with defaults matching original hard-coded values)
+    auto trunk_height = getParameterValue(current_build_parameters, "trunk_height", 0.8f, 0.1f, 3.f, "total trunk height in meters");
+    auto num_scaffolds = uint(getParameterValue(current_build_parameters, "num_scaffolds", 4.f, 2.f, 8.f, "number of scaffold branches"));
+    auto scaffold_angle = getParameterValue(current_build_parameters, "scaffold_angle", 50.f, 20.f, 70.f, "scaffold branch angle in degrees");
+
+    // Calculate trunk nodes based on desired height and internode length
+    float trunk_internode_length = 0.04f;  // Default internode length for walnut
+    uint trunk_nodes = uint(trunk_height / trunk_internode_length);
+    if (trunk_nodes < 1) trunk_nodes = 1;
+
+    // Fixed training parameters (not user-customizable)
+    float scaffold_radius = 0.007f;
+    float scaffold_length = 0.06f;
+
     uint plantID = addPlantInstance(base_position, 0);
 
-    uint uID_trunk = addBaseStemShoot(plantID, 19, make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), 0.f * M_PI), shoot_types.at("trunk").phytomer_parameters.internode.radius_initial.val(), 0.04, 1.f, 1.f,
+    uint uID_trunk = addBaseStemShoot(plantID, trunk_nodes, make_AxisRotation(context_ptr->randu(0.f, 0.05f * M_PI), context_ptr->randu(0.f, 2.f * M_PI), 0.f * M_PI), shoot_types.at("trunk").phytomer_parameters.internode.radius_initial.val(), trunk_internode_length, 1.f, 1.f,
                                       0, "trunk");
     appendPhytomerToShoot(plantID, uID_trunk, shoot_types.at("trunk").phytomer_parameters, 0, 0.01, 1, 1);
 
@@ -3628,12 +3765,14 @@ uint PlantArchitecture::buildWalnutTree(const helios::vec3 &base_position) {
         phytomer->setFloralBudState(BUD_DEAD);
     }
 
-    uint Nscaffolds = 4; // context_ptr->randu(4,5);
+    // Hard-coded scaffold node range (not user-customizable)
+    uint scaffold_nodes_min = 7;
+    uint scaffold_nodes_max = 9;
 
-    for (int i = 0; i < Nscaffolds; i++) {
-        //        float pitch = context_ptr->randu(deg2rad(25), deg2rad(35))+i*deg2rad(7.f);
-        float pitch = context_ptr->randu(deg2rad(45), deg2rad(55));
-        uint uID_shoot = addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - i - 1, context_ptr->randu(7, 9), make_AxisRotation(pitch, (float(i) + context_ptr->randu(-0.2f, 0.2f)) / float(Nscaffolds) * 2 * M_PI, 0), 0.007, 0.06,
+    for (int i = 0; i < num_scaffolds; i++) {
+        float pitch = deg2rad(scaffold_angle) + context_ptr->randu(-0.1f, 0.1f);  // Small randomness around specified angle
+        uint scaffold_nodes = context_ptr->randu(int(scaffold_nodes_min), int(scaffold_nodes_max));
+        uint uID_shoot = addChildShoot(plantID, uID_trunk, getShootNodeCount(plantID, uID_trunk) - i - 1, scaffold_nodes, make_AxisRotation(pitch, (float(i) + context_ptr->randu(-0.2f, 0.2f)) / float(num_scaffolds) * 2 * M_PI, 0), scaffold_radius, scaffold_length,
                                        1.f, 1.f, 0.5, "scaffold", 0);
     }
 

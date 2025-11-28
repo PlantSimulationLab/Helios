@@ -325,7 +325,11 @@ void EnergyBalanceModel::evaluateAirEnergyBalance(const std::vector<uint> &UUIDs
         // Cap relative humidity to 100%
         float esat = esat_Pa(air_temperature_average) / Patm;
         if (air_moisture_average > esat) {
-            std::cerr << "WARNING (EnergyBalanceModel::evaluateAirEnergyBalance): Air moisture exceeds saturation. Capping to saturation value." << std::endl;
+            static bool air_moisture_warning_shown = false;
+            if (!air_moisture_warning_shown) {
+                std::cerr << "WARNING (EnergyBalanceModel::evaluateAirEnergyBalance): Air moisture exceeds saturation. Capping to saturation value." << std::endl;
+                air_moisture_warning_shown = true;
+            }
             air_moisture_average = 0.99f * esat;
         }
         esat = esat_Pa(air_temperature_ABL) / Patm;
@@ -335,7 +339,11 @@ void EnergyBalanceModel::evaluateAirEnergyBalance(const std::vector<uint> &UUIDs
 
         // Check that timestep is not too large based on aerodynamic resistance
         if (dt_actual > 0.5f * canopy_height_m * rho_air_mol_m3 / ga) {
-            std::cerr << "WARNING (EnergyBalanceModel::evaluateAirEnergyBalance): Time step is too large.  The air energy balance may not converge properly." << std::endl;
+            static bool timestep_warning_shown = false;
+            if (!timestep_warning_shown) {
+                std::cerr << "WARNING (EnergyBalanceModel::evaluateAirEnergyBalance): Time step is too large.  The air energy balance may not converge properly." << std::endl;
+                timestep_warning_shown = true;
+            }
         }
 
         float heat_from_Htop = dt_actual / (rho_air_mol_m3 * cp_air_mol * abl_height_m) * sensible_upper_flux_W_m2;
@@ -556,15 +564,10 @@ void EnergyBalanceModel::printDefaultValueReport(const std::vector<uint> &UUIDs)
             assumed_default_Qother++;
         }
 
-        // two-sided flag
-        if (context->doesPrimitiveDataExist(UUID, "twosided_flag") && context->getPrimitiveDataType("twosided_flag") == HELIOS_TYPE_UINT) {
-            uint twosided;
-            context->getPrimitiveData(UUID, "twosided_flag", twosided);
-            if (twosided == 0) {
-                twosided_0++;
-            } else if (twosided == 1) {
-                twosided_1++;
-            }
+        // two-sided flag - check material first, then primitive data
+        uint twosided = context->getPrimitiveTwosidedFlag(UUID, 1);
+        if (twosided == 0) {
+            twosided_0++;
         } else {
             twosided_1++;
         }

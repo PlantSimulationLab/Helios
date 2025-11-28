@@ -93,9 +93,37 @@
 
  Note that \f$\mathrm{cos}^{-1}\f$ gives angles between 0 and \f$\pi\f$, so to get a \f$\phi_s\f$ between 0 and \f$2\pi\f$, we take \f$\phi_s=2\pi-\phi_s\f$ if \f$LST>12\f$.
 
- \subsection SolarFluxTheory Direct and Diffuse Solar Flux
+ \subsection SolarFluxTheory Direct and Diffuse Solar Flux (REST-2 Model)
 
- Clear-sky solar fluxes are calculated using the 'REST-2' model of <a href="https://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. REST-2 is a state-of-the-art atmospheric transmission model that calculates the solar flux at Earth's surface after attenuation by water vapor, CO<sub>2</sub>, Ozone, NO<sub>2</sub>, and aerosols. The model partitions the total radiative flux into direct and diffuse components.
+ Clear-sky solar fluxes are calculated using the 'REST-2' (Reference Evaluation of Solar Transmittance, 2 bands) model of <a href="https://www.sciencedirect.com/science/article/pii/S0038092X07000990">Gueymard (2008)</a>. REST-2 is a high-performance broadband radiative transfer model derived from parameterizations of the SMARTS spectral code, and is widely recognized as one of the most accurate clear-sky models available.
+
+ The model uses a two-band spectral scheme that separately treats the visible band (290-700 nm) and near-infrared band (700-4000 nm). In the visible band, attenuation is dominated by Rayleigh scattering and aerosol extinction, while the NIR band is primarily affected by water vapor absorption. For each band, the model calculates independent broadband transmittances for:
+
+ - <b>Rayleigh scattering</b>: Molecular scattering by air molecules
+ - <b>Uniformly mixed gases</b>: Absorption by CO<sub>2</sub> and O<sub>2</sub>
+ - <b>Ozone</b>: UV and visible absorption bands
+ - <b>Water vapor</b>: Major absorption in the NIR
+ - <b>Aerosols</b>: Scattering and absorption characterized by Ångström turbidity coefficients
+
+ Direct beam irradiance is computed from the product of these transmittances, while diffuse irradiance uses a two-layer scattering scheme that accounts for aerosol forward scattering and backscattering from the atmosphere-ground system. The model partitions the total radiative flux into direct and diffuse components suitable for agricultural, solar energy, and climate applications.
+
+ \subsection SpectralIrradianceTheory Spectral Solar Irradiance (SSolar-GOA Model)
+
+ For applications requiring high spectral resolution (e.g., photosynthesis, remote sensing), the plugin implements the SSolar-GOA spectral radiative transfer model from <a href="https://gmd.copernicus.org/articles/15/1689/2022/">Cachorro et al. (2022)</a>. This model computes bottom-of-atmosphere spectral irradiance from 300-2600 nm at 1 nm resolution.
+
+ The SSolar-GOA model uses the Wehrli (1985) extraterrestrial solar spectrum corrected for Earth-Sun distance, then applies atmospheric transmittances for:
+
+ - <b>Rayleigh scattering</b>: Molecular scattering using Bates (1984) optical depth formula
+ - <b>Aerosol extinction</b>: Ångström turbidity law with Ambartsumian solution for scattering
+ - <b>Water vapor absorption</b>: Empirical model for bands at 940, 1130, 1380, and 1870 nm
+ - <b>Ozone absorption</b>: UV Hartley band (200-310 nm) and visible Chappuis band (400-700 nm)
+ - <b>Oxygen absorption</b>: Primarily the A-band at 760 nm
+
+ The model also accounts for surface-atmosphere multiple reflections based on surface albedo and atmospheric spherical albedo.
+
+ <b>Parameter Derivation:</b> The implementation uses the same atmospheric inputs as the REST-2 model (pressure, temperature, humidity, turbidity). Additional parameters are derived automatically: precipitable water (Viswanadham 1981), ozone column (van Heuklon 1979), Ångström alpha (1.3), surface albedo (0.2), aerosol single scattering albedo (0.90), and asymmetry parameter (0.85).
+
+ <b>Output Format:</b> Results are stored in Context global data as vectors of (wavelength, irradiance) pairs (\ref helios::vec2) with user-defined labels. Three spectral components are computed: global irradiance on horizontal surface, direct irradiance normal to sun direction, and diffuse irradiance on horizontal surface (all in W/m²/nm).
 
  \subsection LWTheory Ambient Longwave Flux
 
@@ -232,26 +260,12 @@
 
  Methods are available to get the incoming solar radiation flux perpendicular to the direction of the sun 1) for the entire solar spectrum (\ref SolarPosition::getSolarFlux()), 2) for the PAR band (\ref SolarPosition::getSolarFluxPAR()), and 3) for the NIR band (\ref SolarPosition::getSolarFluxNIR()).
 
- \note As of version 1.3.57, the recommended approach is to set atmospheric conditions using \ref SolarPosition::setAtmosphericConditions() and then call the parameter-free versions of these methods (see \ref AtmosphericConditions). The methods that take atmospheric parameters as arguments are deprecated but still supported for backward compatibility.
-
- \subsubsection DeprecatedFluxMethods Deprecated Method: Passing Atmospheric Parameters Directly
-
- The original approach of passing atmospheric parameters directly to each flux method is still supported for backward compatibility, but is deprecated. These functions take several arguments needed for the model, which are listed in the table below.
-
- <table>
- <tr><th>Argument</th><th>Description</th><th>Example Value</th></tr>
- <tr><td>pressure</td><td>Atmospheric pressure in Pascals (near the ground).</td><td>101,000 Pa</td></tr>
- <tr><td>temperature</td><td>Air temperature in Kelvin (near the ground).</td><td>300 K</td></tr>
- <tr><td>humidity</td><td>Air relative humidity (near the ground).</td><td>0.6</td></tr>
- <tr><td>turbidity</td><td>Ångström's aerosol turbidity coefficient (AOD at 500 nm). Typical values: 0.02 (very clear), 0.05 (clear), 0.1 (hazy).</td><td>0.05</td></tr>
- </table>
-
- The very similar function \ref SolarPosition::getDiffuseFraction() calculates the fraction of the total flux that is diffuse. The fraction that is direct is simply one minus the diffuse fraction. This function takes the same arguments as \ref SolarPosition::getSolarFlux().
+ The very similar function \ref SolarPosition::getDiffuseFraction() calculates the fraction of the total flux that is diffuse. The fraction that is direct is simply one minus the diffuse fraction.
 
  Example code for using these solar flux functions is given below.
 
  ~~~~~~
-  #include "SolarPosition"
+  #include "SolarPosition.h"
 
   int main(){
       Context context; //declare the context
@@ -263,17 +277,20 @@
       //Initialize the SolarPosition class
       SolarPosition sun( 7, 31.256, 119.947, &context );
 
+      //Set atmospheric conditions globally
+      sun.setAtmosphericConditions( 101000, 300, 0.6, 0.05 ); //pressure, temperature, humidity, turbidity
+
       //Get the sun position
       float zenith = sun.getSunZenith(); //zenithal angle (radians)
 
-      //Calculate solar flux
-      float R = sun.getSolarFlux( 101000, 300, 0.6, 0.05 ); //flux perpendicular to sun (W/m^2)
+      //Calculate solar flux using stored atmospheric conditions
+      float R = sun.getSolarFlux(); //flux perpendicular to sun (W/m^2)
       float R_horiz = R*cos(zenith);  //flux on horizontal surface
 
-      float f_diff = sun.getDiffuseFraction( 101000, 300, 0.6, 0.05 ); //fraction of diffuse radiation
+      float f_diff = sun.getDiffuseFraction(); //fraction of diffuse radiation
 
       float R_dir = R*(1.f-f_diff); //direct component of flux (W/m^2)
-      
+
   }
  ~~~~~~
 
@@ -350,6 +367,59 @@
 
  \image html "CloudyFluxPartitioning.png"
 
+ \subsection SpectralFlux Getting Spectral Solar Irradiance
+
+ For applications requiring wavelength-resolved irradiance (e.g., photosynthesis models with wavelength-dependent quantum yield, remote sensing, hyperspectral image simulation), the \ref SolarPosition::calculateSpectralIrradiance() method computes high-resolution spectral irradiance using the SSolar-GOA model.
+
+ This method uses the same atmospheric conditions set via \ref SolarPosition::setAtmosphericConditions(), automatically deriving additional parameters (water vapor, ozone column) as needed. Results are stored in Context global data for use by other plugins (e.g., radiation plugin for ray tracing with spectral sources).
+
+ Example code for calculating spectral irradiance:
+
+ ~~~~~~
+  #include "SolarPosition.h"
+
+  int main(){
+      Context context;
+
+      //Set current time, date, and location
+      context.setDate(16,7,2023); //July 16, 2023
+      context.setTime(12,0); //Solar noon
+
+      //Initialize SolarPosition with location
+      SolarPosition sun( 0, 36.93f, 3.33f, &context ); //UTC, latitude, longitude
+
+      //Set atmospheric conditions
+      sun.setAtmosphericConditions( 87700.f, 298.f, 0.5f, 0.026f ); //pressure, temp, humidity, turbidity
+
+      //Calculate global solar spectrum at 1 nm resolution (default)
+      sun.calculateGlobalSolarSpectrum( "clear_sky" );
+
+      //Or specify a coarser resolution (e.g., 10 nm)
+      sun.calculateGlobalSolarSpectrum( "clear_sky_10nm", 10.0f );
+
+      //Retrieve spectral data from Context using the same label
+      std::vector<helios::vec2> global_spectrum;
+      context.getGlobalData( "clear_sky", global_spectrum );
+
+      //Use spectral data (wavelength in nm, irradiance in W/m²/nm)
+      for( const auto& point : global_spectrum ){
+          float wavelength_nm = point.x;
+          float irradiance = point.y; //W/m²/nm on horizontal surface
+          //... use wavelength-resolved irradiance
+      }
+
+      //Similarly for direct and diffuse components:
+      sun.calculateDirectSolarSpectrum( "direct_beam" );
+      sun.calculateDiffuseSolarSpectrum( "sky_diffuse" );
+  }
+ ~~~~~~
+
+ Three separate methods are available for the different spectral components:
+ - \ref SolarPosition::calculateGlobalSolarSpectrum(): Total irradiance on horizontal surface (direct + diffuse)
+ - \ref SolarPosition::calculateDirectSolarSpectrum(): Direct beam irradiance normal to sun direction
+ - \ref SolarPosition::calculateDiffuseSolarSpectrum(): Diffuse irradiance on horizontal surface
+
+ Each method accepts an optional resolution parameter (default 1 nm) allowing wavelength downsampling. For example, resolution_nm=10.0 produces 231 wavelengths instead of the native 2301.
 
  \subsection LWFlux Getting the Sky Longwave Flux
 

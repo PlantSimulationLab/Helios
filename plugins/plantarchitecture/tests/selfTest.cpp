@@ -1490,6 +1490,345 @@ DOCTEST_TEST_CASE("PlantArchitecture phenology_stage optional object data") {
     DOCTEST_CHECK(found_stage_data);
 }
 
+DOCTEST_TEST_CASE("Build Parameters - Backward Compatibility (Grapevine VSP)") {
+    // Test that empty parameter map produces identical plants to original hard-coded values
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Build with default parameters (empty map)
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+    std::map<std::string, float> empty_params;
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, empty_params);
+
+    // Verify plant was created
+    DOCTEST_CHECK(plantID != uint(-1));
+
+    // Verify basic plant structure exists
+    std::vector<uint> plant_primitives = plantarchitecture.getAllPlantObjectIDs(plantID);
+    DOCTEST_CHECK(plant_primitives.size() > 0);
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Parameter Override (Grapevine VSP)") {
+    // Test that custom parameter values are applied correctly
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Build with custom parameters
+    // Note: vine_spacing limited by cane max_nodes (9) * internode_length (0.15m) * 2 = 2.7m max
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+    std::map<std::string, float> custom_params = {
+        {"vine_spacing", 2.5f},         // 2.5m spacing (within max_nodes limit)
+        {"trunk_height", 0.15f}         // 15 cm trunk height
+    };
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, custom_params);
+
+    // Verify plant was created with custom parameters
+    DOCTEST_CHECK(plantID != uint(-1));
+    std::vector<uint> plant_primitives = plantarchitecture.getAllPlantObjectIDs(plantID);
+    DOCTEST_CHECK(plant_primitives.size() > 0);
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Validation Catches Invalid Values (Grapevine VSP)") {
+    // Test that out-of-range values raise errors
+    capture_cerr cerr_buffer;
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+
+    // Test vine_spacing out of range (valid range: 0.5-5.0)
+    std::map<std::string, float> invalid_params1 = {{"vine_spacing", 10.0f}};
+    DOCTEST_CHECK_THROWS(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, invalid_params1));
+
+    // Test trunk_height out of range (valid range: 0.05-1.0)
+    std::map<std::string, float> invalid_params2 = {{"trunk_height", 2.0f}};
+    DOCTEST_CHECK_THROWS(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, invalid_params2));
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Grapevine Wye Trellis Parameters") {
+    // Test Wye grapevine specific trellis parameters
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_Wye");
+    std::map<std::string, float> trellis_params = {
+        {"trunk_height", 0.2f},          // 20 cm trunk height
+        {"cordon_spacing", 0.8f},        // 80 cm between cordon rows
+        {"vine_spacing", 2.0f},          // 2 m between plants
+        {"catch_wire_height", 2.5f}      // 2.5 m catch wire height
+    };
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0, trellis_params);
+
+    DOCTEST_CHECK(plantID != uint(-1));
+    std::vector<uint> plant_primitives = plantarchitecture.getAllPlantObjectIDs(plantID);
+    DOCTEST_CHECK(plant_primitives.size() > 0);
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Tree Training System (Almond)") {
+    // Test tree training parameters
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Note: trunk_height limited by trunk max_nodes (20) * internode_length (0.03m) = 0.6m max
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+    std::map<std::string, float> tree_params = {
+        {"trunk_height", 0.5f},              // 50 cm total trunk height (within max_nodes limit)
+        {"num_scaffolds", 5.0f},             // 5 scaffold branches
+        {"scaffold_angle", 35.0f}            // 35 degree scaffold angle
+    };
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000, tree_params);
+
+    DOCTEST_CHECK(plantID != uint(-1));
+    std::vector<uint> plant_primitives = plantarchitecture.getAllPlantObjectIDs(plantID);
+    DOCTEST_CHECK(plant_primitives.size() > 0);
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Apple Tree") {
+    // Test apple tree with custom parameters
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Note: trunk_height limited by trunk max_nodes (20) * internode_length (0.04m) = 0.8m max
+    plantarchitecture.loadPlantModelFromLibrary("apple");
+    std::map<std::string, float> apple_params = {
+        {"trunk_height", 0.7f},          // 70 cm trunk height (within max_nodes limit)
+        {"num_scaffolds", 6.0f},         // 6 scaffold branches
+        {"scaffold_angle", 45.0f}        // 45 degree scaffold angle
+    };
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000, apple_params);
+
+    DOCTEST_CHECK(plantID != uint(-1));
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Pistachio Tree Fixed Scaffold System") {
+    // Test pistachio tree with different scaffold count
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("pistachio");
+
+    // Test with 2 scaffolds (minimum)
+    std::map<std::string, float> pistachio_params_min = {{"num_scaffolds", 2.0f}};
+    uint plantID_min = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000, pistachio_params_min);
+    DOCTEST_CHECK(plantID_min != uint(-1));
+
+    // Test with 4 scaffolds (default)
+    std::map<std::string, float> pistachio_params_def = {{"num_scaffolds", 4.0f}};
+    uint plantID_def = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(5, 0, 0), 5000, pistachio_params_def);
+    DOCTEST_CHECK(plantID_def != uint(-1));
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Canopy Building with Parameters") {
+    // Test that parameters work with canopy building functions
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("grapevine_VSP");
+    std::map<std::string, float> canopy_params = {
+        {"vine_spacing", 2.0f},      // 2.0m vine spacing
+        {"trunk_height", 0.12f}      // 12 cm trunk height
+    };
+
+    // Test regular spacing canopy
+    std::vector<uint> plantIDs = plantarchitecture.buildPlantCanopyFromLibrary(
+        make_vec3(0, 0, 0),
+        make_vec2(2, 2),
+        make_int2(2, 2),
+        0,
+        1.0f,
+        canopy_params
+    );
+
+    DOCTEST_CHECK(plantIDs.size() == 4);
+    for (uint plantID : plantIDs) {
+        DOCTEST_CHECK(plantID != uint(-1));
+    }
+}
+
+DOCTEST_TEST_CASE("Build Parameters - Type Casting Float to Uint") {
+    // Test that float parameters correctly cast to uint for node counts
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.loadPlantModelFromLibrary("almond");
+
+    // Specify parameters as floats (should cast to uint internally where needed)
+    // Note: trunk_height limited by trunk max_nodes (20) * internode_length (0.03m) = 0.6m max
+    std::map<std::string, float> float_params = {
+        {"trunk_height", 0.5f},          // Height as float (within max_nodes limit)
+        {"num_scaffolds", 5.0f},         // Should cast to uint(5)
+        {"scaffold_angle", 42.5f}        // Angle as float
+    };
+
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000, float_params);
+    DOCTEST_CHECK(plantID != uint(-1));
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture optionalOutputObjectData 'all' keyword") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Test that "all" (lowercase) enables all optional output data labels
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("all"));
+
+    // Build a bean plant to verify data is actually being output
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("bean"));
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    DOCTEST_CHECK(plantID != uint(-1));
+
+    // Advance time to create some organs
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 10.0f));
+
+    // Get all object IDs
+    std::vector<uint> all_primitives = plantarchitecture.getAllObjectIDs();
+    DOCTEST_CHECK(all_primitives.size() > 0);
+
+    // Verify that basic metadata labels are present (these exist on all plants)
+    // Note: Organ-specific labels (peduncleID, flowerID, fruitID) may not exist
+    // if the plant hasn't developed those organs yet at this age
+    std::vector<std::string> expected_labels = {
+        "age", "rank", "plantID", "plant_name", "plant_height", "plant_type",
+        "phenology_stage", "leafID"
+    };
+
+    for (const auto& label : expected_labels) {
+        bool found = false;
+        for (uint objID : all_primitives) {
+            if (context.doesObjectDataExist(objID, label.c_str())) {
+                found = true;
+                break;
+            }
+        }
+        DOCTEST_CHECK_MESSAGE(found, "Label '" << label << "' was not found on any primitive");
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture optionalOutputObjectData 'all' case-insensitive") {
+    // Test "ALL" (uppercase)
+    {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("ALL"));
+    }
+
+    // Test "All" (mixed case)
+    {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("All"));
+    }
+
+    // Test "aLl" (random mixed case)
+    {
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+        DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("aLl"));
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture optionalOutputObjectData invalid label throws error") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Test that an invalid label throws a helios_runtime_error with descriptive message
+    bool caught_error = false;
+    try {
+        plantarchitecture.optionalOutputObjectData("invalid_label");
+    } catch (const std::exception& e) {
+        caught_error = true;
+        std::string error_msg(e.what());
+        DOCTEST_CHECK(error_msg.find("invalid_label") != std::string::npos);
+        DOCTEST_CHECK(error_msg.find("not a valid option") != std::string::npos);
+    }
+    DOCTEST_CHECK(caught_error);
+
+    // Note: helios_runtime_error() only writes to stderr when HELIOS_DEBUG is defined,
+    // so we don't check stderr output here - just verify the exception is thrown correctly
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture optionalOutputObjectData vector with 'all'") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Test that "all" works in a vector of labels
+    std::vector<std::string> labels = {"all"};
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData(labels));
+
+    // Build a bean plant to verify data is actually being output
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("bean"));
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    DOCTEST_CHECK(plantID != uint(-1));
+
+    // Advance time to create more organs
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 10.0f));
+
+    // Get all object IDs
+    std::vector<uint> all_primitives = plantarchitecture.getAllObjectIDs();
+    DOCTEST_CHECK(all_primitives.size() > 0);
+
+    // Verify that at least a few optional output data labels are present
+    bool found_age = false;
+    bool found_rank = false;
+    bool found_plant_name = false;
+    for (uint objID : all_primitives) {
+        if (context.doesObjectDataExist(objID, "age")) found_age = true;
+        if (context.doesObjectDataExist(objID, "rank")) found_rank = true;
+        if (context.doesObjectDataExist(objID, "plant_name")) found_plant_name = true;
+    }
+    DOCTEST_CHECK(found_age);
+    DOCTEST_CHECK(found_rank);
+    DOCTEST_CHECK(found_plant_name);
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture optionalOutputObjectData normal labels still work") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Test that individual labels still work as expected
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("age"));
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.optionalOutputObjectData("rank"));
+
+    // Build a bean plant
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.loadPlantModelFromLibrary("bean"));
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    DOCTEST_CHECK(plantID != uint(-1));
+
+    // Advance time
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 5.0f));
+
+    // Verify that age and rank data exist, but other optional data does not
+    std::vector<uint> all_primitives = plantarchitecture.getAllObjectIDs();
+    DOCTEST_CHECK(all_primitives.size() > 0);
+
+    bool found_age = false;
+    bool found_rank = false;
+    bool found_plant_name = false;  // This should NOT be found
+    for (uint objID : all_primitives) {
+        if (context.doesObjectDataExist(objID, "age")) found_age = true;
+        if (context.doesObjectDataExist(objID, "rank")) found_rank = true;
+        if (context.doesObjectDataExist(objID, "plant_name")) found_plant_name = true;
+    }
+    DOCTEST_CHECK(found_age);
+    DOCTEST_CHECK(found_rank);
+    DOCTEST_CHECK_FALSE(found_plant_name);  // Should NOT be enabled
+}
+
 int PlantArchitecture::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

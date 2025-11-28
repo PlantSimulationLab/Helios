@@ -1539,6 +1539,7 @@ std::vector<std::vector<bool>> helios::readPNGAlpha(const std::string &filename)
     uint width = png_get_image_width(png_ptr, info_ptr);
     uint height = png_get_image_height(png_ptr, info_ptr);
     png_byte color_type = png_get_color_type(png_ptr, info_ptr);
+    png_byte bit_depth = png_get_bit_depth(png_ptr, info_ptr);
     bool has_alpha = (color_type & PNG_COLOR_MASK_ALPHA) != 0 || png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) != 0;
 
     mask.resize(height);
@@ -1555,7 +1556,30 @@ std::vector<std::vector<bool>> helios::readPNGAlpha(const std::string &filename)
         return mask;
     }
 
-    //  number_of_passes = png_set_interlace_handling(png_ptr);
+    // Apply transformations to ensure we get RGBA format (4 bytes per pixel)
+    // These transformations must match the format assumed by the pixel access code below
+    if (bit_depth == 16) {
+        png_set_strip_16(png_ptr);
+    }
+    if (color_type == PNG_COLOR_TYPE_PALETTE) {
+        png_set_palette_to_rgb(png_ptr);
+    }
+    if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) {
+        png_set_expand_gray_1_2_4_to_8(png_ptr);
+    }
+    if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
+        png_set_tRNS_to_alpha(png_ptr);
+    }
+    // Only add filler if we don't already have alpha from tRNS
+    if (!png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) &&
+        (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE)) {
+        png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
+    }
+    if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
+        png_set_gray_to_rgb(png_ptr);
+    }
+
+    png_set_interlace_handling(png_ptr);
     png_read_update_info(png_ptr, info_ptr);
 
     /* read file */
@@ -1667,8 +1691,9 @@ void helios::readPNG(const std::string &filename, uint &width, uint &height, std
         if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
             png_set_tRNS_to_alpha(png_ptr);
         }
-        // Ensure we have RGBA
-        if (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE) {
+        // Ensure we have RGBA - but only add filler if we don't already have alpha from tRNS
+        if (!png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) &&
+            (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE)) {
             png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
         }
         if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
@@ -2208,7 +2233,7 @@ helios::RGBAcolor helios::XMLloadrgba(const pugi::xml_node node, const char *fie
     return value;
 }
 
-float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::vector<float> &vars, const void *params, float init_guess, float err_tol, int max_iter) {
+float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::vector<float> &vars, const void *params, float init_guess, float err_tol, int max_iter, WarningAggregator* warnings) {
     constexpr float DELTA_SEED = 1e-3f; // Increased for better initial slope estimate
     constexpr float DENOM_EPS = 1e-10f; // Relaxed flat function detection
     constexpr float MAX_STEP_FACTOR = 0.5f; // Limit step size for stability
@@ -2252,7 +2277,9 @@ float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::
                 f1 = f2;
                 continue;
             }
-            std::cerr << "WARNING: fzero stagnated (|f'|≈0).\n";
+            if (warnings) {
+                warnings->addWarning("fzero_stagnation", "fzero stagnated (|f'|≈0).");
+            }
             return x1; // graceful exit, finite value
         }
 
@@ -2268,7 +2295,9 @@ float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::
         }
 
         if (!std::isfinite(x2)) { // overflow / NaN safeguard
-            std::cerr << "WARNING: fzero produced non-finite iterate.\n";
+            if (warnings) {
+                warnings->addWarning("fzero_nonfinite", "fzero produced non-finite iterate.");
+            }
             return x1;
         }
 
@@ -2296,7 +2325,9 @@ float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::
         f1 = f2;
     }
 
-    std::cerr << "WARNING: fzero did not converge after " << max_iter << " iterations.\n";
+    if (warnings) {
+        warnings->addWarning("fzero_convergence_failure", "fzero did not converge after " + std::to_string(max_iter) + " iterations.");
+    }
     return x1; // best finite estimate
 }
 
@@ -2947,6 +2978,85 @@ std::vector<vec4> helios::linspace(const vec4 &start, const vec4 &end, int num) 
 //
 //     // 4) rejection sampling: envelope = uniform φ, accept with ratio = (1–e²)/denominator
 //     std::uniform_real_distribution<float> dist01(0.f, 1.f);
+//--------- WarningAggregator Implementation ---------//
+
+void helios::WarningAggregator::addWarning(const std::string &category, const std::string &message) {
+    if (!enabled_) {
+        return;
+    }
+
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    // Increment total count (always)
+    counts_[category]++;
+
+    // Only store up to MAX_EXAMPLES messages to prevent memory issues
+    auto &messages = warnings_[category];
+    if (messages.size() < MAX_EXAMPLES) {
+        messages.push_back(message);
+    }
+}
+
+void helios::WarningAggregator::report(std::ostream &stream) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    if (counts_.empty()) {
+        return;  // Nothing to report
+    }
+
+    // Report each category
+    for (const auto &entry : counts_) {
+        const std::string &category = entry.first;
+        size_t count = entry.second;
+
+        stream << "WARNING: " << count << " instance" << (count > 1 ? "s" : "") << " of '" << category << "'";
+
+        // Get stored messages for this category
+        const auto &messages = warnings_[category];
+
+        // Show first few examples
+        size_t examples_to_show = std::min(size_t(3), messages.size());
+        stream << " (showing first " << examples_to_show << "):" << std::endl;
+
+        for (size_t i = 0; i < examples_to_show; ++i) {
+            stream << "  - " << messages[i] << std::endl;
+        }
+
+        if (count > MAX_EXAMPLES) {
+            stream << "  (Note: More than " << MAX_EXAMPLES << " warnings of this type were encountered)" << std::endl;
+        }
+        stream << std::endl;
+    }
+
+    // Clear after reporting
+    warnings_.clear();
+    counts_.clear();
+}
+
+size_t helios::WarningAggregator::getCount(const std::string &category) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    auto it = counts_.find(category);
+    if (it != counts_.end()) {
+        return it->second;
+    }
+    return 0;
+}
+
+void helios::WarningAggregator::clear() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    warnings_.clear();
+    counts_.clear();
+}
+
+void helios::WarningAggregator::setEnabled(bool enabled) {
+    enabled_ = enabled;
+}
+
+bool helios::WarningAggregator::isEnabled() const {
+    return enabled_;
+}
+
 //     while (true) {
 //         float phi = distPhi(*generator);
 //         float d   = phi - phi0;

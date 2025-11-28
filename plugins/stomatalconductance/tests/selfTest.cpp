@@ -48,39 +48,41 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Original selfTest") {
 
     // Capture all stdout to suppress verbose output during model runs
     // Reference data should converge - if fzero warnings occur, the test should fail
-    capture_cout cout_buffer;
+    {
+        capture_cout cout_buffer;
 
-    for (uint i = 0; i < gs_ref.size(); i++) {
-        context_selftest.setPrimitiveData(UUID0, "radiation_flux_PAR", Q_ref.at(i) / 4.57f);
-        context_selftest.setPrimitiveData(UUID0, "net_photosynthesis", An_ref.at(i));
-        context_selftest.setPrimitiveData(UUID0, "temperature", TL_ref.at(i) + 273.f);
-        context_selftest.setPrimitiveData(UUID0, "air_temperature", Tair_ref.at(i) + 273.f);
-        context_selftest.setPrimitiveData(UUID0, "air_CO2", Cs_ref);
-        context_selftest.setPrimitiveData(UUID0, "air_humidity", hs_ref);
-        context_selftest.setPrimitiveData(UUID0, "air_pressure", Patm_ref);
-        context_selftest.setPrimitiveData(UUID0, "boundarylayer_conductance", gbw_ref);
-        context_selftest.setPrimitiveData(UUID0, "Gamma_CO2", Gamma_ref.at(i));
+        for (uint i = 0; i < gs_ref.size(); i++) {
+            context_selftest.setPrimitiveData(UUID0, "radiation_flux_PAR", Q_ref.at(i) / 4.57f);
+            context_selftest.setPrimitiveData(UUID0, "net_photosynthesis", An_ref.at(i));
+            context_selftest.setPrimitiveData(UUID0, "temperature", TL_ref.at(i) + 273.f);
+            context_selftest.setPrimitiveData(UUID0, "air_temperature", Tair_ref.at(i) + 273.f);
+            context_selftest.setPrimitiveData(UUID0, "air_CO2", Cs_ref);
+            context_selftest.setPrimitiveData(UUID0, "air_humidity", hs_ref);
+            context_selftest.setPrimitiveData(UUID0, "air_pressure", Patm_ref);
+            context_selftest.setPrimitiveData(UUID0, "boundarylayer_conductance", gbw_ref);
+            context_selftest.setPrimitiveData(UUID0, "Gamma_CO2", Gamma_ref.at(i));
 
-        gsm.setModelCoefficients(BWBcoeffs);
-        gsm.run();
-        context_selftest.getPrimitiveData(UUID0, "moisture_conductance", gs_BWB.at(i));
-        RMSE_BWB += pow(gs_BWB.at(i) - gs_ref.at(i), 2) / float(gs_ref.size());
+            gsm.setModelCoefficients(BWBcoeffs);
+            gsm.run();
+            context_selftest.getPrimitiveData(UUID0, "moisture_conductance", gs_BWB.at(i));
+            RMSE_BWB += pow(gs_BWB.at(i) - gs_ref.at(i), 2) / float(gs_ref.size());
 
-        gsm.setModelCoefficients(BBLcoeffs);
-        gsm.run();
-        context_selftest.getPrimitiveData(UUID0, "moisture_conductance", gs_BBL.at(i));
-        RMSE_BBL += pow(gs_BBL.at(i) - gs_ref.at(i), 2) / float(gs_ref.size());
+            gsm.setModelCoefficients(BBLcoeffs);
+            gsm.run();
+            context_selftest.getPrimitiveData(UUID0, "moisture_conductance", gs_BBL.at(i));
+            RMSE_BBL += pow(gs_BBL.at(i) - gs_ref.at(i), 2) / float(gs_ref.size());
 
-        gsm.setModelCoefficients(MOPTcoeffs);
-        gsm.run();
-        context_selftest.getPrimitiveData(UUID0, "moisture_conductance", gs_MOPT.at(i));
-        RMSE_MOPT += pow(gs_MOPT.at(i) - gs_ref.at(i), 2) / float(gs_ref.size());
+            gsm.setModelCoefficients(MOPTcoeffs);
+            gsm.run();
+            context_selftest.getPrimitiveData(UUID0, "moisture_conductance", gs_MOPT.at(i));
+            RMSE_MOPT += pow(gs_MOPT.at(i) - gs_ref.at(i), 2) / float(gs_ref.size());
 
-        gsm.setModelCoefficients(BMFcoeffs);
-        gsm.run();
-        context_selftest.getPrimitiveData(UUID0, "moisture_conductance", gs_BMF.at(i));
-        RMSE_BMF += pow(gs_BMF.at(i) - gs_ref.at(i), 2) / float(gs_ref.size());
-    }
+            gsm.setModelCoefficients(BMFcoeffs);
+            gsm.run();
+            context_selftest.getPrimitiveData(UUID0, "moisture_conductance", gs_BMF.at(i));
+            RMSE_BMF += pow(gs_BMF.at(i) - gs_ref.at(i), 2) / float(gs_ref.size());
+        }
+    } // capture_cout goes out of scope here, restoring stdout before assertions
 
     DOCTEST_CHECK(sqrtf(RMSE_BWB) <= RMSE_max);
     DOCTEST_CHECK(sqrtf(RMSE_BBL) <= RMSE_max);
@@ -121,8 +123,12 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Normal Conditions Should Converge"
     gsm.setModelCoefficients(bwb);
 
     // This should NOT produce any fzero warnings
-    capture_cerr cerr_buffer;
-    DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
+    std::string warnings;
+    {
+        capture_cerr cerr_buffer;
+        DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
+        warnings = cerr_buffer.get_captured_output();
+    } // Capture goes out of scope before result verification
 
     // Verify result is reasonable
     float result_gs;
@@ -131,7 +137,6 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Normal Conditions Should Converge"
     DOCTEST_CHECK(result_gs < 1.0f); // Reasonable stomatal conductance range
 
     // Check that no convergence warnings occurred
-    std::string warnings = cerr_buffer.get_captured_output();
     DOCTEST_CHECK_MESSAGE(warnings.empty(), "Normal conditions should not cause fzero warnings");
 }
 
@@ -332,13 +337,15 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Input Validation") {
     gsm.setModelCoefficients(coeffs);
 
     // Capture both stdout and stderr - these extreme values may cause fzero warnings
-    capture_cout cout_buffer;
-    capture_cerr cerr_buffer;
+    {
+        capture_cout cout_buffer;
+        capture_cerr cerr_buffer;
 
-    DOCTEST_CHECK_NOTHROW(gsm.run());
+        DOCTEST_CHECK_NOTHROW(gsm.run());
 
-    std::vector<uint> UUIDs = {UUID};
-    DOCTEST_CHECK_NOTHROW(gsm.run(UUIDs));
+        std::vector<uint> UUIDs = {UUID};
+        DOCTEST_CHECK_NOTHROW(gsm.run(UUIDs));
+    }
 }
 
 DOCTEST_TEST_CASE("StomatalConductanceModel - Unknown Species") {
@@ -453,33 +460,41 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Edge Cases and Error Conditions") 
     context.setPrimitiveData(UUID, "air_humidity", 2.0f);
     context.setPrimitiveData(UUID, "air_pressure", 10000.0f);
 
-    // These extreme values will likely cause fzero convergence issues - capture both stdout and stderr
-    capture_cout cout_buffer;
-    capture_cerr cerr_buffer;
+    std::string captured_warnings;
 
-    BWBcoefficients bwb_coeffs;
-    gsm.setModelCoefficients(bwb_coeffs);
-    DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
+    // These extreme values will likely cause fzero convergence issues
+    // WarningAggregator.report() outputs to stderr
+    {
+        capture_cout cout_buffer;  // Also capture stdout to suppress any other output
+        capture_cerr cerr_buffer;
 
-    BBLcoefficients bbl_coeffs;
-    gsm.setModelCoefficients(bbl_coeffs);
-    DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
+        BWBcoefficients bwb_coeffs;
+        gsm.setModelCoefficients(bwb_coeffs);
+        gsm.run(std::vector<uint>{UUID});
 
-    MOPTcoefficients mopt_coeffs;
-    gsm.setModelCoefficients(mopt_coeffs);
-    DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
+        BBLcoefficients bbl_coeffs;
+        gsm.setModelCoefficients(bbl_coeffs);
+        gsm.run(std::vector<uint>{UUID});
 
-    BMFcoefficients bmf_coeffs;
-    gsm.setModelCoefficients(bmf_coeffs);
-    DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
+        MOPTcoefficients mopt_coeffs;
+        gsm.setModelCoefficients(mopt_coeffs);
+        gsm.run(std::vector<uint>{UUID});
 
-    BBcoefficients bb_coeffs;
-    gsm.setModelCoefficients(bb_coeffs);
-    context.setPrimitiveData(UUID, "xylem_water_potential", -2.0f);
-    DOCTEST_CHECK_NOTHROW(gsm.run(std::vector<uint>{UUID}));
+        BMFcoefficients bmf_coeffs;
+        gsm.setModelCoefficients(bmf_coeffs);
+        gsm.run(std::vector<uint>{UUID});
+
+        BBcoefficients bb_coeffs;
+        gsm.setModelCoefficients(bb_coeffs);
+        context.setPrimitiveData(UUID, "xylem_water_potential", -2.0f);
+        gsm.run(std::vector<uint>{UUID});
+
+        // Get the captured output before the captures go out of scope
+        // WarningAggregator.report() writes to stderr
+        captured_warnings = cerr_buffer.get_captured_output();
+    } // captures go out of scope here, restoring normal output
 
     // Verify we captured some fzero warnings (expected for these extreme conditions)
-    std::string captured_warnings = cerr_buffer.get_captured_output();
     DOCTEST_CHECK(captured_warnings.find("fzero") != std::string::npos);
 }
 
@@ -667,4 +682,167 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Message Control and Output") {
     BMFcoefficients coeffs;
     gsm.setModelCoefficients(coeffs);
     DOCTEST_CHECK_NOTHROW(gsm.printDefaultValueReport());
+}
+
+DOCTEST_TEST_CASE("StomatalConductanceModel - Material-Based Coefficients") {
+    Context context;
+    StomatalConductanceModel gsm(&context);
+
+    // Suppress messages
+    gsm.disableMessages();
+
+    SUBCASE("BMF Model - Set and Retrieve Coefficients via Material") {
+        // Create material
+        context.addMaterial("test_leaf");
+
+        // Set custom coefficients
+        BMFcoefficients custom_coeffs;
+        custom_coeffs.Em = 500.0f;
+        custom_coeffs.i0 = 100.0f;
+        custom_coeffs.k = 5000.0f;
+        custom_coeffs.b = 1000.0f;
+
+        gsm.setModelCoefficients("test_leaf", custom_coeffs);
+
+        // Create primitives with this material
+        uint p1 = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint p2 = context.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+        context.assignMaterialToPrimitive(p1, "test_leaf");
+        context.assignMaterialToPrimitive(p2, "test_leaf");
+
+        // Verify material has the data
+        DOCTEST_CHECK(context.doesMaterialDataExist("test_leaf", "gs_bmf_Em"));
+        DOCTEST_CHECK(context.doesMaterialDataExist("test_leaf", "gs_bmf_i0"));
+        DOCTEST_CHECK(context.doesMaterialDataExist("test_leaf", "gs_bmf_k"));
+        DOCTEST_CHECK(context.doesMaterialDataExist("test_leaf", "gs_bmf_b"));
+
+        // Verify values
+        float Em, i0, k, b;
+        context.getMaterialData("test_leaf", "gs_bmf_Em", Em);
+        context.getMaterialData("test_leaf", "gs_bmf_i0", i0);
+        context.getMaterialData("test_leaf", "gs_bmf_k", k);
+        context.getMaterialData("test_leaf", "gs_bmf_b", b);
+
+        DOCTEST_CHECK(Em == doctest::Approx(500.0f));
+        DOCTEST_CHECK(i0 == doctest::Approx(100.0f));
+        DOCTEST_CHECK(k == doctest::Approx(5000.0f));
+        DOCTEST_CHECK(b == doctest::Approx(1000.0f));
+    }
+
+    SUBCASE("Multiple Primitives Share Material Coefficients") {
+        // Create material
+        context.addMaterial("shared_leaf");
+
+        // Set coefficients
+        BWBcoefficients coeffs;
+        coeffs.gs0 = 0.05f;
+        coeffs.a1 = 10.0f;
+        gsm.setModelCoefficients("shared_leaf", coeffs);
+
+        // Create many primitives with same material
+        std::vector<uint> primitives;
+        for (int i = 0; i < 100; i++) {
+            uint p = context.addPatch(make_vec3(i, 0, 0), make_vec2(1, 1));
+            primitives.push_back(p);
+            context.assignMaterialToPrimitive(p, "shared_leaf");
+        }
+
+        // Verify all primitives have access to same coefficients via material
+        uint shared_mat_id = context.getMaterialIDFromLabel("shared_leaf");
+        for (uint p : primitives) {
+            DOCTEST_CHECK(context.getPrimitiveMaterialID(p) == shared_mat_id);
+        }
+
+        // Material should only store coefficients once
+        DOCTEST_CHECK(context.doesMaterialDataExist("shared_leaf", "gs_bwb_gs0"));
+        DOCTEST_CHECK(context.doesMaterialDataExist("shared_leaf", "gs_bwb_a1"));
+    }
+
+    SUBCASE("Fallback to Legacy UUID Map") {
+        // Create primitives
+        uint p1 = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint p2 = context.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+
+        // Set coefficients using legacy UUID-based method (not material-based)
+        BBLcoefficients legacy_coeffs;
+        legacy_coeffs.gs0 = 0.1f;
+        legacy_coeffs.a1 = 5.0f;
+        legacy_coeffs.D0 = 1.5f;
+        gsm.setModelCoefficients(legacy_coeffs, std::vector<uint>{p1, p2});
+
+        // Model should still work with legacy method
+        // (No easy way to verify retrieval without running model, but at least ensure no crash)
+        DOCTEST_CHECK_NOTHROW(gsm.setModelCoefficients(legacy_coeffs, std::vector<uint>{p1}));
+    }
+
+    SUBCASE("Library Integration with Materials") {
+        // Create materials for different species
+        context.addMaterial("almond_leaf");
+        context.addMaterial("grape_leaf");
+
+        // Set coefficients from library
+        gsm.setBMFCoefficientsFromLibrary("Almond", "almond_leaf");
+        gsm.setBMFCoefficientsFromLibrary("Grape", "grape_leaf");
+
+        // Verify both materials have coefficient data
+        DOCTEST_CHECK(context.doesMaterialDataExist("almond_leaf", "gs_bmf_Em"));
+        DOCTEST_CHECK(context.doesMaterialDataExist("grape_leaf", "gs_bmf_Em"));
+
+        // Coefficients should be different for different species
+        float almond_Em, grape_Em;
+        context.getMaterialData("almond_leaf", "gs_bmf_Em", almond_Em);
+        context.getMaterialData("grape_leaf", "gs_bmf_Em", grape_Em);
+        DOCTEST_CHECK(almond_Em != grape_Em);
+    }
+
+    SUBCASE("All Model Types - Material-Based API") {
+        // Test that all coefficient types can be set via materials
+
+        // BWB
+        context.addMaterial("bwb_mat");
+        BWBcoefficients bwb;
+        bwb.gs0 = 0.05f;
+        bwb.a1 = 8.0f;
+        DOCTEST_CHECK_NOTHROW(gsm.setModelCoefficients("bwb_mat", bwb));
+        DOCTEST_CHECK(context.doesMaterialDataExist("bwb_mat", "gs_bwb_gs0"));
+
+        // BBL
+        context.addMaterial("bbl_mat");
+        BBLcoefficients bbl;
+        bbl.gs0 = 0.03f;
+        bbl.a1 = 6.0f;
+        bbl.D0 = 1.0f;
+        DOCTEST_CHECK_NOTHROW(gsm.setModelCoefficients("bbl_mat", bbl));
+        DOCTEST_CHECK(context.doesMaterialDataExist("bbl_mat", "gs_bbl_gs0"));
+
+        // MOPT
+        context.addMaterial("mopt_mat");
+        MOPTcoefficients mopt;
+        mopt.gs0 = 0.08f;
+        mopt.g1 = 2.5f;
+        DOCTEST_CHECK_NOTHROW(gsm.setModelCoefficients("mopt_mat", mopt));
+        DOCTEST_CHECK(context.doesMaterialDataExist("mopt_mat", "gs_mopt_gs0"));
+
+        // BMF
+        context.addMaterial("bmf_mat");
+        BMFcoefficients bmf;
+        bmf.Em = 300.0f;
+        bmf.i0 = 50.0f;
+        bmf.k = 3000.0f;
+        bmf.b = 700.0f;
+        DOCTEST_CHECK_NOTHROW(gsm.setModelCoefficients("bmf_mat", bmf));
+        DOCTEST_CHECK(context.doesMaterialDataExist("bmf_mat", "gs_bmf_Em"));
+
+        // BB
+        context.addMaterial("bb_mat");
+        BBcoefficients bb;
+        bb.pi_0 = 1.2f;
+        bb.pi_m = 1.8f;
+        bb.theta = 250.0f;
+        bb.sigma = 0.5f;
+        bb.chi = 2.5f;
+        DOCTEST_CHECK_NOTHROW(gsm.setModelCoefficients("bb_mat", bb));
+        DOCTEST_CHECK(context.doesMaterialDataExist("bb_mat", "gs_bb_pi_0"));
+        DOCTEST_CHECK(context.doesMaterialDataExist("bb_mat", "gs_bb_theta"));
+    }
 }

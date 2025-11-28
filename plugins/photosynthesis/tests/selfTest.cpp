@@ -514,6 +514,9 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Edge Cases and Error Conditions") {
     DOCTEST_CHECK(farq_default.Vcmax == doctest::Approx(-1.0f).epsilon(err_tol)); // Uninitialized value
 
     // Test with extreme input values that trigger warnings - capture stderr
+    // Re-enable messages to allow warnings to be produced
+    photomodel.enableMessages();
+
     context_test.setPrimitiveData(UUID, "radiation_flux_PAR", -100.0f); // Negative PAR
     context_test.setPrimitiveData(UUID, "temperature", 150.0f); // Very low temperature
     context_test.setPrimitiveData(UUID, "air_CO2", -50.0f); // Negative CO2
@@ -527,9 +530,6 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Edge Cases and Error Conditions") {
     // Verify we captured convergence warnings (expected for these extreme conditions)
     std::string captured_warnings = cerr_buffer.get_captured_output();
     DOCTEST_CHECK_MESSAGE(captured_warnings.find("Photosynthesis model failed to converge") != std::string::npos, "Extreme conditions should produce convergence warnings");
-
-    // Re-enable messages
-    photomodel.enableMessages();
 
     // Verify the model still produces reasonable output despite bad inputs
     float A;
@@ -667,6 +667,124 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Temperature Response Edge Cases") {
     for (float result: results) {
         DOCTEST_CHECK(!std::isnan(result));
         DOCTEST_CHECK(std::isfinite(result));
+    }
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel - Material-Based Coefficients") {
+    Context context;
+    PhotosynthesisModel photomodel(&context);
+
+    // Suppress messages
+    photomodel.disableMessages();
+
+    SUBCASE("Farquhar Model - Set and Retrieve Coefficients via Material") {
+        // Create material
+        context.addMaterial("test_leaf");
+
+        // Set custom coefficients using setter methods
+        FarquharModelCoefficients custom_coeffs;
+        custom_coeffs.setVcmax(150.0f);
+        custom_coeffs.setJmax(200.0f);
+        custom_coeffs.setRd(2.0f);
+        custom_coeffs.setQuantumEfficiency_alpha(0.4f);
+        custom_coeffs.O = 210.0f;
+
+        photomodel.setModelCoefficients("test_leaf", custom_coeffs);
+
+        // Create primitives with this material
+        uint p1 = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        uint p2 = context.addPatch(make_vec3(1, 0, 0), make_vec2(1, 1));
+        context.assignMaterialToPrimitive(p1, "test_leaf");
+        context.assignMaterialToPrimitive(p2, "test_leaf");
+
+        // Verify material has the data
+        DOCTEST_CHECK(context.doesMaterialDataExist("test_leaf", "photo_fq_Vcmax"));
+        DOCTEST_CHECK(context.doesMaterialDataExist("test_leaf", "photo_fq_Jmax"));
+        DOCTEST_CHECK(context.doesMaterialDataExist("test_leaf", "photo_fq_Rd"));
+        DOCTEST_CHECK(context.doesMaterialDataExist("test_leaf", "photo_fq_alpha"));
+
+        // Verify values
+        float Vcmax, Jmax, Rd, alpha;
+        context.getMaterialData("test_leaf", "photo_fq_Vcmax", Vcmax);
+        context.getMaterialData("test_leaf", "photo_fq_Jmax", Jmax);
+        context.getMaterialData("test_leaf", "photo_fq_Rd", Rd);
+        context.getMaterialData("test_leaf", "photo_fq_alpha", alpha);
+
+        DOCTEST_CHECK(Vcmax == doctest::Approx(150.0f));
+        DOCTEST_CHECK(Jmax == doctest::Approx(200.0f));
+        DOCTEST_CHECK(Rd == doctest::Approx(2.0f));
+        DOCTEST_CHECK(alpha == doctest::Approx(0.4f));
+    }
+
+    SUBCASE("Multiple Primitives Share Material Coefficients") {
+        // Create material
+        context.addMaterial("shared_leaf");
+
+        // Set coefficients using setter methods
+        FarquharModelCoefficients coeffs;
+        coeffs.setVcmax(120.0f);
+        coeffs.setJmax(180.0f);
+        coeffs.setRd(1.5f);
+        coeffs.setQuantumEfficiency_alpha(0.35f);
+        photomodel.setModelCoefficients("shared_leaf", coeffs);
+
+        // Create many primitives with same material
+        std::vector<uint> primitives;
+        for (int i = 0; i < 50; i++) {
+            uint p = context.addPatch(make_vec3(i, 0, 0), make_vec2(1, 1));
+            primitives.push_back(p);
+            context.assignMaterialToPrimitive(p, "shared_leaf");
+        }
+
+        // Verify all primitives have access to same coefficients via material
+        uint shared_mat_id = context.getMaterialIDFromLabel("shared_leaf");
+        for (uint p : primitives) {
+            DOCTEST_CHECK(context.getPrimitiveMaterialID(p) == shared_mat_id);
+        }
+
+        // Material should only store coefficients once
+        DOCTEST_CHECK(context.doesMaterialDataExist("shared_leaf", "photo_fq_Vcmax"));
+        DOCTEST_CHECK(context.doesMaterialDataExist("shared_leaf", "photo_fq_Jmax"));
+    }
+
+    SUBCASE("Library Integration with Materials") {
+        // Create materials for different species
+        context.addMaterial("almond_leaf");
+        context.addMaterial("grape_leaf");
+
+        // Set coefficients from library
+        photomodel.setFarquharCoefficientsFromLibrary("Almond", "almond_leaf");
+        photomodel.setFarquharCoefficientsFromLibrary("Grape", "grape_leaf");
+
+        // Verify both materials have coefficient data
+        DOCTEST_CHECK(context.doesMaterialDataExist("almond_leaf", "photo_fq_Vcmax"));
+        DOCTEST_CHECK(context.doesMaterialDataExist("grape_leaf", "photo_fq_Vcmax"));
+
+        // Coefficients should be different for different species
+        float almond_Vcmax, grape_Vcmax;
+        context.getMaterialData("almond_leaf", "photo_fq_Vcmax", almond_Vcmax);
+        context.getMaterialData("grape_leaf", "photo_fq_Vcmax", grape_Vcmax);
+        DOCTEST_CHECK(almond_Vcmax != grape_Vcmax);
+    }
+
+    SUBCASE("Empirical Model - Material-Based API") {
+        context.addMaterial("empirical_mat");
+
+        EmpiricalModelCoefficients emp;
+        emp.Asat = 25.0f;
+        emp.theta = 70.0f;
+        emp.Topt = 305.0f;
+        emp.kC = 0.9f;
+
+        DOCTEST_CHECK_NOTHROW(photomodel.setModelCoefficients("empirical_mat", emp));
+        DOCTEST_CHECK(context.doesMaterialDataExist("empirical_mat", "photo_emp_Asat"));
+        DOCTEST_CHECK(context.doesMaterialDataExist("empirical_mat", "photo_emp_theta"));
+        DOCTEST_CHECK(context.doesMaterialDataExist("empirical_mat", "photo_emp_Topt"));
+
+        // Verify retrieved values
+        float Asat_retrieved;
+        context.getMaterialData("empirical_mat", "photo_emp_Asat", Asat_retrieved);
+        DOCTEST_CHECK(Asat_retrieved == doctest::Approx(25.0f));
     }
 }
 

@@ -413,6 +413,18 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
             patch_new->translate(center);
 
             primitives[currentUUID] = patch_new;
+
+            // Set context pointer
+            patch_new->context_ptr = this;
+
+            // Create or reuse material with de-duplication
+            std::string mat_label = generateMaterialLabel(make_RGBAcolor(0, 0, 0, 1), texturefile, false);
+            if (!doesMaterialExist(mat_label)) {
+                patch_new->materialID = addMaterial_internal(mat_label, make_RGBAcolor(0, 0, 0, 1), texturefile);
+            } else {
+                patch_new->materialID = getMaterialIDFromLabel(mat_label);
+            }
+
             currentUUID++;
             UUID.push_back(currentUUID - 1);
         }

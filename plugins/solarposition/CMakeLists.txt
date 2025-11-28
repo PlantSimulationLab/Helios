@@ -11,3 +11,6 @@ if(BUILD_TESTS)
     target_link_libraries( solarposition_tests PRIVATE solarposition )
     add_test( NAME solarposition_tests COMMAND solarposition_tests )
 endif()
+
+# Copy SSolar-GOA spectral data files to build directory
+file( COPY assets/ssolar_goa DESTINATION ${CMAKE_BINARY_DIR}/plugins/solarposition/ )

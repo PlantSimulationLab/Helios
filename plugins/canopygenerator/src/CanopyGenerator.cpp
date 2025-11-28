@@ -3118,7 +3118,7 @@ float CanopyGenerator::sampleLeafPDF(const char *distribution) {
 
         std::vector<float> args{ru};
 
-        thetaL = fzero(evaluateCDFresid, args, distribution, 0.25f);
+        thetaL = fzero(evaluateCDFresid, args, distribution, 0.25f, 0.0001f, 100, &warnings);
 
     } else {
         throw(std::runtime_error("ERROR (sampleLeafPDF): Invalid leaf angle distribution of " + std::string(distribution) + " specified."));
@@ -3133,4 +3133,8 @@ void CanopyGenerator::createElementLabels() {
 
 void CanopyGenerator::disableElementLabels() {
     enable_element_labels = false;
+}
+
+void CanopyGenerator::reportWarnings() {
+    warnings.report(std::cerr);
 }
