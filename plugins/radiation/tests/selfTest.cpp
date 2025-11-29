@@ -4997,3 +4997,96 @@ DOCTEST_TEST_CASE("RadiationModel - Camera White Balance") {
         DOCTEST_CHECK(props1 != props2);
     }
 }
+
+// ===== Prague Sky Model Integration Tests =====
+
+TEST_CASE("Radiation - Prague Context data fallback behavior") {
+    Context context;
+    RadiationModel radiation(&context);
+
+    // Add a simple camera with RGB bands
+    radiation.addRadiationBand("red");
+    radiation.addRadiationBand("green");
+    radiation.addRadiationBand("blue");
+
+    // Create simple test geometry
+    uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(UUID, "radiation_flux_red", 0.f);
+    context.setPrimitiveData(UUID, "radiation_flux_green", 0.f);
+    context.setPrimitiveData(UUID, "radiation_flux_blue", 0.f);
+
+    CameraProperties camera_props;
+    camera_props.camera_resolution = make_int2(64, 64);
+    camera_props.focal_plane_distance = 2.0f;
+    camera_props.HFOV = 45.0f;
+
+    radiation.addRadiationCamera("test_camera", {"red", "green", "blue"},
+                                  make_vec3(0, -3, 2), make_vec3(0, 0, 0),
+                                  camera_props, 1);
+
+    // Try to update geometry without Prague data
+    // Should fall back to uniform sky with warning (not crash)
+    DOCTEST_CHECK_NOTHROW(radiation.updateGeometry());
+}
+
+TEST_CASE("Radiation - Prague Context data integration end-to-end") {
+    Context context;
+    RadiationModel radiation(&context);
+
+    // Mock Prague data in Context (simulating what SolarPosition would provide)
+    // Create realistic spectral parameters with Rayleigh-like spectrum: 225 wavelengths × 6 params
+    std::vector<float> spectral_params(225 * 6);
+    for (int i = 0; i < 225; ++i) {
+        float wavelength = 360.0f + i * 5.0f;
+        int base = i * 6;
+
+        // Rayleigh spectrum: blue sky with λ^-4 dependence
+        float rayleigh_factor = std::pow(550.0f / wavelength, 4.0f);
+
+        spectral_params[base + 0] = wavelength;
+        spectral_params[base + 1] = 0.3f * rayleigh_factor;  // L_zenith (W/m²/sr/nm) - blue-heavy
+        spectral_params[base + 2] = 2.0f;  // circ_str
+        spectral_params[base + 3] = 15.0f; // circ_width (degrees)
+        spectral_params[base + 4] = 2.0f;  // horiz_bright
+        spectral_params[base + 5] = 0.8f;  // normalization
+    }
+
+    context.setGlobalData("prague_sky_spectral_params", spectral_params);
+    context.setGlobalData("prague_sky_sun_direction", make_vec3(0, 0.5f, 0.866f));
+    context.setGlobalData("prague_sky_visibility_km", 40.0f);
+    context.setGlobalData("prague_sky_ground_albedo", 0.33f);
+    context.setGlobalData("prague_sky_valid", 1);
+
+    // Verify Prague data is in Context
+    int valid = 0;
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("prague_sky_valid", valid));
+    DOCTEST_CHECK(valid == 1);
+
+    std::vector<float> read_params;
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("prague_sky_spectral_params", read_params));
+    DOCTEST_CHECK(read_params.size() == 225 * 6);
+
+    // Setup radiation with RGB bands
+    radiation.addRadiationBand("red");
+    radiation.addRadiationBand("green");
+    radiation.addRadiationBand("blue");
+
+    // Create test geometry
+    uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(UUID, "radiation_flux_red", 0.f);
+    context.setPrimitiveData(UUID, "radiation_flux_green", 0.f);
+    context.setPrimitiveData(UUID, "radiation_flux_blue", 0.f);
+
+    CameraProperties camera_props;
+    camera_props.camera_resolution = make_int2(64, 64);
+    camera_props.focal_plane_distance = 2.0f;
+    camera_props.HFOV = 45.0f;
+
+    radiation.addRadiationCamera("test_camera", {"red", "green", "blue"},
+                                  make_vec3(0, -3, 2), make_vec3(0, 0, 0),
+                                  camera_props, 1);
+
+    // Update geometry - should read Prague data from Context (no warning)
+    DOCTEST_CHECK_NOTHROW(radiation.updateGeometry());
+}
+

@@ -544,3 +544,115 @@ TEST_CASE("SSolar-GOA validation against Python reference") {
 int SolarPosition::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }
+
+// ===== Prague Sky Model Tests =====
+
+TEST_CASE("SolarPosition - Prague model initialization") {
+    Context context;
+    SolarPosition solar(&context);
+
+    DOCTEST_CHECK(!solar.isPragueSkyModelEnabled());
+    DOCTEST_CHECK_NOTHROW(solar.enablePragueSkyModel());
+    DOCTEST_CHECK(solar.isPragueSkyModelEnabled());
+}
+
+TEST_CASE("SolarPosition - Prague angular parameter fitting - clear sky") {
+    Context context;
+    SolarPosition solar(&context);
+    solar.enablePragueSkyModel();
+    solar.setSunDirection(make_SphericalCoord(0.5236f, 0.0f));  // 60° elevation
+    solar.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.05f);  // Clear sky turbidity
+    solar.updatePragueSkyModel();
+
+    std::vector<float> params;
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("prague_sky_spectral_params", params));
+
+    DOCTEST_CHECK(params.size() == 225 * 6);
+
+    // Check 550nm parameters (index 38: (550-360)/5 = 38)
+    int idx = 38 * 6;
+    float wavelength = params[idx + 0];
+    float L_zenith = params[idx + 1];
+    float circ_str = params[idx + 2];
+    float circ_width = params[idx + 3];
+    float horiz_bright = params[idx + 4];
+    float norm = params[idx + 5];
+
+    DOCTEST_CHECK(wavelength == doctest::Approx(550.0f).epsilon(1.0f));
+    DOCTEST_CHECK(L_zenith > 0.0f);
+    DOCTEST_CHECK(L_zenith < 0.5f);
+    DOCTEST_CHECK(circ_str >= 0.0f);
+    DOCTEST_CHECK(circ_str <= 20.0f);  // Max clamp value
+    DOCTEST_CHECK(circ_width >= 5.0f);
+    DOCTEST_CHECK(circ_width <= 60.0f);
+    DOCTEST_CHECK(horiz_bright >= 1.0f);
+    DOCTEST_CHECK(horiz_bright < 5.0f);
+    DOCTEST_CHECK(norm > 0.0f);
+    DOCTEST_CHECK(norm < 2.0f);
+
+    // Verify global data validity flag
+    int valid = 0;
+    DOCTEST_CHECK_NOTHROW(context.getGlobalData("prague_sky_valid", valid));
+    DOCTEST_CHECK(valid == 1);
+}
+
+TEST_CASE("SolarPosition - Prague lazy evaluation") {
+    Context context;
+    SolarPosition solar(&context);
+    solar.enablePragueSkyModel();
+    solar.setSunDirection(make_SphericalCoord(0.5236f, 0.0f));  // 60° elevation
+    solar.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.1f);
+    solar.updatePragueSkyModel();
+
+    // Small turbidity change - should not need update
+    solar.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.101f);
+    DOCTEST_CHECK(!solar.pragueSkyModelNeedsUpdate(0.33f));
+
+    // Large turbidity change - should need update
+    solar.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.15f);
+    DOCTEST_CHECK(solar.pragueSkyModelNeedsUpdate(0.33f));
+
+    // Sun direction change
+    solar.setSunDirection(make_SphericalCoord(0.6109f, 0.0f));  // 55° elevation (change > 5°)
+    DOCTEST_CHECK(solar.pragueSkyModelNeedsUpdate(0.33f));
+
+    // Albedo change
+    solar.setSunDirection(make_SphericalCoord(0.5236f, 0.0f));  // Back to 60°
+    solar.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.1f);  // Reset turbidity
+    solar.updatePragueSkyModel();  // Update with new sun direction
+    DOCTEST_CHECK(solar.pragueSkyModelNeedsUpdate(0.5f));  // Albedo 0.33 -> 0.5
+}
+
+TEST_CASE("SolarPosition - Prague performance benchmark") {
+    Context context;
+    SolarPosition solar(&context);
+    solar.enablePragueSkyModel();
+    solar.setSunDirection(make_SphericalCoord(0.5236f, 0.0f));  // 60° elevation
+    solar.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.1f);
+
+    auto start = std::chrono::high_resolution_clock::now();
+    solar.updatePragueSkyModel();
+    auto end = std::chrono::high_resolution_clock::now();
+
+    auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+    DOCTEST_MESSAGE("Prague update time: " << duration_ms.count() << " ms");
+    DOCTEST_CHECK(duration_ms.count() < 10000);  // <10 seconds
+}
+
+TEST_CASE("SolarPosition - Prague error handling") {
+    Context context;
+    SolarPosition solar(&context);
+
+    // Try to update without enabling
+    DOCTEST_CHECK_THROWS_WITH_AS(
+        solar.updatePragueSkyModel(),
+        "ERROR (SolarPosition::updatePragueSkyModel): Prague model not enabled. Call enablePragueSkyModel() first.",
+        std::runtime_error
+    );
+
+    // Check needs update returns false when not enabled
+    DOCTEST_CHECK(!solar.pragueSkyModelNeedsUpdate(0.33f));
+}
+
+

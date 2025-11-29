@@ -18,7 +18,6 @@
 
 #include "CameraCalibration.h"
 #include "Context.h"
-#include "PragueSkyModelInterface.h"
 #include "json.hpp"
 
 // NVIDIA OptiX Includes
@@ -2429,8 +2428,18 @@ protected:
 
     std::vector<std::string> spectral_library_files;
 
-    //! Prague Sky Model interface for atmospheric sky radiance calculations
-    helios::PragueSkyModelInterface prague_sky_model;
+    // Helper methods for Prague Sky Model spectral integration from Context
+    float integrateOverResponse(const std::vector<float>& wavelengths,
+                                 const std::vector<float>& values,
+                                 const std::vector<helios::vec2>& camera_response) const;
+
+    float weightedAverageOverResponse(const std::vector<float>& wavelengths,
+                                       const std::vector<float>& param_values,
+                                       const std::vector<float>& weight_values,
+                                       const std::vector<helios::vec2>& camera_response) const;
+
+    float computeAngularNormalization(float circ_str, float circ_width,
+                                       float horiz_bright) const;
 };
 
 void sutilHandleError(RTcontext context, RTresult code, const char *file, int line);
