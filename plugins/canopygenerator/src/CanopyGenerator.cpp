@@ -2200,11 +2200,11 @@ void CanopyGenerator::buildCanopy(const HomogeneousCanopyParameters &params) {
         SphericalCoord rotation(1.f, sampleLeafPDF(params.leaf_angle_distribution.c_str()), 2.f * float(M_PI) * rp);
 
         uint ID = context->copyObject(ID0);
-        context->getObjectPointer(ID)->rotate(-rotation.elevation, "y");
-        context->getObjectPointer(ID)->rotate(rotation.azimuth, "z");
-        context->getObjectPointer(ID)->translate(position);
+        context->rotateObject(ID,-rotation.elevation, "y");
+        context->rotateObject(ID,rotation.azimuth, "z");
+        context->translateObject(ID,position);
 
-        std::vector<uint> UUID = context->getObjectPointer(ID)->getPrimitiveUUIDs();
+        std::vector<uint> UUID = context->getObjectPrimitiveUUIDs(ID);
 
         UUID_leaf.front().push_back(UUID);
     }
@@ -2287,11 +2287,11 @@ void CanopyGenerator::buildCanopy(const SphericalCrownsCanopyParameters &params)
                 float phi = 2.f * float(M_PI) * unif_distribution(generator);
 
                 uint ID = context->copyObject(ID0);
-                context->getObjectPointer(ID)->rotate(-theta, "y");
-                context->getObjectPointer(ID)->rotate(phi, "z");
-                context->getObjectPointer(ID)->translate(center + position);
+                context->rotateObject(ID,-theta, "y");
+                context->rotateObject(ID,phi, "z");
+                context->translateObject(ID,center + position);
 
-                std::vector<uint> UUID = context->getObjectPointer(ID)->getPrimitiveUUIDs();
+                std::vector<uint> UUID = context->getObjectPrimitiveUUIDs(ID);
 
                 UUID_leaf.at(plant_ID).push_back(UUID);
             }
@@ -2380,11 +2380,11 @@ void CanopyGenerator::buildCanopy(const ConicalCrownsCanopyParameters &params) {
                 float phi = 2.f * float(M_PI) * unif_distribution(generator);
 
                 uint ID = context->copyObject(ID0);
-                context->getObjectPointer(ID)->rotate(-theta, "y");
-                context->getObjectPointer(ID)->rotate(phi, "z");
-                context->getObjectPointer(ID)->translate(center + position);
+                context->rotateObject(ID,-theta, "y");
+                context->rotateObject(ID,phi, "z");
+                context->translateObject(ID,center + position);
 
-                std::vector<uint> UUID = context->getObjectPointer(ID)->getPrimitiveUUIDs();
+                std::vector<uint> UUID = context->getObjectPrimitiveUUIDs(ID);
 
                 UUID_leaf.at(plant_ID).push_back(UUID);
             }

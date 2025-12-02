@@ -128,6 +128,12 @@ public:
     //! Enable command-line output messages from this plug-in
     void enableMessages();
 
+    //! Add optional primitive data output
+    /**
+     * \param[in] label Label of the primitive data to output. Available labels: "chlorophyll", "carotenoid", "anthocyanin", "brown", "water", "drymass", "protein", "cellulose".
+     */
+    void optionalOutputPrimitiveData(const char *label);
+
 private:
     std::vector<float> R_spec_normal, R_spec_diffuse, wave_length, Rtotal, Ttotal;
 
@@ -167,4 +173,7 @@ private:
     // Computes surface reflectances for normal and diffuse light incidence
 
     bool message_flag = true;
+
+    //! Names of additional primitive data to add to the Context
+    std::vector<std::string> output_prim_data;
 };

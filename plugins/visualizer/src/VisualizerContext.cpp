@@ -128,7 +128,7 @@ void Visualizer::buildContextGeometry_private() {
             std::vector<uint> ObjIDs = context->getAllObjectIDs();
             for (uint objID: ObjIDs) {
                 if (context->doesObjectExist(objID)) {
-                    std::vector<uint> UUIDs = context->getObjectPointer(objID)->getPrimitiveUUIDs();
+                    std::vector<uint> UUIDs = context->getObjectPrimitiveUUIDs(objID);
                     for (uint UUID: UUIDs) {
                         if (context->doesPrimitiveExist(UUID)) {
                             colorPrimitives_UUIDs[UUID] = UUID;
@@ -139,7 +139,7 @@ void Visualizer::buildContextGeometry_private() {
         } else { // load primitives specified by user
             for (const auto &objID: colorPrimitives_objIDs) {
                 if (context->doesObjectExist(objID.first)) {
-                    std::vector<uint> UUIDs = context->getObjectPointer(objID.first)->getPrimitiveUUIDs();
+                    std::vector<uint> UUIDs = context->getObjectPrimitiveUUIDs(objID.first);
                     for (uint UUID: UUIDs) {
                         if (context->doesPrimitiveExist(UUID)) {
                             colorPrimitives_UUIDs[UUID] = UUID;

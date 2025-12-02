@@ -536,41 +536,41 @@ void WeberPennTree::recursiveBranch(WeberPennTreeParameters parameters, uint n, 
 
         // add to Context
         uint ID = context->copyObject(leaf_template);
-        std::vector<uint> UUIDs = context->getObjectPointer(ID)->getPrimitiveUUIDs();
+        std::vector<uint> UUIDs = context->getObjectPrimitiveUUIDs(ID);
         UUID_leaf.back().insert(UUID_leaf.back().end(), UUIDs.begin(), UUIDs.end());
 
         // perform transformations
         if (parameters.leafAngleCDF.size() > 0) {
-            context->getObjectPointer(ID)->rotate(rotation.elevation, "y");
-            context->getObjectPointer(ID)->rotate(rotation.azimuth, "z");
-            context->getObjectPointer(ID)->translate(position);
+            context->rotateObject(ID, rotation.elevation, "y");
+            context->rotateObject(ID, rotation.azimuth, "z");
+            context->translateObject(ID, position);
         } else {
 
-            context->getObjectPointer(ID)->rotate(M_PI, "x"); // flip leaf (this is so lighting looks right based on leaf normal)
+            context->rotateObject(ID, M_PI, "x"); // flip leaf (this is so lighting looks right based on leaf normal)
 
             // rotate leaf so the tip is pointing in the same direction as the branch
-            context->getObjectPointer(ID)->rotate(0.5 * M_PI - rotation.zenith, "y");
-            context->getObjectPointer(ID)->rotate(-0.5 * M_PI - rotation.azimuth, "z");
+            context->rotateObject(ID, 0.5 * M_PI - rotation.zenith, "y");
+            context->rotateObject(ID, -0.5 * M_PI - rotation.azimuth, "z");
 
-            vec3 lnorm = context->getTileObjectPointer(ID)->getNormal(); // current leaf normal vector
+            vec3 lnorm = context->getTileObjectNormal(ID); // current leaf normal vector
             vec3 pvec = cross(parent_normal, lnorm);
 
             // rotate leaf based on downangle
             if (downangle < 0.f) {
                 downangle = M_PI + downangle;
             }
-            context->getObjectPointer(ID)->rotate(-downangle, pvec);
+            context->rotateObject(ID, -downangle, pvec);
 
             // shift leaf perpendicular to the direction of the branch
             vec3 offset = -0.6 * parameters.LeafScale * scale * fabs(sinf(downangle)) * lnorm;
 
-            context->getObjectPointer(ID)->translate(offset);
+            context->translateObject(ID, offset);
 
             // random azimuthal rotation about the branch
-            context->getObjectPointer(ID)->rotate(phi, parent_normal);
+            context->rotateObject(ID, phi, parent_normal);
 
             // translate to the position of the branch
-            context->getObjectPointer(ID)->translate(position);
+            context->translateObject(ID, position);
         }
     }
 }

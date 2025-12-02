@@ -216,4 +216,75 @@ The method assigns primitive data using the same labels as \ref LeafOptics::setP
 - The method always overwrites existing primitive data for the parameters listed above.
 - Both overloads are available: \ref LeafOptics::getPropertiesFromSpectrum(const std::vector<uint>&) for multiple primitives and \ref LeafOptics::getPropertiesFromSpectrum(uint) for a single primitive.
 
+\section LOOptionalOutput Optional Output Primitive Data
+
+By default, the LeafOptics plug-in does not write leaf constituent concentrations to primitive data. To enable optional output, call LeafOptics::optionalOutputPrimitiveData() with the desired labels before calling run().
+
+~~~~~~{.cpp}
+LeafOptics leafoptics( &context );
+leafoptics.optionalOutputPrimitiveData( "chlorophyll" );
+leafoptics.optionalOutputPrimitiveData( "carotenoid" );
+
+LeafOpticsProperties props;
+std::vector<uint> leafIDs = ...;
+leafoptics.run( leafIDs, props, "example" );
+~~~~~~
+
+<table>
+ <tr>
+    <th>Primitive Data Label</th>
+    <th>Units</th>
+    <th>Data Type</th>
+    <th>Description</th>
+ </tr>
+ <tr>
+    <td>chlorophyll</td>
+    <td>\f$\mu\f$g cm\f$^{-2}\f$</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Total chlorophyll content</td>
+ </tr>
+ <tr>
+    <td>carotenoid</td>
+    <td>\f$\mu\f$g cm\f$^{-2}\f$</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Total carotenoid content</td>
+ </tr>
+ <tr>
+    <td>anthocyanin</td>
+    <td>\f$\mu\f$g cm\f$^{-2}\f$</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Anthocyanin content</td>
+ </tr>
+ <tr>
+    <td>brown</td>
+    <td>unitless</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Brown pigment content (only written if value > 0)</td>
+ </tr>
+ <tr>
+    <td>water</td>
+    <td>g cm\f$^{-2}\f$</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Equivalent water thickness</td>
+ </tr>
+ <tr>
+    <td>drymass</td>
+    <td>g cm\f$^{-2}\f$</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Dry matter mass (PROSPECT-D mode only, when drymass > 0)</td>
+ </tr>
+ <tr>
+    <td>protein</td>
+    <td>g cm\f$^{-2}\f$</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Protein mass (PROSPECT-PRO mode only, when drymass = 0)</td>
+ </tr>
+ <tr>
+    <td>cellulose</td>
+    <td>g cm\f$^{-2}\f$</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Cellulose and carbon compounds (PROSPECT-PRO mode only, when drymass = 0)</td>
+ </tr>
+</table>
+
 */

@@ -59,9 +59,10 @@ public:
     /**
      * \param[in] UUID Unique universal identifier (UUID) of primitive to be sliced
      * \param[in] voxel_face_vertices a vector of at least 3 points on the plane that will be used to do the slicing
+     * \param[in] warnings Reference to WarningAggregator for collecting warnings
      * \return the number of new triangles created by slicing the original primitive
      */
-    std::vector<uint> slicePrimitive(uint UUID, std::vector<helios::vec3> voxel_face_vertices);
+    std::vector<uint> slicePrimitive(uint UUID, std::vector<helios::vec3> voxel_face_vertices, helios::WarningAggregator &warnings);
 
     //! Slice a primitives based on a defined grid of voxels
     /**

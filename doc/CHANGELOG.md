@@ -1,5 +1,32 @@
 # Changelog
 
+# [1.3.59] 2025-12-02
+
+## Core
+- Removed public object pointer getter methods (`getObjectPointer()`, `getTileObjectPointer()`, `getSphereObjectPointer()`, `getTubeObjectPointer()`, `getBoxObjectPointer()`, `getDiskObjectPointer()`, `getPolymeshObjectPointer()`, `getConeObjectPointer()`) to enforce encapsulation. Users should use the existing public getter/setter methods for object properties instead.
+- Added `scaleConeObjectLength()` and `scaleConeObjectGirth()` methods to scale Cone object dimensions without requiring direct pointer access.
+- Added `getGlobalDataVersion()` method for detecting when global data has been modified.
+
+## Leaf Optics
+- Added `optionalOutputPrimitiveData()` method to selectively control which biochemical properties are written as primitive data, improving performance when only specific properties are needed.
+
+## Solar Position
+- Added Prague Sky Model interface for computing physically-based sky radiance distributions: `enablePragueSkyModel()`, `updatePragueSkyModel()`, `isPragueSkyModelEnabled()`, `pragueSkyModelNeedsUpdate()`. The model accounts for Rayleigh and Mie scattering to produce spectral-angular sky radiance parameters stored in Context global data.
+
+## Radiation
+- Moved Prague Sky Model from radiation plugin to solar position plugin; radiation now reads pre-computed Prague spectral parameters from Context global data.
+- Changed `setDiffuseSpectrum()` to apply globally to all bands (existing and future) rather than per-band.
+- Adopted `WarningAggregator` for property validation warnings during radiative property updates.
+
+## Collision Detection
+- Adopted `WarningAggregator` for BVH construction and collision detection warnings.
+
+## Energy Balance
+- Adopted `WarningAggregator` for air energy balance warnings; removed debug print statements.
+
+## Voxel Intersection
+- Adopted `WarningAggregator` for primitive slicing warnings; replaced manual error throws with `helios_runtime_error()`.
+
 # [1.3.58] 2025-11-28
 
 ## Core

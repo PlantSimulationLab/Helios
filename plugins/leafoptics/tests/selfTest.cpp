@@ -319,6 +319,13 @@ DOCTEST_TEST_CASE("LeafOptics SetProperties") {
     props.watermass = 0.018f;
     props.drymass = 0.085f;
 
+    // Enable optional outputs before calling setProperties
+    leafoptics.optionalOutputPrimitiveData("chlorophyll");
+    leafoptics.optionalOutputPrimitiveData("carotenoid");
+    leafoptics.optionalOutputPrimitiveData("anthocyanin");
+    leafoptics.optionalOutputPrimitiveData("water");
+    leafoptics.optionalOutputPrimitiveData("drymass");
+
     DOCTEST_CHECK_NOTHROW(leafoptics.setProperties(UUIDs, props));
 
     // Verify properties were set on primitives
@@ -350,6 +357,9 @@ DOCTEST_TEST_CASE("LeafOptics SetProperties with Brown Pigments") {
     LeafOpticsProperties props;
     props.brownpigments = 0.3f; // Non-zero brown pigments
 
+    // Enable optional output for brown pigments
+    leafoptics.optionalOutputPrimitiveData("brown");
+
     DOCTEST_CHECK_NOTHROW(leafoptics.setProperties(UUIDs, props));
 
     // Verify brown pigments were set
@@ -370,6 +380,10 @@ DOCTEST_TEST_CASE("LeafOptics SetProperties with Protein Mode") {
     props.drymass = 0.0f; // Zero dry mass
     props.protein = 0.001f;
     props.carbonconstituents = 0.005f;
+
+    // Enable optional outputs for protein mode
+    leafoptics.optionalOutputPrimitiveData("protein");
+    leafoptics.optionalOutputPrimitiveData("cellulose");
 
     DOCTEST_CHECK_NOTHROW(leafoptics.setProperties(UUIDs, props));
 
@@ -533,6 +547,13 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - Basic Functionality") 
 
     std::string label = "test_get_props";
 
+    // Enable optional outputs for the parameters we want to retrieve
+    leafoptics.optionalOutputPrimitiveData("chlorophyll");
+    leafoptics.optionalOutputPrimitiveData("carotenoid");
+    leafoptics.optionalOutputPrimitiveData("anthocyanin");
+    leafoptics.optionalOutputPrimitiveData("water");
+    leafoptics.optionalOutputPrimitiveData("drymass");
+
     // Generate spectra and assign to primitives
     leafoptics.run(UUIDs, props, label);
 
@@ -581,6 +602,10 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - Single UUID Overload")
     props.carotenoidcontent = 14.0f;
 
     std::string label = "test_single_uuid";
+
+    // Enable optional outputs
+    leafoptics.optionalOutputPrimitiveData("chlorophyll");
+    leafoptics.optionalOutputPrimitiveData("carotenoid");
 
     // Generate spectrum
     leafoptics.run(std::vector<uint>{UUID}, props, label);
@@ -662,6 +687,10 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - With Brown Pigments") 
 
     std::string label = "test_brown";
 
+    // Enable optional outputs
+    leafoptics.optionalOutputPrimitiveData("chlorophyll");
+    leafoptics.optionalOutputPrimitiveData("brown");
+
     leafoptics.run(std::vector<uint>{UUID}, props, label);
 
     // Clear parameters
@@ -692,6 +721,12 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - PROSPECT-PRO Mode") {
 
     std::string label = "test_pro_mode";
 
+    // Enable optional outputs for PRO mode
+    leafoptics.optionalOutputPrimitiveData("chlorophyll");
+    leafoptics.optionalOutputPrimitiveData("protein");
+    leafoptics.optionalOutputPrimitiveData("cellulose");
+    leafoptics.optionalOutputPrimitiveData("drymass"); // Request drymass but it won't be written since drymass=0
+
     leafoptics.run(std::vector<uint>{UUID}, props, label);
 
     // Clear parameters
@@ -710,7 +745,7 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - PROSPECT-PRO Mode") {
     DOCTEST_CHECK(protein == doctest::Approx(props.protein).epsilon(err_tol));
     DOCTEST_CHECK(carbon == doctest::Approx(props.carbonconstituents).epsilon(err_tol));
 
-    // Should not have dry mass data
+    // Should not have dry mass data (drymass=0 so it's not written even if requested)
     DOCTEST_CHECK(!context_test.doesPrimitiveDataExist(UUID, "drymass"));
 }
 
@@ -730,6 +765,10 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromSpectrum - Multiple Spectra") {
     LeafOpticsProperties props2;
     props2.chlorophyllcontent = 60.0f;
     props2.carotenoidcontent = 16.0f;
+
+    // Enable optional outputs
+    leafoptics.optionalOutputPrimitiveData("chlorophyll");
+    leafoptics.optionalOutputPrimitiveData("carotenoid");
 
     // Generate different spectra
     leafoptics.run(std::vector<uint>{UUID1}, props1, "spectrum1");
@@ -829,6 +868,11 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - Integration with Run") 
     // Get properties from library
     LeafOpticsProperties props;
     leafoptics.getPropertiesFromLibrary("default", props);
+
+    // Enable optional outputs
+    leafoptics.optionalOutputPrimitiveData("chlorophyll");
+    leafoptics.optionalOutputPrimitiveData("water");
+    leafoptics.optionalOutputPrimitiveData("drymass");
 
     // Use properties to run the model
     std::string label = "test_library_integration";
@@ -945,6 +989,9 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - LOPEX93 Integration Tes
     LeafOpticsProperties soybean_props;
     leafoptics.getPropertiesFromLibrary("soybean", soybean_props);
 
+    // Enable optional outputs
+    leafoptics.optionalOutputPrimitiveData("chlorophyll");
+
     // Run model with library properties
     std::string label = "test_soybean";
     DOCTEST_CHECK_NOTHROW(leafoptics.run(UUIDs, soybean_props, label));
@@ -976,6 +1023,105 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - LOPEX93 Species Compari
 
     // English walnut should have higher chlorophyll than lettuce
     DOCTEST_CHECK(walnut_props.chlorophyllcontent > lettuce_props.chlorophyllcontent);
+}
+
+DOCTEST_TEST_CASE("LeafOptics optionalOutputPrimitiveData - No Output By Default") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    // Create test primitives
+    std::vector<uint> UUIDs;
+    UUIDs.push_back(context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1)));
+
+    LeafOpticsProperties props;
+    props.chlorophyllcontent = 45.0f;
+    props.carotenoidcontent = 12.0f;
+    props.watermass = 0.018f;
+    props.drymass = 0.085f;
+
+    // Run without enabling any optional outputs
+    leafoptics.run(UUIDs, props, "test_no_output");
+
+    // Verify no primitive data was written (except for spectrum labels)
+    DOCTEST_CHECK(!context_test.doesPrimitiveDataExist(UUIDs[0], "chlorophyll"));
+    DOCTEST_CHECK(!context_test.doesPrimitiveDataExist(UUIDs[0], "carotenoid"));
+    DOCTEST_CHECK(!context_test.doesPrimitiveDataExist(UUIDs[0], "anthocyanin"));
+    DOCTEST_CHECK(!context_test.doesPrimitiveDataExist(UUIDs[0], "water"));
+    DOCTEST_CHECK(!context_test.doesPrimitiveDataExist(UUIDs[0], "drymass"));
+
+    // Spectrum labels should still be written
+    DOCTEST_CHECK(context_test.doesPrimitiveDataExist(UUIDs[0], "reflectivity_spectrum"));
+    DOCTEST_CHECK(context_test.doesPrimitiveDataExist(UUIDs[0], "transmissivity_spectrum"));
+}
+
+DOCTEST_TEST_CASE("LeafOptics optionalOutputPrimitiveData - Selective Output") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    std::vector<uint> UUIDs;
+    UUIDs.push_back(context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1)));
+
+    LeafOpticsProperties props;
+    props.chlorophyllcontent = 45.0f;
+    props.carotenoidcontent = 12.0f;
+    props.anthocyancontent = 3.0f;
+    props.watermass = 0.018f;
+    props.drymass = 0.085f;
+
+    // Enable only chlorophyll and water
+    leafoptics.optionalOutputPrimitiveData("chlorophyll");
+    leafoptics.optionalOutputPrimitiveData("water");
+
+    leafoptics.run(UUIDs, props, "test_selective");
+
+    // Only chlorophyll and water should be written
+    DOCTEST_CHECK(context_test.doesPrimitiveDataExist(UUIDs[0], "chlorophyll"));
+    DOCTEST_CHECK(context_test.doesPrimitiveDataExist(UUIDs[0], "water"));
+
+    // Other properties should not be written
+    DOCTEST_CHECK(!context_test.doesPrimitiveDataExist(UUIDs[0], "carotenoid"));
+    DOCTEST_CHECK(!context_test.doesPrimitiveDataExist(UUIDs[0], "anthocyanin"));
+    DOCTEST_CHECK(!context_test.doesPrimitiveDataExist(UUIDs[0], "drymass"));
+
+    // Verify correct values
+    float chl, water;
+    context_test.getPrimitiveData(UUIDs[0], "chlorophyll", chl);
+    context_test.getPrimitiveData(UUIDs[0], "water", water);
+    DOCTEST_CHECK(chl == doctest::Approx(props.chlorophyllcontent).epsilon(err_tol));
+    DOCTEST_CHECK(water == doctest::Approx(props.watermass).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("LeafOptics optionalOutputPrimitiveData - Invalid Label Warning") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+
+    // Capture stdout for warning message
+    helios::capture_cout capture;
+
+    // Try to add invalid label (messages enabled)
+    leafoptics.optionalOutputPrimitiveData("invalid_label");
+
+    std::string output = capture.get_captured_output();
+    DOCTEST_CHECK(output.find("WARNING") != std::string::npos);
+    DOCTEST_CHECK(output.find("invalid_label") != std::string::npos);
+}
+
+DOCTEST_TEST_CASE("LeafOptics optionalOutputPrimitiveData - All Valid Labels") {
+    Context context_test;
+    LeafOptics leafoptics(&context_test);
+    leafoptics.disableMessages();
+
+    // All these should be valid labels (no warnings)
+    DOCTEST_CHECK_NOTHROW(leafoptics.optionalOutputPrimitiveData("chlorophyll"));
+    DOCTEST_CHECK_NOTHROW(leafoptics.optionalOutputPrimitiveData("carotenoid"));
+    DOCTEST_CHECK_NOTHROW(leafoptics.optionalOutputPrimitiveData("anthocyanin"));
+    DOCTEST_CHECK_NOTHROW(leafoptics.optionalOutputPrimitiveData("brown"));
+    DOCTEST_CHECK_NOTHROW(leafoptics.optionalOutputPrimitiveData("water"));
+    DOCTEST_CHECK_NOTHROW(leafoptics.optionalOutputPrimitiveData("drymass"));
+    DOCTEST_CHECK_NOTHROW(leafoptics.optionalOutputPrimitiveData("protein"));
+    DOCTEST_CHECK_NOTHROW(leafoptics.optionalOutputPrimitiveData("cellulose"));
 }
 
 int LeafOptics::selfTest(int argc, char **argv) {

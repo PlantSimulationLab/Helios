@@ -17,6 +17,10 @@
 #define SOLARPOSITION
 
 #include "Context.h"
+#include <memory>
+
+// Forward declaration is in PragueSkyModelInterface.h
+#include "PragueSkyModelInterface.h"
 
 class SolarPosition {
 public:
@@ -237,6 +241,52 @@ public:
      */
     void calculateGlobalSolarSpectrum(const std::string& label, float resolution_nm = 1.0f);
 
+    // ===== Prague Sky Model =====
+
+    //! Enable Prague sky model for atmospheric sky radiance computation
+    /**
+     * \note The Prague Sky Model computes physically-based sky radiance distributions accounting for Rayleigh and Mie scattering.
+     * \note Uses the reduced dataset (360-1480 nm, ~27 MB) from plugins/solarposition/lib/prague_sky_model/PragueSkyModelReduced.dat
+     * \note Once enabled, call updatePragueSkyModel() to compute and store spectral-angular parameters in Context global data.
+     */
+    void enablePragueSkyModel();
+
+    //! Check if Prague sky model is enabled
+    /**
+     * \return True if Prague model has been enabled via enablePragueSkyModel()
+     */
+    [[nodiscard]] bool isPragueSkyModelEnabled() const;
+
+    //! Update Prague sky model and store spectral-angular parameters in Context
+    /**
+     * \param[in] ground_albedo Ground reflectance [0-1] (default: 0.33 for vegetation)
+     * \note Must call after solar position changes or atmospheric conditions change.
+     * \note Reads turbidity from Context atmospheric conditions (set via setAtmosphericConditions). If not set, uses default 0.02 (clear sky).
+     * \note Computationally intensive (~1100 model queries with OpenMP parallelization). Use lazy evaluation via pragueSkyModelNeedsUpdate() to avoid unnecessary updates.
+     * \note Stores the following in Context global data:
+     *   - "prague_sky_spectral_params": vec<float> of size 1350 (225 wavelengths × 6 parameters)
+     *   - "prague_sky_sun_direction": vec3 sun direction
+     *   - "prague_sky_visibility_km": float visibility in km
+     *   - "prague_sky_ground_albedo": float ground albedo
+     *   - "prague_sky_valid": int validity flag (1=valid, 0=invalid)
+     */
+    void updatePragueSkyModel(float ground_albedo = 0.33f);
+
+    //! Check if Prague sky model update is needed based on changed conditions
+    /**
+     * \param[in] ground_albedo Current ground albedo
+     * \param[in] sun_tolerance Threshold for sun direction changes (default: 0.01 ≈ 0.57°)
+     * \param[in] turbidity_tolerance Relative threshold for turbidity (default: 0.02 = 2%)
+     * \param[in] albedo_tolerance Threshold for albedo changes (default: 0.05 = 5%)
+     * \return True if updatePragueSkyModel() should be called
+     * \note This method enables lazy evaluation to avoid expensive Prague updates when conditions haven't changed significantly.
+     * \note Reads turbidity from Context atmospheric conditions for comparison.
+     */
+    [[nodiscard]] bool pragueSkyModelNeedsUpdate(float ground_albedo = 0.33f,
+                                                  float sun_tolerance = 0.01f,
+                                                  float turbidity_tolerance = 0.02f,
+                                                  float albedo_tolerance = 0.05f) const;
+
 private:
     helios::Context *context;
 
@@ -249,7 +299,33 @@ private:
 
     std::string cloudcalibrationlabel;
 
+    // Prague Sky Model members
+    std::unique_ptr<helios::PragueSkyModelInterface> prague_model;
+    bool prague_enabled = false;
+
+    // Cached values for Prague lazy evaluation
+    helios::vec3 cached_sun_direction;
+    float cached_turbidity = -1.0f;
+    float cached_albedo = -1.0f;
+
     [[nodiscard]] helios::SphericalCoord calculateSunDirection(const helios::Time &time, const helios::Date &date) const;
+
+    // Prague Sky Model helper methods
+    void fitAngularParametersAtWavelength(float wavelength, float visibility_km,
+                                           float albedo, const helios::vec3& sun_dir,
+                                           float& L_zenith, float& circ_str,
+                                           float& circ_width, float& horiz_bright,
+                                           float& normalization);
+
+    [[nodiscard]] float fitCircumsolarWidth(float L1, float L2, float h1, float h2,
+                                            float gamma1, float gamma2) const;
+
+    [[nodiscard]] float computeAngularNormalization(float circ_str, float circ_width,
+                                                    float horiz_bright) const;
+
+    [[nodiscard]] helios::vec3 rotateDirectionTowardZenith(const helios::vec3& dir, float angle_rad) const;
+
+    [[nodiscard]] helios::vec3 getDirectionAwayFromSun(const helios::vec3& sun_dir, float zenith_angle_deg) const;
 
     void GueymardSolarModel(float pressure, float temperature, float humidity, float turbidity, float &Eb_PAR, float &Eb_NIR, float &fdiff) const;
 

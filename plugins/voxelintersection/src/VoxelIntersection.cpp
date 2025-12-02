@@ -47,14 +47,13 @@ helios::vec3 VoxelIntersection::linesIntersection(helios::vec3 line1_point, heli
     }
 }
 
-std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helios::vec3> voxel_face_vertices) {
+std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helios::vec3> voxel_face_vertices, helios::WarningAggregator &warnings) {
 
     // vector of UUIDs that will be output
     std::vector<uint> resulting_UUIDs;
 
     if (voxel_face_vertices.size() < 3) {
-        std::cerr << "ERROR (slicePrimitive): voxel_face_verticies must contain at least three points" << std::endl;
-        throw(1);
+        helios_runtime_error("ERROR (VoxelIntersection::slicePrimitive): voxel_face_vertices must contain at least three points.");
     }
 
     helios::vec3 face_normal = cross(voxel_face_vertices.at(1) - voxel_face_vertices.at(0), voxel_face_vertices.at(2) - voxel_face_vertices.at(1));
@@ -335,8 +334,7 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
         }
         slice_points.resize(2);
     } else {
-        std::cerr << "ERROR (slicePrimitive): more than 5 slice points: something is very wrong..." << std::endl;
-        throw(1);
+        helios_runtime_error("ERROR (VoxelIntersection::slicePrimitive): more than 5 slice points detected - invalid geometry.");
     }
 
     // determine which side of the plane vertex 0 is on and use that to determine the sign of the buffer to add to the face coordinate
@@ -719,8 +717,7 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                     ip_uv.at(i) = interpolate_texture_UV_to_slice_point(point_0, point_0uv, point_1, point_1uv, slice_points.at(i));
 
                     if (ip_uv.at(0).x < 0 || ip_uv.at(0).x > 1 || ip_uv.at(0).y < 0 || ip_uv.at(0).y > 1) {
-                        std::cerr << "ERROR in slicePrimitive: texture uv for UUID " << UUID << " < 0 or > 1" << std::endl;
-                        throw(1);
+                        helios_runtime_error("ERROR (VoxelIntersection::slicePrimitive): texture UV coordinates for UUID " + std::to_string(UUID) + " are out of valid range [0,1].");
                     }
                 }
 
@@ -811,8 +808,7 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                 ip_uv.at(0) = interpolate_texture_UV_to_slice_point(point_0, point_0uv, point_1, point_1uv, slice_points.at(0));
 
                 if (ip_uv.at(0).x < 0 || ip_uv.at(0).x > 1 || ip_uv.at(0).y < 0 || ip_uv.at(0).y > 1) {
-                    std::cerr << "ERROR in slicePrimitive: texture uv for UUID " << UUID << " < 0 or > 1" << std::endl;
-                    throw(1);
+                    helios_runtime_error("ERROR (VoxelIntersection::slicePrimitive): texture UV coordinates for UUID " + std::to_string(UUID) + " are out of valid range [0,1].");
                 }
 
                 if (slice_points_edge_ID.at(0) == 0) {
@@ -887,8 +883,7 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                     ip_uv.at(i) = interpolate_texture_UV_to_slice_point(point_0, point_0uv, point_1, point_1uv, slice_points.at(i));
 
                     if (ip_uv.at(i).x < 0 || ip_uv.at(i).x > 1 || ip_uv.at(i).y < 0 || ip_uv.at(i).y > 1) {
-                        std::cerr << "ERROR in slicePrimitive: texture uv for UUID " << UUID << " < 0 or > 1" << std::endl;
-                        throw(1);
+                        helios_runtime_error("ERROR (VoxelIntersection::slicePrimitive): texture UV coordinates for UUID " + std::to_string(UUID) + " are out of valid range [0,1].");
                     }
                 }
 
@@ -1036,8 +1031,7 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
                     ip_uv.at(i) = interpolate_texture_UV_to_slice_point(point_0, point_0uv, point_1, point_1uv, slice_points.at(i));
 
                     if (ip_uv.at(i).x < 0 || ip_uv.at(i).x > 1 || ip_uv.at(i).y < 0 || ip_uv.at(i).y > 1) {
-                        std::cerr << "ERROR in slicePrimitive: texture uv for UUID " << UUID << " < 0 or > 1" << std::endl;
-                        throw(1);
+                        helios_runtime_error("ERROR (VoxelIntersection::slicePrimitive): texture UV coordinates for UUID " + std::to_string(UUID) + " are out of valid range [0,1].");
                     }
 
 
@@ -1150,12 +1144,10 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
     float resulting_area = context->sumPrimitiveSurfaceArea(resulting_UUIDs);
     float pdiff_area = (resulting_area - original_area) / original_area * 100.0;
     float pdiff_area_abs = fabs(pdiff_area);
-    if (pdiff_area_abs > 1 && printmessages) {
-        std::cout << "WARNING: sum of slice areas does not equal area of original primitive (UUID = " << UUID << ")" << std::endl;
-        std::cout << "original area = " << original_area << std::endl;
-        std::cout << "resulting_area = " << resulting_area << std::endl;
-        std::cout << "pdiff_area = " << pdiff_area << std::endl;
-        std::cout << "resulting_UUIDs.size() = " << resulting_UUIDs.size() << std::endl;
+    if (pdiff_area_abs > 1) {
+        warnings.addWarning("slice_area_mismatch", "Sum of slice areas does not equal area of original primitive (UUID = " + std::to_string(UUID) +
+                            ", original area = " + std::to_string(original_area) + ", resulting area = " + std::to_string(resulting_area) +
+                            ", percent difference = " + std::to_string(pdiff_area) + "%)");
     }
 
     // compare original and resulting primitive normals to make sure they match
@@ -1164,8 +1156,11 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
     for (uint aa = 0; aa < resulting_UUIDs.size(); aa++) {
         helios::vec3 this_normal = context->getPrimitiveNormal(resulting_UUIDs.at(aa));
         this_normal.normalize();
-        if (printmessages && (!approxSame(primitive_normal.x, this_normal.x, absTol, relTol) || !approxSame(primitive_normal.y, this_normal.y, absTol, relTol) || !approxSame(primitive_normal.z, this_normal.z, absTol, relTol))) {
-            std::cout << "WARNING: UUID " << resulting_UUIDs.at(aa) << " normal " << this_normal << " does not match original normal " << primitive_normal << std::endl;
+        if (!approxSame(primitive_normal.x, this_normal.x, absTol, relTol) || !approxSame(primitive_normal.y, this_normal.y, absTol, relTol) || !approxSame(primitive_normal.z, this_normal.z, absTol, relTol)) {
+            warnings.addWarning("slice_normal_mismatch", "UUID " + std::to_string(resulting_UUIDs.at(aa)) + " normal (" +
+                                std::to_string(this_normal.x) + ", " + std::to_string(this_normal.y) + ", " + std::to_string(this_normal.z) +
+                                ") does not match original normal (" + std::to_string(primitive_normal.x) + ", " +
+                                std::to_string(primitive_normal.y) + ", " + std::to_string(primitive_normal.z) + ")");
         }
     }
 
@@ -1176,6 +1171,10 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
 }
 
 std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> UUIDs, helios::vec3 grid_center, helios::vec3 grid_size, helios::int3 grid_divisions) {
+
+    // Create warning aggregator
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
 
     // set up the grid
     std::vector<std::vector<helios::vec3>> grid_face_vertices;
@@ -1309,7 +1308,7 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
         for (uint j = 0; j < UUIDs_to_slice.size(); j++) {
             // slice
             std::vector<uint> resulting_UUIDs;
-            resulting_UUIDs = slicePrimitive(UUIDs_to_slice.at(j), grid_face_vertices.at(i));
+            resulting_UUIDs = slicePrimitive(UUIDs_to_slice.at(j), grid_face_vertices.at(i), warnings);
 
             // update the UUIDs_to_slice vector so it doesn't include deleted primitives (the originals that were split)
             bool exists = context->doesPrimitiveExist(UUIDs_to_slice.at(j));
@@ -1407,6 +1406,9 @@ std::vector<uint> VoxelIntersection::slicePrimitivesUsingGrid(std::vector<uint> 
         std::cout << UUIDs_out.size() << " total output primitives" << std::endl;
     }
 
+    // Report aggregated warnings
+    warnings.report(std::cerr);
+
     return UUIDs_out;
 }
 
@@ -1445,8 +1447,7 @@ helios::vec2 VoxelIntersection::interpolate_texture_UV_to_slice_point(helios::ve
 
     float F = (Dxyzs / Dxyz);
     if (F > 1.0) {
-        std::cerr << "ERROR (interpolate_texture_UV_to_slice_point): slice point is not between the two end points" << std::endl;
-        throw(1);
+        helios_runtime_error("ERROR (VoxelIntersection::interpolate_texture_UV_to_slice_point): slice point is not between the two end points.");
     } else if (approxSame(p1, ps, absTol)) {
         // then the slice point is the same as the first vertex
         uvs = make_vec2(uv1.x, uv1.y);
@@ -1494,8 +1495,7 @@ helios::vec2 VoxelIntersection::interpolate_texture_UV_to_slice_point(helios::ve
             // std::cout << "uvs = " << uvs << std::endl;
 
         } else {
-            std::cerr << "ERROR (interpolate_texture_UV_to_slice_point): could not interpolate uv coordinates" << std::endl;
-            throw(1);
+            helios_runtime_error("ERROR (VoxelIntersection::interpolate_texture_UV_to_slice_point): could not interpolate UV coordinates.");
         }
     }
 

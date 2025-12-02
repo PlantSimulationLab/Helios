@@ -89,9 +89,12 @@ void EnergyBalanceModel::evaluateAirEnergyBalance(float dt_sec, float time_advan
 void EnergyBalanceModel::evaluateAirEnergyBalance(const std::vector<uint> &UUIDs, float dt_sec, float time_advance_sec) {
 
     if (dt_sec <= 0) {
-        std::cerr << "ERROR (EnergyBalanceModel::evaluateAirEnergyBalance): dt_sec must be greater than zero to run the air energy balance.  Skipping..." << std::endl;
-        return;
+        helios_runtime_error("ERROR (EnergyBalanceModel::evaluateAirEnergyBalance): dt_sec must be greater than zero to run the air energy balance.");
     }
+
+    // Create warning aggregator
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(message_flag);
 
     float air_temperature_reference = air_temperature_default; // Default air temperature in Kelvin
     if (context->doesGlobalDataExist("air_temperature_reference") && context->getGlobalDataType("air_temperature_reference") == helios::HELIOS_TYPE_FLOAT) {
@@ -127,7 +130,6 @@ void EnergyBalanceModel::evaluateAirEnergyBalance(const std::vector<uint> &UUIDs
     float air_moisture_average;
     if (context->doesGlobalDataExist("air_moisture_average") && context->getGlobalDataType("air_moisture_average") == helios::HELIOS_TYPE_FLOAT) {
         context->getGlobalData("air_moisture_average", air_moisture_average);
-        std::cerr << "Reading air_moisture_average from global data: " << air_moisture_average << std::endl;
     } else {
         air_moisture_average = air_humidity_reference * esat_Pa(air_temperature_reference) / Patm;
     }
@@ -140,7 +142,6 @@ void EnergyBalanceModel::evaluateAirEnergyBalance(const std::vector<uint> &UUIDs
     float air_moisture_ABL;
     if (context->doesGlobalDataExist("air_moisture_ABL") && context->getGlobalDataType("air_moisture_ABL") == helios::HELIOS_TYPE_FLOAT) {
         context->getGlobalData("air_moisture_ABL", air_moisture_ABL);
-        std::cerr << "Reading air_moisture_ABL from global data: " << air_moisture_ABL << std::endl;
     } else {
         air_moisture_ABL = air_humidity_reference * esat_Pa(air_temperature_reference) / Patm;
     }
@@ -316,20 +317,10 @@ void EnergyBalanceModel::evaluateAirEnergyBalance(const std::vector<uint> &UUIDs
         float denom_abl_x = 1.f + dt_actual * (ga + g_e) / (rho_air_mol_m3 * abl_height_m);
         air_moisture_ABL = numer_abl_x / denom_abl_x;
 
-        // moisture budget check (mol m⁻² s⁻¹)
-        float canopy_storage = (air_moisture_average - air_moisture_old) * rho_air_mol_m3 * canopy_height_m / dt_actual;
-        float flux_in = E_s; // from latent source
-        float flux_out = E_top; // to ABL
-        std::cerr << std::fixed << "CANOPY MOISTURE BUDGET: in=" << flux_in << " out=" << flux_out << " storage=" << canopy_storage << " residual=" << (flux_in - flux_out - canopy_storage) << std::endl;
-
         // Cap relative humidity to 100%
         float esat = esat_Pa(air_temperature_average) / Patm;
         if (air_moisture_average > esat) {
-            static bool air_moisture_warning_shown = false;
-            if (!air_moisture_warning_shown) {
-                std::cerr << "WARNING (EnergyBalanceModel::evaluateAirEnergyBalance): Air moisture exceeds saturation. Capping to saturation value." << std::endl;
-                air_moisture_warning_shown = true;
-            }
+            warnings.addWarning("air_moisture_exceeds_saturation", "Air moisture exceeds saturation. Capping to saturation value.");
             air_moisture_average = 0.99f * esat;
         }
         esat = esat_Pa(air_temperature_ABL) / Patm;
@@ -339,11 +330,7 @@ void EnergyBalanceModel::evaluateAirEnergyBalance(const std::vector<uint> &UUIDs
 
         // Check that timestep is not too large based on aerodynamic resistance
         if (dt_actual > 0.5f * canopy_height_m * rho_air_mol_m3 / ga) {
-            static bool timestep_warning_shown = false;
-            if (!timestep_warning_shown) {
-                std::cerr << "WARNING (EnergyBalanceModel::evaluateAirEnergyBalance): Time step is too large.  The air energy balance may not converge properly." << std::endl;
-                timestep_warning_shown = true;
-            }
+            warnings.addWarning("timestep_too_large", "Time step is too large. The air energy balance may not converge properly.");
         }
 
         float heat_from_Htop = dt_actual / (rho_air_mol_m3 * cp_air_mol * abl_height_m) * sensible_upper_flux_W_m2;
@@ -440,6 +427,9 @@ void EnergyBalanceModel::evaluateAirEnergyBalance(const std::vector<uint> &UUIDs
 
         time += dt_actual;
     }
+
+    // Report aggregated warnings
+    warnings.report(std::cerr);
 }
 
 void EnergyBalanceModel::enableMessages() {

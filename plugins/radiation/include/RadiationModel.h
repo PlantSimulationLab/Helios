@@ -18,7 +18,6 @@
 
 #include "CameraCalibration.h"
 #include "Context.h"
-#include "PragueSkyModelInterface.h"
 #include "json.hpp"
 
 // NVIDIA OptiX Includes
@@ -473,6 +472,11 @@ struct RadiationBand {
     //! Diffuse distribution normalization factor
     float diffuseDistNorm;
 
+    //! Prague sky model angular parameters for diffuse distribution
+    //! (circumsolar_strength, circumsolar_width, horizon_brightness, normalization)
+    //! If normalization (w component) == 0, Prague not active for this band
+    helios::vec4 diffusePragueParams = helios::make_vec4(0, 0, 0, 0);
+
     //! Spectral distribution of diffuse radiation flux for wave band
     std::vector<helios::vec2> diffuse_spectrum;
 
@@ -553,6 +557,9 @@ public:
     std::vector<helios::vec2> source_spectrum;
 
     std::string source_spectrum_label = "none";
+
+    //! Cached version number of source spectrum for change detection
+    uint64_t source_spectrum_version = 0;
 
     //! Widths for each radiation source (N/A for collimated sources)
     helios::vec2 source_width;
@@ -644,19 +651,23 @@ public:
      */
     void setDiffuseRadiationExtinctionCoeff(const std::string &label, float K, const helios::SphericalCoord &peak_dir);
 
-    //! Set the integral of the diffuse spectral flux distribution across all possible wavelengths FOR ALL EXISTING BANDS (=∫Sdλ)
+    //! Scale the global diffuse spectrum so its integral equals the specified value (=∫Sdλ)
     /**
-     * \param[in] spectrum_integral Integration of source spectral flux distribution across all possible wavelengths (=∫Sdλ)
-     * \note This function will call setDiffuseFlux() for all bands to update source fluxes based on the new spectrum integral
+     * Scales the global diffuse spectrum (set via setDiffuseSpectrum()) so that its integral over all wavelengths
+     * equals the specified value. The scaled spectrum is applied to all existing radiation bands and will be
+     * inherited by any bands created subsequently. This should be called after setDiffuseSpectrum().
+     * \param[in] spectrum_integral Desired integration of spectral flux distribution across all wavelengths (=∫Sdλ)
      */
     void setDiffuseSpectrumIntegral(float spectrum_integral);
 
-    //! Scale the source spectral flux distribution based on a prescribed integral between two wavelengths FOR ALL EXISTING BANDS (=∫Sdλ)
+    //! Scale the global diffuse spectrum based on a prescribed integral between two wavelengths (=∫Sdλ)
     /**
-     * \param[in] spectrum_integral Integration of source spectral flux distribution between two wavelengths (=∫Sdλ)
-     * \param[in] wavelength_min Lower bounding wavelength for wave band
-     * \param[in] wavelength_max Upper bounding wavelength for wave band
-     * \note This function will call setDiffuseFlux() for all bands to update source fluxes based on the new spectrum integral
+     * Scales the global diffuse spectrum (set via setDiffuseSpectrum()) so that its integral between the specified
+     * wavelengths equals the given value. The entire spectrum is scaled uniformly. The scaled spectrum is applied
+     * to all existing radiation bands and will be inherited by any bands created subsequently.
+     * \param[in] spectrum_integral Desired integration of spectral flux distribution between the specified wavelengths (=∫Sdλ)
+     * \param[in] wavelength_min Lower bounding wavelength for integration range (nm)
+     * \param[in] wavelength_max Upper bounding wavelength for integration range (nm)
      */
     void setDiffuseSpectrumIntegral(float spectrum_integral, float wavelength_min, float wavelength_max);
 
@@ -889,19 +900,12 @@ public:
      */
     void setSourceSpectrum(const std::vector<uint> &source_ID, const std::string &spectrum_label);
 
-    //! Set the spectral distribution of diffuse ambient radiation FOR A SINGLE BAND based on global data of wavelength-intensity pairs.
+    //! Set the spectral distribution of diffuse ambient radiation for all bands based on global data of wavelength-intensity pairs.
     /**
-     * \param[in] band_label Label used to reference the band
      * \param[in] spectrum_label Label of global data containing spectral intensity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity (.y).
+     * \note For emission-enabled bands, getDiffuseFlux() returns 0 since diffuse sky radiation is not relevant for thermal bands. Use setDiffuseRadiationFlux() to manually set flux for emission bands if needed.
      */
-    void setDiffuseSpectrum(const std::string &band_label, const std::string &spectrum_label);
-
-    //! Set the spectral distribution of diffuse ambient radiation FOR MULTIPLE BANDS based on global data of wavelength-intensity pairs.
-    /**
-     * \param[in] band_labels List of labels used to reference the bands
-     * \param[in] spectrum_label Label of global data containing spectral intensity data (type of vec2). Each index of the global data gives the wavelength (.x) and spectral intensity (.y).
-     */
-    void setDiffuseSpectrum(const std::vector<std::string> &band_labels, const std::string &spectrum_label);
+    void setDiffuseSpectrum(const std::string &spectrum_label);
 
     //! Get the diffuse flux for a given band
     /**
@@ -1736,6 +1740,15 @@ protected:
 
     std::map<std::string, RadiationBand> radiation_bands;
 
+    //! Global diffuse spectrum applied to all bands (set via setDiffuseSpectrum)
+    std::vector<helios::vec2> global_diffuse_spectrum;
+
+    //! Label for global diffuse spectrum in Context global data
+    std::string global_diffuse_spectrum_label = "none";
+
+    //! Cached version number of global diffuse spectrum for change detection
+    uint64_t global_diffuse_spectrum_version = 0;
+
     std::map<std::string, bool> scattering_iterations_needed;
 
     // --- radiation source variables --- //
@@ -1900,6 +1913,15 @@ protected:
      * \return Vector of base sky radiance values (W/m²/sr) for each band, to be used for camera rendering
      */
     std::vector<float> updateAtmosphericSkyModel(const std::vector<std::string> &band_labels, const RadiationCamera &camera);
+
+    //! Update Prague sky model angular parameters for general diffuse radiation
+    /**
+     * \param[in] band_labels Labels for all bands to be launched
+     * \note Reads Prague spectral parameters from Context global data (set by SolarPosition plugin)
+     * \note Skips bands where power-law extinction is already set (priority 1)
+     * \note If Prague data unavailable, parameters remain at zero (isotropic distribution used)
+     */
+    void updatePragueParametersForGeneralDiffuse(const std::vector<std::string>& band_labels);
 
     //! Load Context global data corresponding to spectral data
     /**
@@ -2429,8 +2451,18 @@ protected:
 
     std::vector<std::string> spectral_library_files;
 
-    //! Prague Sky Model interface for atmospheric sky radiance calculations
-    helios::PragueSkyModelInterface prague_sky_model;
+    // Helper methods for Prague Sky Model spectral integration from Context
+    float integrateOverResponse(const std::vector<float>& wavelengths,
+                                 const std::vector<float>& values,
+                                 const std::vector<helios::vec2>& camera_response) const;
+
+    float weightedAverageOverResponse(const std::vector<float>& wavelengths,
+                                       const std::vector<float>& param_values,
+                                       const std::vector<float>& weight_values,
+                                       const std::vector<helios::vec2>& camera_response) const;
+
+    float computeAngularNormalization(float circ_str, float circ_width,
+                                       float horiz_bright) const;
 };
 
 void sutilHandleError(RTcontext context, RTresult code, const char *file, int line);

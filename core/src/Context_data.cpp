@@ -2270,6 +2270,15 @@ size_t Context::getGlobalDataSize(const char *label) const {
     return globaldata.at(label).size;
 }
 
+uint64_t Context::getGlobalDataVersion(const char *label) const {
+
+    if (!doesGlobalDataExist(label)) {
+        return 0;  // Return 0 for non-existent data (consistent with version = 0 initialization)
+    }
+
+    return globaldata.at(label).version;
+}
+
 std::vector<std::string> Context::listGlobalData() const {
 
     std::vector<std::string> labels;

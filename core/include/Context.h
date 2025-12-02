@@ -588,6 +588,8 @@ namespace helios {
         size_t size;
         //! \brief Type of the data
         HeliosDataType type;
+        //! \brief Version number for change detection (incremented on every setGlobalData call)
+        uint64_t version = 0;
     };
 
     //--------------------- GEOMETRIC PRIMITIVES -----------------------------------//
@@ -5167,6 +5169,7 @@ namespace helios {
                 globaldata[label].global_data_bool = {data};
                 globaldata[label].type = HELIOS_TYPE_BOOL;
             }
+            globaldata[label].version++;
         }
 
         //! Add global data value (vector)
@@ -5218,6 +5221,7 @@ namespace helios {
                 globaldata[label].global_data_bool = data;
                 globaldata[label].type = HELIOS_TYPE_BOOL;
             }
+            globaldata[label].version++;
         }
 
         //! Get global data value (scalar or vector)
@@ -5433,6 +5437,14 @@ namespace helios {
          */
         size_t getGlobalDataSize(const char *label) const;
 
+        //! Get the version number of global data (for change detection)
+        /**
+         * \param[in] label Name/label associated with data
+         * \return Version number of global data (incremented on every setGlobalData call)
+         * \note Version is 0 if global data does not exist
+         */
+        uint64_t getGlobalDataVersion(const char *label) const;
+
         //! List the labels for all global data in the Context
         /**
          * \return Vector of labels for all global data
@@ -5479,12 +5491,6 @@ namespace helios {
         void incrementGlobalData(const char *label, double increment);
 
         //--------- Compound Objects Methods -------------//
-
-        //! Get a pointer to a Compound Object
-        /**
-         * \param[in] ObjID Identifier for Compound Object.
-         */
-        [[nodiscard]] CompoundObject *getObjectPointer(uint ObjID) const;
 
         //! Get the total number of objects that have been created in the Context
         /**
@@ -5726,12 +5732,6 @@ namespace helios {
          */
         [[nodiscard]] helios::ObjectType getObjectType(uint ObjID) const;
 
-        //! Get a pointer to a Tile Compound Object
-        /**
-         * \param[in] ObjID Identifier for Tile Compound Object.
-         */
-        [[nodiscard]] Tile *getTileObjectPointer(uint ObjID) const;
-
         //! Get the area ratio of a tile object (total object area / sub-patch area)
         /**
          * \param[in] ObjID Identifier for Tile Compound Object.
@@ -5796,12 +5796,6 @@ namespace helios {
          */
         [[nodiscard]] std::vector<helios::vec3> getTileObjectVertices(uint ObjID) const;
 
-        //! Get a pointer to a Sphere Compound Object
-        /**
-         * \param[in] ObjID Identifier for Sphere Compound Object.
-         */
-        [[nodiscard]] Sphere *getSphereObjectPointer(uint ObjID) const;
-
         //! get the center of a Sphere object from the context
         /**
          * \param[in] ObjID object ID of the Sphere object
@@ -5825,12 +5819,6 @@ namespace helios {
          * \param[in] ObjID object ID of the Sphere object
          */
         [[nodiscard]] float getSphereObjectVolume(uint ObjID) const;
-
-        //! Get a pointer to a Tube Compound Object
-        /**
-         * \param[in] ObjID Identifier for Tube Compound Object.
-         */
-        [[nodiscard]] Tube *getTubeObjectPointer(uint ObjID) const;
 
         //! get the subdivision count of a Tube object from the context
         /**
@@ -5929,12 +5917,6 @@ namespace helios {
          */
         void setTubeNodes(uint ObjID, const std::vector<helios::vec3> &node_xyz);
 
-        //! Get a pointer to a Box Compound Object
-        /**
-         * \param[in] ObjID Identifier for Box Compound Object.
-         */
-        [[nodiscard]] Box *getBoxObjectPointer(uint ObjID) const;
-
         //! get the center of a Box object from the context
         /**
          * \param[in] ObjID object ID of the Box object
@@ -5959,12 +5941,6 @@ namespace helios {
          */
         [[nodiscard]] float getBoxObjectVolume(uint ObjID) const;
 
-        //! Get a pointer to a Disk Compound Object
-        /**
-         * \param[in] ObjID Identifier for Disk Compound Object.
-         */
-        [[nodiscard]] Disk *getDiskObjectPointer(uint ObjID) const;
-
         //! get the center of a Disk object from the context
         /**
          * \param[in] ObjID object ID of the Disk object
@@ -5983,23 +5959,11 @@ namespace helios {
          */
         [[nodiscard]] uint getDiskObjectSubdivisionCount(uint ObjID) const;
 
-        //! Get a pointer to a Polygon Mesh Compound Object
-        /**
-         * \param[in] ObjID Identifier for Polygon Mesh Compound Object.
-         */
-        [[nodiscard]] Polymesh *getPolymeshObjectPointer(uint ObjID) const;
-
         //! Get the volume of a Polygon Mesh object from the context
         /**
          * \param[in] ObjID object ID of the Polygon Mesh object
          */
         [[nodiscard]] float getPolymeshObjectVolume(uint ObjID) const;
-
-        //! Get a pointer to a Cone Compound Object
-        /**
-         * \param[in] ObjID Identifier for Cone Compound Object.
-         */
-        [[nodiscard]] Cone *getConeObjectPointer(uint ObjID) const;
 
         //! get the subdivision count of a Cone object from the context
         /**
@@ -6051,6 +6015,20 @@ namespace helios {
          * \param[in] ObjID object ID of the Cone object
          */
         [[nodiscard]] float getConeObjectVolume(uint ObjID) const;
+
+        //! Scale the length of a Cone object by scaling the distance between its nodes
+        /**
+         * \param[in] ObjID object ID of the Cone object
+         * \param[in] scale_factor Scaling factor to apply to the length of the cone object
+         */
+        void scaleConeObjectLength(uint ObjID, float scale_factor);
+
+        //! Scale the girth of a Cone object by scaling the radii at both nodes
+        /**
+         * \param[in] ObjID object ID of the Cone object
+         * \param[in] scale_factor Scaling factor to apply to the girth (radii) of the cone object
+         */
+        void scaleConeObjectGirth(uint ObjID, float scale_factor);
 
         //! Add a patch that is subdivided into a regular grid of sub-patches (tiled)
         /**

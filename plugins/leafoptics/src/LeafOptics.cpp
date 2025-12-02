@@ -556,19 +556,24 @@ float LeafOptics::transmittance(double k) {
 }
 
 void LeafOptics::setProperties(const std::vector<uint> &UUIDs, const LeafOpticsProperties &leafproperties) {
-
-    context->setPrimitiveData(UUIDs, "chlorophyll", leafproperties.chlorophyllcontent);
-    context->setPrimitiveData(UUIDs, "carotenoid", leafproperties.carotenoidcontent);
-    context->setPrimitiveData(UUIDs, "anthocyanin", leafproperties.anthocyancontent);
-    if (leafproperties.brownpigments > 0.0) {
-        context->setPrimitiveData(UUIDs, "brown", leafproperties.brownpigments);
-    }
-    context->setPrimitiveData(UUIDs, "water", leafproperties.watermass);
-    if (leafproperties.drymass > 0.0) {
-        context->setPrimitiveData(UUIDs, "drymass", leafproperties.drymass);
-    } else {
-        context->setPrimitiveData(UUIDs, "protein", leafproperties.protein);
-        context->setPrimitiveData(UUIDs, "cellulose", leafproperties.carbonconstituents);
+    for (const auto &data : output_prim_data) {
+        if (data == "chlorophyll") {
+            context->setPrimitiveData(UUIDs, "chlorophyll", leafproperties.chlorophyllcontent);
+        } else if (data == "carotenoid") {
+            context->setPrimitiveData(UUIDs, "carotenoid", leafproperties.carotenoidcontent);
+        } else if (data == "anthocyanin") {
+            context->setPrimitiveData(UUIDs, "anthocyanin", leafproperties.anthocyancontent);
+        } else if (data == "brown" && leafproperties.brownpigments > 0.0) {
+            context->setPrimitiveData(UUIDs, "brown", leafproperties.brownpigments);
+        } else if (data == "water") {
+            context->setPrimitiveData(UUIDs, "water", leafproperties.watermass);
+        } else if (data == "drymass" && leafproperties.drymass > 0.0) {
+            context->setPrimitiveData(UUIDs, "drymass", leafproperties.drymass);
+        } else if (data == "protein" && leafproperties.drymass == 0.0) {
+            context->setPrimitiveData(UUIDs, "protein", leafproperties.protein);
+        } else if (data == "cellulose" && leafproperties.drymass == 0.0) {
+            context->setPrimitiveData(UUIDs, "cellulose", leafproperties.carbonconstituents);
+        }
     }
 }
 
@@ -603,18 +608,24 @@ void LeafOptics::getPropertiesFromSpectrum(const std::vector<uint> &UUIDs) {
         const LeafOpticsProperties &props = it->second;
 
         // Assign primitive data using the same logic as setProperties()
-        context->setPrimitiveData(UUID, "chlorophyll", props.chlorophyllcontent);
-        context->setPrimitiveData(UUID, "carotenoid", props.carotenoidcontent);
-        context->setPrimitiveData(UUID, "anthocyanin", props.anthocyancontent);
-        if (props.brownpigments > 0.0) {
-            context->setPrimitiveData(UUID, "brown", props.brownpigments);
-        }
-        context->setPrimitiveData(UUID, "water", props.watermass);
-        if (props.drymass > 0.0) {
-            context->setPrimitiveData(UUID, "drymass", props.drymass);
-        } else {
-            context->setPrimitiveData(UUID, "protein", props.protein);
-            context->setPrimitiveData(UUID, "cellulose", props.carbonconstituents);
+        for (const auto &data : output_prim_data) {
+            if (data == "chlorophyll") {
+                context->setPrimitiveData(UUID, "chlorophyll", props.chlorophyllcontent);
+            } else if (data == "carotenoid") {
+                context->setPrimitiveData(UUID, "carotenoid", props.carotenoidcontent);
+            } else if (data == "anthocyanin") {
+                context->setPrimitiveData(UUID, "anthocyanin", props.anthocyancontent);
+            } else if (data == "brown" && props.brownpigments > 0.0) {
+                context->setPrimitiveData(UUID, "brown", props.brownpigments);
+            } else if (data == "water") {
+                context->setPrimitiveData(UUID, "water", props.watermass);
+            } else if (data == "drymass" && props.drymass > 0.0) {
+                context->setPrimitiveData(UUID, "drymass", props.drymass);
+            } else if (data == "protein" && props.drymass == 0.0) {
+                context->setPrimitiveData(UUID, "protein", props.protein);
+            } else if (data == "cellulose" && props.drymass == 0.0) {
+                context->setPrimitiveData(UUID, "cellulose", props.carbonconstituents);
+            }
         }
     }
 }
@@ -651,4 +662,17 @@ void LeafOptics::disableMessages() {
 
 void LeafOptics::enableMessages() {
     message_flag = true;
+}
+
+void LeafOptics::optionalOutputPrimitiveData(const char *label) {
+    if (strcmp(label, "chlorophyll") == 0 || strcmp(label, "carotenoid") == 0 ||
+        strcmp(label, "anthocyanin") == 0 || strcmp(label, "brown") == 0 ||
+        strcmp(label, "water") == 0 || strcmp(label, "drymass") == 0 ||
+        strcmp(label, "protein") == 0 || strcmp(label, "cellulose") == 0) {
+        output_prim_data.emplace_back(label);
+    } else {
+        if (message_flag) {
+            std::cout << "WARNING (LeafOptics::optionalOutputPrimitiveData): unknown output primitive data " << label << std::endl;
+        }
+    }
 }

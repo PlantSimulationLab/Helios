@@ -80,7 +80,7 @@ int main() {
     std::vector<std::string> bandlabels = {"red", "green", "blue"};
 
     // Set diffuse sky spectrum for all bands
-    radiation.setDiffuseSpectrum(bandlabels, "solar_spectrum_ASTMG173");
+    radiation.setDiffuseSpectrum("solar_spectrum_ASTMG173");
     radiation.setDiffuseSpectrumIntegral(100.f);
 
     // STEP 5: Configure the radiation camera for synthetic image generation

@@ -457,6 +457,44 @@ RT_PROGRAM void miss_direct() {
     }
 }
 
+// Unified device function to evaluate diffuse angular distribution
+// Supports three modes with automatic priority-based selection:
+//   Priority 1: Power-law (Harrison & Coombes) if K > 0
+//   Priority 2: Prague sky model if params.w > 0 (valid normalization)
+//   Priority 3: Isotropic (uniform) otherwise
+__device__ float evaluateDiffuseAngularDistribution(const float3& ray_dir, const float3& peak_dir, float power_law_K, float power_law_norm, const float4& prague_params) {
+
+    // Priority 1: Power-law (if K > 0)
+    if (power_law_K > 0.0f) {
+        float psi = acos_safe(dot(peak_dir, ray_dir));
+        psi = fmaxf(psi, M_PI / 180.0f);  // Avoid singularity at 1 degree
+        return powf(psi, -power_law_K) * power_law_norm;
+    }
+
+    // Priority 2: Prague (if params.w > 0, indicating valid normalization)
+    if (prague_params.w > 0.0f) {
+        // Angular distance from sun (degrees)
+        float gamma = acos_safe(dot(ray_dir, peak_dir)) * 180.0f / float(M_PI);
+
+        // Zenith angle
+        float cos_theta = fmaxf(ray_dir.z, 0.0f);
+
+        // Circumsolar + horizon brightening
+        // params: (circ_strength, circ_width, horizon_brightness, normalization)
+        float pattern = (1.0f + prague_params.x * expf(-gamma / prague_params.y))
+                      * (1.0f + (prague_params.z - 1.0f) * (1.0f - cos_theta));
+
+        // Multiply by π to account for cosine-weighted sampling PDF (cos×sin/π)
+        // This ensures correct Monte Carlo integration for Prague angular distribution
+        return pattern * prague_params.w * M_PI;
+    }
+
+    // Priority 3: Isotropic
+    // For isotropic diffuse with cosine-weighted sampling (PDF = cos×sin/π):
+    // The π from the PDF denominator must appear in the Monte Carlo weight
+    return 1.0f;
+}
+
 RT_PROGRAM void miss_diffuse() {
 
     //    double strength;
@@ -498,15 +536,13 @@ RT_PROGRAM void miss_diffuse() {
 
             } else { // ray was NOT launched from voxel
 
-                float fd = 1.f;
-                if (diffuse_extinction[b] > 0.f) {
-                    float psi = acos_safe(dot(diffuse_peak_dir[b], ray.direction));
-                    if (psi < M_PI / 180.f) {
-                        fd = powf(M_PI / 180.f, -diffuse_extinction[b]) * diffuse_dist_norm[b]; // Replace 'pow' by 'powf' in
-                    } else {
-                        fd = powf(psi, -diffuse_extinction[b]) * diffuse_dist_norm[b];
-                    }
-                }
+                // Use unified distribution function (supports power-law, Prague, and isotropic modes)
+                float fd = evaluateDiffuseAngularDistribution(
+                    ray.direction,
+                    diffuse_peak_dir[b],
+                    diffuse_extinction[b],
+                    diffuse_dist_norm[b],
+                    sky_radiance_params[b]);
 
                 float strength = fd * diffuse_flux[b] * prd.strength;
 
@@ -543,50 +579,23 @@ RT_PROGRAM void miss_diffuse() {
     }
 }
 
-// Device function to evaluate atmospheric sky radiance based on ray direction
-// Independent analytical implementation based on standard atmospheric scattering physics
-// Following simplified multiplicative formulation similar to Perez/Hosek-Wilkie models
-__device__ float evaluateSkyRadiance(const float3 &ray_dir, const float3 &sun_dir, const float4 &params, float base_radiance) {
-    // params: (circumsolar_strength, circumsolar_width, horizon_brightness, normalization_factor)
-    // base_radiance: Zenith sky radiance in W/m²/sr
-
-    // Angular distance from sun (radians)
-    float cos_gamma = dot(ray_dir, sun_dir);
-    float gamma = acos_safe(cos_gamma);
-
-    // Zenith angle (radians) - z is up
-    float cos_theta = fmaxf(ray_dir.z, 0.0f); // Clamp to avoid below horizon
-
-    // Start with baseline radiance pattern
-    float pattern = 1.0f;
-
-    // Circumsolar brightening: Multiplicative factor that increases radiance near sun
-    // Exponential decay with angular distance from sun (in degrees)
-    float gamma_deg = gamma * 180.0f / float(M_PI);
-    float circumsolar_factor = 1.0f + params.x * expf(-gamma_deg / params.y);
-    pattern *= circumsolar_factor;
-
-    // Horizon brightening: Multiplicative factor that increases radiance toward horizon
-    // Linear interpolation: at zenith (cos_theta=1) factor=1.0, at horizon (cos_theta=0) factor=horizon_brightness
-    float horizon_factor = 1.0f + (params.z - 1.0f) * (1.0f - cos_theta);
-    pattern *= horizon_factor;
-
-    // Apply normalization to ensure energy conservation
-    pattern *= params.w; // normalization_factor
-
-    // Return directional sky radiance (W/m²/sr)
-    return base_radiance * pattern;
-}
-
 RT_PROGRAM void miss_camera() {
 
     for (size_t b = 0; b < Nbands_launch; b++) {
 
         if (camera_sky_radiance[b] > 0.f) {
 
-            // Evaluate directional sky radiance using atmospheric distribution model
+            // Evaluate directional sky radiance using unified distribution function
             // camera_sky_radiance[b] contains the base zenith sky radiance (W/m²/sr) from Prague model
-            float sky_radiance = evaluateSkyRadiance(ray.direction, sun_direction, sky_radiance_params[b], camera_sky_radiance[b]);
+            // For camera, power-law is disabled (K=0, norm=1), so Prague params are used
+            float angular_weight = evaluateDiffuseAngularDistribution(
+                ray.direction,
+                sun_direction,
+                0.0f,  // No power-law for camera
+                1.0f,
+                sky_radiance_params[b]);  // Prague params
+
+            float sky_radiance = camera_sky_radiance[b] * angular_weight;
 
             // Accumulate radiance directly (same as surface hits accumulate radiation_out)
             // Units: W/m²/sr

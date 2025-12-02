@@ -3610,10 +3610,10 @@ void RadiationCamera::applyCameraExposure(helios::Context *context) {
         const float ref_f_number = 2.8f;
 
         // Calibration to match auto-exposure behavior
-        // Typical Helios scenes have raw median ~10, auto-exposure targets 0.18
+        // Typical Helios scenes have raw median ~10, auto-exposure targets 0.135
         // At reference settings (ISO 100, 1/125s, f/2.8), we want the same result as auto
         const float typical_scene_median = 10.0f;
-        const float target_median = 0.18f;
+        const float target_median = 0.135f;
 
         // Calculate exposure from camera settings (proportional to ISO × t / N²)
         // Higher ISO → brighter, longer shutter → brighter, wider aperture (smaller N) → brighter

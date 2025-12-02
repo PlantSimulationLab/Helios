@@ -64,6 +64,18 @@ PlantArchitecture plantarchitecture(&context);
 plantarchitecture.optionalOutputData("plantID"); //insert appropriate label from the table above
 ~~~~~~
 
+You can also enable multiple fields at the same time:
+
+~~~~~~
+plantarchitecture.optionalOutputData({"plantID","leafID","flowerID"});
+~~~~~~
+
+or enable them all by passing the string "all":
+
+~~~~~~
+plantarchitecture.optionalOutputData("all");
+~~~~~~
+
 \section PlantArchOverview Plug-in Overview
 
 This plug-in provides a generalized framework for creating dynamic procedural plant models for a very wide range of species. The plug-in comes with a library of a number of different plant models, which have a common set of parameters that can be adjusted by the user. Parameters defining the plant can be set to constant values, or randomized based on a number of different distributions. The plant model can be grown over time, and will transition through different phenological stages such as dormancy, flowering, fruit set, and senescence.  Users can also create their own plant models by changing model parameters, or build custom plants branch-by-branch.

@@ -126,10 +126,12 @@ std::vector<uint> CollisionDetection::findCollisions(uint UUID, bool allow_spati
 
 std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &UUIDs, bool allow_spatial_culling) {
 
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
+
     if (UUIDs.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findCollisions): No UUIDs provided" << std::endl;
-        }
+        warnings.addWarning("no_uuids_provided", "No UUIDs provided");
+        warnings.report(std::cerr);
         return {};
     }
 
@@ -139,9 +141,6 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &UU
         if (context->doesPrimitiveExist(uuid)) {
             valid_UUIDs.push_back(uuid);
         } else {
-            if (printmessages) {
-                std::cerr << "ERROR (CollisionDetection::findCollisions): Invalid UUID " << uuid << std::endl;
-            }
             helios_runtime_error("ERROR (CollisionDetection::findCollisions): Invalid UUID " + std::to_string(uuid) + " provided");
         }
     }
@@ -188,10 +187,12 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &UU
 
 std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &primitive_UUIDs, const std::vector<uint> &object_IDs, bool allow_spatial_culling) {
 
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
+
     if (primitive_UUIDs.empty() && object_IDs.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findCollisions): No UUIDs or object IDs provided" << std::endl;
-        }
+        warnings.addWarning("no_inputs_provided", "No UUIDs or object IDs provided");
+        warnings.report(std::cerr);
         return {};
     }
 
@@ -212,10 +213,12 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &pr
 
 std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &query_UUIDs, const std::vector<uint> &query_object_IDs, const std::vector<uint> &target_UUIDs, const std::vector<uint> &target_object_IDs, bool allow_spatial_culling) {
 
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
+
     if (query_UUIDs.empty() && query_object_IDs.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findCollisions): No query UUIDs or object IDs provided" << std::endl;
-        }
+        warnings.addWarning("no_query_inputs", "No query UUIDs or object IDs provided");
+        warnings.report(std::cerr);
         return {};
     }
 
@@ -317,10 +320,15 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &qu
     std::sort(all_collisions.begin(), all_collisions.end());
     all_collisions.erase(std::unique(all_collisions.begin(), all_collisions.end()), all_collisions.end());
 
+    warnings.report(std::cerr);
     return all_collisions;
 }
 
 void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
+
+    // Create warning aggregator
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
 
     std::vector<uint> primitives_to_include;
 
@@ -333,9 +341,8 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
 
 
     if (primitives_to_include.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::buildBVH): No primitives found to build BVH" << std::endl;
-        }
+        warnings.addWarning("no_primitives_for_bvh", "No primitives found to build BVH");
+        warnings.report(std::cerr);
         return;
     }
 
@@ -347,9 +354,6 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
             if (context->doesPrimitiveExist(uuid)) {
                 valid_primitives.push_back(uuid);
             } else {
-                if (printmessages) {
-                    std::cerr << "ERROR (CollisionDetection::buildBVH): Invalid UUID " << uuid << std::endl;
-                }
                 helios_runtime_error("ERROR (CollisionDetection::buildBVH): Invalid UUID " + std::to_string(uuid) + " provided");
             }
         }
@@ -358,15 +362,14 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
         for (uint uuid: primitives_to_include) {
             if (context->doesPrimitiveExist(uuid)) {
                 valid_primitives.push_back(uuid);
-            } else if (printmessages) {
-                std::cerr << "WARNING (CollisionDetection::buildBVH): Skipping invalid UUID " << uuid << std::endl;
+            } else {
+                warnings.addWarning("invalid_uuid_skipped", "Skipping invalid UUID " + std::to_string(uuid));
             }
         }
 
         if (valid_primitives.empty()) {
-            if (printmessages) {
-                std::cerr << "WARNING (CollisionDetection::buildBVH): No valid primitives found after filtering" << std::endl;
-            }
+            warnings.addWarning("no_valid_primitives_after_filtering", "No valid primitives found after filtering");
+            warnings.report(std::cerr);
             return;
         }
     }
@@ -464,6 +467,9 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     last_bvh_geometry.insert(primitives_to_include.begin(), primitives_to_include.end());
     bvh_dirty = false;
     soa_dirty = true; // SoA needs rebuild after BVH change
+
+    // Report aggregated warnings
+    warnings.report(std::cerr);
 }
 
 void CollisionDetection::rebuildBVH() {
@@ -1918,15 +1924,18 @@ void CollisionDetection::incrementalUpdateBVH(const std::set<uint> &added_geomet
 }
 
 bool CollisionDetection::validateUUIDs(const std::vector<uint> &UUIDs) const {
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
+
     bool all_valid = true;
     for (uint UUID: UUIDs) {
         if (!context->doesPrimitiveExist(UUID)) {
-            if (printmessages) {
-                std::cerr << "WARNING (CollisionDetection::validateUUIDs): Primitive UUID " + std::to_string(UUID) + " does not exist - skipping" << std::endl;
-            }
+            warnings.addWarning("primitive_uuid_not_exist", "Primitive UUID " + std::to_string(UUID) + " does not exist - skipping");
             all_valid = false;
         }
     }
+
+    warnings.report(std::cerr);
     return all_valid;
 }
 
@@ -2328,19 +2337,20 @@ bool CollisionDetection::findNearestRayIntersection(const vec3 &origin, const ve
 
 bool CollisionDetection::findNearestPrimitiveDistance(const vec3 &origin, const vec3 &direction, const std::vector<uint> &candidate_UUIDs, float &distance, vec3 &obstacle_direction) {
 
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
+
     if (candidate_UUIDs.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): No candidate UUIDs provided" << std::endl;
-        }
+        warnings.addWarning("no_candidate_uuids", "No candidate UUIDs provided");
+        warnings.report(std::cerr);
         return false;
     }
 
     // Validate that direction is normalized
     float dir_magnitude = direction.magnitude();
     if (std::abs(dir_magnitude - 1.0f) > 1e-6f) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): Direction vector is not normalized (magnitude = " << dir_magnitude << ")" << std::endl;
-        }
+        warnings.addWarning("direction_not_normalized", "Direction vector is not normalized (magnitude = " + std::to_string(dir_magnitude) + ")");
+        warnings.report(std::cerr);
         return false;
     }
 
@@ -2350,16 +2360,15 @@ bool CollisionDetection::findNearestPrimitiveDistance(const vec3 &origin, const 
     for (uint uuid: candidate_UUIDs) {
         if (context->doesPrimitiveExist(uuid)) {
             valid_candidates.push_back(uuid);
-        } else if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): Skipping invalid UUID " << uuid << std::endl;
+        } else {
+            warnings.addWarning("invalid_candidate_uuid", "Skipping invalid UUID " + std::to_string(uuid));
         }
     }
 
 
     if (valid_candidates.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): No valid candidate UUIDs after filtering" << std::endl;
-        }
+        warnings.addWarning("no_valid_candidates", "No valid candidate UUIDs after filtering");
+        warnings.report(std::cerr);
         return false;
     }
 
@@ -2412,14 +2421,18 @@ bool CollisionDetection::findNearestPrimitiveDistance(const vec3 &origin, const 
     if (found_forward_surface) {
         distance = nearest_distance_found;
         obstacle_direction = nearest_obstacle_direction;
+        warnings.report(std::cerr);
         return true;
     }
 
-
+    warnings.report(std::cerr);
     return false;
 }
 
 bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const vec3 &axis, float half_angle, float height, const std::vector<uint> &candidate_UUIDs, float &distance, vec3 &obstacle_direction, int num_rays) {
+
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
 
     // OPTIMIZATION: Use per-tree BVH if enabled for better scaling
     std::vector<uint> effective_candidates;
@@ -2438,16 +2451,14 @@ bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const 
 
     // Validate input parameters
     if (half_angle <= 0.0f || half_angle > M_PI / 2.0f) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestSolidObstacleInCone): Invalid half_angle " << half_angle << std::endl;
-        }
+        warnings.addWarning("invalid_half_angle", "Invalid half_angle " + std::to_string(half_angle));
+        warnings.report(std::cerr);
         return false;
     }
 
     if (height <= 0.0f) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestSolidObstacleInCone): Invalid height " << height << std::endl;
-        }
+        warnings.addWarning("invalid_height", "Invalid height " + std::to_string(height));
+        warnings.report(std::cerr);
         return false;
     }
 
@@ -2495,14 +2506,19 @@ bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const 
     if (found_obstacle) {
         distance = nearest_distance;
         obstacle_direction = nearest_direction;
+        warnings.report(std::cerr);
         return true;
     }
 
+    warnings.report(std::cerr);
     return false;
 }
 
 bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const vec3 &axis, float half_angle, float height, const std::vector<uint> &candidate_UUIDs, const std::vector<uint> &plant_primitives, float &distance,
                                                         vec3 &obstacle_direction, int num_rays) {
+
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
 
     // OPTIMIZATION: Use per-tree BVH with plant primitive identification for better scaling
     std::vector<uint> effective_candidates;
@@ -2523,16 +2539,14 @@ bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const 
 
     // Validate input parameters
     if (half_angle <= 0.0f || half_angle > M_PI / 2.0f) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestSolidObstacleInCone): Invalid half_angle " << half_angle << std::endl;
-        }
+        warnings.addWarning("invalid_half_angle", "Invalid half_angle " + std::to_string(half_angle));
+        warnings.report(std::cerr);
         return false;
     }
 
     if (height <= 0.0f) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestSolidObstacleInCone): Invalid height " << height << std::endl;
-        }
+        warnings.addWarning("invalid_height", "Invalid height " + std::to_string(height));
+        warnings.report(std::cerr);
         return false;
     }
 
@@ -2580,9 +2594,11 @@ bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const 
     if (found_obstacle) {
         distance = nearest_distance;
         obstacle_direction = nearest_direction;
+        warnings.report(std::cerr);
         return true;
     }
 
+    warnings.report(std::cerr);
     return false;
 }
 
@@ -3078,14 +3094,16 @@ std::vector<uint> CollisionDetection::filterGeometryByDistance(const helios::vec
 
 void CollisionDetection::calculateVoxelRayPathLengths(const vec3 &grid_center, const vec3 &grid_size, const helios::int3 &grid_divisions, const std::vector<vec3> &ray_origins, const std::vector<vec3> &ray_directions) {
 
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
+
     if (ray_origins.size() != ray_directions.size()) {
         helios_runtime_error("ERROR (CollisionDetection::calculateVoxelRayPathLengths): ray_origins and ray_directions vectors must have same size");
     }
 
     if (ray_origins.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::calculateVoxelRayPathLengths): No rays provided" << std::endl;
-        }
+        warnings.addWarning("no_rays_provided", "No rays provided");
+        warnings.report(std::cerr);
         return;
     }
 
@@ -3109,6 +3127,8 @@ void CollisionDetection::calculateVoxelRayPathLengths(const vec3 &grid_center, c
 #else
     calculateVoxelRayPathLengths_CPU(ray_origins, ray_directions);
 #endif
+
+    warnings.report(std::cerr);
 }
 
 void CollisionDetection::setVoxelTransmissionProbability(int P_denom, int P_trans, const helios::int3 &ijk) {

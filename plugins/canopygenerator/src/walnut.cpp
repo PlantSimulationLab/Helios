@@ -294,18 +294,18 @@ void branchRecursion(const std::vector<vec3> position_parent, const std::vector<
             uint ID1 = addBranch(pbase, 0.5 * L1 * bnorm1, rbase1, pbase + pend1 * L1, L1 * make_vec3(0, 0, 1.f + getVariation(1, generator)), 0.15 * rbase1, 8, params, generator, context);
             uint ID2 = addBranch(pbase, 0.5 * L2 * bnorm2, rbase2, pbase + pend2 * L2, L2 * make_vec3(0, 0, 1.f + getVariation(1, generator)), 0.15 * rbase2, 8, params, generator, context);
 
-            std::vector<uint> UUID = context->getObjectPointer(ID1)->getPrimitiveUUIDs();
+            std::vector<uint> UUID = context->getObjectPrimitiveUUIDs(ID1);
             UUID_branch_plant.insert(UUID_branch_plant.end(), UUID.begin(), UUID.end());
-            UUID = context->getObjectPointer(ID2)->getPrimitiveUUIDs();
+            UUID = context->getObjectPrimitiveUUIDs(ID2);
             UUID_branch_plant.insert(UUID_branch_plant.end(), UUID.begin(), UUID.end());
 
-            std::vector<vec3> pos_parent = context->getTubeObjectPointer(ID1)->getNodes();
-            std::vector<float> rad_parent = context->getTubeObjectPointer(ID1)->getNodeRadii();
+            std::vector<vec3> pos_parent = context->getTubeObjectNodes(ID1);
+            std::vector<float> rad_parent = context->getTubeObjectNodeRadii(ID1);
 
             branchRecursion(pos_parent, rad_parent, level + 1, max_levels, leaf_prototype, nut_prototype, UUID_branch_plant, UUID_leaf_plant, UUID_fruit_plant, params, generator, context);
 
-            pos_parent = context->getTubeObjectPointer(ID2)->getNodes();
-            rad_parent = context->getTubeObjectPointer(ID2)->getNodeRadii();
+            pos_parent = context->getTubeObjectNodes(ID2);
+            rad_parent = context->getTubeObjectNodeRadii(ID2);
 
             branchRecursion(pos_parent, rad_parent, level + 1, max_levels, leaf_prototype, nut_prototype, UUID_branch_plant, UUID_leaf_plant, UUID_fruit_plant, params, generator, context);
         }
@@ -332,10 +332,10 @@ uint CanopyGenerator::walnut(const WalnutCanopyParameters &params, const vec3 &o
     uint ID_trunk = addBranch(origin, make_vec3(0, 0, 1), params.trunk_radius, origin + make_vec3(unif_distribution(generator) * 3 * params.trunk_radius, unif_distribution(generator) * 3 * params.trunk_radius, params.trunk_height),
                               make_vec3(0, 0, 0.5 * params.trunk_height), 0.5 * params.trunk_radius, 8, params, generator, context);
 
-    UUID_trunk.push_back(context->getObjectPointer(ID_trunk)->getPrimitiveUUIDs());
+    UUID_trunk.push_back(context->getObjectPrimitiveUUIDs(ID_trunk));
 
-    std::vector<vec3> pos_trunk = context->getTubeObjectPointer(ID_trunk)->getNodes();
-    std::vector<float> rad_trunk = context->getTubeObjectPointer(ID_trunk)->getNodeRadii();
+    std::vector<vec3> pos_trunk = context->getTubeObjectNodes(ID_trunk);
+    std::vector<float> rad_trunk = context->getTubeObjectNodeRadii(ID_trunk);
 
     branchRecursion(pos_trunk, rad_trunk, 1, 3, leaf_prototype, nut_prototype, UUID_branch_plant, UUID_leaf_plant, UUID_fruit_plant.front(), params, generator, context);
 

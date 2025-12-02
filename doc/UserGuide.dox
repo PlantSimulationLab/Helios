@@ -972,12 +972,6 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
 
  \image html images/AlphaMask_leaf.png "Rectangular patch masked by an image with a transparency channel."
 
- <div style="padding:10px;background-color:#FF6666 ;line-height:1.2;">
-  A very important performance note when using texture-masked primitives with transparency: When a texture-masked primitive with transparency is added to the Context, the solid surface area of the primitive is calculated by determining which fraction of pixels are non-transparent. This is a computationally expensive process when the image is high resolution (e.g., millions of pixels).
-
-  If you are adding many identical primitives/objects with transparency, it is better to add it to the Context one time, then copy and translate it as many times as you need. An example of this is given in the code below.
-  </div>
-
  ~~~~~~{.cpp}
   #include "Context.h"
   using namespace helios;
@@ -1180,16 +1174,7 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
   uint objID; //unique identifier to object
   objID = context.addTileObject( center, size, rotation, make_int2(2,2) );
 
-  CompoundObject* object = context.getObjectPointer(objID);
-
-  float area = object->getArea();
- ~~~~~~
-
- or a shorthand would be
-
- ~~~~~~{.cpp}
-  uint objID; //object identifier
-  float area = context.getObjectPointer(objID)->getArea();
+  float area = context.getObjectArea(objID);
  ~~~~~~
 
  The table below gives a list of available Object functions.

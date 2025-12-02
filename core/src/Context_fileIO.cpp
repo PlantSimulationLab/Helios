@@ -966,7 +966,7 @@ void Context::loadOData(pugi::xml_node p, uint ID) {
 void Context::loadOsubPData(pugi::xml_node p, uint ID) {
     assert(doesObjectExist(ID));
 
-    std::vector<uint> prim_UUIDs = getObjectPointer(ID)->getPrimitiveUUIDs();
+    std::vector<uint> prim_UUIDs = getObjectPointer_private(ID)->getPrimitiveUUIDs();
 
     int u;
 
@@ -1863,14 +1863,14 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             ID = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, subdiv, texture_file.c_str());
         }
 
-        getTileObjectPointer(ID)->setTransformationMatrix(transform);
+        getTileObjectPointer_private(ID)->setTransformationMatrix(transform);
 
         setPrimitiveTransformationMatrix(getObjectPrimitiveUUIDs(ID), transform);
 
         // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && !object_prim_UUIDs.empty() && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+            getObjectPointer_private(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
             deletePrimitive(uuids_to_delete);
             // \todo This is fairly inefficient, it would be nice to have a way to do this without having to create and delete a bunch of primitives
         }
@@ -1953,7 +1953,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+            getObjectPointer_private(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
             deletePrimitive(uuids_to_delete);
             //          if( !doesObjectExist(ID) ){ //if the above method deleted all primitives for this object, move on
             //            continue;
@@ -2051,12 +2051,12 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             ID = addTubeObject(subdiv, nodes, radii, texture_file.c_str());
         }
 
-        getObjectPointer(ID)->setTransformationMatrix(transform);
+        getObjectPointer_private(ID)->setTransformationMatrix(transform);
 
         // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+            getObjectPointer_private(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
             deletePrimitive(uuids_to_delete);
             //            if( !doesObjectExist(ID) ){ //if the above method deleted all primitives for this object, move on
             //              continue;
@@ -2141,7 +2141,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+            getObjectPointer_private(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
             deletePrimitive(uuids_to_delete);
             //            if( !doesObjectExist(ID) ){ //if the above method deleted all primitives for this object, move on
             //              continue;
@@ -2226,7 +2226,7 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
         // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+            getObjectPointer_private(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
             deletePrimitive(uuids_to_delete);
             //            if( !doesObjectExist(ID) ){ //if the above method deleted all primitives for this object, move on
             //              continue;
@@ -2313,12 +2313,12 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             ID = addConeObject(subdiv, nodes.at(0), nodes.at(1), radii.at(0), radii.at(1), texture_file.c_str());
         }
 
-        getObjectPointer(ID)->setTransformationMatrix(transform);
+        getObjectPointer_private(ID)->setTransformationMatrix(transform);
 
         // if primitives exist that were assigned to this object, delete all primitives that were just created
         if (objID > 0 && object_prim_UUIDs.find(objID) != object_prim_UUIDs.end()) {
             std::vector<uint> uuids_to_delete = getObjectPrimitiveUUIDs(ID);
-            getObjectPointer(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
+            getObjectPointer_private(ID)->setPrimitiveUUIDs(object_prim_UUIDs.at(objID));
             deletePrimitive(uuids_to_delete);
             //          if( !doesObjectExist(ID) ){ //if the above method deleted all primitives for this object, move on
             //            continue;
@@ -3318,7 +3318,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
         // Tiles
         if (obj->getObjectType() == OBJECT_TYPE_TILE) {
-            Tile *tile = getTileObjectPointer(o);
+            Tile *tile = getTileObjectPointer_private(o);
 
             float transform[16];
             tile->getTransformationMatrix(transform);
@@ -3336,7 +3336,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             // Spheres
         } else if (obj->getObjectType() == OBJECT_TYPE_SPHERE) {
-            Sphere *sphere = getSphereObjectPointer(o);
+            Sphere *sphere = getSphereObjectPointer_private(o);
 
             float transform[16];
             sphere->getTransformationMatrix(transform);
@@ -3354,7 +3354,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             // Tubes
         } else if (obj->getObjectType() == OBJECT_TYPE_TUBE) {
-            Tube *tube = getTubeObjectPointer(o);
+            Tube *tube = getTubeObjectPointer_private(o);
 
             float transform[16];
             tube->getTransformationMatrix(transform);
@@ -3397,7 +3397,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             // Boxes
         } else if (obj->getObjectType() == OBJECT_TYPE_BOX) {
-            Box *box = getBoxObjectPointer(o);
+            Box *box = getBoxObjectPointer_private(o);
 
             float transform[16];
             box->getTransformationMatrix(transform);
@@ -3415,7 +3415,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             // Disks
         } else if (obj->getObjectType() == OBJECT_TYPE_DISK) {
-            Disk *disk = getDiskObjectPointer(o);
+            Disk *disk = getDiskObjectPointer_private(o);
 
             float transform[16];
             disk->getTransformationMatrix(transform);
@@ -3433,7 +3433,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
             // Cones
         } else if (obj->getObjectType() == OBJECT_TYPE_CONE) {
-            Cone *cone = getConeObjectPointer(o);
+            Cone *cone = getConeObjectPointer_private(o);
 
             float transform[16];
             cone->getTransformationMatrix(transform);

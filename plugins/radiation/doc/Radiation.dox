@@ -451,6 +451,16 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  radiationmodel.setDiffuseRadiationFlux("PAR",200.f); //set the flux
  ~~~~~~
 
+ Alternatively, diffuse flux can be computed automatically from a spectral distribution by setting the diffuse spectrum:
+
+ ~~~~~~{.cpp}
+ radiationmodel.setDiffuseSpectrum("solar_spectrum_ASTMG173"); //set diffuse spectrum for all bands
+ ~~~~~~
+
+ This applies the spectrum to all existing radiation bands. For each band, the diffuse flux is computed by integrating the spectrum over the band's wavelength range. If \ref RadiationModel::setDiffuseRadiationFlux() is called for a band, it will override the spectrum-based flux.
+
+ \note For emission-enabled bands (thermal/longwave bands), spectra are not relevant since these bands use thermal emission rather than incoming solar radiation. For such bands, \ref RadiationModel::getDiffuseFlux() returns 0 unless a manual flux is set via \ref RadiationModel::setDiffuseRadiationFlux().
+
  The default is to use 100 diffuse rays per primitive, which can be set to a user-defined value using the following command:
 
  ~~~~~~{.cpp}

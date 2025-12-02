@@ -2589,8 +2589,8 @@ void Phytomer::setLeafScaleFraction(uint petiole_index, float leaf_scale_factor_
         vec3 last_base = petiole_vertices.at(petiole_index).front(); // looping over petioles
         for (uint objID: petiole_objIDs.at(petiole_index)) {
             // looping over cones/segments within petiole
-            context_ptr->getConeObjectPointer(objID)->scaleLength(delta_scale);
-            context_ptr->getConeObjectPointer(objID)->scaleGirth(delta_scale);
+            context_ptr->scaleConeObjectLength(objID, delta_scale);
+            context_ptr->scaleConeObjectGirth(objID, delta_scale);
             petiole_radii.at(petiole_index).at(node) *= delta_scale;
             if (node > 0) {
                 vec3 new_base = context_ptr->getConeObjectNode(objID, 0);

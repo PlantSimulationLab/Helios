@@ -991,7 +991,7 @@ bool Context::areObjectPrimitivesComplete(uint objID) const {
         helios_runtime_error("ERROR (Context::areObjectPrimitivesComplete): Object ID of " + std::to_string(objID) + " does not exist in the context.");
     }
 #endif
-    return getObjectPointer(objID)->arePrimitivesComplete();
+    return getObjectPointer_private(objID)->arePrimitivesComplete();
 }
 
 void Context::cleanDeletedObjectIDs(std::vector<uint> &objIDs) const {
@@ -1028,15 +1028,6 @@ void Context::cleanDeletedObjectIDs(std::vector<std::vector<std::vector<uint>>> 
             }
         }
     }
-}
-
-CompoundObject *Context::getObjectPointer(uint ObjID) const {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    }
-#endif
-    return objects.at(ObjID);
 }
 
 uint Context::getObjectCount() const {
@@ -1105,7 +1096,7 @@ uint Context::copyObject(uint ObjID) {
 
     ObjectType type = objects.at(ObjID)->getObjectType();
 
-    const std::vector<uint> &UUIDs = getObjectPointer(ObjID)->getPrimitiveUUIDs();
+    const std::vector<uint> &UUIDs = getObjectPointer_private(ObjID)->getPrimitiveUUIDs();
 
     const std::vector<uint> &UUIDs_copy = copyPrimitive(UUIDs);
     for (uint p: UUIDs_copy) {
@@ -1115,7 +1106,7 @@ uint Context::copyObject(uint ObjID) {
     const std::string &texturefile = objects.at(ObjID)->getTextureFile();
 
     if (type == OBJECT_TYPE_TILE) {
-        Tile *o = getTileObjectPointer(ObjID);
+        Tile *o = getTileObjectPointer_private(ObjID);
 
         const int2 &subdiv = o->getSubdivisionCount();
 
@@ -1123,7 +1114,7 @@ uint Context::copyObject(uint ObjID) {
 
         objects[currentObjectID] = tile_new;
     } else if (type == OBJECT_TYPE_SPHERE) {
-        Sphere *o = getSphereObjectPointer(ObjID);
+        Sphere *o = getSphereObjectPointer_private(ObjID);
 
         uint subdiv = o->getSubdivisionCount();
 
@@ -1131,7 +1122,7 @@ uint Context::copyObject(uint ObjID) {
 
         objects[currentObjectID] = sphere_new;
     } else if (type == OBJECT_TYPE_TUBE) {
-        Tube *o = getTubeObjectPointer(ObjID);
+        Tube *o = getTubeObjectPointer_private(ObjID);
 
         const std::vector<vec3> &nodes = o->getNodes();
         const std::vector<float> &radius = o->getNodeRadii();
@@ -1143,7 +1134,7 @@ uint Context::copyObject(uint ObjID) {
 
         objects[currentObjectID] = tube_new;
     } else if (type == OBJECT_TYPE_BOX) {
-        Box *o = getBoxObjectPointer(ObjID);
+        Box *o = getBoxObjectPointer_private(ObjID);
 
         const int3 &subdiv = o->getSubdivisionCount();
 
@@ -1151,7 +1142,7 @@ uint Context::copyObject(uint ObjID) {
 
         objects[currentObjectID] = box_new;
     } else if (type == OBJECT_TYPE_DISK) {
-        Disk *o = getDiskObjectPointer(ObjID);
+        Disk *o = getDiskObjectPointer_private(ObjID);
 
         const int2 &subdiv = o->getSubdivisionCount();
 
@@ -1163,7 +1154,7 @@ uint Context::copyObject(uint ObjID) {
 
         objects[currentObjectID] = polymesh_new;
     } else if (type == OBJECT_TYPE_CONE) {
-        Cone *o = getConeObjectPointer(ObjID);
+        Cone *o = getConeObjectPointer_private(ObjID);
 
         const std::vector<vec3> &nodes = o->getNodeCoordinates();
         const std::vector<float> &radius = o->getNodeRadii();
@@ -1177,9 +1168,9 @@ uint Context::copyObject(uint ObjID) {
     copyObjectData(ObjID, currentObjectID);
 
     float T[16];
-    getObjectPointer(ObjID)->getTransformationMatrix(T);
+    getObjectPointer_private(ObjID)->getTransformationMatrix(T);
 
-    getObjectPointer(currentObjectID)->setTransformationMatrix(T);
+    getObjectPointer_private(currentObjectID)->setTransformationMatrix(T);
 
     currentObjectID++;
     return currentObjectID - 1;
@@ -1269,7 +1260,7 @@ void Context::translateObject(uint ObjID, const vec3 &shift) const {
         helios_runtime_error("ERROR (Context::translateObject): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->translate(shift);
+    getObjectPointer_private(ObjID)->translate(shift);
 }
 
 void Context::translateObject(const std::vector<uint> &ObjIDs, const vec3 &shift) const {
@@ -1284,7 +1275,7 @@ void Context::rotateObject(uint ObjID, float rotation_radians, const char *rotat
         helios_runtime_error("ERROR (Context::rotateObject): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->rotate(rotation_radians, rotation_axis_xyz);
+    getObjectPointer_private(ObjID)->rotate(rotation_radians, rotation_axis_xyz);
 }
 
 void Context::rotateObject(const std::vector<uint> &ObjIDs, float rotation_radians, const char *rotation_axis_xyz) const {
@@ -1299,7 +1290,7 @@ void Context::rotateObject(uint ObjID, float rotation_radians, const vec3 &rotat
         helios_runtime_error("ERROR (Context::rotateObject): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->rotate(rotation_radians, rotation_axis_vector);
+    getObjectPointer_private(ObjID)->rotate(rotation_radians, rotation_axis_vector);
 }
 
 void Context::rotateObject(const std::vector<uint> &ObjIDs, float rotation_radians, const vec3 &rotation_axis_vector) const {
@@ -1314,7 +1305,7 @@ void Context::rotateObject(uint ObjID, float rotation_radians, const vec3 &rotat
         helios_runtime_error("ERROR (Context::rotateObject): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->rotate(rotation_radians, rotation_origin, rotation_axis_vector);
+    getObjectPointer_private(ObjID)->rotate(rotation_radians, rotation_origin, rotation_axis_vector);
 }
 
 void Context::rotateObject(const std::vector<uint> &ObjIDs, float rotation_radians, const vec3 &rotation_origin, const vec3 &rotation_axis_vector) const {
@@ -1329,7 +1320,7 @@ void Context::rotateObjectAboutOrigin(uint ObjID, float rotation_radians, const 
         helios_runtime_error("ERROR (Context::rotateObjectAboutOrigin): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->rotate(rotation_radians, objects.at(ObjID)->object_origin, rotation_axis_vector);
+    getObjectPointer_private(ObjID)->rotate(rotation_radians, objects.at(ObjID)->object_origin, rotation_axis_vector);
 }
 
 void Context::rotateObjectAboutOrigin(const std::vector<uint> &ObjIDs, float rotation_radians, const vec3 &rotation_axis_vector) const {
@@ -1344,7 +1335,7 @@ void Context::scaleObject(uint ObjID, const helios::vec3 &scalefact) const {
         helios_runtime_error("ERROR (Context::scaleObject): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->scale(scalefact);
+    getObjectPointer_private(ObjID)->scale(scalefact);
 }
 
 void Context::scaleObject(const std::vector<uint> &ObjIDs, const helios::vec3 &scalefact) const {
@@ -1359,7 +1350,7 @@ void Context::scaleObjectAboutCenter(uint ObjID, const helios::vec3 &scalefact) 
         helios_runtime_error("ERROR (Context::scaleObjectAboutCenter): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->scaleAboutCenter(scalefact);
+    getObjectPointer_private(ObjID)->scaleAboutCenter(scalefact);
 }
 
 void Context::scaleObjectAboutCenter(const std::vector<uint> &ObjIDs, const helios::vec3 &scalefact) const {
@@ -1374,7 +1365,7 @@ void Context::scaleObjectAboutPoint(uint ObjID, const helios::vec3 &scalefact, c
         helios_runtime_error("ERROR (Context::scaleObjectAboutPoint): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->scaleAboutPoint(scalefact, point);
+    getObjectPointer_private(ObjID)->scaleAboutPoint(scalefact, point);
 }
 
 void Context::scaleObjectAboutPoint(const std::vector<uint> &ObjIDs, const helios::vec3 &scalefact, const helios::vec3 &point) const {
@@ -1389,7 +1380,7 @@ void Context::scaleObjectAboutOrigin(uint ObjID, const helios::vec3 &scalefact) 
         helios_runtime_error("ERROR (Context::scaleObjectAboutOrigin): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    getObjectPointer(ObjID)->scaleAboutPoint(scalefact, objects.at(ObjID)->object_origin);
+    getObjectPointer_private(ObjID)->scaleAboutPoint(scalefact, objects.at(ObjID)->object_origin);
 }
 
 void Context::scaleObjectAboutOrigin(const std::vector<uint> &ObjIDs, const helios::vec3 &scalefact) const {
@@ -1417,7 +1408,7 @@ std::vector<uint> Context::getObjectPrimitiveUUIDs(uint ObjID) const {
         return UUIDs;
     }
 
-    return getObjectPointer(ObjID)->getPrimitiveUUIDs();
+    return getObjectPointer_private(ObjID)->getPrimitiveUUIDs();
 }
 
 std::vector<uint> Context::getObjectPrimitiveUUIDs(const std::vector<uint> &ObjIDs) const {
@@ -1446,7 +1437,7 @@ std::vector<uint> Context::getObjectPrimitiveUUIDs(const std::vector<std::vector
             }
 #endif
 
-            const std::vector<uint> &current_UUIDs = getObjectPointer(ObjIDs.at(j).at(i))->getPrimitiveUUIDs();
+            const std::vector<uint> &current_UUIDs = getObjectPointer_private(ObjIDs.at(j).at(i))->getPrimitiveUUIDs();
             output_UUIDs.insert(output_UUIDs.end(), current_UUIDs.begin(), current_UUIDs.end());
         }
     }
@@ -1462,7 +1453,7 @@ helios::ObjectType Context::getObjectType(uint ObjID) const {
         helios_runtime_error("ERROR (Context::getObjectType): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    return getObjectPointer(ObjID)->getObjectType();
+    return getObjectPointer_private(ObjID)->getObjectType();
 }
 
 float Context::getTileObjectAreaRatio(uint ObjID) const {
@@ -1471,22 +1462,22 @@ float Context::getTileObjectAreaRatio(uint ObjID) const {
         helios_runtime_error("ERROR (Context::getTileObjectAreaRatio): Object ID of " + std::to_string(ObjID) + " not found in the context.");
     }
 #endif
-    if (getObjectPointer(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
+    if (getObjectPointer_private(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
         std::cerr << "WARNING (Context::getTileObjectAreaRatio): ObjectID " << ObjID << " is not a tile object. Skipping..." << std::endl;
         return 0.0;
     }
 
-    if (!(getObjectPointer(ObjID)->arePrimitivesComplete())) {
+    if (!(getObjectPointer_private(ObjID)->arePrimitivesComplete())) {
         std::cerr << "WARNING (Context::getTileObjectAreaRatio): ObjectID " << ObjID << " is missing primitives. Area ratio calculated is area of non-missing subpatches divided by the area of an individual subpatch." << std::endl;
     }
 
-    const int2 &subdiv = getTileObjectPointer(ObjID)->getSubdivisionCount();
+    const int2 &subdiv = getTileObjectPointer_private(ObjID)->getSubdivisionCount();
     if (subdiv.x == 1 && subdiv.y == 1) {
         return 1.0;
     }
 
-    float area = getTileObjectPointer(ObjID)->getArea();
-    const vec2 size = getTileObjectPointer(ObjID)->getSize();
+    float area = getTileObjectPointer_private(ObjID)->getArea();
+    const vec2 size = getTileObjectPointer_private(ObjID)->getSize();
 
     float subpatch_area = size.x * size.y / scast<float>(subdiv.x * subdiv.y);
     return area / subpatch_area;
@@ -1517,13 +1508,13 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
 #endif
 
         // check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
-        if (getObjectPointer(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
+        if (getObjectPointer_private(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
             std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << ObjID << " is not a tile object. Skipping..." << std::endl;
-        } else if (!(getObjectPointer(ObjID)->arePrimitivesComplete())) {
+        } else if (!(getObjectPointer_private(ObjID)->arePrimitivesComplete())) {
             std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << ObjID << " is missing primitives. Skipping..." << std::endl;
         } else {
             // test if the tile is textured and push into two different vectors
-            Patch *p = getPatchPointer_private(getObjectPointer(ObjID)->getPrimitiveUUIDs().at(0));
+            Patch *p = getPatchPointer_private(getObjectPointer_private(ObjID)->getPrimitiveUUIDs().at(0));
             if (!p->hasTexture()) { // no texture
                 tile_ObjectIDs.push_back(ObjID);
             } else { // texture
@@ -1535,7 +1526,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
 
     // Here just call setSubdivisionCount directly for the non-textured tile objects
     for (unsigned int tile_ObjectID: tile_ObjectIDs) {
-        Tile *current_object_pointer = getTileObjectPointer(tile_ObjectID);
+        Tile *current_object_pointer = getTileObjectPointer_private(tile_ObjectID);
         const std::vector<uint> &UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
 
         vec2 size = current_object_pointer->getSize();
@@ -1568,7 +1559,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
         // create a template object for the current texture
         uint object_template = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, new_subdiv, tex.at(j).c_str());
         object_templates.emplace_back(object_template);
-        std::vector<uint> object_primitives = getTileObjectPointer(object_template)->getPrimitiveUUIDs();
+        std::vector<uint> object_primitives = getTileObjectPointer_private(object_template)->getPrimitiveUUIDs();
         template_primitives.emplace_back(object_primitives);
     }
 
@@ -1576,7 +1567,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, con
     // for each textured tile object
     for (uint i = 0; i < textured_tile_ObjectIDs.size(); i++) {
         // get info from current object
-        Tile *current_object_pointer = getTileObjectPointer(textured_tile_ObjectIDs.at(i));
+        Tile *current_object_pointer = getTileObjectPointer_private(textured_tile_ObjectIDs.at(i));
         std::string current_texture_file = current_object_pointer->getTextureFile();
 
         std::vector<uint> UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
@@ -1639,13 +1630,13 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
 #endif
 
         // check if the object ID is a tile object and if it is add it the tile_ObjectIDs vector
-        if (getObjectPointer(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
+        if (getObjectPointer_private(ObjID)->getObjectType() != OBJECT_TYPE_TILE) {
             std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << ObjID << " is not a tile object. Skipping..." << std::endl;
-        } else if (!(getObjectPointer(ObjID)->arePrimitivesComplete())) {
+        } else if (!(getObjectPointer_private(ObjID)->arePrimitivesComplete())) {
             std::cerr << "WARNING (Context::setTileObjectSubdivisionCount): ObjectID " << ObjID << " is missing primitives. Skipping..." << std::endl;
         } else {
             // test if the tile is textured and push into two different vectors
-            Patch *p = getPatchPointer_private(getObjectPointer(ObjID)->getPrimitiveUUIDs().at(0));
+            Patch *p = getPatchPointer_private(getObjectPointer_private(ObjID)->getPrimitiveUUIDs().at(0));
             if (!p->hasTexture()) { // no texture
                 tile_ObjectIDs.push_back(ObjID);
             } else { // texture
@@ -1657,7 +1648,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
 
     // Here just call setSubdivisionCount directly for the non-textured tile objects
     for (uint i = 0; i < tile_ObjectIDs.size(); i++) {
-        Tile *current_object_pointer = getTileObjectPointer(tile_ObjectIDs.at(i));
+        Tile *current_object_pointer = getTileObjectPointer_private(tile_ObjectIDs.at(i));
         std::vector<uint> UUIDs_old = current_object_pointer->getPrimitiveUUIDs();
 
         vec2 size = current_object_pointer->getSize();
@@ -1714,7 +1705,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
         uint ii;
         for (uint i = 0; i < textured_tile_ObjectIDs.size(); i++) {
             // get info from current object
-            Tile *current_object_pointer_b = getTileObjectPointer(textured_tile_ObjectIDs.at(i));
+            Tile *current_object_pointer_b = getTileObjectPointer_private(textured_tile_ObjectIDs.at(i));
             std::string current_texture_file_b = current_object_pointer_b->getTextureFile();
             // if the current tile object has the same texture file as the current unique texture file
             if (current_texture_file_b == tex.at(j)) {
@@ -1724,7 +1715,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
         }
 
         // get info from current object
-        Tile *current_object_pointer = getTileObjectPointer(textured_tile_ObjectIDs.at(ii));
+        Tile *current_object_pointer = getTileObjectPointer_private(textured_tile_ObjectIDs.at(ii));
         vec2 tile_size = current_object_pointer->getSize();
         float tile_area = current_object_pointer->getArea();
 
@@ -1748,7 +1739,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
         // create a template object for the current texture
         uint object_template = addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, new_subdiv, tex.at(j).c_str());
         object_templates.emplace_back(object_template);
-        std::vector<uint> object_primitives = getTileObjectPointer(object_template)->getPrimitiveUUIDs();
+        std::vector<uint> object_primitives = getTileObjectPointer_private(object_template)->getPrimitiveUUIDs();
         template_primitives.emplace_back(object_primitives);
     }
 
@@ -1756,7 +1747,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
     // for each textured tile object
     for (uint i = 0; i < textured_tile_ObjectIDs.size(); i++) {
         // get info from current object
-        Tile *current_object_pointer = getTileObjectPointer(textured_tile_ObjectIDs.at(i));
+        Tile *current_object_pointer = getTileObjectPointer_private(textured_tile_ObjectIDs.at(i));
         // std::string current_texture_file = getPrimitivePointer_private(current_object_pointer->getPrimitiveUUIDs().at(0))->getTextureFile();
         std::string current_texture_file = current_object_pointer->getTextureFile();
         // std::cout << "current_texture_file for ObjID " << textured_tile_ObjectIDs.at(i) << " = " << current_texture_file << std::endl;
@@ -1777,7 +1768,7 @@ void Context::setTileObjectSubdivisionCount(const std::vector<uint> &ObjIDs, flo
                 // change the objectID for the new primitives
                 setPrimitiveParentObjectID(new_primitives, textured_tile_ObjectIDs.at(i));
 
-                int2 new_subdiv = getTileObjectPointer(object_templates.at(j))->getSubdivisionCount();
+                int2 new_subdiv = getTileObjectPointer_private(object_templates.at(j))->getSubdivisionCount();
                 current_object_pointer->setPrimitiveUUIDs(new_primitives);
                 current_object_pointer->setSubdivisionCount(new_subdiv);
 
@@ -3135,7 +3126,7 @@ Context::~Context() {
     }
 
     for (auto &[UUID, object]: objects) {
-        delete getObjectPointer(UUID);
+        delete getObjectPointer_private(UUID);
     }
 }
 
@@ -4813,6 +4804,14 @@ float Context::getConeObjectLength(uint ObjID) const {
 
 float Context::getConeObjectVolume(uint ObjID) const {
     return getConeObjectPointer_private(ObjID)->getVolume();
+}
+
+void Context::scaleConeObjectLength(uint ObjID, float scale_factor) {
+    getConeObjectPointer_private(ObjID)->scaleLength(scale_factor);
+}
+
+void Context::scaleConeObjectGirth(uint ObjID, float scale_factor) {
+    getConeObjectPointer_private(ObjID)->scaleGirth(scale_factor);
 }
 
 float Context::getPolymeshObjectVolume(uint ObjID) const {

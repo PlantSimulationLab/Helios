@@ -32,7 +32,63 @@ jobs:
       with:
         submodules: recursive  # Include submodules for doc assets
         fetch-depth: 0  # Fetch full history including tags
-        
+
+    - name: Validate checkout and force tag refresh
+      run: |
+        echo "=== Git Checkout Validation ==="
+
+        # Verify checkout SHA matches the commit that triggered workflow
+        CHECKOUT_SHA=$(git rev-parse HEAD)
+        EXPECTED_SHA="${{ github.sha }}"
+
+        if [ "$CHECKOUT_SHA" != "$EXPECTED_SHA" ]; then
+          echo "ERROR: Checkout SHA mismatch!"
+          echo "  Expected: $EXPECTED_SHA"
+          echo "  Got:      $CHECKOUT_SHA"
+          echo "This indicates a checkout problem - aborting build"
+          exit 1
+        fi
+        echo "✓ Checkout SHA verified: $CHECKOUT_SHA"
+
+        # Force refresh tags with retry logic (handles propagation delays)
+        echo ""
+        echo "=== Forcing Tag Refresh ==="
+        MAX_RETRIES=5
+        RETRY_DELAY=2
+
+        for attempt in $(seq 1 $MAX_RETRIES); do
+          echo "Attempt $attempt/$MAX_RETRIES: Fetching tags..."
+
+          # Force fetch all tags from remote
+          git fetch --tags --force origin
+
+          # Verify we have tags
+          TAG_COUNT=$(git tag | wc -l)
+          if [ "$TAG_COUNT" -gt 0 ]; then
+            echo "✓ Successfully fetched $TAG_COUNT tags"
+            break
+          else
+            echo "  No tags found, retrying..."
+            if [ $attempt -lt $MAX_RETRIES ]; then
+              sleep $RETRY_DELAY
+              RETRY_DELAY=$((RETRY_DELAY * 2))  # Exponential backoff
+            else
+              echo "ERROR: Could not fetch tags after $MAX_RETRIES attempts"
+              exit 1
+            fi
+          fi
+        done
+
+        # Display tags at current HEAD for debugging
+        echo ""
+        echo "=== Tags at HEAD ==="
+        git tag --points-at HEAD || echo "No tags at HEAD"
+
+        # Display recent tags for reference
+        echo ""
+        echo "=== Recent tags ==="
+        git tag --sort=-version:refname | head -n 5
+
     - name: Install system dependencies
       run: |
         sudo apt-get update
@@ -44,15 +100,112 @@ jobs:
         
     - name: Sync version to Doxygen config
       run: |
-        # Get version from git tags (remove 'v' prefix if present)
-        VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "unknown")
-        if [ "$VERSION" = "unknown" ]; then
-          echo "Warning: Could not determine version from git tags, using fallback"
-          VERSION="dev"
+        echo "=== Version Detection and Validation ==="
+
+        # Method 1: Tags at current HEAD
+        HEAD_TAGS=$(git tag --points-at HEAD)
+        echo "Tags at HEAD: ${HEAD_TAGS:-none}"
+
+        # Method 2: Most recent tag
+        LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        echo "Latest tag: ${LATEST_TAG:-none}"
+
+        # Method 3: Describe with ancestry
+        DESCRIBE_TAG=$(git describe --tags 2>/dev/null || echo "")
+        echo "Describe output: ${DESCRIBE_TAG:-none}"
+
+        # Determine version with cross-validation
+        VERSION=""
+
+        # Prefer tags at HEAD (most accurate for tagged commits)
+        if [ -n "$HEAD_TAGS" ]; then
+          # If multiple tags, take the first one
+          VERSION=$(echo "$HEAD_TAGS" | head -n 1 | sed 's/^v//')
+          echo "Using tag at HEAD: $VERSION"
+
+          # Verify it matches latest tag (sanity check)
+          if [ -n "$LATEST_TAG" ] && [ "$HEAD_TAGS" != "$LATEST_TAG" ]; then
+            echo "WARNING: Tag at HEAD differs from latest tag"
+            echo "  HEAD: $HEAD_TAGS"
+            echo "  Latest: $LATEST_TAG"
+            echo "This may indicate force-pushed tags or checkout issues"
+          fi
+        elif [ -n "$LATEST_TAG" ]; then
+          VERSION=$(echo "$LATEST_TAG" | sed 's/^v//')
+          echo "Using latest tag: $VERSION"
+
+          # Check if HEAD is actually tagged commit
+          LATEST_TAG_SHA=$(git rev-list -n 1 "$LATEST_TAG" 2>/dev/null || echo "")
+          HEAD_SHA=$(git rev-parse HEAD)
+
+          if [ "$LATEST_TAG_SHA" != "$HEAD_SHA" ]; then
+            echo "WARNING: Latest tag is not at HEAD"
+            echo "  HEAD SHA: $HEAD_SHA"
+            echo "  Tag SHA: $LATEST_TAG_SHA"
+            echo "This indicates commits after the tag - using tag anyway"
+          fi
+        else
+          echo "ERROR: No tags found in repository"
+          echo "Cannot determine version - this should not happen in production"
+          exit 1
         fi
+
+        # Validate version format (should be X.Y.Z or X.Y.Z-suffix)
+        if ! echo "$VERSION" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$' > /dev/null; then
+          echo "ERROR: Invalid version format: '$VERSION'"
+          echo "Expected format: X.Y.Z or X.Y.Z-suffix"
+          exit 1
+        fi
+
+        echo ""
+        echo "✓ Version validated: $VERSION"
+
+        # Update Doxyfile
         echo "Updating Doxygen PROJECT_NUMBER to: $VERSION"
         sed -i "s/^PROJECT_NUMBER.*$/PROJECT_NUMBER         = $VERSION/" doc/Doxyfile
-        
+
+        # Verify the update worked
+        UPDATED_VERSION=$(grep "^PROJECT_NUMBER" doc/Doxyfile | sed 's/PROJECT_NUMBER.*= //')
+        if [ "$UPDATED_VERSION" = "$VERSION" ]; then
+          echo "✓ Doxyfile updated successfully"
+        else
+          echo "ERROR: Doxyfile update failed"
+          echo "  Expected: $VERSION"
+          echo "  Got: $UPDATED_VERSION"
+          exit 1
+        fi
+
+    - name: Pre-build verification
+      run: |
+        echo "=== Pre-Build Verification ==="
+
+        # Verify Doxyfile has version set
+        PROJECT_NUMBER=$(grep "^PROJECT_NUMBER" doc/Doxyfile | sed 's/PROJECT_NUMBER.*= //')
+        if [ -z "$PROJECT_NUMBER" ]; then
+          echo "ERROR: PROJECT_NUMBER is empty in Doxyfile"
+          echo "Version detection may have failed"
+          exit 1
+        fi
+        echo "✓ PROJECT_NUMBER set to: $PROJECT_NUMBER"
+
+        # Verify git HEAD hasn't changed since checkout
+        CURRENT_SHA=$(git rev-parse HEAD)
+        EXPECTED_SHA="${{ github.sha }}"
+        if [ "$CURRENT_SHA" != "$EXPECTED_SHA" ]; then
+          echo "ERROR: Git HEAD changed during workflow"
+          echo "  Expected: $EXPECTED_SHA"
+          echo "  Current: $CURRENT_SHA"
+          exit 1
+        fi
+        echo "✓ Git HEAD unchanged: $CURRENT_SHA"
+
+        # Display final build context
+        echo ""
+        echo "=== Build Context ==="
+        echo "Commit: $CURRENT_SHA"
+        echo "Version: $PROJECT_NUMBER"
+        echo "Ready to build documentation"
+
     - name: Build documentation
       run: |
         # Build documentation with Doxygen
@@ -66,6 +219,34 @@ jobs:
         # Verify documentation was generated
         ls -la doc/html/
         echo "✓ Documentation built successfully"
+
+    - name: Verify version in generated docs
+      run: |
+        echo "=== Post-Build Version Verification ==="
+
+        # Get version we set in Doxyfile
+        EXPECTED_VERSION=$(grep "^PROJECT_NUMBER" doc/Doxyfile | sed 's/PROJECT_NUMBER.*= //')
+        echo "Expected version: $EXPECTED_VERSION"
+
+        # Check if version appears in generated index.html
+        if [ -f "doc/html/index.html" ]; then
+          # Doxygen puts version in <span id="projectnumber">
+          if grep -q "projectnumber.*$EXPECTED_VERSION" doc/html/index.html; then
+            echo "✓ Version appears in generated documentation"
+          elif grep -q '<span id="projectnumber">&#160;</span>' doc/html/index.html; then
+            echo "WARNING: Version number not rendered (PROJECT_NUMBER may have been ignored)"
+            echo "This is non-fatal but docs won't show version"
+          else
+            echo "WARNING: Could not verify version in generated HTML"
+            echo "This is non-fatal but unexpected"
+          fi
+        else
+          echo "ERROR: doc/html/index.html not found"
+          echo "Doxygen build may have failed"
+          exit 1
+        fi
+
+        echo "✓ Post-build verification complete"
 
     - name: Validate Doxygen artifacts
       run: |
@@ -187,9 +368,13 @@ jobs:
     needs: deploy-docs
 
     steps:
-    - name: Wait for GitHub Pages propagation and verify
-      timeout-minutes: 10
-      continue-on-error: true
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2  # Need to check commit message for force-push detection
+
+    - name: Verify GitHub Pages deployment
+      timeout-minutes: 25  # Increased from 10 to handle force-pushed tags
       id: verify
       run: |
         SITE_URL="${{ needs.deploy-docs.outputs.page_url }}"
@@ -197,73 +382,272 @@ jobs:
         echo "Target URL: $SITE_URL"
         echo ""
 
-        MAX_ATTEMPTS=15
-        RETRY_DELAY=30
-        ATTEMPT=0
+        # ============================================
+        # CONFIGURATION
+        # ============================================
 
-        echo "Note: GitHub Pages CDN propagation typically takes 1-10 minutes"
-        echo "Will retry up to $MAX_ATTEMPTS times with ${RETRY_DELAY}s delays"
+        # Detect force-pushed tags (indicates CDN may need more time)
+        IS_FORCE_PUSH=false
+        COMMIT_MSG=$(git log -1 --pretty=%B)
+        if echo "$COMMIT_MSG" | grep -q -i "force"; then
+          IS_FORCE_PUSH=true
+          echo "Note: Force push detected in commit message"
+        fi
+
+        # Set retry parameters based on deployment type
+        if [ "$IS_FORCE_PUSH" = true ]; then
+          MAX_ATTEMPTS=40        # 20 minutes max for force pushes
+          RETRY_DELAY=30
+          echo "Using extended timeout: $MAX_ATTEMPTS attempts × ${RETRY_DELAY}s = 20 minutes"
+        else
+          MAX_ATTEMPTS=20        # 10 minutes max for normal deployments
+          RETRY_DELAY=30
+          echo "Using standard timeout: $MAX_ATTEMPTS attempts × ${RETRY_DELAY}s = 10 minutes"
+        fi
         echo ""
 
+        # ============================================
+        # VERIFICATION FUNCTIONS
+        # ============================================
+
+        # Check if page is NOT README.md fallback
+        check_not_readme() {
+          local html=$1
+
+          echo "  [1/3] Checking for README.md fallback..."
+
+          # GitHub Pages README.md fallback has specific HTML structure that Doxygen never generates
+          # Look for GitHub-specific elements, not content
+
+          # Check for absence of Doxygen generator meta tag (most reliable)
+          if ! grep -q 'meta name="generator" content="Doxygen' "$html"; then
+            echo "    ERROR: Missing Doxygen generator meta tag"
+            echo "    This likely indicates GitHub Pages is serving README.md fallback"
+
+            # Additional confirmation: Check for GitHub's markdown rendering
+            if grep -q 'github.com' "$html" || grep -q 'class="markdown-body"' "$html"; then
+              echo "    ERROR: Found GitHub markdown rendering indicators"
+              echo "    This confirms GitHub Pages is serving README.md fallback"
+              return 1
+            fi
+
+            # No clear Doxygen markers
+            echo "    ERROR: Page does not appear to be Doxygen-generated"
+            return 1
+          fi
+
+          echo "    ✓ Not README.md fallback (Doxygen generator tag found)"
+          return 0
+        }
+
+        # Check for Doxygen structure
+        check_doxygen_structure() {
+          local html=$1
+
+          echo "  [2/3] Checking Doxygen structure..."
+
+          # Required Doxygen elements (verified to exist in actual Doxygen output)
+          local required_elements=(
+            "navtree.js"              # Navigation tree script
+            "navtreedata.js"          # Navigation tree data
+            "searchdata.js"           # Search index
+            "dynsections.js"          # Dynamic sections
+            "doxygen-awesome"         # Theme CSS
+          )
+
+          local missing=0
+          for element in "${required_elements[@]}"; do
+            if ! grep -q "$element" "$html"; then
+              echo "    ERROR: Missing Doxygen element: $element"
+              missing=$((missing + 1))
+            fi
+          done
+
+          if [ $missing -gt 0 ]; then
+            echo "    ERROR: Missing $missing required Doxygen elements"
+            return 1
+          fi
+
+          # Check for search functionality (non-fatal, informational)
+          if grep -q "searchBox" "$html" || grep -q "MSearchResults" "$html"; then
+            echo "    ✓ Search functionality detected"
+          else
+            echo "    INFO: Search functionality not detected (non-fatal)"
+          fi
+
+          # Check for "Generated by Doxygen" comment
+          if grep -q "Generated by.*Doxygen" "$html"; then
+            echo "    ✓ Doxygen generation marker found"
+          else
+            echo "    WARNING: Doxygen marker not found (non-fatal)"
+          fi
+
+          echo "    ✓ All required Doxygen elements present"
+          return 0
+        }
+
+        # Check content integrity
+        check_content_integrity() {
+          local html=$1
+
+          echo "  [3/3] Checking content integrity..."
+
+          # Verify navigation tree exists (real Doxygen docs have extensive navigation)
+          local nav_count=$(grep -c "navtree" "$html" 2>/dev/null || echo "0")
+          if [ "$nav_count" -ge 3 ]; then
+            echo "    ✓ Navigation tree references: $nav_count"
+          else
+            echo "    ERROR: Insufficient navigation references ($nav_count < 3)"
+            return 1
+          fi
+
+          # Check for search functionality
+          if grep -q 'searchBox' "$html"; then
+            echo "    ✓ Search functionality present"
+          else
+            echo "    WARNING: Search box may not be functional (non-fatal)"
+          fi
+
+          echo "    ✓ Content integrity validated"
+          return 0
+        }
+
+        # Main verification function
+        verify_doxygen_deployment() {
+          local html=$1
+
+          echo ""
+          echo "=== Verifying Deployment Content ==="
+
+          # Three-level verification
+          if ! check_not_readme "$html"; then
+            return 1
+          fi
+
+          if ! check_doxygen_structure "$html"; then
+            return 1
+          fi
+
+          if ! check_content_integrity "$html"; then
+            return 1
+          fi
+
+          echo ""
+          echo "=== All Verification Checks Passed ==="
+          return 0
+        }
+
+        # ============================================
+        # MAIN VERIFICATION LOOP
+        # ============================================
+
+        ATTEMPT=0
         while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
           ATTEMPT=$((ATTEMPT + 1))
-          echo "[$ATTEMPT/$MAX_ATTEMPTS] Checking site accessibility..."
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Attempt $ATTEMPT/$MAX_ATTEMPTS"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-          # Attempt to fetch the site
+          # Fetch site with cache-busting headers
           HTTP_CODE=$(curl -s -o /tmp/page.html -w "%{http_code}" \
                       --connect-timeout 10 \
                       --max-time 30 \
+                      -H "Cache-Control: no-cache" \
+                      -H "Pragma: no-cache" \
                       "$SITE_URL" || echo "000")
 
           case "$HTTP_CODE" in
             200)
-              echo "  OK: Site returned HTTP 200"
+              echo "✓ Site returned HTTP 200"
 
-              # Verify it's actually our documentation
-              if grep -q "doxygen" /tmp/page.html || grep -q "Helios" /tmp/page.html; then
-                echo "  OK: Content verified (Helios documentation detected)"
-
-                # Check for common Doxygen elements
-                if grep -q "search" /tmp/page.html; then
-                  echo "  OK: Search functionality present"
-                fi
-
+              # Run comprehensive verification
+              if verify_doxygen_deployment /tmp/page.html; then
                 echo ""
-                echo "DEPLOYMENT VERIFIED SUCCESSFULLY"
+                echo "╔════════════════════════════════════════╗"
+                echo "║  DEPLOYMENT VERIFIED SUCCESSFULLY      ║"
+                echo "╚════════════════════════════════════════╝"
+                echo ""
+                echo "Documentation is live at: $SITE_URL"
+                echo "Verification completed in attempt $ATTEMPT/$MAX_ATTEMPTS"
                 exit 0
               else
-                echo "  WARNING: Page returned 200 but doesn't appear to be Helios docs"
-                echo "  Continuing retries..."
+                echo ""
+                echo "✗ Verification failed - content checks did not pass"
               fi
               ;;
             404)
-              echo "  Site not found (HTTP 404) - waiting for propagation..."
+              echo "✗ Site not found (HTTP 404) - waiting for propagation..."
               ;;
             000)
-              echo "  Connection failed - waiting for deployment..."
+              echo "✗ Connection failed - waiting for deployment..."
               ;;
             *)
-              echo "  Received HTTP $HTTP_CODE - waiting..."
+              echo "✗ Received HTTP $HTTP_CODE - waiting..."
               ;;
           esac
 
           if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
-            echo "  Waiting ${RETRY_DELAY}s before retry..."
+            echo "⏳ Waiting ${RETRY_DELAY}s before retry..."
             echo ""
             sleep $RETRY_DELAY
           fi
         done
 
+        # ============================================
+        # VERIFICATION FAILED
+        # ============================================
+
         echo ""
-        echo "VERIFICATION FAILED"
-        echo "Site did not become accessible after $MAX_ATTEMPTS attempts"
+        echo "╔════════════════════════════════════════╗"
+        echo "║     VERIFICATION FAILED                ║"
+        echo "╚════════════════════════════════════════╝"
         echo ""
-        echo "This may indicate:"
-        echo "  - Deployment is still propagating (can take up to 20-30 minutes)"
-        echo "  - GitHub Pages service issues"
-        echo "  - Intermittent CDN problems (try re-running the workflow)"
+        echo "Site did not pass verification after $MAX_ATTEMPTS attempts"
+        echo "Total time elapsed: $(($MAX_ATTEMPTS * $RETRY_DELAY / 60)) minutes"
         echo ""
-        echo "Manual verification recommended: $SITE_URL"
+
+        echo "=== Debugging Information ==="
+        echo "Site URL: $SITE_URL"
+        echo "Last HTTP Status: $HTTP_CODE"
+        echo "Force push detected: $IS_FORCE_PUSH"
+        echo "Commit SHA: ${{ github.sha }}"
+        echo ""
+
+        # Analyze what we found
+        if [ -f /tmp/page.html ]; then
+          echo "=== Page Analysis ==="
+          FILE_SIZE=$(wc -c < /tmp/page.html)
+          echo "Page size: $FILE_SIZE bytes"
+
+          if grep -q "Build and Run" /tmp/page.html; then
+            echo "❌ Page is README.md (GitHub Pages fallback)"
+            echo "   This means the deployment artifact was not properly deployed"
+          elif grep -q "Generated by.*Doxygen" /tmp/page.html; then
+            echo "⚠️  Page is Doxygen-generated but missing required elements"
+            echo "   Partial deployment or corrupted artifact"
+          else
+            echo "❓ Page content is unexpected"
+          fi
+          echo ""
+        fi
+
+        echo "=== Possible Causes ==="
+        echo "1. CDN propagation still in progress (can take 20-30 min for force pushes)"
+        echo "2. Deployment artifact corrupted or incomplete"
+        echo "3. .nojekyll file missing (Jekyll filtering underscore files)"
+        echo "4. GitHub Pages configuration issue"
+        echo "5. Intermittent CDN or GitHub Pages service issues"
+        echo ""
+
+        echo "=== Recommended Actions ==="
+        echo "1. Wait 30 minutes and manually verify: $SITE_URL"
+        echo "2. Check 'Build Documentation' job logs for warnings"
+        echo "3. Verify .nojekyll present in build artifacts"
+        echo "4. Check Settings → Pages → Source = 'GitHub Actions'"
+        echo "5. If force push: this is expected, re-run workflow in 30 minutes"
+        echo "6. If not force push: investigate build artifacts"
+        echo ""
+
         exit 1
 
     - name: Report verification result
@@ -272,5 +656,5 @@ jobs:
         if [ "${{ steps.verify.outcome }}" == "success" ]; then
           echo "::notice::Documentation successfully deployed and verified at ${{ needs.deploy-docs.outputs.page_url }}"
         else
-          echo "::warning::Deployment verification failed or timed out. Site may still be propagating. Manual check: ${{ needs.deploy-docs.outputs.page_url }}"
+          echo "::error::Deployment verification failed after extended retry period. See verification step logs for detailed diagnosis. Manual verification recommended: ${{ needs.deploy-docs.outputs.page_url }}"
         fi

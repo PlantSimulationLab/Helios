@@ -533,7 +533,7 @@ TEST_CASE("Object Management") {
 
         uint objID;
         DOCTEST_CHECK_NOTHROW(objID = context_test.addBoxObject(center, size, subdiv));
-        std::vector<uint> UUIDs = context_test.getObjectPointer(objID)->getPrimitiveUUIDs();
+        std::vector<uint> UUIDs = context_test.getObjectPrimitiveUUIDs(objID);
 
         DOCTEST_CHECK(UUIDs.size() == 6);
         vec3 normal_r = context_test.getPrimitiveNormal(UUIDs.at(0));
@@ -561,7 +561,7 @@ TEST_CASE("Object Management") {
         SphericalCoord rotation = make_SphericalCoord(0.25f * PI_F, 1.4f * PI_F);
         uint objID = context_test.addTileObject(center, size, rotation, subdiv);
 
-        std::vector<uint> UUIDs = context_test.getObjectPointer(objID)->getPrimitiveUUIDs();
+        std::vector<uint> UUIDs = context_test.getObjectPrimitiveUUIDs(objID);
         for (uint UUIDp: UUIDs) {
             vec3 n = context_test.getPrimitiveNormal(UUIDp);
             SphericalCoord rot = cart2sphere(n);
@@ -578,7 +578,7 @@ TEST_CASE("Object Management") {
         SphericalCoord rotation = make_SphericalCoord(0.1f * PI_F, 2.4f * PI_F);
 
         uint objID = context_test.addTileObject(center, size, rotation, subdiv, "lib/images/disk_texture.png");
-        std::vector<uint> UUIDs = context_test.getObjectPointer(objID)->getPrimitiveUUIDs();
+        std::vector<uint> UUIDs = context_test.getObjectPrimitiveUUIDs(objID);
         float area_sum = 0.f;
         for (uint UUID: UUIDs) {
             area_sum += context_test.getPrimitiveArea(UUID);
@@ -592,22 +592,22 @@ TEST_CASE("Object Management") {
         vec3 node0 = make_vec3(0, 0, 0);
         vec3 node1 = make_vec3(0, 0, len);
         uint cone = context_test.addConeObject(50, node0, node1, r0, r1);
-        context_test.getConeObjectPointer(cone)->translate(make_vec3(1, 1, 1));
-        std::vector<vec3> nodes = context_test.getConeObjectPointer(cone)->getNodeCoordinates();
+        context_test.translateObject(cone, make_vec3(1, 1, 1));
+        std::vector<vec3> nodes = context_test.getConeObjectNodes(cone);
         DOCTEST_CHECK(nodes.at(0) == make_vec3(1, 1, 1));
         DOCTEST_CHECK(nodes.at(1) == make_vec3(1, 1, 1 + len));
         vec3 axis = cross(make_vec3(0, 0, 1), make_vec3(1, 0, 0));
         float ang = acos_safe(make_vec3(1, 0, 0) * make_vec3(0, 0, 1));
-        context_test.getConeObjectPointer(cone)->translate(-nodes.at(0));
-        context_test.getConeObjectPointer(cone)->rotate(ang, axis);
-        context_test.getConeObjectPointer(cone)->translate(nodes.at(0));
-        nodes = context_test.getConeObjectPointer(cone)->getNodeCoordinates();
+        context_test.translateObject(cone, -nodes.at(0));
+        context_test.rotateObject(cone, ang, axis);
+        context_test.translateObject(cone, nodes.at(0));
+        nodes = context_test.getConeObjectNodes(cone);
         DOCTEST_CHECK(nodes.at(1).x == doctest::Approx(nodes.at(0).x + len).epsilon(errtol));
-        context_test.getConeObjectPointer(cone)->scaleLength(2.0);
-        nodes = context_test.getConeObjectPointer(cone)->getNodeCoordinates();
+        context_test.scaleConeObjectLength(cone, 2.0);
+        nodes = context_test.getConeObjectNodes(cone);
         DOCTEST_CHECK(nodes.at(1).x == doctest::Approx(nodes.at(0).x + 2 * len).epsilon(errtol));
-        context_test.getConeObjectPointer(cone)->scaleGirth(2.0);
-        std::vector<float> radii = context_test.getConeObjectPointer(cone)->getNodeRadii();
+        context_test.scaleConeObjectGirth(cone, 2.0);
+        std::vector<float> radii = context_test.getConeObjectNodeRadii(cone);
         DOCTEST_CHECK(radii.at(0) == doctest::Approx(2 * r0).epsilon(errtol));
         DOCTEST_CHECK(radii.at(1) == doctest::Approx(2 * r1).epsilon(errtol));
     }
@@ -832,14 +832,14 @@ TEST_CASE("Data and Object Management") {
     SUBCASE("Object creation and manipulation") {
         Context ctx;
         uint disk = ctx.addDiskObject(10, make_vec3(0, 0, 0), make_vec2(1, 1));
-        DOCTEST_CHECK(ctx.getDiskObjectPointer(disk)->getObjectType() == OBJECT_TYPE_DISK);
+        DOCTEST_CHECK(ctx.getObjectType(disk) == OBJECT_TYPE_DISK);
         DOCTEST_CHECK(ctx.getObjectArea(disk) > 0);
         DOCTEST_CHECK(ctx.getDiskObjectCenter(disk) == make_vec3(0, 0, 0));
         DOCTEST_CHECK(ctx.getDiskObjectSubdivisionCount(disk) == 10);
         DOCTEST_CHECK(ctx.getDiskObjectSize(disk).x == doctest::Approx(1.f));
 
         uint sphere = ctx.addSphereObject(10, make_vec3(1, 1, 1), 0.5f);
-        DOCTEST_CHECK(ctx.getSphereObjectPointer(sphere)->getObjectType() == OBJECT_TYPE_SPHERE);
+        DOCTEST_CHECK(ctx.getObjectType(sphere) == OBJECT_TYPE_SPHERE);
         DOCTEST_CHECK(ctx.getObjectArea(sphere) > 0);
         DOCTEST_CHECK(ctx.getSphereObjectCenter(sphere) == make_vec3(1, 1, 1));
         DOCTEST_CHECK(ctx.getSphereObjectSubdivisionCount(sphere) == 10);
@@ -848,14 +848,14 @@ TEST_CASE("Data and Object Management") {
         std::vector<uint> p_uuids;
         p_uuids.push_back(ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0)));
         uint polymesh = ctx.addPolymeshObject(p_uuids);
-        DOCTEST_CHECK(ctx.getPolymeshObjectPointer(polymesh)->getObjectType() == OBJECT_TYPE_POLYMESH);
+        DOCTEST_CHECK(ctx.getObjectType(polymesh) == OBJECT_TYPE_POLYMESH);
         DOCTEST_CHECK(ctx.getObjectArea(polymesh) > 0);
         DOCTEST_CHECK(ctx.getObjectCenter(polymesh).z == doctest::Approx(0.f));
 
         std::vector<vec3> nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1)};
         std::vector<float> radii = {0.2f, 0.1f};
         uint tube = ctx.addTubeObject(10, nodes, radii);
-        DOCTEST_CHECK(ctx.getTubeObjectPointer(tube)->getObjectType() == OBJECT_TYPE_TUBE);
+        DOCTEST_CHECK(ctx.getObjectType(tube) == OBJECT_TYPE_TUBE);
         DOCTEST_CHECK(ctx.getObjectArea(tube) > 0);
         DOCTEST_CHECK(ctx.getObjectCenter(tube).z == doctest::Approx(0.5f));
         DOCTEST_CHECK(ctx.getTubeObjectSubdivisionCount(tube) == 10);
@@ -918,35 +918,29 @@ TEST_CASE("Object Management: Creation and Properties") {
         Context ctx;
         uint objID = ctx.addSphereObject(10, make_vec3(1, 2, 3), 5.f);
         DOCTEST_CHECK(ctx.doesObjectExist(objID));
-        Sphere *sphere = ctx.getSphereObjectPointer(objID);
-        DOCTEST_CHECK(sphere != nullptr);
-        DOCTEST_CHECK(sphere->getCenter() == make_vec3(1, 2, 3));
-        DOCTEST_CHECK(sphere->getRadius() == make_vec3(5.f, 5.f, 5.f));
-        DOCTEST_CHECK(sphere->getSubdivisionCount() == 10);
+        DOCTEST_CHECK(ctx.getSphereObjectCenter(objID) == make_vec3(1, 2, 3));
+        DOCTEST_CHECK(ctx.getSphereObjectRadius(objID) == make_vec3(5.f, 5.f, 5.f));
+        DOCTEST_CHECK(ctx.getSphereObjectSubdivisionCount(objID) == 10);
     }
 
     SUBCASE("addDiskObject") {
         Context ctx;
         uint objID = ctx.addDiskObject(make_int2(8, 16), make_vec3(1, 2, 3), make_vec2(4, 5), nullrotation, RGB::red);
         DOCTEST_CHECK(ctx.doesObjectExist(objID));
-        Disk *disk = ctx.getDiskObjectPointer(objID);
-        DOCTEST_CHECK(disk != nullptr);
-        DOCTEST_CHECK(disk->getCenter() == make_vec3(1, 2, 3));
-        DOCTEST_CHECK(disk->getSize() == make_vec2(4, 5));
-        DOCTEST_CHECK(disk->getSubdivisionCount() == make_int2(8, 16));
+        DOCTEST_CHECK(ctx.getDiskObjectCenter(objID) == make_vec3(1, 2, 3));
+        DOCTEST_CHECK(ctx.getDiskObjectSize(objID) == make_vec2(4, 5));
+        DOCTEST_CHECK(ctx.getDiskObjectSubdivisionCount(objID) == 8u);
     }
 
     SUBCASE("addConeObject") {
         Context ctx;
         uint objID = ctx.addConeObject(10, make_vec3(0, 0, 0), make_vec3(0, 0, 5), 2.f, 1.f);
         DOCTEST_CHECK(ctx.doesObjectExist(objID));
-        Cone *cone = ctx.getConeObjectPointer(objID);
-        DOCTEST_CHECK(cone != nullptr);
-        DOCTEST_CHECK(cone->getNodeCoordinate(0) == make_vec3(0, 0, 0));
-        DOCTEST_CHECK(cone->getNodeCoordinate(1) == make_vec3(0, 0, 5));
-        DOCTEST_CHECK(cone->getNodeRadius(0) == 2.f);
-        DOCTEST_CHECK(cone->getNodeRadius(1) == 1.f);
-        DOCTEST_CHECK(cone->getSubdivisionCount() == 10);
+        DOCTEST_CHECK(ctx.getConeObjectNode(objID, 0) == make_vec3(0, 0, 0));
+        DOCTEST_CHECK(ctx.getConeObjectNode(objID, 1) == make_vec3(0, 0, 5));
+        DOCTEST_CHECK(ctx.getConeObjectNodeRadius(objID, 0) == 2.f);
+        DOCTEST_CHECK(ctx.getConeObjectNodeRadius(objID, 1) == 1.f);
+        DOCTEST_CHECK(ctx.getConeObjectSubdivisionCount(objID) == 10);
     }
 }
 
@@ -1318,8 +1312,7 @@ TEST_CASE("UUID and Object Management") {
         ctx.cleanDeletedObjectIDs(triple_nested_obj);
         DOCTEST_CHECK(triple_nested_obj[0][0].size() == 1);
 
-        Box *box_ptr = ctx.getBoxObjectPointer(obj);
-        DOCTEST_CHECK(box_ptr != nullptr);
+        DOCTEST_CHECK(ctx.doesObjectExist(obj));
 
         vec3 new_origin = make_vec3(5, 5, 5);
         ctx.setObjectOrigin(obj, new_origin);
@@ -1588,31 +1581,25 @@ TEST_CASE("Object Pointer Access") {
         Context ctx;
 
         uint box = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
-        Box *box_ptr = ctx.getBoxObjectPointer(box);
-        DOCTEST_CHECK(box_ptr != nullptr);
+        DOCTEST_CHECK(ctx.doesObjectExist(box));
 
         uint disk = ctx.addDiskObject(10, make_vec3(0, 0, 0), make_vec2(1, 1));
-        Disk *disk_ptr = ctx.getDiskObjectPointer(disk);
-        DOCTEST_CHECK(disk_ptr != nullptr);
+        DOCTEST_CHECK(ctx.doesObjectExist(disk));
 
         uint sphere = ctx.addSphereObject(10, make_vec3(0, 0, 0), 1.f);
-        Sphere *sphere_ptr = ctx.getSphereObjectPointer(sphere);
-        DOCTEST_CHECK(sphere_ptr != nullptr);
+        DOCTEST_CHECK(ctx.doesObjectExist(sphere));
 
         std::vector<vec3> nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1)};
         std::vector<float> radii = {0.2f, 0.1f};
         uint tube = ctx.addTubeObject(10, nodes, radii);
-        Tube *tube_ptr = ctx.getTubeObjectPointer(tube);
-        DOCTEST_CHECK(tube_ptr != nullptr);
+        DOCTEST_CHECK(ctx.doesObjectExist(tube));
 
         uint cone = ctx.addConeObject(10, make_vec3(0, 0, 0), make_vec3(0, 0, 1), 0.5f, 0.3f);
-        Cone *cone_ptr = ctx.getConeObjectPointer(cone);
-        DOCTEST_CHECK(cone_ptr != nullptr);
+        DOCTEST_CHECK(ctx.doesObjectExist(cone));
 
         std::vector<uint> prim_uuids = {ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0))};
         uint polymesh = ctx.addPolymeshObject(prim_uuids);
-        Polymesh *polymesh_ptr = ctx.getPolymeshObjectPointer(polymesh);
-        DOCTEST_CHECK(polymesh_ptr != nullptr);
+        DOCTEST_CHECK(ctx.doesObjectExist(polymesh));
     }
 }
 
