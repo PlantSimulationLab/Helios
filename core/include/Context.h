@@ -148,6 +148,10 @@ namespace helios {
             Value of 0 means one-sided (absorb/emit from front face only). */
         uint twosided_flag;
 
+        //! Reference count - number of primitives currently using this material
+        /** Used for efficient copy-on-write material sharing */
+        mutable uint reference_count;
+
         //! Material primitive data storage - type registry
         std::map<std::string, HeliosDataType> material_data_types;
         //! Material primitive data storage - integer data
@@ -176,11 +180,13 @@ namespace helios {
         std::map<std::string, std::vector<bool>> material_data_bool;
 
         //! Default constructor
-        Material() : materialID(0), label(""), color(make_RGBAcolor(0, 0, 0, 1)), texture_file(""), texture_color_overridden(false), twosided_flag(1) {}
+        Material() : materialID(0), label(""), color(make_RGBAcolor(0, 0, 0, 1)), texture_file(""), texture_color_overridden(false), twosided_flag(1), reference_count(0) {
+        }
 
         //! Constructor with parameters
-        Material(uint ID, const std::string &lbl, const RGBAcolor &c, const std::string &tex, bool override, uint twosided = 1)
-            : materialID(ID), label(lbl), color(c), texture_file(tex), texture_color_overridden(override), twosided_flag(twosided) {}
+        Material(uint ID, const std::string &lbl, const RGBAcolor &c, const std::string &tex, bool override, uint twosided = 1) :
+            materialID(ID), label(lbl), color(c), texture_file(tex), texture_color_overridden(override), twosided_flag(twosided), reference_count(0) {
+        }
 
         //-------- Material Data Methods ---------- //
 
@@ -549,7 +555,7 @@ namespace helios {
         std::vector<std::string> listMaterialData() const {
             std::vector<std::string> data_labels;
             data_labels.reserve(material_data_types.size());
-            for (const auto &data : material_data_types) {
+            for (const auto &data: material_data_types) {
                 data_labels.push_back(data.first);
             }
             return data_labels;
@@ -2472,7 +2478,7 @@ namespace helios {
      * be initialized via a call to initializeContext(), after which geometry and models can be added and simulated.
      */
     class Context {
-        friend class Primitive;  // Allow Primitive methods to access private material data
+        friend class Primitive; // Allow Primitive methods to access private material data
 
     private:
         //---------- PRIMITIVE/OBJECT HELIOS::VECTORS ----------------//
@@ -2608,7 +2614,7 @@ namespace helios {
         //------------ MATERIALS ----------------//
 
         //! Reserved label for the default material
-        static constexpr const char* DEFAULT_MATERIAL_LABEL = "__default__";
+        static constexpr const char *DEFAULT_MATERIAL_LABEL = "__default__";
 
         //! Map containing all materials indexed by material ID
         std::map<uint, Material> materials;
@@ -2631,6 +2637,12 @@ namespace helios {
 
         //! Generate material label from properties for automatic de-duplication
         std::string generateMaterialLabel(const RGBAcolor &color, const std::string &texture, bool texture_override) const;
+
+        //! Check if a material is shared by multiple primitives
+        bool isMaterialShared(uint materialID) const;
+
+        //! Create a copy of a material for a specific primitive (copy-on-write)
+        uint copyMaterialForPrimitive(uint primitiveUUID);
 
         //----------- GLOBAL DATA -------------//
 
@@ -4418,9 +4430,7 @@ namespace helios {
             }
             // If neither has the data, throw error
             else {
-                helios_runtime_error("ERROR (Context::getDataWithMaterialFallback): Data " + std::string(data_label) +
-                                   " does not exist for primitive " + std::to_string(UUID) +
-                                   " (neither in its material nor as primitive data).");
+                helios_runtime_error("ERROR (Context::getDataWithMaterialFallback): Data " + std::string(data_label) + " does not exist for primitive " + std::to_string(UUID) + " (neither in its material nor as primitive data).");
             }
         }
 
@@ -4436,7 +4446,7 @@ namespace helios {
          * \param[in] materialID Unique identifier of the material
          * \return Constant reference to the Material struct
          */
-        [[nodiscard]] const Material& getMaterial(uint materialID) const;
+        [[nodiscard]] const Material &getMaterial(uint materialID) const;
 
         //! Get material ID from material label
         /**

@@ -67,6 +67,8 @@ uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoor
     } else {
         patch_new->materialID = getMaterialIDFromLabel(mat_label);
     }
+    // Increment material reference count
+    materials[patch_new->materialID].reference_count++;
 
     currentUUID++;
     invalidateAllUUIDsCache();
@@ -109,6 +111,8 @@ uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoor
     } else {
         patch_new->materialID = getMaterialIDFromLabel(mat_label);
     }
+    // Increment material reference count
+    materials[patch_new->materialID].reference_count++;
 
     currentUUID++;
     invalidateAllUUIDsCache();
@@ -159,6 +163,8 @@ uint Context::addPatch(const vec3 &center, const vec2 &size, const SphericalCoor
     } else {
         patch_new->materialID = getMaterialIDFromLabel(mat_label);
     }
+    // Increment material reference count
+    materials[patch_new->materialID].reference_count++;
 
     currentUUID++;
     invalidateAllUUIDsCache();
@@ -194,6 +200,8 @@ uint Context::addTriangle(const vec3 &vertex0, const vec3 &vertex1, const vec3 &
     } else {
         tri_new->materialID = getMaterialIDFromLabel(mat_label);
     }
+    // Increment material reference count
+    materials[tri_new->materialID].reference_count++;
 
     currentUUID++;
     invalidateAllUUIDsCache();
@@ -225,6 +233,8 @@ uint Context::addTriangle(const helios::vec3 &vertex0, const helios::vec3 &verte
     } else {
         tri_new->materialID = getMaterialIDFromLabel(mat_label);
     }
+    // Increment material reference count
+    materials[tri_new->materialID].reference_count++;
 
     currentUUID++;
     invalidateAllUUIDsCache();
@@ -270,6 +280,8 @@ uint Context::addVoxel(const vec3 &center, const vec3 &size, const float &rotati
     } else {
         voxel_new->materialID = getMaterialIDFromLabel(mat_label);
     }
+    // Increment material reference count
+    materials[voxel_new->materialID].reference_count++;
 
     currentUUID++;
     invalidateAllUUIDsCache();
@@ -551,6 +563,9 @@ void Context::deletePrimitive(uint UUID) {
         }
     }
 
+    // Decrement material reference count before deleting primitive
+    materials[prim->materialID].reference_count--;
+
     delete prim;
     primitives.erase(UUID);
     dirty_deleted_primitives.push_back(UUID);
@@ -635,6 +650,8 @@ uint Context::copyPrimitive(uint UUID) {
     Primitive *new_prim = getPrimitivePointer_private(currentUUID);
     new_prim->context_ptr = this;
     new_prim->materialID = primitives.at(UUID)->materialID;
+    // Increment material reference count (another primitive now uses this material)
+    materials[new_prim->materialID].reference_count++;
 
     copyPrimitiveData(UUID, currentUUID);
 
@@ -936,7 +953,10 @@ void Primitive::setColor(const helios::RGBcolor &newcolor) {
     if (context_ptr == nullptr) {
         helios_runtime_error("ERROR (Primitive::setColor): Primitive not associated with a Context. Use Context::setPrimitiveColor() instead.");
     }
-    // Directly modify the material's color
+    // Copy-on-write: create new material if shared
+    if (context_ptr->isMaterialShared(materialID)) {
+        materialID = context_ptr->copyMaterialForPrimitive(UUID);
+    }
     context_ptr->materials.at(materialID).color = make_RGBAcolor(newcolor, 1.f);
     dirty_flag = true;
 }
@@ -945,7 +965,10 @@ void Primitive::setColor(const helios::RGBAcolor &newcolor) {
     if (context_ptr == nullptr) {
         helios_runtime_error("ERROR (Primitive::setColor): Primitive not associated with a Context. Use Context::setPrimitiveColor() instead.");
     }
-    // Directly modify the material's color
+    // Copy-on-write: create new material if shared
+    if (context_ptr->isMaterialShared(materialID)) {
+        materialID = context_ptr->copyMaterialForPrimitive(UUID);
+    }
     context_ptr->materials.at(materialID).color = newcolor;
     dirty_flag = true;
 }
@@ -970,7 +993,10 @@ void Primitive::setTextureFile(const char *texture) {
     if (context_ptr == nullptr) {
         helios_runtime_error("ERROR (Primitive::setTextureFile): Primitive not associated with a Context. Use Context::setPrimitiveTextureFile() instead.");
     }
-    // Directly modify the material's texture
+    // Copy-on-write: create new material if shared
+    if (context_ptr->isMaterialShared(materialID)) {
+        materialID = context_ptr->copyMaterialForPrimitive(UUID);
+    }
     context_ptr->materials.at(materialID).texture_file = texture;
     dirty_flag = true;
 }
@@ -988,7 +1014,10 @@ void Primitive::overrideTextureColor() {
     if (context_ptr == nullptr) {
         helios_runtime_error("ERROR (Primitive::overrideTextureColor): Primitive not associated with a Context. Use Context::overridePrimitiveTextureColor() instead.");
     }
-    // Directly modify the material's texture color override flag
+    // Copy-on-write: create new material if shared
+    if (context_ptr->isMaterialShared(materialID)) {
+        materialID = context_ptr->copyMaterialForPrimitive(UUID);
+    }
     context_ptr->materials.at(materialID).texture_color_overridden = true;
     dirty_flag = true;
 }
@@ -997,7 +1026,10 @@ void Primitive::useTextureColor() {
     if (context_ptr == nullptr) {
         helios_runtime_error("ERROR (Primitive::useTextureColor): Primitive not associated with a Context. Use Context::usePrimitiveTextureColor() instead.");
     }
-    // Directly modify the material's texture color override flag
+    // Copy-on-write: create new material if shared
+    if (context_ptr->isMaterialShared(materialID)) {
+        materialID = context_ptr->copyMaterialForPrimitive(UUID);
+    }
     context_ptr->materials.at(materialID).texture_color_overridden = false;
     dirty_flag = true;
 }

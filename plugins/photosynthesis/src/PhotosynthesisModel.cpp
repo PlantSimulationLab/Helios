@@ -21,37 +21,37 @@ using namespace helios;
 
 namespace {
     // Material data labels for Empirical model
-    constexpr const char* LABEL_EMP_Tref = "photo_emp_Tref";
-    constexpr const char* LABEL_EMP_Ci_ref = "photo_emp_Ci_ref";
-    constexpr const char* LABEL_EMP_Asat = "photo_emp_Asat";
-    constexpr const char* LABEL_EMP_theta = "photo_emp_theta";
-    constexpr const char* LABEL_EMP_Tmin = "photo_emp_Tmin";
-    constexpr const char* LABEL_EMP_Topt = "photo_emp_Topt";
-    constexpr const char* LABEL_EMP_q = "photo_emp_q";
-    constexpr const char* LABEL_EMP_R = "photo_emp_R";
-    constexpr const char* LABEL_EMP_ER = "photo_emp_ER";
-    constexpr const char* LABEL_EMP_kC = "photo_emp_kC";
+    constexpr const char *LABEL_EMP_Tref = "photo_emp_Tref";
+    constexpr const char *LABEL_EMP_Ci_ref = "photo_emp_Ci_ref";
+    constexpr const char *LABEL_EMP_Asat = "photo_emp_Asat";
+    constexpr const char *LABEL_EMP_theta = "photo_emp_theta";
+    constexpr const char *LABEL_EMP_Tmin = "photo_emp_Tmin";
+    constexpr const char *LABEL_EMP_Topt = "photo_emp_Topt";
+    constexpr const char *LABEL_EMP_q = "photo_emp_q";
+    constexpr const char *LABEL_EMP_R = "photo_emp_R";
+    constexpr const char *LABEL_EMP_ER = "photo_emp_ER";
+    constexpr const char *LABEL_EMP_kC = "photo_emp_kC";
 
     // Material data labels for Farquhar model
-    constexpr const char* LABEL_FQ_Vcmax = "photo_fq_Vcmax";
-    constexpr const char* LABEL_FQ_Jmax = "photo_fq_Jmax";
-    constexpr const char* LABEL_FQ_Rd = "photo_fq_Rd";
-    constexpr const char* LABEL_FQ_alpha = "photo_fq_alpha";
-    constexpr const char* LABEL_FQ_O = "photo_fq_O";
-    constexpr const char* LABEL_FQ_TPU_flag = "photo_fq_TPU_flag";
-    constexpr const char* LABEL_FQ_c_Rd = "photo_fq_c_Rd";
-    constexpr const char* LABEL_FQ_c_Vcmax = "photo_fq_c_Vcmax";
-    constexpr const char* LABEL_FQ_c_Jmax = "photo_fq_c_Jmax";
-    constexpr const char* LABEL_FQ_c_Gamma = "photo_fq_c_Gamma";
-    constexpr const char* LABEL_FQ_c_Kc = "photo_fq_c_Kc";
-    constexpr const char* LABEL_FQ_c_Ko = "photo_fq_c_Ko";
-    constexpr const char* LABEL_FQ_dH_Rd = "photo_fq_dH_Rd";
-    constexpr const char* LABEL_FQ_dH_Vcmax = "photo_fq_dH_Vcmax";
-    constexpr const char* LABEL_FQ_dH_Jmax = "photo_fq_dH_Jmax";
-    constexpr const char* LABEL_FQ_dH_Gamma = "photo_fq_dH_Gamma";
-    constexpr const char* LABEL_FQ_dH_Kc = "photo_fq_dH_Kc";
-    constexpr const char* LABEL_FQ_dH_Ko = "photo_fq_dH_Ko";
-}
+    constexpr const char *LABEL_FQ_Vcmax = "photo_fq_Vcmax";
+    constexpr const char *LABEL_FQ_Jmax = "photo_fq_Jmax";
+    constexpr const char *LABEL_FQ_Rd = "photo_fq_Rd";
+    constexpr const char *LABEL_FQ_alpha = "photo_fq_alpha";
+    constexpr const char *LABEL_FQ_O = "photo_fq_O";
+    constexpr const char *LABEL_FQ_TPU_flag = "photo_fq_TPU_flag";
+    constexpr const char *LABEL_FQ_c_Rd = "photo_fq_c_Rd";
+    constexpr const char *LABEL_FQ_c_Vcmax = "photo_fq_c_Vcmax";
+    constexpr const char *LABEL_FQ_c_Jmax = "photo_fq_c_Jmax";
+    constexpr const char *LABEL_FQ_c_Gamma = "photo_fq_c_Gamma";
+    constexpr const char *LABEL_FQ_c_Kc = "photo_fq_c_Kc";
+    constexpr const char *LABEL_FQ_c_Ko = "photo_fq_c_Ko";
+    constexpr const char *LABEL_FQ_dH_Rd = "photo_fq_dH_Rd";
+    constexpr const char *LABEL_FQ_dH_Vcmax = "photo_fq_dH_Vcmax";
+    constexpr const char *LABEL_FQ_dH_Jmax = "photo_fq_dH_Jmax";
+    constexpr const char *LABEL_FQ_dH_Gamma = "photo_fq_dH_Gamma";
+    constexpr const char *LABEL_FQ_dH_Kc = "photo_fq_dH_Kc";
+    constexpr const char *LABEL_FQ_dH_Ko = "photo_fq_dH_Ko";
+} // namespace
 
 PhotosynthesisModel::PhotosynthesisModel(helios::Context *a_context) {
     context = a_context;
@@ -153,10 +153,10 @@ void PhotosynthesisModel::setModelCoefficients(const std::string &material_label
 
 void PhotosynthesisModel::setModelCoefficients(const std::string &material_label, const FarquharModelCoefficients &coeffs) {
     // Get temperature response parameters
-    PhotosyntheticTemperatureResponseParameters vcmax_resp = const_cast<FarquharModelCoefficients&>(coeffs).getVcmaxTempResponse();
-    PhotosyntheticTemperatureResponseParameters jmax_resp = const_cast<FarquharModelCoefficients&>(coeffs).getJmaxTempResponse();
-    PhotosyntheticTemperatureResponseParameters rd_resp = const_cast<FarquharModelCoefficients&>(coeffs).getRdTempResponse();
-    PhotosyntheticTemperatureResponseParameters alpha_resp = const_cast<FarquharModelCoefficients&>(coeffs).getQuantumEfficiencyTempResponse();
+    PhotosyntheticTemperatureResponseParameters vcmax_resp = const_cast<FarquharModelCoefficients &>(coeffs).getVcmaxTempResponse();
+    PhotosyntheticTemperatureResponseParameters jmax_resp = const_cast<FarquharModelCoefficients &>(coeffs).getJmaxTempResponse();
+    PhotosyntheticTemperatureResponseParameters rd_resp = const_cast<FarquharModelCoefficients &>(coeffs).getRdTempResponse();
+    PhotosyntheticTemperatureResponseParameters alpha_resp = const_cast<FarquharModelCoefficients &>(coeffs).getQuantumEfficiencyTempResponse();
 
     // Serialize temperature response parameters for Vcmax
     context->setMaterialData(material_label, LABEL_FQ_Vcmax, vcmax_resp.value_at_25C);
@@ -331,16 +331,8 @@ EmpiricalModelCoefficients PhotosynthesisModel::getCoefficientsForPrimitive_Empi
 
     try {
         const Material &mat = context->getMaterial(materialID);
-        if (mat.doesMaterialDataExist(LABEL_EMP_Tref) &&
-            mat.doesMaterialDataExist(LABEL_EMP_Ci_ref) &&
-            mat.doesMaterialDataExist(LABEL_EMP_Asat) &&
-            mat.doesMaterialDataExist(LABEL_EMP_theta) &&
-            mat.doesMaterialDataExist(LABEL_EMP_Tmin) &&
-            mat.doesMaterialDataExist(LABEL_EMP_Topt) &&
-            mat.doesMaterialDataExist(LABEL_EMP_q) &&
-            mat.doesMaterialDataExist(LABEL_EMP_R) &&
-            mat.doesMaterialDataExist(LABEL_EMP_ER) &&
-            mat.doesMaterialDataExist(LABEL_EMP_kC)) {
+        if (mat.doesMaterialDataExist(LABEL_EMP_Tref) && mat.doesMaterialDataExist(LABEL_EMP_Ci_ref) && mat.doesMaterialDataExist(LABEL_EMP_Asat) && mat.doesMaterialDataExist(LABEL_EMP_theta) && mat.doesMaterialDataExist(LABEL_EMP_Tmin) &&
+            mat.doesMaterialDataExist(LABEL_EMP_Topt) && mat.doesMaterialDataExist(LABEL_EMP_q) && mat.doesMaterialDataExist(LABEL_EMP_R) && mat.doesMaterialDataExist(LABEL_EMP_ER) && mat.doesMaterialDataExist(LABEL_EMP_kC)) {
 
             mat.getMaterialData(LABEL_EMP_Tref, coeffs.Tref);
             mat.getMaterialData(LABEL_EMP_Ci_ref, coeffs.Ci_ref);
@@ -358,7 +350,7 @@ EmpiricalModelCoefficients PhotosynthesisModel::getCoefficientsForPrimitive_Empi
         } else {
             found = false;
         }
-    } catch (const std::exception&) {
+    } catch (const std::exception &) {
         found = false;
     }
 
@@ -385,10 +377,7 @@ FarquharModelCoefficients PhotosynthesisModel::getCoefficientsForPrimitive_Farqu
 
     try {
         const Material &mat = context->getMaterial(materialID);
-        if (mat.doesMaterialDataExist(LABEL_FQ_Vcmax) &&
-            mat.doesMaterialDataExist(LABEL_FQ_Jmax) &&
-            mat.doesMaterialDataExist(LABEL_FQ_Rd) &&
-            mat.doesMaterialDataExist(LABEL_FQ_alpha)) {
+        if (mat.doesMaterialDataExist(LABEL_FQ_Vcmax) && mat.doesMaterialDataExist(LABEL_FQ_Jmax) && mat.doesMaterialDataExist(LABEL_FQ_Rd) && mat.doesMaterialDataExist(LABEL_FQ_alpha)) {
 
             // Reconstruct temperature response parameters for Vcmax
             float vcmax_25C, vcmax_dHa, vcmax_dHd, vcmax_Topt;
@@ -417,11 +406,11 @@ FarquharModelCoefficients PhotosynthesisModel::getCoefficientsForPrimitive_Farqu
             mat.getMaterialData("photo_fq_alpha_dHa", alpha_dHa);
 
             // Use setter methods to properly populate the coefficient struct
-            if (vcmax_Topt < 1000.f) {  // Has optimum
+            if (vcmax_Topt < 1000.f) { // Has optimum
                 coeffs.setVcmax(vcmax_25C, vcmax_dHa, vcmax_Topt - 273.15f, vcmax_dHd);
-            } else if (vcmax_dHa > 0.f) {  // Monotonic increase
+            } else if (vcmax_dHa > 0.f) { // Monotonic increase
                 coeffs.setVcmax(vcmax_25C, vcmax_dHa);
-            } else {  // Constant
+            } else { // Constant
                 coeffs.setVcmax(vcmax_25C);
             }
 
@@ -456,7 +445,7 @@ FarquharModelCoefficients PhotosynthesisModel::getCoefficientsForPrimitive_Farqu
         } else {
             found = false;
         }
-    } catch (const std::exception&) {
+    } catch (const std::exception &) {
         found = false;
     }
 
@@ -469,6 +458,30 @@ FarquharModelCoefficients PhotosynthesisModel::getCoefficientsForPrimitive_Farqu
     return farquharmodelcoeffs;
 }
 
+void PhotosynthesisModel::setCi(float Ci, const std::vector<uint> &UUIDs) {
+    // Fail-fast validation
+    if (Ci < 0.f) {
+        helios_runtime_error("ERROR (PhotosynthesisModel::setCi): Ci must be non-negative. Received Ci = " + std::to_string(Ci) + " umol/mol.");
+    }
+
+    if (!std::isfinite(Ci)) {
+        helios_runtime_error("ERROR (PhotosynthesisModel::setCi): Ci must be a finite value.");
+    }
+
+    // Reasonable range warning (typical C3 range: 50-800 umol/mol)
+    if (Ci > 2000.f && message_flag) {
+        std::cout << "WARNING (PhotosynthesisModel::setCi): Ci = " << Ci << " umol/mol is unusually high. Verify this is intentional." << std::endl;
+    }
+
+    // Set manual Ci for all specified UUIDs
+    for (uint UUID: UUIDs) {
+        if (!context->doesPrimitiveExist(UUID)) {
+            helios_runtime_error("ERROR (PhotosynthesisModel::setCi): Primitive with UUID " + std::to_string(UUID) + " does not exist.");
+        }
+        manual_Ci[UUID] = Ci;
+    }
+}
+
 void PhotosynthesisModel::run() {
     run(context->getAllUUIDs());
 }
@@ -476,7 +489,7 @@ void PhotosynthesisModel::run() {
 void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
 
     WarningAggregator warnings;
-    warnings.setEnabled(message_flag);  // Respect existing message flag
+    warnings.setEnabled(message_flag); // Respect existing message flag
 
     for (uint UUID: lUUIDs) {
 
@@ -559,18 +572,44 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
 
         if (model == "farquhar") { // Farquhar-von Caemmerer-Berry Model
 
-            // Initialize Ci with previous timestep value for temporal continuity, or reasonable default
-            if (previous_Ci.find(UUID) != previous_Ci.end()) {
-                Ci = previous_Ci.at(UUID); // Use previous timestep's Ci
+            // Check for manual Ci override first
+            if (manual_Ci.find(UUID) != manual_Ci.end()) {
+                // Use manual Ci, bypassing iterative calculation
+                Ci = manual_Ci.at(UUID);
+
+                FarquharModelCoefficients coeffs = getCoefficientsForPrimitive_Farquhar(UUID);
+
+                // Set up variables vector for evaluateCi_Farquhar
+                std::vector<float> variables{CO2, i_PAR, TL, gM, 0.f, 0.f, 0.f, float(TPU_flag)};
+
+                // Call evaluateCi_Farquhar directly to compute A for the manual Ci
+                // This bypasses the fzero iteration in evaluateFarquharModel
+                evaluateCi_Farquhar(Ci, variables, &coeffs); // Return value (residual) is unused
+
+                // Extract results from variables vector
+                A = variables[4];
+                limitation_state = (int) variables[5];
+                Gamma = variables[6];
+
+                // Store in previous_Ci for consistency
+                previous_Ci[UUID] = Ci;
+
             } else {
-                Ci = CO2 * 0.7f; // Default initial guess (typical Ci/Ca ratio)
+                // Normal iterative calculation
+
+                // Initialize Ci with previous timestep value for temporal continuity, or reasonable default
+                if (previous_Ci.find(UUID) != previous_Ci.end()) {
+                    Ci = previous_Ci.at(UUID); // Use previous timestep's Ci
+                } else {
+                    Ci = CO2 * 0.7f; // Default initial guess (typical Ci/Ca ratio)
+                }
+
+                FarquharModelCoefficients coeffs = getCoefficientsForPrimitive_Farquhar(UUID);
+                A = evaluateFarquharModel(coeffs, i_PAR, TL, CO2, gM, Ci, Gamma, limitation_state, TPU_flag, warnings);
+
+                // Store computed Ci for next timestep (temporal continuity)
+                previous_Ci[UUID] = Ci;
             }
-
-            FarquharModelCoefficients coeffs = getCoefficientsForPrimitive_Farquhar(UUID);
-            A = evaluateFarquharModel(coeffs, i_PAR, TL, CO2, gM, Ci, Gamma, limitation_state, TPU_flag, warnings);
-
-            // Store computed Ci for next timestep (temporal continuity)
-            previous_Ci[UUID] = Ci;
 
         } else { // Empirical Model
 
@@ -816,7 +855,7 @@ float PhotosynthesisModel::evaluateFarquharModel(const FarquharModelCoefficients
         // Reset variables for each attempt
         std::vector<float> vars_attempt = variables;
         bool attempt_converged = false;
-        float Ci_attempt = fzero(evaluateCi_Farquhar, vars_attempt, &farquharmodelcoeffs, guess, attempt_converged, 0.001f, 200);
+        float Ci_attempt = fzero(evaluateCi_Farquhar, vars_attempt, &params, guess, attempt_converged, 0.001f, 200);
 
         // Check if solution converged and is physiologically reasonable
         if (attempt_converged && Ci_attempt > 0 && std::isfinite(Ci_attempt)) {
@@ -829,11 +868,10 @@ float PhotosynthesisModel::evaluateFarquharModel(const FarquharModelCoefficients
 
     // If all initial guesses failed, add warning to aggregator
     if (!overall_converged) {
-        warnings.addWarning("photosynthesis_ci_convergence_failure",
-                           "Photosynthesis model failed to converge for Ci calculation after trying multiple initial guesses.");
+        warnings.addWarning("photosynthesis_ci_convergence_failure", "Photosynthesis model failed to converge for Ci calculation after trying multiple initial guesses.");
         // Use best available estimate from last attempt
         bool final_converged = false;
-        Ci = fzero(evaluateCi_Farquhar, variables, &farquharmodelcoeffs, 100.0f, final_converged, 0.01f, 500);
+        Ci = fzero(evaluateCi_Farquhar, variables, &params, 100.0f, final_converged, 0.01f, 500);
     }
 
     A = variables[4];

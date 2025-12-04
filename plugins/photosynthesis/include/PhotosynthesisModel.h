@@ -19,6 +19,19 @@ GNU General Public License for more details.
 #include "Context.h"
 
 struct PhotosyntheticTemperatureResponseParameters {
+private:
+    static void validateOptimalTemperature(float optimum_temperature_in_C) {
+        if (optimum_temperature_in_C < 0.f) {
+            helios::helios_runtime_error("ERROR (PhotosyntheticTemperatureResponseParameters): Optimal temperature cannot be negative. Received Topt = " + std::to_string(optimum_temperature_in_C) +
+                                         " C. Please check that temperature is provided in units of Celsius, not Kelvin.");
+        }
+        if (optimum_temperature_in_C > 100.f) {
+            helios::helios_runtime_error("ERROR (PhotosyntheticTemperatureResponseParameters): Optimal temperature cannot exceed 100 C. Received Topt = " + std::to_string(optimum_temperature_in_C) +
+                                         " C. This value is biologically unrealistic and likely indicates temperature was provided in Kelvin instead of Celsius. Please convert to Celsius (subtract 273.15 from Kelvin value).");
+        }
+    }
+
+public:
     PhotosyntheticTemperatureResponseParameters() {
         value_at_25C = 100.0f;
         dHa = 60.0f;
@@ -45,6 +58,7 @@ struct PhotosyntheticTemperatureResponseParameters {
     }
 
     PhotosyntheticTemperatureResponseParameters(float value_at_25C, float rate_of_increase_dHa, float optimum_temperature_in_C) {
+        validateOptimalTemperature(optimum_temperature_in_C);
         this->value_at_25C = value_at_25C;
         this->dHa = rate_of_increase_dHa;
         if (rate_of_increase_dHa > 0.f) {
@@ -56,6 +70,7 @@ struct PhotosyntheticTemperatureResponseParameters {
     }
 
     PhotosyntheticTemperatureResponseParameters(float value_at_25C, float rate_of_increase_dHa, float optimum_temperature_in_C, float rate_of_decrease_dHd) {
+        validateOptimalTemperature(optimum_temperature_in_C);
         this->value_at_25C = value_at_25C;
         this->dHa = rate_of_increase_dHa;
         this->dHd = rate_of_decrease_dHd;
@@ -572,6 +587,16 @@ public:
      */
     void optionalOutputPrimitiveData(const char *label);
 
+    //! Manually set the intercellular CO2 concentration (Ci) for specified primitives, bypassing iterative calculation
+    /**
+     * \param[in] Ci Intercellular CO2 concentration in units of umol CO2/mol air
+     * \param[in] UUIDs Universal unique identifiers for primitives to set manual Ci
+     * \note This method is primarily intended for testing and validation purposes. For normal operation, Ci should be calculated from moisture_conductance.
+     * \note Manual Ci values will persist across multiple run() calls until overwritten with another setCi() call.
+     * \note Ci must be positive and should typically be between 50-800 umol/mol for C3 plants (typical range 0.3-0.9 times ambient CO2).
+     */
+    void setCi(float Ci, const std::vector<uint> &UUIDs);
+
     //! Print a report detailing usage of default input values for all primitives in the Context
     void printDefaultValueReport() const;
 
@@ -602,6 +627,9 @@ private:
 
     //! Storage for previous timestep Ci values for temporal continuity (O(1) lookup performance)
     std::unordered_map<uint, float> previous_Ci;
+
+    //! Storage for manual Ci overrides that bypass iterative calculation
+    std::unordered_map<uint, float> manual_Ci;
 
     float evaluateEmpiricalModel(const EmpiricalModelCoefficients &params, float i_PAR, float TL, float CO2, float gM);
 

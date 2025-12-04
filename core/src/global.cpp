@@ -1571,8 +1571,7 @@ std::vector<std::vector<bool>> helios::readPNGAlpha(const std::string &filename)
         png_set_tRNS_to_alpha(png_ptr);
     }
     // Only add filler if we don't already have alpha from tRNS
-    if (!png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) &&
-        (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE)) {
+    if (!png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) && (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE)) {
         png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
     }
     if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
@@ -1692,8 +1691,7 @@ void helios::readPNG(const std::string &filename, uint &width, uint &height, std
             png_set_tRNS_to_alpha(png_ptr);
         }
         // Ensure we have RGBA - but only add filler if we don't already have alpha from tRNS
-        if (!png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) &&
-            (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE)) {
+        if (!png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) && (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE)) {
             png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
         }
         if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
@@ -2233,7 +2231,7 @@ helios::RGBAcolor helios::XMLloadrgba(const pugi::xml_node node, const char *fie
     return value;
 }
 
-float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::vector<float> &vars, const void *params, float init_guess, float err_tol, int max_iter, WarningAggregator* warnings) {
+float helios::fzero(float (*f)(float, std::vector<float> &, const void *), std::vector<float> &vars, const void *params, float init_guess, float err_tol, int max_iter, WarningAggregator *warnings) {
     constexpr float DELTA_SEED = 1e-3f; // Increased for better initial slope estimate
     constexpr float DENOM_EPS = 1e-10f; // Relaxed flat function detection
     constexpr float MAX_STEP_FACTOR = 0.5f; // Limit step size for stability
@@ -3001,11 +2999,11 @@ void helios::WarningAggregator::report(std::ostream &stream) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     if (counts_.empty()) {
-        return;  // Nothing to report
+        return; // Nothing to report
     }
 
     // Report each category
-    for (const auto &entry : counts_) {
+    for (const auto &entry: counts_) {
         const std::string &category = entry.first;
         size_t count = entry.second;
 

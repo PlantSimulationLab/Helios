@@ -80,8 +80,7 @@ public:
      * \return Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
      * \deprecated Use setAtmosphericConditions() and the parameter-free getSolarFlux() instead
      */
-    [[deprecated("Use setAtmosphericConditions() and parameter-free getSolarFlux() instead")]]
-    [[nodiscard]] float getSolarFlux(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const;
+    [[deprecated("Use setAtmosphericConditions() and parameter-free getSolarFlux() instead")]] [[nodiscard]] float getSolarFlux(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const;
 
     //! Get the photosynthetically active (PAR) component of solar radiation flux perpendicular to the sun direction.
     /**
@@ -94,8 +93,7 @@ public:
      * \return Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
      * \deprecated Use setAtmosphericConditions() and the parameter-free getSolarFluxPAR() instead
      */
-    [[deprecated("Use setAtmosphericConditions() and parameter-free getSolarFluxPAR() instead")]]
-    [[nodiscard]] float getSolarFluxPAR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const;
+    [[deprecated("Use setAtmosphericConditions() and parameter-free getSolarFluxPAR() instead")]] [[nodiscard]] float getSolarFluxPAR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const;
 
     //! Get the near-infrared (NIR) component of solar radiation flux perpendicular to the sun direction.
     /**
@@ -108,8 +106,7 @@ public:
      * \return Global solar radiation flux NORMAL TO THE SUN DIRECTION in W/m^2
      * \deprecated Use setAtmosphericConditions() and the parameter-free getSolarFluxNIR() instead
      */
-    [[deprecated("Use setAtmosphericConditions() and parameter-free getSolarFluxNIR() instead")]]
-    [[nodiscard]] float getSolarFluxNIR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const;
+    [[deprecated("Use setAtmosphericConditions() and parameter-free getSolarFluxNIR() instead")]] [[nodiscard]] float getSolarFluxNIR(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const;
 
     //! Get the fraction of solar radiation flux that is diffuse
     /**
@@ -120,8 +117,7 @@ public:
      * \return Fraction of global radiation that is diffuse
      * \deprecated Use setAtmosphericConditions() and the parameter-free getDiffuseFraction() instead
      */
-    [[deprecated("Use setAtmosphericConditions() and parameter-free getDiffuseFraction() instead")]]
-    [[nodiscard]] float getDiffuseFraction(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const;
+    [[deprecated("Use setAtmosphericConditions() and parameter-free getDiffuseFraction() instead")]] [[nodiscard]] float getDiffuseFraction(float pressure_Pa, float temperature_K, float humidity_rel, float turbidity) const;
 
     //! Calculate the ambient (sky) longwave radiation flux
     /**
@@ -131,8 +127,7 @@ public:
      * \note The longwave flux model is based on <a href="http://onlinelibrary.wiley.com/doi/10.1002/qj.49712253306/full">Prata (1996)</a>.
      * \deprecated Use setAtmosphericConditions() and the parameter-free getAmbientLongwaveFlux() instead
      */
-    [[deprecated("Use setAtmosphericConditions() and parameter-free getAmbientLongwaveFlux() instead")]]
-    [[nodiscard]] float getAmbientLongwaveFlux(float temperature_K, float humidity_rel) const;
+    [[deprecated("Use setAtmosphericConditions() and parameter-free getAmbientLongwaveFlux() instead")]] [[nodiscard]] float getAmbientLongwaveFlux(float temperature_K, float humidity_rel) const;
 
     //! Calculate the turbidity value based on a timeseries of net radiation measurements
     /**
@@ -156,7 +151,8 @@ public:
      * \param[in] pressure_Pa Atmospheric pressure near ground surface in Pascals (must be > 0)
      * \param[in] temperature_K Air temperature near the ground surface in Kelvin (must be > 0)
      * \param[in] humidity_rel Air relative humidity near the ground surface (must be between 0 and 1)
-     * \param[in] turbidity Ångström's aerosol turbidity coefficient (β), representing aerosol optical depth (AOD) at 500 nm reference wavelength (must be >= 0). Typical values: 0.02 (very clear sky), 0.05 (clear sky), 0.1 (light haze), 0.2-0.3 (hazy), >0.4 (very hazy/polluted). <b>Note:</b> This is NOT Linke turbidity, which uses a different scale (typically 2-6).
+     * \param[in] turbidity Ångström's aerosol turbidity coefficient (β), representing aerosol optical depth (AOD) at 500 nm reference wavelength (must be >= 0). Typical values: 0.02 (very clear sky), 0.05 (clear sky), 0.1 (light haze), 0.2-0.3
+     * (hazy), >0.4 (very hazy/polluted). <b>Note:</b> This is NOT Linke turbidity, which uses a different scale (typically 2-6).
      * \note This method sets global data in the Context with labels: atmosphere_pressure_Pa, atmosphere_temperature_K, atmosphere_humidity_rel, atmosphere_turbidity
      * \note Input values are validated. Invalid values will throw helios_runtime_error.
      */
@@ -221,7 +217,7 @@ public:
      * \note Computes spectral irradiance normal to sun direction from 300-2600 nm using the SSolar-GOA model (Cachorro et al. 2022).
      * \note Stores result in Context global data as std::vector<helios::vec2> (wavelength_nm, W/m²/nm) with the specified label.
      */
-    void calculateDirectSolarSpectrum(const std::string& label, float resolution_nm = 1.0f);
+    void calculateDirectSolarSpectrum(const std::string &label, float resolution_nm = 1.0f);
 
     //! Calculate diffuse solar spectrum and store in global data
     /**
@@ -230,7 +226,7 @@ public:
      * \note Computes diffuse spectral irradiance on horizontal surface from 300-2600 nm using the SSolar-GOA model (Cachorro et al. 2022).
      * \note Stores result in Context global data as std::vector<helios::vec2> (wavelength_nm, W/m²/nm) with the specified label.
      */
-    void calculateDiffuseSolarSpectrum(const std::string& label, float resolution_nm = 1.0f);
+    void calculateDiffuseSolarSpectrum(const std::string &label, float resolution_nm = 1.0f);
 
     //! Calculate global (total) solar spectrum and store in global data
     /**
@@ -239,7 +235,7 @@ public:
      * \note Computes global spectral irradiance on horizontal surface from 300-2600 nm using the SSolar-GOA model (Cachorro et al. 2022).
      * \note Stores result in Context global data as std::vector<helios::vec2> (wavelength_nm, W/m²/nm) with the specified label.
      */
-    void calculateGlobalSolarSpectrum(const std::string& label, float resolution_nm = 1.0f);
+    void calculateGlobalSolarSpectrum(const std::string &label, float resolution_nm = 1.0f);
 
     // ===== Prague Sky Model =====
 
@@ -282,10 +278,7 @@ public:
      * \note This method enables lazy evaluation to avoid expensive Prague updates when conditions haven't changed significantly.
      * \note Reads turbidity from Context atmospheric conditions for comparison.
      */
-    [[nodiscard]] bool pragueSkyModelNeedsUpdate(float ground_albedo = 0.33f,
-                                                  float sun_tolerance = 0.01f,
-                                                  float turbidity_tolerance = 0.02f,
-                                                  float albedo_tolerance = 0.05f) const;
+    [[nodiscard]] bool pragueSkyModelNeedsUpdate(float ground_albedo = 0.33f, float sun_tolerance = 0.01f, float turbidity_tolerance = 0.02f, float albedo_tolerance = 0.05f) const;
 
 private:
     helios::Context *context;
@@ -311,21 +304,15 @@ private:
     [[nodiscard]] helios::SphericalCoord calculateSunDirection(const helios::Time &time, const helios::Date &date) const;
 
     // Prague Sky Model helper methods
-    void fitAngularParametersAtWavelength(float wavelength, float visibility_km,
-                                           float albedo, const helios::vec3& sun_dir,
-                                           float& L_zenith, float& circ_str,
-                                           float& circ_width, float& horiz_bright,
-                                           float& normalization);
+    void fitAngularParametersAtWavelength(float wavelength, float visibility_km, float albedo, const helios::vec3 &sun_dir, float &L_zenith, float &circ_str, float &circ_width, float &horiz_bright, float &normalization);
 
-    [[nodiscard]] float fitCircumsolarWidth(float L1, float L2, float h1, float h2,
-                                            float gamma1, float gamma2) const;
+    [[nodiscard]] float fitCircumsolarWidth(float L1, float L2, float h1, float h2, float gamma1, float gamma2) const;
 
-    [[nodiscard]] float computeAngularNormalization(float circ_str, float circ_width,
-                                                    float horiz_bright) const;
+    [[nodiscard]] float computeAngularNormalization(float circ_str, float circ_width, float horiz_bright) const;
 
-    [[nodiscard]] helios::vec3 rotateDirectionTowardZenith(const helios::vec3& dir, float angle_rad) const;
+    [[nodiscard]] helios::vec3 rotateDirectionTowardZenith(const helios::vec3 &dir, float angle_rad) const;
 
-    [[nodiscard]] helios::vec3 getDirectionAwayFromSun(const helios::vec3& sun_dir, float zenith_angle_deg) const;
+    [[nodiscard]] helios::vec3 getDirectionAwayFromSun(const helios::vec3 &sun_dir, float zenith_angle_deg) const;
 
     void GueymardSolarModel(float pressure, float temperature, float humidity, float turbidity, float &Eb_PAR, float &Eb_NIR, float &fdiff) const;
 
@@ -337,94 +324,45 @@ private:
 
     //! Spectral data for SSolar-GOA model (TOA spectrum and absorption coefficients)
     struct SpectralData {
-        std::vector<float> wavelengths_nm;      // 300-2600 nm (2301 points)
-        std::vector<float> toa_irradiance;      // Top-of-atmosphere irradiance in W/m²/nm
-        std::vector<float> h2o_coef;            // Water vapor absorption coefficient
-        std::vector<float> h2o_exp;             // Water vapor absorption exponent
-        std::vector<float> o3_xsec;             // Ozone cross section in cm²/molecule
-        std::vector<float> o2_coef;             // Oxygen absorption coefficient
+        std::vector<float> wavelengths_nm; // 300-2600 nm (2301 points)
+        std::vector<float> toa_irradiance; // Top-of-atmosphere irradiance in W/m²/nm
+        std::vector<float> h2o_coef; // Water vapor absorption coefficient
+        std::vector<float> h2o_exp; // Water vapor absorption exponent
+        std::vector<float> o3_xsec; // Ozone cross section in cm²/molecule
+        std::vector<float> o2_coef; // Oxygen absorption coefficient
 
         //! Load spectral data from directory
-        void loadFromDirectory(const std::string& data_path);
+        void loadFromDirectory(const std::string &data_path);
 
         //! Linear interpolation for wavelength data
-        [[nodiscard]] static float interpolate(const std::vector<float>& x, const std::vector<float>& y, float x_val);
+        [[nodiscard]] static float interpolate(const std::vector<float> &x, const std::vector<float> &y, float x_val);
     };
 
     //! Calculate geometric factor (Earth-Sun distance correction) for a given Julian day
     [[nodiscard]] float calculateGeometricFactor(int julian_day) const;
 
     //! Calculate Rayleigh scattering transmittance (Bates formula + Sobolev approximation)
-    void calculateRayleighTransmittance(
-        const std::vector<float>& wavelengths_um,
-        float mu0,
-        float pressure_ratio,
-        std::vector<float>& tdir,
-        std::vector<float>& tglb,
-        std::vector<float>& tdif,
-        std::vector<float>& atm_albedo
-    ) const;
+    void calculateRayleighTransmittance(const std::vector<float> &wavelengths_um, float mu0, float pressure_ratio, std::vector<float> &tdir, std::vector<float> &tglb, std::vector<float> &tdif, std::vector<float> &atm_albedo) const;
 
     //! Calculate aerosol extinction transmittance (Ångström law + Ambartsumian solution)
-    void calculateAerosolTransmittance(
-        const std::vector<float>& wavelengths_um,
-        float mu0,
-        float alpha,
-        float beta,
-        float w0,
-        float g,
-        std::vector<float>& tdir,
-        std::vector<float>& tglb,
-        std::vector<float>& tdif,
-        std::vector<float>& atm_albedo
-    ) const;
+    void calculateAerosolTransmittance(const std::vector<float> &wavelengths_um, float mu0, float alpha, float beta, float w0, float g, std::vector<float> &tdir, std::vector<float> &tglb, std::vector<float> &tdif,
+                                       std::vector<float> &atm_albedo) const;
 
     //! Calculate combined Rayleigh-aerosol mixture transmittance with coupling
-    void calculateMixtureTransmittance(
-        const std::vector<float>& wavelengths_um,
-        float mu0,
-        float pressure_Pa,
-        float turbidity_beta,
-        float angstrom_alpha,
-        float aerosol_ssa,
-        float aerosol_g,
-        bool coupling,
-        std::vector<float>& tglb,
-        std::vector<float>& tdir,
-        std::vector<float>& tdif,
-        std::vector<float>& atm_albedo
-    ) const;
+    void calculateMixtureTransmittance(const std::vector<float> &wavelengths_um, float mu0, float pressure_Pa, float turbidity_beta, float angstrom_alpha, float aerosol_ssa, float aerosol_g, bool coupling, std::vector<float> &tglb,
+                                       std::vector<float> &tdir, std::vector<float> &tdif, std::vector<float> &atm_albedo) const;
 
     //! Calculate water vapor absorption transmittance
-    void calculateWaterVaporTransmittance(
-        const SpectralData& data,
-        float mu0,
-        float water_vapor_cm,
-        std::vector<float>& transmittance
-    ) const;
+    void calculateWaterVaporTransmittance(const SpectralData &data, float mu0, float water_vapor_cm, std::vector<float> &transmittance) const;
 
     //! Calculate ozone absorption transmittance
-    void calculateOzoneTransmittance(
-        const SpectralData& data,
-        float mu0,
-        float ozone_DU,
-        std::vector<float>& transmittance
-    ) const;
+    void calculateOzoneTransmittance(const SpectralData &data, float mu0, float ozone_DU, std::vector<float> &transmittance) const;
 
     //! Calculate oxygen absorption transmittance
-    void calculateOxygenTransmittance(
-        const SpectralData& data,
-        float mu0,
-        std::vector<float>& transmittance
-    ) const;
+    void calculateOxygenTransmittance(const SpectralData &data, float mu0, std::vector<float> &transmittance) const;
 
     //! Helper method to calculate all three spectral components
-    void calculateSpectralIrradianceComponents(
-        std::vector<helios::vec2>& global_spectrum,
-        std::vector<helios::vec2>& direct_spectrum,
-        std::vector<helios::vec2>& diffuse_spectrum,
-        float resolution_nm
-    ) const;
+    void calculateSpectralIrradianceComponents(std::vector<helios::vec2> &global_spectrum, std::vector<helios::vec2> &direct_spectrum, std::vector<helios::vec2> &diffuse_spectrum, float resolution_nm) const;
 };
 
 #endif

@@ -1346,12 +1346,19 @@ public:
     std::vector<std::vector<helios::vec3>> leaf_bases; // first index is petiole within internode, second index is leaf within petiole
     std::vector<std::vector<std::vector<helios::vec3>>> peduncle_vertices; // first index is petiole within internode, second index is floral bud within petiole, third index is tube segment within peduncle
     std::vector<std::vector<std::vector<float>>> peduncle_radii; // first index is petiole within internode, second index is floral bud within petiole, third index is tube segment within peduncle
+    std::vector<std::vector<float>> peduncle_length; // actual sampled length for each peduncle - first index is petiole, second is bud
+    std::vector<std::vector<float>> peduncle_radius; // actual sampled radius for each peduncle - first index is petiole, second is bud
+    std::vector<std::vector<float>> peduncle_pitch; // actual sampled pitch for each peduncle - first index is petiole, second is bud
+    std::vector<std::vector<float>> peduncle_curvature; // actual sampled curvature for each peduncle - first index is petiole, second is bud
     float internode_pitch, internode_phyllotactic_angle;
 
     std::vector<std::vector<float>> petiole_radii; // first index is petiole within internode, second index is segment within petiole tube
     std::vector<float> petiole_length; // index is petiole within internode
     std::vector<float> petiole_pitch; // index is petiole within internode
     std::vector<float> petiole_curvature; // index is petiole within internode
+    std::vector<float> petiole_taper; // taper value for each petiole (tip_radius/base_radius ratio)
+    std::vector<helios::vec3> petiole_axis_initial; // initial petiole axis (before curvature) for each petiole
+    std::vector<helios::vec3> petiole_rotation_axis; // rotation axis for curvature application for each petiole
     std::vector<std::vector<float>> leaf_size_max; // first index is petiole within internode, second index is leaf within petiole
     std::vector<std::vector<AxisRotation>> leaf_rotation; // first index is petiole within internode, second index is leaf within petiole
 
@@ -1388,6 +1395,9 @@ public:
     float internode_radius_initial;
     float internode_radius_max;
     float internode_length_max;
+
+    std::vector<float> internode_curvature_perturbations; //!< Stochastic curvature perturbation values for each internode segment (for exact XML reconstruction)
+    std::vector<float> internode_yaw_perturbations; //!< Stochastic yaw perturbation values for each internode segment (for exact XML reconstruction)
 
     bool build_context_geometry_petiole = true;
     bool build_context_geometry_peduncle = true;
@@ -1729,7 +1739,8 @@ public:
     /**
      * \param[in] base_position Cartesian coordinates of the base of the plant.
      * \param[in] age Age of the plant in days.
-     * \param[in] build_parameters [optional] Map of parameter names to values for overriding default training system parameters (e.g., trunk height, scaffold count, trellis dimensions). Parameter names are species-specific and documented in the plant library documentation.
+     * \param[in] build_parameters [optional] Map of parameter names to values for overriding default training system parameters (e.g., trunk height, scaffold count, trellis dimensions). Parameter names are species-specific and documented in the
+     * plant library documentation.
      * \return ID of the plant instance.
      */
     uint buildPlantInstanceFromLibrary(const helios::vec3 &base_position, float age, const std::map<std::string, float> &build_parameters = {});
@@ -1741,10 +1752,12 @@ public:
      * \param[in] plant_count_xy Number of plants in the canopy in the x- and y-directions.
      * \param[in] age Age of the plants in the canopy in days.
      * \param[in] germination_rate [optional] Probability that a plant in the canopy germinates and a plant is created.
-     * \param[in] build_parameters [optional] Map of parameter names to values for overriding default training system parameters (e.g., trunk height, scaffold count, trellis dimensions). Parameter names are species-specific and documented in the plant library documentation.
+     * \param[in] build_parameters [optional] Map of parameter names to values for overriding default training system parameters (e.g., trunk height, scaffold count, trellis dimensions). Parameter names are species-specific and documented in the
+     * plant library documentation.
      * \return Vector of plant instance IDs.
      */
-    std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, float age, float germination_rate = 1.f, const std::map<std::string, float> &build_parameters = {});
+    std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, float age, float germination_rate = 1.f,
+                                                  const std::map<std::string, float> &build_parameters = {});
 
     //! Build a canopy of randomly scattered plants based on the model currently loaded from the library
     /**
@@ -1752,7 +1765,8 @@ public:
      * \param[in] canopy_extent_xy Size/extent of the canopy boundaries in the x- and y-directions.
      * \param[in] plant_count Number of plants to randomly generate inside canopy bounds.
      * \param[in] age Age of the plants in the canopy in days.
-     * \param[in] build_parameters [optional] Map of parameter names to values for overriding default training system parameters (e.g., trunk height, scaffold count, trellis dimensions). Parameter names are species-specific and documented in the plant library documentation.
+     * \param[in] build_parameters [optional] Map of parameter names to values for overriding default training system parameters (e.g., trunk height, scaffold count, trellis dimensions). Parameter names are species-specific and documented in the
+     * plant library documentation.
      * \return Vector of plant instance IDs.
      */
     std::vector<uint> buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &canopy_extent_xy, uint plant_count, float age, const std::map<std::string, float> &build_parameters = {});

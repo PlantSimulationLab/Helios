@@ -784,10 +784,10 @@ uint CanopyGenerator::grapevineSplit(const SplitGrapevineParameters &params, con
                     vec3 position = origin + pos_leaf + leaf_offset;
 
                     uint ID = context->copyObject(ID0);
-                    context->scaleObject(ID,make_vec3(lsize, lsize, 1));
-                    context->rotateObject(ID,-Rtheta, "y");
-                    context->rotateObject(ID,Rphi, "z");
-                    context->translateObject(ID,position);
+                    context->scaleObject(ID, make_vec3(lsize, lsize, 1));
+                    context->rotateObject(ID, -Rtheta, "y");
+                    context->rotateObject(ID, Rphi, "z");
+                    context->translateObject(ID, position);
 
                     UUID_leaf_plant.push_back(context->getObjectPrimitiveUUIDs(ID));
 
@@ -1017,10 +1017,10 @@ uint CanopyGenerator::grapevineUnilateral(const UnilateralGrapevineParameters &p
             vec3 position = origin + pos_leaf - leaf_offset;
 
             uint ID = context->copyObject(ID0);
-            context->scaleObject(ID,make_vec3(lsize, lsize, 1));
-            context->rotateObject(ID,-Rtheta, "y");
-            context->rotateObject(ID,Rphi, "z");
-            context->translateObject(ID,position);
+            context->scaleObject(ID, make_vec3(lsize, lsize, 1));
+            context->rotateObject(ID, -Rtheta, "y");
+            context->rotateObject(ID, Rphi, "z");
+            context->translateObject(ID, position);
 
             UUID_leaf_plant.push_back(context->getObjectPrimitiveUUIDs(ID));
 
@@ -1203,10 +1203,10 @@ uint CanopyGenerator::grapevineGoblet(const GobletGrapevineParameters &params, c
                 vec3 position = origin + pos_leaf - leaf_offset;
 
                 uint ID = context->copyObject(ID0);
-                context->scaleObject(ID,make_vec3(lsize, lsize, 1));
-                context->rotateObject(ID,-Rtheta, "y");
-                context->rotateObject(ID,Rphi, "z");
-                context->translateObject(ID,position);
+                context->scaleObject(ID, make_vec3(lsize, lsize, 1));
+                context->rotateObject(ID, -Rtheta, "y");
+                context->rotateObject(ID, Rphi, "z");
+                context->translateObject(ID, position);
 
                 UUID_leaf_plant.push_back(context->getObjectPrimitiveUUIDs(ID));
 

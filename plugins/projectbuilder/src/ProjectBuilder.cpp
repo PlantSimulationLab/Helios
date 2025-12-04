@@ -1447,7 +1447,7 @@ void ProjectBuilder::xmlGetValues(const std::string &name, const std::string &pa
         } else {
             const char *node_str = node.child_value();
             std::string default_value = trim_whitespace(std::string(node_str));
-            default_vec.push_back(default_value);  // Always push to maintain vector size consistency
+            default_vec.push_back(default_value); // Always push to maintain vector size consistency
         }
     }
 }

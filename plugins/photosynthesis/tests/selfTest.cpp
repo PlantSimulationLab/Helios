@@ -738,7 +738,7 @@ DOCTEST_TEST_CASE("PhotosynthesisModel - Material-Based Coefficients") {
 
         // Verify all primitives have access to same coefficients via material
         uint shared_mat_id = context.getMaterialIDFromLabel("shared_leaf");
-        for (uint p : primitives) {
+        for (uint p: primitives) {
             DOCTEST_CHECK(context.getPrimitiveMaterialID(p) == shared_mat_id);
         }
 
@@ -785,6 +785,266 @@ DOCTEST_TEST_CASE("PhotosynthesisModel - Material-Based Coefficients") {
         float Asat_retrieved;
         context.getMaterialData("empirical_mat", "photo_emp_Asat", Asat_retrieved);
         DOCTEST_CHECK(Asat_retrieved == doctest::Approx(25.0f));
+    }
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel - Manual Ci Setting") {
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context_test);
+
+    // Set up Farquhar model
+    FarquharModelCoefficients fcoeffs;
+    fcoeffs.setVcmax(78.5f, 65.33f);
+    fcoeffs.setJmax(150.f, 43.54f);
+    fcoeffs.setRd(2.12f, 46.39f);
+    fcoeffs.setQuantumEfficiency_alpha(0.45f);
+    DOCTEST_CHECK_NOTHROW(photomodel.setModelCoefficients(fcoeffs));
+
+    // Enable Ci output
+    DOCTEST_CHECK_NOTHROW(photomodel.optionalOutputPrimitiveData("Ci"));
+
+    // Set environmental conditions
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 800.0f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "temperature", 298.15f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "air_CO2", 400.0f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "moisture_conductance", 0.3f));
+
+    // Set manual Ci
+    float manual_Ci_value = 280.0f;
+    std::vector<uint> UUIDs = {UUID};
+    DOCTEST_CHECK_NOTHROW(photomodel.setCi(manual_Ci_value, UUIDs));
+
+    // Run and verify Ci is manual value
+    DOCTEST_CHECK_NOTHROW(photomodel.run());
+    float Ci_retrieved;
+    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "Ci", Ci_retrieved));
+    DOCTEST_CHECK(Ci_retrieved == doctest::Approx(manual_Ci_value).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel - Manual Ci Persistence") {
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context_test);
+
+    FarquharModelCoefficients fcoeffs;
+    fcoeffs.setVcmax(78.5f, 65.33f);
+    fcoeffs.setJmax(150.f, 43.54f);
+    fcoeffs.setRd(2.12f, 46.39f);
+    fcoeffs.setQuantumEfficiency_alpha(0.45f);
+    DOCTEST_CHECK_NOTHROW(photomodel.setModelCoefficients(fcoeffs));
+    DOCTEST_CHECK_NOTHROW(photomodel.optionalOutputPrimitiveData("Ci"));
+
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 800.0f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "temperature", 298.15f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "air_CO2", 400.0f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "moisture_conductance", 0.3f));
+
+    // Set manual Ci
+    float manual_Ci_value = 250.0f;
+    std::vector<uint> UUIDs = {UUID};
+    DOCTEST_CHECK_NOTHROW(photomodel.setCi(manual_Ci_value, UUIDs));
+
+    // Run multiple times
+    DOCTEST_CHECK_NOTHROW(photomodel.run());
+    float Ci_run1;
+    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "Ci", Ci_run1));
+
+    DOCTEST_CHECK_NOTHROW(photomodel.run());
+    float Ci_run2;
+    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "Ci", Ci_run2));
+
+    DOCTEST_CHECK_NOTHROW(photomodel.run());
+    float Ci_run3;
+    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "Ci", Ci_run3));
+
+    // All runs should use same manual Ci
+    DOCTEST_CHECK(Ci_run1 == doctest::Approx(manual_Ci_value).epsilon(err_tol));
+    DOCTEST_CHECK(Ci_run2 == doctest::Approx(manual_Ci_value).epsilon(err_tol));
+    DOCTEST_CHECK(Ci_run3 == doctest::Approx(manual_Ci_value).epsilon(err_tol));
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel - Invalid Ci Error Handling") {
+    Context context_test;
+    uint UUID = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context_test);
+
+    std::vector<uint> UUIDs = {UUID};
+
+    // Test negative Ci
+    capture_cerr cerr_capture;
+    DOCTEST_CHECK_THROWS_AS(photomodel.setCi(-100.0f, UUIDs), std::runtime_error);
+
+    // Test NaN
+    DOCTEST_CHECK_THROWS_AS(photomodel.setCi(std::numeric_limits<float>::quiet_NaN(), UUIDs), std::runtime_error);
+
+    // Test infinity
+    DOCTEST_CHECK_THROWS_AS(photomodel.setCi(std::numeric_limits<float>::infinity(), UUIDs), std::runtime_error);
+
+    // Test invalid UUID
+    std::vector<uint> invalid_UUIDs = {99999};
+    DOCTEST_CHECK_THROWS_AS(photomodel.setCi(300.0f, invalid_UUIDs), std::runtime_error);
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel - Mixed Manual and Automatic Ci") {
+    Context context_test;
+    uint UUID1 = context_test.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    uint UUID2 = context_test.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1));
+    PhotosynthesisModel photomodel(&context_test);
+
+    FarquharModelCoefficients fcoeffs;
+    fcoeffs.setVcmax(78.5f, 65.33f);
+    fcoeffs.setJmax(150.f, 43.54f);
+    fcoeffs.setRd(2.12f, 46.39f);
+    fcoeffs.setQuantumEfficiency_alpha(0.45f);
+    DOCTEST_CHECK_NOTHROW(photomodel.setModelCoefficients(fcoeffs));
+    DOCTEST_CHECK_NOTHROW(photomodel.optionalOutputPrimitiveData("Ci"));
+
+    // Set same conditions for both primitives
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID1, "radiation_flux_PAR", 800.0f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID2, "radiation_flux_PAR", 800.0f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID1, "temperature", 298.15f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID2, "temperature", 298.15f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID1, "air_CO2", 400.0f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID2, "air_CO2", 400.0f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID1, "moisture_conductance", 0.3f));
+    DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID2, "moisture_conductance", 0.3f));
+
+    // Set manual Ci only for UUID1
+    float manual_Ci_value = 250.0f;
+    std::vector<uint> manual_UUIDs = {UUID1};
+    DOCTEST_CHECK_NOTHROW(photomodel.setCi(manual_Ci_value, manual_UUIDs));
+
+    // Run both
+    DOCTEST_CHECK_NOTHROW(photomodel.run());
+
+    // UUID1 should have manual Ci
+    float Ci1;
+    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID1, "Ci", Ci1));
+    DOCTEST_CHECK(Ci1 == doctest::Approx(manual_Ci_value).epsilon(err_tol));
+
+    // UUID2 should have calculated Ci (different from manual)
+    float Ci2;
+    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID2, "Ci", Ci2));
+    DOCTEST_CHECK(Ci2 != doctest::Approx(manual_Ci_value).epsilon(err_tol));
+    DOCTEST_CHECK(Ci2 > 0.0f);
+    DOCTEST_CHECK(Ci2 < 400.0f);
+}
+
+DOCTEST_TEST_CASE("PhotosynthesisModel - Topt Parameter Validation") {
+    Context context_test;
+    PhotosynthesisModel photomodel(&context_test);
+    FarquharModelCoefficients coeffs;
+
+    SUBCASE("Negative Topt should throw error") {
+        // Test negative Topt for Vcmax
+        DOCTEST_CHECK_THROWS_WITH_AS(coeffs.setVcmax(100.0f, 60.0f, -10.0f),
+                                     "ERROR (PhotosyntheticTemperatureResponseParameters): Optimal temperature cannot be negative. Received Topt = -10.000000 C. Please check that temperature is provided in units of Celsius, not Kelvin.",
+                                     std::runtime_error);
+
+        // Test negative Topt for Jmax
+        DOCTEST_CHECK_THROWS_WITH_AS(coeffs.setJmax(200.0f, 50.0f, -5.0f),
+                                     "ERROR (PhotosyntheticTemperatureResponseParameters): Optimal temperature cannot be negative. Received Topt = -5.000000 C. Please check that temperature is provided in units of Celsius, not Kelvin.",
+                                     std::runtime_error);
+
+        // Test negative Topt for Rd
+        DOCTEST_CHECK_THROWS_WITH_AS(coeffs.setRd(2.0f, 40.0f, -15.0f),
+                                     "ERROR (PhotosyntheticTemperatureResponseParameters): Optimal temperature cannot be negative. Received Topt = -15.000000 C. Please check that temperature is provided in units of Celsius, not Kelvin.",
+                                     std::runtime_error);
+
+        // Test negative Topt for TPU
+        DOCTEST_CHECK_THROWS_WITH_AS(coeffs.setTPU(5.0f, 50.0f, -20.0f),
+                                     "ERROR (PhotosyntheticTemperatureResponseParameters): Optimal temperature cannot be negative. Received Topt = -20.000000 C. Please check that temperature is provided in units of Celsius, not Kelvin.",
+                                     std::runtime_error);
+
+        // Test negative Topt for alpha
+        DOCTEST_CHECK_THROWS_WITH_AS(coeffs.setQuantumEfficiency_alpha(0.5f, 30.0f, -25.0f),
+                                     "ERROR (PhotosyntheticTemperatureResponseParameters): Optimal temperature cannot be negative. Received Topt = -25.000000 C. Please check that temperature is provided in units of Celsius, not Kelvin.",
+                                     std::runtime_error);
+
+        // Test negative Topt for theta
+        DOCTEST_CHECK_THROWS_WITH_AS(coeffs.setLightResponseCurvature_theta(0.7f, 35.0f, -30.0f),
+                                     "ERROR (PhotosyntheticTemperatureResponseParameters): Optimal temperature cannot be negative. Received Topt = -30.000000 C. Please check that temperature is provided in units of Celsius, not Kelvin.",
+                                     std::runtime_error);
+    }
+
+    SUBCASE("Topt > 100C should throw error (likely Kelvin instead of Celsius)") {
+        // Test Topt > 100°C for Vcmax (e.g., user provided 310 K instead of 36.85 C)
+        DOCTEST_CHECK_THROWS_WITH_AS(
+                coeffs.setVcmax(100.0f, 60.0f, 310.0f),
+                "ERROR (PhotosyntheticTemperatureResponseParameters): Optimal temperature cannot exceed 100 C. Received Topt = 310.000000 C. This value is biologically unrealistic and likely indicates temperature was provided in Kelvin instead of Celsius. Please convert to Celsius (subtract 273.15 from Kelvin value).",
+                std::runtime_error);
+
+        // Test Topt > 100°C for Jmax
+        DOCTEST_CHECK_THROWS_WITH_AS(
+                coeffs.setJmax(200.0f, 50.0f, 305.0f),
+                "ERROR (PhotosyntheticTemperatureResponseParameters): Optimal temperature cannot exceed 100 C. Received Topt = 305.000000 C. This value is biologically unrealistic and likely indicates temperature was provided in Kelvin instead of Celsius. Please convert to Celsius (subtract 273.15 from Kelvin value).",
+                std::runtime_error);
+
+        // Test Topt > 100°C for Rd
+        DOCTEST_CHECK_THROWS_WITH_AS(
+                coeffs.setRd(2.0f, 40.0f, 300.0f),
+                "ERROR (PhotosyntheticTemperatureResponseParameters): Optimal temperature cannot exceed 100 C. Received Topt = 300.000000 C. This value is biologically unrealistic and likely indicates temperature was provided in Kelvin instead of Celsius. Please convert to Celsius (subtract 273.15 from Kelvin value).",
+                std::runtime_error);
+
+        // Test Topt > 100°C for TPU
+        DOCTEST_CHECK_THROWS_WITH_AS(
+                coeffs.setTPU(5.0f, 50.0f, 315.0f),
+                "ERROR (PhotosyntheticTemperatureResponseParameters): Optimal temperature cannot exceed 100 C. Received Topt = 315.000000 C. This value is biologically unrealistic and likely indicates temperature was provided in Kelvin instead of Celsius. Please convert to Celsius (subtract 273.15 from Kelvin value).",
+                std::runtime_error);
+
+        // Test Topt > 100°C for alpha
+        DOCTEST_CHECK_THROWS_WITH_AS(
+                coeffs.setQuantumEfficiency_alpha(0.5f, 30.0f, 320.0f),
+                "ERROR (PhotosyntheticTemperatureResponseParameters): Optimal temperature cannot exceed 100 C. Received Topt = 320.000000 C. This value is biologically unrealistic and likely indicates temperature was provided in Kelvin instead of Celsius. Please convert to Celsius (subtract 273.15 from Kelvin value).",
+                std::runtime_error);
+
+        // Test Topt > 100°C for theta
+        DOCTEST_CHECK_THROWS_WITH_AS(
+                coeffs.setLightResponseCurvature_theta(0.7f, 35.0f, 325.0f),
+                "ERROR (PhotosyntheticTemperatureResponseParameters): Optimal temperature cannot exceed 100 C. Received Topt = 325.000000 C. This value is biologically unrealistic and likely indicates temperature was provided in Kelvin instead of Celsius. Please convert to Celsius (subtract 273.15 from Kelvin value).",
+                std::runtime_error);
+    }
+
+    SUBCASE("Valid Topt values should work correctly") {
+        // Test valid Topt values (0-100°C range)
+        DOCTEST_CHECK_NOTHROW(coeffs.setVcmax(100.0f, 60.0f, 35.0f));
+        DOCTEST_CHECK_NOTHROW(coeffs.setJmax(200.0f, 50.0f, 40.0f));
+        DOCTEST_CHECK_NOTHROW(coeffs.setRd(2.0f, 40.0f, 30.0f));
+        DOCTEST_CHECK_NOTHROW(coeffs.setTPU(5.0f, 50.0f, 33.0f));
+        DOCTEST_CHECK_NOTHROW(coeffs.setQuantumEfficiency_alpha(0.5f, 30.0f, 25.0f));
+        DOCTEST_CHECK_NOTHROW(coeffs.setLightResponseCurvature_theta(0.7f, 35.0f, 28.0f));
+
+        // Verify the Topt values were set correctly (converted to Kelvin internally)
+        PhotosyntheticTemperatureResponseParameters vcmax_params = coeffs.getVcmaxTempResponse();
+        DOCTEST_CHECK(vcmax_params.Topt == doctest::Approx(273.15f + 35.0f).epsilon(err_tol));
+
+        PhotosyntheticTemperatureResponseParameters jmax_params = coeffs.getJmaxTempResponse();
+        DOCTEST_CHECK(jmax_params.Topt == doctest::Approx(273.15f + 40.0f).epsilon(err_tol));
+
+        PhotosyntheticTemperatureResponseParameters rd_params = coeffs.getRdTempResponse();
+        DOCTEST_CHECK(rd_params.Topt == doctest::Approx(273.15f + 30.0f).epsilon(err_tol));
+
+        PhotosyntheticTemperatureResponseParameters tpu_params = coeffs.getTPUTempResponse();
+        DOCTEST_CHECK(tpu_params.Topt == doctest::Approx(273.15f + 33.0f).epsilon(err_tol));
+
+        PhotosyntheticTemperatureResponseParameters alpha_params = coeffs.getQuantumEfficiencyTempResponse();
+        DOCTEST_CHECK(alpha_params.Topt == doctest::Approx(273.15f + 25.0f).epsilon(err_tol));
+
+        PhotosyntheticTemperatureResponseParameters theta_params = coeffs.getLightResponseCurvatureTempResponse();
+        DOCTEST_CHECK(theta_params.Topt == doctest::Approx(273.15f + 28.0f).epsilon(err_tol));
+    }
+
+    SUBCASE("Edge cases: 0C and 100C should be valid") {
+        // Test boundary values
+        DOCTEST_CHECK_NOTHROW(coeffs.setVcmax(100.0f, 60.0f, 0.0f)); // 0°C should be valid
+        DOCTEST_CHECK_NOTHROW(coeffs.setJmax(200.0f, 50.0f, 100.0f)); // 100°C should be valid
+
+        PhotosyntheticTemperatureResponseParameters vcmax_params = coeffs.getVcmaxTempResponse();
+        DOCTEST_CHECK(vcmax_params.Topt == doctest::Approx(273.15f).epsilon(err_tol));
+
+        PhotosyntheticTemperatureResponseParameters jmax_params = coeffs.getJmaxTempResponse();
+        DOCTEST_CHECK(jmax_params.Topt == doctest::Approx(373.15f).epsilon(err_tol));
     }
 }
 

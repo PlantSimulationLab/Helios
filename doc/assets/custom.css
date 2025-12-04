@@ -1,13 +1,38 @@
-#searchbox-container {
+/* Keep logo and version number close together */
+#titlearea table {
+    table-layout: auto;
+}
+
+#titlearea #projectlogo {
+    width: 1%;
+    white-space: nowrap;
+    padding-right: 8px;
+}
+
+#titlearea #projectalign {
+    width: 1%;
+    white-space: nowrap;
+}
+
+/* Styles for searchbox - works for both full sidebar and non-full sidebar modes */
+#searchbox-container,
+#titlearea tr:has(> td > #MSearchBox) td {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
 }
 
-#searchbox-container doxygen-awesome-dark-mode-toggle {
-    margin-top: var(--spacing-small);
+/* Search box should be compact to fit in navigation pane with toggle */
+#searchbox-container #MSearchBox,
+#titlearea tr:has(> td > #MSearchBox) #MSearchBox {
+    flex: 1 1 auto;
+    min-width: 150px;
+    max-width: 180px;
 }
 
-#searchbox-container #MSearchBox {
-    width: 100%;
+/* Dark mode toggle should stay at its natural size on the right */
+#searchbox-container doxygen-awesome-dark-mode-toggle,
+#titlearea tr:has(> td > #MSearchBox) doxygen-awesome-dark-mode-toggle {
+    flex: 0 0 auto;
 }

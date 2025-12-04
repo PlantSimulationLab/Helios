@@ -253,7 +253,8 @@ void ShootParameters::defineChildShootTypes(const std::vector<std::string> &a_ch
     this->child_shoot_type_probabilities = a_child_shoot_type_probabilities;
 }
 
-std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, const float age, const float germination_rate, const std::map<std::string, float> &build_parameters) {
+std::vector<uint> PlantArchitecture::buildPlantCanopyFromLibrary(const helios::vec3 &canopy_center_position, const helios::vec2 &plant_spacing_xy, const helios::int2 &plant_count_xy, const float age, const float germination_rate,
+                                                                 const std::map<std::string, float> &build_parameters) {
     if (plant_count_xy.x <= 0 || plant_count_xy.y <= 0) {
         helios_runtime_error("ERROR (PlantArchitecture::buildPlantCanopyFromLibrary): Plant count must be greater than zero.");
     }
@@ -820,14 +821,12 @@ bool PlantArchitecture::detectAttractionPointsInCone(const helios::vec3 &vertex,
 
     if (look_ahead_distance <= 0.0f) {
         if (printmessages) {
-            std::cerr << "WARNING (PlantArchitecture::detectAttractionPointsInCone): Invalid look-ahead distance (<= 0)" << std::endl;
         }
         return false;
     }
 
     if (half_angle_degrees <= 0.0f || half_angle_degrees >= 180.0f) {
         if (printmessages) {
-            std::cerr << "WARNING (PlantArchitecture::detectAttractionPointsInCone): Invalid half-angle (must be in range (0, 180) degrees)" << std::endl;
         }
         return false;
     }
@@ -899,14 +898,12 @@ bool PlantArchitecture::detectAttractionPointsInCone(const std::vector<helios::v
 
     if (look_ahead_distance <= 0.0f) {
         if (printmessages) {
-            std::cerr << "WARNING (PlantArchitecture::detectAttractionPointsInCone): Invalid look-ahead distance (<= 0)" << std::endl;
         }
         return false;
     }
 
     if (half_angle_degrees <= 0.0f || half_angle_degrees >= 180.0f) {
         if (printmessages) {
-            std::cerr << "WARNING (PlantArchitecture::detectAttractionPointsInCone): Invalid half-angle (must be in range (0, 180) degrees)" << std::endl;
         }
         return false;
     }
@@ -1480,8 +1477,15 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
     // initialize peduncle vertices and radii storage (will be resized when floral buds are added)
     peduncle_vertices.resize(phytomer_parameters.petiole.petioles_per_internode);
     peduncle_radii.resize(phytomer_parameters.petiole.petioles_per_internode);
+    peduncle_length.resize(phytomer_parameters.petiole.petioles_per_internode);
+    peduncle_radius.resize(phytomer_parameters.petiole.petioles_per_internode);
+    peduncle_pitch.resize(phytomer_parameters.petiole.petioles_per_internode);
+    peduncle_curvature.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_pitch.resize(phytomer_parameters.petiole.petioles_per_internode);
     petiole_curvature.resize(phytomer_parameters.petiole.petioles_per_internode);
+    petiole_taper.resize(phytomer_parameters.petiole.petioles_per_internode);
+    petiole_axis_initial.resize(phytomer_parameters.petiole.petioles_per_internode);
+    petiole_rotation_axis.resize(phytomer_parameters.petiole.petioles_per_internode);
     std::vector<float> dr_petiole(phytomer_parameters.petiole.petioles_per_internode);
     std::vector<float> dr_petiole_max(phytomer_parameters.petiole.petioles_per_internode);
     for (int p = 0; p < phytomer_parameters.petiole.petioles_per_internode; p++) {
@@ -1529,11 +1533,19 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         petiole_rotation_axis = make_vec3(1, 0, 0);
     }
 
+    // Debug output for first phytomer construction
+    if (phytomer_index == 0) {
+    }
+
     if (phytomer_index == 0) { // if this is the first phytomer along a shoot, apply the origin rotation about the parent axis
 
         // internode pitch rotation for phytomer base
         if (internode_pitch != 0.f) {
+            if (phytomer_index == 0) {
+            }
             internode_axis = rotatePointAboutLine(internode_axis, nullorigin, petiole_rotation_axis, 0.5f * internode_pitch);
+            if (phytomer_index == 0) {
+            }
         }
 
         float roll_nudge = 0.f;
@@ -1541,24 +1553,40 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         //        if( shoot_base_rotation.roll/180.f == floor(shoot_base_rotation.roll/180.f) ) {
         //            roll_nudge = 0.2;
         //        }
+
+        if (phytomer_index == 0) {
+        }
+
         if (shoot_base_rotation.roll != 0.f || roll_nudge != 0.f) {
+            if (phytomer_index == 0) {
+            }
             petiole_rotation_axis = rotatePointAboutLine(petiole_rotation_axis, nullorigin, parent_internode_axis, shoot_base_rotation.roll + roll_nudge);
             // small additional rotation is to make sure the petiole is not exactly vertical
             internode_axis = rotatePointAboutLine(internode_axis, nullorigin, parent_internode_axis, shoot_base_rotation.roll + roll_nudge);
+            if (phytomer_index == 0) {
+            }
         }
 
         vec3 base_pitch_axis = -1 * cross(parent_internode_axis, parent_petiole_axis);
 
         // internode pitch rotation for shoot base rotation
         if (shoot_base_rotation.pitch != 0.f) {
+            if (phytomer_index == 0) {
+            }
             petiole_rotation_axis = rotatePointAboutLine(petiole_rotation_axis, nullorigin, base_pitch_axis, -shoot_base_rotation.pitch);
             internode_axis = rotatePointAboutLine(internode_axis, nullorigin, base_pitch_axis, -shoot_base_rotation.pitch);
+            if (phytomer_index == 0) {
+            }
         }
 
         // internode yaw rotation for shoot base rotation
         if (shoot_base_rotation.yaw != 0) {
+            if (phytomer_index == 0) {
+            }
             petiole_rotation_axis = rotatePointAboutLine(petiole_rotation_axis, nullorigin, parent_internode_axis, shoot_base_rotation.yaw);
             internode_axis = rotatePointAboutLine(internode_axis, nullorigin, parent_internode_axis, shoot_base_rotation.yaw);
+            if (phytomer_index == 0) {
+            }
         }
 
         parent_shoot->radial_outward_axis = rotatePointAboutLine(internode_axis, nullorigin, petiole_rotation_axis, 0.5f * PI_F);
@@ -1596,6 +1624,10 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
     // Solid obstacle avoidance is now handled inside the segment creation loop
 
+    // Resize perturbation vectors to capture stochastic state for XML reconstruction
+    internode_curvature_perturbations.resize(Ndiv_internode_length);
+    internode_yaw_perturbations.resize(Ndiv_internode_length);
+
     // create internode tube
     for (int inode_segment = 1; inode_segment <= Ndiv_internode_length; inode_segment++) {
         // apply curvature and tortuosity
@@ -1610,10 +1642,12 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             float dt = dr_internode_max / float(Ndiv_internode_length);
 
             parent_shoot->curvature_perturbation += -0.5f * parent_shoot->curvature_perturbation * dt + parent_shoot_parameters.tortuosity.val() * context_ptr->randn() * sqrt(dt);
+            internode_curvature_perturbations[inode_segment - 1] = parent_shoot->curvature_perturbation;
             float curvature_angle = deg2rad((parent_shoot->gravitropic_curvature * current_curvature_fact * dr_internode_max + parent_shoot->curvature_perturbation));
             internode_axis = rotatePointAboutLine(internode_axis, nullorigin, shoot_bending_axis, curvature_angle);
 
             parent_shoot->yaw_perturbation += -0.5f * parent_shoot->yaw_perturbation * dt + parent_shoot_parameters.tortuosity.val() * context_ptr->randn() * sqrt(dt);
+            internode_yaw_perturbations[inode_segment - 1] = parent_shoot->yaw_perturbation;
             float yaw_angle = deg2rad((parent_shoot->yaw_perturbation));
             internode_axis = rotatePointAboutLine(internode_axis, nullorigin, make_vec3(0, 0, 1), yaw_angle);
         }
@@ -1772,6 +1806,10 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             petiole_rotation_axis_actual = rotatePointAboutLine(petiole_rotation_axis_actual, nullorigin, internode_axis, budrot);
         }
 
+        // Store true initial vectors before collision avoidance and curvature application
+        this->petiole_axis_initial.at(petiole) = petiole_axis_actual;
+        this->petiole_rotation_axis.at(petiole) = petiole_rotation_axis_actual;
+
         // Apply collision avoidance for petiole direction (if enabled)
         vec3 collision_optimal_petiole_direction;
         bool petiole_collision_active = false;
@@ -1820,6 +1858,10 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             }
         }
 
+        // Sample taper once and store (avoids resampling each iteration which was a bug)
+        petiole_taper.at(petiole) = phytomer_parameters.petiole.taper.val();
+        phytomer_parameters.petiole.taper.resample();
+
         petiole_vertices.at(petiole).at(0) = phytomer_internode_vertices.back();
 
         for (int j = 1; j <= Ndiv_petiole_length; j++) {
@@ -1829,7 +1871,7 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
 
             petiole_vertices.at(petiole).at(j) = petiole_vertices.at(petiole).at(j - 1) + dr_petiole.at(petiole) * petiole_axis_actual;
 
-            petiole_radii.at(petiole).at(j) = leaf_scale_factor_fraction * phytomer_parameters.petiole.radius.val() * (1.f - phytomer_parameters.petiole.taper.val() / float(Ndiv_petiole_length) * float(j));
+            petiole_radii.at(petiole).at(j) = leaf_scale_factor_fraction * phytomer_parameters.petiole.radius.val() * (1.f - petiole_taper.at(petiole) / float(Ndiv_petiole_length) * float(j));
             petiole_colors.at(j) = phytomer_parameters.petiole.color;
 
             assert(!std::isnan(petiole_vertices.at(petiole).at(j).x) && std::isfinite(petiole_vertices.at(petiole).at(j).x));
@@ -2110,8 +2152,7 @@ void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &
 void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerParameters &params) {
     if (params.inflorescence.unique_prototypes > 0) {
         // Initialize closed flower prototypes
-        if (params.inflorescence.flower_prototype_function != nullptr &&
-            unique_closed_flower_prototype_objIDs.find(params.inflorescence.flower_prototype_function) == unique_closed_flower_prototype_objIDs.end()) {
+        if (params.inflorescence.flower_prototype_function != nullptr && unique_closed_flower_prototype_objIDs.find(params.inflorescence.flower_prototype_function) == unique_closed_flower_prototype_objIDs.end()) {
             unique_closed_flower_prototype_objIDs[params.inflorescence.flower_prototype_function].resize(params.inflorescence.unique_prototypes);
             for (int prototype = 0; prototype < params.inflorescence.unique_prototypes; prototype++) {
                 uint objID_flower = params.inflorescence.flower_prototype_function(context_ptr, 1, false);
@@ -2120,8 +2161,7 @@ void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerP
             }
         }
         // Initialize open flower prototypes
-        if (params.inflorescence.flower_prototype_function != nullptr &&
-            unique_open_flower_prototype_objIDs.find(params.inflorescence.flower_prototype_function) == unique_open_flower_prototype_objIDs.end()) {
+        if (params.inflorescence.flower_prototype_function != nullptr && unique_open_flower_prototype_objIDs.find(params.inflorescence.flower_prototype_function) == unique_open_flower_prototype_objIDs.end()) {
             unique_open_flower_prototype_objIDs[params.inflorescence.flower_prototype_function].resize(params.inflorescence.unique_prototypes);
             for (int prototype = 0; prototype < params.inflorescence.unique_prototypes; prototype++) {
                 uint objID_flower = params.inflorescence.flower_prototype_function(context_ptr, 1, true);
@@ -2130,8 +2170,7 @@ void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerP
             }
         }
         // Initialize fruit prototypes
-        if (params.inflorescence.fruit_prototype_function != nullptr &&
-            unique_fruit_prototype_objIDs.find(params.inflorescence.fruit_prototype_function) == unique_fruit_prototype_objIDs.end()) {
+        if (params.inflorescence.fruit_prototype_function != nullptr && unique_fruit_prototype_objIDs.find(params.inflorescence.fruit_prototype_function) == unique_fruit_prototype_objIDs.end()) {
             unique_fruit_prototype_objIDs[params.inflorescence.fruit_prototype_function].resize(params.inflorescence.unique_prototypes);
             for (int prototype = 0; prototype < params.inflorescence.unique_prototypes; prototype++) {
                 uint objID_fruit = params.inflorescence.fruit_prototype_function(context_ptr, 1);
@@ -2151,8 +2190,9 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
         build_context_geometry_peduncle = false;
     }
 
-    float dr_peduncle = phytomer_parameters.peduncle.length.val() / float(Ndiv_peduncle_length);
-    phytomer_parameters.peduncle.length.resample();
+    // Sample length once before calculating dr (same fix as petioles - don't resample until after geometry is created)
+    float peduncle_length = phytomer_parameters.peduncle.length.val();
+    float dr_peduncle = peduncle_length / float(Ndiv_peduncle_length);
 
     std::vector<vec3> peduncle_vertices(phytomer_parameters.peduncle.length_segments + 1);
     peduncle_vertices.at(0) = fbud.base_position;
@@ -2169,7 +2209,6 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     // peduncle pitch rotation
     if (phytomer_parameters.peduncle.pitch.val() != 0.f || fbud.base_rotation.pitch != 0.f) {
         peduncle_axis = rotatePointAboutLine(peduncle_axis, nullorigin, inflorescence_bending_axis_actual, deg2rad(phytomer_parameters.peduncle.pitch.val()) + fbud.base_rotation.pitch);
-        phytomer_parameters.peduncle.pitch.resample();
     }
 
     // rotate peduncle to azimuth of petiole and apply peduncle base yaw rotation
@@ -2210,10 +2249,29 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
         peduncle_axis.normalize();
     }
 
+    // Sample curvature once and store (avoids resampling each iteration which was a bug - same fix as petioles)
+    float peduncle_curvature = phytomer_parameters.peduncle.curvature.val();
+    phytomer_parameters.peduncle.curvature.resample();
+
+    // Store actual sampled peduncle parameters for XML reconstruction
+    uint petiole_idx = fbud.parent_index;
+    uint bud_idx = fbud.bud_index;
+    if (petiole_idx < this->peduncle_length.size()) {
+        if (this->peduncle_length.at(petiole_idx).size() <= bud_idx) {
+            this->peduncle_length.at(petiole_idx).resize(bud_idx + 1);
+            this->peduncle_radius.at(petiole_idx).resize(bud_idx + 1);
+            this->peduncle_pitch.at(petiole_idx).resize(bud_idx + 1);
+            this->peduncle_curvature.at(petiole_idx).resize(bud_idx + 1);
+        }
+        this->peduncle_length.at(petiole_idx).at(bud_idx) = peduncle_length;
+        this->peduncle_radius.at(petiole_idx).at(bud_idx) = phytomer_parameters.peduncle.radius.val();
+        this->peduncle_pitch.at(petiole_idx).at(bud_idx) = phytomer_parameters.peduncle.pitch.val();
+        this->peduncle_curvature.at(petiole_idx).at(bud_idx) = peduncle_curvature;
+    }
+
     for (int i = 1; i <= phytomer_parameters.peduncle.length_segments; i++) {
-        if (phytomer_parameters.peduncle.curvature.val() != 0.f) {
-            float curvature_value = phytomer_parameters.peduncle.curvature.val();
-            phytomer_parameters.peduncle.curvature.resample();
+        if (peduncle_curvature != 0.f) {
+            float curvature_value = peduncle_curvature;
 
             // Calculate horizontal bending axis perpendicular to current peduncle direction
             // This ensures bending is purely upward or downward
@@ -2266,7 +2324,6 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
         peduncle_radii.at(i) = phytomer_parameters.peduncle.radius.val();
         peduncle_colors.at(i) = phytomer_parameters.peduncle.color;
     }
-    phytomer_parameters.peduncle.radius.resample();
 
     if (build_context_geometry_peduncle) {
         fbud.peduncle_objIDs.push_back(context_ptr->addTubeObject(Ndiv_peduncle_radius, peduncle_vertices, peduncle_radii, peduncle_colors));
@@ -2274,8 +2331,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     }
 
     // Store peduncle vertices for later axis vector calculations
-    // Use the parent_index to determine which petiole this floral bud belongs to
-    uint petiole_idx = fbud.parent_index;
+    // Use the parent_index to determine which petiole this floral bud belongs to (petiole_idx already defined above)
 
     // Ensure the peduncle_vertices storage has the right size for this floral bud
     if (petiole_idx < this->peduncle_vertices.size()) {
@@ -2292,6 +2348,11 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
         }
         this->peduncle_radii.at(petiole_idx).at(fbud.bud_index) = peduncle_radii;
     }
+
+    // Resample parameters after geometry is created (same pattern as petioles - avoids mismatch between saved values and geometry)
+    phytomer_parameters.peduncle.length.resample();
+    phytomer_parameters.peduncle.radius.resample();
+    phytomer_parameters.peduncle.pitch.resample();
 
     // Create unique inflorescence prototypes for each shoot type so we can simply copy them for each leaf
     plantarchitecture_ptr->ensureInflorescencePrototypesInitialized(phytomer_parameters);
@@ -3110,7 +3171,6 @@ uint PlantArchitecture::appendShoot(uint plantID, int parent_shoot_ID, uint curr
     } else if (current_node_number > shoot_parameters.max_nodes.val()) {
         helios_runtime_error("ERROR (PlantArchitecture::appendShoot): Cannot add shoot with " + std::to_string(current_node_number) + " nodes since the specified max node number is " + std::to_string(shoot_parameters.max_nodes.val()) + ".");
     } else if (shoot_tree_ptr->at(parent_shoot_ID)->phytomers.empty()) {
-        std::cerr << "WARNING (PlantArchitecture::appendShoot): Shoot does not have any phytomers to append." << std::endl;
     }
 
     // stop parent shoot from producing new phytomers at the apex
@@ -3430,7 +3490,6 @@ void PlantArchitecture::setPhytomerLeafScale(uint plantID, uint shootID, uint no
         helios_runtime_error("ERROR (PlantArchitecture::setPhytomerLeafScale): Cannot scale leaf " + std::to_string(node_number) + " because there are only " + std::to_string(parent_shoot->current_node_number) + " nodes in this shoot.");
     }
     if (leaf_scale_factor_fraction < 0 || leaf_scale_factor_fraction > 1) {
-        std::cerr << "WARNING (PlantArchitecture::setPhytomerLeafScale): Leaf scaling factor was outside the range of 0 to 1. No scaling was applied." << std::endl;
         return;
     }
 
@@ -3446,7 +3505,6 @@ void PlantArchitecture::setPlantBasePosition(uint plantID, const helios::vec3 &b
 
     //\todo Does not work after shoots have been added to the plant.
     if (!plant_instances.at(plantID).shoot_tree.empty()) {
-        std::cerr << "WARNING (PlantArchitecture::setPlantBasePosition): This function does not work after shoots have been added to the plant." << std::endl;
     }
 }
 
@@ -4728,7 +4786,6 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
         }
     }
     if (phyllochron_min == 9999) {
-        std::cerr << "WARNING (PlantArchitecture::advanceTime): No shoots have been added ot the model. Returning.." << std::endl;
         return;
     }
 
@@ -5657,7 +5714,7 @@ void PlantArchitecture::optionalOutputObjectData(const std::string &object_data_
     // Check if "all" was requested
     if (label_lower == "all") {
         // Enable all optional output object data
-        for (auto &item : output_object_data) {
+        for (auto &item: output_object_data) {
             item.second = true;
         }
         return;

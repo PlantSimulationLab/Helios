@@ -699,6 +699,65 @@ TEST_CASE("Vector Statistics and Manipulation") {
             std::vector<float> v3 = {1};
             DOCTEST_CHECK_THROWS(v1 + v3);
         }
+
+        SUBCASE("vector-scalar operators") {
+            std::vector<float> v = {1.f, 2.f, 3.f};
+            float s = 2.f;
+
+            // Addition: vector + scalar
+            std::vector<float> v_add = v + s;
+            DOCTEST_CHECK(v_add.size() == 3);
+            DOCTEST_CHECK(v_add[0] == doctest::Approx(3.f));
+            DOCTEST_CHECK(v_add[1] == doctest::Approx(4.f));
+            DOCTEST_CHECK(v_add[2] == doctest::Approx(5.f));
+
+            // Addition: scalar + vector
+            std::vector<float> v_add2 = s + v;
+            DOCTEST_CHECK(v_add2[0] == doctest::Approx(3.f));
+            DOCTEST_CHECK(v_add2[1] == doctest::Approx(4.f));
+            DOCTEST_CHECK(v_add2[2] == doctest::Approx(5.f));
+
+            // Subtraction: vector - scalar
+            std::vector<float> v_sub = v - s;
+            DOCTEST_CHECK(v_sub[0] == doctest::Approx(-1.f));
+            DOCTEST_CHECK(v_sub[1] == doctest::Approx(0.f));
+            DOCTEST_CHECK(v_sub[2] == doctest::Approx(1.f));
+
+            // Subtraction: scalar - vector
+            std::vector<float> v_sub2 = s - v;
+            DOCTEST_CHECK(v_sub2[0] == doctest::Approx(1.f));
+            DOCTEST_CHECK(v_sub2[1] == doctest::Approx(0.f));
+            DOCTEST_CHECK(v_sub2[2] == doctest::Approx(-1.f));
+
+            // Multiplication: vector * scalar
+            std::vector<float> v_mul = v * s;
+            DOCTEST_CHECK(v_mul[0] == doctest::Approx(2.f));
+            DOCTEST_CHECK(v_mul[1] == doctest::Approx(4.f));
+            DOCTEST_CHECK(v_mul[2] == doctest::Approx(6.f));
+
+            // Multiplication: scalar * vector
+            std::vector<float> v_mul2 = s * v;
+            DOCTEST_CHECK(v_mul2[0] == doctest::Approx(2.f));
+            DOCTEST_CHECK(v_mul2[1] == doctest::Approx(4.f));
+            DOCTEST_CHECK(v_mul2[2] == doctest::Approx(6.f));
+
+            // Division: vector / scalar
+            std::vector<float> v_div = v / s;
+            DOCTEST_CHECK(v_div[0] == doctest::Approx(0.5f));
+            DOCTEST_CHECK(v_div[1] == doctest::Approx(1.f));
+            DOCTEST_CHECK(v_div[2] == doctest::Approx(1.5f));
+
+            // Division: scalar / vector
+            std::vector<float> v_div2 = 6.f / v;
+            DOCTEST_CHECK(v_div2[0] == doctest::Approx(6.f));
+            DOCTEST_CHECK(v_div2[1] == doctest::Approx(3.f));
+            DOCTEST_CHECK(v_div2[2] == doctest::Approx(2.f));
+
+            // Empty vector
+            std::vector<float> empty;
+            std::vector<float> empty_result = empty + 1.f;
+            DOCTEST_CHECK(empty_result.empty());
+        }
     }
 }
 
@@ -1391,7 +1450,7 @@ TEST_CASE("WarningAggregator") {
         const int num_threads = 4;
         const int warnings_per_thread = 250;
 
-        #pragma omp parallel for num_threads(num_threads)
+#pragma omp parallel for num_threads(num_threads)
         for (int i = 0; i < num_threads * warnings_per_thread; i++) {
             agg.addWarning("parallel_test", "message from thread");
         }

@@ -424,6 +424,8 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
             } else {
                 patch_new->materialID = getMaterialIDFromLabel(mat_label);
             }
+            // Increment material reference count
+            materials[patch_new->materialID].reference_count++;
 
             currentUUID++;
             UUID.push_back(currentUUID - 1);

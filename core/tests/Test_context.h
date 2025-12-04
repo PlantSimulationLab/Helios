@@ -2426,7 +2426,7 @@ TEST_CASE("File path resolution priority") {
         DOCTEST_CHECK(!ctx.isMaterialTextureColorOverridden("test_mat"));
 
         // Twosided flag - test default value
-        DOCTEST_CHECK(ctx.getMaterialTwosidedFlag("test_mat") == 1);  // Default is 1 (two-sided)
+        DOCTEST_CHECK(ctx.getMaterialTwosidedFlag("test_mat") == 1); // Default is 1 (two-sided)
 
         // Twosided flag - set to 0 (one-sided)
         ctx.setMaterialTwosidedFlag("test_mat", 0);
@@ -2489,7 +2489,7 @@ TEST_CASE("File path resolution priority") {
         ctx.assignMaterialToPrimitive(UUIDs, "batch_mat");
 
         // Verify all have the material
-        for (uint uuid : UUIDs) {
+        for (uint uuid: UUIDs) {
             DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(uuid) == "batch_mat");
         }
     }
@@ -2525,7 +2525,7 @@ TEST_CASE("File path resolution priority") {
         // Create a material with non-default twosided_flag
         ctx.addMaterial("onesided_mat");
         ctx.setMaterialColor("onesided_mat", make_RGBAcolor(0, 0, 1, 1));
-        ctx.setMaterialTwosidedFlag("onesided_mat", 0);  // One-sided
+        ctx.setMaterialTwosidedFlag("onesided_mat", 0); // One-sided
 
         // Create and assign primitives
         uint p1 = ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_RGBcolor(0, 0, 0));
@@ -2558,7 +2558,7 @@ TEST_CASE("File path resolution priority") {
         DOCTEST_CHECK(ctx2.getPrimitiveTextureFile(loaded_UUIDs[1]) == "lib/images/disk_texture.png");
 
         // Verify twosided_flag was preserved
-        DOCTEST_CHECK(ctx2.getMaterialTwosidedFlag("red_mat") == 1);      // Default
+        DOCTEST_CHECK(ctx2.getMaterialTwosidedFlag("red_mat") == 1); // Default
         DOCTEST_CHECK(ctx2.getMaterialTwosidedFlag("textured_mat") == 1); // Default
         DOCTEST_CHECK(ctx2.getMaterialTwosidedFlag("onesided_mat") == 0); // Non-default
 
@@ -2614,8 +2614,8 @@ TEST_CASE("File path resolution priority") {
 
         // Test: Material takes precedence over primitive data
         // First, set primitive data on a primitive with a material
-        ctx.setPrimitiveData(UUID_mat_onesided, "twosided_flag", uint(1));  // Try to override with primitive data
-        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(UUID_mat_onesided) == 0);  // Should still return material value (0)
+        ctx.setPrimitiveData(UUID_mat_onesided, "twosided_flag", uint(1)); // Try to override with primitive data
+        DOCTEST_CHECK(ctx.getPrimitiveTwosidedFlag(UUID_mat_onesided) == 0); // Should still return material value (0)
     }
 
     SUBCASE("Material Data - Setting and Getting with Labels") {
@@ -2773,20 +2773,20 @@ TEST_CASE("File path resolution priority") {
         DOCTEST_CHECK(ctx.getPrimitiveMaterialID(p3) == mat1_id);
 
         // Test getMaterial
-        const Material& mat1 = ctx.getMaterial(mat1_id);
+        const Material &mat1 = ctx.getMaterial(mat1_id);
         DOCTEST_CHECK(mat1.label == "test_mat_1");
         DOCTEST_CHECK(mat1.color.r == doctest::Approx(1.0f));
         DOCTEST_CHECK(mat1.color.g == doctest::Approx(0.0f));
         DOCTEST_CHECK(mat1.color.b == doctest::Approx(0.0f));
 
-        const Material& mat2 = ctx.getMaterial(mat2_id);
+        const Material &mat2 = ctx.getMaterial(mat2_id);
         DOCTEST_CHECK(mat2.label == "test_mat_2");
         DOCTEST_CHECK(mat2.color.r == doctest::Approx(0.0f));
         DOCTEST_CHECK(mat2.color.g == doctest::Approx(1.0f));
         DOCTEST_CHECK(mat2.color.b == doctest::Approx(0.0f));
 
         // Test getMaterial with invalid ID throws error
-        DOCTEST_CHECK_THROWS((void)ctx.getMaterial(99999));
+        DOCTEST_CHECK_THROWS((void) ctx.getMaterial(99999));
     }
 
     SUBCASE("Material Methods - getMaterialIDFromLabel") {
@@ -2812,6 +2812,71 @@ TEST_CASE("File path resolution priority") {
         DOCTEST_CHECK(ctx.getMaterialIDFromLabel("material_b") == id_b);
 
         // Non-existent label should throw error
-        DOCTEST_CHECK_THROWS((void)ctx.getMaterialIDFromLabel("nonexistent_material"));
+        DOCTEST_CHECK_THROWS((void) ctx.getMaterialIDFromLabel("nonexistent_material"));
+    }
+
+    SUBCASE("Material copy-on-write - basic color modification") {
+        Context context;
+
+        // Create two primitives with same color (shared material via deduplication)
+        uint uuid1 = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), RGB::red);
+        uint uuid2 = context.addPatch(make_vec3(2, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), RGB::red);
+
+        // Verify they share material initially
+        std::string mat1_before = context.getPrimitiveMaterialLabel(uuid1);
+        std::string mat2_before = context.getPrimitiveMaterialLabel(uuid2);
+        DOCTEST_CHECK(mat1_before == mat2_before);
+
+        // Modify one primitive's color
+        context.setPrimitiveColor(uuid1, RGB::blue);
+
+        // Verify materials are now different (copy-on-write occurred)
+        std::string mat1_after = context.getPrimitiveMaterialLabel(uuid1);
+        std::string mat2_after = context.getPrimitiveMaterialLabel(uuid2);
+        DOCTEST_CHECK(mat1_after != mat2_after);
+
+        // Verify colors are independent
+        RGBcolor color1 = context.getPrimitiveColor(uuid1);
+        RGBcolor color2 = context.getPrimitiveColor(uuid2);
+        DOCTEST_CHECK(color1 == RGB::blue);
+        DOCTEST_CHECK(color2 == RGB::red);
+    }
+
+    SUBCASE("Material copy-on-write - object-level modification") {
+        Context context;
+
+        // Create two sphere objects with same color
+        uint obj1 = context.addSphereObject(10, make_vec3(0, 0, 0), 1.f, RGB::green);
+        uint obj2 = context.addSphereObject(10, make_vec3(3, 0, 0), 1.f, RGB::green);
+
+        // Modify one object's color
+        context.setObjectColor(obj1, RGB::yellow);
+
+        // Verify objects have different colors
+        auto prims1 = context.getObjectPrimitiveUUIDs(obj1);
+        auto prims2 = context.getObjectPrimitiveUUIDs(obj2);
+
+        RGBcolor color1 = context.getPrimitiveColor(prims1[0]);
+        RGBcolor color2 = context.getPrimitiveColor(prims2[0]);
+
+        DOCTEST_CHECK(color1 == RGB::yellow);
+        DOCTEST_CHECK(color2 == RGB::green);
+    }
+
+    SUBCASE("Material copy-on-write - non-shared optimization") {
+        Context context;
+
+        // Create single primitive with explicit color
+        uint uuid = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), RGB::cyan);
+
+        std::string mat1 = context.getPrimitiveMaterialLabel(uuid);
+
+        // Modify color - should NOT create new material since it's not shared
+        context.setPrimitiveColor(uuid, RGB::magenta);
+
+        std::string mat2 = context.getPrimitiveMaterialLabel(uuid);
+
+        // Material should be same (no copy needed, just modified in place)
+        DOCTEST_CHECK(mat1 == mat2);
     }
 }

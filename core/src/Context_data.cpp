@@ -2273,7 +2273,7 @@ size_t Context::getGlobalDataSize(const char *label) const {
 uint64_t Context::getGlobalDataVersion(const char *label) const {
 
     if (!doesGlobalDataExist(label)) {
-        return 0;  // Return 0 for non-existent data (consistent with version = 0 initialization)
+        return 0; // Return 0 for non-existent data (consistent with version = 0 initialization)
     }
 
     return globaldata.at(label).version;

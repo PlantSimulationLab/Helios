@@ -16,8 +16,7 @@
 using namespace helios;
 
 // Constructor
-PragueSkyModelInterface::PragueSkyModelInterface()
-    : model(nullptr), initialized(false) {
+PragueSkyModelInterface::PragueSkyModelInterface() : model(nullptr), initialized(false) {
 }
 
 // Destructor
@@ -26,7 +25,7 @@ PragueSkyModelInterface::~PragueSkyModelInterface() {
 }
 
 // Initialize the Prague Sky Model
-void PragueSkyModelInterface::initialize(const std::string& dataset_path) {
+void PragueSkyModelInterface::initialize(const std::string &dataset_path) {
     if (initialized) {
         helios_runtime_error("ERROR (PragueSkyModelInterface::initialize): Model already initialized.");
     }
@@ -38,22 +37,19 @@ void PragueSkyModelInterface::initialize(const std::string& dataset_path) {
     // Prague model throws exceptions, we need to catch and convert to helios_runtime_error
     try {
         model->initialize(dataset_path);
-    } catch (const PragueSkyModel::DatasetNotFoundException& e) {
+    } catch (const PragueSkyModel::DatasetNotFoundException &e) {
         std::ostringstream oss;
-        oss << "ERROR (PragueSkyModelInterface::initialize): Prague dataset file not found: "
-            << dataset_path << "\n"
+        oss << "ERROR (PragueSkyModelInterface::initialize): Prague dataset file not found: " << dataset_path << "\n"
             << "Please ensure PragueSkyModelReduced.dat is present in plugins/radiation/spectral_data/prague_sky_model/\n"
             << "The reduced dataset should be ~26 MB.";
         helios_runtime_error(oss.str());
-    } catch (const PragueSkyModel::DatasetReadException& e) {
+    } catch (const PragueSkyModel::DatasetReadException &e) {
         std::ostringstream oss;
-        oss << "ERROR (PragueSkyModelInterface::initialize): Failed to read Prague dataset: "
-            << e.what();
+        oss << "ERROR (PragueSkyModelInterface::initialize): Failed to read Prague dataset: " << e.what();
         helios_runtime_error(oss.str());
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::ostringstream oss;
-        oss << "ERROR (PragueSkyModelInterface::initialize): Unexpected error initializing Prague model: "
-            << e.what();
+        oss << "ERROR (PragueSkyModelInterface::initialize): Unexpected error initializing Prague model: " << e.what();
         helios_runtime_error(oss.str());
     }
 
@@ -67,9 +63,7 @@ bool PragueSkyModelInterface::isInitialized() const {
 }
 
 // Convert Helios sun direction to Prague elevation and azimuth
-void PragueSkyModelInterface::sunDirectionToAngles(const vec3& sun_dir,
-                                                    double& elevation_deg,
-                                                    double& azimuth_deg) const {
+void PragueSkyModelInterface::sunDirectionToAngles(const vec3 &sun_dir, double &elevation_deg, double &azimuth_deg) const {
     // Helios: sun_dir is unit vector from origin toward sun
     // Z component gives elevation: sun_dir.z = sin(elevation)
     // X,Y components give azimuth
@@ -92,16 +86,14 @@ void PragueSkyModelInterface::sunDirectionToAngles(const vec3& sun_dir,
     azimuth_deg = 90.0 - helios_azimuth_deg;
 
     // Normalize azimuth to [0, 360)
-    while (azimuth_deg < 0.0) azimuth_deg += 360.0;
-    while (azimuth_deg >= 360.0) azimuth_deg -= 360.0;
+    while (azimuth_deg < 0.0)
+        azimuth_deg += 360.0;
+    while (azimuth_deg >= 360.0)
+        azimuth_deg -= 360.0;
 }
 
 // Get sky radiance at single wavelength
-float PragueSkyModelInterface::getSkyRadiance(const vec3& view_direction,
-                                               const vec3& sun_direction,
-                                               float wavelength_nm,
-                                               float visibility_km,
-                                               float albedo) const {
+float PragueSkyModelInterface::getSkyRadiance(const vec3 &view_direction, const vec3 &sun_direction, float wavelength_nm, float visibility_km, float albedo) const {
     if (!initialized) {
         helios_runtime_error("ERROR (PragueSkyModelInterface::getSkyRadiance): Model not initialized. Call initialize() first.");
     }
@@ -125,18 +117,14 @@ float PragueSkyModelInterface::getSkyRadiance(const vec3& view_direction,
     // Compute Prague parameters
     PragueSkyModel::Parameters params;
     try {
-        params = model->computeParameters(view_point,
-                                          prague_view_dir,
+        params = model->computeParameters(view_point, prague_view_dir,
                                           solar_elevation_deg * M_PI / 180.0, // Convert to radians
-                                          solar_azimuth_deg * M_PI / 180.0,
-                                          visibility_km,
-                                          albedo);
-    } catch (const PragueSkyModel::NotInitializedException& e) {
+                                          solar_azimuth_deg * M_PI / 180.0, visibility_km, albedo);
+    } catch (const PragueSkyModel::NotInitializedException &e) {
         helios_runtime_error("ERROR (PragueSkyModelInterface::getSkyRadiance): Prague model not initialized.");
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::ostringstream oss;
-        oss << "ERROR (PragueSkyModelInterface::getSkyRadiance): Error computing Prague parameters: "
-            << e.what();
+        oss << "ERROR (PragueSkyModelInterface::getSkyRadiance): Error computing Prague parameters: " << e.what();
         helios_runtime_error(oss.str());
     }
 
@@ -144,12 +132,11 @@ float PragueSkyModelInterface::getSkyRadiance(const vec3& view_direction,
     double radiance_Wm2_sr_nm = 0.0;
     try {
         radiance_Wm2_sr_nm = model->skyRadiance(params, wavelength_nm);
-    } catch (const PragueSkyModel::NotInitializedException& e) {
+    } catch (const PragueSkyModel::NotInitializedException &e) {
         helios_runtime_error("ERROR (PragueSkyModelInterface::getSkyRadiance): Prague model not initialized.");
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::ostringstream oss;
-        oss << "ERROR (PragueSkyModelInterface::getSkyRadiance): Error querying sky radiance: "
-            << e.what();
+        oss << "ERROR (PragueSkyModelInterface::getSkyRadiance): Error querying sky radiance: " << e.what();
         helios_runtime_error(oss.str());
     }
 
@@ -157,11 +144,7 @@ float PragueSkyModelInterface::getSkyRadiance(const vec3& view_direction,
 }
 
 // Compute integrated sky radiance over camera spectral response
-float PragueSkyModelInterface::computeIntegratedSkyRadiance(const vec3& view_direction,
-                                                             const vec3& sun_direction,
-                                                             float visibility_km,
-                                                             const std::vector<vec2>& camera_response,
-                                                             float albedo) const {
+float PragueSkyModelInterface::computeIntegratedSkyRadiance(const vec3 &view_direction, const vec3 &sun_direction, float visibility_km, const std::vector<vec2> &camera_response, float albedo) const {
     if (!initialized) {
         helios_runtime_error("ERROR (PragueSkyModelInterface::computeIntegratedSkyRadiance): Model not initialized.");
     }
@@ -232,12 +215,7 @@ float PragueSkyModelInterface::turbidityToVisibility(float turbidity) {
 }
 
 // Get available data ranges
-void PragueSkyModelInterface::getAvailableRanges(float& min_wavelength_nm,
-                                                  float& max_wavelength_nm,
-                                                  float& min_visibility_km,
-                                                  float& max_visibility_km,
-                                                  float& min_elevation_deg,
-                                                  float& max_elevation_deg) const {
+void PragueSkyModelInterface::getAvailableRanges(float &min_wavelength_nm, float &max_wavelength_nm, float &min_visibility_km, float &max_visibility_km, float &min_elevation_deg, float &max_elevation_deg) const {
     if (!initialized) {
         helios_runtime_error("ERROR (PragueSkyModelInterface::getAvailableRanges): Model not initialized.");
     }
@@ -247,8 +225,7 @@ void PragueSkyModelInterface::getAvailableRanges(float& min_wavelength_nm,
 
         // Wavelength range
         min_wavelength_nm = static_cast<float>(available.channelStart);
-        max_wavelength_nm = static_cast<float>(available.channelStart +
-                                                available.channelWidth * (available.channels - 1));
+        max_wavelength_nm = static_cast<float>(available.channelStart + available.channelWidth * (available.channels - 1));
 
         // Visibility range
         min_visibility_km = static_cast<float>(available.visibilityMin);
@@ -258,12 +235,11 @@ void PragueSkyModelInterface::getAvailableRanges(float& min_wavelength_nm,
         min_elevation_deg = static_cast<float>(available.elevationMin * 180.0 / M_PI);
         max_elevation_deg = static_cast<float>(available.elevationMax * 180.0 / M_PI);
 
-    } catch (const PragueSkyModel::NotInitializedException& e) {
+    } catch (const PragueSkyModel::NotInitializedException &e) {
         helios_runtime_error("ERROR (PragueSkyModelInterface::getAvailableRanges): Prague model not initialized.");
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::ostringstream oss;
-        oss << "ERROR (PragueSkyModelInterface::getAvailableRanges): Error querying available data: "
-            << e.what();
+        oss << "ERROR (PragueSkyModelInterface::getAvailableRanges): Error querying available data: " << e.what();
         helios_runtime_error(oss.str());
     }
 }

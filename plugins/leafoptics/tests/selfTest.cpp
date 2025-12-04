@@ -909,19 +909,11 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - LOPEX93 Species Library
         float expected_drymass;
     };
 
-    std::vector<SpeciesTestData> species_data = {
-        {"garden_lettuce", 2.00517f, 30.2697f, 0.0052668f},
-        {"alfalfa", 2.00758f, 43.6375f, 0.00473702f},
-        {"corn", 1.59203f, 22.8664f, 0.00441283f},
-        {"sunflower", 1.76358f, 54.0514f, 0.00644855f},
-        {"english_walnut", 1.56274f, 55.9211f, 0.00583351f},
-        {"rice", 1.67081f, 37.233f, 0.00484587f},
-        {"soybean", 1.5375f, 46.4121f, 0.00292814f},
-        {"wine_grape", 1.42673f, 50.918f, 0.00599315f},
-        {"tomato", 1.40304f, 48.3467f, 0.00261571f}
-    };
+    std::vector<SpeciesTestData> species_data = {{"garden_lettuce", 2.00517f, 30.2697f, 0.0052668f}, {"alfalfa", 2.00758f, 43.6375f, 0.00473702f},        {"corn", 1.59203f, 22.8664f, 0.00441283f},
+                                                 {"sunflower", 1.76358f, 54.0514f, 0.00644855f},     {"english_walnut", 1.56274f, 55.9211f, 0.00583351f}, {"rice", 1.67081f, 37.233f, 0.00484587f},
+                                                 {"soybean", 1.5375f, 46.4121f, 0.00292814f},        {"wine_grape", 1.42673f, 50.918f, 0.00599315f},      {"tomato", 1.40304f, 48.3467f, 0.00261571f}};
 
-    for (const auto& species : species_data) {
+    for (const auto &species: species_data) {
         LeafOpticsProperties props;
         DOCTEST_CHECK_NOTHROW(leafoptics.getPropertiesFromLibrary(species.name, props));
 
@@ -1001,7 +993,7 @@ DOCTEST_TEST_CASE("LeafOptics GetPropertiesFromLibrary - LOPEX93 Integration Tes
     DOCTEST_CHECK(context_test.doesGlobalDataExist("leaf_transmissivity_test_soybean"));
 
     // Verify primitive data matches library values
-    for (uint UUID : UUIDs) {
+    for (uint UUID: UUIDs) {
         float chl;
         context_test.getPrimitiveData(UUID, "chlorophyll", chl);
         DOCTEST_CHECK(chl == doctest::Approx(46.4121f).epsilon(err_tol)); // Soybean chlorophyll

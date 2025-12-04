@@ -421,7 +421,7 @@ TEST_CASE("SSolar-GOA spectral irradiance") {
     DOCTEST_CHECK(doctest::Approx(300.f).epsilon(0.1f) == global_spectrum.front().x);
     DOCTEST_CHECK(doctest::Approx(2600.f).epsilon(0.1f) == global_spectrum.back().x);
 
-    for (const auto& point : global_spectrum) {
+    for (const auto &point: global_spectrum) {
         DOCTEST_CHECK(point.y >= 0.f);
         DOCTEST_CHECK(std::isfinite(point.y));
     }
@@ -431,8 +431,8 @@ TEST_CASE("SSolar-GOA spectral irradiance") {
     for (size_t i = 1; i < global_spectrum.size(); ++i) {
         float wl = global_spectrum[i].x;
         if (wl >= 400.f && wl <= 700.f) {
-            float dw = global_spectrum[i].x - global_spectrum[i-1].x;
-            float avg_irr = 0.5f * (global_spectrum[i].y + global_spectrum[i-1].y);
+            float dw = global_spectrum[i].x - global_spectrum[i - 1].x;
+            float avg_irr = 0.5f * (global_spectrum[i].y + global_spectrum[i - 1].y);
             par_flux += avg_irr * dw;
         }
     }
@@ -459,20 +459,20 @@ TEST_CASE("SSolar-GOA spectral resolution") {
     DOCTEST_CHECK_NOTHROW(sp.calculateGlobalSolarSpectrum("res_10nm", 10.0f));
     std::vector<vec2> spectrum_10nm;
     DOCTEST_CHECK_NOTHROW(context_s.getGlobalData("res_10nm", spectrum_10nm));
-    DOCTEST_CHECK(spectrum_10nm.size() == 231);  // (2600-300)/10 + 1 = 231
+    DOCTEST_CHECK(spectrum_10nm.size() == 231); // (2600-300)/10 + 1 = 231
 
     // Test 50 nm resolution
     DOCTEST_CHECK_NOTHROW(sp.calculateGlobalSolarSpectrum("res_50nm", 50.0f));
     std::vector<vec2> spectrum_50nm;
     DOCTEST_CHECK_NOTHROW(context_s.getGlobalData("res_50nm", spectrum_50nm));
-    DOCTEST_CHECK(spectrum_50nm.size() == 47);  // (2600-300)/50 + 1 = 47
+    DOCTEST_CHECK(spectrum_50nm.size() == 47); // (2600-300)/50 + 1 = 47
 
     // Verify wavelength spacing
     DOCTEST_CHECK(doctest::Approx(300.f).epsilon(0.5f) == spectrum_10nm.front().x);
     DOCTEST_CHECK(doctest::Approx(310.f).epsilon(0.5f) == spectrum_10nm[1].x);
 
     // Verify irradiance values are still reasonable
-    for (const auto& point : spectrum_10nm) {
+    for (const auto &point: spectrum_10nm) {
         DOCTEST_CHECK(point.y >= 0.f);
         DOCTEST_CHECK(std::isfinite(point.y));
     }
@@ -496,12 +496,13 @@ TEST_CASE("SSolar-GOA validation against Python reference") {
     std::ifstream ref_file("plugins/solarposition/tests/validate_reference_global.txt");
     if (ref_file.is_open()) {
         std::string header_line;
-        std::getline(ref_file, header_line);  // Skip header
+        std::getline(ref_file, header_line); // Skip header
 
         std::vector<float> ref_wavelengths, ref_irradiances;
         std::string line;
         while (std::getline(ref_file, line)) {
-            if (line.empty() || line[0] == '#') continue;
+            if (line.empty() || line[0] == '#')
+                continue;
 
             std::istringstream iss(line);
             float wl, irr;
@@ -560,8 +561,8 @@ TEST_CASE("SolarPosition - Prague angular parameter fitting - clear sky") {
     Context context;
     SolarPosition solar(&context);
     solar.enablePragueSkyModel();
-    solar.setSunDirection(make_SphericalCoord(0.5236f, 0.0f));  // 60° elevation
-    solar.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.05f);  // Clear sky turbidity
+    solar.setSunDirection(make_SphericalCoord(0.5236f, 0.0f)); // 60° elevation
+    solar.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.05f); // Clear sky turbidity
     solar.updatePragueSkyModel();
 
     std::vector<float> params;
@@ -582,7 +583,7 @@ TEST_CASE("SolarPosition - Prague angular parameter fitting - clear sky") {
     DOCTEST_CHECK(L_zenith > 0.0f);
     DOCTEST_CHECK(L_zenith < 0.5f);
     DOCTEST_CHECK(circ_str >= 0.0f);
-    DOCTEST_CHECK(circ_str <= 20.0f);  // Max clamp value
+    DOCTEST_CHECK(circ_str <= 20.0f); // Max clamp value
     DOCTEST_CHECK(circ_width >= 5.0f);
     DOCTEST_CHECK(circ_width <= 60.0f);
     DOCTEST_CHECK(horiz_bright >= 1.0f);
@@ -600,7 +601,7 @@ TEST_CASE("SolarPosition - Prague lazy evaluation") {
     Context context;
     SolarPosition solar(&context);
     solar.enablePragueSkyModel();
-    solar.setSunDirection(make_SphericalCoord(0.5236f, 0.0f));  // 60° elevation
+    solar.setSunDirection(make_SphericalCoord(0.5236f, 0.0f)); // 60° elevation
     solar.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.1f);
     solar.updatePragueSkyModel();
 
@@ -613,21 +614,21 @@ TEST_CASE("SolarPosition - Prague lazy evaluation") {
     DOCTEST_CHECK(solar.pragueSkyModelNeedsUpdate(0.33f));
 
     // Sun direction change
-    solar.setSunDirection(make_SphericalCoord(0.6109f, 0.0f));  // 55° elevation (change > 5°)
+    solar.setSunDirection(make_SphericalCoord(0.6109f, 0.0f)); // 55° elevation (change > 5°)
     DOCTEST_CHECK(solar.pragueSkyModelNeedsUpdate(0.33f));
 
     // Albedo change
-    solar.setSunDirection(make_SphericalCoord(0.5236f, 0.0f));  // Back to 60°
-    solar.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.1f);  // Reset turbidity
-    solar.updatePragueSkyModel();  // Update with new sun direction
-    DOCTEST_CHECK(solar.pragueSkyModelNeedsUpdate(0.5f));  // Albedo 0.33 -> 0.5
+    solar.setSunDirection(make_SphericalCoord(0.5236f, 0.0f)); // Back to 60°
+    solar.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.1f); // Reset turbidity
+    solar.updatePragueSkyModel(); // Update with new sun direction
+    DOCTEST_CHECK(solar.pragueSkyModelNeedsUpdate(0.5f)); // Albedo 0.33 -> 0.5
 }
 
 TEST_CASE("SolarPosition - Prague performance benchmark") {
     Context context;
     SolarPosition solar(&context);
     solar.enablePragueSkyModel();
-    solar.setSunDirection(make_SphericalCoord(0.5236f, 0.0f));  // 60° elevation
+    solar.setSunDirection(make_SphericalCoord(0.5236f, 0.0f)); // 60° elevation
     solar.setAtmosphericConditions(101325.f, 300.f, 0.5f, 0.1f);
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -637,7 +638,7 @@ TEST_CASE("SolarPosition - Prague performance benchmark") {
     auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
     DOCTEST_MESSAGE("Prague update time: " << duration_ms.count() << " ms");
-    DOCTEST_CHECK(duration_ms.count() < 10000);  // <10 seconds
+    DOCTEST_CHECK(duration_ms.count() < 10000); // <10 seconds
 }
 
 TEST_CASE("SolarPosition - Prague error handling") {
@@ -645,14 +646,8 @@ TEST_CASE("SolarPosition - Prague error handling") {
     SolarPosition solar(&context);
 
     // Try to update without enabling
-    DOCTEST_CHECK_THROWS_WITH_AS(
-        solar.updatePragueSkyModel(),
-        "ERROR (SolarPosition::updatePragueSkyModel): Prague model not enabled. Call enablePragueSkyModel() first.",
-        std::runtime_error
-    );
+    DOCTEST_CHECK_THROWS_WITH_AS(solar.updatePragueSkyModel(), "ERROR (SolarPosition::updatePragueSkyModel): Prague model not enabled. Call enablePragueSkyModel() first.", std::runtime_error);
 
     // Check needs update returns false when not enabled
     DOCTEST_CHECK(!solar.pragueSkyModelNeedsUpdate(0.33f));
 }
-
-

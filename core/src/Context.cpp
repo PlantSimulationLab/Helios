@@ -2074,7 +2074,9 @@ std::vector<uint> Context::addTile(const vec3 &center, const vec2 &size, const S
 
             // Set context pointer and use default material
             patch_new->context_ptr = this;
-            patch_new->materialID = 0;  // Default material
+            patch_new->materialID = 0; // Default material
+            // Increment material reference count
+            materials[0].reference_count++;
 
             currentUUID++;
             UUID.push_back(currentUUID - 1);
@@ -3317,28 +3319,24 @@ helios::RGBAcolor Context::getPrimitiveColorRGBA(uint UUID) const {
 }
 
 void Context::setPrimitiveColor(uint UUID, const RGBcolor &color) const {
-    api_warnings.addWarning("setPrimitiveColor_inefficient_api",
-                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
+    api_warnings.addWarning("setPrimitiveColor_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     getPrimitivePointer_private(UUID)->setColor(color);
 }
 
 void Context::setPrimitiveColor(const std::vector<uint> &UUIDs, const RGBcolor &color) const {
-    api_warnings.addWarning("setPrimitiveColor_inefficient_api",
-                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
+    api_warnings.addWarning("setPrimitiveColor_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     for (uint UUID: UUIDs) {
         getPrimitivePointer_private(UUID)->setColor(color);
     }
 }
 
 void Context::setPrimitiveColor(uint UUID, const RGBAcolor &color) const {
-    api_warnings.addWarning("setPrimitiveColor_inefficient_api",
-                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
+    api_warnings.addWarning("setPrimitiveColor_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     getPrimitivePointer_private(UUID)->setColor(color);
 }
 
 void Context::setPrimitiveColor(const std::vector<uint> &UUIDs, const RGBAcolor &color) const {
-    api_warnings.addWarning("setPrimitiveColor_inefficient_api",
-                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
+    api_warnings.addWarning("setPrimitiveColor_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     for (uint UUID: UUIDs) {
         getPrimitivePointer_private(UUID)->setColor(color);
     }
@@ -3349,8 +3347,7 @@ std::string Context::getPrimitiveTextureFile(uint UUID) const {
 }
 
 void Context::setPrimitiveTextureFile(uint UUID, const std::string &texturefile) const {
-    api_warnings.addWarning("setPrimitiveTextureFile_inefficient_api",
-                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
+    api_warnings.addWarning("setPrimitiveTextureFile_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     getPrimitivePointer_private(UUID)->setTextureFile(texturefile.c_str());
 }
 
@@ -3385,28 +3382,24 @@ const std::vector<std::vector<bool>> *Context::getPrimitiveTextureTransparencyDa
 }
 
 void Context::overridePrimitiveTextureColor(uint UUID) const {
-    api_warnings.addWarning("overridePrimitiveTextureColor_inefficient_api",
-                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
+    api_warnings.addWarning("overridePrimitiveTextureColor_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     getPrimitivePointer_private(UUID)->overrideTextureColor();
 }
 
 void Context::overridePrimitiveTextureColor(const std::vector<uint> &UUIDs) const {
-    api_warnings.addWarning("overridePrimitiveTextureColor_inefficient_api",
-                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
+    api_warnings.addWarning("overridePrimitiveTextureColor_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     for (uint UUID: UUIDs) {
         getPrimitivePointer_private(UUID)->overrideTextureColor();
     }
 }
 
 void Context::usePrimitiveTextureColor(uint UUID) const {
-    api_warnings.addWarning("usePrimitiveTextureColor_inefficient_api",
-                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
+    api_warnings.addWarning("usePrimitiveTextureColor_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     getPrimitivePointer_private(UUID)->useTextureColor();
 }
 
 void Context::usePrimitiveTextureColor(const std::vector<uint> &UUIDs) const {
-    api_warnings.addWarning("usePrimitiveTextureColor_inefficient_api",
-                           "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
+    api_warnings.addWarning("usePrimitiveTextureColor_inefficient_api", "This method creates per-primitive materials. For better memory efficiency, use addMaterial() + assignMaterialToPrimitive().");
     for (uint UUID: UUIDs) {
         getPrimitivePointer_private(UUID)->useTextureColor();
     }
@@ -3731,6 +3724,54 @@ std::string Context::generateMaterialLabel(const RGBAcolor &color, const std::st
     return "__auto_" + std::to_string(hash);
 }
 
+bool Context::isMaterialShared(uint materialID) const {
+    if (materials.find(materialID) == materials.end()) {
+        return false;
+    }
+    // Use reference count for O(1) lookup instead of O(n) scan
+    return materials.at(materialID).reference_count > 1;
+}
+
+uint Context::copyMaterialForPrimitive(uint primitiveUUID) {
+    Primitive *prim = getPrimitivePointer_private(primitiveUUID);
+    uint oldMaterialID = prim->materialID;
+    const Material &oldMaterial = materials.at(oldMaterialID);
+
+    // Generate unique label using primitive UUID
+    std::string newLabel = "__copy_" + std::to_string(currentMaterialID) + "_" + std::to_string(primitiveUUID);
+
+    // Create new material with same base properties
+    uint newMaterialID = addMaterial_internal(newLabel, oldMaterial.color, oldMaterial.texture_file);
+
+    // Copy all material properties
+    materials[newMaterialID].texture_color_overridden = oldMaterial.texture_color_overridden;
+    materials[newMaterialID].twosided_flag = oldMaterial.twosided_flag;
+
+    // Copy all material data (all types)
+    materials[newMaterialID].material_data_types = oldMaterial.material_data_types;
+    materials[newMaterialID].material_data_int = oldMaterial.material_data_int;
+    materials[newMaterialID].material_data_uint = oldMaterial.material_data_uint;
+    materials[newMaterialID].material_data_float = oldMaterial.material_data_float;
+    materials[newMaterialID].material_data_double = oldMaterial.material_data_double;
+    materials[newMaterialID].material_data_vec2 = oldMaterial.material_data_vec2;
+    materials[newMaterialID].material_data_vec3 = oldMaterial.material_data_vec3;
+    materials[newMaterialID].material_data_vec4 = oldMaterial.material_data_vec4;
+    materials[newMaterialID].material_data_int2 = oldMaterial.material_data_int2;
+    materials[newMaterialID].material_data_int3 = oldMaterial.material_data_int3;
+    materials[newMaterialID].material_data_int4 = oldMaterial.material_data_int4;
+    materials[newMaterialID].material_data_string = oldMaterial.material_data_string;
+    materials[newMaterialID].material_data_bool = oldMaterial.material_data_bool;
+
+    // Update material reference counts
+    materials[oldMaterialID].reference_count--; // Decrement old material
+    materials[newMaterialID].reference_count = 1; // New material has one user (this primitive)
+
+    // Update primitive to use new material
+    prim->materialID = newMaterialID;
+
+    return newMaterialID;
+}
+
 bool Context::doesMaterialExist(const std::string &material_label) const {
     return material_label_to_id.find(material_label) != material_label_to_id.end();
 }
@@ -3738,7 +3779,7 @@ bool Context::doesMaterialExist(const std::string &material_label) const {
 std::vector<std::string> Context::listMaterials() const {
     std::vector<std::string> labels;
     labels.reserve(material_label_to_id.size());
-    for (const auto &pair : material_label_to_id) {
+    for (const auto &pair: material_label_to_id) {
         // Don't include the default material or auto-generated materials in the list
         if (pair.first != DEFAULT_MATERIAL_LABEL && pair.first.substr(0, 7) != "__auto_") {
             labels.push_back(pair.first);
@@ -3811,13 +3852,21 @@ uint Context::getPrimitiveTwosidedFlag(uint UUID, uint default_value) const {
 void Context::assignMaterialToPrimitive(uint UUID, const std::string &material_label) {
     uint materialID = getMaterialIDFromLabel(material_label);
     Primitive *prim = getPrimitivePointer_private(UUID);
+    uint oldMaterialID = prim->materialID;
+    // Update reference counts
+    materials[oldMaterialID].reference_count--;
+    materials[materialID].reference_count++;
     prim->materialID = materialID;
 }
 
 void Context::assignMaterialToPrimitive(const std::vector<uint> &UUIDs, const std::string &material_label) {
     uint materialID = getMaterialIDFromLabel(material_label);
-    for (uint UUID : UUIDs) {
+    for (uint UUID: UUIDs) {
         Primitive *prim = getPrimitivePointer_private(UUID);
+        uint oldMaterialID = prim->materialID;
+        // Update reference counts
+        materials[oldMaterialID].reference_count--;
+        materials[materialID].reference_count++;
         prim->materialID = materialID;
     }
 }
@@ -3828,7 +3877,7 @@ void Context::assignMaterialToObject(uint ObjID, const std::string &material_lab
 }
 
 void Context::assignMaterialToObject(const std::vector<uint> &ObjIDs, const std::string &material_label) {
-    for (uint ObjID : ObjIDs) {
+    for (uint ObjID: ObjIDs) {
         assignMaterialToObject(ObjID, material_label);
     }
 }
@@ -3846,7 +3895,7 @@ std::string Context::getPrimitiveMaterialLabel(uint UUID) const {
 std::vector<uint> Context::getPrimitivesUsingMaterial(const std::string &material_label) const {
     uint materialID = getMaterialIDFromLabel(material_label);
     std::vector<uint> result;
-    for (const auto &pair : primitives) {
+    for (const auto &pair: primitives) {
         if (pair.second->materialID == materialID) {
             result.push_back(pair.first);
         }
@@ -3869,12 +3918,14 @@ void Context::deleteMaterial(const std::string &material_label) {
     // Check if any primitives are using this material
     std::vector<uint> users = getPrimitivesUsingMaterial(material_label);
     if (!users.empty()) {
-        std::cerr << "WARNING (Context::deleteMaterial): Material '" << material_label << "' is in use by "
-                  << users.size() << " primitives. They will be reassigned to the default material." << std::endl;
+        std::cerr << "WARNING (Context::deleteMaterial): Material '" << material_label << "' is in use by " << users.size() << " primitives. They will be reassigned to the default material." << std::endl;
         // Reassign primitives to default material
-        for (uint UUID : users) {
+        for (uint UUID: users) {
             Primitive *prim = getPrimitivePointer_private(UUID);
+            // Update material reference counts
+            materials[materialID].reference_count--; // Decrement deleted material
             prim->materialID = 0; // Default material ID
+            materials[0].reference_count++; // Increment default material
         }
     }
 
@@ -3903,7 +3954,7 @@ uint Context::getPrimitiveMaterialID(uint UUID) const {
     return prim->materialID;
 }
 
-const Material& Context::getMaterial(uint materialID) const {
+const Material &Context::getMaterial(uint materialID) const {
     if (materials.find(materialID) == materials.end()) {
         helios_runtime_error("ERROR (Context::getMaterial): Material ID " + std::to_string(materialID) + " does not exist.");
     }
@@ -3913,7 +3964,7 @@ const Material& Context::getMaterial(uint materialID) const {
 uint Context::getMaterialCount() const {
     // Don't count the default material or auto-generated primitive materials
     uint count = 0;
-    for (const auto &pair : material_label_to_id) {
+    for (const auto &pair: material_label_to_id) {
         // Skip default and auto-generated materials
         if (pair.first != DEFAULT_MATERIAL_LABEL && pair.first.substr(0, 7) != "__auto_") {
             count++;

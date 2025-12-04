@@ -20,31 +20,31 @@ using namespace helios;
 
 namespace {
     // Material data labels for BWB model
-    constexpr const char* LABEL_BWB_gs0 = "gs_bwb_gs0";
-    constexpr const char* LABEL_BWB_a1 = "gs_bwb_a1";
+    constexpr const char *LABEL_BWB_gs0 = "gs_bwb_gs0";
+    constexpr const char *LABEL_BWB_a1 = "gs_bwb_a1";
 
     // Material data labels for BBL model
-    constexpr const char* LABEL_BBL_gs0 = "gs_bbl_gs0";
-    constexpr const char* LABEL_BBL_a1 = "gs_bbl_a1";
-    constexpr const char* LABEL_BBL_D0 = "gs_bbl_D0";
+    constexpr const char *LABEL_BBL_gs0 = "gs_bbl_gs0";
+    constexpr const char *LABEL_BBL_a1 = "gs_bbl_a1";
+    constexpr const char *LABEL_BBL_D0 = "gs_bbl_D0";
 
     // Material data labels for MOPT model
-    constexpr const char* LABEL_MOPT_gs0 = "gs_mopt_gs0";
-    constexpr const char* LABEL_MOPT_g1 = "gs_mopt_g1";
+    constexpr const char *LABEL_MOPT_gs0 = "gs_mopt_gs0";
+    constexpr const char *LABEL_MOPT_g1 = "gs_mopt_g1";
 
     // Material data labels for BMF model
-    constexpr const char* LABEL_BMF_Em = "gs_bmf_Em";
-    constexpr const char* LABEL_BMF_i0 = "gs_bmf_i0";
-    constexpr const char* LABEL_BMF_k = "gs_bmf_k";
-    constexpr const char* LABEL_BMF_b = "gs_bmf_b";
+    constexpr const char *LABEL_BMF_Em = "gs_bmf_Em";
+    constexpr const char *LABEL_BMF_i0 = "gs_bmf_i0";
+    constexpr const char *LABEL_BMF_k = "gs_bmf_k";
+    constexpr const char *LABEL_BMF_b = "gs_bmf_b";
 
     // Material data labels for BB model
-    constexpr const char* LABEL_BB_pi_0 = "gs_bb_pi_0";
-    constexpr const char* LABEL_BB_pi_m = "gs_bb_pi_m";
-    constexpr const char* LABEL_BB_theta = "gs_bb_theta";
-    constexpr const char* LABEL_BB_sigma = "gs_bb_sigma";
-    constexpr const char* LABEL_BB_chi = "gs_bb_chi";
-}
+    constexpr const char *LABEL_BB_pi_0 = "gs_bb_pi_0";
+    constexpr const char *LABEL_BB_pi_m = "gs_bb_pi_m";
+    constexpr const char *LABEL_BB_theta = "gs_bb_theta";
+    constexpr const char *LABEL_BB_sigma = "gs_bb_sigma";
+    constexpr const char *LABEL_BB_chi = "gs_bb_chi";
+} // namespace
 
 StomatalConductanceModel::StomatalConductanceModel(helios::Context *m_context) {
     context = m_context;
@@ -353,8 +353,7 @@ BWBcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BWB(uint U
 
     try {
         const Material &mat = context->getMaterial(materialID);
-        if (mat.doesMaterialDataExist(LABEL_BWB_gs0) &&
-            mat.doesMaterialDataExist(LABEL_BWB_a1)) {
+        if (mat.doesMaterialDataExist(LABEL_BWB_gs0) && mat.doesMaterialDataExist(LABEL_BWB_a1)) {
 
             mat.getMaterialData(LABEL_BWB_gs0, coeffs.gs0);
             mat.getMaterialData(LABEL_BWB_a1, coeffs.a1);
@@ -365,7 +364,7 @@ BWBcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BWB(uint U
         } else {
             found = false;
         }
-    } catch (const std::exception&) {
+    } catch (const std::exception &) {
         found = false;
     }
 
@@ -390,9 +389,7 @@ BBLcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BBL(uint U
 
     try {
         const Material &mat = context->getMaterial(materialID);
-        if (mat.doesMaterialDataExist(LABEL_BBL_gs0) &&
-            mat.doesMaterialDataExist(LABEL_BBL_a1) &&
-            mat.doesMaterialDataExist(LABEL_BBL_D0)) {
+        if (mat.doesMaterialDataExist(LABEL_BBL_gs0) && mat.doesMaterialDataExist(LABEL_BBL_a1) && mat.doesMaterialDataExist(LABEL_BBL_D0)) {
 
             mat.getMaterialData(LABEL_BBL_gs0, coeffs.gs0);
             mat.getMaterialData(LABEL_BBL_a1, coeffs.a1);
@@ -403,7 +400,7 @@ BBLcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BBL(uint U
         } else {
             found = false;
         }
-    } catch (const std::exception&) {
+    } catch (const std::exception &) {
         found = false;
     }
 
@@ -426,8 +423,7 @@ MOPTcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_MOPT(uint
 
     try {
         const Material &mat = context->getMaterial(materialID);
-        if (mat.doesMaterialDataExist(LABEL_MOPT_gs0) &&
-            mat.doesMaterialDataExist(LABEL_MOPT_g1)) {
+        if (mat.doesMaterialDataExist(LABEL_MOPT_gs0) && mat.doesMaterialDataExist(LABEL_MOPT_g1)) {
 
             mat.getMaterialData(LABEL_MOPT_gs0, coeffs.gs0);
             mat.getMaterialData(LABEL_MOPT_g1, coeffs.g1);
@@ -437,7 +433,7 @@ MOPTcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_MOPT(uint
         } else {
             found = false;
         }
-    } catch (const std::exception&) {
+    } catch (const std::exception &) {
         found = false;
     }
 
@@ -460,10 +456,7 @@ BMFcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BMF(uint U
 
     try {
         const Material &mat = context->getMaterial(materialID);
-        if (mat.doesMaterialDataExist(LABEL_BMF_Em) &&
-            mat.doesMaterialDataExist(LABEL_BMF_i0) &&
-            mat.doesMaterialDataExist(LABEL_BMF_k) &&
-            mat.doesMaterialDataExist(LABEL_BMF_b)) {
+        if (mat.doesMaterialDataExist(LABEL_BMF_Em) && mat.doesMaterialDataExist(LABEL_BMF_i0) && mat.doesMaterialDataExist(LABEL_BMF_k) && mat.doesMaterialDataExist(LABEL_BMF_b)) {
 
             mat.getMaterialData(LABEL_BMF_Em, coeffs.Em);
             mat.getMaterialData(LABEL_BMF_i0, coeffs.i0);
@@ -475,7 +468,7 @@ BMFcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BMF(uint U
         } else {
             found = false;
         }
-    } catch (const std::exception&) {
+    } catch (const std::exception &) {
         found = false;
     }
 
@@ -498,11 +491,7 @@ BBcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BB(uint UUI
 
     try {
         const Material &mat = context->getMaterial(materialID);
-        if (mat.doesMaterialDataExist(LABEL_BB_pi_0) &&
-            mat.doesMaterialDataExist(LABEL_BB_pi_m) &&
-            mat.doesMaterialDataExist(LABEL_BB_theta) &&
-            mat.doesMaterialDataExist(LABEL_BB_sigma) &&
-            mat.doesMaterialDataExist(LABEL_BB_chi)) {
+        if (mat.doesMaterialDataExist(LABEL_BB_pi_0) && mat.doesMaterialDataExist(LABEL_BB_pi_m) && mat.doesMaterialDataExist(LABEL_BB_theta) && mat.doesMaterialDataExist(LABEL_BB_sigma) && mat.doesMaterialDataExist(LABEL_BB_chi)) {
 
             mat.getMaterialData(LABEL_BB_pi_0, coeffs.pi_0);
             mat.getMaterialData(LABEL_BB_pi_m, coeffs.pi_m);
@@ -515,7 +504,7 @@ BBcoefficients StomatalConductanceModel::getCoefficientsForPrimitive_BB(uint UUI
         } else {
             found = false;
         }
-    } catch (const std::exception&) {
+    } catch (const std::exception &) {
         found = false;
     }
 

@@ -1433,13 +1433,13 @@ std::vector<uint> Context::loadXML(const char *filename, bool quiet) {
             }
 
             // Twosided flag
-            uint twosided = 1;  // default: two-sided
+            uint twosided = 1; // default: two-sided
             pugi::xml_node twosided_node = mat.child("twosided_flag");
             if (!twosided_node.empty()) {
                 const char *twosided_str = twosided_node.child_value();
                 int twosided_val;
                 if (parse_int(twosided_str, twosided_val) && twosided_val >= 0) {
-                    twosided = (uint)twosided_val;
+                    twosided = (uint) twosided_val;
                 }
             }
 
@@ -2929,7 +2929,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
     // Collect unique material labels used by the primitives being written
     std::set<std::string> material_labels_used;
-    for (uint UUID : UUIDs) {
+    for (uint UUID: UUIDs) {
         if (doesPrimitiveExist(UUID)) {
             uint matID = getPrimitivePointer_private(UUID)->materialID;
             if (materials.find(matID) != materials.end()) {
@@ -2940,7 +2940,7 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
 
     if (!material_labels_used.empty()) {
         outfile << "   <materials>" << std::endl;
-        for (const std::string &label : material_labels_used) {
+        for (const std::string &label: material_labels_used) {
             if (doesMaterialExist(label)) {
                 uint matID = getMaterialIDFromLabel(label);
                 const Material &mat = materials.at(matID);
@@ -2952,13 +2952,13 @@ void Context::writeXML(const char *filename, const std::vector<uint> &UUIDs, boo
                 if (mat.texture_color_overridden) {
                     outfile << "\t\t<texture_override>1</texture_override>" << std::endl;
                 }
-                if (mat.twosided_flag != 1) {  // Only write if non-default
+                if (mat.twosided_flag != 1) { // Only write if non-default
                     outfile << "\t\t<twosided_flag>" << mat.twosided_flag << "</twosided_flag>" << std::endl;
                 }
                 // Write material data
                 std::vector<std::string> mdata = mat.listMaterialData();
                 if (!mdata.empty()) {
-                    writeDataToXMLstream("material", mdata, const_cast<Material*>(&mat), outfile);
+                    writeDataToXMLstream("material", mdata, const_cast<Material *>(&mat), outfile);
                 }
                 outfile << "\t</material>" << std::endl;
             }

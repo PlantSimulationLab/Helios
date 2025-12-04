@@ -1,5 +1,24 @@
 # Changelog
 
+# [1.3.60] 2025-12-08
+
+## Core
+- Added vector-scalar arithmetic operators for `std::vector<float>` to enable element-wise operations: addition (`vec + scalar`, `scalar + vec`), subtraction (`vec - scalar`, `scalar - vec`), multiplication (`vec * scalar`, `scalar * vec`), and division (`vec / scalar`, `scalar / vec`).
+- Fixed an issue with shared materials. If duplicate materials were merged, and the color/texture/etc. is changed for a subset of primitives, all primitives sharing that merged material would be affected.
+
+## Photosynthesis
+- Added `setCi()` method to manually override intercellular CO2 concentration for specified primitives, bypassing the normal iterative calculation that couples photosynthesis with stomatal conductance. This feature is primarily intended for testing and validation purposes.
+- CRITICAL BUG: Fixed bug in `evaluateFarquharModel()` where incorrect variable name was used when calling `fzero()`. This could result in parameters reverting to the default values in certain cases.
+- Added check for Farquhar `Topt` parameters to catch instances where users specify them in units of Kelvin instead of Celsius.
+
+## Plant Architecture
+- Substantially refactored XML reading/writing to avoid writing position and orientation vectors to XML. Instead, they are auto-computed based on bulk parameters.
+
+## Radiation
+- Added zoom parameter to the radiation camera parameters structure. By default zoom is 1x, so should be backward compatible.
+- Added lens flare model to radiation camera.
+- Radiation sources are now rendered in the radiation camera images if in view of the camera.
+
 # [1.3.59] 2025-12-02
 
 ## Core

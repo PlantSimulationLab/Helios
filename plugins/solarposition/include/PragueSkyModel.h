@@ -58,9 +58,9 @@ double lerp(const double from, const double to, const double factor);
 class PragueSkyModel {
 
 
-/////////////////////////////////////////////////////////////////////////////////////
-// Public types
-/////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////
+    // Public types
+    /////////////////////////////////////////////////////////////////////////////////////
 public:
     /// Exception thrown by the initialize method if the passed dataset file could not be found.
     class DatasetNotFoundException : public std::exception {
@@ -68,10 +68,12 @@ public:
         const std::string message;
 
     public:
-        DatasetNotFoundException(const std::string& filename)
-            : message(std::string("Dataset file ") + filename + std::string(" not found")) {}
+        DatasetNotFoundException(const std::string &filename) : message(std::string("Dataset file ") + filename + std::string(" not found")) {
+        }
 
-        virtual const char* what() const throw() { return message.c_str(); }
+        virtual const char *what() const throw() {
+            return message.c_str();
+        }
     };
 
     /// Exception thrown by the initialize method if an error occurred while reading the passed dataset file.
@@ -80,10 +82,12 @@ public:
         const std::string message;
 
     public:
-        DatasetReadException(const std::string& parameterName)
-            : message(std::string("Dataset reading failed at ") + parameterName) {}
+        DatasetReadException(const std::string &parameterName) : message(std::string("Dataset reading failed at ") + parameterName) {
+        }
 
-        virtual const char* what() const throw() { return message.c_str(); }
+        virtual const char *what() const throw() {
+            return message.c_str();
+        }
     };
 
     /// Exception thrown by the polarisation method if the dataset passed to the initialize method does not
@@ -93,10 +97,12 @@ public:
         const std::string message;
 
     public:
-        NoPolarisationException()
-            : message(std::string("The supplied dataset does not contain polarisation data")) {}
+        NoPolarisationException() : message(std::string("The supplied dataset does not contain polarisation data")) {
+        }
 
-        virtual const char* what() const throw() { return message.c_str(); }
+        virtual const char *what() const throw() {
+            return message.c_str();
+        }
     };
 
     /// Exception thrown when using the model without calling the initialize method first.
@@ -105,10 +111,12 @@ public:
         const std::string message;
 
     public:
-        NotInitializedException()
-            : message(std::string("The model is not initialized")) {}
+        NotInitializedException() : message(std::string("The model is not initialized")) {
+        }
 
-        virtual const char* what() const throw() { return message.c_str(); }
+        virtual const char *what() const throw() {
+            return message.c_str();
+        }
     };
 
     /// A simple 3D vector implementation. Provides some basic operations.
@@ -128,18 +136,24 @@ public:
             this->z = z;
         }
 
-        Vector3 operator+(const Vector3& other) const {
+        Vector3 operator+(const Vector3 &other) const {
             return Vector3(x + other.x, y + other.y, z + other.z);
         }
-        Vector3 operator-(const Vector3& other) const {
+        Vector3 operator-(const Vector3 &other) const {
             return Vector3(x - other.x, y - other.y, z - other.z);
         }
 
-        Vector3 operator*(const double factor) const { return Vector3(x * factor, y * factor, z * factor); }
+        Vector3 operator*(const double factor) const {
+            return Vector3(x * factor, y * factor, z * factor);
+        }
 
-        Vector3 operator/(const double factor) const { return Vector3(x / factor, y / factor, z / factor); }
+        Vector3 operator/(const double factor) const {
+            return Vector3(x / factor, y / factor, z / factor);
+        }
 
-        bool isZero() const { return x == 0.0 && y == 0.0 && z == 0.0; }
+        bool isZero() const {
+            return x == 0.0 && y == 0.0 && z == 0.0;
+        }
     };
 
     /// Structure holding all parameters necessary for querying the model.
@@ -185,22 +199,22 @@ public:
         double elevationMax;
         double visibilityMin;
         double visibilityMax;
-        bool   polarisation;
-        int    channels;
+        bool polarisation;
+        int channels;
         double channelStart;
         double channelWidth;
     };
 
 
-/////////////////////////////////////////////////////////////////////////////////////
-// Private types
-/////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////
+    // Private types
+    /////////////////////////////////////////////////////////////////////////////////////
 private:
     /// Structure holding index and factor for interpolating with respect to two neighboring values of an
     /// array.
     struct InterpolationParameter {
         double factor;
-        int    index;
+        int index;
     };
 
     /// Angles converted into interpolation parameters.
@@ -212,46 +226,46 @@ private:
     struct ControlParameters {
         /// 16 sets of parameters that will be bi-linearly interpolated
         std::array<std::vector<float>::const_iterator, 16> coefficients;
-        std::array<double, 4>                              interpolationFactor;
+        std::array<double, 4> interpolationFactor;
     };
 
     /// Structure used for storing radiance and polarisation metadata.
     struct Metadata {
         int rank;
 
-        int                 sunOffset;
-        int                 sunStride;
+        int sunOffset;
+        int sunStride;
         std::vector<double> sunBreaks;
 
-        int                 zenithOffset;
-        int                 zenithStride;
+        int zenithOffset;
+        int zenithStride;
         std::vector<double> zenithBreaks;
 
-        int                 emphOffset; // not used for polarisation
+        int emphOffset; // not used for polarisation
         std::vector<double> emphBreaks; // not used for polarisation
 
         int totalCoefsSingleConfig;
         int totalCoefsAllConfigs;
-	};
+    };
 
-	/// Transmittance model internal parameters.
-	struct TransmittanceParameters {
-		InterpolationParameter altitude;
-		InterpolationParameter distance;
-	};
+    /// Transmittance model internal parameters.
+    struct TransmittanceParameters {
+        InterpolationParameter altitude;
+        InterpolationParameter distance;
+    };
 
 
-/////////////////////////////////////////////////////////////////////////////////////
-// Private data
-/////////////////////////////////////////////////////////////////////////////////////
-    int    channels;
+    /////////////////////////////////////////////////////////////////////////////////////
+    // Private data
+    /////////////////////////////////////////////////////////////////////////////////////
+    int channels;
     double channelStart;
     double channelWidth;
 
     bool initialized;
 
-	// Total number of configurations
-	int totalConfigs;
+    // Total number of configurations
+    int totalConfigs;
 
     // Number of configurations skipped from the beginning of the radiance/polarisation coefficients part
     // of the dataset file (if loading of just one visibility was requested)
@@ -274,32 +288,32 @@ private:
 
     // Radiance data
     //
-	// Structure:
-	// [[[[[[ sunCoefsRad       (sunBreaksCountRad * float),
-	//        zenithCoefsRad (zenithBreaksCountRad * float) ] * rankRad,
-	//        emphCoefsRad     (emphBreaksCountRad * float) ]
-	//  * channels ] * elevationCount ] * altitudeCount ] * albedoCount ] * visibilityCount
+    // Structure:
+    // [[[[[[ sunCoefsRad       (sunBreaksCountRad * float),
+    //        zenithCoefsRad (zenithBreaksCountRad * float) ] * rankRad,
+    //        emphCoefsRad     (emphBreaksCountRad * float) ]
+    //  * channels ] * elevationCount ] * altitudeCount ] * albedoCount ] * visibilityCount
 
     std::vector<float> dataRad;
 
-	// Polarisation metadata
+    // Polarisation metadata
 
     Metadata metadataPol;
 
-	// Polarisation data
+    // Polarisation data
     //
-	// Struture:
-	// [[[[[[ sunCoefsPol       (sunBreaksCountPol * float),
-	//        zenithCoefsPol (zenithBreaksCountPol * float) ] * rankPol]
-	// * channels ] * elevationCount ] * altitudeCount ] * albedoCount ] * visibilityCount
+    // Struture:
+    // [[[[[[ sunCoefsPol       (sunBreaksCountPol * float),
+    //        zenithCoefsPol (zenithBreaksCountPol * float) ] * rankPol]
+    // * channels ] * elevationCount ] * altitudeCount ] * albedoCount ] * visibilityCount
 
     std::vector<float> dataPol;
 
     // Transmittance metadata
 
-    int                 aDim;
-    int                 dDim;
-    int                 rankTrans;
+    int aDim;
+    int dDim;
+    int rankTrans;
     std::vector<double> altitudesTrans;
     std::vector<double> visibilitiesTrans;
 
@@ -309,9 +323,9 @@ private:
     std::vector<float> dataTransV;
 
 
-/////////////////////////////////////////////////////////////////////////////////////
-// Public methods
-/////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////
+    // Public methods
+    /////////////////////////////////////////////////////////////////////////////////////
 public:
     PragueSkyModel() : initialized(false) {};
 
@@ -324,9 +338,11 @@ public:
     /// Throws:
     /// - DatasetNotFoundException: if the specified dataset file could not be found
     /// - DatasetReadException: if an error occurred while reading the dataset file
-    void initialize(const std::string& filename, const double singleVisibility = 0.0);
+    void initialize(const std::string &filename, const double singleVisibility = 0.0);
 
-    bool isInitialized() const { return initialized; }
+    bool isInitialized() const {
+        return initialized;
+    }
 
     /// Gets parameter ranges available in currently loaded dataset.
     ///
@@ -341,18 +357,13 @@ public:
     /// supports altitude from [0, 15000] m, elevation from [-0.073, PI/2] rad, azimuth from [0, PI] rad, visibility
     /// from [20, 131.8] km, and albedo from [0, 1]. Values outside range of the used dataset are clamped to the
     /// nearest supported value.
-    Parameters computeParameters(const Vector3& viewPoint,
-                                 const Vector3& viewDirection,
-                                 const double   groundLevelSolarElevationAtOrigin,
-                                 const double   groundLevelSolarAzimuthAtOrigin,
-                                 const double   visibility,
-                                 const double   albedo) const;
+    Parameters computeParameters(const Vector3 &viewPoint, const Vector3 &viewDirection, const double groundLevelSolarElevationAtOrigin, const double groundLevelSolarAzimuthAtOrigin, const double visibility, const double albedo) const;
 
     /// Computes sky radiance only (without direct sun contribution) for given parameters and wavelength (full
     /// dataset supports wavelengths from 280 nm to 2480 nm).
     ///
     /// Throws NotInitializedException if called without initializing the model first.
-    double skyRadiance(const Parameters& params, const double wavelength) const;
+    double skyRadiance(const Parameters &params, const double wavelength) const;
 
     /// Computes sun radiance only (without radiance inscattered from the sky) for given parameters and
     /// wavelength (full dataset supports wavelengths from 280 nm to 2480 nm).
@@ -360,7 +371,7 @@ public:
     /// Checks whether the parameters correspond to view direction hitting the sun and returns 0 if not.
     ///
     /// Throws NotInitializedException if called without initializing the model first.
-    double sunRadiance(const Parameters& params, const double wavelength) const;
+    double sunRadiance(const Parameters &params, const double wavelength) const;
 
     /// Computes degree of polarisation for given parameters and wavelength (full
     /// dataset supports wavelengths from 280 nm to 2480 nm). Can be negative.
@@ -369,7 +380,7 @@ public:
     /// - NoPolarisationException: if the polarisation method is called but the model does not contain
     /// polarisation data
     /// - NotInitializedException: if called without initializing the model first
-    double polarisation(const Parameters& params, const double wavelength) const;
+    double polarisation(const Parameters &params, const double wavelength) const;
 
     /// Computes transmittance between view point and a point certain distance away from it along view
     /// direction.
@@ -379,12 +390,12 @@ public:
     /// infinity).
     ///
     /// Throws NotInitializedException if called without initializing the model first.
-    double transmittance(const Parameters& params, const double wavelength, const double distance) const;
+    double transmittance(const Parameters &params, const double wavelength, const double distance) const;
 
 
-/////////////////////////////////////////////////////////////////////////////////////
-// Private methods
-/////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////
+    // Private methods
+    /////////////////////////////////////////////////////////////////////////////////////
 private:
     /// Reads radiance part of the dataset file into memory.
     ///
@@ -393,34 +404,26 @@ private:
     /// dataset or one nearest if not). Otherwise, the entire dataset is loaded.
     ///
     /// Throws DatasetReadException if an error occurred while reading the dataset file.
-    void readRadiance(FILE* handle, const double singleVisibility);
+    void readRadiance(FILE *handle, const double singleVisibility);
 
     /// Reads transmittance part of the dataset file into memory.
     /// Throws DatasetReadException if an error occurred while reading the dataset file.
-    void readTransmittance(FILE* handle);
+    void readTransmittance(FILE *handle);
 
     /// Reads polarisation part of the dataset file into memory.
     /// Throws DatasetReadException if an error occurred while reading the dataset file.
-    void readPolarisation(FILE* handle);
+    void readPolarisation(FILE *handle);
 
     // Sky radiance and polarisation
 
     /// Gets iterator to coefficients in the dataset array corresponding to the given configuration. Used for
     /// sky radiance and polarisation.
-    std::vector<float>::const_iterator getCoefficients(const std::vector<float>& dataset,
-                                                       const int                 totalCoefsSingleConfig,
-                                                       const int                 elevation,
-                                                       const int                 altitude,
-                                                       const int                 visibility,
-                                                       const int                 albedo,
-                                                       const int                 wavelength) const;
+    std::vector<float>::const_iterator getCoefficients(const std::vector<float> &dataset, const int totalCoefsSingleConfig, const int elevation, const int altitude, const int visibility, const int albedo, const int wavelength) const;
 
     /// Recursive function controlling interpolation of reconstructed radiance between two neighboring visibility,
     /// albedo, altitude and elevation values.
-    template <int TOffset, int TLevel>
-    double interpolate(const AngleParameters&   angleParameters,
-                       const ControlParameters& controlParameters,
-                       const Metadata&          metadata) const {
+    template<int TOffset, int TLevel>
+    double interpolate(const AngleParameters &angleParameters, const ControlParameters &controlParameters, const Metadata &metadata) const {
         /// Starts at level 0 and recursively goes down to level 4 while computing offset to the control
         /// parameters array. There it reconstructs radiance. When returning from recursion interpolates
         /// according to elevation, altitude, albedo and visibility at level 3, 2, 1 and 0, respectively.
@@ -428,8 +431,7 @@ private:
             return reconstruct(angleParameters, controlParameters.coefficients[TOffset], metadata);
         } else {
             // Compute the first value
-            const double resultLow =
-                interpolate<TOffset, TLevel + 1>(angleParameters, controlParameters, metadata);
+            const double resultLow = interpolate<TOffset, TLevel + 1>(angleParameters, controlParameters, metadata);
 
             // Skip the second value if not useful or not available.
             if (controlParameters.interpolationFactor[TLevel] < 1e-6) {
@@ -437,10 +439,7 @@ private:
             }
 
             // Compute the second value
-            const double resultHigh =
-                interpolate<TOffset + (1 << (3 - TLevel)), TLevel + 1>(angleParameters,
-                                                                       controlParameters,
-                                                                       metadata);
+            const double resultHigh = interpolate<TOffset + (1 << (3 - TLevel)), TLevel + 1>(angleParameters, controlParameters, metadata);
 
             /// Interpolate between the two
             return lerp(resultLow, resultHigh, controlParameters.interpolationFactor[TLevel]);
@@ -449,58 +448,38 @@ private:
 
     /// Reconstructs sky radiance or polarisation from the given control parameters by inverse tensor
     /// decomposition.
-    double reconstruct(const AngleParameters&                   angleParameters,
-                       const std::vector<float>::const_iterator controlParameters,
-                       const Metadata&                          metadata) const;
+    double reconstruct(const AngleParameters &angleParameters, const std::vector<float>::const_iterator controlParameters, const Metadata &metadata) const;
 
     /// Get interpolation parameter for the given query value, i.e. finds position of the query value between
     /// a pair of break values.
     ///
     /// Used for albedo, elevation, altitude, visibility and angles (theta, alpha, or gamma).
-    InterpolationParameter getInterpolationParameter(const double               queryVal,
-                                                     const std::vector<double>& breaks) const;
+    InterpolationParameter getInterpolationParameter(const double queryVal, const std::vector<double> &breaks) const;
 
     /// Evaluates the model. Used for computing sky radiance and polarisation.
-    double evaluateModel(const Parameters&         params,
-                         const double              wavelength,
-                         const std::vector<float>& data,
-                         const Metadata&           metadata) const;
+    double evaluateModel(const Parameters &params, const double wavelength, const std::vector<float> &data, const Metadata &metadata) const;
 
     // Transmittance
 
     /// Gets iterator to base transmittance coefficients in the dataset array corresponding to the given
     /// configuration.
-    std::vector<float>::const_iterator getCoefficientsTransBase(const int altitude,
-                                                                const int a,
-                                                                const int d) const;
+    std::vector<float>::const_iterator getCoefficientsTransBase(const int altitude, const int a, const int d) const;
 
     /// Gets iterator to transmittance coefficients in the dataset array corresponding to the given
     /// configuration.
-    std::vector<float>::const_iterator getCoefficientsTrans(const int visibility,
-                                                            const int altitude,
-                                                            const int wavelength) const;
+    std::vector<float>::const_iterator getCoefficientsTrans(const int visibility, const int altitude, const int wavelength) const;
 
     /// Interpolates transmittances computed for two nearest altitudes.
-    double interpolateTrans(const int                     visibilityIndex,
-                            const InterpolationParameter  altitudeParam,
-                            const TransmittanceParameters transParams,
-                            const int                     channelIndex) const;
+    double interpolateTrans(const int visibilityIndex, const InterpolationParameter altitudeParam, const TransmittanceParameters transParams, const int channelIndex) const;
 
     /// For each channel reconstructs transmittances for the four nearest transmittance parameters and
     /// interpolates them.
-    double reconstructTrans(const int                     visibilityIndex,
-                            const int                     altitudeIndex,
-                            const TransmittanceParameters transParams,
-                            const int                     channelIndex) const;
+    double reconstructTrans(const int visibilityIndex, const int altitudeIndex, const TransmittanceParameters transParams, const int channelIndex) const;
 
     /// Converts altitude or distance value used in the transmittance model into interpolation parameter.
-    InterpolationParameter getInterpolationParameterTrans(const double value,
-                                                          const int    paramCount,
-                                                          const int    power) const;
+    InterpolationParameter getInterpolationParameterTrans(const double value, const int paramCount, const int power) const;
 
     /// Transforms the given theta angle, observer altitude and distance along ray into transmittance model
     /// internal [altitude, distance] parametrization.
-    TransmittanceParameters toTransmittanceParams(const double theta,
-                                                  const double distance,
-                                                  const double altitude) const;
+    TransmittanceParameters toTransmittanceParams(const double theta, const double distance, const double altitude) const;
 };

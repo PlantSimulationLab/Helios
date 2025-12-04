@@ -556,7 +556,7 @@ float LeafOptics::transmittance(double k) {
 }
 
 void LeafOptics::setProperties(const std::vector<uint> &UUIDs, const LeafOpticsProperties &leafproperties) {
-    for (const auto &data : output_prim_data) {
+    for (const auto &data: output_prim_data) {
         if (data == "chlorophyll") {
             context->setPrimitiveData(UUIDs, "chlorophyll", leafproperties.chlorophyllcontent);
         } else if (data == "carotenoid") {
@@ -608,7 +608,7 @@ void LeafOptics::getPropertiesFromSpectrum(const std::vector<uint> &UUIDs) {
         const LeafOpticsProperties &props = it->second;
 
         // Assign primitive data using the same logic as setProperties()
-        for (const auto &data : output_prim_data) {
+        for (const auto &data: output_prim_data) {
             if (data == "chlorophyll") {
                 context->setPrimitiveData(UUID, "chlorophyll", props.chlorophyllcontent);
             } else if (data == "carotenoid") {
@@ -665,10 +665,8 @@ void LeafOptics::enableMessages() {
 }
 
 void LeafOptics::optionalOutputPrimitiveData(const char *label) {
-    if (strcmp(label, "chlorophyll") == 0 || strcmp(label, "carotenoid") == 0 ||
-        strcmp(label, "anthocyanin") == 0 || strcmp(label, "brown") == 0 ||
-        strcmp(label, "water") == 0 || strcmp(label, "drymass") == 0 ||
-        strcmp(label, "protein") == 0 || strcmp(label, "cellulose") == 0) {
+    if (strcmp(label, "chlorophyll") == 0 || strcmp(label, "carotenoid") == 0 || strcmp(label, "anthocyanin") == 0 || strcmp(label, "brown") == 0 || strcmp(label, "water") == 0 || strcmp(label, "drymass") == 0 || strcmp(label, "protein") == 0 ||
+        strcmp(label, "cellulose") == 0) {
         output_prim_data.emplace_back(label);
     } else {
         if (message_flag) {

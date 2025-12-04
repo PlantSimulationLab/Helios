@@ -1028,7 +1028,8 @@ namespace helios {
      * \param[in] max_iterations [optional] Maximum number of iterations to allow before exiting solver.
      * \param[in] warnings [optional] Pointer to WarningAggregator for collecting convergence warnings. If nullptr, warnings are not collected.
      */
-    [[nodiscard]] float fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f, int max_iterations = 100, WarningAggregator* warnings = nullptr);
+    [[nodiscard]] float fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f, int max_iterations = 100,
+                              WarningAggregator *warnings = nullptr);
 
     //! Use Newton-Raphson method to find the zero of a function with convergence status
     /**
@@ -1275,6 +1276,118 @@ namespace helios {
         return result;
     }
 
+    //! Add a scalar to each element of a vector
+    /**
+     * \param[in] vec Vector of floats
+     * \param[in] scalar Scalar value to add
+     * \return New vector with scalar added to each element
+     * \ingroup functions
+     */
+    inline std::vector<float> operator+(const std::vector<float> &vec, float scalar) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = vec[i] + scalar;
+        }
+        return result;
+    }
+
+    //! Add a scalar to each element of a vector (scalar on left)
+    /**
+     * \param[in] scalar Scalar value to add
+     * \param[in] vec Vector of floats
+     * \return New vector with scalar added to each element
+     * \ingroup functions
+     */
+    inline std::vector<float> operator+(float scalar, const std::vector<float> &vec) {
+        return vec + scalar;
+    }
+
+    //! Subtract a scalar from each element of a vector
+    /**
+     * \param[in] vec Vector of floats
+     * \param[in] scalar Scalar value to subtract
+     * \return New vector with scalar subtracted from each element
+     * \ingroup functions
+     */
+    inline std::vector<float> operator-(const std::vector<float> &vec, float scalar) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = vec[i] - scalar;
+        }
+        return result;
+    }
+
+    //! Subtract each element of a vector from a scalar
+    /**
+     * \param[in] scalar Scalar value
+     * \param[in] vec Vector of floats to subtract from scalar
+     * \return New vector with each element being scalar minus the vector element
+     * \ingroup functions
+     */
+    inline std::vector<float> operator-(float scalar, const std::vector<float> &vec) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = scalar - vec[i];
+        }
+        return result;
+    }
+
+    //! Multiply each element of a vector by a scalar
+    /**
+     * \param[in] vec Vector of floats
+     * \param[in] scalar Scalar value to multiply
+     * \return New vector with each element multiplied by scalar
+     * \ingroup functions
+     */
+    inline std::vector<float> operator*(const std::vector<float> &vec, float scalar) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = vec[i] * scalar;
+        }
+        return result;
+    }
+
+    //! Multiply each element of a vector by a scalar (scalar on left)
+    /**
+     * \param[in] scalar Scalar value to multiply
+     * \param[in] vec Vector of floats
+     * \return New vector with each element multiplied by scalar
+     * \ingroup functions
+     */
+    inline std::vector<float> operator*(float scalar, const std::vector<float> &vec) {
+        return vec * scalar;
+    }
+
+    //! Divide each element of a vector by a scalar
+    /**
+     * \param[in] vec Vector of floats
+     * \param[in] scalar Scalar value to divide by
+     * \return New vector with each element divided by scalar
+     * \ingroup functions
+     */
+    inline std::vector<float> operator/(const std::vector<float> &vec, float scalar) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = vec[i] / scalar;
+        }
+        return result;
+    }
+
+    //! Divide a scalar by each element of a vector
+    /**
+     * \param[in] scalar Scalar value (numerator)
+     * \param[in] vec Vector of floats (denominators)
+     * \return New vector with each element being scalar divided by vector element
+     * \ingroup functions
+     */
+    inline std::vector<float> operator/(float scalar, const std::vector<float> &vec) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = scalar / vec[i];
+        }
+        return result;
+    }
+
     /**
      * \class PixelUVKey
      * \brief Represents a unique key for a pixel using its UV coordinates.
@@ -1452,11 +1565,11 @@ namespace helios {
         [[nodiscard]] bool isEnabled() const;
 
     private:
-        mutable std::mutex mutex_;                                     //!< Thread safety for OpenMP
+        mutable std::mutex mutex_; //!< Thread safety for OpenMP
         std::unordered_map<std::string, std::vector<std::string>> warnings_; //!< Storage: category -> messages
-        std::unordered_map<std::string, size_t> counts_;               //!< Total count per category (may exceed stored messages)
-        bool enabled_ = true;                                          //!< Whether to accumulate warnings
-        static constexpr size_t MAX_EXAMPLES = 100;                    //!< Maximum examples to store per category
+        std::unordered_map<std::string, size_t> counts_; //!< Total count per category (may exceed stored messages)
+        bool enabled_ = true; //!< Whether to accumulate warnings
+        static constexpr size_t MAX_EXAMPLES = 100; //!< Maximum examples to store per category
     };
 
     //! Default null SphericalCoord that applies no rotation

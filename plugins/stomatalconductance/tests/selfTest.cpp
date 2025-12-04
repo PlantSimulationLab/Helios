@@ -465,7 +465,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Edge Cases and Error Conditions") 
     // These extreme values will likely cause fzero convergence issues
     // WarningAggregator.report() outputs to stderr
     {
-        capture_cout cout_buffer;  // Also capture stdout to suppress any other output
+        capture_cout cout_buffer; // Also capture stdout to suppress any other output
         capture_cerr cerr_buffer;
 
         BWBcoefficients bwb_coeffs;
@@ -749,7 +749,7 @@ DOCTEST_TEST_CASE("StomatalConductanceModel - Material-Based Coefficients") {
 
         // Verify all primitives have access to same coefficients via material
         uint shared_mat_id = context.getMaterialIDFromLabel("shared_leaf");
-        for (uint p : primitives) {
+        for (uint p: primitives) {
             DOCTEST_CHECK(context.getPrimitiveMaterialID(p) == shared_mat_id);
         }
 

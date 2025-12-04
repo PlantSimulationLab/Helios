@@ -1241,23 +1241,23 @@ DOCTEST_TEST_CASE("RadiationModel Prague Sky Diffuse Radiation Normalization") {
 
     // Condition 1: Clear sky, moderate circumsolar
     std::vector<float> clear_sky;
-    clear_sky.push_back(3.0f);   // circumsolar strength
-    clear_sky.push_back(15.0f);  // circumsolar width (degrees)
-    clear_sky.push_back(1.5f);   // horizon brightness
+    clear_sky.push_back(3.0f); // circumsolar strength
+    clear_sky.push_back(15.0f); // circumsolar width (degrees)
+    clear_sky.push_back(1.5f); // horizon brightness
     prague_test_conditions.push_back(clear_sky);
 
     // Condition 2: Turbid sky, strong circumsolar
     std::vector<float> turbid_sky;
-    turbid_sky.push_back(8.0f);   // circumsolar strength
-    turbid_sky.push_back(10.0f);  // circumsolar width (degrees)
-    turbid_sky.push_back(2.5f);   // horizon brightness
+    turbid_sky.push_back(8.0f); // circumsolar strength
+    turbid_sky.push_back(10.0f); // circumsolar width (degrees)
+    turbid_sky.push_back(2.5f); // horizon brightness
     prague_test_conditions.push_back(turbid_sky);
 
     // Condition 3: Overcast sky, weak circumsolar
     std::vector<float> overcast_sky;
-    overcast_sky.push_back(0.5f);  // circumsolar strength
+    overcast_sky.push_back(0.5f); // circumsolar strength
     overcast_sky.push_back(30.0f); // circumsolar width (degrees)
-    overcast_sky.push_back(1.2f);  // horizon brightness
+    overcast_sky.push_back(1.2f); // horizon brightness
     prague_test_conditions.push_back(overcast_sky);
 
     uint UUID_prague = context_prague.addPatch();
@@ -1282,7 +1282,7 @@ DOCTEST_TEST_CASE("RadiationModel Prague Sky Diffuse Radiation Normalization") {
 
     // Set Prague data as valid
     context_prague.setGlobalData("prague_sky_valid", 1);
-    context_prague.setGlobalData("prague_sky_sun_direction", make_vec3(0, 0.5f, 0.866f));  // 60° elevation
+    context_prague.setGlobalData("prague_sky_sun_direction", make_vec3(0, 0.5f, 0.866f)); // 60° elevation
     context_prague.setGlobalData("prague_sky_visibility_km", 50.0f);
     context_prague.setGlobalData("prague_sky_ground_albedo", 0.2f);
 
@@ -1294,7 +1294,7 @@ DOCTEST_TEST_CASE("RadiationModel Prague Sky Diffuse Radiation Normalization") {
         // Compute normalization factor (same logic as in RadiationModel::computeAngularNormalization)
         const int N = 50;
         float integral = 0.0f;
-        helios::vec3 sun_dir = make_vec3(0, 0, 1);  // Sun at zenith for normalization
+        helios::vec3 sun_dir = make_vec3(0, 0, 1); // Sun at zenith for normalization
         for (int j = 0; j < N; ++j) {
             for (int i = 0; i < N; ++i) {
                 float theta = 0.5f * M_PI * (i + 0.5f) / N;
@@ -1318,11 +1318,11 @@ DOCTEST_TEST_CASE("RadiationModel Prague Sky Diffuse Radiation Normalization") {
 
         // Create minimal Prague spectral parameters (just one wavelength at 550nm)
         std::vector<float> prague_params;
-        prague_params.push_back(550.0f);        // wavelength
-        prague_params.push_back(0.1f);          // L_zenith (not used in this test)
-        prague_params.push_back(circ_str);      // circumsolar strength
-        prague_params.push_back(circ_width);    // circumsolar width
-        prague_params.push_back(horiz_bright);  // horizon brightness
+        prague_params.push_back(550.0f); // wavelength
+        prague_params.push_back(0.1f); // L_zenith (not used in this test)
+        prague_params.push_back(circ_str); // circumsolar strength
+        prague_params.push_back(circ_width); // circumsolar width
+        prague_params.push_back(horiz_bright); // horizon brightness
         prague_params.push_back(normalization); // normalization factor
 
         context_prague.setGlobalData("prague_sky_spectral_params", prague_params);
@@ -2326,9 +2326,7 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary") {
 
     // Test 2: Load iPhone11 camera (verify different camera works)
     radiation.addRadiationCameraFromLibrary("cam2", "iPhone11", position, lookat, 1);
-    DOCTEST_CHECK(std::find(radiation.getAllCameraLabels().begin(),
-                            radiation.getAllCameraLabels().end(),
-                            "cam2") != radiation.getAllCameraLabels().end());
+    DOCTEST_CHECK(std::find(radiation.getAllCameraLabels().begin(), radiation.getAllCameraLabels().end(), "cam2") != radiation.getAllCameraLabels().end());
 
     // Verify iPhone11 spectral data was loaded separately
     DOCTEST_CHECK(context.doesGlobalDataExist("iPhone11_red"));
@@ -2338,10 +2336,7 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary") {
     // Test 3: Invalid camera label should throw error
     {
         capture_cerr capture_error;
-        DOCTEST_CHECK_THROWS_AS(
-            radiation.addRadiationCameraFromLibrary("cam3", "InvalidCamera", position, lookat, 1),
-            std::runtime_error
-        );
+        DOCTEST_CHECK_THROWS_AS(radiation.addRadiationCameraFromLibrary("cam3", "InvalidCamera", position, lookat, 1), std::runtime_error);
     }
 
     // Test 4: Verify camera properties are correctly calculated
@@ -2359,13 +2354,11 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary") {
     // Test 6: Load all available cameras to ensure they all parse correctly
     std::vector<std::string> available_cameras = {"Canon_20D", "Nikon_D700", "Nikon_D50", "iPhone11", "iPhone12ProMAX"};
     int cam_count = 3;
-    for (const auto &cam_name : available_cameras) {
-        if (cam_name != "Canon_20D" && cam_name != "iPhone11") {  // Already loaded these
+    for (const auto &cam_name: available_cameras) {
+        if (cam_name != "Canon_20D" && cam_name != "iPhone11") { // Already loaded these
             std::string label = "cam" + std::to_string(cam_count++);
             radiation.addRadiationCameraFromLibrary(label, cam_name, position, lookat, 1);
-            DOCTEST_CHECK(std::find(radiation.getAllCameraLabels().begin(),
-                                    radiation.getAllCameraLabels().end(),
-                                    label) != radiation.getAllCameraLabels().end());
+            DOCTEST_CHECK(std::find(radiation.getAllCameraLabels().begin(), radiation.getAllCameraLabels().end(), label) != radiation.getAllCameraLabels().end());
         }
     }
 }
@@ -2405,16 +2398,13 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary with custom ba
     // Verify spectral data is correct type and has correct number of points
     std::vector<vec2> red_response;
     context.getGlobalData("Canon_20D_red", red_response);
-    DOCTEST_CHECK(red_response.size() == 33);  // 400-720 nm at 10nm intervals
+    DOCTEST_CHECK(red_response.size() == 33); // 400-720 nm at 10nm intervals
 
     // Test 2: Wrong number of custom labels should throw
     {
         capture_cerr capture_error;
-        std::vector<std::string> wrong_size = {"A", "B"};  // Only 2, but Canon_20D has 3 bands
-        DOCTEST_CHECK_THROWS_AS(
-            radiation.addRadiationCameraFromLibrary("cam_fail", "Canon_20D", position, lookat, 1, wrong_size),
-            std::runtime_error
-        );
+        std::vector<std::string> wrong_size = {"A", "B"}; // Only 2, but Canon_20D has 3 bands
+        DOCTEST_CHECK_THROWS_AS(radiation.addRadiationCameraFromLibrary("cam_fail", "Canon_20D", position, lookat, 1, wrong_size), std::runtime_error);
     }
 
     // Test 3: Empty custom labels uses default behavior (XML labels)
@@ -2479,12 +2469,12 @@ DOCTEST_TEST_CASE("RadiationModel - updateCameraParameters") {
 
     // Test 1: Update all camera parameters successfully
     CameraProperties updated_props;
-    updated_props.camera_resolution = make_int2(200, 150);  // Change resolution
-    updated_props.HFOV = 60.0f;  // Change HFOV
-    updated_props.lens_diameter = 0.2f;  // Change lens diameter
-    updated_props.focal_plane_distance = 10.0f;  // Change focal distance
-    updated_props.sensor_width_mm = 50.0f;  // Change sensor width
-    updated_props.model = "UpdatedCamera";  // Change model name
+    updated_props.camera_resolution = make_int2(200, 150); // Change resolution
+    updated_props.HFOV = 60.0f; // Change HFOV
+    updated_props.lens_diameter = 0.2f; // Change lens diameter
+    updated_props.focal_plane_distance = 10.0f; // Change focal distance
+    updated_props.sensor_width_mm = 50.0f; // Change sensor width
+    updated_props.model = "UpdatedCamera"; // Change model name
 
     // Should not throw
     DOCTEST_CHECK_NOTHROW(radiation.updateCameraParameters("cam1", updated_props));
@@ -2506,10 +2496,7 @@ DOCTEST_TEST_CASE("RadiationModel - updateCameraParameters") {
     props.HFOV = 45.0f;
     {
         capture_cerr capture_error;
-        DOCTEST_CHECK_THROWS_AS(
-            radiation.updateCameraParameters("nonexistent_camera", props),
-            std::runtime_error
-        );
+        DOCTEST_CHECK_THROWS_AS(radiation.updateCameraParameters("nonexistent_camera", props), std::runtime_error);
     }
 
     // Test 3: Error case - invalid resolution (zero x)
@@ -2518,10 +2505,7 @@ DOCTEST_TEST_CASE("RadiationModel - updateCameraParameters") {
         invalid_props.camera_resolution = make_int2(0, 100);
         invalid_props.HFOV = 45.0f;
         capture_cerr capture_error;
-        DOCTEST_CHECK_THROWS_AS(
-            radiation.updateCameraParameters("cam1", invalid_props),
-            std::runtime_error
-        );
+        DOCTEST_CHECK_THROWS_AS(radiation.updateCameraParameters("cam1", invalid_props), std::runtime_error);
     }
 
     // Test 4: Error case - invalid resolution (negative y)
@@ -2530,10 +2514,7 @@ DOCTEST_TEST_CASE("RadiationModel - updateCameraParameters") {
         invalid_props.camera_resolution = make_int2(100, -1);
         invalid_props.HFOV = 45.0f;
         capture_cerr capture_error;
-        DOCTEST_CHECK_THROWS_AS(
-            radiation.updateCameraParameters("cam1", invalid_props),
-            std::runtime_error
-        );
+        DOCTEST_CHECK_THROWS_AS(radiation.updateCameraParameters("cam1", invalid_props), std::runtime_error);
     }
 
     // Test 5: Error case - invalid HFOV (zero)
@@ -2542,10 +2523,7 @@ DOCTEST_TEST_CASE("RadiationModel - updateCameraParameters") {
         invalid_props.camera_resolution = make_int2(100, 100);
         invalid_props.HFOV = 0.0f;
         capture_cerr capture_error;
-        DOCTEST_CHECK_THROWS_AS(
-            radiation.updateCameraParameters("cam1", invalid_props),
-            std::runtime_error
-        );
+        DOCTEST_CHECK_THROWS_AS(radiation.updateCameraParameters("cam1", invalid_props), std::runtime_error);
     }
 
     // Test 6: Error case - invalid HFOV (exactly 180 degrees)
@@ -2554,10 +2532,7 @@ DOCTEST_TEST_CASE("RadiationModel - updateCameraParameters") {
         invalid_props.camera_resolution = make_int2(100, 100);
         invalid_props.HFOV = 180.0f;
         capture_cerr capture_error;
-        DOCTEST_CHECK_THROWS_AS(
-            radiation.updateCameraParameters("cam1", invalid_props),
-            std::runtime_error
-        );
+        DOCTEST_CHECK_THROWS_AS(radiation.updateCameraParameters("cam1", invalid_props), std::runtime_error);
     }
 
     // Test 7: Error case - invalid HFOV (greater than 180 degrees)
@@ -2566,10 +2541,7 @@ DOCTEST_TEST_CASE("RadiationModel - updateCameraParameters") {
         invalid_props.camera_resolution = make_int2(100, 100);
         invalid_props.HFOV = 200.0f;
         capture_cerr capture_error;
-        DOCTEST_CHECK_THROWS_AS(
-            radiation.updateCameraParameters("cam1", invalid_props),
-            std::runtime_error
-        );
+        DOCTEST_CHECK_THROWS_AS(radiation.updateCameraParameters("cam1", invalid_props), std::runtime_error);
     }
 
     // Test 8: Error case - invalid HFOV (negative)
@@ -2578,10 +2550,7 @@ DOCTEST_TEST_CASE("RadiationModel - updateCameraParameters") {
         invalid_props.camera_resolution = make_int2(100, 100);
         invalid_props.HFOV = -10.0f;
         capture_cerr capture_error;
-        DOCTEST_CHECK_THROWS_AS(
-            radiation.updateCameraParameters("cam1", invalid_props),
-            std::runtime_error
-        );
+        DOCTEST_CHECK_THROWS_AS(radiation.updateCameraParameters("cam1", invalid_props), std::runtime_error);
     }
 
     // Test 9: Valid edge case - HFOV just above 0
@@ -2608,7 +2577,7 @@ DOCTEST_TEST_CASE("RadiationModel - updateCameraParameters") {
     // Test 12: Update resolution with non-square aspect ratio
     {
         CameraProperties nonsquare_props;
-        nonsquare_props.camera_resolution = make_int2(1920, 1080);  // 16:9 aspect
+        nonsquare_props.camera_resolution = make_int2(1920, 1080); // 16:9 aspect
         nonsquare_props.HFOV = 70.0f;
         DOCTEST_CHECK_NOTHROW(radiation.updateCameraParameters("cam1", nonsquare_props));
     }
@@ -2618,7 +2587,7 @@ DOCTEST_TEST_CASE("RadiationModel - updateCameraParameters") {
         CameraProperties pinhole_props;
         pinhole_props.camera_resolution = make_int2(100, 100);
         pinhole_props.HFOV = 45.0f;
-        pinhole_props.lens_diameter = 0.0f;  // Pinhole camera
+        pinhole_props.lens_diameter = 0.0f; // Pinhole camera
         DOCTEST_CHECK_NOTHROW(radiation.updateCameraParameters("cam1", pinhole_props));
     }
 
@@ -2701,10 +2670,7 @@ DOCTEST_TEST_CASE("RadiationModel - getCameraParameters") {
     // Test 4: Error case - non-existent camera
     {
         capture_cerr capture_error;
-        DOCTEST_CHECK_THROWS_AS(
-            radiation.getCameraParameters("nonexistent_camera"),
-            std::runtime_error
-        );
+        DOCTEST_CHECK_THROWS_AS(radiation.getCameraParameters("nonexistent_camera"), std::runtime_error);
     }
 
     // Test 5: Round-trip test - get, update with same values, get again (should not generate warnings)
@@ -2715,7 +2681,7 @@ DOCTEST_TEST_CASE("RadiationModel - getCameraParameters") {
         capture_cerr capture_no_warning;
         radiation.updateCameraParameters("test_cam", roundtrip_props);
         std::string captured = capture_no_warning.get_captured_output();
-        DOCTEST_CHECK(captured.empty());  // No warnings should be generated
+        DOCTEST_CHECK(captured.empty()); // No warnings should be generated
     }
 
     CameraProperties roundtrip_props2 = radiation.getCameraParameters("test_cam");
@@ -2731,7 +2697,7 @@ DOCTEST_TEST_CASE("RadiationModel - getCameraParameters") {
 
     // Test 6: Verify non-square resolution aspect ratio
     CameraProperties nonsquare_props;
-    nonsquare_props.camera_resolution = make_int2(1280, 720);  // 16:9
+    nonsquare_props.camera_resolution = make_int2(1280, 720); // 16:9
     nonsquare_props.HFOV = 90.0f;
     radiation.updateCameraParameters("test_cam", nonsquare_props);
     retrieved_props = radiation.getCameraParameters("test_cam");
@@ -4349,7 +4315,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Metadata Export") {
         std::vector<std::string> image_paths;
         std::vector<std::string> json_paths;
 
-        for (const auto &label : camera_labels) {
+        for (const auto &label: camera_labels) {
             std::string image_path = radiationmodel.writeCameraImage(label, {"RGB_R", "RGB_G", "RGB_B"}, "test_vector");
             DOCTEST_CHECK(!image_path.empty());
 
@@ -4677,7 +4643,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Metadata Agronomic Properties") {
     DOCTEST_SUBCASE("Agronomic properties with no plant data") {
         // Create objects without plant architecture data
         std::vector<uint> patch_UUIDs = context.addTile(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(5, 5));
-        for (const auto &uuid : patch_UUIDs) {
+        for (const auto &uuid: patch_UUIDs) {
             context.setPrimitiveData(uuid, "reflectivity_SW", 0.3f);
         }
 
@@ -4854,10 +4820,10 @@ DOCTEST_TEST_CASE("RadiationModel Atmospheric Sky Model for Camera") {
     context.setPrimitiveData(UUID, "temperature", 300.f);
 
     // Set atmospheric conditions (as would be set by SolarPosition plugin)
-    float pressure_Pa = 95000.f;      // Lower pressure (higher altitude)
-    float temperature_K = 285.f;      // Cooler temperature
-    float humidity_rel = 0.6f;        // 60% humidity
-    float turbidity = 0.08f;          // Moderately turbid (AOD at 500nm)
+    float pressure_Pa = 95000.f; // Lower pressure (higher altitude)
+    float temperature_K = 285.f; // Cooler temperature
+    float humidity_rel = 0.6f; // 60% humidity
+    float turbidity = 0.08f; // Moderately turbid (AOD at 500nm)
 
     context.setGlobalData("atmosphere_pressure_Pa", pressure_Pa);
     context.setGlobalData("atmosphere_temperature_K", temperature_K);
@@ -4944,7 +4910,7 @@ DOCTEST_TEST_CASE("RadiationModel Atmospheric Sky Model for Camera") {
 
         // Now change turbidity (higher turbidity = more scattering)
         // Typical values: 0.03-0.05 (very clear), 0.1 (clear), 0.2-0.3 (hazy), >0.4 (very hazy)
-        float high_turbidity = 0.3f;  // Hazy conditions (AOD at 500nm)
+        float high_turbidity = 0.3f; // Hazy conditions (AOD at 500nm)
         context.setGlobalData("atmosphere_turbidity", high_turbidity);
 
         radiationmodel.runBand("VIS");
@@ -5209,7 +5175,7 @@ DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior"
 
         // Should not throw when called with no bands
         radiation2.setDiffuseSpectrum("test_spectrum");
-        DOCTEST_CHECK(true);  // If we get here, no exception was thrown
+        DOCTEST_CHECK(true); // If we get here, no exception was thrown
     }
 
     DOCTEST_SUBCASE("setDiffuseSpectrum before bands are added applies to later bands") {
@@ -5319,9 +5285,7 @@ TEST_CASE("Radiation - Prague Context data fallback behavior") {
     camera_props.focal_plane_distance = 2.0f;
     camera_props.HFOV = 45.0f;
 
-    radiation.addRadiationCamera("test_camera", {"red", "green", "blue"},
-                                  make_vec3(0, -3, 2), make_vec3(0, 0, 0),
-                                  camera_props, 1);
+    radiation.addRadiationCamera("test_camera", {"red", "green", "blue"}, make_vec3(0, -3, 2), make_vec3(0, 0, 0), camera_props, 1);
 
     // Try to update geometry without Prague data
     // Should fall back to uniform sky with warning (not crash)
@@ -5343,11 +5307,11 @@ TEST_CASE("Radiation - Prague Context data integration end-to-end") {
         float rayleigh_factor = std::pow(550.0f / wavelength, 4.0f);
 
         spectral_params[base + 0] = wavelength;
-        spectral_params[base + 1] = 0.3f * rayleigh_factor;  // L_zenith (W/m²/sr/nm) - blue-heavy
-        spectral_params[base + 2] = 2.0f;  // circ_str
+        spectral_params[base + 1] = 0.3f * rayleigh_factor; // L_zenith (W/m²/sr/nm) - blue-heavy
+        spectral_params[base + 2] = 2.0f; // circ_str
         spectral_params[base + 3] = 15.0f; // circ_width (degrees)
-        spectral_params[base + 4] = 2.0f;  // horiz_bright
-        spectral_params[base + 5] = 0.8f;  // normalization
+        spectral_params[base + 4] = 2.0f; // horiz_bright
+        spectral_params[base + 5] = 0.8f; // normalization
     }
 
     context.setGlobalData("prague_sky_spectral_params", spectral_params);
@@ -5381,9 +5345,7 @@ TEST_CASE("Radiation - Prague Context data integration end-to-end") {
     camera_props.focal_plane_distance = 2.0f;
     camera_props.HFOV = 45.0f;
 
-    radiation.addRadiationCamera("test_camera", {"red", "green", "blue"},
-                                  make_vec3(0, -3, 2), make_vec3(0, 0, 0),
-                                  camera_props, 1);
+    radiation.addRadiationCamera("test_camera", {"red", "green", "blue"}, make_vec3(0, -3, 2), make_vec3(0, 0, 0), camera_props, 1);
 
     // Update geometry - should read Prague data from Context (no warning)
     DOCTEST_CHECK_NOTHROW(radiation.updateGeometry());
@@ -5450,7 +5412,7 @@ DOCTEST_TEST_CASE("RadiationModel Automatic Spectrum Update Detection") {
 
     // Note: Diffuse contribution may be small in this simple test geometry
     // The important test is that direct spectrum update worked (verified above)
-    DOCTEST_CHECK(flux_v3 >= flux_v2 * 0.99f);  // Allow for small numerical differences
+    DOCTEST_CHECK(flux_v3 >= flux_v2 * 0.99f); // Allow for small numerical differences
 
     std::cout << "Automatic spectrum update detection test passed!" << std::endl;
     std::cout << "  Initial flux: " << flux_v1 << std::endl;
@@ -5531,3 +5493,412 @@ DOCTEST_TEST_CASE("RadiationModel No Update When Spectrum Unchanged") {
     std::cout << "No unnecessary update test passed!" << std::endl;
 }
 
+DOCTEST_TEST_CASE("RadiationModel - CameraProperties default camera_zoom") {
+    CameraProperties props;
+    DOCTEST_CHECK(props.camera_zoom == 1.0f);
+}
+
+DOCTEST_TEST_CASE("RadiationModel - CameraProperties equality with camera_zoom") {
+    CameraProperties props1;
+    CameraProperties props2;
+
+    DOCTEST_CHECK(props1 == props2); // Both have default camera_zoom = 1.0
+
+    props1.camera_zoom = 2.0f;
+    DOCTEST_CHECK(props1 != props2); // Different zoom values
+
+    props2.camera_zoom = 2.0f;
+    DOCTEST_CHECK(props1 == props2); // Same zoom values again
+}
+
+DOCTEST_TEST_CASE("RadiationModel - camera_zoom validation in updateCameraParameters") {
+    Context context;
+    RadiationModel radiation(&context);
+
+    CameraProperties props;
+    props.camera_resolution = make_int2(100, 100);
+    props.HFOV = 45.0f;
+    props.camera_zoom = 1.0f;
+
+    std::vector<std::string> bands = {"R"};
+    radiation.addRadiationCamera("test_cam", bands, make_vec3(0, 0, 5), make_vec3(0, 0, -1), props, 1);
+
+    // Try to update with invalid zoom (0.0)
+    CameraProperties invalid = radiation.getCameraParameters("test_cam");
+    invalid.camera_zoom = 0.0f;
+
+    DOCTEST_CHECK_THROWS_WITH_AS(radiation.updateCameraParameters("test_cam", invalid), "ERROR (RadiationModel::updateCameraParameters): camera_zoom must be greater than 0.", std::runtime_error);
+
+    // Try to update with invalid zoom (negative)
+    invalid.camera_zoom = -1.0f;
+    DOCTEST_CHECK_THROWS_WITH_AS(radiation.updateCameraParameters("test_cam", invalid), "ERROR (RadiationModel::updateCameraParameters): camera_zoom must be greater than 0.", std::runtime_error);
+}
+
+DOCTEST_TEST_CASE("RadiationModel - camera_zoom parameter get/set") {
+    Context context;
+    RadiationModel radiation(&context);
+
+    CameraProperties props;
+    props.camera_resolution = make_int2(100, 100);
+    props.HFOV = 60.0f;
+    props.camera_zoom = 3.5f;
+
+    std::vector<std::string> bands = {"R", "G", "B"};
+    radiation.addRadiationCamera("test_cam", bands, make_vec3(0, 0, 5), make_vec3(0, 0, -1), props, 1);
+
+    CameraProperties retrieved = radiation.getCameraParameters("test_cam");
+    DOCTEST_CHECK(retrieved.camera_zoom == 3.5f);
+    DOCTEST_CHECK(retrieved.HFOV == 60.0f); // Base HFOV unchanged
+}
+
+DOCTEST_TEST_CASE("RadiationModel - update camera_zoom") {
+    Context context;
+    RadiationModel radiation(&context);
+
+    CameraProperties props;
+    props.camera_resolution = make_int2(100, 100);
+    props.HFOV = 45.0f;
+    props.camera_zoom = 1.0f;
+
+    std::vector<std::string> bands = {"R"};
+    radiation.addRadiationCamera("test_cam", bands, make_vec3(0, 0, 5), make_vec3(0, 0, -1), props, 1);
+
+    // Update camera_zoom
+    CameraProperties updated = radiation.getCameraParameters("test_cam");
+    updated.camera_zoom = 2.5f;
+    radiation.updateCameraParameters("test_cam", updated);
+
+    CameraProperties final_props = radiation.getCameraParameters("test_cam");
+    DOCTEST_CHECK(final_props.camera_zoom == 2.5f);
+    DOCTEST_CHECK(final_props.HFOV == 45.0f); // Base HFOV should remain unchanged
+}
+DOCTEST_TEST_CASE("Lens Flare - Enable/Disable API") {
+    helios::Context context;
+    RadiationModel radiation(&context);
+
+    // Add a camera
+    CameraProperties camera_props;
+    camera_props.camera_resolution = helios::make_int2(64, 64);
+    camera_props.HFOV = 45.0f;
+    radiation.addRadiationCamera("test_camera", {"red", "green", "blue"}, helios::make_vec3(0, 0, 5), helios::make_vec3(0, 0, 0), camera_props, 1);
+
+    // Test default state is disabled
+    DOCTEST_CHECK(!radiation.isCameraLensFlareEnabled("test_camera"));
+
+    // Test enabling
+    radiation.enableCameraLensFlare("test_camera");
+    DOCTEST_CHECK(radiation.isCameraLensFlareEnabled("test_camera"));
+
+    // Test disabling
+    radiation.disableCameraLensFlare("test_camera");
+    DOCTEST_CHECK(!radiation.isCameraLensFlareEnabled("test_camera"));
+
+    // Test error for non-existent camera
+    DOCTEST_CHECK_THROWS(radiation.enableCameraLensFlare("nonexistent_camera"));
+    DOCTEST_CHECK_THROWS(radiation.disableCameraLensFlare("nonexistent_camera"));
+    DOCTEST_CHECK_THROWS((void) radiation.isCameraLensFlareEnabled("nonexistent_camera"));
+
+    std::cout << "Lens flare enable/disable API test passed!" << std::endl;
+}
+
+DOCTEST_TEST_CASE("Lens Flare - Properties API") {
+    helios::Context context;
+    RadiationModel radiation(&context);
+
+    // Add a camera
+    CameraProperties camera_props;
+    camera_props.camera_resolution = helios::make_int2(64, 64);
+    camera_props.HFOV = 45.0f;
+    radiation.addRadiationCamera("test_camera", {"red", "green", "blue"}, helios::make_vec3(0, 0, 5), helios::make_vec3(0, 0, 0), camera_props, 1);
+
+    // Test default properties
+    LensFlareProperties default_props = radiation.getCameraLensFlareProperties("test_camera");
+    DOCTEST_CHECK(default_props.aperture_blade_count == 6);
+    DOCTEST_CHECK(default_props.coating_efficiency == doctest::Approx(0.96f));
+    DOCTEST_CHECK(default_props.ghost_intensity == doctest::Approx(1.0f));
+    DOCTEST_CHECK(default_props.starburst_intensity == doctest::Approx(1.0f));
+    DOCTEST_CHECK(default_props.intensity_threshold == doctest::Approx(0.8f));
+    DOCTEST_CHECK(default_props.ghost_count == 5);
+
+    // Test setting properties
+    LensFlareProperties custom_props;
+    custom_props.aperture_blade_count = 8;
+    custom_props.coating_efficiency = 0.98f;
+    custom_props.ghost_intensity = 0.5f;
+    custom_props.starburst_intensity = 0.75f;
+    custom_props.intensity_threshold = 0.9f;
+    custom_props.ghost_count = 3;
+
+    radiation.setCameraLensFlareProperties("test_camera", custom_props);
+    LensFlareProperties retrieved_props = radiation.getCameraLensFlareProperties("test_camera");
+
+    DOCTEST_CHECK(retrieved_props.aperture_blade_count == 8);
+    DOCTEST_CHECK(retrieved_props.coating_efficiency == doctest::Approx(0.98f));
+    DOCTEST_CHECK(retrieved_props.ghost_intensity == doctest::Approx(0.5f));
+    DOCTEST_CHECK(retrieved_props.starburst_intensity == doctest::Approx(0.75f));
+    DOCTEST_CHECK(retrieved_props.intensity_threshold == doctest::Approx(0.9f));
+    DOCTEST_CHECK(retrieved_props.ghost_count == 3);
+
+    // Test validation errors
+    LensFlareProperties invalid_props;
+
+    // Invalid blade count (< 3)
+    invalid_props = default_props;
+    invalid_props.aperture_blade_count = 2;
+    DOCTEST_CHECK_THROWS(radiation.setCameraLensFlareProperties("test_camera", invalid_props));
+
+    // Invalid coating efficiency (> 1.0)
+    invalid_props = default_props;
+    invalid_props.coating_efficiency = 1.5f;
+    DOCTEST_CHECK_THROWS(radiation.setCameraLensFlareProperties("test_camera", invalid_props));
+
+    // Invalid coating efficiency (< 0.0)
+    invalid_props = default_props;
+    invalid_props.coating_efficiency = -0.1f;
+    DOCTEST_CHECK_THROWS(radiation.setCameraLensFlareProperties("test_camera", invalid_props));
+
+    // Invalid ghost intensity (< 0)
+    invalid_props = default_props;
+    invalid_props.ghost_intensity = -0.5f;
+    DOCTEST_CHECK_THROWS(radiation.setCameraLensFlareProperties("test_camera", invalid_props));
+
+    // Invalid intensity threshold (> 1.0)
+    invalid_props = default_props;
+    invalid_props.intensity_threshold = 1.5f;
+    DOCTEST_CHECK_THROWS(radiation.setCameraLensFlareProperties("test_camera", invalid_props));
+
+    // Invalid ghost count (< 1)
+    invalid_props = default_props;
+    invalid_props.ghost_count = 0;
+    DOCTEST_CHECK_THROWS(radiation.setCameraLensFlareProperties("test_camera", invalid_props));
+
+    std::cout << "Lens flare properties API test passed!" << std::endl;
+}
+
+DOCTEST_TEST_CASE("Lens Flare - Application to Camera Image") {
+    helios::Context context;
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    // Create a simple scene with a bright light source
+    uint ground = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(10, 10));
+    uint bright_patch = context.addPatch(helios::make_vec3(0, 0, 0.5), helios::make_vec2(0.5, 0.5));
+    context.setPrimitiveData(ground, "twosided_flag", uint(0));
+    context.setPrimitiveData(bright_patch, "twosided_flag", uint(0));
+
+    // Set reflectivity (need emissivity = 1 - reflectivity for energy conservation)
+    context.setPrimitiveData(ground, "reflectivity_red", 0.5f);
+    context.setPrimitiveData(ground, "reflectivity_green", 0.5f);
+    context.setPrimitiveData(ground, "reflectivity_blue", 0.5f);
+    context.setPrimitiveData(bright_patch, "reflectivity_red", 0.99f);
+    context.setPrimitiveData(bright_patch, "reflectivity_green", 0.99f);
+    context.setPrimitiveData(bright_patch, "reflectivity_blue", 0.99f);
+
+    // Add radiation bands first (required before setting source flux)
+    radiation.addRadiationBand("red");
+    radiation.addRadiationBand("green");
+    radiation.addRadiationBand("blue");
+
+    // Disable emission for all bands (we're only testing direct illumination)
+    radiation.disableEmission("red");
+    radiation.disableEmission("green");
+    radiation.disableEmission("blue");
+
+    // Add radiation source
+    uint source = radiation.addCollimatedRadiationSource(helios::make_vec3(0, 0, 1));
+    radiation.setSourceFlux(source, "red", 500.0f);
+    radiation.setSourceFlux(source, "green", 500.0f);
+    radiation.setSourceFlux(source, "blue", 500.0f);
+
+    radiation.setDirectRayCount("red", 1000);
+    radiation.setDirectRayCount("green", 1000);
+    radiation.setDirectRayCount("blue", 1000);
+    radiation.setDiffuseRayCount("red", 100);
+    radiation.setDiffuseRayCount("green", 100);
+    radiation.setDiffuseRayCount("blue", 100);
+
+    // Add a camera
+    CameraProperties camera_props;
+    camera_props.camera_resolution = helios::make_int2(64, 64);
+    camera_props.HFOV = 60.0f;
+    camera_props.focal_plane_distance = 5.0f;
+    radiation.addRadiationCamera("test_camera", {"red", "green", "blue"}, helios::make_vec3(0, 0, 5), helios::make_vec3(0, 0, 0), camera_props, 1);
+
+    // Enable lens flare with lower threshold to ensure effect is visible
+    radiation.enableCameraLensFlare("test_camera");
+    LensFlareProperties props;
+    props.intensity_threshold = 0.5f; // Lower threshold to catch more pixels
+    props.ghost_intensity = 1.0f;
+    props.starburst_intensity = 1.0f;
+    radiation.setCameraLensFlareProperties("test_camera", props);
+
+    // Update and run
+    radiation.updateGeometry();
+    radiation.runBand({"red", "green", "blue"});
+
+    // Apply image corrections (lens flare is automatically applied when enabled)
+    DOCTEST_CHECK_NOTHROW(radiation.applyCameraImageCorrections("test_camera", "red", "green", "blue"));
+
+    // Verify camera still has valid pixel data
+    auto all_labels = radiation.getAllCameraLabels();
+    DOCTEST_CHECK(std::find(all_labels.begin(), all_labels.end(), "test_camera") != all_labels.end());
+
+    std::cout << "Lens flare application test passed!" << std::endl;
+}
+
+DOCTEST_TEST_CASE("Lens Flare - Disabled Does Nothing") {
+    helios::Context context;
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    // Create a simple scene
+    uint ground = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(10, 10));
+    context.setPrimitiveData(ground, "twosided_flag", uint(0));
+    context.setPrimitiveData(ground, "reflectivity_red", 0.5f);
+    context.setPrimitiveData(ground, "reflectivity_green", 0.5f);
+    context.setPrimitiveData(ground, "reflectivity_blue", 0.5f);
+
+    // Add radiation bands first (required before setting source flux)
+    radiation.addRadiationBand("red");
+    radiation.addRadiationBand("green");
+    radiation.addRadiationBand("blue");
+
+    // Disable emission for all bands (we're only testing direct illumination)
+    radiation.disableEmission("red");
+    radiation.disableEmission("green");
+    radiation.disableEmission("blue");
+
+    // Add radiation source
+    uint source = radiation.addCollimatedRadiationSource(helios::make_vec3(0, 0, 1));
+    radiation.setSourceFlux(source, "red", 500.0f);
+    radiation.setSourceFlux(source, "green", 500.0f);
+    radiation.setSourceFlux(source, "blue", 500.0f);
+
+    radiation.setDirectRayCount("red", 100);
+    radiation.setDirectRayCount("green", 100);
+    radiation.setDirectRayCount("blue", 100);
+
+    // Add a camera (lens flare disabled by default)
+    CameraProperties camera_props;
+    camera_props.camera_resolution = helios::make_int2(32, 32);
+    camera_props.HFOV = 45.0f;
+    radiation.addRadiationCamera("test_camera", {"red", "green", "blue"}, helios::make_vec3(0, 0, 5), helios::make_vec3(0, 0, 0), camera_props, 1);
+
+    // Update and run
+    radiation.updateGeometry();
+    radiation.runBand({"red", "green", "blue"});
+
+    // Apply image corrections - lens flare should NOT be applied since it's disabled
+    DOCTEST_CHECK(!radiation.isCameraLensFlareEnabled("test_camera"));
+    DOCTEST_CHECK_NOTHROW(radiation.applyCameraImageCorrections("test_camera", "red", "green", "blue"));
+
+    std::cout << "Lens flare disabled test passed!" << std::endl;
+}
+
+DOCTEST_TEST_CASE("RadiationModel - Camera Sphere Source Rendering") {
+    helios::Context context;
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    uint ground = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(2.0f, 2.0f));
+    context.setPrimitiveData(ground, "twosided_flag", uint(0));
+    context.setPrimitiveData(ground, "reflectivity_test_band", 0.0f);
+
+    radiation.addRadiationBand("test_band");
+    radiation.disableEmission("test_band");
+    radiation.setDirectRayCount("test_band", 100);
+    radiation.setDiffuseRayCount("test_band", 0);
+    radiation.setScatteringDepth("test_band", 1);
+
+    uint source = radiation.addSphereRadiationSource(helios::make_vec3(0, 0, 0.5), 0.2f);
+    std::vector<helios::vec2> test_spectrum = {{400, 1.0f}, {700, 1.0f}};
+    context.setGlobalData("test_spectrum", test_spectrum);
+    radiation.setSourceSpectrum(source, "test_spectrum");
+
+    CameraProperties camera_props;
+    camera_props.camera_resolution = helios::make_int2(32, 32);
+    camera_props.HFOV = 45.0f;
+    camera_props.lens_diameter = 0.0f;
+    radiation.addRadiationCamera("sphere_cam", {"test_band"}, helios::make_vec3(0, 0, 2), helios::make_vec3(0, 0, 0), camera_props, 10);
+
+    radiation.updateGeometry();
+    radiation.runBand("test_band");
+
+    auto pixel_data = radiation.getCameraPixelData("sphere_cam", "test_band");
+    DOCTEST_REQUIRE(!pixel_data.empty());
+
+    int center_idx = (camera_props.camera_resolution.y / 2) * camera_props.camera_resolution.x + (camera_props.camera_resolution.x / 2);
+    DOCTEST_CHECK(pixel_data[center_idx] > 0.0f);
+}
+
+DOCTEST_TEST_CASE("RadiationModel - Camera Rectangle Source Rendering") {
+    helios::Context context;
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    uint ground = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(2.0f, 2.0f));
+    context.setPrimitiveData(ground, "twosided_flag", uint(0));
+    context.setPrimitiveData(ground, "reflectivity_test_band", 0.0f);
+
+    radiation.addRadiationBand("test_band");
+    radiation.disableEmission("test_band");
+    radiation.setDirectRayCount("test_band", 100);
+    radiation.setDiffuseRayCount("test_band", 0);
+    radiation.setScatteringDepth("test_band", 1);
+
+    uint source = radiation.addRectangleRadiationSource(helios::make_vec3(0, 0, 0.5), helios::make_vec2(0.4f, 0.4f), helios::make_vec3(0, 0, 0));
+    std::vector<helios::vec2> test_spectrum = {{400, 1.0f}, {700, 1.0f}};
+    context.setGlobalData("test_spectrum", test_spectrum);
+    radiation.setSourceSpectrum(source, "test_spectrum");
+
+    CameraProperties camera_props;
+    camera_props.camera_resolution = helios::make_int2(32, 32);
+    camera_props.HFOV = 45.0f;
+    camera_props.lens_diameter = 0.0f;
+    radiation.addRadiationCamera("rect_cam", {"test_band"}, helios::make_vec3(0, 0, 2), helios::make_vec3(0, 0, 0), camera_props, 10);
+
+    radiation.updateGeometry();
+    radiation.runBand("test_band");
+
+    auto pixel_data = radiation.getCameraPixelData("rect_cam", "test_band");
+    DOCTEST_REQUIRE(!pixel_data.empty());
+
+    int center_idx = (camera_props.camera_resolution.y / 2) * camera_props.camera_resolution.x + (camera_props.camera_resolution.x / 2);
+    DOCTEST_CHECK(pixel_data[center_idx] > 0.0f);
+}
+
+DOCTEST_TEST_CASE("RadiationModel - Camera Disk Source Rendering") {
+    helios::Context context;
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    uint ground = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(2.0f, 2.0f));
+    context.setPrimitiveData(ground, "twosided_flag", uint(0));
+    context.setPrimitiveData(ground, "reflectivity_test_band", 0.0f);
+
+    radiation.addRadiationBand("test_band");
+    radiation.disableEmission("test_band");
+    radiation.setDirectRayCount("test_band", 100);
+    radiation.setDiffuseRayCount("test_band", 0);
+    radiation.setScatteringDepth("test_band", 1);
+
+    uint source = radiation.addDiskRadiationSource(helios::make_vec3(0, 0, 0.5), 0.2f, helios::make_vec3(0, 0, 0));
+    std::vector<helios::vec2> test_spectrum = {{400, 1.0f}, {700, 1.0f}};
+    context.setGlobalData("test_spectrum", test_spectrum);
+    radiation.setSourceSpectrum(source, "test_spectrum");
+
+    CameraProperties camera_props;
+    camera_props.camera_resolution = helios::make_int2(32, 32);
+    camera_props.HFOV = 45.0f;
+    camera_props.lens_diameter = 0.0f;
+    radiation.addRadiationCamera("disk_cam", {"test_band"}, helios::make_vec3(0, 0, 2), helios::make_vec3(0, 0, 0), camera_props, 10);
+
+    radiation.updateGeometry();
+    radiation.runBand("test_band");
+
+    auto pixel_data = radiation.getCameraPixelData("disk_cam", "test_band");
+    DOCTEST_REQUIRE(!pixel_data.empty());
+
+    int center_idx = (camera_props.camera_resolution.y / 2) * camera_props.camera_resolution.x + (camera_props.camera_resolution.x / 2);
+    DOCTEST_CHECK(pixel_data[center_idx] > 0.0f);
+}

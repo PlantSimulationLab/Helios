@@ -57,6 +57,26 @@
  <tr><td>limitation\_state</td><td>N/A</td><td>N/A</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">int</span>\endhtmlonly</td><td>Photosynthesis limitation state. limitation_state=0 if photosynthesis is Rubisco-limited, limitation_state=1 if photosynthesis is electron transport limited.</td></tr>
  </table>
 
+ \subsection PhotoManualCi Manual Override of Intercellular CO2 (Testing)
+
+ For testing and validation purposes, the intercellular CO2 concentration (Ci) can be manually set to bypass the normal iterative calculation that couples photosynthesis with stomatal conductance.
+
+ To set manual Ci values:
+ ~~~~~~~~{.cpp}
+ PhotosynthesisModel photomodel(&context);
+ photomodel.optionalOutputPrimitiveData("Ci");
+
+ std::vector<uint> UUIDs = {UUID1, UUID2};
+ photomodel.setCi(300.0f, UUIDs);  // Set Ci = 300 umol/mol
+
+ photomodel.run();  // Uses manual Ci
+ // Manual Ci persists across multiple run() calls
+ ~~~~~~~~
+
+ \warning Manual Ci values bypass the coupling with moisture conductance. In normal operation, Ci should be calculated from moisture_conductance, typically provided by the \ref StomatalConductanceModel plug-in. Only use manual Ci for testing specific conditions.
+
+ \note Typical Ci values for C3 plants range from 50-800 umol/mol.
+
  \section PhotoDescription Introduction
 
  The photosynthesis plug-in implements two types of models: the biochemical model of <a href="https://link.springer.com/article/10.1007/BF00386231">Farquhar, von Caemmerer, and Berry (1980)</a>, and an empirical model similar to that of <a href="../../plugins/photosynthesis/doc/Johnson_2010_PlantMod.pdf">Johnson (2010)</a>, which are described separately below.

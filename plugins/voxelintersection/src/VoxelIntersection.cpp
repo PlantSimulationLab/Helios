@@ -1145,9 +1145,8 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
     float pdiff_area = (resulting_area - original_area) / original_area * 100.0;
     float pdiff_area_abs = fabs(pdiff_area);
     if (pdiff_area_abs > 1) {
-        warnings.addWarning("slice_area_mismatch", "Sum of slice areas does not equal area of original primitive (UUID = " + std::to_string(UUID) +
-                            ", original area = " + std::to_string(original_area) + ", resulting area = " + std::to_string(resulting_area) +
-                            ", percent difference = " + std::to_string(pdiff_area) + "%)");
+        warnings.addWarning("slice_area_mismatch", "Sum of slice areas does not equal area of original primitive (UUID = " + std::to_string(UUID) + ", original area = " + std::to_string(original_area) +
+                                                           ", resulting area = " + std::to_string(resulting_area) + ", percent difference = " + std::to_string(pdiff_area) + "%)");
     }
 
     // compare original and resulting primitive normals to make sure they match
@@ -1157,10 +1156,8 @@ std::vector<uint> VoxelIntersection::slicePrimitive(uint UUID, std::vector<helio
         helios::vec3 this_normal = context->getPrimitiveNormal(resulting_UUIDs.at(aa));
         this_normal.normalize();
         if (!approxSame(primitive_normal.x, this_normal.x, absTol, relTol) || !approxSame(primitive_normal.y, this_normal.y, absTol, relTol) || !approxSame(primitive_normal.z, this_normal.z, absTol, relTol)) {
-            warnings.addWarning("slice_normal_mismatch", "UUID " + std::to_string(resulting_UUIDs.at(aa)) + " normal (" +
-                                std::to_string(this_normal.x) + ", " + std::to_string(this_normal.y) + ", " + std::to_string(this_normal.z) +
-                                ") does not match original normal (" + std::to_string(primitive_normal.x) + ", " +
-                                std::to_string(primitive_normal.y) + ", " + std::to_string(primitive_normal.z) + ")");
+            warnings.addWarning("slice_normal_mismatch", "UUID " + std::to_string(resulting_UUIDs.at(aa)) + " normal (" + std::to_string(this_normal.x) + ", " + std::to_string(this_normal.y) + ", " + std::to_string(this_normal.z) +
+                                                                 ") does not match original normal (" + std::to_string(primitive_normal.x) + ", " + std::to_string(primitive_normal.y) + ", " + std::to_string(primitive_normal.z) + ")");
         }
     }
 
