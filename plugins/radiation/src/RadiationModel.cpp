@@ -4436,11 +4436,14 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 RT_CHECK_ERROR(rtVariableSet1f(FOV_aspect_RTvariable, camera.second.FOV_aspect_ratio));
                 // Set focal plane distance (working distance for ray generation), not the lens optical focal length
                 RT_CHECK_ERROR(rtVariableSet1f(camera_focal_length_RTvariable, camera.second.focal_length));
-                RT_CHECK_ERROR(rtVariableSet1f(camera_viewplane_length_RTvariable, 0.5f / tanf(0.5f * camera.second.HFOV_degrees * M_PI / 180.f)));
+
+                // Calculate effective HFOV considering zoom: effective_HFOV = base_HFOV / zoom
+                float effective_HFOV = camera.second.HFOV_degrees / camera.second.camera_zoom;
+                RT_CHECK_ERROR(rtVariableSet1f(camera_viewplane_length_RTvariable, 0.5f / tanf(0.5f * effective_HFOV * M_PI / 180.f)));
 
                 // Calculate pixel solid angle: Ω_pixel ≈ (angular_size_horizontal) × (angular_size_vertical)
                 // For small angles: Ω ≈ (HFOV/width) × (VFOV/height) in steradians
-                float HFOV_rad = camera.second.HFOV_degrees * M_PI / 180.f;
+                float HFOV_rad = effective_HFOV * M_PI / 180.f;  // Use effective_HFOV from above
                 float VFOV_rad = HFOV_rad / camera.second.FOV_aspect_ratio;
                 float pixel_angle_horizontal = HFOV_rad / float(camera.second.resolution.x);
                 float pixel_angle_vertical = VFOV_rad / float(camera.second.resolution.y);

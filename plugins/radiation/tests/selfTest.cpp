@@ -5531,3 +5531,90 @@ DOCTEST_TEST_CASE("RadiationModel No Update When Spectrum Unchanged") {
     std::cout << "No unnecessary update test passed!" << std::endl;
 }
 
+DOCTEST_TEST_CASE("RadiationModel - CameraProperties default camera_zoom") {
+    CameraProperties props;
+    DOCTEST_CHECK(props.camera_zoom == 1.0f);
+}
+
+DOCTEST_TEST_CASE("RadiationModel - CameraProperties equality with camera_zoom") {
+    CameraProperties props1;
+    CameraProperties props2;
+
+    DOCTEST_CHECK(props1 == props2);  // Both have default camera_zoom = 1.0
+
+    props1.camera_zoom = 2.0f;
+    DOCTEST_CHECK(props1 != props2);  // Different zoom values
+
+    props2.camera_zoom = 2.0f;
+    DOCTEST_CHECK(props1 == props2);  // Same zoom values again
+}
+
+DOCTEST_TEST_CASE("RadiationModel - camera_zoom validation in updateCameraParameters") {
+    Context context;
+    RadiationModel radiation(&context);
+
+    CameraProperties props;
+    props.camera_resolution = make_int2(100, 100);
+    props.HFOV = 45.0f;
+    props.camera_zoom = 1.0f;
+
+    std::vector<std::string> bands = {"R"};
+    radiation.addRadiationCamera("test_cam", bands, make_vec3(0, 0, 5), make_vec3(0, 0, -1), props, 1);
+
+    // Try to update with invalid zoom (0.0)
+    CameraProperties invalid = radiation.getCameraParameters("test_cam");
+    invalid.camera_zoom = 0.0f;
+
+    DOCTEST_CHECK_THROWS_WITH_AS(
+        radiation.updateCameraParameters("test_cam", invalid),
+        "ERROR (RadiationModel::updateCameraParameters): camera_zoom must be greater than 0.",
+        std::runtime_error
+    );
+
+    // Try to update with invalid zoom (negative)
+    invalid.camera_zoom = -1.0f;
+    DOCTEST_CHECK_THROWS_WITH_AS(
+        radiation.updateCameraParameters("test_cam", invalid),
+        "ERROR (RadiationModel::updateCameraParameters): camera_zoom must be greater than 0.",
+        std::runtime_error
+    );
+}
+
+DOCTEST_TEST_CASE("RadiationModel - camera_zoom parameter get/set") {
+    Context context;
+    RadiationModel radiation(&context);
+
+    CameraProperties props;
+    props.camera_resolution = make_int2(100, 100);
+    props.HFOV = 60.0f;
+    props.camera_zoom = 3.5f;
+
+    std::vector<std::string> bands = {"R", "G", "B"};
+    radiation.addRadiationCamera("test_cam", bands, make_vec3(0, 0, 5), make_vec3(0, 0, -1), props, 1);
+
+    CameraProperties retrieved = radiation.getCameraParameters("test_cam");
+    DOCTEST_CHECK(retrieved.camera_zoom == 3.5f);
+    DOCTEST_CHECK(retrieved.HFOV == 60.0f);  // Base HFOV unchanged
+}
+
+DOCTEST_TEST_CASE("RadiationModel - update camera_zoom") {
+    Context context;
+    RadiationModel radiation(&context);
+
+    CameraProperties props;
+    props.camera_resolution = make_int2(100, 100);
+    props.HFOV = 45.0f;
+    props.camera_zoom = 1.0f;
+
+    std::vector<std::string> bands = {"R"};
+    radiation.addRadiationCamera("test_cam", bands, make_vec3(0, 0, 5), make_vec3(0, 0, -1), props, 1);
+
+    // Update camera_zoom
+    CameraProperties updated = radiation.getCameraParameters("test_cam");
+    updated.camera_zoom = 2.5f;
+    radiation.updateCameraParameters("test_cam", updated);
+
+    CameraProperties final_props = radiation.getCameraParameters("test_cam");
+    DOCTEST_CHECK(final_props.camera_zoom == 2.5f);
+    DOCTEST_CHECK(final_props.HFOV == 45.0f);  // Base HFOV should remain unchanged
+}

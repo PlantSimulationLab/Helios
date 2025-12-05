@@ -477,6 +477,7 @@ CameraProperties RadiationModel::getCameraParameters(const std::string &camera_l
     camera_properties.exposure = camera.exposure;
     camera_properties.shutter_speed = camera.shutter_speed;
     camera_properties.white_balance = camera.white_balance;
+    camera_properties.camera_zoom = camera.camera_zoom;
     camera_properties.FOV_aspect_ratio = camera.FOV_aspect_ratio;
 
     return camera_properties;
@@ -494,6 +495,8 @@ void RadiationModel::updateCameraParameters(const std::string &camera_label, con
         helios_runtime_error("ERROR (RadiationModel::updateCameraParameters): Camera resolution must be at least 1x1.");
     } else if (camera_properties.HFOV <= 0 || camera_properties.HFOV >= 180.f) {
         helios_runtime_error("ERROR (RadiationModel::updateCameraParameters): Camera horizontal field of view must be between 0 and 180 degrees.");
+    } else if (camera_properties.camera_zoom <= 0.0f) {
+        helios_runtime_error("ERROR (RadiationModel::updateCameraParameters): camera_zoom must be greater than 0.");
     }
 
     // Get reference to camera
@@ -510,6 +513,7 @@ void RadiationModel::updateCameraParameters(const std::string &camera_label, con
     camera.exposure = camera_properties.exposure;
     camera.shutter_speed = camera_properties.shutter_speed;
     camera.white_balance = camera_properties.white_balance;
+    camera.camera_zoom = camera_properties.camera_zoom;
 
     // Recalculate FOV_aspect_ratio to ensure square pixels
     camera.FOV_aspect_ratio = float(camera.resolution.x) / float(camera.resolution.y);
@@ -4109,6 +4113,10 @@ void RadiationModel::populateCameraMetadata(const std::string &camera_label, Cam
     metadata.camera_properties.sensor_height = cam.sensor_width_mm / cam.FOV_aspect_ratio;
 
     // Back-calculate optical focal length from HFOV and sensor width for metadata export
+    // IMPORTANT: All metadata values reflect the REFERENCE state at zoom=1.0, not the zoomed state.
+    // - focal_length is calculated from the base HFOV (cam.HFOV_degrees), not effective HFOV
+    // - sensor dimensions are physical properties unaffected by zoom
+    // - The zoom value itself is written separately so users can reconstruct effective parameters
     // This ensures metadata accurately reflects the configured camera geometry (HFOV)
     // Note: For ISO exposure calculations, we use lens_focal_length which may differ from this value
     float HFOV_rad = cam.HFOV_degrees * M_PI / 180.0f;
@@ -4140,6 +4148,9 @@ void RadiationModel::populateCameraMetadata(const std::string &camera_label, Cam
 
     // White balance mode
     metadata.camera_properties.white_balance = cam.white_balance;
+
+    // Zoom setting
+    metadata.camera_properties.camera_zoom = cam.camera_zoom;
 
     // --- Location Properties --- //
     helios::Location loc = context->getLocation();
@@ -4272,6 +4283,9 @@ std::string RadiationModel::writeCameraMetadataFile(const std::string &camera_la
 
     // White balance mode
     j["camera_properties"]["white_balance"] = metadata.camera_properties.white_balance;
+
+    // Camera zoom setting
+    j["camera_properties"]["zoom"] = format_float(metadata.camera_properties.camera_zoom, 2);
 
     j["location_properties"]["latitude"] = format_float(metadata.location_properties.latitude, 6);
     j["location_properties"]["longitude"] = format_float(metadata.location_properties.longitude, 6);

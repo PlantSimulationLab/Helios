@@ -77,6 +77,20 @@ struct CameraProperties {
     //! White balance mode: "auto" (automatic white balance using spectral response) or "off" (no white balance correction)
     std::string white_balance;
 
+    /**! \brief Camera optical zoom multiplier (1.0 = no zoom, 2.0 = 2x zoom, etc.)
+     *
+     * This parameter scales the horizontal field of view (HFOV) during rendering: effective_HFOV = HFOV / camera_zoom.
+     * The HFOV parameter represents the reference field of view at zoom=1.0. When zoom > 1.0, the effective FOV
+     * becomes narrower (telephoto effect). When zoom < 1.0, the effective FOV becomes wider.
+     *
+     * IMPORTANT: All camera metadata exported to JSON (focal_length, sensor dimensions, etc.) reflect the REFERENCE
+     * state at zoom=1.0, not the zoomed state. The zoom value itself is written to metadata as "zoom" so users
+     * can reconstruct the effective parameters.
+     *
+     * Example: HFOV=60° with camera_zoom=2.0 renders with an effective HFOV of 30° (2x optical zoom).
+     */
+    float camera_zoom;
+
     CameraProperties() {
         camera_resolution = helios::make_int2(512, 512);
         focal_plane_distance = 1;
@@ -89,12 +103,13 @@ struct CameraProperties {
         exposure = "auto";
         shutter_speed = 1.f / 125.f; // 1/125 second (standard default)
         white_balance = "auto";
+        camera_zoom = 1.0f;
     }
 
     bool operator==(const CameraProperties &rhs) const {
         return camera_resolution == rhs.camera_resolution && focal_plane_distance == rhs.focal_plane_distance && lens_focal_length == rhs.lens_focal_length && lens_diameter == rhs.lens_diameter && FOV_aspect_ratio == rhs.FOV_aspect_ratio && HFOV == rhs.HFOV &&
                sensor_width_mm == rhs.sensor_width_mm && model == rhs.model && lens_make == rhs.lens_make && lens_model == rhs.lens_model && lens_specification == rhs.lens_specification &&
-               exposure == rhs.exposure && shutter_speed == rhs.shutter_speed && white_balance == rhs.white_balance;
+               exposure == rhs.exposure && shutter_speed == rhs.shutter_speed && white_balance == rhs.white_balance && camera_zoom == rhs.camera_zoom;
     }
 };
 
@@ -121,6 +136,7 @@ struct RadiationCamera {
         exposure = camera_properties.exposure;
         shutter_speed = camera_properties.shutter_speed;
         white_balance = camera_properties.white_balance;
+        camera_zoom = camera_properties.camera_zoom;
     }
 
     // Label for camera array
@@ -157,6 +173,8 @@ struct RadiationCamera {
     float shutter_speed;
     // White balance mode: "auto" or "off"
     std::string white_balance;
+    // Camera optical zoom multiplier
+    float camera_zoom;
     // Camera type (rgb, spectral, or thermal)
     std::string camera_type;
     // Number of antialiasing samples per pixel
@@ -397,6 +415,7 @@ struct CameraMetadata {
         std::string exposure; //!< Exposure mode: "auto", "ISOXXX" (e.g., "ISO100"), or "manual"
         float shutter_speed; //!< Shutter speed in seconds (e.g., 0.008 for 1/125s)
         std::string white_balance; //!< White balance mode: "auto" or "off"
+        float camera_zoom; //!< Camera optical zoom multiplier (1.0 = no zoom, 2.0 = 2x zoom)
     } camera_properties;
 
     //! Geographic location properties
