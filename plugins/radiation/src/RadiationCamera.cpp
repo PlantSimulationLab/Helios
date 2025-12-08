@@ -15,6 +15,7 @@ Copyright (C) 2016-2025 Brian Bailey
 */
 
 #include "RadiationModel.h"
+#include "LensFlare.h"
 
 #include <queue>
 #include <set>
@@ -2843,6 +2844,12 @@ void RadiationModel::applyCameraImageCorrections(const std::string &cameralabel,
     // NOTE: White balance is now automatically applied during rendering based on camera white_balance setting
     // NOTE: sRGB gamma compression is now applied during image export in writeCameraImage()
 
+    // Step 0: Apply lens flare effect if enabled (before other adjustments)
+    if (camera.lens_flare_enabled) {
+        LensFlare lens_flare(camera.lens_flare_properties, camera.resolution);
+        lens_flare.apply(camera.pixel_data, camera.resolution);
+    }
+
     // Step 1: Brightness and contrast adjustments in linear space
     if (brightness_adjustment != 1.f || contrast_adjustment != 1.f) {
         camera.adjustBrightnessContrast(red_band_label, green_band_label, blue_band_label, brightness_adjustment, contrast_adjustment);
@@ -4348,4 +4355,60 @@ std::string RadiationModel::writeCameraMetadataFile(const std::string &camera_la
     json_file.close();
 
     return json_path;
+}
+
+void RadiationModel::enableCameraLensFlare(const std::string &camera_label) {
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::enableCameraLensFlare): Camera '" + camera_label + "' does not exist.");
+    }
+    cameras.at(camera_label).lens_flare_enabled = true;
+}
+
+void RadiationModel::disableCameraLensFlare(const std::string &camera_label) {
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::disableCameraLensFlare): Camera '" + camera_label + "' does not exist.");
+    }
+    cameras.at(camera_label).lens_flare_enabled = false;
+}
+
+bool RadiationModel::isCameraLensFlareEnabled(const std::string &camera_label) const {
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::isCameraLensFlareEnabled): Camera '" + camera_label + "' does not exist.");
+    }
+    return cameras.at(camera_label).lens_flare_enabled;
+}
+
+void RadiationModel::setCameraLensFlareProperties(const std::string &camera_label, const LensFlareProperties &properties) {
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::setCameraLensFlareProperties): Camera '" + camera_label + "' does not exist.");
+    }
+
+    // Validate properties
+    if (properties.aperture_blade_count < 3) {
+        helios_runtime_error("ERROR (RadiationModel::setCameraLensFlareProperties): aperture_blade_count must be at least 3.");
+    }
+    if (properties.coating_efficiency < 0.0f || properties.coating_efficiency > 1.0f) {
+        helios_runtime_error("ERROR (RadiationModel::setCameraLensFlareProperties): coating_efficiency must be in range [0.0, 1.0].");
+    }
+    if (properties.ghost_intensity < 0.0f) {
+        helios_runtime_error("ERROR (RadiationModel::setCameraLensFlareProperties): ghost_intensity must be non-negative.");
+    }
+    if (properties.starburst_intensity < 0.0f) {
+        helios_runtime_error("ERROR (RadiationModel::setCameraLensFlareProperties): starburst_intensity must be non-negative.");
+    }
+    if (properties.intensity_threshold < 0.0f || properties.intensity_threshold > 1.0f) {
+        helios_runtime_error("ERROR (RadiationModel::setCameraLensFlareProperties): intensity_threshold must be in range [0.0, 1.0].");
+    }
+    if (properties.ghost_count < 1) {
+        helios_runtime_error("ERROR (RadiationModel::setCameraLensFlareProperties): ghost_count must be at least 1.");
+    }
+
+    cameras.at(camera_label).lens_flare_properties = properties;
+}
+
+LensFlareProperties RadiationModel::getCameraLensFlareProperties(const std::string &camera_label) const {
+    if (cameras.find(camera_label) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::getCameraLensFlareProperties): Camera '" + camera_label + "' does not exist.");
+    }
+    return cameras.at(camera_label).lens_flare_properties;
 }

@@ -459,7 +459,7 @@ uint RadiationModel::addSunSphereRadiationSource(const vec3 &sun_direction) {
     return Nsources - 1;
 }
 
-uint RadiationModel::addRectangleRadiationSource(const vec3 &position, const vec2 &size, const vec3 &rotation) {
+uint RadiationModel::addRectangleRadiationSource(const vec3 &position, const vec2 &size, const vec3 &rotation_rad) {
 
     if (size.x <= 0 || size.y <= 0) {
         helios_runtime_error("ERROR (RadiationModel::addRectangleRadiationSource): Radiation source size must be positive.");
@@ -470,7 +470,7 @@ uint RadiationModel::addRectangleRadiationSource(const vec3 &position, const vec
         helios_runtime_error("ERROR (RadiationModel::addRectangleRadiationSource): A maximum of 256 radiation sources are allowed.");
     }
 
-    RadiationSource rectangle_source(position, size, rotation);
+    RadiationSource rectangle_source(position, size, rotation_rad);
 
     // initialize fluxes
     for (const auto &band: radiation_bands) {
@@ -490,7 +490,7 @@ uint RadiationModel::addRectangleRadiationSource(const vec3 &position, const vec
     return sourceID;
 }
 
-uint RadiationModel::addDiskRadiationSource(const vec3 &position, float radius, const vec3 &rotation) {
+uint RadiationModel::addDiskRadiationSource(const vec3 &position, float radius, const vec3 &rotation_rad) {
 
     if (radius <= 0) {
         helios_runtime_error("ERROR (RadiationModel::addDiskRadiationSource): Disk radiation source radius must be positive.");
@@ -501,7 +501,7 @@ uint RadiationModel::addDiskRadiationSource(const vec3 &position, float radius, 
         helios_runtime_error("ERROR (RadiationModel::addDiskRadiationSource): A maximum of 256 radiation sources are allowed.");
     }
 
-    RadiationSource disk_source(position, radius, rotation);
+    RadiationSource disk_source(position, radius, rotation_rad);
 
     // initialize fluxes
     for (const auto &band: radiation_bands) {
@@ -1519,6 +1519,13 @@ void RadiationModel::initializeOptiX() {
     // Sun direction for atmospheric sky radiance evaluation
     RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "sun_direction", &sun_direction_RTvariable));
     RT_CHECK_ERROR(rtVariableSet3f(sun_direction_RTvariable, 0.f, 0.f, 1.f)); // Default to zenith
+
+    // Solar disk radiance for camera rendering (enables lens flare effects)
+    addBuffer("solar_disk_radiance", solar_disk_radiance_RTbuffer, solar_disk_radiance_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_FLOAT, 1);
+
+    // Cosine of solar angular radius (~0.265° = 4.63 mrad, solid angle ~6.74e-5 sr)
+    RT_CHECK_ERROR(rtContextDeclareVariable(OptiX_Context, "solar_disk_cos_angle", &solar_disk_cos_angle_RTvariable));
+    RT_CHECK_ERROR(rtVariableSet1f(solar_disk_cos_angle_RTvariable, 0.0f)); // Default disabled (0 = no solar disk)
 
     // Bounding Box
     addBuffer("bbox_UUID", bbox_UUID_RTbuffer, bbox_UUID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
@@ -4407,6 +4414,62 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             initializeBuffer1Df(camera_sky_radiance_RTbuffer, sky_base_radiances);
 
             cam++;
+        }
+
+        // Setup solar disk rendering for cameras (enables lens flare effects)
+        // Find sun-like sources (collimated or sun_sphere) and compute solar disk radiance
+        vec3 sun_dir(0, 0, 1); // Default zenith
+        std::vector<float> solar_radiances(Nbands_launch, 0.0f);
+        bool has_sun_source = false;
+
+        for (size_t s = 0; s < radiation_sources.size(); s++) {
+            const RadiationSource &source = radiation_sources.at(s);
+            if (source.source_type == RADIATION_SOURCE_TYPE_COLLIMATED ||
+                source.source_type == RADIATION_SOURCE_TYPE_SUN_SPHERE) {
+                // Get sun direction from source position (normalized)
+                sun_dir = source.source_position;
+                sun_dir.normalize();
+                has_sun_source = true;
+
+                // Compute solar disk radiance for each band
+                for (size_t b = 0; b < Nbands_launch; b++) {
+                    float flux = getSourceFlux(s, band_labels.at(b));
+
+                    if (source.source_type == RADIATION_SOURCE_TYPE_SUN_SPHERE) {
+                        // For sun sphere: flux is surface exitance (σT⁴)
+                        // Radiance as seen from Earth: L = F_surface / π
+                        solar_radiances[b] = flux / M_PI;
+                    } else {
+                        // For collimated: flux is irradiance at Earth
+                        // Solar solid angle: π × (4.63e-3)² ≈ 6.74×10⁻⁵ sr
+                        const float solar_solid_angle = 6.74e-5f;
+                        solar_radiances[b] = flux / solar_solid_angle;
+                    }
+                }
+                break; // Use first sun-like source found
+            }
+        }
+
+        // Upload solar disk parameters
+        RT_CHECK_ERROR(rtVariableSet3f(sun_direction_RTvariable, sun_dir.x, sun_dir.y, sun_dir.z));
+        initializeBuffer1Df(solar_disk_radiance_RTbuffer, solar_radiances);
+
+        if (has_sun_source) {
+            // cos(0.265°) ≈ 0.999989 - rays within this angle of sun direction see the solar disk
+            const float solar_cos_angle = 0.999989f;
+            RT_CHECK_ERROR(rtVariableSet1f(solar_disk_cos_angle_RTvariable, solar_cos_angle));
+
+            if (message_flag) {
+                std::cout << "Solar disk rendering enabled: sun_direction = (" << sun_dir.x << ", " << sun_dir.y << ", " << sun_dir.z << ")" << std::endl;
+                std::cout << "Solar disk radiances (W/m²/sr): ";
+                for (size_t b = 0; b < solar_radiances.size(); b++) {
+                    std::cout << band_labels.at(b) << "=" << solar_radiances[b] << " ";
+                }
+                std::cout << std::endl;
+            }
+        } else {
+            // No sun source - disable solar disk rendering
+            RT_CHECK_ERROR(rtVariableSet1f(solar_disk_cos_angle_RTvariable, 0.0f));
         }
 
         if (scatteringenabled && (emissionenabled || diffuseenabled || rundirect)) {

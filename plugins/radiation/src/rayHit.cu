@@ -298,10 +298,92 @@ RT_PROGRAM void closest_hit_camera() {
         double strength;
         for (size_t b = 0; b < Nbands_launch; b++) {
 
+            // Check if any light sources are between camera and hit point
+            float source_radiance = 0.0f;
+            for (uint s = 0; s < Nsources; s++) {
+                float flux = source_fluxes[s * Nbands_launch + b];
+                if (flux <= 0.0f) continue;
+
+                uint source_type = source_types[s];
+
+                if (source_type == 1) {
+                    // SPHERE
+                    float radius = source_widths[s].x * 0.5f;
+                    float3 oc = ray.origin - source_positions[s];
+                    float b = dot(oc, ray.direction);
+                    float c = dot(oc, oc) - radius * radius;
+                    float discriminant = b * b - c;
+
+                    if (discriminant >= 0.0f) {
+                        float t_sphere = -b - sqrtf(discriminant);
+                        if (t_sphere > 0.0f && t_sphere < t_hit) {
+                            float area = 4.0f * M_PI * radius * radius;
+                            source_radiance += (flux / area) / M_PI;
+                        }
+                    }
+                }
+                else if (source_type == 3) {
+                    // RECTANGLE
+                    float transform[16];
+                    d_makeTransformMatrix(source_rotations[s], transform);
+                    float3 normal = make_float3(transform[2], transform[6], transform[10]);
+
+                    float denom = dot(ray.direction, normal);
+                    if (denom < -1e-6f) {
+                        float3 oc = source_positions[s] - ray.origin;
+                        float t_rect = dot(oc, normal) / denom;
+
+                        if (t_rect > 0.0f && t_rect < t_hit) {
+                            float3 hit_point = ray.origin + t_rect * ray.direction;
+                            float3 local_hit = hit_point - source_positions[s];
+                            float inv_transform[16];
+                            d_invertMatrix(transform, inv_transform);
+                            d_transformPoint(inv_transform, local_hit);
+
+                            if (fabsf(local_hit.x) <= source_widths[s].x * 0.5f &&
+                                fabsf(local_hit.y) <= source_widths[s].y * 0.5f) {
+                                float area = source_widths[s].x * source_widths[s].y;
+                                float cos_angle = -denom;
+                                source_radiance += (flux / area) * cos_angle / M_PI;
+                            }
+                        }
+                    }
+                }
+                else if (source_type == 4) {
+                    // DISK
+                    float transform[16];
+                    d_makeTransformMatrix(source_rotations[s], transform);
+                    float3 normal = make_float3(transform[2], transform[6], transform[10]);
+
+                    float denom = dot(ray.direction, normal);
+                    if (denom < -1e-6f) {
+                        float3 oc = source_positions[s] - ray.origin;
+                        float t_disk = dot(oc, normal) / denom;
+
+                        if (t_disk > 0.0f && t_disk < t_hit) {
+                            float3 hit_point = ray.origin + t_disk * ray.direction;
+                            float3 offset = hit_point - source_positions[s];
+                            float dist_sq = dot(offset, offset);
+
+                            float radius = source_widths[s].x;
+                            if (dist_sq <= radius * radius) {
+                                float area = M_PI * radius * radius;
+                                float cos_angle = -denom;
+                                source_radiance += (flux / area) * cos_angle / M_PI;
+                            }
+                        }
+                    }
+                }
+            }
+
             if (face || primitive_type[objID] == 4) {
-                strength = radiation_out_top[Nbands_launch * UUID + b] * prd.strength; // this one  /fabs(dot())
+                strength = radiation_out_top[Nbands_launch * UUID + b] * prd.strength;
             } else {
                 strength = radiation_out_bottom[Nbands_launch * UUID + b] * prd.strength;
+            }
+
+            if (source_radiance > 0.0f) {
+                strength += source_radiance * prd.strength;
             }
 
             // specular reflection
@@ -583,8 +665,58 @@ RT_PROGRAM void miss_camera() {
 
     for (size_t b = 0; b < Nbands_launch; b++) {
 
-        if (camera_sky_radiance[b] > 0.f) {
+        float radiance = 0.0f;
 
+        // Check all light sources
+        for (uint s = 0; s < Nsources; s++) {
+            float flux = source_fluxes[s * Nbands_launch + b];
+            if (flux <= 0.0f) continue;
+
+            uint source_type = source_types[s];
+
+            if (source_type == 0 || source_type == 2) {
+                // COLLIMATED or SUN_SPHERE
+                float cos_sun_angle = dot(ray.direction, sun_direction);
+                if (cos_sun_angle >= solar_disk_cos_angle && solar_disk_radiance[b] > 0.0f) {
+                    radiance += solar_disk_radiance[b];
+                }
+            }
+            else if (source_type == 1) {
+                // SPHERE
+                float radius = source_widths[s].x * 0.5f;
+                if (d_raySphereIntersect(ray.origin, ray.direction, source_positions[s], radius)) {
+                    float area = 4.0f * M_PI * radius * radius;
+                    radiance += (flux / area) / M_PI;
+                }
+            }
+            else if (source_type == 3) {
+                // RECTANGLE
+                float cos_angle;
+                if (d_rayRectangleIntersect(ray.origin, ray.direction,
+                                           source_positions[s],
+                                           source_widths[s].x, source_widths[s].y,
+                                           source_rotations[s],
+                                           cos_angle)) {
+                    float area = source_widths[s].x * source_widths[s].y;
+                    radiance += (flux / area) * cos_angle / M_PI;
+                }
+            }
+            else if (source_type == 4) {
+                // DISK
+                float cos_angle;
+                float radius = source_widths[s].x;
+                if (d_rayDiskIntersect(ray.origin, ray.direction,
+                                      source_positions[s], radius,
+                                      source_rotations[s],
+                                      cos_angle)) {
+                    float area = M_PI * radius * radius;
+                    radiance += (flux / area) * cos_angle / M_PI;
+                }
+            }
+        }
+
+        // Fallback to sky radiance if no sources visible
+        if (radiance <= 0.0f && camera_sky_radiance[b] > 0.f) {
             // Evaluate directional sky radiance using unified distribution function
             // camera_sky_radiance[b] contains the base zenith sky radiance (W/m²/sr) from Prague model
             // For camera, power-law is disabled (K=0, norm=1), so Prague params are used
@@ -595,12 +727,14 @@ RT_PROGRAM void miss_camera() {
                 1.0f,
                 sky_radiance_params[b]);  // Prague params
 
-            float sky_radiance = camera_sky_radiance[b] * angular_weight;
+            radiance = camera_sky_radiance[b] * angular_weight;
+        }
 
+        if (radiance > 0.0f) {
             // Accumulate radiance directly (same as surface hits accumulate radiation_out)
             // Units: W/m²/sr
             // Monte Carlo averaging: prd.strength = 1/N_rays
-            atomicAdd(&radiation_in_camera[Nbands_launch * prd.origin_UUID + b], sky_radiance * prd.strength);
+            atomicAdd(&radiation_in_camera[Nbands_launch * prd.origin_UUID + b], radiance * prd.strength);
         }
     }
 }

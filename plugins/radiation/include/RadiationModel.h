@@ -98,6 +98,38 @@ struct CameraProperties {
     }
 };
 
+//! Properties defining lens flare rendering parameters
+struct LensFlareProperties {
+
+    //! Number of aperture blades (affects starburst pattern). 6 blades produces 6-pointed star, 8 blades produces 8-pointed star, etc.
+    int aperture_blade_count = 6;
+
+    //! Anti-reflective coating efficiency (0.0-1.0). Higher values reduce ghost intensity. Typical modern coatings are 0.96-0.99.
+    float coating_efficiency = 0.96f;
+
+    //! Scale factor for ghost reflection intensity (0.0-1.0+). Default 1.0 uses physically-derived intensity.
+    float ghost_intensity = 1.0f;
+
+    //! Scale factor for starburst/diffraction pattern intensity (0.0-1.0+). Default 1.0 uses physically-derived intensity.
+    float starburst_intensity = 1.0f;
+
+    //! Minimum normalized pixel intensity (0.0-1.0) required to generate lens flare. Pixels below this threshold are ignored.
+    float intensity_threshold = 0.8f;
+
+    //! Number of ghost reflections to render. More ghosts increase realism but also computation time.
+    int ghost_count = 5;
+
+    bool operator==(const LensFlareProperties &rhs) const {
+        return aperture_blade_count == rhs.aperture_blade_count && coating_efficiency == rhs.coating_efficiency &&
+               ghost_intensity == rhs.ghost_intensity && starburst_intensity == rhs.starburst_intensity &&
+               intensity_threshold == rhs.intensity_threshold && ghost_count == rhs.ghost_count;
+    }
+
+    bool operator!=(const LensFlareProperties &rhs) const {
+        return !(rhs == *this);
+    }
+};
+
 //! Data object for a radiation camera
 struct RadiationCamera {
 
@@ -170,6 +202,12 @@ struct RadiationCamera {
 
     std::vector<uint> pixel_label_UUID;
     std::vector<float> pixel_depth;
+
+    //! Flag indicating whether lens flare rendering is enabled for this camera
+    bool lens_flare_enabled = false;
+
+    //! Lens flare rendering properties
+    LensFlareProperties lens_flare_properties;
 
     //! Normalize all pixel data in the camera such that the maximum pixel value is 1.0 and the minimum is 0.0 (no clamping applied)
     void normalizePixels();
@@ -647,7 +685,7 @@ public:
      * K=0 the ambient distribution is uniform, which is the default setting
      * \param[in] label Label used to reference the radiative band
      * \param[in] K Extinction coefficient value
-     * \param[in] peak_dir Spherical direction of the peak in diffuse radiation (this is usually the sun direction)
+     * \param[in] peak_dir Spherical direction of the peak in diffuse radiation (elevation and azimuth angles in radians, this is usually the sun direction)
      */
     void setDiffuseRadiationExtinctionCoeff(const std::string &label, float K, const helios::SphericalCoord &peak_dir);
 
@@ -745,7 +783,7 @@ public:
 
     //! Add an external source of collimated radiation (i.e., source at infinite distance with parallel rays)
     /**
-     * \param[in] direction Spherical coordinate pointing toward the radiation source
+     * \param[in] direction Spherical coordinate pointing toward the radiation source (elevation and azimuth angles in radians)
      * \return Source identifier
      */
     uint addCollimatedRadiationSource(const helios::SphericalCoord &direction);
@@ -789,19 +827,19 @@ public:
     /**
      * \param[in] position  (x,y,z) position of the center of the rectangular radiation source
      * \param[in] size Length (.x) and width (.y) of rectangular source
-     * \param[in] rotation Rotation of the source in radians about the x- y- and z- axes (the sign of the rotation angle follows right-hand rule)
+     * \param[in] rotation_rad Rotation of the source in radians about the x- y- and z- axes (the sign of the rotation angle follows right-hand rule)
      * \return Source identifier
      */
-    uint addRectangleRadiationSource(const helios::vec3 &position, const helios::vec2 &size, const helios::vec3 &rotation);
+    uint addRectangleRadiationSource(const helios::vec3 &position, const helios::vec2 &size, const helios::vec3 &rotation_rad);
 
     //! Add planar circular radiation source
     /**
      * \param[in] position  (x,y,z) position of the center of the disk radiation source
      * \param[in] radius Radius of disk source
-     * \param[in] rotation Rotation of the source in radians about the x- y- and z- axes (the sign of the rotation angle follows right-hand rule)
+     * \param[in] rotation_rad Rotation of the source in radians about the x- y- and z- axes (the sign of the rotation angle follows right-hand rule)
      * \return Source identifier
      */
-    uint addDiskRadiationSource(const helios::vec3 &position, float radius, const helios::vec3 &rotation);
+    uint addDiskRadiationSource(const helios::vec3 &position, float radius, const helios::vec3 &rotation_rad);
 
     //! Delete an existing radiation source (any type)
     /**
@@ -861,7 +899,7 @@ public:
     //! Set the position/direction of radiation source based on a spherical vector
     /**
      * \param[in] source_ID Identifier of radiation source
-     * \param[in] position If point source - (radius,elevation,azimuth) position of the radiation source. If collimated source - (elevation,azimuth) vector pointing toward the source (radius is ignored).
+     * \param[in] position If point source - (radius,elevation,azimuth) position of the radiation source (elevation and azimuth angles in radians). If collimated source - (elevation,azimuth) vector pointing toward the source (elevation and azimuth angles in radians, radius is ignored).
      */
     void setSourcePosition(uint source_ID, const helios::SphericalCoord &position);
 
@@ -1086,7 +1124,7 @@ public:
      * \param[in] camera_label A label that will be used to refer to the camera (e.g., "thermal", "multispectral", "NIR", etc.).
      * \param[in] band_label Labels for radiation bands to include in camera.
      * \param[in] position Cartesian (x,y,z) location of the camera sensor.
-     * \param[in] viewing_direction Spherical direction in which the camera is pointed.
+     * \param[in] viewing_direction Spherical direction in which the camera is pointed (elevation and azimuth angles in radians).
      * \param[in] camera_properties 'CameraProperties' struct containing intrinsic camera parameters.
      * \param[in] antialiasing_samples Number of ray samples per pixel. More samples will decrease noise/aliasing in the image, but will take longer to run.
      */
@@ -1204,14 +1242,14 @@ public:
     //! Set the orientation of the radiation camera based on a spherical coordinate
     /**
      * \param[in] camera_label Label for the camera to be set.
-     * \param[in] direction Spherical coordinate defining the orientation of the camera.
+     * \param[in] direction Spherical coordinate defining the orientation of the camera (elevation and azimuth angles in radians).
      */
     void setCameraOrientation(const std::string &camera_label, const helios::SphericalCoord &direction);
 
     //! Get the orientation of the radiation camera based on a spherical coordinate
     /**
      * \param[in] camera_label Label for the camera to be set.
-     * \return Spherical coordinate defining the orientation of the camera.
+     * \return Spherical coordinate defining the orientation of the camera (elevation and azimuth angles in radians).
      */
     helios::SphericalCoord getCameraOrientation(const std::string &camera_label) const;
 
@@ -1282,6 +1320,43 @@ public:
      * \note When writeCameraImage() is called for this camera, a JSON metadata file will be automatically created alongside the image.
      */
     void setCameraMetadata(const std::string &camera_label, const CameraMetadata &metadata);
+
+    //! Enable lens flare rendering for a camera
+    /**
+     * Enables physically-based lens flare effects including ghost reflections and starburst diffraction patterns.
+     * Lens flare is applied as a post-processing step after the main radiation calculations.
+     * \param[in] camera_label Label for the camera to enable lens flare for.
+     * \note Use setCameraLensFlareProperties() to customize lens flare appearance.
+     */
+    void enableCameraLensFlare(const std::string &camera_label);
+
+    //! Disable lens flare rendering for a camera
+    /**
+     * \param[in] camera_label Label for the camera to disable lens flare for.
+     */
+    void disableCameraLensFlare(const std::string &camera_label);
+
+    //! Check if lens flare rendering is enabled for a camera
+    /**
+     * \param[in] camera_label Label for the camera to check.
+     * \return true if lens flare is enabled, false otherwise.
+     */
+    [[nodiscard]] bool isCameraLensFlareEnabled(const std::string &camera_label) const;
+
+    //! Set lens flare rendering properties for a camera
+    /**
+     * \param[in] camera_label Label for the camera to configure.
+     * \param[in] properties LensFlareProperties struct containing the desired settings.
+     * \note Lens flare must be enabled separately using enableCameraLensFlare().
+     */
+    void setCameraLensFlareProperties(const std::string &camera_label, const LensFlareProperties &properties);
+
+    //! Get the current lens flare properties for a camera
+    /**
+     * \param[in] camera_label Label for the camera to get properties for.
+     * \return LensFlareProperties struct containing current settings.
+     */
+    [[nodiscard]] LensFlareProperties getCameraLensFlareProperties(const std::string &camera_label) const;
 
     //! Adds all geometric primitives from the Context to OptiX
     /**
@@ -2193,6 +2268,13 @@ protected:
 
     //! Sun direction for atmospheric sky radiance evaluation
     RTvariable sun_direction_RTvariable;
+
+    //! Solar disk radiance for camera rendering (W/m²/sr)
+    RTvariable solar_disk_radiance_RTvariable;
+    RTbuffer solar_disk_radiance_RTbuffer;
+
+    //! Cosine of solar angular radius for disk rendering (cos(0.265°) ≈ 0.99999)
+    RTvariable solar_disk_cos_angle_RTvariable;
 
     //! Radiation emission flag
     RTvariable emission_flag_RTvariable;

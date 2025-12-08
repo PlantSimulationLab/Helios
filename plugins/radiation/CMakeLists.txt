@@ -13,6 +13,7 @@ add_library(radiation STATIC
     "src/RadiationModel.cpp"
     "src/RadiationCamera.cpp"
     "src/CameraCalibration.cpp"
+    "src/LensFlare.cpp"
     "tests/selfTest.cpp"
 )
 
