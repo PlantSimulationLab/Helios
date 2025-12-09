@@ -18,6 +18,7 @@
 
 #include "CameraCalibration.h"
 #include "Context.h"
+#include "RayTracingBackend.h"
 #include "json.hpp"
 
 // NVIDIA OptiX Includes
@@ -1802,6 +1803,20 @@ public:
     //! Set camera pixel data for a specific band
     void setCameraPixelData(const std::string &camera_label, const std::string &band_label, const std::vector<float> &pixel_data);
 
+    //! Query GPU memory available via backend abstraction layer
+    /**
+     * Phase 1: Integration test method - proves backend is accessible and functional.
+     * This method uses the backend instead of direct OptiX calls.
+     */
+    void queryBackendGPUMemory() const;
+
+    //! Test helper: Build geometry data and return primitive count (Phase 1 testing)
+    /**
+     * Phase 1: Testing helper to verify buildGeometryData() works correctly.
+     * Returns the number of primitives extracted from Context.
+     */
+    size_t testBuildGeometryData();
+
 protected:
     //! Flag to determine if status messages are output to the screen
     bool message_flag;
@@ -2194,10 +2209,25 @@ protected:
 
     void updateCameraModelPosition(const std::string &cameralabel);
 
+    //! Phase 1: Build backend-agnostic geometry data from Context primitives
+    /**
+     * Extracts geometry from all Context primitives and populates geometry_data structure.
+     * This data can then be uploaded to the backend via backend->updateGeometry().
+     */
+    void buildGeometryData();
+
     //! UUIDs for source 3D object models (for visualization). Key is the source ID, value is a vector of UUIDs for the source model.
     std::map<uint, std::vector<uint>> source_model_UUIDs;
     //! UUIDs for camera 3D object models (for visualization). Key is the camera label, value is a vector of UUIDs for the camera model.
     std::map<std::string, std::vector<uint>> camera_model_UUIDs;
+
+    /* Phase 1: Backend abstraction layer (for incremental OptiX code replacement) */
+
+    //! Ray tracing backend (will replace direct OptiX usage)
+    std::unique_ptr<helios::RayTracingBackend> backend;
+
+    //! Backend-agnostic geometry data (built from Context, uploaded to backend)
+    helios::RayTracingGeometry geometry_data;
 
     /* Primary RT API objects */
 

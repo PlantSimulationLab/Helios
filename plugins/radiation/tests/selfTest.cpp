@@ -5902,3 +5902,45 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Disk Source Rendering") {
     int center_idx = (camera_props.camera_resolution.y / 2) * camera_props.camera_resolution.x + (camera_props.camera_resolution.x / 2);
     DOCTEST_CHECK(pixel_data[center_idx] > 0.0f);
 }
+
+// ========== Phase 1: Backend Integration Tests ==========
+
+DOCTEST_TEST_CASE("Phase1.E Step2: Backend GPU Memory Query Integration") {
+    // Test that RadiationModel can call backend methods
+    // This proves backend is accessible and the integration path works
+
+    helios::Context context;
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    // Should call backend->queryGPUMemory() without crashing
+    DOCTEST_REQUIRE_NOTHROW(radiation.queryBackendGPUMemory());
+
+    // If we get here, backend method was successfully called
+    // Visual verification: output should show "GPU Memory Available: X MB"
+}
+
+
+DOCTEST_TEST_CASE("Phase1.E Step3: buildGeometryData() Extraction") {
+    // Test that buildGeometryData() correctly extracts geometry from Context
+
+    helios::Context context;
+
+    // Create test geometry: 1 patch, 1 triangle
+    context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
+    context.addTriangle(helios::make_vec3(2, 0, 0), helios::make_vec3(3, 0, 0), helios::make_vec3(2.5, 1, 0));
+
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    // Build geometry data - should extract 2 primitives
+    size_t prim_count = radiation.testBuildGeometryData();
+
+    // Verify primitive count
+    DOCTEST_CHECK(prim_count == 2);
+
+    // If we get here without crashing, buildGeometryData() successfully:
+    // - Extracted primitives from Context
+    // - Populated geometry_data structure
+    // - Handled patches and triangles
+}

@@ -63,6 +63,12 @@ RadiationModel::RadiationModel(helios::Context *context_a) {
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/DGK_DKK_colorboard.xml").string());
 
     initializeOptiX();
+
+    // Phase 1: Initialize backend abstraction layer
+    // Note: Creates second OptiX context temporarily during transition
+    // Will replace OptiX_Context once integration is complete
+    backend = helios::RayTracingBackend::create("optix6");
+    backend->initialize();
 }
 
 RadiationModel::~RadiationModel() {
@@ -6844,6 +6850,18 @@ void RadiationModel::setCameraPixelData(const std::string &camera_label, const s
     cameras.at(camera_label).pixel_data[band_label] = pixel_data;
 }
 
+// ========== Phase 1: Backend Integration Methods ==========
+
+void RadiationModel::queryBackendGPUMemory() const {
+    if (backend) {
+        backend->queryGPUMemory();
+    } else {
+        std::cout << "Backend not initialized - cannot query GPU memory." << std::endl;
+    }
+}
+
+// ========== End Phase 1 Methods ==========
+
 void sutilHandleError(RTcontext context, RTresult code, const char *file, int line) {
     const char *message;
     char s[2048];
@@ -6863,3 +6881,198 @@ void sutilReportError(const char *message) {
     }
 #endif
 }
+
+void RadiationModel::buildGeometryData() {
+    // Build backend-agnostic geometry data from Context primitives
+    // This extracts all geometry information needed by the ray tracing backend
+
+    std::vector<uint> UUIDs = context->getAllUUIDs();
+
+    // Filter out invalid/zero-area primitives (same as old updateGeometry)
+    std::vector<uint> valid_UUIDs;
+    for (uint UUID : UUIDs) {
+        if (!context->doesPrimitiveExist(UUID)) continue;
+        
+        float area = context->getPrimitiveArea(UUID);
+        uint parentID = context->getPrimitiveParentObjectID(UUID);
+        if ((area == 0 || std::isnan(area)) && context->getObjectType(parentID) != helios::OBJECT_TYPE_TILE) {
+            continue;
+        }
+        valid_UUIDs.push_back(UUID);
+    }
+
+    if (valid_UUIDs.empty()) {
+        geometry_data = helios::RayTracingGeometry(); // Empty geometry
+        return;
+    }
+
+    // Reorder primitives by parent object (same ordering as old code)
+    std::vector<uint> objID_all = context->getUniquePrimitiveParentObjectIDs(valid_UUIDs, true);
+    std::vector<uint> primitive_UUIDs_ordered;
+    std::unordered_set<uint> valid_set(valid_UUIDs.begin(), valid_UUIDs.end());
+
+    for (uint objID : objID_all) {
+        const std::vector<uint> &prim_UUIDs = context->getObjectPrimitiveUUIDs(objID);
+        for (uint UUID : prim_UUIDs) {
+            if (context->doesPrimitiveExist(UUID) && valid_set.find(UUID) != valid_set.end()) {
+                primitive_UUIDs_ordered.push_back(UUID);
+            }
+        }
+    }
+
+    size_t Nprimitives = primitive_UUIDs_ordered.size();
+    geometry_data.primitive_count = Nprimitives;
+
+    // Allocate arrays
+    geometry_data.transform_matrices.resize(Nprimitives * 16);
+    geometry_data.primitive_types.resize(Nprimitives);
+    geometry_data.primitive_UUIDs = primitive_UUIDs_ordered;
+    geometry_data.object_IDs.resize(Nprimitives);
+    geometry_data.object_subdivisions.resize(Nprimitives);
+    geometry_data.twosided_flags.resize(Nprimitives);
+    geometry_data.solid_fractions.resize(Nprimitives);
+
+    // Clear type-specific arrays
+    geometry_data.patches.vertices.clear();
+    geometry_data.patches.UUIDs.clear();
+    geometry_data.triangles.vertices.clear();
+    geometry_data.triangles.UUIDs.clear();
+    geometry_data.disk_centers.clear();
+    geometry_data.disk_radii.clear();
+    geometry_data.disk_normals.clear();
+    geometry_data.disk_UUIDs.clear();
+    geometry_data.tiles.vertices.clear();
+    geometry_data.tiles.UUIDs.clear();
+    geometry_data.voxels.vertices.clear();
+    geometry_data.voxels.UUIDs.clear();
+    geometry_data.bboxes.vertices.clear();
+    geometry_data.bboxes.UUIDs.clear();
+
+    // Track object IDs for compound objects
+    uint current_objID = 0;
+    uint last_parentID = 99999;
+
+    std::vector<uint> primitiveID_indices; // Maps primitives to their "object" index
+
+    for (size_t u = 0; u < Nprimitives; u++) {
+        uint UUID = primitive_UUIDs_ordered[u];
+        uint parentID = context->getPrimitiveParentObjectID(UUID);
+
+        if (last_parentID != parentID || parentID == 0 || context->getObjectType(parentID) != helios::OBJECT_TYPE_TILE) {
+            primitiveID_indices.push_back(u);
+            last_parentID = parentID;
+            current_objID++;
+        } else {
+            last_parentID = parentID;
+        }
+
+        geometry_data.object_IDs[u] = current_objID - 1;
+    }
+
+    size_t Nobjects = primitiveID_indices.size();
+
+    // Populate geometry for each primitive
+    size_t patch_idx = 0, tri_idx = 0, disk_idx = 0, tile_idx = 0, voxel_idx = 0, bbox_idx = 0;
+
+    for (size_t u = 0; u < Nobjects; u++) {
+        size_t prim_idx = primitiveID_indices[u];
+        uint UUID = primitive_UUIDs_ordered[prim_idx];
+
+        // Transform matrix
+        float m[16];
+        uint parentID = context->getPrimitiveParentObjectID(UUID);
+        helios::PrimitiveType type = context->getPrimitiveType(UUID);
+
+        // Solid fraction
+        geometry_data.solid_fractions[prim_idx] = context->getPrimitiveSolidFraction(UUID);
+
+        // Two-sided flag
+        geometry_data.twosided_flags[prim_idx] = context->getPrimitiveTwosidedFlag(UUID, 1) ? 1 : 0;
+
+        if (parentID > 0 && context->getObjectType(parentID) == helios::OBJECT_TYPE_TILE) {
+            // Tile object
+            geometry_data.primitive_types[prim_idx] = 3; // tile
+
+            context->getObjectTransformationMatrix(parentID, m);
+            memcpy(&geometry_data.transform_matrices[prim_idx * 16], m, 16 * sizeof(float));
+
+            std::vector<vec3> verts = context->getTileObjectVertices(parentID);
+            for (const auto& v : verts) {
+                geometry_data.tiles.vertices.push_back(v);
+            }
+
+            helios::int2 subdiv = context->getTileObjectSubdivisionCount(parentID);
+            geometry_data.object_subdivisions[prim_idx] = subdiv;
+
+            geometry_data.tiles.UUIDs.push_back(prim_idx);
+            tile_idx++;
+
+        } else if (type == helios::PRIMITIVE_TYPE_PATCH) {
+            geometry_data.primitive_types[prim_idx] = 0; // patch
+
+            context->getPrimitiveTransformationMatrix(UUID, m);
+            memcpy(&geometry_data.transform_matrices[prim_idx * 16], m, 16 * sizeof(float));
+
+            std::vector<vec3> verts = context->getPrimitiveVertices(UUID);
+            for (const auto& v : verts) {
+                geometry_data.patches.vertices.push_back(v);
+            }
+
+            geometry_data.object_subdivisions[prim_idx] = helios::make_int2(1, 1);
+            geometry_data.patches.UUIDs.push_back(prim_idx);
+            patch_idx++;
+
+        } else if (type == helios::PRIMITIVE_TYPE_TRIANGLE) {
+            geometry_data.primitive_types[prim_idx] = 1; // triangle
+
+            context->getPrimitiveTransformationMatrix(UUID, m);
+            memcpy(&geometry_data.transform_matrices[prim_idx * 16], m, 16 * sizeof(float));
+
+            std::vector<vec3> verts = context->getPrimitiveVertices(UUID);
+            for (const auto& v : verts) {
+                geometry_data.triangles.vertices.push_back(v);
+            }
+
+            geometry_data.object_subdivisions[prim_idx] = helios::make_int2(1, 1);
+            geometry_data.triangles.UUIDs.push_back(prim_idx);
+            tri_idx++;
+
+        } else if (type == helios::PRIMITIVE_TYPE_VOXEL) {
+            geometry_data.primitive_types[prim_idx] = 4; // voxel
+
+            context->getPrimitiveTransformationMatrix(UUID, m);
+            memcpy(&geometry_data.transform_matrices[prim_idx * 16], m, 16 * sizeof(float));
+
+            std::vector<vec3> verts = context->getPrimitiveVertices(UUID);
+            for (const auto& v : verts) {
+                geometry_data.voxels.vertices.push_back(v);
+            }
+
+            geometry_data.object_subdivisions[prim_idx] = helios::make_int2(1, 1);
+            geometry_data.voxels.UUIDs.push_back(prim_idx);
+            voxel_idx++;
+        }
+    }
+
+    // Set counts
+    geometry_data.patch_count = patch_idx;
+    geometry_data.triangle_count = tri_idx;
+    geometry_data.disk_count = disk_idx;
+    geometry_data.tile_count = tile_idx;
+    geometry_data.voxel_count = voxel_idx;
+    geometry_data.bbox_count = bbox_idx;
+
+    // Periodic boundary condition
+    geometry_data.periodic_flag = periodic_flag;
+
+    // TODO: Extract texture masks and UV data when needed
+    geometry_data.mask_IDs.clear();
+    geometry_data.uv_IDs.clear();
+}
+
+
+size_t RadiationModel::testBuildGeometryData() {
+    buildGeometryData();
+    return geometry_data.primitive_count;
+}
+
