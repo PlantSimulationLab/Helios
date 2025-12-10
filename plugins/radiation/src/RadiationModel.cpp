@@ -3357,6 +3357,12 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         updateRadiativeProperties();
     }
 
+    // Phase 1: Upload materials and sources to backend
+    buildMaterialData();
+    backend->updateMaterials(material_data);
+    buildSourceData();
+    backend->updateSources(source_data);
+
     // Number of radiation bands in this launch
     size_t Nbands_launch = band_labels.size();
     RT_CHECK_ERROR(rtVariableSet1ui(Nbands_launch_RTvariable, Nbands_launch));
@@ -3631,53 +3637,43 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             initializeBuffer1Df(source_fluxes_cam_RTbuffer, source_fluxes_cam);
         }
 
-        // -- Ray Trace -- //
-
-        // Compute direct launch dimension
-        size_t n = ceil(sqrt(double(directRayCount)));
-
-        size_t maxPrims = floor(float(maxRays) / float(n * n));
-
-        int Nlaunches = ceil(n * n * Nobjects / float(maxRays));
-
-        size_t prims_per_launch = fmin(Nobjects, maxPrims);
-
-        for (uint launch = 0; launch < Nlaunches; launch++) {
-
-            size_t prims_this_launch;
-            if ((launch + 1) * prims_per_launch > Nobjects) {
-                prims_this_launch = Nobjects - launch * prims_per_launch;
-            } else {
-                prims_this_launch = prims_per_launch;
-            }
-
-            RT_CHECK_ERROR(rtVariableSet1ui(launch_offset_RTvariable, launch * prims_per_launch));
-
-            launch_dim_dir = optix::make_int3(round(n), round(n), prims_this_launch);
-
-            if (message_flag) {
-                std::cout << "Performing primary direct radiation ray trace for bands ";
-                for (const auto &band: label) {
-                    std::cout << band << ", ";
-                }
-                std::cout << " (batch " << launch + 1 << " of " << Nlaunches << ")..." << std::flush;
-            }
-            RT_CHECK_ERROR(rtContextLaunch3D(OptiX_Context, RAYTYPE_DIRECT, launch_dim_dir.x, launch_dim_dir.y, launch_dim_dir.z));
-
-            if (message_flag) {
-                std::cout << "\r                                                                                                                               \r" << std::flush;
-            }
-        }
+        // -- Ray Trace (Phase 1: Using Backend) -- //
 
         if (message_flag) {
             std::cout << "Performing primary direct radiation ray trace for bands ";
             for (const auto &band: label) {
                 std::cout << band << ", ";
             }
-            std::cout << "...done." << std::endl;
+            std::cout << "..." << std::flush;
+        }
+
+        // Phase 1: Launch direct rays through backend
+        backend->zeroRadiationBuffers();
+
+        helios::RayTracingLaunchParams params;
+        params.launch_offset = 0;
+        params.launch_count = Nprimitives;  // Launch all primitives at once (simplified)
+        params.rays_per_primitive = directRayCount;
+        params.random_seed = std::chrono::system_clock::now().time_since_epoch().count();
+        params.num_bands_global = Nbands_global;
+        params.num_bands_launch = Nbands_launch;
+        params.specular_reflection_enabled = false;
+
+        // Use the band_launch_flag already built above (lines 3375-3383)
+        std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
+        params.band_launch_flag = band_flags;
+
+        backend->launchDirectRays(params);
+
+        if (message_flag) {
+            std::cout << "done." << std::endl;
         }
 
     } // end direct source launch
+
+    // Phase 1 TEMPORARY: Skip to result extraction for minimal direct-only integration
+    // Diffuse/emission/camera will be integrated in Step 6 continuation
+    goto phase1_result_extraction;
 
     // --- Diffuse/Emission launch ---- //
 
@@ -4261,19 +4257,18 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     }
 
     // deposit any energy that is left to make sure we satisfy conservation of energy
-    TBS_top = getOptiXbufferData(scatter_buff_top_RTbuffer);
-    TBS_bottom = getOptiXbufferData(scatter_buff_bottom_RTbuffer);
 
-    // Set variables in geometric objects
+phase1_result_extraction: // Phase 1 TEMP: Goto target for minimal integration
 
-    // std::vector<float> radiation_top_cam;
-    // radiation_top_cam=getOptiXbufferData( scatter_buff_top_cam_RTbuffer );
-    // std::vector<float> radiation_bottom_cam;
-    // radiation_bottom_cam=getOptiXbufferData( scatter_buff_bottom_cam_RTbuffer );
-    // std::vector<float> radiation_flux_data = radiation_top_cam+ radiation_bottom_cam;
+    // Phase 1: Extract ALL results from backend instead of old OptiX buffers
+    helios::RayTracingResults results;
+    backend->getRadiationResults(results);
 
-    std::vector<float> radiation_flux_data;
-    radiation_flux_data = getOptiXbufferData(radiation_in_RTbuffer);
+    std::vector<float> radiation_flux_data = results.radiation_in;
+
+    // Phase 1 TEMP: Zero scatter buffers (diffuse/emission not yet integrated)
+    TBS_top.resize(Nbands_launch * Nprimitives, 0.0f);
+    TBS_bottom.resize(Nbands_launch * Nprimitives, 0.0f);
 
     std::vector<uint> UUIDs_context_all = context->getAllUUIDs();
 
@@ -6484,6 +6479,9 @@ void RadiationModel::buildGeometryData() {
     }
 
     size_t Nobjects = primitiveID_indices.size();
+
+    // Phase 1: Populate primitiveID for runBand() compatibility
+    primitiveID = primitiveID_indices;
 
     // Populate geometry for each primitive
     size_t patch_idx = 0, tri_idx = 0, disk_idx = 0, tile_idx = 0, voxel_idx = 0, bbox_idx = 0;
