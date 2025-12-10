@@ -6033,6 +6033,221 @@ DOCTEST_TEST_CASE("Phase1.E Step5: Backend Functional Validation - Direct Radiat
     float actual = results.radiation_in[0];
     float tolerance = 10.0f;  // 1% tolerance
     
-    DOCTEST_CHECK_MESSAGE(std::abs(actual - expected) < tolerance, 
+    DOCTEST_CHECK_MESSAGE(std::abs(actual - expected) < tolerance,
         "Backend radiation incorrect: expected " << expected << " W, got " << actual << " W");
+}
+
+DOCTEST_TEST_CASE("Phase1.E Step6: Backend Functional Validation - Diffuse Radiation") {
+    // CRITICAL TEST: Prove backend can handle diffuse radiation (single patch, no shadowing)
+
+    helios::Context context;
+
+    // Create single horizontal patch (1m x 1m) facing up
+    uint patch = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
+
+    // Set as perfect absorber (rho=0, tau=0)
+    context.setPrimitiveData(patch, "reflectivity_SW", 0.0f);
+    context.setPrimitiveData(patch, "transmissivity_SW", 0.0f);
+
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    // Add radiation band with diffuse radiation
+    radiation.addRadiationBand("SW");
+    radiation.setDiffuseRadiationFlux("SW", 100.0f);  // 100 W/m² diffuse from sky
+    radiation.setDiffuseRayCount("SW", 10000);  // High ray count for accuracy
+    radiation.disableEmission("SW");
+
+    // Build all data structures
+    radiation.testBuildAllBackendData();
+
+    // Upload to backend
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->updateGeometry(radiation.getGeometryData()));
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->buildAccelerationStructure());
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->updateMaterials(radiation.getMaterialData()));
+
+    // Zero radiation buffers
+    radiation.getBackend()->zeroRadiationBuffers();
+
+    // Build diffuse launch parameters
+    helios::RayTracingLaunchParams params;
+    params.launch_offset = 0;
+    params.launch_count = 1;
+    params.rays_per_primitive = 10000;  // n*n where n = 100
+    params.random_seed = 12345;
+    params.num_bands_global = 1;
+    params.num_bands_launch = 1;
+    params.band_launch_flag = {true};
+    params.scattering_iteration = 0;
+    params.launch_face = 1;  // Top face
+
+    // Set diffuse radiation parameters
+    params.diffuse_flux = {100.0f};
+    params.diffuse_extinction = {0.0f};  // Isotropic
+    params.diffuse_peak_dir = {helios::make_vec3(0, 0, 1)};  // From zenith
+    params.diffuse_dist_norm = {1.0f / M_PI};  // Isotropic normalization
+    params.radiation_out_top = {0.0f};  // No emission
+    params.radiation_out_bottom = {0.0f};
+
+    // Launch diffuse rays
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->launchDiffuseRays(params));
+
+    // Get results from backend
+    helios::RayTracingResults results;
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->getRadiationResults(results));
+
+    // CRITICAL VALIDATION: Check numerical correctness
+    // Expected: 1m² patch + 100 W/m² diffuse + perfect absorber = 100 W absorbed
+
+    DOCTEST_REQUIRE(results.radiation_in.size() >= 1);
+
+    float expected = 100.0f;
+    float actual = results.radiation_in[0];
+    float tolerance = 2.0f;  // 2% tolerance for statistical variation
+
+    DOCTEST_CHECK_MESSAGE(std::abs(actual - expected) < tolerance,
+        "Backend diffuse radiation incorrect: expected " << expected << " W, got " << actual << " W");
+}
+
+DOCTEST_TEST_CASE("Phase1.E Step6b: Backend Diffuse With Partial Occlusion") {
+    // Test if diffuse hit program works by adding occluding patch
+
+    helios::Context context;
+
+    // Patch 0: horizontal (1m x 1m) at z=0, facing up
+    uint patch0 = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
+
+    // Patch 1: horizontal (1m x 1m) at z=0.5m above, facing down (blocks ~50% of sky)
+    uint patch1 = context.addPatch(helios::make_vec3(0, 0, 0.5), helios::make_vec2(1, 1),
+                                  helios::make_SphericalCoord(M_PI, 0));  // Facing down
+
+    // Both perfect absorbers, one-sided (twosided_flag = 0)
+    context.setPrimitiveData(patch0, "reflectivity_SW", 0.0f);
+    context.setPrimitiveData(patch0, "transmissivity_SW", 0.0f);
+    uint flag = 0;
+    context.setPrimitiveData(patch0, "twosided_flag", flag);
+    context.setPrimitiveData(patch1, "reflectivity_SW", 0.0f);
+    context.setPrimitiveData(patch1, "transmissivity_SW", 0.0f);
+    context.setPrimitiveData(patch1, "twosided_flag", flag);
+
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    // Add radiation band with diffuse
+    radiation.addRadiationBand("SW");
+    radiation.setDiffuseRadiationFlux("SW", 100.0f);
+    radiation.setDiffuseRayCount("SW", 10000);
+    radiation.disableEmission("SW");
+
+    // Build and upload
+    radiation.testBuildAllBackendData();
+    radiation.getBackend()->updateGeometry(radiation.getGeometryData());
+    radiation.getBackend()->buildAccelerationStructure();
+    radiation.getBackend()->updateMaterials(radiation.getMaterialData());
+    radiation.getBackend()->zeroRadiationBuffers();
+
+    // Launch diffuse rays FROM PATCH0 ONLY
+    helios::RayTracingLaunchParams params;
+    params.launch_offset = 0;
+    params.launch_count = 1;  // ONLY patch0 to test if it sees patch1
+    params.rays_per_primitive = 10000;
+    params.random_seed = 12345;
+    params.num_bands_global = 1;
+    params.num_bands_launch = 1;
+    params.band_launch_flag = {true};
+    params.scattering_iteration = 0;
+    params.launch_face = 1;
+    params.diffuse_flux = {100.0f};
+    params.diffuse_extinction = {0.0f};
+    params.diffuse_peak_dir = {helios::make_vec3(0, 0, 1)};
+    params.diffuse_dist_norm = {1.0f / M_PI};
+    params.radiation_out_top = {0.0f, 0.0f};
+    params.radiation_out_bottom = {0.0f, 0.0f};
+
+    radiation.getBackend()->launchDiffuseRays(params);
+
+    // Get results
+    helios::RayTracingResults results;
+    radiation.getBackend()->getRadiationResults(results);
+
+    DOCTEST_REQUIRE(results.radiation_in.size() == 2);
+
+    float patch0_radiation = results.radiation_in[0];
+    float patch1_radiation = results.radiation_in[1];
+
+    std::cout << "DEBUG Occlusion: patch0=" << patch0_radiation << " W, patch1=" << patch1_radiation << " W" << std::endl;
+
+    // If hits work: patch0 should get LESS than 100 (blocked by patch1)
+    // If hits don't work: patch0 gets 100 (all rays miss, no blocking detected)
+    DOCTEST_CHECK_MESSAGE(patch0_radiation < 90.0f,
+        "Patch0 should be partially blocked by patch1, got " << patch0_radiation << " W (expected <90)");
+}
+
+DOCTEST_TEST_CASE("Phase1.E Step6c: Multi-Patch Direct Radiation Occlusion Test") {
+    // Test if DIRECT rays show proper occlusion with multiple patches
+    // This will tell us if the issue is geometry-wide or diffuse-specific
+
+    helios::Context context;
+
+    // Patch 0: horizontal at z=0, facing up
+    uint patch0 = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
+
+    // Patch 1: horizontal at z=0.5m above, blocks direct source from reaching patch0
+    uint patch1 = context.addPatch(helios::make_vec3(0, 0, 0.5), helios::make_vec2(1, 1));
+
+    // Both perfect absorbers, TWO-SIDED to receive radiation from downward source
+    uint flag = 1;  // two-sided
+    context.setPrimitiveData(patch0, "reflectivity_PAR", 0.0f);
+    context.setPrimitiveData(patch0, "transmissivity_PAR", 0.0f);
+    context.setPrimitiveData(patch0, "twosided_flag", flag);
+    context.setPrimitiveData(patch1, "reflectivity_PAR", 0.0f);
+    context.setPrimitiveData(patch1, "transmissivity_PAR", 0.0f);
+    context.setPrimitiveData(patch1, "twosided_flag", flag);
+
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    // Add band with direct source from above
+    radiation.addRadiationBand("PAR");
+    uint source = radiation.addCollimatedRadiationSource(helios::make_vec3(0, 0, -1));  // Downward
+    radiation.setSourceFlux(source, "PAR", 100.0f);
+
+    // Build and upload
+    radiation.testBuildAllBackendData();
+    radiation.getBackend()->updateGeometry(radiation.getGeometryData());
+    radiation.getBackend()->buildAccelerationStructure();
+    radiation.getBackend()->updateMaterials(radiation.getMaterialData());
+    radiation.getBackend()->updateSources(radiation.getSourceData());
+    radiation.getBackend()->zeroRadiationBuffers();
+
+    // Launch direct rays (SMALL ray count for debug)
+    helios::RayTracingLaunchParams params;
+    params.launch_offset = 0;
+    params.launch_count = 2;
+    params.rays_per_primitive = 4;  // DEBUG: Small ray count
+    params.random_seed = 12345;
+    params.num_bands_global = 1;
+    params.num_bands_launch = 1;
+    params.band_launch_flag = {true};
+    params.specular_reflection_enabled = false;
+
+    radiation.getBackend()->launchDirectRays(params);
+
+    // Get results
+    helios::RayTracingResults results;
+    radiation.getBackend()->getRadiationResults(results);
+
+    DOCTEST_REQUIRE(results.radiation_in.size() == 2);
+
+    float patch0_radiation = results.radiation_in[0];
+    float patch1_radiation = results.radiation_in[1];
+
+    std::cout << "DEBUG Direct Occlusion: patch0=" << patch0_radiation << " W, patch1=" << patch1_radiation << " W" << std::endl;
+
+    // If blocking works: patch0 should get ~0 (blocked by patch1)
+    // patch1 should get ~100 (faces source)
+    DOCTEST_CHECK_MESSAGE(patch0_radiation < 10.0f,
+        "Patch0 should be blocked by patch1, got " << patch0_radiation << " W (expected ~0)");
+    DOCTEST_CHECK_MESSAGE(patch1_radiation > 90.0f,
+        "Patch1 should receive full flux, got " << patch1_radiation << " W (expected ~100)");
 }

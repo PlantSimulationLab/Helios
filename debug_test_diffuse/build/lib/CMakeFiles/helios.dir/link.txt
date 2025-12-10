@@ -1,0 +1,2 @@
+/usr/bin/ar qc libhelios.a CMakeFiles/helios.dir/src/Context.cpp.o CMakeFiles/helios.dir/src/Context_primitive.cpp.o CMakeFiles/helios.dir/src/Context_object.cpp.o CMakeFiles/helios.dir/src/Context_fileIO.cpp.o CMakeFiles/helios.dir/src/Context_data.cpp.o CMakeFiles/helios.dir/src/global.cpp.o CMakeFiles/helios.dir/tests/selfTest.cpp.o CMakeFiles/helios.dir/lib/pugixml/pugixml.cpp.o
+/usr/bin/ranlib libhelios.a

@@ -42,6 +42,7 @@ struct RayTracingGeometry {
     std::vector<float> transform_matrices;      //!< Transform matrices (16 floats per primitive, row-major)
     std::vector<uint> primitive_types;          //!< Primitive type: 0=patch, 1=triangle, 2=disk, 3=tile, 4=voxel, 5=bbox
     std::vector<uint> primitive_UUIDs;          //!< UUID for each primitive (for result mapping)
+    std::vector<uint> primitive_IDs;            //!< Primitive ID within parent object (for sub-patch calculations)
     std::vector<uint> object_IDs;               //!< Parent object ID for each primitive
     std::vector<helios::int2> object_subdivisions;  //!< Object subdivisions (for mapping)
     std::vector<char> twosided_flags;           //!< Two-sided flag (1=two-sided, 0=one-sided)

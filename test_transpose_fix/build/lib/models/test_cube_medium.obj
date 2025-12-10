@@ -1,0 +1,46 @@
+# Cube test with materials
+# Created for Helios OBJ loading tests
+mtllib test_cube_medium.mtl
+
+# Cube vertices
+v -1.0 -1.0 -1.0
+v  1.0 -1.0 -1.0
+v  1.0  1.0 -1.0
+v -1.0  1.0 -1.0
+v -1.0 -1.0  1.0
+v  1.0 -1.0  1.0
+v  1.0  1.0  1.0
+v -1.0  1.0  1.0
+
+# Texture coordinates
+vt 0.0 0.0
+vt 1.0 0.0
+vt 1.0 1.0
+vt 0.0 1.0
+
+# Normals
+vn  0.0  0.0 -1.0
+vn  0.0  0.0  1.0
+vn  0.0 -1.0  0.0
+vn  0.0  1.0  0.0
+vn -1.0  0.0  0.0
+vn  1.0  0.0  0.0
+
+# Faces with material
+usemtl red_material
+# Front face
+f 1/1/1 2/2/1 3/3/1 4/4/1
+# Back face
+f 8/1/2 7/2/2 6/3/2 5/4/2
+
+usemtl blue_material  
+# Bottom face
+f 1/1/3 5/2/3 6/3/3 2/4/3
+# Top face
+f 4/1/4 3/2/4 7/3/4 8/4/4
+
+usemtl green_material
+# Left face
+f 1/1/5 4/2/5 8/3/5 5/4/5
+# Right face
+f 2/1/6 6/2/6 7/3/6 3/4/6

@@ -3432,7 +3432,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             diffuseenabled = true;
         }
     }
-    initializeBuffer1Df(diffuse_flux_RTbuffer, diffuse_flux);
+    // NOTE: diffuse_flux now passed to backend via launch params, not uploaded here
 
     // Initialize camera sky radiance buffer to zeros (will be set per-camera if atmospheric model is used)
     std::vector<float> camera_sky_radiance(Nbands_launch, 0.0f);
@@ -3451,7 +3451,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             diffuse_extinction.at(b) = radiation_bands.at(band_labels.at(b)).diffuseExtinction;
         }
     }
-    initializeBuffer1Df(diffuse_extinction_RTbuffer, diffuse_extinction);
+    // NOTE: diffuse_extinction now passed to backend via launch params, not uploaded here
 
     // Set diffuse distribution normalization factor for each band
     std::vector<float> diffuse_dist_norm(Nbands_launch, 0);
@@ -3459,8 +3459,8 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         for (auto b = 0; b < Nbands_launch; b++) {
             diffuse_dist_norm.at(b) = radiation_bands.at(band_labels.at(b)).diffuseDistNorm;
         }
-        initializeBuffer1Df(diffuse_dist_norm_RTbuffer, diffuse_dist_norm);
     }
+    // NOTE: diffuse_dist_norm now passed to backend via launch params, not uploaded here
 
     // Set diffuse distribution peak direction for each band
     std::vector<optix::float3> diffuse_peak_dir(Nbands_launch);
@@ -3469,8 +3469,8 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             helios::vec3 peak_dir = radiation_bands.at(band_labels.at(b)).diffusePeakDir;
             diffuse_peak_dir.at(b) = optix::make_float3(peak_dir.x, peak_dir.y, peak_dir.z);
         }
-        initializeBuffer1Dfloat3(diffuse_peak_dir_RTbuffer, diffuse_peak_dir);
     }
+    // NOTE: diffuse_peak_dir now passed to backend via launch params, not uploaded here
 
     // Upload Prague parameters for general diffuse (reuses camera buffer)
     // This allows general diffuse to use Prague sky model if available
@@ -3682,10 +3682,13 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
         // If we are doing a diffuse/emission ray trace anyway and we have direct scattered energy, we get a "free" scattering trace here
         if (scatteringenabled && rundirect) {
-            flux_top = getOptiXbufferData(scatter_buff_top_RTbuffer);
-            flux_bottom = getOptiXbufferData(scatter_buff_bottom_RTbuffer);
-            zeroBuffer1D(scatter_buff_top_RTbuffer, Nbands_launch * Nprimitives);
-            zeroBuffer1D(scatter_buff_bottom_RTbuffer, Nbands_launch * Nprimitives);
+            // Get scattered energy from backend's buffers
+            helios::RayTracingResults scatter_results;
+            backend->getRadiationResults(scatter_results);
+            flux_top = scatter_results.scatter_buff_top;
+            flux_bottom = scatter_results.scatter_buff_bottom;
+            // Zero backend's scatter buffers
+            backend->zeroScatterBuffers();
         }
 
         // add any emitted energy to the outgoing energy buffer
@@ -3793,6 +3796,17 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             params.radiation_out_top = flux_top;
             params.radiation_out_bottom = flux_bottom;
 
+            // Pass diffuse radiation parameters to backend
+            params.diffuse_flux = diffuse_flux;
+            params.diffuse_extinction = diffuse_extinction;
+            params.diffuse_dist_norm = diffuse_dist_norm;
+            // Convert optix::float3 to helios::vec3
+            std::vector<helios::vec3> peak_dirs(diffuse_peak_dir.size());
+            for (size_t i = 0; i < diffuse_peak_dir.size(); i++) {
+                peak_dirs[i] = helios::make_vec3(diffuse_peak_dir[i].x, diffuse_peak_dir[i].y, diffuse_peak_dir[i].z);
+            }
+            params.diffuse_peak_dir = peak_dirs;
+
             // Top surface launch
             params.launch_face = 1;
             backend->launchDiffuseRays(params);
@@ -3820,7 +3834,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         for (auto b = 0; b < Nbands_launch; b++) {
             diffuse_flux.at(b) = 0.f;
         }
-        initializeBuffer1Df(diffuse_flux_RTbuffer, diffuse_flux);
+        // NOTE: diffuse_flux zeroed for scattering, passed to backend via launch params
 
         size_t n = ceil(sqrt(double(diffuseRayCount)));
         uint rays_per_primitive = n * n;
@@ -3889,6 +3903,17 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 params.band_launch_flag = band_flags;
                 params.scattering_iteration = s;
                 params.max_scatters = scatteringDepth;
+
+                // Pass diffuse radiation parameters to backend
+                params.diffuse_flux = diffuse_flux;
+                params.diffuse_extinction = diffuse_extinction;
+                params.diffuse_dist_norm = diffuse_dist_norm;
+                // Convert optix::float3 to helios::vec3
+                std::vector<helios::vec3> peak_dirs(diffuse_peak_dir.size());
+                for (size_t i = 0; i < diffuse_peak_dir.size(); i++) {
+                    peak_dirs[i] = helios::make_vec3(diffuse_peak_dir[i].x, diffuse_peak_dir[i].y, diffuse_peak_dir[i].z);
+                }
+                params.diffuse_peak_dir = peak_dirs;
 
                 // Top surface launch
                 params.launch_face = 1;
@@ -4280,6 +4305,17 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     backend->getRadiationResults(results);
 
     std::vector<float> radiation_flux_data = results.radiation_in;
+
+    // DEBUG: Check radiation values
+    float total_radiation = 0.0f;
+    for (size_t i = 0; i < radiation_flux_data.size(); i++) {
+        total_radiation += radiation_flux_data[i];
+    }
+    std::cerr << "DEBUG: total_radiation=" << total_radiation
+              << " diffuseenabled=" << diffuseenabled
+              << " Nprims=" << Nprimitives
+              << " Nbands=" << Nbands_launch
+              << " diffuse_flux[0]=" << (diffuse_flux.empty() ? -1.0f : diffuse_flux[0]) << std::endl;
 
     // Extract scatter buffer data from backend results
     TBS_top = results.scatter_buff_top;
@@ -6451,6 +6487,7 @@ void RadiationModel::buildGeometryData() {
     geometry_data.transform_matrices.resize(Nprimitives * 16);
     geometry_data.primitive_types.resize(Nprimitives);
     geometry_data.primitive_UUIDs = primitive_UUIDs_ordered;
+    geometry_data.primitive_IDs.resize(Nprimitives);  // Will be populated after primitiveID_indices is built
     geometry_data.object_IDs.resize(Nprimitives);
     geometry_data.object_subdivisions.resize(Nprimitives);
     geometry_data.twosided_flags.resize(Nprimitives);
@@ -6497,6 +6534,9 @@ void RadiationModel::buildGeometryData() {
 
     // Phase 1: Populate primitiveID for runBand() compatibility
     primitiveID = primitiveID_indices;
+
+    // Copy primitiveID mapping to geometry_data for backend upload
+    geometry_data.primitive_IDs = primitiveID_indices;
 
     // Populate geometry for each primitive
     size_t patch_idx = 0, tri_idx = 0, disk_idx = 0, tile_idx = 0, voxel_idx = 0, bbox_idx = 0;

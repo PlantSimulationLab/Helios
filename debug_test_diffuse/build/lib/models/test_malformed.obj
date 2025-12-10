@@ -1,0 +1,18 @@
+# Malformed OBJ for error handling tests
+# This file contains various malformed elements to test robustness
+
+# Valid vertices
+v 0.0 0.0 0.0
+v 1.0 0.0 0.0
+v 0.5 1.0 0.0
+
+# Invalid vertex (should cause error)
+v not_a_number 0.0 0.0
+
+# Valid face
+f 1 2 3
+
+# Invalid faces (should cause errors)
+f 1 2 999  # Non-existent vertex index
+f 1        # Too few vertices
+f a b c    # Non-numeric indices

@@ -485,6 +485,9 @@ void OptiX6Backend::updateMaterials(const RayTracingMaterial& materials) {
     current_band_count = materials.num_bands;
     current_source_count = materials.num_sources;
     current_camera_count = materials.num_cameras;
+
+    // Update Ncameras variable in backend's OptiX context
+    RT_CHECK_ERROR(rtVariableSet1ui(Ncameras_RTvariable, materials.num_cameras));
 }
 
 void OptiX6Backend::updateSources(const std::vector<RayTracingSource>& sources) {
@@ -535,11 +538,13 @@ void OptiX6Backend::launchDirectRays(const RayTracingLaunchParams& params) {
     // Set launch parameters
     launchParamsToVariables(params);
 
-    // Launch direct rays: dimension = (launch_count, rays_per_primitive, 1)
+    // Launch direct rays: dimension = (n, n, primitives) where n = sqrt(rays_per_primitive)
+    // This matches CUDA code: launch_index.x/y for ray sampling, launch_index.z for primitive
+    uint n = std::ceil(std::sqrt(static_cast<double>(params.rays_per_primitive)));
     RT_CHECK_ERROR(rtContextLaunch3D(OptiX_Context, RAYTYPE_DIRECT,
-                                    params.launch_count,
-                                    params.rays_per_primitive,
-                                    1));
+                                    n,
+                                    n,
+                                    params.launch_count));
 }
 
 void OptiX6Backend::launchDiffuseRays(const RayTracingLaunchParams& params) {
@@ -572,11 +577,16 @@ void OptiX6Backend::launchDiffuseRays(const RayTracingLaunchParams& params) {
         initializeBuffer1Df(diffuse_dist_norm_RTbuffer, params.diffuse_dist_norm);
     }
 
-    // Launch diffuse rays: dimension = (launch_count, rays_per_primitive, 1)
+    // Validate context to ensure acceleration structure is built
+    RT_CHECK_ERROR(rtContextValidate(OptiX_Context));
+
+    // Launch diffuse rays: dimension = (n, n, primitives) where n = sqrt(rays_per_primitive)
+    // This matches the diffuse ray generation pattern expecting 2D hemisphere sampling
+    uint n = std::ceil(std::sqrt(static_cast<double>(params.rays_per_primitive)));
     RT_CHECK_ERROR(rtContextLaunch3D(OptiX_Context, RAYTYPE_DIFFUSE,
-                                    params.launch_count,
-                                    params.rays_per_primitive,
-                                    1));
+                                    n,
+                                    n,
+                                    params.launch_count));
 }
 
 void OptiX6Backend::launchCameraRays(const RayTracingLaunchParams& params) {
@@ -1223,6 +1233,11 @@ void OptiX6Backend::geometryToBuffers(const RayTracingGeometry& geometry) {
     // Primitive types
     if (!geometry.primitive_types.empty()) {
         initializeBuffer1Dui(primitive_type_RTbuffer, geometry.primitive_types);
+    }
+
+    // Primitive IDs (for sub-patch calculations)
+    if (!geometry.primitive_IDs.empty()) {
+        initializeBuffer1Dui(primitiveID_RTbuffer, geometry.primitive_IDs);
     }
 
     // Primitive UUIDs and object IDs
