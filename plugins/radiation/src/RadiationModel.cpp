@@ -1872,6 +1872,7 @@ void RadiationModel::updateGeometry() {
     updateGeometry(context->getAllUUIDs());
 }
 
+
 void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
 
     if (message_flag) {
@@ -1880,501 +1881,14 @@ void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
 
     context_UUIDs = UUIDs;
 
-    // remove any primitive UUIDs that don't exist or have zero area
-    for (std::size_t u = context_UUIDs.size(); u-- > 0;) {
-        if (!context->doesPrimitiveExist(context_UUIDs.at(u))) {
-            context_UUIDs[u] = context_UUIDs.back();
-            context_UUIDs.pop_back();
-            continue;
-        }
-        float area = context->getPrimitiveArea(context_UUIDs.at(u));
-        if ((area == 0 || std::isnan(area)) && context->getObjectType(context->getPrimitiveParentObjectID(context_UUIDs.at(u))) != OBJECT_TYPE_TILE) {
-            context_UUIDs[u] = context_UUIDs.back();
-            context_UUIDs.pop_back();
-        }
-    }
-
-    //--- Populate Primitive Geometry Buffers ---//
-
-    size_t Nprimitives = context_UUIDs.size(); // Number of primitives
-
-    if (Nprimitives == 0) {
-        std::cerr << "WARNING (RadiationModel::updateGeometry): No primitives found in context. Cannot update geometry." << std::endl;
-        return;
-    }
-
-    std::vector<uint> objID_all = context->getUniquePrimitiveParentObjectIDs(context_UUIDs, true);
-
-    // We need to reorder the primitive UUIDs so they appear in the proper order within the parent object
-
-    std::vector<uint> primitive_UUIDs_ordered;
-    primitive_UUIDs_ordered.reserve(Nprimitives);
-
-    std::unordered_set<uint> context_UUIDs_set(context_UUIDs.begin(), context_UUIDs.end());
-
-    for (uint objID: objID_all) {
-
-        const std::vector<uint> &primitive_UUIDs = context->getObjectPrimitiveUUIDs(objID);
-        for (uint p: primitive_UUIDs) {
-            // Only add if primitive exists AND was not filtered out for zero area
-            if (context->doesPrimitiveExist(p) && context_UUIDs_set.find(p) != context_UUIDs_set.end()) {
-                primitive_UUIDs_ordered.push_back(p);
-            }
-        }
-    }
-
-    context_UUIDs = primitive_UUIDs_ordered;
-
-    // transformation matrix buffer - size=Nobjects
-    std::vector<std::vector<float>> m_global;
-
-    // primitive type buffer - size=Nobjects
-    std::vector<uint> ptype_global;
-
-    // primitive solid fraction buffer - size=Nobjects
-    std::vector<float> solid_fraction_global;
-
-    // primitive UUID buffers - total size of all combined is Nobjects
-    std::vector<uint> patch_UUID;
-    patch_UUID.reserve(Nprimitives);
-    std::vector<uint> triangle_UUID;
-    triangle_UUID.reserve(Nprimitives);
-    std::vector<uint> disk_UUID;
-    disk_UUID.reserve(Nprimitives);
-    std::vector<uint> tile_UUID;
-    tile_UUID.reserve(Nprimitives);
-    std::vector<uint> voxel_UUID;
-
-    // twosided flag buffer - size=Nobjects
-    std::vector<char> twosided_flag_global;
-    twosided_flag_global.reserve(Nprimitives);
-
-    // primitive geometry specification buffers
-    std::vector<std::vector<optix::float3>> patch_vertices;
-    patch_vertices.reserve(Nprimitives);
-    std::vector<std::vector<optix::float3>> triangle_vertices;
-    triangle_vertices.reserve(Nprimitives);
-    std::vector<std::vector<optix::float3>> tile_vertices;
-    tile_vertices.reserve(Nprimitives);
-    std::vector<std::vector<optix::float3>> voxel_vertices;
-
-    // number of patch subdivisions for each tile - size is same as tile_vertices
-    std::vector<optix::int2> object_subdivisions;
-    object_subdivisions.reserve(Nprimitives);
-
-    // ID of object corresponding to each primitive - size Nprimitives
-    std::vector<uint> objectID;
-    objectID.resize(Nprimitives);
-
-    std::size_t patch_count = 0;
-    std::size_t triangle_count = 0;
-    std::size_t disk_count = 0;
-    std::size_t tile_count = 0;
-    std::size_t voxel_count = 0;
-
-    solid_fraction_global.resize(Nprimitives);
-
-    primitiveID.resize(0);
-    primitiveID.reserve(Nprimitives);
-
-    // Create a vector of primitive pointers 'primitives' (note: only add one pointer for compound objects)
-    uint objID = 0;
-    uint ID = 99999;
-    for (std::size_t u = 0; u < Nprimitives; u++) {
-
-        uint p = context_UUIDs.at(u);
-
-        // primitve solid fraction
-        solid_fraction_global.at(u) = context->getPrimitiveSolidFraction(p);
-
-        uint parentID = context->getPrimitiveParentObjectID(p);
-
-        if (ID != parentID || parentID == 0 || context->getObjectType(parentID) != helios::OBJECT_TYPE_TILE) { // if this is a new object, or primitive does not belong to an object
-            primitiveID.push_back(u);
-            ID = parentID;
-            objID++;
-        } else {
-            ID = parentID;
-        }
-
-        assert(objID > 0);
-
-        objectID.at(u) = objID - 1;
-    }
-
-    // Nobjects is the number of isolated primitives plus the number of compound objects (all primitives inside and object combined only counts as one element)
-    size_t Nobjects = primitiveID.size();
-
-    m_global.resize(Nobjects);
-    ptype_global.resize(Nobjects);
-    twosided_flag_global.resize(Nobjects);
-
-    // Populate attributes for each primitive in the pointer vector 'primitives'
-    for (std::size_t u = 0; u < Nobjects; u++) {
-
-        uint p = context_UUIDs.at(primitiveID.at(u));
-
-        // transformation matrix
-        float m[16];
-
-        // primitive type
-        helios::PrimitiveType type = context->getPrimitiveType(p);
-        ptype_global.at(u) = type;
-
-        assert(ptype_global.at(u) >= 0 && ptype_global.at(u) <= 4);
-
-        // primitive twosided flag - check material first, then primitive data
-        twosided_flag_global.at(u) = char(context->getPrimitiveTwosidedFlag(p, 1));
-
-        uint parentID = context->getPrimitiveParentObjectID(p);
-
-        if (parentID > 0 && context->getObjectType(parentID) == helios::OBJECT_TYPE_TILE) { // tile objects
-
-            ptype_global.at(u) = 3;
-
-            context->getObjectTransformationMatrix(parentID, m);
-
-            m_global.at(u).resize(16);
-            for (uint i = 0; i < 16; i++) {
-                m_global.at(u).at(i) = m[i];
-            }
-
-            std::vector<vec3> vertices = context->getTileObjectVertices(parentID);
-            std::vector<optix::float3> v{optix::make_float3(vertices.at(0).x, vertices.at(0).y, vertices.at(0).z), optix::make_float3(vertices.at(1).x, vertices.at(1).y, vertices.at(1).z),
-                                         optix::make_float3(vertices.at(2).x, vertices.at(2).y, vertices.at(2).z), optix::make_float3(vertices.at(3).x, vertices.at(3).y, vertices.at(3).z)};
-            tile_vertices.push_back(v);
-
-            helios::int2 subdiv = context->getTileObjectSubdivisionCount(parentID);
-
-            object_subdivisions.push_back(optix::make_int2(subdiv.x, subdiv.y));
-
-            tile_UUID.push_back(primitiveID.at(u));
-            tile_count++;
-
-        } else if (type == helios::PRIMITIVE_TYPE_PATCH) { // patches
-
-            context->getPrimitiveTransformationMatrix(p, m);
-
-            m_global.at(u).resize(16);
-            for (uint i = 0; i < 16; i++) {
-                m_global.at(u).at(i) = m[i];
-            }
-
-            std::vector<vec3> vertices = context->getPrimitiveVertices(p);
-            std::vector<optix::float3> v{
-                    optix::make_float3(vertices.at(0).x, vertices.at(0).y, vertices.at(0).z),
-                    optix::make_float3(vertices.at(1).x, vertices.at(1).y, vertices.at(1).z),
-                    optix::make_float3(vertices.at(2).x, vertices.at(2).y, vertices.at(2).z),
-                    optix::make_float3(vertices.at(3).x, vertices.at(3).y, vertices.at(3).z),
-            };
-            patch_vertices.push_back(v);
-            object_subdivisions.push_back(optix::make_int2(1, 1));
-            patch_UUID.push_back(primitiveID.at(u));
-            patch_count++;
-        } else if (type == helios::PRIMITIVE_TYPE_TRIANGLE) { // triangles
-
-            context->getPrimitiveTransformationMatrix(p, m);
-
-            m_global.at(u).resize(16);
-            for (uint i = 0; i < 16; i++) {
-                m_global.at(u).at(i) = m[i];
-            }
-
-            std::vector<vec3> vertices = context->getPrimitiveVertices(p);
-            std::vector<optix::float3> v{optix::make_float3(vertices.at(0).x, vertices.at(0).y, vertices.at(0).z), optix::make_float3(vertices.at(1).x, vertices.at(1).y, vertices.at(1).z),
-                                         optix::make_float3(vertices.at(2).x, vertices.at(2).y, vertices.at(2).z)};
-            triangle_vertices.push_back(v);
-            object_subdivisions.push_back(optix::make_int2(1, 1));
-            triangle_UUID.push_back(primitiveID.at(u));
-            triangle_count++;
-        } else if (type == helios::PRIMITIVE_TYPE_VOXEL) { // voxels
-
-            context->getPrimitiveTransformationMatrix(p, m);
-
-            m_global.at(u).resize(16);
-            for (uint i = 0; i < 16; i++) {
-                m_global.at(u).at(i) = m[i];
-            }
-
-            helios::vec3 center = context->getVoxelCenter(p);
-            helios::vec3 size = context->getVoxelSize(p);
-            std::vector<optix::float3> v{optix::make_float3(center.x - 0.5f * size.x, center.y - 0.5f * size.y, center.z - 0.5f * size.z), optix::make_float3(center.x + 0.5f * size.x, center.y + 0.5f * size.y, center.z + 0.5f * size.z)};
-            voxel_vertices.push_back(v);
-            object_subdivisions.push_back(optix::make_int2(1, 1));
-            voxel_UUID.push_back(primitiveID.at(u));
-            voxel_count++;
-        }
-    }
-
-    // Texture mask data
-    std::vector<std::vector<std::vector<bool>>> maskdata;
-    std::map<std::string, uint> maskname;
-    std::vector<optix::int2> masksize;
-    std::vector<int> maskID;
-    std::vector<std::vector<optix::float2>> uvdata;
-    std::vector<int> uvID;
-    maskID.resize(Nobjects);
-    uvID.resize(Nobjects);
-
-    for (size_t u = 0; u < Nobjects; u++) {
-
-        uint p = context_UUIDs.at(primitiveID.at(u));
-
-        std::string maskfile = context->getPrimitiveTextureFile(p);
-
-        uint parentID = context->getPrimitiveParentObjectID(p);
-
-        if (context->getPrimitiveType(p) == PRIMITIVE_TYPE_VOXEL || maskfile.size() == 0 || !context->primitiveTextureHasTransparencyChannel(p)) { // does not have texture transparency
-
-            maskID.at(u) = -1;
-            uvID.at(u) = -1;
-
-        } else {
-
-            // texture mask data //
-
-            // Check if this mask has already been added
-            if (maskname.find(maskfile) != maskname.end()) { // has already been added
-                uint ID = maskname.at(maskfile);
-                maskID.at(u) = ID;
-            } else { // mask has not been added
-
-                uint ID = maskdata.size();
-                maskID.at(u) = ID;
-                maskname[maskfile] = maskdata.size();
-                maskdata.push_back(*context->getPrimitiveTextureTransparencyData(p));
-                auto sy = maskdata.back().size();
-                auto sx = maskdata.back().front().size();
-                masksize.push_back(optix::make_int2(sx, sy));
-            }
-
-            // uv coordinates //
-            std::vector<vec2> uv;
-
-            if (parentID == 0 || context->getObjectType(parentID) != helios::OBJECT_TYPE_TILE) { // primitives
-                uv = context->getPrimitiveTextureUV(p);
-            }
-
-            if (!uv.empty()) { // has custom (u,v) coordinates
-                std::vector<optix::float2> uvf2;
-                uvf2.resize(4);
-                // first index if uvf2 is the minimum (u,v) coordinate, second index is the size of the (u,v) rectangle in x- and y-directions.
-
-                for (int i = 0; i < uv.size(); i++) {
-                    uvf2.at(i) = optix::make_float2(uv.at(i).x, uv.at(i).y);
-                }
-                if (uv.size() == 3) {
-                    uvf2.at(3) = optix::make_float2(0, 0);
-                }
-                uvdata.push_back(uvf2);
-                uvID.at(u) = uvdata.size() - 1;
-            } else { // DOES NOT have custom (u,v) coordinates
-                uvID.at(u) = -1;
-            }
-        }
-    }
-
-    int2 size_max(0, 0);
-    for (int t = 0; t < maskdata.size(); t++) {
-        int2 sz(maskdata.at(t).front().size(), maskdata.at(t).size());
-        if (sz.x > size_max.x) {
-            size_max.x = sz.x;
-        }
-        if (sz.y > size_max.y) {
-            size_max.y = sz.y;
-        }
-    }
-
-    for (int t = 0; t < maskdata.size(); t++) {
-        maskdata.at(t).resize(size_max.y);
-        for (int j = 0; j < size_max.y; j++) {
-            maskdata.at(t).at(j).resize(size_max.x);
-        }
-    }
-
-    initializeBuffer3D(maskdata_RTbuffer, maskdata);
-    initializeBuffer1Dint2(masksize_RTbuffer, masksize);
-    initializeBuffer1Di(maskID_RTbuffer, maskID);
-
-    initializeBuffer2Dfloat2(uvdata_RTbuffer, uvdata);
-    initializeBuffer1Di(uvID_RTbuffer, uvID);
-
-    // Bounding box
-    helios::vec2 xbounds, ybounds, zbounds;
-    context->getDomainBoundingBox(xbounds, ybounds, zbounds);
-
-    if (periodic_flag.x == 1 || periodic_flag.y == 1) {
-        if (!cameras.empty()) {
-            for (auto &camera: cameras) {
-                vec3 camerapos = camera.second.position;
-                if (camerapos.x < xbounds.x || camerapos.x > xbounds.y || camerapos.y < ybounds.x || camerapos.y > ybounds.y) {
-                    std::cout << "WARNING (RadiationModel::updateGeometry): camera position is outside of the domain bounding box. Disabling periodic boundary conditions." << std::endl;
-                    periodic_flag.x = 0;
-                    periodic_flag.y = 0;
-                    break;
-                }
-                if (camerapos.z < zbounds.x) {
-                    zbounds.x = camerapos.z;
-                }
-                if (camerapos.z > zbounds.y) {
-                    zbounds.y = camerapos.z;
-                }
-            }
-        }
-    }
-
-    xbounds.x -= 1e-5;
-    xbounds.y += 1e-5;
-    ybounds.x -= 1e-5;
-    ybounds.y += 1e-5;
-    zbounds.x -= 1e-5;
-    zbounds.y += 1e-5;
-
-    std::vector<uint> bbox_UUID;
-    int bbox_face_count = 0;
-
-    std::vector<std::vector<optix::float3>> bbox_vertices;
-
-    // primitive type
-
-    std::vector<optix::float3> v;
-    v.resize(4);
-
-    if (periodic_flag.x == 1) {
-
-        // -x facing
-        v.at(0) = optix::make_float3(xbounds.x, ybounds.x, zbounds.x);
-        v.at(1) = optix::make_float3(xbounds.x, ybounds.y, zbounds.x);
-        v.at(2) = optix::make_float3(xbounds.x, ybounds.y, zbounds.y);
-        v.at(3) = optix::make_float3(xbounds.x, ybounds.x, zbounds.y);
-        bbox_vertices.push_back(v);
-        bbox_UUID.push_back(Nprimitives + bbox_face_count);
-        objectID.push_back(Nobjects + bbox_face_count);
-        ptype_global.push_back(5);
-        bbox_face_count++;
-
-        // +x facing
-        v.at(0) = optix::make_float3(xbounds.y, ybounds.x, zbounds.x);
-        v.at(1) = optix::make_float3(xbounds.y, ybounds.y, zbounds.x);
-        v.at(2) = optix::make_float3(xbounds.y, ybounds.y, zbounds.y);
-        v.at(3) = optix::make_float3(xbounds.y, ybounds.x, zbounds.y);
-        bbox_vertices.push_back(v);
-        bbox_UUID.push_back(Nprimitives + bbox_face_count);
-        objectID.push_back(Nobjects + bbox_face_count);
-        ptype_global.push_back(5);
-        bbox_face_count++;
-    }
-    if (periodic_flag.y == 1) {
-
-        // -y facing
-        v.at(0) = optix::make_float3(xbounds.x, ybounds.x, zbounds.x);
-        v.at(1) = optix::make_float3(xbounds.y, ybounds.x, zbounds.x);
-        v.at(2) = optix::make_float3(xbounds.y, ybounds.x, zbounds.y);
-        v.at(3) = optix::make_float3(xbounds.x, ybounds.x, zbounds.y);
-        bbox_vertices.push_back(v);
-        bbox_UUID.push_back(Nprimitives + bbox_face_count);
-        objectID.push_back(Nobjects + bbox_face_count);
-        ptype_global.push_back(5);
-        bbox_face_count++;
-
-        // +y facing
-        v.at(0) = optix::make_float3(xbounds.x, ybounds.y, zbounds.x);
-        v.at(1) = optix::make_float3(xbounds.y, ybounds.y, zbounds.x);
-        v.at(2) = optix::make_float3(xbounds.y, ybounds.y, zbounds.y);
-        v.at(3) = optix::make_float3(xbounds.x, ybounds.y, zbounds.y);
-        bbox_vertices.push_back(v);
-        bbox_UUID.push_back(Nprimitives + bbox_face_count);
-        objectID.push_back(Nobjects + bbox_face_count);
-        ptype_global.push_back(5);
-        bbox_face_count++;
-    }
-
-    initializeBuffer2Df(transform_matrix_RTbuffer, m_global);
-    initializeBuffer1Dui(primitive_type_RTbuffer, ptype_global);
-    initializeBuffer1Df(primitive_solid_fraction_RTbuffer, solid_fraction_global);
-    initializeBuffer1Dchar(twosided_flag_RTbuffer, twosided_flag_global);
-    initializeBuffer2Dfloat3(patch_vertices_RTbuffer, patch_vertices);
-    initializeBuffer2Dfloat3(triangle_vertices_RTbuffer, triangle_vertices);
-    initializeBuffer2Dfloat3(tile_vertices_RTbuffer, tile_vertices);
-    initializeBuffer2Dfloat3(voxel_vertices_RTbuffer, voxel_vertices);
-    initializeBuffer2Dfloat3(bbox_vertices_RTbuffer, bbox_vertices);
-
-    initializeBuffer1Dint2(object_subdivisions_RTbuffer, object_subdivisions);
-
-    initializeBuffer1Dui(patch_UUID_RTbuffer, patch_UUID);
-    initializeBuffer1Dui(triangle_UUID_RTbuffer, triangle_UUID);
-    initializeBuffer1Dui(disk_UUID_RTbuffer, disk_UUID);
-    initializeBuffer1Dui(tile_UUID_RTbuffer, tile_UUID);
-    initializeBuffer1Dui(voxel_UUID_RTbuffer, voxel_UUID);
-    initializeBuffer1Dui(bbox_UUID_RTbuffer, bbox_UUID);
-
-    initializeBuffer1Dui(objectID_RTbuffer, objectID);
-    initializeBuffer1Dui(primitiveID_RTbuffer, primitiveID);
-
-    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(patch, patch_count));
-    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(triangle, triangle_count));
-    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(disk, disk_count));
-    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(tile, tile_count));
-    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(voxel, voxel_count));
-    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(bbox, bbox_face_count));
-
-    RT_CHECK_ERROR(rtAccelerationMarkDirty(geometry_acceleration));
-
-    /* Set the top_object variable */
-    // NOTE: not sure if this has to be set again or not..
-    RT_CHECK_ERROR(rtVariableSetObject(top_object, top_level_group));
-
-    RTsize device_memory;
-    RT_CHECK_ERROR(rtContextGetAttribute(OptiX_Context, RT_CONTEXT_ATTRIBUTE_AVAILABLE_DEVICE_MEMORY, sizeof(RTsize), &device_memory));
-
-    device_memory *= 1e-6;
-
-    if (device_memory < 500) {
-        std::cout << "WARNING (RadiationModel): device memory is very low (" << device_memory << " MB)" << std::endl;
-    }
-
-    /* Validate/Compile OptiX Context */
-    RT_CHECK_ERROR(rtContextValidate(OptiX_Context));
-    RT_CHECK_ERROR(rtContextCompile(OptiX_Context));
-
-    // device_memory;
-    // RT_CHECK_ERROR( rtContextGetAttribute( OptiX_Context, RT_CONTEXT_ATTRIBUTE_AVAILABLE_DEVICE_MEMORY, sizeof(RTsize), &device_memory ) );
-
-    // device_memory *= 1e-6;
-    // if( device_memory < 1000 ){
-    //   printf("available device memory at end of OptiX context compile: %6.3f MB\n",device_memory);
-    // }else{
-    //   printf("available device memory at end of OptiX context compile: %6.3f GB\n",device_memory*1e-3);
-    // }
-
-    isgeometryinitialized = true;
-
-    // device_memory;
-    // RT_CHECK_ERROR( rtContextGetAttribute( OptiX_Context, RT_CONTEXT_ATTRIBUTE_AVAILABLE_DEVICE_MEMORY, sizeof(RTsize), &device_memory ) );
-
-    // device_memory *= 1e-6;
-    // if( device_memory < 1000 ){
-    //   printf("available device memory before acceleration build: %6.3f MB\n",device_memory);
-    // }else{
-    //   printf("available device memory before acceleration build: %6.3f GB\n",device_memory*1e-3);
-    // }
-
-    optix::int3 launch_dim_dummy = optix::make_int3(1, 1, 1);
-    RT_CHECK_ERROR(rtContextLaunch3D(OptiX_Context, RAYTYPE_DIRECT, launch_dim_dummy.x, launch_dim_dummy.y, launch_dim_dummy.z));
-
-    RT_CHECK_ERROR(rtContextGetAttribute(OptiX_Context, RT_CONTEXT_ATTRIBUTE_AVAILABLE_DEVICE_MEMORY, sizeof(RTsize), &device_memory));
-
-    // device_memory;
-    // RT_CHECK_ERROR( rtContextGetAttribute( OptiX_Context, RT_CONTEXT_ATTRIBUTE_AVAILABLE_DEVICE_MEMORY, sizeof(RTsize), &device_memory ) );
-
-    // device_memory *= 1e-6;
-    // if( device_memory < 1000 ){
-    //   printf("available device memory at end of acceleration build: %6.3f MB\n",device_memory);
-    // }else{
-    //   printf("available device memory at end of acceleration build: %6.3f GB\n",device_memory*1e-3);
-    // }
+    // Phase 1: Upload geometry through backend abstraction layer
+    // Replaces old direct OptiX buffer population (502 lines removed)
+    buildGeometryData();
+    backend->updateGeometry(geometry_data);
+    backend->buildAccelerationStructure();
 
     radiativepropertiesneedupdate = true;
+    isgeometryinitialized = true;
 
     if (message_flag) {
         std::cout << "done." << std::endl;
@@ -7074,5 +6588,108 @@ void RadiationModel::buildGeometryData() {
 size_t RadiationModel::testBuildGeometryData() {
     buildGeometryData();
     return geometry_data.primitive_count;
+}
+
+
+void RadiationModel::buildMaterialData() {
+    // Build backend-agnostic material data from Context primitive data
+    // For now, minimal implementation for testing
+    
+    size_t Nprims = geometry_data.primitive_count;
+    size_t Nbands = radiation_bands.size();
+    size_t Nsources = radiation_sources.size();
+    
+    material_data.num_primitives = Nprims;
+    material_data.num_bands = Nbands;
+    material_data.num_sources = Nsources;
+    material_data.num_cameras = cameras.size();
+    
+    // Allocate arrays (indexed as [source * Nbands * Nprims + band * Nprims + prim])
+    size_t total_size = Nsources * Nbands * Nprims;
+    material_data.reflectivity.resize(total_size, 0.0f);
+    material_data.transmissivity.resize(total_size, 0.0f);
+    material_data.specular_exponent.resize(Nprims, 10.0f);
+    material_data.specular_scale.resize(Nprims, 0.0f);
+    
+    // Extract material properties from Context primitives
+    size_t b_idx = 0;
+    for (const auto& band_pair : radiation_bands) {
+        std::string band_label = band_pair.second.label;
+
+        for (size_t s = 0; s < Nsources; s++) {
+            for (size_t p = 0; p < Nprims; p++) {
+                uint UUID = geometry_data.primitive_UUIDs[p];
+                size_t idx = s * Nbands * Nprims + b_idx * Nprims + p;
+
+                // Get reflectivity
+                float rho = rho_default;
+                std::string rho_label = "reflectivity_" + band_label;
+                if (context->doesPrimitiveDataExist(UUID, rho_label.c_str())) {
+                    context->getPrimitiveData(UUID, rho_label.c_str(), rho);
+                }
+                material_data.reflectivity[idx] = rho;
+
+                // Get transmissivity
+                float tau = tau_default;
+                std::string tau_label = "transmissivity_" + band_label;
+                if (context->doesPrimitiveDataExist(UUID, tau_label.c_str())) {
+                    context->getPrimitiveData(UUID, tau_label.c_str(), tau);
+                }
+                material_data.transmissivity[idx] = tau;
+            }
+        }
+        b_idx++;
+    }
+}
+
+void RadiationModel::buildSourceData() {
+    // Build backend-agnostic source data from radiation_sources
+    
+    source_data.clear();
+    source_data.reserve(radiation_sources.size());
+    
+    for (const auto& src : radiation_sources) {
+        helios::RayTracingSource backend_src;
+        backend_src.position = src.source_position;
+        backend_src.rotation = src.source_rotation;
+        backend_src.width = src.source_width;
+        backend_src.type = src.source_type;
+        
+        // Flatten flux arrays
+        backend_src.fluxes.clear();
+        backend_src.fluxes_cam.clear();
+        for (const auto& band_pair : radiation_bands) {
+            std::string band_label = band_pair.second.label;
+            float flux = src.source_fluxes.count(band_label) ? src.source_fluxes.at(band_label) : 0.0f;
+            backend_src.fluxes.push_back(flux);
+            backend_src.fluxes_cam.push_back(flux); // Same for now
+        }
+        
+        source_data.push_back(backend_src);
+    }
+}
+
+
+helios::RayTracingBackend* RadiationModel::getBackend() {
+    return backend.get();
+}
+
+helios::RayTracingGeometry& RadiationModel::getGeometryData() {
+    return geometry_data;
+}
+
+helios::RayTracingMaterial& RadiationModel::getMaterialData() {
+    return material_data;
+}
+
+std::vector<helios::RayTracingSource>& RadiationModel::getSourceData() {
+    return source_data;
+}
+
+
+void RadiationModel::testBuildAllBackendData() {
+    buildGeometryData();
+    buildMaterialData();
+    buildSourceData();
 }
 

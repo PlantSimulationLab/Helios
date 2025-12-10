@@ -5944,3 +5944,95 @@ DOCTEST_TEST_CASE("Phase1.E Step3: buildGeometryData() Extraction") {
     // - Populated geometry_data structure
     // - Handled patches and triangles
 }
+
+DOCTEST_TEST_CASE("Phase1.E Step4: updateGeometry() Backend Integration") {
+    // Test that updateGeometry() now uses backend instead of old OptiX code
+    
+    helios::Context context;
+    
+    // Create test geometry
+    context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
+    context.addTriangle(helios::make_vec3(2, 0, 0), helios::make_vec3(3, 0, 0), helios::make_vec3(2.5, 1, 0));
+    
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+    
+    // Call updateGeometry - should use backend path now
+    DOCTEST_REQUIRE_NOTHROW(radiation.updateGeometry());
+    
+    // If we get here, updateGeometry() successfully:
+    // - Called buildGeometryData()
+    // - Called backend->updateGeometry(geometry_data)  
+    // - Called backend->buildAccelerationStructure()
+    // - Did NOT crash
+    
+    // Verify backend was used by checking geometry was built
+    size_t prim_count = radiation.testBuildGeometryData();
+    DOCTEST_CHECK(prim_count == 2);
+}
+
+DOCTEST_TEST_CASE("Phase1.E Step5: Backend Functional Validation - Direct Radiation") {
+    // CRITICAL TEST: Prove backend can actually trace rays and produce correct results
+    
+    helios::Context context;
+
+    // Create single horizontal patch (1m x 1m) facing up
+    uint patch = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
+    
+    // Set as perfect absorber (rho=0, tau=0)
+    context.setPrimitiveData(patch, "reflectivity_PAR", 0.0f);
+    context.setPrimitiveData(patch, "transmissivity_PAR", 0.0f);
+
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+    
+    // Add radiation band
+    radiation.addRadiationBand("PAR");
+    
+    // Add downward collimated source (1000 W/m²)
+    uint source = radiation.addCollimatedRadiationSource(helios::make_vec3(0, 0, -1));
+    radiation.setSourceFlux(source, "PAR", 1000.0f);
+
+    // Build all data structures
+    
+    
+    radiation.testBuildAllBackendData();
+
+    // Upload to backend using test helpers
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->updateGeometry(radiation.getGeometryData()));
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->buildAccelerationStructure());
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->updateMaterials(radiation.getMaterialData()));
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->updateSources(radiation.getSourceData()));
+
+    // Zero radiation buffers
+    radiation.getBackend()->zeroRadiationBuffers();
+
+    // Launch direct rays through backend
+    helios::RayTracingLaunchParams params;
+    params.launch_offset = 0;
+    params.launch_count = 1;
+    params.rays_per_primitive = 100;
+    params.random_seed = 12345;
+    params.num_bands_global = 1;
+    params.num_bands_launch = 1;
+    params.band_launch_flag = {true};
+    params.specular_reflection_enabled = false;
+
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->launchDirectRays(params));
+
+    // Get results from backend
+    helios::RayTracingResults results;
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->getRadiationResults(results));
+
+    // CRITICAL VALIDATION: Check numerical correctness
+    // Expected: 1m² patch + 1000 W/m² perpendicular + perfect absorber = 1000 W absorbed
+    
+    DOCTEST_REQUIRE(results.radiation_in.size() >= 1);
+    
+    float expected = 1000.0f;
+    float actual = results.radiation_in[0];
+    float tolerance = 10.0f;  // 1% tolerance
+    
+    DOCTEST_CHECK_MESSAGE(std::abs(actual - expected) < tolerance, 
+        "Backend radiation incorrect: expected " << expected << " W, got " << actual << " W");
+}

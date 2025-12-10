@@ -1817,6 +1817,21 @@ public:
      */
     size_t testBuildGeometryData();
 
+    //! Test helper: Get backend pointer for direct testing (Phase 1 only)
+    helios::RayTracingBackend* getBackend();
+
+    //! Test helper: Get geometry data reference (Phase 1 only)
+    helios::RayTracingGeometry& getGeometryData();
+
+    //! Test helper: Get material data reference (Phase 1 only)
+    helios::RayTracingMaterial& getMaterialData();
+
+    //! Test helper: Get source data reference (Phase 1 only)
+    std::vector<helios::RayTracingSource>& getSourceData();
+
+    //! Test helper: Build all backend data (Phase 1 testing only)
+    void testBuildAllBackendData();
+
 protected:
     //! Flag to determine if status messages are output to the screen
     bool message_flag;
@@ -2216,6 +2231,12 @@ protected:
      */
     void buildGeometryData();
 
+    //! Phase 1: Build backend-agnostic material data from Context primitive data
+    void buildMaterialData();
+
+    //! Phase 1: Build backend-agnostic source data from radiation_sources
+    void buildSourceData();
+
     //! UUIDs for source 3D object models (for visualization). Key is the source ID, value is a vector of UUIDs for the source model.
     std::map<uint, std::vector<uint>> source_model_UUIDs;
     //! UUIDs for camera 3D object models (for visualization). Key is the camera label, value is a vector of UUIDs for the camera model.
@@ -2228,6 +2249,12 @@ protected:
 
     //! Backend-agnostic geometry data (built from Context, uploaded to backend)
     helios::RayTracingGeometry geometry_data;
+
+    //! Backend-agnostic material data (built from Context, uploaded to backend)
+    helios::RayTracingMaterial material_data;
+
+    //! Backend-agnostic source data (built from radiation_sources, uploaded to backend)
+    std::vector<helios::RayTracingSource> source_data;
 
     /* Primary RT API objects */
 
