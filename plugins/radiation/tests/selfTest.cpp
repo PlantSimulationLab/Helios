@@ -153,6 +153,11 @@ DOCTEST_TEST_CASE("RadiationModel Black Parallel Rectangles") {
     float shortwave_error_0 = fabsf(shortwave_model_0 - shortwave_exact_0) / fabsf(shortwave_exact_0);
     float shortwave_error_1 = fabsf(shortwave_model_1 - shortwave_exact_1) / fabsf(shortwave_exact_1);
 
+    std::cerr << "Black Rect DEBUG: expected=" << shortwave_exact_0
+              << " actual0=" << shortwave_model_0
+              << " actual1=" << shortwave_model_1
+              << " F12=" << F12 << std::endl;
+
     DOCTEST_CHECK(shortwave_error_0 <= error_threshold);
     DOCTEST_CHECK(shortwave_error_1 <= error_threshold);
 }

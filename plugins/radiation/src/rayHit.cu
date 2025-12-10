@@ -61,6 +61,13 @@ RT_PROGRAM void closest_hit_direct() {
 
 RT_PROGRAM void closest_hit_diffuse() {
 
+    // DEBUG: Count first few hits
+    static __device__ int hit_count = 0;
+    int count = atomicAdd(&hit_count, 1);
+    if (count < 10) {
+        rtPrintf("HIT_DIFFUSE: origin=%u hit=%u\n", prd.origin_UUID, UUID);
+    }
+
     uint origin_UUID = prd.origin_UUID;
 
     uint objID = objectID[UUID];
@@ -576,6 +583,13 @@ __device__ float evaluateDiffuseAngularDistribution(const float3 &ray_dir, const
 }
 
 RT_PROGRAM void miss_diffuse() {
+
+    // DEBUG: Count first few misses
+    static __device__ int miss_count = 0;
+    int count = atomicAdd(&miss_count, 1);
+    if (count < 10) {
+        rtPrintf("MISS_DIFFUSE: UUID=%u\n", prd.origin_UUID);
+    }
 
     //    double strength;
     //    if (prd.face || primitive_type[objectID[prd.origin_UUID]] == 3) {

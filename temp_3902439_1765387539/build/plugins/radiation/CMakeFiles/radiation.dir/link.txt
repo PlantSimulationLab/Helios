@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../lib/libradiation.a CMakeFiles/radiation.dir/src/RadiationModel.cpp.o CMakeFiles/radiation.dir/src/RadiationCamera.cpp.o CMakeFiles/radiation.dir/src/CameraCalibration.cpp.o CMakeFiles/radiation.dir/src/LensFlare.cpp.o CMakeFiles/radiation.dir/src/backends/OptiX6Backend.cpp.o CMakeFiles/radiation.dir/src/backends/BackendFactory.cpp.o CMakeFiles/radiation.dir/tests/selfTest.cpp.o
+/usr/bin/ranlib ../../lib/libradiation.a
