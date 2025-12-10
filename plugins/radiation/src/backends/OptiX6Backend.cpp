@@ -550,6 +550,14 @@ void OptiX6Backend::launchDiffuseRays(const RayTracingLaunchParams& params) {
     // Set launch parameters
     launchParamsToVariables(params);
 
+    // Upload emission/outgoing radiation if provided
+    if (!params.radiation_out_top.empty()) {
+        initializeBuffer1Df(radiation_out_top_RTbuffer, params.radiation_out_top);
+    }
+    if (!params.radiation_out_bottom.empty()) {
+        initializeBuffer1Df(radiation_out_bottom_RTbuffer, params.radiation_out_bottom);
+    }
+
     // Upload diffuse parameters if provided
     if (!params.diffuse_flux.empty()) {
         initializeBuffer1Df(diffuse_flux_RTbuffer, params.diffuse_flux);
@@ -662,6 +670,14 @@ void OptiX6Backend::zeroRadiationBuffers() {
         zeroBuffer1D(radiation_in_RTbuffer, buffer_size);
         zeroBuffer1D(radiation_out_top_RTbuffer, buffer_size);
         zeroBuffer1D(radiation_out_bottom_RTbuffer, buffer_size);
+        zeroBuffer1D(scatter_buff_top_RTbuffer, buffer_size);
+        zeroBuffer1D(scatter_buff_bottom_RTbuffer, buffer_size);
+    }
+
+    // Zero camera scatter buffers
+    if (current_camera_count > 0 && buffer_size > 0) {
+        zeroBuffer1D(scatter_buff_top_cam_RTbuffer, buffer_size);
+        zeroBuffer1D(scatter_buff_bottom_cam_RTbuffer, buffer_size);
     }
 
     // Zero specular buffer (indexed by source, camera, primitive, band)

@@ -153,6 +153,10 @@ struct RayTracingLaunchParams {
     std::vector<helios::vec3> diffuse_peak_dir; //!< Peak direction for diffuse distribution per band
     std::vector<float> diffuse_dist_norm;       //!< Diffuse distribution normalization per band
 
+    // Emission/outgoing radiation (for diffuse ray launches)
+    std::vector<float> radiation_out_top;       //!< Emitted/outgoing radiation (top face) per [primitive][band]
+    std::vector<float> radiation_out_bottom;    //!< Emitted/outgoing radiation (bottom face) per [primitive][band]
+
     // Flags
     bool specular_reflection_enabled = false;   //!< Enable specular reflections
 };
