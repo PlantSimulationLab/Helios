@@ -4306,17 +4306,6 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
     std::vector<float> radiation_flux_data = results.radiation_in;
 
-    // DEBUG: Check radiation values
-    float total_radiation = 0.0f;
-    for (size_t i = 0; i < radiation_flux_data.size(); i++) {
-        total_radiation += radiation_flux_data[i];
-    }
-    std::cerr << "DEBUG: total_radiation=" << total_radiation
-              << " diffuseenabled=" << diffuseenabled
-              << " Nprims=" << Nprimitives
-              << " Nbands=" << Nbands_launch
-              << " diffuse_flux[0]=" << (diffuse_flux.empty() ? -1.0f : diffuse_flux[0]) << std::endl;
-
     // Extract scatter buffer data from backend results
     TBS_top = results.scatter_buff_top;
     TBS_bottom = results.scatter_buff_bottom;
@@ -6535,8 +6524,17 @@ void RadiationModel::buildGeometryData() {
     // Phase 1: Populate primitiveID for runBand() compatibility
     primitiveID = primitiveID_indices;
 
-    // Copy primitiveID mapping to geometry_data for backend upload
-    geometry_data.primitive_IDs = primitiveID_indices;
+    // For backend: primitiveID[objID] must return the actual context UUID
+    // Because CUDA computes: UUID = primitiveID[objID] + subpatch_offset
+    // And the geometry data is stored in reordered positions
+    std::vector<uint> primitiveID_for_backend(Nobjects);
+    for (size_t i = 0; i < Nobjects; i++) {
+        size_t prim_idx = primitiveID_indices[i];
+        primitiveID_for_backend[i] = primitive_UUIDs_ordered[prim_idx];
+    }
+
+    // Copy corrected primitiveID mapping to geometry_data for backend upload
+    geometry_data.primitive_IDs = primitiveID_for_backend;
 
     // Populate geometry for each primitive
     size_t patch_idx = 0, tri_idx = 0, disk_idx = 0, tile_idx = 0, voxel_idx = 0, bbox_idx = 0;
@@ -6586,7 +6584,7 @@ void RadiationModel::buildGeometryData() {
             }
 
             geometry_data.object_subdivisions[prim_idx] = helios::make_int2(1, 1);
-            geometry_data.patches.UUIDs.push_back(prim_idx);
+            // Note: patches.UUIDs will be populated after loop (needs to be in patch_idx order, not iteration order)
             patch_idx++;
 
         } else if (type == helios::PRIMITIVE_TYPE_TRIANGLE) {
@@ -6629,12 +6627,30 @@ void RadiationModel::buildGeometryData() {
     geometry_data.voxel_count = voxel_idx;
     geometry_data.bbox_count = bbox_idx;
 
+    // Build patch_UUID mapping: patch_UUID[patch_idx] = UUID
+    // This must be done AFTER the loop so we can index by patch_idx
+    geometry_data.patches.UUIDs.resize(patch_idx);
+    for (size_t u = 0; u < Nprimitives; u++) {
+        if (geometry_data.primitive_types[u] == 0) { // patch
+            // Find which patch_idx this primitive corresponds to
+            // Count how many patches came before this primitive in the ordered list
+            size_t this_patch_idx = 0;
+            for (size_t v = 0; v < u; v++) {
+                if (geometry_data.primitive_types[v] == 0) {
+                    this_patch_idx++;
+                }
+            }
+            geometry_data.patches.UUIDs[this_patch_idx] = primitive_UUIDs_ordered[u];
+        }
+    }
+
     // Periodic boundary condition
     geometry_data.periodic_flag = periodic_flag;
 
     // TODO: Extract texture masks and UV data when needed
-    geometry_data.mask_IDs.clear();
-    geometry_data.uv_IDs.clear();
+    // For now, set all to -1 (no texture transparency)
+    geometry_data.mask_IDs.resize(Nobjects, -1);
+    geometry_data.uv_IDs.resize(Nobjects, -1);
 }
 
 

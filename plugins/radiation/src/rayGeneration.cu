@@ -258,15 +258,7 @@ RT_PROGRAM void diffuse_raygen() {
 
     uint objID = launch_offset + launch_index.z;
 
-    // DEBUG: Print first ray from each primitive
-    if (indx == 0) {
-        rtPrintf("DIFFUSE_GEN: objID=%u face=%u twosided=%u\n", objID, launch_face, twosided_flag[objID]);
-    }
-
     if (launch_face == 0 && twosided_flag[objID] == 0) { // skip the launch if from the bottom face and twosided_flag = 0
-        if (indx == 0) {
-            rtPrintf("  SKIP bottom face\n");
-        }
         return;
     }
 

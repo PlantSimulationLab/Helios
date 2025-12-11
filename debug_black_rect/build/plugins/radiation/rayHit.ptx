@@ -11,12 +11,6 @@
 .address_size 64
 
 	// .globl	_Z18closest_hit_directv
-.extern .func  (.param .b32 func_retval0) vprintf
-(
-	.param .b64 vprintf_param_0,
-	.param .b64 vprintf_param_1
-)
-;
 .global .align 4 .b8 top_object[4];
 .global .align 4 .u32 random_seed;
 .global .align 4 .u32 launch_offset;
@@ -107,8 +101,6 @@
 .global .align 4 .f32 t_hit;
 .global .align 8 .b8 prd[40];
 .global .align 4 .u32 UUID;
-.global .align 4 .u32 _ZZ19closest_hit_diffusevE9hit_count;
-.global .align 4 .u32 _ZZ12miss_diffusevE10miss_count;
 .global .align 4 .b8 _ZN21rti_internal_typeinfo10top_objectE[8] = {82, 97, 121, 0, 4};
 .global .align 4 .b8 _ZN21rti_internal_typeinfo11random_seedE[8] = {82, 97, 121, 0, 4};
 .global .align 4 .b8 _ZN21rti_internal_typeinfo13launch_offsetE[8] = {82, 97, 121, 0, 4};
@@ -308,8 +300,6 @@
 .global .align 1 .b8 _ZN23rti_internal_annotation5t_hitE[1];
 .global .align 1 .b8 _ZN23rti_internal_annotation3prdE[1];
 .global .align 1 .b8 _ZN23rti_internal_annotation4UUIDE[1];
-.global .align 1 .b8 $str[31] = {72, 73, 84, 95, 68, 73, 70, 70, 85, 83, 69, 58, 32, 111, 114, 105, 103, 105, 110, 61, 37, 117, 32, 104, 105, 116, 61, 37, 117, 10};
-.global .align 1 .b8 $str$1[23] = {77, 73, 83, 83, 95, 68, 73, 70, 70, 85, 83, 69, 58, 32, 85, 85, 73, 68, 61, 37, 117, 10};
 
 .visible .entry _Z18closest_hit_directv()
 {
@@ -448,85 +438,46 @@ $L__BB0_12:
 	// .globl	_Z19closest_hit_diffusev
 .visible .entry _Z19closest_hit_diffusev()
 {
-	.local .align 8 .b8 	__local_depot1[8];
-	.reg .b64 	%SP;
-	.reg .b64 	%SPL;
-	.reg .pred 	%p<37>;
+	.reg .pred 	%p<35>;
 	.reg .b16 	%rs<5>;
 	.reg .f32 	%f<234>;
-	.reg .b32 	%r<137>;
+	.reg .b32 	%r<132>;
 	.reg .f64 	%fd<22>;
-	.reg .b64 	%rd<319>;
+	.reg .b64 	%rd<314>;
 
 
-	mov.u64 	%SPL, __local_depot1;
-	cvta.local.u64 	%SP, %SPL;
-	mov.u64 	%rd9, _ZZ19closest_hit_diffusevE9hit_count;
-	atom.global.add.u32 	%r9, [%rd9], 1;
-	setp.gt.s32 	%p1, %r9, 9;
-	@%p1 bra 	$L__BB1_3;
-
-	ld.global.u32 	%r1, [prd+8];
-	ld.global.u32 	%r2, [UUID];
-	// begin inline asm
-	call (%r10), _rt_print_active, ();
-	// end inline asm
-	setp.eq.s32 	%p2, %r10, 0;
-	@%p2 bra 	$L__BB1_3;
-
-	add.u64 	%rd10, %SP, 0;
-	add.u64 	%rd11, %SPL, 0;
-	st.local.v2.u32 	[%rd11], {%r1, %r2};
-	mov.u64 	%rd12, $str;
-	cvta.global.u64 	%rd13, %rd12;
-	{ // callseq 0, 0
-	.reg .b32 temp_param_reg;
-	.param .b64 param0;
-	st.param.b64 	[param0+0], %rd13;
-	.param .b64 param1;
-	st.param.b64 	[param1+0], %rd10;
-	.param .b32 retval0;
-	call.uni (retval0), 
-	vprintf, 
-	(
-	param0, 
-	param1
-	);
-	ld.param.b32 	%r11, [retval0+0];
-	} // callseq 0
-
-$L__BB1_3:
 	ld.global.u32 	%rd1, [prd+8];
-	mov.u64 	%rd19, 0;
-	ld.global.u32 	%rd16, [UUID];
-	mov.u64 	%rd20, objectID;
-	cvta.global.u64 	%rd15, %rd20;
-	mov.u32 	%r12, 1;
-	mov.u32 	%r13, 4;
+	mov.u64 	%rd14, 0;
+	ld.global.u32 	%rd11, [UUID];
+	mov.u64 	%rd15, objectID;
+	cvta.global.u64 	%rd10, %rd15;
+	mov.u32 	%r7, 1;
+	mov.u32 	%r8, 4;
 	// begin inline asm
-	call (%rd14), _rt_buffer_get_64, (%rd15, %r12, %r13, %rd16, %rd19, %rd19, %rd19);
+	call (%rd9), _rt_buffer_get_64, (%rd10, %r7, %r8, %rd11, %rd14, %rd14, %rd14);
 	// end inline asm
-	ld.u32 	%rd2, [%rd14];
+	ld.u32 	%rd2, [%rd9];
 	ld.global.v2.f32 	{%f38, %f39}, [periodic_flag];
-	setp.eq.ftz.f32 	%p3, %f38, 0f3F800000;
-	setp.eq.ftz.f32 	%p4, %f39, 0f3F800000;
-	or.pred  	%p5, %p3, %p4;
-	@%p5 bra 	$L__BB1_4;
-	bra.uni 	$L__BB1_5;
+	setp.eq.ftz.f32 	%p1, %f38, 0f3F800000;
+	setp.eq.ftz.f32 	%p2, %f39, 0f3F800000;
+	or.pred  	%p3, %p1, %p2;
+	@%p3 bra 	$L__BB1_1;
+	bra.uni 	$L__BB1_2;
 
-$L__BB1_4:
-	mov.u64 	%rd27, primitive_type;
-	cvta.global.u64 	%rd22, %rd27;
+$L__BB1_1:
+	mov.u64 	%rd22, primitive_type;
+	cvta.global.u64 	%rd17, %rd22;
 	// begin inline asm
-	call (%rd21), _rt_buffer_get_64, (%rd22, %r12, %r13, %rd2, %rd19, %rd19, %rd19);
+	call (%rd16), _rt_buffer_get_64, (%rd17, %r7, %r8, %rd2, %rd14, %rd14, %rd14);
 	// end inline asm
-	ld.u32 	%r16, [%rd21];
-	setp.eq.s32 	%p6, %r16, 5;
-	@%p6 bra 	$L__BB1_32;
-	bra.uni 	$L__BB1_5;
+	ld.u32 	%r11, [%rd16];
+	setp.eq.s32 	%p4, %r11, 5;
+	@%p4 bra 	$L__BB1_29;
+	bra.uni 	$L__BB1_2;
 
-$L__BB1_32:
-	mov.u64 	%rd316, 0;
+$L__BB1_29:
+	mov.u64 	%rd309, 1;
+	mov.u64 	%rd311, 0;
 	mov.u16 	%rs4, 1;
 	st.global.u8 	[prd+21], %rs4;
 	ld.global.f32 	%f203, [ray+12];
@@ -539,171 +490,170 @@ $L__BB1_32:
 	fma.rn.ftz.f32 	%f31, %f204, %f205, %f208;
 	ld.global.f32 	%f209, [ray+8];
 	fma.rn.ftz.f32 	%f210, %f204, %f206, %f209;
-	mov.u64 	%rd317, bbox_vertices;
-	cvta.global.u64 	%rd294, %rd317;
-	mov.u32 	%r132, 2;
-	mov.u32 	%r133, 12;
+	mov.u64 	%rd312, bbox_vertices;
+	cvta.global.u64 	%rd289, %rd312;
+	mov.u32 	%r127, 2;
+	mov.u32 	%r128, 12;
 	// begin inline asm
-	call (%rd293), _rt_buffer_get_64, (%rd294, %r132, %r133, %rd316, %rd316, %rd316, %rd316);
+	call (%rd288), _rt_buffer_get_64, (%rd289, %r127, %r128, %rd311, %rd311, %rd311, %rd311);
 	// end inline asm
-	ld.f32 	%f32, [%rd293];
-	mov.u64 	%rd314, 1;
+	ld.f32 	%f32, [%rd288];
 	// begin inline asm
-	call (%rd299), _rt_buffer_get_64, (%rd294, %r132, %r133, %rd314, %rd314, %rd316, %rd316);
+	call (%rd294), _rt_buffer_get_64, (%rd289, %r127, %r128, %rd309, %rd309, %rd311, %rd311);
 	// end inline asm
-	ld.f32 	%f33, [%rd299];
+	ld.f32 	%f33, [%rd294];
 	// begin inline asm
-	call (%rd305), _rt_buffer_get_64, (%rd294, %r132, %r133, %rd316, %rd316, %rd316, %rd316);
+	call (%rd300), _rt_buffer_get_64, (%rd289, %r127, %r128, %rd311, %rd311, %rd311, %rd311);
 	// end inline asm
-	ld.f32 	%f34, [%rd305+4];
+	ld.f32 	%f34, [%rd300+4];
 	// begin inline asm
-	call (%rd311), _rt_buffer_get_64, (%rd294, %r132, %r133, %rd314, %rd314, %rd316, %rd316);
+	call (%rd306), _rt_buffer_get_64, (%rd289, %r127, %r128, %rd309, %rd309, %rd311, %rd311);
 	// end inline asm
 	sub.ftz.f32 	%f35, %f33, %f32;
-	ld.f32 	%f36, [%rd311+4];
+	ld.f32 	%f36, [%rd306+4];
 	sub.ftz.f32 	%f37, %f36, %f34;
 	st.global.v2.f32 	[prd+24], {%f30, %f31};
 	st.global.f32 	[prd+32], %f210;
 	ld.global.f32 	%f211, [periodic_flag];
-	setp.neu.ftz.f32 	%p31, %f211, 0f3F800000;
-	@%p31 bra 	$L__BB1_37;
+	setp.neu.ftz.f32 	%p29, %f211, 0f3F800000;
+	@%p29 bra 	$L__BB1_34;
 
 	sub.ftz.f32 	%f212, %f30, %f32;
 	abs.ftz.f32 	%f213, %f212;
-	setp.gtu.ftz.f32 	%p32, %f213, 0f3727C5AC;
-	@%p32 bra 	$L__BB1_35;
-	bra.uni 	$L__BB1_34;
+	setp.gtu.ftz.f32 	%p30, %f213, 0f3727C5AC;
+	@%p30 bra 	$L__BB1_32;
+	bra.uni 	$L__BB1_31;
 
-$L__BB1_35:
+$L__BB1_32:
 	sub.ftz.f32 	%f216, %f30, %f33;
 	abs.ftz.f32 	%f217, %f216;
-	setp.gtu.ftz.f32 	%p33, %f217, 0f3727C5AC;
+	setp.gtu.ftz.f32 	%p31, %f217, 0f3727C5AC;
+	@%p31 bra 	$L__BB1_34;
+	bra.uni 	$L__BB1_33;
+
+$L__BB1_34:
+	ld.global.f32 	%f221, [periodic_flag+4];
+	setp.neu.ftz.f32 	%p32, %f221, 0f3F800000;
+	@%p32 bra 	$L__BB1_39;
+
+	sub.ftz.f32 	%f222, %f31, %f34;
+	abs.ftz.f32 	%f223, %f222;
+	setp.gtu.ftz.f32 	%p33, %f223, 0f3727C5AC;
 	@%p33 bra 	$L__BB1_37;
 	bra.uni 	$L__BB1_36;
 
 $L__BB1_37:
-	ld.global.f32 	%f221, [periodic_flag+4];
-	setp.neu.ftz.f32 	%p34, %f221, 0f3F800000;
-	@%p34 bra 	$L__BB1_42;
-
-	sub.ftz.f32 	%f222, %f31, %f34;
-	abs.ftz.f32 	%f223, %f222;
-	setp.gtu.ftz.f32 	%p35, %f223, 0f3727C5AC;
-	@%p35 bra 	$L__BB1_40;
-	bra.uni 	$L__BB1_39;
-
-$L__BB1_40:
 	sub.ftz.f32 	%f226, %f31, %f36;
 	abs.ftz.f32 	%f227, %f226;
-	setp.gtu.ftz.f32 	%p36, %f227, 0f3727C5AC;
-	@%p36 bra 	$L__BB1_42;
+	setp.gtu.ftz.f32 	%p34, %f227, 0f3727C5AC;
+	@%p34 bra 	$L__BB1_39;
 
 	mov.f32 	%f228, 0f3727C5AC;
 	sub.ftz.f32 	%f229, %f228, %f37;
 	add.ftz.f32 	%f230, %f229, %f31;
 	st.global.f32 	[prd+28], %f230;
-	bra.uni 	$L__BB1_42;
+	bra.uni 	$L__BB1_39;
 
-$L__BB1_5:
-	mov.u64 	%rd130, transform_matrix;
-	cvta.global.u64 	%rd29, %rd130;
-	mov.u32 	%r47, 2;
+$L__BB1_2:
+	mov.u64 	%rd125, transform_matrix;
+	cvta.global.u64 	%rd24, %rd125;
+	mov.u32 	%r42, 2;
 	// begin inline asm
-	call (%rd28), _rt_buffer_get_64, (%rd29, %r47, %r13, %rd19, %rd2, %rd19, %rd19);
+	call (%rd23), _rt_buffer_get_64, (%rd24, %r42, %r8, %rd14, %rd2, %rd14, %rd14);
 	// end inline asm
-	ld.f32 	%f1, [%rd28];
-	mov.u64 	%rd36, 1;
+	ld.f32 	%f1, [%rd23];
+	mov.u64 	%rd31, 1;
 	// begin inline asm
-	call (%rd34), _rt_buffer_get_64, (%rd29, %r47, %r13, %rd36, %rd2, %rd19, %rd19);
+	call (%rd29), _rt_buffer_get_64, (%rd24, %r42, %r8, %rd31, %rd2, %rd14, %rd14);
 	// end inline asm
-	ld.f32 	%f2, [%rd34];
-	mov.u64 	%rd42, 2;
+	ld.f32 	%f2, [%rd29];
+	mov.u64 	%rd37, 2;
 	// begin inline asm
-	call (%rd40), _rt_buffer_get_64, (%rd29, %r47, %r13, %rd42, %rd2, %rd19, %rd19);
+	call (%rd35), _rt_buffer_get_64, (%rd24, %r42, %r8, %rd37, %rd2, %rd14, %rd14);
 	// end inline asm
-	ld.f32 	%f3, [%rd40];
-	mov.u64 	%rd48, 3;
+	ld.f32 	%f3, [%rd35];
+	mov.u64 	%rd43, 3;
 	// begin inline asm
-	call (%rd46), _rt_buffer_get_64, (%rd29, %r47, %r13, %rd48, %rd2, %rd19, %rd19);
+	call (%rd41), _rt_buffer_get_64, (%rd24, %r42, %r8, %rd43, %rd2, %rd14, %rd14);
 	// end inline asm
-	ld.f32 	%f4, [%rd46];
-	mov.u64 	%rd54, 4;
+	ld.f32 	%f4, [%rd41];
+	mov.u64 	%rd49, 4;
 	// begin inline asm
-	call (%rd52), _rt_buffer_get_64, (%rd29, %r47, %r13, %rd54, %rd2, %rd19, %rd19);
+	call (%rd47), _rt_buffer_get_64, (%rd24, %r42, %r8, %rd49, %rd2, %rd14, %rd14);
 	// end inline asm
-	ld.f32 	%f5, [%rd52];
-	mov.u64 	%rd60, 5;
+	ld.f32 	%f5, [%rd47];
+	mov.u64 	%rd55, 5;
 	// begin inline asm
-	call (%rd58), _rt_buffer_get_64, (%rd29, %r47, %r13, %rd60, %rd2, %rd19, %rd19);
+	call (%rd53), _rt_buffer_get_64, (%rd24, %r42, %r8, %rd55, %rd2, %rd14, %rd14);
 	// end inline asm
-	ld.f32 	%f6, [%rd58];
-	mov.u64 	%rd66, 6;
+	ld.f32 	%f6, [%rd53];
+	mov.u64 	%rd61, 6;
 	// begin inline asm
-	call (%rd64), _rt_buffer_get_64, (%rd29, %r47, %r13, %rd66, %rd2, %rd19, %rd19);
+	call (%rd59), _rt_buffer_get_64, (%rd24, %r42, %r8, %rd61, %rd2, %rd14, %rd14);
 	// end inline asm
-	ld.f32 	%f7, [%rd64];
-	mov.u64 	%rd72, 7;
+	ld.f32 	%f7, [%rd59];
+	mov.u64 	%rd67, 7;
 	// begin inline asm
-	call (%rd70), _rt_buffer_get_64, (%rd29, %r47, %r13, %rd72, %rd2, %rd19, %rd19);
+	call (%rd65), _rt_buffer_get_64, (%rd24, %r42, %r8, %rd67, %rd2, %rd14, %rd14);
 	// end inline asm
-	ld.f32 	%f8, [%rd70];
-	mov.u64 	%rd78, 8;
+	ld.f32 	%f8, [%rd65];
+	mov.u64 	%rd73, 8;
 	// begin inline asm
-	call (%rd76), _rt_buffer_get_64, (%rd29, %r47, %r13, %rd78, %rd2, %rd19, %rd19);
+	call (%rd71), _rt_buffer_get_64, (%rd24, %r42, %r8, %rd73, %rd2, %rd14, %rd14);
 	// end inline asm
-	ld.f32 	%f9, [%rd76];
-	mov.u64 	%rd84, 9;
+	ld.f32 	%f9, [%rd71];
+	mov.u64 	%rd79, 9;
 	// begin inline asm
-	call (%rd82), _rt_buffer_get_64, (%rd29, %r47, %r13, %rd84, %rd2, %rd19, %rd19);
+	call (%rd77), _rt_buffer_get_64, (%rd24, %r42, %r8, %rd79, %rd2, %rd14, %rd14);
 	// end inline asm
-	ld.f32 	%f10, [%rd82];
-	mov.u64 	%rd90, 10;
+	ld.f32 	%f10, [%rd77];
+	mov.u64 	%rd85, 10;
 	// begin inline asm
-	call (%rd88), _rt_buffer_get_64, (%rd29, %r47, %r13, %rd90, %rd2, %rd19, %rd19);
+	call (%rd83), _rt_buffer_get_64, (%rd24, %r42, %r8, %rd85, %rd2, %rd14, %rd14);
 	// end inline asm
-	ld.f32 	%f11, [%rd88];
-	mov.u64 	%rd96, 11;
+	ld.f32 	%f11, [%rd83];
+	mov.u64 	%rd91, 11;
 	// begin inline asm
-	call (%rd94), _rt_buffer_get_64, (%rd29, %r47, %r13, %rd96, %rd2, %rd19, %rd19);
+	call (%rd89), _rt_buffer_get_64, (%rd24, %r42, %r8, %rd91, %rd2, %rd14, %rd14);
 	// end inline asm
-	ld.f32 	%f12, [%rd94];
-	mov.u64 	%rd102, 12;
+	ld.f32 	%f12, [%rd89];
+	mov.u64 	%rd97, 12;
 	// begin inline asm
-	call (%rd100), _rt_buffer_get_64, (%rd29, %r47, %r13, %rd102, %rd2, %rd19, %rd19);
+	call (%rd95), _rt_buffer_get_64, (%rd24, %r42, %r8, %rd97, %rd2, %rd14, %rd14);
 	// end inline asm
-	mov.u64 	%rd108, 13;
+	mov.u64 	%rd103, 13;
 	// begin inline asm
-	call (%rd106), _rt_buffer_get_64, (%rd29, %r47, %r13, %rd108, %rd2, %rd19, %rd19);
+	call (%rd101), _rt_buffer_get_64, (%rd24, %r42, %r8, %rd103, %rd2, %rd14, %rd14);
 	// end inline asm
-	mov.u64 	%rd114, 14;
+	mov.u64 	%rd109, 14;
 	// begin inline asm
-	call (%rd112), _rt_buffer_get_64, (%rd29, %r47, %r13, %rd114, %rd2, %rd19, %rd19);
+	call (%rd107), _rt_buffer_get_64, (%rd24, %r42, %r8, %rd109, %rd2, %rd14, %rd14);
 	// end inline asm
-	mov.u64 	%rd120, 15;
+	mov.u64 	%rd115, 15;
 	// begin inline asm
-	call (%rd118), _rt_buffer_get_64, (%rd29, %r47, %r13, %rd120, %rd2, %rd19, %rd19);
+	call (%rd113), _rt_buffer_get_64, (%rd24, %r42, %r8, %rd115, %rd2, %rd14, %rd14);
 	// end inline asm
-	mov.u64 	%rd131, primitive_type;
-	cvta.global.u64 	%rd125, %rd131;
+	mov.u64 	%rd126, primitive_type;
+	cvta.global.u64 	%rd120, %rd126;
 	// begin inline asm
-	call (%rd124), _rt_buffer_get_64, (%rd125, %r12, %r13, %rd2, %rd19, %rd19, %rd19);
+	call (%rd119), _rt_buffer_get_64, (%rd120, %r7, %r8, %rd2, %rd14, %rd14, %rd14);
 	// end inline asm
-	ld.u32 	%r51, [%rd124];
-	setp.eq.s32 	%p7, %r51, 0;
-	@%p7 bra 	$L__BB1_12;
+	ld.u32 	%r46, [%rd119];
+	setp.eq.s32 	%p5, %r46, 0;
+	@%p5 bra 	$L__BB1_9;
 
-	mov.u32 	%r52, 1;
-	mov.u32 	%r53, 4;
-	mov.u64 	%rd137, 0;
+	mov.u32 	%r47, 1;
+	mov.u32 	%r48, 4;
+	mov.u64 	%rd132, 0;
 	// begin inline asm
-	call (%rd132), _rt_buffer_get_64, (%rd125, %r52, %r53, %rd2, %rd137, %rd137, %rd137);
+	call (%rd127), _rt_buffer_get_64, (%rd120, %r47, %r48, %rd2, %rd132, %rd132, %rd132);
 	// end inline asm
-	ld.u32 	%r54, [%rd132];
-	setp.eq.s32 	%p8, %r54, 3;
-	@%p8 bra 	$L__BB1_12;
-	bra.uni 	$L__BB1_7;
+	ld.u32 	%r49, [%rd127];
+	setp.eq.s32 	%p6, %r49, 3;
+	@%p6 bra 	$L__BB1_9;
+	bra.uni 	$L__BB1_4;
 
-$L__BB1_12:
+$L__BB1_9:
 	mul.ftz.f32 	%f127, %f2, 0f00000000;
 	fma.rn.ftz.f32 	%f128, %f1, 0f00000000, %f127;
 	fma.rn.ftz.f32 	%f129, %f3, 0f00000000, %f128;
@@ -750,7 +700,7 @@ $L__BB1_12:
 	mul.ftz.f32 	%f168, %f158, %f160;
 	sub.ftz.f32 	%f233, %f167, %f168;
 
-$L__BB1_13:
+$L__BB1_10:
 	mul.ftz.f32 	%f169, %f232, %f232;
 	fma.rn.ftz.f32 	%f170, %f231, %f231, %f169;
 	fma.rn.ftz.f32 	%f171, %f233, %f233, %f170;
@@ -764,110 +714,110 @@ $L__BB1_13:
 	fma.rn.ftz.f32 	%f179, %f176, %f173, %f178;
 	ld.global.f32 	%f180, [ray+20];
 	fma.rn.ftz.f32 	%f25, %f175, %f180, %f179;
-	ld.global.u32 	%r63, [Nbands_global];
-	setp.eq.s32 	%p11, %r63, 0;
-	@%p11 bra 	$L__BB1_42;
+	ld.global.u32 	%r58, [Nbands_global];
+	setp.eq.s32 	%p9, %r58, 0;
+	@%p9 bra 	$L__BB1_39;
 
-	mov.u32 	%r136, -1;
-	mov.u32 	%r134, 0;
-	mov.u64 	%rd166, band_launch_flag;
-	cvta.global.u64 	%rd161, %rd166;
+	mov.u32 	%r131, -1;
+	mov.u32 	%r129, 0;
+	mov.u64 	%rd161, band_launch_flag;
+	cvta.global.u64 	%rd156, %rd161;
 
-$L__BB1_15:
-	cvt.s64.s32 	%rd162, %r134;
-	mov.u32 	%r67, 1;
-	mov.u64 	%rd165, 0;
+$L__BB1_12:
+	cvt.s64.s32 	%rd157, %r129;
+	mov.u32 	%r62, 1;
+	mov.u64 	%rd160, 0;
 	// begin inline asm
-	call (%rd160), _rt_buffer_get_64, (%rd161, %r67, %r67, %rd162, %rd165, %rd165, %rd165);
+	call (%rd155), _rt_buffer_get_64, (%rd156, %r62, %r62, %rd157, %rd160, %rd160, %rd160);
 	// end inline asm
-	ld.u8 	%rs1, [%rd160];
-	setp.eq.s16 	%p12, %rs1, 0;
-	@%p12 bra 	$L__BB1_31;
+	ld.u8 	%rs1, [%rd155];
+	setp.eq.s16 	%p10, %rs1, 0;
+	@%p10 bra 	$L__BB1_28;
 
-	cvt.u32.u64 	%r68, %rd1;
-	ld.global.u32 	%r69, [Nbands_launch];
-	add.s32 	%r136, %r136, 1;
-	mad.lo.s32 	%r70, %r69, %r68, %r136;
-	cvt.u64.u32 	%rd4, %r70;
-	ld.global.u32 	%r71, [UUID];
-	mad.lo.s32 	%r72, %r71, %r69, %r136;
-	cvt.u64.u32 	%rd5, %r72;
-	setp.lt.ftz.f32 	%p13, %f25, 0f00000000;
-	@%p13 bra 	$L__BB1_19;
+	cvt.u32.u64 	%r63, %rd1;
+	ld.global.u32 	%r64, [Nbands_launch];
+	add.s32 	%r131, %r131, 1;
+	mad.lo.s32 	%r65, %r64, %r63, %r131;
+	cvt.u64.u32 	%rd4, %r65;
+	ld.global.u32 	%r66, [UUID];
+	mad.lo.s32 	%r67, %r66, %r64, %r131;
+	cvt.u64.u32 	%rd5, %r67;
+	setp.lt.ftz.f32 	%p11, %f25, 0f00000000;
+	@%p11 bra 	$L__BB1_16;
 
+	mov.u32 	%r68, 1;
+	mov.u32 	%r69, 4;
+	mov.u64 	%rd167, 0;
+	// begin inline asm
+	call (%rd162), _rt_buffer_get_64, (%rd120, %r68, %r69, %rd2, %rd167, %rd167, %rd167);
+	// end inline asm
+	ld.u32 	%r70, [%rd162];
+	setp.eq.s32 	%p12, %r70, 4;
+	@%p12 bra 	$L__BB1_16;
+	bra.uni 	$L__BB1_15;
+
+$L__BB1_16:
+	mov.u64 	%rd182, radiation_out_top;
+	cvta.global.u64 	%rd177, %rd182;
 	mov.u32 	%r73, 1;
 	mov.u32 	%r74, 4;
-	mov.u64 	%rd172, 0;
+	mov.u64 	%rd181, 0;
 	// begin inline asm
-	call (%rd167), _rt_buffer_get_64, (%rd125, %r73, %r74, %rd2, %rd172, %rd172, %rd172);
+	call (%rd313), _rt_buffer_get_64, (%rd177, %r73, %r74, %rd5, %rd181, %rd181, %rd181);
 	// end inline asm
-	ld.u32 	%r75, [%rd167];
-	setp.eq.s32 	%p14, %r75, 4;
-	@%p14 bra 	$L__BB1_19;
-	bra.uni 	$L__BB1_18;
+	bra.uni 	$L__BB1_17;
 
-$L__BB1_19:
-	mov.u64 	%rd187, radiation_out_top;
-	cvta.global.u64 	%rd182, %rd187;
-	mov.u32 	%r78, 1;
-	mov.u32 	%r79, 4;
-	mov.u64 	%rd186, 0;
+$L__BB1_15:
+	mov.u64 	%rd175, radiation_out_bottom;
+	cvta.global.u64 	%rd170, %rd175;
 	// begin inline asm
-	call (%rd318), _rt_buffer_get_64, (%rd182, %r78, %r79, %rd5, %rd186, %rd186, %rd186);
-	// end inline asm
-	bra.uni 	$L__BB1_20;
-
-$L__BB1_18:
-	mov.u64 	%rd180, radiation_out_bottom;
-	cvta.global.u64 	%rd175, %rd180;
-	// begin inline asm
-	call (%rd318), _rt_buffer_get_64, (%rd175, %r73, %r74, %rd5, %rd172, %rd172, %rd172);
+	call (%rd313), _rt_buffer_get_64, (%rd170, %r68, %r69, %rd5, %rd167, %rd167, %rd167);
 	// end inline asm
 
-$L__BB1_20:
-	ld.f32 	%f181, [%rd318];
+$L__BB1_17:
+	ld.f32 	%f181, [%rd313];
 	cvt.ftz.f64.f32 	%fd2, %f181;
 	ld.global.f64 	%fd3, [prd];
 	mul.f64 	%fd1, %fd3, %fd2;
-	setp.eq.f64 	%p15, %fd1, 0d0000000000000000;
-	@%p15 bra 	$L__BB1_31;
+	setp.eq.f64 	%p13, %fd1, 0d0000000000000000;
+	@%p13 bra 	$L__BB1_28;
 
-	mov.u64 	%rd211, 0;
-	ld.global.u8 	%r89, [prd+20];
-	ld.global.u32 	%r90, [Nprimitives];
-	mad.lo.s32 	%r91, %r90, %r89, %r68;
-	ld.global.u32 	%r92, [Nbands_global];
-	mad.lo.s32 	%r93, %r91, %r92, %r134;
-	cvt.u64.u32 	%rd196, %r93;
-	mov.u64 	%rd212, rho;
-	cvta.global.u64 	%rd189, %rd212;
-	mov.u32 	%r86, 1;
-	mov.u32 	%r87, 4;
+	mov.u64 	%rd206, 0;
+	ld.global.u8 	%r84, [prd+20];
+	ld.global.u32 	%r85, [Nprimitives];
+	mad.lo.s32 	%r86, %r85, %r84, %r63;
+	ld.global.u32 	%r87, [Nbands_global];
+	mad.lo.s32 	%r88, %r86, %r87, %r129;
+	cvt.u64.u32 	%rd191, %r88;
+	mov.u64 	%rd207, rho;
+	cvta.global.u64 	%rd184, %rd207;
+	mov.u32 	%r81, 1;
+	mov.u32 	%r82, 4;
 	// begin inline asm
-	call (%rd188), _rt_buffer_get_64, (%rd189, %r86, %r87, %rd196, %rd211, %rd211, %rd211);
+	call (%rd183), _rt_buffer_get_64, (%rd184, %r81, %r82, %rd191, %rd206, %rd206, %rd206);
 	// end inline asm
-	ld.f32 	%f26, [%rd188];
-	mov.u64 	%rd213, tau;
-	cvta.global.u64 	%rd195, %rd213;
+	ld.f32 	%f26, [%rd183];
+	mov.u64 	%rd208, tau;
+	cvta.global.u64 	%rd190, %rd208;
 	// begin inline asm
-	call (%rd194), _rt_buffer_get_64, (%rd195, %r86, %r87, %rd196, %rd211, %rd211, %rd211);
+	call (%rd189), _rt_buffer_get_64, (%rd190, %r81, %r82, %rd191, %rd206, %rd206, %rd206);
 	// end inline asm
-	ld.f32 	%f27, [%rd194];
+	ld.f32 	%f27, [%rd189];
 	// begin inline asm
-	call (%rd200), _rt_buffer_get_64, (%rd15, %r86, %r87, %rd1, %rd211, %rd211, %rd211);
+	call (%rd195), _rt_buffer_get_64, (%rd10, %r81, %r82, %rd1, %rd206, %rd206, %rd206);
 	// end inline asm
-	ld.u32 	%rd208, [%rd200];
+	ld.u32 	%rd203, [%rd195];
 	// begin inline asm
-	call (%rd206), _rt_buffer_get_64, (%rd125, %r86, %r87, %rd208, %rd211, %rd211, %rd211);
+	call (%rd201), _rt_buffer_get_64, (%rd120, %r81, %r82, %rd203, %rd206, %rd206, %rd206);
 	// end inline asm
-	ld.u32 	%r94, [%rd206];
-	setp.eq.s32 	%p16, %r94, 4;
-	@%p16 bra 	$L__BB1_31;
+	ld.u32 	%r89, [%rd201];
+	setp.eq.s32 	%p14, %r89, 4;
+	@%p14 bra 	$L__BB1_28;
 
-	mov.u64 	%rd222, radiation_in;
-	cvta.global.u64 	%rd217, %rd222;
+	mov.u64 	%rd217, radiation_in;
+	cvta.global.u64 	%rd212, %rd217;
 	// begin inline asm
-	call (%rd216), _rt_buffer_get_64, (%rd217, %r86, %r87, %rd4, %rd211, %rd211, %rd211);
+	call (%rd211), _rt_buffer_get_64, (%rd212, %r81, %r82, %rd4, %rd206, %rd206, %rd206);
 	// end inline asm
 	mov.f32 	%f182, 0f3F800000;
 	sub.ftz.f32 	%f183, %f182, %f26;
@@ -875,168 +825,168 @@ $L__BB1_20:
 	cvt.ftz.f64.f32 	%fd4, %f184;
 	mul.f64 	%fd5, %fd1, %fd4;
 	cvt.rn.ftz.f32.f64 	%f185, %fd5;
-	red.add.f32 	[%rd216], %f185;
-	setp.leu.ftz.f32 	%p17, %f27, 0f00000000;
-	setp.leu.ftz.f32 	%p18, %f26, 0f00000000;
-	and.pred  	%p19, %p18, %p17;
-	setp.leu.f64 	%p20, %fd1, 0d0000000000000000;
-	or.pred  	%p21, %p20, %p19;
-	@%p21 bra 	$L__BB1_26;
+	red.add.f32 	[%rd211], %f185;
+	setp.leu.ftz.f32 	%p15, %f27, 0f00000000;
+	setp.leu.ftz.f32 	%p16, %f26, 0f00000000;
+	and.pred  	%p17, %p16, %p15;
+	setp.leu.f64 	%p18, %fd1, 0d0000000000000000;
+	or.pred  	%p19, %p18, %p17;
+	@%p19 bra 	$L__BB1_23;
 
 	ld.global.u8 	%rs2, [prd+12];
-	setp.eq.s16 	%p22, %rs2, 0;
-	@%p22 bra 	$L__BB1_25;
+	setp.eq.s16 	%p20, %rs2, 0;
+	@%p20 bra 	$L__BB1_22;
 
-	mov.u64 	%rd235, scatter_buff_top;
-	cvta.global.u64 	%rd224, %rd235;
-	mov.u32 	%r99, 1;
-	mov.u32 	%r100, 4;
-	mov.u64 	%rd234, 0;
+	mov.u64 	%rd230, scatter_buff_top;
+	cvta.global.u64 	%rd219, %rd230;
+	mov.u32 	%r94, 1;
+	mov.u32 	%r95, 4;
+	mov.u64 	%rd229, 0;
 	// begin inline asm
-	call (%rd223), _rt_buffer_get_64, (%rd224, %r99, %r100, %rd4, %rd234, %rd234, %rd234);
+	call (%rd218), _rt_buffer_get_64, (%rd219, %r94, %r95, %rd4, %rd229, %rd229, %rd229);
 	// end inline asm
 	cvt.ftz.f64.f32 	%fd6, %f26;
 	mul.f64 	%fd7, %fd1, %fd6;
 	cvt.rn.ftz.f32.f64 	%f187, %fd7;
-	red.add.f32 	[%rd223], %f187;
-	mov.u64 	%rd236, scatter_buff_bottom;
-	cvta.global.u64 	%rd230, %rd236;
+	red.add.f32 	[%rd218], %f187;
+	mov.u64 	%rd231, scatter_buff_bottom;
+	cvta.global.u64 	%rd225, %rd231;
 	// begin inline asm
-	call (%rd229), _rt_buffer_get_64, (%rd230, %r99, %r100, %rd4, %rd234, %rd234, %rd234);
+	call (%rd224), _rt_buffer_get_64, (%rd225, %r94, %r95, %rd4, %rd229, %rd229, %rd229);
 	// end inline asm
 	cvt.ftz.f64.f32 	%fd8, %f27;
 	mul.f64 	%fd9, %fd1, %fd8;
 	cvt.rn.ftz.f32.f64 	%f189, %fd9;
-	red.add.f32 	[%rd229], %f189;
-	bra.uni 	$L__BB1_26;
+	red.add.f32 	[%rd224], %f189;
+	bra.uni 	$L__BB1_23;
 
-$L__BB1_25:
-	mov.u64 	%rd249, scatter_buff_bottom;
-	cvta.global.u64 	%rd238, %rd249;
-	mov.u32 	%r103, 1;
-	mov.u32 	%r104, 4;
-	mov.u64 	%rd248, 0;
+$L__BB1_22:
+	mov.u64 	%rd244, scatter_buff_bottom;
+	cvta.global.u64 	%rd233, %rd244;
+	mov.u32 	%r98, 1;
+	mov.u32 	%r99, 4;
+	mov.u64 	%rd243, 0;
 	// begin inline asm
-	call (%rd237), _rt_buffer_get_64, (%rd238, %r103, %r104, %rd4, %rd248, %rd248, %rd248);
+	call (%rd232), _rt_buffer_get_64, (%rd233, %r98, %r99, %rd4, %rd243, %rd243, %rd243);
 	// end inline asm
 	cvt.ftz.f64.f32 	%fd10, %f26;
 	mul.f64 	%fd11, %fd1, %fd10;
 	cvt.rn.ftz.f32.f64 	%f191, %fd11;
-	red.add.f32 	[%rd237], %f191;
-	mov.u64 	%rd250, scatter_buff_top;
-	cvta.global.u64 	%rd244, %rd250;
+	red.add.f32 	[%rd232], %f191;
+	mov.u64 	%rd245, scatter_buff_top;
+	cvta.global.u64 	%rd239, %rd245;
 	// begin inline asm
-	call (%rd243), _rt_buffer_get_64, (%rd244, %r103, %r104, %rd4, %rd248, %rd248, %rd248);
+	call (%rd238), _rt_buffer_get_64, (%rd239, %r98, %r99, %rd4, %rd243, %rd243, %rd243);
 	// end inline asm
 	cvt.ftz.f64.f32 	%fd12, %f27;
 	mul.f64 	%fd13, %fd1, %fd12;
 	cvt.rn.ftz.f32.f64 	%f193, %fd13;
-	red.add.f32 	[%rd243], %f193;
+	red.add.f32 	[%rd238], %f193;
 
-$L__BB1_26:
-	ld.global.u32 	%r6, [Ncameras];
-	setp.eq.s32 	%p23, %r6, 0;
-	@%p23 bra 	$L__BB1_31;
+$L__BB1_23:
+	ld.global.u32 	%r4, [Ncameras];
+	setp.eq.s32 	%p21, %r4, 0;
+	@%p21 bra 	$L__BB1_28;
 
-	mov.u64 	%rd262, 0;
-	ld.global.u8 	%r109, [prd+20];
-	ld.global.u32 	%r110, [Nprimitives];
-	mad.lo.s32 	%r112, %r110, %r109, %r68;
-	ld.global.u32 	%r113, [Nbands_global];
-	mad.lo.s32 	%r114, %r112, %r113, %r134;
-	ld.global.u32 	%r115, [camera_ID];
-	mad.lo.s32 	%r116, %r114, %r6, %r115;
-	cvt.u64.u32 	%rd259, %r116;
-	mov.u64 	%rd263, rho_cam;
-	cvta.global.u64 	%rd252, %rd263;
-	mov.u32 	%r107, 1;
-	mov.u32 	%r108, 4;
+	mov.u64 	%rd257, 0;
+	ld.global.u8 	%r104, [prd+20];
+	ld.global.u32 	%r105, [Nprimitives];
+	mad.lo.s32 	%r107, %r105, %r104, %r63;
+	ld.global.u32 	%r108, [Nbands_global];
+	mad.lo.s32 	%r109, %r107, %r108, %r129;
+	ld.global.u32 	%r110, [camera_ID];
+	mad.lo.s32 	%r111, %r109, %r4, %r110;
+	cvt.u64.u32 	%rd254, %r111;
+	mov.u64 	%rd258, rho_cam;
+	cvta.global.u64 	%rd247, %rd258;
+	mov.u32 	%r102, 1;
+	mov.u32 	%r103, 4;
 	// begin inline asm
-	call (%rd251), _rt_buffer_get_64, (%rd252, %r107, %r108, %rd259, %rd262, %rd262, %rd262);
+	call (%rd246), _rt_buffer_get_64, (%rd247, %r102, %r103, %rd254, %rd257, %rd257, %rd257);
 	// end inline asm
-	ld.f32 	%f28, [%rd251];
-	mov.u64 	%rd264, tau_cam;
-	cvta.global.u64 	%rd258, %rd264;
+	ld.f32 	%f28, [%rd246];
+	mov.u64 	%rd259, tau_cam;
+	cvta.global.u64 	%rd253, %rd259;
 	// begin inline asm
-	call (%rd257), _rt_buffer_get_64, (%rd258, %r107, %r108, %rd259, %rd262, %rd262, %rd262);
+	call (%rd252), _rt_buffer_get_64, (%rd253, %r102, %r103, %rd254, %rd257, %rd257, %rd257);
 	// end inline asm
-	setp.leu.ftz.f32 	%p25, %f28, 0f00000000;
-	ld.f32 	%f29, [%rd257];
-	setp.leu.ftz.f32 	%p26, %f29, 0f00000000;
-	and.pred  	%p27, %p25, %p26;
-	or.pred  	%p28, %p20, %p27;
-	@%p28 bra 	$L__BB1_31;
+	setp.leu.ftz.f32 	%p23, %f28, 0f00000000;
+	ld.f32 	%f29, [%rd252];
+	setp.leu.ftz.f32 	%p24, %f29, 0f00000000;
+	and.pred  	%p25, %p23, %p24;
+	or.pred  	%p26, %p18, %p25;
+	@%p26 bra 	$L__BB1_28;
 
 	ld.global.u8 	%rs3, [prd+12];
-	setp.eq.s16 	%p29, %rs3, 0;
-	@%p29 bra 	$L__BB1_30;
+	setp.eq.s16 	%p27, %rs3, 0;
+	@%p27 bra 	$L__BB1_27;
 
-	mov.u64 	%rd277, scatter_buff_top_cam;
-	cvta.global.u64 	%rd266, %rd277;
-	mov.u32 	%r119, 1;
-	mov.u32 	%r120, 4;
-	mov.u64 	%rd276, 0;
+	mov.u64 	%rd272, scatter_buff_top_cam;
+	cvta.global.u64 	%rd261, %rd272;
+	mov.u32 	%r114, 1;
+	mov.u32 	%r115, 4;
+	mov.u64 	%rd271, 0;
 	// begin inline asm
-	call (%rd265), _rt_buffer_get_64, (%rd266, %r119, %r120, %rd4, %rd276, %rd276, %rd276);
+	call (%rd260), _rt_buffer_get_64, (%rd261, %r114, %r115, %rd4, %rd271, %rd271, %rd271);
 	// end inline asm
 	cvt.ftz.f64.f32 	%fd14, %f28;
 	mul.f64 	%fd15, %fd1, %fd14;
 	cvt.rn.ftz.f32.f64 	%f195, %fd15;
-	red.add.f32 	[%rd265], %f195;
-	mov.u64 	%rd278, scatter_buff_bottom_cam;
-	cvta.global.u64 	%rd272, %rd278;
+	red.add.f32 	[%rd260], %f195;
+	mov.u64 	%rd273, scatter_buff_bottom_cam;
+	cvta.global.u64 	%rd267, %rd273;
 	// begin inline asm
-	call (%rd271), _rt_buffer_get_64, (%rd272, %r119, %r120, %rd4, %rd276, %rd276, %rd276);
+	call (%rd266), _rt_buffer_get_64, (%rd267, %r114, %r115, %rd4, %rd271, %rd271, %rd271);
 	// end inline asm
 	cvt.ftz.f64.f32 	%fd16, %f29;
 	mul.f64 	%fd17, %fd1, %fd16;
 	cvt.rn.ftz.f32.f64 	%f197, %fd17;
-	red.add.f32 	[%rd271], %f197;
-	bra.uni 	$L__BB1_31;
+	red.add.f32 	[%rd266], %f197;
+	bra.uni 	$L__BB1_28;
 
-$L__BB1_30:
-	mov.u64 	%rd291, scatter_buff_bottom_cam;
-	cvta.global.u64 	%rd280, %rd291;
-	mov.u32 	%r123, 1;
-	mov.u32 	%r124, 4;
-	mov.u64 	%rd290, 0;
+$L__BB1_27:
+	mov.u64 	%rd286, scatter_buff_bottom_cam;
+	cvta.global.u64 	%rd275, %rd286;
+	mov.u32 	%r118, 1;
+	mov.u32 	%r119, 4;
+	mov.u64 	%rd285, 0;
 	// begin inline asm
-	call (%rd279), _rt_buffer_get_64, (%rd280, %r123, %r124, %rd4, %rd290, %rd290, %rd290);
+	call (%rd274), _rt_buffer_get_64, (%rd275, %r118, %r119, %rd4, %rd285, %rd285, %rd285);
 	// end inline asm
 	cvt.ftz.f64.f32 	%fd18, %f28;
 	mul.f64 	%fd19, %fd1, %fd18;
 	cvt.rn.ftz.f32.f64 	%f199, %fd19;
-	red.add.f32 	[%rd279], %f199;
-	mov.u64 	%rd292, scatter_buff_top_cam;
-	cvta.global.u64 	%rd286, %rd292;
+	red.add.f32 	[%rd274], %f199;
+	mov.u64 	%rd287, scatter_buff_top_cam;
+	cvta.global.u64 	%rd281, %rd287;
 	// begin inline asm
-	call (%rd285), _rt_buffer_get_64, (%rd286, %r123, %r124, %rd4, %rd290, %rd290, %rd290);
+	call (%rd280), _rt_buffer_get_64, (%rd281, %r118, %r119, %rd4, %rd285, %rd285, %rd285);
 	// end inline asm
 	cvt.ftz.f64.f32 	%fd20, %f29;
 	mul.f64 	%fd21, %fd1, %fd20;
 	cvt.rn.ftz.f32.f64 	%f201, %fd21;
-	red.add.f32 	[%rd285], %f201;
+	red.add.f32 	[%rd280], %f201;
 
-$L__BB1_31:
-	ld.global.u32 	%r125, [Nbands_global];
-	add.s32 	%r134, %r134, 1;
-	setp.lt.u32 	%p30, %r134, %r125;
-	@%p30 bra 	$L__BB1_15;
+$L__BB1_28:
+	ld.global.u32 	%r120, [Nbands_global];
+	add.s32 	%r129, %r129, 1;
+	setp.lt.u32 	%p28, %r129, %r120;
+	@%p28 bra 	$L__BB1_12;
 
-$L__BB1_42:
+$L__BB1_39:
 	ret;
 
-$L__BB1_7:
-	ld.global.u32 	%rd141, [UUID];
+$L__BB1_4:
+	ld.global.u32 	%rd136, [UUID];
 	// begin inline asm
-	call (%rd139), _rt_buffer_get_64, (%rd125, %r52, %r53, %rd141, %rd137, %rd137, %rd137);
+	call (%rd134), _rt_buffer_get_64, (%rd120, %r47, %r48, %rd136, %rd132, %rd132, %rd132);
 	// end inline asm
-	ld.u32 	%r57, [%rd139];
-	setp.eq.s32 	%p9, %r57, 1;
-	@%p9 bra 	$L__BB1_11;
-	bra.uni 	$L__BB1_8;
+	ld.u32 	%r52, [%rd134];
+	setp.eq.s32 	%p7, %r52, 1;
+	@%p7 bra 	$L__BB1_8;
+	bra.uni 	$L__BB1_5;
 
-$L__BB1_11:
+$L__BB1_8:
 	mul.ftz.f32 	%f85, %f2, 0f00000000;
 	fma.rn.ftz.f32 	%f86, %f1, 0f00000000, %f85;
 	fma.rn.ftz.f32 	%f87, %f3, 0f00000000, %f86;
@@ -1082,22 +1032,22 @@ $L__BB1_11:
 	mul.ftz.f32 	%f125, %f115, %f119;
 	mul.ftz.f32 	%f126, %f116, %f118;
 	sub.ftz.f32 	%f233, %f125, %f126;
-	bra.uni 	$L__BB1_13;
+	bra.uni 	$L__BB1_10;
 
-$L__BB1_8:
-	ld.global.u32 	%rd148, [UUID];
-	mov.u64 	%rd151, 0;
-	mov.u32 	%r58, 1;
-	mov.u32 	%r59, 4;
+$L__BB1_5:
+	ld.global.u32 	%rd143, [UUID];
+	mov.u64 	%rd146, 0;
+	mov.u32 	%r53, 1;
+	mov.u32 	%r54, 4;
 	// begin inline asm
-	call (%rd146), _rt_buffer_get_64, (%rd125, %r58, %r59, %rd148, %rd151, %rd151, %rd151);
+	call (%rd141), _rt_buffer_get_64, (%rd120, %r53, %r54, %rd143, %rd146, %rd146, %rd146);
 	// end inline asm
-	ld.u32 	%r60, [%rd146];
-	setp.eq.s32 	%p10, %r60, 2;
-	@%p10 bra 	$L__BB1_10;
-	bra.uni 	$L__BB1_9;
+	ld.u32 	%r55, [%rd141];
+	setp.eq.s32 	%p8, %r55, 2;
+	@%p8 bra 	$L__BB1_7;
+	bra.uni 	$L__BB1_6;
 
-$L__BB1_10:
+$L__BB1_7:
 	mul.ftz.f32 	%f43, %f2, 0f00000000;
 	fma.rn.ftz.f32 	%f44, %f1, 0f00000000, %f43;
 	fma.rn.ftz.f32 	%f45, %f3, 0f00000000, %f44;
@@ -1143,33 +1093,33 @@ $L__BB1_10:
 	mul.ftz.f32 	%f83, %f73, %f77;
 	mul.ftz.f32 	%f84, %f74, %f76;
 	sub.ftz.f32 	%f233, %f83, %f84;
-	bra.uni 	$L__BB1_13;
+	bra.uni 	$L__BB1_10;
 
-$L__BB1_34:
+$L__BB1_31:
 	add.ftz.f32 	%f214, %f35, 0fB727C5AC;
 	add.ftz.f32 	%f215, %f214, %f30;
 	st.global.f32 	[prd+24], %f215;
-	bra.uni 	$L__BB1_42;
+	bra.uni 	$L__BB1_39;
 
-$L__BB1_9:
-	ld.global.u32 	%rd155, [UUID];
+$L__BB1_6:
+	ld.global.u32 	%rd150, [UUID];
 	// begin inline asm
-	call (%rd153), _rt_buffer_get_64, (%rd125, %r58, %r59, %rd155, %rd151, %rd151, %rd151);
+	call (%rd148), _rt_buffer_get_64, (%rd120, %r53, %r54, %rd150, %rd146, %rd146, %rd146);
 	// end inline asm
-	bra.uni 	$L__BB1_13;
+	bra.uni 	$L__BB1_10;
 
-$L__BB1_36:
+$L__BB1_33:
 	mov.f32 	%f218, 0f3727C5AC;
 	sub.ftz.f32 	%f219, %f218, %f35;
 	add.ftz.f32 	%f220, %f219, %f30;
 	st.global.f32 	[prd+24], %f220;
-	bra.uni 	$L__BB1_42;
+	bra.uni 	$L__BB1_39;
 
-$L__BB1_39:
+$L__BB1_36:
 	add.ftz.f32 	%f224, %f37, 0fB727C5AC;
 	add.ftz.f32 	%f225, %f224, %f31;
 	st.global.f32 	[prd+28], %f225;
-	bra.uni 	$L__BB1_42;
+	bra.uni 	$L__BB1_39;
 
 }
 	// .globl	_Z18closest_hit_camerav
@@ -2816,139 +2766,100 @@ $L__BB4_15:
 	// .globl	_Z12miss_diffusev
 .visible .entry _Z12miss_diffusev()
 {
-	.local .align 8 .b8 	__local_depot5[8];
-	.reg .b64 	%SP;
-	.reg .b64 	%SPL;
-	.reg .pred 	%p<31>;
+	.reg .pred 	%p<29>;
 	.reg .b16 	%rs<4>;
 	.reg .f32 	%f<166>;
-	.reg .b32 	%r<89>;
+	.reg .b32 	%r<85>;
 	.reg .f64 	%fd<20>;
-	.reg .b64 	%rd<203>;
+	.reg .b64 	%rd<198>;
 
 
-	mov.u64 	%SPL, __local_depot5;
-	cvta.local.u64 	%SP, %SPL;
-	mov.u64 	%rd8, _ZZ12miss_diffusevE10miss_count;
-	atom.global.add.u32 	%r6, [%rd8], 1;
-	setp.gt.s32 	%p1, %r6, 9;
-	@%p1 bra 	$L__BB5_3;
+	ld.global.u32 	%r5, [Nbands_global];
+	setp.eq.s32 	%p1, %r5, 0;
+	@%p1 bra 	$L__BB5_20;
 
-	ld.global.u32 	%r1, [prd+8];
+	mov.u64 	%rd8, 0;
+	mov.u32 	%r84, -1;
+	mov.u64 	%rd15, band_launch_flag;
+	cvta.global.u64 	%rd10, %rd15;
+	mov.u64 	%rd22, diffuse_flux;
+	cvta.global.u64 	%rd17, %rd22;
+	mov.u64 	%rd197, %rd8;
+
+$L__BB5_2:
+	mov.u32 	%r8, 1;
 	// begin inline asm
-	call (%r7), _rt_print_active, ();
+	call (%rd9), _rt_buffer_get_64, (%rd10, %r8, %r8, %rd197, %rd8, %rd8, %rd8);
 	// end inline asm
-	setp.eq.s32 	%p2, %r7, 0;
-	@%p2 bra 	$L__BB5_3;
+	ld.u8 	%rs1, [%rd9];
+	setp.eq.s16 	%p2, %rs1, 0;
+	@%p2 bra 	$L__BB5_19;
 
-	add.u64 	%rd9, %SP, 0;
-	add.u64 	%rd10, %SPL, 0;
-	st.local.u32 	[%rd10], %r1;
-	mov.u64 	%rd11, $str$1;
-	cvta.global.u64 	%rd12, %rd11;
-	{ // callseq 1, 0
-	.reg .b32 temp_param_reg;
-	.param .b64 param0;
-	st.param.b64 	[param0+0], %rd12;
-	.param .b64 param1;
-	st.param.b64 	[param1+0], %rd9;
-	.param .b32 retval0;
-	call.uni (retval0), 
-	vprintf, 
-	(
-	param0, 
-	param1
-	);
-	ld.param.b32 	%r8, [retval0+0];
-	} // callseq 1
-
-$L__BB5_3:
-	ld.global.u32 	%r9, [Nbands_global];
-	setp.eq.s32 	%p3, %r9, 0;
-	@%p3 bra 	$L__BB5_23;
-
-	mov.u32 	%r88, -1;
-	mov.u64 	%rd13, 0;
-	mov.u64 	%rd20, band_launch_flag;
-	cvta.global.u64 	%rd15, %rd20;
-	mov.u64 	%rd27, diffuse_flux;
-	cvta.global.u64 	%rd22, %rd27;
-	mov.u64 	%rd202, %rd13;
-
-$L__BB5_5:
-	mov.u32 	%r12, 1;
+	add.s32 	%r84, %r84, 1;
+	cvt.s64.s32 	%rd18, %r84;
+	mov.u32 	%r10, 4;
+	mov.u64 	%rd21, 0;
 	// begin inline asm
-	call (%rd14), _rt_buffer_get_64, (%rd15, %r12, %r12, %rd202, %rd13, %rd13, %rd13);
+	call (%rd16), _rt_buffer_get_64, (%rd17, %r8, %r10, %rd18, %rd21, %rd21, %rd21);
 	// end inline asm
-	ld.u8 	%rs1, [%rd14];
-	setp.eq.s16 	%p4, %rs1, 0;
-	@%p4 bra 	$L__BB5_22;
+	ld.f32 	%f12, [%rd16];
+	setp.leu.ftz.f32 	%p3, %f12, 0f00000000;
+	@%p3 bra 	$L__BB5_19;
 
-	add.s32 	%r88, %r88, 1;
-	cvt.s64.s32 	%rd23, %r88;
-	mov.u32 	%r14, 4;
-	mov.u64 	%rd26, 0;
+	ld.global.u32 	%r19, [Nbands_launch];
+	ld.global.u32 	%r20, [prd+8];
+	mad.lo.s32 	%r21, %r20, %r19, %r84;
+	cvt.u64.u32 	%rd3, %r21;
+	ld.global.u8 	%r22, [prd+20];
+	ld.global.u32 	%r23, [Nprimitives];
+	mad.lo.s32 	%r24, %r23, %r22, %r20;
+	ld.global.u32 	%r25, [Nbands_global];
+	mul.lo.s32 	%r26, %r24, %r25;
+	cvt.u64.u32 	%rd47, %r26;
+	add.s64 	%rd31, %rd197, %rd47;
+	mov.u64 	%rd48, rho;
+	cvta.global.u64 	%rd24, %rd48;
+	mov.u32 	%r17, 1;
 	// begin inline asm
-	call (%rd21), _rt_buffer_get_64, (%rd22, %r12, %r14, %rd23, %rd26, %rd26, %rd26);
+	call (%rd23), _rt_buffer_get_64, (%rd24, %r17, %r10, %rd31, %rd21, %rd21, %rd21);
 	// end inline asm
-	ld.f32 	%f12, [%rd21];
-	setp.leu.ftz.f32 	%p5, %f12, 0f00000000;
-	@%p5 bra 	$L__BB5_22;
+	ld.f32 	%f1, [%rd23];
+	mov.u64 	%rd49, tau;
+	cvta.global.u64 	%rd30, %rd49;
+	// begin inline asm
+	call (%rd29), _rt_buffer_get_64, (%rd30, %r17, %r10, %rd31, %rd21, %rd21, %rd21);
+	// end inline asm
+	ld.f32 	%f2, [%rd29];
+	ld.global.u32 	%rd37, [prd+8];
+	mov.u64 	%rd50, objectID;
+	cvta.global.u64 	%rd36, %rd50;
+	// begin inline asm
+	call (%rd35), _rt_buffer_get_64, (%rd36, %r17, %r10, %rd37, %rd21, %rd21, %rd21);
+	// end inline asm
+	ld.u32 	%rd43, [%rd35];
+	mov.u64 	%rd51, primitive_type;
+	cvta.global.u64 	%rd42, %rd51;
+	// begin inline asm
+	call (%rd41), _rt_buffer_get_64, (%rd42, %r17, %r10, %rd43, %rd21, %rd21, %rd21);
+	// end inline asm
+	ld.u32 	%r27, [%rd41];
+	setp.eq.s32 	%p4, %r27, 4;
+	@%p4 bra 	$L__BB5_18;
+	bra.uni 	$L__BB5_5;
 
-	ld.global.u32 	%r23, [Nbands_launch];
-	ld.global.u32 	%r24, [prd+8];
-	mad.lo.s32 	%r25, %r24, %r23, %r88;
-	cvt.u64.u32 	%rd3, %r25;
-	ld.global.u8 	%r26, [prd+20];
-	ld.global.u32 	%r27, [Nprimitives];
-	mad.lo.s32 	%r28, %r27, %r26, %r24;
-	ld.global.u32 	%r29, [Nbands_global];
-	mul.lo.s32 	%r30, %r28, %r29;
-	cvt.u64.u32 	%rd52, %r30;
-	add.s64 	%rd36, %rd202, %rd52;
-	mov.u64 	%rd53, rho;
-	cvta.global.u64 	%rd29, %rd53;
-	mov.u32 	%r21, 1;
-	// begin inline asm
-	call (%rd28), _rt_buffer_get_64, (%rd29, %r21, %r14, %rd36, %rd26, %rd26, %rd26);
-	// end inline asm
-	ld.f32 	%f1, [%rd28];
-	mov.u64 	%rd54, tau;
-	cvta.global.u64 	%rd35, %rd54;
-	// begin inline asm
-	call (%rd34), _rt_buffer_get_64, (%rd35, %r21, %r14, %rd36, %rd26, %rd26, %rd26);
-	// end inline asm
-	ld.f32 	%f2, [%rd34];
-	ld.global.u32 	%rd42, [prd+8];
-	mov.u64 	%rd55, objectID;
-	cvta.global.u64 	%rd41, %rd55;
-	// begin inline asm
-	call (%rd40), _rt_buffer_get_64, (%rd41, %r21, %r14, %rd42, %rd26, %rd26, %rd26);
-	// end inline asm
-	ld.u32 	%rd48, [%rd40];
-	mov.u64 	%rd56, primitive_type;
-	cvta.global.u64 	%rd47, %rd56;
-	// begin inline asm
-	call (%rd46), _rt_buffer_get_64, (%rd47, %r21, %r14, %rd48, %rd26, %rd26, %rd26);
-	// end inline asm
-	ld.u32 	%r31, [%rd46];
-	setp.eq.s32 	%p6, %r31, 4;
-	@%p6 bra 	$L__BB5_21;
-	bra.uni 	$L__BB5_8;
-
-$L__BB5_21:
+$L__BB5_18:
 	add.ftz.f32 	%f158, %f1, %f2;
-	mov.u64 	%rd198, radiation_in;
-	cvta.global.u64 	%rd175, %rd198;
-	mov.u32 	%r86, 4;
-	mov.u64 	%rd197, 0;
+	mov.u64 	%rd193, radiation_in;
+	cvta.global.u64 	%rd170, %rd193;
+	mov.u32 	%r82, 4;
+	mov.u64 	%rd192, 0;
 	// begin inline asm
-	call (%rd174), _rt_buffer_get_64, (%rd175, %r21, %r86, %rd3, %rd197, %rd197, %rd197);
+	call (%rd169), _rt_buffer_get_64, (%rd170, %r17, %r82, %rd3, %rd192, %rd192, %rd192);
 	// end inline asm
 	// begin inline asm
-	call (%rd180), _rt_buffer_get_64, (%rd22, %r21, %r86, %rd23, %rd197, %rd197, %rd197);
+	call (%rd175), _rt_buffer_get_64, (%rd17, %r17, %r82, %rd18, %rd192, %rd192, %rd192);
 	// end inline asm
-	ld.f32 	%f159, [%rd180];
+	ld.f32 	%f159, [%rd175];
 	cvt.ftz.f64.f32 	%fd7, %f159;
 	ld.global.f64 	%fd8, [prd];
 	mul.f64 	%fd9, %fd8, %fd7;
@@ -2957,16 +2868,16 @@ $L__BB5_21:
 	cvt.ftz.f64.f32 	%fd12, %f158;
 	div.rn.f64 	%fd13, %fd11, %fd12;
 	cvt.rn.ftz.f32.f64 	%f160, %fd13;
-	red.add.f32 	[%rd174], %f160;
-	mov.u64 	%rd200, scatter_buff_top;
-	cvta.global.u64 	%rd187, %rd200;
+	red.add.f32 	[%rd169], %f160;
+	mov.u64 	%rd195, scatter_buff_top;
+	cvta.global.u64 	%rd182, %rd195;
 	// begin inline asm
-	call (%rd186), _rt_buffer_get_64, (%rd187, %r21, %r86, %rd3, %rd197, %rd197, %rd197);
+	call (%rd181), _rt_buffer_get_64, (%rd182, %r17, %r82, %rd3, %rd192, %rd192, %rd192);
 	// end inline asm
 	// begin inline asm
-	call (%rd192), _rt_buffer_get_64, (%rd22, %r21, %r86, %rd23, %rd197, %rd197, %rd197);
+	call (%rd187), _rt_buffer_get_64, (%rd17, %r17, %r82, %rd18, %rd192, %rd192, %rd192);
 	// end inline asm
-	ld.f32 	%f162, [%rd192];
+	ld.f32 	%f162, [%rd187];
 	cvt.ftz.f64.f32 	%fd14, %f162;
 	ld.global.f64 	%fd15, [prd];
 	mul.f64 	%fd16, %fd15, %fd14;
@@ -2974,54 +2885,54 @@ $L__BB5_21:
 	mul.f64 	%fd18, %fd16, %fd17;
 	div.rn.f64 	%fd19, %fd18, %fd12;
 	cvt.rn.ftz.f32.f64 	%f163, %fd19;
-	red.add.f32 	[%rd186], %f163;
-	bra.uni 	$L__BB5_22;
+	red.add.f32 	[%rd181], %f163;
+	bra.uni 	$L__BB5_19;
+
+$L__BB5_5:
+	mov.u64 	%rd76, diffuse_peak_dir;
+	cvta.global.u64 	%rd53, %rd76;
+	mov.u32 	%r29, 12;
+	mov.u64 	%rd75, 0;
+	// begin inline asm
+	call (%rd52), _rt_buffer_get_64, (%rd53, %r17, %r29, %rd18, %rd75, %rd75, %rd75);
+	// end inline asm
+	mov.u64 	%rd77, diffuse_extinction;
+	cvta.global.u64 	%rd59, %rd77;
+	mov.u32 	%r33, 4;
+	// begin inline asm
+	call (%rd58), _rt_buffer_get_64, (%rd59, %r17, %r33, %rd18, %rd75, %rd75, %rd75);
+	// end inline asm
+	ld.f32 	%f3, [%rd58];
+	mov.u64 	%rd78, diffuse_dist_norm;
+	cvta.global.u64 	%rd65, %rd78;
+	// begin inline asm
+	call (%rd64), _rt_buffer_get_64, (%rd65, %r17, %r33, %rd18, %rd75, %rd75, %rd75);
+	// end inline asm
+	ld.f32 	%f4, [%rd64];
+	mov.u64 	%rd79, sky_radiance_params;
+	cvta.global.u64 	%rd71, %rd79;
+	mov.u32 	%r35, 16;
+	// begin inline asm
+	call (%rd70), _rt_buffer_get_64, (%rd71, %r17, %r35, %rd18, %rd75, %rd75, %rd75);
+	// end inline asm
+	setp.gt.ftz.f32 	%p5, %f3, 0f00000000;
+	@%p5 bra 	$L__BB5_8;
+	bra.uni 	$L__BB5_6;
 
 $L__BB5_8:
-	mov.u64 	%rd81, diffuse_peak_dir;
-	cvta.global.u64 	%rd58, %rd81;
-	mov.u32 	%r33, 12;
-	mov.u64 	%rd80, 0;
-	// begin inline asm
-	call (%rd57), _rt_buffer_get_64, (%rd58, %r21, %r33, %rd23, %rd80, %rd80, %rd80);
-	// end inline asm
-	mov.u64 	%rd82, diffuse_extinction;
-	cvta.global.u64 	%rd64, %rd82;
-	mov.u32 	%r37, 4;
-	// begin inline asm
-	call (%rd63), _rt_buffer_get_64, (%rd64, %r21, %r37, %rd23, %rd80, %rd80, %rd80);
-	// end inline asm
-	ld.f32 	%f3, [%rd63];
-	mov.u64 	%rd83, diffuse_dist_norm;
-	cvta.global.u64 	%rd70, %rd83;
-	// begin inline asm
-	call (%rd69), _rt_buffer_get_64, (%rd70, %r21, %r37, %rd23, %rd80, %rd80, %rd80);
-	// end inline asm
-	ld.f32 	%f4, [%rd69];
-	mov.u64 	%rd84, sky_radiance_params;
-	cvta.global.u64 	%rd76, %rd84;
-	mov.u32 	%r39, 16;
-	// begin inline asm
-	call (%rd75), _rt_buffer_get_64, (%rd76, %r21, %r39, %rd23, %rd80, %rd80, %rd80);
-	// end inline asm
-	setp.gt.ftz.f32 	%p7, %f3, 0f00000000;
-	@%p7 bra 	$L__BB5_11;
-	bra.uni 	$L__BB5_9;
-
-$L__BB5_11:
-	ld.f32 	%f83, [%rd57];
+	ld.f32 	%f83, [%rd52];
 	ld.global.f32 	%f84, [ray+12];
 	ld.global.f32 	%f85, [ray+16];
-	ld.f32 	%f86, [%rd57+4];
+	ld.f32 	%f86, [%rd52+4];
 	mul.ftz.f32 	%f87, %f86, %f85;
 	fma.rn.ftz.f32 	%f88, %f83, %f84, %f87;
 	ld.global.f32 	%f89, [ray+20];
-	ld.f32 	%f90, [%rd57+8];
+	ld.f32 	%f90, [%rd52+8];
 	fma.rn.ftz.f32 	%f91, %f90, %f89, %f88;
-	setp.lt.ftz.f32 	%p14, %f91, 0fBF800000;
-	setp.gt.ftz.f32 	%p15, %f91, 0f3F800000;
-	selp.f32 	%f92, 0f3F800000, %f91, %p15;
-	selp.f32 	%f93, 0fBF800000, %f92, %p14;
+	setp.lt.ftz.f32 	%p12, %f91, 0fBF800000;
+	setp.gt.ftz.f32 	%p13, %f91, 0f3F800000;
+	selp.f32 	%f92, 0f3F800000, %f91, %p13;
+	selp.f32 	%f93, 0fBF800000, %f92, %p12;
 	abs.ftz.f32 	%f94, %f93;
 	neg.ftz.f32 	%f95, %f94;
 	mov.f32 	%f96, 0f3F000000;
@@ -3032,15 +2943,15 @@ $L__BB5_11:
 	neg.ftz.f32 	%f101, %f99;
 	fma.rn.ftz.f32 	%f102, %f101, %f100, %f96;
 	fma.rn.ftz.f32 	%f103, %f99, %f102, %f99;
-	setp.eq.ftz.f32 	%p16, %f94, 0f3F800000;
-	selp.f32 	%f104, 0f00000000, %f103, %p16;
-	setp.gt.ftz.f32 	%p17, %f94, 0f3F0F5C29;
-	selp.f32 	%f105, %f104, %f94, %p17;
-	mov.b32 	%r44, %f105;
-	mov.b32 	%r45, %f93;
-	and.b32  	%r46, %r45, -2147483648;
-	or.b32  	%r47, %r46, %r44;
-	mov.b32 	%f106, %r47;
+	setp.eq.ftz.f32 	%p14, %f94, 0f3F800000;
+	selp.f32 	%f104, 0f00000000, %f103, %p14;
+	setp.gt.ftz.f32 	%p15, %f94, 0f3F0F5C29;
+	selp.f32 	%f105, %f104, %f94, %p15;
+	mov.b32 	%r40, %f105;
+	mov.b32 	%r41, %f93;
+	and.b32  	%r42, %r41, -2147483648;
+	or.b32  	%r43, %r42, %r40;
+	mov.b32 	%f106, %r43;
 	mul.ftz.f32 	%f107, %f106, %f106;
 	mov.f32 	%f108, 0f3C8B1ABB;
 	mov.f32 	%f109, 0f3D10ECEF;
@@ -3056,14 +2967,14 @@ $L__BB5_11:
 	mul.ftz.f32 	%f119, %f118, %f107;
 	fma.rn.ftz.f32 	%f120, %f119, %f106, %f106;
 	neg.ftz.f32 	%f121, %f120;
-	selp.f32 	%f122, %f120, %f121, %p17;
+	selp.f32 	%f122, %f120, %f121, %p15;
 	mov.f32 	%f123, 0f3FD774EB;
 	mov.f32 	%f124, 0f3F6EE581;
 	fma.rn.ftz.f32 	%f125, %f124, %f123, %f122;
-	setp.gt.ftz.f32 	%p18, %f93, 0f3F0F5C29;
-	selp.f32 	%f126, %f120, %f125, %p18;
+	setp.gt.ftz.f32 	%p16, %f93, 0f3F0F5C29;
+	selp.f32 	%f126, %f120, %f125, %p16;
 	add.ftz.f32 	%f127, %f126, %f126;
-	selp.f32 	%f128, %f127, %f126, %p17;
+	selp.f32 	%f128, %f127, %f126, %p15;
 	mov.f32 	%f129, 0f3C8EFA35;
 	max.ftz.f32 	%f130, %f128, %f129;
 	lg2.approx.ftz.f32 	%f131, %f130;
@@ -3071,28 +2982,28 @@ $L__BB5_11:
 	neg.ftz.f32 	%f133, %f132;
 	ex2.approx.ftz.f32 	%f134, %f133;
 	mul.ftz.f32 	%f165, %f4, %f134;
-	bra.uni 	$L__BB5_12;
+	bra.uni 	$L__BB5_9;
 
-$L__BB5_9:
-	ld.f32 	%f5, [%rd75+12];
-	setp.leu.ftz.f32 	%p8, %f5, 0f00000000;
+$L__BB5_6:
+	ld.f32 	%f5, [%rd70+12];
+	setp.leu.ftz.f32 	%p6, %f5, 0f00000000;
 	mov.f32 	%f165, 0f3F800000;
-	@%p8 bra 	$L__BB5_12;
+	@%p6 bra 	$L__BB5_9;
 
 	ld.global.f32 	%f14, [ray+12];
-	ld.f32 	%f15, [%rd57];
-	ld.f32 	%f16, [%rd57+4];
+	ld.f32 	%f15, [%rd52];
+	ld.f32 	%f16, [%rd52+4];
 	ld.global.f32 	%f17, [ray+16];
 	mul.ftz.f32 	%f18, %f17, %f16;
 	fma.rn.ftz.f32 	%f19, %f14, %f15, %f18;
-	ld.f32 	%f20, [%rd57+8];
+	ld.f32 	%f20, [%rd52+8];
 	ld.global.f32 	%f21, [ray+20];
 	fma.rn.ftz.f32 	%f22, %f21, %f20, %f19;
-	setp.lt.ftz.f32 	%p9, %f22, 0fBF800000;
-	setp.gt.ftz.f32 	%p10, %f22, 0f3F800000;
+	setp.lt.ftz.f32 	%p7, %f22, 0fBF800000;
+	setp.gt.ftz.f32 	%p8, %f22, 0f3F800000;
 	mov.f32 	%f23, 0f3F800000;
-	selp.f32 	%f24, 0f3F800000, %f22, %p10;
-	selp.f32 	%f25, 0fBF800000, %f24, %p9;
+	selp.f32 	%f24, 0f3F800000, %f22, %p8;
+	selp.f32 	%f25, 0fBF800000, %f24, %p7;
 	abs.ftz.f32 	%f26, %f25;
 	neg.ftz.f32 	%f27, %f26;
 	mov.f32 	%f28, 0f3F000000;
@@ -3103,16 +3014,16 @@ $L__BB5_9:
 	neg.ftz.f32 	%f33, %f31;
 	fma.rn.ftz.f32 	%f34, %f33, %f32, %f28;
 	fma.rn.ftz.f32 	%f35, %f31, %f34, %f31;
-	setp.eq.ftz.f32 	%p11, %f26, 0f3F800000;
-	selp.f32 	%f36, 0f00000000, %f35, %p11;
+	setp.eq.ftz.f32 	%p9, %f26, 0f3F800000;
+	selp.f32 	%f36, 0f00000000, %f35, %p9;
 	mov.f32 	%f37, 0f00000000;
-	setp.gt.ftz.f32 	%p12, %f26, 0f3F0F5C29;
-	selp.f32 	%f38, %f36, %f26, %p12;
-	mov.b32 	%r40, %f38;
-	mov.b32 	%r41, %f25;
-	and.b32  	%r42, %r41, -2147483648;
-	or.b32  	%r43, %r42, %r40;
-	mov.b32 	%f39, %r43;
+	setp.gt.ftz.f32 	%p10, %f26, 0f3F0F5C29;
+	selp.f32 	%f38, %f36, %f26, %p10;
+	mov.b32 	%r36, %f38;
+	mov.b32 	%r37, %f25;
+	and.b32  	%r38, %r37, -2147483648;
+	or.b32  	%r39, %r38, %r36;
+	mov.b32 	%f39, %r39;
 	mul.ftz.f32 	%f40, %f39, %f39;
 	mov.f32 	%f41, 0f3C8B1ABB;
 	mov.f32 	%f42, 0f3D10ECEF;
@@ -3128,20 +3039,20 @@ $L__BB5_9:
 	mul.ftz.f32 	%f52, %f51, %f40;
 	fma.rn.ftz.f32 	%f53, %f52, %f39, %f39;
 	neg.ftz.f32 	%f54, %f53;
-	selp.f32 	%f55, %f53, %f54, %p12;
+	selp.f32 	%f55, %f53, %f54, %p10;
 	mov.f32 	%f56, 0f3FD774EB;
 	mov.f32 	%f57, 0f3F6EE581;
 	fma.rn.ftz.f32 	%f58, %f57, %f56, %f55;
-	setp.gt.ftz.f32 	%p13, %f25, 0f3F0F5C29;
-	selp.f32 	%f59, %f53, %f58, %p13;
+	setp.gt.ftz.f32 	%p11, %f25, 0f3F0F5C29;
+	selp.f32 	%f59, %f53, %f58, %p11;
 	add.ftz.f32 	%f60, %f59, %f59;
-	selp.f32 	%f61, %f60, %f59, %p12;
+	selp.f32 	%f61, %f60, %f59, %p10;
 	mul.ftz.f32 	%f62, %f61, 0f43340000;
 	mov.f32 	%f63, 0f40490FDB;
 	div.approx.ftz.f32 	%f64, %f62, %f63;
 	max.ftz.f32 	%f65, %f21, %f37;
 	.pragma "used_bytes_mask 4095";
-	ld.v4.f32 	{%f66, %f67, %f68, %f69}, [%rd75];
+	ld.v4.f32 	{%f66, %f67, %f68, %f69}, [%rd70];
 	neg.ftz.f32 	%f73, %f64;
 	div.approx.ftz.f32 	%f74, %f73, %f67;
 	mul.ftz.f32 	%f75, %f74, 0f3FB8AA3B;
@@ -3156,166 +3067,166 @@ $L__BB5_9:
 	mul.f64 	%fd2, %fd1, 0d400921FB54442D18;
 	cvt.rn.ftz.f32.f64 	%f165, %fd2;
 
-$L__BB5_12:
-	mov.u32 	%r50, 1;
-	mov.u32 	%r51, 4;
-	mov.u64 	%rd96, 0;
+$L__BB5_9:
+	mov.u32 	%r46, 1;
+	mov.u32 	%r47, 4;
+	mov.u64 	%rd91, 0;
 	// begin inline asm
-	call (%rd85), _rt_buffer_get_64, (%rd22, %r50, %r51, %rd23, %rd96, %rd96, %rd96);
+	call (%rd80), _rt_buffer_get_64, (%rd17, %r46, %r47, %rd18, %rd91, %rd91, %rd91);
 	// end inline asm
-	ld.f32 	%f135, [%rd85];
+	ld.f32 	%f135, [%rd80];
 	mul.ftz.f32 	%f136, %f165, %f135;
 	cvt.ftz.f64.f32 	%fd3, %f136;
 	ld.global.f64 	%fd4, [prd];
 	mul.f64 	%fd5, %fd4, %fd3;
 	cvt.rn.ftz.f32.f64 	%f9, %fd5;
-	mov.u64 	%rd98, radiation_in;
-	cvta.global.u64 	%rd92, %rd98;
+	mov.u64 	%rd93, radiation_in;
+	cvta.global.u64 	%rd87, %rd93;
 	// begin inline asm
-	call (%rd91), _rt_buffer_get_64, (%rd92, %r50, %r51, %rd3, %rd96, %rd96, %rd96);
+	call (%rd86), _rt_buffer_get_64, (%rd87, %r46, %r47, %rd3, %rd91, %rd91, %rd91);
 	// end inline asm
 	mov.f32 	%f137, 0f3F800000;
 	sub.ftz.f32 	%f138, %f137, %f1;
 	sub.ftz.f32 	%f139, %f138, %f2;
 	mul.ftz.f32 	%f140, %f139, %f9;
-	red.add.f32 	[%rd91], %f140;
-	setp.leu.ftz.f32 	%p19, %f2, 0f00000000;
-	setp.leu.ftz.f32 	%p20, %f1, 0f00000000;
-	and.pred  	%p21, %p20, %p19;
-	@%p21 bra 	$L__BB5_16;
+	red.add.f32 	[%rd86], %f140;
+	setp.leu.ftz.f32 	%p17, %f2, 0f00000000;
+	setp.leu.ftz.f32 	%p18, %f1, 0f00000000;
+	and.pred  	%p19, %p18, %p17;
+	@%p19 bra 	$L__BB5_13;
 
 	ld.global.u8 	%rs2, [prd+12];
-	setp.eq.s16 	%p22, %rs2, 0;
-	@%p22 bra 	$L__BB5_15;
+	setp.eq.s16 	%p20, %rs2, 0;
+	@%p20 bra 	$L__BB5_12;
 
-	mov.u64 	%rd111, scatter_buff_top;
-	cvta.global.u64 	%rd100, %rd111;
-	mov.u32 	%r54, 1;
-	mov.u32 	%r55, 4;
-	mov.u64 	%rd110, 0;
+	mov.u64 	%rd106, scatter_buff_top;
+	cvta.global.u64 	%rd95, %rd106;
+	mov.u32 	%r50, 1;
+	mov.u32 	%r51, 4;
+	mov.u64 	%rd105, 0;
 	// begin inline asm
-	call (%rd99), _rt_buffer_get_64, (%rd100, %r54, %r55, %rd3, %rd110, %rd110, %rd110);
+	call (%rd94), _rt_buffer_get_64, (%rd95, %r50, %r51, %rd3, %rd105, %rd105, %rd105);
 	// end inline asm
 	mul.ftz.f32 	%f142, %f1, %f9;
-	red.add.f32 	[%rd99], %f142;
-	mov.u64 	%rd112, scatter_buff_bottom;
-	cvta.global.u64 	%rd106, %rd112;
+	red.add.f32 	[%rd94], %f142;
+	mov.u64 	%rd107, scatter_buff_bottom;
+	cvta.global.u64 	%rd101, %rd107;
 	// begin inline asm
-	call (%rd105), _rt_buffer_get_64, (%rd106, %r54, %r55, %rd3, %rd110, %rd110, %rd110);
+	call (%rd100), _rt_buffer_get_64, (%rd101, %r50, %r51, %rd3, %rd105, %rd105, %rd105);
 	// end inline asm
 	mul.ftz.f32 	%f144, %f2, %f9;
-	red.add.f32 	[%rd105], %f144;
-	bra.uni 	$L__BB5_16;
+	red.add.f32 	[%rd100], %f144;
+	bra.uni 	$L__BB5_13;
 
-$L__BB5_15:
-	mov.u64 	%rd125, scatter_buff_bottom;
-	cvta.global.u64 	%rd114, %rd125;
-	mov.u32 	%r58, 1;
-	mov.u32 	%r59, 4;
-	mov.u64 	%rd124, 0;
+$L__BB5_12:
+	mov.u64 	%rd120, scatter_buff_bottom;
+	cvta.global.u64 	%rd109, %rd120;
+	mov.u32 	%r54, 1;
+	mov.u32 	%r55, 4;
+	mov.u64 	%rd119, 0;
 	// begin inline asm
-	call (%rd113), _rt_buffer_get_64, (%rd114, %r58, %r59, %rd3, %rd124, %rd124, %rd124);
+	call (%rd108), _rt_buffer_get_64, (%rd109, %r54, %r55, %rd3, %rd119, %rd119, %rd119);
 	// end inline asm
 	mul.ftz.f32 	%f146, %f1, %f9;
-	red.add.f32 	[%rd113], %f146;
-	mov.u64 	%rd126, scatter_buff_top;
-	cvta.global.u64 	%rd120, %rd126;
+	red.add.f32 	[%rd108], %f146;
+	mov.u64 	%rd121, scatter_buff_top;
+	cvta.global.u64 	%rd115, %rd121;
 	// begin inline asm
-	call (%rd119), _rt_buffer_get_64, (%rd120, %r58, %r59, %rd3, %rd124, %rd124, %rd124);
+	call (%rd114), _rt_buffer_get_64, (%rd115, %r54, %r55, %rd3, %rd119, %rd119, %rd119);
 	// end inline asm
 	mul.ftz.f32 	%f148, %f2, %f9;
-	red.add.f32 	[%rd119], %f148;
+	red.add.f32 	[%rd114], %f148;
 
-$L__BB5_16:
-	ld.global.u32 	%r4, [Ncameras];
-	setp.eq.s32 	%p23, %r4, 0;
-	@%p23 bra 	$L__BB5_22;
+$L__BB5_13:
+	ld.global.u32 	%r3, [Ncameras];
+	setp.eq.s32 	%p21, %r3, 0;
+	@%p21 bra 	$L__BB5_19;
 
-	cvt.u64.u32 	%rd139, %r4;
-	mov.u64 	%rd138, 0;
-	ld.global.u8 	%r64, [prd+20];
-	ld.global.u32 	%r65, [Nprimitives];
-	ld.global.u32 	%r66, [prd+8];
-	mad.lo.s32 	%r67, %r65, %r64, %r66;
-	ld.global.u32 	%r68, [Nbands_global];
-	mul.lo.s32 	%r69, %r4, %r68;
-	mul.lo.s32 	%r70, %r69, %r67;
-	cvt.u64.u32 	%rd140, %r70;
-	ld.global.u32 	%rd141, [camera_ID];
-	mul.lo.s64 	%rd142, %rd202, %rd139;
-	add.s64 	%rd143, %rd142, %rd141;
-	add.s64 	%rd135, %rd143, %rd140;
-	mov.u64 	%rd144, rho_cam;
-	cvta.global.u64 	%rd128, %rd144;
-	mov.u32 	%r62, 1;
-	mov.u32 	%r63, 4;
+	cvt.u64.u32 	%rd134, %r3;
+	mov.u64 	%rd133, 0;
+	ld.global.u8 	%r60, [prd+20];
+	ld.global.u32 	%r61, [Nprimitives];
+	ld.global.u32 	%r62, [prd+8];
+	mad.lo.s32 	%r63, %r61, %r60, %r62;
+	ld.global.u32 	%r64, [Nbands_global];
+	mul.lo.s32 	%r65, %r3, %r64;
+	mul.lo.s32 	%r66, %r65, %r63;
+	cvt.u64.u32 	%rd135, %r66;
+	ld.global.u32 	%rd136, [camera_ID];
+	mul.lo.s64 	%rd137, %rd197, %rd134;
+	add.s64 	%rd138, %rd137, %rd136;
+	add.s64 	%rd130, %rd138, %rd135;
+	mov.u64 	%rd139, rho_cam;
+	cvta.global.u64 	%rd123, %rd139;
+	mov.u32 	%r58, 1;
+	mov.u32 	%r59, 4;
 	// begin inline asm
-	call (%rd127), _rt_buffer_get_64, (%rd128, %r62, %r63, %rd135, %rd138, %rd138, %rd138);
+	call (%rd122), _rt_buffer_get_64, (%rd123, %r58, %r59, %rd130, %rd133, %rd133, %rd133);
 	// end inline asm
-	ld.f32 	%f10, [%rd127];
-	mov.u64 	%rd145, tau_cam;
-	cvta.global.u64 	%rd134, %rd145;
+	ld.f32 	%f10, [%rd122];
+	mov.u64 	%rd140, tau_cam;
+	cvta.global.u64 	%rd129, %rd140;
 	// begin inline asm
-	call (%rd133), _rt_buffer_get_64, (%rd134, %r62, %r63, %rd135, %rd138, %rd138, %rd138);
+	call (%rd128), _rt_buffer_get_64, (%rd129, %r58, %r59, %rd130, %rd133, %rd133, %rd133);
 	// end inline asm
-	setp.leu.ftz.f32 	%p24, %f10, 0f00000000;
-	ld.f32 	%f11, [%rd133];
-	setp.leu.ftz.f32 	%p25, %f11, 0f00000000;
-	and.pred  	%p26, %p24, %p25;
+	setp.leu.ftz.f32 	%p22, %f10, 0f00000000;
+	ld.f32 	%f11, [%rd128];
+	setp.leu.ftz.f32 	%p23, %f11, 0f00000000;
+	and.pred  	%p24, %p22, %p23;
 	ld.global.f64 	%fd6, [prd];
-	setp.leu.f64 	%p27, %fd6, 0d0000000000000000;
-	or.pred  	%p28, %p26, %p27;
-	@%p28 bra 	$L__BB5_22;
+	setp.leu.f64 	%p25, %fd6, 0d0000000000000000;
+	or.pred  	%p26, %p24, %p25;
+	@%p26 bra 	$L__BB5_19;
 
 	ld.global.u8 	%rs3, [prd+12];
-	setp.eq.s16 	%p29, %rs3, 0;
-	@%p29 bra 	$L__BB5_20;
+	setp.eq.s16 	%p27, %rs3, 0;
+	@%p27 bra 	$L__BB5_17;
 
-	mov.u64 	%rd158, scatter_buff_top_cam;
-	cvta.global.u64 	%rd147, %rd158;
-	mov.u32 	%r73, 1;
-	mov.u32 	%r74, 4;
-	mov.u64 	%rd157, 0;
+	mov.u64 	%rd153, scatter_buff_top_cam;
+	cvta.global.u64 	%rd142, %rd153;
+	mov.u32 	%r69, 1;
+	mov.u32 	%r70, 4;
+	mov.u64 	%rd152, 0;
 	// begin inline asm
-	call (%rd146), _rt_buffer_get_64, (%rd147, %r73, %r74, %rd3, %rd157, %rd157, %rd157);
+	call (%rd141), _rt_buffer_get_64, (%rd142, %r69, %r70, %rd3, %rd152, %rd152, %rd152);
 	// end inline asm
 	mul.ftz.f32 	%f150, %f10, %f9;
-	red.add.f32 	[%rd146], %f150;
-	mov.u64 	%rd159, scatter_buff_bottom_cam;
-	cvta.global.u64 	%rd153, %rd159;
+	red.add.f32 	[%rd141], %f150;
+	mov.u64 	%rd154, scatter_buff_bottom_cam;
+	cvta.global.u64 	%rd148, %rd154;
 	// begin inline asm
-	call (%rd152), _rt_buffer_get_64, (%rd153, %r73, %r74, %rd3, %rd157, %rd157, %rd157);
+	call (%rd147), _rt_buffer_get_64, (%rd148, %r69, %r70, %rd3, %rd152, %rd152, %rd152);
 	// end inline asm
 	mul.ftz.f32 	%f152, %f11, %f9;
-	red.add.f32 	[%rd152], %f152;
-	bra.uni 	$L__BB5_22;
+	red.add.f32 	[%rd147], %f152;
+	bra.uni 	$L__BB5_19;
 
-$L__BB5_20:
-	mov.u64 	%rd172, scatter_buff_bottom_cam;
-	cvta.global.u64 	%rd161, %rd172;
-	mov.u32 	%r77, 1;
-	mov.u32 	%r78, 4;
-	mov.u64 	%rd171, 0;
+$L__BB5_17:
+	mov.u64 	%rd167, scatter_buff_bottom_cam;
+	cvta.global.u64 	%rd156, %rd167;
+	mov.u32 	%r73, 1;
+	mov.u32 	%r74, 4;
+	mov.u64 	%rd166, 0;
 	// begin inline asm
-	call (%rd160), _rt_buffer_get_64, (%rd161, %r77, %r78, %rd3, %rd171, %rd171, %rd171);
+	call (%rd155), _rt_buffer_get_64, (%rd156, %r73, %r74, %rd3, %rd166, %rd166, %rd166);
 	// end inline asm
 	mul.ftz.f32 	%f154, %f10, %f9;
-	red.add.f32 	[%rd160], %f154;
-	mov.u64 	%rd173, scatter_buff_top_cam;
-	cvta.global.u64 	%rd167, %rd173;
+	red.add.f32 	[%rd155], %f154;
+	mov.u64 	%rd168, scatter_buff_top_cam;
+	cvta.global.u64 	%rd162, %rd168;
 	// begin inline asm
-	call (%rd166), _rt_buffer_get_64, (%rd167, %r77, %r78, %rd3, %rd171, %rd171, %rd171);
+	call (%rd161), _rt_buffer_get_64, (%rd162, %r73, %r74, %rd3, %rd166, %rd166, %rd166);
 	// end inline asm
 	mul.ftz.f32 	%f156, %f11, %f9;
-	red.add.f32 	[%rd166], %f156;
+	red.add.f32 	[%rd161], %f156;
 
-$L__BB5_22:
-	ld.global.u32 	%rd201, [Nbands_global];
-	add.s64 	%rd202, %rd202, 1;
-	setp.lt.u64 	%p30, %rd202, %rd201;
-	@%p30 bra 	$L__BB5_5;
+$L__BB5_19:
+	ld.global.u32 	%rd196, [Nbands_global];
+	add.s64 	%rd197, %rd197, 1;
+	setp.lt.u64 	%p28, %rd197, %rd196;
+	@%p28 bra 	$L__BB5_2;
 
-$L__BB5_23:
+$L__BB5_20:
 	ret;
 
 }

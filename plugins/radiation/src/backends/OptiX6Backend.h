@@ -386,6 +386,12 @@ private:
     // Internal state tracking
     bool is_initialized = false;
     size_t current_primitive_count = 0;
+    size_t current_patch_count = 0;
+    size_t current_triangle_count = 0;
+    size_t current_disk_count = 0;
+    size_t current_tile_count = 0;
+    size_t current_voxel_count = 0;
+    size_t current_bbox_count = 0;
     size_t current_source_count = 0;
     size_t current_band_count = 0;
     size_t current_camera_count = 0;

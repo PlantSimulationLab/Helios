@@ -510,7 +510,7 @@ ENABLE_OPENMP:BOOL=ON
 GIT_EXECUTABLE:FILEPATH=/usr/bin/git
 
 //Last configured Helios Git commit
-HELIOS_PREVIOUS_COMMIT:STRING=d052ab8b8
+HELIOS_PREVIOUS_COMMIT:STRING=cc2ba974a
 
 //Where to install binaries to.
 INSTALL_BIN:PATH=bin

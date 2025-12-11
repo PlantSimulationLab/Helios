@@ -447,8 +447,15 @@ void OptiX6Backend::updateGeometry(const RayTracingGeometry& geometry) {
     // Convert geometry data to OptiX buffers
     geometryToBuffers(geometry);
 
-    // Update primitive count
+    // Update primitive counts
     current_primitive_count = geometry.primitive_count;
+    current_patch_count = geometry.patch_count;
+    current_triangle_count = geometry.triangle_count;
+    current_disk_count = geometry.disk_count;
+    current_tile_count = geometry.tile_count;
+    current_voxel_count = geometry.voxel_count;
+    current_bbox_count = geometry.bbox_count;
+
     RT_CHECK_ERROR(rtVariableSet1ui(Nprimitives_RTvariable, geometry.primitive_count));
 
     // Update periodic boundary flags
@@ -463,13 +470,13 @@ void OptiX6Backend::buildAccelerationStructure() {
         helios_runtime_error("ERROR (OptiX6Backend::buildAccelerationStructure): Backend not initialized.");
     }
 
-    // Set primitive counts for each geometry type
-    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(patch_geometry, current_primitive_count > 0 ? current_primitive_count : 0));
-    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(triangle_geometry, 0));
-    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(disk_geometry, 0));
-    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(tile_geometry, 0));
-    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(voxel_geometry, 0));
-    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(bbox_geometry, 0));
+    // Set primitive counts for each geometry type (use type-specific counts, not total)
+    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(patch_geometry, current_patch_count));
+    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(triangle_geometry, current_triangle_count));
+    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(disk_geometry, current_disk_count));
+    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(tile_geometry, current_tile_count));
+    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(voxel_geometry, current_voxel_count));
+    RT_CHECK_ERROR(rtGeometrySetPrimitiveCount(bbox_geometry, current_bbox_count));
 
     // OptiX will automatically rebuild the acceleration structure on next launch
 }
