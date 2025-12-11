@@ -49,34 +49,33 @@ void PlantArchitecture::setPlantNitrogenParameters(const std::vector<uint>& plan
 
 // ==================== Initialization Methods ==================== //
 
-void PlantArchitecture::initializeNitrogenPools(float initial_leaf_N_concentration) {
+void PlantArchitecture::initializeNitrogenPools(float initial_leaf_N_area) {
     for (auto& [plantID, plant_instance] : plant_instances) {
-        initializePlantNitrogenPools(plantID, initial_leaf_N_concentration);
+        initializePlantNitrogenPools(plantID, initial_leaf_N_area);
     }
 }
 
-void PlantArchitecture::initializePlantNitrogenPools(uint plantID, float initial_leaf_N_concentration) {
+void PlantArchitecture::initializePlantNitrogenPools(uint plantID, float initial_leaf_N_area) {
     // Validate inputs
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::initializePlantNitrogenPools): Plant with ID of " +
                            std::to_string(plantID) + " does not exist.");
     }
-    if (initial_leaf_N_concentration < 0) {
-        helios_runtime_error("ERROR (PlantArchitecture::initializePlantNitrogenPools): Initial leaf N concentration must be >= 0.");
+    if (initial_leaf_N_area < 0) {
+        helios_runtime_error("ERROR (PlantArchitecture::initializePlantNitrogenPools): Initial leaf N content per area must be >= 0.");
     }
 
     PlantInstance& plant = plant_instances.at(plantID);
-    const NitrogenParameters& N_params = plant.nitrogen_parameters;
 
     // Initialize plant-level pools to zero
     plant.root_nitrogen_pool_gN = 0;
     plant.available_nitrogen_pool_gN = 0;
     plant.cumulative_N_uptake_gN = 0;
 
-    // Initialize per-leaf pools based on current leaf biomass
+    // Initialize per-leaf nitrogen content (area basis) based on current leaf areas
     for (auto& shoot : plant.shoot_tree) {
         // Clear existing leaf N pools for this shoot
-        shoot->leaf_nitrogen_gN.clear();
+        shoot->leaf_nitrogen_gN_m2.clear();
 
         for (auto& phytomer : shoot->phytomers) {
             // Iterate through all leaves in this phytomer (2D vector structure)
@@ -88,22 +87,15 @@ void PlantArchitecture::initializePlantNitrogenPools(uint plantID, float initial
                         continue;
                     }
 
-                    // Get leaf area (scaled)
+                    // Get current leaf area
                     float leaf_area = context_ptr->getObjectArea(leaf_objID);
 
-                    // Get current scale factor to calculate unscaled area
-                    float scale_factor = phytomer->current_leaf_scale_factor.at(petiole_idx);
-                    float unscaled_area = leaf_area / (scale_factor * scale_factor);
+                    // Initialize leaf N content per area (g N/m²)
+                    shoot->leaf_nitrogen_gN_m2[leaf_objID] = initial_leaf_N_area;
 
-                    // Calculate leaf biomass (g DW)
-                    float leaf_biomass_gDW = unscaled_area / N_params.SLA;
-
-                    // Initialize leaf N pool
-                    float initial_leaf_N = leaf_biomass_gDW * initial_leaf_N_concentration;
-                    shoot->leaf_nitrogen_gN[leaf_objID] = initial_leaf_N;
-
-                    // Add to plant total uptake tracking
-                    plant.cumulative_N_uptake_gN += initial_leaf_N;
+                    // Track total N added (for cumulative uptake)
+                    float total_N_added = initial_leaf_N_area * leaf_area;
+                    plant.cumulative_N_uptake_gN += total_N_added;
                 }
             }
         }
@@ -139,7 +131,7 @@ void PlantArchitecture::addPlantNitrogen(const std::vector<uint>& plantIDs, floa
     }
 }
 
-// ==================== Leaf Nitrogen Accumulation (Rate-Limited) ==================== //
+// ==================== Leaf Nitrogen Accumulation (Rate-Limited, Area Basis) ==================== //
 
 void PlantArchitecture::accumulateLeafNitrogen(float dt) {
     for (auto& [plantID, plant] : plant_instances) {
@@ -161,42 +153,38 @@ void PlantArchitecture::accumulateLeafNitrogen(float dt) {
                             continue;
                         }
 
-                        // Get current leaf area (scaled)
+                        // Get current leaf area
                         float leaf_area = context_ptr->getObjectArea(leaf_objID);
 
-                        // Get scale factor to calculate unscaled area
-                        float scale_factor = phytomer->current_leaf_scale_factor.at(petiole_idx);
-                        float unscaled_area = leaf_area / (scale_factor * scale_factor);
-
-                        // Calculate leaf biomass (g DW)
-                        float leaf_biomass_gDW = unscaled_area / N_params.SLA;
-
-                        // Calculate target N for this leaf
-                        float target_leaf_N = leaf_biomass_gDW * N_params.target_leaf_N_concentration;
-
-                        // Get current leaf N
-                        float current_leaf_N = 0;
-                        if (shoot->leaf_nitrogen_gN.count(leaf_objID)) {
-                            current_leaf_N = shoot->leaf_nitrogen_gN.at(leaf_objID);
+                        // Get current leaf N content per area (g N/m²)
+                        float current_N_area = 0;
+                        if (shoot->leaf_nitrogen_gN_m2.count(leaf_objID)) {
+                            current_N_area = shoot->leaf_nitrogen_gN_m2.at(leaf_objID);
                         } else {
                             // Initialize if not present
-                            shoot->leaf_nitrogen_gN[leaf_objID] = 0;
+                            shoot->leaf_nitrogen_gN_m2[leaf_objID] = 0;
                         }
 
-                        // Calculate N demand
-                        float N_demand = std::max(0.0f, target_leaf_N - current_leaf_N);
-                        if (N_demand <= 0) {
+                        // Calculate N content per area demand (g N/m²)
+                        float N_area_demand = std::max(0.0f, N_params.target_leaf_N_area - current_N_area);
+                        if (N_area_demand <= 0) {
                             continue;  // Leaf is at target
                         }
 
-                        // Rate limiting: max N per day
-                        float max_this_step = N_params.max_N_accumulation_rate * dt;
+                        // Rate limiting: max N per m² per day
+                        float max_N_area_this_step = N_params.max_N_accumulation_rate * dt;
 
-                        // Also limited by available N
-                        float N_to_add = std::min({N_demand, max_this_step, plant.available_nitrogen_pool_gN});
+                        // Calculate total N demand for this leaf (g N)
+                        float total_N_demand = std::min(N_area_demand, max_N_area_this_step) * leaf_area;
 
-                        // Update pools
-                        shoot->leaf_nitrogen_gN[leaf_objID] += N_to_add;
+                        // Also limited by available N pool
+                        float N_to_add = std::min(total_N_demand, plant.available_nitrogen_pool_gN);
+
+                        // Update leaf N content per area (g N/m²)
+                        float N_area_to_add = N_to_add / leaf_area;
+                        shoot->leaf_nitrogen_gN_m2[leaf_objID] += N_area_to_add;
+
+                        // Update available pool
                         plant.available_nitrogen_pool_gN -= N_to_add;
 
                         if (plant.available_nitrogen_pool_gN <= 0) {
@@ -211,41 +199,41 @@ void PlantArchitecture::accumulateLeafNitrogen(float dt) {
     }
 }
 
-// ==================== Nitrogen Remobilization (CRITICAL FEATURE) ==================== //
+// ==================== Nitrogen Remobilization (Area Basis) ==================== //
 
 void PlantArchitecture::remobilizeNitrogen(float dt) {
     for (auto& [plantID, plant] : plant_instances) {
         const NitrogenParameters& N_params = plant.nitrogen_parameters;
 
         // Calculate current N stress to determine remobilization intensity
-        float total_leaf_N = 0;
-        float total_leaf_biomass = 0;
+        float total_N_area = 0;  // Sum of N_area across all leaves
+        float total_area = 0;     // Total leaf area
+        int num_leaves = 0;
 
         for (auto& shoot : plant.shoot_tree) {
-            for (auto& [leaf_objID, leaf_N] : shoot->leaf_nitrogen_gN) {
+            for (auto& [leaf_objID, leaf_N_area] : shoot->leaf_nitrogen_gN_m2) {
                 if (!context_ptr->doesObjectExist(leaf_objID)) {
                     continue;
                 }
-                // Get leaf area (simplified: use current scaled area divided by SLA)
                 float leaf_area = context_ptr->getObjectArea(leaf_objID);
-                float leaf_biomass = leaf_area / N_params.SLA;
-                total_leaf_N += leaf_N;
-                total_leaf_biomass += leaf_biomass;
+                total_N_area += leaf_N_area * leaf_area;  // g N
+                total_area += leaf_area;                   // m²
+                num_leaves++;
             }
         }
 
-        if (total_leaf_biomass == 0) {
+        if (num_leaves == 0 || total_area == 0) {
             continue;  // No leaves
         }
 
-        float actual_N_concentration = total_leaf_N / total_leaf_biomass;
-        float N_stress_factor = std::min(1.0f, actual_N_concentration / N_params.target_leaf_N_concentration);
+        float avg_N_area = total_N_area / total_area;  // Average g N/m²
+        float N_stress_factor = std::min(1.0f, avg_N_area / N_params.target_leaf_N_area);
 
         // Classify leaves by age
         std::vector<std::pair<uint, uint>> source_leaves;  // (shoot_idx, leaf_objID)
         std::vector<std::pair<uint, uint>> sink_leaves;    // (shoot_idx, leaf_objID)
-        std::map<uint, float> source_N_available;          // leaf_objID → available N
-        std::map<uint, float> sink_N_demand;               // leaf_objID → N demand
+        std::map<uint, float> source_N_available;          // leaf_objID → available N (g N)
+        std::map<uint, float> sink_N_demand;               // leaf_objID → N demand (g N)
         float total_source_N_available = 0;
         float total_sink_demand = 0;
 
@@ -270,51 +258,48 @@ void PlantArchitecture::remobilizeNitrogen(float dt) {
                             continue;
                         }
 
-                        if (!shoot->leaf_nitrogen_gN.count(leaf_objID)) {
+                        if (!shoot->leaf_nitrogen_gN_m2.count(leaf_objID)) {
                             continue;
                         }
+
+                        float leaf_area = context_ptr->getObjectArea(leaf_objID);
+                        float current_N_area = shoot->leaf_nitrogen_gN_m2.at(leaf_objID);  // g N/m²
 
                         // Classify by age
                         if (age_fraction >= N_params.remobilization_age_threshold) {
                             // OLD LEAF: Source for remobilization (>70% of lifespan)
-                            float current_N = shoot->leaf_nitrogen_gN.at(leaf_objID);
 
-                            // Calculate minimum N for this leaf
-                            float leaf_area = context_ptr->getObjectArea(leaf_objID);
-                            float scale_factor = phytomer->current_leaf_scale_factor.at(petiole_idx);
-                            float unscaled_area = leaf_area / (scale_factor * scale_factor);
-                            float leaf_biomass = unscaled_area / N_params.SLA;
-                            float min_N = leaf_biomass * N_params.minimum_leaf_N_concentration;
-
-                            // Available for remobilization (limited by efficiency and minimum)
-                            float remobilizable_N = std::max(0.0f,
-                                (current_N - min_N) * N_params.leaf_remobilization_efficiency);
+                            // Calculate remobilizable N per area (g N/m²)
+                            float remobilizable_N_area = std::max(0.0f,
+                                (current_N_area - N_params.minimum_leaf_N_area) * N_params.leaf_remobilization_efficiency);
 
                             // Accelerate under N stress (up to 1.3x faster)
                             if (N_stress_factor < 1.0f) {
-                                remobilizable_N *= (1.0f + 0.3f * (1.0f - N_stress_factor));
+                                remobilizable_N_area *= (1.0f + 0.3f * (1.0f - N_stress_factor));
                             }
 
-                            if (remobilizable_N > 0) {
+                            // Convert to total N available (g N)
+                            float remobilizable_N_total = remobilizable_N_area * leaf_area;
+
+                            if (remobilizable_N_total > 0) {
                                 source_leaves.push_back({shoot_idx, leaf_objID});
-                                source_N_available[leaf_objID] = remobilizable_N;
-                                total_source_N_available += remobilizable_N;
+                                source_N_available[leaf_objID] = remobilizable_N_total;
+                                total_source_N_available += remobilizable_N_total;
                             }
 
                         } else if (age_fraction < 0.5f) {
                             // YOUNG LEAF: Sink for remobilized N (<50% of lifespan)
-                            float leaf_area = context_ptr->getObjectArea(leaf_objID);
-                            float scale_factor = phytomer->current_leaf_scale_factor.at(petiole_idx);
-                            float unscaled_area = leaf_area / (scale_factor * scale_factor);
-                            float leaf_biomass = unscaled_area / N_params.SLA;
-                            float target_N = leaf_biomass * N_params.target_leaf_N_concentration;
-                            float current_N = shoot->leaf_nitrogen_gN.at(leaf_objID);
 
-                            float demand = std::max(0.0f, target_N - current_N);
-                            if (demand > 0) {
+                            // Calculate N demand per area (g N/m²)
+                            float N_area_demand = std::max(0.0f, N_params.target_leaf_N_area - current_N_area);
+
+                            // Convert to total N demand (g N)
+                            float N_total_demand = N_area_demand * leaf_area;
+
+                            if (N_total_demand > 0) {
                                 sink_leaves.push_back({shoot_idx, leaf_objID});
-                                sink_N_demand[leaf_objID] = demand;
-                                total_sink_demand += demand;
+                                sink_N_demand[leaf_objID] = N_total_demand;
+                                total_sink_demand += N_total_demand;
                             }
                         }
                     }
@@ -330,31 +315,37 @@ void PlantArchitecture::remobilizeNitrogen(float dt) {
             // Remove from source leaves proportionally
             for (auto& [shoot_idx, source_objID] : source_leaves) {
                 float leaf_contribution = source_N_available[source_objID] / total_source_N_available;
-                float N_removed = N_to_remobilize * leaf_contribution;
+                float N_removed_total = N_to_remobilize * leaf_contribution;  // g N
 
-                plant.shoot_tree.at(shoot_idx)->leaf_nitrogen_gN[source_objID] -= N_removed;
+                // Convert to per-area and update
+                float source_leaf_area = context_ptr->getObjectArea(source_objID);
+                float N_removed_area = N_removed_total / source_leaf_area;  // g N/m²
+                plant.shoot_tree.at(shoot_idx)->leaf_nitrogen_gN_m2[source_objID] -= N_removed_area;
             }
 
             // Add to sink leaves proportionally
             for (auto& [shoot_idx, sink_objID] : sink_leaves) {
                 float leaf_demand_fraction = sink_N_demand[sink_objID] / total_sink_demand;
-                float N_added = N_to_remobilize * leaf_demand_fraction;
+                float N_added_total = N_to_remobilize * leaf_demand_fraction;  // g N
 
-                plant.shoot_tree.at(shoot_idx)->leaf_nitrogen_gN[sink_objID] += N_added;
+                // Convert to per-area and update
+                float sink_leaf_area = context_ptr->getObjectArea(sink_objID);
+                float N_added_area = N_added_total / sink_leaf_area;  // g N/m²
+                plant.shoot_tree.at(shoot_idx)->leaf_nitrogen_gN_m2[sink_objID] += N_added_area;
             }
         }
     }
 }
 
-// ==================== Nitrogen Stress Factor Calculation ==================== //
+// ==================== Nitrogen Stress Factor Calculation (Area Basis) ==================== //
 
 void PlantArchitecture::updateNitrogenStressFactor() {
     for (auto& [plantID, plant] : plant_instances) {
         const NitrogenParameters& N_params = plant.nitrogen_parameters;
 
-        // Calculate average leaf N concentration across all leaves
-        float total_leaf_N = 0;
-        float total_leaf_biomass = 0;
+        // Calculate area-weighted average leaf N content per area across all leaves
+        float total_N = 0;      // Total nitrogen (g N)
+        float total_area = 0;   // Total leaf area (m²)
         int num_leaves = 0;
 
         for (auto& shoot : plant.shoot_tree) {
@@ -367,34 +358,30 @@ void PlantArchitecture::updateNitrogenStressFactor() {
                             continue;
                         }
 
-                        if (!shoot->leaf_nitrogen_gN.count(leaf_objID)) {
+                        if (!shoot->leaf_nitrogen_gN_m2.count(leaf_objID)) {
                             continue;
                         }
 
-                        float leaf_N = shoot->leaf_nitrogen_gN.at(leaf_objID);
-                        float leaf_area = context_ptr->getObjectArea(leaf_objID);
-                        float scale_factor = phytomer->current_leaf_scale_factor.at(petiole_idx);
-                        float unscaled_area = leaf_area / (scale_factor * scale_factor);
-                        float leaf_biomass = unscaled_area / N_params.SLA;
+                        float leaf_N_area = shoot->leaf_nitrogen_gN_m2.at(leaf_objID);  // g N/m²
+                        float leaf_area = context_ptr->getObjectArea(leaf_objID);       // m²
 
-                        total_leaf_N += leaf_N;
-                        total_leaf_biomass += leaf_biomass;
+                        total_N += leaf_N_area * leaf_area;  // g N
+                        total_area += leaf_area;              // m²
                         num_leaves++;
                     }
                 }
             }
         }
 
-        if (num_leaves == 0) {
+        if (num_leaves == 0 || total_area == 0) {
             continue;  // No leaves to evaluate
         }
 
-        // Calculate actual leaf N concentration
-        float actual_leaf_N_concentration = total_leaf_N / total_leaf_biomass;
+        // Calculate average leaf N content per area (g N/m²)
+        float avg_leaf_N_area = total_N / total_area;
 
         // Calculate stress factor: simple ratio
-        float stress_factor = std::min(1.0f,
-            actual_leaf_N_concentration / N_params.target_leaf_N_concentration);
+        float stress_factor = std::min(1.0f, avg_leaf_N_area / N_params.target_leaf_N_area);
 
         // Clamp to [0, 1]
         stress_factor = std::clamp(stress_factor, 0.0f, 1.0f);
@@ -407,7 +394,7 @@ void PlantArchitecture::updateNitrogenStressFactor() {
     }
 }
 
-// ==================== Fruit Nitrogen Removal ==================== //
+// ==================== Fruit Nitrogen Removal (Area Basis) ==================== //
 
 void PlantArchitecture::removeFruitNitrogen() {
     for (auto& [plantID, plant] : plant_instances) {
@@ -429,28 +416,30 @@ void PlantArchitecture::removeFruitNitrogen() {
                             continue;  // No growth
                         }
 
-                        // Calculate fruit biomass increment
-                        float fruit_biomass_increment = 0;
+                        // Calculate fruit area increment
+                        float fruit_area_increment = 0;
                         for (uint fruit_objID : fbud.inflorescence_objIDs) {
                             if (!context_ptr->doesObjectExist(fruit_objID)) {
                                 continue;
                             }
 
-                            // Get mature fruit volume (unscaled)
-                            float mature_volume = context_ptr->getPolymeshObjectVolume(fruit_objID) /
-                                                 fbud.current_fruit_scale_factor;
+                            // Get current fruit area
+                            float current_fruit_area = context_ptr->getObjectArea(fruit_objID);
 
-                            // Calculate volume increment
-                            float volume_increment = mature_volume * scale_increment;
+                            // Calculate mature (unscaled) fruit area
+                            float mature_fruit_area = current_fruit_area / (fbud.current_fruit_scale_factor * fbud.current_fruit_scale_factor);
 
-                            // Convert to biomass using fruit density (from CarbohydrateParameters)
-                            float biomass_increment = volume_increment * plant.carb_parameters.fruit_density;  // g DW
-                            fruit_biomass_increment += biomass_increment;
+                            // Calculate area increment (mature area × scale change × 2 for surface scaling)
+                            float area_increment = mature_fruit_area *
+                                (fbud.current_fruit_scale_factor * fbud.current_fruit_scale_factor -
+                                 fbud.previous_fruit_scale_factor * fbud.previous_fruit_scale_factor);
+
+                            fruit_area_increment += area_increment;
                         }
 
-                        if (fruit_biomass_increment > 0) {
-                            // Calculate N demand for fruit growth
-                            float fruit_N_demand = fruit_biomass_increment * N_params.fruit_N_concentration;
+                        if (fruit_area_increment > 0) {
+                            // Calculate N demand for fruit growth (g N/m² × m² = g N)
+                            float fruit_N_demand = fruit_area_increment * N_params.fruit_N_area;
 
                             // Deduct from available pool (supply-limited)
                             float N_removed = std::min(fruit_N_demand, plant.available_nitrogen_pool_gN);

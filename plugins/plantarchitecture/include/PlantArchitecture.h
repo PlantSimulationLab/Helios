@@ -338,19 +338,19 @@ struct CarbohydrateParameters {
 //! Parameters for the nitrogen model
 struct NitrogenParameters {
 
-    // -- Leaf Nitrogen Concentrations -- //
-    //! target leaf nitrogen concentration (g N/g DW)
-    float target_leaf_N_concentration = 0.035f;
-    //! minimum viable leaf nitrogen concentration (g N/g DW)
-    float minimum_leaf_N_concentration = 0.012f;
+    // -- Leaf Nitrogen Content (Area Basis) -- //
+    //! target leaf nitrogen content per unit area (g N/m²)
+    float target_leaf_N_area = 1.5f;
+    //! minimum viable leaf nitrogen content per unit area (g N/m²)
+    float minimum_leaf_N_area = 0.5f;
 
     // -- Allocation Parameters -- //
     //! fraction of nitrogen uptake allocated to roots
     float root_allocation_fraction = 0.15f;
 
     // -- Rate Limiting Parameters -- //
-    //! maximum rate at which leaves can accumulate nitrogen (g N/day)
-    float max_N_accumulation_rate = 0.005f;
+    //! maximum rate at which leaves can accumulate nitrogen per unit area (g N/m²/day)
+    float max_N_accumulation_rate = 0.1f;
 
     // -- Remobilization Parameters -- //
     //! fraction of leaf nitrogen that can be remobilized from old leaves (0.0-1.0)
@@ -359,12 +359,8 @@ struct NitrogenParameters {
     float remobilization_age_threshold = 0.70f;
 
     // -- Fruit Nitrogen Parameters -- //
-    //! nitrogen concentration in fruit tissue (g N/g DW)
-    float fruit_N_concentration = 0.020f;
-
-    // -- Leaf Area Parameters -- //
-    //! specific leaf area - ratio of leaf area to leaf dry mass (m^2 / g DW)
-    float SLA = 0.025f;
+    //! nitrogen content per unit fruit area (g N/m²)
+    float fruit_N_area = 1.0f;
 
 };
 
@@ -1630,8 +1626,8 @@ struct Shoot {
 
     float carbohydrate_pool_molC = 0; // mol C
 
-    //! Per-leaf nitrogen tracking - maps leaf objID to nitrogen content (g N)
-    std::map<uint, float> leaf_nitrogen_gN;
+    //! Per-leaf nitrogen tracking - maps leaf objID to nitrogen content per unit area (g N/m²)
+    std::map<uint, float> leaf_nitrogen_gN_m2;
 
     float old_shoot_volume = 0;
 
