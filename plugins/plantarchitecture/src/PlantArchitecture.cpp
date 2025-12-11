@@ -5048,6 +5048,8 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                         for (auto &fbud: petiole) {
                             // If the floral bud it in a 'fruiting' state, the fruit grows with time
                             if (fbud.state == BUD_FRUITING && fbud.time_counter > 0) {
+                                // Save current scale for nitrogen model growth tracking
+                                fbud.previous_fruit_scale_factor = fbud.current_fruit_scale_factor;
                                 float scale = fmin(1, 0.25f + 0.75f * fbud.time_counter / plant_instance.dd_to_fruit_maturity);
                                 phytomer->setInflorescenceScaleFraction(fbud, scale);
                             }

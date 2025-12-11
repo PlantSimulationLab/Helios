@@ -54,6 +54,8 @@
     <tr><td>age</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Age of the organ that the object belongs to (e.g., a leaf).</td></tr>
     <tr><td>carbohydrate_concentration</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Concentration of carbohydrates in the shoot (mol C/m³). Value is constant along the shoot, and zero for non-internode organs.</td></tr>
     <tr><td>leaf_area</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Total leaf area associated with the shoot (m²).</td></tr>
+    <tr><td>nitrogen_stress_factor</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Nitrogen stress factor (0-1) calculated by the nitrogen model. Written to plant objects. 1.0 = no stress, 0.0 = severe stress. Only present when nitrogen model is enabled.</td></tr>
+    <tr><td>leaf_nitrogen_gN_m2</td><td>\htmlonly<span style="font-family: Courier, monospace; color: green;">float</span>\endhtmlonly</td><td>Leaf nitrogen content per unit area (g N/m²). Written to leaf objects. Only present when nitrogen model is enabled.</td></tr>
 </table>
 
 To enable optional output object data, use:

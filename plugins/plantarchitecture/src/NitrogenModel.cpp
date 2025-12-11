@@ -155,6 +155,9 @@ void PlantArchitecture::accumulateLeafNitrogen(float dt) {
 
                         // Get current leaf area
                         float leaf_area = context_ptr->getObjectArea(leaf_objID);
+                        if (leaf_area <= 0) {
+                            continue;  // Skip leaves with no area (prevents division by zero)
+                        }
 
                         // Get current leaf N content per area (g N/m²)
                         float current_N_area = 0;
@@ -319,6 +322,9 @@ void PlantArchitecture::remobilizeNitrogen(float dt) {
 
                 // Convert to per-area and update
                 float source_leaf_area = context_ptr->getObjectArea(source_objID);
+                if (source_leaf_area <= 0) {
+                    continue;  // Skip leaves with no area (prevents division by zero)
+                }
                 float N_removed_area = N_removed_total / source_leaf_area;  // g N/m²
                 plant.shoot_tree.at(shoot_idx)->leaf_nitrogen_gN_m2[source_objID] -= N_removed_area;
             }
@@ -330,6 +336,9 @@ void PlantArchitecture::remobilizeNitrogen(float dt) {
 
                 // Convert to per-area and update
                 float sink_leaf_area = context_ptr->getObjectArea(sink_objID);
+                if (sink_leaf_area <= 0) {
+                    continue;  // Skip leaves with no area (prevents division by zero)
+                }
                 float N_added_area = N_added_total / sink_leaf_area;  // g N/m²
                 plant.shoot_tree.at(shoot_idx)->leaf_nitrogen_gN_m2[sink_objID] += N_added_area;
             }
@@ -364,6 +373,9 @@ void PlantArchitecture::updateNitrogenStressFactor() {
 
                         float leaf_N_area = shoot->leaf_nitrogen_gN_m2.at(leaf_objID);  // g N/m²
                         float leaf_area = context_ptr->getObjectArea(leaf_objID);       // m²
+
+                        // Write leaf nitrogen per area to object data for visualization
+                        context_ptr->setObjectData(leaf_objID, "leaf_nitrogen_gN_m2", leaf_N_area);
 
                         total_N += leaf_N_area * leaf_area;  // g N
                         total_area += leaf_area;              // m²
