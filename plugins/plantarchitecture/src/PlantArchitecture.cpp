@@ -5189,6 +5189,14 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
             checkCarbonPool_abortOrgans(dt_max_days);
         }
 
+        // **** nitrogen model operations **** //
+        if (nitrogen_model_enabled) {
+            accumulateLeafNitrogen(dt_max_days);    // Available pool → leaf pools (rate-limited)
+            remobilizeNitrogen(dt_max_days);        // Old leaves → young leaves (age-based)
+            removeFruitNitrogen();                  // Deduct N from available pool for fruit growth
+            updateNitrogenStressFactor();           // Calculate and write stress factor to object data
+        }
+
         // Reset geometry counter if updates occurred this timestep
         if (geometry_update_counter >= geometry_update_frequency) {
             geometry_update_counter = 0;
