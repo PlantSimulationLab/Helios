@@ -209,6 +209,17 @@ public:
      */
     virtual void copyScatterToRadiation() = 0;
 
+    /**
+     * @brief Upload radiation_out buffers directly (without launching rays)
+     *
+     * @param[in] radiation_out_top Top-face outgoing radiation [Nprims * Nbands]
+     * @param[in] radiation_out_bottom Bottom-face outgoing radiation [Nprims * Nbands]
+     *
+     * Used to set outgoing radiation for scattering iterations.
+     */
+    virtual void uploadRadiationOut(const std::vector<float>& radiation_out_top,
+                                     const std::vector<float>& radiation_out_bottom) = 0;
+
     // ========== Diagnostics ==========
 
     /**

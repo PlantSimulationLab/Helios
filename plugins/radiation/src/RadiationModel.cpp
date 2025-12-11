@@ -14,6 +14,7 @@
 */
 
 #include "RadiationModel.h"
+#include "BufferIndexing.h"
 #include <cmath>
 #include <ctime>
 #include <fstream>
@@ -1884,6 +1885,7 @@ void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
     // Phase 1: Upload geometry through backend abstraction layer
     // Replaces old direct OptiX buffer population (502 lines removed)
     buildGeometryData();
+    buildUUIDMapping();  // Build UUID↔position mapping for efficient indexing
     backend->updateGeometry(geometry_data);
     backend->buildAccelerationStructure();
 
@@ -3672,24 +3674,46 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
     } // end direct source launch
 
+    // --- Extract scattered energy from direct rays for diffuse/emission and scattering ---//
+    // This needs to happen BEFORE diffuse/emission block so scattered direct energy
+    // is available for both diffuse/emission (via flux_top/flux_bottom) and scattering (via radiation_out)
+    std::vector<float> flux_top, flux_bottom;
+    flux_top.resize(Nbands_launch * Nprimitives, 0);
+    flux_bottom = flux_top;
+
+    if (scatteringenabled && rundirect) {
+        // Get scattered energy from direct rays for primary diffuse/emission
+        helios::RayTracingResults scatter_results;
+        backend->getRadiationResults(scatter_results);
+        flux_top = scatter_results.scatter_buff_top;
+        flux_bottom = scatter_results.scatter_buff_bottom;
+
+        // For one-sided primitives, make scattered energy accessible from both faces
+        // This is necessary because scattering rays can hit from either direction
+        RadiationBufferIndexer rad_indexer(Nprimitives, Nbands_launch);
+
+        for (size_t i = 0; i < Nprimitives; i++) {
+            uint UUID = context_UUIDs.at(i);
+            uint twosided = context->getPrimitiveTwosidedFlag(UUID, 1);
+
+            if (twosided == 0) { // one-sided primitive - combine top+bottom scattered energy
+                for (size_t b = 0; b < Nbands_launch; b++) {
+                    size_t ind = rad_indexer(i, b);
+                    float total = flux_top[ind] + flux_bottom[ind];
+                    flux_top[ind] = total;
+                    flux_bottom[ind] = total;
+                }
+            }
+        }
+
+        // Upload scattered energy to backend's radiation_out buffers for scattering iterations
+        backend->uploadRadiationOut(flux_top, flux_bottom);
+        backend->zeroScatterBuffers();
+    }
+
     // --- Diffuse/Emission launch ---- //
 
     if (emissionenabled || diffuseenabled) {
-
-        std::vector<float> flux_top, flux_bottom;
-        flux_top.resize(Nbands_launch * Nprimitives, 0);
-        flux_bottom = flux_top;
-
-        // If we are doing a diffuse/emission ray trace anyway and we have direct scattered energy, we get a "free" scattering trace here
-        if (scatteringenabled && rundirect) {
-            // Get scattered energy from backend's buffers
-            helios::RayTracingResults scatter_results;
-            backend->getRadiationResults(scatter_results);
-            flux_top = scatter_results.scatter_buff_top;
-            flux_bottom = scatter_results.scatter_buff_bottom;
-            // Zero backend's scatter buffers
-            backend->zeroScatterBuffers();
-        }
 
         // add any emitted energy to the outgoing energy buffer
         if (emissionenabled) {
@@ -3706,12 +3730,16 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 scatter_buff_bottom_cam_data = (float *) ptr;
             }
 
+            // Create indexer for emission flux buffers
+            RadiationBufferIndexer emission_indexer(Nprimitives, Nbands_launch);
+
             for (auto b = 0; b < Nbands_launch; b++) {
                 //\todo For emissivity and twosided_flag, this should be done in updateRadiativeProperties() to avoid having to do it on every runBand() call
                 if (radiation_bands.at(band_labels.at(b)).emissionFlag) {
                     std::string prop = "emissivity_" + band_labels.at(b);
                     for (size_t u = 0; u < Nprimitives; u++) {
-                        size_t ind = u * Nbands_launch + b;
+                        // Use BufferIndexer: [primitive][band]
+                        size_t ind = emission_indexer(u, b);
                         uint p = context_UUIDs.at(u);
                         if (context->doesPrimitiveDataExist(p, prop.c_str())) {
                             context->getPrimitiveData(p, prop.c_str(), eps);
@@ -3868,18 +3896,18 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 }
             }
 
-            //            TBS_top=getOptiXbufferData( scatter_buff_top_RTbuffer );
-            //            TBS_bottom=getOptiXbufferData( scatter_buff_bottom_RTbuffer );
-            //            float TBS_max = 0;
-            //            for( size_t u=0; u<Nprimitives*Nbands; u++ ){
-            //                if( TBS_top.at(u)+TBS_bottom.at(u)>TBS_max ){
-            //                    TBS_max = TBS_top.at(u)+TBS_bottom.at(u);
-            //                }
-            //            }
-
-            // Copy scatter buffers to outgoing radiation and zero scatter buffers
-            backend->copyScatterToRadiation();
+            // For iterations after the first, copy scatter buffers to outgoing radiation
+            // For the first iteration (s=0), radiation_out already contains scattered energy from direct rays
+            if (s > 0) {
+                backend->copyScatterToRadiation();
+            }
             backend->zeroScatterBuffers();
+
+            // Extract radiation_out buffers to use as sources for next scattering iteration
+            helios::RayTracingResults scatter_results;
+            backend->getRadiationResults(scatter_results);
+            std::vector<float> flux_top = scatter_results.radiation_out_top;
+            std::vector<float> flux_bottom = scatter_results.radiation_out_bottom;
 
             for (uint launch = 0; launch < Nlaunches; launch++) {
 
@@ -3914,6 +3942,10 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                     peak_dirs[i] = helios::make_vec3(diffuse_peak_dir[i].x, diffuse_peak_dir[i].y, diffuse_peak_dir[i].z);
                 }
                 params.diffuse_peak_dir = peak_dirs;
+
+                // Pass radiation_out as sources for scattering rays
+                params.radiation_out_top = flux_top;
+                params.radiation_out_bottom = flux_bottom;
 
                 // Top surface launch
                 params.launch_face = 1;
@@ -4312,12 +4344,16 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
     std::vector<uint> UUIDs_context_all = context->getAllUUIDs();
 
+    // Create indexer for result extraction
+    RadiationBufferIndexer result_indexer(Nprimitives, Nbands_launch);
+
     for (auto b = 0; b < Nbands_launch; b++) {
 
         std::string prop = "radiation_flux_" + band_labels.at(b);
         std::vector<float> R(Nprimitives);
         for (size_t u = 0; u < Nprimitives; u++) {
-            size_t ind = u * Nbands_launch + b;
+            // Use BufferIndexer: [primitive][band]
+            size_t ind = result_indexer(u, b);
             R.at(u) = radiation_flux_data.at(ind) + TBS_top.at(ind) + TBS_bottom.at(ind);
             if (radiation_flux_data.at(ind) != radiation_flux_data.at(ind)) {
                 std::cout << "NaN here " << ind << std::endl;
@@ -6651,6 +6687,17 @@ void RadiationModel::buildGeometryData() {
     // For now, set all to -1 (no texture transparency)
     geometry_data.mask_IDs.resize(Nobjects, -1);
     geometry_data.uv_IDs.resize(Nobjects, -1);
+
+    // Build primitive_positions lookup table for GPU UUID→position conversion
+    // Size by max UUID to create sparse lookup table
+    if (!primitive_UUIDs_ordered.empty()) {
+        uint max_UUID = *std::max_element(primitive_UUIDs_ordered.begin(), primitive_UUIDs_ordered.end());
+        geometry_data.primitive_positions.resize(max_UUID + 1, UINT_MAX);  // UINT_MAX = invalid/unused
+        for (size_t i = 0; i < geometry_data.primitive_count; i++) {
+            uint UUID = geometry_data.primitive_UUIDs[i];
+            geometry_data.primitive_positions[UUID] = i;  // Map UUID → array position
+        }
+    }
 }
 
 
@@ -6659,27 +6706,44 @@ size_t RadiationModel::testBuildGeometryData() {
     return geometry_data.primitive_count;
 }
 
+void RadiationModel::buildUUIDMapping() {
+    // Build bidirectional UUID ↔ array position mapping
+    // This enables efficient conversion between UUID values and array indices
+
+    uuid_to_position.clear();
+    position_to_uuid.clear();
+
+    // geometry_data.primitive_UUIDs is already ordered by object
+    // Build mapping from this ordered list
+    for (size_t i = 0; i < geometry_data.primitive_count; i++) {
+        uint UUID = geometry_data.primitive_UUIDs[i];
+        uuid_to_position[UUID] = i;
+        position_to_uuid.push_back(UUID);
+    }
+}
 
 void RadiationModel::buildMaterialData() {
     // Build backend-agnostic material data from Context primitive data
-    // For now, minimal implementation for testing
-    
+
     size_t Nprims = geometry_data.primitive_count;
     size_t Nbands = radiation_bands.size();
     size_t Nsources = radiation_sources.size();
-    
+
     material_data.num_primitives = Nprims;
     material_data.num_bands = Nbands;
     material_data.num_sources = Nsources;
     material_data.num_cameras = cameras.size();
-    
-    // Allocate arrays (indexed as [source * Nbands * Nprims + band * Nprims + prim])
+
+    // Allocate arrays (indexed as [source][primitive][band] using MaterialPropertyIndexer)
     size_t total_size = Nsources * Nbands * Nprims;
     material_data.reflectivity.resize(total_size, 0.0f);
     material_data.transmissivity.resize(total_size, 0.0f);
     material_data.specular_exponent.resize(Nprims, 10.0f);
     material_data.specular_scale.resize(Nprims, 0.0f);
-    
+
+    // Create indexer for material properties: [source][primitive][band]
+    MaterialPropertyIndexer mat_indexer(Nsources, Nprims, Nbands);
+
     // Extract material properties from Context primitives
     size_t b_idx = 0;
     for (const auto& band_pair : radiation_bands) {
@@ -6688,7 +6752,10 @@ void RadiationModel::buildMaterialData() {
         for (size_t s = 0; s < Nsources; s++) {
             for (size_t p = 0; p < Nprims; p++) {
                 uint UUID = geometry_data.primitive_UUIDs[p];
-                size_t idx = s * Nbands * Nprims + b_idx * Nprims + p;
+
+                // Use BufferIndexer for safe, verifiable indexing
+                // Note: p is already the array position, so we use p directly (not UUID)
+                size_t idx = mat_indexer(s, p, b_idx);
 
                 // Get reflectivity
                 float rho = rho_default;

@@ -1,5 +1,6 @@
 #include "CameraCalibration.h"
 #include "RadiationModel.h"
+#include "BufferIndexing.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
@@ -9,6 +10,122 @@ using namespace helios;
 
 int RadiationModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
+}
+
+DOCTEST_TEST_CASE("BufferIndexing Correctness") {
+    // Test 2D indexer
+    {
+        BufferIndexer2D indexer(10, 5);  // 10x5 array
+
+        DOCTEST_CHECK(indexer(0, 0) == 0);
+        DOCTEST_CHECK(indexer(0, 1) == 1);
+        DOCTEST_CHECK(indexer(0, 4) == 4);
+        DOCTEST_CHECK(indexer(1, 0) == 5);
+        DOCTEST_CHECK(indexer(1, 1) == 6);
+        DOCTEST_CHECK(indexer(9, 4) == 49);  // Last element
+
+        // Verify against manual calculation
+        for (size_t i = 0; i < 10; i++) {
+            for (size_t j = 0; j < 5; j++) {
+                size_t manual = i * 5 + j;
+                size_t indexed = indexer(i, j);
+                DOCTEST_CHECK(manual == indexed);
+            }
+        }
+    }
+
+    // Test 3D indexer
+    {
+        BufferIndexer3D indexer(2, 3, 4);  // 2x3x4 array
+
+        DOCTEST_CHECK(indexer(0, 0, 0) == 0);
+        DOCTEST_CHECK(indexer(0, 0, 1) == 1);
+        DOCTEST_CHECK(indexer(0, 0, 3) == 3);
+        DOCTEST_CHECK(indexer(0, 1, 0) == 4);
+        DOCTEST_CHECK(indexer(0, 2, 0) == 8);
+        DOCTEST_CHECK(indexer(1, 0, 0) == 12);
+        DOCTEST_CHECK(indexer(1, 2, 3) == 23);  // Last element
+
+        // Verify against manual calculation
+        for (size_t i = 0; i < 2; i++) {
+            for (size_t j = 0; j < 3; j++) {
+                for (size_t k = 0; k < 4; k++) {
+                    size_t manual = i * 3 * 4 + j * 4 + k;
+                    size_t indexed = indexer(i, j, k);
+                    DOCTEST_CHECK(manual == indexed);
+                }
+            }
+        }
+    }
+
+    // Test 4D indexer
+    {
+        BufferIndexer4D indexer(2, 2, 2, 2);  // 2x2x2x2 array
+
+        DOCTEST_CHECK(indexer(0, 0, 0, 0) == 0);
+        DOCTEST_CHECK(indexer(0, 0, 0, 1) == 1);
+        DOCTEST_CHECK(indexer(0, 0, 1, 0) == 2);
+        DOCTEST_CHECK(indexer(0, 1, 0, 0) == 4);
+        DOCTEST_CHECK(indexer(1, 0, 0, 0) == 8);
+        DOCTEST_CHECK(indexer(1, 1, 1, 1) == 15);  // Last element
+
+        // Verify against manual calculation
+        for (size_t i = 0; i < 2; i++) {
+            for (size_t j = 0; j < 2; j++) {
+                for (size_t k = 0; k < 2; k++) {
+                    for (size_t l = 0; l < 2; l++) {
+                        size_t manual = i * 2 * 2 * 2 + j * 2 * 2 + k * 2 + l;
+                        size_t indexed = indexer(i, j, k, l);
+                        DOCTEST_CHECK(manual == indexed);
+                    }
+                }
+            }
+        }
+    }
+
+    // Test realistic dimensions matching radiation plugin usage
+    {
+        const size_t Nsources = 5;
+        const size_t Nprimitives = 100;
+        const size_t Nbands = 20;
+        const size_t Ncameras = 3;
+
+        MaterialPropertyIndexer mat_indexer(Nsources, Nprimitives, Nbands);
+
+        // Verify a few random indices
+        DOCTEST_CHECK(mat_indexer(0, 0, 0) == 0);
+        DOCTEST_CHECK(mat_indexer(0, 0, 1) == 1);
+        DOCTEST_CHECK(mat_indexer(0, 1, 0) == 20);
+        DOCTEST_CHECK(mat_indexer(1, 0, 0) == 2000);
+
+        // Verify against manual calculation for all combinations
+        for (size_t s = 0; s < Nsources; s++) {
+            for (size_t p = 0; p < Nprimitives; p++) {
+                for (size_t b = 0; b < Nbands; b++) {
+                    size_t manual = s * Nprimitives * Nbands + p * Nbands + b;
+                    size_t indexed = mat_indexer(s, p, b);
+                    DOCTEST_CHECK(manual == indexed);
+                }
+            }
+        }
+
+        // Test 4D camera material indexer
+        CameraMaterialIndexer cam_mat_indexer(Nsources, Nprimitives, Nbands, Ncameras);
+
+        for (size_t s = 0; s < 2; s++) {  // Test subset
+            for (size_t p = 0; p < 10; p++) {
+                for (size_t b = 0; b < Nbands; b++) {
+                    for (size_t c = 0; c < Ncameras; c++) {
+                        size_t manual = s * Nprimitives * Nbands * Ncameras +
+                                        p * Nbands * Ncameras +
+                                        b * Ncameras + c;
+                        size_t indexed = cam_mat_indexer(s, p, b, c);
+                        DOCTEST_CHECK(manual == indexed);
+                    }
+                }
+            }
+        }
+    }
 }
 
 DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Squares") {

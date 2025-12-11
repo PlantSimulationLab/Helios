@@ -48,6 +48,12 @@ struct RayTracingGeometry {
     std::vector<char> twosided_flags;           //!< Two-sided flag (1=two-sided, 0=one-sided)
     std::vector<float> solid_fractions;         //!< Solid fraction (0-1, for porous surfaces)
 
+    // UUID-to-position lookup table (indexed by UUID value)
+    //!< Maps UUID to array position: primitive_positions[UUID] = array_index
+    //!< Size: max_UUID + 1 (sparse array, entries for non-existent UUIDs = UINT_MAX)
+    //!< Enables CUDA to convert UUID to array position for buffer indexing
+    std::vector<uint> primitive_positions;
+
     // Per-type geometry data
     PrimitiveTypeGeometry patches;      //!< Patch data (4 vertices per patch)
     PrimitiveTypeGeometry triangles;    //!< Triangle data (3 vertices per triangle)

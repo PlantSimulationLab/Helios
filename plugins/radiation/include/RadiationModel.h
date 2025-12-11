@@ -1851,6 +1851,14 @@ protected:
     //! UUIDs currently added from the Context
     std::vector<uint> context_UUIDs;
 
+    //! UUID-to-array-position mapping (UUID → array index)
+    //! Enables O(1) lookup of array position from UUID value
+    std::unordered_map<uint, size_t> uuid_to_position;
+
+    //! Array-position-to-UUID mapping (array index → UUID)
+    //! For reverse lookups: position_to_uuid[array_position] = UUID
+    std::vector<uint> position_to_uuid;
+
     // --- Radiation Band Variables --- //
 
     std::map<std::string, RadiationBand> radiation_bands;
@@ -2230,6 +2238,10 @@ protected:
      * This data can then be uploaded to the backend via backend->updateGeometry().
      */
     void buildGeometryData();
+
+    //! Build UUID-to-array-position mapping from geometry_data
+    //! Must be called after buildGeometryData() and before buildMaterialData()
+    void buildUUIDMapping();
 
     //! Phase 1: Build backend-agnostic material data from Context primitive data
     void buildMaterialData();

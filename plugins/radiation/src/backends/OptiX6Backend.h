@@ -107,6 +107,8 @@ public:
     void zeroRadiationBuffers() override;
     void zeroScatterBuffers() override;
     void copyScatterToRadiation() override;
+    void uploadRadiationOut(const std::vector<float>& radiation_out_top,
+                            const std::vector<float>& radiation_out_bottom) override;
 
     // Diagnostics
     void queryGPUMemory() const override;
@@ -215,6 +217,8 @@ private:
     RTvariable objectID_RTvariable;
     RTbuffer primitiveID_RTbuffer;
     RTvariable primitiveID_RTvariable;
+    RTbuffer primitive_positions_RTbuffer;
+    RTvariable primitive_positions_RTvariable;
     RTbuffer twosided_flag_RTbuffer;
     RTvariable twosided_flag_RTvariable;
 

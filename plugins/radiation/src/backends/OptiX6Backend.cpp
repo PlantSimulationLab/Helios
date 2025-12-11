@@ -287,6 +287,7 @@ void OptiX6Backend::initialize() {
     // Mapping buffers
     addBuffer("objectID", objectID_RTbuffer, objectID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
     addBuffer("primitiveID", primitiveID_RTbuffer, primitiveID_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
+    addBuffer("primitive_positions", primitive_positions_RTbuffer, primitive_positions_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_UNSIGNED_INT, 1);
     addBuffer("object_subdivisions", object_subdivisions_RTbuffer, object_subdivisions_RTvariable, RT_BUFFER_INPUT, RT_FORMAT_INT2, 1);
 
     // Material property buffers
@@ -737,6 +738,20 @@ void OptiX6Backend::copyScatterToRadiation() {
     // Copy scatter buffer contents to radiation_out buffers
     copyBuffer1D(scatter_buff_top_RTbuffer, radiation_out_top_RTbuffer);
     copyBuffer1D(scatter_buff_bottom_RTbuffer, radiation_out_bottom_RTbuffer);
+}
+
+void OptiX6Backend::uploadRadiationOut(const std::vector<float>& radiation_out_top,
+                                        const std::vector<float>& radiation_out_bottom) {
+    if (!is_initialized) {
+        helios_runtime_error("ERROR (OptiX6Backend::uploadRadiationOut): Backend not initialized.");
+    }
+
+    if (!radiation_out_top.empty()) {
+        initializeBuffer1Df(radiation_out_top_RTbuffer, radiation_out_top);
+    }
+    if (!radiation_out_bottom.empty()) {
+        initializeBuffer1Df(radiation_out_bottom_RTbuffer, radiation_out_bottom);
+    }
 }
 
 void OptiX6Backend::queryGPUMemory() const {
@@ -1247,6 +1262,11 @@ void OptiX6Backend::geometryToBuffers(const RayTracingGeometry& geometry) {
         initializeBuffer1Dui(primitiveID_RTbuffer, geometry.primitive_IDs);
     }
 
+    // Primitive positions (UUID → array position lookup)
+    if (!geometry.primitive_positions.empty()) {
+        initializeBuffer1Dui(primitive_positions_RTbuffer, geometry.primitive_positions);
+    }
+
     // Primitive UUIDs and object IDs
     if (!geometry.object_IDs.empty()) {
         initializeBuffer1Dui(objectID_RTbuffer, geometry.object_IDs);
@@ -1402,7 +1422,8 @@ void OptiX6Backend::geometryToBuffers(const RayTracingGeometry& geometry) {
 
 void OptiX6Backend::materialsToBuffers(const RayTracingMaterial& materials) {
     // Upload material properties to OptiX buffers
-    // Indexing: [source * Nbands * Nprims + band * Nprims + prim]
+    // Indexing: [source * Nbands * Nprims + prim * Nbands + band]
+    // This matches CUDA formula: Nprimitives * Nbands_global * source_ID + Nbands_global * origin_UUID + b_global
 
     if (!materials.reflectivity.empty()) {
         initializeBuffer1Df(rho_RTbuffer, materials.reflectivity);

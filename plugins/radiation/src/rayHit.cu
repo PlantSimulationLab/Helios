@@ -19,6 +19,7 @@
 #include <optixu/optixu_matrix_namespace.h>
 
 #include "RayTracing.cuh"
+#include "BufferIndexing.h"
 
 using namespace optix;
 
@@ -61,9 +62,17 @@ RT_PROGRAM void closest_hit_direct() {
 
 RT_PROGRAM void closest_hit_diffuse() {
 
+    // Convert UUIDs to array positions for buffer indexing
     uint origin_UUID = prd.origin_UUID;
+    uint origin_position = primitive_positions[origin_UUID];
+    uint hit_position = primitive_positions[UUID];
 
     uint objID = objectID[UUID];
+
+    // Create indexers for buffer access
+    RadiationBufferIndexer rad_indexer(Nprimitives, Nbands_launch);
+    MaterialPropertyIndexer mat_indexer(Nsources, Nprimitives, Nbands_global);
+    CameraMaterialIndexer cam_mat_indexer(Nsources, Nprimitives, Nbands_global, Ncameras);
 
     if ((periodic_flag.x == 1 || periodic_flag.y == 1) && primitive_type[objID] == 5) { // periodic boundary condition
 
@@ -144,8 +153,9 @@ RT_PROGRAM void closest_hit_diffuse() {
             }
             b++;
 
-            size_t ind_origin = Nbands_launch * origin_UUID + b;
-            size_t ind_hit = Nbands_launch * UUID + b;
+            // Use BufferIndexer for radiation buffers: [primitive][band]
+            size_t ind_origin = rad_indexer(origin_position, b);
+            size_t ind_hit = rad_indexer(hit_position, b);
 
             double strength;
             if (face || primitive_type[objID] == 4) {
@@ -158,7 +168,8 @@ RT_PROGRAM void closest_hit_diffuse() {
                 continue;
             }
 
-            size_t radprop_ind_global = Nprimitives * Nbands_global * prd.source_ID + Nbands_global * origin_UUID + b_global;
+            // Use BufferIndexer for material properties: [source][primitive][band]
+            size_t radprop_ind_global = mat_indexer(prd.source_ID, origin_position, b_global);
             float t_rho = rho[radprop_ind_global];
             float t_tau = tau[radprop_ind_global];
 
@@ -189,7 +200,8 @@ RT_PROGRAM void closest_hit_diffuse() {
                     }
                 }
                 if (Ncameras > 0) {
-                    size_t indc = prd.source_ID * Nprimitives * Nbands_global * Ncameras + origin_UUID * Nbands_global * Ncameras + b_global * Ncameras + camera_ID;
+                    // Use BufferIndexer for camera material: [source][primitive][band][camera]
+                    size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, camera_ID);
                     float t_rho_cam = rho_cam[indc];
                     float t_tau_cam = tau_cam[indc];
                     if ((t_rho_cam > 0 || t_tau_cam > 0) && strength > 0) {
@@ -219,7 +231,15 @@ RT_PROGRAM void closest_hit_diffuse() {
 
 RT_PROGRAM void closest_hit_camera() {
 
+    // Convert UUID to array position
+    uint hit_position = primitive_positions[UUID];
+
     uint objID = objectID[UUID];
+
+    // Create indexers
+    RadiationBufferIndexer rad_indexer(Nprimitives, Nbands_launch);
+    SourceFluxIndexer source_flux_indexer(Nsources, Nbands_launch);
+    SpecularRadiationIndexer spec_indexer(Nsources, Ncameras, Nprimitives, Nbands_launch);
 
     if ((periodic_flag.x == 1 || periodic_flag.y == 1) && primitive_type[objID] == 5) { // periodic boundary condition
 
@@ -374,10 +394,13 @@ RT_PROGRAM void closest_hit_camera() {
                 }
             }
 
+            // Use BufferIndexer: [primitive][band]
+            size_t ind_hit = rad_indexer(hit_position, b);
+
             if (face || primitive_type[objID] == 4) {
-                strength = radiation_out_top[Nbands_launch * UUID + b] * prd.strength;
+                strength = radiation_out_top[ind_hit] * prd.strength;
             } else {
-                strength = radiation_out_bottom[Nbands_launch * UUID + b] * prd.strength;
+                strength = radiation_out_bottom[ind_hit] * prd.strength;
             }
 
             if (source_radiance > 0.0f) {
@@ -396,7 +419,8 @@ RT_PROGRAM void closest_hit_camera() {
 
                     // Get camera-weighted incident radiation from this source
                     // Already has source color and camera response weighting applied
-                    size_t ind_specular = rr * Ncameras * Nprimitives * Nbands_launch + camera_ID * Nprimitives * Nbands_launch + UUID * Nbands_launch + b;
+                    // Use BufferIndexer: [source][camera][primitive][band]
+                    size_t ind_specular = spec_indexer(rr, camera_ID, hit_position, b);
                     float spec = radiation_specular[ind_specular];
 
                     // Apply default 0.25 scaling factor (typical Fresnel reflectance for dielectrics is ~4%,
@@ -431,8 +455,12 @@ RT_PROGRAM void closest_hit_camera() {
             }
 
             // absorption
+            // Convert origin UUID to position
+            uint origin_position = primitive_positions[prd.origin_UUID];
+            // Use BufferIndexer: [primitive][band]
+            size_t ind_camera = rad_indexer(origin_position, b);
 
-            atomicAdd(&radiation_in_camera[Nbands_launch * prd.origin_UUID + b],
+            atomicAdd(&radiation_in_camera[ind_camera],
                       (strength + strength_spec) / M_PI); // note: pi factor is to convert from flux to intensity assuming surface is Lambertian. We don't multiply by the solid angle by convention to avoid very small numbers.
         }
     }
@@ -483,7 +511,17 @@ RT_PROGRAM void closest_hit_pixel_label() {
 
 RT_PROGRAM void miss_direct() {
 
+    // Convert UUID to array position
+    uint origin_position = primitive_positions[prd.origin_UUID];
     uint objID = objectID[prd.origin_UUID];
+
+    // Create indexers
+    RadiationBufferIndexer rad_indexer(Nprimitives, Nbands_launch);
+    MaterialPropertyIndexer mat_indexer(Nsources, Nprimitives, Nbands_global);
+    SourceFluxIndexer source_flux_indexer(Nsources, Nbands_launch);
+    CameraMaterialIndexer cam_mat_indexer(Nsources, Nprimitives, Nbands_global, Ncameras);
+    SourceCameraFluxIndexer source_cam_flux_indexer(Nsources, Nbands_launch, Ncameras);
+    SpecularRadiationIndexer spec_indexer(Nsources, Ncameras, Nprimitives, Nbands_launch);
 
     int b = -1;
     for (int b_global = 0; b_global < Nbands_global; b_global++) {
@@ -493,13 +531,16 @@ RT_PROGRAM void miss_direct() {
         }
         b++;
 
-        size_t ind_origin = Nbands_launch * prd.origin_UUID + b;
+        // Use BufferIndexer: [primitive][band]
+        size_t ind_origin = rad_indexer(origin_position, b);
 
-        size_t radprop_ind_global = Nprimitives * Nbands_global * prd.source_ID + Nbands_global * prd.origin_UUID + b_global;
+        // Use BufferIndexer: [source][primitive][band]
+        size_t radprop_ind_global = mat_indexer(prd.source_ID, origin_position, b_global);
         float t_rho = rho[radprop_ind_global];
         float t_tau = tau[radprop_ind_global];
 
-        double strength = prd.strength * source_fluxes[prd.source_ID * Nbands_launch + b];
+        // Use BufferIndexer: [source][band]
+        double strength = prd.strength * source_fluxes[source_flux_indexer(prd.source_ID, b)];
 
         // absorption
         atomicAdd(&radiation_in[ind_origin], strength * (1.f - t_rho - t_tau));
@@ -514,7 +555,8 @@ RT_PROGRAM void miss_direct() {
             }
         }
         if (Ncameras > 0) {
-            size_t indc = prd.source_ID * Nprimitives * Nbands_global * Ncameras + prd.origin_UUID * Nbands_global * Ncameras + b_global * Ncameras + camera_ID;
+            // Use BufferIndexer: [source][primitive][band][camera]
+            size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, camera_ID);
             float t_rho_cam = rho_cam[indc];
             float t_tau_cam = tau_cam[indc];
             if ((t_rho_cam > 0 || t_tau_cam > 0) && strength > 0) {
@@ -529,9 +571,11 @@ RT_PROGRAM void miss_direct() {
             // Accumulate incident radiation for specular (per source, camera-weighted)
             // Apply camera spectral response weighting: ∫(source × camera) / ∫(source)
             if (strength > 0) {
-                size_t weight_ind = prd.source_ID * Nbands_launch * Ncameras + b * Ncameras + camera_ID;
+                // Use BufferIndexer: [source][band][camera]
+                size_t weight_ind = source_cam_flux_indexer(prd.source_ID, b, camera_ID);
                 float camera_weight = source_fluxes_cam[weight_ind];
-                size_t ind_specular = prd.source_ID * Ncameras * Nprimitives * Nbands_launch + camera_ID * Nprimitives * Nbands_launch + prd.origin_UUID * Nbands_launch + b;
+                // Use BufferIndexer: [source][camera][primitive][band] (note different order!)
+                size_t ind_specular = spec_indexer(prd.source_ID, camera_ID, origin_position, b);
                 atomicFloatAdd(&radiation_specular[ind_specular], strength * camera_weight);
             }
         }
@@ -577,14 +621,13 @@ __device__ float evaluateDiffuseAngularDistribution(const float3 &ray_dir, const
 
 RT_PROGRAM void miss_diffuse() {
 
-    //    double strength;
-    //    if (prd.face || primitive_type[objectID[prd.origin_UUID]] == 3) {
-    //        strength = radiation_out_top[prd.origin_UUID] * prd.strength * prd.area;
-    //    } else {
-    //        strength = radiation_out_bottom[prd.origin_UUID] * prd.strength * prd.area;
-    //    }
-    //
-    //    atomicFloatAdd(&Rsky[prd.origin_UUID], strength);
+    // Convert UUID to array position
+    uint origin_position = primitive_positions[prd.origin_UUID];
+
+    // Create indexers
+    RadiationBufferIndexer rad_indexer(Nprimitives, Nbands_launch);
+    MaterialPropertyIndexer mat_indexer(Nsources, Nprimitives, Nbands_global);
+    CameraMaterialIndexer cam_mat_indexer(Nsources, Nprimitives, Nbands_global, Ncameras);
 
     int b = -1;
     for (size_t b_global = 0; b_global < Nbands_global; b_global++) {
@@ -596,9 +639,11 @@ RT_PROGRAM void miss_diffuse() {
 
         if (diffuse_flux[b] > 0.f) {
 
-            size_t ind_origin = Nbands_launch * prd.origin_UUID + b;
+            // Use BufferIndexer: [primitive][band]
+            size_t ind_origin = rad_indexer(origin_position, b);
 
-            size_t radprop_ind_global = Nprimitives * Nbands_global * prd.source_ID + Nbands_global * prd.origin_UUID + b_global;
+            // Use BufferIndexer: [source][primitive][band]
+            size_t radprop_ind_global = mat_indexer(prd.source_ID, origin_position, b_global);
             float t_rho = rho[radprop_ind_global];
             float t_tau = tau[radprop_ind_global];
 
@@ -634,7 +679,8 @@ RT_PROGRAM void miss_diffuse() {
                     }
                 }
                 if (Ncameras > 0) {
-                    size_t indc = prd.source_ID * Nprimitives * Nbands_global * Ncameras + prd.origin_UUID * Nbands_global * Ncameras + b_global * Ncameras + camera_ID;
+                    // Use BufferIndexer: [source][primitive][band][camera]
+                    size_t indc = cam_mat_indexer(prd.source_ID, origin_position, b_global, camera_ID);
                     float t_rho_cam = rho_cam[indc];
                     float t_tau_cam = tau_cam[indc];
                     if ((t_rho_cam > 0 || t_tau_cam > 0) && prd.strength > 0) {
@@ -655,6 +701,12 @@ RT_PROGRAM void miss_diffuse() {
 }
 
 RT_PROGRAM void miss_camera() {
+
+    // Convert UUID to array position
+    uint origin_position = primitive_positions[prd.origin_UUID];
+
+    // Create indexer
+    RadiationBufferIndexer rad_indexer(Nprimitives, Nbands_launch);
 
     for (size_t b = 0; b < Nbands_launch; b++) {
 
@@ -716,7 +768,9 @@ RT_PROGRAM void miss_camera() {
             // Accumulate radiance directly (same as surface hits accumulate radiation_out)
             // Units: W/m²/sr
             // Monte Carlo averaging: prd.strength = 1/N_rays
-            atomicAdd(&radiation_in_camera[Nbands_launch * prd.origin_UUID + b], radiance * prd.strength);
+            // Use BufferIndexer: [primitive][band]
+            size_t ind_camera = rad_indexer(origin_position, b);
+            atomicAdd(&radiation_in_camera[ind_camera], radiance * prd.strength);
         }
     }
 }
