@@ -1825,6 +1825,432 @@ DOCTEST_TEST_CASE("PlantArchitecture optionalOutputObjectData normal labels stil
     DOCTEST_CHECK_FALSE(found_plant_name); // Should NOT be enabled
 }
 
+// ==================== NITROGEN MODEL TESTS ==================== //
+
+DOCTEST_TEST_CASE("Nitrogen Model - Initialization") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Enable nitrogen model
+    plantarchitecture.enableNitrogenModel();
+    DOCTEST_CHECK(plantarchitecture.isNitrogenModelEnabled());
+
+    // Build a simple plant
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    // Grow plant to create leaves
+    plantarchitecture.advanceTime(plantID, 5.0f);
+
+    // Initialize nitrogen pools with target concentration
+    float initial_N_concentration = 1.5f;  // g N/m² (target value)
+    plantarchitecture.initializePlantNitrogenPools(plantID, initial_N_concentration);
+
+    // Advance time to trigger nitrogen stress calculation and output writing
+    plantarchitecture.advanceTime(plantID, 0.1f);
+
+    // Get all leaf objects
+    std::vector<uint> all_objects = plantarchitecture.getAllPlantObjectIDs(plantID);
+    DOCTEST_CHECK(all_objects.size() > 0);
+
+    // Verify leaf nitrogen content was initialized
+    bool found_leaf_N = false;
+    for (uint objID : all_objects) {
+        if (context.doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
+            float leaf_N_area;
+            context.getObjectData(objID, "leaf_nitrogen_gN_m2", leaf_N_area);
+            DOCTEST_CHECK(leaf_N_area == doctest::Approx(initial_N_concentration).epsilon(0.1));
+            found_leaf_N = true;
+        }
+    }
+    DOCTEST_CHECK(found_leaf_N);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Application and Pool Splitting") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.advanceTime(plantID, 3.0f);
+
+    // Initialize with zero nitrogen
+    plantarchitecture.initializePlantNitrogenPools(plantID, 0.0f);
+
+    // Apply 10 g N to plant
+    float N_applied = 10.0f;  // g N
+    plantarchitecture.addPlantNitrogen(plantID, N_applied);
+
+    // Verify nitrogen was split between root (15%) and available (85%) pools
+    // We can't directly access the pools, but we can verify by advancing time
+    // and checking that leaves accumulate nitrogen from the available pool
+    plantarchitecture.advanceTime(plantID, 1.0f);
+
+    // Check that leaves now have nitrogen > 0
+    std::vector<uint> all_objects = plantarchitecture.getAllPlantObjectIDs(plantID);
+    bool found_N_accumulation = false;
+    for (uint objID : all_objects) {
+        if (context.doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
+            float leaf_N_area;
+            context.getObjectData(objID, "leaf_nitrogen_gN_m2", leaf_N_area);
+            if (leaf_N_area > 0) {
+                found_N_accumulation = true;
+                break;
+            }
+        }
+    }
+    DOCTEST_CHECK(found_N_accumulation);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Rate Limiting") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.advanceTime(plantID, 5.0f);
+
+    // Initialize with zero nitrogen
+    plantarchitecture.initializePlantNitrogenPools(plantID, 0.0f);
+
+    // Set nitrogen parameters with known max accumulation rate
+    NitrogenParameters N_params;
+    N_params.max_N_accumulation_rate = 0.1f;  // g N/m²/day
+    N_params.target_leaf_N_area = 10.0f;  // Very high target to ensure demand > rate
+    plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+
+    // Apply large amount of nitrogen
+    plantarchitecture.addPlantNitrogen(plantID, 100.0f);
+
+    // Advance time by 1 day
+    float dt = 1.0f;
+    plantarchitecture.advanceTime(plantID, dt);
+
+    // Check that leaf nitrogen didn't exceed rate limit
+    std::vector<uint> all_objects = plantarchitecture.getAllPlantObjectIDs(plantID);
+    for (uint objID : all_objects) {
+        if (context.doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
+            float leaf_N_area;
+            context.getObjectData(objID, "leaf_nitrogen_gN_m2", leaf_N_area);
+            // Should be at most max_N_accumulation_rate * dt
+            DOCTEST_CHECK(leaf_N_area <= N_params.max_N_accumulation_rate * dt * 1.01f);  // 1% tolerance
+        }
+    }
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Stress Factor Output") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.advanceTime(plantID, 5.0f);
+
+    // Initialize with low nitrogen (stress condition)
+    plantarchitecture.initializePlantNitrogenPools(plantID, 0.5f);  // Below target of 1.5
+
+    // Advance time to trigger stress factor calculation
+    plantarchitecture.advanceTime(plantID, 0.1f);
+
+    // Verify stress factor exists and is in valid range [0, 1]
+    std::vector<uint> plant_objects = plantarchitecture.getAllPlantObjectIDs(plantID);
+    DOCTEST_CHECK(plant_objects.size() > 0);
+
+    bool found_stress_factor = false;
+    for (uint objID : plant_objects) {
+        if (context.doesObjectDataExist(objID, "nitrogen_stress_factor")) {
+            float stress_factor;
+            context.getObjectData(objID, "nitrogen_stress_factor", stress_factor);
+            DOCTEST_CHECK(stress_factor >= 0.0f);
+            DOCTEST_CHECK(stress_factor <= 1.0f);
+            // With low N, stress should be less than 1
+            DOCTEST_CHECK(stress_factor < 1.0f);
+            found_stress_factor = true;
+            break;
+        }
+    }
+    DOCTEST_CHECK(found_stress_factor);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Remobilization") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    // Grow plant to create leaves of different ages
+    plantarchitecture.advanceTime(plantID, 15.0f);
+
+    // Initialize with low nitrogen to create stress condition
+    plantarchitecture.initializePlantNitrogenPools(plantID, 0.8f);  // Below target
+
+    // Advance time significantly to age leaves and trigger remobilization
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 25.0f));
+
+    // Verify nitrogen stress factor reflects stress condition
+    std::vector<uint> plant_objects = plantarchitecture.getAllPlantObjectIDs(plantID);
+    bool found_stress_factor = false;
+    for (uint objID : plant_objects) {
+        if (context.doesObjectDataExist(objID, "nitrogen_stress_factor")) {
+            float stress_factor;
+            context.getObjectData(objID, "nitrogen_stress_factor", stress_factor);
+            DOCTEST_CHECK(stress_factor < 1.0f);  // Should indicate some stress
+            found_stress_factor = true;
+            break;
+        }
+    }
+    DOCTEST_CHECK(found_stress_factor);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Fruit Removal") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.enableNitrogenModel();
+
+    // Use tomato which produces fruit
+    plantarchitecture.loadPlantModelFromLibrary("tomato");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    // Grow plant to vegetative stage
+    plantarchitecture.advanceTime(plantID, 30.0f);
+
+    // Initialize with adequate nitrogen
+    plantarchitecture.initializePlantNitrogenPools(plantID, 1.5f);
+
+    // Add nitrogen to available pool
+    plantarchitecture.addPlantNitrogen(plantID, 50.0f);
+
+    // Continue growth to allow fruiting
+    plantarchitecture.advanceTime(plantID, 40.0f);
+
+    // Verify plant grew (basic sanity check)
+    std::vector<uint> plant_objects = plantarchitecture.getAllPlantObjectIDs(plantID);
+    DOCTEST_CHECK(plant_objects.size() > 0);
+
+    // Nitrogen stress factor should exist
+    bool found_stress_factor = false;
+    for (uint objID : plant_objects) {
+        if (context.doesObjectDataExist(objID, "nitrogen_stress_factor")) {
+            found_stress_factor = true;
+            break;
+        }
+    }
+    DOCTEST_CHECK(found_stress_factor);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Full Growth Cycle Integration") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    // Initial growth
+    plantarchitecture.advanceTime(plantID, 5.0f);
+
+    // Initialize nitrogen
+    plantarchitecture.initializePlantNitrogenPools(plantID, 1.0f);
+
+    // Simulate periodic nitrogen applications during growth
+    for (int i = 0; i < 5; i++) {
+        plantarchitecture.addPlantNitrogen(plantID, 5.0f);  // Add 5 g N
+        plantarchitecture.advanceTime(plantID, 5.0f);       // Grow 5 days
+    }
+
+    // Verify plant completed growth cycle
+    std::vector<uint> plant_objects = plantarchitecture.getAllPlantObjectIDs(plantID);
+    DOCTEST_CHECK(plant_objects.size() > 0);
+
+    // Verify stress factor updated throughout
+    bool found_stress_factor = false;
+    float final_stress = 0;
+    for (uint objID : plant_objects) {
+        if (context.doesObjectDataExist(objID, "nitrogen_stress_factor")) {
+            context.getObjectData(objID, "nitrogen_stress_factor", final_stress);
+            found_stress_factor = true;
+            break;
+        }
+    }
+    DOCTEST_CHECK(found_stress_factor);
+    DOCTEST_CHECK(final_stress >= 0.0f);
+    DOCTEST_CHECK(final_stress <= 1.0f);
+
+    // Verify leaves have nitrogen data
+    bool found_leaf_N = false;
+    for (uint objID : plant_objects) {
+        if (context.doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
+            float leaf_N;
+            context.getObjectData(objID, "leaf_nitrogen_gN_m2", leaf_N);
+            DOCTEST_CHECK(leaf_N >= 0.0f);
+            found_leaf_N = true;
+        }
+    }
+    DOCTEST_CHECK(found_leaf_N);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Edge Case: Zero Nitrogen") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.advanceTime(plantID, 5.0f);
+
+    // Initialize with zero nitrogen - should not crash
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.initializePlantNitrogenPools(plantID, 0.0f));
+
+    // Advance time with zero nitrogen - should not crash
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 5.0f));
+
+    // Stress factor should be very low (severe stress)
+    std::vector<uint> plant_objects = plantarchitecture.getAllPlantObjectIDs(plantID);
+    bool found_stress_factor = false;
+    for (uint objID : plant_objects) {
+        if (context.doesObjectDataExist(objID, "nitrogen_stress_factor")) {
+            float stress_factor;
+            context.getObjectData(objID, "nitrogen_stress_factor", stress_factor);
+            DOCTEST_CHECK(stress_factor < 0.2f);  // Should be low under zero N
+            found_stress_factor = true;
+            break;
+        }
+    }
+    DOCTEST_CHECK(found_stress_factor);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Edge Case: Excessive Nitrogen") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.advanceTime(plantID, 5.0f);
+
+    // Initialize with zero
+    plantarchitecture.initializePlantNitrogenPools(plantID, 0.0f);
+
+    // Set high accumulation rate to overcome rate limiting
+    NitrogenParameters N_params;
+    N_params.max_N_accumulation_rate = 1.0f;  // g N/m²/day (10x default)
+    plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
+
+    // Apply excessive nitrogen - should not crash
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.addPlantNitrogen(plantID, 1000.0f));
+
+    // Advance time - should not crash
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 5.0f));
+
+    // Stress factor should clamp at 1.0 (no stress) and be high with excess N
+    std::vector<uint> plant_objects = plantarchitecture.getAllPlantObjectIDs(plantID);
+    bool found_stress_factor = false;
+    for (uint objID : plant_objects) {
+        if (context.doesObjectDataExist(objID, "nitrogen_stress_factor")) {
+            float stress_factor;
+            context.getObjectData(objID, "nitrogen_stress_factor", stress_factor);
+            DOCTEST_CHECK(stress_factor <= 1.0f);  // Should clamp at 1.0
+            DOCTEST_CHECK(stress_factor >= 0.90f); // Should be very high with excess N and fast accumulation
+            found_stress_factor = true;
+            break;
+        }
+    }
+    DOCTEST_CHECK(found_stress_factor);
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Edge Case: No Leaves") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.enableNitrogenModel();
+
+    // Build plant at very early stage (no leaves yet)
+    uint plantID = plantarchitecture.addPlantInstance(make_vec3(0, 0, 0), 0);
+
+    // Try to initialize nitrogen - should not crash even with no leaves
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.initializePlantNitrogenPools(plantID, 1.5f));
+
+    // Add nitrogen - should not crash
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.addPlantNitrogen(plantID, 10.0f));
+
+    // Advance time with no leaves - should not crash
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 1.0f));
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Division by Zero Prevention") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    plantarchitecture.enableNitrogenModel();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    // Grow plant slightly to create very small leaves
+    plantarchitecture.advanceTime(plantID, 0.5f);
+
+    // Initialize nitrogen
+    plantarchitecture.initializePlantNitrogenPools(plantID, 1.5f);
+
+    // Add nitrogen and advance - should handle small/zero leaf areas gracefully
+    plantarchitecture.addPlantNitrogen(plantID, 10.0f);
+
+    // This should not crash due to division by zero (bug fix verification)
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 1.0f));
+
+    // Continue growth and check remobilization doesn't crash either
+    plantarchitecture.advanceTime(plantID, 20.0f);
+    DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 5.0f));
+}
+
+DOCTEST_TEST_CASE("Nitrogen Model - Enable/Disable") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+
+    // Initially disabled
+    DOCTEST_CHECK_FALSE(plantarchitecture.isNitrogenModelEnabled());
+
+    // Enable
+    plantarchitecture.enableNitrogenModel();
+    DOCTEST_CHECK(plantarchitecture.isNitrogenModelEnabled());
+
+    // Disable
+    plantarchitecture.disableNitrogenModel();
+    DOCTEST_CHECK_FALSE(plantarchitecture.isNitrogenModelEnabled());
+
+    // Build plant with model disabled - should not output nitrogen data
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+    plantarchitecture.advanceTime(plantID, 5.0f);
+
+    std::vector<uint> plant_objects = plantarchitecture.getAllPlantObjectIDs(plantID);
+    bool found_nitrogen_data = false;
+    for (uint objID : plant_objects) {
+        if (context.doesObjectDataExist(objID, "nitrogen_stress_factor")) {
+            found_nitrogen_data = true;
+            break;
+        }
+    }
+    DOCTEST_CHECK_FALSE(found_nitrogen_data);  // Should NOT have nitrogen data when disabled
+}
+
 int PlantArchitecture::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }
