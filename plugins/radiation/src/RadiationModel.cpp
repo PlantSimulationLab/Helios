@@ -3857,6 +3857,14 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         }
     }
 
+    // After primary diffuse, prepare scatter_buff for scattering iterations
+    // When direct rays ran, scatter_buff was already copied to radiation_out at line 3710
+    // For emission/diffuse without direct rays, we need to do this now
+    if (scatteringenabled && (emissionenabled || diffuseenabled) && !rundirect) {
+        backend->copyScatterToRadiation();
+        backend->zeroScatterBuffers();
+    }
+
     if (scatteringenabled && (emissionenabled || diffuseenabled || rundirect)) {
 
         for (auto b = 0; b < Nbands_launch; b++) {
@@ -3874,6 +3882,9 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         size_t prims_per_launch = fmin(Nobjects, maxPrims);
 
         uint s;
+        // FIX: Use a copy of band_launch_flag for scattering so modifications don't affect primary launch indices
+        std::vector<char> scatter_band_flags = band_launch_flag;
+
         for (s = 0; s < scatteringDepth; s++) {
             if (message_flag) {
                 std::cout << "Performing scattering ray trace (iteration " << s + 1 << " of " << scatteringDepth << ")..." << std::flush;
@@ -3882,7 +3893,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             int b = -1;
             for (uint b_global = 0; b_global < Nbands_global; b_global++) {
 
-                if (band_launch_flag.at(b_global) == 0) {
+                if (scatter_band_flags.at(b_global) == 0) {
                     continue;
                 }
                 b++;
@@ -3892,7 +3903,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                     if (message_flag) {
                         std::cout << "Skipping band " << band_labels.at(b) << " for scattering launch " << s + 1 << std::flush;
                     }
-                    band_launch_flag.at(b_global) = 0;
+                    scatter_band_flags.at(b_global) = 0;  // FIX: Modify copy, not original
                 }
             }
 
@@ -3927,7 +3938,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 params.current_band = 0;
                 params.num_bands_global = Nbands_global;
                 params.num_bands_launch = Nbands_launch;
-                std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
+                std::vector<bool> band_flags(scatter_band_flags.begin(), scatter_band_flags.end());  // FIX: Use scatter copy
                 params.band_launch_flag = band_flags;
                 params.scattering_iteration = s;
                 params.max_scatters = scatteringDepth;
@@ -3944,12 +3955,27 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 params.diffuse_peak_dir = peak_dirs;
 
                 // Pass radiation_out as sources for scattering rays
-                params.radiation_out_top = flux_top;
-                params.radiation_out_bottom = flux_bottom;
+                // FIX: Zero out radiation_out for disabled bands to prevent spurious accumulation
+                std::vector<float> scatter_rad_out_top = flux_top;
+                std::vector<float> scatter_rad_out_bottom = flux_bottom;
+                RadiationBufferIndexer scatter_indexer(Nprimitives, Nbands_launch);
+                for (size_t p = 0; p < Nprimitives; p++) {
+                    for (size_t bg = 0; bg < Nbands_global; bg++) {
+                        if (scatter_band_flags.at(bg) == 0 && bg < Nbands_launch) {
+                            // Band is disabled for scattering - zero its radiation_out
+                            size_t ind = scatter_indexer(p, bg);
+                            scatter_rad_out_top.at(ind) = 0.0f;
+                            scatter_rad_out_bottom.at(ind) = 0.0f;
+                        }
+                    }
+                }
+                params.radiation_out_top = scatter_rad_out_top;
+                params.radiation_out_bottom = scatter_rad_out_bottom;
 
                 // Top surface launch
                 params.launch_face = 1;
                 backend->launchDiffuseRays(params);
+
 
                 // Bottom surface launch
                 params.launch_face = 0;
@@ -6635,7 +6661,7 @@ void RadiationModel::buildGeometryData() {
             }
 
             geometry_data.object_subdivisions[prim_idx] = helios::make_int2(1, 1);
-            geometry_data.triangles.UUIDs.push_back(prim_idx);
+            geometry_data.triangles.UUIDs.push_back(UUID);  // Store actual UUID, not position
             tri_idx++;
 
         } else if (type == helios::PRIMITIVE_TYPE_VOXEL) {
@@ -6650,7 +6676,7 @@ void RadiationModel::buildGeometryData() {
             }
 
             geometry_data.object_subdivisions[prim_idx] = helios::make_int2(1, 1);
-            geometry_data.voxels.UUIDs.push_back(prim_idx);
+            geometry_data.voxels.UUIDs.push_back(UUID);  // Store actual UUID, not position
             voxel_idx++;
         }
     }
@@ -6722,8 +6748,80 @@ void RadiationModel::buildUUIDMapping() {
     }
 }
 
+static void validateAndCorrectMaterialProperties(
+    float& rho, float& tau, float eps,
+    bool emission_enabled, uint scattering_depth,
+    const std::string& band_label, uint UUID,
+    helios::WarningAggregator* warnings = nullptr
+) {
+    // Helper function to enforce energy conservation constraints on material properties
+    // Mirrors the validation logic from updateRadiativeProperties() (lines 2672-2686)
+
+    // 1. Clamp rho and tau to [0,1] with warnings for out-of-range values
+    if (rho < 0.f || rho > 1.f) {
+        if (warnings) {
+            warnings->addWarning("material_property_clamping",
+                "Reflectivity out of range [0,1] for band " + band_label +
+                ", primitive #" + std::to_string(UUID) + ": rho=" + std::to_string(rho) +
+                ". Clamping to valid range.");
+        }
+        rho = std::max(0.f, std::min(1.f, rho));
+    }
+
+    if (tau < 0.f || tau > 1.f) {
+        if (warnings) {
+            warnings->addWarning("material_property_clamping",
+                "Transmissivity out of range [0,1] for band " + band_label +
+                ", primitive #" + std::to_string(UUID) + ": tau=" + std::to_string(tau) +
+                ". Clamping to valid range.");
+        }
+        tau = std::max(0.f, std::min(1.f, tau));
+    }
+
+    // 2. Apply emission-specific constraints
+    if (emission_enabled) {
+        // Special case: blackbody emission (scatteringDepth=0 requires eps=1, rho=0, tau=0)
+        if (scattering_depth == 0 && eps != 1.f) {
+            if (warnings && (rho != 0.f || tau != 0.f)) {
+                warnings->addWarning("blackbody_override",
+                    "Band " + band_label + " has emission with scatteringDepth=0, " +
+                    "enforcing blackbody behavior (eps=1, rho=0, tau=0) for primitive #" +
+                    std::to_string(UUID));
+            }
+            rho = 0.f;
+            tau = 0.f;
+        }
+        // General emission case: check energy conservation (eps + rho + tau = 1)
+        else if (eps != 1.f && rho == 0 && tau == 0) {
+            // Auto-correct: set rho = 1 - eps
+            rho = 1.f - eps;
+        } else if (std::abs(eps + rho + tau - 1.f) > 1e-5f && eps > 0.f) {
+            // Cannot auto-correct, throw error
+            helios_runtime_error(
+                std::string("ERROR (RadiationModel): emissivity, transmissivity, and reflectivity ") +
+                "must sum to 1 to ensure energy conservation. Band " + band_label +
+                ", Primitive #" + std::to_string(UUID) + ": eps=" + std::to_string(eps) +
+                ", tau=" + std::to_string(tau) + ", rho=" + std::to_string(rho) +
+                ". It is also possible that you forgot to disable emission for this band.");
+        }
+    } else {
+        // 3. Non-emission case: rho + tau must be ≤ 1
+        if (rho + tau > 1.f) {
+            helios_runtime_error(
+                std::string("ERROR (RadiationModel): transmissivity and reflectivity cannot sum to ") +
+                "greater than 1 to ensure energy conservation. Band " + band_label +
+                ", Primitive #" + std::to_string(UUID) + ": eps=" + std::to_string(eps) +
+                ", tau=" + std::to_string(tau) + ", rho=" + std::to_string(rho) +
+                ". It is also possible that you forgot to disable emission for this band.");
+        }
+    }
+}
+
 void RadiationModel::buildMaterialData() {
     // Build backend-agnostic material data from Context primitive data
+
+    // Warning aggregator for energy conservation issues
+    helios::WarningAggregator warnings;
 
     size_t Nprims = geometry_data.primitive_count;
     size_t Nbands = radiation_bands.size();
@@ -6763,7 +6861,6 @@ void RadiationModel::buildMaterialData() {
                 if (context->doesPrimitiveDataExist(UUID, rho_label.c_str())) {
                     context->getPrimitiveData(UUID, rho_label.c_str(), rho);
                 }
-                material_data.reflectivity[idx] = rho;
 
                 // Get transmissivity
                 float tau = tau_default;
@@ -6771,36 +6868,59 @@ void RadiationModel::buildMaterialData() {
                 if (context->doesPrimitiveDataExist(UUID, tau_label.c_str())) {
                     context->getPrimitiveData(UUID, tau_label.c_str(), tau);
                 }
+
+                // Get emissivity for validation
+                float eps = eps_default;
+                std::string eps_label = "emissivity_" + band_label;
+                if (context->doesPrimitiveDataExist(UUID, eps_label.c_str())) {
+                    context->getPrimitiveData(UUID, eps_label.c_str(), eps);
+                }
+
+                // Validate and correct material properties to ensure energy conservation
+                const RadiationBand& band = band_pair.second;
+                validateAndCorrectMaterialProperties(
+                    rho, tau, eps,
+                    band.emissionFlag, band.scatteringDepth,
+                    band_label, UUID, &warnings
+                );
+
+                // Store validated properties
+                material_data.reflectivity[idx] = rho;
                 material_data.transmissivity[idx] = tau;
             }
         }
         b_idx++;
     }
+
+    // Report any accumulated warnings
+    warnings.report();
 }
 
 void RadiationModel::buildSourceData() {
     // Build backend-agnostic source data from radiation_sources
-    
+
     source_data.clear();
     source_data.reserve(radiation_sources.size());
-    
-    for (const auto& src : radiation_sources) {
+
+    for (size_t s = 0; s < radiation_sources.size(); s++) {
+        const auto& src = radiation_sources[s];
         helios::RayTracingSource backend_src;
         backend_src.position = src.source_position;
         backend_src.rotation = src.source_rotation;
         backend_src.width = src.source_width;
         backend_src.type = src.source_type;
-        
-        // Flatten flux arrays
+
+        // Flatten flux arrays - use getSourceFlux() to handle -1.f sentinel values
         backend_src.fluxes.clear();
         backend_src.fluxes_cam.clear();
         for (const auto& band_pair : radiation_bands) {
             std::string band_label = band_pair.second.label;
-            float flux = src.source_fluxes.count(band_label) ? src.source_fluxes.at(band_label) : 0.0f;
+            // Use getSourceFlux() which properly handles -1.f sentinel (returns 0 or integrates spectrum)
+            float flux = getSourceFlux(s, band_label);
             backend_src.fluxes.push_back(flux);
             backend_src.fluxes_cam.push_back(flux); // Same for now
         }
-        
+
         source_data.push_back(backend_src);
     }
 }

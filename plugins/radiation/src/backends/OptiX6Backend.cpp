@@ -566,6 +566,12 @@ void OptiX6Backend::launchDiffuseRays(const RayTracingLaunchParams& params) {
     // Upload emission/outgoing radiation if provided
     if (!params.radiation_out_top.empty()) {
         initializeBuffer1Df(radiation_out_top_RTbuffer, params.radiation_out_top);
+        // DEBUG: Print first few values to verify upload
+        if (params.radiation_out_top.size() >= 3) {
+            std::cerr << "BACKEND UPLOAD: radiation_out_top[0]=" << params.radiation_out_top[0]
+                      << " [1]=" << params.radiation_out_top[1]
+                      << " [2]=" << params.radiation_out_top[2] << std::endl;
+        }
     }
     if (!params.radiation_out_bottom.empty()) {
         initializeBuffer1Df(radiation_out_bottom_RTbuffer, params.radiation_out_bottom);

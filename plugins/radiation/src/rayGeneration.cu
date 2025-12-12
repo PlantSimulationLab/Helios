@@ -102,7 +102,7 @@ RT_PROGRAM void direct_raygen() {
                 float3 v2 = make_float3(1, 1, 0);
                 d_transformPoint(m_trans, v2);
 
-                normal = normalize(cross(v1 - v0, v2 - v1));
+                normal = normalize(cross(v1 - v0, v2 - v0));
 
                 int ID = maskID[objID];
                 if (ID >= 0 && primitive_solid_fraction[UUID] > 0.f && primitive_solid_fraction[UUID] < 1.f) { // has texture transparency
@@ -332,7 +332,7 @@ RT_PROGRAM void diffuse_raygen() {
                 float3 v2 = make_float3(1, 1, 0);
                 d_transformPoint(m_trans, v2);
 
-                normal = normalize(cross(v1 - v0, v2 - v1));
+                normal = normalize(cross(v1 - v0, v2 - v0));
 
                 int ID = maskID[objID];
                 if (ID >= 0) { // has texture transparency
@@ -451,6 +451,11 @@ RT_PROGRAM void diffuse_raygen() {
 
                 if (launch_face == 1 && twosided_flag[objID] != 3) {
 
+                    // DEBUG: Count top launches
+                    if (UUID <= 1 && launch_index.x == 0 && launch_index.y == 0) {
+                        printf("TOP_LAUNCH: UUID=%u launch_face=%u\n", UUID, launch_face);
+                    }
+
                     ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
 
                     prd.face = 1;
@@ -467,6 +472,12 @@ RT_PROGRAM void diffuse_raygen() {
 
                     // ---- "bottom" surface launch -------
                 } else if (launch_face == 0 && twosided_flag[objID] == 1) {
+
+                    // DEBUG: Count bottom launches
+                    if (UUID <= 1 && launch_index.x == 0 && launch_index.y == 0) {
+                        printf("BOTTOM_LAUNCH: UUID=%u launch_face=%u\n", UUID, launch_face);
+                    }
+
                     ray_direction = -ray_direction;
                     ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
 
@@ -482,6 +493,7 @@ RT_PROGRAM void diffuse_raygen() {
                         prd.hit_periodic_boundary = false;
                     }
                 }
+                // else: Skip ray trace for bottom face of one-sided primitives
             }
         }
     }

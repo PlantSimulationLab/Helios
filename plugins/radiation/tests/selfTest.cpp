@@ -206,6 +206,7 @@ DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Squares") {
     float shortwave_error_1 = fabsf(shortwave_model_1 - shortwave_exact_1) / fabsf(shortwave_exact_1);
     float longwave_error_1 = fabsf(longwave_model_1 - longwave_exact_1) / fabsf(longwave_exact_1);
 
+
     DOCTEST_CHECK(shortwave_error_0 <= error_threshold);
     DOCTEST_CHECK(shortwave_error_1 <= error_threshold);
     // For zero expected value, check direct equality

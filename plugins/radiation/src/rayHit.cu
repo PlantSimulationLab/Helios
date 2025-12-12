@@ -31,7 +31,9 @@ rtDeclareVariable(unsigned int, UUID, attribute UUID, );
 
 RT_PROGRAM void closest_hit_direct() {
 
-    uint objID = objectID[UUID];
+    // FIX: objectID is indexed by array position, not UUID
+    uint hit_position = primitive_positions[UUID];
+    uint objID = objectID[hit_position];
 
     if ((periodic_flag.x == 1 || periodic_flag.y == 1) && primitive_type[objID] == 5) { // periodic boundary condition
 
@@ -67,7 +69,8 @@ RT_PROGRAM void closest_hit_diffuse() {
     uint origin_position = primitive_positions[origin_UUID];
     uint hit_position = primitive_positions[UUID];
 
-    uint objID = objectID[UUID];
+    // FIX: objectID is indexed by array position, not UUID
+    uint objID = objectID[hit_position];
 
     // Create indexers for buffer access
     RadiationBufferIndexer rad_indexer(Nprimitives, Nbands_launch);
@@ -119,15 +122,15 @@ RT_PROGRAM void closest_hit_diffuse() {
             d_transformPoint(m, s1);
             d_transformPoint(m, s2);
             normal = cross(s1 - s0, s2 - s0);
-        } else if (primitive_type[UUID] == 1) { // hit triangle
+        } else if (primitive_type[objID] == 1) { // hit triangle - FIX: use objID not UUID
             float3 v0 = make_float3(0, 0, 0);
             d_transformPoint(m, v0);
             float3 v1 = make_float3(0, 1, 0);
             d_transformPoint(m, v1);
             float3 v2 = make_float3(1, 1, 0);
             d_transformPoint(m, v2);
-            normal = cross(v1 - v0, v2 - v1);
-        } else if (primitive_type[UUID] == 2) { // hit disk
+            normal = cross(v1 - v0, v2 - v0);
+        } else if (primitive_type[objID] == 2) { // hit disk - FIX: use objID not UUID
             float3 v0 = make_float3(0, 0, 0);
             d_transformPoint(m, v0);
             float3 v1 = make_float3(1, 0, 0);
@@ -135,7 +138,7 @@ RT_PROGRAM void closest_hit_diffuse() {
             float3 v2 = make_float3(0, 1, 0);
             d_transformPoint(m, v2);
             normal = cross(v1 - v0, v2 - v0);
-        } else if (primitive_type[UUID] == 4) { // hit voxel
+        } else if (primitive_type[objID] == 4) { // hit voxel - FIX: use objID not UUID
             float3 vmin = make_float3(-0.5, -0.5, -0.5);
             d_transformPoint(m, vmin);
             float3 vmax = make_float3(0.5, 0.5, 0.5);
@@ -154,6 +157,8 @@ RT_PROGRAM void closest_hit_diffuse() {
             b++;
 
             // Use BufferIndexer for radiation buffers: [primitive][band]
+            // NOTE: b should match the band's index in the original band_labels array
+            // This is correct as long as band_launch_flag isn't modified after launch
             size_t ind_origin = rad_indexer(origin_position, b);
             size_t ind_hit = rad_indexer(hit_position, b);
 
@@ -187,8 +192,19 @@ RT_PROGRAM void closest_hit_diffuse() {
 
             } else { // ray was NOT launched from voxel
 
-                // absorption
-                atomicAdd(&radiation_in[ind_origin], strength * (1.f - t_rho - t_tau));
+                // absorption - calculate with defensive check for energy conservation violations
+                float absorption_factor = 1.f - t_rho - t_tau;
+                float contribution = strength * absorption_factor;
+
+
+#ifndef NDEBUG
+                if (absorption_factor < -1e-5f) {
+                    printf("ERROR: Negative absorption! rho=%.6f, tau=%.6f, origin_UUID=%u\n",
+                           t_rho, t_tau, origin_UUID);
+                    absorption_factor = 0.f;
+                }
+#endif
+                atomicAdd(&radiation_in[ind_origin], contribution);
 
                 if ((t_rho > 0 || t_tau > 0) && strength > 0) {
                     if (prd.face) { // reflection from top, transmission from bottom
@@ -234,7 +250,8 @@ RT_PROGRAM void closest_hit_camera() {
     // Convert UUID to array position
     uint hit_position = primitive_positions[UUID];
 
-    uint objID = objectID[UUID];
+    // FIX: objectID is indexed by array position, not UUID
+    uint objID = objectID[hit_position];
 
     // Create indexers
     RadiationBufferIndexer rad_indexer(Nprimitives, Nbands_launch);
@@ -286,15 +303,15 @@ RT_PROGRAM void closest_hit_camera() {
             d_transformPoint(m, s1);
             d_transformPoint(m, s2);
             normal = cross(s1 - s0, s2 - s0);
-        } else if (primitive_type[UUID] == 1) { // hit triangle
+        } else if (primitive_type[objID] == 1) { // hit triangle - FIX: use objID not UUID
             float3 v0 = make_float3(0, 0, 0);
             d_transformPoint(m, v0);
             float3 v1 = make_float3(0, 1, 0);
             d_transformPoint(m, v1);
             float3 v2 = make_float3(1, 1, 0);
             d_transformPoint(m, v2);
-            normal = cross(v1 - v0, v2 - v1);
-        } else if (primitive_type[UUID] == 2) { // hit disk
+            normal = cross(v1 - v0, v2 - v0);
+        } else if (primitive_type[objID] == 2) { // hit disk - FIX: use objID not UUID
             float3 v0 = make_float3(0, 0, 0);
             d_transformPoint(m, v0);
             float3 v1 = make_float3(1, 0, 0);
@@ -302,7 +319,7 @@ RT_PROGRAM void closest_hit_camera() {
             float3 v2 = make_float3(0, 1, 0);
             d_transformPoint(m, v2);
             normal = cross(v1 - v0, v2 - v0);
-        } else if (primitive_type[UUID] == 4) { // hit voxel
+        } else if (primitive_type[objID] == 4) { // hit voxel - FIX: use objID not UUID
             float3 vmin = make_float3(-0.5, -0.5, -0.5);
             d_transformPoint(m, vmin);
             float3 vmax = make_float3(0.5, 0.5, 0.5);
@@ -470,7 +487,9 @@ RT_PROGRAM void closest_hit_pixel_label() {
 
     uint origin_UUID = prd.origin_UUID;
 
-    uint objID = objectID[UUID];
+    // FIX: objectID is indexed by array position, not UUID
+    uint hit_position = primitive_positions[UUID];
+    uint objID = objectID[hit_position];
 
     if ((periodic_flag.x == 1 || periodic_flag.y == 1) && primitive_type[objID] == 5) { // periodic boundary condition
 
