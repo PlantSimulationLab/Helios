@@ -1880,12 +1880,15 @@ void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
         std::cout << "Updating geometry in radiation transport model..." << std::flush;
     }
 
-    context_UUIDs = UUIDs;
-
     // Phase 1: Upload geometry through backend abstraction layer
     // Replaces old direct OptiX buffer population (502 lines removed)
     buildGeometryData();
     buildUUIDMapping();  // Build UUID↔position mapping for efficient indexing
+
+    // CRITICAL: context_UUIDs must match GPU buffer ordering (primitive_UUIDs_ordered)
+    // Emission data is indexed by position, which corresponds to primitive_UUIDs order
+    context_UUIDs = geometry_data.primitive_UUIDs;
+
     backend->updateGeometry(geometry_data);
     backend->buildAccelerationStructure();
 
@@ -3582,11 +3585,10 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             s++;
         }
 
-        initializeBuffer1Df(source_fluxes_RTbuffer, flatten(fluxes));
-        initializeBuffer1Dfloat3(source_positions_RTbuffer, positions);
-        initializeBuffer1Dfloat2(source_widths_RTbuffer, widths);
-        initializeBuffer1Dfloat3(source_rotations_RTbuffer, rotations);
-        initializeBuffer1Dui(source_types_RTbuffer, types);
+        // Upload band-specific source fluxes to backend buffer (indexed by Nbands_launch, not Nbands_global)
+        backend->uploadSourceFluxes(flatten(fluxes));
+        // Note: positions, widths, rotations, types are uploaded once in buildSourceData()
+        // Only fluxes need per-launch update because they depend on which bands are being run
 
         // Compute camera response weighting factors for specular reflection (if cameras exist)
         // Factor = ∫(source_spectrum × camera_response) / ∫(source_spectrum)
@@ -3777,6 +3779,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 RT_CHECK_ERROR(rtBufferUnmap(scatter_buff_top_cam_RTbuffer));
                 RT_CHECK_ERROR(rtBufferUnmap(scatter_buff_bottom_cam_RTbuffer));
             }
+
         }
 
         // Note: radiation_specular_RTbuffer is populated on GPU via atomicFloatAdd during ray tracing, don't overwrite it here
@@ -3907,9 +3910,12 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 }
             }
 
-            // For iterations after the first, copy scatter buffers to outgoing radiation
-            // For the first iteration (s=0), radiation_out already contains scattered energy from direct rays
-            if (s > 0) {
+            // Copy scatter buffers to radiation_out for all iterations
+            // For s=0 with emission: radiation_out still contains emission from primary diffuse, which would
+            // cause double-counting if re-used. Copy scatter buffers to overwrite the emission.
+            // For s=0 without emission: radiation_out contains scattered energy from direct rays.
+            // For s>0: radiation_out may have stale data, copy scatter buffers to update.
+            if (s > 0 || emissionenabled) {
                 backend->copyScatterToRadiation();
             }
             backend->zeroScatterBuffers();
@@ -3955,22 +3961,11 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 params.diffuse_peak_dir = peak_dirs;
 
                 // Pass radiation_out as sources for scattering rays
-                // FIX: Zero out radiation_out for disabled bands to prevent spurious accumulation
-                std::vector<float> scatter_rad_out_top = flux_top;
-                std::vector<float> scatter_rad_out_bottom = flux_bottom;
-                RadiationBufferIndexer scatter_indexer(Nprimitives, Nbands_launch);
-                for (size_t p = 0; p < Nprimitives; p++) {
-                    for (size_t bg = 0; bg < Nbands_global; bg++) {
-                        if (scatter_band_flags.at(bg) == 0 && bg < Nbands_launch) {
-                            // Band is disabled for scattering - zero its radiation_out
-                            size_t ind = scatter_indexer(p, bg);
-                            scatter_rad_out_top.at(ind) = 0.0f;
-                            scatter_rad_out_bottom.at(ind) = 0.0f;
-                        }
-                    }
-                }
-                params.radiation_out_top = scatter_rad_out_top;
-                params.radiation_out_bottom = scatter_rad_out_bottom;
+                // Note: flux_top/flux_bottom contain data indexed by [primitive * Nbands_launch + launch_band]
+                // The data was written by CUDA using Nbands_launch indexing, so we don't need to re-index
+                // Just pass through the flux vectors directly - disabled bands won't have data anyway
+                params.radiation_out_top = flux_top;
+                params.radiation_out_bottom = flux_bottom;
 
                 // Top surface launch
                 params.launch_face = 1;
@@ -4381,9 +4376,6 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             // Use BufferIndexer: [primitive][band]
             size_t ind = result_indexer(u, b);
             R.at(u) = radiation_flux_data.at(ind) + TBS_top.at(ind) + TBS_bottom.at(ind);
-            if (radiation_flux_data.at(ind) != radiation_flux_data.at(ind)) {
-                std::cout << "NaN here " << ind << std::endl;
-            }
         }
         context->setPrimitiveData(context_UUIDs, prop.c_str(), R);
 
@@ -6534,14 +6526,22 @@ void RadiationModel::buildGeometryData() {
     size_t Nprimitives = primitive_UUIDs_ordered.size();
     geometry_data.primitive_count = Nprimitives;
 
-    // Allocate arrays
+    // Clear and allocate per-primitive arrays (important when updateGeometry is called multiple times)
+    geometry_data.transform_matrices.clear();
     geometry_data.transform_matrices.resize(Nprimitives * 16);
-    geometry_data.primitive_types.resize(Nprimitives);
+    geometry_data.primitive_types.clear();
+    // Initialize to UINT_MAX as sentinel - prevents uninitialized entries from matching type==0 (patch)
+    geometry_data.primitive_types.resize(Nprimitives, UINT_MAX);
     geometry_data.primitive_UUIDs = primitive_UUIDs_ordered;
+    geometry_data.primitive_IDs.clear();
     geometry_data.primitive_IDs.resize(Nprimitives);  // Will be populated after primitiveID_indices is built
+    geometry_data.object_IDs.clear();
     geometry_data.object_IDs.resize(Nprimitives);
+    geometry_data.object_subdivisions.clear();
     geometry_data.object_subdivisions.resize(Nprimitives);
+    geometry_data.twosided_flags.clear();
     geometry_data.twosided_flags.resize(Nprimitives);
+    geometry_data.solid_fractions.clear();
     geometry_data.solid_fractions.resize(Nprimitives);
 
     // Clear type-specific arrays
@@ -6601,8 +6601,13 @@ void RadiationModel::buildGeometryData() {
     // Populate geometry for each primitive
     size_t patch_idx = 0, tri_idx = 0, disk_idx = 0, tile_idx = 0, voxel_idx = 0, bbox_idx = 0;
 
-    for (size_t u = 0; u < Nobjects; u++) {
-        size_t prim_idx = primitiveID_indices[u];
+    // Track which parent tile objects have been added to tile geometry
+    // (tiles should have ONE geometry entry per parent object, not per subpatch)
+    std::set<uint> processed_tile_parents;
+
+    // Iterate over ALL primitives to set per-primitive data
+    // (not just Nobjects, which only has one entry per object group)
+    for (size_t prim_idx = 0; prim_idx < Nprimitives; prim_idx++) {
         uint UUID = primitive_UUIDs_ordered[prim_idx];
 
         // Transform matrix
@@ -6617,22 +6622,29 @@ void RadiationModel::buildGeometryData() {
         geometry_data.twosided_flags[prim_idx] = context->getPrimitiveTwosidedFlag(UUID, 1) ? 1 : 0;
 
         if (parentID > 0 && context->getObjectType(parentID) == helios::OBJECT_TYPE_TILE) {
-            // Tile object
+            // Tile object - set per-primitive data for ALL subpatches
             geometry_data.primitive_types[prim_idx] = 3; // tile
 
             context->getObjectTransformationMatrix(parentID, m);
             memcpy(&geometry_data.transform_matrices[prim_idx * 16], m, 16 * sizeof(float));
 
-            std::vector<vec3> verts = context->getTileObjectVertices(parentID);
-            for (const auto& v : verts) {
-                geometry_data.tiles.vertices.push_back(v);
-            }
-
             helios::int2 subdiv = context->getTileObjectSubdivisionCount(parentID);
             geometry_data.object_subdivisions[prim_idx] = subdiv;
 
-            geometry_data.tiles.UUIDs.push_back(prim_idx);
-            tile_idx++;
+            // Only add ONE tile geometry entry per parent tile object (not per subpatch)
+            // The tile intersection program handles subpatch selection internally
+            if (processed_tile_parents.find(parentID) == processed_tile_parents.end()) {
+                processed_tile_parents.insert(parentID);
+
+                std::vector<vec3> verts = context->getTileObjectVertices(parentID);
+                for (const auto& v : verts) {
+                    geometry_data.tiles.vertices.push_back(v);
+                }
+
+                // Use the first subpatch's UUID as the tile geometry UUID
+                geometry_data.tiles.UUIDs.push_back(UUID);
+                tile_idx++;
+            }
 
         } else if (type == helios::PRIMITIVE_TYPE_PATCH) {
             geometry_data.primitive_types[prim_idx] = 0; // patch
@@ -6709,13 +6721,13 @@ void RadiationModel::buildGeometryData() {
     // Periodic boundary condition
     geometry_data.periodic_flag = periodic_flag;
 
-    // TODO: Extract texture masks and UV data when needed
-    // For now, set all to -1 (no texture transparency)
-    geometry_data.mask_IDs.resize(Nobjects, -1);
-    geometry_data.uv_IDs.resize(Nobjects, -1);
+    // Extract texture mask and UV data for primitives with transparency textures
+    buildTextureData();
 
     // Build primitive_positions lookup table for GPU UUID→position conversion
     // Size by max UUID to create sparse lookup table
+    // Clear first to remove stale mappings from deleted primitives
+    geometry_data.primitive_positions.clear();
     if (!primitive_UUIDs_ordered.empty()) {
         uint max_UUID = *std::max_element(primitive_UUIDs_ordered.begin(), primitive_UUIDs_ordered.end());
         geometry_data.primitive_positions.resize(max_UUID + 1, UINT_MAX);  // UINT_MAX = invalid/unused
@@ -6723,9 +6735,101 @@ void RadiationModel::buildGeometryData() {
             uint UUID = geometry_data.primitive_UUIDs[i];
             geometry_data.primitive_positions[UUID] = i;  // Map UUID → array position
         }
+        std::cout << "POSITIONS DEBUG: max_UUID=" << max_UUID << " positions.size=" << geometry_data.primitive_positions.size() << std::endl;
+        std::cout << "POSITIONS DEBUG: UUIDs = ";
+        for (uint u : geometry_data.primitive_UUIDs) std::cout << u << " ";
+        std::cout << std::endl;
     }
 }
 
+void RadiationModel::buildTextureData() {
+    // Extract texture mask and UV data for all primitives with transparency textures
+
+    size_t Nobjects = geometry_data.primitive_count;
+
+    std::cout << "TEXTURE DEBUG: buildTextureData called, Nobjects=" << Nobjects << std::endl;
+
+    // Clear any previous texture data (important when updateGeometry is called multiple times)
+    geometry_data.mask_data.clear();
+    geometry_data.mask_sizes.clear();
+    geometry_data.uv_data.clear();
+
+    // Initialize with -1 (no texture)
+    geometry_data.mask_IDs.clear();
+    geometry_data.mask_IDs.resize(Nobjects, -1);
+    geometry_data.uv_IDs.clear();
+    geometry_data.uv_IDs.resize(Nobjects, -1);
+
+    // Cache to avoid duplicate mask data for primitives using the same texture file
+    std::map<std::string, int> texture_to_mask_idx;
+
+    for (size_t prim_idx = 0; prim_idx < Nobjects; prim_idx++) {
+        uint UUID = geometry_data.primitive_UUIDs[prim_idx];
+
+        // Check if primitive has a texture file
+        std::string texture_file = context->getPrimitiveTextureFile(UUID);
+        if (texture_file.empty()) {
+            continue;  // No texture - mask_ID stays -1
+        }
+
+        // Check if texture has transparency channel (alpha)
+        if (!context->primitiveTextureHasTransparencyChannel(UUID)) {
+            continue;  // No transparency - mask_ID stays -1 (e.g., JPEG files)
+        }
+
+        // Check cache for existing mask from same texture file
+        int mask_idx;
+        auto cache_it = texture_to_mask_idx.find(texture_file);
+        if (cache_it != texture_to_mask_idx.end()) {
+            // Reuse existing mask
+            mask_idx = cache_it->second;
+        } else {
+            // New texture - extract mask data
+            const std::vector<std::vector<bool>>* trans_data =
+                context->getPrimitiveTextureTransparencyData(UUID);
+            helios::int2 tex_size = context->getPrimitiveTextureSize(UUID);
+
+            mask_idx = static_cast<int>(geometry_data.mask_sizes.size());
+            texture_to_mask_idx[texture_file] = mask_idx;
+
+            // Flatten 2D bool array to 1D (row-major: [y][x])
+            // Backend expects: for each mask m, iterate [y][x] order
+            for (int y = 0; y < tex_size.y; y++) {
+                for (int x = 0; x < tex_size.x; x++) {
+                    geometry_data.mask_data.push_back((*trans_data)[y][x]);
+                }
+            }
+            geometry_data.mask_sizes.push_back(tex_size);
+        }
+
+        geometry_data.mask_IDs[prim_idx] = mask_idx;
+
+        // Extract UV coordinates for this primitive
+        // uv_IDs stores the position index (not offset), used to access uvdata[vertex][position] in CUDA
+        std::vector<helios::vec2> uvs = context->getPrimitiveTextureUV(UUID);
+        if (!uvs.empty()) {
+            geometry_data.uv_IDs[prim_idx] = static_cast<int>(prim_idx);  // Store position index for CUDA 2D buffer access
+            for (const auto& uv : uvs) {
+                geometry_data.uv_data.push_back(uv);
+            }
+            // Pad to 4 vertices if needed (CUDA expects max 4 vertices per primitive)
+            size_t start_idx = geometry_data.uv_data.size() - uvs.size();
+            while (geometry_data.uv_data.size() - start_idx < 4) {
+                geometry_data.uv_data.push_back(uvs.back());
+            }
+        }
+        // If uvs is empty, uv_ID stays -1 and CUDA will use default UV mapping
+    }
+
+    std::cout << "TEXTURE DEBUG: After processing - mask_data.size=" << geometry_data.mask_data.size()
+              << " mask_sizes.size=" << geometry_data.mask_sizes.size()
+              << " uv_data.size=" << geometry_data.uv_data.size() << std::endl;
+    int textured_count = 0;
+    for (size_t i = 0; i < geometry_data.mask_IDs.size(); i++) {
+        if (geometry_data.mask_IDs[i] >= 0) textured_count++;
+    }
+    std::cout << "TEXTURE DEBUG: Primitives with textures: " << textured_count << std::endl;
+}
 
 size_t RadiationModel::testBuildGeometryData() {
     buildGeometryData();

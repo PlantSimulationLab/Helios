@@ -566,12 +566,6 @@ void OptiX6Backend::launchDiffuseRays(const RayTracingLaunchParams& params) {
     // Upload emission/outgoing radiation if provided
     if (!params.radiation_out_top.empty()) {
         initializeBuffer1Df(radiation_out_top_RTbuffer, params.radiation_out_top);
-        // DEBUG: Print first few values to verify upload
-        if (params.radiation_out_top.size() >= 3) {
-            std::cerr << "BACKEND UPLOAD: radiation_out_top[0]=" << params.radiation_out_top[0]
-                      << " [1]=" << params.radiation_out_top[1]
-                      << " [2]=" << params.radiation_out_top[2] << std::endl;
-        }
     }
     if (!params.radiation_out_bottom.empty()) {
         initializeBuffer1Df(radiation_out_bottom_RTbuffer, params.radiation_out_bottom);
@@ -757,6 +751,16 @@ void OptiX6Backend::uploadRadiationOut(const std::vector<float>& radiation_out_t
     }
     if (!radiation_out_bottom.empty()) {
         initializeBuffer1Df(radiation_out_bottom_RTbuffer, radiation_out_bottom);
+    }
+}
+
+void OptiX6Backend::uploadSourceFluxes(const std::vector<float>& fluxes) {
+    if (!is_initialized) {
+        helios_runtime_error("ERROR (OptiX6Backend::uploadSourceFluxes): Backend not initialized.");
+    }
+
+    if (!fluxes.empty()) {
+        initializeBuffer1Df(source_fluxes_RTbuffer, fluxes);
     }
 }
 
@@ -1395,30 +1399,27 @@ void OptiX6Backend::geometryToBuffers(const RayTracingGeometry& geometry) {
     }
 
     // UV data
+    // uv_IDs contains position indices (not offsets), used by CUDA to access uvdata[vertex][position]
+    // uv_data is stored sequentially: 4 UVs per primitive that has UVs
     if (!geometry.uv_data.empty()) {
-        // Convert 1D vec2 array to 2D structure
-        std::vector<std::vector<helios::vec2>> uv_2d;
-        size_t max_vertices = 0;
-        for (int id : geometry.uv_IDs) {
-            if (id >= 0) {
-                max_vertices = std::max(max_vertices, (size_t)(id + 4)); // Assume max 4 vertices per primitive
-            }
-        }
-        if (max_vertices > 0) {
-            uv_2d.resize(geometry.primitive_count);
-            for (size_t p = 0; p < geometry.primitive_count; p++) {
-                int uv_start = geometry.uv_IDs[p];
-                if (uv_start >= 0) {
-                    uv_2d[p].resize(4);
-                    for (int v = 0; v < 4 && (uv_start + v) < geometry.uv_data.size(); v++) {
-                        uv_2d[p][v] = geometry.uv_data[uv_start + v];
-                    }
-                } else {
-                    uv_2d[p] = {helios::make_vec2(0, 0)};
+        // Convert 1D vec2 array to 2D structure: uv_2d[position][vertex]
+        std::vector<std::vector<helios::vec2>> uv_2d(geometry.primitive_count);
+        size_t uv_offset = 0;
+        for (size_t p = 0; p < geometry.primitive_count; p++) {
+            int uv_id = geometry.uv_IDs[p];
+            if (uv_id >= 0) {
+                // This primitive has UVs - read next 4 from uv_data
+                uv_2d[p].resize(4);
+                for (int v = 0; v < 4 && uv_offset < geometry.uv_data.size(); v++) {
+                    uv_2d[p][v] = geometry.uv_data[uv_offset++];
                 }
+            } else {
+                // No UVs - use default
+                uv_2d[p] = {helios::make_vec2(0, 0), helios::make_vec2(1, 0),
+                            helios::make_vec2(1, 1), helios::make_vec2(0, 1)};
             }
-            initializeBuffer2Dfloat2(uvdata_RTbuffer, uv_2d);
         }
+        initializeBuffer2Dfloat2(uvdata_RTbuffer, uv_2d);
     }
 
     if (!geometry.uv_IDs.empty()) {
