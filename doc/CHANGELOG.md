@@ -1,5 +1,24 @@
 # Changelog
 
+# [1.3.61] 2025-12-17
+
+## Core
+- Fixed CMake linkage visibility for `stdc++fs` library on older GNU compilers (< 9.0) by specifying `PRIVATE` visibility.
+- Added `compact` parameter to `WarningAggregator::report()` for single-line warning summaries.
+
+## Energy Balance
+- CUDA is now optional. Plugin uses three-tier execution: GPU (CUDA), OpenMP (parallel CPU), or serial CPU fallback. OpenMP is recommended for most workloads.
+- Added `enableGPUAcceleration()`, `disableGPUAcceleration()`, and `isGPUAccelerationEnabled()` methods to control GPU usage at runtime (only available when compiled with CUDA).
+
+## Collision Detection
+- Added runtime warning when OpenMP is not available, recommending its installation for better performance.
+
+## Plant Architecture
+- Added nitrogen model for simulating nitrogen uptake, allocation, remobilization, and stress effects on plant growth. Uses area-based nitrogen tracking (g N/m²) with three-level pool structure (root → available → per-leaf). Calculates nitrogen stress factor (0-1) for use by other plugins.
+
+## Leaf Optics
+- Added nitrogen-based automatic leaf optics mode that computes chlorophyll and carotenoid content from leaf nitrogen concentration. Uses adaptive binning to limit computational overhead while maintaining spectral fidelity across nitrogen gradients. Integrates with PlantArchitecture nitrogen model via `leaf_nitrogen_gN_m2` object data. 
+
 # [1.3.60] 2025-12-08
 
 ## Core

@@ -644,6 +644,7 @@ void ProjectBuilder::updateCameras() {
             int camera_index = camera_dict[rig_camera_label];
 
             /* Load properties of camera */
+            delete cameraproperties;  // Delete previous allocation to prevent memory leak
             cameraproperties = new CameraProperties();
             cameraproperties->camera_resolution = camera_resolutions[camera_index];
             cameraproperties->focal_plane_distance = focal_plane_distances[camera_index];
@@ -826,25 +827,39 @@ void ProjectBuilder::reload() {
     visualizer->plotUpdate();
     visualizer->clearGeometry();
 #endif // HELIOS_VISUALIZER
-    delete context;
-#ifdef ENABLE_PLANT_ARCHITECTURE
-    delete plantarchitecture;
-#endif // PLANT_ARCHITECTURE
-#ifdef ENABLE_RADIATION_MODEL
-    delete radiation;
-#endif // RADIATION_MODEL
-#ifdef ENABLE_SOLARPOSITION
-    delete solarposition;
-#endif // SOLARPOSITION
-#ifdef ENABLE_ENERGYBALANCEMODEL
-    delete energybalancemodel;
-#endif // ENERGYBALANCEMODEL
+
+    // Delete plugins BEFORE context - they hold pointers to context
 #ifdef ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
     delete boundarylayerconductance;
+    boundarylayerconductance = nullptr;
 #endif // BOUNDARYLAYERCONDUCTANCEMODEL
+#ifdef ENABLE_ENERGYBALANCEMODEL
+    delete energybalancemodel;
+    energybalancemodel = nullptr;
+#endif // ENERGYBALANCEMODEL
+#ifdef ENABLE_SOLARPOSITION
+    delete solarposition;
+    solarposition = nullptr;
+#endif // SOLARPOSITION
 #ifdef ENABLE_RADIATION_MODEL
+    delete radiation;
+    radiation = nullptr;
     delete cameraproperties;
+    cameraproperties = nullptr;
 #endif // RADIATION_MODEL
+#ifdef ENABLE_CANOPY_GENERATOR
+    delete canopygenerator;
+    canopygenerator = nullptr;
+#endif // CANOPY_GENERATOR
+#ifdef ENABLE_PLANT_ARCHITECTURE
+    delete plantarchitecture;
+    plantarchitecture = nullptr;
+#endif // PLANT_ARCHITECTURE
+
+    // Delete context LAST
+    delete context;
+    context = nullptr;
+
     buildFromXML();
     // #ifdef ENABLE_RADIATION_MODEL
     // radiation->enableCameraModelVisualization();

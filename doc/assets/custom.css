@@ -1,17 +1,35 @@
+/* Override sidebar width (20% narrower than default 335px) */
+html {
+    --side-nav-fixed-width: 268px;
+}
+
 /* Keep logo and version number close together */
 #titlearea table {
-    table-layout: auto;
+    width: auto !important;
+    table-layout: fixed;
+}
+
+#titlearea #projectrow {
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 #titlearea #projectlogo {
-    width: 1%;
-    white-space: nowrap;
-    padding-right: 8px;
+    width: auto !important;
+    padding: 0 !important;
+    flex-shrink: 0;
+}
+
+#titlearea #projectlogo img {
+    margin-right: 0 !important;
+    display: block;
 }
 
 #titlearea #projectalign {
-    width: 1%;
-    white-space: nowrap;
+    width: auto !important;
+    padding: 0 !important;
+    flex-shrink: 0;
 }
 
 /* Styles for searchbox - works for both full sidebar and non-full sidebar modes */

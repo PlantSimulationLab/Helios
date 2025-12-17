@@ -7,7 +7,7 @@
  <p> <br><br> </p>
 
  <table>
- <tr><th>Dependencies <td>NVIDIA CUDA 9.0+
+ <tr><th>Dependencies <td>OpenMP (recommended), NVIDIA CUDA 9.0+ (optional)
  <tr><th>CMakeLists.txt <td>set( PLUGINS "energybalance" )
  <tr><th>Header File <td>#include "EnergyBalanceModel.h"
  <tr><th>Class <td>\ref EnergyBalanceModel
@@ -18,23 +18,53 @@
 <table>
  <tr>
   <th>Package</th>
+  <th>Status</th>
   <td>\image html apple-logo.png</td>
   <td>\image html unix-logo.png</td>
   <td>\image html windows-logo.png</td>
  </tr>
  <tr>
+  <td>OpenMP</td>
+  <td><b>Recommended</b></td>
+  <td>Usually available (via libomp)</td>
+  <td>Usually available</td>
+  <td>Usually available</td>
+ </tr>
+ <tr>
   <td>NVIDIA CUDA 9.0+</td>
+  <td><b>Optional</b></td>
   <td>Mac OSX: Not available</td>
   <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
   <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
  </tr>
 </table>
 
-For help choosing the correct CUDA toolkit version for your system, consult this page: \ref ChoosingCUDA
+<b>Important:</b> As of version 1.3.61, the Energy Balance plugin no longer requires CUDA. The plugin uses a three-tier execution hierarchy:
+
+<ol>
+<li><b>GPU (CUDA):</b> Used when CUDA is compiled and GPU hardware is detected. Optional.</li>
+<li><b>OpenMP (CPU parallel):</b> Used when OpenMP is available (default). <b>Recommended for best performance.</b></li>
+<li><b>Serial CPU:</b> Fallback when neither GPU nor OpenMP available. Works but significantly slower.</li>
+</ol>
+
+<b>Performance Note:</b> Benchmarks show the OpenMP CPU implementation is actually faster than the GPU implementation for typical workloads (< 1M primitives). OpenMP is strongly recommended for production use.
+
+\subsection EBCUDAOptional CUDA is Now Optional
+
+The Energy Balance plugin can be built and used in multiple configurations:
+
+<ol>
+<li><b>CPU-only build with OpenMP (Recommended):</b> No CUDA Toolkit required. Uses optimized OpenMP parallelization. Fastest for most workloads.</li>
+<li><b>CPU-only build without OpenMP:</b> No CUDA or OpenMP. Uses serial CPU implementation. Works but significantly slower. A warning is issued recommending OpenMP installation.</li>
+<li><b>CUDA build with GPU:</b> Compiles with CUDA support. Automatically uses GPU if available at runtime. Falls back to OpenMP if no GPU detected.</li>
+<li><b>CUDA build without GPU:</b> Compiles with CUDA support but runs on machine without GPU. Automatically falls back to OpenMP (or serial if OpenMP unavailable).</li>
+</ol>
+
+For help choosing the correct CUDA toolkit version for your system (if using CUDA), consult this page: \ref ChoosingCUDA
 
 Useful OS-specific information for installing CUDA can be found here: \ref DependentSoftware
 
-If you are using a PC, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: \ref PCGPUTimeout
+<b>Note:</b> The GPU timeout registry setting (previously required for Windows) is no longer necessary when using the default CPU implementation.
 
 
 \section EBissues Known Issues
@@ -43,7 +73,7 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
 
  \section EBIntro Introduction
 
- This model plugin calculates a local energy balance for every primitive, and ultimately predicts sensible, latent, and longwave fluxes as well as surface temperature. The energy balance equation is solved in parallel on the GPU to accelerate calculations.
+ This model plugin calculates a local energy balance for every primitive, and ultimately predicts sensible, latent, and longwave fluxes as well as surface temperature. The energy balance equation is solved in parallel using OpenMP CPU parallelization by default, with optional GPU acceleration available when CUDA is installed and GPU hardware is detected.
 
  The model is solving the steady-state budget between absorbed radiation, emitted radiation, sensible heat exchange, and latent heat exchange, which is written as
 
@@ -143,6 +173,37 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
   energybalance.addRadiationBand("NIR");
   energybalance.addRadiationBand("LW");
  ```
+
+ \subsection EBGPUControl GPU Acceleration Control
+
+ The Energy Balance plugin automatically detects GPU availability at runtime and uses GPU acceleration when available. However, you can manually control whether to use GPU or CPU execution:
+
+ ```
+  EnergyBalanceModel energybalance(&context);
+
+  // Force CPU mode (even if GPU is available)
+  energybalance.disableGPUAcceleration();
+
+  // Enable GPU if available
+  energybalance.enableGPUAcceleration();
+
+  // Check current mode
+  if (energybalance.isGPUAccelerationEnabled()) {
+      std::cout << "Using GPU acceleration" << std::endl;
+  } else {
+      std::cout << "Using CPU (OpenMP) implementation" << std::endl;
+  }
+ ```
+
+ <b>Note:</b> These methods are only available when the plugin is compiled with CUDA support (HELIOS_CUDA_AVAILABLE defined). For CPU-only builds, these methods are not available and the plugin always uses OpenMP.
+
+ <b>When to use CPU mode:</b>
+ <ul>
+ <li>Benchmarks show CPU implementation is faster than GPU for workloads < 1M primitives</li>
+ <li>Testing and validation (ensure consistent results across platforms)</li>
+ <li>Debugging (simpler execution path)</li>
+ <li>Systems where GPU is shared with visualization</li>
+ </ul>
 
  \subsection EBblc Boundary-layer Conductance Model
 

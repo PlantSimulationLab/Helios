@@ -2995,7 +2995,7 @@ void helios::WarningAggregator::addWarning(const std::string &category, const st
     }
 }
 
-void helios::WarningAggregator::report(std::ostream &stream) {
+void helios::WarningAggregator::report(std::ostream &stream, bool compact) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     if (counts_.empty()) {
@@ -3009,21 +3009,26 @@ void helios::WarningAggregator::report(std::ostream &stream) {
 
         stream << "WARNING: " << count << " instance" << (count > 1 ? "s" : "") << " of '" << category << "'";
 
-        // Get stored messages for this category
-        const auto &messages = warnings_[category];
+        if (!compact) {
+            // Original behavior: show examples
+            const auto &messages = warnings_[category];
 
-        // Show first few examples
-        size_t examples_to_show = std::min(size_t(3), messages.size());
-        stream << " (showing first " << examples_to_show << "):" << std::endl;
+            // Show first few examples
+            size_t examples_to_show = std::min(size_t(3), messages.size());
+            stream << " (showing first " << examples_to_show << "):" << std::endl;
 
-        for (size_t i = 0; i < examples_to_show; ++i) {
-            stream << "  - " << messages[i] << std::endl;
+            for (size_t i = 0; i < examples_to_show; ++i) {
+                stream << "  - " << messages[i] << std::endl;
+            }
+
+            if (count > MAX_EXAMPLES) {
+                stream << "  (Note: More than " << MAX_EXAMPLES << " warnings of this type were encountered)" << std::endl;
+            }
+            stream << std::endl;
+        } else {
+            // Compact mode: just the count
+            stream << std::endl;
         }
-
-        if (count > MAX_EXAMPLES) {
-            stream << "  (Note: More than " << MAX_EXAMPLES << " warnings of this type were encountered)" << std::endl;
-        }
-        stream << std::endl;
     }
 
     // Clear after reporting

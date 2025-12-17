@@ -5,19 +5,19 @@
  <p> <br><br> </p>
 
  <table>
-   <tr>	
+   <tr>
       <th>Dependencies</th>
-      <td>NVIDIA CUDA 9.0+ (optional)</td>
+      <td>OpenMP (recommended), NVIDIA CUDA 9.0+ (optional)</td>
    </tr>
-   <tr>	
+   <tr>
      <th>CMakeLists.txt</th>
      <td>set( PLUGINS "collisiondetection" )</td>
    </tr>
-   <tr>	
+   <tr>
      <th>Header File</th>
      <td>#include "CollisionDetection.h"</td>
    </tr>
-   <tr>	
+   <tr>
      <th>Class</th>
      <td>\ref CollisionDetection</td>
    </tr>
@@ -28,17 +28,28 @@
 <table>
     <tr>
         <th>Package</th>
+        <th>Status</th>
         <td>\image html apple-logo.png</td>
         <td>\image html unix-logo.png</td>
         <td>\image html windows-logo.png</td>
     </tr>
     <tr>
+        <td>OpenMP</td>
+        <td><b>Recommended</b></td>
+        <td>Usually available (via libomp)</td>
+        <td>Usually available</td>
+        <td>Usually available</td>
+    </tr>
+    <tr>
         <td>NVIDIA CUDA 9.0+ (optional)</td>
+        <td><b>Optional</b></td>
         <td>Mac OSX: Not available</td>
         <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
         <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
     </tr>
 </table>
+
+<b>Performance Note:</b> OpenMP is strongly recommended for production use. The plugin will work without OpenMP using serial CPU execution, but performance will be significantly slower for large scenes.
 
 For help choosing the correct CUDA toolkit version and accompanying OptiX version for your system, consult this page: \ref ChoosingCUDA
 
@@ -46,7 +57,7 @@ Useful OS-specific information for installing CUDA can be found here: \ref Depen
 
 If you are using a PC, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: \ref PCGPUTimeout
 
-<b>Note:</b> CUDA is optional for this plugin. The collision detection system will work on CPU-only systems, but GPU acceleration provides significant performance improvements for large scenes.
+<b>Note:</b> CUDA is optional for this plugin. The collision detection system will work on CPU-only systems. OpenMP provides parallel CPU execution and is recommended for best performance. When neither GPU nor OpenMP is available, the plugin falls back to serial CPU execution with a performance warning.
 
  \section CDIntro Introduction
 

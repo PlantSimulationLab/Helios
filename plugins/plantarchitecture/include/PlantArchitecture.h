@@ -335,6 +335,35 @@ struct CarbohydrateParameters {
     float carbon_conductance_up = carbon_conductance_down / 5; // Conductance of carbon from parent to child shoots << conductance from child to parent
 };
 
+//! Parameters for the nitrogen model
+struct NitrogenParameters {
+
+    // -- Leaf Nitrogen Content (Area Basis) -- //
+    //! target leaf nitrogen content per unit area (g N/m²)
+    float target_leaf_N_area = 1.5f;
+    //! minimum viable leaf nitrogen content per unit area (g N/m²)
+    float minimum_leaf_N_area = 0.5f;
+
+    // -- Allocation Parameters -- //
+    //! fraction of nitrogen uptake allocated to roots
+    float root_allocation_fraction = 0.15f;
+
+    // -- Rate Limiting Parameters -- //
+    //! maximum rate at which leaves can accumulate nitrogen per unit area (g N/m²/day)
+    float max_N_accumulation_rate = 0.1f;
+
+    // -- Remobilization Parameters -- //
+    //! fraction of leaf nitrogen that can be remobilized from old leaves (0.0-1.0)
+    float leaf_remobilization_efficiency = 0.70f;
+    //! fraction of leaf lifespan at which remobilization begins (0.0-1.0)
+    float remobilization_age_threshold = 0.70f;
+
+    // -- Fruit Nitrogen Parameters -- //
+    //! nitrogen content per unit fruit area (g N/m²)
+    float fruit_N_area = 1.0f;
+
+};
+
 //! Add geometry to the Context consisting of a series of Cone objects to form a tube-like shape
 /**
  * \param[in] radial_subdivisions Number of subdivisions around the circumference of each cone (must be be >= 3).
@@ -1596,6 +1625,10 @@ struct Shoot {
     const uint parent_petiole_index;
 
     float carbohydrate_pool_molC = 0; // mol C
+
+    //! Per-leaf nitrogen tracking - maps leaf objID to nitrogen content per unit area (g N/m²)
+    std::map<uint, float> leaf_nitrogen_gN_m2;
+
     float old_shoot_volume = 0;
 
     float phyllochron_increase = 5;
@@ -1672,6 +1705,18 @@ struct PlantInstance {
     float max_age = 999;
 
     CarbohydrateParameters carb_parameters;
+
+    // --- Nitrogen Model --- //
+
+    //! Parameters for the nitrogen model
+    NitrogenParameters nitrogen_parameters;
+
+    //! Root nitrogen pool (g N)
+    float root_nitrogen_pool_gN = 0;
+    //! Available nitrogen pool for leaves to draw from (g N)
+    float available_nitrogen_pool_gN = 0;
+    //! Cumulative nitrogen uptake tracking (g N)
+    float cumulative_N_uptake_gN = 0;
 
     //! Snapshot of shoot parameters that were active when this plant was created
     //! This prevents parameter contamination between different plant types
@@ -2684,6 +2729,76 @@ public:
      */
     void disableCarbohydrateModel();
 
+    // -- Nitrogen Model Methods -- //
+
+    /**
+     * \brief Enable the nitrogen model for tracking plant nitrogen status and stress
+     *
+     * The nitrogen model simulates nitrogen uptake, allocation to leaves, remobilization
+     * from old to young leaves, and calculates a nitrogen stress factor (0-1) that other
+     * plugins can optionally use to modify photosynthesis and growth.
+     *
+     * \see disableNitrogenModel(), addPlantNitrogen(), setPlantNitrogenParameters()
+     */
+    void enableNitrogenModel();
+
+    /**
+     * \brief Disable the nitrogen model
+     */
+    void disableNitrogenModel();
+
+    /**
+     * \brief Check if the nitrogen model is enabled
+     * \return True if nitrogen model is enabled, false otherwise
+     */
+    [[nodiscard]] bool isNitrogenModelEnabled() const;
+
+    /**
+     * \brief Set nitrogen model parameters for a single plant
+     * \param[in] plantID Plant ID to set parameters for
+     * \param[in] params Nitrogen parameters struct
+     * \throws helios_runtime_error if plant does not exist
+     */
+    void setPlantNitrogenParameters(uint plantID, const NitrogenParameters& params);
+
+    /**
+     * \brief Set nitrogen model parameters for multiple plants
+     * \param[in] plantIDs Vector of plant IDs
+     * \param[in] params Nitrogen parameters struct
+     * \throws helios_runtime_error if any plant does not exist
+     */
+    void setPlantNitrogenParameters(const std::vector<uint>& plantIDs, const NitrogenParameters& params);
+
+    /**
+     * \brief Initialize nitrogen pools for all plants based on current leaf biomass
+     * \param[in] initial_leaf_N_concentration Initial leaf nitrogen concentration (g N/g DW)
+     */
+    void initializeNitrogenPools(float initial_leaf_N_concentration);
+
+    /**
+     * \brief Initialize nitrogen pools for a specific plant
+     * \param[in] plantID Plant ID to initialize
+     * \param[in] initial_leaf_N_concentration Initial leaf nitrogen concentration (g N/g DW)
+     * \throws helios_runtime_error if plant does not exist
+     */
+    void initializePlantNitrogenPools(uint plantID, float initial_leaf_N_concentration);
+
+    /**
+     * \brief Add nitrogen to a single plant (immediate application to root and available pools)
+     * \param[in] plantID Plant ID to receive nitrogen
+     * \param[in] amount_gN Amount of nitrogen to add (g N)
+     * \throws helios_runtime_error if plant does not exist or amount is negative
+     */
+    void addPlantNitrogen(uint plantID, float amount_gN);
+
+    /**
+     * \brief Add nitrogen to multiple plants (immediate application)
+     * \param[in] plantIDs Vector of plant IDs to receive nitrogen
+     * \param[in] amount_gN Amount of nitrogen to add to each plant (g N)
+     * \throws helios_runtime_error if any plant does not exist or amount is negative
+     */
+    void addPlantNitrogen(const std::vector<uint>& plantIDs, float amount_gN);
+
     // -- manual plant generation from input string -- //
 
     /**
@@ -2895,6 +3010,15 @@ protected:
     void checkCarbonPool_transferCarbon(float dt);
 
     bool carbon_model_enabled = false;
+
+    // --- Nitrogen Model --- //
+
+    void accumulateLeafNitrogen(float dt);
+    void remobilizeNitrogen(float dt);
+    void updateNitrogenStressFactor();
+    void removeFruitNitrogen();
+
+    bool nitrogen_model_enabled = false;
 
     // --- Collision Detection --- //
 

@@ -1992,32 +1992,40 @@ public:
     ~ProjectBuilder() {
         std::cout.rdbuf(old_cout_stream_buf);
 
-        delete context;
+        // Delete plugins BEFORE context - they hold pointers to context
+        // and may access it during destruction
 
-#ifdef HELIOS_VISUALIZER
-        delete visualizer;
-#endif // ENABLE_HELIOS_VISUALIZER
+#ifdef ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
+        delete boundarylayerconductance;
+#endif // ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
 
-#ifdef ENABLE_PLANT_ARCHITECTURE
-        delete plantarchitecture;
-#endif // ENABLE_PLANT_ARCHITECTURE
+#ifdef ENABLE_ENERGYBALANCEMODEL
+        delete energybalancemodel;
+#endif // ENABLE_ENERGYBALANCEMODEL
+
+#ifdef ENABLE_SOLARPOSITION
+        delete solarposition;
+#endif // ENABLE_SOLARPOSITION
 
 #ifdef ENABLE_RADIATION_MODEL
         delete radiation;
         delete cameraproperties;
 #endif // ENABLE_RADIATION_MODEL
 
-#ifdef ENABLE_SOLARPOSITION
-        delete solarposition;
-#endif // ENABLE_SOLARPOSITION
+#ifdef ENABLE_CANOPY_GENERATOR
+        delete canopygenerator;
+#endif // ENABLE_CANOPY_GENERATOR
 
-#ifdef ENABLE_ENERGYBALANCEMODEL
-        delete energybalancemodel;
-#endif // ENABLE_ENERGYBALANCEMODEL
+#ifdef ENABLE_PLANT_ARCHITECTURE
+        delete plantarchitecture;
+#endif // ENABLE_PLANT_ARCHITECTURE
 
-#ifdef ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
-        delete boundarylayerconductance;
-#endif // ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
+#ifdef ENABLE_HELIOS_VISUALIZER
+        delete visualizer;
+#endif // ENABLE_HELIOS_VISUALIZER
+
+        // Delete context LAST - all plugins depend on it
+        delete context;
     }
 };
 

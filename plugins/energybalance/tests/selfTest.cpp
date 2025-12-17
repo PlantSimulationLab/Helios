@@ -271,9 +271,13 @@ DOCTEST_TEST_CASE("EnergyBalanceModel Optional Output Primitive Data") {
 
     DOCTEST_CHECK_NOTHROW(testModel.optionalOutputPrimitiveData("boundarylayer_conductance_out"));
 
-    capture_cerr cerr_buffer;
-    DOCTEST_CHECK_NOTHROW(testModel.optionalOutputPrimitiveData("invalid_label")); // Should print warning
-    DOCTEST_CHECK(cerr_buffer.has_output());
+    bool has_cerr_output;
+    {
+        capture_cerr cerr_buffer;
+        testModel.optionalOutputPrimitiveData("invalid_label"); // Should print warning
+        has_cerr_output = cerr_buffer.has_output();
+    }  // capture destroyed here before assertion
+    DOCTEST_CHECK(has_cerr_output);
 }
 
 DOCTEST_TEST_CASE("EnergyBalanceModel Print Default Value Report") {
@@ -346,6 +350,239 @@ DOCTEST_TEST_CASE("EnergyBalanceModel Additional Dynamic Model Check") {
     }
 
     DOCTEST_CHECK(!temperature_dyn.empty());
+}
+
+#ifdef HELIOS_CUDA_AVAILABLE
+DOCTEST_TEST_CASE("EnergyBalanceModel GPU vs CPU Consistency") {
+    Context context_gpu_cpu;
+    uint UUID_gpu_cpu = context_gpu_cpu.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+    context_gpu_cpu.setPrimitiveData(UUID_gpu_cpu, "radiation_flux_SW", 400.f);
+    context_gpu_cpu.setPrimitiveData(UUID_gpu_cpu, "air_temperature", 300.f);
+    context_gpu_cpu.setPrimitiveData(UUID_gpu_cpu, "air_humidity", 0.5f);
+    context_gpu_cpu.setPrimitiveData(UUID_gpu_cpu, "moisture_conductance", 0.1f);
+
+    EnergyBalanceModel model_gpu_cpu(&context_gpu_cpu);
+    model_gpu_cpu.disableMessages();
+    model_gpu_cpu.addRadiationBand("SW");
+
+    // Check if GPU is available
+    bool gpu_available = model_gpu_cpu.isGPUAccelerationEnabled();
+    if (!gpu_available) {
+        DOCTEST_WARN("GPU not available - skipping GPU vs CPU comparison test");
+        return;
+    }
+
+    // Run with GPU
+    DOCTEST_CHECK_NOTHROW(model_gpu_cpu.run());
+    float T_gpu;
+    DOCTEST_CHECK_NOTHROW(context_gpu_cpu.getPrimitiveData(UUID_gpu_cpu, "temperature", T_gpu));
+
+    // Run with CPU
+    model_gpu_cpu.disableGPUAcceleration();
+    DOCTEST_CHECK(model_gpu_cpu.isGPUAccelerationEnabled() == false);
+    DOCTEST_CHECK_NOTHROW(model_gpu_cpu.run());
+    float T_cpu;
+    DOCTEST_CHECK_NOTHROW(context_gpu_cpu.getPrimitiveData(UUID_gpu_cpu, "temperature", T_cpu));
+
+    // Verify GPU and CPU give same result (within floating-point precision)
+    DOCTEST_CHECK(T_cpu == doctest::Approx(T_gpu).epsilon(1e-4));
+}
+#endif
+
+DOCTEST_TEST_CASE("EnergyBalanceModel - Default value warnings") {
+
+    DOCTEST_SUBCASE("Missing air_temperature triggers warning") {
+        Context context;
+        uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+        // Set only radiation, leave air_temperature unset
+        context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
+
+        // Capture cout to check warnings - must go out of scope before assertions
+        std::string output;
+        {
+            capture_cout capture;
+            EnergyBalanceModel model(&context);
+            model.addRadiationBand("LW");
+            model.run();
+            output = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(output.find("missing_air_temperature") != std::string::npos);
+        DOCTEST_CHECK(output.find("WARNING:") != std::string::npos);
+        DOCTEST_CHECK(output.find("instance") != std::string::npos);  // singular for 1 primitive
+    }
+
+    DOCTEST_SUBCASE("Missing wind_speed triggers warning") {
+        Context context;
+        uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+        context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
+        context.setPrimitiveData(UUID, "air_temperature", 300.f);
+        // Leave wind_speed and boundarylayer_conductance unset
+
+        std::string output;
+        {
+            capture_cout capture;
+            EnergyBalanceModel model(&context);
+            model.addRadiationBand("LW");
+            model.run();
+            output = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(output.find("missing_wind_speed") != std::string::npos);
+        DOCTEST_CHECK(output.find("WARNING:") != std::string::npos);
+    }
+
+    DOCTEST_SUBCASE("Missing air_humidity triggers warning") {
+        Context context;
+        uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+        context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
+        context.setPrimitiveData(UUID, "air_temperature", 300.f);
+        // Leave air_humidity unset
+
+        std::string output;
+        {
+            capture_cout capture;
+            EnergyBalanceModel model(&context);
+            model.addRadiationBand("LW");
+            model.run();
+            output = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(output.find("missing_air_humidity") != std::string::npos);
+        DOCTEST_CHECK(output.find("WARNING:") != std::string::npos);
+    }
+
+    DOCTEST_SUBCASE("Missing surface temperature triggers warning") {
+        Context context;
+        uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+        context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
+        context.setPrimitiveData(UUID, "air_temperature", 300.f);
+        // Leave temperature unset
+
+        std::string output;
+        {
+            capture_cout capture;
+            EnergyBalanceModel model(&context);
+            model.addRadiationBand("LW");
+            model.run();
+            output = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(output.find("missing_surface_temperature") != std::string::npos);
+        DOCTEST_CHECK(output.find("WARNING:") != std::string::npos);
+    }
+
+    DOCTEST_SUBCASE("Missing emissivity triggers warning") {
+        Context context;
+        uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+        context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
+        context.setPrimitiveData(UUID, "air_temperature", 300.f);
+        // Leave emissivity_LW unset (will default to 1.0)
+
+        std::string output;
+        {
+            capture_cout capture;
+            EnergyBalanceModel model(&context);
+            model.addRadiationBand("LW");
+            model.run();
+            output = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(output.find("missing_emissivity") != std::string::npos);
+        DOCTEST_CHECK(output.find("WARNING:") != std::string::npos);
+    }
+
+    DOCTEST_SUBCASE("Air temperature < 250K triggers warning") {
+        Context context;
+        uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+        context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
+        context.setPrimitiveData(UUID, "air_temperature", 25.f);  // Likely Celsius
+
+        std::string output;
+        {
+            capture_cout capture;
+            EnergyBalanceModel model(&context);
+            model.addRadiationBand("LW");
+            model.run();
+            output = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(output.find("air_temperature_likely_celsius") != std::string::npos);
+        DOCTEST_CHECK(output.find("WARNING:") != std::string::npos);
+    }
+
+    DOCTEST_SUBCASE("Air humidity out of range triggers warning") {
+        Context context;
+        uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+        context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
+        context.setPrimitiveData(UUID, "air_temperature", 300.f);
+        context.setPrimitiveData(UUID, "air_humidity", 1.5f);  // Out of range
+
+        std::string output;
+        {
+            capture_cout capture;
+            EnergyBalanceModel model(&context);
+            model.addRadiationBand("LW");
+            model.run();
+            output = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(output.find("air_humidity_out_of_range_high") != std::string::npos);
+        DOCTEST_CHECK(output.find("WARNING:") != std::string::npos);
+    }
+
+    DOCTEST_SUBCASE("Messages can be disabled") {
+        Context context;
+        uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+
+        context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
+        // Leave air_temperature unset
+
+        std::string output;
+        {
+            capture_cout capture;
+            EnergyBalanceModel model(&context);
+            model.disableMessages();
+            model.addRadiationBand("LW");
+            model.run();
+            output = capture.get_captured_output();
+        }
+        // Should produce no warnings
+        DOCTEST_CHECK(output.find("WARNING:") == std::string::npos);
+    }
+
+    DOCTEST_SUBCASE("Multiple missing parameters produce aggregated warnings") {
+        Context context;
+        std::vector<uint> UUIDs;
+        // Create 10 primitives with missing parameters
+        for (int i = 0; i < 10; i++) {
+            uint UUID = context.addPatch(make_vec3(i, 0, 0), make_vec2(1, 1));
+            UUIDs.push_back(UUID);
+            context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
+            // Leave air_temperature, wind_speed, air_humidity unset
+        }
+
+        std::string output;
+        {
+            capture_cout capture;
+            EnergyBalanceModel model(&context);
+            model.addRadiationBand("LW");
+            model.run();
+            output = capture.get_captured_output();
+        }
+
+        // Should have warnings for missing parameters
+        DOCTEST_CHECK(output.find("missing_air_temperature") != std::string::npos);
+        DOCTEST_CHECK(output.find("missing_wind_speed") != std::string::npos);
+        DOCTEST_CHECK(output.find("missing_air_humidity") != std::string::npos);
+
+        // Should show counts (10 instances for each)
+        DOCTEST_CHECK(output.find("10 instances") != std::string::npos);
+
+        // Should NOT show individual example messages (compact mode)
+        DOCTEST_CHECK(output.find("(showing first") == std::string::npos);
+    }
 }
 
 int EnergyBalanceModel::selfTest(int argc, char **argv) {

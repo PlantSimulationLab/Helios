@@ -142,12 +142,11 @@ endif()
 #target_compile_definitions(projectbuilder PUBLIC BOUNDARYLAYERCONDUCTANCEMODEL)
 #target_compile_definitions(projectbuilder PUBLIC BOUNDARYLAYERCONDUCTANCEMODEL)
 
-# CUDA + OPTIX required for energybalance and radiation
-if("radiation" IN_LIST PLUGINS OR "energybalance" IN_LIST PLUGINS)
+# CUDA + OPTIX required for radiation plugin
+# EnergyBalance plugin handles CUDA optionally in its own CMakeLists.txt
+if("radiation" IN_LIST PLUGINS)
     find_package(CUDAToolkit REQUIRED)
-    if(CUDAToolkit_FOUND)
-        target_link_libraries( projectbuilder PRIVATE CUDA::cudart_static )
-    endif(CUDAToolkit_FOUND)
+    target_link_libraries( projectbuilder PRIVATE CUDA::cudart_static )
     if(UNIX AND NOT APPLE)
         if( OPTIX_VERSION_LEGACY )
             set(OPTIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../radiation/lib/OptiX/linux64-5.1.0/)

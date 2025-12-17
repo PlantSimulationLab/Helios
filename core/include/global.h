@@ -1537,9 +1537,11 @@ namespace helios {
         //! Report all accumulated warnings and clear
         /**
          * \param[in] stream Output stream to write warnings to (default: std::cerr)
-         * \note Outputs format: "WARNING: N instances of 'category' (showing first 3):"
+         * \param[in] compact If true, output single line per category with count only (default: false)
+         * \note Standard format: "WARNING: N instances of 'category' (showing first 3):"
+         * \note Compact format: "WARNING: N instances of 'category'"
          */
-        void report(std::ostream &stream = std::cerr);
+        void report(std::ostream &stream = std::cerr, bool compact = false);
 
         //! Get the count of warnings for a specific category
         /**

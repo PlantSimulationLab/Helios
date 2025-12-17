@@ -98,6 +98,16 @@ CollisionDetection::CollisionDetection(helios::Context *a_context) {
     tree_isolation_distance = 5.0f; // Default 5 meter isolation distance
     obstacle_spatial_grid_initialized = false;
 
+    // Issue warning if OpenMP not available
+    #ifndef _OPENMP
+    static bool openmp_warning_issued = false;
+    if (printmessages && !openmp_warning_issued) {
+        std::cout << "WARNING (CollisionDetection): OpenMP not available. Using serial CPU implementation. "
+                  << "Performance will be significantly slower. Consider installing OpenMP for parallel execution." << std::endl;
+        openmp_warning_issued = true;
+    }
+    #endif
+
     // Initialize grid parameters
     grid_center = make_vec3(0, 0, 0);
     grid_size = make_vec3(1, 1, 1);

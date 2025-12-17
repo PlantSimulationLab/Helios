@@ -145,13 +145,18 @@ TEST_CASE("SolarPosition turbidity calibration") {
 TEST_CASE("SolarPosition invalid lat/long") {
     Context context_s;
 
-    capture_cerr cerr_buffer;
-    SolarPosition sp_1(7, -100.f, 105.2369f, &context_s);
-    DOCTEST_CHECK(cerr_buffer.has_output());
+    bool had_output_1, had_output_2;
+    {
+        capture_cerr cerr_buffer;
+        SolarPosition sp_1(7, -100.f, 105.2369f, &context_s);
+        had_output_1 = cerr_buffer.has_output();
 
-    cerr_buffer.clear();
-    SolarPosition sp_2(7, 40.125f, -200.f, &context_s);
-    DOCTEST_CHECK(cerr_buffer.has_output());
+        cerr_buffer.clear();
+        SolarPosition sp_2(7, 40.125f, -200.f, &context_s);
+        had_output_2 = cerr_buffer.has_output();
+    } // capture goes out of scope before assertions
+    DOCTEST_CHECK(had_output_1);
+    DOCTEST_CHECK(had_output_2);
 }
 
 TEST_CASE("SolarPosition invalid solar angle") {
@@ -230,8 +235,10 @@ TEST_CASE("SolarPosition cloud calibration") {
 
     DOCTEST_CHECK_NOTHROW(sp.disableCloudCalibration());
 
-    capture_cerr cerr_buffer;
-    DOCTEST_CHECK_THROWS_AS(sp.enableCloudCalibration("non_existent_timeseries"), std::runtime_error);
+    {
+        capture_cerr cerr_buffer;
+        DOCTEST_CHECK_THROWS_AS(sp.enableCloudCalibration("non_existent_timeseries"), std::runtime_error);
+    }
 }
 
 TEST_CASE("SolarPosition turbidity calculation") {
@@ -241,11 +248,17 @@ TEST_CASE("SolarPosition turbidity calculation") {
     DOCTEST_CHECK_NOTHROW(context_s.loadTabularTimeseriesData("lib/testdata/cimis.csv", {"CIMIS"}, ","));
 
     float turbidity;
-    DOCTEST_CHECK_NOTHROW(turbidity = sp.calibrateTurbidityFromTimeseries("net_radiation"));
+    {
+        // Turbidity calibration may produce fzero warnings - capture them
+        capture_cerr cerr_buffer;
+        DOCTEST_CHECK_NOTHROW(turbidity = sp.calibrateTurbidityFromTimeseries("net_radiation"));
+    } // capture goes out of scope before assertion
     DOCTEST_CHECK(turbidity > 0.f);
 
-    capture_cerr cerr_buffer;
-    DOCTEST_CHECK_THROWS_AS(turbidity = sp.calibrateTurbidityFromTimeseries("non_existent_timeseries"), std::runtime_error);
+    {
+        capture_cerr cerr_buffer;
+        DOCTEST_CHECK_THROWS_AS(turbidity = sp.calibrateTurbidityFromTimeseries("non_existent_timeseries"), std::runtime_error);
+    }
 }
 
 TEST_CASE("SolarPosition setAtmosphericConditions valid inputs") {
@@ -322,12 +335,15 @@ TEST_CASE("SolarPosition getAtmosphericConditions defaults") {
 
     // Get atmospheric conditions without setting them first
     float pressure, temperature, humidity, turbidity;
-
-    capture_cerr cerr_buffer;
-    DOCTEST_CHECK_NOTHROW(sp.getAtmosphericConditions(pressure, temperature, humidity, turbidity));
+    bool had_warning;
+    {
+        capture_cerr cerr_buffer;
+        sp.getAtmosphericConditions(pressure, temperature, humidity, turbidity);
+        had_warning = cerr_buffer.has_output();
+    } // capture goes out of scope before assertions
 
     // Verify warning was issued
-    DOCTEST_CHECK(cerr_buffer.has_output());
+    DOCTEST_CHECK(had_warning);
 
     // Verify default values are used
     DOCTEST_CHECK(doctest::Approx(101325.f).epsilon(1e-6f) == pressure);
@@ -388,8 +404,10 @@ TEST_CASE("SolarPosition parameter-free methods with defaults") {
 
     // Verify defaults are being used
     float pressure, temperature, humidity, turbidity;
-    capture_cerr cerr_buffer;
-    sp.getAtmosphericConditions(pressure, temperature, humidity, turbidity);
+    {
+        capture_cerr cerr_buffer;
+        sp.getAtmosphericConditions(pressure, temperature, humidity, turbidity);
+    } // capture goes out of scope before assertions
     DOCTEST_CHECK(doctest::Approx(101325.f).epsilon(1e-6f) == pressure);
     DOCTEST_CHECK(doctest::Approx(300.f).epsilon(1e-6f) == temperature);
     DOCTEST_CHECK(doctest::Approx(0.5f).epsilon(1e-6f) == humidity);
@@ -637,7 +655,6 @@ TEST_CASE("SolarPosition - Prague performance benchmark") {
 
     auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-    DOCTEST_MESSAGE("Prague update time: " << duration_ms.count() << " ms");
     DOCTEST_CHECK(duration_ms.count() < 10000); // <10 seconds
 }
 

@@ -674,3 +674,366 @@ void LeafOptics::optionalOutputPrimitiveData(const char *label) {
         }
     }
 }
+
+// === Nitrogen mode helper methods ===
+
+LeafOpticsProperties LeafOptics::computePropertiesFromNitrogen(float N_area_gN_m2, const LeafOpticsProperties_Nauto &params) {
+    LeafOpticsProperties props;
+
+    // Convert nitrogen concentration to chlorophyll content
+    // N (g/m2) -> N (ug/cm2): multiply by 100
+    // Then apply photosynthetic fraction and empirical coefficient
+    float N_area_ug_cm2 = N_area_gN_m2 * 100.0f;
+    props.chlorophyllcontent = N_area_ug_cm2 * params.f_photosynthetic * params.N_to_Cab_coefficient;
+
+    // Clamp chlorophyll to physically reasonable range [5, 80] ug/cm2
+    props.chlorophyllcontent = std::max(5.0f, std::min(80.0f, props.chlorophyllcontent));
+
+    // Calculate carotenoids from chlorophyll ratio
+    props.carotenoidcontent = props.chlorophyllcontent * params.Car_to_Cab_ratio;
+
+    // Copy fixed parameters from Nauto struct
+    props.numberlayers = params.numberlayers;
+    props.anthocyancontent = params.anthocyancontent;
+    props.brownpigments = params.brownpigments;
+    props.watermass = params.watermass;
+    props.drymass = params.drymass;
+    props.protein = params.protein;
+    props.carbonconstituents = params.carbonconstituents;
+
+    return props;
+}
+
+std::map<uint, std::vector<uint>> LeafOptics::groupPrimitivesByObject(const std::vector<uint> &UUIDs) {
+    std::map<uint, std::vector<uint>> object_groups;
+
+    for (uint UUID : UUIDs) {
+        if (!context->doesPrimitiveExist(UUID)) {
+            if (message_flag) {
+                std::cerr << "WARNING (LeafOptics::groupPrimitivesByObject): Primitive UUID " << UUID << " does not exist, skipping." << std::endl;
+            }
+            continue;
+        }
+
+        uint objID = context->getPrimitiveParentObjectID(UUID);
+
+        // Object ID 0 means no parent object
+        if (objID == 0) {
+            if (message_flag) {
+                std::cerr << "WARNING (LeafOptics::groupPrimitivesByObject): Primitive UUID " << UUID << " has no parent object, skipping." << std::endl;
+            }
+            continue;
+        }
+
+        object_groups[objID].push_back(UUID);
+    }
+
+    return object_groups;
+}
+
+void LeafOptics::createAdaptiveBins(const std::vector<float> &nitrogen_values) {
+    nitrogen_bins.clear();
+
+    if (nitrogen_values.empty()) {
+        return;
+    }
+
+    // Sort nitrogen values for quantile calculation
+    std::vector<float> sorted_N = nitrogen_values;
+    std::sort(sorted_N.begin(), sorted_N.end());
+
+    uint count = sorted_N.size();
+    uint target_bins = nitrogen_params.num_bins;
+
+    // Adjust number of bins if fewer unique values than requested bins
+    if (count < target_bins) {
+        target_bins = count;
+    }
+
+    // Create quantile-based bin centers
+    std::vector<float> bin_centers;
+    for (uint i = 0; i < target_bins; i++) {
+        // Calculate index for quantile center
+        uint idx = (i * count / target_bins) + (count / (2 * target_bins));
+        if (idx >= count) {
+            idx = count - 1;
+        }
+        float center = sorted_N[idx];
+
+        // Only add if not a duplicate (within tolerance)
+        bool is_duplicate = false;
+        for (float existing : bin_centers) {
+            if (std::abs(center - existing) < 0.001f) {
+                is_duplicate = true;
+                break;
+            }
+        }
+        if (!is_duplicate) {
+            bin_centers.push_back(center);
+        }
+    }
+
+    // Generate PROSPECT spectrum for each bin
+    for (uint i = 0; i < bin_centers.size(); i++) {
+        SpectrumBin bin;
+        bin.N_center = bin_centers[i];
+        bin.spectrum_label = "Nauto_" + std::to_string(i);
+
+        // Compute PROSPECT properties and generate spectrum
+        LeafOpticsProperties props = computePropertiesFromNitrogen(bin.N_center, nitrogen_params);
+        run(props, bin.spectrum_label);
+
+        nitrogen_bins.push_back(bin);
+    }
+
+    if (message_flag) {
+        std::cout << "LeafOptics: Created " << nitrogen_bins.size() << " nitrogen-based spectrum bins." << std::endl;
+    }
+}
+
+uint LeafOptics::findNearestBin(float N_value) {
+    if (nitrogen_bins.empty()) {
+        helios_runtime_error("ERROR (LeafOptics::findNearestBin): No nitrogen bins have been created.");
+    }
+
+    uint best_bin = 0;
+    float best_distance = std::abs(N_value - nitrogen_bins[0].N_center);
+
+    for (uint i = 1; i < nitrogen_bins.size(); i++) {
+        float distance = std::abs(N_value - nitrogen_bins[i].N_center);
+        if (distance < best_distance) {
+            best_distance = distance;
+            best_bin = i;
+        }
+    }
+
+    return best_bin;
+}
+
+bool LeafOptics::shouldReassign(float current_N, uint current_bin) {
+    if (current_bin >= nitrogen_bins.size()) {
+        return false;
+    }
+
+    float bin_center = nitrogen_bins[current_bin].N_center;
+    float absolute_change = std::abs(current_N - bin_center);
+
+    // Check absolute threshold first
+    if (absolute_change < nitrogen_params.min_reassignment_change) {
+        return false;
+    }
+
+    // Check relative threshold
+    float relative_change = (bin_center > 0.0f) ? (absolute_change / bin_center) : 0.0f;
+    return relative_change > nitrogen_params.reassignment_threshold;
+}
+
+bool LeafOptics::isSignificantImprovement(float current_N, uint old_bin, uint new_bin) {
+    if (old_bin >= nitrogen_bins.size() || new_bin >= nitrogen_bins.size()) {
+        return false;
+    }
+
+    float old_distance = std::abs(current_N - nitrogen_bins[old_bin].N_center);
+    float new_distance = std::abs(current_N - nitrogen_bins[new_bin].N_center);
+
+    // Require improvement of at least half the minimum change threshold (hysteresis)
+    return (old_distance - new_distance) > nitrogen_params.min_reassignment_change * 0.5f;
+}
+
+void LeafOptics::assignSpectrumToPrimitives(const std::vector<uint> &UUIDs, uint bin_index) {
+    if (bin_index >= nitrogen_bins.size()) {
+        helios_runtime_error("ERROR (LeafOptics::assignSpectrumToPrimitives): Invalid bin index " + std::to_string(bin_index));
+    }
+
+    const std::string &label = nitrogen_bins[bin_index].spectrum_label;
+    std::string refl_label = "leaf_reflectivity_" + label;
+    std::string trans_label = "leaf_transmissivity_" + label;
+
+    context->setPrimitiveData(UUIDs, "reflectivity_spectrum", refl_label);
+    context->setPrimitiveData(UUIDs, "transmissivity_spectrum", trans_label);
+}
+
+void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_Nauto &params) {
+    if (UUIDs.empty()) {
+        if (message_flag) {
+            std::cout << "LeafOptics: Empty UUID list provided to nitrogen mode, nothing to do." << std::endl;
+        }
+        return;
+    }
+
+    // Group primitives by parent object
+    std::map<uint, std::vector<uint>> object_groups = groupPrimitivesByObject(UUIDs);
+
+    if (object_groups.empty()) {
+        if (message_flag) {
+            std::cerr << "WARNING (LeafOptics::run): No valid objects found for nitrogen-based leaf optics." << std::endl;
+        }
+        return;
+    }
+
+    // Collect nitrogen values from all objects
+    std::vector<float> nitrogen_values;
+    std::map<uint, float> object_nitrogen;
+
+    for (const auto &pair : object_groups) {
+        uint objID = pair.first;
+
+        // Check if nitrogen data exists on this object
+        if (!context->doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
+            helios_runtime_error("ERROR (LeafOptics::run): Object " + std::to_string(objID) +
+                " does not have 'leaf_nitrogen_gN_m2' data. Enable PlantArchitecture nitrogen model first.");
+        }
+
+        float N_area;
+        context->getObjectData(objID, "leaf_nitrogen_gN_m2", N_area);
+        nitrogen_values.push_back(N_area);
+        object_nitrogen[objID] = N_area;
+    }
+
+    if (!nitrogen_mode_active) {
+        // First call: Initialize nitrogen mode
+        nitrogen_params = params;
+
+        // Create adaptive bins based on nitrogen distribution
+        createAdaptiveBins(nitrogen_values);
+
+        // Assign each object to nearest bin
+        for (const auto &pair : object_groups) {
+            uint objID = pair.first;
+            const std::vector<uint> &obj_UUIDs = pair.second;
+            float N_area = object_nitrogen[objID];
+
+            uint best_bin = findNearestBin(N_area);
+            assignSpectrumToPrimitives(obj_UUIDs, best_bin);
+
+            // Track assignment
+            ObjectAssignment assignment;
+            assignment.bin_index = best_bin;
+            assignment.N_at_assignment = N_area;
+            assignment.primitive_UUIDs = obj_UUIDs;
+            object_assignments[objID] = assignment;
+
+            // Track primitive to object mapping
+            for (uint UUID : obj_UUIDs) {
+                primitive_to_object[UUID] = objID;
+            }
+        }
+
+        nitrogen_mode_active = true;
+
+        if (message_flag) {
+            std::cout << "LeafOptics: Nitrogen mode initialized with " << object_assignments.size()
+                      << " leaf objects assigned to " << nitrogen_bins.size() << " spectrum bins." << std::endl;
+        }
+
+    } else {
+        // Subsequent call: Update assignments
+
+        // Build set of current object IDs
+        std::set<uint> current_objects;
+        for (const auto &pair : object_groups) {
+            current_objects.insert(pair.first);
+        }
+
+        // Build set of previously tracked objects
+        std::set<uint> tracked_objects;
+        for (const auto &pair : object_assignments) {
+            tracked_objects.insert(pair.first);
+        }
+
+        // Find removed objects (tracked but not in current)
+        std::vector<uint> removed_objects;
+        for (uint objID : tracked_objects) {
+            if (current_objects.find(objID) == current_objects.end()) {
+                removed_objects.push_back(objID);
+            }
+        }
+
+        // Remove tracking for removed objects
+        for (uint objID : removed_objects) {
+            const ObjectAssignment &assignment = object_assignments[objID];
+            for (uint UUID : assignment.primitive_UUIDs) {
+                primitive_to_object.erase(UUID);
+            }
+            object_assignments.erase(objID);
+        }
+
+        // Process current objects
+        for (const auto &pair : object_groups) {
+            uint objID = pair.first;
+            const std::vector<uint> &obj_UUIDs = pair.second;
+            float N_area = object_nitrogen[objID];
+
+            if (tracked_objects.find(objID) == tracked_objects.end()) {
+                // New object: assign to nearest existing bin
+                uint best_bin = findNearestBin(N_area);
+                assignSpectrumToPrimitives(obj_UUIDs, best_bin);
+
+                ObjectAssignment assignment;
+                assignment.bin_index = best_bin;
+                assignment.N_at_assignment = N_area;
+                assignment.primitive_UUIDs = obj_UUIDs;
+                object_assignments[objID] = assignment;
+
+                for (uint UUID : obj_UUIDs) {
+                    primitive_to_object[UUID] = objID;
+                }
+
+            } else {
+                // Existing object: check for reassignment
+                ObjectAssignment &assignment = object_assignments[objID];
+
+                // Update primitive list (in case it changed)
+                assignment.primitive_UUIDs = obj_UUIDs;
+                for (uint UUID : obj_UUIDs) {
+                    primitive_to_object[UUID] = objID;
+                }
+
+                if (shouldReassign(N_area, assignment.bin_index)) {
+                    uint best_bin = findNearestBin(N_area);
+
+                    if (best_bin != assignment.bin_index && isSignificantImprovement(N_area, assignment.bin_index, best_bin)) {
+                        assignSpectrumToPrimitives(obj_UUIDs, best_bin);
+                        assignment.bin_index = best_bin;
+                        assignment.N_at_assignment = N_area;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void LeafOptics::updateNitrogenBasedSpectra() {
+    if (!nitrogen_mode_active) {
+        helios_runtime_error("ERROR (LeafOptics::updateNitrogenBasedSpectra): Nitrogen mode is not active. "
+            "Call run() with LeafOpticsProperties_Nauto first to initialize nitrogen mode.");
+    }
+
+    for (auto &pair : object_assignments) {
+        uint objID = pair.first;
+        ObjectAssignment &assignment = pair.second;
+
+        // Read current nitrogen value
+        if (!context->doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
+            if (message_flag) {
+                std::cerr << "WARNING (LeafOptics::updateNitrogenBasedSpectra): Object " << objID
+                          << " no longer has 'leaf_nitrogen_gN_m2' data, skipping." << std::endl;
+            }
+            continue;
+        }
+
+        float current_N;
+        context->getObjectData(objID, "leaf_nitrogen_gN_m2", current_N);
+
+        // Check for reassignment
+        if (shouldReassign(current_N, assignment.bin_index)) {
+            uint best_bin = findNearestBin(current_N);
+
+            if (best_bin != assignment.bin_index && isSignificantImprovement(current_N, assignment.bin_index, best_bin)) {
+                assignSpectrumToPrimitives(assignment.primitive_UUIDs, best_bin);
+                assignment.bin_index = best_bin;
+                assignment.N_at_assignment = current_N;
+            }
+        }
+    }
+}

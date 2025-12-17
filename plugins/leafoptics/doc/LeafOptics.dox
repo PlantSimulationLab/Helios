@@ -11,6 +11,154 @@
  <tr><th>Class</th><td>\ref LeafOptics</td></tr>
 </table>
 
+\section LOConstructor LeafOptics Class Constructor
+
+<table>
+ <tr><th>Constructors</th></tr>
+ <tr><td>\ref LeafOptics::LeafOptics( helios::Context* context )</td></tr>
+</table>
+
+The constructor simply stores a pointer to the Helios context and loads the
+spectral library data required by the model.
+
+\section LOData Input/Output Data
+
+\subsection LOInputObjectData Input Object Data
+
+The following object data is used by the nitrogen-based automatic mode (see \ref LONitrogenAuto):
+
+<table>
+ <tr>
+    <th>Object Data Label</th>
+    <th>Units</th>
+    <th>Data Type</th>
+    <th>Description</th>
+    <th>Available Plug-ins</th>
+ </tr>
+ <tr>
+    <td>leaf_nitrogen_gN_m2</td>
+    <td>g N/m²</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Leaf nitrogen content per unit area. Required for nitrogen-based automatic mode.</td>
+    <td>Written by \ref PlantArchitecture nitrogen model</td>
+ </tr>
+</table>
+
+\subsection LOOutputGlobalData Output Global Data
+
+The plug-in creates global data containing the computed spectra:
+
+<table>
+ <tr>
+    <th>Global Data Label</th>
+    <th>Data Type</th>
+    <th>Description</th>
+ </tr>
+ <tr>
+    <td>leaf_reflectivity_*</td>
+    <td><span style="font-family: Courier, monospace; color: green;">std::vector&lt;helios::vec2&gt;</span></td>
+    <td>Reflectivity spectrum (wavelength in nm, reflectivity). The * is replaced by the user-specified label.</td>
+ </tr>
+ <tr>
+    <td>leaf_transmissivity_*</td>
+    <td><span style="font-family: Courier, monospace; color: green;">std::vector&lt;helios::vec2&gt;</span></td>
+    <td>Transmissivity spectrum (wavelength in nm, transmissivity). The * is replaced by the user-specified label.</td>
+ </tr>
+</table>
+
+\subsection LOOutputPrimData Output Primitive Data
+
+The plug-in assigns the following primitive data to processed primitives:
+
+<table>
+ <tr>
+    <th>Primitive Data Label</th>
+    <th>Data Type</th>
+    <th>Description</th>
+ </tr>
+ <tr>
+    <td>reflectivity_spectrum</td>
+    <td><span style="font-family: Courier, monospace; color: green;">std::string</span></td>
+    <td>Label of the assigned reflectivity spectrum global data (e.g., "leaf_reflectivity_example")</td>
+ </tr>
+ <tr>
+    <td>transmissivity_spectrum</td>
+    <td><span style="font-family: Courier, monospace; color: green;">std::string</span></td>
+    <td>Label of the assigned transmissivity spectrum global data (e.g., "leaf_transmissivity_example")</td>
+ </tr>
+</table>
+
+\subsection LOOptionalOutputData Optional Output Primitive Data
+
+By default, the LeafOptics plug-in does not write leaf constituent concentrations to primitive data. To enable optional output, call LeafOptics::optionalOutputPrimitiveData() with the desired labels before calling run().
+
+~~~~~~{.cpp}
+LeafOptics leafoptics( &context );
+leafoptics.optionalOutputPrimitiveData( "chlorophyll" );
+leafoptics.optionalOutputPrimitiveData( "carotenoid" );
+
+LeafOpticsProperties props;
+std::vector<uint> leafIDs = ...;
+leafoptics.run( leafIDs, props, "example" );
+~~~~~~
+
+<table>
+ <tr>
+    <th>Primitive Data Label</th>
+    <th>Units</th>
+    <th>Data Type</th>
+    <th>Description</th>
+ </tr>
+ <tr>
+    <td>chlorophyll</td>
+    <td>\f$\mu\f$g cm\f$^{-2}\f$</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Total chlorophyll content</td>
+ </tr>
+ <tr>
+    <td>carotenoid</td>
+    <td>\f$\mu\f$g cm\f$^{-2}\f$</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Total carotenoid content</td>
+ </tr>
+ <tr>
+    <td>anthocyanin</td>
+    <td>\f$\mu\f$g cm\f$^{-2}\f$</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Anthocyanin content</td>
+ </tr>
+ <tr>
+    <td>brown</td>
+    <td>unitless</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Brown pigment content (only written if value > 0)</td>
+ </tr>
+ <tr>
+    <td>water</td>
+    <td>g cm\f$^{-2}\f$</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Equivalent water thickness</td>
+ </tr>
+ <tr>
+    <td>drymass</td>
+    <td>g cm\f$^{-2}\f$</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Dry matter mass (only written in PROSPECT-D mode, see \ref LOModes)</td>
+ </tr>
+ <tr>
+    <td>protein</td>
+    <td>g cm\f$^{-2}\f$</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Protein mass (only written in PROSPECT-PRO mode, see \ref LOModes)</td>
+ </tr>
+ <tr>
+    <td>cellulose</td>
+    <td>g cm\f$^{-2}\f$</td>
+    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
+    <td>Cellulose and carbon compounds (only written in PROSPECT-PRO mode, see \ref LOModes)</td>
+ </tr>
+</table>
+
 \section LOIntro Introduction
 
 This plug-in computes leaf spectral reflectance and transmittance using the
@@ -29,32 +177,69 @@ internal spectral library.  Fresnel equations are used to compute surface
 reflectance and a radiative transfer solution gives the total leaf
 reflectance and transmittance.
 
-\section LOConstructor LeafOptics Class Constructor
+\section LOModes PROSPECT Model Variants
+
+The plug-in supports two variants of the PROSPECT model, which differ in how leaf dry matter is represented:
+
+\subsection LOProspectD PROSPECT-D Mode
+
+PROSPECT-D represents leaf dry matter as a single "dry mass" parameter that lumps together all carbon-based constituents. This is the simpler and more commonly used mode.
+
+**To use PROSPECT-D mode:** Set `drymass > 0` and leave `protein = 0` and `carbonconstituents = 0` (default behavior).
+
+~~~~~~{.cpp}
+LeafOpticsProperties props;
+props.drymass = 0.006f;  // g/cm² - PROSPECT-D mode
+// protein and carbonconstituents default to 0
+~~~~~~
+
+\subsection LOProspectPRO PROSPECT-PRO Mode
+
+<a href="https://doi.org/10.1016/j.rse.2017.08.004">PROSPECT-PRO</a> separates dry matter into protein and carbon constituents (cellulose, lignin, etc.), providing more detailed characterization of leaf biochemistry. This mode is useful when protein content is known or when modeling nitrogen-rich leaves.
+
+**To use PROSPECT-PRO mode:** Set `protein > 0` and/or `carbonconstituents > 0`. When either of these parameters is non-zero, the `drymass` parameter is automatically ignored.
+
+~~~~~~{.cpp}
+LeafOpticsProperties props;
+props.protein = 0.001f;           // g/cm² - enables PROSPECT-PRO mode
+props.carbonconstituents = 0.005f; // g/cm²
+// drymass is ignored when protein or carbonconstituents > 0
+~~~~~~
+
+\subsection LOModeSelection Automatic Mode Selection
+
+The model automatically selects the appropriate mode based on parameter values:
 
 <table>
- <tr><th>Constructors</th></tr>
- <tr><td>\ref LeafOptics::LeafOptics( helios::Context* context )</td></tr>
+ <tr><th>Condition</th><th>Mode</th><th>Dry Matter Parameters Used</th></tr>
+ <tr><td>`protein == 0` AND `carbonconstituents == 0`</td><td>PROSPECT-D</td><td>`drymass`</td></tr>
+ <tr><td>`protein > 0` OR `carbonconstituents > 0`</td><td>PROSPECT-PRO</td><td>`protein`, `carbonconstituents`</td></tr>
 </table>
 
-The constructor simply stores a pointer to the Helios context and loads the
-spectral library data required by the model.
+**Note:** The built-in species library uses PROSPECT-D mode for all species. If you need PROSPECT-PRO parameters, you must set them manually.
 
 \section LOProps LeafOpticsProperties Structure
 
 The \ref LeafOpticsProperties structure stores the biochemical inputs to the
-model.
+model. See \ref LOModes for details on PROSPECT-D vs PROSPECT-PRO mode selection.
 
 <table>
+ <tr><th colspan="4">Common Parameters (Both Modes)</th></tr>
  <tr><th>Member</th><th>Units</th><th>Description</th><th>Default Value</th></tr>
  <tr><td>numberlayers</td><td>unitless</td><td>Leaf structure parameter \f$N\f$</td><td>1.5</td></tr>
- <tr><td>brownpigments</td><td>unitless</td><td>Mass of brown pigments</td><td>0</td></tr>
  <tr><td>chlorophyllcontent</td><td>\f$\mu\f$g&nbsp;cm\f$^{-2}\f$</td><td>Total chlorophyll</td><td>30</td></tr>
  <tr><td>carotenoidcontent</td><td>\f$\mu\f$g&nbsp;cm\f$^{-2}\f$</td><td>Total carotenoids</td><td>7</td></tr>
  <tr><td>anthocyancontent</td><td>\f$\mu\f$g&nbsp;cm\f$^{-2}\f$</td><td>Anthocyanins</td><td>1</td></tr>
+ <tr><td>brownpigments</td><td>unitless</td><td>Brown pigments (senescence indicator)</td><td>0</td></tr>
  <tr><td>watermass</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Equivalent water thickness</td><td>0.015</td></tr>
- <tr><td>drymass</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Dry matter mass</td><td>0.09</td></tr>
- <tr><td>protein</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Protein mass</td><td>0</td></tr>
- <tr><td>carbonconstituents</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Cellulose and other carbon compounds</td><td>0</td></tr>
+</table>
+
+<table>
+ <tr><th colspan="4">Dry Matter Parameters (Mode-Dependent)</th></tr>
+ <tr><th>Member</th><th>Units</th><th>Description</th><th>Default Value</th></tr>
+ <tr><td>drymass</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Total dry matter mass (PROSPECT-D mode)</td><td>0.09</td></tr>
+ <tr><td>protein</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Protein mass (PROSPECT-PRO mode)</td><td>0</td></tr>
+ <tr><td>carbonconstituents</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Cellulose, lignin, and other carbon compounds (PROSPECT-PRO mode)</td><td>0</td></tr>
 </table>
 
 \section LOUse Using the LeafOptics Plug-in
@@ -106,7 +291,7 @@ The method populates all nine parameters in the \ref LeafOpticsProperties struct
 
 \subsection LOLibrarySpecies Available Species
 
-The library contains PROSPECT-D parameters fitted to LOPEX93 spectral library samples using the `fit_prospect_visrobust.py` script with robust optimization. All species use PROSPECT-D mode (drymass > 0, protein = 0, carbonconstituents = 0).
+The library contains parameters fitted to LOPEX93 spectral library samples using the `fit_prospect_visrobust.py` script with robust optimization. All species use PROSPECT-D mode (see \ref LOModes).
 
 <table>
  <tr><th>Species Label</th><th>Scientific Name</th><th>N</th><th>Cab<br>(µg/cm²)</th><th>Car<br>(µg/cm²)</th><th>Ant<br>(µg/cm²)</th><th>Cbrown</th><th>Cw<br>(g/cm²)</th><th>Cm<br>(g/cm²)</th><th>R²</th><th>Source</th></tr>
@@ -204,9 +389,9 @@ The method assigns primitive data using the same labels as \ref LeafOptics::setP
  <tr><td>"anthocyanin"</td><td>anthocyancontent</td><td>Always</td></tr>
  <tr><td>"brown"</td><td>brownpigments</td><td>If brownpigments > 0</td></tr>
  <tr><td>"water"</td><td>watermass</td><td>Always</td></tr>
- <tr><td>"drymass"</td><td>drymass</td><td>If drymass > 0 (PROSPECT-D mode)</td></tr>
- <tr><td>"protein"</td><td>protein</td><td>If drymass = 0 (PROSPECT-PRO mode)</td></tr>
- <tr><td>"cellulose"</td><td>carbonconstituents</td><td>If drymass = 0 (PROSPECT-PRO mode)</td></tr>
+ <tr><td>"drymass"</td><td>drymass</td><td>PROSPECT-D mode only (see \ref LOModes)</td></tr>
+ <tr><td>"protein"</td><td>protein</td><td>PROSPECT-PRO mode only (see \ref LOModes)</td></tr>
+ <tr><td>"cellulose"</td><td>carbonconstituents</td><td>PROSPECT-PRO mode only (see \ref LOModes)</td></tr>
 </table>
 
 \subsection LORetrieveNotes Important Notes
@@ -216,75 +401,241 @@ The method assigns primitive data using the same labels as \ref LeafOptics::setP
 - The method always overwrites existing primitive data for the parameters listed above.
 - Both overloads are available: \ref LeafOptics::getPropertiesFromSpectrum(const std::vector<uint>&) for multiple primitives and \ref LeafOptics::getPropertiesFromSpectrum(uint) for a single primitive.
 
-\section LOOptionalOutput Optional Output Primitive Data
+\section LONitrogenAuto Nitrogen-Based Automatic Leaf Optics
 
-By default, the LeafOptics plug-in does not write leaf constituent concentrations to primitive data. To enable optional output, call LeafOptics::optionalOutputPrimitiveData() with the desired labels before calling run().
+The LeafOptics plugin supports automatic computation of leaf optical properties from leaf nitrogen concentration. This enables seamless integration with the PlantArchitecture nitrogen model, where chlorophyll and carotenoid content are derived from nitrogen data while limiting computational overhead through adaptive spectrum binning.
 
-~~~~~~{.cpp}
-LeafOptics leafoptics( &context );
-leafoptics.optionalOutputPrimitiveData( "chlorophyll" );
-leafoptics.optionalOutputPrimitiveData( "carotenoid" );
+\subsection LONitrogenBackground Scientific Background
 
-LeafOpticsProperties props;
-std::vector<uint> leafIDs = ...;
-leafoptics.run( leafIDs, props, "example" );
-~~~~~~
+The nitrogen-to-chlorophyll relationship is based on Evans (1989) and subsequent literature:
+
+- **Stoichiometry**: Approximately 50 mol thylakoid N per mol chlorophyll
+- **Photosynthetic fraction**: ~50% of leaf nitrogen is in photosynthetic machinery
+- **Empirical relationship**: \f$C_{ab} (\mu g/cm^2) = N_{area} (g/m^2) \times 100 \times f_{photo} \times k\f$
+
+Carotenoids do not contain nitrogen directly. The relationship is indirect through chlorophyll:
+- Healthy leaves: \f$C_{ar} \approx 0.25 \times C_{ab}\f$
+- Under nitrogen stress, the Car/Cab ratio increases as chlorophyll declines faster
+
+Since nitrogen alone cannot uniquely determine all PROSPECT parameters, only chlorophyll and carotenoids are computed from nitrogen. Other parameters (structure, water, dry matter, etc.) use user-specified defaults.
+
+\subsection LONitrogenNauto LeafOpticsProperties_Nauto Structure
+
+The \ref LeafOpticsProperties_Nauto structure configures the nitrogen-based automatic mode.
 
 <table>
- <tr>
-    <th>Primitive Data Label</th>
-    <th>Units</th>
-    <th>Data Type</th>
-    <th>Description</th>
- </tr>
- <tr>
-    <td>chlorophyll</td>
-    <td>\f$\mu\f$g cm\f$^{-2}\f$</td>
-    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
-    <td>Total chlorophyll content</td>
- </tr>
- <tr>
-    <td>carotenoid</td>
-    <td>\f$\mu\f$g cm\f$^{-2}\f$</td>
-    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
-    <td>Total carotenoid content</td>
- </tr>
- <tr>
-    <td>anthocyanin</td>
-    <td>\f$\mu\f$g cm\f$^{-2}\f$</td>
-    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
-    <td>Anthocyanin content</td>
- </tr>
- <tr>
-    <td>brown</td>
-    <td>unitless</td>
-    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
-    <td>Brown pigment content (only written if value > 0)</td>
- </tr>
- <tr>
-    <td>water</td>
-    <td>g cm\f$^{-2}\f$</td>
-    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
-    <td>Equivalent water thickness</td>
- </tr>
- <tr>
-    <td>drymass</td>
-    <td>g cm\f$^{-2}\f$</td>
-    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
-    <td>Dry matter mass (PROSPECT-D mode only, when drymass > 0)</td>
- </tr>
- <tr>
-    <td>protein</td>
-    <td>g cm\f$^{-2}\f$</td>
-    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
-    <td>Protein mass (PROSPECT-PRO mode only, when drymass = 0)</td>
- </tr>
- <tr>
-    <td>cellulose</td>
-    <td>g cm\f$^{-2}\f$</td>
-    <td><span style="font-family: Courier, monospace; color: green;">float</span></td>
-    <td>Cellulose and carbon compounds (PROSPECT-PRO mode only, when drymass = 0)</td>
- </tr>
+ <tr><th colspan="4">Nitrogen-to-Pigment Conversion Coefficients</th></tr>
+ <tr><th>Member</th><th>Units</th><th>Description</th><th>Default</th></tr>
+ <tr><td>f_photosynthetic</td><td>unitless [0-1]</td><td>Fraction of leaf nitrogen in photosynthetic machinery</td><td>0.50</td></tr>
+ <tr><td>N_to_Cab_coefficient</td><td>unitless</td><td>Empirical coefficient for chlorophyll calculation</td><td>0.40</td></tr>
+ <tr><td>Car_to_Cab_ratio</td><td>unitless</td><td>Carotenoid to chlorophyll ratio</td><td>0.25</td></tr>
 </table>
+
+The chlorophyll calculation follows: \f$C_{ab} (\mu g/cm^2) = N_{area} (g/m^2) \times 100 \times f_{photosynthetic} \times N\_to\_Cab\_coefficient\f$
+
+Chlorophyll is clamped to the range [5, 80] \f$\mu g/cm^2\f$ to ensure physically realistic values.
+
+<table>
+ <tr><th colspan="4">Fixed PROSPECT Parameters</th></tr>
+ <tr><th>Member</th><th>Units</th><th>Description</th><th>Default</th></tr>
+ <tr><td>numberlayers</td><td>unitless</td><td>Leaf structure parameter \f$N\f$</td><td>1.5</td></tr>
+ <tr><td>anthocyancontent</td><td>\f$\mu\f$g&nbsp;cm\f$^{-2}\f$</td><td>Anthocyanin content</td><td>1.0</td></tr>
+ <tr><td>brownpigments</td><td>unitless</td><td>Brown pigment content (senescence indicator)</td><td>0.0</td></tr>
+ <tr><td>watermass</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Equivalent water thickness</td><td>0.015</td></tr>
+ <tr><td>drymass</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Leaf mass per area</td><td>0.006</td></tr>
+ <tr><td>protein</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Protein content (PROSPECT-PRO mode)</td><td>0.0</td></tr>
+ <tr><td>carbonconstituents</td><td>g&nbsp;cm\f$^{-2}\f$</td><td>Carbon constituents (PROSPECT-PRO mode)</td><td>0.0</td></tr>
+</table>
+
+<table>
+ <tr><th colspan="4">Adaptive Binning Configuration</th></tr>
+ <tr><th>Member</th><th>Units</th><th>Description</th><th>Default</th></tr>
+ <tr><td>num_bins</td><td>count</td><td>Target number of spectrum bins</td><td>20</td></tr>
+ <tr><td>reassignment_threshold</td><td>unitless</td><td>Relative nitrogen change threshold for reassignment</td><td>0.30</td></tr>
+ <tr><td>min_reassignment_change</td><td>g&nbsp;m\f$^{-2}\f$</td><td>Minimum absolute nitrogen change for reassignment</td><td>0.3</td></tr>
+</table>
+
+\subsection LONitrogenUsage Using Nitrogen-Based Mode
+
+Call \ref LeafOptics::run(const std::vector<uint>&, const LeafOpticsProperties_Nauto&) with primitive UUIDs and nitrogen-auto parameters. The method groups primitives by parent object, reads "leaf_nitrogen_gN_m2" object data, and assigns spectra accordingly.
+
+~~~~~~{.cpp}
+#include "LeafOptics.h"
+#include "PlantArchitecture.h"
+
+Context context;
+PlantArchitecture plantarch(&context);
+LeafOptics leafoptics(&context);
+
+// Build plant canopy and enable nitrogen model
+plantarch.loadPlantModelFromLibrary("bean");
+std::vector<uint> plantIDs = plantarch.buildPlantCanopyFromLibrary(
+    make_vec3(0,0,0), make_vec2(0.3, 0.3), make_int2(10, 10), 30);
+plantarch.enableNitrogenModel();
+plantarch.initializeNitrogenPools(2.0f);
+
+// Configure nitrogen-based leaf optics
+LeafOpticsProperties_Nauto N_optics;
+N_optics.f_photosynthetic = 0.50f;
+N_optics.N_to_Cab_coefficient = 0.40f;
+N_optics.Car_to_Cab_ratio = 0.25f;
+N_optics.num_bins = 20;
+
+// Get leaf primitives and run
+std::vector<uint> leaf_UUIDs = plantarch.getAllLeafUUIDs(plantIDs);
+leafoptics.run(leaf_UUIDs, N_optics);
+~~~~~~
+
+\subsection LONitrogenBehavior Method Behavior
+
+The behavior of \ref LeafOptics::run(const std::vector<uint>&, const LeafOpticsProperties_Nauto&) depends on the call sequence:
+
+**First call (initialization):**
+1. Groups primitives by parent object ID
+2. Reads "leaf_nitrogen_gN_m2" from each object (throws error if missing)
+3. Creates adaptive spectrum bins based on nitrogen distribution using quantiles
+4. Generates PROSPECT spectra for each bin (stored as "leaf_reflectivity_Nauto_0", etc.)
+5. Assigns each object to its nearest bin
+
+**Subsequent calls (update):**
+1. New primitives (not previously tracked) are assigned to the nearest existing bin
+2. Removed primitives (previously tracked but not in current call) are untracked
+3. Existing primitives are checked for nitrogen changes and reassigned if thresholds are exceeded
+
+All primitives belonging to the same parent object receive the same spectrum assignment.
+
+\subsection LONitrogenUpdate Efficient Update Path
+
+When nitrogen values have changed but the primitive set is unchanged, use \ref LeafOptics::updateNitrogenBasedSpectra() for more efficient updates:
+
+~~~~~~{.cpp}
+// After nitrogen model advances time
+plantarch.advanceTime(1.0f);
+
+// Fast update - skips primitive grouping and add/remove processing
+leafoptics.updateNitrogenBasedSpectra();
+~~~~~~
+
+This method re-reads nitrogen from parent objects and reassigns primitives if the change exceeds configured thresholds. It throws an error if nitrogen mode has not been initialized.
+
+\subsection LONitrogenBinning Adaptive Binning Algorithm
+
+The adaptive binning algorithm selects bin centers using quantiles of the nitrogen distribution:
+
+1. Sort nitrogen values from all tracked objects
+2. Select bin centers at evenly spaced quantile positions
+3. Remove duplicate bin centers (occurs when many objects have similar nitrogen)
+4. Generate a PROSPECT spectrum for each unique bin
+
+This ensures bins are concentrated where data is dense, providing better spectral resolution in common nitrogen ranges while limiting the total number of unique spectra.
+
+\subsection LONitrogenStability Reassignment Stability (Hysteresis)
+
+To prevent oscillation at bin boundaries, reassignment requires both:
+
+1. **Relative change**: \f$|N_{current} - N_{bin}| / N_{bin} > reassignment\_threshold\f$
+2. **Absolute change**: \f$|N_{current} - N_{bin}| > min\_reassignment\_change\f$
+
+Additionally, moving to a new bin requires a significant improvement in fit (at least half of `min_reassignment_change` closer to the new bin center than the old). This hysteresis prevents frequent reassignments when nitrogen values hover near bin boundaries.
+
+\subsection LONitrogenPFT Parameter Values by Plant Functional Type
+
+Suggested parameter values for different plant types:
+
+<table>
+ <tr><th>Parameter</th><th>C3 Crops</th><th>C4 Crops</th><th>Deciduous Trees</th></tr>
+ <tr><td>f_photosynthetic</td><td>0.50</td><td>0.35</td><td>0.45</td></tr>
+ <tr><td>N_to_Cab_coefficient</td><td>0.40</td><td>0.45</td><td>0.38</td></tr>
+ <tr><td>Car_to_Cab_ratio</td><td>0.25</td><td>0.22</td><td>0.28</td></tr>
+ <tr><td>numberlayers</td><td>1.5</td><td>1.6</td><td>1.8</td></tr>
+ <tr><td>drymass</td><td>0.005</td><td>0.004</td><td>0.008</td></tr>
+</table>
+
+C4 crops have a lower photosynthetic nitrogen fraction because more nitrogen is allocated to PEP carboxylase rather than Rubisco. Deciduous trees typically have thicker leaves (higher drymass and numberlayers).
+
+\subsection LONitrogenExample Complete Integration Example
+
+~~~~~~{.cpp}
+#include "Context.h"
+#include "PlantArchitecture.h"
+#include "LeafOptics.h"
+#include "RadiationModel.h"
+
+using namespace helios;
+
+int main() {
+    Context context;
+
+    // === Build plant canopy ===
+    PlantArchitecture plantarch(&context);
+    plantarch.loadPlantModelFromLibrary("bean");
+    std::vector<uint> plantIDs = plantarch.buildPlantCanopyFromLibrary(
+        make_vec3(0,0,0), make_vec2(0.3, 0.3), make_int2(10, 10), 30);
+
+    // === Initialize nitrogen model ===
+    plantarch.enableNitrogenModel();
+    NitrogenParameters N_params_plant;
+    N_params_plant.target_leaf_N_area = 2.0f;  // g N/m²
+    plantarch.setPlantNitrogenParameters(plantIDs, N_params_plant);
+    plantarch.initializeNitrogenPools(2.0f);
+
+    // === Configure nitrogen-based leaf optics ===
+    LeafOptics leafoptics(&context);
+
+    LeafOpticsProperties_Nauto N_optics;
+    N_optics.f_photosynthetic = 0.50f;
+    N_optics.N_to_Cab_coefficient = 0.40f;
+    N_optics.Car_to_Cab_ratio = 0.25f;
+    N_optics.numberlayers = 1.5f;
+    N_optics.drymass = 0.005f;
+    N_optics.num_bins = 20;
+    N_optics.reassignment_threshold = 0.30f;
+
+    // === Initial leaf optics assignment ===
+    std::vector<uint> leaf_UUIDs = plantarch.getAllLeafUUIDs(plantIDs);
+    leafoptics.run(leaf_UUIDs, N_optics);
+
+    // === Setup radiation ===
+    RadiationModel radiation(&context);
+    radiation.addSunSphereRadiationSource(make_SphericalCoord(30*M_PI/180, 0));
+
+    // === Time loop ===
+    for (int day = 100; day <= 200; day++) {
+        context.setDate(make_Date(day, 2024));
+
+        // Nitrogen fertilization events
+        if (day == 115 || day == 145) {
+            plantarch.addPlantNitrogen(plantIDs, 0.5f);
+        }
+
+        // Advance plant growth and nitrogen dynamics
+        plantarch.advanceTime(1.0f);
+
+        // Update leaf optics (handles new leaves, removed leaves, N changes)
+        leaf_UUIDs = plantarch.getAllLeafUUIDs(plantIDs);
+        leafoptics.run(leaf_UUIDs, N_optics);
+
+        // Alternative: fast update when primitive set is unchanged
+        // leafoptics.updateNitrogenBasedSpectra();
+
+        // Run radiation with current spectra
+        radiation.runBand("PAR");
+    }
+
+    return 0;
+}
+~~~~~~
+
+\subsection LONitrogenRequirements Requirements
+
+- Each leaf object must have "leaf_nitrogen_gN_m2" object data set (typically by PlantArchitecture::NitrogenModel)
+- All primitives must belong to a parent object (primitives without parents are skipped with a warning)
+- The nitrogen mode parameters are stored at initialization; subsequent calls ignore parameter changes
+
+\subsection LONitrogenReferences References
+
+- Evans, J.R. (1989). Photosynthesis and nitrogen relationships in leaves of C3 plants. *Oecologia*, 78(1), 9-19.
+- Féret, J.B., et al. (2021). PROSPECT-PRO for estimating content of nitrogen-containing leaf proteins and other carbon-based constituents. *Remote Sensing of Environment*, 252, 112173.
+- Ali, A.M., et al. (2020). Retrieval of leaf nitrogen content from hyperspectral data. *Agricultural and Forest Meteorology*, 281, 107819.
 
 */

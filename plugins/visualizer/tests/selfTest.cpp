@@ -899,6 +899,7 @@ TEST_CASE("Visualizer::Transparent background with non-square window") {
 
     // Test with a non-square window (800x600, aspect ratio 4:3)
     Visualizer visualizer(800, 600, 16, false, true);
+    visualizer.disableMessages();
 
     // Set transparent background
     DOCTEST_CHECK_NOTHROW(visualizer.setBackgroundTransparent());
@@ -960,6 +961,7 @@ TEST_CASE("Visualizer::Background color/transparent switching") {
 
     SUBCASE("Watermark visible → transparent → solid color (should restore watermark)") {
         Visualizer visualizer(200, 200, 16, false, true);
+        visualizer.disableMessages();
         visualizer.buildContextGeometry(&context);
 
         // Watermark should be visible by default
@@ -986,6 +988,7 @@ TEST_CASE("Visualizer::Background color/transparent switching") {
 
     SUBCASE("Watermark hidden → transparent → solid color (should NOT restore watermark)") {
         Visualizer visualizer(200, 200, 16, false, true);
+        visualizer.disableMessages();
         visualizer.buildContextGeometry(&context);
 
         // Manually hide watermark before enabling transparent background
@@ -1011,6 +1014,7 @@ TEST_CASE("Visualizer::Background color/transparent switching") {
 
     SUBCASE("Multiple switches between transparent and solid") {
         Visualizer visualizer(200, 200, 16, false, true);
+        visualizer.disableMessages();
         visualizer.buildContextGeometry(&context);
 
         // Multiple switches should work correctly
@@ -1030,6 +1034,7 @@ DOCTEST_TEST_CASE("Visualizer::Navigation Gizmo") {
 
     SUBCASE("Navigation gizmo is enabled by default") {
         Visualizer visualizer(200, 200, 16, false, true);
+        visualizer.disableMessages();
         // Gizmo should be enabled by default
         // We can't directly access the private member, but we can test the behavior
         DOCTEST_CHECK_NOTHROW(visualizer.plotUpdate(true));
@@ -1037,6 +1042,7 @@ DOCTEST_TEST_CASE("Visualizer::Navigation Gizmo") {
 
     SUBCASE("Show and hide navigation gizmo") {
         Visualizer visualizer(200, 200, 16, false, true);
+        visualizer.disableMessages();
 
         // Hide the gizmo
         DOCTEST_CHECK_NOTHROW(visualizer.hideNavigationGizmo());
@@ -1056,6 +1062,7 @@ DOCTEST_TEST_CASE("Visualizer::Navigation Gizmo") {
 
     SUBCASE("Navigation gizmo with camera movement") {
         Visualizer visualizer(200, 200, 16, false, true);
+        visualizer.disableMessages();
 
         // Add some geometry to visualize
         auto sphere_center = make_vec3(0, 0, 0);
@@ -1078,6 +1085,7 @@ DOCTEST_TEST_CASE("Visualizer::Navigation Gizmo") {
 
     SUBCASE("Navigation gizmo with printWindow") {
         Visualizer visualizer(200, 200, 16, false, true);
+        visualizer.disableMessages();
 
         // Add some geometry
         auto sphere_uuids = visualizer.addSphereByCenter(1.0f, make_vec3(0, 0, 0), 10, make_RGBcolor(1.f, 0.f, 0.f), Visualizer::COORDINATES_CARTESIAN);
@@ -1099,6 +1107,7 @@ DOCTEST_TEST_CASE("Visualizer::Navigation Gizmo") {
 
     SUBCASE("Navigation gizmo state persists after printWindow") {
         Visualizer visualizer(200, 200, 16, false, true);
+        visualizer.disableMessages();
 
         // Enable gizmo
         visualizer.showNavigationGizmo();

@@ -18,6 +18,14 @@
 
 #include "global.h"
 
+#ifdef HELIOS_CUDA_AVAILABLE
+#include <cuda_runtime.h>
+#endif
+
+#ifdef USE_OPENMP
+#include <omp.h>
+#endif
+
 using namespace helios;
 
 EnergyBalanceModel::EnergyBalanceModel(helios::Context *__context) {
@@ -48,6 +56,14 @@ EnergyBalanceModel::EnergyBalanceModel(helios::Context *__context) {
 
     // Copy pointer to the context
     context = __context;
+
+    #ifdef HELIOS_CUDA_AVAILABLE
+    // Initialize GPU acceleration flags
+    gpu_acceleration_enabled = true;  // Try to use GPU by default
+
+    // Perform runtime GPU detection
+    initializeGPUAcceleration();
+    #endif
 }
 
 void EnergyBalanceModel::run() {
@@ -81,6 +97,60 @@ void EnergyBalanceModel::run(const std::vector<uint> &UUIDs, float dt) {
         std::cout << "done." << std::endl;
     }
 }
+
+#ifdef HELIOS_CUDA_AVAILABLE
+void EnergyBalanceModel::initializeGPUAcceleration() {
+    // Check if CUDA is actually available at runtime
+    int deviceCount = 0;
+    cudaError_t err = cudaGetDeviceCount(&deviceCount);
+
+    if (err != cudaSuccess || deviceCount == 0) {
+        // CUDA not available - disable GPU acceleration and fall back to CPU
+        if (message_flag) {
+            std::cout << "INFO (EnergyBalanceModel): CUDA runtime unavailable ("
+                      << cudaGetErrorString(err)
+                      << "). Using OpenMP CPU implementation." << std::endl;
+        }
+        gpu_acceleration_enabled = false;
+        return;
+    }
+
+    // GPU available
+    if (message_flag) {
+        std::cout << "INFO (EnergyBalanceModel): GPU acceleration enabled ("
+                  << deviceCount << " device(s) found)." << std::endl;
+    }
+    gpu_acceleration_enabled = true;
+}
+#endif
+
+void EnergyBalanceModel::evaluateSurfaceEnergyBalance(const std::vector<uint> &UUIDs, float dt) {
+    #ifdef HELIOS_CUDA_AVAILABLE
+    if (gpu_acceleration_enabled) {
+        evaluateSurfaceEnergyBalance_GPU(UUIDs, dt);
+    } else {
+        evaluateSurfaceEnergyBalance_CPU(UUIDs, dt);
+    }
+    #else
+    // CPU-only build: always use OpenMP implementation
+    evaluateSurfaceEnergyBalance_CPU(UUIDs, dt);
+    #endif
+}
+
+#ifdef HELIOS_CUDA_AVAILABLE
+void EnergyBalanceModel::enableGPUAcceleration() {
+    // Try to enable GPU, but respect hardware availability
+    initializeGPUAcceleration();
+}
+
+void EnergyBalanceModel::disableGPUAcceleration() {
+    gpu_acceleration_enabled = false;
+}
+
+bool EnergyBalanceModel::isGPUAccelerationEnabled() const {
+    return gpu_acceleration_enabled;
+}
+#endif
 
 void EnergyBalanceModel::evaluateAirEnergyBalance(float dt_sec, float time_advance_sec) {
     evaluateAirEnergyBalance(context->getAllUUIDs(), dt_sec, time_advance_sec);
@@ -634,4 +704,458 @@ void EnergyBalanceModel::printDefaultValueReport(const std::vector<uint> &UUIDs)
     std::cout << "evaporating faces: " << Ne_1 << " of " << Nprimitives << " used Ne = 1 (default); " << Ne_2 << " of " << Nprimitives << " used Ne = 2" << std::endl;
 
     std::cout << "------------------------------------------------------" << std::endl;
+}
+
+// Helper function: CPU version of energy balance evaluation
+static inline float evaluateEnergyBalance_CPU(float T, float R, float Qother, float eps,
+                                               float Ta, float ea, float pressure, float gH,
+                                               float gS, uint Nsides, float stomatal_sidedness,
+                                               float heatcapacity, float surfacehumidity,
+                                               float dt, float Tprev) {
+
+    // Outgoing emission flux
+    float Rout = float(Nsides) * eps * 5.67e-8F * T * T * T * T;
+
+    // Sensible heat flux
+    float QH = cp_air_mol * gH * (T - Ta);
+
+    // Latent heat flux
+    float es = 611.0f * expf(17.502f * (T - 273.f) / (T - 273.f + 240.97f));
+    float gM = 1.08f * gH * gS * (stomatal_sidedness / (1.08f * gH + gS * stomatal_sidedness) +
+                                  (1.f - stomatal_sidedness) / (1.08f * gH + gS * (1.f - stomatal_sidedness)));
+    if (gH == 0 && gS == 0) {
+        gM = 0;
+    }
+
+    float QL = gM * lambda_mol * (es - ea * surfacehumidity) / pressure;
+
+    // Storage heat flux
+    float storage = 0.f;
+    if (dt > 0) {
+        storage = heatcapacity * (T - Tprev) / dt;
+    }
+
+    // Residual
+    return R - Rout - QH - QL - Qother - storage;
+}
+void EnergyBalanceModel::evaluateSurfaceEnergyBalance_CPU(const std::vector<uint> &UUIDs, float dt) {
+
+    // Create warning aggregator for default value warnings
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(message_flag);
+
+    //---- Sum up to get total absorbed radiation across all bands ----//
+
+    if (radiation_bands.empty()) {
+        helios_runtime_error("ERROR (EnergyBalanceModel::run): No radiation bands were found.");
+    }
+
+    const uint Nprimitives = UUIDs.size();
+
+    std::vector<float> Rn(Nprimitives, 0);
+    std::vector<float> emissivity(Nprimitives);
+
+    for (size_t u = 0; u < Nprimitives; u++) {
+        emissivity.at(u) = 1.f;
+    }
+
+    // Accumulate radiation across bands
+    for (int b = 0; b < radiation_bands.size(); b++) {
+        for (size_t u = 0; u < Nprimitives; u++) {
+            size_t p = UUIDs.at(u);
+
+            char str[50];
+            snprintf(str, sizeof(str), "radiation_flux_%s", radiation_bands.at(b).c_str());
+            if (!context->doesPrimitiveDataExist(p, str)) {
+                helios_runtime_error("ERROR (EnergyBalanceModel::run): No radiation was found in the context for band " +
+                                    std::string(radiation_bands.at(b)) +
+                                    ". Did you run the radiation model for this band?");
+            } else if (context->getPrimitiveDataType(str) != helios::HELIOS_TYPE_FLOAT) {
+                helios_runtime_error("ERROR (EnergyBalanceModel::run): Radiation primitive data for band " +
+                                    std::string(radiation_bands.at(b)) +
+                                    " does not have the correct type of 'float'");
+            }
+            float R;
+            context->getPrimitiveData(p, str, R);
+            Rn.at(u) += R;
+
+            snprintf(str, sizeof(str), "emissivity_%s", radiation_bands.at(b).c_str());
+            if (context->doesPrimitiveDataExist(p, str) && context->getPrimitiveDataType(str) == helios::HELIOS_TYPE_FLOAT) {
+                context->getPrimitiveData(p, str, emissivity.at(u));
+            } else {
+                warnings.addWarning("missing_emissivity",
+                    "Primitive data 'emissivity_" + std::string(radiation_bands.at(b)) +
+                    "' not set, using default (1.0)");
+            }
+        }
+    }
+
+    //---- Set up temperature solution ----//
+
+    // Allocate arrays for inputs
+    std::vector<float> To(Nprimitives);
+    std::vector<float> R(Nprimitives);
+    std::vector<float> Qother(Nprimitives);
+    std::vector<float> eps(Nprimitives);
+    std::vector<float> Ta(Nprimitives);
+    std::vector<float> ea(Nprimitives);
+    std::vector<float> pressure(Nprimitives);
+    std::vector<float> gH(Nprimitives);
+    std::vector<float> gS(Nprimitives);
+    std::vector<uint> Nsides(Nprimitives);
+    std::vector<float> stomatal_sidedness(Nprimitives);
+    std::vector<float> heatcapacity(Nprimitives);
+    std::vector<float> surfacehumidity(Nprimitives);
+
+    bool calculated_blconductance_used = false;
+    bool primitive_length_used = false;
+
+    // Data preparation loop - same as CUDA version
+    for (uint u = 0; u < Nprimitives; u++) {
+        size_t p = UUIDs.at(u);
+
+        // Initial guess for surface temperature
+        if (context->doesPrimitiveDataExist(p, "temperature") &&
+            context->getPrimitiveDataType("temperature") == helios::HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(p, "temperature", To[u]);
+        } else {
+            To[u] = temperature_default;
+            warnings.addWarning("missing_surface_temperature",
+                "Primitive data 'temperature' not set, using default (" +
+                std::to_string(temperature_default) + " K)");
+        }
+        if (To[u] == 0) {
+            To[u] = 300;
+        }
+
+        // Air temperature
+        if (context->doesPrimitiveDataExist(p, "air_temperature") &&
+            context->getPrimitiveDataType("air_temperature") == helios::HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(p, "air_temperature", Ta[u]);
+            if (Ta[u] < 250.f) {
+                warnings.addWarning("air_temperature_likely_celsius",
+                    "Value of " + std::to_string(Ta[u]) +
+                    " in 'air_temperature' is very small - should be in Kelvin, using default (" +
+                    std::to_string(air_temperature_default) + " K)");
+                Ta[u] = air_temperature_default;
+            }
+        } else {
+            Ta[u] = air_temperature_default;
+            warnings.addWarning("missing_air_temperature",
+                "Primitive data 'air_temperature' not set, using default (" +
+                std::to_string(air_temperature_default) + " K)");
+        }
+
+        // Air relative humidity
+        float hr;
+        if (context->doesPrimitiveDataExist(p, "air_humidity") &&
+            context->getPrimitiveDataType("air_humidity") == helios::HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(p, "air_humidity", hr);
+            if (hr > 1.f) {
+                warnings.addWarning("air_humidity_out_of_range_high",
+                    "Value of " + std::to_string(hr) +
+                    " in 'air_humidity' > 1.0 - should be fractional [0,1], using default (" +
+                    std::to_string(air_humidity_default) + ")");
+                hr = air_humidity_default;
+            } else if (hr < 0.f) {
+                warnings.addWarning("air_humidity_out_of_range_low",
+                    "Value of " + std::to_string(hr) +
+                    " in 'air_humidity' < 0.0 - should be fractional [0,1], using default (" +
+                    std::to_string(air_humidity_default) + ")");
+                hr = air_humidity_default;
+            }
+        } else {
+            hr = air_humidity_default;
+            warnings.addWarning("missing_air_humidity",
+                "Primitive data 'air_humidity' not set, using default (" +
+                std::to_string(air_humidity_default) + ")");
+        }
+
+        // Air vapor pressure
+        float esat = esat_Pa(Ta[u]);
+        ea[u] = hr * esat;
+
+        // Air pressure
+        if (context->doesPrimitiveDataExist(p, "air_pressure") &&
+            context->getPrimitiveDataType("air_pressure") == helios::HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(p, "air_pressure", pressure[u]);
+            if (pressure[u] < 10000.f) {
+                if (message_flag) {
+                    std::cout << "WARNING (EnergyBalanceModel::run): Value of " << pressure[u]
+                              << " given in 'air_pressure' primitive data is very small. "
+                              << "Values should be given in units of Pascals. Assuming default value of "
+                              << pressure_default << std::endl;
+                }
+                pressure[u] = pressure_default;
+            }
+        } else {
+            pressure[u] = pressure_default;
+        }
+
+        // Number of sides emitting radiation
+        uint twosided_flag = context->getPrimitiveTwosidedFlag(p, 1);
+        Nsides[u] = (twosided_flag == 0) ? 1 : 2;
+
+        // Number of evaporating/transpiring faces
+        stomatal_sidedness[u] = 0.f;
+        if (Nsides[u] == 2 && context->doesPrimitiveDataExist(p, "stomatal_sidedness") &&
+            context->getPrimitiveDataType("stomatal_sidedness") == helios::HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(p, "stomatal_sidedness", stomatal_sidedness[u]);
+        } else if (Nsides[u] == 2 && context->doesPrimitiveDataExist(p, "evaporating_faces") &&
+                   context->getPrimitiveDataType("evaporating_faces") == helios::HELIOS_TYPE_UINT) {
+            uint flag;
+            context->getPrimitiveData(p, "evaporating_faces", flag);
+            if (flag == 1) {
+                stomatal_sidedness[u] = 0.f;
+            } else if (flag == 2) {
+                stomatal_sidedness[u] = 0.5f;
+            }
+        }
+
+        // Boundary-layer conductance to heat
+        if (context->doesPrimitiveDataExist(p, "boundarylayer_conductance") &&
+            context->getPrimitiveDataType("boundarylayer_conductance") == helios::HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(p, "boundarylayer_conductance", gH[u]);
+        } else {
+            // Wind speed
+            float U;
+            if (context->doesPrimitiveDataExist(p, "wind_speed") &&
+                context->getPrimitiveDataType("wind_speed") == helios::HELIOS_TYPE_FLOAT) {
+                context->getPrimitiveData(p, "wind_speed", U);
+            } else {
+                U = wind_speed_default;
+                warnings.addWarning("missing_wind_speed",
+                    "Primitive data 'wind_speed' not set, using default (" +
+                    std::to_string(wind_speed_default) + " m/s)");
+            }
+
+            // Characteristic size of primitive
+            float L;
+            if (context->doesPrimitiveDataExist(p, "object_length") &&
+                context->getPrimitiveDataType("object_length") == helios::HELIOS_TYPE_FLOAT) {
+                context->getPrimitiveData(p, "object_length", L);
+                if (L == 0) {
+                    L = sqrt(context->getPrimitiveArea(p));
+                    primitive_length_used = true;
+                }
+            } else if (context->getPrimitiveParentObjectID(p) > 0) {
+                uint objID = context->getPrimitiveParentObjectID(p);
+                L = sqrt(context->getObjectArea(objID));
+            } else {
+                L = sqrt(context->getPrimitiveArea(p));
+                primitive_length_used = true;
+            }
+
+            gH[u] = 0.135f * sqrt(U / L) * float(Nsides[u]);
+            calculated_blconductance_used = true;
+        }
+
+        // Moisture conductance
+        if (context->doesPrimitiveDataExist(p, "moisture_conductance") &&
+            context->getPrimitiveDataType("moisture_conductance") == helios::HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(p, "moisture_conductance", gS[u]);
+        } else {
+            gS[u] = gS_default;
+        }
+
+        // Other fluxes
+        if (context->doesPrimitiveDataExist(p, "other_surface_flux") &&
+            context->getPrimitiveDataType("other_surface_flux") == helios::HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(p, "other_surface_flux", Qother[u]);
+        } else {
+            Qother[u] = Qother_default;
+        }
+
+        // Object heat capacity
+        if (context->doesPrimitiveDataExist(p, "heat_capacity") &&
+            context->getPrimitiveDataType("heat_capacity") == helios::HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(p, "heat_capacity", heatcapacity[u]);
+        } else {
+            heatcapacity[u] = heatcapacity_default;
+        }
+
+        // Surface humidity
+        if (context->doesPrimitiveDataExist(p, "surface_humidity") &&
+            context->getPrimitiveDataType("surface_humidity") == helios::HELIOS_TYPE_FLOAT) {
+            context->getPrimitiveData(p, "surface_humidity", surfacehumidity[u]);
+        } else {
+            surfacehumidity[u] = surface_humidity_default;
+        }
+
+        // Emissivity
+        eps[u] = emissivity.at(u);
+
+        // Net absorbed radiation
+        R[u] = Rn.at(u);
+    }
+
+    // Report all accumulated warnings
+    warnings.report(std::cout, true);  // true = compact mode
+
+    // Enable output for calculated boundary-layer conductance if used
+    if (calculated_blconductance_used) {
+        auto it = find(output_prim_data.begin(), output_prim_data.end(), "boundarylayer_conductance_out");
+        if (it == output_prim_data.end()) {
+            output_prim_data.emplace_back("boundarylayer_conductance_out");
+        }
+    }
+
+    // Warning about primitive length usage
+    if (message_flag && primitive_length_used) {
+        std::cout << "WARNING (EnergyBalanceModel::run): The length of a primitive that is not a member of a compound object "
+                  << "was used to calculate the boundary-layer conductance. This often results in incorrect values because "
+                  << "the length should be that of the object (e.g., leaf, stem) not the primitive. "
+                  << "Make sure this is what you intended." << std::endl;
+    }
+
+    //---- Solve energy balance using OpenMP ----//
+
+    // Issue warning if OpenMP not available (use aggregator to avoid spam)
+    #ifndef USE_OPENMP
+    static bool openmp_warning_issued = false;
+    if (message_flag && !openmp_warning_issued) {
+        std::cout << "WARNING (EnergyBalanceModel): OpenMP not available. Using serial CPU implementation. "
+                  << "Performance will be significantly slower. Consider installing OpenMP for parallel execution." << std::endl;
+        openmp_warning_issued = true;
+    }
+    #endif
+
+    // Allocate result array
+    std::vector<float> T(Nprimitives);
+
+    // Thread-local storage for convergence warnings
+    #ifdef USE_OPENMP
+    int num_threads = omp_get_max_threads();
+    std::vector<int> thread_convergence_failures(num_threads, 0);
+    #else
+    int convergence_failures = 0;
+    #endif
+
+    // Parallel loop over primitives
+    #ifdef USE_OPENMP
+    #pragma omp parallel for schedule(dynamic, 64)
+    #endif
+    for (int p = 0; p < (int)Nprimitives; p++) {
+
+        // Secant method parameters
+        const float err_max = 0.0001f;
+        const uint max_iter = 100;
+
+        // Initial guesses
+        float T_old_old = To[p];
+        float T_old = T_old_old;
+        T_old_old = 400.f;
+
+        // Evaluate residual at initial guesses
+        float resid_old = evaluateEnergyBalance_CPU(T_old, R[p], Qother[p], eps[p], Ta[p], ea[p],
+                                                     pressure[p], gH[p], gS[p], Nsides[p],
+                                                     stomatal_sidedness[p], heatcapacity[p],
+                                                     surfacehumidity[p], dt, To[p]);
+        float resid_old_old = evaluateEnergyBalance_CPU(T_old_old, R[p], Qother[p], eps[p], Ta[p], ea[p],
+                                                         pressure[p], gH[p], gS[p], Nsides[p],
+                                                         stomatal_sidedness[p], heatcapacity[p],
+                                                         surfacehumidity[p], dt, To[p]);
+
+        // Secant method iteration
+        float T_new;
+        float resid = 100;
+        float err = resid;
+        uint iter = 0;
+        while (err > err_max && iter < max_iter) {
+
+            if (resid_old == resid_old_old) {
+                err = 0;
+                break;
+            }
+
+            T_new = fabs((T_old_old * resid_old - T_old * resid_old_old) / (resid_old - resid_old_old));
+
+            resid = evaluateEnergyBalance_CPU(T_new, R[p], Qother[p], eps[p], Ta[p], ea[p],
+                                              pressure[p], gH[p], gS[p], Nsides[p],
+                                              stomatal_sidedness[p], heatcapacity[p],
+                                              surfacehumidity[p], dt, To[p]);
+
+            resid_old_old = resid_old;
+            resid_old = resid;
+
+            err = fabs(T_old - T_old_old) / fabs(T_old_old);
+
+            T_old_old = T_old;
+            T_old = T_new;
+
+            iter++;
+        }
+
+        // Track convergence failures (thread-safe)
+        if (err > err_max) {
+            #ifdef USE_OPENMP
+            int thread_id = omp_get_thread_num();
+            thread_convergence_failures[thread_id]++;
+            #else
+            convergence_failures++;
+            #endif
+        }
+
+        T[p] = T_new;
+    }
+
+    // Report convergence warnings
+    #ifdef USE_OPENMP
+    int total_failures = 0;
+    for (int i = 0; i < num_threads; i++) {
+        total_failures += thread_convergence_failures[i];
+    }
+    if (total_failures > 0 && message_flag) {
+        std::cout << "WARNING (EnergyBalanceModel::solveEnergyBalance): Energy balance did not converge for "
+                  << total_failures << " primitives." << std::endl;
+    }
+    #else
+    if (convergence_failures > 0 && message_flag) {
+        std::cout << "WARNING (EnergyBalanceModel::solveEnergyBalance): Energy balance did not converge for "
+                  << convergence_failures << " primitives." << std::endl;
+    }
+    #endif
+
+    //---- Write results back to Context ----//
+
+    for (uint u = 0; u < Nprimitives; u++) {
+        size_t UUID = UUIDs.at(u);
+
+        if (T[u] != T[u]) {  // NaN check
+            T[u] = temperature_default;
+        }
+
+        context->setPrimitiveData(UUID, "temperature", T[u]);
+
+        float QH = cp_air_mol * gH[u] * (T[u] - Ta[u]);
+        context->setPrimitiveData(UUID, "sensible_flux", QH);
+
+        float es = esat_Pa(T[u]);
+        float gM = 1.08f * gH[u] * gS[u] *
+                   (stomatal_sidedness[u] / (1.08f * gH[u] + gS[u] * stomatal_sidedness[u]) +
+                    (1.f - stomatal_sidedness[u]) / (1.08f * gH[u] + gS[u] * (1.f - stomatal_sidedness[u])));
+        if (gH[u] == 0 && gS[u] == 0) {
+            gM = 0;
+        }
+        float QL = lambda_mol * gM * (es - ea[u]) / pressure[u];
+        context->setPrimitiveData(UUID, "latent_flux", QL);
+
+        for (const auto &data_label : output_prim_data) {
+            if (data_label == "boundarylayer_conductance_out") {
+                context->setPrimitiveData(UUID, "boundarylayer_conductance_out", gH[u]);
+            } else if (data_label == "vapor_pressure_deficit") {
+                float vpd = (es - ea[u]) / pressure[u];
+                context->setPrimitiveData(UUID, "vapor_pressure_deficit", vpd);
+            } else if (data_label == "net_radiation_flux") {
+                float Rnet = R[u] - float(Nsides[u]) * eps[u] * 5.67e-8F * std::pow(T[u], 4);
+                context->setPrimitiveData(UUID, "net_radiation_flux", Rnet);
+            } else if (data_label == "storage_flux") {
+                float storage = 0.f;
+                if (dt > 0) {
+                    storage = heatcapacity[u] * (T[u] - To[u]) / dt;
+                }
+                context->setPrimitiveData(UUID, "storage_flux", storage);
+            }
+        }
+    }
 }
