@@ -268,15 +268,21 @@ struct CarbohydrateParameters {
 
     // -- Stem Growth Parameters -- //
     //! mature internode (wood/stem) density (g m^-3)
-    float stem_density = 540000;
+    float stem_density = 54000;
     //! fraction of the dry weight of internode made up by carbon in mature shoot
     float stem_carbon_percentage = 0.4559;
+    //! mean fraction of the dry weight of internode composed of carbohydrates in mature shoot
+    float carbohydrate_percentage = 0.10;
+    //! fraction of carbohydrates composed of carbon
+    float carbohydrate_carbon_percentage = 0.4;
+    //! fraction of the dry weight of internode made up by structural carbon in mature shoot - Excludes fraction made up by carbohydrates
+    float stem_structural_carbon_percentage = stem_carbon_percentage - (carbohydrate_carbon_percentage * carbohydrate_percentage);
     //! age at which stem reaches physiological maturity (days)
     float maturity_age = 180;
     //! starting fraction of the final stem carbon density in new growth
     float initial_density_ratio = 0.2;
     //! ratio of shoot internode dry weight to root dry weight
-    float shoot_root_ratio = 4.5;
+    float shoot_root_ratio = 3;
 
     // -- Leaf Growth Parameters -- //
     //! specific leaf area - ratio of leaf area to leaf dry mass (m^2 / g DW)
@@ -299,14 +305,18 @@ struct CarbohydrateParameters {
     float stem_maintenance_respiration_rate = 3.5024e-05;
     //! maintenance respiration rate of root (mol C respired/mol C in pool/day)
     float root_maintenance_respiration_rate = 3.5024e-05;
+    //! fraction of wood composed of physiologically active tissue
+    float living_wood_fraction = 0.5;
+    //! fraction of active respiration that occurs during dormancy
+    float dormant_respiration_fraction = 0.9;
     //! growth respiration cost (fraction of total carbon used during growth that goes toward respiration rather than structure)
     float growth_respiration_fraction = 0.28;
 
     // -- Organ Abortion Thresholds -- //
     //! carbohydrate concentration threshold to abort a flowering bud as a fraction of g C/ g DW in the stem
-    float carbohydrate_abortion_threshold = 0.1;
+    float carbohydrate_abortion_threshold = 0.15;
     //! carbohydrate concentration threshold to prune a shoot as a fraction of g C/ g DW in the stem
-    float carbohydrate_pruning_threshold = 0.01;
+    float carbohydrate_pruning_threshold = 0.025;
     //! threshold time (days) to abort a bud (bud is aborted when the carbohydrate concentration is below carbohydrate_abortion_threshold for more than this time)
     float bud_death_threshold_days = 2;
     //! threshold time (days) to abort a shoot (shoot is aborted when the carbohydrate concentration is below carbohydrate_abortion_threshold for more than this time)
@@ -319,13 +329,14 @@ struct CarbohydrateParameters {
     float carbohydrate_vegetative_break_threshold = 0.15;
 
     //! carbohydrate concentration threshold for radial growth as a fraction of g C/ g DW in the stem
-    float carbohydrate_growth_threshold = 0.1;
+    float carbohydrate_growth_threshold = 0.15;
 
     // -- Carbon Transfer Parameters -- //
     //! carbohydrate concentration threshold to transfer carbon to child shoots as a fraction of g C/ g DW in the stem
-    float carbohydrate_transfer_threshold = 0.05;
-    float carbon_conductance_down = 0.9; //<= 1.0
-    float carbon_conductance_up = carbon_conductance_down / 5; // Conductance of carbon from parent to child shoots << conductance from child to parent
+    float carbohydrate_transfer_threshold_down = 0.025;
+    float carbohydrate_transfer_threshold_up = 0.04;
+    float carbon_conductance_down = 0.75; //<= 1.0
+    float carbon_conductance_up = carbon_conductance_down; // Conductance of carbon from parent to child shoots << conductance from child to parent
 };
 
 //! Add geometry to the Context consisting of a series of Cone objects to form a tube-like shape
@@ -842,6 +853,9 @@ struct ShootParameters {
     RandomParameter_float elongation_rate_max;
     //! Minimum probability that a bud will break and form a new shoot
     RandomParameter_float vegetative_bud_break_probability_min;
+    //! Maximum probability that a bud will break and form a new shoot
+    RandomParameter_float vegetative_bud_break_probability_max;
+
     //! Decay rate (1/node) of the vegetative bud-break probability along the shoot; sign determines direction
     RandomParameter_float vegetative_bud_break_probability_decay_rate;
     //! FLAG: description not found in specification table – please advise
@@ -882,6 +896,7 @@ struct ShootParameters {
         this->girth_area_factor = a.girth_area_factor;
         this->girth_area_factor.resample();
         this->vegetative_bud_break_probability_min = a.vegetative_bud_break_probability_min;
+        this->vegetative_bud_break_probability_max = 1.;
         this->vegetative_bud_break_probability_min.resample();
         this->flower_bud_break_probability = a.flower_bud_break_probability;
         this->flower_bud_break_probability.resample();
@@ -1417,8 +1432,6 @@ struct Shoot {
     [[nodiscard]] bool sampleVegetativeBudBreak(uint node_index) const;
 
     [[nodiscard]] bool sampleVegetativeBudBreak_carb(uint node_index) const;
-
-    [[nodiscard]] bool sampleVegetativeBudBreak_carb( uint node_index ) const;
 
     //! Randomly sample whether the shoot should produce an epicormic shoot (water sprout) over timestep
     /**
@@ -2523,6 +2536,22 @@ public:
      */
     [[nodiscard]] std::vector<uint> getPlantFruitObjectIDs(uint plantID) const;
 
+    //! Assign a fruit count value for each shoot on a plant
+    /**
+     * \param[in] plantID ID of the plant instance.
+     */
+
+    void updateShootFruitCounts(uint plantID) const;
+
+
+    //! Get internode object IDs for all shoots for a given plant
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \return Vector of object IDs for all shoots in the plant.
+     */
+
+    [[nodiscard]] std::vector<uint> getShootInternodeObjectIDs(uint plantID) const;
+
     //! Get collision-relevant object IDs for a specific plant
     /**
      * \param[in] plantID Plant ID for which to query collision-relevant object IDs
@@ -2880,6 +2909,14 @@ protected:
     void initializeAlmondTreeShoots();
 
     uint buildAlmondTree(const helios::vec3 &base_position);
+
+    void initializeAlmondTreeAldrichShoots();
+
+    uint buildAlmondTreeAldrich(const helios::vec3 &base_position);
+
+    void initializeAlmondTreeWoodColonyShoots();
+
+    uint buildAlmondTreeWoodColony(const helios::vec3 &base_position);
 
     void initializeAppleTreeShoots();
 
