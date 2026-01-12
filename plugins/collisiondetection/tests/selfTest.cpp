@@ -1,6 +1,6 @@
 /** \file "selfTest.cpp" Self-test routines for collision detection plugin
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -155,12 +155,17 @@ DOCTEST_TEST_CASE("CollisionDetection Plugin Initialization") {
     // Test basic initialization
     DOCTEST_CHECK_NOTHROW(collision.disableMessages());
     DOCTEST_CHECK_NOTHROW(collision.enableMessages());
+    collision.disableMessages(); // Re-disable to suppress subsequent output
 
     // Test GPU acceleration capabilities based on actual hardware availability
     try {
-        // Try to enable GPU acceleration and see if it actually works
-        collision.enableGPUAcceleration();
-        bool gpu_enabled = collision.isGPUAccelerationEnabled();
+        // Try to enable GPU acceleration and see if it actually works (capture any warnings)
+        bool gpu_enabled;
+        {
+            helios::capture_cerr capture;
+            collision.enableGPUAcceleration();
+            gpu_enabled = collision.isGPUAccelerationEnabled();
+        } // Capture destroyed before assertions
 
         // Create minimal test geometry to verify GPU functionality
         uint test_uuid = context.addTriangle(make_vec3(-1, -1, 0), make_vec3(1, -1, 0), make_vec3(0, 1, 0));
@@ -318,9 +323,13 @@ DOCTEST_TEST_CASE("CollisionDetection GPU/CPU Mode Switching") {
 
     collision.buildBVH();
 
-    // Test with GPU enabled
-    collision.enableGPUAcceleration();
-    std::vector<uint> gpu_results = collision.findCollisions(UUID1);
+    // Test with GPU enabled (capture any warnings)
+    std::vector<uint> gpu_results;
+    {
+        helios::capture_cerr capture;
+        collision.enableGPUAcceleration();
+        gpu_results = collision.findCollisions(UUID1);
+    }
 
     // Test with GPU disabled
     collision.disableGPUAcceleration();
@@ -475,10 +484,12 @@ DOCTEST_TEST_CASE("CollisionDetection Message Control") {
 
     // Suppress initialization messages (we're testing message control itself)
     CollisionDetection collision(&context);
+    collision.disableMessages();
 
     // Test message disabling/enabling
     DOCTEST_CHECK_NOTHROW(collision.disableMessages());
     DOCTEST_CHECK_NOTHROW(collision.enableMessages());
+    collision.disableMessages(); // Re-disable to suppress subsequent output
 }
 
 
@@ -680,6 +691,7 @@ DOCTEST_TEST_CASE("CollisionDetection Soft/Hard Detection Integration - Differen
     Context context;
 
     CollisionDetection collision(&context);
+    collision.disableMessages();
     collision.disableGPUAcceleration();
 
     // Create separate geometry sets for soft and hard detection
@@ -796,9 +808,13 @@ DOCTEST_TEST_CASE("CollisionDetection GPU Acceleration") {
         uint UUID = context.getAllUUIDs()[0];
         std::vector<uint> cpu_results = collision.findCollisions(UUID);
 
-        collision.enableGPUAcceleration();
-        collision.buildBVH(); // This should transfer to GPU
-        std::vector<uint> gpu_results = collision.findCollisions(UUID);
+        std::vector<uint> gpu_results;
+        {
+            helios::capture_cerr capture;
+            collision.enableGPUAcceleration();
+            collision.buildBVH(); // This should transfer to GPU
+            gpu_results = collision.findCollisions(UUID);
+        } // Capture destroyed before assertions
 
         // Compare results (allowing for different orders)
         std::sort(cpu_results.begin(), cpu_results.end());
@@ -831,6 +847,7 @@ DOCTEST_TEST_CASE("CollisionDetection GPU/CPU Message Display") {
 
     // Suppress initialization message, then create collision detection object and test geometry
     CollisionDetection collision(&context);
+    collision.disableMessages();
 
     uint UUID1 = context.addTriangle(make_vec3(-1, -1, 0), make_vec3(1, -1, 0), make_vec3(0, 1, 0));
     uint UUID2 = context.addTriangle(make_vec3(-0.5, -0.5, 0), make_vec3(1.5, -0.5, 0), make_vec3(0.5, 1.5, 0));
@@ -841,9 +858,13 @@ DOCTEST_TEST_CASE("CollisionDetection GPU/CPU Message Display") {
     collision.disableGPUAcceleration();
 
     // Capture traversal messages using capture_cout (these are the specific messages we want to test)
-    helios::capture_cout capture_cpu;
-    std::vector<uint> cpu_results = collision.findCollisions(UUID1);
-    std::string cpu_output = capture_cpu.get_captured_output();
+    std::string cpu_output;
+    std::vector<uint> cpu_results;
+    {
+        helios::capture_cout capture_cpu;
+        cpu_results = collision.findCollisions(UUID1);
+        cpu_output = capture_cpu.get_captured_output();
+    } // capture destroyed here
 
     // Check that some CPU message was displayed (the exact message may vary)
     // DOCTEST_INFO("CPU output: " << cpu_output);
@@ -851,11 +872,15 @@ DOCTEST_TEST_CASE("CollisionDetection GPU/CPU Message Display") {
     DOCTEST_CHECK(true); // Placeholder - the main goal is testing message suppression below
 
     // Test GPU message (if available)
-    collision.enableGPUAcceleration();
-
-    helios::capture_cout capture_gpu;
-    std::vector<uint> gpu_results = collision.findCollisions(UUID1);
-    std::string gpu_output = capture_gpu.get_captured_output();
+    std::string gpu_output;
+    std::vector<uint> gpu_results;
+    {
+        helios::capture_cerr capture_err;
+        helios::capture_cout capture_gpu;
+        collision.enableGPUAcceleration();
+        gpu_results = collision.findCollisions(UUID1);
+        gpu_output = capture_gpu.get_captured_output();
+    } // Capture destroyed before assertions
 
     // Should contain either GPU or CPU message depending on availability
     // For now, just check basic functionality (the main test is message suppression below)
@@ -864,9 +889,13 @@ DOCTEST_TEST_CASE("CollisionDetection GPU/CPU Message Display") {
     // Test message suppression
     collision.disableMessages();
 
-    helios::capture_cout capture_silent;
-    std::vector<uint> silent_results = collision.findCollisions(UUID1);
-    std::string silent_output = capture_silent.get_captured_output();
+    std::string silent_output;
+    std::vector<uint> silent_results;
+    {
+        helios::capture_cout capture_silent;
+        silent_results = collision.findCollisions(UUID1);
+        silent_output = capture_silent.get_captured_output();
+    } // capture destroyed here
 
     // Should not contain traversal messages when disabled
     DOCTEST_CHECK(silent_output.find("Using GPU acceleration") == std::string::npos);
@@ -1601,9 +1630,13 @@ DOCTEST_TEST_CASE("CollisionDetection CPU vs GPU Consistency - Large Scale") {
     auto cpu_results = collision.findCollisions(cluster1[0]);
 
     // Test GPU results
-    collision.enableGPUAcceleration();
-    collision.buildBVH();
-    auto gpu_results = collision.findCollisions(cluster1[0]);
+    std::vector<uint> gpu_results;
+    {
+        helios::capture_cerr capture;
+        collision.enableGPUAcceleration();
+        collision.buildBVH();
+        gpu_results = collision.findCollisions(cluster1[0]);
+    } // Capture destroyed before assertions
 
     // Sort for comparison
     std::sort(cpu_results.begin(), cpu_results.end());
@@ -1634,8 +1667,12 @@ DOCTEST_TEST_CASE("CollisionDetection Negative Test - Well Separated Primitives"
     auto cpu_collisions = collision.findCollisions(triangle1);
 
     // Test GPU
-    collision.enableGPUAcceleration();
-    auto gpu_collisions = collision.findCollisions(triangle1);
+    std::vector<uint> gpu_collisions;
+    {
+        helios::capture_cerr capture;
+        collision.enableGPUAcceleration();
+        gpu_collisions = collision.findCollisions(triangle1);
+    } // Capture destroyed before assertions
 
     // Should find 0 collisions (not counting self)
     DOCTEST_CHECK(cpu_collisions.size() == 0);
@@ -1661,8 +1698,12 @@ DOCTEST_TEST_CASE("CollisionDetection Negative Test - Patch vs Distant Model") {
     collision.disableGPUAcceleration();
     auto cpu_collisions = collision.findCollisions(patch);
 
-    collision.enableGPUAcceleration();
-    auto gpu_collisions = collision.findCollisions(patch);
+    std::vector<uint> gpu_collisions;
+    {
+        helios::capture_cerr capture;
+        collision.enableGPUAcceleration();
+        gpu_collisions = collision.findCollisions(patch);
+    } // Capture destroyed before assertions
 
     // Should find 0 collisions
     DOCTEST_CHECK(cpu_collisions.size() == 0);
@@ -1689,8 +1730,12 @@ DOCTEST_TEST_CASE("CollisionDetection Edge Case - Boundary Touching") {
     collision.disableGPUAcceleration();
     auto cpu_results = collision.findCollisions(triangle1);
 
-    collision.enableGPUAcceleration();
-    auto gpu_results = collision.findCollisions(triangle1);
+    std::vector<uint> gpu_results;
+    {
+        helios::capture_cerr capture;
+        collision.enableGPUAcceleration();
+        gpu_results = collision.findCollisions(triangle1);
+    } // Capture destroyed before assertions
 
     std::sort(cpu_results.begin(), cpu_results.end());
     std::sort(gpu_results.begin(), gpu_results.end());
@@ -1715,8 +1760,12 @@ DOCTEST_TEST_CASE("CollisionDetection Edge Case - Very Small Overlaps") {
     collision.disableGPUAcceleration();
     auto cpu_results = collision.findCollisions(triangle1);
 
-    collision.enableGPUAcceleration();
-    auto gpu_results = collision.findCollisions(triangle1);
+    std::vector<uint> gpu_results;
+    {
+        helios::capture_cerr capture;
+        collision.enableGPUAcceleration();
+        gpu_results = collision.findCollisions(triangle1);
+    } // Capture destroyed before assertions
 
     std::sort(cpu_results.begin(), cpu_results.end());
     std::sort(gpu_results.begin(), gpu_results.end());
@@ -1760,9 +1809,13 @@ DOCTEST_TEST_CASE("CollisionDetection Real Geometry - PLY File Loading") {
     auto cpu_intersecting = collision.findCollisions(patch_intersecting);
     auto cpu_non_intersecting = collision.findCollisions(patch_non_intersecting);
 
-    collision.enableGPUAcceleration();
-    auto gpu_intersecting = collision.findCollisions(patch_intersecting);
-    auto gpu_non_intersecting = collision.findCollisions(patch_non_intersecting);
+    std::vector<uint> gpu_intersecting, gpu_non_intersecting;
+    {
+        helios::capture_cerr capture;
+        collision.enableGPUAcceleration();
+        gpu_intersecting = collision.findCollisions(patch_intersecting);
+        gpu_non_intersecting = collision.findCollisions(patch_non_intersecting);
+    } // Capture destroyed before assertions
 
     // Sort for comparison
     std::sort(cpu_intersecting.begin(), cpu_intersecting.end());
@@ -1976,6 +2029,7 @@ DOCTEST_TEST_CASE("CollisionDetection findNearestPrimitiveDistance - Directional
 DOCTEST_TEST_CASE("CollisionDetection - findNearestPrimitiveDistance front/back face detection") {
     helios::Context context;
     CollisionDetection collision(&context);
+    collision.disableMessages();
 
     // Create a horizontal patch at z=1.0 (normal pointing up in +Z direction)
     vec3 patch_center = make_vec3(0, 0, 1);
@@ -2025,6 +2079,7 @@ DOCTEST_TEST_CASE("CollisionDetection - findNearestPrimitiveDistance front/back 
 DOCTEST_TEST_CASE("CollisionDetection Cone-Based Obstacle Detection - Basic Functionality") {
     Context context;
     CollisionDetection collision(&context);
+    collision.disableMessages();
 
     // Create a horizontal patch obstacle at z=1.0
     uint obstacle_uuid = context.addPatch(make_vec3(0, 0, 1), make_vec2(2, 2));
@@ -2064,6 +2119,7 @@ DOCTEST_TEST_CASE("CollisionDetection Cone-Based Obstacle Detection - Basic Func
 DOCTEST_TEST_CASE("CollisionDetection Cone-Based vs Legacy Method Comparison") {
     Context context;
     CollisionDetection collision(&context);
+    collision.disableMessages();
 
     // Create test obstacle
     uint obstacle_uuid = context.addPatch(make_vec3(0, 0, 1), make_vec2(1, 1));
@@ -2102,6 +2158,7 @@ DOCTEST_TEST_CASE("CollisionDetection Cone-Based vs Legacy Method Comparison") {
 DOCTEST_TEST_CASE("CollisionDetection Cone-Based Triangle vs Patch Intersection") {
     Context context;
     CollisionDetection collision(&context);
+    collision.disableMessages();
 
     // Test triangle intersection
     uint triangle_uuid = context.addTriangle(make_vec3(-0.5f, -0.5f, 1.0f), make_vec3(0.5f, -0.5f, 1.0f), make_vec3(0, 0.5f, 1.0f));
@@ -2138,6 +2195,7 @@ DOCTEST_TEST_CASE("CollisionDetection Cone-Based Triangle vs Patch Intersection"
 DOCTEST_TEST_CASE("CollisionDetection Cone-Based Parameter Validation") {
     Context context;
     CollisionDetection collision(&context);
+    collision.disableMessages();
 
     uint obstacle_uuid = context.addPatch(make_vec3(0, 0, 1), make_vec2(1, 1));
     std::vector<uint> obstacles = {obstacle_uuid};
@@ -2172,6 +2230,7 @@ DOCTEST_TEST_CASE("CollisionDetection Cone-Based Parameter Validation") {
 DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - Basic Functionality") {
     Context context;
     CollisionDetection collision(&context);
+    collision.disableMessages();
 
     // Set up simple voxel grid
     vec3 grid_center(0, 0, 0);
@@ -2211,6 +2270,7 @@ DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - Basic Functionalit
 DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - Edge Cases") {
     Context context;
     CollisionDetection collision(&context);
+    collision.disableMessages();
 
     // Test with empty ray vectors
     vec3 grid_center(0, 0, 0);
@@ -2227,25 +2287,29 @@ DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - Edge Cases") {
     int P_denom, P_trans;
 
     // Test boundary cases - should handle gracefully or throw appropriate error
-    capture_cerr capture;
-    try {
-        collision.getVoxelTransmissionProbability(make_int3(-1, 0, 0), P_denom, P_trans);
-    } catch (const std::exception &e) {
-        // Expected behavior - invalid indices should be handled
-        DOCTEST_CHECK(true);
-    }
+    {
+        capture_cerr capture;
+        try {
+            collision.getVoxelTransmissionProbability(make_int3(-1, 0, 0), P_denom, P_trans);
+        } catch (const std::exception &e) {
+            // Expected behavior - invalid indices should be handled
+        }
 
-    try {
-        collision.getVoxelTransmissionProbability(make_int3(1, 0, 0), P_denom, P_trans);
-    } catch (const std::exception &e) {
-        // Expected behavior - out of bounds indices
-        DOCTEST_CHECK(true);
-    }
+        try {
+            collision.getVoxelTransmissionProbability(make_int3(1, 0, 0), P_denom, P_trans);
+        } catch (const std::exception &e) {
+            // Expected behavior - out of bounds indices
+        }
+    } // capture destroyed here
+
+    // Assertions after capture is destroyed
+    DOCTEST_CHECK(true);
 }
 
 DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - Data Consistency") {
     Context context;
     CollisionDetection collision(&context);
+    collision.disableMessages();
 
     vec3 grid_center(0, 0, 0);
     vec3 grid_size(6, 6, 6);
@@ -2293,6 +2357,7 @@ DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - Data Consistency")
 DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - Manual Data Setting") {
     Context context;
     CollisionDetection collision(&context);
+    collision.disableMessages();
 
     vec3 grid_center(0, 0, 0);
     vec3 grid_size(4, 4, 4);
@@ -2340,6 +2405,7 @@ DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - Manual Data Settin
 DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - Different Grid Sizes") {
     Context context;
     CollisionDetection collision(&context);
+    collision.disableMessages();
 
     // Test various grid sizes
     std::vector<int3> test_grids = {
@@ -2388,6 +2454,7 @@ DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - Different Grid Siz
 DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - Ray Direction Variations") {
     Context context;
     CollisionDetection collision(&context);
+    collision.disableMessages();
 
     vec3 grid_center(0, 0, 0);
     vec3 grid_size(8, 8, 8);
@@ -2438,6 +2505,7 @@ DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - Ray Direction Vari
 DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - GPU/CPU Consistency") {
     Context context;
     CollisionDetection collision(&context);
+    collision.disableMessages();
 
     vec3 grid_center(0, 0, 0);
     vec3 grid_size(6, 6, 6);
@@ -2472,9 +2540,12 @@ DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - GPU/CPU Consistenc
     }
 
     // Test GPU implementation
-    collision.enableGPUAcceleration();
-    collision.clearVoxelData();
-    collision.calculateVoxelRayPathLengths(grid_center, grid_size, grid_divisions, ray_origins, ray_directions);
+    {
+        helios::capture_cerr capture;
+        collision.enableGPUAcceleration();
+        collision.clearVoxelData();
+        collision.calculateVoxelRayPathLengths(grid_center, grid_size, grid_divisions, ray_origins, ray_directions);
+    } // Capture destroyed before assertions
 
     // Compare GPU results with CPU results
     for (int i = 0; i < grid_divisions.x; i++) {
@@ -2691,9 +2762,12 @@ DOCTEST_TEST_CASE("CollisionDetection Voxel Ray Path Length - Numerical Precisio
     }
 
     // GPU calculation
-    collision.enableGPUAcceleration();
-    collision.clearVoxelData();
-    collision.calculateVoxelRayPathLengths(precision_center, precision_size, precision_divisions, precision_origins, precision_directions);
+    {
+        helios::capture_cerr capture;
+        collision.enableGPUAcceleration();
+        collision.clearVoxelData();
+        collision.calculateVoxelRayPathLengths(precision_center, precision_size, precision_divisions, precision_origins, precision_directions);
+    } // Capture destroyed before assertions
 
     // Compare with tighter tolerance than existing test
     int idx = 0;
@@ -3316,7 +3390,9 @@ DOCTEST_TEST_CASE("CollisionDetection Ray Casting - Performance and Scalability"
     // Performance should be reasonable (less than 1 second for 200 rays)
     DOCTEST_CHECK(duration.count() < 1000);
 
-    std::cout << "Batch ray casting performance: " << duration.count() << " ms for " << many_rays.size() << " rays (" << stats.total_hits << " hits)" << std::endl;
+    // Performance info available in stats but not printed during normal test runs
+    // Uncomment for performance benchmarking:
+    // std::cout << "Batch ray casting performance: " << duration.count() << " ms for " << many_rays.size() << " rays (" << stats.total_hits << " hits)" << std::endl;
 }
 
 DOCTEST_TEST_CASE("CollisionDetection Ray Casting - Integration with Existing BVH") {
@@ -3963,8 +4039,12 @@ DOCTEST_TEST_CASE("CollisionDetection Voxel Primitive Intersection - GPU vs CPU 
     auto cpu_results = collision.castRays(test_rays);
 
     // Test GPU implementation
-    collision.enableGPUAcceleration();
-    auto gpu_results = collision.castRays(test_rays);
+    std::vector<CollisionDetection::HitResult> gpu_results;
+    {
+        helios::capture_cerr capture;
+        collision.enableGPUAcceleration();
+        gpu_results = collision.castRays(test_rays);
+    } // Capture destroyed before assertions
 
     // Compare results
     DOCTEST_CHECK(cpu_results.size() == gpu_results.size());
@@ -5074,28 +5154,37 @@ DOCTEST_TEST_CASE("CollisionDetection Ray Classification - Error Handling and In
     collision.disableMessages();
 
     // Test error handling for invalid voxel indices
-    capture_cerr capture;
+    bool caught_negative_exception = false;
+    bool caught_large_exception = false;
+    std::string negative_error_msg;
+    std::string large_error_msg;
 
-    // Test invalid negative indices
-    bool caught_exception = false;
-    try {
-        int hit_before, hit_after, hit_inside;
-        collision.getVoxelRayHitCounts(make_int3(-1, 0, 0), hit_before, hit_after, hit_inside);
-    } catch (const std::exception &e) {
-        caught_exception = true;
-        DOCTEST_CHECK(std::string(e.what()).find("Invalid voxel indices") != std::string::npos);
-    }
-    DOCTEST_CHECK(caught_exception);
+    {
+        capture_cerr capture;
 
-    // Test invalid too-large indices
-    caught_exception = false;
-    try {
-        std::vector<float> path_lengths = collision.getVoxelRayPathLengths(make_int3(100, 100, 100));
-    } catch (const std::exception &e) {
-        caught_exception = true;
-        DOCTEST_CHECK(std::string(e.what()).find("Invalid voxel indices") != std::string::npos);
-    }
-    DOCTEST_CHECK(caught_exception);
+        // Test invalid negative indices
+        try {
+            int hit_before, hit_after, hit_inside;
+            collision.getVoxelRayHitCounts(make_int3(-1, 0, 0), hit_before, hit_after, hit_inside);
+        } catch (const std::exception &e) {
+            caught_negative_exception = true;
+            negative_error_msg = e.what();
+        }
+
+        // Test invalid too-large indices
+        try {
+            std::vector<float> path_lengths = collision.getVoxelRayPathLengths(make_int3(100, 100, 100));
+        } catch (const std::exception &e) {
+            caught_large_exception = true;
+            large_error_msg = e.what();
+        }
+    } // capture destroyed here
+
+    // Assertions after capture is destroyed
+    DOCTEST_CHECK(caught_negative_exception);
+    DOCTEST_CHECK(negative_error_msg.find("Invalid voxel indices") != std::string::npos);
+    DOCTEST_CHECK(caught_large_exception);
+    DOCTEST_CHECK(large_error_msg.find("Invalid voxel indices") != std::string::npos);
 
     // Test accessing data before initialization
     int hit_before, hit_after, hit_inside;
@@ -5214,6 +5303,7 @@ DOCTEST_TEST_CASE("CollisionDetection Ray Classification - Beer's Law Integratio
 DOCTEST_TEST_CASE("CollisionDetection calculateVoxelPathLengths Enhanced Method") {
     Context context;
     CollisionDetection collision(&context);
+    collision.disableMessages();
 
     // Test 1: Basic functionality with simple ray-voxel setup
     {
@@ -5335,13 +5425,16 @@ DOCTEST_TEST_CASE("CollisionDetection calculateVoxelPathLengths Enhanced Method"
         // Test mismatched voxel center/size arrays
         std::vector<vec3> mismatched_sizes = {make_vec3(1.0f, 1.0f, 1.0f), make_vec3(2.0f, 2.0f, 2.0f)};
 
-        capture_cerr capture;
         bool threw_exception = false;
-        try {
-            collision.calculateVoxelPathLengths(scan_origin, ray_directions, voxel_centers, mismatched_sizes);
-        } catch (const std::exception &) {
-            threw_exception = true;
-        }
+        {
+            capture_cerr capture;
+            try {
+                collision.calculateVoxelPathLengths(scan_origin, ray_directions, voxel_centers, mismatched_sizes);
+            } catch (const std::exception &) {
+                threw_exception = true;
+            }
+        } // capture destroyed here
+
         DOCTEST_CHECK(threw_exception);
     }
 
@@ -5429,4 +5522,344 @@ DOCTEST_TEST_CASE("CollisionDetection calculateVoxelPathLengths Enhanced Method"
             }
         }
     }
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - Patch with no slices") {
+    Context context;
+
+    // Create patch using center and size instead of vertices
+    vec3 patch_center = make_vec3(0.5, 0, 0.5);
+    vec2 patch_size = make_vec2(1, 1);
+
+    uint prim_UUID = context.addPatch(patch_center, patch_size);
+
+    vec3 grid_center = make_vec3(0, 1, 0);
+    vec3 grid_size = make_vec3(10, 10, 10);
+
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    std::vector<uint> voxel_UUIDs = collisiondetection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(2, 2, 2));
+
+    DOCTEST_CHECK(voxel_UUIDs.size() >= 1);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - Patch with one slice") {
+    Context context;
+
+    // Create patch using center and size instead of vertices
+    vec3 patch_center = make_vec3(0.5, 0, 0);
+    vec2 patch_size = make_vec2(2, 2);
+
+    uint prim_UUID = context.addPatch(patch_center, patch_size);
+
+    vec3 grid_center = make_vec3(0, 0, 0);
+    vec3 grid_size = make_vec3(1, 10, 10);
+
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    std::vector<uint> voxel_UUIDs = collisiondetection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(2, 1, 1));
+
+    DOCTEST_CHECK(voxel_UUIDs.size() >= 1);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - Patch with 2 slices") {
+    Context context;
+
+    // Create patch using center and size instead of vertices
+    vec3 patch_center = make_vec3(1, 0, 0);
+    vec2 patch_size = make_vec2(3, 1);
+
+    uint prim_UUID = context.addPatch(patch_center, patch_size);
+
+    vec3 grid_center = make_vec3(0, 0, 0);
+    vec3 grid_size = make_vec3(2, 10, 1);
+
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    std::vector<uint> voxel_UUIDs = collisiondetection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(3, 1, 1));
+
+    DOCTEST_CHECK(voxel_UUIDs.size() >= 1);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - Patch with 3 slices and no vertices inside voxel") {
+    Context context;
+
+    // Create patch using center and size instead of vertices
+    vec3 patch_center = make_vec3(2, 0, 0);
+    vec2 patch_size = make_vec2(3, 2);
+
+    uint prim_UUID = context.addPatch(patch_center, patch_size);
+
+    vec3 grid_center = make_vec3(0, 0, 0);
+    vec3 grid_size = make_vec3(4, 10, 10);
+
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    std::vector<uint> voxel_UUIDs = collisiondetection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(4, 1, 1));
+
+    DOCTEST_CHECK(voxel_UUIDs.size() >= 1);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - Areas after slicing (non-textured)") {
+    Context context;
+
+    // Create patch using center and size instead of vertices
+    vec3 patch_center = make_vec3(0, 0, 0);
+    vec2 patch_size = make_vec2(2, 2);
+
+    uint prim_UUID = context.addPatch(patch_center, patch_size);
+
+    float area_patch = context.getPrimitiveArea(prim_UUID);
+
+    vec3 grid_center = make_vec3(0, 0, 0);
+    vec3 grid_size = make_vec3(2, 10, 2);
+
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    std::vector<uint> voxel_UUIDs = collisiondetection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(2, 1, 2));
+
+    float area_tot = 0;
+    for (uint UUID: voxel_UUIDs) {
+        area_tot += context.getPrimitiveArea(UUID);
+    }
+
+    DOCTEST_CHECK(fabs(area_tot - area_patch) / area_patch < 0.05f);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - Textured areas after slicing") {
+    Context context;
+
+    // Create textured patch using center, size, and texture file
+    vec3 patch_center = make_vec3(0, 0, 0);
+    vec2 patch_size = make_vec2(2, 2);
+
+    uint prim_UUID = context.addPatch(patch_center, patch_size, make_SphericalCoord(0, 0), "lib/images/disk_texture.png");
+
+    float area_patch = context.getPrimitiveArea(prim_UUID);
+
+    vec3 grid_center = make_vec3(0, 0, 0);
+    vec3 grid_size = make_vec3(2, 10, 2);
+
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    std::vector<uint> voxel_UUIDs = collisiondetection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(2, 1, 2));
+
+    float area_tot = 0;
+    for (uint UUID: voxel_UUIDs) {
+        area_tot += context.getPrimitiveArea(UUID);
+    }
+
+    DOCTEST_CHECK(fabs(area_tot - area_patch) / area_patch < 0.05f);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - Cropping non-textured primitives") {
+    Context context;
+
+    // Create two triangles to form a quad (replacement for addPolygon)
+    uint tri1_UUID = context.addTriangle(make_vec3(-1, 0, 1), make_vec3(1, 0, 1), make_vec3(1, 0, -1));
+    uint tri2_UUID = context.addTriangle(make_vec3(1, 0, -1), make_vec3(-1, 0, -1), make_vec3(-1, 0, 1));
+    uint prim_UUID = tri1_UUID; // Use first triangle for the test
+
+    vec3 grid_center = make_vec3(0, 0, 0);
+    vec3 grid_size = make_vec3(1, 10, 1);
+
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    // Test slicing the primitive within the voxel bounds
+    std::vector<uint> voxel_UUIDs = collisiondetection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(1, 1, 1));
+
+    DOCTEST_CHECK(voxel_UUIDs.size() >= 1);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - Cropping textured primitives") {
+    Context context;
+
+    // Create textured patch using center, size, and texture file
+    vec3 patch_center = make_vec3(0, 0, 0);
+    vec2 patch_size = make_vec2(2, 2);
+
+    uint prim_UUID = context.addPatch(patch_center, patch_size, make_SphericalCoord(0, 0), "lib/images/disk_texture.png");
+
+    vec3 grid_center = make_vec3(0, 0, 0);
+    vec3 grid_size = make_vec3(1, 10, 1);
+
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    // Test slicing the textured primitive within the voxel bounds
+    std::vector<uint> voxel_UUIDs = collisiondetection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(1, 1, 1));
+
+    DOCTEST_CHECK(voxel_UUIDs.size() >= 1);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - Basic functionality test") {
+    Context context;
+
+    // Create patch using center and size instead of vertices
+    vec3 patch_center = make_vec3(0, 0, 0);
+    vec2 patch_size = make_vec2(2, 2);
+
+    uint prim_UUID = context.addPatch(patch_center, patch_size);
+
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    // Test slicing the primitive within a grid
+    vec3 grid_center = make_vec3(0, 0, 0);
+    vec3 grid_size = make_vec3(3, 3, 3);
+    std::vector<uint> sliced_UUIDs = collisiondetection.slicePrimitivesUsingGrid(std::vector<uint>{prim_UUID}, grid_center, grid_size, make_int3(2, 1, 2));
+
+    // Check that slicing worked and produced some output
+    DOCTEST_CHECK(sliced_UUIDs.size() >= 1);
+}
+
+// ============================================================================
+// VOXEL-PRIMITIVE INTERSECTION TESTS (calculatePrimitiveVoxelIntersection)
+// ============================================================================
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - calculatePrimitiveVoxelIntersection Basic") {
+    Context context;
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    // Create a voxel at origin
+    vec3 voxel_center = make_vec3(0, 0, 0);
+    vec3 voxel_size = make_vec3(2, 2, 2);
+    uint voxel_uuid = context.addVoxel(voxel_center, voxel_size);
+
+    // Create a patch inside the voxel
+    vec3 patch_center = make_vec3(0.5, 0.5, 0.5);
+    vec2 patch_size = make_vec2(0.5, 0.5);
+    uint patch_uuid = context.addPatch(patch_center, patch_size);
+
+    // Create a patch outside the voxel
+    vec3 outside_center = make_vec3(5, 5, 5);
+    uint outside_uuid = context.addPatch(outside_center, patch_size);
+
+    // Calculate intersection
+    collisiondetection.calculatePrimitiveVoxelIntersection();
+
+    // Voxel should have "inside_UUIDs" data containing the inside patch
+    DOCTEST_CHECK(context.doesPrimitiveDataExist(voxel_uuid, "inside_UUIDs"));
+
+    std::vector<uint> inside_prims;
+    context.getPrimitiveData(voxel_uuid, "inside_UUIDs", inside_prims);
+
+    DOCTEST_CHECK(inside_prims.size() == 1);
+    DOCTEST_CHECK(inside_prims[0] == patch_uuid);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - calculatePrimitiveVoxelIntersection Axis-Aligned") {
+    Context context;
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    // Create voxel at origin
+    uint voxel_uuid = context.addVoxel(make_vec3(0, 0, 0), make_vec3(2, 2, 2));
+
+    // Create patch with centroid on X-axis (tests divide-by-zero fix for y,z components)
+    uint patch_x = context.addPatch(make_vec3(0.5, 0, 0), make_vec2(0.2, 0.2));
+
+    // Create patch with centroid on Y-axis (tests divide-by-zero fix for x,z components)
+    uint patch_y = context.addPatch(make_vec3(0, 0.5, 0), make_vec2(0.2, 0.2));
+
+    // Create patch with centroid on Z-axis (tests divide-by-zero fix for x,y components)
+    uint patch_z = context.addPatch(make_vec3(0, 0, 0.5), make_vec2(0.2, 0.2));
+
+    // This should NOT crash with divide-by-zero
+    collisiondetection.calculatePrimitiveVoxelIntersection();
+
+    // All three patches should be detected inside the voxel
+    DOCTEST_CHECK(context.doesPrimitiveDataExist(voxel_uuid, "inside_UUIDs"));
+
+    std::vector<uint> inside_prims;
+    context.getPrimitiveData(voxel_uuid, "inside_UUIDs", inside_prims);
+
+    DOCTEST_CHECK(inside_prims.size() == 3);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - calculatePrimitiveVoxelIntersection Multiple Voxels") {
+    Context context;
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    // Create 3 voxels in a row
+    uint voxel1 = context.addVoxel(make_vec3(-2, 0, 0), make_vec3(1, 1, 1));
+    uint voxel2 = context.addVoxel(make_vec3(0, 0, 0), make_vec3(1, 1, 1));
+    uint voxel3 = context.addVoxel(make_vec3(2, 0, 0), make_vec3(1, 1, 1));
+
+    // Create primitives in different voxels
+    uint patch1 = context.addPatch(make_vec3(-2, 0, 0), make_vec2(0.2, 0.2));
+    uint patch2 = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.2, 0.2));
+    uint patch3a = context.addPatch(make_vec3(2, 0, 0), make_vec2(0.2, 0.2));
+    uint patch3b = context.addPatch(make_vec3(2, 0.2, 0.2), make_vec2(0.1, 0.1));
+
+    collisiondetection.calculatePrimitiveVoxelIntersection();
+
+    // Check voxel 1 contains patch1
+    std::vector<uint> inside1;
+    context.getPrimitiveData(voxel1, "inside_UUIDs", inside1);
+    DOCTEST_CHECK(inside1.size() == 1);
+    DOCTEST_CHECK(inside1[0] == patch1);
+
+    // Check voxel 2 contains patch2
+    std::vector<uint> inside2;
+    context.getPrimitiveData(voxel2, "inside_UUIDs", inside2);
+    DOCTEST_CHECK(inside2.size() == 1);
+    DOCTEST_CHECK(inside2[0] == patch2);
+
+    // Check voxel 3 contains both patch3a and patch3b
+    std::vector<uint> inside3;
+    context.getPrimitiveData(voxel3, "inside_UUIDs", inside3);
+    DOCTEST_CHECK(inside3.size() == 2);
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - calculatePrimitiveVoxelIntersection Empty Inputs") {
+    Context context;
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    // Test with no voxels (should handle gracefully)
+    uint patch_uuid = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    collisiondetection.calculatePrimitiveVoxelIntersection();
+    // Should complete without error
+
+    // Test with no primitives (should handle gracefully)
+    Context context2;
+    CollisionDetection collisiondetection2(&context2);
+    collisiondetection2.disableMessages();
+    uint voxel_uuid = context2.addVoxel(make_vec3(0, 0, 0), make_vec3(1, 1, 1));
+    collisiondetection2.calculatePrimitiveVoxelIntersection();
+    // Should complete without error
+    DOCTEST_CHECK(!context2.doesPrimitiveDataExist(voxel_uuid, "inside_UUIDs"));
+}
+
+DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - calculatePrimitiveVoxelIntersection Specific UUIDs") {
+    Context context;
+    CollisionDetection collisiondetection(&context);
+    collisiondetection.disableMessages();
+
+    // Create voxel and primitives
+    uint voxel_uuid = context.addVoxel(make_vec3(0, 0, 0), make_vec3(2, 2, 2));
+    uint patch1 = context.addPatch(make_vec3(0.5, 0.5, 0.5), make_vec2(0.2, 0.2));
+    uint patch2 = context.addPatch(make_vec3(-0.5, -0.5, -0.5), make_vec2(0.2, 0.2));
+    uint patch3 = context.addPatch(make_vec3(5, 5, 5), make_vec2(0.2, 0.2)); // Outside
+
+    // Test with specific UUIDs only
+    std::vector<uint> test_uuids = {voxel_uuid, patch1, patch3};
+    collisiondetection.calculatePrimitiveVoxelIntersection(test_uuids);
+
+    // Should only find patch1, not patch2 (wasn't in test UUIDs)
+    std::vector<uint> inside_prims;
+    context.getPrimitiveData(voxel_uuid, "inside_UUIDs", inside_prims);
+
+    DOCTEST_CHECK(inside_prims.size() == 1);
+    DOCTEST_CHECK(inside_prims[0] == patch1);
 }

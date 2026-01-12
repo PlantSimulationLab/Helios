@@ -1,6 +1,6 @@
 /** \file "LeafOptics.h" Primary header file for PROSPECT leaf optics model.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -73,13 +73,13 @@ struct LeafOpticsProperties_Nauto {
 
     // === Fixed PROSPECT parameters (not derived from nitrogen) ===
 
-    float numberlayers = 1.5f;           //!< Leaf structure parameter (N)
-    float anthocyancontent = 1.0f;       //!< Anthocyanin content (ug/cm2)
-    float brownpigments = 0.0f;          //!< Brown pigment content (senescence indicator)
-    float watermass = 0.015f;            //!< Equivalent water thickness (g/cm2)
-    float drymass = 0.006f;              //!< Leaf mass per area (g/cm2)
-    float protein = 0.0f;                //!< Protein content (g/cm2) - for PROSPECT-PRO
-    float carbonconstituents = 0.0f;     //!< Carbon constituents (g/cm2) - for PROSPECT-PRO
+    float numberlayers = 1.5f; //!< Leaf structure parameter (N)
+    float anthocyancontent = 1.0f; //!< Anthocyanin content (ug/cm2)
+    float brownpigments = 0.0f; //!< Brown pigment content (senescence indicator)
+    float watermass = 0.015f; //!< Equivalent water thickness (g/cm2)
+    float drymass = 0.006f; //!< Leaf mass per area (g/cm2)
+    float protein = 0.0f; //!< Protein content (g/cm2) - for PROSPECT-PRO
+    float carbonconstituents = 0.0f; //!< Carbon constituents (g/cm2) - for PROSPECT-PRO
 
     // === Adaptive binning configuration ===
 
@@ -273,8 +273,8 @@ private:
 
     //! Structure representing a spectrum bin for nitrogen-based mode
     struct SpectrumBin {
-        float N_center;              //!< Bin center nitrogen value (g/m2)
-        std::string spectrum_label;  //!< Label suffix (e.g., "Nauto_0")
+        float N_center; //!< Bin center nitrogen value (g/m2)
+        std::string spectrum_label; //!< Label suffix (e.g., "Nauto_0")
     };
 
     //! Bins for nitrogen-based spectrum assignment
@@ -282,9 +282,9 @@ private:
 
     //! Structure tracking object assignment to spectrum bins
     struct ObjectAssignment {
-        uint bin_index;                      //!< Current bin assignment
-        float N_at_assignment;               //!< Nitrogen when assigned (for change detection)
-        std::vector<uint> primitive_UUIDs;   //!< All primitives in this object
+        uint bin_index; //!< Current bin assignment
+        float N_at_assignment; //!< Nitrogen when assigned (for change detection)
+        std::vector<uint> primitive_UUIDs; //!< All primitives in this object
     };
 
     //! Map from object ID to its bin assignment (objID -> assignment)

@@ -276,7 +276,7 @@ DOCTEST_TEST_CASE("EnergyBalanceModel Optional Output Primitive Data") {
         capture_cerr cerr_buffer;
         testModel.optionalOutputPrimitiveData("invalid_label"); // Should print warning
         has_cerr_output = cerr_buffer.has_output();
-    }  // capture destroyed here before assertion
+    } // capture destroyed here before assertion
     DOCTEST_CHECK(has_cerr_output);
 }
 
@@ -410,7 +410,7 @@ DOCTEST_TEST_CASE("EnergyBalanceModel - Default value warnings") {
         }
         DOCTEST_CHECK(output.find("missing_air_temperature") != std::string::npos);
         DOCTEST_CHECK(output.find("WARNING:") != std::string::npos);
-        DOCTEST_CHECK(output.find("instance") != std::string::npos);  // singular for 1 primitive
+        DOCTEST_CHECK(output.find("instance") != std::string::npos); // singular for 1 primitive
     }
 
     DOCTEST_SUBCASE("Missing wind_speed triggers warning") {
@@ -498,7 +498,7 @@ DOCTEST_TEST_CASE("EnergyBalanceModel - Default value warnings") {
         uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
 
         context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
-        context.setPrimitiveData(UUID, "air_temperature", 25.f);  // Likely Celsius
+        context.setPrimitiveData(UUID, "air_temperature", 25.f); // Likely Celsius
 
         std::string output;
         {
@@ -518,7 +518,7 @@ DOCTEST_TEST_CASE("EnergyBalanceModel - Default value warnings") {
 
         context.setPrimitiveData(UUID, "radiation_flux_LW", 400.f);
         context.setPrimitiveData(UUID, "air_temperature", 300.f);
-        context.setPrimitiveData(UUID, "air_humidity", 1.5f);  // Out of range
+        context.setPrimitiveData(UUID, "air_humidity", 1.5f); // Out of range
 
         std::string output;
         {

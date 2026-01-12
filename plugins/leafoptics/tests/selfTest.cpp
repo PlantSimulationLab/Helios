@@ -1155,7 +1155,7 @@ DOCTEST_TEST_CASE("Nitrogen Mode - First Call Creates Bins") {
         objIDs.push_back(objID);
 
         // Set nitrogen data on each object (varying nitrogen levels)
-        float N_area = 1.0f + float(i) * 0.5f;  // 1.0, 1.5, 2.0, 2.5, 3.0
+        float N_area = 1.0f + float(i) * 0.5f; // 1.0, 1.5, 2.0, 2.5, 3.0
         context_test.setObjectData(objID, "leaf_nitrogen_gN_m2", N_area);
 
         // Get primitives for this object
@@ -1164,7 +1164,7 @@ DOCTEST_TEST_CASE("Nitrogen Mode - First Call Creates Bins") {
     }
 
     LeafOpticsProperties_Nauto params;
-    params.num_bins = 3;  // Request 3 bins
+    params.num_bins = 3; // Request 3 bins
 
     // Run nitrogen mode
     DOCTEST_CHECK_NOTHROW(leafoptics.run(all_UUIDs, params));
@@ -1296,7 +1296,7 @@ DOCTEST_TEST_CASE("Nitrogen Mode - Reassignment When N Changes Significantly") {
     for (int i = 0; i < 4; i++) {
         uint objID = context_test.addTileObject(make_vec3(float(i), 0, 0), make_vec2(0.1f, 0.1f), make_SphericalCoord(0, 0), make_int2(2, 2));
         objIDs.push_back(objID);
-        float N_area = 1.0f + float(i) * 1.0f;  // 1.0, 2.0, 3.0, 4.0
+        float N_area = 1.0f + float(i) * 1.0f; // 1.0, 2.0, 3.0, 4.0
         context_test.setObjectData(objID, "leaf_nitrogen_gN_m2", N_area);
         std::vector<uint> obj_UUIDs = context_test.getObjectPrimitiveUUIDs(objID);
         all_UUIDs.insert(all_UUIDs.end(), obj_UUIDs.begin(), obj_UUIDs.end());
@@ -1416,14 +1416,14 @@ DOCTEST_TEST_CASE("Nitrogen Mode - Spectrum Count Bounded by num_bins") {
     std::vector<uint> all_UUIDs;
     for (int i = 0; i < 50; i++) {
         uint objID = context_test.addTileObject(make_vec3(float(i) * 0.2f, 0, 0), make_vec2(0.05f, 0.05f), make_SphericalCoord(0, 0), make_int2(1, 1));
-        float N_area = 0.5f + float(i) * 0.1f;  // Wide range of nitrogen values
+        float N_area = 0.5f + float(i) * 0.1f; // Wide range of nitrogen values
         context_test.setObjectData(objID, "leaf_nitrogen_gN_m2", N_area);
         std::vector<uint> obj_UUIDs = context_test.getObjectPrimitiveUUIDs(objID);
         all_UUIDs.insert(all_UUIDs.end(), obj_UUIDs.begin(), obj_UUIDs.end());
     }
 
     LeafOpticsProperties_Nauto params;
-    params.num_bins = 5;  // Limit to 5 bins
+    params.num_bins = 5; // Limit to 5 bins
 
     leafoptics.run(all_UUIDs, params);
 
@@ -1482,7 +1482,7 @@ DOCTEST_TEST_CASE("Nitrogen Mode - Chlorophyll Clamping Low") {
 
     // Create object with very low nitrogen (should clamp Cab to 5)
     uint objID = context_test.addTileObject(make_vec3(0, 0, 0), make_vec2(0.1f, 0.1f), make_SphericalCoord(0, 0), make_int2(2, 2));
-    context_test.setObjectData(objID, "leaf_nitrogen_gN_m2", 0.1f);  // Very low N
+    context_test.setObjectData(objID, "leaf_nitrogen_gN_m2", 0.1f); // Very low N
     std::vector<uint> UUIDs = context_test.getObjectPrimitiveUUIDs(objID);
 
     LeafOpticsProperties_Nauto params;
@@ -1502,7 +1502,7 @@ DOCTEST_TEST_CASE("Nitrogen Mode - Chlorophyll Clamping High") {
 
     // Create object with very high nitrogen (should clamp Cab to 80)
     uint objID = context_test.addTileObject(make_vec3(0, 0, 0), make_vec2(0.1f, 0.1f), make_SphericalCoord(0, 0), make_int2(2, 2));
-    context_test.setObjectData(objID, "leaf_nitrogen_gN_m2", 10.0f);  // Very high N
+    context_test.setObjectData(objID, "leaf_nitrogen_gN_m2", 10.0f); // Very high N
     std::vector<uint> UUIDs = context_test.getObjectPrimitiveUUIDs(objID);
 
     LeafOpticsProperties_Nauto params;
@@ -1635,7 +1635,7 @@ DOCTEST_TEST_CASE("Nitrogen Mode - All Same Nitrogen Values") {
     }
 
     LeafOpticsProperties_Nauto params;
-    params.num_bins = 5;  // Request 5 bins, but should only create 1
+    params.num_bins = 5; // Request 5 bins, but should only create 1
 
     leafoptics.run(all_UUIDs, params);
 
@@ -1655,7 +1655,7 @@ DOCTEST_TEST_CASE("Nitrogen Mode - All Same Nitrogen Values") {
     std::string first_label;
     context_test.getPrimitiveData(all_UUIDs[0], "reflectivity_spectrum", first_label);
 
-    for (uint UUID : all_UUIDs) {
+    for (uint UUID: all_UUIDs) {
         std::string label;
         context_test.getPrimitiveData(UUID, "reflectivity_spectrum", label);
         DOCTEST_CHECK(label == first_label);

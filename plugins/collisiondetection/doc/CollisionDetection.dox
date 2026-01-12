@@ -404,4 +404,131 @@ If you are using a PC, it is likely you will need to increase the GPU timeout in
  }
  ~~~~~~
 
+ \section slicing Primitive Slicing Operations
+
+ The CollisionDetection plugin provides primitive slicing capabilities for subdividing geometry along planar boundaries or regular grids. This functionality was integrated from the VoxelIntersection plugin and allows for precise spatial discretization of primitives.
+
+ \subsection slicing_single Single Primitive Slicing
+
+ Use \ref CollisionDetection::slicePrimitive() to slice a primitive along a planar face:
+
+ ~~~~~~{.cpp}
+ helios::WarningAggregator warnings;
+
+ // Define a slicing plane with at least 3 vertices
+ std::vector<vec3> plane_vertices = {
+     make_vec3(0, 0, 0),
+     make_vec3(1, 0, 0),
+     make_vec3(0, 1, 0)
+ };
+
+ // Slice the primitive - returns new triangle UUIDs
+ std::vector<uint> new_triangles = collisiondetection.slicePrimitive(uuid, plane_vertices, warnings);
+
+ // Check and display any warnings
+ warnings.report(std::cerr);
+ ~~~~~~
+
+ **Key features**:
+ - Preserves texture UV coordinates during slicing
+ - Handles both triangles (3 vertices) and patches (4 vertices)
+ - Validates area conservation
+ - Reports warnings for numerical issues
+
+ \subsection slicing_grid Grid-Based Slicing
+
+ Use \ref CollisionDetection::slicePrimitivesUsingGrid() to slice primitives along a regular 3D grid:
+
+ ~~~~~~{.cpp}
+ // Define grid parameters
+ vec3 grid_center = make_vec3(0, 0, 0);
+ vec3 grid_size = make_vec3(10, 10, 10);
+ int3 grid_divisions = make_int3(5, 5, 5);
+
+ // Slice all primitives in the vector
+ std::vector<uint> sliced_primitives = collisiondetection.slicePrimitivesUsingGrid(
+     primitive_uuids, grid_center, grid_size, grid_divisions
+ );
+
+ // Access results by grid cell
+ auto grid = collisiondetection.getGridCells();
+
+ // Iterate through all cells
+ for (int i = 0; i < grid.size(); i++) {
+     for (int j = 0; j < grid[i].size(); j++) {
+         for (int k = 0; k < grid[i][j].size(); k++) {
+             std::vector<uint> cell_primitives = grid[i][j][k];
+             // Process primitives in cell (i,j,k)
+             std::cout << "Cell [" << i << "," << j << "," << k << "] contains "
+                       << cell_primitives.size() << " primitives" << std::endl;
+         }
+     }
+ }
+
+ // Or access a specific cell directly
+ std::vector<uint> specific_cell = collisiondetection.getGridIntersections(2, 3, 1);
+ ~~~~~~
+
+ **Grid slicing creates**:
+ - New triangular primitives from sliced geometry
+ - "cell_ID" primitive data on each primitive (value = cell index, -1 if outside grid)
+ - Populated 4D grid_cells structure accessible via \ref CollisionDetection::getGridCells()
+
+ \subsection slicing_voxel Voxel-Primitive Intersection
+
+ Use \ref CollisionDetection::calculatePrimitiveVoxelIntersection() to determine which voxel primitives contain which planar primitives:
+
+ ~~~~~~{.cpp}
+ // Requires actual voxel primitives in the Context
+ // Tests which voxels contain the center point of each primitive
+ collisiondetection.calculatePrimitiveVoxelIntersection();
+
+ // Results stored as "inside_UUIDs" data on voxel primitives
+ for (uint voxel_uuid : voxel_primitives) {
+     if (context.doesPrimitiveDataExist(voxel_uuid, "inside_UUIDs")) {
+         std::vector<uint> inside_prims;
+         context.getPrimitiveData(voxel_uuid, "inside_UUIDs", inside_prims);
+         std::cout << "Voxel " << voxel_uuid << " contains "
+                   << inside_prims.size() << " primitives" << std::endl;
+     }
+ }
+ ~~~~~~
+
+ **Note**: This method uses OpenMP parallelization for CPU execution. The algorithm tests primitive centers against voxel bounding boxes using ray-box intersection.
+
+ \subsection slicing_grid_helper Grid Intersection Helper Method
+
+ For convenience, use \ref CollisionDetection::calculateGridIntersection() which combines slicing with grid population:
+
+ ~~~~~~{.cpp}
+ // Automatically slices primitives and populates grid_cells
+ collisiondetection.calculateGridIntersection(grid_center, grid_size, grid_divisions);
+
+ // Then access results
+ auto grid = collisiondetection.getGridCells();
+ ~~~~~~
+
+ \subsection migration_voxelintersection Migration from VoxelIntersection Plugin
+
+ If migrating code from the deprecated VoxelIntersection plugin:
+
+ **API Changes**:
+ - Replace `VoxelIntersection` class with `CollisionDetection`
+ - All method names remain the same (no API changes needed)
+ - `calculatePrimitiveVoxelIntersection()` now uses OpenMP instead of CUDA
+ - Method signatures use const references for vector parameters
+
+ **Example Migration**:
+ ~~~~~~{.cpp}
+ // Old VoxelIntersection code:
+ // VoxelIntersection voxelintersection(&context);
+ // voxelintersection.slicePrimitivesUsingGrid(uuids, center, size, divisions);
+
+ // New CollisionDetection code:
+ CollisionDetection collisiondetection(&context);
+ collisiondetection.slicePrimitivesUsingGrid(uuids, center, size, divisions);
+ ~~~~~~
+
+ **Performance Note**: The OpenMP implementation may have different performance characteristics compared to the GPU version. If performance is critical for large datasets, benchmark and consider future GPU optimization.
+
 */

@@ -1,6 +1,6 @@
 /** \file "PhotosynthesisModel.cpp" Primary source file for photosynthesis plug-in.
 
-Copyright (C) 2016-2025 Brian Bailey
+Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -567,7 +567,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
             gM = 1.08f * gH * gM * (stomatal_sidedness / (1.08f * gH + gM * stomatal_sidedness) + (1.f - stomatal_sidedness) / (1.08f * gH + gM * (1.f - stomatal_sidedness)));
         }
 
-        float A, Ci, Gamma;
+        float A, Ci, Gamma, J_over_Jmax = 0.f;
         int limitation_state, TPU_flag = 0;
 
         if (model == "farquhar") { // Farquhar-von Caemmerer-Berry Model
@@ -580,7 +580,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                 FarquharModelCoefficients coeffs = getCoefficientsForPrimitive_Farquhar(UUID);
 
                 // Set up variables vector for evaluateCi_Farquhar
-                std::vector<float> variables{CO2, i_PAR, TL, gM, 0.f, 0.f, 0.f, float(TPU_flag)};
+                std::vector<float> variables{CO2, i_PAR, TL, gM, 0.f, 0.f, 0.f, float(TPU_flag), 0.f};
 
                 // Call evaluateCi_Farquhar directly to compute A for the manual Ci
                 // This bypasses the fzero iteration in evaluateFarquharModel
@@ -590,6 +590,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                 A = variables[4];
                 limitation_state = (int) variables[5];
                 Gamma = variables[6];
+                J_over_Jmax = variables[8];
 
                 // Store in previous_Ci for consistency
                 previous_Ci[UUID] = Ci;
@@ -605,7 +606,7 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                 }
 
                 FarquharModelCoefficients coeffs = getCoefficientsForPrimitive_Farquhar(UUID);
-                A = evaluateFarquharModel(coeffs, i_PAR, TL, CO2, gM, Ci, Gamma, limitation_state, TPU_flag, warnings);
+                A = evaluateFarquharModel(coeffs, i_PAR, TL, CO2, gM, Ci, Gamma, limitation_state, TPU_flag, J_over_Jmax, warnings);
 
                 // Store computed Ci for next timestep (temporal continuity)
                 previous_Ci[UUID] = Ci;
@@ -630,6 +631,8 @@ void PhotosynthesisModel::run(const std::vector<uint> &lUUIDs) {
                 context->setPrimitiveData(UUID, "limitation_state", limitation_state);
             } else if (data == "Gamma_CO2" && model == "farquhar") {
                 context->setPrimitiveData(UUID, "Gamma_CO2", Gamma);
+            } else if (data == "electron_transport_ratio" && model == "farquhar") {
+                context->setPrimitiveData(UUID, "electron_transport_ratio", J_over_Jmax);
             }
         }
     }
@@ -778,6 +781,10 @@ float PhotosynthesisModel::evaluateCi_Farquhar(float Ci, std::vector<float> &var
     double J = (-b - sqrt(pow(b, 2.000f) - 4.f * a * c)) * 0.5f * ia;
     // J = Jmax * alpha * Q / (alpha * Q + Jmax);
 
+    // Store J/Jmax ratio for fluorescence calculations
+    float J_over_Jmax = (Jmax > 0.f) ? static_cast<float>(J / Jmax) : 0.f;
+    variables[8] = J_over_Jmax;
+
     float Wc = Vcmax * Ci / (Ci + Kco);
     float Wj = J * Ci / (4.f * Ci + 8.f * Gamma_star);
     float Wp = 3.f * TPU * Ci / (Ci - Gamma_star);
@@ -833,10 +840,11 @@ float PhotosynthesisModel::respondToTemperature(const PhotosyntheticTemperatureR
 }
 
 
-float PhotosynthesisModel::evaluateFarquharModel(const FarquharModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Gamma, int &limitation_state, int &TPU_flag, helios::WarningAggregator &warnings) {
+float PhotosynthesisModel::evaluateFarquharModel(const FarquharModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Gamma, int &limitation_state, int &TPU_flag, float &J_over_Jmax,
+                                                 helios::WarningAggregator &warnings) {
 
     float A = 0;
-    std::vector<float> variables{CO2, i_PAR, TL, gM, A, float(limitation_state), Gamma, float(TPU_flag)};
+    std::vector<float> variables{CO2, i_PAR, TL, gM, A, float(limitation_state), Gamma, float(TPU_flag), 0.f};
 
     // Temporal continuity approach: use previous Ci as initial guess, with fallbacks
     // This leverages the fact that Ci changes slowly between timesteps
@@ -877,6 +885,7 @@ float PhotosynthesisModel::evaluateFarquharModel(const FarquharModelCoefficients
     A = variables[4];
     limitation_state = (int) variables[5];
     Gamma = variables[6];
+    J_over_Jmax = variables[8];
 
     return A;
 }
@@ -899,7 +908,7 @@ void PhotosynthesisModel::enableMessages() {
 
 void PhotosynthesisModel::optionalOutputPrimitiveData(const char *label) {
 
-    if (strcmp(label, "Ci") == 0 || strcmp(label, "limitation_state") == 0 || strcmp(label, "Gamma_CO2") == 0) {
+    if (strcmp(label, "Ci") == 0 || strcmp(label, "limitation_state") == 0 || strcmp(label, "Gamma_CO2") == 0 || strcmp(label, "electron_transport_ratio") == 0) {
         output_prim_data.emplace_back(label);
     } else {
         if (message_flag) {

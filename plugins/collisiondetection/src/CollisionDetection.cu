@@ -1,6 +1,6 @@
 /** \file "CollisionDetection.cu" CUDA source file for GPU-accelerated collision detection
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

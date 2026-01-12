@@ -1,6 +1,6 @@
 /** \file "LensFlare.cpp" Implementation of lens flare rendering algorithms.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
 
 */
 
-#include "RadiationModel.h"  // Must be included first for LensFlareProperties definition
+#include "RadiationModel.h" // Must be included first for LensFlareProperties definition
 #include "LensFlare.h"
 #include <algorithm>
 #include <cmath>
@@ -76,7 +76,7 @@ std::vector<std::tuple<int, int, float>> LensFlare::findBrightPixels(const std::
 
     // Calculate per-pixel maximum intensity across all bands
     std::vector<float> max_intensity(num_pixels, 0.0f);
-    for (const auto &band_pair : pixel_data) {
+    for (const auto &band_pair: pixel_data) {
         const auto &band_data = band_pair.second;
         for (int i = 0; i < num_pixels; ++i) {
             max_intensity[i] = std::max(max_intensity[i], band_data[i]);
@@ -125,7 +125,7 @@ void LensFlare::generateStarburstKernel() {
 
     // Normalize kernel to [0, 1]
     if (max_magnitude > 0.0f) {
-        for (float &val : starburst_kernel_) {
+        for (float &val: starburst_kernel_) {
             val /= max_magnitude;
         }
     }
@@ -148,7 +148,7 @@ void LensFlare::generateStarburstKernel() {
     }
 
     // Apply power falloff to make spikes more pronounced
-    for (float &val : starburst_kernel_) {
+    for (float &val: starburst_kernel_) {
         val = std::pow(val, 0.5f); // Square root to enhance spikes
     }
 }
@@ -213,7 +213,7 @@ void LensFlare::applyStarburst(std::map<std::string, std::vector<float>> &pixel_
     int half_kernel = kernel_size_ / 2;
 
     // Apply starburst kernel centered on each bright pixel
-    for (const auto &bright_pixel : bright_pixels) {
+    for (const auto &bright_pixel: bright_pixels) {
         int bx = std::get<0>(bright_pixel);
         int by = std::get<1>(bright_pixel);
         float pixel_intensity = std::get<2>(bright_pixel);
@@ -222,14 +222,14 @@ void LensFlare::applyStarburst(std::map<std::string, std::vector<float>> &pixel_
         int pixel_idx = by * resolution.x + bx;
         std::map<std::string, float> color_ratios;
         float total = 0.0f;
-        for (const auto &[band_label, band_data] : pixel_data) {
+        for (const auto &[band_label, band_data]: pixel_data) {
             float value = band_data[pixel_idx];
             color_ratios[band_label] = value;
             total += value;
         }
         // Normalize color ratios
         if (total > 0.0f) {
-            for (auto &[band_label, ratio] : color_ratios) {
+            for (auto &[band_label, ratio]: color_ratios) {
                 ratio /= total;
             }
         }
@@ -240,7 +240,7 @@ void LensFlare::applyStarburst(std::map<std::string, std::vector<float>> &pixel_
         float scaled_intensity = intensity_scale * brightness_factor * pixel_intensity;
 
         // Add starburst contribution to each band with source color
-        for (auto &[band_label, band_data] : pixel_data) {
+        for (auto &[band_label, band_data]: pixel_data) {
             float band_scale = color_ratios[band_label] * scaled_intensity;
 
             for (int ky = 0; ky < kernel_size_; ++ky) {
@@ -273,8 +273,7 @@ void LensFlare::applyGhosts(std::map<std::string, std::vector<float>> &pixel_dat
     float center_x = static_cast<float>(resolution.x) / 2.0f;
     float center_y = static_cast<float>(resolution.y) / 2.0f;
 
-    std::cout << "applyGhosts: resolution=(" << resolution.x << "," << resolution.y
-              << ") center=(" << center_x << "," << center_y << ")" << std::endl;
+    std::cout << "applyGhosts: resolution=(" << resolution.x << "," << resolution.y << ") center=(" << center_x << "," << center_y << ")" << std::endl;
 
     // Base reflectance from coating efficiency
     // Each ghost involves 2 reflections, so intensity = (1 - coating_efficiency)^2
@@ -283,7 +282,7 @@ void LensFlare::applyGhosts(std::map<std::string, std::vector<float>> &pixel_dat
 
     int num_ghosts = std::min(props_.ghost_count, static_cast<int>(sizeof(ghost_scales_) / sizeof(ghost_scales_[0])));
 
-    for (const auto &bright_pixel : bright_pixels) {
+    for (const auto &bright_pixel: bright_pixels) {
         int bx = std::get<0>(bright_pixel);
         int by = std::get<1>(bright_pixel);
         float pixel_intensity = std::get<2>(bright_pixel);
@@ -291,7 +290,7 @@ void LensFlare::applyGhosts(std::map<std::string, std::vector<float>> &pixel_dat
         // Extract color from source pixel
         int pixel_idx = by * resolution.x + bx;
         std::map<std::string, float> source_color;
-        for (const auto &[band_label, band_data] : pixel_data) {
+        for (const auto &[band_label, band_data]: pixel_data) {
             source_color[band_label] = band_data[pixel_idx];
         }
 
@@ -324,13 +323,13 @@ void LensFlare::applyGhosts(std::map<std::string, std::vector<float>> &pixel_dat
             // Separate luminance and chrominance (production approach)
             // Step 1: Find max channel as luminance proxy
             float luminance = 0.0f;
-            for (const auto &[band_label, val] : source_color) {
+            for (const auto &[band_label, val]: source_color) {
                 luminance = std::max(luminance, val);
             }
 
             // Step 2: Extract normalized chrominance (color ratios)
             std::map<std::string, float> chrominance;
-            for (const auto &[band_label, val] : source_color) {
+            for (const auto &[band_label, val]: source_color) {
                 chrominance[band_label] = val / std::max(luminance, 1e-6f);
             }
 
@@ -348,12 +347,13 @@ void LensFlare::applyGhosts(std::map<std::string, std::vector<float>> &pixel_dat
                 std::cout << "Ghost " << g << " from pixel (" << bx << "," << by << "):" << std::endl;
                 std::cout << "  Luminance: " << luminance << " → compressed: " << compressed_luminance << std::endl;
                 std::cout << "  Chrominance: ";
-                for (const auto &[b, v] : chrominance) std::cout << b << "=" << v << " ";
+                for (const auto &[b, v]: chrominance)
+                    std::cout << b << "=" << v << " ";
                 std::cout << std::endl;
                 std::cout << "  ghost_base=" << ghost_base << " final_luminance=" << ghost_luminance << std::endl;
                 std::cout << "  Ghost position: (" << ghost_x << ", " << ghost_y << ") radius=" << ghost_radius << std::endl;
                 std::cout << "  Final band intensities: ";
-                for (const auto &[b, v] : chrominance) {
+                for (const auto &[b, v]: chrominance) {
                     std::cout << b << "=" << (v * ghost_luminance) << " ";
                 }
                 std::cout << std::endl;
@@ -362,7 +362,7 @@ void LensFlare::applyGhosts(std::map<std::string, std::vector<float>> &pixel_dat
             }
 
             // Apply to each band: chrominance × compressed luminance
-            for (auto &[band_label, band_data] : pixel_data) {
+            for (auto &[band_label, band_data]: pixel_data) {
                 // Recombine: color ratio × compressed brightness
                 float band_intensity = chrominance[band_label] * ghost_luminance;
 
@@ -497,7 +497,7 @@ void LensFlare::fft1D(std::vector<std::complex<float>> &data, int size, bool inv
 
     // Scale for inverse FFT
     if (inverse) {
-        for (auto &val : data) {
+        for (auto &val: data) {
             val /= static_cast<float>(n);
         }
     }

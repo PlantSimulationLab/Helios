@@ -1,6 +1,6 @@
 /** \file "CollisionDetection.h" Primary header file for collision detection plugin
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -493,6 +493,76 @@ public:
      * \return Vector of UUIDs in the specified grid cell
      */
     std::vector<uint> getGridIntersections(int i, int j, int k);
+
+    // -------- PRIMITIVE SLICING OPERATIONS --------
+
+    /**
+     * \brief Slice a primitive (patch or triangle) into multiple triangles using a planar face
+     * \param[in] UUID Primitive UUID to slice
+     * \param[in] voxel_face_vertices Vector of ≥3 points defining the slicing plane
+     * \param[in] warnings Warning aggregator for collecting non-fatal warnings
+     * \return Vector of new triangle UUIDs created by slicing
+     */
+    std::vector<uint> slicePrimitive(uint UUID, const std::vector<helios::vec3> &voxel_face_vertices, helios::WarningAggregator &warnings);
+
+    /**
+     * \brief Slice primitives along a regular 3D grid
+     * \param[in] UUIDs Primitives to slice
+     * \param[in] grid_center Center of voxel grid
+     * \param[in] grid_size Grid dimensions (x, y, z)
+     * \param[in] grid_divisions Grid cells (x, y, z)
+     * \return All resulting triangle UUIDs (sliced + unmodified)
+     * \note Creates "cell_ID" primitive data (-1 for outside grid)
+     * \note Populates internal grid_cells structure
+     */
+    std::vector<uint> slicePrimitivesUsingGrid(const std::vector<uint> &UUIDs, const helios::vec3 &grid_center, const helios::vec3 &grid_size, const helios::int3 &grid_divisions);
+
+    /**
+     * \brief Calculate voxel-primitive intersections using OpenMP parallelization
+     * \param[in] UUIDs Optional primitive UUIDs (empty = all primitives)
+     * \note Requires actual voxel primitives in Context
+     * \note Creates "inside_UUIDs" primitive data on voxels
+     * \note Uses OpenMP for CPU parallel execution
+     */
+    void calculatePrimitiveVoxelIntersection(const std::vector<uint> &UUIDs = {});
+
+    // -------- GEOMETRIC UTILITY FUNCTIONS --------
+
+    /**
+     * \brief Calculate 3D line intersection point
+     * \param[in] line1_point Point on first line
+     * \param[in] line1_direction Direction of first line
+     * \param[in] line2_point Point on second line
+     * \param[in] line2_direction Direction of second line
+     * \return Intersection point (assumes lines intersect)
+     */
+    helios::vec3 linesIntersection(const helios::vec3 &line1_point, const helios::vec3 &line1_direction, const helios::vec3 &line2_point, const helios::vec3 &line2_direction) const;
+
+    /**
+     * \brief Compare floats with dual tolerance (absolute + relative)
+     * \param[in] a First value
+     * \param[in] b Second value
+     * \param[in] absTol Absolute tolerance
+     * \param[in] relTol Relative tolerance
+     * \return True if |a-b| ≤ absTol OR |a-b|/max(|a|,|b|) ≤ relTol
+     */
+    bool approxSame(float a, float b, float absTol, float relTol) const;
+
+    /**
+     * \brief Compare vec3's element-wise with absolute tolerance
+     */
+    bool approxSame(const helios::vec3 &a, const helios::vec3 &b, float absTol) const;
+
+    /**
+     * \brief Interpolate UV texture coordinates to slice point
+     * \param[in] p1 First edge vertex position
+     * \param[in] uv1 First edge vertex UV
+     * \param[in] p2 Second edge vertex position
+     * \param[in] uv2 Second edge vertex UV
+     * \param[in] ps Slice point position on edge
+     * \return Interpolated UV coordinates at slice point
+     */
+    helios::vec2 interpolate_texture_UV_to_slice_point(const helios::vec3 &p1, const helios::vec2 &uv1, const helios::vec3 &p2, const helios::vec2 &uv2, const helios::vec3 &ps) const;
 
     // -------- VOXEL RAY PATH LENGTH CALCULATIONS --------
 

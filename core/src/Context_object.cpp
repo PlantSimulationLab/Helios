@@ -1,7 +1,7 @@
 /**
  * \file "Context_object.cpp" Context compound object definitions and methods.
  *
- * Copyright (C) 2016-2025 Brian Bailey
+ * Copyright (C) 2016-2026 Brian Bailey
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2093,16 +2093,18 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
 
     // add triangles for new segment
 
+    int second_last = node_count - 2;
+    int last = node_count - 1;
     for (int j = 0; j < radial_subdivisions; j++) {
-        vec3 v0 = triangle_vertices.at(1).at(j);
-        vec3 v1 = triangle_vertices.at(1 + 1).at(j + 1);
-        vec3 v2 = triangle_vertices.at(1).at(j + 1);
+        vec3 v0 = triangle_vertices.at(second_last).at(j);
+        vec3 v1 = triangle_vertices.at(last).at(j + 1);
+        vec3 v2 = triangle_vertices.at(second_last).at(j + 1);
 
         UUIDs.push_back(context->addTriangle(v0, v1, v2, node_color));
 
-        v0 = triangle_vertices.at(1).at(j);
-        v1 = triangle_vertices.at(1 + 1).at(j);
-        v2 = triangle_vertices.at(1 + 1).at(j + 1);
+        v0 = triangle_vertices.at(second_last).at(j);
+        v1 = triangle_vertices.at(last).at(j);
+        v2 = triangle_vertices.at(last).at(j + 1);
 
         UUIDs.push_back(context->addTriangle(v0, v1, v2, node_color));
     }
@@ -2628,7 +2630,7 @@ void Cone::scaleLength(float S) {
     float angle = acos_safe(dot);
 
     // only rotate if the cone is not alread aligned with the z axis (i.e., angle is not zero. If zero, the axis of rotation is 0,0,0 and we end up with problems)
-    if (angle != float(0.0)) {
+    if (angle != 0.f) {
         rotate(-1 * angle, ra);
     }
 
@@ -2645,7 +2647,7 @@ void Cone::scaleLength(float S) {
     }
 
     // rotate back
-    if (angle != 0.0) {
+    if (angle != 0.f) {
         rotate(angle, ra);
     }
 
@@ -2672,7 +2674,7 @@ void Cone::scaleGirth(float S) {
     float dot = axis_unit_vector * z_axis;
     float angle = acos_safe(dot);
     // only rotate if the cone is not already aligned with the z axis (i.e., angle is not zero. If zero, the axis of rotation is 0,0,0 and we end up with problems)
-    if (angle != float(0.0)) {
+    if (angle != 0.f) {
         rotate(-1 * angle, ra);
     }
 
@@ -2681,7 +2683,7 @@ void Cone::scaleGirth(float S) {
 
 
     // rotate back
-    if (angle != 0.0) {
+    if (angle != 0.f) {
         rotate(angle, ra);
     }
 

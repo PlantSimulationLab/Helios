@@ -64,10 +64,12 @@ TEST_CASE("Core Context State and Configuration") {
 
     SUBCASE("Texture utility methods") {
         Context ctx;
-        capture_cerr cerr_buffer;
-        DOCTEST_CHECK_NOTHROW(ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/solid.jpg"));
-        DOCTEST_CHECK_THROWS(ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/missing.png"));
-        DOCTEST_CHECK_THROWS(ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/invalid.txt"));
+        {
+            capture_cerr cerr_buffer;
+            DOCTEST_CHECK_NOTHROW(ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/solid.jpg"));
+            DOCTEST_CHECK_THROWS(ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/missing.png"));
+            DOCTEST_CHECK_THROWS(ctx.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation, "lib/images/invalid.txt"));
+        }
 
         Texture tex("lib/images/solid.jpg");
         DOCTEST_CHECK(tex.getTextureFile() == "lib/images/solid.jpg");
@@ -523,6 +525,116 @@ TEST_CASE("Primitive Management: Creation, Properties, and Operations") {
     }
 }
 
+TEST_CASE("Triangle Scaling") {
+    Context ctx;
+    const float errtol = 0.0001f;
+
+    SUBCASE("scalePrimitive basic test") {
+        // Create a simple right triangle at the origin
+        vec3 v0 = make_vec3(0, 0, 0);
+        vec3 v1 = make_vec3(1, 0, 0);
+        vec3 v2 = make_vec3(0, 1, 0);
+        uint tri = ctx.addTriangle(v0, v1, v2);
+
+        // Get initial vertices and area
+        std::vector<vec3> verts_before = ctx.getPrimitiveVertices(tri);
+        float area_before = ctx.getPrimitiveArea(tri);
+
+        // Apply uniform 2x scaling
+        ctx.scalePrimitive(tri, make_vec3(2, 2, 2));
+
+        // Get vertices and area after scaling
+        std::vector<vec3> verts_after = ctx.getPrimitiveVertices(tri);
+        float area_after = ctx.getPrimitiveArea(tri);
+
+        // Expected: vertices should be doubled (scaling about origin)
+        // v0: (0,0,0) -> (0,0,0)  [origin stays at origin]
+        // v1: (1,0,0) -> (2,0,0)
+        // v2: (0,1,0) -> (0,2,0)
+        // Area should be 4x larger (scale^2 for 2D)
+
+        DOCTEST_CHECK(verts_after[0].x == doctest::Approx(0.0f).epsilon(errtol));
+        DOCTEST_CHECK(verts_after[0].y == doctest::Approx(0.0f).epsilon(errtol));
+        DOCTEST_CHECK(verts_after[1].x == doctest::Approx(2.0f).epsilon(errtol));
+        DOCTEST_CHECK(verts_after[1].y == doctest::Approx(0.0f).epsilon(errtol));
+        DOCTEST_CHECK(verts_after[2].x == doctest::Approx(0.0f).epsilon(errtol));
+        DOCTEST_CHECK(verts_after[2].y == doctest::Approx(2.0f).epsilon(errtol));
+
+        DOCTEST_CHECK(area_after == doctest::Approx(4.0f * area_before).epsilon(errtol));
+    }
+
+    SUBCASE("scalePrimitiveAboutPoint test") {
+        // Create a simple right triangle at the origin
+        vec3 v0 = make_vec3(0, 0, 0);
+        vec3 v1 = make_vec3(1, 0, 0);
+        vec3 v2 = make_vec3(0, 1, 0);
+        uint tri = ctx.addTriangle(v0, v1, v2);
+
+        // Get initial area
+        float area_before = ctx.getPrimitiveArea(tri);
+
+        // Apply 2x scaling about origin
+        ctx.scalePrimitiveAboutPoint(tri, make_vec3(2, 2, 2), make_vec3(0, 0, 0));
+
+        // Get area after scaling
+        float area_after = ctx.getPrimitiveArea(tri);
+
+        // Expected: should behave same as scalePrimitive when scaling about origin
+        DOCTEST_CHECK(area_after == doctest::Approx(4.0f * area_before).epsilon(errtol));
+    }
+
+    SUBCASE("scalePrimitiveAboutPoint - scale about centroid") {
+        // Create a triangle NOT at the origin
+        vec3 v0 = make_vec3(1, 1, 0);
+        vec3 v1 = make_vec3(2, 1, 0);
+        vec3 v2 = make_vec3(1, 2, 0);
+        uint tri = ctx.addTriangle(v0, v1, v2);
+
+        // Calculate centroid
+        std::vector<vec3> verts_before = ctx.getPrimitiveVertices(tri);
+        vec3 center = make_vec3(0, 0, 0);
+        for (const auto &v: verts_before) {
+            center = center + v;
+        }
+        center = center / float(verts_before.size());
+
+        float area_before = ctx.getPrimitiveArea(tri);
+
+        // Scale by 0.5 about the centroid (like user's code)
+        ctx.scalePrimitiveAboutPoint(tri, make_vec3(0.5f, 0.5f, 0.5f), center);
+
+        // Get area after scaling
+        float area_after = ctx.getPrimitiveArea(tri);
+
+        // Expected: area should be 0.25x (scale^2)
+        DOCTEST_CHECK(area_after == doctest::Approx(0.25f * area_before).epsilon(errtol));
+    }
+
+    SUBCASE("triangle in compound object") {
+        // Create a compound object with a triangle
+        std::vector<uint> UUIDs;
+        UUIDs.push_back(ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0)));
+        uint objID = ctx.addPolymeshObject(UUIDs);
+
+        uint tri = UUIDs[0];
+        float area_before = ctx.getPrimitiveArea(tri);
+
+        // Try to scale the triangle (should be blocked)
+        bool has_warning;
+        {
+            capture_cerr cerr_buffer;
+            ctx.scalePrimitiveAboutPoint(tri, make_vec3(2, 2, 2), make_vec3(0, 0, 0));
+            has_warning = cerr_buffer.has_output();
+        } // cerr_buffer destroyed here
+        DOCTEST_CHECK(has_warning); // Should print warning
+
+        float area_after = ctx.getPrimitiveArea(tri);
+
+        // Area should NOT change (scaling blocked for compound objects)
+        DOCTEST_CHECK(area_after == doctest::Approx(area_before).epsilon(errtol));
+    }
+}
+
 TEST_CASE("Object Management") {
     SUBCASE("addBoxObject") {
         Context context_test;
@@ -690,24 +802,33 @@ TEST_CASE("Object Management") {
     }
 
     SUBCASE("domain cropping") {
-        capture_cerr cerr_buffer;
         Context ctx;
         uint p1 = ctx.addPatch(make_vec3(-2.f, 0.f, 0.f), make_vec2(1, 1));
         uint p2 = ctx.addPatch(make_vec3(2.f, 0.f, 0.f), make_vec2(1, 1));
         uint p3 = ctx.addPatch(make_vec3(0.f, 3.f, 0.f), make_vec2(1, 1));
         uint p4 = ctx.addPatch(make_vec3(0.f, 0.f, 3.f), make_vec2(1, 1));
-        ctx.cropDomainX(make_vec2(-1.f, 1.f));
-        DOCTEST_CHECK(!ctx.doesPrimitiveExist(p1));
-        ctx.cropDomainY(make_vec2(-1.f, 1.f));
-        DOCTEST_CHECK(!ctx.doesPrimitiveExist(p3));
-        ctx.cropDomainZ(make_vec2(-1.f, 1.f));
-        DOCTEST_CHECK(!ctx.doesPrimitiveExist(p4));
-        DOCTEST_CHECK(cerr_buffer.has_output());
-        cerr_buffer.clear();
-        std::vector<uint> ids_rem = ctx.getAllUUIDs();
-        ctx.cropDomain(ids_rem, make_vec2(-0.5f, 1.f), make_vec2(-0.5f, 1.f), make_vec2(-0.5f, 1.f));
-        DOCTEST_CHECK(!ctx.doesPrimitiveExist(p2));
-        DOCTEST_CHECK(cerr_buffer.has_output());
+
+        bool has_output1, has_output2;
+        {
+            capture_cerr cerr_buffer;
+            ctx.cropDomainX(make_vec2(-1.f, 1.f));
+            DOCTEST_CHECK(!ctx.doesPrimitiveExist(p1));
+            ctx.cropDomainY(make_vec2(-1.f, 1.f));
+            DOCTEST_CHECK(!ctx.doesPrimitiveExist(p3));
+            ctx.cropDomainZ(make_vec2(-1.f, 1.f));
+            DOCTEST_CHECK(!ctx.doesPrimitiveExist(p4));
+            has_output1 = cerr_buffer.has_output();
+        }
+        DOCTEST_CHECK(has_output1);
+
+        {
+            capture_cerr cerr_buffer;
+            std::vector<uint> ids_rem = ctx.getAllUUIDs();
+            ctx.cropDomain(ids_rem, make_vec2(-0.5f, 1.f), make_vec2(-0.5f, 1.f), make_vec2(-0.5f, 1.f));
+            DOCTEST_CHECK(!ctx.doesPrimitiveExist(p2));
+            has_output2 = cerr_buffer.has_output();
+        }
+        DOCTEST_CHECK(has_output2);
     }
 }
 
@@ -1072,9 +1193,13 @@ TEST_CASE("Context primitive data calculations") {
     int int_val;
     ctx.getPrimitiveData(uuids[0], "int_val", int_val);
     DOCTEST_CHECK(int_val == 15);
-    capture_cerr cerr_buffer;
-    ctx.incrementPrimitiveData(uuids, "float_val", 1); // Wrong type, should warn
-    DOCTEST_CHECK(cerr_buffer.has_output());
+    bool has_warning;
+    {
+        capture_cerr cerr_buffer;
+        ctx.incrementPrimitiveData(uuids, "float_val", 1); // Wrong type, should warn
+        has_warning = cerr_buffer.has_output();
+    }
+    DOCTEST_CHECK(has_warning);
 }
 
 TEST_CASE("Context primitive data aggregation and filtering") {
@@ -1191,9 +1316,13 @@ TEST_CASE("Global data") {
     int val;
     ctx.getGlobalData("inc_me", val);
     DOCTEST_CHECK(val == 15);
-    capture_cerr cerr_buffer;
-    ctx.incrementGlobalData("g_float", 1); // Wrong type
-    DOCTEST_CHECK(cerr_buffer.has_output());
+    bool has_warning;
+    {
+        capture_cerr cerr_buffer;
+        ctx.incrementGlobalData("g_float", 1); // Wrong type
+        has_warning = cerr_buffer.has_output();
+    }
+    DOCTEST_CHECK(has_warning);
 }
 
 TEST_CASE("Voxel Management") {
@@ -1564,13 +1693,18 @@ TEST_CASE("Print and Information Functions") {
         uint obj = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
 
         // Capture stdout output from these functions
-        capture_cout cout_buffer;
-        DOCTEST_CHECK_NOTHROW(ctx.printPrimitiveInfo(patch));
-        DOCTEST_CHECK_NOTHROW(ctx.printObjectInfo(obj));
+        bool has_output;
+        std::string output;
+        {
+            capture_cout cout_buffer;
+            DOCTEST_CHECK_NOTHROW(ctx.printPrimitiveInfo(patch));
+            DOCTEST_CHECK_NOTHROW(ctx.printObjectInfo(obj));
+            has_output = cout_buffer.has_output();
+            output = cout_buffer.get_captured_output();
+        } // cout_buffer destroyed here
 
         // Verify that output was captured (functions should produce output)
-        DOCTEST_CHECK(cout_buffer.has_output());
-        std::string output = cout_buffer.get_captured_output();
+        DOCTEST_CHECK(has_output);
         DOCTEST_CHECK(output.find("Info for UUID") != std::string::npos);
         DOCTEST_CHECK(output.find("Info for ObjID") != std::string::npos);
     }

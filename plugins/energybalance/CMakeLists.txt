@@ -11,7 +11,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mo
 find_package(CUDAToolkit QUIET)
 
 if(CUDAToolkit_FOUND)
-    message(STATUS "[EnergyBalance] CUDA found - building with GPU acceleration")
     set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
 
     # Set CUDA architectures before enabling CUDA language
@@ -84,8 +83,6 @@ if(CUDAToolkit_FOUND)
     target_compile_definitions(energybalance PUBLIC HELIOS_CUDA_AVAILABLE)
 
 else()
-    message(STATUS "[EnergyBalance] CUDA not found - building CPU-only version with OpenMP")
-
     # Build CPU-only version (exclude .cu file)
     add_library(energybalance STATIC "src/EnergyBalanceModel.cpp" "tests/selfTest.cpp")
 

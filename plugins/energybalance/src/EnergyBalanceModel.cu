@@ -1,6 +1,6 @@
 /** \file "EnergyBalanceModel.cu" Energy balance model plugin declarations (CUDA kernels).
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -160,9 +160,7 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_GPU(const std::vector<uint
             if (context->doesPrimitiveDataExist(p, str) && context->getPrimitiveDataType(str) == helios::HELIOS_TYPE_FLOAT) {
                 context->getPrimitiveData(p, str, emissivity.at(u));
             } else {
-                warnings.addWarning("missing_emissivity",
-                    "Primitive data 'emissivity_" + std::string(radiation_bands.at(b)) +
-                    "' not set, using default (1.0)");
+                warnings.addWarning("missing_emissivity", "Primitive data 'emissivity_" + std::string(radiation_bands.at(b)) + "' not set, using default (1.0)");
             }
         }
     }
@@ -234,9 +232,7 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_GPU(const std::vector<uint
             context->getPrimitiveData(p, "temperature", To[u]);
         } else {
             To[u] = temperature_default;
-            warnings.addWarning("missing_surface_temperature",
-                "Primitive data 'temperature' not set, using default (" +
-                std::to_string(temperature_default) + " K)");
+            warnings.addWarning("missing_surface_temperature", "Primitive data 'temperature' not set, using default (" + std::to_string(temperature_default) + " K)");
         }
         if (To[u] == 0) { // can't have To equal to 0
             To[u] = 300;
@@ -246,17 +242,12 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_GPU(const std::vector<uint
         if (context->doesPrimitiveDataExist(p, "air_temperature") && context->getPrimitiveDataType("air_temperature") == helios::HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(p, "air_temperature", Ta[u]);
             if (Ta[u] < 250.f) {
-                warnings.addWarning("air_temperature_likely_celsius",
-                    "Value of " + std::to_string(Ta[u]) +
-                    " in 'air_temperature' is very small - should be in Kelvin, using default (" +
-                    std::to_string(air_temperature_default) + " K)");
+                warnings.addWarning("air_temperature_likely_celsius", "Value of " + std::to_string(Ta[u]) + " in 'air_temperature' is very small - should be in Kelvin, using default (" + std::to_string(air_temperature_default) + " K)");
                 Ta[u] = air_temperature_default;
             }
         } else {
             Ta[u] = air_temperature_default;
-            warnings.addWarning("missing_air_temperature",
-                "Primitive data 'air_temperature' not set, using default (" +
-                std::to_string(air_temperature_default) + " K)");
+            warnings.addWarning("missing_air_temperature", "Primitive data 'air_temperature' not set, using default (" + std::to_string(air_temperature_default) + " K)");
         }
 
         // Air relative humidity
@@ -264,23 +255,15 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_GPU(const std::vector<uint
         if (context->doesPrimitiveDataExist(p, "air_humidity") && context->getPrimitiveDataType("air_humidity") == helios::HELIOS_TYPE_FLOAT) {
             context->getPrimitiveData(p, "air_humidity", hr);
             if (hr > 1.f) {
-                warnings.addWarning("air_humidity_out_of_range_high",
-                    "Value of " + std::to_string(hr) +
-                    " in 'air_humidity' > 1.0 - should be fractional [0,1], using default (" +
-                    std::to_string(air_humidity_default) + ")");
+                warnings.addWarning("air_humidity_out_of_range_high", "Value of " + std::to_string(hr) + " in 'air_humidity' > 1.0 - should be fractional [0,1], using default (" + std::to_string(air_humidity_default) + ")");
                 hr = air_humidity_default;
             } else if (hr < 0.f) {
-                warnings.addWarning("air_humidity_out_of_range_low",
-                    "Value of " + std::to_string(hr) +
-                    " in 'air_humidity' < 0.0 - should be fractional [0,1], using default (" +
-                    std::to_string(air_humidity_default) + ")");
+                warnings.addWarning("air_humidity_out_of_range_low", "Value of " + std::to_string(hr) + " in 'air_humidity' < 0.0 - should be fractional [0,1], using default (" + std::to_string(air_humidity_default) + ")");
                 hr = air_humidity_default;
             }
         } else {
             hr = air_humidity_default;
-            warnings.addWarning("missing_air_humidity",
-                "Primitive data 'air_humidity' not set, using default (" +
-                std::to_string(air_humidity_default) + ")");
+            warnings.addWarning("missing_air_humidity", "Primitive data 'air_humidity' not set, using default (" + std::to_string(air_humidity_default) + ")");
         }
 
         // Air vapor pressure
@@ -331,9 +314,7 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_GPU(const std::vector<uint
                 context->getPrimitiveData(p, "wind_speed", U);
             } else {
                 U = wind_speed_default;
-                warnings.addWarning("missing_wind_speed",
-                    "Primitive data 'wind_speed' not set, using default (" +
-                    std::to_string(wind_speed_default) + " m/s)");
+                warnings.addWarning("missing_wind_speed", "Primitive data 'wind_speed' not set, using default (" + std::to_string(wind_speed_default) + " m/s)");
             }
 
             // Characteristic size of primitive
@@ -393,7 +374,7 @@ void EnergyBalanceModel::evaluateSurfaceEnergyBalance_GPU(const std::vector<uint
     }
 
     // Report all accumulated warnings
-    warnings.report(std::cout, true);  // true = compact mode
+    warnings.report(std::cout, true); // true = compact mode
 
     // if we used the calculated boundary-layer conductance, enable output primitive data "boundarylayer_conductance_out" so that it can be used by other plug-ins
     if (calculated_blconductance_used) {

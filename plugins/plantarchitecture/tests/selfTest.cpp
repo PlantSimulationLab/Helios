@@ -1844,7 +1844,7 @@ DOCTEST_TEST_CASE("Nitrogen Model - Initialization") {
     plantarchitecture.advanceTime(plantID, 5.0f);
 
     // Initialize nitrogen pools with target concentration
-    float initial_N_concentration = 1.5f;  // g N/m² (target value)
+    float initial_N_concentration = 1.5f; // g N/m² (target value)
     plantarchitecture.initializePlantNitrogenPools(plantID, initial_N_concentration);
 
     // Advance time to trigger nitrogen stress calculation and output writing
@@ -1856,7 +1856,7 @@ DOCTEST_TEST_CASE("Nitrogen Model - Initialization") {
 
     // Verify leaf nitrogen content was initialized
     bool found_leaf_N = false;
-    for (uint objID : all_objects) {
+    for (uint objID: all_objects) {
         if (context.doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
             float leaf_N_area;
             context.getObjectData(objID, "leaf_nitrogen_gN_m2", leaf_N_area);
@@ -1881,7 +1881,7 @@ DOCTEST_TEST_CASE("Nitrogen Model - Application and Pool Splitting") {
     plantarchitecture.initializePlantNitrogenPools(plantID, 0.0f);
 
     // Apply 10 g N to plant
-    float N_applied = 10.0f;  // g N
+    float N_applied = 10.0f; // g N
     plantarchitecture.addPlantNitrogen(plantID, N_applied);
 
     // Verify nitrogen was split between root (15%) and available (85%) pools
@@ -1892,7 +1892,7 @@ DOCTEST_TEST_CASE("Nitrogen Model - Application and Pool Splitting") {
     // Check that leaves now have nitrogen > 0
     std::vector<uint> all_objects = plantarchitecture.getAllPlantObjectIDs(plantID);
     bool found_N_accumulation = false;
-    for (uint objID : all_objects) {
+    for (uint objID: all_objects) {
         if (context.doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
             float leaf_N_area;
             context.getObjectData(objID, "leaf_nitrogen_gN_m2", leaf_N_area);
@@ -1920,8 +1920,8 @@ DOCTEST_TEST_CASE("Nitrogen Model - Rate Limiting") {
 
     // Set nitrogen parameters with known max accumulation rate
     NitrogenParameters N_params;
-    N_params.max_N_accumulation_rate = 0.1f;  // g N/m²/day
-    N_params.target_leaf_N_area = 10.0f;  // Very high target to ensure demand > rate
+    N_params.max_N_accumulation_rate = 0.1f; // g N/m²/day
+    N_params.target_leaf_N_area = 10.0f; // Very high target to ensure demand > rate
     plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
 
     // Apply large amount of nitrogen
@@ -1933,12 +1933,12 @@ DOCTEST_TEST_CASE("Nitrogen Model - Rate Limiting") {
 
     // Check that leaf nitrogen didn't exceed rate limit
     std::vector<uint> all_objects = plantarchitecture.getAllPlantObjectIDs(plantID);
-    for (uint objID : all_objects) {
+    for (uint objID: all_objects) {
         if (context.doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
             float leaf_N_area;
             context.getObjectData(objID, "leaf_nitrogen_gN_m2", leaf_N_area);
             // Should be at most max_N_accumulation_rate * dt
-            DOCTEST_CHECK(leaf_N_area <= N_params.max_N_accumulation_rate * dt * 1.01f);  // 1% tolerance
+            DOCTEST_CHECK(leaf_N_area <= N_params.max_N_accumulation_rate * dt * 1.01f); // 1% tolerance
         }
     }
 }
@@ -1954,7 +1954,7 @@ DOCTEST_TEST_CASE("Nitrogen Model - Stress Factor Output") {
     plantarchitecture.advanceTime(plantID, 5.0f);
 
     // Initialize with low nitrogen (stress condition)
-    plantarchitecture.initializePlantNitrogenPools(plantID, 0.5f);  // Below target of 1.5
+    plantarchitecture.initializePlantNitrogenPools(plantID, 0.5f); // Below target of 1.5
 
     // Advance time to trigger stress factor calculation
     plantarchitecture.advanceTime(plantID, 0.1f);
@@ -1964,7 +1964,7 @@ DOCTEST_TEST_CASE("Nitrogen Model - Stress Factor Output") {
     DOCTEST_CHECK(plant_objects.size() > 0);
 
     bool found_stress_factor = false;
-    for (uint objID : plant_objects) {
+    for (uint objID: plant_objects) {
         if (context.doesObjectDataExist(objID, "nitrogen_stress_factor")) {
             float stress_factor;
             context.getObjectData(objID, "nitrogen_stress_factor", stress_factor);
@@ -1992,7 +1992,7 @@ DOCTEST_TEST_CASE("Nitrogen Model - Remobilization") {
     plantarchitecture.advanceTime(plantID, 15.0f);
 
     // Initialize with low nitrogen to create stress condition
-    plantarchitecture.initializePlantNitrogenPools(plantID, 0.8f);  // Below target
+    plantarchitecture.initializePlantNitrogenPools(plantID, 0.8f); // Below target
 
     // Advance time significantly to age leaves and trigger remobilization
     DOCTEST_CHECK_NOTHROW(plantarchitecture.advanceTime(plantID, 25.0f));
@@ -2000,11 +2000,11 @@ DOCTEST_TEST_CASE("Nitrogen Model - Remobilization") {
     // Verify nitrogen stress factor reflects stress condition
     std::vector<uint> plant_objects = plantarchitecture.getAllPlantObjectIDs(plantID);
     bool found_stress_factor = false;
-    for (uint objID : plant_objects) {
+    for (uint objID: plant_objects) {
         if (context.doesObjectDataExist(objID, "nitrogen_stress_factor")) {
             float stress_factor;
             context.getObjectData(objID, "nitrogen_stress_factor", stress_factor);
-            DOCTEST_CHECK(stress_factor < 1.0f);  // Should indicate some stress
+            DOCTEST_CHECK(stress_factor < 1.0f); // Should indicate some stress
             found_stress_factor = true;
             break;
         }
@@ -2041,7 +2041,7 @@ DOCTEST_TEST_CASE("Nitrogen Model - Fruit Removal") {
 
     // Nitrogen stress factor should exist
     bool found_stress_factor = false;
-    for (uint objID : plant_objects) {
+    for (uint objID: plant_objects) {
         if (context.doesObjectDataExist(objID, "nitrogen_stress_factor")) {
             found_stress_factor = true;
             break;
@@ -2067,8 +2067,8 @@ DOCTEST_TEST_CASE("Nitrogen Model - Full Growth Cycle Integration") {
 
     // Simulate periodic nitrogen applications during growth
     for (int i = 0; i < 5; i++) {
-        plantarchitecture.addPlantNitrogen(plantID, 5.0f);  // Add 5 g N
-        plantarchitecture.advanceTime(plantID, 5.0f);       // Grow 5 days
+        plantarchitecture.addPlantNitrogen(plantID, 5.0f); // Add 5 g N
+        plantarchitecture.advanceTime(plantID, 5.0f); // Grow 5 days
     }
 
     // Verify plant completed growth cycle
@@ -2078,7 +2078,7 @@ DOCTEST_TEST_CASE("Nitrogen Model - Full Growth Cycle Integration") {
     // Verify stress factor updated throughout
     bool found_stress_factor = false;
     float final_stress = 0;
-    for (uint objID : plant_objects) {
+    for (uint objID: plant_objects) {
         if (context.doesObjectDataExist(objID, "nitrogen_stress_factor")) {
             context.getObjectData(objID, "nitrogen_stress_factor", final_stress);
             found_stress_factor = true;
@@ -2091,7 +2091,7 @@ DOCTEST_TEST_CASE("Nitrogen Model - Full Growth Cycle Integration") {
 
     // Verify leaves have nitrogen data
     bool found_leaf_N = false;
-    for (uint objID : plant_objects) {
+    for (uint objID: plant_objects) {
         if (context.doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
             float leaf_N;
             context.getObjectData(objID, "leaf_nitrogen_gN_m2", leaf_N);
@@ -2121,11 +2121,11 @@ DOCTEST_TEST_CASE("Nitrogen Model - Edge Case: Zero Nitrogen") {
     // Stress factor should be very low (severe stress)
     std::vector<uint> plant_objects = plantarchitecture.getAllPlantObjectIDs(plantID);
     bool found_stress_factor = false;
-    for (uint objID : plant_objects) {
+    for (uint objID: plant_objects) {
         if (context.doesObjectDataExist(objID, "nitrogen_stress_factor")) {
             float stress_factor;
             context.getObjectData(objID, "nitrogen_stress_factor", stress_factor);
-            DOCTEST_CHECK(stress_factor < 0.2f);  // Should be low under zero N
+            DOCTEST_CHECK(stress_factor < 0.2f); // Should be low under zero N
             found_stress_factor = true;
             break;
         }
@@ -2148,7 +2148,7 @@ DOCTEST_TEST_CASE("Nitrogen Model - Edge Case: Excessive Nitrogen") {
 
     // Set high accumulation rate to overcome rate limiting
     NitrogenParameters N_params;
-    N_params.max_N_accumulation_rate = 1.0f;  // g N/m²/day (10x default)
+    N_params.max_N_accumulation_rate = 1.0f; // g N/m²/day (10x default)
     plantarchitecture.setPlantNitrogenParameters(plantID, N_params);
 
     // Apply excessive nitrogen - should not crash
@@ -2160,11 +2160,11 @@ DOCTEST_TEST_CASE("Nitrogen Model - Edge Case: Excessive Nitrogen") {
     // Stress factor should clamp at 1.0 (no stress) and be high with excess N
     std::vector<uint> plant_objects = plantarchitecture.getAllPlantObjectIDs(plantID);
     bool found_stress_factor = false;
-    for (uint objID : plant_objects) {
+    for (uint objID: plant_objects) {
         if (context.doesObjectDataExist(objID, "nitrogen_stress_factor")) {
             float stress_factor;
             context.getObjectData(objID, "nitrogen_stress_factor", stress_factor);
-            DOCTEST_CHECK(stress_factor <= 1.0f);  // Should clamp at 1.0
+            DOCTEST_CHECK(stress_factor <= 1.0f); // Should clamp at 1.0
             DOCTEST_CHECK(stress_factor >= 0.90f); // Should be very high with excess N and fast accumulation
             found_stress_factor = true;
             break;
@@ -2242,13 +2242,150 @@ DOCTEST_TEST_CASE("Nitrogen Model - Enable/Disable") {
 
     std::vector<uint> plant_objects = plantarchitecture.getAllPlantObjectIDs(plantID);
     bool found_nitrogen_data = false;
-    for (uint objID : plant_objects) {
+    for (uint objID: plant_objects) {
         if (context.doesObjectDataExist(objID, "nitrogen_stress_factor")) {
             found_nitrogen_data = true;
             break;
         }
     }
-    DOCTEST_CHECK_FALSE(found_nitrogen_data);  // Should NOT have nitrogen data when disabled
+    DOCTEST_CHECK_FALSE(found_nitrogen_data); // Should NOT have nitrogen data when disabled
+}
+
+// ===== Tests for listShootTypeLabels() methods =====
+
+DOCTEST_TEST_CASE("PlantArchitecture listShootTypeLabels - no parameter success") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    std::vector<std::string> labels = plantarchitecture.listShootTypeLabels();
+
+    DOCTEST_CHECK(labels.size() == 2);
+    DOCTEST_CHECK(std::find(labels.begin(), labels.end(), "unifoliate") != labels.end());
+    DOCTEST_CHECK(std::find(labels.begin(), labels.end(), "trifoliate") != labels.end());
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture listShootTypeLabels - no parameter error") {
+    std::string error_message;
+    {
+        capture_cerr cerr_buffer;
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+
+        // Should throw because no plant model is loaded
+        DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.listShootTypeLabels()));
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture listShootTypeLabels - string parameter success") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+
+    // Query bean shoot types without loading it
+    std::vector<std::string> bean_labels = plantarchitecture.listShootTypeLabels("bean");
+    DOCTEST_CHECK(bean_labels.size() == 2);
+    DOCTEST_CHECK(std::find(bean_labels.begin(), bean_labels.end(), "unifoliate") != bean_labels.end());
+    DOCTEST_CHECK(std::find(bean_labels.begin(), bean_labels.end(), "trifoliate") != bean_labels.end());
+
+    // Query tomato shoot types
+    std::vector<std::string> tomato_labels = plantarchitecture.listShootTypeLabels("tomato");
+    DOCTEST_CHECK(tomato_labels.size() == 1);
+    DOCTEST_CHECK(std::find(tomato_labels.begin(), tomato_labels.end(), "mainstem") != tomato_labels.end());
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture listShootTypeLabels - string parameter error") {
+    std::string error_message;
+    {
+        capture_cerr cerr_buffer;
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+
+        // Should throw for non-existent plant model
+        DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.listShootTypeLabels("nonexistent_plant")));
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture listShootTypeLabels - state preservation") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+
+    // Load bean plant model
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+
+    // Query tomato shoot types (should not change current plant model)
+    std::vector<std::string> tomato_labels = plantarchitecture.listShootTypeLabels("tomato");
+
+    // Verify bean is still loaded by checking current labels
+    std::vector<std::string> current_labels = plantarchitecture.listShootTypeLabels();
+    DOCTEST_CHECK(current_labels.size() == 2);
+    DOCTEST_CHECK(std::find(current_labels.begin(), current_labels.end(), "unifoliate") != current_labels.end());
+    DOCTEST_CHECK(std::find(current_labels.begin(), current_labels.end(), "trifoliate") != current_labels.end());
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture listShootTypeLabels - all plant models") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+
+    std::vector<std::string> all_plants = plantarchitecture.getAvailablePlantModels();
+
+    // Should successfully query shoot types for all plants
+    for (const auto &plant: all_plants) {
+        std::vector<std::string> labels;
+        DOCTEST_CHECK_NOTHROW(labels = plantarchitecture.listShootTypeLabels(plant));
+        DOCTEST_CHECK(!labels.empty()); // All plants should have at least one shoot type
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture listShootTypeLabels - uint parameter success") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+
+    // Load and build bean plant
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    // Query by plantID
+    std::vector<std::string> labels = plantarchitecture.listShootTypeLabels(plantID);
+
+    // Should match bean model shoot types
+    DOCTEST_CHECK(labels.size() == 2);
+    DOCTEST_CHECK(std::find(labels.begin(), labels.end(), "unifoliate") != labels.end());
+    DOCTEST_CHECK(std::find(labels.begin(), labels.end(), "trifoliate") != labels.end());
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture listShootTypeLabels - uint parameter error") {
+    std::string error_message;
+    {
+        capture_cerr cerr_buffer;
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+
+        // Should throw for invalid plantID
+        DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.listShootTypeLabels(999)));
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture listShootTypeLabels - multiple instances") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+
+    // Build bean plant
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint bean_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0);
+
+    // Build tomato plant
+    plantarchitecture.loadPlantModelFromLibrary("tomato");
+    uint tomato_plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(1, 0, 0), 0);
+
+    // Verify each returns correct labels for its model
+    std::vector<std::string> bean_labels = plantarchitecture.listShootTypeLabels(bean_plantID);
+    DOCTEST_CHECK(bean_labels.size() == 2);
+    DOCTEST_CHECK(std::find(bean_labels.begin(), bean_labels.end(), "unifoliate") != bean_labels.end());
+    DOCTEST_CHECK(std::find(bean_labels.begin(), bean_labels.end(), "trifoliate") != bean_labels.end());
+
+    std::vector<std::string> tomato_labels = plantarchitecture.listShootTypeLabels(tomato_plantID);
+    DOCTEST_CHECK(tomato_labels.size() == 1);
+    DOCTEST_CHECK(std::find(tomato_labels.begin(), tomato_labels.end(), "mainstem") != tomato_labels.end());
 }
 
 int PlantArchitecture::selfTest(int argc, char **argv) {

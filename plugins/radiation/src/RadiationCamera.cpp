@@ -1005,9 +1005,10 @@ void RadiationModel::writePrimitiveDataLabelMap(const std::string &cameralabel, 
     }
 
     bool empty_flag = true;
+    // Apply horizontal flip to match mask coordinate system
     for (uint j = 0; j < camera_resolution.y; j++) {
         for (uint i = 0; i < camera_resolution.x; i++) {
-            uint ii = camera_resolution.x - i - 1;
+            uint ii = camera_resolution.x - i - 1;  // horizontal flip
             uint UUID = pixel_UUIDs.at(j * camera_resolution.x + ii) - 1;
             if (context->doesPrimitiveExist(UUID) && context->doesPrimitiveDataExist(UUID, primitive_data_label.c_str())) {
                 HeliosDataType datatype = context->getPrimitiveDataType(primitive_data_label.c_str());
@@ -1092,9 +1093,10 @@ void RadiationModel::writeObjectDataLabelMap(const std::string &cameralabel, con
     }
 
     bool empty_flag = true;
+    // Apply horizontal flip to match mask coordinate system
     for (uint j = 0; j < camera_resolution.y; j++) {
         for (uint i = 0; i < camera_resolution.x; i++) {
-            uint ii = camera_resolution.x - i - 1;
+            uint ii = camera_resolution.x - i - 1;  // horizontal flip
             uint UUID = pixel_UUIDs.at(j * camera_resolution.x + ii) - 1;
             if (!context->doesPrimitiveExist(UUID)) {
                 pixel_data << padvalue << " ";
@@ -1317,8 +1319,7 @@ void RadiationModel::writeImageBoundingBoxes(const std::string &cameralabel, con
 
     for (int j = 0; j < camera_resolution.y; j++) {
         for (int i = 0; i < camera_resolution.x; i++) {
-            uint ii = camera_resolution.x - i - 1;
-            uint UUID = pixel_UUIDs.at(j * camera_resolution.x + ii) - 1;
+            uint UUID = pixel_UUIDs.at(j * camera_resolution.x + i) - 1;
             if (context->doesPrimitiveExist(UUID) && context->doesPrimitiveDataExist(UUID, primitive_data_label.c_str())) {
 
                 uint labeldata;
@@ -1646,9 +1647,10 @@ void RadiationModel::writeImageBoundingBoxes_ObjectData(const std::string &camer
     std::map<std::pair<uint, uint>, vec4> pdata_bounds; // (class_id, label_value) -> bbox
 
     // Iterate through all pixels
+    // Apply horizontal flip to match mask coordinate system
     for (int j = 0; j < camera_resolution.y; j++) {
         for (int i = 0; i < camera_resolution.x; i++) {
-            uint ii = camera_resolution.x - i - 1;
+            uint ii = camera_resolution.x - i - 1;  // horizontal flip
             uint UUID = pixel_UUIDs.at(j * camera_resolution.x + ii) - 1;
 
             if (!context->doesPrimitiveExist(UUID)) {
@@ -1843,9 +1845,10 @@ std::map<int, std::vector<std::vector<bool>>> RadiationModel::generateLabelMasks
     std::map<int, std::vector<std::vector<bool>>> label_masks;
 
     // First pass: identify all unique labels and create binary masks
+    // Apply horizontal flip to match JPEG coordinate system
     for (int j = 0; j < camera_resolution.y; j++) {
         for (int i = 0; i < camera_resolution.x; i++) {
-            uint ii = camera_resolution.x - i - 1;
+            uint ii = camera_resolution.x - i - 1;  // horizontal flip to match JPEG
             uint UUID = pixel_UUIDs.at(j * camera_resolution.x + ii) - 1;
 
             if (context->doesPrimitiveExist(UUID)) {
@@ -2279,7 +2282,7 @@ void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel,
                                 int count = 0;
 
                                 for (const auto &[px_i, px_j]: component_pixels) {
-                                    uint ii = camera_resolution.x - px_i - 1;
+                                    uint ii = camera_resolution.x - px_i - 1;  // horizontal flip because component_pixels are in mask space
                                     uint UUID = pixel_UUIDs.at(px_j * camera_resolution.x + ii) - 1;
 
                                     if (context->doesPrimitiveExist(UUID)) {
@@ -2493,30 +2496,214 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
         // Generate label masks using helper function (object data version)
         std::map<int, std::vector<std::vector<bool>>> label_masks = generateLabelMasks(cameralabel, object_data_label[i], true);
 
-        // Generate annotations from masks using helper function
-        std::vector<std::map<std::string, std::vector<float>>> annotations = generateAnnotationsFromMasks(label_masks, object_class_ID[i], camera_resolution, image_id);
+        // Find the highest existing annotation ID to avoid conflicts
+        int max_annotation_id = -1;
+        for (const auto &existing_ann: coco_json["annotations"]) {
+            if (existing_ann["id"] > max_annotation_id) {
+                max_annotation_id = existing_ann["id"];
+            }
+        }
 
-        // Calculate mean attribute values for each mask if requested
-        std::vector<std::map<std::string, double>> mean_attribute_values_per_component;
-        if (use_attributes) {
-            // For each label mask, find connected components and calculate mean attribute values
-            for (const auto &label_pair: label_masks) {
-                const auto &mask = label_pair.second;
-                std::vector<std::vector<bool>> visited(camera_resolution.y, std::vector<bool>(camera_resolution.x, false));
+        // Generate annotations from masks and calculate attributes together
+        // This ensures 1:1 correspondence between annotations and their attributes
+        for (const auto &label_pair: label_masks) {
+            const auto &mask = label_pair.second;
 
-                for (int j = 0; j < camera_resolution.y; j++) {
-                    for (int i_px = 0; i_px < camera_resolution.x; i_px++) {
-                        if (mask[j][i_px] && !visited[j][i_px]) {
-                            // Found a new connected component - gather all pixels
+            // Create a visited mask for connected components
+            std::vector<std::vector<bool>> visited(camera_resolution.y, std::vector<bool>(camera_resolution.x, false));
+
+            // Find all connected components for this label
+            for (int j = 0; j < camera_resolution.y; j++) {
+                for (int i_px = 0; i_px < camera_resolution.x; i_px++) {
+                    if (mask[j][i_px] && !visited[j][i_px]) {
+                        // Find boundary pixel for this component
+                        int boundary_i = i_px, boundary_j = j;
+                        bool is_boundary = false;
+
+                        // Check if this pixel is on the boundary
+                        for (int di = -1; di <= 1; di++) {
+                            for (int dj = -1; dj <= 1; dj++) {
+                                int ni = i_px + di;
+                                int nj = j + dj;
+                                if (ni < 0 || ni >= camera_resolution.x || nj < 0 || nj >= camera_resolution.y || !mask[nj][ni]) {
+                                    is_boundary = true;
+                                    boundary_i = i_px;
+                                    boundary_j = j;
+                                    break;
+                                }
+                            }
+                            if (is_boundary)
+                                break;
+                        }
+
+                        if (is_boundary) {
+                            // First, mark all pixels in this connected component using flood fill
                             std::stack<std::pair<int, int>> stack;
                             std::vector<std::pair<int, int>> component_pixels;
+                            stack.push({i_px, j});
+                            visited[j][i_px] = true;
+
+                            int min_x = i_px, max_x = i_px, min_y = j, max_y = j;
+                            int area = 0;
+
+                            while (!stack.empty()) {
+                                auto [ci, cj] = stack.top();
+                                stack.pop();
+                                area++;
+                                component_pixels.push_back({ci, cj});
+
+                                min_x = std::min(min_x, ci);
+                                max_x = std::max(max_x, ci);
+                                min_y = std::min(min_y, cj);
+                                max_y = std::max(max_y, cj);
+
+                                // Check 4-connected neighbors
+                                for (int di = -1; di <= 1; di++) {
+                                    for (int dj = -1; dj <= 1; dj++) {
+                                        if (abs(di) + abs(dj) != 1)
+                                            continue; // Only 4-connected
+                                        int ni = ci + di;
+                                        int nj = cj + dj;
+                                        if (ni >= 0 && ni < camera_resolution.x && nj >= 0 && nj < camera_resolution.y && mask[nj][ni] && !visited[nj][ni]) {
+                                            stack.push({ni, nj});
+                                            visited[nj][ni] = true;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Now trace the boundary of this component
+                            auto start_pixel = findStartingBoundaryPixel(mask, camera_resolution);
+                            bool is_boundary_start = false;
+
+                            if (start_pixel.first >= min_x && start_pixel.first <= max_x && start_pixel.second >= min_y && start_pixel.second <= max_y) {
+                                is_boundary_start = true;
+                            }
+
+                            if (is_boundary_start) {
+                                // Try Moore neighborhood boundary tracing first
+                                auto contour = traceBoundaryMoore(mask, start_pixel.first, start_pixel.second, camera_resolution);
+
+                                // If Moore tracing didn't work well, fall back to simple boundary collection
+                                if (contour.size() < 10) {
+                                    contour = traceBoundarySimple(mask, start_pixel.first, start_pixel.second, camera_resolution);
+                                }
+
+                                if (contour.size() >= 3) {
+                                    // Calculate mean attribute values for this component (for all attributes)
+                                    std::map<std::string, double> component_attributes;
+                                    if (use_attributes) {
+                                        for (const auto &attr: attribute_info) {
+                                            double sum = 0.0;
+                                            int count = 0;
+
+                                            for (const auto &[px_i, px_j]: component_pixels) {
+                                                uint ii = camera_resolution.x - px_i - 1;
+                                                uint UUID = pixel_UUIDs.at(px_j * camera_resolution.x + ii) - 1;
+
+                                                if (context->doesPrimitiveExist(UUID)) {
+                                                    double value = 0.0;
+                                                    bool has_value = false;
+
+                                                    if (attr.is_primitive_data) {
+                                                        if (context->doesPrimitiveDataExist(UUID, attr.label.c_str())) {
+                                                            HeliosDataType datatype = context->getPrimitiveDataType(attr.label.c_str());
+                                                            if (datatype == HELIOS_TYPE_INT) {
+                                                                int val;
+                                                                context->getPrimitiveData(UUID, attr.label.c_str(), val);
+                                                                value = static_cast<double>(val);
+                                                                has_value = true;
+                                                            } else if (datatype == HELIOS_TYPE_UINT) {
+                                                                uint val;
+                                                                context->getPrimitiveData(UUID, attr.label.c_str(), val);
+                                                                value = static_cast<double>(val);
+                                                                has_value = true;
+                                                            } else if (datatype == HELIOS_TYPE_FLOAT) {
+                                                                float val;
+                                                                context->getPrimitiveData(UUID, attr.label.c_str(), val);
+                                                                value = static_cast<double>(val);
+                                                                has_value = true;
+                                                            } else if (datatype == HELIOS_TYPE_DOUBLE) {
+                                                                context->getPrimitiveData(UUID, attr.label.c_str(), value);
+                                                                has_value = true;
+                                                            }
+                                                        }
+                                                    } else {
+                                                        uint objID = context->getPrimitiveParentObjectID(UUID);
+                                                        if (objID != 0 && context->doesObjectDataExist(objID, attr.label.c_str())) {
+                                                            HeliosDataType datatype = context->getObjectDataType(attr.label.c_str());
+                                                            if (datatype == HELIOS_TYPE_INT) {
+                                                                int val;
+                                                                context->getObjectData(objID, attr.label.c_str(), val);
+                                                                value = static_cast<double>(val);
+                                                                has_value = true;
+                                                            } else if (datatype == HELIOS_TYPE_UINT) {
+                                                                uint val;
+                                                                context->getObjectData(objID, attr.label.c_str(), val);
+                                                                value = static_cast<double>(val);
+                                                                has_value = true;
+                                                            } else if (datatype == HELIOS_TYPE_FLOAT) {
+                                                                float val;
+                                                                context->getObjectData(objID, attr.label.c_str(), val);
+                                                                value = static_cast<double>(val);
+                                                                has_value = true;
+                                                            } else if (datatype == HELIOS_TYPE_DOUBLE) {
+                                                                context->getObjectData(objID, attr.label.c_str(), value);
+                                                                has_value = true;
+                                                            }
+                                                        }
+                                                    }
+
+                                                    if (has_value) {
+                                                        sum += value;
+                                                        count++;
+                                                    }
+                                                }
+                                            }
+
+                                            if (count > 0) {
+                                                component_attributes[attr.label] = sum / count;
+                                            } else {
+                                                component_attributes[attr.label] = 0.0; // Default if no valid data
+                                            }
+                                        }
+                                    }
+
+                                    // Create annotation with attributes
+                                    nlohmann::json json_annotation;
+                                    json_annotation["id"] = max_annotation_id + 1;
+                                    json_annotation["image_id"] = image_id;
+                                    json_annotation["category_id"] = (int) object_class_ID[i];
+                                    json_annotation["bbox"] = {min_x, min_y, max_x - min_x, max_y - min_y};
+                                    json_annotation["area"] = area;
+                                    json_annotation["iscrowd"] = 0;
+
+                                    // Convert contour to segmentation format (flatten coordinates)
+                                    std::vector<int> segmentation_coords;
+                                    for (const auto &point: contour) {
+                                        segmentation_coords.push_back(point.first);  // x coordinate
+                                        segmentation_coords.push_back(point.second); // y coordinate
+                                    }
+                                    json_annotation["segmentation"] = {segmentation_coords};
+
+                                    // Add attributes if requested
+                                    if (use_attributes) {
+                                        json_annotation["attributes"] = component_attributes;
+                                    }
+
+                                    coco_json["annotations"].push_back(json_annotation);
+                                    max_annotation_id++;
+                                }
+                            }
+                        } else {
+                            // Mark all pixels in this non-boundary component as visited
+                            std::stack<std::pair<int, int>> stack;
                             stack.push({i_px, j});
                             visited[j][i_px] = true;
 
                             while (!stack.empty()) {
                                 auto [ci, cj] = stack.top();
                                 stack.pop();
-                                component_pixels.push_back({ci, cj});
 
                                 // Check 4-connected neighbors
                                 for (int di = -1; di <= 1; di++) {
@@ -2532,127 +2719,10 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
                                     }
                                 }
                             }
-
-                            // Calculate mean attribute values for this component (for all attributes)
-                            std::map<std::string, double> component_attributes;
-                            for (const auto &attr: attribute_info) {
-                                double sum = 0.0;
-                                int count = 0;
-
-                                for (const auto &[px_i, px_j]: component_pixels) {
-                                    uint ii = camera_resolution.x - px_i - 1;
-                                    uint UUID = pixel_UUIDs.at(px_j * camera_resolution.x + ii) - 1;
-
-                                    if (context->doesPrimitiveExist(UUID)) {
-                                        double value = 0.0;
-                                        bool has_value = false;
-
-                                        if (attr.is_primitive_data) {
-                                            if (context->doesPrimitiveDataExist(UUID, attr.label.c_str())) {
-                                                HeliosDataType datatype = context->getPrimitiveDataType(attr.label.c_str());
-                                                if (datatype == HELIOS_TYPE_INT) {
-                                                    int val;
-                                                    context->getPrimitiveData(UUID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val);
-                                                    has_value = true;
-                                                } else if (datatype == HELIOS_TYPE_UINT) {
-                                                    uint val;
-                                                    context->getPrimitiveData(UUID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val);
-                                                    has_value = true;
-                                                } else if (datatype == HELIOS_TYPE_FLOAT) {
-                                                    float val;
-                                                    context->getPrimitiveData(UUID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val);
-                                                    has_value = true;
-                                                } else if (datatype == HELIOS_TYPE_DOUBLE) {
-                                                    context->getPrimitiveData(UUID, attr.label.c_str(), value);
-                                                    has_value = true;
-                                                }
-                                            }
-                                        } else {
-                                            uint objID = context->getPrimitiveParentObjectID(UUID);
-                                            if (objID != 0 && context->doesObjectDataExist(objID, attr.label.c_str())) {
-                                                HeliosDataType datatype = context->getObjectDataType(attr.label.c_str());
-                                                if (datatype == HELIOS_TYPE_INT) {
-                                                    int val;
-                                                    context->getObjectData(objID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val);
-                                                    has_value = true;
-                                                } else if (datatype == HELIOS_TYPE_UINT) {
-                                                    uint val;
-                                                    context->getObjectData(objID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val);
-                                                    has_value = true;
-                                                } else if (datatype == HELIOS_TYPE_FLOAT) {
-                                                    float val;
-                                                    context->getObjectData(objID, attr.label.c_str(), val);
-                                                    value = static_cast<double>(val);
-                                                    has_value = true;
-                                                } else if (datatype == HELIOS_TYPE_DOUBLE) {
-                                                    context->getObjectData(objID, attr.label.c_str(), value);
-                                                    has_value = true;
-                                                }
-                                            }
-                                        }
-
-                                        if (has_value) {
-                                            sum += value;
-                                            count++;
-                                        }
-                                    }
-                                }
-
-                                if (count > 0) {
-                                    component_attributes[attr.label] = sum / count;
-                                } else {
-                                    component_attributes[attr.label] = 0.0; // Default if no valid data
-                                }
-                            }
-
-                            mean_attribute_values_per_component.push_back(component_attributes);
                         }
                     }
                 }
             }
-        }
-
-        // Find the highest existing annotation ID to avoid conflicts
-        int max_annotation_id = -1;
-        for (const auto &existing_ann: coco_json["annotations"]) {
-            if (existing_ann["id"] > max_annotation_id) {
-                max_annotation_id = existing_ann["id"];
-            }
-        }
-
-        // Add new annotations for this data label
-        size_t ann_idx = 0;
-        for (const auto &ann: annotations) {
-            nlohmann::json json_annotation;
-            json_annotation["id"] = max_annotation_id + 1;
-            json_annotation["image_id"] = (int) ann.at("image_id")[0];
-            json_annotation["category_id"] = (int) ann.at("category_id")[0];
-
-            const auto &bbox = ann.at("bbox");
-            json_annotation["bbox"] = {(int) bbox[0], (int) bbox[1], (int) bbox[2], (int) bbox[3]};
-            json_annotation["area"] = (int) ann.at("area")[0];
-
-            const auto &seg = ann.at("segmentation");
-            std::vector<int> segmentation_coords;
-            for (float coord: seg) {
-                segmentation_coords.push_back((int) coord);
-            }
-            json_annotation["segmentation"] = {segmentation_coords};
-            json_annotation["iscrowd"] = (int) ann.at("iscrowd")[0];
-
-            // Add attributes if requested
-            if (use_attributes && ann_idx < mean_attribute_values_per_component.size()) {
-                json_annotation["attributes"] = mean_attribute_values_per_component[ann_idx];
-            }
-
-            coco_json["annotations"].push_back(json_annotation);
-            max_annotation_id++;
-            ann_idx++;
         }
     }
 
@@ -3825,9 +3895,7 @@ void RadiationModel::computeAgronomicProperties(const std::string &camera_label,
     // Iterate through all pixels to find unique objects and query their data
     for (uint j = 0; j < cam.resolution.y; j++) {
         for (uint i = 0; i < cam.resolution.x; i++) {
-            // Apply horizontal flip (same as in segmentation mask code)
-            uint ii = cam.resolution.x - i - 1;
-            uint pixel_index = j * cam.resolution.x + ii;
+            uint pixel_index = j * cam.resolution.x + i;
 
             if (pixel_index >= pixel_UUIDs.size()) {
                 continue;

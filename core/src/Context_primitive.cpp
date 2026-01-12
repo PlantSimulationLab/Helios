@@ -1,7 +1,7 @@
 /**
  * \file "Context_primitive.cpp" Context primitive type definitions and methods.
  *
- * Copyright (C) 2016-2025 Brian Bailey
+ * Copyright (C) 2016-2026 Brian Bailey
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1587,14 +1587,7 @@ float Voxel::getVolume() {
 }
 
 vec3 Voxel::getCenter() const {
-    vec3 center;
-    vec3 Y;
-
-    center.x = transform[0] * Y.x + transform[1] * Y.y + transform[2] * Y.z + transform[3];
-    center.y = transform[4] * Y.x + transform[5] * Y.y + transform[6] * Y.z + transform[7];
-    center.z = transform[8] * Y.x + transform[9] * Y.y + transform[10] * Y.z + transform[11];
-
-    return center;
+    return make_vec3(transform[3], transform[7], transform[11]);
 }
 
 vec3 Voxel::getSize() const {

@@ -1,6 +1,6 @@
 /** \file "PlantArchitecture.h" Primary header file for plant architecture plug-in.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -361,7 +361,6 @@ struct NitrogenParameters {
     // -- Fruit Nitrogen Parameters -- //
     //! nitrogen content per unit fruit area (g N/m²)
     float fruit_N_area = 1.0f;
-
 };
 
 //! Add geometry to the Context consisting of a series of Cone objects to form a tube-like shape
@@ -1836,6 +1835,30 @@ public:
      */
     std::map<std::string, PhytomerParameters> getCurrentPhytomerParameters();
 
+    //! Get the list of shoot type labels for the currently loaded plant model
+    /**
+     * \return Vector of shoot type label strings for the currently loaded plant model.
+     * \note This method only works if a plant model has been loaded via loadPlantModelFromLibrary(). Use the overload listShootTypeLabels(plant_model_name) to query a specific model without loading, or listShootTypeLabels(plantID) to query a plant
+     * instance.
+     */
+    [[nodiscard]] std::vector<std::string> listShootTypeLabels() const;
+
+    //! Get the list of shoot type labels for a specific plant model without changing current state
+    /**
+     * \param[in] plant_model_name Name of the plant model to query (e.g., "bean", "tomato", "almond"). Use getAvailablePlantModels() to see available plant model names.
+     * \return Vector of shoot type label strings for the specified plant model.
+     * \note This method temporarily loads the plant model to extract shoot type information, then restores the original plant state. The current plant model remains unchanged after calling this method.
+     */
+    [[nodiscard]] std::vector<std::string> listShootTypeLabels(const std::string &plant_model_name);
+
+    //! Get the list of shoot type labels for a specific plant instance
+    /**
+     * \param[in] plantID Unique identifier for the plant instance.
+     * \return Vector of shoot type label strings for the specified plant instance.
+     * \note This method returns the shoot types that were defined when the plant instance was created. The shoot types are captured from the plant model at creation time.
+     */
+    [[nodiscard]] std::vector<std::string> listShootTypeLabels(uint plantID) const;
+
     //! Update the parameters of a single shoot type in the current plant model
     /**
      * \param[in] shoot_type_label User-defined label for the shoot type to be updated.
@@ -2759,7 +2782,7 @@ public:
      * \param[in] params Nitrogen parameters struct
      * \throws helios_runtime_error if plant does not exist
      */
-    void setPlantNitrogenParameters(uint plantID, const NitrogenParameters& params);
+    void setPlantNitrogenParameters(uint plantID, const NitrogenParameters &params);
 
     /**
      * \brief Set nitrogen model parameters for multiple plants
@@ -2767,7 +2790,7 @@ public:
      * \param[in] params Nitrogen parameters struct
      * \throws helios_runtime_error if any plant does not exist
      */
-    void setPlantNitrogenParameters(const std::vector<uint>& plantIDs, const NitrogenParameters& params);
+    void setPlantNitrogenParameters(const std::vector<uint> &plantIDs, const NitrogenParameters &params);
 
     /**
      * \brief Initialize nitrogen pools for all plants based on current leaf biomass
@@ -2797,7 +2820,7 @@ public:
      * \param[in] amount_gN Amount of nitrogen to add to each plant (g N)
      * \throws helios_runtime_error if any plant does not exist or amount is negative
      */
-    void addPlantNitrogen(const std::vector<uint>& plantIDs, float amount_gN);
+    void addPlantNitrogen(const std::vector<uint> &plantIDs, float amount_gN);
 
     // -- manual plant generation from input string -- //
 
@@ -2870,6 +2893,27 @@ public:
 
     //! Re-enable standard output from this plug-in
     void enableMessages();
+
+    //! Resolve an asset file path for the plantarchitecture plugin
+    /**
+     * This method resolves asset file paths (textures and OBJ models) for the plantarchitecture plugin,
+     * allowing users to specify simple paths like "OliveBark.jpg" or "MyLeaf.obj" instead of using the
+     * verbose helios::resolvePluginAsset() wrapper.
+     *
+     * Resolution order:
+     * 1. Empty path returns empty string
+     * 2. Absolute paths that exist are returned as-is
+     * 3. Try resolving as a general file path (for already-resolved paths)
+     * 4. Try resolving as a plugin asset path (e.g., "assets/textures/OliveBark.jpg")
+     * 5. If path doesn't have "assets/" prefix, determine subdirectory from file extension:
+     *    - .obj/.mtl files: try "assets/obj/" + filename
+     *    - Other files: try "assets/textures/" + filename
+     *
+     * \param[in] texture_file The asset file path (can be simple filename, relative path, or absolute path)
+     * \return Resolved absolute path to the asset file
+     * \throws helios_runtime_error if the asset file cannot be found
+     */
+    static std::string resolveTextureFile(const std::string &texture_file);
 
     friend struct Phytomer;
     friend struct Shoot;

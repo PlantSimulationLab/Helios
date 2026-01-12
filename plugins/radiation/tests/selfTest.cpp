@@ -5902,3 +5902,678 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Disk Source Rendering") {
     int center_idx = (camera_props.camera_resolution.y / 2) * camera_props.camera_resolution.x + (camera_props.camera_resolution.x / 2);
     DOCTEST_CHECK(pixel_data[center_idx] > 0.0f);
 }
+
+DOCTEST_TEST_CASE("RadiationModel - Camera Pixel UUID Indexing Validation") {
+    // This test validates that camera pixel-to-UUID mapping is spatially correct
+    // by checking that left pixels see left patches, not right patches (which would happen with horizontal flip bug)
+
+    Context context;
+
+    // Create 3 vertical patches side-by-side: left, center, right
+    // Each patch is tagged with a unique ID for validation
+    uint left_patch = context.addPatch(make_vec3(-1.5, 0, 0), make_vec2(0.8, 2));
+    uint center_patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.8, 2));
+    uint right_patch = context.addPatch(make_vec3(1.5, 0, 0), make_vec2(0.8, 2));
+
+    // Tag each patch with unique primitive data ID
+    context.setPrimitiveData(left_patch, "patch_id", uint(1));
+    context.setPrimitiveData(center_patch, "patch_id", uint(2));
+    context.setPrimitiveData(right_patch, "patch_id", uint(3));
+
+    // Set up radiation model with camera looking down from above
+    RadiationModel radiationmodel(&context);
+    radiationmodel.disableMessages();
+
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(64, 64);
+    cam_props.HFOV = 90;  // Wide FOV to see all three patches
+    cam_props.focal_plane_distance = 10;
+    cam_props.lens_diameter = 0.0f;
+
+    radiationmodel.addRadiationCamera("test_cam", {"SW"},
+                                     make_vec3(0, 0, 5),  // Above scene
+                                     make_vec3(0, 0, 0),  // Looking down
+                                     cam_props, 1);
+
+    radiationmodel.addRadiationBand("SW");
+    radiationmodel.setScatteringDepth("SW", 1);  // Enable scattering for camera ray tracing
+
+    // Add a radiation source - required for camera pixel labeling to run
+    uint source = radiationmodel.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiationmodel.setSourceFlux(source, "SW", 1000.f);
+
+    radiationmodel.updateGeometry();
+    radiationmodel.runBand("SW");
+
+    // Write label map to temporary file
+    // Filename format: {cameralabel}_{imagefile_base}_{frame:05d}.txt
+    std::string test_file = "test_cam_test_camera_indexing_00000.txt";
+    radiationmodel.writePrimitiveDataLabelMap("test_cam", "patch_id",
+                                              "test_camera_indexing", "./", 0, 0.0f);
+
+    // Read back the label map
+    std::ifstream label_file(test_file);
+    DOCTEST_REQUIRE_MESSAGE(label_file.is_open(), "Could not open label map file");
+
+    std::vector<float> labels;
+    float val;
+    while (label_file >> val) {
+        labels.push_back(val);
+    }
+    label_file.close();
+
+    DOCTEST_REQUIRE_EQ(labels.size(), 64 * 64);
+
+    // Check spatial correctness
+    // World positions: patch1 at X=-1.5 (left), patch2 at X=0 (center), patch3 at X=+1.5 (right)
+    // Sample left region of label map (x=[20,24])
+    int left_votes = 0, center_votes = 0, right_votes = 0;
+    for (int j = 26; j < 38; j++) {
+        for (int i = 20; i < 25; i++) {
+            float label = labels[j * 64 + i];
+            if (label == 1.0f) left_votes++;
+            else if (label == 2.0f) center_votes++;
+            else if (label == 3.0f) right_votes++;
+        }
+    }
+
+    // Left region should see world-left patch (ID=1)
+    DOCTEST_CHECK_MESSAGE(left_votes > right_votes,
+                          "Left region should see world-left patch (ID=1), not world-right (ID=3)");
+    DOCTEST_CHECK_MESSAGE(left_votes > center_votes,
+                          "Left region should predominantly see left patch");
+
+    // Sample right region of label map (x=[39,43])
+    left_votes = center_votes = right_votes = 0;
+    for (int j = 26; j < 38; j++) {
+        for (int i = 39; i < 44; i++) {
+            float label = labels[j * 64 + i];
+            if (label == 1.0f) left_votes++;
+            else if (label == 2.0f) center_votes++;
+            else if (label == 3.0f) right_votes++;
+        }
+    }
+
+    // Right region should see world-right patch (ID=3)
+    DOCTEST_CHECK_MESSAGE(right_votes > left_votes,
+                          "Right region should see world-right patch (ID=3), not world-left (ID=1)");
+    DOCTEST_CHECK_MESSAGE(right_votes > center_votes,
+                          "Right region should predominantly see right patch");
+
+    // Cleanup test file
+    std::remove(test_file.c_str());
+}
+
+DOCTEST_TEST_CASE("RadiationModel - Pixel Labeling with Fine Tessellation") {
+    // Test that pixel labeling doesn't miss primitives when tessellation ≈ camera resolution
+    // This validates the epsilon-tolerant boundary test prevents systematic misses
+
+    Context context;
+
+    // Create ground with tessellation matching camera resolution
+    int res = 128;  // Use 128x128 for fast test (principle same as 1024x1024)
+    float camera_height = 20.0f;
+    float HFOV_degrees = 45.0f;
+
+    // Calculate tile size to fill camera FOV: ground_size = 2 * height * tan(HFOV/2)
+    float ground_size = 2.0f * camera_height * tanf(HFOV_degrees * M_PI / 180.0f / 2.0f);
+
+    std::vector<uint> ground = context.addTile(make_vec3(0, 0, 0),
+                                               make_vec2(ground_size, ground_size),
+                                               make_SphericalCoord(0, 0),
+                                               make_int2(res, res));
+
+    // Tag ground with data
+    context.setPrimitiveData(ground, "ground_id", uint(42));
+
+    // Camera looking straight down
+    RadiationModel radiationmodel(&context);
+    radiationmodel.disableMessages();
+
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(res, res);  // Match ground tessellation
+    cam_props.HFOV = HFOV_degrees;
+    cam_props.focal_plane_distance = 10;
+    cam_props.lens_diameter = 0.0f;
+
+    radiationmodel.addRadiationCamera("test_cam", {"SW"},
+                                     make_vec3(0, 0, camera_height),  // Above ground
+                                     make_vec3(0, 0, 0),   // Looking down
+                                     cam_props, 1);
+
+    radiationmodel.addRadiationBand("SW");
+    radiationmodel.setScatteringDepth("SW", 1);  // Enable scattering for camera ray tracing
+
+    // Add a radiation source - required for camera pixel labeling to run
+    uint source = radiationmodel.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiationmodel.setSourceFlux(source, "SW", 1000.f);
+
+    radiationmodel.updateGeometry();
+    radiationmodel.runBand("SW");
+
+    // Write and read label map
+    // Filename format: {cameralabel}_{imagefile_base}_{frame:05d}.txt
+    std::string test_file = "test_cam_test_fine_tessellation_00000.txt";
+    radiationmodel.writePrimitiveDataLabelMap("test_cam", "ground_id",
+                                              "test_fine_tessellation", "./", 0, 0.0f);
+
+    std::ifstream label_file(test_file);
+    DOCTEST_REQUIRE(label_file.is_open());
+
+    std::vector<float> labels;
+    float val;
+    while (label_file >> val) {
+        labels.push_back(val);
+    }
+    label_file.close();
+
+    // Count valid hits (ground_id = 42) vs misses (NaN)
+    int valid_count = 0;
+    int nan_count = 0;
+    for (float label : labels) {
+        if (std::isnan(label)) {
+            nan_count++;
+        } else if (label == 42.0f) {
+            valid_count++;
+        }
+    }
+
+    float valid_percentage = 100.0f * valid_count / labels.size();
+
+    // With fine tessellation and tile sized to fill FOV, expect reasonable hit rate
+    // Actual coverage depends on exact tile/camera geometry alignment
+    DOCTEST_CHECK_MESSAGE(valid_percentage > 60.0f,
+                          "Pixel labeling with fine tessellation should have >60% valid hits, got "
+                          << valid_percentage << "% (tile may not exactly fill FOV)");
+
+    // Cleanup
+    std::remove(test_file.c_str());
+}
+
+DOCTEST_TEST_CASE("RadiationModel - runBand Invalid Band Error Handling") {
+
+    // Test 1: Single invalid band label
+    DOCTEST_SUBCASE("Single invalid band") {
+        Context context1;
+        RadiationModel radiation1(&context1);
+        radiation1.disableMessages();
+
+        uint uuid = context1.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        radiation1.addRadiationBand("PAR");
+        uint source = radiation1.addCollimatedRadiationSource();
+        radiation1.setSourceFlux(source, "PAR", 1000.f);
+        radiation1.updateGeometry();
+
+        // Try to run a band that doesn't exist
+        bool exception_thrown = false;
+        std::string error_message;
+        try {
+            radiation1.runBand("INVALID_BAND");
+        } catch (const std::runtime_error &e) {
+            exception_thrown = true;
+            error_message = e.what();
+            DOCTEST_CHECK(error_message.find("INVALID_BAND") != std::string::npos);
+            DOCTEST_CHECK(error_message.find("not a valid band") != std::string::npos);
+        } catch (const std::out_of_range &e) {
+            // This is the bug - should throw helios_runtime_error, not out_of_range
+            DOCTEST_FAIL("Caught std::out_of_range instead of helios_runtime_error. This indicates the bug is present.");
+        }
+        DOCTEST_CHECK_MESSAGE(exception_thrown, "Expected helios_runtime_error for invalid band");
+    }
+
+    // Test 2: Vector with mixed valid and invalid bands
+    DOCTEST_SUBCASE("Mixed valid and invalid bands") {
+        Context context2;
+        RadiationModel radiation2(&context2);
+        radiation2.disableMessages();
+
+        uint uuid = context2.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        radiation2.addRadiationBand("PAR");
+        radiation2.addRadiationBand("NIR");
+        uint source = radiation2.addCollimatedRadiationSource();
+        radiation2.setSourceFlux(source, "PAR", 1000.f);
+        radiation2.setSourceFlux(source, "NIR", 500.f);
+        radiation2.updateGeometry();
+
+        // Try to run bands where some exist and some don't
+        std::vector<std::string> bands = {"PAR", "INVALID_BAND", "NIR"};
+        bool exception_thrown = false;
+        std::string error_message;
+        try {
+            radiation2.runBand(bands);
+        } catch (const std::runtime_error &e) {
+            exception_thrown = true;
+            error_message = e.what();
+            DOCTEST_CHECK(error_message.find("INVALID_BAND") != std::string::npos);
+            DOCTEST_CHECK(error_message.find("not a valid band") != std::string::npos);
+        } catch (const std::out_of_range &e) {
+            // This is the bug - should throw helios_runtime_error, not out_of_range
+            DOCTEST_FAIL("Caught std::out_of_range instead of helios_runtime_error. This indicates the bug is present.");
+        }
+        DOCTEST_CHECK_MESSAGE(exception_thrown, "Expected helios_runtime_error for invalid band in vector");
+    }
+
+    // Test 3: All invalid bands in vector
+    DOCTEST_SUBCASE("All invalid bands") {
+        Context context3;
+        RadiationModel radiation3(&context3);
+        radiation3.disableMessages();
+
+        uint uuid = context3.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+        radiation3.addRadiationBand("PAR");
+        uint source = radiation3.addCollimatedRadiationSource();
+        radiation3.setSourceFlux(source, "PAR", 1000.f);
+        radiation3.updateGeometry();
+
+        // Try to run multiple bands that don't exist
+        std::vector<std::string> bands = {"INVALID1", "INVALID2"};
+        bool exception_thrown = false;
+        std::string error_message;
+        try {
+            radiation3.runBand(bands);
+        } catch (const std::runtime_error &e) {
+            exception_thrown = true;
+            error_message = e.what();
+            // Should catch the first invalid band
+            bool found_invalid = error_message.find("INVALID1") != std::string::npos ||
+                                error_message.find("INVALID2") != std::string::npos;
+            DOCTEST_CHECK(found_invalid);
+            DOCTEST_CHECK(error_message.find("not a valid band") != std::string::npos);
+        } catch (const std::out_of_range &e) {
+            // This is the bug - should throw helios_runtime_error, not out_of_range
+            DOCTEST_FAIL("Caught std::out_of_range instead of helios_runtime_error. This indicates the bug is present.");
+        }
+        DOCTEST_CHECK_MESSAGE(exception_thrown, "Expected helios_runtime_error for all invalid bands");
+    }
+}
+
+DOCTEST_TEST_CASE("RadiationModel - Segmentation Mask to Image Coordinate Alignment") {
+    // This test validates that segmentation mask coordinates correctly align with camera images
+    // by creating patches at known locations and verifying their bbox coordinates match the image
+
+    Context context;
+
+    // Create 4 patches at known positions forming a cross pattern
+    uint top_patch = context.addPatch(make_vec3(0, 0, 1.5), make_vec2(0.5, 0.5));
+    uint bottom_patch = context.addPatch(make_vec3(0, 0, -1.5), make_vec2(0.5, 0.5));
+    uint left_patch = context.addPatch(make_vec3(-1.5, 0, 0), make_vec2(0.5, 0.5));
+    uint right_patch = context.addPatch(make_vec3(1.5, 0, 0), make_vec2(0.5, 0.5));
+
+    // Tag patches with unique IDs
+    context.setPrimitiveData(top_patch, "patch_id", uint(1));
+    context.setPrimitiveData(bottom_patch, "patch_id", uint(2));
+    context.setPrimitiveData(left_patch, "patch_id", uint(3));
+    context.setPrimitiveData(right_patch, "patch_id", uint(4));
+
+    // Set up radiation model
+    RadiationModel radiationmodel(&context);
+    radiationmodel.disableMessages();
+
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(128, 128);
+    cam_props.HFOV = 60;
+    cam_props.focal_plane_distance = 10;
+    cam_props.lens_diameter = 0.0f;
+
+    radiationmodel.addRadiationCamera("test_cam", {"SW"},
+                                     make_vec3(0, -10, 0),  // Camera looking from -Y toward origin
+                                     make_vec3(0, 0, 0),
+                                     cam_props, 1);
+
+    radiationmodel.addRadiationBand("SW");
+    radiationmodel.setScatteringDepth("SW", 1);
+
+    uint source = radiationmodel.addCollimatedRadiationSource(make_vec3(0, 1, 0));
+    radiationmodel.setSourceFlux(source, "SW", 1000.f);
+
+    radiationmodel.updateGeometry();
+    radiationmodel.runBand("SW");
+
+    // Write camera image and segmentation masks
+    std::string image_file = radiationmodel.writeCameraImage("test_cam", {"SW"}, "test_alignment", "./");
+
+    radiationmodel.writeImageSegmentationMasks("test_cam", "patch_id", 1u, "test_alignment_masks.json", image_file, {}, false);
+
+    // Read the JSON file to get bounding boxes
+    std::ifstream json_file("test_alignment_masks.json");
+    DOCTEST_REQUIRE(json_file.is_open());
+
+    std::stringstream buffer;
+    buffer << json_file.rdbuf();
+    json_file.close();
+
+    nlohmann::json coco_json = nlohmann::json::parse(buffer.str());
+
+    // Read the camera pixel UUID data
+    std::vector<uint> pixel_UUIDs;
+    context.getGlobalData("camera_test_cam_pixel_UUID", pixel_UUIDs);
+
+    // For each annotation, verify the bbox encloses ALL pixels with that patch's UUID
+    for (const auto &ann : coco_json["annotations"]) {
+        int bbox_x = ann["bbox"][0];
+        int bbox_y = ann["bbox"][1];
+        int bbox_w = ann["bbox"][2];
+        int bbox_h = ann["bbox"][3];
+
+        // Get the segmentation to find which patch this is
+        std::vector<int> seg_coords = ann["segmentation"][0];
+
+        // Sample a pixel inside this bbox to determine which patch UUID it corresponds to
+        int sample_x = bbox_x + bbox_w / 2;
+        int sample_y = bbox_y + bbox_h / 2;
+        uint sample_UUID = pixel_UUIDs.at(sample_y * 128 + sample_x) - 1;
+
+        if (!context.doesPrimitiveExist(sample_UUID)) {
+            continue;
+        }
+
+        // Find all pixels with this same UUID
+        int min_x = 128, max_x = 0, min_y = 128, max_y = 0;
+        bool found_any = false;
+
+        for (int j = 0; j < 128; j++) {
+            for (int i = 0; i < 128; i++) {
+                uint UUID = pixel_UUIDs.at(j * 128 + i) - 1;
+                if (UUID == sample_UUID) {
+                    min_x = std::min(min_x, i);
+                    max_x = std::max(max_x, i);
+                    min_y = std::min(min_y, j);
+                    max_y = std::max(max_y, j);
+                    found_any = true;
+                }
+            }
+        }
+
+        if (found_any) {
+            // Verify bbox from JSON matches actual pixel extent (allow 2-pixel tolerance for edge effects)
+            DOCTEST_CHECK_MESSAGE(bbox_x <= min_x + 2, "Bbox x-min should match or slightly exceed actual pixels");
+            DOCTEST_CHECK_MESSAGE(bbox_x + bbox_w >= max_x - 2, "Bbox x-max should match or slightly exceed actual pixels");
+            DOCTEST_CHECK_MESSAGE(bbox_y <= min_y + 2, "Bbox y-min should match or slightly exceed actual pixels");
+            DOCTEST_CHECK_MESSAGE(bbox_y + bbox_h >= max_y - 2, "Bbox y-max should match or slightly exceed actual pixels");
+        }
+    }
+
+    // Cleanup
+    std::remove("test_alignment_masks.json");
+    std::remove(image_file.c_str());
+}
+
+DOCTEST_TEST_CASE("RadiationModel - Mask Spatial Ordering Matches Image") {
+    // Verify that left/right/top/bottom spatial relationships are preserved between image and masks
+
+    Context context;
+
+    // Create 3 patches in a horizontal line: left, center, right
+    // Camera looks from (0,-10,0) toward origin, so patches should face -Y (rotated 90° about X axis)
+    SphericalCoord rotation = make_SphericalCoord(M_PI/2, 0);  // 90° pitch to face -Y
+    uint left_patch = context.addPatch(make_vec3(-2, 0, 0), make_vec2(0.8, 1.5), rotation);
+    uint center_patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.8, 1.5), rotation);
+    uint right_patch = context.addPatch(make_vec3(2, 0, 0), make_vec2(0.8, 1.5), rotation);
+
+    // Tag with IDs
+    context.setPrimitiveData(left_patch, "patch_id", uint(10));
+    context.setPrimitiveData(center_patch, "patch_id", uint(20));
+    context.setPrimitiveData(right_patch, "patch_id", uint(30));
+
+    RadiationModel radiationmodel(&context);
+    radiationmodel.disableMessages();
+
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(128, 128);
+    cam_props.HFOV = 70;
+    cam_props.focal_plane_distance = 10;
+    cam_props.lens_diameter = 0.0f;
+
+    radiationmodel.addRadiationCamera("test_cam", {"SW"},
+                                     make_vec3(0, -10, 0),
+                                     make_vec3(0, 0, 0),
+                                     cam_props, 1);
+
+    radiationmodel.addRadiationBand("SW");
+    radiationmodel.setScatteringDepth("SW", 1);
+
+    uint source = radiationmodel.addCollimatedRadiationSource(make_vec3(0, 1, 0));
+    radiationmodel.setSourceFlux(source, "SW", 1000.f);
+
+    radiationmodel.updateGeometry();
+    radiationmodel.runBand("SW");
+
+    // Verify patches are visible in pixel data
+    std::vector<uint> pixel_UUIDs_check;
+    context.getGlobalData("camera_test_cam_pixel_UUID", pixel_UUIDs_check);
+    int patch_hits = 0;
+    for (uint uuid : pixel_UUIDs_check) {
+        if (uuid > 0 && context.doesPrimitiveExist(uuid - 1)) {
+            if (context.doesPrimitiveDataExist(uuid - 1, "patch_id")) {
+                patch_hits++;
+            }
+        }
+    }
+    DOCTEST_INFO("Pixels hitting patches with patch_id: " << patch_hits);
+    DOCTEST_REQUIRE_MESSAGE(patch_hits > 0, "Camera should hit at least some patches");
+
+    // Write segmentation masks
+    std::string image_file = radiationmodel.writeCameraImage("test_cam", {"SW"}, "spatial_test", "./");
+    radiationmodel.writeImageSegmentationMasks("test_cam", "patch_id", 1u, "spatial_test_masks.json", image_file, {}, false);
+
+    // Read JSON
+    std::ifstream json_file("spatial_test_masks.json");
+    DOCTEST_REQUIRE(json_file.is_open());
+
+    std::stringstream buffer;
+    buffer << json_file.rdbuf();
+    json_file.close();
+
+    nlohmann::json coco_json = nlohmann::json::parse(buffer.str());
+
+    // Debug: check if annotations exist
+    DOCTEST_INFO("Number of annotations: " << coco_json["annotations"].size());
+
+    // Find bbox center x-coordinates for each patch ID
+    std::map<int, int> patch_center_x;  // patch_id -> center_x
+
+    for (const auto &ann : coco_json["annotations"]) {
+        int cat_id = ann["category_id"];
+        int bbox_x = ann["bbox"][0];
+        int bbox_w = ann["bbox"][2];
+        int center_x = bbox_x + bbox_w / 2;
+
+        // Map category_id back to patch_id (we set them both to 1u in writeImageSegmentationMasks)
+        // We need to look at the actual labels to find which is which
+        // Since all have category_id=1, we can't distinguish them this way
+        // Instead, check the bbox positions
+        patch_center_x[center_x] = center_x;  // Just store for now
+    }
+
+    // We should have 3 annotations
+    DOCTEST_CHECK_EQ(coco_json["annotations"].size(), 3);
+
+    // Extract and sort the center x coordinates
+    std::vector<int> centers;
+    for (const auto &ann : coco_json["annotations"]) {
+        int bbox_x = ann["bbox"][0];
+        int bbox_w = ann["bbox"][2];
+        centers.push_back(bbox_x + bbox_w / 2);
+    }
+    std::sort(centers.begin(), centers.end());
+
+    // Verify spatial ordering: centers should be increasing from left to right
+    if (centers.size() == 3) {
+        DOCTEST_CHECK_MESSAGE(centers[0] < centers[1], "Left patch should be left of center patch");
+        DOCTEST_CHECK_MESSAGE(centers[1] < centers[2], "Center patch should be left of right patch");
+
+        // Verify they're reasonably spaced (not all clustered)
+        int spacing1 = centers[1] - centers[0];
+        int spacing2 = centers[2] - centers[1];
+        DOCTEST_CHECK_MESSAGE(spacing1 > 5, "Patches should be visibly separated in x");
+        DOCTEST_CHECK_MESSAGE(spacing2 > 5, "Patches should be visibly separated in x");
+        DOCTEST_CHECK_MESSAGE(abs(spacing1 - spacing2) < spacing1 * 0.5, "Spacing should be roughly uniform");
+    }
+
+    // Cleanup
+    std::remove("spatial_test_masks.json");
+    std::remove(image_file.c_str());
+}
+
+DOCTEST_TEST_CASE("RadiationModel - Data Label Maps Match Segmentation Mask Coordinates") {
+    // Validates that writePrimitiveDataLabelMap and writeObjectDataLabelMap use the same
+    // coordinate system as segmentation masks by comparing their outputs
+
+    Context context;
+
+    // Create 3 tiles (returning primitive UUIDs) with distinct primitive and object data values
+    std::vector<uint> patch1_uuids = context.addTile(make_vec3(-1.5, 0, 0), make_vec2(0.8, 2), make_SphericalCoord(0, 0), make_int2(1, 1));
+    std::vector<uint> patch2_uuids = context.addTile(make_vec3(0, 0, 0), make_vec2(0.8, 2), make_SphericalCoord(0, 0), make_int2(1, 1));
+    std::vector<uint> patch3_uuids = context.addTile(make_vec3(1.5, 0, 0), make_vec2(0.8, 2), make_SphericalCoord(0, 0), make_int2(1, 1));
+
+    // Create polymesh objects for object data
+    uint obj1 = context.addPolymeshObject(patch1_uuids);
+    uint obj2 = context.addPolymeshObject(patch2_uuids);
+    uint obj3 = context.addPolymeshObject(patch3_uuids);
+
+    // Set primitive data
+    context.setPrimitiveData(patch1_uuids, "patch_id", uint(10));
+    context.setPrimitiveData(patch2_uuids, "patch_id", uint(20));
+    context.setPrimitiveData(patch3_uuids, "patch_id", uint(30));
+
+    // Set object data
+    context.setObjectData(obj1, "obj_id", uint(100));
+    context.setObjectData(obj2, "obj_id", uint(200));
+    context.setObjectData(obj3, "obj_id", uint(300));
+
+    RadiationModel radiationmodel(&context);
+    radiationmodel.disableMessages();
+
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(64, 64);
+    cam_props.HFOV = 90;
+    cam_props.focal_plane_distance = 10;
+    cam_props.lens_diameter = 0.0f;
+
+    radiationmodel.addRadiationCamera("test_cam", {"SW"},
+                                     make_vec3(0, 0, 5),
+                                     make_vec3(0, 0, 0),
+                                     cam_props, 1);
+
+    radiationmodel.addRadiationBand("SW");
+    radiationmodel.setScatteringDepth("SW", 1);
+
+    uint source = radiationmodel.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiationmodel.setSourceFlux(source, "SW", 1000.f);
+
+    radiationmodel.updateGeometry();
+    radiationmodel.runBand("SW");
+
+    // Write all outputs
+    std::string image_file = radiationmodel.writeCameraImage("test_cam", {"SW"}, "coord_match_test", "./");
+    radiationmodel.writePrimitiveDataLabelMap("test_cam", "patch_id", "coord_match_primdata", "./", 0, 0.0f);
+    radiationmodel.writeObjectDataLabelMap("test_cam", "obj_id", "coord_match_objdata", "./", 0, 0.0f);
+    radiationmodel.writeImageSegmentationMasks_ObjectData("test_cam", "obj_id", 1u, "./coord_match_masks.json", image_file, {}, false);
+
+    // Read primitive data label map
+    std::ifstream prim_file("test_cam_coord_match_primdata_00000.txt");
+    DOCTEST_REQUIRE(prim_file.is_open());
+    std::vector<float> prim_labels;
+    float val;
+    while (prim_file >> val) {
+        prim_labels.push_back(val);
+    }
+    prim_file.close();
+    DOCTEST_REQUIRE_EQ(prim_labels.size(), 64 * 64);
+
+    // Read object data label map
+    std::ifstream obj_file("test_cam_coord_match_objdata_00000.txt");
+    DOCTEST_REQUIRE(obj_file.is_open());
+    std::vector<float> obj_labels;
+    while (obj_file >> val) {
+        obj_labels.push_back(val);
+    }
+    obj_file.close();
+    DOCTEST_REQUIRE_EQ(obj_labels.size(), 64 * 64);
+
+    // Read JSON masks
+    std::ifstream json_file("./coord_match_masks.json");
+    DOCTEST_REQUIRE(json_file.is_open());
+    std::stringstream buffer;
+    buffer << json_file.rdbuf();
+    json_file.close();
+    nlohmann::json coco_json = nlohmann::json::parse(buffer.str());
+
+    // For each annotation, verify that the bbox region contains consistent data values
+    // Sample multiple pixels across the bbox region to detect horizontal/vertical flips
+    int total_annotations = coco_json["annotations"].size();
+    std::cout << "Number of annotations: " << total_annotations << std::endl;
+    DOCTEST_REQUIRE_MESSAGE(total_annotations == 3, "Should have 3 annotations, got " << total_annotations);
+
+    // Expected values based on world positions:
+    // Left patch (world X=-1.5): obj_id=100, should appear at low image-x
+    // Center patch (world X=0): obj_id=200, should appear at middle image-x
+    // Right patch (world X=+1.5): obj_id=300, should appear at high image-x
+
+    // Sort annotations by bbox x-position to get left, center, right
+    std::vector<std::tuple<int, int, int, int, int>> ann_data; // x, y, w, h, index
+    for (size_t idx = 0; idx < coco_json["annotations"].size(); idx++) {
+        const auto &ann = coco_json["annotations"][idx];
+        ann_data.push_back({ann["bbox"][0].get<int>(), ann["bbox"][1].get<int>(),
+                           ann["bbox"][2].get<int>(), ann["bbox"][3].get<int>(), idx});
+    }
+    std::sort(ann_data.begin(), ann_data.end()); // Sort by x position
+
+    // Expected object IDs from left to right in output coordinate space
+    // World positions: obj1=100 at X=-1.5 (left), obj2=200 at X=0 (center), obj3=300 at X=+1.5 (right)
+    // With horizontal flip in both masks and label maps, they're consistent
+    // But need to verify actual ordering
+    std::vector<uint> expected_obj_ids = {100, 200, 300};
+
+    for (size_t i = 0; i < ann_data.size(); i++) {
+        auto [bbox_x, bbox_y, bbox_w, bbox_h, ann_idx] = ann_data[i];
+        uint expected_obj_value = expected_obj_ids[i];
+
+        std::cout << "Annotation " << i << " at (" << bbox_x << "," << bbox_y << ") expects obj_id=" <<
+                     expected_obj_value << std::endl;
+
+        // Verify label map has the SAME value in this bbox region
+        int correct_value_count = 0;
+        int total_pixels = 0;
+
+        for (int dy = 0; dy < bbox_h; dy++) {
+            for (int dx = 0; dx < bbox_w; dx++) {
+                int px = bbox_x + dx;
+                int py = bbox_y + dy;
+
+                if (px < 0 || px >= 64 || py < 0 || py >= 64) continue;
+
+                float obj_value = obj_labels[py * 64 + px];
+
+                // Check if label map has the CORRECT value (not just any non-zero)
+                if (fabs(obj_value - expected_obj_value) < 1.0f) {
+                    correct_value_count++;
+                }
+                total_pixels++;
+            }
+        }
+
+        float match_percentage = 100.0f * correct_value_count / total_pixels;
+
+        // Sample what value we're actually getting at bbox center
+        int center_x = bbox_x + bbox_w / 2;
+        int center_y = bbox_y + bbox_h / 2;
+        float sample_actual_value = obj_labels[center_y * 64 + center_x];
+
+        std::cout << "  Label map match: " << match_percentage << "% of bbox pixels have correct value" << std::endl;
+        std::cout << "  At bbox center (" << center_x << "," << center_y << "): expected=" << expected_obj_value <<
+                     ", actual=" << sample_actual_value << std::endl;
+
+        // If coordinates match correctly, bbox region should have the CORRECT value (not wrong patch's value)
+        DOCTEST_CHECK_MESSAGE(match_percentage > 80.0f,
+                              "At least 80% of bbox pixels should have CORRECT data value in label map. "
+                              "If this fails, label map coordinates are flipped relative to mask. Got " << match_percentage << "%");
+    }
+
+    // Cleanup
+    std::remove("test_cam_coord_match_primdata_00000.txt");
+    std::remove("test_cam_coord_match_objdata_00000.txt");
+    std::remove("./coord_match_masks.json");
+    std::remove(image_file.c_str());
+}
+

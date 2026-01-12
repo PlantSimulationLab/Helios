@@ -1,6 +1,6 @@
 /** \file "LeafOptics.cpp" Implementation of PROSPECT-PRO leaf optical model.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -707,7 +707,7 @@ LeafOpticsProperties LeafOptics::computePropertiesFromNitrogen(float N_area_gN_m
 std::map<uint, std::vector<uint>> LeafOptics::groupPrimitivesByObject(const std::vector<uint> &UUIDs) {
     std::map<uint, std::vector<uint>> object_groups;
 
-    for (uint UUID : UUIDs) {
+    for (uint UUID: UUIDs) {
         if (!context->doesPrimitiveExist(UUID)) {
             if (message_flag) {
                 std::cerr << "WARNING (LeafOptics::groupPrimitivesByObject): Primitive UUID " << UUID << " does not exist, skipping." << std::endl;
@@ -762,7 +762,7 @@ void LeafOptics::createAdaptiveBins(const std::vector<float> &nitrogen_values) {
 
         // Only add if not a duplicate (within tolerance)
         bool is_duplicate = false;
-        for (float existing : bin_centers) {
+        for (float existing: bin_centers) {
             if (std::abs(center - existing) < 0.001f) {
                 is_duplicate = true;
                 break;
@@ -851,6 +851,32 @@ void LeafOptics::assignSpectrumToPrimitives(const std::vector<uint> &UUIDs, uint
 
     context->setPrimitiveData(UUIDs, "reflectivity_spectrum", refl_label);
     context->setPrimitiveData(UUIDs, "transmissivity_spectrum", trans_label);
+
+    // Write optional primitive data if any are enabled
+    if (!output_prim_data.empty()) {
+        // Compute properties from the bin's nitrogen center value
+        LeafOpticsProperties props = computePropertiesFromNitrogen(nitrogen_bins[bin_index].N_center, nitrogen_params);
+
+        for (const auto &data: output_prim_data) {
+            if (data == "chlorophyll") {
+                context->setPrimitiveData(UUIDs, "chlorophyll", props.chlorophyllcontent);
+            } else if (data == "carotenoid") {
+                context->setPrimitiveData(UUIDs, "carotenoid", props.carotenoidcontent);
+            } else if (data == "anthocyanin") {
+                context->setPrimitiveData(UUIDs, "anthocyanin", props.anthocyancontent);
+            } else if (data == "brown" && props.brownpigments > 0.0) {
+                context->setPrimitiveData(UUIDs, "brown", props.brownpigments);
+            } else if (data == "water") {
+                context->setPrimitiveData(UUIDs, "water", props.watermass);
+            } else if (data == "drymass" && props.drymass > 0.0) {
+                context->setPrimitiveData(UUIDs, "drymass", props.drymass);
+            } else if (data == "protein" && props.drymass == 0.0) {
+                context->setPrimitiveData(UUIDs, "protein", props.protein);
+            } else if (data == "cellulose" && props.drymass == 0.0) {
+                context->setPrimitiveData(UUIDs, "cellulose", props.carbonconstituents);
+            }
+        }
+    }
 }
 
 void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_Nauto &params) {
@@ -875,13 +901,12 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_
     std::vector<float> nitrogen_values;
     std::map<uint, float> object_nitrogen;
 
-    for (const auto &pair : object_groups) {
+    for (const auto &pair: object_groups) {
         uint objID = pair.first;
 
         // Check if nitrogen data exists on this object
         if (!context->doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
-            helios_runtime_error("ERROR (LeafOptics::run): Object " + std::to_string(objID) +
-                " does not have 'leaf_nitrogen_gN_m2' data. Enable PlantArchitecture nitrogen model first.");
+            helios_runtime_error("ERROR (LeafOptics::run): Object " + std::to_string(objID) + " does not have 'leaf_nitrogen_gN_m2' data. Enable PlantArchitecture nitrogen model first.");
         }
 
         float N_area;
@@ -898,7 +923,7 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_
         createAdaptiveBins(nitrogen_values);
 
         // Assign each object to nearest bin
-        for (const auto &pair : object_groups) {
+        for (const auto &pair: object_groups) {
             uint objID = pair.first;
             const std::vector<uint> &obj_UUIDs = pair.second;
             float N_area = object_nitrogen[objID];
@@ -914,7 +939,7 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_
             object_assignments[objID] = assignment;
 
             // Track primitive to object mapping
-            for (uint UUID : obj_UUIDs) {
+            for (uint UUID: obj_UUIDs) {
                 primitive_to_object[UUID] = objID;
             }
         }
@@ -922,8 +947,7 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_
         nitrogen_mode_active = true;
 
         if (message_flag) {
-            std::cout << "LeafOptics: Nitrogen mode initialized with " << object_assignments.size()
-                      << " leaf objects assigned to " << nitrogen_bins.size() << " spectrum bins." << std::endl;
+            std::cout << "LeafOptics: Nitrogen mode initialized with " << object_assignments.size() << " leaf objects assigned to " << nitrogen_bins.size() << " spectrum bins." << std::endl;
         }
 
     } else {
@@ -931,35 +955,35 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_
 
         // Build set of current object IDs
         std::set<uint> current_objects;
-        for (const auto &pair : object_groups) {
+        for (const auto &pair: object_groups) {
             current_objects.insert(pair.first);
         }
 
         // Build set of previously tracked objects
         std::set<uint> tracked_objects;
-        for (const auto &pair : object_assignments) {
+        for (const auto &pair: object_assignments) {
             tracked_objects.insert(pair.first);
         }
 
         // Find removed objects (tracked but not in current)
         std::vector<uint> removed_objects;
-        for (uint objID : tracked_objects) {
+        for (uint objID: tracked_objects) {
             if (current_objects.find(objID) == current_objects.end()) {
                 removed_objects.push_back(objID);
             }
         }
 
         // Remove tracking for removed objects
-        for (uint objID : removed_objects) {
+        for (uint objID: removed_objects) {
             const ObjectAssignment &assignment = object_assignments[objID];
-            for (uint UUID : assignment.primitive_UUIDs) {
+            for (uint UUID: assignment.primitive_UUIDs) {
                 primitive_to_object.erase(UUID);
             }
             object_assignments.erase(objID);
         }
 
         // Process current objects
-        for (const auto &pair : object_groups) {
+        for (const auto &pair: object_groups) {
             uint objID = pair.first;
             const std::vector<uint> &obj_UUIDs = pair.second;
             float N_area = object_nitrogen[objID];
@@ -975,7 +999,7 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_
                 assignment.primitive_UUIDs = obj_UUIDs;
                 object_assignments[objID] = assignment;
 
-                for (uint UUID : obj_UUIDs) {
+                for (uint UUID: obj_UUIDs) {
                     primitive_to_object[UUID] = objID;
                 }
 
@@ -985,7 +1009,7 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_
 
                 // Update primitive list (in case it changed)
                 assignment.primitive_UUIDs = obj_UUIDs;
-                for (uint UUID : obj_UUIDs) {
+                for (uint UUID: obj_UUIDs) {
                     primitive_to_object[UUID] = objID;
                 }
 
@@ -1006,18 +1030,17 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_
 void LeafOptics::updateNitrogenBasedSpectra() {
     if (!nitrogen_mode_active) {
         helios_runtime_error("ERROR (LeafOptics::updateNitrogenBasedSpectra): Nitrogen mode is not active. "
-            "Call run() with LeafOpticsProperties_Nauto first to initialize nitrogen mode.");
+                             "Call run() with LeafOpticsProperties_Nauto first to initialize nitrogen mode.");
     }
 
-    for (auto &pair : object_assignments) {
+    for (auto &pair: object_assignments) {
         uint objID = pair.first;
         ObjectAssignment &assignment = pair.second;
 
         // Read current nitrogen value
         if (!context->doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
             if (message_flag) {
-                std::cerr << "WARNING (LeafOptics::updateNitrogenBasedSpectra): Object " << objID
-                          << " no longer has 'leaf_nitrogen_gN_m2' data, skipping." << std::endl;
+                std::cerr << "WARNING (LeafOptics::updateNitrogenBasedSpectra): Object " << objID << " no longer has 'leaf_nitrogen_gN_m2' data, skipping." << std::endl;
             }
             continue;
         }

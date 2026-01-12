@@ -1,6 +1,6 @@
 /** \file "RadiationModel.cpp" Primary source file for radiation transport model.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -3794,7 +3794,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     }
 
     // Check that all the bands passed to the runBand() method exist
-    for (const std::string &band: band_labels) {
+    for (const std::string &band: label) {
         if (!doesBandExist(band)) {
             helios_runtime_error("ERROR (RadiationModel::runBand): Cannot run band " + band + " because it is not a valid band. Use addRadiationBand() function to add the band.");
         }
@@ -4438,14 +4438,8 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             const float solar_cos_angle = 0.999989f;
             RT_CHECK_ERROR(rtVariableSet1f(solar_disk_cos_angle_RTvariable, solar_cos_angle));
 
-            if (message_flag) {
-                std::cout << "Solar disk rendering enabled: sun_direction = (" << sun_dir.x << ", " << sun_dir.y << ", " << sun_dir.z << ")" << std::endl;
-                std::cout << "Solar disk radiances (W/m²/sr): ";
-                for (size_t b = 0; b < solar_radiances.size(); b++) {
-                    std::cout << band_labels.at(b) << "=" << solar_radiances[b] << " ";
-                }
-                std::cout << std::endl;
-            }
+            // Solar disk rendering configured
+            (void)sun_dir;  // Suppress unused variable warning
         } else {
             // No sun source - disable solar disk rendering
             RT_CHECK_ERROR(rtVariableSet1f(solar_disk_cos_angle_RTvariable, 0.0f));

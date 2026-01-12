@@ -190,18 +190,22 @@ DOCTEST_TEST_CASE("PhotosynthesisModel Optional Output Primitive Data") {
     DOCTEST_CHECK_NOTHROW(photomodel.optionalOutputPrimitiveData("Ci"));
     DOCTEST_CHECK_NOTHROW(photomodel.optionalOutputPrimitiveData("limitation_state"));
     DOCTEST_CHECK_NOTHROW(photomodel.optionalOutputPrimitiveData("Gamma_CO2"));
+    DOCTEST_CHECK_NOTHROW(photomodel.optionalOutputPrimitiveData("electron_transport_ratio"));
 
     DOCTEST_CHECK_NOTHROW(context_test.setPrimitiveData(UUID, "radiation_flux_PAR", 400.0f));
     DOCTEST_CHECK_NOTHROW(photomodel.run());
 
-    float Ci, Gamma;
+    float Ci, Gamma, J_over_Jmax;
     int limitation_state;
     DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "Ci", Ci));
     DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "limitation_state", limitation_state));
     DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "Gamma_CO2", Gamma));
+    DOCTEST_CHECK_NOTHROW(context_test.getPrimitiveData(UUID, "electron_transport_ratio", J_over_Jmax));
 
     DOCTEST_CHECK(Ci != 0.0f);
     DOCTEST_CHECK(Gamma != 0.0f);
+    DOCTEST_CHECK(J_over_Jmax >= 0.0f);
+    DOCTEST_CHECK(J_over_Jmax <= 1.0f);
 }
 
 DOCTEST_TEST_CASE("PhotosynthesisModel Print Default Value Report") {

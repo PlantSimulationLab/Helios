@@ -16,6 +16,7 @@ usage() {
     echo "  --tests <list>   Run specified tests (comma-separated, e.g., --tests \"radiation,lidar\")"
     echo "  --testcase <case> Pass specific test case to doctest (e.g., --testcase \"My Test Case\")"
     echo "  --doctestargs <args> Pass arguments directly to doctest (e.g., --doctestargs \"--help --list-test-cases\")"
+    echo "  --list-tests         Build test executables and list available test cases without running them"
     echo "  --project-dir <dir>  Use specified directory for project (persistent, not cleaned up)"
     echo "  --disableopenmp      Disable OpenMP by passing -DENABLE_OPENMP=OFF to cmake"
     echo
@@ -171,6 +172,10 @@ while [ $# -gt 0 ]; do
     fi
     PROJECT_DIR="$2"
     shift
+    ;;
+
+  --list-tests)
+    LIST_TESTS="ON"
     ;;
 
   --disableopenmp)
@@ -447,7 +452,31 @@ else
     done
     
     echo "Verified ${#TEST_EXECUTABLES[@]} test executable(s): ${TEST_EXECUTABLES[*]}"
-    
+
+    # If --list-tests is specified, list test cases and exit
+    if [ "$LIST_TESTS" == "ON" ]; then
+      echo ""
+      for test_exe in "${TEST_EXECUTABLES[@]}"; do
+        echo -e "\x1B[32m=== Test cases in $test_exe ===\x1B[39m"
+        if [[ "${OSTYPE}" == "msys"* ]]; then
+          "./${test_exe}.exe" --list-test-cases
+        else
+          "./${test_exe}" --list-test-cases
+        fi
+        echo ""
+      done
+
+      cd "$TEMP_BASE" || cleanup
+
+      # Clean up temp directory if not persistent
+      if [ -d "$TEMP_DIR" ] && [ "$PERSISTENT_PROJECT" != "ON" ]; then
+        chmod -R 755 "$TEMP_DIR" 2>/dev/null || true
+        rm -rf "$TEMP_DIR"
+      fi
+
+      exit 0
+    fi
+
     # Run each test executable
     for test_exe in "${TEST_EXECUTABLES[@]}"; do
       
@@ -466,7 +495,23 @@ else
         # Use eval to properly split DOCTEST_ARGS into array elements
         eval "TEST_ARGS_ARRAY+=($DOCTEST_ARGS)"
       fi
-      
+
+      # Validate test case filter matches at least one test before running
+      if [ -n "$TESTCASE_FILTER" ]; then
+        if [[ "${OSTYPE}" == "msys"* ]]; then
+          MATCHED_CASES=$("./${test_exe}.exe" --list-test-cases --test-case="$TESTCASE_FILTER" 2>/dev/null)
+        else
+          MATCHED_CASES=$("./${test_exe}" --list-test-cases --test-case="$TESTCASE_FILTER" 2>/dev/null)
+        fi
+        # Check if doctest reports 0 matching test cases
+        if echo "$MATCHED_CASES" | grep -q "current filters: 0"; then
+          echo -e "\x1B[31mError: No test cases match filter '$TESTCASE_FILTER' in $test_exe\x1B[39m"
+          echo "Use --doctestargs \"--list-test-cases\" to see available test cases"
+          ERROR_COUNT=$((ERROR_COUNT + 1))
+          continue
+        fi
+      fi
+
       if [ ${#TEST_ARGS_ARRAY[@]} -gt 0 ]; then
         echo -ne "Running test $test_exe with args: ${TEST_ARGS_ARRAY[*]}..."
       else

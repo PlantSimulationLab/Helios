@@ -1,7 +1,7 @@
 /**
  * \file "global.cpp" global declarations.
  *
- * Copyright (C) 2016-2025 Brian Bailey
+ * Copyright (C) 2016-2026 Brian Bailey
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -754,7 +754,17 @@ float helios::atan2_2pi(float y, float x) {
 
 SphericalCoord helios::cart2sphere(const vec3 &Cartesian) {
     float radius = sqrtf(Cartesian.x * Cartesian.x + Cartesian.y * Cartesian.y + Cartesian.z * Cartesian.z);
-    return {radius, asin_safe(Cartesian.z / radius), atan2_2pi(Cartesian.x, Cartesian.y)};
+
+    // Add small epsilon to prevent singularity when vector is exactly vertical (x=0, y=0)
+    // This prevents gimbal lock for cameras pointing straight up/down
+    // Use positive y offset so atan2(0, eps) gives azimuth = 0 (pointing in +y direction)
+    float x_safe = Cartesian.x;
+    float y_safe = Cartesian.y;
+    if (fabsf(x_safe) < 1e-7f && fabsf(y_safe) < 1e-7f) {
+        y_safe = 1e-7f; // Positive offset gives azimuth = 0 (+y direction)
+    }
+
+    return {radius, asin_safe(Cartesian.z / radius), atan2_2pi(x_safe, y_safe)};
 }
 
 vec3 helios::sphere2cart(const SphericalCoord &Spherical) {
@@ -1491,127 +1501,131 @@ std::vector<std::vector<bool>> helios::readPNGAlpha(const std::string &filename)
         helios_runtime_error("ERROR (readPNGAlpha): File " + fn + " has no extension.");
     }
     std::string ext = fn.substr(dot + 1);
-    if (ext != "png" && ext != "PNG") {
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return std::tolower(c); });
+    if (ext != "png") {
         helios_runtime_error("ERROR (readPNGAlpha): File " + fn + " is not PNG format.");
     }
 
-    int y;
-
     std::vector<std::vector<bool>> mask;
+    png_structp png_ptr = nullptr;
+    png_infop info_ptr = nullptr;
 
-    png_structp png_ptr;
-    png_infop info_ptr;
-
-    char header[8]; // 8 is the maximum size that can be checked
-
-    /* open file and test for it being a png */
-    FILE *fp = fopen(filename.c_str(), "rb");
-    if (!fp) {
-        helios_runtime_error("ERROR (readPNGAlpha): File " + std::string(filename) + " could not be opened for reading.");
-    }
-    size_t head = fread(header, 1, 8, fp);
-    // if (png_sig_cmp(header, 0, 8)){
-    //   std::cerr << "ERROR (read_png_alpha): File " << filename << " is not recognized as a PNG file." << std::endl;
-    //   exit(EXIT_FAILURE);
-    // }
-
-    /* initialize stuff */
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
-
-    if (!png_ptr) {
-        helios_runtime_error("ERROR (readPNGAlpha): png_create_read_struct failed.");
-    }
-
-    info_ptr = png_create_info_struct(png_ptr);
-    if (!info_ptr) {
-        helios_runtime_error("ERROR (readPNGAlpha): png_create_info_struct failed.");
-    }
-
-    if (setjmp(png_jmpbuf(png_ptr))) {
-        helios_runtime_error("ERROR (readPNGAlpha): init_io failed.");
-    }
-
-    png_init_io(png_ptr, fp);
-    png_set_sig_bytes(png_ptr, 8);
-
-    png_read_info(png_ptr, info_ptr);
-
-    uint width = png_get_image_width(png_ptr, info_ptr);
-    uint height = png_get_image_height(png_ptr, info_ptr);
-    png_byte color_type = png_get_color_type(png_ptr, info_ptr);
-    png_byte bit_depth = png_get_bit_depth(png_ptr, info_ptr);
-    bool has_alpha = (color_type & PNG_COLOR_MASK_ALPHA) != 0 || png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) != 0;
-
-    mask.resize(height);
-    for (uint i = 0; i < height; i++) {
-        mask.at(i).resize(width);
-    }
-
-    if (!has_alpha) {
-        for (uint j = 0; j < height; ++j) {
-            std::fill(mask.at(j).begin(), mask.at(j).end(), true);
+    try {
+        // RAII for FILE*
+        auto fileDeleter = [](FILE *f) {
+            if (f)
+                fclose(f);
+        };
+        std::unique_ptr<FILE, decltype(fileDeleter)> fp(fopen(filename.c_str(), "rb"), fileDeleter);
+        if (!fp) {
+            throw std::runtime_error("File " + filename + " could not be opened for reading.");
         }
-        fclose(fp);
-        png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
-        return mask;
-    }
 
-    // Apply transformations to ensure we get RGBA format (4 bytes per pixel)
-    // These transformations must match the format assumed by the pixel access code below
-    if (bit_depth == 16) {
-        png_set_strip_16(png_ptr);
-    }
-    if (color_type == PNG_COLOR_TYPE_PALETTE) {
-        png_set_palette_to_rgb(png_ptr);
-    }
-    if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) {
-        png_set_expand_gray_1_2_4_to_8(png_ptr);
-    }
-    if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
-        png_set_tRNS_to_alpha(png_ptr);
-    }
-    // Only add filler if we don't already have alpha from tRNS
-    if (!png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) && (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE)) {
-        png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
-    }
-    if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
-        png_set_gray_to_rgb(png_ptr);
-    }
+        // Read & validate PNG signature
+        unsigned char header[8];
+        if (fread(header, 1, 8, fp.get()) != 8) {
+            throw std::runtime_error("Failed to read PNG header from " + filename);
+        }
+        if (png_sig_cmp(header, 0, 8)) {
+            throw std::runtime_error("File " + filename + " is not a valid PNG.");
+        }
 
-    png_set_interlace_handling(png_ptr);
-    png_read_update_info(png_ptr, info_ptr);
+        // Create libpng structs
+        png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+        if (!png_ptr) {
+            throw std::runtime_error("png_create_read_struct failed.");
+        }
 
-    /* read file */
-    if (setjmp(png_jmpbuf(png_ptr))) {
-        helios_runtime_error("ERROR (readPNGAlpha): read_image failed.");
-    }
+        info_ptr = png_create_info_struct(png_ptr);
+        if (!info_ptr) {
+            png_destroy_read_struct(&png_ptr, nullptr, nullptr);
+            throw std::runtime_error("png_create_info_struct failed.");
+        }
 
-    auto *row_pointers = (png_bytep *) malloc(sizeof(png_bytep) * height);
-    for (y = 0; y < height; y++)
-        row_pointers[y] = (png_byte *) malloc(png_get_rowbytes(png_ptr, info_ptr));
+        // libpng error handling
+        if (setjmp(png_jmpbuf(png_ptr))) {
+            throw std::runtime_error("Error during PNG initialization.");
+        }
 
-    png_read_image(png_ptr, row_pointers);
+        png_init_io(png_ptr, fp.get());
+        png_set_sig_bytes(png_ptr, 8);
+        png_read_info(png_ptr, info_ptr);
 
-    fclose(fp);
+        uint width = png_get_image_width(png_ptr, info_ptr);
+        uint height = png_get_image_height(png_ptr, info_ptr);
+        png_byte color_type = png_get_color_type(png_ptr, info_ptr);
+        png_byte bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+        bool has_alpha = (color_type & PNG_COLOR_MASK_ALPHA) != 0 || png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) != 0;
 
-    for (uint j = 0; j < height; j++) {
-        png_byte *row = row_pointers[j];
-        for (int i = 0; i < width; i++) {
-            png_byte *ba = &(row[i * 4]);
-            float alpha = ba[3];
-            if (alpha < 250) {
-                mask.at(j).at(i) = false;
-            } else {
-                mask.at(j).at(i) = true;
+        mask.resize(height);
+        for (uint i = 0; i < height; i++) {
+            mask.at(i).resize(width);
+        }
+
+        if (!has_alpha) {
+            for (uint j = 0; j < height; ++j) {
+                std::fill(mask.at(j).begin(), mask.at(j).end(), true);
+            }
+            png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+            return mask;
+        }
+
+        // Apply transformations to ensure we get RGBA format (4 bytes per pixel)
+        if (bit_depth == 16) {
+            png_set_strip_16(png_ptr);
+        }
+        if (color_type == PNG_COLOR_TYPE_PALETTE) {
+            png_set_palette_to_rgb(png_ptr);
+        }
+        if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) {
+            png_set_expand_gray_1_2_4_to_8(png_ptr);
+        }
+        if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
+            png_set_tRNS_to_alpha(png_ptr);
+        }
+        // Only add filler if we don't already have alpha from tRNS
+        if (!png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS) && (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE)) {
+            png_set_filler(png_ptr, 0xFF, PNG_FILLER_AFTER);
+        }
+        if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
+            png_set_gray_to_rgb(png_ptr);
+        }
+
+        png_set_interlace_handling(png_ptr);
+        png_read_update_info(png_ptr, info_ptr);
+
+        // Prepare row pointers using RAII containers
+        size_t rowbytes = png_get_rowbytes(png_ptr, info_ptr);
+        std::vector<std::vector<png_byte>> row_data(height, std::vector<png_byte>(rowbytes));
+        std::vector<png_bytep> row_pointers(height);
+        for (uint y = 0; y < height; ++y) {
+            row_pointers[y] = row_data[y].data();
+        }
+
+        // Read the image
+        if (setjmp(png_jmpbuf(png_ptr))) {
+            throw std::runtime_error("Error during PNG read.");
+        }
+        png_read_image(png_ptr, row_pointers.data());
+
+        // Extract alpha mask
+        for (uint j = 0; j < height; j++) {
+            png_byte *row = row_pointers[j];
+            for (uint i = 0; i < width; i++) {
+                png_byte *ba = &(row[i * 4]);
+                float alpha = ba[3];
+                mask.at(j).at(i) = (alpha >= 250);
             }
         }
+
+        png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+
+    } catch (const std::exception &e) {
+        if (png_ptr) {
+            png_destroy_read_struct(&png_ptr, info_ptr ? &info_ptr : nullptr, nullptr);
+        }
+        helios_runtime_error(std::string("ERROR (readPNGAlpha): ") + e.what());
     }
-
-    for (y = 0; y < height; y++)
-        png_free(png_ptr, row_pointers[y]);
-    png_free(png_ptr, row_pointers);
-    png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
-
 
     return mask;
 }

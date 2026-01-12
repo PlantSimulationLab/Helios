@@ -1,5 +1,35 @@
 # Changelog
 
+# [1.3.62] 2026-01-12
+
+## Core
+- Fixed `Tube::appendTubeSegment()` to correctly add triangles for new segments using proper vertex indices instead of hardcoded values.
+- Refactored `readPNGAlpha()` to use RAII patterns for proper resource management and added PNG signature validation.
+- Fixed `cart2sphere()` singularity when converting vectors pointing straight up or down (gimbal lock), which caused camera orientation issues.
+
+## Voxel Intersection
+- The voxel intersection plug-in has been deprecated. Use the collision detection instead.
+
+## Collision Detection
+- All functionality from the voxel intersection plug-in has been incorporated in the collision detection plug-in. This also includes an OpenMP fallback if no GPU is available.
+
+## Photosynthesis
+- Added `electron_transport_ratio` (J/Jmax) as optional output primitive data for computing fluorescence quantum yield.
+
+## Plant Architecture
+- Added `listShootTypeLabels()` method with three overloads to discover available shoot types: query the currently loaded model (no parameters), query any model by name (string parameter), or query a plant instance by ID (uint parameter).
+- Added `resolveTextureFile()` static method for simplified asset path resolution when loading textures and OBJ models.
+- Updates to pistachio and walnut model parameters.
+- Fixed nitrogen model to track all leaves in the nitrogen map even when no nitrogen is available in the pool.
+
+## Leaf Optics
+- Added optional primitive data output for biochemical properties (chlorophyll, carotenoid, etc.) when using nitrogen-based automatic mode.
+
+## Radiation
+- Fixed horizontal mirroring in camera output functions: `writePrimitiveDataLabelMap()`, `writeObjectDataLabelMap()`, `writeImageBoundingBoxes()`, `writeImageSegmentationMasks()`, `writeCameraImage()`, and related methods.
+- Refactored COCO annotation generation in `writeImageSegmentationMasks_ObjectData()` to ensure 1:1 correspondence between annotations and their attribute values.
+- Fixed `runBand()` to validate band labels from the input parameter rather than an internal variable, which caused incorrect error messages when invalid bands were passed.
+
 # [1.3.61] 2025-12-17
 
 ## Core

@@ -1,6 +1,6 @@
 /** \file "CollisionDetection.cpp" Source file for collision detection plugin
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -98,15 +98,15 @@ CollisionDetection::CollisionDetection(helios::Context *a_context) {
     tree_isolation_distance = 5.0f; // Default 5 meter isolation distance
     obstacle_spatial_grid_initialized = false;
 
-    // Issue warning if OpenMP not available
-    #ifndef _OPENMP
+// Issue warning if OpenMP not available
+#ifndef _OPENMP
     static bool openmp_warning_issued = false;
     if (printmessages && !openmp_warning_issued) {
         std::cout << "WARNING (CollisionDetection): OpenMP not available. Using serial CPU implementation. "
                   << "Performance will be significantly slower. Consider installing OpenMP for parallel execution." << std::endl;
         openmp_warning_issued = true;
     }
-    #endif
+#endif
 
     // Initialize grid parameters
     grid_center = make_vec3(0, 0, 0);
@@ -2128,23 +2128,30 @@ bool CollisionDetection::rayPrimitiveIntersection(const vec3 &origin, const vec3
 }
 
 void CollisionDetection::calculateGridIntersection(const vec3 &grid_center, const vec3 &grid_size, const helios::int3 &grid_divisions, const std::vector<uint> &UUIDs) {
-    if (printmessages) {
-        std::cerr << "WARNING: calculateGridIntersection not yet implemented" << std::endl;
+    // Use slicePrimitivesUsingGrid to populate grid_cells
+    std::vector<uint> uuids_to_process = UUIDs.empty() ? context->getAllUUIDs() : UUIDs;
+
+    // Filter to only non-voxel primitives
+    std::vector<uint> planar_primitives;
+    for (uint uuid: uuids_to_process) {
+        if (context->getPrimitiveType(uuid) != PRIMITIVE_TYPE_VOXEL) {
+            planar_primitives.push_back(uuid);
+        }
     }
+
+    // This will populate grid_cells
+    slicePrimitivesUsingGrid(planar_primitives, grid_center, grid_size, grid_divisions);
 }
 
 std::vector<std::vector<std::vector<std::vector<uint>>>> CollisionDetection::getGridCells() {
-    if (printmessages) {
-        std::cerr << "WARNING: getGridCells not yet implemented" << std::endl;
-    }
-    return {};
+    return grid_cells;
 }
 
 std::vector<uint> CollisionDetection::getGridIntersections(int i, int j, int k) {
-    if (printmessages) {
-        std::cerr << "WARNING: getGridIntersections not yet implemented" << std::endl;
+    if (i < 0 || i >= static_cast<int>(grid_cells.size()) || j < 0 || j >= static_cast<int>(grid_cells[i].size()) || k < 0 || k >= static_cast<int>(grid_cells[i][j].size())) {
+        helios_runtime_error("ERROR (CollisionDetection::getGridIntersections): Grid indices out of bounds");
     }
-    return {};
+    return grid_cells[i][j][k];
 }
 
 int CollisionDetection::optimizeLayout(const std::vector<uint> &UUIDs, float learning_rate, int max_iterations) {

@@ -1,14 +1,23 @@
-/**
- * \file PragueSkyModelInterface.h
- * \brief Helios wrapper interface for the Prague Sky Model
- *
- * This class provides a Helios-friendly interface to the Prague Sky Model,
- * handling coordinate system conversions, parameter mappings, and spectral
- * integration for camera bands.
- *
- * Copyright 2025 Helios
- * Integrates Prague Sky Model (Apache 2.0) by Charles University
- */
+/** \file "PragueSkyModelInterface.h" Helios wrapper interface for the Prague Sky Model.
+
+    Copyright (C) 2016-2026 Brian Bailey
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, version 2.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    This class provides a Helios-friendly interface to the Prague Sky Model,
+    handling coordinate system conversions, parameter mappings, and spectral
+    integration for camera bands.
+
+    Integrates Prague Sky Model (Apache 2.0) by Charles University
+
+*/
 
 #ifndef HELIOS_PRAGUE_SKY_MODEL_INTERFACE_H
 #define HELIOS_PRAGUE_SKY_MODEL_INTERFACE_H

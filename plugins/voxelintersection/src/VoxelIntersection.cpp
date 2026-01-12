@@ -1,6 +1,6 @@
 /** \file "VoxelIntersection.cpp" Primary source file for Primitive-Voxel Intersection plug-in.
 
-    Copyright (C) 2016-2025 Brian Bailey, Eric Kent
+    Copyright (C) 2016-2026 Brian Bailey, Eric Kent
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -22,6 +22,23 @@ VoxelIntersection::VoxelIntersection(helios::Context *__context) {
     context = __context;
 
     printmessages = true;
+
+    // Deprecation warning
+    std::cerr << "\n";
+    std::cerr << "********************************************************************************\n";
+    std::cerr << "*** DEPRECATION WARNING: VoxelIntersection plugin                            ***\n";
+    std::cerr << "********************************************************************************\n";
+    std::cerr << "The VoxelIntersection plugin is DEPRECATED and has been merged into the\n";
+    std::cerr << "CollisionDetection plugin. Please migrate your code:\n\n";
+    std::cerr << "  Replace: VoxelIntersection voxelintersection(&context);\n";
+    std::cerr << "  With:    CollisionDetection collisiondetection(&context);\n\n";
+    std::cerr << "  Replace: #include \"VoxelIntersection.h\"\n";
+    std::cerr << "  With:    #include \"CollisionDetection.h\"\n\n";
+    std::cerr << "All method names remain the same (no API changes).\n";
+    std::cerr << "See CollisionDetection documentation for details.\n\n";
+    std::cerr << "This plugin will be REMOVED in a future release.\n";
+    std::cerr << "********************************************************************************\n";
+    std::cerr << "\n";
 }
 
 

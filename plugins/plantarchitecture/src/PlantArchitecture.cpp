@@ -1,6 +1,6 @@
 /** \file "PlantArchitecture.cpp" Primary source file for plant architecture plug-in.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -121,6 +121,54 @@ PlantArchitecture::~PlantArchitecture() {
         collision_detection_ptr = nullptr;
         owns_collision_detection = false;
     }
+}
+
+std::string PlantArchitecture::resolveTextureFile(const std::string &texture_file) {
+    // Empty path returns empty string
+    if (texture_file.empty()) {
+        return "";
+    }
+
+    std::filesystem::path filepath(texture_file);
+
+    // Absolute paths that exist are returned as-is
+    if (filepath.is_absolute() && std::filesystem::exists(filepath)) {
+        return texture_file;
+    }
+
+    // Try resolving as a general file path (handles already-resolved paths and paths relative to cwd)
+    try {
+        return helios::resolveFilePath(texture_file).string();
+    } catch (const std::runtime_error &) {
+        // Continue to plugin-specific resolution
+    }
+
+    // Try resolving as a plugin asset path
+    try {
+        return helios::resolvePluginAsset("plantarchitecture", texture_file).string();
+    } catch (const std::runtime_error &) {
+        // Continue to fallback
+    }
+
+    // If path doesn't have "assets/" prefix, try appropriate asset subdirectory based on file extension
+    if (texture_file.find("assets/") != 0) {
+        std::string filename = std::filesystem::path(texture_file).filename().string();
+        std::string extension = std::filesystem::path(texture_file).extension().string();
+
+        // Determine correct asset subdirectory based on file extension
+        std::string subdirectory = (extension == ".obj" || extension == ".mtl") ? "assets/obj/" : "assets/textures/";
+        std::string assets_path = subdirectory + filename;
+
+        try {
+            return helios::resolvePluginAsset("plantarchitecture", assets_path).string();
+        } catch (const std::runtime_error &) {
+            // Fall through to error
+        }
+    }
+
+    // None of the resolution strategies worked
+    helios_runtime_error("ERROR (PlantArchitecture): Could not resolve asset file: " + texture_file + ". Tried: direct path, plugin asset path, and assets/ subdirectory prefix.");
+    return ""; // Never reached
 }
 
 LeafPrototype::LeafPrototype(std::minstd_rand0 *generator) : generator(generator) {
@@ -1742,10 +1790,13 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             uv_y.at(j) = (length + j * dy) / texture_repeat_length - std::floor((length + j * dy) / texture_repeat_length);
         }
 
+        // Resolve internode texture path (allows users to specify simple paths like "OliveBark.jpg")
+        std::string resolved_internode_texture = PlantArchitecture::resolveTextureFile(phytomer_parameters.internode.image_texture);
+
         if (!context_ptr->doesObjectExist(parent_shoot->internode_tube_objID)) {
             // first internode on shoot
-            if (!phytomer_parameters.internode.image_texture.empty()) {
-                parent_shoot->internode_tube_objID = context_ptr->addTubeObject(Ndiv_internode_radius, phytomer_internode_vertices, phytomer_internode_radii, phytomer_parameters.internode.image_texture.c_str(), uv_y);
+            if (!resolved_internode_texture.empty()) {
+                parent_shoot->internode_tube_objID = context_ptr->addTubeObject(Ndiv_internode_radius, phytomer_internode_vertices, phytomer_internode_radii, resolved_internode_texture.c_str(), uv_y);
             } else {
                 parent_shoot->internode_tube_objID = context_ptr->addTubeObject(Ndiv_internode_radius, phytomer_internode_vertices, phytomer_internode_radii, internode_colors);
             }
@@ -1753,8 +1804,8 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
         } else {
             // appending internode to shoot
             for (int inode_segment = 1; inode_segment <= Ndiv_internode_length; inode_segment++) {
-                if (!phytomer_parameters.internode.image_texture.empty()) {
-                    context_ptr->appendTubeSegment(parent_shoot->internode_tube_objID, phytomer_internode_vertices.at(inode_segment), phytomer_internode_radii.at(inode_segment), phytomer_parameters.internode.image_texture.c_str(),
+                if (!resolved_internode_texture.empty()) {
+                    context_ptr->appendTubeSegment(parent_shoot->internode_tube_objID, phytomer_internode_vertices.at(inode_segment), phytomer_internode_radii.at(inode_segment), resolved_internode_texture.c_str(),
                                                    {uv_y.at(inode_segment - 1), uv_y.at(inode_segment)});
                 } else {
                     context_ptr->appendTubeSegment(parent_shoot->internode_tube_objID, phytomer_internode_vertices.at(inode_segment), phytomer_internode_radii.at(inode_segment), internode_colors.at(inode_segment));
@@ -3888,6 +3939,25 @@ float PlantArchitecture::getPlantAge(uint plantID) const {
     return plant_instances.at(plantID).current_age;
 }
 
+std::vector<std::string> PlantArchitecture::listShootTypeLabels(uint plantID) const {
+    // Validate plant instance exists
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::listShootTypeLabels): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    // Get reference to shoot types snapshot
+    const auto &shoot_types_snap = plant_instances.at(plantID).shoot_types_snapshot;
+
+    // Extract shoot type labels
+    std::vector<std::string> labels;
+    labels.reserve(shoot_types_snap.size());
+    for (const auto &pair: shoot_types_snap) {
+        labels.push_back(pair.first);
+    }
+
+    return labels;
+}
+
 void PlantArchitecture::harvestPlant(uint plantID) {
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::harvestPlant): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -5193,10 +5263,10 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
         // **** nitrogen model operations **** //
         if (nitrogen_model_enabled) {
-            accumulateLeafNitrogen(dt_max_days);    // Available pool → leaf pools (rate-limited)
-            remobilizeNitrogen(dt_max_days);        // Old leaves → young leaves (age-based)
-            removeFruitNitrogen();                  // Deduct N from available pool for fruit growth
-            updateNitrogenStressFactor();           // Calculate and write stress factor to object data
+            accumulateLeafNitrogen(dt_max_days); // Available pool → leaf pools (rate-limited)
+            remobilizeNitrogen(dt_max_days); // Old leaves → young leaves (age-based)
+            removeFruitNitrogen(); // Deduct N from available pool for fruit growth
+            updateNitrogenStressFactor(); // Calculate and write stress factor to object data
         }
 
         // Reset geometry counter if updates occurred this timestep

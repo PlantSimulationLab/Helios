@@ -82,6 +82,8 @@ plantarchitecture.optionalOutputData("all");
 
 This plug-in provides a generalized framework for creating dynamic procedural plant models for a very wide range of species. The plug-in comes with a library of a number of different plant models, which have a common set of parameters that can be adjusted by the user. Parameters defining the plant can be set to constant values, or randomized based on a number of different distributions. The plant model can be grown over time, and will transition through different phenological stages such as dormancy, flowering, fruit set, and senescence.  Users can also create their own plant models by changing model parameters, or build custom plants branch-by-branch.
 
+The methodology behind the plant architecture model is described in the technical report found here: <a href="http://arxiv.org/abs/2512.17966">http://arxiv.org/abs/2512.17966</a>
+
 The next section provides information on how to load existing models from the library and grow them over time, which is likely how most users will interact with the plug-in. The following sections provide more detailed information on the parameters that define the plant model, the structure of the plant model, and how to modify parameters of existing models or create custom plant models from scratch.
 
 \section PlantArchGettingStarted Getting Started with the Existing Plant Library
@@ -315,28 +317,28 @@ Default values for each species in the plant library are given in the table belo
 
 The phenological cycle starts when the plant enters dormancy, and thus a period of \htmlonly<span style="font-family: Courier, monospace; color: blue;">time_to_dormancy_break</span>\endhtmlonly must pass before the plant starts to actively grow.
 
-Plant type string argument | time_to_dormancy_break | time_to_flower_initiation | time_to_flower_opening | time_to_fruit_set | time_to_fruit_maturity | time_to_senescence | Age at time = 0 | Maximum age |
-| ------| ------ | ------ | ------ | ------ | ------ | ------ | ------ | ------ |
+Plant type string argument | time_to_dormancy_break | time_to_flower_initiation | time_to_flower_opening | time_to_fruit_set | time_to_fruit_maturity | time_to_senescence | Age at time = 0 | Maximum age         |
+| ------| ------ | ------ | ------ | ------ | ------ | ------ | ------ |---------------------|
 "almond" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1825 days (5 years) |
 "apple" | 165 | -1 | 3 | 7 | 30 | 200 | 3 years | 1460 days (4 years) |
-"bean" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year) |
-"bindweed" | 0 | -1 | 14 | -1 | -1 | \f$\infty\f$ | 0 | 50 days |
-"butterlettuce" | 0 | -1 | -1 | -1 | -1 | \f$\infty\f$ | 0 | 365 days (1 year) |
-"cheeseweed" | 0 | -1 | -1 | -1 | -1 | \f$\infty\f$ | 0 | 40 days |
-"cowpea" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year) |
+"bean" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
+"bindweed" | 0 | -1 | 14 | -1 | -1 | \f$\infty\f$ | 0 | 50 days             |
+"butterlettuce" | 0 | -1 | -1 | -1 | -1 | \f$\infty\f$ | 0 | 365 days (1 year)   |
+"cheeseweed" | 0 | -1 | -1 | -1 | -1 | \f$\infty\f$ | 0 | 40 days             |
+"cowpea" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "easternredbud" | 165 | -1 | 3 | 7 | 30 | 200 | 2 years | 1460 days (4 years) |
-"grapevine_VSP" | 165 | -1 | -1 | 45 | 45 | 200 | 3 years | 365 days (1 year) |
-"maize" | 0 | -1 | -1 | 4 | 10 | \f$\infty\f$ | 0 | 365 days (1 year) |
+"grapevine_VSP" | 165 | -1 | -1 | 45 | 45 | 200 | 3 years | 365 days (1 year)   |
+"maize" | 0 | -1 | -1 | 4 | 10 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "olive" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1825 days (5 years) |
-"pistachio" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1095 days (3 years) |
-"puncturevine" | 0 | -1 | 14 | -1 | -1 | \f$\infty\f$ | 0 | 45 days |
-"rice" | 0 | -1 | -1 | 4 | 15 | \f$\infty\f$ | 0 | 365 days (1 year) |
-"sorghum" | 0 | -1 | -1 | 4 | 10 | \f$\infty\f$ | 0 | 365 days (1 year) |
-"soybean" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year) |
-"sugarbeet" | 0 | -1 | -1 | -1 | -1 | \f$\infty\f$ | 0 | 365 days (1 year) |
-"tomato" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year) |
+"pistachio" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1460 days (4 years) |
+"puncturevine" | 0 | -1 | 14 | -1 | -1 | \f$\infty\f$ | 0 | 45 days             |
+"rice" | 0 | -1 | -1 | 4 | 15 | \f$\infty\f$ | 0 | 365 days (1 year)   |
+"sorghum" | 0 | -1 | -1 | 4 | 10 | \f$\infty\f$ | 0 | 365 days (1 year)   |
+"soybean" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
+"sugarbeet" | 0 | -1 | -1 | -1 | -1 | \f$\infty\f$ | 0 | 365 days (1 year)   |
+"tomato" | 0 | 40 | 5 | 5 | 30 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 "walnut" | 165 | -1 | 3 | 7 | 20 | 200 | 3 years | 1095 days (3 years) |
-"wheat" | 0 | -1 | -1 | 4 | 10 | \f$\infty\f$ | 0 | 365 days (1 year) |
+"wheat" | 0 | -1 | -1 | 4 | 10 | \f$\infty\f$ | 0 | 365 days (1 year)   |
 
 \subsection PlantArchCollision Collision Avoidance
 
@@ -835,6 +837,74 @@ for( auto params : shoot_parameters ){
 }
 plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );
 ~~~~~~
+
+\subsection PlantArchShootTypeDiscovery Discovering Available Shoot Types
+
+Each plant model in the library defines one or more shoot types (e.g., "trunk", "branch", "unifoliate", "trifoliate"). You can query which shoot types are available using \ref PlantArchitecture::listShootTypeLabels() to help identify the correct labels for customizing parameters.
+
+\subsubsection PlantArchShootTypeDiscovery_CurrentModel Query Shoot Types for Currently Loaded Model
+
+If you have already loaded a plant model, you can list its shoot types:
+
+~~~~~~
+PlantArchitecture plantarchitecture(&context);
+
+plantarchitecture.loadPlantModelFromLibrary("bean");
+
+std::vector<std::string> shoot_types = plantarchitecture.listShootTypeLabels();
+// shoot_types = {"unifoliate", "trifoliate"}
+
+for( const auto& type : shoot_types ){
+    std::cout << "Bean has shoot type: " << type << std::endl;
+}
+~~~~~~
+
+\subsubsection PlantArchShootTypeDiscovery_AnyModel Query Shoot Types for Any Model Without Loading
+
+You can also query shoot types for any plant in the library without changing your current plant model:
+
+~~~~~~
+PlantArchitecture plantarchitecture(&context);
+
+// Query shoot types for multiple models without loading them
+std::vector<std::string> bean_shoots = plantarchitecture.listShootTypeLabels("bean");
+std::vector<std::string> tomato_shoots = plantarchitecture.listShootTypeLabels("tomato");
+std::vector<std::string> almond_shoots = plantarchitecture.listShootTypeLabels("almond");
+
+// Combine with getAvailablePlantModels() to explore entire library
+std::vector<std::string> all_plants = plantarchitecture.getAvailablePlantModels();
+for( const auto& plant : all_plants ){
+    std::vector<std::string> shoot_types = plantarchitecture.listShootTypeLabels(plant);
+    std::cout << plant << " has " << shoot_types.size() << " shoot types" << std::endl;
+}
+~~~~~~
+
+\subsubsection PlantArchShootTypeDiscovery_Instance Query Shoot Types for Plant Instances
+
+For plant instances that have been built, you can query their shoot types using the plant ID:
+
+~~~~~~
+PlantArchitecture plantarchitecture(&context);
+
+// Build bean and tomato plants
+plantarchitecture.loadPlantModelFromLibrary("bean");
+uint bean_plantID = plantarchitecture.buildPlantInstanceFromLibrary( nullorigin, 0 );
+
+plantarchitecture.loadPlantModelFromLibrary("tomato");
+uint tomato_plantID = plantarchitecture.buildPlantInstanceFromLibrary( make_vec3(1,0,0), 0 );
+
+// Query shoot types for each instance
+std::vector<std::string> bean_types = plantarchitecture.listShootTypeLabels(bean_plantID);
+std::vector<std::string> tomato_types = plantarchitecture.listShootTypeLabels(tomato_plantID);
+~~~~~~
+
+This functionality is useful for:
+- Exploratory analysis of plant models
+- Validating shoot type names before calling \ref PlantArchitecture::getCurrentShootParameters()
+- Building user interfaces that display available options
+- Runtime inspection of plant instances to understand their structure
+
+<B>Note:</B> Plant <I>models</I> are templates defined in the library (referenced by string names like "bean", "tomato"), while plant <I>instances</I> are actual plants built in the simulation (referenced by uint IDs). The shoot types are defined at the model level and captured when each instance is created.
 
 \subsection PlantArchPhenoMod Modifying Phenological Threshold Parameters
 

@@ -2,6 +2,33 @@ cmake_minimum_required(VERSION 3.15)
 
 project(helios)
 
+# ============================================================================
+# DEPRECATION WARNING
+# ============================================================================
+message(WARNING "
+********************************************************************************
+*** DEPRECATED PLUGIN: VoxelIntersection                                    ***
+********************************************************************************
+The VoxelIntersection plugin has been DEPRECATED and merged into the
+CollisionDetection plugin. All functionality is now available in CollisionDetection.
+
+PLEASE UPDATE YOUR CODE:
+  - Replace: set(PLUGINS \"voxelintersection\")
+  - With:    set(PLUGINS \"collisiondetection\")
+
+  - Replace: #include \"VoxelIntersection.h\"
+  - With:    #include \"CollisionDetection.h\"
+
+  - Replace: VoxelIntersection class
+  - With:    CollisionDetection class
+
+All method names remain the same. See CollisionDetection plugin documentation
+for details: https://baileylab.ucdavis.edu/software/helios/doc/
+
+This plugin will be REMOVED in a future release.
+********************************************************************************
+")
+
 if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
      set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
 endif()

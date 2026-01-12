@@ -644,7 +644,7 @@ void ProjectBuilder::updateCameras() {
             int camera_index = camera_dict[rig_camera_label];
 
             /* Load properties of camera */
-            delete cameraproperties;  // Delete previous allocation to prevent memory leak
+            delete cameraproperties; // Delete previous allocation to prevent memory leak
             cameraproperties = new CameraProperties();
             cameraproperties->camera_resolution = camera_resolutions[camera_index];
             cameraproperties->focal_plane_distance = focal_plane_distances[camera_index];

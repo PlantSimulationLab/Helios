@@ -1,6 +1,6 @@
 /** \file "PhotosynthesisModel.h" Primary header file for photosynthesis plug-in.
 
-Copyright (C) 2016-2025 Brian Bailey
+Copyright (C) 2016-2026 Brian Bailey
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -583,7 +583,8 @@ public:
 
     //! Add optional output primitive data values to the Context
     /**
-     * \param[in] label Name of primitive data (e.g., Ci)
+     * \param[in] label Name of primitive data. Available labels for the Farquhar model: "Ci" (intercellular CO2), "limitation_state" (0=Rubisco-limited, 1=electron transport-limited), "Gamma_CO2" (CO2 compensation point), "electron_transport_ratio"
+     * (J/Jmax ratio, useful for fluorescence calculations).
      */
     void optionalOutputPrimitiveData(const char *label);
 
@@ -633,7 +634,7 @@ private:
 
     float evaluateEmpiricalModel(const EmpiricalModelCoefficients &params, float i_PAR, float TL, float CO2, float gM);
 
-    float evaluateFarquharModel(const FarquharModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Gamma, int &limitation_state, int &TPU_flag, helios::WarningAggregator &warnings);
+    float evaluateFarquharModel(const FarquharModelCoefficients &params, float i_PAR, float TL, float CO2, float gM, float &Ci, float &Gamma, int &limitation_state, int &TPU_flag, float &J_over_Jmax, helios::WarningAggregator &warnings);
 
     float evaluateCi_Empirical(const EmpiricalModelCoefficients &params, float Ci, float CO2, float fL, float Rd, float gM) const;
 
