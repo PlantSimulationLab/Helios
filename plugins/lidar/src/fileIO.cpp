@@ -1,6 +1,6 @@
 /** \file "fileIO.cpp" Declarations for LiDAR plug-in related to file input/output.
 
-    Copyright (C) 2016-2026 Brian Bailey
+    Copyright (C) 2016-2025 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -820,7 +820,7 @@ void LiDARcloud::exportPointCloud(const char *filename) {
 
             std::string filename_a = filename;
             char scan[20];
-            sprintf(scan, "%d", i);
+            snprintf(scan, sizeof(scan), "%d", i);
 
             size_t dotindex = filename_a.find_last_of(".");
             if (dotindex == filename_a.size() - 1 || filename_a.size() - 1 - dotindex > 4) { // no file extension was provided
@@ -1146,9 +1146,8 @@ std::vector<uint> LiDARcloud::loadTreeQSM_impl(helios::Context *context, const s
 
             if (use_colormap) {
                 // Sample color from colormap based on branch ID
-                // Use branch_id as seed for consistent but pseudo-random color selection
-                std::srand(static_cast<unsigned int>(std::abs(branch_id)));
-                int color_index = std::rand() % colormap.size();
+                // Use branch_id modulo colormap size for deterministic color selection
+                int color_index = std::abs(branch_id) % colormap.size();
                 helios::RGBcolor branch_color = colormap[color_index];
 
                 // Create a color vector for all nodes in this branch

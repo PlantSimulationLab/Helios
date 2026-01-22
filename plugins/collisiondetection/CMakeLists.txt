@@ -82,10 +82,10 @@ if(CUDAToolkit_FOUND)
     target_include_directories(collisiondetection PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
     
     target_link_libraries(collisiondetection PUBLIC CUDA::cudart_static)
-    
+
     # Define preprocessor macro to indicate CUDA support
     target_compile_definitions(collisiondetection PRIVATE HELIOS_CUDA_AVAILABLE)
-    
+
 else()
     message(STATUS "CUDA not found - building CPU-only version")
     

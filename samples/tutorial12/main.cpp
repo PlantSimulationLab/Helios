@@ -115,7 +115,7 @@ int main() {
     radiation.runBand(bandlabels);
 
     // Apply standard image processing pipeline (tone mapping, gamma correction, etc.)
-    radiation.applyImageProcessingPipeline("bunnycam", "red", "green", "blue", 1, 1, 1, 1);
+    radiation.applyCameraImageCorrections("bunnycam", "red", "green", "blue", 1, 1, 1);
 
     // STEP 7: Export results for computer vision applications
 

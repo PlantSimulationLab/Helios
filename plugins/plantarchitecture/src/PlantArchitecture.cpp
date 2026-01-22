@@ -277,6 +277,7 @@ ShootParameters::ShootParameters(std::minstd_rand0 *generator) {
 
     vegetative_bud_break_time.initialize(5, generator);
     vegetative_bud_break_probability_min.initialize(0, generator);
+    vegetative_bud_break_probability_max.initialize(1.0, generator);
     vegetative_bud_break_probability_decay_rate.initialize(-0.5, generator);
     max_terminal_floral_buds.initialize(0, generator);
     flower_bud_break_probability.initialize(0, generator);
@@ -3102,6 +3103,7 @@ bool Shoot::sampleVegetativeBudBreak(uint node_index) const {
     }
 
     float probability_min = plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_types_snapshot.at(this->shoot_type_label).vegetative_bud_break_probability_min.val();
+    float probability_max = plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_types_snapshot.at(this->shoot_type_label).vegetative_bud_break_probability_max.val();
     float probability_decay = plantarchitecture_ptr->plant_instances.at(this->plantID).shoot_types_snapshot.at(this->shoot_type_label).vegetative_bud_break_probability_decay_rate.val();
 
     float bud_break_probability;
@@ -3109,15 +3111,15 @@ bool Shoot::sampleVegetativeBudBreak(uint node_index) const {
         bud_break_probability = probability_min;
     } else if (probability_decay > 0) {
         // probability maximum at apex
-        bud_break_probability = std::fmax(probability_min, 1.f - probability_decay * float(this->current_node_number - node_index - 1));
+        bud_break_probability = std::fmax(probability_min, probability_max - probability_decay * float(this->current_node_number - node_index - 1));
     } else if (probability_decay < 0) {
         // probability maximum at base
-        bud_break_probability = std::fmax(probability_min, 1.f - fabs(probability_decay) * float(node_index));
+        bud_break_probability = std::fmax(probability_min, probability_max - fabs(probability_decay) * float(node_index));
     } else {
         if (probability_decay == 0.f) {
             bud_break_probability = probability_min;
         } else {
-            bud_break_probability = 1.f;
+            bud_break_probability = probability_max;
         }
     }
 
@@ -4541,6 +4543,54 @@ std::vector<uint> PlantArchitecture::getPlantFruitObjectIDs(uint plantID) const 
     return objIDs;
 }
 
+
+void PlantArchitecture::updateShootFruitCounts(uint plantID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantInflorescenceObjectIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    auto &shoot_tree = plant_instances.at(plantID).shoot_tree;
+
+    for (const auto& shoot : shoot_tree) {
+
+        int fruit_count = 0;
+
+        for (const auto& phytomer : shoot->phytomers) {
+            for (int petiole = 0; petiole < phytomer->floral_buds.size(); petiole++) {
+                for (int bud = 0; bud < phytomer->floral_buds.at(petiole).size(); bud++) {
+                    if (phytomer->floral_buds.at(petiole).at(bud).state == BUD_FRUITING) {
+                        fruit_count++;
+                    }
+                }
+            }
+        }
+
+        if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
+            context_ptr->setObjectData(shoot->internode_tube_objID, "fruit_count", fruit_count);
+        }
+    }
+}
+
+
+
+std::vector<uint> PlantArchitecture::getShootInternodeObjectIDs(uint plantID) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantInflorescenceObjectIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    std::vector<uint> objIDs;
+
+    auto &shoot_tree = plant_instances.at(plantID).shoot_tree;
+
+    for (auto &shoot: shoot_tree) {
+        objIDs.push_back(shoot->internode_tube_objID);
+    }
+
+    return objIDs;
+}
+
+
+
 std::vector<uint> PlantArchitecture::getPlantCollisionRelevantObjectIDs(uint plantID) const {
     if (plant_instances.find(plantID) == plant_instances.end()) {
         helios_runtime_error("ERROR (PlantArchitecture::getPlantCollisionRelevantObjectIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
@@ -5233,11 +5283,23 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                 pruneGroundCollisions(plantID);
             }
 
+            // **** subtract maintenance carbon costs **** //
+            if (carbon_model_enabled) {
+                subtractShootMaintenanceCarbon(dt_max_days);
+                subtractShootGrowthCarbon();
+                checkCarbonPool_transferCarbon(dt_max_days);
+                checkCarbonPool_adjustPhyllochron(dt_max_days);
+                checkCarbonPool_abortOrgans(dt_max_days);
+            }
+
             // Assign current volume as old volume for your next timestep
             for (auto &shoot: *shoot_tree) {
                 float shoot_volume = plant_instances.at(plantID).shoot_tree.at(shoot->ID)->calculateShootInternodeVolume();
                 // Find current volume for each shoot in the plant
+                float volume_ratio = shoot->old_shoot_volume/shoot_volume;
+                context_ptr->setObjectData(shoot->internode_tube_objID, "volume_ratio", volume_ratio);
                 shoot->old_shoot_volume = shoot_volume; // Set old volume to the current volume for the next timestep
+                context_ptr->setObjectData(shoot->internode_tube_objID, "old_shoot_volume", shoot_volume);
             }
 
             // Update plant-level dynamic object data
@@ -5250,15 +5312,6 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
                     context_ptr->setObjectData(plant_primitives, "phenology_stage", determinePhenologyStage(plantID));
                 }
             }
-        }
-
-        // **** subtract maintenance carbon costs **** //
-        if (carbon_model_enabled) {
-            subtractShootMaintenanceCarbon(dt_max_days);
-            subtractShootGrowthCarbon();
-            checkCarbonPool_transferCarbon(dt_max_days);
-            checkCarbonPool_adjustPhyllochron(dt_max_days);
-            checkCarbonPool_abortOrgans(dt_max_days);
         }
 
         // **** nitrogen model operations **** //

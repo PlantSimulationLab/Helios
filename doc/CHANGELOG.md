@@ -1,5 +1,24 @@
 # Changelog
 
+# [1.3.63] 2026-01-21
+
+## Core
+- Updated docs to be mobile friendly with slide-out sidebar navigation and hamburger menu.
+
+## LiDAR
+- Removed direct CUDA dependency; ray tracing now uses the CollisionDetection plugin for GPU acceleration.
+- Renamed `calculateLeafAreaGPU()` to `calculateLeafArea()` (old methods deprecated but still available).
+- Added `enableGPUAcceleration()` and `disableGPUAcceleration()` methods to control CollisionDetection GPU usage.
+- Added adaptive triangulation filtering for multi-return data using separation ratio thresholds.
+- Improved `gapfillMisses()` to track filled grid positions and avoid duplicate gap-filled points.
+
+## Plant Architecture
+- Refined carbohydrate model with new parameters for structural vs non-structural carbon tracking (`carbohydrate_percentage`, `stem_structural_carbon_percentage`, `living_wood_fraction`, `dormant_respiration_fraction`) and separate upward/downward transfer thresholds.
+- Added `vegetative_bud_break_probability_max` parameter to ShootParameters for controlling maximum bud break probability.
+- Added `updateShootFruitCounts()` and `getShootInternodeObjectIDs()` methods.
+- Added additional internode object data outputs for carbon model diagnostics (`carbohydrate_pool_molC`, `daily_net_photosynthesis`, `daily_respiration`, `daily_growth`).
+- Added two new almond tree model variants: `almond_aldrich` and `almond_wood_colony`.
+
 # [1.3.62] 2026-01-12
 
 ## Core

@@ -1,6 +1,6 @@
 /** \file "LiDAR.h" Primary header file for LiDAR plug-in.
 
-    Copyright (C) 2016-2026 Brian Bailey
+    Copyright (C) 2016-2025 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -316,8 +316,6 @@ private:
 
     void floodfill(size_t t, std::vector<Triangulation> &cloud_triangles, std::vector<int> &fill_flag, std::vector<std::vector<int>> &nodes, int tag, int depth, int maxdepth);
 
-    void sourcesInsideGridCellGPU();
-
     //! Perform inversion to estimate LAD
     /**
      * \param[in] P  Vector of floats where each element is the P value of a given grid cell
@@ -326,6 +324,89 @@ private:
      * \param[in] fillAnalytic  If true the analytic solution using mean dr will be used when the inversion fails. If false, LAD will be set as 999.
      */
     std::vector<float> LAD_inversion(std::vector<float> &P, std::vector<float> &Gtheta, std::vector<std::vector<float>> &dr_array, bool fillAnalytic);
+
+    // -------- HELPERS --------- //
+
+    //! Compute G(theta) values for all grid cells from triangulation data
+    /**
+     * \param[in] Ncells Number of grid cells
+     * \param[in] Nscans Number of scans
+     * \param[out] Gtheta G(theta) value for each cell (size = Ncells)
+     * \param[out] Gtheta_bar Average G(theta) for each cell (size = Ncells)
+     */
+    void computeGtheta(uint Ncells, uint Nscans,
+                       std::vector<float> &Gtheta, std::vector<float> &Gtheta_bar);
+
+    //! Perform LAD inversion for a single voxel using secant method
+    /**
+     * \param[in] voxel_index Grid cell index
+     * \param[in] P Transmission probability for this voxel
+     * \param[in] Gtheta G(theta) value for this voxel
+     * \param[in] dr_samples Vector of path length samples through this voxel
+     * \param[in] min_voxel_hits Minimum number of hits required
+     * \param[in] gridsize Voxel dimensions (x, y, z)
+     * \param[out] leaf_area Computed leaf area for this voxel
+     * \return True if inversion succeeded, false otherwise
+     */
+    bool invertLAD(uint voxel_index, float P, float Gtheta,
+                   const std::vector<float> &dr_samples, int min_voxel_hits,
+                   const helios::vec3 &gridsize, float &leaf_area);
+
+    //! Filter rays by bounding box intersection (replaces intersectBoundingBox GPU kernel)
+    /**
+     * \param[in] scan_origin Origin point of the scan
+     * \param[in] ray_endpoints Vector of ray endpoint positions (far points)
+     * \param[in] bb_center Center of the bounding box
+     * \param[in] bb_size Size of the bounding box (x, y, z dimensions)
+     * \param[out] filtered_indices Output vector of indices that hit the bounding box
+     * \return Number of rays that intersect the bounding box
+     */
+    uint filterRaysByBoundingBox(const helios::vec3 &scan_origin,
+                                  const std::vector<helios::vec3> &ray_endpoints,
+                                  const helios::vec3 &bb_center,
+                                  const helios::vec3 &bb_size,
+                                  std::vector<uint> &filtered_indices);
+
+    //! Calculate voxel path lengths using CollisionDetection (replaces intersectGridcell GPU kernel)
+    /**
+     * \param[in] scan_origin Origin point of the scan
+     * \param[in] ray_directions Vector of ray directions (normalized)
+     * \param[in] voxel_centers Vector of voxel center positions
+     * \param[in] voxel_sizes Vector of voxel sizes
+     * \param[in] voxel_rotations Vector of voxel rotation angles (radians, around Z-axis)
+     * \param[out] dr_agg Vector of path length samples per voxel
+     * \param[out] hit_before_agg Weighted hit count before each voxel
+     * \param[out] hit_after_agg Weighted hit count after/inside each voxel
+     */
+    void calculateVoxelPathLengths(const helios::vec3 &scan_origin,
+                                      const std::vector<helios::vec3> &ray_directions,
+                                      const std::vector<helios::vec3> &voxel_centers,
+                                      const std::vector<helios::vec3> &voxel_sizes,
+                                      const std::vector<float> &voxel_rotations,
+                                      std::vector<std::vector<float>> &dr_agg,
+                                      std::vector<float> &hit_before_agg,
+                                      std::vector<float> &hit_after_agg);
+
+    // -------- MULTI-RETURN HELPERS --------- //
+
+    //! Detect if point cloud contains multi-return data
+    /**
+     * \return True if multi-return data detected (target_count > 1), false otherwise
+     */
+    bool isMultiReturnData() const;
+
+    //! Beam grouping structure for multi-return data
+    struct BeamGrouping {
+        uint Nbeams;
+        std::vector<std::vector<uint>> beam_array;
+    };
+
+    //! Group hit points by timestamp into beams
+    /**
+     * \param[in] scan_indices Vector of hit indices for a specific scan
+     * \return BeamGrouping structure with beam organization
+     */
+    BeamGrouping groupHitsByTimestamp(const std::vector<uint>& scan_indices) const;
 
     //! Helper method for loading TreeQSM cylinder files with different coloring strategies
     /**
@@ -360,7 +441,7 @@ public:
     void initializeCollisionDetection(helios::Context *context);
 
     //! Perform unified ray-tracing using collision detection plugin (replaces CUDA kernels)
-    void performUnifiedRayTracing(helios::Context *context, size_t N, int Npulse, helios::vec3 scan_origin, helios::vec3 *direction, float *hit_t, float *hit_fnorm, int *hit_ID);
+    void performUnifiedRayTracing(helios::Context *context, size_t N, int Npulse, helios::vec3 *ray_origins, helios::vec3 *direction, float *hit_t, float *hit_fnorm, int *hit_ID);
 
     // ------- SCANS -------- //
 
@@ -981,12 +1062,6 @@ public:
      */
     float getCellRotation(uint index) const;
 
-    //! Determine the grid cell in which each hit point resides for the whole point cloud - GPU accelerated version */
-    /**
-     * \note This function does not return a value, rather, it sets the Scan variable `hit_vol' which is queried by the function \ref LiDARcloud::getHitGridCell().
-     */
-    void calculateHitGridCellGPU();
-
     // ------- SYNTHETIC SCAN ------ //
 
     //! Run a discrete return synthetic LiDAR scan based on scan parameters given in an XML file (returns only one laser hit per pulse)
@@ -1133,47 +1208,43 @@ public:
 
 
     //! Calculate the leaf area for each grid volume
-    void calculateLeafAreaGPU();
+    /**
+     * \param[in] context Pointer to the Helios context
+     */
+    void calculateLeafArea(helios::Context *context);
 
     //! Calculate the leaf area for each grid volume
     /**
-     * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel. If the total number of hits in a voxel is less than min_voxel_hits, the calculated leaf area will be set to zero.
-     * \note Currently, this version assumes all data is discrete-return. The function calculateLeafAreaGPU_testing() deals with waveform data, but may not be working correctly. In the next version, these two functions will be combined.
+     * \param[in] context Pointer to the Helios context
+     * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
      */
-    void calculateLeafAreaGPU(int min_voxel_hits);
+    void calculateLeafArea(helios::Context *context, int min_voxel_hits);
 
-    //! Calculate the leaf area for each grid volume
+    //! Calculate the leaf area for each grid volume (DEPRECATED - use calculateLeafArea)
     /**
-     * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel. If the total number of hits in a voxel is less than min_voxel_hits, the calculated leaf area will be set to zero.
+     * \deprecated This function has been renamed to calculateLeafArea(). The GPU-specific implementation has been replaced with CollisionDetection plugin integration. Use calculateLeafArea() instead. For GPU acceleration, call enableCDGPUAcceleration() before calculateLeafArea().
+     * \param[in] context Pointer to the Helios context
      */
-    void calculateLeafAreaGPU_testing(int min_voxel_hits);
+    [[deprecated("Use calculateLeafArea() instead. GPU functionality is now provided by the CollisionDetection plugin.")]]
+    void calculateLeafAreaGPU(helios::Context *context);
 
-    //! Calculate the leaf area for each grid volume in a synthetic scan using several different method for estimating P
+    //! Calculate the leaf area for each grid volume (DEPRECATED - use calculateLeafArea)
     /**
-     * \param[in] context Pointer to the Helios context.
-     * \param[in] beamoutput if true writes detailed data about each beam to ../beamoutput/beam_data_s_[scan index]_c_[grid cell index].txt.
-     * \param[in] fillAnalytic if true, when the iterative LAD inversion fails, the analytic solution using mean dr will be substituted. If false LAD is set to 999.
-     * \note writes voxel level data to ../voxeloutput/voxeloutput.txt
+     * \deprecated This function has been renamed to calculateLeafArea(). The GPU-specific implementation has been replaced with CollisionDetection plugin integration. Use calculateLeafArea() instead. For GPU acceleration, call enableCDGPUAcceleration() before calculateLeafArea().
+     * \param[in] context Pointer to the Helios context
+     * \param[in] min_voxel_hits Minimum number of allowable LiDAR hits per voxel
      */
-    void calculateLeafAreaGPU_synthetic(helios::Context *context, bool beamoutput, bool fillAnalytic);
+    [[deprecated("Use calculateLeafArea(context, min_voxel_hits) instead. GPU functionality is now provided by the CollisionDetection plugin.")]]
+    void calculateLeafAreaGPU(helios::Context *context, int min_voxel_hits);
 
-    //! Calculate the leaf area for each grid volume using equal weighting method
-    /**
-     * \param[in] beamoutput if true writes detailed data about each beam to ../beamoutput/beam_data_s_[scan index]_c_[grid cell index].txt.
-     * \param[in] fillAnalytic if true, when the iterative LAD inversion fails, the analytic solution using mean dr will be substituted. If false LAD is set to 999.
-     * \note writes voxel level data to ../voxeloutput/voxeloutput.txt
-     */
-    void calculateLeafAreaGPU_equal_weighting(bool beamoutput, bool fillAnalytic);
+    //! Enable GPU acceleration in CollisionDetection plugin
+    void enableGPUAcceleration();
 
-    //! Calculate the leaf area for each grid volume using equal weighting method
-    /**
-     * \param[in] beamoutput if true writes detailed data about each beam to ../beamoutput/beam_data_s_[scan index]_c_[grid cell index].txt.
-     * \param[in] fillAnalytic if true, when the iterative LAD inversion fails, the analytic solution using mean dr will be substituted. If false LAD is set to 999.
-     * \param[in] constant_G A separate LAD inversion will be performed for each element of this vector, setting the value of G in all voxels to the value given in this vector.
-     * \note writes voxel level data to ../voxeloutput/voxeloutput.txt
-     */
-    void calculateLeafAreaGPU_equal_weighting(bool beamoutput, bool fillAnalytic, std::vector<float> constant_G);
+    //! Disable GPU acceleration in CollisionDetection plugin (use CPU/OpenMP only)
+    void disableGPUAcceleration();
 
+    //! Determine which grid cell each hit point resides in
+    void calculateHitGridCell();
 
     // -------- RECONSTRUCTION --------- //
 

@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <vector>
 #include <set>
+#include <cmath>
 
 
 
@@ -94,10 +95,16 @@ struct Shx
 
 
 // sort into descending order (for use in corner responce ranking).
-inline bool operator<(const Shx &a, const Shx &b) 
-{ 
-  if( a.ro == b.ro){
-    if( a.r == b.r ){
+inline bool operator<(const Shx &a, const Shx &b)
+{
+  // Use epsilon-based comparison for floating-point values to ensure
+  // consistent sorting across different architectures (ARM64 vs x86_64)
+  // and compiler optimizations. Direct equality (==) on floats causes
+  // platform-dependent sort orders that cascade through triangulation.
+  const float epsilon = 1e-9f;
+
+  if( std::abs(a.ro - b.ro) < epsilon ){
+    if( std::abs(a.r - b.r) < epsilon ){
       return a.c < b.c;
     }
     return a.r < b.r;
@@ -128,9 +135,11 @@ struct Dupex
 
 
 // sort into descending order (for use in corner responce ranking).
-inline bool operator<(const Dupex &a, const Dupex &b) 
-{ 
-  if( a.r == b.r)
+inline bool operator<(const Dupex &a, const Dupex &b)
+{
+  // Use epsilon-based comparison for cross-platform consistency
+  const float epsilon = 1e-9f;
+  if( std::abs(a.r - b.r) < epsilon )
     return a.c < b.c;
   return a.r <  b.r;
 };

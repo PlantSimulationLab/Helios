@@ -114,7 +114,7 @@ __device__ __forceinline__ float3 operator*(const float3 &a, float scalar) {
  * \return True if ray intersects triangle within max_distance
  */
 __device__ __forceinline__ bool rayTriangleIntersect(const float3 &ray_origin, const float3 &ray_direction, const float3 &v0, const float3 &v1, const float3 &v2, float max_distance, float &hit_distance) {
-    const float EPSILON = 1e-8f;
+    const float EPSILON = 1e-5f;  // Match CPU tolerance for consistent GPU/CPU behavior
 
     // Find vectors for two edges sharing v0
     float3 edge1 = make_float3(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
@@ -133,7 +133,7 @@ __device__ __forceinline__ bool rayTriangleIntersect(const float3 &ray_origin, c
     float3 s = make_float3(ray_origin.x - v0.x, ray_origin.y - v0.y, ray_origin.z - v0.z);
     float u = f * (s.x * h.x + s.y * h.y + s.z * h.z);
 
-    if (u < 0.0f || u > 1.0f) {
+    if (u < -EPSILON || u > 1.0f + EPSILON) {
         return false;
     }
 
@@ -141,14 +141,15 @@ __device__ __forceinline__ bool rayTriangleIntersect(const float3 &ray_origin, c
 
     float v = f * (ray_direction.x * q.x + ray_direction.y * q.y + ray_direction.z * q.z);
 
-    if (v < 0.0f || u + v > 1.0f) {
+    if (v < -EPSILON || u + v > 1.0f + EPSILON) {
         return false;
     }
 
     // At this stage we can compute t to find out where the intersection point is on the line.
     float t = f * (edge2.x * q.x + edge2.y * q.y + edge2.z * q.z);
 
-    if (t > EPSILON && t <= max_distance) { // ray intersection
+    // Match CPU behavior - don't check max_distance here (checked by caller)
+    if (t > EPSILON) { // ray intersection
         hit_distance = t;
         return true;
     } else { // This means that there is a line intersection but not a ray intersection.
@@ -221,6 +222,8 @@ __device__ __forceinline__ bool warpRayAABBIntersect(const float3 &ray_origin, c
 __device__ __forceinline__ bool rayTriangleIntersectCPU(const float3 &origin, const float3 &direction, const float3 &v0, const float3 &v1, const float3 &v2, float &distance) {
 
     // Use same algorithm as CPU: radiation model's triangle_intersect
+    const float EPSILON = 1e-5f;  // Match CPU tolerance for consistent GPU/CPU behavior
+
     float a = v0.x - v1.x, b = v0.x - v2.x, c = direction.x, d = v0.x - origin.x;
     float e = v0.y - v1.y, f = v0.y - v2.y, g = direction.y, h = v0.y - origin.y;
     float i = v0.z - v1.z, j = v0.z - v2.z, k = direction.z, l = v0.z - origin.z;
@@ -229,7 +232,7 @@ __device__ __forceinline__ bool rayTriangleIntersectCPU(const float3 &origin, co
     float q = g * i - e * k, s = e * j - f * i;
 
     float denom = a * m + b * q + c * s;
-    if (fabsf(denom) < 1e-8f) {
+    if (fabsf(denom) < EPSILON) {
         return false; // Ray is parallel to triangle
     }
 
@@ -238,16 +241,16 @@ __device__ __forceinline__ bool rayTriangleIntersectCPU(const float3 &origin, co
     float e1 = d * m - b * n - c * p;
     float beta = e1 * inv_denom;
 
-    if (beta >= 0.0f) {
+    if (beta >= -EPSILON) {
         float r = e * l - h * i;
         float e2 = a * n + d * q + c * r;
         float gamma = e2 * inv_denom;
 
-        if (gamma >= 0.0f && beta + gamma <= 1.0f) {
+        if (gamma >= -EPSILON && beta + gamma <= 1.0f + EPSILON) {
             float e3 = a * p - b * r + d * s;
             float t = e3 * inv_denom;
 
-            if (t > 1e-8f) {
+            if (t > EPSILON) {
                 distance = t;
                 return true;
             }
@@ -260,6 +263,8 @@ __device__ __forceinline__ bool rayTriangleIntersectCPU(const float3 &origin, co
 __device__ __forceinline__ bool rayPatchIntersect(const float3 &origin, const float3 &direction, const float3 &v0, const float3 &v1, const float3 &v2, const float3 &v3, float &distance) {
 
     // Calculate patch vectors and normal (same as CPU radiation model)
+    const float EPSILON = 1e-5f;  // Match triangle epsilon for consistency
+
     float3 anchor = v0;
     float3 normal = cross(v1 - v0, v2 - v0);
     normal = normalize(normal);
@@ -269,10 +274,10 @@ __device__ __forceinline__ bool rayPatchIntersect(const float3 &origin, const fl
 
     // Ray-plane intersection
     float denom = dot(direction, normal);
-    if (fabsf(denom) > 1e-8f) { // Not parallel to plane
+    if (fabsf(denom) > EPSILON) { // Not parallel to plane
         float t = dot(anchor - origin, normal) / denom;
 
-        if (t > 1e-8f && t < 1e8f) { // Valid intersection distance
+        if (t > EPSILON && t < 1e8f) { // Valid intersection distance
             // Find intersection point
             float3 p = origin + direction * t;
             float3 d = p - anchor;
@@ -294,7 +299,7 @@ __device__ __forceinline__ bool rayPatchIntersect(const float3 &origin, const fl
 
 // Ray-AABB intersection for voxel primitives
 __device__ bool rayVoxelIntersect(const float3 &ray_origin, const float3 &ray_direction, const float3 &aabb_min, const float3 &aabb_max, float &distance) {
-    const float EPSILON = 1e-8f;
+    const float EPSILON = 1e-5f;  // Match triangle/patch epsilon for consistency
 
     // Calculate t values for each slab using optimized method
     float3 inv_dir = make_float3(1.0f / ray_direction.x, 1.0f / ray_direction.y, 1.0f / ray_direction.z);
@@ -392,8 +397,7 @@ __global__ void rayPrimitiveBVHKernel(GPUBVHNode *d_bvh_nodes, unsigned int *d_p
 
                 // Bounds check for primitive_index
                 if (primitive_index >= primitive_count) {
-                    printf("CUDA ERROR: primitive_index %u >= primitive_count %d in ray %d\n", primitive_index, primitive_count, ray_idx);
-                    return;
+                    continue; // Skip this primitive, don't exit the entire kernel!
                 }
 
                 unsigned int primitive_id = d_primitive_indices[primitive_index];
@@ -410,20 +414,18 @@ __global__ void rayPrimitiveBVHKernel(GPUBVHNode *d_bvh_nodes, unsigned int *d_p
 
                 if (ptype == 1) { // PRIMITIVE_TYPE_TRIANGLE
                     if (vertex_offset + 2 >= total_vertex_count) {
-                        printf("CUDA ERROR: triangle vertex_offset %u+2 >= total_vertex_count %d in ray %d\n", vertex_offset, total_vertex_count, ray_idx);
-                        return;
+                        continue; // Skip this primitive, don't exit the entire kernel!
                     }
 
                     float3 v0 = d_primitive_vertices[vertex_offset + 0];
                     float3 v1 = d_primitive_vertices[vertex_offset + 1];
                     float3 v2 = d_primitive_vertices[vertex_offset + 2];
 
-                    hit = rayTriangleIntersectCPU(ray_origin, ray_direction, v0, v1, v2, hit_distance);
+                    hit = rayTriangleIntersect(ray_origin, ray_direction, v0, v1, v2, ray_max_distance, hit_distance);
 
                 } else if (ptype == 0) { // PRIMITIVE_TYPE_PATCH
                     if (vertex_offset + 3 >= total_vertex_count) {
-                        printf("CUDA ERROR: patch vertex_offset %u+3 >= total_vertex_count %d in ray %d\n", vertex_offset, total_vertex_count, ray_idx);
-                        return;
+                        continue; // Skip this primitive, don't exit the entire kernel!
                     }
 
                     float3 v0 = d_primitive_vertices[vertex_offset + 0];
@@ -437,8 +439,7 @@ __global__ void rayPrimitiveBVHKernel(GPUBVHNode *d_bvh_nodes, unsigned int *d_p
                     // Voxel intersection using AABB intersection
                     // For voxels, vertices store min/max coordinates: [min.x, min.y, min.z, max.x, max.y, max.z, 0, 0]
                     if (vertex_offset + 1 >= total_vertex_count) {
-                        printf("CUDA ERROR: voxel vertex_offset %u+1 >= total_vertex_count %d in ray %d\n", vertex_offset, total_vertex_count, ray_idx);
-                        return;
+                        continue; // Skip this primitive, don't exit the entire kernel!
                     }
 
                     float3 voxel_min = d_primitive_vertices[vertex_offset + 0];
@@ -448,7 +449,8 @@ __global__ void rayPrimitiveBVHKernel(GPUBVHNode *d_bvh_nodes, unsigned int *d_p
                 }
 
                 // Process hit if found
-                if (hit && hit_distance > 1e-8f && hit_distance <= ray_max_distance) {
+
+                if (hit && hit_distance > 1e-5f && hit_distance <= ray_max_distance) {
                     total_hits++;
 
                     if (find_closest_hit) {
@@ -1138,10 +1140,19 @@ __global__ void intersectRegularGridKernel(const size_t num_rays, float3 *d_ray_
 
 /**
  * \brief Launch CUDA kernel for regular grid voxel ray path length calculation
+ * \return true if GPU execution succeeded, false if GPU unavailable or error occurred
  */
-void launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x,
+bool launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x,
                                int grid_divisions_y, int grid_divisions_z, int primitive_count, int *h_voxel_ray_counts, float *h_voxel_path_lengths, int *h_voxel_transmitted, int *h_voxel_hit_before, int *h_voxel_hit_after,
                                int *h_voxel_hit_inside) {
+
+    // Check if GPU is available before attempting allocation
+    int deviceCount = 0;
+    cudaError_t err = cudaGetDeviceCount(&deviceCount);
+    if (err != cudaSuccess || deviceCount == 0) {
+        // No GPU available - return false for CPU fallback
+        return false;
+    }
 
     // Allocate device memory
     float3 *d_ray_origins, *d_ray_directions;
@@ -1155,14 +1166,71 @@ void launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_
     size_t voxel_float_size = voxel_count * sizeof(float);
 
     // Allocate memory
-    cudaMalloc(&d_ray_origins, ray_data_size);
-    cudaMalloc(&d_ray_directions, ray_data_size);
-    cudaMalloc(&d_voxel_ray_counts, voxel_int_size);
-    cudaMalloc(&d_voxel_transmitted, voxel_int_size);
-    cudaMalloc(&d_voxel_hit_before, voxel_int_size);
-    cudaMalloc(&d_voxel_hit_after, voxel_int_size);
-    cudaMalloc(&d_voxel_hit_inside, voxel_int_size);
-    cudaMalloc(&d_voxel_path_lengths, voxel_float_size);
+    err = cudaMalloc(&d_ray_origins, ray_data_size);
+    if (err != cudaSuccess) return false;
+
+    err = cudaMalloc(&d_ray_directions, ray_data_size);
+    if (err != cudaSuccess) {
+        cudaFree(d_ray_origins);
+        return false;
+    }
+
+    err = cudaMalloc(&d_voxel_ray_counts, voxel_int_size);
+    if (err != cudaSuccess) {
+        cudaFree(d_ray_origins);
+        cudaFree(d_ray_directions);
+        return false;
+    }
+
+    err = cudaMalloc(&d_voxel_transmitted, voxel_int_size);
+    if (err != cudaSuccess) {
+        cudaFree(d_ray_origins);
+        cudaFree(d_ray_directions);
+        cudaFree(d_voxel_ray_counts);
+        return false;
+    }
+
+    err = cudaMalloc(&d_voxel_hit_before, voxel_int_size);
+    if (err != cudaSuccess) {
+        cudaFree(d_ray_origins);
+        cudaFree(d_ray_directions);
+        cudaFree(d_voxel_ray_counts);
+        cudaFree(d_voxel_transmitted);
+        return false;
+    }
+
+    err = cudaMalloc(&d_voxel_hit_after, voxel_int_size);
+    if (err != cudaSuccess) {
+        cudaFree(d_ray_origins);
+        cudaFree(d_ray_directions);
+        cudaFree(d_voxel_ray_counts);
+        cudaFree(d_voxel_transmitted);
+        cudaFree(d_voxel_hit_before);
+        return false;
+    }
+
+    err = cudaMalloc(&d_voxel_hit_inside, voxel_int_size);
+    if (err != cudaSuccess) {
+        cudaFree(d_ray_origins);
+        cudaFree(d_ray_directions);
+        cudaFree(d_voxel_ray_counts);
+        cudaFree(d_voxel_transmitted);
+        cudaFree(d_voxel_hit_before);
+        cudaFree(d_voxel_hit_after);
+        return false;
+    }
+
+    err = cudaMalloc(&d_voxel_path_lengths, voxel_float_size);
+    if (err != cudaSuccess) {
+        cudaFree(d_ray_origins);
+        cudaFree(d_ray_directions);
+        cudaFree(d_voxel_ray_counts);
+        cudaFree(d_voxel_transmitted);
+        cudaFree(d_voxel_hit_before);
+        cudaFree(d_voxel_hit_after);
+        cudaFree(d_voxel_hit_inside);
+        return false;
+    }
 
     // Copy input data to device
     cudaMemcpy(d_ray_origins, h_ray_origins, ray_data_size, cudaMemcpyHostToDevice);
@@ -1188,9 +1256,8 @@ void launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_
     cudaDeviceSynchronize();
 
     // Check for errors
-    cudaError_t err = cudaGetLastError();
+    err = cudaGetLastError();
     if (err != cudaSuccess) {
-        fprintf(stderr, "CUDA voxel kernel launch error: %s\n", cudaGetErrorString(err));
         // Clean up GPU memory before returning
         cudaFree(d_ray_origins);
         cudaFree(d_ray_directions);
@@ -1200,7 +1267,7 @@ void launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_
         cudaFree(d_voxel_hit_after);
         cudaFree(d_voxel_hit_inside);
         cudaFree(d_voxel_path_lengths);
-        return;
+        return false;
     }
 
     // Copy results back to host
@@ -1220,6 +1287,8 @@ void launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_
     cudaFree(d_voxel_hit_after);
     cudaFree(d_voxel_hit_inside);
     cudaFree(d_voxel_path_lengths);
+
+    return true; // Success
 }
 
 } // extern "C"

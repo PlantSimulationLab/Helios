@@ -5863,3 +5863,91 @@ DOCTEST_TEST_CASE("CollisionDetection VoxelIntersection Integration - calculateP
     DOCTEST_CHECK(inside_prims.size() == 1);
     DOCTEST_CHECK(inside_prims[0] == patch1);
 }
+
+DOCTEST_TEST_CASE("CollisionDetection GPU/CPU Ray Casting Parity") {
+    // Test that GPU and CPU ray-casting produce similar results for large ray batches
+    // This test exposes the bug where GPU returns far fewer hits than CPU when
+    // BVH is transferred to GPU memory
+
+    Context context;
+    CollisionDetection cd(&context);
+    cd.disableMessages();
+
+    // Create a simple 2m x 2m wall of triangles at x=0
+    // This ensures rays shooting in +x direction will hit
+    int grid_size = 50;
+    float wall_size = 2.0f;
+    float spacing = wall_size / grid_size;
+
+    for (int iy = 0; iy < grid_size; iy++) {
+        for (int iz = 0; iz < grid_size; iz++) {
+            float y = -wall_size/2.0f + iy * spacing;
+            float z = -wall_size/2.0f + iz * spacing;
+
+            // Create two triangles per grid cell to form a quad
+            vec3 v0(0, y, z);
+            vec3 v1(0, y + spacing, z);
+            vec3 v2(0, y + spacing, z + spacing);
+            vec3 v3(0, y, z + spacing);
+
+            context.addTriangle(v0, v1, v2);
+            context.addTriangle(v0, v2, v3);
+        }
+    }
+
+    uint triangle_count = context.getPrimitiveCount();
+    std::cout << "Test geometry: " << triangle_count << " triangles" << std::endl;
+
+    // Build BVH (this will call transferBVHToGPU when HELIOS_CUDA_AVAILABLE is defined)
+    cd.buildBVH();
+
+    // Create rays shooting at the wall from x=-2
+    std::vector<CollisionDetection::RayQuery> ray_queries;
+    int rays_per_dim = 1050; // 1,102,500 total rays (exceeds 1M GPU threshold to test GPU path)
+
+    for (int iy = 0; iy < rays_per_dim; iy++) {
+        for (int iz = 0; iz < rays_per_dim; iz++) {
+            float y = -wall_size/2.0f + (iy + 0.5f) * wall_size / rays_per_dim;
+            float z = -wall_size/2.0f + (iz + 0.5f) * wall_size / rays_per_dim;
+            vec3 origin(-2.0f, y, z);
+            vec3 direction(1.0f, 0.0f, 0.0f);
+            ray_queries.emplace_back(origin, direction, 10.0f);
+        }
+    }
+
+    std::cout << "Casting " << ray_queries.size() << " rays through wall (testing GPU path)..." << std::endl;
+
+    // Test with GPU disabled first (to get baseline)
+    cd.disableGPUAcceleration();
+    std::vector<CollisionDetection::HitResult> cpu_results = cd.castRays(ray_queries);
+
+    size_t cpu_hits = 0;
+    for (const auto& result : cpu_results) {
+        if (result.hit) cpu_hits++;
+    }
+
+    // Test with GPU enabled
+    cd.enableGPUAcceleration();
+    std::vector<CollisionDetection::HitResult> gpu_results = cd.castRays(ray_queries);
+
+    size_t gpu_hits = 0;
+    for (const auto& result : gpu_results) {
+        if (result.hit) gpu_hits++;
+    }
+
+    std::cout << "CPU hits: " << cpu_hits << " (" << (100.0*cpu_hits/ray_queries.size()) << "%)" << std::endl;
+    std::cout << "GPU hits: " << gpu_hits << " (" << (100.0*gpu_hits/ray_queries.size()) << "%)" << std::endl;
+
+    // CPU should find most rays hit the wall (>90%)
+    float cpu_hit_rate = static_cast<float>(cpu_hits) / ray_queries.size();
+    DOCTEST_CHECK(cpu_hit_rate > 0.90f);
+
+    // GPU and CPU should produce similar hit counts (within 5%)
+    // This will FAIL if GPU ray-casting has bugs
+    if (cpu_hits > 0) {
+        float hit_ratio = static_cast<float>(gpu_hits) / static_cast<float>(cpu_hits);
+        DOCTEST_CHECK(hit_ratio > 0.95f);
+        DOCTEST_CHECK(hit_ratio < 1.05f);
+    }
+}
+

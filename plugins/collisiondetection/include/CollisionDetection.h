@@ -1546,7 +1546,7 @@ private:
      * \param[in] ray_origins Vector of ray origin points
      * \param[in] ray_directions Vector of ray direction vectors
      */
-    void calculateVoxelRayPathLengths_GPU(const std::vector<helios::vec3> &ray_origins, const std::vector<helios::vec3> &ray_directions);
+    bool calculateVoxelRayPathLengths_GPU(const std::vector<helios::vec3> &ray_origins, const std::vector<helios::vec3> &ray_directions);
 
     /**
      * \brief Validate voxel grid indices

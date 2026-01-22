@@ -51,7 +51,7 @@ struct GPUBVHNode {
 extern "C" {
 void launchBVHTraversal(void *h_nodes, int node_count, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_query_aabb_min, float *h_query_aabb_max, int num_queries,
                         unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_query);
-void launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x,
+bool launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x,
                                int grid_divisions_y, int grid_divisions_z, int primitive_count, int *h_voxel_ray_counts, float *h_voxel_path_lengths, int *h_voxel_transmitted, int *h_voxel_hit_before, int *h_voxel_hit_after, int *h_voxel_hit_inside);
 // Warp-efficient GPU kernels
 void launchWarpEfficientBVH(void *h_bvh_soa_gpu, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_ray_origins, float *h_ray_directions, float *h_ray_max_distances,
@@ -928,6 +928,11 @@ void CollisionDetection::buildBVHRecursive(uint node_index, size_t primitive_sta
             centroid_b_coord = 0.5f * (aabb_b.first.z + aabb_b.second.z);
         }
 
+        // Add stable tiebreaker using UUID to ensure deterministic BVH construction
+        // This prevents non-deterministic behavior when primitives have equal centroids
+        if (centroid_a_coord == centroid_b_coord) {
+            return a < b;
+        }
         return centroid_a_coord < centroid_b_coord;
     });
 
@@ -3137,7 +3142,16 @@ void CollisionDetection::calculateVoxelRayPathLengths(const vec3 &grid_center, c
     // Choose GPU or CPU implementation based on acceleration setting
 #ifdef HELIOS_CUDA_AVAILABLE
     if (isGPUAccelerationEnabled()) {
-        calculateVoxelRayPathLengths_GPU(ray_origins, ray_directions);
+        // Try GPU first, but fall back to CPU if GPU fails (no hardware, out of memory, etc.)
+        bool gpu_success = calculateVoxelRayPathLengths_GPU(ray_origins, ray_directions);
+        if (!gpu_success) {
+            // GPU failed - fall back to CPU and disable GPU for future calls
+            if (printmessages) {
+                warnings.addWarning("gpu_voxel_fallback", "GPU voxel calculation failed, falling back to CPU");
+            }
+            gpu_acceleration_enabled = false;
+            calculateVoxelRayPathLengths_CPU(ray_origins, ray_directions);
+        }
     } else {
         calculateVoxelRayPathLengths_CPU(ray_origins, ray_directions);
     }
@@ -3933,7 +3947,15 @@ void CollisionDetection::calculateVoxelRayPathLengths_CPU(const std::vector<vec3
 }
 
 #ifdef HELIOS_CUDA_AVAILABLE
-void CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3> &ray_origins, const std::vector<vec3> &ray_directions) {
+bool CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3> &ray_origins, const std::vector<vec3> &ray_directions) {
+    // Check if GPU is actually available at runtime
+    int deviceCount = 0;
+    cudaError_t err = cudaGetDeviceCount(&deviceCount);
+    if (err != cudaSuccess || deviceCount == 0) {
+        // No GPU hardware available - return false to trigger CPU fallback
+        return false;
+    }
+
     if (printmessages) {
     }
 
@@ -3967,9 +3989,14 @@ void CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3
     int primitive_count = static_cast<int>(primitive_cache.size());
 
     // Launch CUDA kernel
-    launchVoxelRayPathLengths(num_rays, h_ray_origins.data(), h_ray_directions.data(), voxel_grid_center.x, voxel_grid_center.y, voxel_grid_center.z, voxel_grid_size.x, voxel_grid_size.y, voxel_grid_size.z, voxel_grid_divisions.x,
+    bool gpu_success = launchVoxelRayPathLengths(num_rays, h_ray_origins.data(), h_ray_directions.data(), voxel_grid_center.x, voxel_grid_center.y, voxel_grid_center.z, voxel_grid_size.x, voxel_grid_size.y, voxel_grid_size.z, voxel_grid_divisions.x,
                               voxel_grid_divisions.y, voxel_grid_divisions.z, primitive_count, h_voxel_ray_counts.data(), h_voxel_path_lengths.data(), h_voxel_transmitted.data(), h_voxel_hit_before.data(), h_voxel_hit_after.data(),
                               h_voxel_hit_inside.data());
+
+    if (!gpu_success) {
+        // GPU kernel failed - return false to trigger CPU fallback
+        return false;
+    }
 
     // Copy results back to class data structures
     if (use_flat_arrays) {
@@ -4117,6 +4144,8 @@ void CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3
             total_ray_voxel_intersections += count;
         }
     }
+
+    return true; // GPU execution succeeded
 }
 #endif
 

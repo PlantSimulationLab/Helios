@@ -55,7 +55,7 @@ struct GPUBVHNode {
 extern "C" {
 void launchBVHTraversal(void *h_nodes, int node_count, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_query_aabb_min, float *h_query_aabb_max, int num_queries,
                         unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_query);
-void launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x,
+bool launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x,
                                int grid_divisions_y, int grid_divisions_z, int primitive_count, int *h_voxel_ray_counts, float *h_voxel_path_lengths, int *h_voxel_transmitted, int *h_voxel_hit_before, int *h_voxel_hit_after, int *h_voxel_hit_inside);
 // Warp-efficient GPU kernels
 void launchWarpEfficientBVH(void *h_bvh_soa_gpu, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_ray_origins, float *h_ray_directions, float *h_ray_max_distances,
@@ -218,9 +218,8 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRays(const st
     // Smart CPU/GPU selection based on ray count and scene complexity
     // Performance analysis shows CPU is faster for small batches (<1000 rays) due to
     // GPU launch overhead, while GPU provides significant speedup for large batches
-    // TEMPORARY: Force CPU for LiDAR until GPU normal calculation is implemented
-    const size_t GPU_BATCH_THRESHOLD = 1000000; // Use GPU for batches larger than this (effectively disabled)
-    const size_t MIN_PRIMITIVES_FOR_GPU = 500; // Keep CPU path for stability
+    const size_t GPU_BATCH_THRESHOLD = 1000000; // Use GPU for batches larger than 1M rays
+    const size_t MIN_PRIMITIVES_FOR_GPU = 500; // Minimum scene complexity for GPU
 
 #ifdef HELIOS_CUDA_AVAILABLE
     bool use_gpu = gpu_acceleration_enabled && ray_queries.size() >= GPU_BATCH_THRESHOLD && d_bvh_nodes != nullptr && !primitive_indices.empty() && primitive_indices.size() >= MIN_PRIMITIVES_FOR_GPU;
@@ -1194,7 +1193,8 @@ void CollisionDetection::buildPrimitiveCache() {
 
 bool CollisionDetection::triangleIntersect(const vec3 &origin, const vec3 &direction, const vec3 &v0, const vec3 &v1, const vec3 &v2, float &distance) {
     // Möller-Trumbore triangle intersection algorithm (optimized - no vec3 temporaries)
-    const float EPSILON = 1e-8f;
+    // Note: Using 1e-5f to match LiDAR CUDA kernel tolerance for edge-case rays
+    const float EPSILON = 1e-5f;
 
     // Compute triangle edges directly as components (avoid vec3 constructors)
     float edge1_x = v1.x - v0.x, edge1_y = v1.y - v0.y, edge1_z = v1.z - v0.z;
@@ -1335,12 +1335,12 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPU(const
         ray_max_distances[i] = ray_queries[i].max_distance;
     }
 
-    // Get all primitives for GPU ray tracing (handle all primitive types like CPU)
-    std::vector<uint> all_primitives = context->getAllUUIDs();
-    std::vector<unsigned int> primitive_indices(all_primitives.size());
-    std::vector<int> primitive_types(all_primitives.size());
+    // CRITICAL: Use the SAME primitive_indices that the BVH was built with!
+    // Building a fresh array from getAllUUIDs() causes index mismatches
+    // because getAllUUIDs() order may differ from buildBVH() order
+    std::vector<int> primitive_types(primitive_indices.size());
     std::vector<float3> primitive_vertices;
-    std::vector<unsigned int> vertex_offsets(all_primitives.size());
+    std::vector<unsigned int> vertex_offsets(primitive_indices.size());
 
     size_t triangle_count = 0;
     size_t patch_count = 0;
@@ -1349,16 +1349,15 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPU(const
     if (printmessages) {
     }
 
-    // Prepare primitive data arrays for GPU
+    // Prepare primitive data arrays for GPU using existing primitive_indices
     size_t vertex_index = 0;
-    for (size_t i = 0; i < all_primitives.size(); i++) {
-        primitive_indices[i] = all_primitives[i];
+    for (size_t i = 0; i < primitive_indices.size(); i++) {
         vertex_offsets[i] = vertex_index;
 
-        PrimitiveType ptype = context->getPrimitiveType(all_primitives[i]);
+        PrimitiveType ptype = context->getPrimitiveType(primitive_indices[i]);
         primitive_types[i] = static_cast<int>(ptype);
 
-        std::vector<vec3> vertices = context->getPrimitiveVertices(all_primitives[i]);
+        std::vector<vec3> vertices = context->getPrimitiveVertices(primitive_indices[i]);
 
         if (ptype == PRIMITIVE_TYPE_TRIANGLE) {
             triangle_count++;
@@ -1371,7 +1370,7 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPU(const
                 vertex_index += 4;
             } else {
                 if (printmessages) {
-                    std::cout << "WARNING: Triangle primitive " << all_primitives[i] << " has " << vertices.size() << " vertices" << std::endl;
+                    std::cout << "WARNING: Triangle primitive " << primitive_indices[i] << " has " << vertices.size() << " vertices" << std::endl;
                 }
                 // Add zeros for invalid triangle
                 for (int v = 0; v < 4; v++) {
@@ -1389,7 +1388,7 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPU(const
                 vertex_index += 4;
             } else {
                 if (printmessages) {
-                    std::cout << "WARNING: Patch primitive " << all_primitives[i] << " has " << vertices.size() << " vertices" << std::endl;
+                    std::cout << "WARNING: Patch primitive " << primitive_indices[i] << " has " << vertices.size() << " vertices" << std::endl;
                 }
                 // Add zeros for invalid patch
                 for (int v = 0; v < 4; v++) {
@@ -1432,7 +1431,7 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPU(const
     if (printmessages) {
     }
 
-    if (all_primitives.empty()) {
+    if (primitive_indices.empty()) {
         if (printmessages) {
             std::cout << "No primitives found for GPU ray tracing, falling back to CPU" << std::endl;
         }
@@ -1468,7 +1467,7 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPU(const
     launchRayPrimitiveIntersection(gpu_bvh_nodes.data(), // BVH nodes
                                    static_cast<int>(gpu_bvh_nodes.size()), // Node count
                                    primitive_indices.data(), // Primitive indices
-                                   static_cast<int>(all_primitives.size()), // Primitive count
+                                   static_cast<int>(primitive_indices.size()), // Primitive count
                                    primitive_types.data(), // Primitive types
                                    primitive_vertices.data(), // Primitive vertices (all types)
                                    vertex_offsets.data(), // Vertex offsets
@@ -1485,14 +1484,33 @@ std::vector<CollisionDetection::HitResult> CollisionDetection::castRaysGPU(const
 
     // Convert GPU results back to HitResult format
     size_t hit_count = 0;
+    size_t filtered_count = 0;  // Hits found but filtered out
     for (size_t i = 0; i < ray_queries.size(); i++) {
         if (hit_counts[i] > 0 && hit_distances[i] <= ray_queries[i].max_distance) {
             results[i].hit = true;
             results[i].primitive_UUID = hit_primitive_ids[i];
             results[i].distance = hit_distances[i];
             results[i].intersection_point = ray_queries[i].origin + ray_queries[i].direction * hit_distances[i];
+
+            // Calculate normal for triangles and patches (required for LiDAR)
+            PrimitiveType ptype = context->getPrimitiveType(hit_primitive_ids[i]);
+            if (ptype == PRIMITIVE_TYPE_TRIANGLE || ptype == PRIMITIVE_TYPE_PATCH) {
+                std::vector<vec3> vertices = context->getPrimitiveVertices(hit_primitive_ids[i]);
+                if (vertices.size() >= 3) {
+                    vec3 edge1 = vertices[1] - vertices[0];
+                    vec3 edge2 = vertices[2] - vertices[0];
+                    results[i].normal = cross(edge1, edge2);
+                    if (results[i].normal.magnitude() > 1e-8f) {
+                        results[i].normal.normalize();
+                    }
+                }
+            }
+
             hit_count++;
         } else {
+            if (hit_counts[i] > 0) {
+                filtered_count++;  // Hit was found but distance exceeded max_distance
+            }
             results[i].hit = false;
             results[i].primitive_UUID = 0;
             results[i].distance = std::numeric_limits<float>::max();

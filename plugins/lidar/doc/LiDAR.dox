@@ -7,7 +7,7 @@
   <p> <br><br> </p>
 
   <table>
-  <tr><th>Dependencies</th><td>NVIDIA CUDA 9.0+ <br>Visualizer plug-in</td></tr>
+  <tr><th>Dependencies</th><td>Visualizer plug-in <br>CollisionDetection plug-in</td></tr>
   <tr><th>CMakeLists.txt</th><td>set( PLUGINS "lidar" )</td></tr>
   <tr><th>Header File</th><td>#include "LiDAR.h"</td></tr>
   <tr><th>Class</th><td>\ref LiDARcloud</td></tr>
@@ -16,7 +16,7 @@
   \section LiDARissues Known Issues
 
   - The LiDAR plug-in requires the Visualizer plug-in to be loaded in the CMakeLists.txt file.
-  - The current version of calculateLeafAreaGPU() assumes data is discrete-return. The version calculateLeafAreaGPU_testing() does both discrete-return and waveform data, but it has not been thoroughly tested.
+  - The current version of calculateLeafArea() handles both discrete-return and multi-return data automatically.
 
   \section LiDARintro Introduction
 
@@ -24,26 +24,15 @@
 
   \section LiDARdepends Dependencies
 
-  <table>
-  <caption>Installing dependent packages</caption>
-  <tr>
-	<th>Package</th><td>\image html apple-logo.png</td>
-	<td>\image html unix-logo.png</td>
-	<td>\image html windows-logo.png</td>
-  </tr>
-  <tr>
-	<td>NVIDIA CUDA 9.0+</td>
-	<td>Mac OSX: Not available.</td>
-	<td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
-    <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
-  </tr>
-  </table>
+  The LiDAR plugin uses the CollisionDetection plugin for ray tracing. GPU acceleration is optional and controlled through the CollisionDetection plugin:
+  - For CPU-only operation: No additional dependencies required
+  - For GPU acceleration: NVIDIA CUDA-capable GPU and CUDA runtime (managed by CollisionDetection plugin)
 
-  For help choosing the correct CUDA toolkit version for your system, consult this page: \ref ChoosingCUDA
-
-  Useful OS-specific information for installing CUDA can be found here: \ref DependentSoftware
-
-  If you are using a PC, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: \ref PCGPUTimeout
+  To enable GPU acceleration for faster processing of large point clouds:
+  \code
+  LiDARcloud pointcloud;
+  pointcloud.enableCDGPUAcceleration();  // Enable GPU acceleration before running scans
+  \endcode
 
 
 \section LiDARConstructor Class Constructor
@@ -305,6 +294,8 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   Another optional parameter is the maximum allowable aspect ratio of a triangle, which is the ratio of the length of the longest triangle side to the shortest triangle side. This has a similar effect as the \f$L_{max}\f$ parameter, and works better in some cases.
 
+  \note <b>Multi-Return Data:</b> For multi-return LiDAR data (detected automatically via target_count field), the triangulation uses an adaptive separation ratio filter instead of the aspect ratio parameter. This filter calculates the ratio of spatial distance to angular separation for each triangle edge and rejects triangles where this ratio is anomalously high (indicating points that are angularly close but spatially distant, characteristic of "sliver" triangles from beam spreading). The threshold is automatically calculated as 4.6 times the 25th percentile of the separation ratio distribution, eliminating the need for manual tuning. This approach is robust across different leaf sizes and scan resolutions.
+
   The following code sample illustrates how to perform a triangulation.
 
   ~~~~~~{.cpp}
@@ -349,8 +340,8 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
      pointcloud.triangulateHitPoints( 0.05, 5 ); //Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5
 
-     pointcloud.calculateLeafAreaGPU(); //Calculate leaf area for each grid cell
-      
+     pointcloud.calculateLeafArea(&context); //Calculate leaf area for each grid cell
+
   }
   ~~~~~~
 
@@ -378,11 +369,11 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
      pointcloud.triangulateHitPoints( 0.05, 5 ); //Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5
 
-     pointcloud.calculateLeafAreaGPU(); //Calculate leaf area for each grid cell
+     Context context; //Initialize the Context
+
+     pointcloud.calculateLeafArea(&context); //Calculate leaf area for each grid cell
 
      pointcloud.leafReconstructionAlphaMask( 0.001, 0.02, "plugins/visualizer/textures/ElmLeaf.png" ); //Perform the reconstruction
-
-     Context context; //Initialize the Context
 
      pointcloud.addLeafReconstructionToContext( &context );
       
@@ -578,7 +569,9 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
       pointcloud.triangulateHitPoints( 0.05, 5 ); //Perform triangulation with Lmax=0.05 and maximum aspect ratio of 5
 
-      pointcloud.calculateLeafAreaGPU(); //Calculate leaf area for each grid cell
+      Context context; //Initialize the Context
+
+      pointcloud.calculateLeafArea(&context); //Calculate leaf area for each grid cell
 
       uint Ncells = pointcloud.getGridCellCount(); //Get the number of grid cells
       

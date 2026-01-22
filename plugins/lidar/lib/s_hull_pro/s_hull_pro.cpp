@@ -209,7 +209,7 @@ int s_hull_pro( std::vector<Shx> &pts, std::vector<Triad> &triads)
 {
 
   //write_Shx(pts,"points.txt");
-  
+
   int nump = (int) pts.size();
 
 
@@ -495,8 +495,11 @@ int s_hull_pro( std::vector<Shx> &pts, std::vector<Triad> &triads)
 
       }
 
-      if( e1<0 ){//failed for some reason
-	std::cout << "triangle failed" << std::endl;
+      if( e1<0 ){
+	// Point cannot be inserted: all hull facets are invisible from this point
+	// This occurs when a point is very close to an existing hull point (typically ~1e-7 distance)
+	// due to floating-point precision after coordinate snapping
+	// Skipping the point is correct - the hull will be completed successfully without it
 	continue;
       }
 
