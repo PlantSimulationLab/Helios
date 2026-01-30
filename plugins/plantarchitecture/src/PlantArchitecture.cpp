@@ -137,17 +137,15 @@ std::string PlantArchitecture::resolveTextureFile(const std::string &texture_fil
     }
 
     // Try resolving as a general file path (handles already-resolved paths and paths relative to cwd)
-    try {
-        return helios::resolveFilePath(texture_file).string();
-    } catch (const std::runtime_error &) {
-        // Continue to plugin-specific resolution
+    std::filesystem::path resolved_path = helios::tryResolveFilePath(texture_file);
+    if (!resolved_path.empty()) {
+        return resolved_path.string();
     }
 
     // Try resolving as a plugin asset path
-    try {
-        return helios::resolvePluginAsset("plantarchitecture", texture_file).string();
-    } catch (const std::runtime_error &) {
-        // Continue to fallback
+    resolved_path = helios::tryResolvePluginAsset("plantarchitecture", texture_file);
+    if (!resolved_path.empty()) {
+        return resolved_path.string();
     }
 
     // If path doesn't have "assets/" prefix, try appropriate asset subdirectory based on file extension
@@ -159,10 +157,9 @@ std::string PlantArchitecture::resolveTextureFile(const std::string &texture_fil
         std::string subdirectory = (extension == ".obj" || extension == ".mtl") ? "assets/obj/" : "assets/textures/";
         std::string assets_path = subdirectory + filename;
 
-        try {
-            return helios::resolvePluginAsset("plantarchitecture", assets_path).string();
-        } catch (const std::runtime_error &) {
-            // Fall through to error
+        resolved_path = helios::tryResolvePluginAsset("plantarchitecture", assets_path);
+        if (!resolved_path.empty()) {
+            return resolved_path.string();
         }
     }
 
@@ -4418,6 +4415,32 @@ std::vector<uint> PlantArchitecture::getPlantInternodeObjectIDs(uint plantID) co
         if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
             objIDs.push_back(shoot->internode_tube_objID);
         }
+    }
+
+    return objIDs;
+}
+
+std::vector<uint> PlantArchitecture::getPlantInternodeObjectIDs(uint plantID, const std::string &shoot_type_label) const {
+    if (plant_instances.find(plantID) == plant_instances.end()) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantInternodeObjectIDs): Plant with ID of " + std::to_string(plantID) + " does not exist.");
+    }
+
+    std::vector<uint> objIDs;
+
+    auto &shoot_tree = plant_instances.at(plantID).shoot_tree;
+
+    bool shoot_type_found = false;
+    for (auto &shoot: shoot_tree) {
+        if (shoot->shoot_type_label == shoot_type_label) {
+            shoot_type_found = true;
+            if (context_ptr->doesObjectExist(shoot->internode_tube_objID)) {
+                objIDs.push_back(shoot->internode_tube_objID);
+            }
+        }
+    }
+
+    if (!shoot_type_found) {
+        helios_runtime_error("ERROR (PlantArchitecture::getPlantInternodeObjectIDs): No shoots with shoot type label '" + shoot_type_label + "' exist for plant with ID " + std::to_string(plantID) + ".");
     }
 
     return objIDs;

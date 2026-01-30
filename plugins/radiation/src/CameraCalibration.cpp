@@ -884,9 +884,13 @@ std::map<int, std::vector<std::vector<bool>>> CameraCalibration::generateColorBo
 
     context->getGlobalData(global_data_label.c_str(), camera_UUIDs);
 
-    // This is a placeholder - we need to access camera resolution
-    // For now, assume standard resolution - this should be obtained from camera data
-    helios::int2 camera_resolution = helios::make_int2(1024, 1024); // TODO: Get from camera properties
+    // Get camera resolution from global data
+    std::string resolution_label = "camera_" + camera_label + "_resolution";
+    if (!context->doesGlobalDataExist(resolution_label.c_str())) {
+        helios_runtime_error("ERROR (CameraCalibration::generateColorBoardSegmentationMasks): Camera resolution data for camera '" + camera_label + "' does not exist. Make sure the radiation model has been run.");
+    }
+    helios::int2 camera_resolution;
+    context->getGlobalData(resolution_label.c_str(), camera_resolution);
 
     std::string colorboard_label = "colorboard_" + colorboard_type;
     std::map<int, std::vector<std::vector<bool>>> label_masks;

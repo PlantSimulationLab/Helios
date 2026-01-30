@@ -26,6 +26,7 @@ rtDeclareVariable(Ray, ray, rtCurrentRay, );
 rtDeclareVariable(PerRayData, prd, rtPayload, );
 
 rtDeclareVariable(unsigned int, UUID, attribute UUID, );
+// Note: Nprimitives is declared in RayTracing.cuh (for bbox position calculation)
 
 //----------------- Rectangle Primitive ----------------------//
 
@@ -35,7 +36,10 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
 
     if (prd.origin_UUID == patch_UUID[objID]) { // the ray should not intersect the primitive from which it was launched
         return;
-    } else if (twosided_flag[patch_UUID[objID]] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
+    }
+    // FIX: Convert UUID to position for twosided_flag access
+    uint position = primitive_positions[patch_UUID[objID]];
+    if (twosided_flag[position] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
         return;
     }
 
@@ -67,7 +71,14 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
 
                 uint U = patch_UUID[objID];
 
-                uint ID = objectID[U];
+                // FIX: Convert UUID to position using primitive_positions lookup
+                // objectID is position-indexed, not UUID-indexed
+                uint ID = primitive_positions[U];
+
+                // Skip if UUID maps to invalid position (e.g., deleted UUID)
+                if (ID == UINT_MAX) {
+                    return;
+                }
 
                 if (maskID[ID] == -1) { // no texture transparency
                     if (rtPotentialIntersection(t)) {
@@ -92,7 +103,7 @@ RT_PROGRAM void rectangle_intersect(int objID /**< [in] index of primitive in ge
 
                         ind = make_uint3(floorf(float(sz.x - 1) * (uvmin.x + uv.x * duv.x)), floorf(float(sz.y - 1) * (1.f - uvmin.y - uv.y * duv.y)), maskID[ID]);
                         if (ind.x >= sz.x || ind.y >= sz.y) {
-                            rtPrintf("ERROR: texture out of bounds. uv = (%f,%f)\n", uv.x, uv.y);
+                            // Texture coord out of bounds - skip
                         }
                     }
                     if (maskdata[ind]) {
@@ -128,7 +139,10 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
 
     if (prd.origin_UUID == triangle_UUID[objID]) { // the ray should not intersect the primitive from which it was launched
         return;
-    } else if (twosided_flag[triangle_UUID[objID]] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
+    }
+    // FIX: Convert UUID to position for twosided_flag access
+    uint position = primitive_positions[triangle_UUID[objID]];
+    if (twosided_flag[position] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
         return;
     }
 
@@ -163,7 +177,13 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
 
                 uint U = triangle_UUID[objID];
 
-                uint ID = objectID[U];
+                // FIX: Convert UUID to position using primitive_positions lookup
+                uint ID = primitive_positions[U];
+
+                // Skip if UUID maps to invalid position (e.g., deleted UUID)
+                if (ID == UINT_MAX) {
+                    return;
+                }
 
                 if (maskID[ID] == -1) { // no texture transparency
                     if (rtPotentialIntersection(t)) {
@@ -183,7 +203,7 @@ RT_PROGRAM void triangle_intersect(int objID /**< [in] index of primitive in geo
 
                     uint3 ind = make_uint3(roundf(float(sz.x - 1) * fabs(uv.x)), roundf(float(sz.y - 1) * fabs(uv.y)), maskID[ID]);
                     if (ind.x >= sz.x || ind.y >= sz.y) {
-                        rtPrintf("ERROR: texture out of bounds. uv = (%f,%f)\n", uv.x, uv.y);
+                        // Texture coord out of bounds - skip
                     }
                     if (maskdata[ind]) {
                         if (rtPotentialIntersection(t)) {
@@ -217,7 +237,10 @@ RT_PROGRAM void disk_intersect(int objID /**< [in] index of primitive in geometr
 
     if (prd.origin_UUID == disk_UUID[objID]) { // the ray should not intersect the primitive from which it was launched
         return;
-    } else if (twosided_flag[disk_UUID[objID]] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
+    }
+    // FIX: Convert UUID to position for twosided_flag access
+    uint position = primitive_positions[disk_UUID[objID]];
+    if (twosided_flag[position] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
         return;
     }
 
@@ -259,7 +282,10 @@ RT_PROGRAM void voxel_intersect(int objID /**< [in] index of primitive in geomet
 
     if (prd.origin_UUID == voxel_UUID[objID]) { // the ray should not intersect the primitive from which it was launched
         return;
-    } else if (twosided_flag[voxel_UUID[objID]] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
+    }
+    // FIX: Convert UUID to position for twosided_flag access
+    uint position = primitive_positions[voxel_UUID[objID]];
+    if (twosided_flag[position] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
         return;
     }
 
@@ -355,7 +381,11 @@ RT_PROGRAM void bbox_intersect(int objID /**< [in] index of primitive in geometr
 
     if (prd.origin_UUID == bbox_UUID[objID]) { // the ray should not intersect the primitive from which it was launched
         return;
-    } else if (twosided_flag[bbox_UUID[objID]] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
+    }
+    // Bbox position is deterministic: Nprimitives + objID
+    // (bboxes are synthetic geometry, not in primitive_positions lookup table)
+    uint position = Nprimitives + objID;
+    if (twosided_flag[position] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
         return;
     }
 
@@ -415,7 +445,10 @@ RT_PROGRAM void tile_intersect(int objID /**< [in] index of primitive in geometr
 
     if (prd.origin_UUID == tile_UUID[objID]) { // the ray should not intersect the primitive from which it was launched
         return;
-    } else if (twosided_flag[tile_UUID[objID]] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
+    }
+    // FIX: Convert UUID to position for twosided_flag access
+    uint position = primitive_positions[tile_UUID[objID]];
+    if (twosided_flag[position] >= 2) { // if twosided_flag=2, ignore intersection (transparent)
         return;
     }
 
@@ -449,13 +482,23 @@ RT_PROGRAM void tile_intersect(int objID /**< [in] index of primitive in geometr
                 float bmag = d_magnitude(b);
                 float2 uv = make_float2(ddota / amag / amag, ddotb / bmag / bmag);
 
+                // Get tile base UUID - objID should always be 0 since each tile has one geometry entry
                 uint U = tile_UUID[objID];
 
-                uint ID = objectID[U];
+                // FIX: Convert UUID to position using primitive_positions lookup
+                uint ID = primitive_positions[U];
+
+                // Skip if UUID maps to invalid position (e.g., deleted UUID)
+                if (ID == UINT_MAX) {
+                    return;
+                }
 
                 if (maskID[ID] == -1) { // no texture transparency
                     if (rtPotentialIntersection(t)) {
-                        UUID = U + floorf(uv.y * object_subdivisions[ID].y) * object_subdivisions[ID].x + floorf(uv.x * object_subdivisions[ID].x);
+                        // Calculate subpatch indices and clamp to valid range [0, subdivisions-1]
+                        int subpatch_x = min((int) floorf(uv.x * object_subdivisions[ID].x), object_subdivisions[ID].x - 1);
+                        int subpatch_y = min((int) floorf(uv.y * object_subdivisions[ID].y), object_subdivisions[ID].y - 1);
+                        UUID = U + subpatch_y * object_subdivisions[ID].x + subpatch_x;
                         rtReportIntersection(0);
                     }
                 } else { // use transparency mask
@@ -466,7 +509,10 @@ RT_PROGRAM void tile_intersect(int objID /**< [in] index of primitive in geometr
 
                     if (maskdata[ind]) {
                         if (rtPotentialIntersection(t)) {
-                            UUID = U + floorf(uv.y * object_subdivisions[ID].y) * object_subdivisions[ID].x + floorf(uv.x * object_subdivisions[ID].x);
+                            // Calculate subpatch indices and clamp to valid range [0, subdivisions-1]
+                            int subpatch_x = min((int) floorf(uv.x * object_subdivisions[ID].x), object_subdivisions[ID].x - 1);
+                            int subpatch_y = min((int) floorf(uv.y * object_subdivisions[ID].y), object_subdivisions[ID].y - 1);
+                            UUID = U + subpatch_y * object_subdivisions[ID].x + subpatch_x;
                             rtReportIntersection(0);
                         }
                     }

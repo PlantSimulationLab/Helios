@@ -273,8 +273,6 @@ void LensFlare::applyGhosts(std::map<std::string, std::vector<float>> &pixel_dat
     float center_x = static_cast<float>(resolution.x) / 2.0f;
     float center_y = static_cast<float>(resolution.y) / 2.0f;
 
-    std::cout << "applyGhosts: resolution=(" << resolution.x << "," << resolution.y << ") center=(" << center_x << "," << center_y << ")" << std::endl;
-
     // Base reflectance from coating efficiency
     // Each ghost involves 2 reflections, so intensity = (1 - coating_efficiency)^2
     float coating_reflectance = 1.0f - props_.coating_efficiency;
@@ -340,26 +338,6 @@ void LensFlare::applyGhosts(std::map<std::string, std::vector<float>> &pixel_dat
             // compressed_luminance ≈ 1.0 for bright sources, ghost_base ≈ 5e-5
             // Reduced to 20% of previous strength for subtler effect
             float ghost_luminance = compressed_luminance * ghost_base * 40.0f;
-
-            // Debug output for first ghost
-            static bool debug_once = true;
-            if (debug_once && g == 0) {
-                std::cout << "Ghost " << g << " from pixel (" << bx << "," << by << "):" << std::endl;
-                std::cout << "  Luminance: " << luminance << " → compressed: " << compressed_luminance << std::endl;
-                std::cout << "  Chrominance: ";
-                for (const auto &[b, v]: chrominance)
-                    std::cout << b << "=" << v << " ";
-                std::cout << std::endl;
-                std::cout << "  ghost_base=" << ghost_base << " final_luminance=" << ghost_luminance << std::endl;
-                std::cout << "  Ghost position: (" << ghost_x << ", " << ghost_y << ") radius=" << ghost_radius << std::endl;
-                std::cout << "  Final band intensities: ";
-                for (const auto &[b, v]: chrominance) {
-                    std::cout << b << "=" << (v * ghost_luminance) << " ";
-                }
-                std::cout << std::endl;
-                std::cout << "  Number of bright pixels: " << bright_pixels.size() << std::endl;
-                debug_once = false;
-            }
 
             // Apply to each band: chrominance × compressed luminance
             for (auto &[band_label, band_data]: pixel_data) {
