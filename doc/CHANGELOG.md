@@ -1,5 +1,18 @@
 # Changelog
 
+# [1.3.64] 2026-01-30
+
+## Core
+- Added non-throwing path resolution functions `tryResolveFilePath()` and `tryResolvePluginAsset()` that return empty paths instead of throwing exceptions when files are not found.
+
+## Plant Architecture
+- Refactored `resolveTextureFile()` to use non-throwing path resolution functions, eliminating exception handling for file probing.
+- Added overloaded `PlantArchitecture::getPlantInternodeObjectIDs()` that can take a shoot type label string in order to only get object IDs for that shoot type.
+
+## Radiation
+- Refactored ray tracing architecture with backend abstraction layer to enable future support for OptiX 7.7 and Vulkan backends while maintaining backward compatibility with OptiX 6.5. This is a major overhaul, but should be fully backward compatible - please report any errors you encounter.
+- Added type-safe buffer indexing utilities (`BufferIndexing.h`, `IndexTypes.h`) to eliminate manual index calculations and prevent indexing errors in multi-dimensional GPU buffers.
+
 # [1.3.63] 2026-01-21
 
 ## Core

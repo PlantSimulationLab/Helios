@@ -1174,6 +1174,17 @@ namespace helios {
      */
     [[nodiscard]] std::filesystem::path resolvePluginAsset(const std::string &pluginName, const std::string &assetPath);
 
+    //! Attempt to resolve a plugin asset path without throwing exceptions
+    /**
+     * Similar to resolvePluginAsset() but returns an empty path instead of throwing on failure.
+     * Useful for probing whether a plugin asset exists.
+     *
+     * \param[in] pluginName Name of the plugin (e.g., "plantarchitecture")
+     * \param[in] assetPath Path relative to plugin directory (e.g., "assets/textures/leaf.png")
+     * \return Absolute canonical path to the asset if found, empty path otherwise
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path tryResolvePluginAsset(const std::string &pluginName, const std::string &assetPath);
 
     //! Resolve file path using standard Helios resolution hierarchy
     /**
@@ -1188,6 +1199,17 @@ namespace helios {
      * \ingroup functions
      */
     [[nodiscard]] std::filesystem::path resolveFilePath(const std::string &filename);
+
+    //! Attempt to resolve a file path without throwing exceptions
+    /**
+     * Similar to resolveFilePath() but returns an empty path instead of throwing on failure.
+     * Useful for probing whether a file exists at various locations.
+     *
+     * \param[in] filename File name with or without path (e.g., "texture.jpg" or "models/texture.jpg")
+     * \return Absolute canonical path to the file if found, empty path otherwise
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path tryResolveFilePath(const std::string &filename);
 
     //! Resolve spectral data file path
     /**

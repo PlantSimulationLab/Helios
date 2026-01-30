@@ -2656,6 +2656,15 @@ public:
      */
     [[nodiscard]] std::vector<uint> getPlantInternodeObjectIDs(uint plantID) const;
 
+    //! Get object IDs for internode (Tube) objects matching a specified shoot type label
+    /**
+     * \param[in] plantID ID of the plant instance.
+     * \param[in] shoot_type_label Label of the shoot type to filter internodes by.
+     * \return Vector of object IDs for all internodes matching the specified shoot type label.
+     * \note Throws a helios_runtime_error if the plant does not exist or if no shoots with the specified shoot type label are found.
+     */
+    [[nodiscard]] std::vector<uint> getPlantInternodeObjectIDs(uint plantID, const std::string &shoot_type_label) const;
+
     //! Get object IDs for all petiole (Tube) objects for a given plant
     /**
      * \param[in] plantID ID of the plant instance.

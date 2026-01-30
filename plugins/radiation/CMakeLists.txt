@@ -14,10 +14,14 @@ add_library(radiation STATIC
     "src/RadiationCamera.cpp"
     "src/CameraCalibration.cpp"
     "src/LensFlare.cpp"
+    "src/RayTracingTypes.cpp"
+    "src/backends/OptiX6Backend.cpp"
+    "src/backends/BackendFactory.cpp"
     "tests/selfTest.cpp"
 )
 
 target_include_directories(radiation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/lib/json" )
+target_include_directories(radiation PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/backends")
 
 find_package(CUDAToolkit REQUIRED)
 set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})

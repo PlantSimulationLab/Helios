@@ -498,6 +498,11 @@ std::vector<uint> Context::getAllUUIDs() const {
         }
         cached_all_uuids.push_back(UUID);
     }
+
+    // Sort UUIDs for consistent ordering across platforms
+    // (std::unordered_map iteration order is platform-dependent)
+    std::sort(cached_all_uuids.begin(), cached_all_uuids.end());
+
     all_uuids_cache_valid = true;
     return cached_all_uuids;
 }

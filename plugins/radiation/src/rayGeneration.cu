@@ -67,7 +67,8 @@ RT_PROGRAM void direct_raygen() {
                 sp.z = 0.f;
 
                 int ID = maskID[objID];
-                if (ID >= 0 && primitive_solid_fraction[UUID] > 0.f && primitive_solid_fraction[UUID] < 1.f) { // has texture transparency
+                // FIX: Use objID (position) instead of UUID for primitive_solid_fraction access
+                if (ID >= 0 && primitive_solid_fraction[objID] > 0.f && primitive_solid_fraction[objID] < 1.f) { // has texture transparency
 
                     d_sampleTexture_patch(sp, optix::make_int2(ii, jj), optix::make_float2(dx, dy), prd, ID, puvID);
                 }
@@ -102,10 +103,11 @@ RT_PROGRAM void direct_raygen() {
                 float3 v2 = make_float3(1, 1, 0);
                 d_transformPoint(m_trans, v2);
 
-                normal = normalize(cross(v1 - v0, v2 - v1));
+                normal = normalize(cross(v1 - v0, v2 - v0));
 
                 int ID = maskID[objID];
-                if (ID >= 0 && primitive_solid_fraction[UUID] > 0.f && primitive_solid_fraction[UUID] < 1.f) { // has texture transparency
+                // FIX: Use objID (position) instead of UUID for primitive_solid_fraction access
+                if (ID >= 0 && primitive_solid_fraction[objID] > 0.f && primitive_solid_fraction[objID] < 1.f) { // has texture transparency
 
                     d_sampleTexture_triangle(sp, v0, v1, v2, prd, m_trans, ID, puvID);
                 }
@@ -332,7 +334,7 @@ RT_PROGRAM void diffuse_raygen() {
                 float3 v2 = make_float3(1, 1, 0);
                 d_transformPoint(m_trans, v2);
 
-                normal = normalize(cross(v1 - v0, v2 - v1));
+                normal = normalize(cross(v1 - v0, v2 - v0));
 
                 int ID = maskID[objID];
                 if (ID >= 0) { // has texture transparency
@@ -467,6 +469,7 @@ RT_PROGRAM void diffuse_raygen() {
 
                     // ---- "bottom" surface launch -------
                 } else if (launch_face == 0 && twosided_flag[objID] == 1) {
+
                     ray_direction = -ray_direction;
                     ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
 
@@ -482,6 +485,7 @@ RT_PROGRAM void diffuse_raygen() {
                         prd.hit_periodic_boundary = false;
                     }
                 }
+                // else: Skip ray trace for bottom face of one-sided primitives
             }
         }
     }

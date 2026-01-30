@@ -18,13 +18,8 @@
 
 #include "CameraCalibration.h"
 #include "Context.h"
+#include "RayTracingBackend.h"
 #include "json.hpp"
-
-// NVIDIA OptiX Includes
-#include <optix.h>
-#include <optixu/optixpp_namespace.h>
-#include <optixu/optixu_vector_functions.h>
-#include <optixu/optixu_vector_types.h>
 
 #include <utility>
 
@@ -428,6 +423,12 @@ private:
     static float luminance(float red, float green, float blue) noexcept {
         return 0.2126f * red + 0.7152f * green + 0.0722f * blue;
     }
+};
+
+//! Struct to store camera tile information for tiled rendering
+struct CameraTile {
+    helios::int2 resolution; //!< Tile dimensions (width, height)
+    helios::int2 offset; //!< Tile offset in full image (x, y)
 };
 
 //! Metadata for radiation camera image export
@@ -1802,9 +1803,41 @@ public:
     //! Set camera pixel data for a specific band
     void setCameraPixelData(const std::string &camera_label, const std::string &band_label, const std::vector<float> &pixel_data);
 
+    //! Query GPU memory available via backend abstraction layer
+    /**
+     * Phase 1: Integration test method - proves backend is accessible and functional.
+     * This method uses the backend instead of direct OptiX calls.
+     */
+    void queryBackendGPUMemory() const;
+
+    //! Test helper: Build geometry data and return primitive count (Phase 1 testing)
+    /**
+     * Phase 1: Testing helper to verify buildGeometryData() works correctly.
+     * Returns the number of primitives extracted from Context.
+     */
+    size_t testBuildGeometryData();
+
+    //! Test helper: Get backend pointer for direct testing (Phase 1 only)
+    helios::RayTracingBackend *getBackend();
+
+    //! Test helper: Get geometry data reference (Phase 1 only)
+    helios::RayTracingGeometry &getGeometryData();
+
+    //! Test helper: Get material data reference (Phase 1 only)
+    helios::RayTracingMaterial &getMaterialData();
+
+    //! Test helper: Get source data reference (Phase 1 only)
+    std::vector<helios::RayTracingSource> &getSourceData();
+
+    //! Test helper: Build all backend data (Phase 1 testing only)
+    void testBuildAllBackendData();
+
 protected:
     //! Flag to determine if status messages are output to the screen
     bool message_flag;
+
+    //! Specular reflection mode: 0=disabled, 1=default scale (0.25), 2=user scale
+    uint specular_reflection_mode = 0;
 
     //! Pointer to the context
     helios::Context *context;
@@ -1820,6 +1853,14 @@ protected:
 
     //! UUIDs currently added from the Context
     std::vector<uint> context_UUIDs;
+
+    //! UUID-to-array-position mapping (UUID → array index)
+    //! Enables O(1) lookup of array position from UUID value
+    std::unordered_map<uint, size_t> uuid_to_position;
+
+    //! Array-position-to-UUID mapping (array index → UUID)
+    //! For reverse lookups: position_to_uuid[array_position] = UUID
+    std::vector<uint> position_to_uuid;
 
     // --- Radiation Band Variables --- //
 
@@ -1840,39 +1881,6 @@ protected:
 
     std::vector<RadiationSource> radiation_sources;
 
-    //! Number of external radiation sources
-    RTvariable Nsources_RTvariable;
-
-    //! (x,y,z) positions of external radiation sources - RTbuffer object
-    RTbuffer source_positions_RTbuffer;
-    //! (x,y,z) positions of external radiation sources - RTvariable
-    RTvariable source_positions_RTvariable;
-
-    //! Types of radiation sources - RTbuffer object
-    RTbuffer source_types_RTbuffer;
-    //! Types radiation sources - RTvariable
-    RTvariable source_types_RTvariable;
-
-    //! Fluxes of external radiation sources - RTbuffer object
-    RTbuffer source_fluxes_RTbuffer;
-    //! Fluxes of external radiation sources - RTvariable
-    RTvariable source_fluxes_RTvariable;
-    //! Camera-weighted fluxes of external radiation sources for specular - RTbuffer object
-    RTbuffer source_fluxes_cam_RTbuffer;
-    //! Camera-weighted fluxes of external radiation sources for specular - RTvariable
-    RTvariable source_fluxes_cam_RTvariable;
-
-    //! Widths of external radiation sources - RTbuffer object
-    RTbuffer source_widths_RTbuffer;
-    //! Widths of external radiation sources - RTvariable
-    RTvariable source_widths_RTvariable;
-
-
-    //! Rotations (rx,ry,rz) of external radiation sources - RTbuffer object
-    RTbuffer source_rotations_RTbuffer;
-    //! Rotations (rx,ry,rz) of external radiation sources - RTvariable
-    RTvariable source_rotations_RTvariable;
-
     // --- Camera Variables --- //
 
     //! Radiation cameras
@@ -1883,33 +1891,6 @@ protected:
 
     //! Set of cameras with metadata JSON writing enabled
     std::set<std::string> metadata_enabled_cameras;
-
-    //! Positions of radiation camera center points - RTvariable
-    RTvariable camera_position_RTvariable;
-
-    //! Radiation camera viewing directions - RTvariable
-    RTvariable camera_direction_RTvariable;
-
-    //! Radiation camera lens size - RTvariable
-    RTvariable camera_lens_diameter_RTvariable;
-
-    //! Radiation FOV aspect ratio - RTvariable
-    RTvariable FOV_aspect_RTvariable;
-
-    //! Radiation camera focal plane distance (working distance for ray generation, NOT lens optical focal length) - RTvariable
-    RTvariable camera_focal_length_RTvariable;
-
-    //! Radiation camera distance between lens and sensor plane - RTvariable
-    RTvariable camera_viewplane_length_RTvariable;
-
-    //! Solid angle subtended by a single camera pixel (steradians) - RTvariable
-    RTvariable camera_pixel_solid_angle_RTvariable;
-
-    //! Number of radiation cameras
-    RTvariable Ncameras_RTvariable;
-
-    //! Current radiation camera index
-    RTvariable camera_ID_RTvariable;
 
     //! Primitive spectral reflectivity data references
     std::map<std::string, std::vector<uint>> spectral_reflectivity_data;
@@ -1975,8 +1956,10 @@ protected:
     void initializeOptiX();
 
     //! Sets radiative properties for all primitives
-    /** This function should be called anytime primitive radiative properties are modified. If radiative properties were not set in the Context, default radiative properties will be applied (black body).
-        \note \ref RadiationModel::updateRadiativeProperties() must be called before simulation can be run
+    /** DEPRECATED: This function is no longer required - material properties are automatically updated when runBand() is called.
+        Handles spectrum-based material loading and camera spectral response weighting.
+        Called internally during runBand() when spectrum interpolation is configured.
+        \note This is a private method called automatically - users should not call this directly.
     */
     void updateRadiativeProperties();
 
@@ -2017,174 +2000,6 @@ protected:
 
     /// void updateFluxesFromSpectra( uint SourceID );
 
-    //! Get 1D array of data for an OptiX buffer of floats
-    /**
-        \param[in] buffer OptiX buffer object corresponding to 1D array of data
-    */
-    std::vector<float> getOptiXbufferData(RTbuffer buffer);
-
-    //! Get 1D array of data for an OptiX buffer of doubles
-    /**
-        \param[in] buffer OptiX buffer object corresponding to 1D array of data
-    */
-    std::vector<double> getOptiXbufferData_d(RTbuffer buffer);
-
-    //! Get 1D array of data for an OptiX buffer of unsigned ints
-    /**
-        \param[in] buffer OptiX buffer object corresponding to 1D array of data
-    */
-    std::vector<uint> getOptiXbufferData_ui(RTbuffer buffer);
-
-    void addBuffer(const char *name, RTbuffer &buffer, RTvariable &variable, RTbuffertype type, RTformat format, size_t dimension);
-
-    //! Set size of 1D buffer and initialize all elements to zero.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] bsize length of buffer.
-     */
-    void zeroBuffer1D(RTbuffer &buffer, size_t bsize);
-
-    //! Copy contents of one buffer to another
-    /**
-     * \param[in] buffer OptiX buffer to copy FROM.
-     * \param[out] buffer_copy OptiX buffer to copy TO.
-     */
-    void copyBuffer1D(RTbuffer &buffer, RTbuffer &buffer_copy);
-
-    //! Set size of 1D buffer and initialize all elements based on a 1D array of doubles.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 1D array used to initialize buffer.
-     */
-    void initializeBuffer1Dd(RTbuffer &buffer, const std::vector<double> &array);
-    //! Set size of 1D buffer and initialize all elements based on a 1D array of floats.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 1D array used to initialize buffer.
-     */
-    void initializeBuffer1Df(RTbuffer &buffer, const std::vector<float> &array);
-    //! Set size of 1D buffer and initialize all elements based on a 1D array of type float2.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 1D array used to initialize buffer.
-     */
-    void initializeBuffer1Dfloat2(RTbuffer &buffer, const std::vector<optix::float2> &array);
-    //! Set size of 1D buffer and initialize all elements based on a 1D array of type float3.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 1D array used to initialize buffer.
-     */
-    void initializeBuffer1Dfloat3(RTbuffer &buffer, const std::vector<optix::float3> &array);
-    //! Set size of 1D buffer and initialize all elements based on a 1D array of type float4.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 1D array used to initialize buffer.
-     */
-    void initializeBuffer1Dfloat4(RTbuffer &buffer, const std::vector<optix::float4> &array);
-    //! Set size of 1D buffer and initialize all elements based on a 1D array of type int.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 1D array used to initialize buffer.
-     */
-    void initializeBuffer1Di(RTbuffer &buffer, const std::vector<int> &array);
-    //! Set size of 1D buffer and initialize all elements based on a 1D array of type unsigned int.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 1D array used to initialize buffer.
-     */
-    void initializeBuffer1Dui(RTbuffer &buffer, const std::vector<uint> &array);
-    //! Set size of 1D buffer and initialize all elements based on a 1D array of type int2.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 1D array used to initialize buffer.
-     */
-    void initializeBuffer1Dint2(RTbuffer &buffer, const std::vector<optix::int2> &array);
-    //! Set size of 1D buffer and initialize all elements based on a 1D array of type int3.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 1D array used to initialize buffer.
-     */
-    void initializeBuffer1Dint3(RTbuffer &buffer, const std::vector<optix::int3> &array);
-    //! Set size of 1D buffer and initialize all elements based on a 1D array of type char.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 1D array used to initialize buffer.
-     */
-    void initializeBuffer1Dchar(RTbuffer &buffer, const std::vector<char> &array);
-    //! Set size of 2D buffer and initialize all elements to zero.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] size length of buffer.
-     */
-    void zeroBuffer2D(RTbuffer &buffer, optix::int2 bsize);
-    //! Set size of 2D buffer and initialize all elements based on a 2D array of doubles.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 2D array used to initialize buffer.
-     */
-    void initializeBuffer2Dd(RTbuffer &buffer, const std::vector<std::vector<double>> &array);
-    //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 2D array used to initialize buffer.
-     */
-    void initializeBuffer2Df(RTbuffer &buffer, const std::vector<std::vector<float>> &array);
-    //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 2D array used to initialize buffer.
-     */
-    void initializeBuffer2Dfloat2(RTbuffer &buffer, const std::vector<std::vector<optix::float2>> &array);
-    //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 2D array used to initialize buffer.
-     */
-    void initializeBuffer2Dfloat3(RTbuffer &buffer, const std::vector<std::vector<optix::float3>> &array);
-    //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 2D array used to initialize buffer.
-     */
-    void initializeBuffer2Dfloat4(RTbuffer &buffer, const std::vector<std::vector<optix::float4>> &array);
-    //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 2D array used to initialize buffer.
-     */
-    void initializeBuffer2Di(RTbuffer &buffer, const std::vector<std::vector<int>> &array);
-    //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 2D array used to initialize buffer.
-     */
-    void initializeBuffer2Dui(RTbuffer &buffer, const std::vector<std::vector<uint>> &array);
-    //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 2D array used to initialize buffer.
-     */
-    void initializeBuffer2Dint2(RTbuffer &buffer, const std::vector<std::vector<optix::int2>> &array);
-    //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 2D array used to initialize buffer.
-     */
-    void initializeBuffer2Dint3(RTbuffer &buffer, const std::vector<std::vector<optix::int3>> &array);
-    //! Set size of 2D buffer and initialize all elements based on a 2D array of floats.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 2D array used to initialize buffer.
-     */
-    void initializeBuffer2Dbool(RTbuffer &buffer, const std::vector<std::vector<bool>> &array);
-
-    //! Set size of 3D buffer and initialize all elements based on a 3D array.
-    /**
-     * \param[inout] buffer OptiX buffer to be initialized.
-     * \param[in] array 3D array used to initialize buffer.
-     */
-    template<typename anytype>
-    void initializeBuffer3D(RTbuffer &buffer, const std::vector<std::vector<std::vector<anytype>>> &array);
 
     void buildLightModelGeometry(uint sourceID);
 
@@ -2194,342 +2009,77 @@ protected:
 
     void updateCameraModelPosition(const std::string &cameralabel);
 
+    //! Build camera launch parameters from camera settings
+    /**
+     * @brief Build camera launch parameters from camera settings
+     * @param camera Camera configuration
+     * @param camera_id Camera index
+     * @param antialiasing_samples Antialiasing sample count
+     * @param tile_resolution Tile resolution (or full resolution if no tiling)
+     * @param tile_offset Tile offset (0,0 if no tiling)
+     * @return Launch parameters struct ready for backend
+     */
+    helios::RayTracingLaunchParams buildCameraLaunchParams(const RadiationCamera &camera, uint camera_id, uint antialiasing_samples, const helios::int2 &tile_resolution, const helios::int2 &tile_offset);
+
+    //! Compute camera tiles for large renders
+    /**
+     * @brief Compute camera tiles for large renders
+     * @param camera Camera to tile
+     * @param maxRays Maximum rays per launch
+     * @return Vector of tiles (single tile if no tiling needed)
+     */
+    std::vector<CameraTile> computeCameraTiles(const RadiationCamera &camera, size_t maxRays);
+
+    //! Phase 1: Build backend-agnostic geometry data from Context primitives
+    /**
+     * Extracts geometry from all Context primitives and populates geometry_data structure.
+     * This data can then be uploaded to the backend via backend->updateGeometry().
+     */
+    void buildGeometryData();
+
+    //! Extract texture mask and UV data for all primitives
+    /**
+     * Iterates through primitives with transparency textures, extracts mask data
+     * and UV coordinates, and populates the texture-related fields in geometry_data.
+     * Called internally by buildGeometryData().
+     */
+    void buildTextureData();
+
+    //! Build UUID-to-array-position mapping from geometry_data
+    //! Must be called after buildGeometryData() and before buildMaterialData()
+    void buildUUIDMapping();
+
+    //! Phase 1: Build backend-agnostic material data from Context primitive data
+    void buildMaterialData();
+
+    //! Phase 1: Build backend-agnostic source data from radiation_sources
+    void buildSourceData();
+
     //! UUIDs for source 3D object models (for visualization). Key is the source ID, value is a vector of UUIDs for the source model.
     std::map<uint, std::vector<uint>> source_model_UUIDs;
     //! UUIDs for camera 3D object models (for visualization). Key is the camera label, value is a vector of UUIDs for the camera model.
     std::map<std::string, std::vector<uint>> camera_model_UUIDs;
 
-    /* Primary RT API objects */
+    /* Phase 1: Backend abstraction layer (for incremental OptiX code replacement) */
 
-    //! OptiX context object
-    RTcontext OptiX_Context;
-    //! OptiX ray generation program handle for direct radiation
-    RTprogram direct_raygen;
-    //! OptiX ray generation program handle for diffuse radiation
-    RTprogram diffuse_raygen;
+    //! Ray tracing backend (will replace direct OptiX usage)
+    std::unique_ptr<helios::RayTracingBackend> backend;
 
-    //! OptiX ray generation program handle for radiation cameras
-    RTprogram camera_raygen;
-    //! OptiX ray generation program handle for radiation camera pixel labeling
-    RTprogram pixel_label_raygen;
+    //! Backend-agnostic geometry data (built from Context, uploaded to backend)
+    helios::RayTracingGeometry geometry_data;
 
-    /* Variables */
+    //! Backend-agnostic material data (built from Context, uploaded to backend)
+    helios::RayTracingMaterial material_data;
 
-    RTgeometrygroup base_geometry_group;
-
-    //! Random number generator seed
-    RTvariable random_seed_RTvariable;
-
-    //! Primitive offset used for tiling ray launches
-    RTvariable launch_offset_RTvariable;
-
-    //! Camera pixel x-offset for tiling camera ray launches
-    RTvariable camera_pixel_offset_x_RTvariable;
-
-    //! Camera pixel y-offset for tiling camera ray launches
-    RTvariable camera_pixel_offset_y_RTvariable;
-
-    //! Full camera resolution (not tile size) for camera ray launches
-    RTvariable camera_resolution_full_RTvariable;
-
-    //! Flag designating which face of the primitive the launch is for
-    RTvariable launch_face_RTvariable;
-
-    //! Maximum scattering depth
-    RTvariable max_scatters_RTvariable;
-    RTbuffer max_scatters_RTbuffer;
-
-    //! Number of radiative bands in the radiation model
-    RTvariable Nbands_global_RTvariable;
-
-    //! Number of radiative bands in the current launch
-    RTvariable Nbands_launch_RTvariable;
-
-    //! Flag to disable launches for certain bands
-    RTvariable band_launch_flag_RTvariable;
-    RTbuffer band_launch_flag_RTbuffer;
-
-    //! Number of Context primitives
-    RTvariable Nprimitives_RTvariable;
-
-    //! Flux of ambient/diffuse radiation
-    RTvariable diffuse_flux_RTvariable;
-    RTbuffer diffuse_flux_RTbuffer;
-
-    //! Diffuse distribution coefficient of diffuse ambient radiation
-    RTvariable diffuse_extinction_RTvariable;
-    RTbuffer diffuse_extinction_RTbuffer;
-
-    //! Direction of peak diffuse radiation
-    RTvariable diffuse_peak_dir_RTvariable;
-    RTbuffer diffuse_peak_dir_RTbuffer;
-
-    //! Diffuse distribution normalization factor
-    RTvariable diffuse_dist_norm_RTvariable;
-    RTbuffer diffuse_dist_norm_RTbuffer;
-
-    //! Atmospheric sky radiance parameters for camera miss rays
-    RTvariable sky_radiance_params_RTvariable;
-    RTbuffer sky_radiance_params_RTbuffer;
-
-    //! Base sky radiance for camera atmospheric model (separate from diffuse_flux used for radiation transfer)
-    RTvariable camera_sky_radiance_RTvariable;
-    RTbuffer camera_sky_radiance_RTbuffer;
-
-    //! Sun direction for atmospheric sky radiance evaluation
-    RTvariable sun_direction_RTvariable;
-
-    //! Solar disk radiance for camera rendering (W/m²/sr)
-    RTvariable solar_disk_radiance_RTvariable;
-    RTbuffer solar_disk_radiance_RTbuffer;
-
-    //! Cosine of solar angular radius for disk rendering (cos(0.265°) ≈ 0.99999)
-    RTvariable solar_disk_cos_angle_RTvariable;
-
-    //! Radiation emission flag
-    RTvariable emission_flag_RTvariable;
-    RTbuffer emission_flag_RTbuffer;
-
-    //! Periodic boundary condition
-    helios::vec2 periodic_flag;
-    RTvariable periodic_flag_RTvariable;
-
-    //! Energy absorbed by the "sky"
-    RTvariable Rsky_RTvariable;
-
-    //! Primitive reflectivity - RTbuffer
-    RTbuffer rho_RTbuffer;
-    //! Primitive reflectivity - RTvariable
-    RTvariable rho_RTvariable;
-    //! Primitive transmissivity - RTbuffer
-    RTbuffer tau_RTbuffer;
-    //! Primitive transmissivity - RTvariable
-    RTvariable tau_RTvariable;
-
-    //! Primitive reflectivity weighted by camera response - RTbuffer
-    RTbuffer rho_cam_RTbuffer;
-    //! Primitive reflectivity weighted by camera response - RTvariable
-    RTvariable rho_cam_RTvariable;
-    //! Primitive transmissivity weighted by camera response - RTbuffer
-    RTbuffer tau_cam_RTbuffer;
-    //! Primitive transmissivity weighted by camera response - RTvariable
-    RTvariable tau_cam_RTvariable;
-
-    //! Primitive specular reflection exponent - RTbuffer
-    RTbuffer specular_exponent_RTbuffer;
-    //! Primitive specular reflection exponent - RTvariable
-    RTvariable specular_exponent_RTvariable;
-
-    //! Primitive specular reflection scale coefficient - RTbuffer
-    RTbuffer specular_scale_RTbuffer;
-    //! Primitive specular reflection scale coefficient - RTvariable
-    RTvariable specular_scale_RTvariable;
-
-    //! Flag indicating whether specular reflection is enabled - RTvariable
-    /**
-     * = 0 -> specular reflection is disabled
-     * = 1 -> specular reflection is enabled with scale coefficient of 1.0
-     * = 2 -> specular reflection is enabled with per-primitive scale coefficient specified
-     */
-    RTvariable specular_reflection_enabled_RTvariable;
-
-    //! Current scattering iteration (0-based) for camera ray tracing
-    RTvariable scattering_iteration_RTvariable;
-
-    //! Primitive type - RTbuffer object
-    RTbuffer primitive_type_RTbuffer;
-    //! Primitive type - RTvariable
-    RTvariable primitive_type_RTvariable;
-
-    //! Primitive area - RTbuffer object
-    RTbuffer primitive_solid_fraction_RTbuffer;
-    //! Primitive area - RTvariable
-    RTvariable primitive_solid_fraction_RTvariable;
-
-    //! Primitive UUIDs - RTbuffer object
-    RTbuffer patch_UUID_RTbuffer;
-    RTbuffer triangle_UUID_RTbuffer;
-    RTbuffer disk_UUID_RTbuffer;
-    RTbuffer tile_UUID_RTbuffer;
-    RTbuffer voxel_UUID_RTbuffer;
-    RTbuffer bbox_UUID_RTbuffer;
-    //! Primitive UUIDs - RTvariable object
-    RTvariable patch_UUID_RTvariable;
-    RTvariable triangle_UUID_RTvariable;
-    RTvariable disk_UUID_RTvariable;
-    RTvariable tile_UUID_RTvariable;
-    RTvariable voxel_UUID_RTvariable;
-    RTvariable bbox_UUID_RTvariable;
-
-    //! Mapping UUIDs to object IDs - RTbuffer object
-    RTbuffer objectID_RTbuffer;
-    //! Mapping UUIDs to object IDs - RTvariable object
-    RTvariable objectID_RTvariable;
-
-    //! Mapping object IDs to UUIDs - RTbuffer object
-    RTbuffer primitiveID_RTbuffer;
-    //! Mapping object IDs to UUIDs - RTvariable object
-    RTvariable primitiveID_RTvariable;
-
-    //! Primitive two-sided flag - RTbuffer object
-    RTbuffer twosided_flag_RTbuffer;
-    //! Primitive two-sided flag - RTvariable
-    RTvariable twosided_flag_RTvariable;
-
-    //! Radiative flux lost to the sky - RTbuffer object
-    RTbuffer Rsky_RTbuffer;
-
-    //-- Patch Buffers --//
-    RTbuffer patch_vertices_RTbuffer;
-    RTvariable patch_vertices_RTvariable;
-
-    //-- Triangle Buffers --//
-    RTbuffer triangle_vertices_RTbuffer;
-    RTvariable triangle_vertices_RTvariable;
-
-    //-- Disk Buffers --//
-    RTbuffer disk_centers_RTbuffer;
-    RTvariable disk_centers_RTvariable;
-    RTbuffer disk_radii_RTbuffer;
-    RTvariable disk_radii_RTvariable;
-    RTbuffer disk_normals_RTbuffer;
-    RTvariable disk_normals_RTvariable;
-
-    //-- Tile Buffers --//
-    RTbuffer tile_vertices_RTbuffer;
-    RTvariable tile_vertices_RTvariable;
-
-    //-- Voxel Buffers --//
-    RTbuffer voxel_vertices_RTbuffer;
-    RTvariable voxel_vertices_RTvariable;
-
-    //-- Bounding Box Buffers --//
-    RTbuffer bbox_vertices_RTbuffer;
-    RTvariable bbox_vertices_RTvariable;
-
-    //-- Object Buffers --//
-    RTbuffer object_subdivisions_RTbuffer;
-    RTvariable object_subdivisions_RTvariable;
-
-    /* Output Buffers */
-
-    //! Primitive affine transformation matrix - RTbuffer object
-    RTbuffer transform_matrix_RTbuffer;
-    //! Primitive affine transformation matrix - RTvariable
-    RTvariable transform_matrix_RTvariable;
-    //! Primitive temperatures - RTbuffer object
-    RTbuffer primitive_emission_RTbuffer;
-    //! Primitive temperatures - RTvariable
-    RTvariable primitive_emission_RTvariable;
-
-    //! Incoming radiative energy for each object - RTbuffer object
-    RTbuffer radiation_in_RTbuffer;
-    //! Incoming radiative energy for each object - RTvariable
-    RTvariable radiation_in_RTvariable;
-    //! Outgoing radiative energy (reflected/emitted) for top surface of each object - RTbuffer object
-    RTbuffer radiation_out_top_RTbuffer;
-    //! Outgoing radiative energy (reflected/emitted) for top surface each object - RTvariable
-    RTvariable radiation_out_top_RTvariable;
-    //! Outgoing radiative energy (reflected/emitted) for bottom surface of each object - RTbuffer object
-    RTbuffer radiation_out_bottom_RTbuffer;
-    //! Outgoing radiative energy (reflected/emitted) for bottom surface each object - RTvariable
-    RTvariable radiation_out_bottom_RTvariable;
-    //! "to-be-scattered" radiative energy (reflected/emitted) for top surface of each object - RTbuffer object
-    RTbuffer scatter_buff_top_RTbuffer;
-    //! "to-be-scattered" radiative energy (reflected/emitted) for top surface each object - RTvariable
-    RTvariable scatter_buff_top_RTvariable;
-    //! "to-be-scattered" radiative energy (reflected/emitted) for bottom surface of each object - RTbuffer object
-    RTbuffer scatter_buff_bottom_RTbuffer;
-    //! "to-be-scattered" radiative energy (reflected/emitted) for bottom surface each object - RTvariable
-    RTvariable scatter_buff_bottom_RTvariable;
-    //! Incident radiative energy for specular reflection (without rho/tau applied) - RTbuffer object
-    RTbuffer radiation_specular_RTbuffer;
-    //! Incident radiative energy for specular reflection - RTvariable
-    RTvariable radiation_specular_RTvariable;
-
-    //! Incoming radiative energy for each camera pixel - RTbuffer
-    RTbuffer radiation_in_camera_RTbuffer;
-    //! Incoming radiative energy for each camera pixel - RTvariable
-    RTvariable radiation_in_camera_RTvariable;
-
-    //! Camera "to-be-scattered" radiative energy (reflected/emitted) for top surface of each object - RTbuffer object
-    RTbuffer scatter_buff_top_cam_RTbuffer;
-    //! Camera "to-be-scattered" radiative energy (reflected/emitted) for top surface each object - RTvariable
-    RTvariable scatter_buff_top_cam_RTvariable;
-    //! Camera "to-be-scattered" radiative energy (reflected/emitted) for bottom surface of each object - RTbuffer object
-    RTbuffer scatter_buff_bottom_cam_RTbuffer;
-    //! Camera "to-be-scattered" radiative energy (reflected/emitted) for bottom surface each object - RTvariable
-    RTvariable scatter_buff_bottom_cam_RTvariable;
-
-    //! Pixel label primitive ID - RTbuffer
-    RTbuffer camera_pixel_label_RTbuffer;
-    //! Pixel label primitive ID - RTvariable
-    RTvariable camera_pixel_label_RTvariable;
-
-    //! Pixel depth - RTbuffer
-    RTbuffer camera_pixel_depth_RTbuffer;
-    //! Pixel depth - RTvariable
-    RTvariable camera_pixel_depth_RTvariable;
-
-    //! Mask data for texture masked Patches - RTbuffer object
-    RTbuffer maskdata_RTbuffer;
-    //! Mask data for texture masked Patches - RTvariable
-    RTvariable maskdata_RTvariable;
-    //! Size of mask data for texture masked Patches - RTbuffer object
-    RTbuffer masksize_RTbuffer;
-    //! Size of mask data for texture masked Patches - RTvariable object
-    RTvariable masksize_RTvariable;
-    //! ID of mask data (0...Nmasks-1) - RTbuffer object
-    RTbuffer maskID_RTbuffer;
-    //! ID of mask data (0...Nmasks-1) - RTvariable object
-    RTvariable maskID_RTvariable;
-    //! uv data for textures - RTbuffer object
-    RTbuffer uvdata_RTbuffer;
-    //! uv data for textures - RTvariable
-    RTvariable uvdata_RTvariable;
-    //! ID of uv data (0...Nuv-1) - RTbuffer object
-    RTbuffer uvID_RTbuffer;
-    //! ID of uv data (0...Nuv-1) - RTvariable
-    RTvariable uvID_RTvariable;
-
-
-    /* Ray Types */
-
-    //! Handle to OptiX ray type for direct radiation rays.
-    RTvariable direct_ray_type_RTvariable;
-    //! Handle to OptiX ray type for diffuse radiation rays.
-    RTvariable diffuse_ray_type_RTvariable;
-
-    // Handle to OptiX ray type for camera rays
-    RTvariable camera_ray_type_RTvariable;
-    // Handle to OptiX ray type for camera pixel labeling rays
-    RTvariable pixel_label_ray_type_RTvariable;
-
-    //! OptiX Ray Types
-    enum RayType { RAYTYPE_DIRECT = 0, RAYTYPE_DIFFUSE = 1, RAYTYPE_CAMERA = 2, RAYTYPE_PIXEL_LABEL = 3 };
-
-    /* OptiX Geometry Structures */
-    RTgeometry patch;
-    RTgeometry triangle;
-    RTgeometry disk;
-    RTgeometry tile;
-    RTgeometry voxel;
-    RTgeometry bbox;
-    RTmaterial patch_material;
-    RTmaterial triangle_material;
-    RTmaterial disk_material;
-    RTmaterial tile_material;
-    RTmaterial voxel_material;
-    RTmaterial bbox_material;
-
-    RTgroup top_level_group;
-    RTacceleration top_level_acceleration;
-    RTvariable top_object;
-    RTacceleration geometry_acceleration;
+    //! Backend-agnostic source data (built from radiation_sources, uploaded to backend)
+    std::vector<helios::RayTracingSource> source_data;
 
 
     //! Flag indicating whether geometry has been built
     bool isgeometryinitialized;
+
+    //! Periodic boundary condition flags (x, y)
+    helios::vec2 periodic_flag;
 
     bool radiativepropertiesneedupdate = true;
 
@@ -2550,29 +2100,5 @@ protected:
 
     float computeAngularNormalization(float circ_str, float circ_width, float horiz_bright) const;
 };
-
-void sutilHandleError(RTcontext context, RTresult code, const char *file, int line);
-
-void sutilReportError(const char *message);
-
-/* assumes current scope has Context variable named 'OptiX_Context' */
-#define RT_CHECK_ERROR(func)                                                                                                                                                                                                                             \
-    do {                                                                                                                                                                                                                                                 \
-        RTresult code = func;                                                                                                                                                                                                                            \
-        if (code != RT_SUCCESS)                                                                                                                                                                                                                          \
-            sutilHandleError(OptiX_Context, code, __FILE__, __LINE__);                                                                                                                                                                                   \
-    } while (0)
-
-/* Destructor-safe version: logs errors but does not call exit() */
-/* Use this ONLY in destructors to avoid exit() being called during cleanup */
-#define RT_CHECK_ERROR_NOEXIT(func)                                                                                                                                                                                                                      \
-    do {                                                                                                                                                                                                                                                 \
-        RTresult code = func;                                                                                                                                                                                                                            \
-        if (code != RT_SUCCESS) {                                                                                                                                                                                                                        \
-            const char *message;                                                                                                                                                                                                                         \
-            rtContextGetErrorString(OptiX_Context, code, &message);                                                                                                                                                                                      \
-            std::cerr << "WARNING (OptiX cleanup): " << message << " (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;                                                                                                                              \
-        }                                                                                                                                                                                                                                                \
-    } while (0)
 
 #endif

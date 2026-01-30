@@ -59,6 +59,11 @@ rtBuffer<int2, 1> object_subdivisions;
 // ID for first primitive in an object
 rtBuffer<uint, 1> primitiveID;
 
+// UUID to array position lookup (indexed by UUID, returns array position)
+// Size: max_UUID + 1 (sparse array)
+// Usage: uint position = primitive_positions[UUID];
+rtBuffer<uint, 1> primitive_positions;
+
 // Radiation sources buffers
 rtDeclareVariable(unsigned int, Nsources, , );
 rtBuffer<float, 1> source_fluxes;
@@ -105,6 +110,7 @@ rtBuffer<unsigned int, 1> bbox_UUID;
 
 // Primitive data
 rtDeclareVariable(unsigned int, Nprimitives, , );
+rtDeclareVariable(unsigned int, bbox_UUID_base, , ); // Starting UUID for bboxes (max_real_UUID + 1)
 rtDeclareVariable(float2, periodic_flag, , );
 rtBuffer<char, 1> twosided_flag;
 rtBuffer<float, 2> transform_matrix;

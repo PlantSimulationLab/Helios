@@ -2388,6 +2388,61 @@ DOCTEST_TEST_CASE("PlantArchitecture listShootTypeLabels - multiple instances") 
     DOCTEST_CHECK(std::find(tomato_labels.begin(), tomato_labels.end(), "mainstem") != tomato_labels.end());
 }
 
+DOCTEST_TEST_CASE("PlantArchitecture getPlantInternodeObjectIDs with shoot type filter") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+
+    // Build a bean plant (has two shoot types: "unifoliate" and "trifoliate")
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0.0);
+
+    // Get all internode object IDs without filter
+    std::vector<uint> all_internodes = plantarchitecture.getPlantInternodeObjectIDs(plantID);
+    DOCTEST_CHECK(all_internodes.size() > 0);
+
+    // Get internode object IDs for "unifoliate" shoot type
+    std::vector<uint> unifoliate_internodes = plantarchitecture.getPlantInternodeObjectIDs(plantID, "unifoliate");
+    DOCTEST_CHECK(unifoliate_internodes.size() > 0);
+
+    // Get internode object IDs for "trifoliate" shoot type
+    std::vector<uint> trifoliate_internodes = plantarchitecture.getPlantInternodeObjectIDs(plantID, "trifoliate");
+    DOCTEST_CHECK(trifoliate_internodes.size() > 0);
+
+    // Verify that filtered results are subsets of all internodes
+    for (uint objID : unifoliate_internodes) {
+        DOCTEST_CHECK(std::find(all_internodes.begin(), all_internodes.end(), objID) != all_internodes.end());
+    }
+    for (uint objID : trifoliate_internodes) {
+        DOCTEST_CHECK(std::find(all_internodes.begin(), all_internodes.end(), objID) != all_internodes.end());
+    }
+
+    // Verify no overlap between unifoliate and trifoliate internodes
+    for (uint objID : unifoliate_internodes) {
+        DOCTEST_CHECK(std::find(trifoliate_internodes.begin(), trifoliate_internodes.end(), objID) == trifoliate_internodes.end());
+    }
+
+    // Verify that sum of filtered internodes equals total internodes
+    DOCTEST_CHECK(unifoliate_internodes.size() + trifoliate_internodes.size() == all_internodes.size());
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture getPlantInternodeObjectIDs with shoot type filter - error cases") {
+    std::string error_message;
+    {
+        capture_cerr cerr_buffer;
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+        uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 0.0);
+
+        // Should throw for non-existent shoot type
+        DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantInternodeObjectIDs(plantID, "nonexistent_shoot_type")));
+
+        // Should throw for invalid plant ID
+        DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantInternodeObjectIDs(9999, "unifoliate")));
+    }
+}
+
 int PlantArchitecture::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }

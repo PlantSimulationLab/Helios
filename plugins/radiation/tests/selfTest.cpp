@@ -1,5 +1,6 @@
 #include "CameraCalibration.h"
 #include "RadiationModel.h"
+#include "BufferIndexing.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
@@ -9,6 +10,120 @@ using namespace helios;
 
 int RadiationModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
+}
+
+DOCTEST_TEST_CASE("BufferIndexing Correctness") {
+    // Test 2D indexer
+    {
+        BufferIndexer2D indexer(10, 5); // 10x5 array
+
+        DOCTEST_CHECK(indexer(0, 0) == 0);
+        DOCTEST_CHECK(indexer(0, 1) == 1);
+        DOCTEST_CHECK(indexer(0, 4) == 4);
+        DOCTEST_CHECK(indexer(1, 0) == 5);
+        DOCTEST_CHECK(indexer(1, 1) == 6);
+        DOCTEST_CHECK(indexer(9, 4) == 49); // Last element
+
+        // Verify against manual calculation
+        for (size_t i = 0; i < 10; i++) {
+            for (size_t j = 0; j < 5; j++) {
+                size_t manual = i * 5 + j;
+                size_t indexed = indexer(i, j);
+                DOCTEST_CHECK(manual == indexed);
+            }
+        }
+    }
+
+    // Test 3D indexer
+    {
+        BufferIndexer3D indexer(2, 3, 4); // 2x3x4 array
+
+        DOCTEST_CHECK(indexer(0, 0, 0) == 0);
+        DOCTEST_CHECK(indexer(0, 0, 1) == 1);
+        DOCTEST_CHECK(indexer(0, 0, 3) == 3);
+        DOCTEST_CHECK(indexer(0, 1, 0) == 4);
+        DOCTEST_CHECK(indexer(0, 2, 0) == 8);
+        DOCTEST_CHECK(indexer(1, 0, 0) == 12);
+        DOCTEST_CHECK(indexer(1, 2, 3) == 23); // Last element
+
+        // Verify against manual calculation
+        for (size_t i = 0; i < 2; i++) {
+            for (size_t j = 0; j < 3; j++) {
+                for (size_t k = 0; k < 4; k++) {
+                    size_t manual = i * 3 * 4 + j * 4 + k;
+                    size_t indexed = indexer(i, j, k);
+                    DOCTEST_CHECK(manual == indexed);
+                }
+            }
+        }
+    }
+
+    // Test 4D indexer
+    {
+        BufferIndexer4D indexer(2, 2, 2, 2); // 2x2x2x2 array
+
+        DOCTEST_CHECK(indexer(0, 0, 0, 0) == 0);
+        DOCTEST_CHECK(indexer(0, 0, 0, 1) == 1);
+        DOCTEST_CHECK(indexer(0, 0, 1, 0) == 2);
+        DOCTEST_CHECK(indexer(0, 1, 0, 0) == 4);
+        DOCTEST_CHECK(indexer(1, 0, 0, 0) == 8);
+        DOCTEST_CHECK(indexer(1, 1, 1, 1) == 15); // Last element
+
+        // Verify against manual calculation
+        for (size_t i = 0; i < 2; i++) {
+            for (size_t j = 0; j < 2; j++) {
+                for (size_t k = 0; k < 2; k++) {
+                    for (size_t l = 0; l < 2; l++) {
+                        size_t manual = i * 2 * 2 * 2 + j * 2 * 2 + k * 2 + l;
+                        size_t indexed = indexer(i, j, k, l);
+                        DOCTEST_CHECK(manual == indexed);
+                    }
+                }
+            }
+        }
+    }
+
+    // Test realistic dimensions matching radiation plugin usage
+    {
+        const size_t Nsources = 5;
+        const size_t Nprimitives = 100;
+        const size_t Nbands = 20;
+        const size_t Ncameras = 3;
+
+        MaterialPropertyIndexer mat_indexer(Nsources, Nprimitives, Nbands);
+
+        // Verify a few random indices
+        DOCTEST_CHECK(mat_indexer(0, 0, 0) == 0);
+        DOCTEST_CHECK(mat_indexer(0, 0, 1) == 1);
+        DOCTEST_CHECK(mat_indexer(0, 1, 0) == 20);
+        DOCTEST_CHECK(mat_indexer(1, 0, 0) == 2000);
+
+        // Verify against manual calculation for all combinations
+        for (size_t s = 0; s < Nsources; s++) {
+            for (size_t p = 0; p < Nprimitives; p++) {
+                for (size_t b = 0; b < Nbands; b++) {
+                    size_t manual = s * Nprimitives * Nbands + p * Nbands + b;
+                    size_t indexed = mat_indexer(s, p, b);
+                    DOCTEST_CHECK(manual == indexed);
+                }
+            }
+        }
+
+        // Test 4D camera material indexer
+        CameraMaterialIndexer cam_mat_indexer(Nsources, Nprimitives, Nbands, Ncameras);
+
+        for (size_t s = 0; s < 2; s++) { // Test subset
+            for (size_t p = 0; p < 10; p++) {
+                for (size_t b = 0; b < Nbands; b++) {
+                    for (size_t c = 0; c < Ncameras; c++) {
+                        size_t manual = s * Nprimitives * Nbands * Ncameras + p * Nbands * Ncameras + b * Ncameras + c;
+                        size_t indexed = cam_mat_indexer(s, p, b, c);
+                        DOCTEST_CHECK(manual == indexed);
+                    }
+                }
+            }
+        }
+    }
 }
 
 DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Squares") {
@@ -89,6 +204,7 @@ DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Squares") {
     float shortwave_error_1 = fabsf(shortwave_model_1 - shortwave_exact_1) / fabsf(shortwave_exact_1);
     float longwave_error_1 = fabsf(longwave_model_1 - longwave_exact_1) / fabsf(longwave_exact_1);
 
+
     DOCTEST_CHECK(shortwave_error_0 <= error_threshold);
     DOCTEST_CHECK(shortwave_error_1 <= error_threshold);
     // For zero expected value, check direct equality
@@ -118,12 +234,12 @@ DOCTEST_TEST_CASE("RadiationModel Black Parallel Rectangles") {
     float shortwave_exact_1 = (1.f - F12);
 
     Context context_2;
-    context_2.addPatch(make_vec3(0, 0, 0), make_vec2(a, b));
-    context_2.addPatch(make_vec3(0, 0, c), make_vec2(a, b), make_SphericalCoord(M_PI, 0.f));
+    uint patch0 = context_2.addPatch(make_vec3(0, 0, 0), make_vec2(a, b));
+    uint patch1 = context_2.addPatch(make_vec3(0, 0, c), make_vec2(a, b), make_SphericalCoord(M_PI, 0.f));
 
     uint flag = 0;
-    context_2.setPrimitiveData(0, "twosided_flag", flag);
-    context_2.setPrimitiveData(1, "twosided_flag", flag);
+    context_2.setPrimitiveData(patch0, "twosided_flag", flag);
+    context_2.setPrimitiveData(patch1, "twosided_flag", flag);
 
     RadiationModel radiationmodel_2(&context_2);
     radiationmodel_2.disableMessages();
@@ -2294,7 +2410,12 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary") {
     // Test 1: Load Canon_20D camera
     vec3 position(0, 0, 5);
     vec3 lookat(0, 0, 0);
-    radiation.addRadiationCameraFromLibrary("cam1", "Canon_20D", position, lookat, 1);
+
+    // Suppress expected band auto-creation warnings
+    {
+        capture_cout capture;
+        radiation.addRadiationCameraFromLibrary("cam1", "Canon_20D", position, lookat, 1);
+    }
 
     // Verify camera was created
     std::vector<std::string> cameras = radiation.getAllCameraLabels();
@@ -2325,6 +2446,7 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary") {
     DOCTEST_CHECK(red_response.back().x == 720.0f);
 
     // Test 2: Load iPhone11 camera (verify different camera works)
+    // Bands already exist from cam1, so no warnings expected here
     radiation.addRadiationCameraFromLibrary("cam2", "iPhone11", position, lookat, 1);
     DOCTEST_CHECK(std::find(radiation.getAllCameraLabels().begin(), radiation.getAllCameraLabels().end(), "cam2") != radiation.getAllCameraLabels().end());
 
@@ -2374,7 +2496,12 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary with custom ba
 
     // Test 1: Custom band labels
     std::vector<std::string> custom_labels = {"R_custom", "G_custom", "B_custom"};
-    radiation.addRadiationCameraFromLibrary("cam_custom", "Canon_20D", position, lookat, 1, custom_labels);
+
+    // Suppress expected band auto-creation warnings
+    {
+        capture_cout capture;
+        radiation.addRadiationCameraFromLibrary("cam_custom", "Canon_20D", position, lookat, 1, custom_labels);
+    }
 
     // Verify camera was created
     std::vector<std::string> cameras = radiation.getAllCameraLabels();
@@ -2411,7 +2538,12 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary with custom ba
     Context context2;
     RadiationModel radiation2(&context2);
     radiation2.disableMessages();
-    radiation2.addRadiationCameraFromLibrary("cam_default", "iPhone11", position, lookat, 1, std::vector<std::string>());
+
+    // Suppress expected band auto-creation warnings
+    {
+        capture_cout capture;
+        radiation2.addRadiationCameraFromLibrary("cam_default", "iPhone11", position, lookat, 1, std::vector<std::string>());
+    }
 
     // Bands should be created with XML labels
     DOCTEST_CHECK(radiation2.doesBandExist("red"));
@@ -2425,7 +2557,12 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary with custom ba
     radiation3.disableMessages();
 
     std::vector<std::string> custom_labels2 = {"NIR", "VIS", "UV"};
-    radiation3.addRadiationCameraFromLibrary("cam_test", "Nikon_D700", position, lookat, 1, custom_labels2);
+
+    // Suppress expected band auto-creation warnings
+    {
+        capture_cout capture;
+        radiation3.addRadiationCameraFromLibrary("cam_test", "Nikon_D700", position, lookat, 1, custom_labels2);
+    }
 
     // Verify bands created with custom names
     DOCTEST_CHECK(radiation3.doesBandExist("NIR"));
@@ -2791,8 +2928,11 @@ DOCTEST_TEST_CASE("CameraCalibration Basic Functionality") {
     test_spectrum.push_back(make_vec2(700.0f, 0.3f));
 
     // Write a test spectrum file (should succeed)
-    bool write_success = calibration.writeSpectralXMLfile("/tmp/test_spectrum.xml", "Test spectrum", "test_label", &test_spectrum);
+    bool write_success = calibration.writeSpectralXMLfile("test_spectrum.xml", "Test spectrum", "test_label", &test_spectrum);
     DOCTEST_CHECK(write_success == true);
+
+    // Cleanup
+    std::remove("test_spectrum.xml");
 }
 
 DOCTEST_TEST_CASE("CameraCalibration DGK Integration") {
@@ -2862,7 +3002,12 @@ DOCTEST_TEST_CASE("CameraCalibration Multiple Colorboards") {
     DOCTEST_CHECK(std::find(detected_types.begin(), detected_types.end(), "SpyderCHECKR") != detected_types.end());
 
     // Test 4: Adding the same type again should replace it (with warning)
-    std::vector<uint> dgk_UUIDs_2 = calibration.addDGKColorboard(make_vec3(0, 0.5, 0.001), 0.05);
+    // Suppress expected replacement warning
+    std::vector<uint> dgk_UUIDs_2;
+    {
+        capture_cout capture;
+        dgk_UUIDs_2 = calibration.addDGKColorboard(make_vec3(0, 0.5, 0.001), 0.05);
+    }
     DOCTEST_CHECK(dgk_UUIDs_2.size() == 18);
 
     // Should still have 66 patches total (18 + 24 + 24), since the old DGK was replaced
@@ -2891,6 +3036,7 @@ DOCTEST_TEST_CASE("CameraCalibration Multiple Colorboards") {
 DOCTEST_TEST_CASE("RadiationModel CCM Export and Import") {
     Context context;
     RadiationModel radiationmodel(&context);
+    radiationmodel.disableMessages();
 
     // Create a simple test camera with RGB bands
     std::vector<std::string> band_labels = {"red", "green", "blue"};
@@ -2923,7 +3069,7 @@ DOCTEST_TEST_CASE("RadiationModel CCM Export and Import") {
         // Create a test color correction matrix
         std::vector<std::vector<float>> test_matrix = {{1.2f, -0.1f, 0.05f}, {-0.08f, 1.15f, 0.02f}, {0.03f, -0.12f, 1.18f}};
 
-        std::string ccm_file_path = "/tmp/test_ccm_3x3.xml";
+        std::string ccm_file_path = "test_ccm_3x3.xml";
 
         // Test the exportColorCorrectionMatrixXML function directly
         radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, camera_label, test_matrix, "/path/to/test_image.jpg", "DGK", 15.5f);
@@ -2958,7 +3104,7 @@ DOCTEST_TEST_CASE("RadiationModel CCM Export and Import") {
         // Create a test 4x3 color correction matrix (with affine offset)
         std::vector<std::vector<float>> test_matrix_4x3 = {{1.1f, -0.05f, 0.02f, 0.01f}, {-0.04f, 1.08f, 0.01f, -0.005f}, {0.02f, -0.06f, 1.12f, 0.008f}};
 
-        std::string ccm_file_path = "/tmp/test_ccm_4x3.xml";
+        std::string ccm_file_path = "test_ccm_4x3.xml";
 
         // Export 4x3 matrix
         radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, camera_label, test_matrix_4x3, "/path/to/test_image.jpg", "Calibrite", 12.3f);
@@ -2987,7 +3133,7 @@ DOCTEST_TEST_CASE("RadiationModel CCM Export and Import") {
         // Create a test CCM file
         std::vector<std::vector<float>> test_matrix = {{1.1f, -0.05f, 0.02f}, {-0.03f, 1.08f, 0.01f}, {0.01f, -0.04f, 1.12f}};
 
-        std::string ccm_file_path = "/tmp/test_apply_ccm_3x3.xml";
+        std::string ccm_file_path = "test_apply_ccm_3x3.xml";
         radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, camera_label, test_matrix, "/path/to/test.jpg", "DGK", 10.0f);
 
         // Get initial pixel values
@@ -3022,7 +3168,7 @@ DOCTEST_TEST_CASE("RadiationModel CCM Export and Import") {
         // Create a test 4x3 CCM file
         std::vector<std::vector<float>> test_matrix = {{1.05f, -0.02f, 0.01f, 0.005f}, {-0.01f, 1.03f, 0.005f, -0.002f}, {0.005f, -0.015f, 1.08f, 0.003f}};
 
-        std::string ccm_file_path = "/tmp/test_apply_ccm_4x3.xml";
+        std::string ccm_file_path = "test_apply_ccm_4x3.xml";
         radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, camera_label, test_matrix, "/path/to/test.jpg", "SpyderCHECKR", 8.5f);
 
         // Reset camera data to known values
@@ -3076,7 +3222,7 @@ DOCTEST_TEST_CASE("RadiationModel CCM Error Handling") {
 
     // Test 2: Malformed XML file
     {
-        std::string malformed_ccm_path = "/tmp/malformed_ccm.xml";
+        std::string malformed_ccm_path = "malformed_ccm.xml";
         std::ofstream malformed_file(malformed_ccm_path);
         malformed_file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
         malformed_file << "<helios>\n";
@@ -3102,7 +3248,7 @@ DOCTEST_TEST_CASE("RadiationModel CCM Error Handling") {
 
     // Test 3: Apply CCM to nonexistent camera
     {
-        std::string ccm_file_path = "/tmp/test_error_ccm.xml";
+        std::string ccm_file_path = "test_error_ccm.xml";
         std::vector<std::vector<float>> identity_matrix = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}};
 
         radiationmodel.exportColorCorrectionMatrixXML(ccm_file_path, "test_camera", identity_matrix, "/test.jpg", "DGK", 5.0f);
@@ -4752,10 +4898,12 @@ DOCTEST_TEST_CASE("RadiationModel - FOV_aspect_ratio Deprecation") {
         // FOV_aspect_ratio left at default (0.0)
 
         // Should not produce any warning
-        capture_cerr captured_cerr;
-        radiationmodel.addRadiationCamera("test_camera_1", {"test"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), camera_props, 1);
-
-        std::string stderr_output = captured_cerr.get_captured_output();
+        std::string stderr_output;
+        {
+            capture_cerr captured_cerr;
+            radiationmodel.addRadiationCamera("test_camera_1", {"test"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), camera_props, 1);
+            stderr_output = captured_cerr.get_captured_output();
+        } // capture destroyed here
         DOCTEST_CHECK(stderr_output.empty());
 
         // Verify FOV_aspect_ratio was auto-calculated correctly
@@ -4772,10 +4920,12 @@ DOCTEST_TEST_CASE("RadiationModel - FOV_aspect_ratio Deprecation") {
         camera_props.FOV_aspect_ratio = 1.5f; // Explicitly set to non-zero value
 
         // Should produce deprecation warning
-        capture_cerr captured_cerr;
-        radiationmodel.addRadiationCamera("test_camera_2", {"test"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), camera_props, 1);
-
-        std::string stderr_output = captured_cerr.get_captured_output();
+        std::string stderr_output;
+        {
+            capture_cerr captured_cerr;
+            radiationmodel.addRadiationCamera("test_camera_2", {"test"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), camera_props, 1);
+            stderr_output = captured_cerr.get_captured_output();
+        } // capture destroyed here
         DOCTEST_CHECK(stderr_output.find("WARNING") != std::string::npos);
         DOCTEST_CHECK(stderr_output.find("FOV_aspect_ratio") != std::string::npos);
         DOCTEST_CHECK(stderr_output.find("deprecated") != std::string::npos);
@@ -4799,11 +4949,13 @@ DOCTEST_TEST_CASE("RadiationModel - FOV_aspect_ratio Deprecation") {
 
             std::string camera_label = "camera_" + std::to_string(resolution.x) + "x" + std::to_string(resolution.y);
 
-            capture_cerr captured_cerr;
-            radiationmodel.addRadiationCamera(camera_label, {"test"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), camera_props, 1);
-
             // Should not produce any warning
-            std::string stderr_output = captured_cerr.get_captured_output();
+            std::string stderr_output;
+            {
+                capture_cerr captured_cerr;
+                radiationmodel.addRadiationCamera(camera_label, {"test"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), camera_props, 1);
+                stderr_output = captured_cerr.get_captured_output();
+            } // capture destroyed here
             DOCTEST_CHECK(stderr_output.empty());
         }
     }
@@ -4836,6 +4988,7 @@ DOCTEST_TEST_CASE("RadiationModel Atmospheric Sky Model for Camera") {
     DOCTEST_SUBCASE("Sky model requires wavelength bounds with uniform response") {
         // Test that error is thrown if wavelength bounds not set for uniform camera response
         radiationmodel.addRadiationBand("VIS"); // No wavelength bounds - will cause error
+        radiationmodel.setScatteringDepth("VIS", 1); // Enable scattering so camera rendering code path is executed
         radiationmodel.setDirectRayCount("VIS", 100);
         radiationmodel.setDiffuseRayCount("VIS", 100);
         radiationmodel.disableEmission("VIS");
@@ -4854,12 +5007,16 @@ DOCTEST_TEST_CASE("RadiationModel Atmospheric Sky Model for Camera") {
         radiationmodel.updateGeometry();
 
         // Should throw error about missing wavelength bounds
+        // Suppress expected Prague sky model warning (no SolarPosition data available)
         bool threw_error = false;
-        try {
-            radiationmodel.runBand("VIS");
-        } catch (std::runtime_error &e) {
-            std::string error_msg = e.what();
-            threw_error = (error_msg.find("wavelength bounds") != std::string::npos);
+        {
+            capture_cerr capture;
+            try {
+                radiationmodel.runBand("VIS");
+            } catch (std::runtime_error &e) {
+                std::string error_msg = e.what();
+                threw_error = (error_msg.find("wavelength bounds") != std::string::npos);
+            }
         }
         DOCTEST_CHECK(threw_error);
     }
@@ -4872,8 +5029,12 @@ DOCTEST_TEST_CASE("RadiationModel Atmospheric Sky Model for Camera") {
         radiationmodel.disableEmission("VIS");
         radiationmodel.setDiffuseRadiationFlux("VIS", 100.f); // Set some diffuse flux for sky
 
-        // Add sun source
-        uint SunSource = radiationmodel.addCollimatedRadiationSource(make_vec3(0.5, 0.3, 0.8));
+        // Add sun source (suppress expected "multiple sun sources" warning from previous subcase)
+        uint SunSource;
+        {
+            capture_cerr capture;
+            SunSource = radiationmodel.addCollimatedRadiationSource(make_vec3(0.5, 0.3, 0.8));
+        }
         radiationmodel.setSourceFlux(SunSource, "VIS", 1000.f);
 
         // Add camera
@@ -4885,7 +5046,11 @@ DOCTEST_TEST_CASE("RadiationModel Atmospheric Sky Model for Camera") {
         radiationmodel.updateGeometry();
 
         // Run with camera - should compute atmospheric sky model
-        radiationmodel.runBand("VIS");
+        // Suppress expected warning about Prague sky model not being available
+        {
+            capture_cerr capture;
+            radiationmodel.runBand("VIS");
+        }
 
         // If we get here without crashing, the atmospheric sky model was successfully computed
         DOCTEST_CHECK(true);
@@ -5268,6 +5433,7 @@ DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior"
 TEST_CASE("Radiation - Prague Context data fallback behavior") {
     Context context;
     RadiationModel radiation(&context);
+    radiation.disableMessages();
 
     // Add a simple camera with RGB bands
     radiation.addRadiationBand("red");
@@ -5295,6 +5461,7 @@ TEST_CASE("Radiation - Prague Context data fallback behavior") {
 TEST_CASE("Radiation - Prague Context data integration end-to-end") {
     Context context;
     RadiationModel radiation(&context);
+    radiation.disableMessages();
 
     // Mock Prague data in Context (simulating what SolarPosition would provide)
     // Create realistic spectral parameters with Rayleigh-like spectrum: 225 wavelengths × 6 params
@@ -5355,6 +5522,7 @@ DOCTEST_TEST_CASE("RadiationModel Automatic Spectrum Update Detection") {
 
     helios::Context context;
     RadiationModel radiation(&context);
+    radiation.disableMessages();
 
     // Create initial direct spectrum
     std::vector<helios::vec2> direct_spectrum_v1 = {{300, 1.0}, {400, 2.0}, {500, 3.0}, {700, 2.0}, {800, 1.0}};
@@ -5413,26 +5581,26 @@ DOCTEST_TEST_CASE("RadiationModel Automatic Spectrum Update Detection") {
     // Note: Diffuse contribution may be small in this simple test geometry
     // The important test is that direct spectrum update worked (verified above)
     DOCTEST_CHECK(flux_v3 >= flux_v2 * 0.99f); // Allow for small numerical differences
-
-    std::cout << "Automatic spectrum update detection test passed!" << std::endl;
-    std::cout << "  Initial flux: " << flux_v1 << std::endl;
-    std::cout << "  After direct update (2x): " << flux_v2 << " (expected ~" << flux_v1 * 2.0f << ")" << std::endl;
-    std::cout << "  After diffuse update (3x): " << flux_v3 << " (diffuse contribution may be small in simple geometry)" << std::endl;
 }
 
 DOCTEST_TEST_CASE("RadiationModel Multiple Sources Same Spectrum Update") {
 
     helios::Context context;
     RadiationModel radiation(&context);
+    radiation.disableMessages();
 
     // Create spectrum used by multiple sources
     std::vector<helios::vec2> shared_spectrum = {{300, 1.0}, {800, 1.0}};
     context.setGlobalData("shared_spectrum", shared_spectrum);
 
     // Add multiple sources all using same spectrum
-    for (int i = 0; i < 3; i++) {
-        uint source = radiation.addCollimatedRadiationSource(helios::make_vec3(0, 0, 1));
-        radiation.setSourceSpectrum(source, "shared_spectrum");
+    // Suppress expected warnings about multiple sun sources
+    {
+        capture_cerr capture;
+        for (int i = 0; i < 3; i++) {
+            uint source = radiation.addCollimatedRadiationSource(helios::make_vec3(0, 0, 1));
+            radiation.setSourceSpectrum(source, "shared_spectrum");
+        }
     }
 
     radiation.addRadiationBand("test", 400, 700);
@@ -5459,14 +5627,13 @@ DOCTEST_TEST_CASE("RadiationModel Multiple Sources Same Spectrum Update") {
 
     // All 3 sources doubled, so total flux should roughly double
     DOCTEST_CHECK(flux_v2 > flux_v1 * 1.8f);
-
-    std::cout << "Multiple sources shared spectrum update test passed!" << std::endl;
 }
 
 DOCTEST_TEST_CASE("RadiationModel No Update When Spectrum Unchanged") {
 
     helios::Context context;
     RadiationModel radiation(&context);
+    radiation.disableMessages();
 
     // Create spectrum
     std::vector<helios::vec2> spectrum = {{300, 1.0}, {800, 1.0}};
@@ -5489,8 +5656,6 @@ DOCTEST_TEST_CASE("RadiationModel No Update When Spectrum Unchanged") {
     float flux;
     context.getPrimitiveData(ground, "radiation_flux_test", flux);
     DOCTEST_CHECK(flux > 0.0f);
-
-    std::cout << "No unnecessary update test passed!" << std::endl;
 }
 
 DOCTEST_TEST_CASE("RadiationModel - CameraProperties default camera_zoom") {
@@ -5514,6 +5679,7 @@ DOCTEST_TEST_CASE("RadiationModel - CameraProperties equality with camera_zoom")
 DOCTEST_TEST_CASE("RadiationModel - camera_zoom validation in updateCameraParameters") {
     Context context;
     RadiationModel radiation(&context);
+    radiation.disableMessages();
 
     CameraProperties props;
     props.camera_resolution = make_int2(100, 100);
@@ -5537,6 +5703,7 @@ DOCTEST_TEST_CASE("RadiationModel - camera_zoom validation in updateCameraParame
 DOCTEST_TEST_CASE("RadiationModel - camera_zoom parameter get/set") {
     Context context;
     RadiationModel radiation(&context);
+    radiation.disableMessages();
 
     CameraProperties props;
     props.camera_resolution = make_int2(100, 100);
@@ -5554,6 +5721,7 @@ DOCTEST_TEST_CASE("RadiationModel - camera_zoom parameter get/set") {
 DOCTEST_TEST_CASE("RadiationModel - update camera_zoom") {
     Context context;
     RadiationModel radiation(&context);
+    radiation.disableMessages();
 
     CameraProperties props;
     props.camera_resolution = make_int2(100, 100);
@@ -5597,8 +5765,6 @@ DOCTEST_TEST_CASE("Lens Flare - Enable/Disable API") {
     DOCTEST_CHECK_THROWS(radiation.enableCameraLensFlare("nonexistent_camera"));
     DOCTEST_CHECK_THROWS(radiation.disableCameraLensFlare("nonexistent_camera"));
     DOCTEST_CHECK_THROWS((void) radiation.isCameraLensFlareEnabled("nonexistent_camera"));
-
-    std::cout << "Lens flare enable/disable API test passed!" << std::endl;
 }
 
 DOCTEST_TEST_CASE("Lens Flare - Properties API") {
@@ -5671,8 +5837,6 @@ DOCTEST_TEST_CASE("Lens Flare - Properties API") {
     invalid_props = default_props;
     invalid_props.ghost_count = 0;
     DOCTEST_CHECK_THROWS(radiation.setCameraLensFlareProperties("test_camera", invalid_props));
-
-    std::cout << "Lens flare properties API test passed!" << std::endl;
 }
 
 DOCTEST_TEST_CASE("Lens Flare - Application to Camera Image") {
@@ -5717,6 +5881,11 @@ DOCTEST_TEST_CASE("Lens Flare - Application to Camera Image") {
     radiation.setDiffuseRayCount("green", 100);
     radiation.setDiffuseRayCount("blue", 100);
 
+    // Enable scattering since we set reflectivity values
+    radiation.setScatteringDepth("red", 1);
+    radiation.setScatteringDepth("green", 1);
+    radiation.setScatteringDepth("blue", 1);
+
     // Add a camera
     CameraProperties camera_props;
     camera_props.camera_resolution = helios::make_int2(64, 64);
@@ -5742,8 +5911,6 @@ DOCTEST_TEST_CASE("Lens Flare - Application to Camera Image") {
     // Verify camera still has valid pixel data
     auto all_labels = radiation.getAllCameraLabels();
     DOCTEST_CHECK(std::find(all_labels.begin(), all_labels.end(), "test_camera") != all_labels.end());
-
-    std::cout << "Lens flare application test passed!" << std::endl;
 }
 
 DOCTEST_TEST_CASE("Lens Flare - Disabled Does Nothing") {
@@ -5778,6 +5945,11 @@ DOCTEST_TEST_CASE("Lens Flare - Disabled Does Nothing") {
     radiation.setDirectRayCount("green", 100);
     radiation.setDirectRayCount("blue", 100);
 
+    // Enable scattering since we set reflectivity values
+    radiation.setScatteringDepth("red", 1);
+    radiation.setScatteringDepth("green", 1);
+    radiation.setScatteringDepth("blue", 1);
+
     // Add a camera (lens flare disabled by default)
     CameraProperties camera_props;
     camera_props.camera_resolution = helios::make_int2(32, 32);
@@ -5791,8 +5963,6 @@ DOCTEST_TEST_CASE("Lens Flare - Disabled Does Nothing") {
     // Apply image corrections - lens flare should NOT be applied since it's disabled
     DOCTEST_CHECK(!radiation.isCameraLensFlareEnabled("test_camera"));
     DOCTEST_CHECK_NOTHROW(radiation.applyCameraImageCorrections("test_camera", "red", "green", "blue"));
-
-    std::cout << "Lens flare disabled test passed!" << std::endl;
 }
 
 DOCTEST_TEST_CASE("RadiationModel - Camera Sphere Source Rendering") {
@@ -5903,6 +6073,344 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Disk Source Rendering") {
     DOCTEST_CHECK(pixel_data[center_idx] > 0.0f);
 }
 
+// ========== Phase 1: Backend Integration Tests ==========
+
+DOCTEST_TEST_CASE("Phase1.E Step2: Backend GPU Memory Query Integration") {
+    // Test that RadiationModel can call backend methods
+    // This proves backend is accessible and the integration path works
+
+    helios::Context context;
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    // Should call backend->queryGPUMemory() without crashing
+    DOCTEST_REQUIRE_NOTHROW(radiation.queryBackendGPUMemory());
+
+    // If we get here, backend method was successfully called
+    // Visual verification: output should show "GPU Memory Available: X MB"
+}
+
+
+DOCTEST_TEST_CASE("RadiationModel buildGeometryData() Extraction") {
+    // Test that buildGeometryData() correctly extracts geometry from Context
+
+    helios::Context context;
+
+    // Create test geometry: 1 patch, 1 triangle
+    context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
+    context.addTriangle(helios::make_vec3(2, 0, 0), helios::make_vec3(3, 0, 0), helios::make_vec3(2.5, 1, 0));
+
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    // Build geometry data - should extract 2 primitives
+    size_t prim_count = radiation.testBuildGeometryData();
+
+    // Verify primitive count
+    DOCTEST_CHECK(prim_count == 2);
+
+    // If we get here without crashing, buildGeometryData() successfully:
+    // - Extracted primitives from Context
+    // - Populated geometry_data structure
+    // - Handled patches and triangles
+}
+
+DOCTEST_TEST_CASE("Phase1.E Step4: updateGeometry() Backend Integration") {
+    // Test that updateGeometry() now uses backend instead of old OptiX code
+
+    helios::Context context;
+
+    // Create test geometry
+    context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
+    context.addTriangle(helios::make_vec3(2, 0, 0), helios::make_vec3(3, 0, 0), helios::make_vec3(2.5, 1, 0));
+
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    // Call updateGeometry - should use backend path now
+    DOCTEST_REQUIRE_NOTHROW(radiation.updateGeometry());
+
+    // If we get here, updateGeometry() successfully:
+    // - Called buildGeometryData()
+    // - Called backend->updateGeometry(geometry_data)
+    // - Called backend->buildAccelerationStructure()
+    // - Did NOT crash
+
+    // Verify backend was used by checking geometry was built
+    size_t prim_count = radiation.testBuildGeometryData();
+    DOCTEST_CHECK(prim_count == 2);
+}
+
+DOCTEST_TEST_CASE("Phase1.E Step5: Backend Functional Validation - Direct Radiation") {
+    // CRITICAL TEST: Prove backend can actually trace rays and produce correct results
+
+    helios::Context context;
+
+    // Create single horizontal patch (1m x 1m) facing up
+    uint patch = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
+
+    // Set as perfect absorber (rho=0, tau=0)
+    context.setPrimitiveData(patch, "reflectivity_PAR", 0.0f);
+    context.setPrimitiveData(patch, "transmissivity_PAR", 0.0f);
+
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    // Add radiation band
+    radiation.addRadiationBand("PAR");
+
+    // Add downward collimated source (1000 W/m²)
+    uint source = radiation.addCollimatedRadiationSource(helios::make_vec3(0, 0, -1));
+    radiation.setSourceFlux(source, "PAR", 1000.0f);
+
+    // Build all data structures
+
+
+    radiation.testBuildAllBackendData();
+
+    // Upload to backend using test helpers
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->updateGeometry(radiation.getGeometryData()));
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->buildAccelerationStructure());
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->updateMaterials(radiation.getMaterialData()));
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->updateSources(radiation.getSourceData()));
+
+    // Zero radiation buffers
+    radiation.getBackend()->zeroRadiationBuffers(1);
+
+    // Launch direct rays through backend
+    helios::RayTracingLaunchParams params;
+    params.launch_offset = 0;
+    params.launch_count = 1;
+    params.rays_per_primitive = 100;
+    params.random_seed = 12345;
+    params.num_bands_global = 1;
+    params.num_bands_launch = 1;
+    params.band_launch_flag = {true};
+    params.specular_reflection_enabled = false;
+
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->launchDirectRays(params));
+
+    // Get results from backend
+    helios::RayTracingResults results;
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->getRadiationResults(results));
+
+    // CRITICAL VALIDATION: Check numerical correctness
+    // Expected: 1m² patch + 1000 W/m² perpendicular + perfect absorber = 1000 W absorbed
+
+    DOCTEST_REQUIRE(results.radiation_in.size() >= 1);
+
+    float expected = 1000.0f;
+    float actual = results.radiation_in[0];
+    float tolerance = 10.0f; // 1% tolerance
+
+    DOCTEST_CHECK_MESSAGE(std::abs(actual - expected) < tolerance, "Backend radiation incorrect: expected " << expected << " W, got " << actual << " W");
+}
+
+DOCTEST_TEST_CASE("Phase1.E Step6: Backend Functional Validation - Diffuse Radiation") {
+    // CRITICAL TEST: Prove backend can handle diffuse radiation (single patch, no shadowing)
+
+    helios::Context context;
+
+    // Create single horizontal patch (1m x 1m) facing up
+    uint patch = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
+
+    // Set as perfect absorber (rho=0, tau=0)
+    context.setPrimitiveData(patch, "reflectivity_SW", 0.0f);
+    context.setPrimitiveData(patch, "transmissivity_SW", 0.0f);
+
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    // Add radiation band with diffuse radiation
+    radiation.addRadiationBand("SW");
+    radiation.setDiffuseRadiationFlux("SW", 100.0f); // 100 W/m² diffuse from sky
+    radiation.setDiffuseRayCount("SW", 10000); // High ray count for accuracy
+    radiation.disableEmission("SW");
+
+    // Build all data structures
+    radiation.testBuildAllBackendData();
+
+    // Upload to backend
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->updateGeometry(radiation.getGeometryData()));
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->buildAccelerationStructure());
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->updateMaterials(radiation.getMaterialData()));
+
+    // Zero radiation buffers
+    radiation.getBackend()->zeroRadiationBuffers(1);
+
+    // Build diffuse launch parameters
+    helios::RayTracingLaunchParams params;
+    params.launch_offset = 0;
+    params.launch_count = 1;
+    params.rays_per_primitive = 10000; // n*n where n = 100
+    params.random_seed = 12345;
+    params.num_bands_global = 1;
+    params.num_bands_launch = 1;
+    params.band_launch_flag = {true};
+    params.scattering_iteration = 0;
+    params.launch_face = 1; // Top face
+
+    // Set diffuse radiation parameters
+    params.diffuse_flux = {100.0f};
+    params.diffuse_extinction = {0.0f}; // Isotropic
+    params.diffuse_peak_dir = {helios::make_vec3(0, 0, 1)}; // From zenith
+    params.diffuse_dist_norm = {1.0f / M_PI}; // Isotropic normalization
+    params.radiation_out_top = {0.0f}; // No emission
+    params.radiation_out_bottom = {0.0f};
+
+    // Launch diffuse rays
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->launchDiffuseRays(params));
+
+    // Get results from backend
+    helios::RayTracingResults results;
+    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->getRadiationResults(results));
+
+    // CRITICAL VALIDATION: Check numerical correctness
+    // Expected: 1m² patch + 100 W/m² diffuse + perfect absorber = 100 W absorbed
+
+    DOCTEST_REQUIRE(results.radiation_in.size() >= 1);
+
+    float expected = 100.0f;
+    float actual = results.radiation_in[0];
+    float tolerance = 2.0f; // 2% tolerance for statistical variation
+
+    DOCTEST_CHECK_MESSAGE(std::abs(actual - expected) < tolerance, "Backend diffuse radiation incorrect: expected " << expected << " W, got " << actual << " W");
+}
+
+DOCTEST_TEST_CASE("Phase1.E Step6b: Backend Diffuse With Partial Occlusion") {
+    // Test if diffuse hit program works by adding occluding patch
+
+    helios::Context context;
+
+    // Patch 0: horizontal (1m x 1m) at z=0, facing up
+    uint patch0 = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
+
+    // Patch 1: horizontal (1m x 1m) at z=0.5m above, facing down (blocks ~50% of sky)
+    uint patch1 = context.addPatch(helios::make_vec3(0, 0, 0.5), helios::make_vec2(1, 1), helios::make_SphericalCoord(M_PI, 0)); // Facing down
+
+    // Both perfect absorbers, one-sided (twosided_flag = 0)
+    context.setPrimitiveData(patch0, "reflectivity_SW", 0.0f);
+    context.setPrimitiveData(patch0, "transmissivity_SW", 0.0f);
+    uint flag = 0;
+    context.setPrimitiveData(patch0, "twosided_flag", flag);
+    context.setPrimitiveData(patch1, "reflectivity_SW", 0.0f);
+    context.setPrimitiveData(patch1, "transmissivity_SW", 0.0f);
+    context.setPrimitiveData(patch1, "twosided_flag", flag);
+
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    // Add radiation band with diffuse
+    radiation.addRadiationBand("SW");
+    radiation.setDiffuseRadiationFlux("SW", 100.0f);
+    radiation.setDiffuseRayCount("SW", 10000);
+    radiation.disableEmission("SW");
+
+    // Build and upload
+    radiation.testBuildAllBackendData();
+    radiation.getBackend()->updateGeometry(radiation.getGeometryData());
+    radiation.getBackend()->buildAccelerationStructure();
+    radiation.getBackend()->updateMaterials(radiation.getMaterialData());
+    radiation.getBackend()->zeroRadiationBuffers(1);
+
+    // Launch diffuse rays FROM PATCH0 ONLY
+    helios::RayTracingLaunchParams params;
+    params.launch_offset = 0;
+    params.launch_count = 1; // ONLY patch0 to test if it sees patch1
+    params.rays_per_primitive = 10000;
+    params.random_seed = 12345;
+    params.num_bands_global = 1;
+    params.num_bands_launch = 1;
+    params.band_launch_flag = {true};
+    params.scattering_iteration = 0;
+    params.launch_face = 1;
+    params.diffuse_flux = {100.0f};
+    params.diffuse_extinction = {0.0f};
+    params.diffuse_peak_dir = {helios::make_vec3(0, 0, 1)};
+    params.diffuse_dist_norm = {1.0f / M_PI};
+    params.radiation_out_top = {0.0f, 0.0f};
+    params.radiation_out_bottom = {0.0f, 0.0f};
+
+    radiation.getBackend()->launchDiffuseRays(params);
+
+    // Get results
+    helios::RayTracingResults results;
+    radiation.getBackend()->getRadiationResults(results);
+
+    DOCTEST_REQUIRE(results.radiation_in.size() == 2);
+
+    float patch0_radiation = results.radiation_in[0];
+    float patch1_radiation = results.radiation_in[1];
+
+    // If hits work: patch0 should get LESS than 100 (blocked by patch1)
+    // If hits don't work: patch0 gets 100 (all rays miss, no blocking detected)
+    DOCTEST_CHECK_MESSAGE(patch0_radiation < 90.0f, "Patch0 should be partially blocked by patch1, got " << patch0_radiation << " W (expected <90)");
+}
+
+DOCTEST_TEST_CASE("RadiationModel Multi-Patch Direct Radiation Occlusion Test") {
+    // Test if DIRECT rays show proper occlusion with multiple patches
+    // This will tell us if the issue is geometry-wide or diffuse-specific
+
+    helios::Context context;
+
+    // Patch 0: horizontal at z=0, facing up
+    uint patch0 = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
+
+    // Patch 1: horizontal at z=0.5m above, blocks direct source from reaching patch0
+    uint patch1 = context.addPatch(helios::make_vec3(0, 0, 0.5), helios::make_vec2(1, 1));
+
+    // Both perfect absorbers, TWO-SIDED to receive radiation from source above
+    uint flag = 1; // two-sided
+    context.setPrimitiveData(patch0, "reflectivity_PAR", 0.0f);
+    context.setPrimitiveData(patch0, "transmissivity_PAR", 0.0f);
+    context.setPrimitiveData(patch0, "twosided_flag", flag);
+    context.setPrimitiveData(patch1, "reflectivity_PAR", 0.0f);
+    context.setPrimitiveData(patch1, "transmissivity_PAR", 0.0f);
+    context.setPrimitiveData(patch1, "twosided_flag", flag);
+
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    // Add band with direct source from above
+    radiation.addRadiationBand("PAR");
+    uint source = radiation.addCollimatedRadiationSource(helios::make_vec3(0, 0, 1)); // Upward toward source above
+    radiation.setSourceFlux(source, "PAR", 100.0f);
+
+    // Build and upload
+    radiation.testBuildAllBackendData();
+    radiation.getBackend()->updateGeometry(radiation.getGeometryData());
+    radiation.getBackend()->buildAccelerationStructure();
+    radiation.getBackend()->updateMaterials(radiation.getMaterialData());
+    radiation.getBackend()->updateSources(radiation.getSourceData());
+    radiation.getBackend()->zeroRadiationBuffers(1);
+
+    // Launch direct rays (SMALL ray count for debug)
+    helios::RayTracingLaunchParams params;
+    params.launch_offset = 0;
+    params.launch_count = 2;
+    params.rays_per_primitive = 4;
+    params.random_seed = 12345;
+    params.num_bands_global = 1;
+    params.num_bands_launch = 1;
+    params.band_launch_flag = {true};
+    params.specular_reflection_enabled = false;
+
+    radiation.getBackend()->launchDirectRays(params);
+
+    // Get results
+    helios::RayTracingResults results;
+    radiation.getBackend()->getRadiationResults(results);
+
+    DOCTEST_REQUIRE(results.radiation_in.size() == 2);
+
+    float patch0_radiation = results.radiation_in[0];
+    float patch1_radiation = results.radiation_in[1];
+
+    // If blocking works: patch0 should get ~0 (blocked by patch1)
+    // patch1 should get ~100 (faces source)
+    DOCTEST_CHECK_MESSAGE(patch0_radiation < 10.0f, "Patch0 should be blocked by patch1, got " << patch0_radiation << " W (expected ~0)");
+    DOCTEST_CHECK_MESSAGE(patch1_radiation > 90.0f, "Patch1 should receive full flux, got " << patch1_radiation << " W (expected ~100)");
+}
 DOCTEST_TEST_CASE("RadiationModel - Camera Pixel UUID Indexing Validation") {
     // This test validates that camera pixel-to-UUID mapping is spatially correct
     // by checking that left pixels see left patches, not right patches (which would happen with horizontal flip bug)
@@ -5926,17 +6434,16 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Pixel UUID Indexing Validation") {
 
     CameraProperties cam_props;
     cam_props.camera_resolution = make_int2(64, 64);
-    cam_props.HFOV = 90;  // Wide FOV to see all three patches
+    cam_props.HFOV = 90; // Wide FOV to see all three patches
     cam_props.focal_plane_distance = 10;
     cam_props.lens_diameter = 0.0f;
 
-    radiationmodel.addRadiationCamera("test_cam", {"SW"},
-                                     make_vec3(0, 0, 5),  // Above scene
-                                     make_vec3(0, 0, 0),  // Looking down
-                                     cam_props, 1);
+    radiationmodel.addRadiationCamera("test_cam", {"SW"}, make_vec3(0, 0, 5), // Above scene
+                                      make_vec3(0, 0, 0), // Looking down
+                                      cam_props, 1);
 
     radiationmodel.addRadiationBand("SW");
-    radiationmodel.setScatteringDepth("SW", 1);  // Enable scattering for camera ray tracing
+    radiationmodel.setScatteringDepth("SW", 1); // Enable scattering for camera ray tracing
 
     // Add a radiation source - required for camera pixel labeling to run
     uint source = radiationmodel.addCollimatedRadiationSource(make_vec3(0, 0, 1));
@@ -5948,8 +6455,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Pixel UUID Indexing Validation") {
     // Write label map to temporary file
     // Filename format: {cameralabel}_{imagefile_base}_{frame:05d}.txt
     std::string test_file = "test_cam_test_camera_indexing_00000.txt";
-    radiationmodel.writePrimitiveDataLabelMap("test_cam", "patch_id",
-                                              "test_camera_indexing", "./", 0, 0.0f);
+    radiationmodel.writePrimitiveDataLabelMap("test_cam", "patch_id", "test_camera_indexing", "./", 0, 0.0f);
 
     // Read back the label map
     std::ifstream label_file(test_file);
@@ -5971,34 +6477,36 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Pixel UUID Indexing Validation") {
     for (int j = 26; j < 38; j++) {
         for (int i = 20; i < 25; i++) {
             float label = labels[j * 64 + i];
-            if (label == 1.0f) left_votes++;
-            else if (label == 2.0f) center_votes++;
-            else if (label == 3.0f) right_votes++;
+            if (label == 1.0f)
+                left_votes++;
+            else if (label == 2.0f)
+                center_votes++;
+            else if (label == 3.0f)
+                right_votes++;
         }
     }
 
     // Left region should see world-left patch (ID=1)
-    DOCTEST_CHECK_MESSAGE(left_votes > right_votes,
-                          "Left region should see world-left patch (ID=1), not world-right (ID=3)");
-    DOCTEST_CHECK_MESSAGE(left_votes > center_votes,
-                          "Left region should predominantly see left patch");
+    DOCTEST_CHECK_MESSAGE(left_votes > right_votes, "Left region should see world-left patch (ID=1), not world-right (ID=3)");
+    DOCTEST_CHECK_MESSAGE(left_votes > center_votes, "Left region should predominantly see left patch");
 
     // Sample right region of label map (x=[39,43])
     left_votes = center_votes = right_votes = 0;
     for (int j = 26; j < 38; j++) {
         for (int i = 39; i < 44; i++) {
             float label = labels[j * 64 + i];
-            if (label == 1.0f) left_votes++;
-            else if (label == 2.0f) center_votes++;
-            else if (label == 3.0f) right_votes++;
+            if (label == 1.0f)
+                left_votes++;
+            else if (label == 2.0f)
+                center_votes++;
+            else if (label == 3.0f)
+                right_votes++;
         }
     }
 
     // Right region should see world-right patch (ID=3)
-    DOCTEST_CHECK_MESSAGE(right_votes > left_votes,
-                          "Right region should see world-right patch (ID=3), not world-left (ID=1)");
-    DOCTEST_CHECK_MESSAGE(right_votes > center_votes,
-                          "Right region should predominantly see right patch");
+    DOCTEST_CHECK_MESSAGE(right_votes > left_votes, "Right region should see world-right patch (ID=3), not world-left (ID=1)");
+    DOCTEST_CHECK_MESSAGE(right_votes > center_votes, "Right region should predominantly see right patch");
 
     // Cleanup test file
     std::remove(test_file.c_str());
@@ -6011,17 +6519,14 @@ DOCTEST_TEST_CASE("RadiationModel - Pixel Labeling with Fine Tessellation") {
     Context context;
 
     // Create ground with tessellation matching camera resolution
-    int res = 128;  // Use 128x128 for fast test (principle same as 1024x1024)
+    int res = 128; // Use 128x128 for fast test (principle same as 1024x1024)
     float camera_height = 20.0f;
     float HFOV_degrees = 45.0f;
 
     // Calculate tile size to fill camera FOV: ground_size = 2 * height * tan(HFOV/2)
     float ground_size = 2.0f * camera_height * tanf(HFOV_degrees * M_PI / 180.0f / 2.0f);
 
-    std::vector<uint> ground = context.addTile(make_vec3(0, 0, 0),
-                                               make_vec2(ground_size, ground_size),
-                                               make_SphericalCoord(0, 0),
-                                               make_int2(res, res));
+    std::vector<uint> ground = context.addTile(make_vec3(0, 0, 0), make_vec2(ground_size, ground_size), make_SphericalCoord(0, 0), make_int2(res, res));
 
     // Tag ground with data
     context.setPrimitiveData(ground, "ground_id", uint(42));
@@ -6031,18 +6536,17 @@ DOCTEST_TEST_CASE("RadiationModel - Pixel Labeling with Fine Tessellation") {
     radiationmodel.disableMessages();
 
     CameraProperties cam_props;
-    cam_props.camera_resolution = make_int2(res, res);  // Match ground tessellation
+    cam_props.camera_resolution = make_int2(res, res); // Match ground tessellation
     cam_props.HFOV = HFOV_degrees;
     cam_props.focal_plane_distance = 10;
     cam_props.lens_diameter = 0.0f;
 
-    radiationmodel.addRadiationCamera("test_cam", {"SW"},
-                                     make_vec3(0, 0, camera_height),  // Above ground
-                                     make_vec3(0, 0, 0),   // Looking down
-                                     cam_props, 1);
+    radiationmodel.addRadiationCamera("test_cam", {"SW"}, make_vec3(0, 0, camera_height), // Above ground
+                                      make_vec3(0, 0, 0), // Looking down
+                                      cam_props, 1);
 
     radiationmodel.addRadiationBand("SW");
-    radiationmodel.setScatteringDepth("SW", 1);  // Enable scattering for camera ray tracing
+    radiationmodel.setScatteringDepth("SW", 1); // Enable scattering for camera ray tracing
 
     // Add a radiation source - required for camera pixel labeling to run
     uint source = radiationmodel.addCollimatedRadiationSource(make_vec3(0, 0, 1));
@@ -6054,8 +6558,7 @@ DOCTEST_TEST_CASE("RadiationModel - Pixel Labeling with Fine Tessellation") {
     // Write and read label map
     // Filename format: {cameralabel}_{imagefile_base}_{frame:05d}.txt
     std::string test_file = "test_cam_test_fine_tessellation_00000.txt";
-    radiationmodel.writePrimitiveDataLabelMap("test_cam", "ground_id",
-                                              "test_fine_tessellation", "./", 0, 0.0f);
+    radiationmodel.writePrimitiveDataLabelMap("test_cam", "ground_id", "test_fine_tessellation", "./", 0, 0.0f);
 
     std::ifstream label_file(test_file);
     DOCTEST_REQUIRE(label_file.is_open());
@@ -6070,7 +6573,7 @@ DOCTEST_TEST_CASE("RadiationModel - Pixel Labeling with Fine Tessellation") {
     // Count valid hits (ground_id = 42) vs misses (NaN)
     int valid_count = 0;
     int nan_count = 0;
-    for (float label : labels) {
+    for (float label: labels) {
         if (std::isnan(label)) {
             nan_count++;
         } else if (label == 42.0f) {
@@ -6080,11 +6583,8 @@ DOCTEST_TEST_CASE("RadiationModel - Pixel Labeling with Fine Tessellation") {
 
     float valid_percentage = 100.0f * valid_count / labels.size();
 
-    // With fine tessellation and tile sized to fill FOV, expect reasonable hit rate
-    // Actual coverage depends on exact tile/camera geometry alignment
-    DOCTEST_CHECK_MESSAGE(valid_percentage > 60.0f,
-                          "Pixel labeling with fine tessellation should have >60% valid hits, got "
-                          << valid_percentage << "% (tile may not exactly fill FOV)");
+    // Tile fills entire FOV, so should get >95% valid hits (allowing for edge pixels and numerical precision)
+    DOCTEST_CHECK_MESSAGE(valid_percentage > 95.0f, "Pixel labeling with fine tessellation should have >95% valid hits, got " << valid_percentage << "%");
 
     // Cleanup
     std::remove(test_file.c_str());
@@ -6175,8 +6675,7 @@ DOCTEST_TEST_CASE("RadiationModel - runBand Invalid Band Error Handling") {
             exception_thrown = true;
             error_message = e.what();
             // Should catch the first invalid band
-            bool found_invalid = error_message.find("INVALID1") != std::string::npos ||
-                                error_message.find("INVALID2") != std::string::npos;
+            bool found_invalid = error_message.find("INVALID1") != std::string::npos || error_message.find("INVALID2") != std::string::npos;
             DOCTEST_CHECK(found_invalid);
             DOCTEST_CHECK(error_message.find("not a valid band") != std::string::npos);
         } catch (const std::out_of_range &e) {
@@ -6215,10 +6714,8 @@ DOCTEST_TEST_CASE("RadiationModel - Segmentation Mask to Image Coordinate Alignm
     cam_props.focal_plane_distance = 10;
     cam_props.lens_diameter = 0.0f;
 
-    radiationmodel.addRadiationCamera("test_cam", {"SW"},
-                                     make_vec3(0, -10, 0),  // Camera looking from -Y toward origin
-                                     make_vec3(0, 0, 0),
-                                     cam_props, 1);
+    radiationmodel.addRadiationCamera("test_cam", {"SW"}, make_vec3(0, -10, 0), // Camera looking from -Y toward origin
+                                      make_vec3(0, 0, 0), cam_props, 1);
 
     radiationmodel.addRadiationBand("SW");
     radiationmodel.setScatteringDepth("SW", 1);
@@ -6249,7 +6746,7 @@ DOCTEST_TEST_CASE("RadiationModel - Segmentation Mask to Image Coordinate Alignm
     context.getGlobalData("camera_test_cam_pixel_UUID", pixel_UUIDs);
 
     // For each annotation, verify the bbox encloses ALL pixels with that patch's UUID
-    for (const auto &ann : coco_json["annotations"]) {
+    for (const auto &ann: coco_json["annotations"]) {
         int bbox_x = ann["bbox"][0];
         int bbox_y = ann["bbox"][1];
         int bbox_w = ann["bbox"][2];
@@ -6305,7 +6802,7 @@ DOCTEST_TEST_CASE("RadiationModel - Mask Spatial Ordering Matches Image") {
 
     // Create 3 patches in a horizontal line: left, center, right
     // Camera looks from (0,-10,0) toward origin, so patches should face -Y (rotated 90° about X axis)
-    SphericalCoord rotation = make_SphericalCoord(M_PI/2, 0);  // 90° pitch to face -Y
+    SphericalCoord rotation = make_SphericalCoord(M_PI / 2, 0); // 90° pitch to face -Y
     uint left_patch = context.addPatch(make_vec3(-2, 0, 0), make_vec2(0.8, 1.5), rotation);
     uint center_patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.8, 1.5), rotation);
     uint right_patch = context.addPatch(make_vec3(2, 0, 0), make_vec2(0.8, 1.5), rotation);
@@ -6324,10 +6821,7 @@ DOCTEST_TEST_CASE("RadiationModel - Mask Spatial Ordering Matches Image") {
     cam_props.focal_plane_distance = 10;
     cam_props.lens_diameter = 0.0f;
 
-    radiationmodel.addRadiationCamera("test_cam", {"SW"},
-                                     make_vec3(0, -10, 0),
-                                     make_vec3(0, 0, 0),
-                                     cam_props, 1);
+    radiationmodel.addRadiationCamera("test_cam", {"SW"}, make_vec3(0, -10, 0), make_vec3(0, 0, 0), cam_props, 1);
 
     radiationmodel.addRadiationBand("SW");
     radiationmodel.setScatteringDepth("SW", 1);
@@ -6342,7 +6836,7 @@ DOCTEST_TEST_CASE("RadiationModel - Mask Spatial Ordering Matches Image") {
     std::vector<uint> pixel_UUIDs_check;
     context.getGlobalData("camera_test_cam_pixel_UUID", pixel_UUIDs_check);
     int patch_hits = 0;
-    for (uint uuid : pixel_UUIDs_check) {
+    for (uint uuid: pixel_UUIDs_check) {
         if (uuid > 0 && context.doesPrimitiveExist(uuid - 1)) {
             if (context.doesPrimitiveDataExist(uuid - 1, "patch_id")) {
                 patch_hits++;
@@ -6370,9 +6864,9 @@ DOCTEST_TEST_CASE("RadiationModel - Mask Spatial Ordering Matches Image") {
     DOCTEST_INFO("Number of annotations: " << coco_json["annotations"].size());
 
     // Find bbox center x-coordinates for each patch ID
-    std::map<int, int> patch_center_x;  // patch_id -> center_x
+    std::map<int, int> patch_center_x; // patch_id -> center_x
 
-    for (const auto &ann : coco_json["annotations"]) {
+    for (const auto &ann: coco_json["annotations"]) {
         int cat_id = ann["category_id"];
         int bbox_x = ann["bbox"][0];
         int bbox_w = ann["bbox"][2];
@@ -6382,7 +6876,7 @@ DOCTEST_TEST_CASE("RadiationModel - Mask Spatial Ordering Matches Image") {
         // We need to look at the actual labels to find which is which
         // Since all have category_id=1, we can't distinguish them this way
         // Instead, check the bbox positions
-        patch_center_x[center_x] = center_x;  // Just store for now
+        patch_center_x[center_x] = center_x; // Just store for now
     }
 
     // We should have 3 annotations
@@ -6390,7 +6884,7 @@ DOCTEST_TEST_CASE("RadiationModel - Mask Spatial Ordering Matches Image") {
 
     // Extract and sort the center x coordinates
     std::vector<int> centers;
-    for (const auto &ann : coco_json["annotations"]) {
+    for (const auto &ann: coco_json["annotations"]) {
         int bbox_x = ann["bbox"][0];
         int bbox_w = ann["bbox"][2];
         centers.push_back(bbox_x + bbox_w / 2);
@@ -6450,10 +6944,7 @@ DOCTEST_TEST_CASE("RadiationModel - Data Label Maps Match Segmentation Mask Coor
     cam_props.focal_plane_distance = 10;
     cam_props.lens_diameter = 0.0f;
 
-    radiationmodel.addRadiationCamera("test_cam", {"SW"},
-                                     make_vec3(0, 0, 5),
-                                     make_vec3(0, 0, 0),
-                                     cam_props, 1);
+    radiationmodel.addRadiationCamera("test_cam", {"SW"}, make_vec3(0, 0, 5), make_vec3(0, 0, 0), cam_props, 1);
 
     radiationmodel.addRadiationBand("SW");
     radiationmodel.setScatteringDepth("SW", 1);
@@ -6502,7 +6993,6 @@ DOCTEST_TEST_CASE("RadiationModel - Data Label Maps Match Segmentation Mask Coor
     // For each annotation, verify that the bbox region contains consistent data values
     // Sample multiple pixels across the bbox region to detect horizontal/vertical flips
     int total_annotations = coco_json["annotations"].size();
-    std::cout << "Number of annotations: " << total_annotations << std::endl;
     DOCTEST_REQUIRE_MESSAGE(total_annotations == 3, "Should have 3 annotations, got " << total_annotations);
 
     // Expected values based on world positions:
@@ -6514,23 +7004,17 @@ DOCTEST_TEST_CASE("RadiationModel - Data Label Maps Match Segmentation Mask Coor
     std::vector<std::tuple<int, int, int, int, int>> ann_data; // x, y, w, h, index
     for (size_t idx = 0; idx < coco_json["annotations"].size(); idx++) {
         const auto &ann = coco_json["annotations"][idx];
-        ann_data.push_back({ann["bbox"][0].get<int>(), ann["bbox"][1].get<int>(),
-                           ann["bbox"][2].get<int>(), ann["bbox"][3].get<int>(), idx});
+        ann_data.push_back({ann["bbox"][0].get<int>(), ann["bbox"][1].get<int>(), ann["bbox"][2].get<int>(), ann["bbox"][3].get<int>(), static_cast<int>(idx)});
     }
     std::sort(ann_data.begin(), ann_data.end()); // Sort by x position
 
-    // Expected object IDs from left to right in output coordinate space
-    // World positions: obj1=100 at X=-1.5 (left), obj2=200 at X=0 (center), obj3=300 at X=+1.5 (right)
-    // With horizontal flip in both masks and label maps, they're consistent
-    // But need to verify actual ordering
+    // Expected object IDs from left to right IN MASK/LABEL MAP COORDINATE SPACE
+    // Dev's backend implementation produces unflipped coordinates (world order matches image order)
     std::vector<uint> expected_obj_ids = {100, 200, 300};
 
     for (size_t i = 0; i < ann_data.size(); i++) {
         auto [bbox_x, bbox_y, bbox_w, bbox_h, ann_idx] = ann_data[i];
         uint expected_obj_value = expected_obj_ids[i];
-
-        std::cout << "Annotation " << i << " at (" << bbox_x << "," << bbox_y << ") expects obj_id=" <<
-                     expected_obj_value << std::endl;
 
         // Verify label map has the SAME value in this bbox region
         int correct_value_count = 0;
@@ -6541,7 +7025,8 @@ DOCTEST_TEST_CASE("RadiationModel - Data Label Maps Match Segmentation Mask Coor
                 int px = bbox_x + dx;
                 int py = bbox_y + dy;
 
-                if (px < 0 || px >= 64 || py < 0 || py >= 64) continue;
+                if (px < 0 || px >= 64 || py < 0 || py >= 64)
+                    continue;
 
                 float obj_value = obj_labels[py * 64 + px];
 
@@ -6560,14 +7045,10 @@ DOCTEST_TEST_CASE("RadiationModel - Data Label Maps Match Segmentation Mask Coor
         int center_y = bbox_y + bbox_h / 2;
         float sample_actual_value = obj_labels[center_y * 64 + center_x];
 
-        std::cout << "  Label map match: " << match_percentage << "% of bbox pixels have correct value" << std::endl;
-        std::cout << "  At bbox center (" << center_x << "," << center_y << "): expected=" << expected_obj_value <<
-                     ", actual=" << sample_actual_value << std::endl;
-
         // If coordinates match correctly, bbox region should have the CORRECT value (not wrong patch's value)
-        DOCTEST_CHECK_MESSAGE(match_percentage > 80.0f,
-                              "At least 80% of bbox pixels should have CORRECT data value in label map. "
-                              "If this fails, label map coordinates are flipped relative to mask. Got " << match_percentage << "%");
+        DOCTEST_CHECK_MESSAGE(match_percentage > 80.0f, "At least 80% of bbox pixels should have CORRECT data value in label map. "
+                                                        "If this fails, label map coordinates are flipped relative to mask. Got "
+                                                                << match_percentage << "%");
     }
 
     // Cleanup
@@ -6577,3 +7058,204 @@ DOCTEST_TEST_CASE("RadiationModel - Data Label Maps Match Segmentation Mask Coor
     std::remove(image_file.c_str());
 }
 
+DOCTEST_TEST_CASE("Material Backend Migration - Spectrum Interpolation Integration") {
+    // Test that spectrum interpolation configs are properly applied in buildMaterialData()
+
+    helios::Context context;
+    RadiationModel radiationmodel(&context);
+    radiationmodel.disableMessages();
+
+    // Create spectral data for different ages
+    std::vector<helios::vec2> spectrum_young = {{400, 0.1}, {500, 0.15}, {600, 0.2}, {700, 0.25}};
+    std::vector<helios::vec2> spectrum_old = {{400, 0.5}, {500, 0.55}, {600, 0.6}, {700, 0.65}};
+
+    context.setGlobalData("rho_young", spectrum_young);
+    context.setGlobalData("rho_old", spectrum_old);
+
+    // Create test primitive
+    uint uuid = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
+    context.setPrimitiveData(uuid, "leaf_age", 8.0f); // Should select "rho_old" (closer to 10 than 0)
+
+    // Set up interpolation config
+    std::vector<uint> uuids = {uuid};
+    std::vector<std::string> spectra = {"rho_young", "rho_old"};
+    std::vector<float> values = {0.0f, 10.0f};
+    radiationmodel.interpolateSpectrumFromPrimitiveData(uuids, spectra, values, "leaf_age", "reflectivity_spectrum");
+
+    // Add band with wavelength bounds for spectral integration
+    radiationmodel.addRadiationBand("PAR", 400.f, 700.f);
+    radiationmodel.disableEmission("PAR"); // Disable emission to avoid energy conservation errors
+    radiationmodel.setScatteringDepth("PAR", 1); // Enable scattering so material calculation runs
+
+    // Add source with constant flux
+    uint source = radiationmodel.addCollimatedRadiationSource();
+    radiationmodel.setSourceFlux(source, "PAR", 1000.f);
+
+    // Update geometry and run - this triggers buildMaterialData()
+    radiationmodel.updateGeometry();
+    radiationmodel.runBand("PAR");
+
+    // Verify that interpolation was applied
+    std::string assigned_spectrum;
+    DOCTEST_REQUIRE(context.doesPrimitiveDataExist(uuid, "reflectivity_spectrum"));
+    context.getPrimitiveData(uuid, "reflectivity_spectrum", assigned_spectrum);
+    DOCTEST_CHECK(assigned_spectrum == "rho_old");
+}
+
+DOCTEST_TEST_CASE("Material Backend Migration - Camera Weighted Materials") {
+    // Test that camera-weighted materials are correctly calculated with spectral responses
+
+    helios::Context context;
+    RadiationModel radiationmodel(&context);
+    radiationmodel.disableMessages();
+
+    // Create object spectrum (reflectivity)
+    std::vector<helios::vec2> object_spectrum = {{400, 0.1}, {500, 0.3}, {600, 0.5}, {700, 0.7}};
+    context.setGlobalData("object_rho", object_spectrum);
+
+    // Create camera spectral response (Gaussian-like, peaked at 550nm)
+    std::vector<helios::vec2> camera_response = {{400, 0.2}, {500, 0.8}, {600, 0.8}, {700, 0.2}};
+    context.setGlobalData("camera_green", camera_response);
+
+    // Create source spectrum (sunlight-like)
+    std::vector<helios::vec2> source_spectrum = {{400, 0.8}, {500, 1.0}, {600, 1.0}, {700, 0.9}};
+    context.setGlobalData("sunlight", source_spectrum);
+
+    // Create test primitive with spectral reflectivity
+    uint uuid = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
+    context.setPrimitiveData(uuid, "reflectivity_spectrum", std::string("object_rho"));
+
+    // Add band with wavelength bounds
+    radiationmodel.addRadiationBand("VIS", 400.f, 700.f);
+    radiationmodel.disableEmission("VIS"); // Disable emission to avoid energy conservation errors
+    radiationmodel.setScatteringDepth("VIS", 1); // Enable scattering for camera rendering
+
+    // Add source with spectrum
+    uint source = radiationmodel.addCollimatedRadiationSource();
+    radiationmodel.setSourceFlux(source, "VIS", 1000.f);
+    radiationmodel.setSourceSpectrum(source, "sunlight");
+
+    // Add camera with spectral response
+    CameraProperties cam_props;
+    cam_props.camera_resolution = helios::make_int2(10, 10);
+    cam_props.HFOV = 45.f;
+    cam_props.focal_plane_distance = 2.0f;
+    cam_props.lens_diameter = 0.0f; // Pinhole
+
+    std::vector<std::string> band_labels = {"VIS"};
+    radiationmodel.addRadiationCamera("test_cam", band_labels, helios::make_vec3(0, -5, 0), helios::make_vec3(0, 0, 0), cam_props, 1);
+    radiationmodel.setCameraSpectralResponse("test_cam", "VIS", "camera_green");
+
+    // Update and run
+    radiationmodel.updateGeometry();
+    radiationmodel.runBand("VIS");
+
+    // Verify camera data was generated
+    DOCTEST_CHECK(context.doesGlobalDataExist("camera_test_cam_VIS"));
+
+    // Get camera data
+    if (context.doesGlobalDataExist("camera_test_cam_VIS")) {
+        std::vector<float> camera_data;
+        context.getGlobalData("camera_test_cam_VIS", camera_data);
+        DOCTEST_CHECK(camera_data.size() == 100); // 10x10 pixels
+    }
+}
+
+DOCTEST_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
+    // Test that setting specular_exponent affects camera rendering
+    // This verifies specular reflection is enabled and working correctly
+
+    Context context;
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    // Create patch at origin facing +Z
+    uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(UUID, "twosided_flag", uint(1));
+
+    // Set low diffuse reflectivity to isolate specular contribution
+    std::vector<helios::vec2> reflectivity;
+    reflectivity.push_back(make_vec2(400, 0.05f));
+    reflectivity.push_back(make_vec2(700, 0.05f));
+    context.setGlobalData("reflectivity", reflectivity);
+    context.setPrimitiveData(UUID, "reflectivity_spectrum", "reflectivity");
+
+    std::vector<helios::vec2> zero_transmissivity;
+    zero_transmissivity.push_back(make_vec2(400, 0.0f));
+    zero_transmissivity.push_back(make_vec2(700, 0.0f));
+    context.setGlobalData("zero_transmissivity", zero_transmissivity);
+    context.setPrimitiveData(UUID, "transmissivity_spectrum", "zero_transmissivity");
+
+    // Setup radiation band and source
+    radiation.addRadiationBand("SUN");
+    radiation.setScatteringDepth("SUN", 1);
+
+    helios::vec3 sun_direction = helios::make_vec3(0, 0, 1); // Sun above (direction points TO sun)
+    uint source = radiation.addCollimatedRadiationSource(sun_direction);
+    radiation.setSourceFlux(source, "SUN", 1000.0f);
+    radiation.setDirectRayCount("SUN", 10000);
+    radiation.setDiffuseRayCount("SUN", 0);
+    radiation.disableEmission("SUN");
+
+    // Camera looking straight down at patch
+    helios::vec3 camera_pos = helios::make_vec3(0, 0, 2.0f);
+    helios::vec3 camera_lookat = helios::make_vec3(0, 0, 0);
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(32, 32);
+    cam_props.lens_diameter = 0.0f;
+    cam_props.focal_plane_distance = 2.0f;
+    cam_props.HFOV = 30.0f;
+    radiation.addRadiationCamera("test_cam", {"SUN"}, camera_pos, camera_lookat, cam_props, 1);
+
+    // Set camera spectral response
+    std::vector<helios::vec2> camera_response;
+    camera_response.push_back(make_vec2(400, 1.0f));
+    camera_response.push_back(make_vec2(700, 1.0f));
+    context.setGlobalData("camera_response", camera_response);
+    radiation.setCameraSpectralResponse("test_cam", "SUN", "camera_response");
+
+    // TEST 1: specular_exponent = -1 (disabled)
+    std::string output1;
+    {
+        capture_cout capture;
+        context.setPrimitiveData(UUID, "specular_exponent", -1.0f);
+        radiation.updateGeometry();
+        radiation.runBand("SUN");
+        output1 = capture.get_captured_output();
+    }
+
+    std::vector<float> pixels_no_specular;
+    context.getGlobalData("camera_test_cam_SUN", pixels_no_specular);
+
+    float sum_no_specular = 0.0f;
+    for (float p: pixels_no_specular) {
+        sum_no_specular += p;
+    }
+    float avg_no_specular = sum_no_specular / pixels_no_specular.size();
+
+    // TEST 2: specular_exponent = 50 (strong specular highlight)
+    std::string output2;
+    {
+        capture_cout capture;
+        context.setPrimitiveData(UUID, "specular_exponent", 50.0f);
+        radiation.updateGeometry();
+        radiation.runBand("SUN");
+        output2 = capture.get_captured_output();
+    }
+
+    std::vector<float> pixels_with_specular;
+    context.getGlobalData("camera_test_cam_SUN", pixels_with_specular);
+
+    float sum_with_specular = 0.0f;
+    for (float p: pixels_with_specular) {
+        sum_with_specular += p;
+    }
+    float avg_with_specular = sum_with_specular / pixels_with_specular.size();
+
+    float difference = avg_with_specular - avg_no_specular;
+
+    // Verify specular exponent changes camera intensity
+    DOCTEST_CHECK_MESSAGE(std::abs(difference) > 1.0f, "Specular exponent should affect camera intensity. "
+                                                       "No specular: "
+                                                               << avg_no_specular << ", With specular: " << avg_with_specular << ", Difference: " << difference);
+}

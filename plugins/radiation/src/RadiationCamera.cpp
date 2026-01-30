@@ -1008,7 +1008,7 @@ void RadiationModel::writePrimitiveDataLabelMap(const std::string &cameralabel, 
     // Apply horizontal flip to match mask coordinate system
     for (uint j = 0; j < camera_resolution.y; j++) {
         for (uint i = 0; i < camera_resolution.x; i++) {
-            uint ii = camera_resolution.x - i - 1;  // horizontal flip
+            uint ii = camera_resolution.x - i - 1; // horizontal flip
             uint UUID = pixel_UUIDs.at(j * camera_resolution.x + ii) - 1;
             if (context->doesPrimitiveExist(UUID) && context->doesPrimitiveDataExist(UUID, primitive_data_label.c_str())) {
                 HeliosDataType datatype = context->getPrimitiveDataType(primitive_data_label.c_str());
@@ -1096,7 +1096,7 @@ void RadiationModel::writeObjectDataLabelMap(const std::string &cameralabel, con
     // Apply horizontal flip to match mask coordinate system
     for (uint j = 0; j < camera_resolution.y; j++) {
         for (uint i = 0; i < camera_resolution.x; i++) {
-            uint ii = camera_resolution.x - i - 1;  // horizontal flip
+            uint ii = camera_resolution.x - i - 1; // horizontal flip
             uint UUID = pixel_UUIDs.at(j * camera_resolution.x + ii) - 1;
             if (!context->doesPrimitiveExist(UUID)) {
                 pixel_data << padvalue << " ";
@@ -1650,7 +1650,7 @@ void RadiationModel::writeImageBoundingBoxes_ObjectData(const std::string &camer
     // Apply horizontal flip to match mask coordinate system
     for (int j = 0; j < camera_resolution.y; j++) {
         for (int i = 0; i < camera_resolution.x; i++) {
-            uint ii = camera_resolution.x - i - 1;  // horizontal flip
+            uint ii = camera_resolution.x - i - 1; // horizontal flip
             uint UUID = pixel_UUIDs.at(j * camera_resolution.x + ii) - 1;
 
             if (!context->doesPrimitiveExist(UUID)) {
@@ -1848,7 +1848,7 @@ std::map<int, std::vector<std::vector<bool>>> RadiationModel::generateLabelMasks
     // Apply horizontal flip to match JPEG coordinate system
     for (int j = 0; j < camera_resolution.y; j++) {
         for (int i = 0; i < camera_resolution.x; i++) {
-            uint ii = camera_resolution.x - i - 1;  // horizontal flip to match JPEG
+            uint ii = camera_resolution.x - i - 1; // horizontal flip to match JPEG
             uint UUID = pixel_UUIDs.at(j * camera_resolution.x + ii) - 1;
 
             if (context->doesPrimitiveExist(UUID)) {
@@ -2282,7 +2282,7 @@ void RadiationModel::writeImageSegmentationMasks(const std::string &cameralabel,
                                 int count = 0;
 
                                 for (const auto &[px_i, px_j]: component_pixels) {
-                                    uint ii = camera_resolution.x - px_i - 1;  // horizontal flip because component_pixels are in mask space
+                                    uint ii = camera_resolution.x - px_i - 1; // horizontal flip because component_pixels are in mask space
                                     uint UUID = pixel_UUIDs.at(px_j * camera_resolution.x + ii) - 1;
 
                                     if (context->doesPrimitiveExist(UUID)) {
@@ -2681,7 +2681,7 @@ void RadiationModel::writeImageSegmentationMasks_ObjectData(const std::string &c
                                     // Convert contour to segmentation format (flatten coordinates)
                                     std::vector<int> segmentation_coords;
                                     for (const auto &point: contour) {
-                                        segmentation_coords.push_back(point.first);  // x coordinate
+                                        segmentation_coords.push_back(point.first); // x coordinate
                                         segmentation_coords.push_back(point.second); // y coordinate
                                     }
                                     json_annotation["segmentation"] = {segmentation_coords};
