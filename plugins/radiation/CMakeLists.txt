@@ -9,32 +9,109 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
 
-add_library(radiation STATIC
+# ========== Core radiation plugin sources (backend-agnostic) ==========
+set(RADIATION_CORE_SOURCES
     "src/RadiationModel.cpp"
     "src/RadiationCamera.cpp"
     "src/CameraCalibration.cpp"
     "src/LensFlare.cpp"
     "src/RayTracingTypes.cpp"
-    "src/backends/OptiX6Backend.cpp"
     "src/backends/BackendFactory.cpp"
     "tests/selfTest.cpp"
+)
+
+# ========== Detect Available Backends ==========
+
+# CMake option to force Vulkan backend (for testing on NVIDIA systems)
+option(FORCE_VULKAN_BACKEND "Force Vulkan backend even if CUDA is available (for testing)" OFF)
+
+# Try to find CUDA/OptiX (optional)
+find_package(CUDAToolkit QUIET)
+
+set(HAVE_OPTIX FALSE)
+set(OPTIX_BACKEND_SOURCES "")
+
+if(CUDAToolkit_FOUND AND NOT FORCE_VULKAN_BACKEND)
+	message(STATUS "CUDA found - OptiX backend will be available")
+	set(HAVE_OPTIX TRUE)
+	set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
+
+	# Set CUDA architectures before enabling CUDA language
+	if( OPTIX_VERSION_LEGACY )
+		set(CMAKE_CUDA_ARCHITECTURES "35")
+	else()
+		include("${CMAKE_BINARY_DIR}/lib/detect_GPU_compute.cmake")
+	endif()
+
+	# Enable CUDA as a language (modern CMake approach)
+	enable_language(CUDA)
+
+	# Add OptiX backend source
+	list(APPEND OPTIX_BACKEND_SOURCES "src/backends/OptiX6Backend.cpp")
+elseif(FORCE_VULKAN_BACKEND)
+	message(STATUS "FORCE_VULKAN_BACKEND=ON - OptiX backend disabled for testing")
+else()
+	message(STATUS "CUDA not found - OptiX backend will NOT be available")
+endif()
+
+# Try to find Vulkan (optional, or force it for testing)
+if(FORCE_VULKAN_BACKEND)
+	find_package(Vulkan REQUIRED)
+else()
+	find_package(Vulkan QUIET)
+endif()
+
+set(HAVE_VULKAN FALSE)
+set(VULKAN_BACKEND_SOURCES "")
+
+if(Vulkan_FOUND)
+	message(STATUS "Vulkan found - Vulkan compute backend will be available")
+	set(HAVE_VULKAN TRUE)
+
+	# Add Vulkan backend sources
+	list(APPEND VULKAN_BACKEND_SOURCES
+		"src/backends/VulkanComputeBackend.cpp"
+		"src/backends/VulkanDevice.cpp"
+		"src/backends/BVHBuilder.cpp"
+	)
+else()
+	message(STATUS "Vulkan not found - Vulkan compute backend will NOT be available")
+endif()
+
+# Ensure at least one backend is available
+if(NOT HAVE_OPTIX AND NOT HAVE_VULKAN)
+	message(FATAL_ERROR
+		"ERROR: No ray tracing backend available. "
+		"Install CUDA Toolkit (for OptiX backend) or Vulkan SDK (for Vulkan compute backend). "
+		"At least one backend is required to build the radiation plugin."
+	)
+endif()
+
+# ========== Create radiation library with available backends ==========
+add_library(radiation STATIC
+	${RADIATION_CORE_SOURCES}
+	${OPTIX_BACKEND_SOURCES}
+	${VULKAN_BACKEND_SOURCES}
 )
 
 target_include_directories(radiation PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/lib/json" )
 target_include_directories(radiation PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/backends")
 
-find_package(CUDAToolkit REQUIRED)
-set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
-
-# Set CUDA architectures before enabling CUDA language
-if( OPTIX_VERSION_LEGACY )
-	set(CMAKE_CUDA_ARCHITECTURES "35")
-else()
-	include("${CMAKE_BINARY_DIR}/lib/detect_GPU_compute.cmake")
+# Add compile definitions for available backends
+if(HAVE_OPTIX)
+	target_compile_definitions(radiation PUBLIC HELIOS_HAVE_OPTIX)
+endif()
+if(HAVE_VULKAN)
+	target_compile_definitions(radiation PUBLIC HELIOS_HAVE_VULKAN)
+	target_include_directories(radiation PRIVATE
+		"${Vulkan_INCLUDE_DIRS}"
+		"${CMAKE_CURRENT_SOURCE_DIR}/lib/vma"
+	)
+	target_link_libraries(radiation PUBLIC ${Vulkan_LIBRARIES})
 endif()
 
-# Enable CUDA as a language (modern CMake approach)
-enable_language(CUDA)
+# ========== OptiX Backend Configuration (if available) ==========
+if(HAVE_OPTIX)
 
 # Windows-specific: Override CMake's automatic CUDA flag injection
 if(WIN32 AND MSVC)
@@ -228,6 +305,68 @@ endforeach()
 
 # Ensure main project depends on PTX target
 add_dependencies(radiation ptx)
+
+endif(HAVE_OPTIX)
+# ========== End OptiX Backend Configuration ==========
+
+# ========== Vulkan Backend Configuration (if available) ==========
+if(HAVE_VULKAN)
+
+# Find glslangValidator for shader compilation
+find_program(GLSLANG_VALIDATOR glslangValidator REQUIRED)
+
+if(NOT GLSLANG_VALIDATOR)
+	message(FATAL_ERROR "glslangValidator not found. Install Vulkan SDK or glslang-tools package.")
+endif()
+
+message(STATUS "Found glslangValidator: ${GLSLANG_VALIDATOR}")
+
+# Shader source files
+set(SHADER_SOURCES
+	shaders/direct_raygen.comp
+	shaders/diffuse_raygen.comp
+	shaders/camera_raygen.comp
+	shaders/pixel_label_raygen.comp
+)
+
+# Generate SPIR-V files using custom commands
+set(SPIRV_FILES "")
+foreach(SHADER_SOURCE ${SHADER_SOURCES})
+	get_filename_component(SHADER_NAME ${SHADER_SOURCE} NAME_WE)
+
+	# Output SPIR-V file path
+	set(SPIRV_FILE "${CMAKE_BINARY_DIR}/plugins/radiation/${SHADER_NAME}.spv")
+	list(APPEND SPIRV_FILES ${SPIRV_FILE})
+
+	# Source file absolute path
+	set(SHADER_SOURCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_SOURCE}")
+
+	# Custom command to compile GLSL to SPIR-V
+	add_custom_command(
+		OUTPUT ${SPIRV_FILE}
+		COMMAND ${GLSLANG_VALIDATOR} -V --target-env vulkan1.1 -o ${SPIRV_FILE} ${SHADER_SOURCE_PATH}
+		DEPENDS ${SHADER_SOURCE_PATH}
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+		COMMENT "Compiling Vulkan shader ${SHADER_NAME}.comp to SPIR-V"
+		VERBATIM
+	)
+endforeach()
+
+# Create custom target to build all SPIR-V files
+add_custom_target(vulkan_shaders ALL
+	DEPENDS ${SPIRV_FILES}
+)
+
+# Ensure output directory exists
+add_custom_command(TARGET vulkan_shaders PRE_BUILD
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/plugins/radiation/
+)
+
+# Ensure main project depends on shader target
+add_dependencies(radiation vulkan_shaders)
+
+endif(HAVE_VULKAN)
+# ========== End Vulkan Backend Configuration ==========
 
 file( COPY include/disk.png DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/)
 file( COPY spectral_data DESTINATION ${CMAKE_BINARY_DIR}/plugins/radiation/ )

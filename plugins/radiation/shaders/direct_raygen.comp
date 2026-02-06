@@ -1,0 +1,28 @@
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+
+// Direct ray generation shader (Phase 1+)
+// Launches rays from surfaces toward radiation sources
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+// Push constants (launch parameters)
+layout(push_constant) uniform PushConstants {
+    uint launch_offset;
+    uint launch_count;
+    uint rays_per_primitive;
+    uint random_seed;
+    uint current_band;
+    uint band_count;
+} pc;
+
+// Placeholder main (to be implemented in Phase 1)
+void main() {
+    uint global_id = gl_GlobalInvocationID.x;
+
+    if (global_id >= pc.launch_count) {
+        return;
+    }
+
+    // TODO: Implement direct ray generation in Phase 1
+}
