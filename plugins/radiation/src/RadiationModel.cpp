@@ -1333,7 +1333,7 @@ void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
     }
 
     // Upload geometry through backend abstraction layer
-    buildGeometryData();
+    buildGeometryData(UUIDs);
     buildUUIDMapping(); // Build UUID↔position mapping for efficient indexing
 
     // CRITICAL: context_UUIDs must match GPU buffer ordering (primitive_UUIDs_ordered)
@@ -4875,11 +4875,9 @@ std::vector<CameraTile> RadiationModel::computeCameraTiles(const RadiationCamera
     return tiles;
 }
 
-void RadiationModel::buildGeometryData() {
+void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
     // Build backend-agnostic geometry data from Context primitives
     // This extracts all geometry information needed by the ray tracing backend
-
-    std::vector<uint> UUIDs = context->getAllUUIDs();
 
     // Filter out invalid/zero-area primitives (same as old updateGeometry)
     std::vector<uint> valid_UUIDs;
@@ -4906,7 +4904,12 @@ void RadiationModel::buildGeometryData() {
     std::unordered_set<uint> valid_set(valid_UUIDs.begin(), valid_UUIDs.end());
 
     for (uint objID: objID_all) {
-        const std::vector<uint> &prim_UUIDs = context->getObjectPrimitiveUUIDs(objID);
+        std::vector<uint> prim_UUIDs = context->getObjectPrimitiveUUIDs(objID);
+        if (objID == 0) {
+            // Standalone primitives (parentID=0) come from unordered_map iteration,
+            // which has non-deterministic ordering. Sort by UUID for reproducibility.
+            std::sort(prim_UUIDs.begin(), prim_UUIDs.end());
+        }
         for (uint UUID: prim_UUIDs) {
             if (context->doesPrimitiveExist(UUID) && valid_set.find(UUID) != valid_set.end()) {
                 primitive_UUIDs_ordered.push_back(UUID);
@@ -5326,7 +5329,7 @@ void RadiationModel::buildTextureData() {
 }
 
 size_t RadiationModel::testBuildGeometryData() {
-    buildGeometryData();
+    buildGeometryData(context->getAllUUIDs());
     return geometry_data.primitive_count;
 }
 
@@ -5663,7 +5666,7 @@ std::vector<helios::RayTracingSource> &RadiationModel::getSourceData() {
 
 
 void RadiationModel::testBuildAllBackendData() {
-    buildGeometryData();
+    buildGeometryData(context->getAllUUIDs());
     buildMaterialData();
     buildSourceData();
 }

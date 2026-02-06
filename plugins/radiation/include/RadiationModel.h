@@ -2032,10 +2032,11 @@ protected:
 
     //! Phase 1: Build backend-agnostic geometry data from Context primitives
     /**
-     * Extracts geometry from all Context primitives and populates geometry_data structure.
+     * Extracts geometry from the specified Context primitives and populates geometry_data structure.
      * This data can then be uploaded to the backend via backend->updateGeometry().
+     * \param[in] UUIDs Vector of primitive UUIDs to include in the geometry
      */
-    void buildGeometryData();
+    void buildGeometryData(const std::vector<uint> &UUIDs);
 
     //! Extract texture mask and UV data for all primitives
     /**

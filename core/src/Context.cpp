@@ -498,6 +498,7 @@ std::vector<uint> Context::getAllUUIDs() const {
         }
         cached_all_uuids.push_back(UUID);
     }
+
     all_uuids_cache_valid = true;
     return cached_all_uuids;
 }
