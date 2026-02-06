@@ -27,9 +27,20 @@ namespace helios {
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
                                                          const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData) {
-        if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-            std::cerr << "Vulkan validation: " << pCallbackData->pMessage << std::endl;
+        std::string severity_str;
+        if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+            severity_str = "ERROR";
+        } else if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+            severity_str = "WARNING";
+        } else if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+            severity_str = "INFO";
+        } else {
+            severity_str = "VERBOSE";
         }
+
+        // Use std::cout instead of std::cerr (Helios convention)
+        std::cout << "[Vulkan " << severity_str << "] " << pCallbackData->pMessage << std::endl;
+
         return VK_FALSE;
     }
 
@@ -283,15 +294,51 @@ namespace helios {
     }
 
     void VulkanDevice::detectMoltenVK() {
-        // Check if device name contains "MoltenVK" or "Apple"
+        // Method 1: Check for Apple vendor ID (0x106B)
+        if (device_properties.vendorID == 0x106B) {
+            is_moltenvk = true;
+            return;
+        }
+
+        // Method 2: Check for MoltenVK-specific extension
+        uint32_t ext_count;
+        vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &ext_count, nullptr);
+        std::vector<VkExtensionProperties> exts(ext_count);
+        vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &ext_count, exts.data());
+
+        for (const auto &ext : exts) {
+            if (std::strcmp(ext.extensionName, "VK_MVK_moltenvk") == 0) {
+                is_moltenvk = true;
+                return;
+            }
+        }
+
+        // Method 3: Fallback to device name check
         const char *device_name = device_properties.deviceName;
-        is_moltenvk = (std::strstr(device_name, "MoltenVK") != nullptr) || (std::strstr(device_name, "Apple") != nullptr);
+        is_moltenvk = (std::strstr(device_name, "MoltenVK") != nullptr);
     }
 
     void VulkanDevice::detectAtomicFloat() {
-        // Query for atomic float support (VK_EXT_shader_atomic_float)
-        // This requires querying extension features, which needs Vulkan 1.1+ with VkPhysicalDeviceFeatures2
+        // First check if VK_EXT_shader_atomic_float extension is available
+        uint32_t ext_count;
+        vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &ext_count, nullptr);
+        std::vector<VkExtensionProperties> exts(ext_count);
+        vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &ext_count, exts.data());
 
+        bool has_extension = false;
+        for (const auto &ext : exts) {
+            if (std::strcmp(ext.extensionName, VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME) == 0) {
+                has_extension = true;
+                break;
+            }
+        }
+
+        if (!has_extension) {
+            has_atomic_float = false;
+            return; // Extension not available, use atomicCompSwap fallback
+        }
+
+        // Extension present, query features
         VkPhysicalDeviceShaderAtomicFloatFeaturesEXT atomic_float_features{};
         atomic_float_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_FEATURES_EXT;
 

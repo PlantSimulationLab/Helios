@@ -35,6 +35,10 @@ namespace helios {
         // Create command resources
         createCommandResources();
 
+        // Create descriptor sets and pipelines
+        createDescriptorSets();
+        createPipelines();
+
         std::cout << "Vulkan compute backend initialized successfully." << std::endl;
     }
 
@@ -85,6 +89,8 @@ namespace helios {
         destroyBuffer(scatter_bottom_buffer);
 
         // Destroy command resources
+        if (transfer_fence != VK_NULL_HANDLE)
+            vkDestroyFence(vk_device, transfer_fence, nullptr);
         if (command_pool != VK_NULL_HANDLE)
             vkDestroyCommandPool(vk_device, command_pool, nullptr);
 
@@ -127,6 +133,12 @@ namespace helios {
 
         // Upload transform matrices
         if (!geometry.transform_matrices.empty()) {
+            size_t expected_size = primitive_count * 16;
+            if (geometry.transform_matrices.size() != expected_size) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateGeometry): transform_matrices size mismatch. Expected " + std::to_string(expected_size) + " floats (16 per primitive), got " +
+                                     std::to_string(geometry.transform_matrices.size()));
+            }
+
             if (transform_matrices_buffer.buffer != VK_NULL_HANDLE) {
                 destroyBuffer(transform_matrices_buffer);
             }
@@ -136,6 +148,11 @@ namespace helios {
 
         // Upload primitive types
         if (!geometry.primitive_types.empty()) {
+            if (geometry.primitive_types.size() != primitive_count) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateGeometry): primitive_types size mismatch. Expected " + std::to_string(primitive_count) + " entries, got " +
+                                     std::to_string(geometry.primitive_types.size()));
+            }
+
             if (primitive_types_buffer.buffer != VK_NULL_HANDLE) {
                 destroyBuffer(primitive_types_buffer);
             }
@@ -145,6 +162,11 @@ namespace helios {
 
         // Upload primitive UUIDs
         if (!geometry.primitive_UUIDs.empty()) {
+            if (geometry.primitive_UUIDs.size() != primitive_count) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateGeometry): primitive_UUIDs size mismatch. Expected " + std::to_string(primitive_count) + " entries, got " +
+                                     std::to_string(geometry.primitive_UUIDs.size()));
+            }
+
             if (primitive_uuids_buffer.buffer != VK_NULL_HANDLE) {
                 destroyBuffer(primitive_uuids_buffer);
             }
@@ -246,8 +268,28 @@ namespace helios {
     }
 
     void VulkanComputeBackend::queryGPUMemory() const {
-        // TODO: Query Vulkan memory budget in Phase 8
-        std::cout << "Vulkan memory query not yet implemented." << std::endl;
+        // Query VMA statistics
+        VmaTotalStatistics stats;
+        vmaCalculateStatistics(device->getAllocator(), &stats);
+
+        std::cout << "========== Vulkan Memory Usage ==========" << std::endl;
+        std::cout << "Allocated blocks: " << stats.total.statistics.blockCount << std::endl;
+        std::cout << "Allocated memory: " << (stats.total.statistics.allocationBytes / 1024.0 / 1024.0) << " MB" << std::endl;
+        std::cout << "Used memory: " << (stats.total.statistics.blockBytes / 1024.0 / 1024.0) << " MB" << std::endl;
+
+        // Query physical device memory properties
+        VkPhysicalDeviceMemoryProperties mem_props;
+        vkGetPhysicalDeviceMemoryProperties(device->getPhysicalDevice(), &mem_props);
+
+        std::cout << "\nTotal device memory heaps: " << mem_props.memoryHeapCount << std::endl;
+        for (uint32_t i = 0; i < mem_props.memoryHeapCount; ++i) {
+            std::cout << "  Heap " << i << ": " << (mem_props.memoryHeaps[i].size / 1024.0 / 1024.0 / 1024.0) << " GB";
+            if (mem_props.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
+                std::cout << " (device-local)";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << "==========================================" << std::endl;
     }
 
     // ========== Helper methods ==========
@@ -264,6 +306,16 @@ namespace helios {
 
         VmaAllocationCreateInfo alloc_info{};
         alloc_info.usage = mem_usage;
+
+        // Optimization: Use dedicated memory for large GPU-only buffers (>64 MB)
+        if (mem_usage == VMA_MEMORY_USAGE_GPU_ONLY && size > 64 * 1024 * 1024) {
+            alloc_info.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+        }
+
+        // Optimization: Keep staging buffers persistently mapped for faster CPU access
+        if (mem_usage == VMA_MEMORY_USAGE_CPU_ONLY) {
+            alloc_info.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+        }
 
         VkResult result = vmaCreateBuffer(device->getAllocator(), &buffer_info, &alloc_info, &buffer.buffer, &buffer.allocation, nullptr);
         if (result != VK_SUCCESS) {
@@ -302,18 +354,34 @@ namespace helios {
         copy_region.size = size;
         vkCmdCopyBuffer(command_buffer, staging.buffer, buffer.buffer, 1, &copy_region);
 
+        // Add memory barrier to ensure transfer completes before compute shader access
+        VkBufferMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.buffer = buffer.buffer;
+        barrier.offset = 0;
+        barrier.size = VK_WHOLE_SIZE;
+
+        vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+
         vkEndCommandBuffer(command_buffer);
 
-        // Submit and wait
+        // Submit with fence
         VkSubmitInfo submit_info{};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &command_buffer;
 
-        vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, VK_NULL_HANDLE);
-        vkQueueWaitIdle(device->getComputeQueue());
+        vkResetFences(device->getDevice(), 1, &transfer_fence);
+        vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, transfer_fence);
 
-        // Cleanup staging
+        // Wait for fence
+        vkWaitForFences(device->getDevice(), 1, &transfer_fence, VK_TRUE, UINT64_MAX);
+
+        // SAFETY: Staging buffer destroyed only after fence signals (GPU copy complete)
         destroyBuffer(staging);
     }
 
@@ -327,20 +395,36 @@ namespace helios {
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         vkBeginCommandBuffer(command_buffer, &begin_info);
 
+        // Add memory barrier to ensure compute shader writes complete before transfer
+        VkBufferMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.buffer = buffer.buffer;
+        barrier.offset = 0;
+        barrier.size = VK_WHOLE_SIZE;
+
+        vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+
         VkBufferCopy copy_region{};
         copy_region.size = size;
         vkCmdCopyBuffer(command_buffer, buffer.buffer, staging.buffer, 1, &copy_region);
 
         vkEndCommandBuffer(command_buffer);
 
-        // Submit and wait
+        // Submit with fence
         VkSubmitInfo submit_info{};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &command_buffer;
 
-        vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, VK_NULL_HANDLE);
-        vkQueueWaitIdle(device->getComputeQueue());
+        vkResetFences(device->getDevice(), 1, &transfer_fence);
+        vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, transfer_fence);
+
+        // Wait for fence
+        vkWaitForFences(device->getDevice(), 1, &transfer_fence, VK_TRUE, UINT64_MAX);
 
         // Map and read
         void *mapped;
@@ -362,23 +446,28 @@ namespace helios {
 
         vkEndCommandBuffer(command_buffer);
 
-        // Submit and wait
+        // Submit with fence
         VkSubmitInfo submit_info{};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &command_buffer;
 
-        vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, VK_NULL_HANDLE);
-        vkQueueWaitIdle(device->getComputeQueue());
+        vkResetFences(device->getDevice(), 1, &transfer_fence);
+        vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, transfer_fence);
+
+        // Wait for fence
+        vkWaitForFences(device->getDevice(), 1, &transfer_fence, VK_TRUE, UINT64_MAX);
     }
 
     void VulkanComputeBackend::createCommandResources() {
+        VkDevice vk_device = device->getDevice();
+
         VkCommandPoolCreateInfo pool_info{};
         pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         pool_info.queueFamilyIndex = device->getComputeQueueFamily();
         pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-        VkResult result = vkCreateCommandPool(device->getDevice(), &pool_info, nullptr, &command_pool);
+        VkResult result = vkCreateCommandPool(vk_device, &pool_info, nullptr, &command_pool);
         if (result != VK_SUCCESS) {
             helios_runtime_error("ERROR (VulkanComputeBackend::createCommandResources): Failed to create command pool. VkResult: " + std::to_string(result));
         }
@@ -389,23 +478,244 @@ namespace helios {
         alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         alloc_info.commandBufferCount = 1;
 
-        result = vkAllocateCommandBuffers(device->getDevice(), &alloc_info, &command_buffer);
+        result = vkAllocateCommandBuffers(vk_device, &alloc_info, &command_buffer);
         if (result != VK_SUCCESS) {
             helios_runtime_error("ERROR (VulkanComputeBackend::createCommandResources): Failed to allocate command buffer. VkResult: " + std::to_string(result));
+        }
+
+        // Create fence for buffer operation synchronization
+        VkFenceCreateInfo fence_info{};
+        fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fence_info.flags = 0; // Start unsignaled
+
+        result = vkCreateFence(vk_device, &fence_info, nullptr, &transfer_fence);
+        if (result != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::createCommandResources): Failed to create transfer fence. VkResult: " + std::to_string(result));
         }
     }
 
     void VulkanComputeBackend::createDescriptorSets() {
-        // TODO: Implement in Phase 1
+        VkDevice vk_device = device->getDevice();
+
+        // ========== Create Descriptor Set Layouts ==========
+
+        // Set 0: Geometry buffers (changes on geometry update)
+        std::vector<VkDescriptorSetLayoutBinding> geometry_bindings = {
+            {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},  // BVH nodes
+            {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},  // Primitive indices
+            {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},  // Transform matrices
+            {3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},  // Primitive types
+            {4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},  // Primitive UUIDs
+            {5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},  // Primitive positions
+            // TODO Phase 1+: Add vertex buffers, mask data, UV data
+        };
+
+        VkDescriptorSetLayoutCreateInfo layout_info{};
+        layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layout_info.bindingCount = static_cast<uint32_t>(geometry_bindings.size());
+        layout_info.pBindings = geometry_bindings.data();
+
+        if (vkCreateDescriptorSetLayout(vk_device, &layout_info, nullptr, &set_layout_geometry) != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::createDescriptorSets): Failed to create geometry descriptor set layout");
+        }
+
+        // Set 1: Material buffers (changes per simulation) - minimal for Phase 0
+        std::vector<VkDescriptorSetLayoutBinding> material_bindings = {
+            {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Reflectivity
+            {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Transmissivity
+            // TODO Phase 1+: Add source data, diffuse params, specular
+        };
+
+        layout_info.bindingCount = static_cast<uint32_t>(material_bindings.size());
+        layout_info.pBindings = material_bindings.data();
+
+        if (vkCreateDescriptorSetLayout(vk_device, &layout_info, nullptr, &set_layout_materials) != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::createDescriptorSets): Failed to create material descriptor set layout");
+        }
+
+        // Set 2: Result buffers (read/write, zeroed per-launch)
+        std::vector<VkDescriptorSetLayoutBinding> result_bindings = {
+            {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_in
+            {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_out
+            {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // scatter_top
+            {3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // scatter_bottom
+            // TODO Phase 7: Add camera buffers
+        };
+
+        layout_info.bindingCount = static_cast<uint32_t>(result_bindings.size());
+        layout_info.pBindings = result_bindings.data();
+
+        if (vkCreateDescriptorSetLayout(vk_device, &layout_info, nullptr, &set_layout_results) != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::createDescriptorSets): Failed to create result descriptor set layout");
+        }
+
+        // ========== Create Descriptor Pool ==========
+
+        std::vector<VkDescriptorPoolSize> pool_sizes = {
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 20}, // Enough for all 3 sets
+        };
+
+        VkDescriptorPoolCreateInfo pool_info{};
+        pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        pool_info.poolSizeCount = static_cast<uint32_t>(pool_sizes.size());
+        pool_info.pPoolSizes = pool_sizes.data();
+        pool_info.maxSets = 3; // geometry, materials, results
+
+        if (vkCreateDescriptorPool(vk_device, &pool_info, nullptr, &descriptor_pool) != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::createDescriptorSets): Failed to create descriptor pool");
+        }
+
+        // ========== Allocate Descriptor Sets ==========
+
+        VkDescriptorSetLayout layouts[] = {set_layout_geometry, set_layout_materials, set_layout_results};
+
+        VkDescriptorSetAllocateInfo alloc_info{};
+        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        alloc_info.descriptorPool = descriptor_pool;
+        alloc_info.descriptorSetCount = 3;
+        alloc_info.pSetLayouts = layouts;
+
+        VkDescriptorSet sets[3];
+        if (vkAllocateDescriptorSets(vk_device, &alloc_info, sets) != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::createDescriptorSets): Failed to allocate descriptor sets");
+        }
+
+        set_geometry = sets[0];
+        set_materials = sets[1];
+        set_results = sets[2];
+
+        std::cout << "Descriptor sets created successfully." << std::endl;
     }
 
     void VulkanComputeBackend::createPipelines() {
-        // TODO: Implement in Phase 1
+        VkDevice vk_device = device->getDevice();
+
+        // ========== Create Pipeline Layout ==========
+
+        VkDescriptorSetLayout set_layouts[] = {set_layout_geometry, set_layout_materials, set_layout_results};
+
+        // Push constants (128 bytes max for MoltenVK compatibility)
+        const uint32_t push_constant_size = 128;
+
+        // Validate against device limits
+        const VkPhysicalDeviceProperties &props = device->getDeviceProperties();
+        if (push_constant_size > props.limits.maxPushConstantsSize) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::createPipelines): Push constant size (" + std::to_string(push_constant_size) + " bytes) exceeds device limit (" +
+                                 std::to_string(props.limits.maxPushConstantsSize) + " bytes)");
+        }
+
+        // Warn if approaching MoltenVK's 128-byte limit
+        if (device->isMoltenVK() && push_constant_size > 96) {
+            std::cout << "WARNING: Push constants (" << push_constant_size << " bytes) are close to MoltenVK's 128-byte limit. Consider moving large parameters to UBO." << std::endl;
+        }
+
+        VkPushConstantRange push_constant_range{};
+        push_constant_range.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        push_constant_range.offset = 0;
+        push_constant_range.size = push_constant_size;
+
+        VkPipelineLayoutCreateInfo pipeline_layout_info{};
+        pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipeline_layout_info.setLayoutCount = 3;
+        pipeline_layout_info.pSetLayouts = set_layouts;
+        pipeline_layout_info.pushConstantRangeCount = 1;
+        pipeline_layout_info.pPushConstantRanges = &push_constant_range;
+
+        if (vkCreatePipelineLayout(vk_device, &pipeline_layout_info, nullptr, &pipeline_layout) != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::createPipelines): Failed to create pipeline layout");
+        }
+
+        // ========== Load Shaders ==========
+
+        // Shader paths (relative to build directory)
+        std::string shader_dir = "plugins/radiation/";
+
+        VkShaderModule shader_direct = loadShader(shader_dir + "direct_raygen.spv");
+        VkShaderModule shader_diffuse = loadShader(shader_dir + "diffuse_raygen.spv");
+        VkShaderModule shader_camera = loadShader(shader_dir + "camera_raygen.spv");
+        VkShaderModule shader_pixel_label = loadShader(shader_dir + "pixel_label_raygen.spv");
+
+        // ========== Create Compute Pipelines ==========
+
+        VkComputePipelineCreateInfo pipeline_info{};
+        pipeline_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+        pipeline_info.layout = pipeline_layout;
+
+        // Direct ray pipeline
+        pipeline_info.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        pipeline_info.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+        pipeline_info.stage.module = shader_direct;
+        pipeline_info.stage.pName = "main";
+
+        if (vkCreateComputePipelines(vk_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline_direct) != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::createPipelines): Failed to create direct ray pipeline");
+        }
+
+        // Diffuse ray pipeline
+        pipeline_info.stage.module = shader_diffuse;
+        if (vkCreateComputePipelines(vk_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline_diffuse) != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::createPipelines): Failed to create diffuse ray pipeline");
+        }
+
+        // Camera ray pipeline
+        pipeline_info.stage.module = shader_camera;
+        if (vkCreateComputePipelines(vk_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline_camera) != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::createPipelines): Failed to create camera ray pipeline");
+        }
+
+        // Pixel label pipeline
+        pipeline_info.stage.module = shader_pixel_label;
+        if (vkCreateComputePipelines(vk_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline_pixel_label) != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::createPipelines): Failed to create pixel label pipeline");
+        }
+
+        // Cleanup shader modules (no longer needed after pipeline creation)
+        vkDestroyShaderModule(vk_device, shader_direct, nullptr);
+        vkDestroyShaderModule(vk_device, shader_diffuse, nullptr);
+        vkDestroyShaderModule(vk_device, shader_camera, nullptr);
+        vkDestroyShaderModule(vk_device, shader_pixel_label, nullptr);
+
+        std::cout << "Compute pipelines created successfully." << std::endl;
     }
 
     VkShaderModule VulkanComputeBackend::loadShader(const std::string &filename) {
-        // TODO: Implement in Phase 1
-        return VK_NULL_HANDLE;
+        // Read SPIR-V file
+        std::ifstream file(filename, std::ios::binary | std::ios::ate);
+        if (!file.is_open()) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::loadShader): Failed to open shader file: " + filename);
+        }
+
+        size_t file_size = file.tellg();
+        if (file_size == 0) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::loadShader): Shader file is empty: " + filename);
+        }
+        if (file_size % 4 != 0) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::loadShader): Invalid SPIR-V file size (not multiple of 4 bytes): " + filename);
+        }
+
+        std::vector<uint32_t> code(file_size / 4);
+        file.seekg(0);
+        file.read(reinterpret_cast<char *>(code.data()), file_size);
+        file.close();
+
+        // Validate SPIR-V magic number (0x07230203)
+        if (code.empty() || code[0] != 0x07230203) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::loadShader): Invalid SPIR-V magic number in: " + filename + ". Expected 0x07230203, got 0x" + std::to_string(code.empty() ? 0 : code[0]));
+        }
+
+        // Create shader module
+        VkShaderModuleCreateInfo create_info{};
+        create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        create_info.codeSize = code.size() * sizeof(uint32_t);
+        create_info.pCode = code.data();
+
+        VkShaderModule shader_module;
+        VkResult result = vkCreateShaderModule(device->getDevice(), &create_info, nullptr, &shader_module);
+        if (result != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::loadShader): Failed to create shader module from: " + filename + " (VkResult: " + std::to_string(result) + ")");
+        }
+
+        return shader_module;
     }
 
 } // namespace helios

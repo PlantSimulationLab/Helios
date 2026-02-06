@@ -1,4 +1,14 @@
 /** transforms.glsl - Matrix and vector transformations
+ *
+ * IMPORTANT: Matrix Layout Convention
+ * ====================================
+ * CPU-side (C++): Matrices are stored in ROW-MAJOR order (16 floats)
+ *   Layout: [m0 m1 m2 m3] (row 0), [m4 m5 m6 m7] (row 1), etc.
+ *
+ * GPU-side (GLSL): Matrices are COLUMN-MAJOR (GLSL standard)
+ *   The floats_to_mat4() function transposes during conversion
+ *
+ * This ensures correct transformation on both CPU (BVHBuilder) and GPU (shaders).
  */
 
 #ifndef TRANSFORMS_GLSL
@@ -21,13 +31,15 @@ vec3 inverse_transform_direction(mat4 transform, vec3 dir) {
     return transpose(mat3(transform)) * dir;
 }
 
-// Convert row-major float array to mat4
+// Convert row-major float array to mat4 (transposes to column-major)
+// Input: m[16] in row-major order from C++ side
+// Output: mat4 in column-major order (GLSL standard)
 mat4 floats_to_mat4(float m[16]) {
     return mat4(
-        m[0], m[4], m[8], m[12],
-        m[1], m[5], m[9], m[13],
-        m[2], m[6], m[10], m[14],
-        m[3], m[7], m[11], m[15]
+        m[0], m[4], m[8], m[12],   // Column 0 (from row-major rows)
+        m[1], m[5], m[9], m[13],   // Column 1
+        m[2], m[6], m[10], m[14],  // Column 2
+        m[3], m[7], m[11], m[15]   // Column 3
     );
 }
 

@@ -141,6 +141,7 @@ namespace helios {
         // Command buffer
         VkCommandPool command_pool = VK_NULL_HANDLE;
         VkCommandBuffer command_buffer = VK_NULL_HANDLE;
+        VkFence transfer_fence = VK_NULL_HANDLE; // For synchronizing buffer operations
 
         // Geometry cache
         size_t primitive_count = 0;

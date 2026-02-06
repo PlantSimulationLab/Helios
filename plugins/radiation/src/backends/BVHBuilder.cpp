@@ -31,7 +31,16 @@ namespace helios {
             return {}; // Empty BVH
         }
 
-        // Step 1: Compute AABBs for all primitives (serial for now, TODO: parallelize with TBB)
+        // Step 1: Pre-compute type-specific offset tables (O(N) instead of O(N²))
+        type_offsets.resize(geom.primitive_count);
+        std::array<uint32_t, 6> type_counters = {0}; // 6 primitive types
+
+        for (size_t i = 0; i < geom.primitive_count; ++i) {
+            uint32_t prim_type = geom.primitive_types[i];
+            type_offsets[i] = type_counters[prim_type]++;
+        }
+
+        // Step 2: Compute AABBs for all primitives (serial for now, TODO: parallelize with TBB)
         primitive_refs.resize(geom.primitive_count);
 
         for (size_t i = 0; i < geom.primitive_count; ++i) {
@@ -41,14 +50,14 @@ namespace helios {
             primitive_refs[i].bounds = computePrimitiveAABB(static_cast<uint32_t>(i), prim_type);
         }
 
-        // Step 2: Build BVH tree (recursive SAH)
+        // Step 3: Build BVH tree (recursive SAH)
         BuildNode *root = recursiveBuild(primitive_refs, 0, static_cast<uint32_t>(geom.primitive_count), 0);
 
         if (!root) {
             return {}; // Failed to build
         }
 
-        // Step 3: Flatten tree to contiguous array
+        // Step 4: Flatten tree to contiguous array
         std::vector<BVHNode> nodes;
         nodes.reserve(allocated_nodes.size() * 2); // Estimate size
         flattenTree(root, nodes);
@@ -56,6 +65,7 @@ namespace helios {
         // Cleanup
         cleanup();
         primitive_refs.clear();
+        type_offsets.clear();
 
         return nodes;
     }
@@ -94,13 +104,8 @@ namespace helios {
     }
 
     AABB BVHBuilder::computePatchAABB(uint32_t prim_index) const {
-        // Find patch index in per-type array
-        uint32_t patch_index = 0;
-        for (uint32_t i = 0; i < prim_index; ++i) {
-            if (geometry->primitive_types[i] == 0) {
-                patch_index++;
-            }
-        }
+        // O(1) lookup using pre-computed offset table
+        uint32_t patch_index = type_offsets[prim_index];
 
         // Patches have 4 vertices
         const float *transform = &geometry->transform_matrices[prim_index * 16];
@@ -122,13 +127,8 @@ namespace helios {
     }
 
     AABB BVHBuilder::computeTriangleAABB(uint32_t prim_index) const {
-        // Find triangle index in per-type array
-        uint32_t tri_index = 0;
-        for (uint32_t i = 0; i < prim_index; ++i) {
-            if (geometry->primitive_types[i] == 1) {
-                tri_index++;
-            }
-        }
+        // O(1) lookup using pre-computed offset table
+        uint32_t tri_index = type_offsets[prim_index];
 
         // Triangles have 3 vertices
         const float *transform = &geometry->transform_matrices[prim_index * 16];
@@ -150,13 +150,8 @@ namespace helios {
     }
 
     AABB BVHBuilder::computeDiskAABB(uint32_t prim_index) const {
-        // Find disk index in per-type array
-        uint32_t disk_index = 0;
-        for (uint32_t i = 0; i < prim_index; ++i) {
-            if (geometry->primitive_types[i] == 2) {
-                disk_index++;
-            }
-        }
+        // O(1) lookup using pre-computed offset table
+        uint32_t disk_index = type_offsets[prim_index];
 
         // Disks: center + radius + normal (already in world space from disk_centers)
         const float *transform = &geometry->transform_matrices[prim_index * 16];
@@ -175,13 +170,8 @@ namespace helios {
     }
 
     AABB BVHBuilder::computeTileAABB(uint32_t prim_index) const {
-        // Find tile index in per-type array
-        uint32_t tile_index = 0;
-        for (uint32_t i = 0; i < prim_index; ++i) {
-            if (geometry->primitive_types[i] == 3) {
-                tile_index++;
-            }
-        }
+        // O(1) lookup using pre-computed offset table
+        uint32_t tile_index = type_offsets[prim_index];
 
         // Tiles have 4 vertices
         const float *transform = &geometry->transform_matrices[prim_index * 16];
@@ -203,13 +193,8 @@ namespace helios {
     }
 
     AABB BVHBuilder::computeVoxelAABB(uint32_t prim_index) const {
-        // Find voxel index in per-type array
-        uint32_t voxel_index = 0;
-        for (uint32_t i = 0; i < prim_index; ++i) {
-            if (geometry->primitive_types[i] == 4) {
-                voxel_index++;
-            }
-        }
+        // O(1) lookup using pre-computed offset table
+        uint32_t voxel_index = type_offsets[prim_index];
 
         // Voxels have 8 vertices
         const float *transform = &geometry->transform_matrices[prim_index * 16];
@@ -231,13 +216,8 @@ namespace helios {
     }
 
     AABB BVHBuilder::computeBBoxAABB(uint32_t prim_index) const {
-        // Find bbox index in per-type array
-        uint32_t bbox_index = 0;
-        for (uint32_t i = 0; i < prim_index; ++i) {
-            if (geometry->primitive_types[i] == 5) {
-                bbox_index++;
-            }
-        }
+        // O(1) lookup using pre-computed offset table
+        uint32_t bbox_index = type_offsets[prim_index];
 
         // BBoxes have 8 vertices
         const float *transform = &geometry->transform_matrices[prim_index * 16];

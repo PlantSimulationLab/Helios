@@ -321,6 +321,16 @@ endif()
 
 message(STATUS "Found glslangValidator: ${GLSLANG_VALIDATOR}")
 
+# Common shader includes (shaders depend on these)
+set(SHADER_COMMON_INCLUDES
+	shaders/common/random.glsl
+	shaders/common/transforms.glsl
+	shaders/common/buffer_indexing.glsl
+	shaders/common/bvh_traversal.glsl
+	shaders/common/intersections.glsl
+	shaders/common/material.glsl
+)
+
 # Shader source files
 set(SHADER_SOURCES
 	shaders/direct_raygen.comp
@@ -342,10 +352,11 @@ foreach(SHADER_SOURCE ${SHADER_SOURCES})
 	set(SHADER_SOURCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_SOURCE}")
 
 	# Custom command to compile GLSL to SPIR-V
+	# Depends on both the shader source and common includes
 	add_custom_command(
 		OUTPUT ${SPIRV_FILE}
 		COMMAND ${GLSLANG_VALIDATOR} -V --target-env vulkan1.1 -o ${SPIRV_FILE} ${SHADER_SOURCE_PATH}
-		DEPENDS ${SHADER_SOURCE_PATH}
+		DEPENDS ${SHADER_SOURCE_PATH} ${SHADER_COMMON_INCLUDES}
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		COMMENT "Compiling Vulkan shader ${SHADER_NAME}.comp to SPIR-V"
 		VERBATIM

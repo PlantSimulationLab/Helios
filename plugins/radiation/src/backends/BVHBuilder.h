@@ -146,6 +146,7 @@ namespace helios {
         std::vector<BuildNode *> allocated_nodes; //!< Track allocated nodes for cleanup
 
         const RayTracingGeometry *geometry = nullptr; //!< Geometry being built
+        std::vector<uint32_t> type_offsets; //!< Pre-computed type-specific indices for O(1) lookup
 
         // BVH construction parameters
         static constexpr uint32_t MAX_PRIMS_PER_LEAF = 4; //!< Max primitives per leaf
@@ -193,6 +194,15 @@ namespace helios {
 
         /**
          * @brief Apply transform matrix to vec3
+         *
+         * @param transform Row-major 4x4 transform matrix (16 floats)
+         * @param point Point to transform
+         * @return Transformed point in world space
+         *
+         * @note Transform matrices are stored in ROW-MAJOR order in CPU memory:
+         *       Layout: [m0 m1 m2 m3] (row 0), [m4 m5 m6 m7] (row 1), etc.
+         *       The GLSL shader code in transforms.glsl transposes to COLUMN-MAJOR when loading.
+         *       This is correct because GLSL matrices are column-major by default.
          */
         helios::vec3 transformPoint(const float *transform, const helios::vec3 &point) const;
 
