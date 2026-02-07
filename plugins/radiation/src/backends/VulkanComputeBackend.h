@@ -118,12 +118,21 @@ namespace helios {
         Buffer primitive_types_buffer;
         Buffer primitive_uuids_buffer;
         Buffer primitive_positions_buffer;
-        // TODO: Add per-type vertex buffers, mask data, UV data
+        Buffer object_subdivisions_buffer;
+        Buffer twosided_flag_buffer;
+        Buffer patch_vertices_buffer;
+        Buffer triangle_vertices_buffer;
+        // TODO Phase 2+: Add disk, tile, voxel, bbox vertices, mask data, UV data
 
-        // Material buffers (Set 1)
+        // Material/Source buffers (Set 1)
+        Buffer source_positions_buffer;
+        Buffer source_types_buffer;
+        Buffer source_rotations_buffer;
+        Buffer source_widths_buffer;
+        Buffer source_fluxes_buffer;
         Buffer reflectivity_buffer;
         Buffer transmissivity_buffer;
-        // TODO: Add source data, diffuse params, specular params
+        // TODO Phase 2+: Add diffuse params, specular
 
         // Result buffers (Set 2)
         Buffer radiation_in_buffer;
@@ -156,6 +165,10 @@ namespace helios {
         // Geometry cache
         size_t primitive_count = 0;
         size_t band_count = 0;
+        size_t source_count = 0;
+
+        // Descriptor set update tracking
+        bool descriptors_dirty = false;
 
         /**
          * @brief Create Vulkan buffer with VMA
@@ -201,6 +214,11 @@ namespace helios {
          * @brief Create command pool and allocate command buffer
          */
         void createCommandResources();
+
+        /**
+         * @brief Update descriptor set bindings with current buffers
+         */
+        void updateDescriptorSets();
     };
 
 } // namespace helios

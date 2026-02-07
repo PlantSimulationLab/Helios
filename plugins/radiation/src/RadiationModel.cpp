@@ -65,7 +65,17 @@ RadiationModel::RadiationModel(helios::Context *context_a) {
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/DGK_DKK_colorboard.xml").string());
 
     // Initialize backend abstraction layer
-    backend = helios::RayTracingBackend::create("optix6");
+    // Auto-detect available backend
+    std::string backend_type;
+#ifdef HELIOS_HAVE_OPTIX
+    backend_type = "optix6";
+#elif defined(HELIOS_HAVE_VULKAN)
+    backend_type = "vulkan_compute";
+#else
+    #error "No ray tracing backend available"
+#endif
+
+    backend = helios::RayTracingBackend::create(backend_type);
     backend->initialize();
 }
 

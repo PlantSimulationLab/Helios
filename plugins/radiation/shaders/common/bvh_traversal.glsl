@@ -35,11 +35,60 @@ bool intersect_aabb(vec3 ray_origin, vec3 ray_dir_inv, vec3 aabb_min, vec3 aabb_
     return t_near <= t_far && t_far >= 0.0 && t_near <= t_max;
 }
 
-// Placeholder BVH traversal (to be implemented in Phase 1+)
-// Returns: hit primitive index or UINT_MAX if miss
-uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, float t_max) {
-    // TODO: Implement full traversal in Phase 1
-    return UINT_MAX; // Miss
+// BVH traversal with stack-based descent
+// Returns: closest hit primitive index or UINT_MAX if miss
+// Outputs: closest_t (intersection distance), hit_prim_type
+uint traverse_bvh(layout(std430) readonly buffer BVHBuffer { BVHNode nodes[]; } bvh_buf,
+                  layout(std430) readonly buffer PrimIndicesBuffer { uint indices[]; } prim_indices_buf,
+                  vec3 ray_origin, vec3 ray_dir, float t_min, inout float closest_t, out uint hit_prim_type) {
+
+    // Pre-compute inverse ray direction for AABB tests
+    vec3 ray_dir_inv = vec3(1.0) / ray_dir;
+
+    // Stack for BVH traversal
+    uint stack[MAX_STACK_DEPTH];
+    int stack_ptr = 0;
+
+    uint closest_prim = UINT_MAX;
+    closest_t = 1e30;
+    hit_prim_type = 0;
+
+    // Start at root
+    stack[stack_ptr++] = 0;
+
+    while (stack_ptr > 0) {
+        uint node_idx = stack[--stack_ptr];
+        BVHNode node = bvh_buf.nodes[node_idx];
+
+        // Test ray against node AABB
+        if (!intersect_aabb(ray_origin, ray_dir_inv, node.aabb_min, node.aabb_max, closest_t)) {
+            continue;
+        }
+
+        if (node.right_child == UINT_MAX) {
+            // Leaf node - test primitives
+            for (uint i = 0; i < node.prim_count; ++i) {
+                uint prim_idx = prim_indices_buf.indices[node.first_prim + i];
+
+                // Intersection test happens in caller (they know prim type)
+                // For Phase 1, we just return the first primitive in the leaf
+                // TODO Phase 2+: Proper intersection testing here
+                if (prim_idx < closest_prim) {
+                    closest_prim = prim_idx;
+                    hit_prim_type = node.prim_type;
+                }
+            }
+        } else {
+            // Internal node - push children (near child last for depth-first)
+            // Simple heuristic: push both, GPU will cull via AABB test
+            if (stack_ptr + 2 <= MAX_STACK_DEPTH) {
+                stack[stack_ptr++] = node.left_child;
+                stack[stack_ptr++] = node.right_child;
+            }
+        }
+    }
+
+    return closest_prim;
 }
 
 #endif // BVH_TRAVERSAL_GLSL

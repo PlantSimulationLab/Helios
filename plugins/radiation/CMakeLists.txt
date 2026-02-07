@@ -355,7 +355,7 @@ foreach(SHADER_SOURCE ${SHADER_SOURCES})
 	# Depends on both the shader source and common includes
 	add_custom_command(
 		OUTPUT ${SPIRV_FILE}
-		COMMAND ${GLSLANG_VALIDATOR} -V --target-env vulkan1.1 -o ${SPIRV_FILE} ${SHADER_SOURCE_PATH}
+		COMMAND ${GLSLANG_VALIDATOR} -V --target-env vulkan1.1 -I${CMAKE_CURRENT_SOURCE_DIR}/shaders -o ${SPIRV_FILE} ${SHADER_SOURCE_PATH}
 		DEPENDS ${SHADER_SOURCE_PATH} ${SHADER_COMMON_INCLUDES}
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		COMMENT "Compiling Vulkan shader ${SHADER_NAME}.comp to SPIR-V"

@@ -259,11 +259,25 @@ namespace helios {
         VkPhysicalDeviceFeatures device_features{};
         // No special features required for baseline compute
 
+        // Check and enable atomic float if available (needed for atomicAdd in shaders)
+        VkPhysicalDeviceShaderAtomicFloatFeaturesEXT atomic_float_features{};
+        atomic_float_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_FEATURES_EXT;
+        atomic_float_features.pNext = nullptr;
+
+        VkPhysicalDeviceFeatures2 features2{};
+        features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        features2.pNext = &atomic_float_features;
+        features2.features = device_features;
+
+        // Query if atomic float is supported
+        vkGetPhysicalDeviceFeatures2(physical_device, &features2);
+
+        bool enable_atomic_float = atomic_float_features.shaderBufferFloat32AtomicAdd;
+
         VkDeviceCreateInfo create_info{};
         create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         create_info.pQueueCreateInfos = &queue_create_info;
         create_info.queueCreateInfoCount = 1;
-        create_info.pEnabledFeatures = &device_features;
 
         // Required device extensions
         std::vector<const char *> device_extensions;
@@ -272,6 +286,18 @@ namespace helios {
         // MoltenVK requires portability subset extension
         device_extensions.push_back("VK_KHR_portability_subset");
 #endif
+
+        // Enable atomic float extension if supported
+        if (enable_atomic_float) {
+            device_extensions.push_back(VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME);
+            // Enable the feature via pNext chain
+            atomic_float_features.shaderBufferFloat32AtomicAdd = VK_TRUE;
+            create_info.pNext = &features2;
+            create_info.pEnabledFeatures = nullptr;  // Use features2 instead
+        } else {
+            create_info.pEnabledFeatures = &device_features;
+            std::cout << "WARNING: GPU does not support atomic float add - shader atomics may use software fallback" << std::endl;
+        }
 
         create_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions.size());
         create_info.ppEnabledExtensionNames = device_extensions.data();

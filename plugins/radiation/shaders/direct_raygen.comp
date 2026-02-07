@@ -1,7 +1,9 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_EXT_shader_atomic_float : enable
+#extension GL_GOOGLE_include_directive : enable
 
-// Direct ray generation shader (Phase 1+)
+// Direct ray generation shader (Phase 1)
 // Launches rays from surfaces toward radiation sources
 
 layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
@@ -14,15 +16,329 @@ layout(push_constant) uniform PushConstants {
     uint random_seed;
     uint current_band;
     uint band_count;
+    uint source_count;
+    uint primitive_count;
 } pc;
 
-// Placeholder main (to be implemented in Phase 1)
+// ========== Descriptor Set 0: Geometry ==========
+layout(set = 0, binding = 0) readonly buffer BVHBuffer {
+    // BVHNode struct placeholder - not used in Phase 1 (direct rays don't trace)
+    float data[];
+} bvh_buf;
+
+layout(set = 0, binding = 1) readonly buffer PrimIndicesBuffer {
+    uint indices[];
+} prim_indices_buf;
+
+layout(set = 0, binding = 2) readonly buffer TransformMatricesBuffer {
+    float matrices[]; // 16 floats per primitive (row-major)
+} transform_buf;
+
+layout(set = 0, binding = 3) readonly buffer PrimTypesBuffer {
+    uint types[];
+} prim_types_buf;
+
+layout(set = 0, binding = 4) readonly buffer PrimUUIDsBuffer {
+    uint uuids[];
+} prim_uuids_buf;
+
+layout(set = 0, binding = 5) readonly buffer PrimPositionsBuffer {
+    uint positions[];
+} prim_positions_buf;
+
+layout(set = 0, binding = 6) readonly buffer ObjectSubdivisionsBuffer {
+    ivec2 subdivisions[];
+} obj_subdivisions_buf;
+
+layout(set = 0, binding = 7) readonly buffer TwosidedFlagBuffer {
+    uint twosided_flags[];
+} twosided_buf;
+
+layout(set = 0, binding = 8) readonly buffer PatchVerticesBuffer {
+    float vertices[]; // 12 floats per patch (4 vec3 vertices)
+} patch_vertices_buf;
+
+layout(set = 0, binding = 9) readonly buffer TriangleVerticesBuffer {
+    float vertices[]; // 9 floats per triangle (3 vec3 vertices)
+} triangle_vertices_buf;
+
+// ========== Descriptor Set 1: Materials/Sources ==========
+layout(set = 1, binding = 0) readonly buffer SourcePositionsBuffer {
+    vec3 positions[];
+} source_positions_buf;
+
+layout(set = 1, binding = 1) readonly buffer SourceTypesBuffer {
+    uint types[];
+} source_types_buf;
+
+layout(set = 1, binding = 2) readonly buffer SourceRotationsBuffer {
+    vec3 rotations[];
+} source_rotations_buf;
+
+layout(set = 1, binding = 3) readonly buffer SourceWidthsBuffer {
+    vec2 widths[];
+} source_widths_buf;
+
+layout(set = 1, binding = 4) readonly buffer SourceFluxesBuffer {
+    float fluxes[];
+} source_fluxes_buf;
+
+layout(set = 1, binding = 5) readonly buffer ReflectivityBuffer {
+    float reflectivity[]; // [primitive * band_count + band]
+} reflectivity_buf;
+
+layout(set = 1, binding = 6) readonly buffer TransmissivityBuffer {
+    float transmissivity[];
+} transmissivity_buf;
+
+// ========== Descriptor Set 2: Results ==========
+layout(set = 2, binding = 0) buffer RadiationInBuffer {
+    float radiation_in[]; // [primitive * band_count + band]
+} rad_in_buf;
+
+layout(set = 2, binding = 1) buffer RadiationOutBuffer {
+    float radiation_out[];
+} rad_out_buf;
+
+layout(set = 2, binding = 2) buffer ScatterTopBuffer {
+    float scatter_top[];
+} scatter_top_buf;
+
+layout(set = 2, binding = 3) buffer ScatterBottomBuffer {
+    float scatter_bottom[];
+} scatter_bottom_buf;
+
+// ========== Include common shader utilities ==========
+#include "common/random.glsl"
+#include "common/transforms.glsl"
+#include "common/buffer_indexing.glsl"
+
+// ========== Helper Functions ==========
+
+// Sample stratified random point on patch (matches CUDA rayGeneration.cu lines 57-67)
+vec3 sample_patch_stratified(inout RNGState rng, uint prim_idx, ivec2 subdivision, ivec2 sub_cell, ivec2 ray_cell, uint Nrays_per_dim) {
+    int NX = subdivision.x;
+    int NY = subdivision.y;
+
+    float dx = 1.0 / float(NX);
+    float dy = 1.0 / float(NY);
+
+    float Rx = rng_float(rng);
+    float Ry = rng_float(rng);
+
+    // Stratified sampling within subdivision cell
+    // Map to patch local space [-0.5, 0.5] x [-0.5, 0.5]
+    vec3 sp;
+    sp.x = -0.5 + sub_cell.x * dx + float(ray_cell.x) * dx / float(Nrays_per_dim) + Rx * dx / float(Nrays_per_dim);
+    sp.y = -0.5 + sub_cell.y * dy + float(ray_cell.y) * dy / float(Nrays_per_dim) + Ry * dy / float(Nrays_per_dim);
+    sp.z = 0.0;
+
+    return sp;
+}
+
+// Sample random point on triangle
+vec3 sample_triangle(inout RNGState rng) {
+    float Rx = rng_float(rng);
+    float Ry = rng_float(rng);
+
+    vec3 sp;
+    // Map to triangle with vertices (0,0,0), (0,1,0), (1,1,0)
+    if (Rx < Ry) {
+        sp.x = Rx;
+        sp.y = Ry;
+    } else {
+        sp.x = Ry;
+        sp.y = Rx;
+    }
+    sp.z = 0.0;
+
+    return sp;
+}
+
+// Sample random point on disk (uniform distribution)
+vec3 sample_disk(inout RNGState rng) {
+    float Rx = rng_float(rng);
+    float Ry = rng_float(rng);
+
+    // Map to square [-1,1] x [-1,1]
+    vec3 sp;
+    sp.x = -1.0 + 2.0 * Rx;
+    sp.y = -1.0 + 2.0 * Ry;
+
+    // Concentric disk mapping (Shirley & Chiu 1997)
+    float r, phi;
+    if (sp.x > -sp.y) {
+        if (sp.x > sp.y) {
+            r = sp.x;
+            phi = sp.y / sp.x;
+        } else {
+            r = sp.y;
+            phi = 2.0 - sp.x / sp.y;
+        }
+    } else {
+        if (sp.x < sp.y) {
+            r = -sp.x;
+            phi = 4.0 + sp.y / sp.x;
+        } else {
+            r = -sp.y;
+            if (sp.y != 0.0) {
+                phi = 6.0 - sp.x / sp.y;
+            } else {
+                phi = 0.0;
+            }
+        }
+    }
+    phi *= 0.25 * 3.14159265359;
+
+    sp.x = r * cos(phi);
+    sp.y = r * sin(phi);
+    sp.z = 0.0;
+
+    return sp;
+}
+
+// Get patch normal in world space
+vec3 get_patch_normal(uint prim_idx, float transform_mat[16]) {
+    mat4 transform = floats_to_mat4(transform_mat);
+
+    vec3 v0 = transform_point(transform, vec3(0, 0, 0));
+    vec3 v1 = transform_point(transform, vec3(1, 0, 0));
+    vec3 v2 = transform_point(transform, vec3(0, 1, 0));
+
+    return normalize(cross(v1 - v0, v2 - v0));
+}
+
+// Get triangle normal in world space
+vec3 get_triangle_normal(uint prim_idx, float transform_mat[16]) {
+    mat4 transform = floats_to_mat4(transform_mat);
+
+    vec3 v0 = transform_point(transform, vec3(0, 0, 0));
+    vec3 v1 = transform_point(transform, vec3(0, 1, 0));
+    vec3 v2 = transform_point(transform, vec3(1, 1, 0));
+
+    return normalize(cross(v1 - v0, v2 - v0));
+}
+
+// Calculate ray strength for collimated source (sun)
+float calc_collimated_strength(vec3 normal, vec3 ray_dir, uint Nrays) {
+    return abs(dot(normal, ray_dir)) / float(Nrays);
+}
+
+// ========== Main Shader ==========
 void main() {
     uint global_id = gl_GlobalInvocationID.x;
 
     if (global_id >= pc.launch_count) {
-        return;
+        return; // Out of bounds
     }
 
-    // TODO: Implement direct ray generation in Phase 1
+    uint prim_idx = pc.launch_offset + global_id;
+
+    if (prim_idx >= pc.primitive_count) {
+        return; // Safety check
+    }
+
+    // Initialize RNG
+    uint Nrays_per_dim = pc.rays_per_primitive;
+    uint Nrays = Nrays_per_dim * Nrays_per_dim; // Total rays per primitive
+    uint ray_index = global_id;
+    RNGState rng = rng_init(pc.random_seed, ray_index);
+
+    // Get primitive data
+    uint prim_type = prim_types_buf.types[prim_idx];
+    uint prim_uuid = prim_uuids_buf.uuids[prim_idx];
+    ivec2 subdivisions = obj_subdivisions_buf.subdivisions[prim_idx];
+    uint twosided = twosided_buf.twosided_flags[prim_idx];
+
+    // Get transform matrix (16 floats per primitive)
+    float transform_mat[16];
+    for (uint i = 0; i < 16; ++i) {
+        transform_mat[i] = transform_buf.matrices[prim_idx * 16 + i];
+    }
+    mat4 transform = floats_to_mat4(transform_mat);
+
+    // Loop over sub-patches (for patches with subdivisions)
+    int NX = subdivisions.x;
+    int NY = subdivisions.y;
+
+    for (int jj = 0; jj < NY; ++jj) {
+        for (int ii = 0; ii < NX; ++ii) {
+
+            // Loop over ray samples (stratified grid: rays_per_primitive × rays_per_primitive)
+            for (uint ry = 0; ry < Nrays_per_dim; ++ry) {
+                for (uint rx = 0; rx < Nrays_per_dim; ++rx) {
+
+                    // Sample random point on primitive surface
+                    vec3 sp_local;
+                    vec3 normal;
+
+                    if (prim_type == 0 || prim_type == 3) { // Patch or Tile
+                        sp_local = sample_patch_stratified(rng, prim_idx, subdivisions, ivec2(ii, jj), ivec2(rx, ry), Nrays_per_dim);
+                        normal = get_patch_normal(prim_idx, transform_mat);
+
+                    } else if (prim_type == 1) { // Triangle
+                        sp_local = sample_triangle(rng);
+                        normal = get_triangle_normal(prim_idx, transform_mat);
+
+                    } else if (prim_type == 2) { // Disk
+                        sp_local = sample_disk(rng);
+                        normal = get_patch_normal(prim_idx, transform_mat); // Disk uses same normal calc as patch
+
+                    } else {
+                        // Unsupported primitive type in Phase 1
+                        continue;
+                    }
+
+                    // Transform to world space
+                    vec3 ray_origin = transform_point(transform, sp_local);
+
+                    // Send ray to each source
+                    for (uint src_idx = 0; src_idx < pc.source_count; ++src_idx) {
+
+                        vec3 source_pos = source_positions_buf.positions[src_idx];
+                        uint source_type = source_types_buf.types[src_idx];
+
+                        vec3 ray_dir;
+                        float strength = 0.0;
+
+                        if (source_type == 0) { // Collimated source (sun)
+                            ray_dir = normalize(source_pos); // source_pos is direction for collimated
+                            strength = calc_collimated_strength(normal, ray_dir, Nrays);
+
+                        } else {
+                            // Point/sphere/disk/rectangle sources not yet implemented
+                            // TODO Phase 2+: Implement other source types
+                            continue;
+                        }
+
+                        // Check if ray is facing the correct direction
+                        float dot_product = dot(ray_dir, normal);
+                        bool is_top_face = (dot_product > 0.0);
+
+                        // Skip if wrong face or transparent primitive
+                        if (twosided == 3 || (!is_top_face && twosided == 0)) {
+                            continue;
+                        }
+
+                        // Phase 1: Direct illumination (no ray tracing)
+                        // Loop over all launched bands
+                        for (uint band = 0; band < pc.band_count; ++band) {
+                            // Get source flux for this band
+                            uint flux_idx = src_idx * pc.band_count + band;
+                            float flux = source_fluxes_buf.fluxes[flux_idx];
+
+                            // Calculate energy contribution
+                            float energy = flux * strength;
+
+                            // Accumulate to radiation_in buffer
+                            uint rad_idx = index_prim_band(prim_idx, band, pc.primitive_count);
+
+                            // Atomic add to radiation_in
+                            atomicAdd(rad_in_buf.radiation_in[rad_idx], energy);
+                        }
+                    }
+                } // rx loop
+            } // ry loop
+        } // ii loop
+    } // jj loop
 }
