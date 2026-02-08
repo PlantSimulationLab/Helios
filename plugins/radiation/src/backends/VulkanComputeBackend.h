@@ -157,10 +157,12 @@ namespace helios {
         VkPipeline pipeline_camera = VK_NULL_HANDLE;
         VkPipeline pipeline_pixel_label = VK_NULL_HANDLE;
 
-        // Command buffer
+        // Command resources - separate for transfer and compute to avoid synchronization issues
         VkCommandPool command_pool = VK_NULL_HANDLE;
-        VkCommandBuffer command_buffer = VK_NULL_HANDLE;
+        VkCommandBuffer transfer_command_buffer = VK_NULL_HANDLE;  // For buffer uploads/downloads
+        VkCommandBuffer compute_command_buffer = VK_NULL_HANDLE;   // For compute shader dispatches
         VkFence transfer_fence = VK_NULL_HANDLE; // For synchronizing buffer operations
+        VkFence compute_fence = VK_NULL_HANDLE;  // For synchronizing compute operations
 
         // Geometry cache
         size_t primitive_count = 0;

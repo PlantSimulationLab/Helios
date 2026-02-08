@@ -113,13 +113,6 @@ namespace helios {
         // Required extensions (none for headless compute)
         std::vector<const char *> extensions;
 
-        // Validation layers for debugging
-        std::vector<const char *> validation_layers;
-        if (enable_validation) {
-            validation_layers.push_back("VK_LAYER_KHRONOS_validation");
-            extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-        }
-
         // MoltenVK requires VK_KHR_portability_enumeration on macOS
 #ifdef __APPLE__
         extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
@@ -127,19 +120,52 @@ namespace helios {
         create_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 #endif
 
-        create_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-        create_info.ppEnabledExtensionNames = extensions.data();
-        create_info.enabledLayerCount = static_cast<uint32_t>(validation_layers.size());
-        create_info.ppEnabledLayerNames = validation_layers.data();
-
-        VkResult result = vkCreateInstance(&create_info, nullptr, &instance);
-        if (result != VK_SUCCESS) {
-            helios_runtime_error("ERROR (VulkanDevice::createInstance): Failed to create Vulkan instance. "
-                                 "Make sure Vulkan SDK is installed. VkResult code: " +
-                                 std::to_string(result));
-        }
+        // Try with validation first if requested
+        std::vector<const char *> validation_layers;
+        bool validation_enabled = false;
 
         if (enable_validation) {
+            validation_layers.push_back("VK_LAYER_KHRONOS_validation");
+            extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+            create_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+            create_info.ppEnabledExtensionNames = extensions.data();
+            create_info.enabledLayerCount = static_cast<uint32_t>(validation_layers.size());
+            create_info.ppEnabledLayerNames = validation_layers.data();
+
+            VkResult result = vkCreateInstance(&create_info, nullptr, &instance);
+
+            if (result == VK_SUCCESS) {
+                validation_enabled = true;
+                std::cout << "Vulkan validation layers enabled" << std::endl;
+            } else if (result == VK_ERROR_LAYER_NOT_PRESENT || result == VK_ERROR_EXTENSION_NOT_PRESENT) {
+                // Validation not available, try without it
+                std::cout << "Vulkan validation layers not available, continuing without validation" << std::endl;
+                extensions.pop_back(); // Remove debug utils extension
+            } else {
+                // Other error - fail
+                helios_runtime_error("ERROR (VulkanDevice::createInstance): Failed to create Vulkan instance. "
+                                     "Make sure Vulkan SDK is installed. VkResult code: " +
+                                     std::to_string(result));
+            }
+        }
+
+        // Create instance without validation if not already created
+        if (instance == VK_NULL_HANDLE) {
+            create_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+            create_info.ppEnabledExtensionNames = extensions.data();
+            create_info.enabledLayerCount = 0;
+            create_info.ppEnabledLayerNames = nullptr;
+
+            VkResult result = vkCreateInstance(&create_info, nullptr, &instance);
+            if (result != VK_SUCCESS) {
+                helios_runtime_error("ERROR (VulkanDevice::createInstance): Failed to create Vulkan instance. "
+                                     "Make sure Vulkan SDK is installed. VkResult code: " +
+                                     std::to_string(result));
+            }
+        }
+
+        if (validation_enabled) {
             setupDebugMessenger();
         }
     }

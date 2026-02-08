@@ -29,8 +29,8 @@ namespace helios {
     }
 
     void VulkanComputeBackend::initialize() {
-        // Initialize Vulkan device
-        device->initialize(false); // Validation off for release
+        // Initialize Vulkan device (validation enabled in debug builds)
+        device->initialize(true);
 
         // Create command resources
         createCommandResources();
@@ -38,8 +38,6 @@ namespace helios {
         // Create descriptor sets and pipelines
         createDescriptorSets();
         createPipelines();
-
-        std::cout << "Vulkan compute backend initialized successfully." << std::endl;
     }
 
     void VulkanComputeBackend::shutdown() {
@@ -100,6 +98,8 @@ namespace helios {
         // Destroy command resources
         if (transfer_fence != VK_NULL_HANDLE)
             vkDestroyFence(vk_device, transfer_fence, nullptr);
+        if (compute_fence != VK_NULL_HANDLE)
+            vkDestroyFence(vk_device, compute_fence, nullptr);
         if (command_pool != VK_NULL_HANDLE)
             vkDestroyCommandPool(vk_device, command_pool, nullptr);
 
@@ -367,21 +367,20 @@ namespace helios {
             updateDescriptorSets();
             descriptors_dirty = false;
         }
-
         VkDevice vk_device = device->getDevice();
 
-        // Record command buffer
+        // Record COMPUTE command buffer
         VkCommandBufferBeginInfo begin_info{};
         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer(command_buffer, &begin_info);
+        vkBeginCommandBuffer(compute_command_buffer, &begin_info);
 
         // Bind pipeline
-        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_direct);
+        vkCmdBindPipeline(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_direct);
 
         // Bind descriptor sets
         VkDescriptorSet sets[] = {set_geometry, set_materials, set_results};
-        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 3, sets, 0, nullptr);
+        vkCmdBindDescriptorSets(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 3, sets, 0, nullptr);
 
         // Push constants
         struct PushConstants {
@@ -393,6 +392,7 @@ namespace helios {
             uint band_count;
             uint source_count;
             uint primitive_count;
+            uint debug_mode;  // 1 = enable bounds checking, 0 = production
         } push_constants;
 
         push_constants.launch_offset = params.launch_offset;
@@ -404,34 +404,87 @@ namespace helios {
         push_constants.source_count = source_count;
         push_constants.primitive_count = primitive_count;
 
-        vkCmdPushConstants(command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
+        // Enable debug bounds checking (can be disabled in production builds)
+        #ifdef HELIOS_DEBUG
+            push_constants.debug_mode = 1;
+        #else
+            push_constants.debug_mode = 0;
+        #endif
+
+        vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
 
         // Dispatch compute shader
         // Workgroup size = 256 threads (from shader local_size_x)
         uint workgroup_count = (params.launch_count + 255) / 256;
-        vkCmdDispatch(command_buffer, workgroup_count, 1, 1);
+        vkCmdDispatch(compute_command_buffer, workgroup_count, 1, 1);
 
-        // Memory barrier to ensure writes complete before next launch or readback
-        VkMemoryBarrier barrier{};
-        barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+        // Buffer memory barrier to ensure storage buffer writes are visible for readback
+        // CRITICAL: Use buffer-specific barrier instead of global barrier for MoltenVK compatibility
+        VkBufferMemoryBarrier buffer_barriers[2];
 
-        vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 1, &barrier, 0, nullptr, 0, nullptr);
+        // Radiation_in buffer barrier
+        buffer_barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        buffer_barriers[0].pNext = nullptr;
+        buffer_barriers[0].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        buffer_barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+        buffer_barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        buffer_barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        buffer_barriers[0].buffer = radiation_in_buffer.buffer;
+        buffer_barriers[0].offset = 0;
+        buffer_barriers[0].size = VK_WHOLE_SIZE;
 
-        vkEndCommandBuffer(command_buffer);
+        // Radiation_out buffer barrier
+        buffer_barriers[1].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        buffer_barriers[1].pNext = nullptr;
+        buffer_barriers[1].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        buffer_barriers[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+        buffer_barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        buffer_barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        buffer_barriers[1].buffer = radiation_out_buffer.buffer;
+        buffer_barriers[1].offset = 0;
+        buffer_barriers[1].size = VK_WHOLE_SIZE;
 
-        // Submit command buffer with fence
+        vkCmdPipelineBarrier(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+                             0, nullptr,  // No global memory barriers
+                             2, buffer_barriers,  // Buffer-specific barriers
+                             0, nullptr);  // No image barriers
+
+        vkEndCommandBuffer(compute_command_buffer);
+
+        // Submit command buffer with COMPUTE fence
         VkSubmitInfo submit_info{};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer;
+        submit_info.pCommandBuffers = &compute_command_buffer;
 
-        vkResetFences(vk_device, 1, &transfer_fence);
-        vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, transfer_fence);
+        vkResetFences(vk_device, 1, &compute_fence);
+        VkResult result = vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, compute_fence);
+        if (result != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): vkQueueSubmit failed. VkResult: " + std::to_string(result));
+        }
 
-        // Wait for completion
-        vkWaitForFences(vk_device, 1, &transfer_fence, VK_TRUE, UINT64_MAX);
+        // Manual timeout loop (vkWaitForFences timeout doesn't work reliably on MoltenVK)
+        const int max_attempts = 50; // 50 * 100ms = 5 seconds
+        const uint64_t poll_interval_ns = 100000000ULL; // 100ms
+        bool completed = false;
+
+        for (int attempt = 0; attempt < max_attempts; ++attempt) {
+            result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, poll_interval_ns);
+            if (result == VK_SUCCESS) {
+                completed = true;
+                break;
+            } else if (result != VK_TIMEOUT) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): vkWaitForFences failed. VkResult: " + std::to_string(result));
+            }
+        }
+
+        if (!completed) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): GPU operation timed out after 5 seconds. "
+                               "Check for shader errors or infinite loops. "
+                               "Workgroup count: " + std::to_string(workgroup_count) +
+                               ", primitives: " + std::to_string(primitive_count) +
+                               ", sources: " + std::to_string(source_count));
+        }
     }
 
     void VulkanComputeBackend::launchDiffuseRays(const RayTracingLaunchParams &params) {
@@ -462,9 +515,48 @@ namespace helios {
 
         // Download radiation_in buffer
         if (radiation_in_buffer.buffer != VK_NULL_HANDLE) {
-            downloadBufferData(radiation_in_buffer, results.radiation_in.data(), buffer_size * sizeof(float));
+            // WORKAROUND for MoltenVK: Direct map instead of transfer command buffer
+            // This works around coherency issues with compute shader writes
+            vkQueueWaitIdle(device->getComputeQueue()); // Ensure compute is done
+
+            void *mapped;
+            VkResult result = vmaMapMemory(device->getAllocator(), radiation_in_buffer.allocation, &mapped);
+            if (result == VK_SUCCESS) {
+                // Invalidate mapped memory range to ensure coherency with GPU writes
+                VkMappedMemoryRange range{};
+                range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+                VmaAllocationInfo alloc_info;
+                vmaGetAllocationInfo(device->getAllocator(), radiation_in_buffer.allocation, &alloc_info);
+                range.memory = alloc_info.deviceMemory;
+                range.offset = alloc_info.offset;
+                range.size = alloc_info.size;
+                vkInvalidateMappedMemoryRanges(device->getDevice(), 1, &range);
+
+                std::memcpy(results.radiation_in.data(), mapped, buffer_size * sizeof(float));
+                vmaUnmapMemory(device->getAllocator(), radiation_in_buffer.allocation);
+
+                // Check for shader error codes (negative values)
+                if (results.radiation_in[0] < 0.0f) {
+                    std::string error_msg = "ERROR (VulkanComputeBackend): Compute shader reported error. Code: " + std::to_string(results.radiation_in[0]);
+                    if (results.radiation_in[0] == -999.0f) {
+                        error_msg += " (Invalid subdivisions: NX=" + std::to_string(results.radiation_in[1]) + " NY=" + std::to_string(results.radiation_in[2]) + ")";
+                    } else if (results.radiation_in[0] == -998.0f) {
+                        error_msg += " (Subdivisions too large: NX=" + std::to_string(results.radiation_in[1]) + " NY=" + std::to_string(results.radiation_in[2]) + ")";
+                    } else if (results.radiation_in[0] == -997.0f) {
+                        error_msg += " (Zero rays per dimension)";
+                    } else if (results.radiation_in[0] == -996.0f) {
+                        error_msg += " (Too many rays per dimension: " + std::to_string(results.radiation_in[1]) + ")";
+                    }
+                    helios_runtime_error(error_msg);
+                }
+
+            } else {
+                std::cout << "ERROR: Failed to map radiation_in buffer, falling back to transfer" << std::endl;
+                downloadBufferData(radiation_in_buffer, results.radiation_in.data(), buffer_size * sizeof(float));
+            }
         } else {
             std::fill(results.radiation_in.begin(), results.radiation_in.end(), 0.0f);
+            std::cout << "WARNING: radiation_in_buffer is NULL!" << std::endl;
         }
 
         // Phase 1: radiation_out and scatter buffers not used (no emission, no scattering)
@@ -490,11 +582,14 @@ namespace helios {
         size_t buffer_size = primitive_count * band_count;
 
         // Create or resize radiation_in buffer
+        // CRITICAL: Use AUTO_PREFER_HOST for coherent memory (matches working Vulkan compute examples)
+        // This ensures HOST_VISIBLE | HOST_COHERENT memory which works reliably on MoltenVK
         if (radiation_in_buffer.buffer == VK_NULL_HANDLE || radiation_in_buffer.size != buffer_size * sizeof(float)) {
             if (radiation_in_buffer.buffer != VK_NULL_HANDLE) {
                 destroyBuffer(radiation_in_buffer);
             }
-            radiation_in_buffer = createBuffer(buffer_size * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            radiation_in_buffer = createBuffer(buffer_size * sizeof(float), usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
         }
 
         // Create or resize radiation_out buffer
@@ -502,7 +597,8 @@ namespace helios {
             if (radiation_out_buffer.buffer != VK_NULL_HANDLE) {
                 destroyBuffer(radiation_out_buffer);
             }
-            radiation_out_buffer = createBuffer(buffer_size * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            radiation_out_buffer = createBuffer(buffer_size * sizeof(float), usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
         }
 
         // Zero both buffers
@@ -600,6 +696,13 @@ namespace helios {
         VmaAllocationCreateInfo alloc_info{};
         alloc_info.usage = mem_usage;
 
+        // CRITICAL for MoltenVK: Request host-coherent memory for compute shader result buffers
+        // This matches working Vulkan compute examples that use HOST_VISIBLE | HOST_COHERENT
+        if (mem_usage == VMA_MEMORY_USAGE_AUTO_PREFER_HOST) {
+            alloc_info.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+            alloc_info.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        }
+
         // Optimization: Use dedicated memory for large GPU-only buffers (>64 MB)
         if (mem_usage == VMA_MEMORY_USAGE_GPU_ONLY && size > 64 * 1024 * 1024) {
             alloc_info.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
@@ -641,11 +744,11 @@ namespace helios {
         VkCommandBufferBeginInfo begin_info{};
         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer(command_buffer, &begin_info);
+        vkBeginCommandBuffer(transfer_command_buffer, &begin_info);
 
         VkBufferCopy copy_region{};
         copy_region.size = size;
-        vkCmdCopyBuffer(command_buffer, staging.buffer, buffer.buffer, 1, &copy_region);
+        vkCmdCopyBuffer(transfer_command_buffer, staging.buffer, buffer.buffer, 1, &copy_region);
 
         // Add memory barrier to ensure transfer completes before compute shader access
         VkBufferMemoryBarrier barrier{};
@@ -658,27 +761,47 @@ namespace helios {
         barrier.offset = 0;
         barrier.size = VK_WHOLE_SIZE;
 
-        vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+        vkCmdPipelineBarrier(transfer_command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 
-        vkEndCommandBuffer(command_buffer);
+        vkEndCommandBuffer(transfer_command_buffer);
 
         // Submit with fence
         VkSubmitInfo submit_info{};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer;
+        submit_info.pCommandBuffers = &transfer_command_buffer;
 
         vkResetFences(device->getDevice(), 1, &transfer_fence);
         vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, transfer_fence);
 
-        // Wait for fence
-        vkWaitForFences(device->getDevice(), 1, &transfer_fence, VK_TRUE, UINT64_MAX);
+        // Polling-based timeout (MoltenVK doesn't respect timeout parameter)
+        const int max_attempts = 50;
+        const uint64_t poll_interval_ns = 100000000ULL; // 100ms
+        bool completed = false;
+
+        for (int attempt = 0; attempt < max_attempts; ++attempt) {
+            VkResult result = vkWaitForFences(device->getDevice(), 1, &transfer_fence, VK_TRUE, poll_interval_ns);
+            if (result == VK_SUCCESS) {
+                completed = true;
+                break;
+            } else if (result != VK_TIMEOUT) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::uploadBufferData): vkWaitForFences failed. VkResult: " + std::to_string(result));
+            }
+        }
+
+        if (!completed) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::uploadBufferData): GPU buffer upload timed out after 5 seconds. Buffer size: " + std::to_string(size));
+        }
 
         // SAFETY: Staging buffer destroyed only after fence signals (GPU copy complete)
         destroyBuffer(staging);
     }
 
     void VulkanComputeBackend::downloadBufferData(const Buffer &buffer, void *data, size_t size) {
+        // CRITICAL: Wait for ALL GPU work to complete before downloading
+        // This ensures compute shader writes are visible to the transfer operation
+        vkQueueWaitIdle(device->getComputeQueue());
+
         // Create staging buffer
         Buffer staging = createBuffer(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
 
@@ -686,7 +809,7 @@ namespace helios {
         VkCommandBufferBeginInfo begin_info{};
         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer(command_buffer, &begin_info);
+        vkBeginCommandBuffer(transfer_command_buffer, &begin_info);
 
         // Add memory barrier to ensure compute shader writes complete before transfer
         VkBufferMemoryBarrier barrier{};
@@ -699,25 +822,41 @@ namespace helios {
         barrier.offset = 0;
         barrier.size = VK_WHOLE_SIZE;
 
-        vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+        vkCmdPipelineBarrier(transfer_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 
         VkBufferCopy copy_region{};
         copy_region.size = size;
-        vkCmdCopyBuffer(command_buffer, buffer.buffer, staging.buffer, 1, &copy_region);
+        vkCmdCopyBuffer(transfer_command_buffer, buffer.buffer, staging.buffer, 1, &copy_region);
 
-        vkEndCommandBuffer(command_buffer);
+        vkEndCommandBuffer(transfer_command_buffer);
 
         // Submit with fence
         VkSubmitInfo submit_info{};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer;
+        submit_info.pCommandBuffers = &transfer_command_buffer;
 
         vkResetFences(device->getDevice(), 1, &transfer_fence);
         vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, transfer_fence);
 
-        // Wait for fence
-        vkWaitForFences(device->getDevice(), 1, &transfer_fence, VK_TRUE, UINT64_MAX);
+        // Polling-based timeout (MoltenVK doesn't respect timeout parameter)
+        const int max_attempts = 50;
+        const uint64_t poll_interval_ns = 100000000ULL; // 100ms
+        bool completed = false;
+
+        for (int attempt = 0; attempt < max_attempts; ++attempt) {
+            VkResult result = vkWaitForFences(device->getDevice(), 1, &transfer_fence, VK_TRUE, poll_interval_ns);
+            if (result == VK_SUCCESS) {
+                completed = true;
+                break;
+            } else if (result != VK_TIMEOUT) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::downloadBufferData): vkWaitForFences failed. VkResult: " + std::to_string(result));
+            }
+        }
+
+        if (!completed) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::downloadBufferData): GPU buffer download timed out after 5 seconds. Buffer size: " + std::to_string(size));
+        }
 
         // Map and read
         void *mapped;
@@ -733,23 +872,39 @@ namespace helios {
         VkCommandBufferBeginInfo begin_info{};
         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer(command_buffer, &begin_info);
+        vkBeginCommandBuffer(transfer_command_buffer, &begin_info);
 
-        vkCmdFillBuffer(command_buffer, buffer.buffer, 0, buffer.size, 0);
+        vkCmdFillBuffer(transfer_command_buffer, buffer.buffer, 0, buffer.size, 0);
 
-        vkEndCommandBuffer(command_buffer);
+        vkEndCommandBuffer(transfer_command_buffer);
 
         // Submit with fence
         VkSubmitInfo submit_info{};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &command_buffer;
+        submit_info.pCommandBuffers = &transfer_command_buffer;
 
         vkResetFences(device->getDevice(), 1, &transfer_fence);
         vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, transfer_fence);
 
-        // Wait for fence
-        vkWaitForFences(device->getDevice(), 1, &transfer_fence, VK_TRUE, UINT64_MAX);
+        // Polling-based timeout (MoltenVK doesn't respect timeout parameter)
+        const int max_attempts = 50;
+        const uint64_t poll_interval_ns = 100000000ULL; // 100ms
+        bool completed = false;
+
+        for (int attempt = 0; attempt < max_attempts; ++attempt) {
+            VkResult result = vkWaitForFences(device->getDevice(), 1, &transfer_fence, VK_TRUE, poll_interval_ns);
+            if (result == VK_SUCCESS) {
+                completed = true;
+                break;
+            } else if (result != VK_TIMEOUT) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::zeroBuffer): vkWaitForFences failed. VkResult: " + std::to_string(result));
+            }
+        }
+
+        if (!completed) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::zeroBuffer): GPU buffer clear timed out after 5 seconds. Buffer size: " + std::to_string(buffer.size));
+        }
     }
 
     void VulkanComputeBackend::createCommandResources() {
@@ -765,25 +920,35 @@ namespace helios {
             helios_runtime_error("ERROR (VulkanComputeBackend::createCommandResources): Failed to create command pool. VkResult: " + std::to_string(result));
         }
 
+        // Allocate TWO command buffers: one for transfers, one for compute
         VkCommandBufferAllocateInfo alloc_info{};
         alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         alloc_info.commandPool = command_pool;
         alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        alloc_info.commandBufferCount = 1;
+        alloc_info.commandBufferCount = 2;
 
-        result = vkAllocateCommandBuffers(vk_device, &alloc_info, &command_buffer);
+        VkCommandBuffer buffers[2];
+        result = vkAllocateCommandBuffers(vk_device, &alloc_info, buffers);
         if (result != VK_SUCCESS) {
-            helios_runtime_error("ERROR (VulkanComputeBackend::createCommandResources): Failed to allocate command buffer. VkResult: " + std::to_string(result));
+            helios_runtime_error("ERROR (VulkanComputeBackend::createCommandResources): Failed to allocate command buffers. VkResult: " + std::to_string(result));
         }
 
-        // Create fence for buffer operation synchronization
+        transfer_command_buffer = buffers[0];
+        compute_command_buffer = buffers[1];
+
+        // Create fences for synchronization
         VkFenceCreateInfo fence_info{};
         fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fence_info.flags = 0; // Start unsignaled
+        fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT; // Start signaled so first wait succeeds
 
         result = vkCreateFence(vk_device, &fence_info, nullptr, &transfer_fence);
         if (result != VK_SUCCESS) {
             helios_runtime_error("ERROR (VulkanComputeBackend::createCommandResources): Failed to create transfer fence. VkResult: " + std::to_string(result));
+        }
+
+        result = vkCreateFence(vk_device, &fence_info, nullptr, &compute_fence);
+        if (result != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::createCommandResources): Failed to create compute fence. VkResult: " + std::to_string(result));
         }
     }
 
@@ -1324,7 +1489,7 @@ namespace helios {
         VkDescriptorBufferInfo rad_in_info{};
         rad_in_info.buffer = radiation_in_buffer.buffer;
         rad_in_info.offset = 0;
-        rad_in_info.range = VK_WHOLE_SIZE;
+        rad_in_info.range = radiation_in_buffer.size;  // Use explicit size instead of VK_WHOLE_SIZE for MoltenVK
 
         VkDescriptorBufferInfo rad_out_info{};
         rad_out_info.buffer = radiation_out_buffer.buffer;

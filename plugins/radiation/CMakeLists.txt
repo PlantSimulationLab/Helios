@@ -321,14 +321,14 @@ endif()
 
 message(STATUS "Found glslangValidator: ${GLSLANG_VALIDATOR}")
 
-# Common shader includes (shaders depend on these)
+# Common shader includes (shaders depend on these) - use absolute paths for proper dependency tracking
 set(SHADER_COMMON_INCLUDES
-	shaders/common/random.glsl
-	shaders/common/transforms.glsl
-	shaders/common/buffer_indexing.glsl
-	shaders/common/bvh_traversal.glsl
-	shaders/common/intersections.glsl
-	shaders/common/material.glsl
+	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/random.glsl
+	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/transforms.glsl
+	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/buffer_indexing.glsl
+	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/bvh_traversal.glsl
+	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/intersections.glsl
+	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/material.glsl
 )
 
 # Shader source files

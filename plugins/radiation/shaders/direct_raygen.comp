@@ -18,6 +18,7 @@ layout(push_constant) uniform PushConstants {
     uint band_count;
     uint source_count;
     uint primitive_count;
+    uint debug_mode;  // 1 = enable bounds checking with error codes, 0 = production (no checks)
 } pc;
 
 // ========== Descriptor Set 0: Geometry ==========
@@ -239,8 +240,9 @@ void main() {
     }
 
     // Initialize RNG
-    uint Nrays_per_dim = pc.rays_per_primitive;
-    uint Nrays = Nrays_per_dim * Nrays_per_dim; // Total rays per primitive
+    // rays_per_primitive is the TOTAL number of rays, need to compute per-dimension
+    uint Nrays = pc.rays_per_primitive;
+    uint Nrays_per_dim = uint(sqrt(float(Nrays))); // Square root for stratified 2D grid
     uint ray_index = global_id;
     RNGState rng = rng_init(pc.random_seed, ray_index);
 
@@ -260,6 +262,38 @@ void main() {
     // Loop over sub-patches (for patches with subdivisions)
     int NX = subdivisions.x;
     int NY = subdivisions.y;
+
+    // Debug mode bounds checking (only when pc.debug_mode == 1)
+    if (pc.debug_mode == 1) {
+        // Check for invalid subdivision values
+        if (NX <= 0 || NY <= 0) {
+            rad_in_buf.radiation_in[0] = -999.0; // Error: invalid subdivisions
+            rad_in_buf.radiation_in[1] = float(NX);
+            rad_in_buf.radiation_in[2] = float(NY);
+            return;
+        }
+
+        // Check for unreasonably large subdivisions (likely indicates data corruption)
+        if (NX > 10000 || NY > 10000) {
+            rad_in_buf.radiation_in[0] = -998.0; // Error: subdivisions too large
+            rad_in_buf.radiation_in[1] = float(NX);
+            rad_in_buf.radiation_in[2] = float(NY);
+            return;
+        }
+
+        // Check for invalid ray counts
+        if (Nrays_per_dim == 0) {
+            rad_in_buf.radiation_in[0] = -997.0; // Error: zero rays
+            return;
+        }
+
+        // Check for unreasonably large ray counts per dimension
+        if (Nrays_per_dim > 100000) {
+            rad_in_buf.radiation_in[0] = -996.0; // Error: too many rays per dimension
+            rad_in_buf.radiation_in[1] = float(Nrays_per_dim);
+            return;
+        }
+    }
 
     for (int jj = 0; jj < NY; ++jj) {
         for (int ii = 0; ii < NX; ++ii) {
@@ -327,11 +361,17 @@ void main() {
                             uint flux_idx = src_idx * pc.band_count + band;
                             float flux = source_fluxes_buf.fluxes[flux_idx];
 
-                            // Calculate energy contribution
-                            float energy = flux * strength;
+                            // Get material properties for this primitive and band
+                            uint mat_idx = index_source_band_prim(src_idx, band, prim_idx, pc.band_count, pc.primitive_count);
+                            float rho = reflectivity_buf.reflectivity[mat_idx];
+                            float tau = transmissivity_buf.transmissivity[mat_idx];
+
+                            // Calculate absorbed energy (matches CUDA rayHit.cu line 202)
+                            float absorption_factor = 1.0 - rho - tau;
+                            float energy = flux * strength * absorption_factor;
 
                             // Accumulate to radiation_in buffer
-                            uint rad_idx = index_prim_band(prim_idx, band, pc.primitive_count);
+                            uint rad_idx = index_prim_band(prim_idx, band, pc.band_count);
 
                             // Atomic add to radiation_in
                             atomicAdd(rad_in_buf.radiation_in[rad_idx], energy);

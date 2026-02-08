@@ -126,6 +126,37 @@ DOCTEST_TEST_CASE("BufferIndexing Correctness") {
     }
 }
 
+DOCTEST_TEST_CASE("RadiationModel Vulkan Phase 1 - Simple Direct") {
+    // Minimal test for Phase 1 Vulkan: single patch, collimated source, no scattering, no emission
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1)); // Horizontal 1x1 patch
+    context.setPrimitiveData(patch, "twosided_flag", uint(0)); // One-sided
+    context.setPrimitiveData(patch, "reflectivity_SW", 0.0f); // No reflection (100% absorption)
+
+    RadiationModel radiation(&context);
+    radiation.disableMessages();
+
+    // Add shortwave band
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1)); // Sun pointing down (+Z)
+    radiation.setSourceFlux(sun, "SW", 1000.0f); // 1000 W/m²
+    radiation.setDirectRayCount("SW", 10000);
+    radiation.setScatteringDepth("SW", 0); // No scattering
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    float flux;
+    context.getPrimitiveData(patch, "radiation_flux_SW", flux);
+
+    std::cout << "Simple direct test: flux=" << flux << " expected=1000" << std::endl;
+
+    // With no reflection, horizontal patch, downward sun: should absorb ~1000 W/m²
+    float error = fabsf(flux - 1000.0f) / 1000.0f;
+    DOCTEST_CHECK(error <= 0.01); // 1% tolerance
+}
+
 DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Squares") {
     float error_threshold = 0.005;
     int Nensemble = 500;
@@ -203,7 +234,6 @@ DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Squares") {
     float shortwave_error_0 = fabsf(shortwave_model_0 - shortwave_exact_0) / fabsf(shortwave_exact_0);
     float shortwave_error_1 = fabsf(shortwave_model_1 - shortwave_exact_1) / fabsf(shortwave_exact_1);
     float longwave_error_1 = fabsf(longwave_model_1 - longwave_exact_1) / fabsf(longwave_exact_1);
-
 
     DOCTEST_CHECK(shortwave_error_0 <= error_threshold);
     DOCTEST_CHECK(shortwave_error_1 <= error_threshold);

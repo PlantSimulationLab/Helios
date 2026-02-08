@@ -6,14 +6,16 @@
 #ifndef BUFFER_INDEXING_GLSL
 #define BUFFER_INDEXING_GLSL
 
-// Index into [Nprims * Nbands] buffer
-uint index_prim_band(uint prim, uint band, uint Nprims) {
-    return band * Nprims + prim;
+// Index into [Nprims][Nbands] buffer (primitive-major, matches CPU BufferIndexer2D)
+// CPU formula: primitive * Nbands + band
+uint index_prim_band(uint prim, uint band, uint Nbands) {
+    return prim * Nbands + band;
 }
 
-// Index into [Nsources * Nbands * Nprims] buffer (source-major)
+// Index into [Nsources][Nprims][Nbands] buffer (source-major, primitive-major, band-minor)
+// Matches CPU MaterialPropertyIndexer: source * (Nprims * Nbands) + prim * Nbands + band
 uint index_source_band_prim(uint source, uint band, uint prim, uint Nbands, uint Nprims) {
-    return source * (Nbands * Nprims) + band * Nprims + prim;
+    return source * (Nprims * Nbands) + prim * Nbands + band;
 }
 
 // Index into [Ncameras * Nbands * Nprims] buffer (camera-major)
