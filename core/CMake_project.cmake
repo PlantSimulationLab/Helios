@@ -1,7 +1,6 @@
 option(ENABLE_OPENMP "Enable building with OpenMP" ON)
 option(BUILD_TESTS "Build test executables" OFF)
 option(BUILD_BENCHMARKS "Build performance benchmark executables" OFF)
-option(FORCE_VULKAN_BACKEND "Force Vulkan backend even if CUDA is available" OFF)
 
 
 # Set CMake policies to avoid warnings on newer CMake versions
@@ -85,7 +84,7 @@ message( STATUS "[Helios] Last configured Helios Git commit hash: ${HELIOS_PREVI
 
 if(NOT HELIOS_PREVIOUS_COMMIT STREQUAL GIT_COMMIT_HASH)
   message(STATUS "[Helios] Git commit version change detected, automatically re-configuring...")
-
+  
   # Clean CUDA object files to prevent linking issues with stale objects
   find_package(CUDAToolkit QUIET)
   if(CUDAToolkit_FOUND)
@@ -164,12 +163,6 @@ endif()
 # -- linking plug-ins --#
 LIST(LENGTH PLUGINS PLUGIN_COUNT)
 message( STATUS "[Helios] Loading ${PLUGIN_COUNT} plug-ins")
-
-# Check FORCE_VULKAN_BACKEND before loading plugins (for radiation plugin)
-if(FORCE_VULKAN_BACKEND)
-    message(STATUS "[Helios] FORCE_VULKAN_BACKEND=ON - will skip CUDA/OptiX detection")
-endif()
-
 foreach(PLUGIN ${PLUGINS})
     message( STATUS "[Helios] Loading plug-in ${PLUGIN}")
     if( ${PLUGIN} STREQUAL ${EXECUTABLE_NAME} )
