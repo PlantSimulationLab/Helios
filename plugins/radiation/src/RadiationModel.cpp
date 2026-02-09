@@ -5039,10 +5039,12 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
             if (processed_tile_parents.find(parentID) == processed_tile_parents.end()) {
                 processed_tile_parents.insert(parentID);
 
-                std::vector<vec3> verts = context->getTileObjectVertices(parentID);
-                for (const auto &v: verts) {
-                    geometry_data.tiles.vertices.push_back(v);
-                }
+                // Store canonical (local-space) vertices — the transform matrix is applied
+                // by the BVH builder and GPU shader, so vertices must NOT be pre-transformed.
+                geometry_data.tiles.vertices.push_back(make_vec3(-0.5f, -0.5f, 0.f));
+                geometry_data.tiles.vertices.push_back(make_vec3( 0.5f, -0.5f, 0.f));
+                geometry_data.tiles.vertices.push_back(make_vec3( 0.5f,  0.5f, 0.f));
+                geometry_data.tiles.vertices.push_back(make_vec3(-0.5f,  0.5f, 0.f));
 
                 // Use the first subpatch's UUID as the tile geometry UUID
                 geometry_data.tiles.UUIDs.push_back(UUID);
@@ -5055,10 +5057,12 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
             context->getPrimitiveTransformationMatrix(UUID, m);
             memcpy(&geometry_data.transform_matrices[prim_idx * 16], m, 16 * sizeof(float));
 
-            std::vector<vec3> verts = context->getPrimitiveVertices(UUID);
-            for (const auto &v: verts) {
-                geometry_data.patches.vertices.push_back(v);
-            }
+            // Store canonical (local-space) vertices — the transform matrix is applied
+            // by the BVH builder and GPU shader, so vertices must NOT be pre-transformed.
+            geometry_data.patches.vertices.push_back(make_vec3(-0.5f, -0.5f, 0.f));
+            geometry_data.patches.vertices.push_back(make_vec3( 0.5f, -0.5f, 0.f));
+            geometry_data.patches.vertices.push_back(make_vec3( 0.5f,  0.5f, 0.f));
+            geometry_data.patches.vertices.push_back(make_vec3(-0.5f,  0.5f, 0.f));
 
             geometry_data.object_subdivisions[prim_idx] = helios::make_int2(1, 1);
 
@@ -5073,10 +5077,11 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
             context->getPrimitiveTransformationMatrix(UUID, m);
             memcpy(&geometry_data.transform_matrices[prim_idx * 16], m, 16 * sizeof(float));
 
-            std::vector<vec3> verts = context->getPrimitiveVertices(UUID);
-            for (const auto &v: verts) {
-                geometry_data.triangles.vertices.push_back(v);
-            }
+            // Store canonical (local-space) vertices — the transform matrix is applied
+            // by the BVH builder and GPU shader, so vertices must NOT be pre-transformed.
+            geometry_data.triangles.vertices.push_back(make_vec3(0.f, 0.f, 0.f));
+            geometry_data.triangles.vertices.push_back(make_vec3(0.f, 1.f, 0.f));
+            geometry_data.triangles.vertices.push_back(make_vec3(1.f, 1.f, 0.f));
 
             geometry_data.object_subdivisions[prim_idx] = helios::make_int2(1, 1);
             geometry_data.triangles.UUIDs.push_back(UUID); // Store actual UUID, not position

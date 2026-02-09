@@ -1,8 +1,10 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_EXT_shader_atomic_float : enable
+#extension GL_GOOGLE_include_directive : enable
 
-// Diffuse ray generation shader (Phase 2+)
-// Launches hemispherically distributed rays for diffuse radiation
+// Diffuse ray generation shader (Phase 2)
+// Launches rays from surfaces in hemispherical directions for diffuse radiation transfer
 
 layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
@@ -14,15 +16,481 @@ layout(push_constant) uniform PushConstants {
     uint random_seed;
     uint current_band;
     uint band_count;
+    uint source_count;
+    uint primitive_count;
+    uint debug_mode;       // 1 = enable bounds checking with error codes, 0 = production
+    uint launch_face;      // 0 = bottom face, 1 = top face
+    uint launch_dim_x;     // Grid dimension X for stratified hemisphere sampling
+    uint launch_dim_y;     // Grid dimension Y for stratified hemisphere sampling
 } pc;
 
-// Placeholder main (to be implemented in Phase 2)
+// ========== Descriptor Set 0: Geometry ==========
+layout(set = 0, binding = 0) readonly buffer BVHBuffer {
+    float data[]; // BVHNode array (accessed via bvh_traversal.glsl)
+} bvh_buf;
+
+layout(set = 0, binding = 1) readonly buffer PrimIndicesBuffer {
+    uint indices[];
+} prim_indices_buf;
+
+layout(set = 0, binding = 2) readonly buffer TransformMatricesBuffer {
+    float matrices[]; // 16 floats per primitive (row-major)
+} transform_buf;
+
+layout(set = 0, binding = 3) readonly buffer PrimTypesBuffer {
+    uint types[];
+} prim_types_buf;
+
+layout(set = 0, binding = 4) readonly buffer PrimUUIDsBuffer {
+    uint uuids[];
+} prim_uuids_buf;
+
+layout(set = 0, binding = 5) readonly buffer PrimPositionsBuffer {
+    uint positions[];
+} prim_positions_buf;
+
+layout(set = 0, binding = 6) readonly buffer ObjectSubdivisionsBuffer {
+    ivec2 subdivisions[];
+} obj_subdivisions_buf;
+
+layout(set = 0, binding = 7) readonly buffer TwosidedFlagBuffer {
+    uint twosided_flags[];
+} twosided_buf;
+
+layout(set = 0, binding = 8) readonly buffer PatchVerticesBuffer {
+    float vertices[]; // 12 floats per patch (4 vec3 vertices)
+} patch_vertices_buf;
+
+layout(set = 0, binding = 9) readonly buffer TriangleVerticesBuffer {
+    float vertices[]; // 9 floats per triangle (3 vec3 vertices)
+} triangle_vertices_buf;
+
+// ========== Descriptor Set 1: Materials/Sources ==========
+layout(set = 1, binding = 0) readonly buffer SourcePositionsBuffer {
+    vec3 positions[];
+} source_positions_buf;
+
+layout(set = 1, binding = 1) readonly buffer SourceTypesBuffer {
+    uint types[];
+} source_types_buf;
+
+layout(set = 1, binding = 2) readonly buffer SourceRotationsBuffer {
+    vec3 rotations[];
+} source_rotations_buf;
+
+layout(set = 1, binding = 3) readonly buffer SourceWidthsBuffer {
+    vec2 widths[];
+} source_widths_buf;
+
+layout(set = 1, binding = 4) readonly buffer SourceFluxesBuffer {
+    float fluxes[];
+} source_fluxes_buf;
+
+layout(set = 1, binding = 5) readonly buffer ReflectivityBuffer {
+    float reflectivity[]; // [primitive * band_count + band]
+} reflectivity_buf;
+
+layout(set = 1, binding = 6) readonly buffer TransmissivityBuffer {
+    float transmissivity[];
+} transmissivity_buf;
+
+// ========== Descriptor Set 2: Results ==========
+layout(set = 2, binding = 0) buffer RadiationInBuffer {
+    float radiation_in[]; // [primitive * band_count + band]
+} rad_in_buf;
+
+layout(set = 2, binding = 1) readonly buffer RadiationOutTopBuffer {
+    float radiation_out_top[]; // Energy emitted from top face
+} rad_out_top_buf;
+
+layout(set = 2, binding = 2) readonly buffer RadiationOutBottomBuffer {
+    float radiation_out_bottom[]; // Energy emitted from bottom face
+} rad_out_bottom_buf;
+
+layout(set = 2, binding = 3) buffer ScatterTopBuffer {
+    float scatter_top[]; // Scattered energy from top face
+} scatter_top_buf;
+
+layout(set = 2, binding = 4) buffer ScatterBottomBuffer {
+    float scatter_bottom[]; // Scattered energy from bottom face
+} scatter_bottom_buf;
+
+// ========== Descriptor Set 3: Sky Parameters ==========
+layout(set = 3, binding = 0) readonly buffer DiffuseFluxBuffer {
+    float diffuse_flux[]; // [band] - Sky irradiance per band
+} diffuse_flux_buf;
+
+layout(set = 3, binding = 1) readonly buffer DiffusePeakDirBuffer {
+    vec3 diffuse_peak_dir[]; // [band] - Sun direction per band
+} diffuse_peak_dir_buf;
+
+layout(set = 3, binding = 2) readonly buffer DiffuseExtinctionBuffer {
+    float diffuse_extinction[]; // [band] - Power-law K parameter
+} diffuse_extinction_buf;
+
+layout(set = 3, binding = 3) readonly buffer DiffuseDistNormBuffer {
+    float diffuse_dist_norm[]; // [band] - Power-law normalization
+} diffuse_dist_norm_buf;
+
+layout(set = 3, binding = 4) readonly buffer SkyRadianceParamsBuffer {
+    vec4 sky_radiance_params[]; // [band] - Prague model params (circ_str, circ_width, horiz_bright, norm)
+} sky_radiance_params_buf;
+
+// ========== Include common shader utilities ==========
+#include "common/random.glsl"
+#include "common/transforms.glsl"
+#include "common/buffer_indexing.glsl"
+#include "common/bvh_traversal.glsl"
+#include "common/sky_distribution.glsl"
+
+// ========== Helper Functions ==========
+
+// Sample random point on patch (matches CUDA)
+vec3 sample_patch(inout RNGState rng, ivec2 subdivision, ivec2 sub_cell) {
+    int NX = subdivision.x;
+    int NY = subdivision.y;
+
+    float dx = 1.0 / float(NX);
+    float dy = 1.0 / float(NY);
+
+    float Rx = rng_float(rng);
+    float Ry = rng_float(rng);
+
+    // Map to patch local space [-0.5, 0.5] x [-0.5, 0.5]
+    vec3 sp;
+    sp.x = -0.5 + (sub_cell.x + Rx) * dx;
+    sp.y = -0.5 + (sub_cell.y + Ry) * dy;
+    sp.z = 0.0;
+
+    return sp;
+}
+
+// Sample random point on triangle
+vec3 sample_triangle(inout RNGState rng) {
+    float Rx = rng_float(rng);
+    float Ry = rng_float(rng);
+
+    vec3 sp;
+    // Map to triangle with vertices (0,0,0), (0,1,0), (1,1,0)
+    if (Rx < Ry) {
+        sp.x = Rx;
+        sp.y = Ry;
+    } else {
+        sp.x = Ry;
+        sp.y = Rx;
+    }
+    sp.z = 0.0;
+
+    return sp;
+}
+
+// Sample random point on disk (uniform distribution)
+vec3 sample_disk(inout RNGState rng) {
+    float Rx = rng_float(rng);
+    float Ry = rng_float(rng);
+
+    // Map to square [-1,1] x [-1,1]
+    vec3 sp;
+    sp.x = -1.0 + 2.0 * Rx;
+    sp.y = -1.0 + 2.0 * Ry;
+
+    // Concentric disk mapping (Shirley & Chiu 1997)
+    float r, phi;
+    if (sp.x > -sp.y) {
+        if (sp.x > sp.y) {
+            r = sp.x;
+            phi = sp.y / sp.x;
+        } else {
+            r = sp.y;
+            phi = 2.0 - sp.x / sp.y;
+        }
+    } else {
+        if (sp.x < sp.y) {
+            r = -sp.x;
+            phi = 4.0 + sp.y / sp.x;
+        } else {
+            r = -sp.y;
+            if (sp.y != 0.0) {
+                phi = 6.0 - sp.x / sp.y;
+            } else {
+                phi = 0.0;
+            }
+        }
+    }
+    phi *= 0.25 * 3.14159265359;
+
+    sp.x = r * cos(phi);
+    sp.y = r * sin(phi);
+    sp.z = 0.0;
+
+    return sp;
+}
+
+// Get patch normal in world space
+vec3 get_patch_normal(float transform_mat[16]) {
+    mat4 transform = floats_to_mat4(transform_mat);
+
+    vec3 v0 = transform_point(transform, vec3(0, 0, 0));
+    vec3 v1 = transform_point(transform, vec3(1, 0, 0));
+    vec3 v2 = transform_point(transform, vec3(0, 1, 0));
+
+    return normalize(cross(v1 - v0, v2 - v0));
+}
+
+// Get triangle normal in world space
+vec3 get_triangle_normal(float transform_mat[16]) {
+    mat4 transform = floats_to_mat4(transform_mat);
+
+    vec3 v0 = transform_point(transform, vec3(0, 0, 0));
+    vec3 v1 = transform_point(transform, vec3(0, 1, 0));
+    vec3 v2 = transform_point(transform, vec3(1, 1, 0));
+
+    return normalize(cross(v1 - v0, v2 - v0));
+}
+
+// Rotate local hemisphere direction to align with surface normal
+// Local frame: Z-up (hemisphere aligned with +Z axis)
+// World frame: Arbitrary normal direction
+vec3 rotate_to_normal(vec3 dir_local, vec3 normal) {
+    // Compute rotation to align Z-axis with normal
+    // Using spherical coordinate rotation (matches CUDA d_rotatePoint)
+
+    // Elevation angle (from Z-axis)
+    float elevation = acos(clamp(normal.z, -1.0, 1.0));
+
+    // Azimuthal angle (in XY plane)
+    float azimuth = atan(normal.y, normal.x);
+
+    // Rotate local direction to world frame
+    // First rotate around Y by elevation, then around Z by azimuth
+    float ce = cos(elevation);
+    float se = sin(elevation);
+    float ca = cos(azimuth);
+    float sa = sin(azimuth);
+
+    // Rotation matrix: Rz(azimuth) × Ry(elevation)
+    vec3 dir_world;
+    dir_world.x = dir_local.x * (ce * ca) - dir_local.y * sa + dir_local.z * (se * ca);
+    dir_world.y = dir_local.x * (ce * sa) + dir_local.y * ca + dir_local.z * (se * sa);
+    dir_world.z = -dir_local.x * se + dir_local.z * ce;
+
+    return normalize(dir_world);
+}
+
+// ========== Main Shader ==========
 void main() {
     uint global_id = gl_GlobalInvocationID.x;
 
     if (global_id >= pc.launch_count) {
+        return; // Out of bounds
+    }
+
+    uint prim_idx = pc.launch_offset + global_id;
+
+    if (prim_idx >= pc.primitive_count) {
+        return; // Safety check
+    }
+
+    // Get primitive data
+    uint prim_type = prim_types_buf.types[prim_idx];
+    uint prim_uuid = prim_uuids_buf.uuids[prim_idx];
+    ivec2 subdivisions = obj_subdivisions_buf.subdivisions[prim_idx];
+    uint twosided = twosided_buf.twosided_flags[prim_idx];
+
+    // Skip if launching from bottom face and twosided_flag = 0 (single-sided, top only)
+    if (pc.launch_face == 0 && twosided == 0) {
         return;
     }
 
-    // TODO: Implement diffuse ray generation in Phase 2
+    // Total rays per primitive
+    uint dimx = pc.launch_dim_x * pc.launch_dim_y;
+
+    // Get transform matrix (16 floats per primitive)
+    float transform_mat[16];
+    for (uint i = 0; i < 16; ++i) {
+        transform_mat[i] = transform_buf.matrices[prim_idx * 16 + i];
+    }
+    mat4 transform = floats_to_mat4(transform_mat);
+
+    // Get surface normal
+    vec3 normal;
+    if (prim_type == 0 || prim_type == 3) { // Patch or Tile
+        normal = get_patch_normal(transform_mat);
+    } else if (prim_type == 1) { // Triangle
+        normal = get_triangle_normal(transform_mat);
+    } else if (prim_type == 2) { // Disk
+        normal = get_patch_normal(transform_mat); // Disk uses same normal calc as patch
+    } else {
+        // Unsupported primitive type (voxels handled separately)
+        return;
+    }
+
+    // Loop over sub-patches (for primitives with subdivisions)
+    int NX = subdivisions.x;
+    int NY = subdivisions.y;
+
+    for (int jj = 0; jj < NY; ++jj) {
+        for (int ii = 0; ii < NX; ++ii) {
+
+            uint UUID = prim_uuid + jj * NX + ii;
+
+            // Stratified hemisphere sampling (2D grid over hemisphere)
+            for (uint launch_y = 0; launch_y < pc.launch_dim_y; ++launch_y) {
+                for (uint launch_x = 0; launch_x < pc.launch_dim_x; ++launch_x) {
+
+                    // Per-ray RNG seed (matches CUDA: tea(indx + dimx * prim_idx, random_seed))
+                    uint ray_index = pc.launch_dim_x * launch_y + launch_x;
+                    RNGState rng = rng_init(pc.random_seed, ray_index + dimx * prim_idx);
+
+                    // Sample random point on primitive surface (per-ray, matching CUDA)
+                    vec3 sp_local;
+                    if (prim_type == 0 || prim_type == 3) { // Patch or Tile
+                        sp_local = sample_patch(rng, subdivisions, ivec2(ii, jj));
+                    } else if (prim_type == 1) { // Triangle
+                        sp_local = sample_triangle(rng);
+                    } else if (prim_type == 2) { // Disk
+                        sp_local = sample_disk(rng);
+                    }
+
+                    // Transform to world space
+                    vec3 ray_origin = transform_point(transform, sp_local);
+
+                    // Stratified random samples [0,1] within grid cell
+                    float Rt = (float(launch_x) + rng_float(rng)) / float(pc.launch_dim_x);
+                    float Rp = (float(launch_y) + rng_float(rng)) / float(pc.launch_dim_y);
+
+                    // Cosine-weighted hemisphere sampling
+                    // Theta in [0, π/2], Phi in [0, 2π]
+                    float theta = asin(sqrt(Rt));
+                    float phi = 2.0 * 3.14159265359 * Rp;
+
+                    // Cartesian direction in local hemisphere frame (+Z up)
+                    vec3 dir_local;
+                    dir_local.x = sin(theta) * cos(phi);
+                    dir_local.y = sin(theta) * sin(phi);
+                    dir_local.z = cos(theta);
+
+                    // Rotate to align with surface normal
+                    vec3 ray_direction = rotate_to_normal(dir_local, normal);
+
+                    // Flip direction if launching from bottom face
+                    if (pc.launch_face == 0 && twosided == 1) {
+                        ray_direction = -ray_direction;
+                    }
+
+                    // Ray strength (equal energy per ray)
+                    float strength = 1.0 / float(dimx);
+
+                    // Trace ray through BVH (buffers accessed globally)
+                    float closest_t;
+                    uint hit_prim_type;
+                    uint hit_prim_idx = traverse_bvh(
+                        ray_origin,
+                        ray_direction,
+                        1e-5, // t_min (avoid self-intersection)
+                        prim_idx, // origin primitive index (skip self-hits)
+                        closest_t,
+                        hit_prim_type
+                    );
+
+                    // Process hit or miss
+                    bool hit_found = (hit_prim_idx != 0xFFFFFFFF);
+
+                    if (hit_found) {
+                        // ========== HIT: Ray intersected another surface ==========
+
+                        // Get material properties of ORIGIN primitive (where energy is absorbed)
+                        uint mat_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
+                        float rho = reflectivity_buf.reflectivity[mat_idx];
+                        float tau = transmissivity_buf.transmissivity[mat_idx];
+
+                        // Get radiation emitted from HIT primitive
+                        uint hit_rad_idx = index_prim_band(hit_prim_idx, pc.current_band, pc.band_count);
+
+                        // Determine which face of hit primitive is visible based on ray-surface geometry
+                        // Get hit primitive's transform matrix
+                        float hit_transform[16];
+                        for (uint i = 0; i < 16; ++i) {
+                            hit_transform[i] = transform_buf.matrices[hit_prim_idx * 16 + i];
+                        }
+
+                        // Compute hit surface normal
+                        vec3 hit_normal;
+                        if (hit_prim_type == 0 || hit_prim_type == 3) { // Patch or Tile
+                            hit_normal = get_patch_normal(hit_transform);
+                        } else if (hit_prim_type == 1) { // Triangle
+                            hit_normal = get_triangle_normal(hit_transform);
+                        } else { // Disk
+                            hit_normal = get_patch_normal(hit_transform);
+                        }
+
+                        // Determine hit face: dot(normal, ray_dir) < 0 means we hit the TOP face
+                        bool hit_top_face = dot(hit_normal, ray_direction) < 0.0;
+
+                        float incoming;
+                        if (hit_top_face) {
+                            incoming = rad_out_top_buf.radiation_out_top[hit_rad_idx];
+                        } else {
+                            incoming = rad_out_bottom_buf.radiation_out_bottom[hit_rad_idx];
+                        }
+
+                        float hit_energy = incoming * strength;
+
+                        // Absorption (energy absorbed by origin primitive)
+                        uint origin_rad_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
+                        atomicAdd(rad_in_buf.radiation_in[origin_rad_idx], hit_energy * (1.0 - rho - tau));
+
+                        // Scattering (reflected and transmitted energy)
+                        if (pc.launch_face == 1) {
+                            // Launched from top face
+                            atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], hit_energy * rho);    // Reflection
+                            atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], hit_energy * tau); // Transmission
+                        } else {
+                            // Launched from bottom face
+                            atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], hit_energy * rho);    // Reflection
+                            atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], hit_energy * tau); // Transmission
+                        }
+
+                    } else {
+                        // ========== MISS: Ray hit sky ==========
+
+                        // Get material properties of origin primitive
+                        uint mat_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
+                        float rho = reflectivity_buf.reflectivity[mat_idx];
+                        float tau = transmissivity_buf.transmissivity[mat_idx];
+
+                        // Get sky parameters for current band
+                        float diffuse_flux = diffuse_flux_buf.diffuse_flux[pc.current_band];
+
+                        if (diffuse_flux > 0.0) {
+                            vec3 peak_dir = diffuse_peak_dir_buf.diffuse_peak_dir[pc.current_band];
+                            float extinction = diffuse_extinction_buf.diffuse_extinction[pc.current_band];
+                            float dist_norm = diffuse_dist_norm_buf.diffuse_dist_norm[pc.current_band];
+                            vec4 sky_params = sky_radiance_params_buf.sky_radiance_params[pc.current_band];
+
+                            // Evaluate sky angular distribution
+                            float fd = evaluate_sky_distribution(ray_direction, peak_dir, extinction, dist_norm, sky_params);
+
+                            float sky_energy = fd * diffuse_flux * strength;
+
+                            // Absorption
+                            uint origin_rad_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
+                            atomicAdd(rad_in_buf.radiation_in[origin_rad_idx], sky_energy * (1.0 - rho - tau));
+
+                            // Scattering
+                            if (pc.launch_face == 1) {
+                                // Launched from top face
+                                atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], sky_energy * rho);
+                                atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], sky_energy * tau);
+                            } else {
+                                // Launched from bottom face
+                                atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], sky_energy * rho);
+                                atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], sky_energy * tau);
+                            }
+                        }
+                    }
+                } // launch_x loop
+            } // launch_y loop
+        } // ii loop (sub-patches)
+    } // jj loop (sub-patches)
 }

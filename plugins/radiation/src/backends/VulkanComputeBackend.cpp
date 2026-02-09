@@ -71,6 +71,8 @@ namespace helios {
             vkDestroyDescriptorSetLayout(vk_device, set_layout_materials, nullptr);
         if (set_layout_results != VK_NULL_HANDLE)
             vkDestroyDescriptorSetLayout(vk_device, set_layout_results, nullptr);
+        if (set_layout_sky != VK_NULL_HANDLE)
+            vkDestroyDescriptorSetLayout(vk_device, set_layout_sky, nullptr);
 
         // Destroy buffers
         destroyBuffer(bvh_buffer);
@@ -92,8 +94,15 @@ namespace helios {
         destroyBuffer(transmissivity_buffer);
         destroyBuffer(radiation_in_buffer);
         destroyBuffer(radiation_out_buffer);
+        destroyBuffer(radiation_out_top_buffer);
+        destroyBuffer(radiation_out_bottom_buffer);
         destroyBuffer(scatter_top_buffer);
         destroyBuffer(scatter_bottom_buffer);
+        destroyBuffer(diffuse_flux_buffer);
+        destroyBuffer(diffuse_peak_dir_buffer);
+        destroyBuffer(diffuse_extinction_buffer);
+        destroyBuffer(diffuse_dist_norm_buffer);
+        destroyBuffer(sky_radiance_params_buffer);
 
         // Destroy command resources
         if (transfer_fence != VK_NULL_HANDLE)
@@ -488,7 +497,309 @@ namespace helios {
     }
 
     void VulkanComputeBackend::launchDiffuseRays(const RayTracingLaunchParams &params) {
-        // TODO: Implement in Phase 2
+        if (primitive_count == 0) {
+            return; // No geometry
+        }
+
+        // Ensure radiation_out_top/bottom buffers exist (required by shader)
+        size_t rad_out_size = primitive_count * band_count * sizeof(float);
+        if (radiation_out_top_buffer.buffer == VK_NULL_HANDLE || radiation_out_top_buffer.size != rad_out_size) {
+            if (radiation_out_top_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(radiation_out_top_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            radiation_out_top_buffer = createBuffer(rad_out_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            zeroBuffer(radiation_out_top_buffer);
+            descriptors_dirty = true;
+        }
+
+        if (radiation_out_bottom_buffer.buffer == VK_NULL_HANDLE || radiation_out_bottom_buffer.size != rad_out_size) {
+            if (radiation_out_bottom_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(radiation_out_bottom_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            radiation_out_bottom_buffer = createBuffer(rad_out_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            zeroBuffer(radiation_out_bottom_buffer);
+            descriptors_dirty = true;
+        }
+
+        // Ensure scatter_top/bottom buffers exist (required by shader and barriers)
+        if (scatter_top_buffer.buffer == VK_NULL_HANDLE || scatter_top_buffer.size != rad_out_size) {
+            if (scatter_top_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(scatter_top_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            scatter_top_buffer = createBuffer(rad_out_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            zeroBuffer(scatter_top_buffer);
+            descriptors_dirty = true;
+        }
+        if (scatter_bottom_buffer.buffer == VK_NULL_HANDLE || scatter_bottom_buffer.size != rad_out_size) {
+            if (scatter_bottom_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(scatter_bottom_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            scatter_bottom_buffer = createBuffer(rad_out_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            zeroBuffer(scatter_bottom_buffer);
+            descriptors_dirty = true;
+        }
+
+        // Upload radiation_out_top and radiation_out_bottom if provided
+        if (!params.radiation_out_top.empty() && !params.radiation_out_bottom.empty()) {
+            uploadRadiationOut(params.radiation_out_top, params.radiation_out_bottom);
+        }
+
+        // Upload diffuse sky parameters
+        if (!params.diffuse_flux.empty()) {
+            // Diffuse flux buffer
+            size_t flux_size = params.diffuse_flux.size() * sizeof(float);
+            if (diffuse_flux_buffer.buffer == VK_NULL_HANDLE || diffuse_flux_buffer.size != flux_size) {
+                if (diffuse_flux_buffer.buffer != VK_NULL_HANDLE) {
+                    destroyBuffer(diffuse_flux_buffer);
+                }
+                diffuse_flux_buffer = createBuffer(flux_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                descriptors_dirty = true;
+            }
+            uploadBufferData(diffuse_flux_buffer, params.diffuse_flux.data(), flux_size);
+        }
+
+        if (!params.diffuse_peak_dir.empty()) {
+            // Diffuse peak direction buffer
+            size_t peak_dir_size = params.diffuse_peak_dir.size() * sizeof(helios::vec3);
+            if (diffuse_peak_dir_buffer.buffer == VK_NULL_HANDLE || diffuse_peak_dir_buffer.size != peak_dir_size) {
+                if (diffuse_peak_dir_buffer.buffer != VK_NULL_HANDLE) {
+                    destroyBuffer(diffuse_peak_dir_buffer);
+                }
+                diffuse_peak_dir_buffer = createBuffer(peak_dir_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                descriptors_dirty = true;
+            }
+            uploadBufferData(diffuse_peak_dir_buffer, params.diffuse_peak_dir.data(), peak_dir_size);
+        }
+
+        if (!params.diffuse_extinction.empty()) {
+            // Diffuse extinction buffer
+            size_t extinction_size = params.diffuse_extinction.size() * sizeof(float);
+            if (diffuse_extinction_buffer.buffer == VK_NULL_HANDLE || diffuse_extinction_buffer.size != extinction_size) {
+                if (diffuse_extinction_buffer.buffer != VK_NULL_HANDLE) {
+                    destroyBuffer(diffuse_extinction_buffer);
+                }
+                diffuse_extinction_buffer = createBuffer(extinction_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                descriptors_dirty = true;
+            }
+            uploadBufferData(diffuse_extinction_buffer, params.diffuse_extinction.data(), extinction_size);
+        }
+
+        if (!params.diffuse_dist_norm.empty()) {
+            // Diffuse distribution normalization buffer
+            size_t dist_norm_size = params.diffuse_dist_norm.size() * sizeof(float);
+            if (diffuse_dist_norm_buffer.buffer == VK_NULL_HANDLE || diffuse_dist_norm_buffer.size != dist_norm_size) {
+                if (diffuse_dist_norm_buffer.buffer != VK_NULL_HANDLE) {
+                    destroyBuffer(diffuse_dist_norm_buffer);
+                }
+                diffuse_dist_norm_buffer = createBuffer(dist_norm_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                descriptors_dirty = true;
+            }
+            uploadBufferData(diffuse_dist_norm_buffer, params.diffuse_dist_norm.data(), dist_norm_size);
+        }
+
+        // Ensure all sky parameter buffers exist (required by shader even if empty/zero)
+        // Only create if null - don't resize (that's handled by upload sections above)
+        if (diffuse_flux_buffer.buffer == VK_NULL_HANDLE) {
+            size_t flux_size = band_count * sizeof(float);
+            diffuse_flux_buffer = createBuffer(flux_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            zeroBuffer(diffuse_flux_buffer);
+            descriptors_dirty = true;
+        }
+
+        if (diffuse_peak_dir_buffer.buffer == VK_NULL_HANDLE) {
+            size_t peak_dir_size = band_count * sizeof(helios::vec3);
+            diffuse_peak_dir_buffer = createBuffer(peak_dir_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            zeroBuffer(diffuse_peak_dir_buffer);
+            descriptors_dirty = true;
+        }
+
+        if (diffuse_extinction_buffer.buffer == VK_NULL_HANDLE) {
+            size_t extinction_size = band_count * sizeof(float);
+            diffuse_extinction_buffer = createBuffer(extinction_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            zeroBuffer(diffuse_extinction_buffer);
+            descriptors_dirty = true;
+        }
+
+        if (diffuse_dist_norm_buffer.buffer == VK_NULL_HANDLE) {
+            size_t dist_norm_size = band_count * sizeof(float);
+            diffuse_dist_norm_buffer = createBuffer(dist_norm_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            zeroBuffer(diffuse_dist_norm_buffer);
+            descriptors_dirty = true;
+        }
+
+        // Sky radiance params (Prague model) - create zero-filled buffer for Phase 2 (isotropic sky)
+        // TODO Phase 3+: Upload actual sky_radiance_params from updateSkyModel
+        if (sky_radiance_params_buffer.buffer == VK_NULL_HANDLE) {
+            size_t sky_params_size = band_count * sizeof(helios::vec4);
+            sky_radiance_params_buffer = createBuffer(sky_params_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            zeroBuffer(sky_radiance_params_buffer);
+            descriptors_dirty = true;
+        }
+
+        // Update descriptor sets only if buffers changed
+        if (descriptors_dirty) {
+            updateDescriptorSets();
+            descriptors_dirty = false;
+        }
+        VkDevice vk_device = device->getDevice();
+
+        // Compute 2D grid dimensions for stratified hemisphere sampling
+        uint32_t launch_dim_x = static_cast<uint32_t>(std::sqrt(static_cast<double>(params.rays_per_primitive)));
+        uint32_t launch_dim_y = launch_dim_x;
+
+        // Use the launch_face specified by the caller (RadiationModel already loops over faces)
+        uint32_t launch_face = params.launch_face;
+
+            // Record COMPUTE command buffer
+            VkCommandBufferBeginInfo begin_info{};
+            begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            vkBeginCommandBuffer(compute_command_buffer, &begin_info);
+
+            // Bind pipeline
+            vkCmdBindPipeline(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_diffuse);
+
+            // Bind descriptor sets (geometry, materials, results, sky)
+            VkDescriptorSet sets[] = {set_geometry, set_materials, set_results, set_sky};
+            vkCmdBindDescriptorSets(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 4, sets, 0, nullptr);
+
+            // Push constants (expanded for diffuse rays)
+            struct PushConstants {
+                uint32_t launch_offset;
+                uint32_t launch_count;
+                uint32_t rays_per_primitive;
+                uint32_t random_seed;
+                uint32_t current_band;
+                uint32_t band_count;
+                uint32_t source_count;
+                uint32_t primitive_count;
+                uint32_t debug_mode;
+                uint32_t launch_face;     // 0 = bottom, 1 = top
+                uint32_t launch_dim_x;    // Grid dimension X
+                uint32_t launch_dim_y;    // Grid dimension Y
+            } push_constants;
+
+            push_constants.launch_offset = params.launch_offset;
+            push_constants.launch_count = params.launch_count;
+            push_constants.rays_per_primitive = params.rays_per_primitive;
+            push_constants.random_seed = params.random_seed;
+            push_constants.current_band = params.current_band;
+            push_constants.band_count = band_count;
+
+            push_constants.source_count = source_count;
+            push_constants.primitive_count = primitive_count;
+            push_constants.launch_face = launch_face;
+            push_constants.launch_dim_x = launch_dim_x;
+            push_constants.launch_dim_y = launch_dim_y;
+
+            // Enable debug bounds checking (can be disabled in production builds)
+            #ifdef HELIOS_DEBUG
+                push_constants.debug_mode = 1;
+            #else
+                push_constants.debug_mode = 0;
+            #endif
+
+            vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
+
+            // Dispatch compute shader
+            // Workgroup size = 256 threads (from shader local_size_x)
+            uint32_t workgroup_count = (params.launch_count + 255) / 256;
+            vkCmdDispatch(compute_command_buffer, workgroup_count, 1, 1);
+
+            // Check buffer validity before setting up barriers
+
+            // Buffer memory barriers to ensure storage buffer writes are visible
+            VkBufferMemoryBarrier buffer_barriers[4];
+
+            // Radiation_in buffer barrier
+            buffer_barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            buffer_barriers[0].pNext = nullptr;
+            buffer_barriers[0].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            buffer_barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+            buffer_barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[0].buffer = radiation_in_buffer.buffer;
+            buffer_barriers[0].offset = 0;
+            buffer_barriers[0].size = VK_WHOLE_SIZE;
+
+            // Scatter_top buffer barrier
+            buffer_barriers[1].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            buffer_barriers[1].pNext = nullptr;
+            buffer_barriers[1].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            buffer_barriers[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+            buffer_barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[1].buffer = scatter_top_buffer.buffer;
+            buffer_barriers[1].offset = 0;
+            buffer_barriers[1].size = VK_WHOLE_SIZE;
+
+            // Scatter_bottom buffer barrier
+            buffer_barriers[2].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            buffer_barriers[2].pNext = nullptr;
+            buffer_barriers[2].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            buffer_barriers[2].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+            buffer_barriers[2].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[2].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[2].buffer = scatter_bottom_buffer.buffer;
+            buffer_barriers[2].offset = 0;
+            buffer_barriers[2].size = VK_WHOLE_SIZE;
+
+            // Radiation_out_top buffer barrier (read-only for diffuse rays)
+            buffer_barriers[3].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            buffer_barriers[3].pNext = nullptr;
+            buffer_barriers[3].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            buffer_barriers[3].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            buffer_barriers[3].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[3].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            buffer_barriers[3].buffer = radiation_out_top_buffer.buffer;
+            buffer_barriers[3].offset = 0;
+            buffer_barriers[3].size = VK_WHOLE_SIZE;
+
+            vkCmdPipelineBarrier(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+                                 0, nullptr,  // No global memory barriers
+                                 4, buffer_barriers,  // Buffer-specific barriers
+                                 0, nullptr);  // No image barriers
+
+            vkEndCommandBuffer(compute_command_buffer);
+
+            // Submit command buffer with COMPUTE fence
+            VkSubmitInfo submit_info{};
+            submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submit_info.commandBufferCount = 1;
+            submit_info.pCommandBuffers = &compute_command_buffer;
+
+            vkResetFences(vk_device, 1, &compute_fence);
+            VkResult result = vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, compute_fence);
+            if (result != VK_SUCCESS) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): vkQueueSubmit failed. VkResult: " + std::to_string(result));
+            }
+
+            // Manual timeout loop (vkWaitForFences timeout doesn't work reliably on MoltenVK)
+            const int max_attempts = 50; // 50 * 100ms = 5 seconds
+            const uint64_t poll_interval_ns = 100000000ULL; // 100ms
+            bool completed = false;
+
+            for (int attempt = 0; attempt < max_attempts; ++attempt) {
+                result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, poll_interval_ns);
+                if (result == VK_SUCCESS) {
+                    completed = true;
+                    break;
+                } else if (result != VK_TIMEOUT) {
+                    helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): vkWaitForFences failed. VkResult: " + std::to_string(result));
+                }
+            }
+
+            if (!completed) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): GPU operation timed out after 5 seconds. "
+                                   "Check for shader errors or infinite loops. "
+                                   "Workgroup count: " + std::to_string(workgroup_count) +
+                                   ", primitives: " + std::to_string(primitive_count) +
+                                   ", launch_face: " + std::to_string(launch_face));
+            }
     }
 
     void VulkanComputeBackend::launchCameraRays(const RayTracingLaunchParams &params) {
@@ -609,7 +920,35 @@ namespace helios {
     }
 
     void VulkanComputeBackend::zeroScatterBuffers() {
-        // TODO: Zero scatter buffers in Phase 4
+        if (primitive_count == 0 || band_count == 0) {
+            return; // No geometry or bands
+        }
+
+        size_t buffer_size = primitive_count * band_count;
+
+        // Create or resize scatter_top buffer
+        if (scatter_top_buffer.buffer == VK_NULL_HANDLE || scatter_top_buffer.size != buffer_size * sizeof(float)) {
+            if (scatter_top_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(scatter_top_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            scatter_top_buffer = createBuffer(buffer_size * sizeof(float), usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        }
+
+        // Create or resize scatter_bottom buffer
+        if (scatter_bottom_buffer.buffer == VK_NULL_HANDLE || scatter_bottom_buffer.size != buffer_size * sizeof(float)) {
+            if (scatter_bottom_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(scatter_bottom_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            scatter_bottom_buffer = createBuffer(buffer_size * sizeof(float), usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        }
+
+        // Zero both buffers
+        zeroBuffer(scatter_top_buffer);
+        zeroBuffer(scatter_bottom_buffer);
+
+        descriptors_dirty = true;  // Scatter buffers created/changed
     }
 
     void VulkanComputeBackend::zeroCameraPixelBuffers(const helios::int2 &resolution) {
@@ -617,11 +956,80 @@ namespace helios {
     }
 
     void VulkanComputeBackend::copyScatterToRadiation() {
-        // TODO: Copy scatter→radiation in Phase 4
+        if (primitive_count == 0 || band_count == 0) {
+            return; // No geometry or bands
+        }
+
+        size_t buffer_size = primitive_count * band_count * sizeof(float);
+
+        // Create radiation_out_top/bottom buffers if they don't exist
+        if (radiation_out_top_buffer.buffer == VK_NULL_HANDLE || radiation_out_top_buffer.size != buffer_size) {
+            if (radiation_out_top_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(radiation_out_top_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            radiation_out_top_buffer = createBuffer(buffer_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            descriptors_dirty = true;
+        }
+
+        if (radiation_out_bottom_buffer.buffer == VK_NULL_HANDLE || radiation_out_bottom_buffer.size != buffer_size) {
+            if (radiation_out_bottom_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(radiation_out_bottom_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            radiation_out_bottom_buffer = createBuffer(buffer_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            descriptors_dirty = true;
+        }
+
+        // Copy scatter_top → radiation_out_top (using host-coherent memory)
+        void *src_top = nullptr;
+        void *dst_top = nullptr;
+        vmaMapMemory(device->getAllocator(), scatter_top_buffer.allocation, &src_top);
+        vmaMapMemory(device->getAllocator(), radiation_out_top_buffer.allocation, &dst_top);
+        memcpy(dst_top, src_top, buffer_size);
+        vmaUnmapMemory(device->getAllocator(), scatter_top_buffer.allocation);
+        vmaUnmapMemory(device->getAllocator(), radiation_out_top_buffer.allocation);
+
+        // Copy scatter_bottom → radiation_out_bottom
+        void *src_bottom = nullptr;
+        void *dst_bottom = nullptr;
+        vmaMapMemory(device->getAllocator(), scatter_bottom_buffer.allocation, &src_bottom);
+        vmaMapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation, &dst_bottom);
+        memcpy(dst_bottom, src_bottom, buffer_size);
+        vmaUnmapMemory(device->getAllocator(), scatter_bottom_buffer.allocation);
+        vmaUnmapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation);
     }
 
     void VulkanComputeBackend::uploadRadiationOut(const std::vector<float> &radiation_out_top, const std::vector<float> &radiation_out_bottom) {
-        // TODO: Upload radiation_out in Phase 3
+        if (radiation_out_top.empty() || radiation_out_bottom.empty()) {
+            return; // No data to upload
+        }
+
+        size_t buffer_size = radiation_out_top.size() * sizeof(float);
+
+        // Create radiation_out_top buffer if needed
+        if (radiation_out_top_buffer.buffer == VK_NULL_HANDLE || radiation_out_top_buffer.size != buffer_size) {
+            if (radiation_out_top_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(radiation_out_top_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            radiation_out_top_buffer = createBuffer(buffer_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            descriptors_dirty = true;
+        }
+
+        // Create radiation_out_bottom buffer if needed
+        if (radiation_out_bottom_buffer.buffer == VK_NULL_HANDLE || radiation_out_bottom_buffer.size != buffer_size) {
+            if (radiation_out_bottom_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(radiation_out_bottom_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            radiation_out_bottom_buffer = createBuffer(buffer_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            descriptors_dirty = true;
+        }
+
+        // Upload data to both buffers
+        uploadBufferData(radiation_out_top_buffer, radiation_out_top.data(), buffer_size);
+        uploadBufferData(radiation_out_bottom_buffer, radiation_out_bottom.data(), buffer_size);
     }
 
     void VulkanComputeBackend::uploadCameraScatterBuffers(const std::vector<float> &scatter_top_cam, const std::vector<float> &scatter_bottom_cam) {
@@ -1003,9 +1411,10 @@ namespace helios {
         // Set 2: Result buffers (read/write, zeroed per-launch)
         std::vector<VkDescriptorSetLayoutBinding> result_bindings = {
             {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_in
-            {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_out
-            {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // scatter_top
-            {3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // scatter_bottom
+            {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_out_top (Phase 2+)
+            {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_out_bottom (Phase 2+)
+            {3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // scatter_top
+            {4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // scatter_bottom
             // TODO Phase 7: Add camera buffers
         };
 
@@ -1016,17 +1425,33 @@ namespace helios {
             helios_runtime_error("ERROR (VulkanComputeBackend::createDescriptorSets): Failed to create result descriptor set layout");
         }
 
+        // Set 3: Sky parameters (Phase 2+, read-only diffuse parameters)
+        std::vector<VkDescriptorSetLayoutBinding> sky_bindings = {
+            {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // diffuse_flux
+            {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // diffuse_peak_dir
+            {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // diffuse_extinction
+            {3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // diffuse_dist_norm
+            {4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // sky_radiance_params
+        };
+
+        layout_info.bindingCount = static_cast<uint32_t>(sky_bindings.size());
+        layout_info.pBindings = sky_bindings.data();
+
+        if (vkCreateDescriptorSetLayout(vk_device, &layout_info, nullptr, &set_layout_sky) != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::createDescriptorSets): Failed to create sky descriptor set layout");
+        }
+
         // ========== Create Descriptor Pool ==========
 
         std::vector<VkDescriptorPoolSize> pool_sizes = {
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 25}, // Enough for all 3 sets (10 geometry + 7 material + 4 result + margin)
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 35}, // Enough for all 4 sets (10 geometry + 7 material + 4 result + 5 sky + margin)
         };
 
         VkDescriptorPoolCreateInfo pool_info{};
         pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         pool_info.poolSizeCount = static_cast<uint32_t>(pool_sizes.size());
         pool_info.pPoolSizes = pool_sizes.data();
-        pool_info.maxSets = 3; // geometry, materials, results
+        pool_info.maxSets = 4; // geometry, materials, results, sky
 
         if (vkCreateDescriptorPool(vk_device, &pool_info, nullptr, &descriptor_pool) != VK_SUCCESS) {
             helios_runtime_error("ERROR (VulkanComputeBackend::createDescriptorSets): Failed to create descriptor pool");
@@ -1034,15 +1459,15 @@ namespace helios {
 
         // ========== Allocate Descriptor Sets ==========
 
-        VkDescriptorSetLayout layouts[] = {set_layout_geometry, set_layout_materials, set_layout_results};
+        VkDescriptorSetLayout layouts[] = {set_layout_geometry, set_layout_materials, set_layout_results, set_layout_sky};
 
         VkDescriptorSetAllocateInfo alloc_info{};
         alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         alloc_info.descriptorPool = descriptor_pool;
-        alloc_info.descriptorSetCount = 3;
+        alloc_info.descriptorSetCount = 4;
         alloc_info.pSetLayouts = layouts;
 
-        VkDescriptorSet sets[3];
+        VkDescriptorSet sets[4];
         if (vkAllocateDescriptorSets(vk_device, &alloc_info, sets) != VK_SUCCESS) {
             helios_runtime_error("ERROR (VulkanComputeBackend::createDescriptorSets): Failed to allocate descriptor sets");
         }
@@ -1050,6 +1475,77 @@ namespace helios {
         set_geometry = sets[0];
         set_materials = sets[1];
         set_results = sets[2];
+        set_sky = sets[3];
+
+        // ========== Create placeholder sky parameter buffers ==========
+        // MoltenVK requires all descriptor buffers to exist before pipeline creation
+        // to determine argument buffer resource base types during shader compilation.
+        // These will be resized properly when launchDiffuseRays() is first called.
+
+        const size_t placeholder_size = sizeof(float); // Minimal 1-element buffer
+
+        diffuse_flux_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        diffuse_peak_dir_buffer = createBuffer(sizeof(helios::vec3), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        diffuse_extinction_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        diffuse_dist_norm_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        sky_radiance_params_buffer = createBuffer(sizeof(helios::vec4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+
+        // Update descriptor set 3 (sky parameters) with placeholder buffers
+        // Note: Geometry/material/result buffers don't exist yet, so we only update set 3
+        VkDescriptorBufferInfo diffuse_flux_info{};
+        diffuse_flux_info.buffer = diffuse_flux_buffer.buffer;
+        diffuse_flux_info.offset = 0;
+        diffuse_flux_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo diffuse_peak_dir_info{};
+        diffuse_peak_dir_info.buffer = diffuse_peak_dir_buffer.buffer;
+        diffuse_peak_dir_info.offset = 0;
+        diffuse_peak_dir_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo diffuse_extinction_info{};
+        diffuse_extinction_info.buffer = diffuse_extinction_buffer.buffer;
+        diffuse_extinction_info.offset = 0;
+        diffuse_extinction_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo diffuse_dist_norm_info{};
+        diffuse_dist_norm_info.buffer = diffuse_dist_norm_buffer.buffer;
+        diffuse_dist_norm_info.offset = 0;
+        diffuse_dist_norm_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo sky_radiance_params_info{};
+        sky_radiance_params_info.buffer = sky_radiance_params_buffer.buffer;
+        sky_radiance_params_info.offset = 0;
+        sky_radiance_params_info.range = VK_WHOLE_SIZE;
+
+        std::vector<VkWriteDescriptorSet> descriptor_writes;
+
+        VkWriteDescriptorSet write{};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.dstSet = set_sky;
+        write.dstBinding = 0;
+        write.dstArrayElement = 0;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        write.descriptorCount = 1;
+        write.pBufferInfo = &diffuse_flux_info;
+        descriptor_writes.push_back(write);
+
+        write.dstBinding = 1;
+        write.pBufferInfo = &diffuse_peak_dir_info;
+        descriptor_writes.push_back(write);
+
+        write.dstBinding = 2;
+        write.pBufferInfo = &diffuse_extinction_info;
+        descriptor_writes.push_back(write);
+
+        write.dstBinding = 3;
+        write.pBufferInfo = &diffuse_dist_norm_info;
+        descriptor_writes.push_back(write);
+
+        write.dstBinding = 4;
+        write.pBufferInfo = &sky_radiance_params_info;
+        descriptor_writes.push_back(write);
+
+        vkUpdateDescriptorSets(vk_device, static_cast<uint32_t>(descriptor_writes.size()), descriptor_writes.data(), 0, nullptr);
 
         std::cout << "Descriptor sets created successfully." << std::endl;
     }
@@ -1059,9 +1555,10 @@ namespace helios {
 
         // ========== Create Pipeline Layout ==========
 
-        VkDescriptorSetLayout set_layouts[] = {set_layout_geometry, set_layout_materials, set_layout_results};
+        VkDescriptorSetLayout set_layouts[] = {set_layout_geometry, set_layout_materials, set_layout_results, set_layout_sky};
 
         // Push constants (128 bytes max for MoltenVK compatibility)
+        // Phase 2 needs 48 bytes (12 uint32_t for diffuse raygen)
         const uint32_t push_constant_size = 128;
 
         // Validate against device limits
@@ -1083,7 +1580,7 @@ namespace helios {
 
         VkPipelineLayoutCreateInfo pipeline_layout_info{};
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipeline_layout_info.setLayoutCount = 3;
+        pipeline_layout_info.setLayoutCount = 4; // geometry, materials, results, sky
         pipeline_layout_info.pSetLayouts = set_layouts;
         pipeline_layout_info.pushConstantRangeCount = 1;
         pipeline_layout_info.pPushConstantRanges = &push_constant_range;
@@ -1491,10 +1988,15 @@ namespace helios {
         rad_in_info.offset = 0;
         rad_in_info.range = radiation_in_buffer.size;  // Use explicit size instead of VK_WHOLE_SIZE for MoltenVK
 
-        VkDescriptorBufferInfo rad_out_info{};
-        rad_out_info.buffer = radiation_out_buffer.buffer;
-        rad_out_info.offset = 0;
-        rad_out_info.range = VK_WHOLE_SIZE;
+        VkDescriptorBufferInfo rad_out_top_info{};
+        rad_out_top_info.buffer = radiation_out_top_buffer.buffer;
+        rad_out_top_info.offset = 0;
+        rad_out_top_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo rad_out_bottom_info{};
+        rad_out_bottom_info.buffer = radiation_out_bottom_buffer.buffer;
+        rad_out_bottom_info.offset = 0;
+        rad_out_bottom_info.range = VK_WHOLE_SIZE;
 
         VkDescriptorBufferInfo scatter_top_info{};
         scatter_top_info.buffer = scatter_top_buffer.buffer;
@@ -1518,7 +2020,7 @@ namespace helios {
             descriptor_writes.push_back(write);
         }
 
-        if (radiation_out_buffer.buffer != VK_NULL_HANDLE) {
+        if (radiation_out_top_buffer.buffer != VK_NULL_HANDLE) {
             VkWriteDescriptorSet write{};
             write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             write.dstSet = set_results;
@@ -1526,7 +2028,19 @@ namespace helios {
             write.dstArrayElement = 0;
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
-            write.pBufferInfo = &rad_out_info;
+            write.pBufferInfo = &rad_out_top_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (radiation_out_bottom_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 2;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &rad_out_bottom_info;
             descriptor_writes.push_back(write);
         }
 
@@ -1534,7 +2048,7 @@ namespace helios {
             VkWriteDescriptorSet write{};
             write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             write.dstSet = set_results;
-            write.dstBinding = 2;
+            write.dstBinding = 3;
             write.dstArrayElement = 0;
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
@@ -1546,11 +2060,98 @@ namespace helios {
             VkWriteDescriptorSet write{};
             write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             write.dstSet = set_results;
-            write.dstBinding = 3;
+            write.dstBinding = 4;
             write.dstArrayElement = 0;
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &scatter_bottom_info;
+            descriptor_writes.push_back(write);
+        }
+
+        // ========== Set 3: Sky Parameters ==========
+
+        VkDescriptorBufferInfo diffuse_flux_info{};
+        diffuse_flux_info.buffer = diffuse_flux_buffer.buffer;
+        diffuse_flux_info.offset = 0;
+        diffuse_flux_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo diffuse_peak_dir_info{};
+        diffuse_peak_dir_info.buffer = diffuse_peak_dir_buffer.buffer;
+        diffuse_peak_dir_info.offset = 0;
+        diffuse_peak_dir_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo diffuse_extinction_info{};
+        diffuse_extinction_info.buffer = diffuse_extinction_buffer.buffer;
+        diffuse_extinction_info.offset = 0;
+        diffuse_extinction_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo diffuse_dist_norm_info{};
+        diffuse_dist_norm_info.buffer = diffuse_dist_norm_buffer.buffer;
+        diffuse_dist_norm_info.offset = 0;
+        diffuse_dist_norm_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo sky_radiance_params_info{};
+        sky_radiance_params_info.buffer = sky_radiance_params_buffer.buffer;
+        sky_radiance_params_info.offset = 0;
+        sky_radiance_params_info.range = VK_WHOLE_SIZE;
+
+        if (diffuse_flux_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_sky;
+            write.dstBinding = 0;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &diffuse_flux_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (diffuse_peak_dir_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_sky;
+            write.dstBinding = 1;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &diffuse_peak_dir_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (diffuse_extinction_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_sky;
+            write.dstBinding = 2;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &diffuse_extinction_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (diffuse_dist_norm_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_sky;
+            write.dstBinding = 3;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &diffuse_dist_norm_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (sky_radiance_params_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_sky;
+            write.dstBinding = 4;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &sky_radiance_params_info;
             descriptor_writes.push_back(write);
         }
 

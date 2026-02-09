@@ -136,19 +136,30 @@ namespace helios {
 
         // Result buffers (Set 2)
         Buffer radiation_in_buffer;
-        Buffer radiation_out_buffer;
+        Buffer radiation_out_buffer; // Phase 1 unified buffer (deprecated in Phase 2+)
+        Buffer radiation_out_top_buffer;    // Phase 2+ separate top face
+        Buffer radiation_out_bottom_buffer; // Phase 2+ separate bottom face
         Buffer scatter_top_buffer;
         Buffer scatter_bottom_buffer;
         // TODO: Add camera pixel buffers
+
+        // Sky parameter buffers (Set 3) - Phase 2+
+        Buffer diffuse_flux_buffer;
+        Buffer diffuse_peak_dir_buffer;
+        Buffer diffuse_extinction_buffer;
+        Buffer diffuse_dist_norm_buffer;
+        Buffer sky_radiance_params_buffer;
 
         // Descriptor sets
         VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
         VkDescriptorSetLayout set_layout_geometry = VK_NULL_HANDLE;
         VkDescriptorSetLayout set_layout_materials = VK_NULL_HANDLE;
         VkDescriptorSetLayout set_layout_results = VK_NULL_HANDLE;
+        VkDescriptorSetLayout set_layout_sky = VK_NULL_HANDLE; // Phase 2+: Sky parameters
         VkDescriptorSet set_geometry = VK_NULL_HANDLE;
         VkDescriptorSet set_materials = VK_NULL_HANDLE;
         VkDescriptorSet set_results = VK_NULL_HANDLE;
+        VkDescriptorSet set_sky = VK_NULL_HANDLE; // Phase 2+: Sky parameters
 
         // Compute pipelines
         VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;

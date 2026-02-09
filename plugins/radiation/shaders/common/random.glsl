@@ -26,22 +26,22 @@ struct RNGState {
     uint seed;
 };
 
-// Initialize RNG state
+// Initialize RNG state (matches CUDA: tea(index, seed))
 RNGState rng_init(uint seed, uint index) {
     RNGState state;
-    state.seed = tea(seed, index);
+    state.seed = tea(index, seed);
     return state;
 }
 
-// Generate random uint [0, 2^32-1]
+// Generate random uint [0, 2^24-1] (matches CUDA LCG with 24-bit mask)
 uint rng_uint(inout RNGState state) {
-    state.seed = (1103515245u * state.seed + 12345u);
-    return state.seed;
+    state.seed = (1664525u * state.seed + 1013904223u);
+    return state.seed & 0x00FFFFFFu;
 }
 
 // Generate random float [0, 1)
 float rng_float(inout RNGState state) {
-    return float(rng_uint(state)) * (1.0 / 4294967296.0);
+    return float(rng_uint(state)) / 16777216.0;
 }
 
 // Generate random float [min, max)
