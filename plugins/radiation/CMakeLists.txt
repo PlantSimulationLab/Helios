@@ -22,8 +22,8 @@ set(RADIATION_CORE_SOURCES
 
 # ========== Detect Available Backends ==========
 
-# CMake option to force Vulkan backend (for testing on NVIDIA systems)
-option(FORCE_VULKAN_BACKEND "Force Vulkan backend even if CUDA is available (for testing)" OFF)
+# FORCE_VULKAN_BACKEND can be passed via cmake -DFORCE_VULKAN_BACKEND=ON to disable OptiX
+# If not specified, it defaults to OFF (undefined evaluates to false)
 
 # Try to find CUDA/OptiX (optional)
 find_package(CUDAToolkit QUIET)
