@@ -22,8 +22,13 @@ set(RADIATION_CORE_SOURCES
 
 # ========== Detect Available Backends ==========
 
-# FORCE_VULKAN_BACKEND can be passed via cmake -DFORCE_VULKAN_BACKEND=ON to disable OptiX
-# If not specified, it defaults to OFF (undefined evaluates to false)
+# Define FORCE_VULKAN_BACKEND as a cached variable so -D flag works properly
+# This must be done BEFORE checking the variable value
+if(NOT DEFINED FORCE_VULKAN_BACKEND)
+    set(FORCE_VULKAN_BACKEND OFF CACHE BOOL "Force Vulkan backend even if CUDA is available (for testing)")
+endif()
+
+message(STATUS "[Radiation] FORCE_VULKAN_BACKEND = ${FORCE_VULKAN_BACKEND}")
 
 # Try to find CUDA/OptiX (optional)
 find_package(CUDAToolkit QUIET)
