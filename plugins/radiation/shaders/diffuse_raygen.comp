@@ -6,7 +6,7 @@
 // Diffuse ray generation shader (Phase 2)
 // Launches rays from surfaces in hemispherical directions for diffuse radiation transfer
 
-layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 // Push constants (launch parameters)
 layout(push_constant) uniform PushConstants {
@@ -279,13 +279,23 @@ vec3 rotate_to_normal(vec3 dir_local, vec3 normal) {
 
 // ========== Main Shader ==========
 void main() {
-    uint global_id = gl_GlobalInvocationID.x;
+    // 3D dispatch: X/Y = ray grid position, Z = primitive index
+    // Matches OptiX: rtContextLaunch3D(context, RAYTYPE_DIFFUSE, n, n, launch_count)
+    uint launch_x = gl_GlobalInvocationID.x;       // Ray grid X [0, launch_dim_x)
+    uint launch_y = gl_GlobalInvocationID.y;       // Ray grid Y [0, launch_dim_y)
+    uint prim_batch_idx = gl_GlobalInvocationID.z; // Primitive index within batch
 
-    if (global_id >= pc.launch_count) {
-        return; // Out of bounds
+    // Bounds check: ray grid
+    if (launch_x >= pc.launch_dim_x || launch_y >= pc.launch_dim_y) {
+        return;
     }
 
-    uint prim_idx = pc.launch_offset + global_id;
+    // Bounds check: primitive batch
+    if (prim_batch_idx >= pc.launch_count) {
+        return;
+    }
+
+    uint prim_idx = pc.launch_offset + prim_batch_idx;
 
     if (prim_idx >= pc.primitive_count) {
         return; // Safety check
@@ -302,8 +312,12 @@ void main() {
         return;
     }
 
-    // Total rays per primitive
+    // Total rays per primitive (matches CUDA: dimx = launch_dim.x * launch_dim.y)
     uint dimx = pc.launch_dim_x * pc.launch_dim_y;
+
+    // Per-ray RNG seed (matches CUDA: tea(indx + dimx * launch_index.z, random_seed))
+    uint ray_index = pc.launch_dim_x * launch_y + launch_x;
+    RNGState rng = rng_init(pc.random_seed, ray_index + dimx * prim_idx);
 
     // Get transform matrix (16 floats per primitive)
     float transform_mat[16];
@@ -325,7 +339,10 @@ void main() {
         return;
     }
 
-    // Loop over sub-patches (for primitives with subdivisions)
+    // Ray strength (equal energy per ray)
+    float strength = 1.0 / float(dimx);
+
+    // Loop over sub-patches (matches OptiX: still loops over NX*NY sub-patches per thread)
     int NX = subdivisions.x;
     int NY = subdivisions.y;
 
@@ -334,163 +351,150 @@ void main() {
 
             uint UUID = prim_uuid + jj * NX + ii;
 
-            // Stratified hemisphere sampling (2D grid over hemisphere)
-            for (uint launch_y = 0; launch_y < pc.launch_dim_y; ++launch_y) {
-                for (uint launch_x = 0; launch_x < pc.launch_dim_x; ++launch_x) {
+            // Sample random point on primitive surface (per-ray, matching CUDA)
+            vec3 sp_local;
+            if (prim_type == 0 || prim_type == 3) { // Patch or Tile
+                sp_local = sample_patch(rng, subdivisions, ivec2(ii, jj));
+            } else if (prim_type == 1) { // Triangle
+                sp_local = sample_triangle(rng);
+            } else if (prim_type == 2) { // Disk
+                sp_local = sample_disk(rng);
+            }
 
-                    // Per-ray RNG seed (matches CUDA: tea(indx + dimx * prim_idx, random_seed))
-                    uint ray_index = pc.launch_dim_x * launch_y + launch_x;
-                    RNGState rng = rng_init(pc.random_seed, ray_index + dimx * prim_idx);
+            // Transform to world space
+            vec3 ray_origin = transform_point(transform, sp_local);
 
-                    // Sample random point on primitive surface (per-ray, matching CUDA)
-                    vec3 sp_local;
-                    if (prim_type == 0 || prim_type == 3) { // Patch or Tile
-                        sp_local = sample_patch(rng, subdivisions, ivec2(ii, jj));
-                    } else if (prim_type == 1) { // Triangle
-                        sp_local = sample_triangle(rng);
-                    } else if (prim_type == 2) { // Disk
-                        sp_local = sample_disk(rng);
-                    }
+            // Stratified random samples [0,1] within grid cell
+            float Rt = (float(launch_x) + rng_float(rng)) / float(pc.launch_dim_x);
+            float Rp = (float(launch_y) + rng_float(rng)) / float(pc.launch_dim_y);
 
-                    // Transform to world space
-                    vec3 ray_origin = transform_point(transform, sp_local);
+            // Cosine-weighted hemisphere sampling
+            // Theta in [0, π/2], Phi in [0, 2π]
+            float theta = asin(sqrt(Rt));
+            float phi = 2.0 * 3.14159265359 * Rp;
 
-                    // Stratified random samples [0,1] within grid cell
-                    float Rt = (float(launch_x) + rng_float(rng)) / float(pc.launch_dim_x);
-                    float Rp = (float(launch_y) + rng_float(rng)) / float(pc.launch_dim_y);
+            // Cartesian direction in local hemisphere frame (+Z up)
+            vec3 dir_local;
+            dir_local.x = sin(theta) * cos(phi);
+            dir_local.y = sin(theta) * sin(phi);
+            dir_local.z = cos(theta);
 
-                    // Cosine-weighted hemisphere sampling
-                    // Theta in [0, π/2], Phi in [0, 2π]
-                    float theta = asin(sqrt(Rt));
-                    float phi = 2.0 * 3.14159265359 * Rp;
+            // Rotate to align with surface normal
+            vec3 ray_direction = rotate_to_normal(dir_local, normal);
 
-                    // Cartesian direction in local hemisphere frame (+Z up)
-                    vec3 dir_local;
-                    dir_local.x = sin(theta) * cos(phi);
-                    dir_local.y = sin(theta) * sin(phi);
-                    dir_local.z = cos(theta);
+            // Flip direction if launching from bottom face
+            if (pc.launch_face == 0 && twosided == 1) {
+                ray_direction = -ray_direction;
+            }
 
-                    // Rotate to align with surface normal
-                    vec3 ray_direction = rotate_to_normal(dir_local, normal);
+            // Trace ray through BVH (buffers accessed globally)
+            float closest_t;
+            uint hit_prim_type;
+            uint hit_prim_idx = traverse_bvh(
+                ray_origin,
+                ray_direction,
+                1e-5, // t_min (avoid self-intersection)
+                prim_idx, // origin primitive index (skip self-hits)
+                closest_t,
+                hit_prim_type
+            );
 
-                    // Flip direction if launching from bottom face
-                    if (pc.launch_face == 0 && twosided == 1) {
-                        ray_direction = -ray_direction;
-                    }
+            // Process hit or miss
+            bool hit_found = (hit_prim_idx != 0xFFFFFFFF);
 
-                    // Ray strength (equal energy per ray)
-                    float strength = 1.0 / float(dimx);
+            if (hit_found) {
+                // ========== HIT: Ray intersected another surface ==========
 
-                    // Trace ray through BVH (buffers accessed globally)
-                    float closest_t;
-                    uint hit_prim_type;
-                    uint hit_prim_idx = traverse_bvh(
-                        ray_origin,
-                        ray_direction,
-                        1e-5, // t_min (avoid self-intersection)
-                        prim_idx, // origin primitive index (skip self-hits)
-                        closest_t,
-                        hit_prim_type
-                    );
+                // Get material properties of ORIGIN primitive (where energy is absorbed)
+                uint mat_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
+                float rho = reflectivity_buf.reflectivity[mat_idx];
+                float tau = transmissivity_buf.transmissivity[mat_idx];
 
-                    // Process hit or miss
-                    bool hit_found = (hit_prim_idx != 0xFFFFFFFF);
+                // Get radiation emitted from HIT primitive
+                uint hit_rad_idx = index_prim_band(hit_prim_idx, pc.current_band, pc.band_count);
 
-                    if (hit_found) {
-                        // ========== HIT: Ray intersected another surface ==========
+                // Determine which face of hit primitive is visible based on ray-surface geometry
+                // Get hit primitive's transform matrix
+                float hit_transform[16];
+                for (uint i = 0; i < 16; ++i) {
+                    hit_transform[i] = transform_buf.matrices[hit_prim_idx * 16 + i];
+                }
 
-                        // Get material properties of ORIGIN primitive (where energy is absorbed)
-                        uint mat_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
-                        float rho = reflectivity_buf.reflectivity[mat_idx];
-                        float tau = transmissivity_buf.transmissivity[mat_idx];
+                // Compute hit surface normal
+                vec3 hit_normal;
+                if (hit_prim_type == 0 || hit_prim_type == 3) { // Patch or Tile
+                    hit_normal = get_patch_normal(hit_transform);
+                } else if (hit_prim_type == 1) { // Triangle
+                    hit_normal = get_triangle_normal(hit_transform);
+                } else { // Disk
+                    hit_normal = get_patch_normal(hit_transform);
+                }
 
-                        // Get radiation emitted from HIT primitive
-                        uint hit_rad_idx = index_prim_band(hit_prim_idx, pc.current_band, pc.band_count);
+                // Determine hit face: dot(normal, ray_dir) < 0 means we hit the TOP face
+                bool hit_top_face = dot(hit_normal, ray_direction) < 0.0;
 
-                        // Determine which face of hit primitive is visible based on ray-surface geometry
-                        // Get hit primitive's transform matrix
-                        float hit_transform[16];
-                        for (uint i = 0; i < 16; ++i) {
-                            hit_transform[i] = transform_buf.matrices[hit_prim_idx * 16 + i];
-                        }
+                float incoming;
+                if (hit_top_face) {
+                    incoming = rad_out_top_buf.radiation_out_top[hit_rad_idx];
+                } else {
+                    incoming = rad_out_bottom_buf.radiation_out_bottom[hit_rad_idx];
+                }
 
-                        // Compute hit surface normal
-                        vec3 hit_normal;
-                        if (hit_prim_type == 0 || hit_prim_type == 3) { // Patch or Tile
-                            hit_normal = get_patch_normal(hit_transform);
-                        } else if (hit_prim_type == 1) { // Triangle
-                            hit_normal = get_triangle_normal(hit_transform);
-                        } else { // Disk
-                            hit_normal = get_patch_normal(hit_transform);
-                        }
+                float hit_energy = incoming * strength;
 
-                        // Determine hit face: dot(normal, ray_dir) < 0 means we hit the TOP face
-                        bool hit_top_face = dot(hit_normal, ray_direction) < 0.0;
+                // Absorption (energy absorbed by origin primitive)
+                uint origin_rad_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
+                atomicAdd(rad_in_buf.radiation_in[origin_rad_idx], hit_energy * (1.0 - rho - tau));
 
-                        float incoming;
-                        if (hit_top_face) {
-                            incoming = rad_out_top_buf.radiation_out_top[hit_rad_idx];
-                        } else {
-                            incoming = rad_out_bottom_buf.radiation_out_bottom[hit_rad_idx];
-                        }
+                // Scattering (reflected and transmitted energy)
+                if (pc.launch_face == 1) {
+                    // Launched from top face
+                    atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], hit_energy * rho);    // Reflection
+                    atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], hit_energy * tau); // Transmission
+                } else {
+                    // Launched from bottom face
+                    atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], hit_energy * rho);    // Reflection
+                    atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], hit_energy * tau); // Transmission
+                }
 
-                        float hit_energy = incoming * strength;
+            } else {
+                // ========== MISS: Ray hit sky ==========
 
-                        // Absorption (energy absorbed by origin primitive)
-                        uint origin_rad_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
-                        atomicAdd(rad_in_buf.radiation_in[origin_rad_idx], hit_energy * (1.0 - rho - tau));
+                // Get material properties of origin primitive
+                uint mat_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
+                float rho = reflectivity_buf.reflectivity[mat_idx];
+                float tau = transmissivity_buf.transmissivity[mat_idx];
 
-                        // Scattering (reflected and transmitted energy)
-                        if (pc.launch_face == 1) {
-                            // Launched from top face
-                            atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], hit_energy * rho);    // Reflection
-                            atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], hit_energy * tau); // Transmission
-                        } else {
-                            // Launched from bottom face
-                            atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], hit_energy * rho);    // Reflection
-                            atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], hit_energy * tau); // Transmission
-                        }
+                // Get sky parameters for current band
+                float diffuse_flux = diffuse_flux_buf.diffuse_flux[pc.current_band];
 
+                if (diffuse_flux > 0.0) {
+                    vec3 peak_dir = diffuse_peak_dir_buf.diffuse_peak_dir[pc.current_band];
+                    float extinction = diffuse_extinction_buf.diffuse_extinction[pc.current_band];
+                    float dist_norm = diffuse_dist_norm_buf.diffuse_dist_norm[pc.current_band];
+                    vec4 sky_params = sky_radiance_params_buf.sky_radiance_params[pc.current_band];
+
+                    // Evaluate sky angular distribution
+                    float fd = evaluate_sky_distribution(ray_direction, peak_dir, extinction, dist_norm, sky_params);
+
+                    float sky_energy = fd * diffuse_flux * strength;
+
+                    // Absorption
+                    uint origin_rad_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
+                    atomicAdd(rad_in_buf.radiation_in[origin_rad_idx], sky_energy * (1.0 - rho - tau));
+
+                    // Scattering
+                    if (pc.launch_face == 1) {
+                        // Launched from top face
+                        atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], sky_energy * rho);
+                        atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], sky_energy * tau);
                     } else {
-                        // ========== MISS: Ray hit sky ==========
-
-                        // Get material properties of origin primitive
-                        uint mat_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
-                        float rho = reflectivity_buf.reflectivity[mat_idx];
-                        float tau = transmissivity_buf.transmissivity[mat_idx];
-
-                        // Get sky parameters for current band
-                        float diffuse_flux = diffuse_flux_buf.diffuse_flux[pc.current_band];
-
-                        if (diffuse_flux > 0.0) {
-                            vec3 peak_dir = diffuse_peak_dir_buf.diffuse_peak_dir[pc.current_band];
-                            float extinction = diffuse_extinction_buf.diffuse_extinction[pc.current_band];
-                            float dist_norm = diffuse_dist_norm_buf.diffuse_dist_norm[pc.current_band];
-                            vec4 sky_params = sky_radiance_params_buf.sky_radiance_params[pc.current_band];
-
-                            // Evaluate sky angular distribution
-                            float fd = evaluate_sky_distribution(ray_direction, peak_dir, extinction, dist_norm, sky_params);
-
-                            float sky_energy = fd * diffuse_flux * strength;
-
-                            // Absorption
-                            uint origin_rad_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
-                            atomicAdd(rad_in_buf.radiation_in[origin_rad_idx], sky_energy * (1.0 - rho - tau));
-
-                            // Scattering
-                            if (pc.launch_face == 1) {
-                                // Launched from top face
-                                atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], sky_energy * rho);
-                                atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], sky_energy * tau);
-                            } else {
-                                // Launched from bottom face
-                                atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], sky_energy * rho);
-                                atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], sky_energy * tau);
-                            }
-                        }
+                        // Launched from bottom face
+                        atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], sky_energy * rho);
+                        atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], sky_energy * tau);
                     }
-                } // launch_x loop
-            } // launch_y loop
+                }
+            }
         } // ii loop (sub-patches)
     } // jj loop (sub-patches)
 }

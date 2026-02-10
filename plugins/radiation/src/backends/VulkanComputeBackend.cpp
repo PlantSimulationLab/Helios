@@ -391,7 +391,7 @@ namespace helios {
         VkDescriptorSet sets[] = {set_geometry, set_materials, set_results};
         vkCmdBindDescriptorSets(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 3, sets, 0, nullptr);
 
-        // Push constants
+        // Push constants (expanded for 3D dispatch)
         struct PushConstants {
             uint launch_offset;
             uint launch_count;
@@ -402,7 +402,13 @@ namespace helios {
             uint source_count;
             uint primitive_count;
             uint debug_mode;  // 1 = enable bounds checking, 0 = production
+            uint launch_dim_x;    // Grid dimension X for stratified sampling
+            uint launch_dim_y;    // Grid dimension Y for stratified sampling
         } push_constants;
+
+        // Compute 2D grid dimensions for stratified sampling (matches OptiX)
+        uint32_t launch_dim_x = static_cast<uint32_t>(std::ceil(std::sqrt(static_cast<double>(params.rays_per_primitive))));
+        uint32_t launch_dim_y = launch_dim_x;
 
         push_constants.launch_offset = params.launch_offset;
         push_constants.launch_count = params.launch_count;
@@ -412,6 +418,8 @@ namespace helios {
         push_constants.band_count = band_count;
         push_constants.source_count = source_count;
         push_constants.primitive_count = primitive_count;
+        push_constants.launch_dim_x = launch_dim_x;
+        push_constants.launch_dim_y = launch_dim_y;
 
         // Enable debug bounds checking (can be disabled in production builds)
         #ifdef HELIOS_DEBUG
@@ -420,12 +428,41 @@ namespace helios {
             push_constants.debug_mode = 0;
         #endif
 
-        vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
+        // 3D dispatch: X/Y = ray grid workgroups, Z = primitives
+        // Matches OptiX: rtContextLaunch3D(context, RAYTYPE_DIRECT, n, n, launch_count)
+        const uint32_t WG_X = 16; // Must match shader local_size_x
+        const uint32_t WG_Y = 16; // Must match shader local_size_y
+        uint32_t dispatch_x = (launch_dim_x + WG_X - 1) / WG_X;
+        uint32_t dispatch_y = (launch_dim_y + WG_Y - 1) / WG_Y;
 
-        // Dispatch compute shader
-        // Workgroup size = 256 threads (from shader local_size_x)
-        uint workgroup_count = (params.launch_count + 255) / 256;
-        vkCmdDispatch(compute_command_buffer, workgroup_count, 1, 1);
+        // Sub-batch primitives to stay within Vulkan spec limit (65535 per dimension)
+        const uint32_t MAX_Z_DISPATCH = 65535;
+        uint32_t prims_remaining = params.launch_count;
+        uint32_t prim_sub_offset = 0;
+
+        while (prims_remaining > 0) {
+            uint32_t prims_this_dispatch = std::min(prims_remaining, MAX_Z_DISPATCH);
+
+            push_constants.launch_offset = params.launch_offset + prim_sub_offset;
+            push_constants.launch_count = prims_this_dispatch;
+
+            vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
+            vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, prims_this_dispatch);
+
+            prims_remaining -= prims_this_dispatch;
+            prim_sub_offset += prims_this_dispatch;
+
+            // Pipeline barrier between sub-batches to ensure atomicAdd visibility
+            if (prims_remaining > 0) {
+                VkMemoryBarrier mem_barrier{};
+                mem_barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+                mem_barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+                mem_barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+                vkCmdPipelineBarrier(compute_command_buffer,
+                                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                                     0, 1, &mem_barrier, 0, nullptr, 0, nullptr);
+            }
+        }
 
         // Buffer memory barrier to ensure storage buffer writes are visible for readback
         // CRITICAL: Use buffer-specific barrier instead of global barrier for MoltenVK compatibility
@@ -490,9 +527,10 @@ namespace helios {
         if (!completed) {
             helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): GPU operation timed out after 5 seconds. "
                                "Check for shader errors or infinite loops. "
-                               "Workgroup count: " + std::to_string(workgroup_count) +
+                               "Dispatch: (" + std::to_string(dispatch_x) + ", " + std::to_string(dispatch_y) + ", " + std::to_string(params.launch_count) + ")"
                                ", primitives: " + std::to_string(primitive_count) +
-                               ", sources: " + std::to_string(source_count));
+                               ", sources: " + std::to_string(source_count) +
+                               ", rays: " + std::to_string(launch_dim_x) + "x" + std::to_string(launch_dim_y));
         }
     }
 
@@ -647,8 +685,8 @@ namespace helios {
         }
         VkDevice vk_device = device->getDevice();
 
-        // Compute 2D grid dimensions for stratified hemisphere sampling
-        uint32_t launch_dim_x = static_cast<uint32_t>(std::sqrt(static_cast<double>(params.rays_per_primitive)));
+        // Compute 2D grid dimensions for stratified hemisphere sampling (matches OptiX: ceil(sqrt(rays_per_primitive)))
+        uint32_t launch_dim_x = static_cast<uint32_t>(std::ceil(std::sqrt(static_cast<double>(params.rays_per_primitive))));
         uint32_t launch_dim_y = launch_dim_x;
 
         // Use the launch_face specified by the caller (RadiationModel already loops over faces)
@@ -703,16 +741,43 @@ namespace helios {
                 push_constants.debug_mode = 0;
             #endif
 
-            vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
+            // 3D dispatch: X/Y = ray grid workgroups, Z = primitives
+            // Matches OptiX: rtContextLaunch3D(context, RAYTYPE_DIFFUSE, n, n, launch_count)
+            const uint32_t WG_X = 16; // Must match shader local_size_x
+            const uint32_t WG_Y = 16; // Must match shader local_size_y
+            uint32_t dispatch_x = (launch_dim_x + WG_X - 1) / WG_X;
+            uint32_t dispatch_y = (launch_dim_y + WG_Y - 1) / WG_Y;
 
-            // Dispatch compute shader
-            // Workgroup size = 256 threads (from shader local_size_x)
-            uint32_t workgroup_count = (params.launch_count + 255) / 256;
-            vkCmdDispatch(compute_command_buffer, workgroup_count, 1, 1);
+            // Sub-batch primitives to stay within Vulkan spec limit (65535 per dimension)
+            const uint32_t MAX_Z_DISPATCH = 65535;
+            uint32_t prims_remaining = params.launch_count;
+            uint32_t prim_sub_offset = 0;
 
-            // Check buffer validity before setting up barriers
+            while (prims_remaining > 0) {
+                uint32_t prims_this_dispatch = std::min(prims_remaining, MAX_Z_DISPATCH);
 
-            // Buffer memory barriers to ensure storage buffer writes are visible
+                push_constants.launch_offset = params.launch_offset + prim_sub_offset;
+                push_constants.launch_count = prims_this_dispatch;
+
+                vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
+                vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, prims_this_dispatch);
+
+                prims_remaining -= prims_this_dispatch;
+                prim_sub_offset += prims_this_dispatch;
+
+                // Pipeline barrier between sub-batches to ensure atomicAdd visibility
+                if (prims_remaining > 0) {
+                    VkMemoryBarrier mem_barrier{};
+                    mem_barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+                    mem_barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+                    mem_barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+                    vkCmdPipelineBarrier(compute_command_buffer,
+                                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                                         0, 1, &mem_barrier, 0, nullptr, 0, nullptr);
+                }
+            }
+
+            // Final buffer memory barriers to ensure storage buffer writes are visible
             VkBufferMemoryBarrier buffer_barriers[4];
 
             // Radiation_in buffer barrier
@@ -796,9 +861,10 @@ namespace helios {
             if (!completed) {
                 helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): GPU operation timed out after 5 seconds. "
                                    "Check for shader errors or infinite loops. "
-                                   "Workgroup count: " + std::to_string(workgroup_count) +
+                                   "Dispatch: (" + std::to_string(dispatch_x) + ", " + std::to_string(dispatch_y) + ", " + std::to_string(params.launch_count) + ")"
                                    ", primitives: " + std::to_string(primitive_count) +
-                                   ", launch_face: " + std::to_string(launch_face));
+                                   ", launch_face: " + std::to_string(launch_face) +
+                                   ", rays: " + std::to_string(launch_dim_x) + "x" + std::to_string(launch_dim_y));
             }
     }
 
@@ -840,7 +906,7 @@ namespace helios {
                 vmaGetAllocationInfo(device->getAllocator(), radiation_in_buffer.allocation, &alloc_info);
                 range.memory = alloc_info.deviceMemory;
                 range.offset = alloc_info.offset;
-                range.size = alloc_info.size;
+                range.size = VK_WHOLE_SIZE;  // Use VK_WHOLE_SIZE to avoid alignment issues
                 vkInvalidateMappedMemoryRanges(device->getDevice(), 1, &range);
 
                 std::memcpy(results.radiation_in.data(), mapped, buffer_size * sizeof(float));
