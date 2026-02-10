@@ -509,28 +509,27 @@ namespace helios {
             helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): vkQueueSubmit failed. VkResult: " + std::to_string(result));
         }
 
-        // Manual timeout loop (vkWaitForFences timeout doesn't work reliably on MoltenVK)
-        const int max_attempts = 50; // 50 * 100ms = 5 seconds
-        const uint64_t poll_interval_ns = 100000000ULL; // 100ms
+        // Wait for compute to complete with progress updates (no timeout - large scenes can take minutes)
+        const uint64_t poll_interval_ns = 1000000000ULL; // 1 second
         bool completed = false;
+        int elapsed_seconds = 0;
 
-        for (int attempt = 0; attempt < max_attempts; ++attempt) {
+        while (!completed) {
             result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, poll_interval_ns);
             if (result == VK_SUCCESS) {
                 completed = true;
                 break;
-            } else if (result != VK_TIMEOUT) {
+            } else if (result == VK_TIMEOUT) {
+                elapsed_seconds++;
+                // Print progress every 5 seconds for large scenes
+                if (elapsed_seconds % 5 == 0) {
+                    std::cout << "  Direct rays still computing... " << elapsed_seconds << "s elapsed "
+                              << "(dispatch: " << dispatch_x << "×" << dispatch_y << "×" << params.launch_count
+                              << ", rays: " << launch_dim_x << "×" << launch_dim_y << ")" << std::endl;
+                }
+            } else {
                 helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): vkWaitForFences failed. VkResult: " + std::to_string(result));
             }
-        }
-
-        if (!completed) {
-            helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): GPU operation timed out after 5 seconds. "
-                               "Check for shader errors or infinite loops. "
-                               "Dispatch: (" + std::to_string(dispatch_x) + ", " + std::to_string(dispatch_y) + ", " + std::to_string(params.launch_count) + ")"
-                               ", primitives: " + std::to_string(primitive_count) +
-                               ", sources: " + std::to_string(source_count) +
-                               ", rays: " + std::to_string(launch_dim_x) + "x" + std::to_string(launch_dim_y));
         }
     }
 
@@ -843,28 +842,28 @@ namespace helios {
                 helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): vkQueueSubmit failed. VkResult: " + std::to_string(result));
             }
 
-            // Manual timeout loop (vkWaitForFences timeout doesn't work reliably on MoltenVK)
-            const int max_attempts = 50; // 50 * 100ms = 5 seconds
-            const uint64_t poll_interval_ns = 100000000ULL; // 100ms
+            // Wait for compute to complete with progress updates (no timeout - large scenes can take minutes)
+            const uint64_t poll_interval_ns = 1000000000ULL; // 1 second
             bool completed = false;
+            int elapsed_seconds = 0;
 
-            for (int attempt = 0; attempt < max_attempts; ++attempt) {
+            while (!completed) {
                 result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, poll_interval_ns);
                 if (result == VK_SUCCESS) {
                     completed = true;
                     break;
-                } else if (result != VK_TIMEOUT) {
+                } else if (result == VK_TIMEOUT) {
+                    elapsed_seconds++;
+                    // Print progress every 5 seconds for large scenes
+                    if (elapsed_seconds % 5 == 0) {
+                        std::cout << "  Diffuse rays still computing... " << elapsed_seconds << "s elapsed "
+                                  << "(dispatch: " << dispatch_x << "×" << dispatch_y << "×" << params.launch_count
+                                  << ", rays: " << launch_dim_x << "×" << launch_dim_y
+                                  << ", face: " << launch_face << ")" << std::endl;
+                    }
+                } else {
                     helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): vkWaitForFences failed. VkResult: " + std::to_string(result));
                 }
-            }
-
-            if (!completed) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): GPU operation timed out after 5 seconds. "
-                                   "Check for shader errors or infinite loops. "
-                                   "Dispatch: (" + std::to_string(dispatch_x) + ", " + std::to_string(dispatch_y) + ", " + std::to_string(params.launch_count) + ")"
-                                   ", primitives: " + std::to_string(primitive_count) +
-                                   ", launch_face: " + std::to_string(launch_face) +
-                                   ", rays: " + std::to_string(launch_dim_x) + "x" + std::to_string(launch_dim_y));
             }
     }
 
