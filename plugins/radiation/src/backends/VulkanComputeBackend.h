@@ -122,6 +122,7 @@ namespace helios {
         Buffer twosided_flag_buffer;
         Buffer patch_vertices_buffer;
         Buffer triangle_vertices_buffer;
+        Buffer normal_buffer; //!< Pre-computed world-space normals (vec3 per primitive)
         // TODO Phase 2+: Add disk, tile, voxel, bbox vertices, mask data, UV data
 
         // Material/Source buffers (Set 1)

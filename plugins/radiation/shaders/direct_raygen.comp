@@ -2,6 +2,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_shader_atomic_float : enable
 #extension GL_GOOGLE_include_directive : enable
+#extension GL_KHR_shader_subgroup_arithmetic : enable
 
 // Direct ray generation shader (Phase 1)
 // Launches rays from surfaces toward radiation sources
@@ -64,6 +65,10 @@ layout(set = 0, binding = 8) readonly buffer PatchVerticesBuffer {
 layout(set = 0, binding = 9) readonly buffer TriangleVerticesBuffer {
     float vertices[]; // 9 floats per triangle (3 vec3 vertices)
 } triangle_vertices_buf;
+
+layout(set = 0, binding = 10) readonly buffer NormalsBuffer {
+    float normals[]; // 3 floats per primitive (pre-computed world-space normal)
+} normals_buf;
 
 // ========== Descriptor Set 1: Materials/Sources ==========
 layout(set = 1, binding = 0) readonly buffer SourcePositionsBuffer {
@@ -313,24 +318,24 @@ void main() {
 
             // Sample random point on primitive surface using ray grid position
             vec3 sp_local;
-            vec3 normal;
 
             if (prim_type == 0 || prim_type == 3) { // Patch or Tile
                 sp_local = sample_patch_stratified(rng, prim_idx, subdivisions, ivec2(ii, jj), ivec2(launch_x, launch_y), Nrays_per_dim);
-                normal = get_patch_normal(prim_idx, transform_mat);
 
             } else if (prim_type == 1) { // Triangle
                 sp_local = sample_triangle(rng);
-                normal = get_triangle_normal(prim_idx, transform_mat);
 
             } else if (prim_type == 2) { // Disk
                 sp_local = sample_disk(rng);
-                normal = get_patch_normal(prim_idx, transform_mat); // Disk uses same normal calc as patch
 
             } else {
                 // Unsupported primitive type in Phase 1
                 continue;
             }
+
+            // Read pre-computed world-space normal from buffer
+            uint nbase = prim_idx * 3;
+            vec3 normal = vec3(normals_buf.normals[nbase], normals_buf.normals[nbase + 1], normals_buf.normals[nbase + 2]);
 
             // Transform to world space
             vec3 ray_origin = transform_point(transform, sp_local);
@@ -379,11 +384,14 @@ void main() {
                     float absorption_factor = 1.0 - rho - tau;
                     float energy = flux * strength * absorption_factor;
 
-                    // Accumulate to radiation_in buffer
+                    // Accumulate to radiation_in buffer with subgroup reduction
+                    // All threads in this subgroup write to the same rad_idx (same primitive),
+                    // so we reduce within the subgroup before issuing a single atomic.
                     uint rad_idx = index_prim_band(prim_idx, band, pc.band_count);
-
-                    // Atomic add to radiation_in
-                    atomicAdd(rad_in_buf.radiation_in[rad_idx], energy);
+                    float subgroup_sum = subgroupAdd(energy);
+                    if (subgroupElect()) {
+                        atomicAdd(rad_in_buf.radiation_in[rad_idx], subgroup_sum);
+                    }
                 }
             }
         } // ii loop

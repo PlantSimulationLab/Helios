@@ -104,16 +104,17 @@ namespace helios {
     }
 
     AABB BVHBuilder::computePatchAABB(uint32_t prim_index) const {
-        // O(1) lookup using pre-computed offset table
-        uint32_t patch_index = type_offsets[prim_index];
+        // Canonical patch vertices in local space — transform to world space for AABB
+        static const helios::vec3 canonical_quad[4] = {
+            {-0.5f, -0.5f, 0.f}, {0.5f, -0.5f, 0.f},
+            {0.5f, 0.5f, 0.f}, {-0.5f, 0.5f, 0.f}
+        };
 
-        // Patches have 4 vertices
         const float *transform = &geometry->transform_matrices[prim_index * 16];
         AABB bounds{{1e30f, 1e30f, 1e30f}, {-1e30f, -1e30f, -1e30f}};
 
         for (uint32_t v = 0; v < 4; ++v) {
-            helios::vec3 vertex = geometry->patches.vertices[patch_index * 4 + v];
-            helios::vec3 world_vertex = transformPoint(transform, vertex);
+            helios::vec3 world_vertex = transformPoint(transform, canonical_quad[v]);
 
             bounds.min.x = std::min(bounds.min.x, world_vertex.x);
             bounds.min.y = std::min(bounds.min.y, world_vertex.y);
@@ -127,16 +128,16 @@ namespace helios {
     }
 
     AABB BVHBuilder::computeTriangleAABB(uint32_t prim_index) const {
-        // O(1) lookup using pre-computed offset table
-        uint32_t tri_index = type_offsets[prim_index];
+        // Canonical triangle vertices in local space — transform to world space for AABB
+        static const helios::vec3 canonical_tri[3] = {
+            {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {1.f, 1.f, 0.f}
+        };
 
-        // Triangles have 3 vertices
         const float *transform = &geometry->transform_matrices[prim_index * 16];
         AABB bounds{{1e30f, 1e30f, 1e30f}, {-1e30f, -1e30f, -1e30f}};
 
         for (uint32_t v = 0; v < 3; ++v) {
-            helios::vec3 vertex = geometry->triangles.vertices[tri_index * 3 + v];
-            helios::vec3 world_vertex = transformPoint(transform, vertex);
+            helios::vec3 world_vertex = transformPoint(transform, canonical_tri[v]);
 
             bounds.min.x = std::min(bounds.min.x, world_vertex.x);
             bounds.min.y = std::min(bounds.min.y, world_vertex.y);
@@ -170,16 +171,17 @@ namespace helios {
     }
 
     AABB BVHBuilder::computeTileAABB(uint32_t prim_index) const {
-        // O(1) lookup using pre-computed offset table
-        uint32_t tile_index = type_offsets[prim_index];
+        // Canonical tile vertices in local space — transform to world space for AABB
+        static const helios::vec3 canonical_quad[4] = {
+            {-0.5f, -0.5f, 0.f}, {0.5f, -0.5f, 0.f},
+            {0.5f, 0.5f, 0.f}, {-0.5f, 0.5f, 0.f}
+        };
 
-        // Tiles have 4 vertices
         const float *transform = &geometry->transform_matrices[prim_index * 16];
         AABB bounds{{1e30f, 1e30f, 1e30f}, {-1e30f, -1e30f, -1e30f}};
 
         for (uint32_t v = 0; v < 4; ++v) {
-            helios::vec3 vertex = geometry->tiles.vertices[tile_index * 4 + v];
-            helios::vec3 world_vertex = transformPoint(transform, vertex);
+            helios::vec3 world_vertex = transformPoint(transform, canonical_quad[v]);
 
             bounds.min.x = std::min(bounds.min.x, world_vertex.x);
             bounds.min.y = std::min(bounds.min.y, world_vertex.y);
@@ -306,31 +308,48 @@ namespace helios {
                 bins[bin_idx].bounds.expand(refs[i].bounds);
             }
 
-            // Compute SAH cost for each split position
-            for (uint32_t split_idx = 1; split_idx < NUM_BINS; ++split_idx) {
-                AABB left_bounds{{1e30f, 1e30f, 1e30f}, {-1e30f, -1e30f, -1e30f}};
-                AABB right_bounds{{1e30f, 1e30f, 1e30f}, {-1e30f, -1e30f, -1e30f}};
-                uint32_t left_count = 0, right_count = 0;
+            // Incremental SAH cost computation using prefix sums (O(NUM_BINS) instead of O(NUM_BINS^2))
+            AABB left_prefix_bounds[NUM_BINS];
+            AABB right_prefix_bounds[NUM_BINS];
+            uint32_t left_prefix_count[NUM_BINS];
+            uint32_t right_prefix_count[NUM_BINS];
 
-                for (uint32_t i = 0; i < split_idx; ++i) {
-                    left_bounds.expand(bins[i].bounds);
-                    left_count += bins[i].count;
+            // Forward sweep: cumulative left bounds and counts
+            {
+                AABB running{{1e30f, 1e30f, 1e30f}, {-1e30f, -1e30f, -1e30f}};
+                uint32_t count = 0;
+                for (uint32_t i = 0; i < NUM_BINS - 1; ++i) {
+                    running.expand(bins[i].bounds);
+                    count += bins[i].count;
+                    left_prefix_bounds[i] = running;
+                    left_prefix_count[i] = count;
                 }
-                for (uint32_t i = split_idx; i < NUM_BINS; ++i) {
-                    right_bounds.expand(bins[i].bounds);
-                    right_count += bins[i].count;
+            }
+
+            // Backward sweep: cumulative right bounds and counts
+            {
+                AABB running{{1e30f, 1e30f, 1e30f}, {-1e30f, -1e30f, -1e30f}};
+                uint32_t count = 0;
+                for (int i = NUM_BINS - 1; i >= 1; --i) {
+                    running.expand(bins[i].bounds);
+                    count += bins[i].count;
+                    right_prefix_bounds[i - 1] = running;
+                    right_prefix_count[i - 1] = count;
                 }
+            }
 
-                if (left_count == 0 || right_count == 0)
-                    continue; // Invalid split
+            // Evaluate SAH cost at each split position in a single pass
+            float parent_sa = bounds.surfaceArea();
+            for (uint32_t split_idx = 0; split_idx < NUM_BINS - 1; ++split_idx) {
+                if (left_prefix_count[split_idx] == 0 || right_prefix_count[split_idx] == 0)
+                    continue;
 
-                // SAH cost = traversal_cost + left_SA * left_count + right_SA * right_count
-                float cost = 1.0f + (left_bounds.surfaceArea() * left_count + right_bounds.surfaceArea() * right_count) / bounds.surfaceArea();
+                float cost = 1.0f + (left_prefix_bounds[split_idx].surfaceArea() * left_prefix_count[split_idx] + right_prefix_bounds[split_idx].surfaceArea() * right_prefix_count[split_idx]) / parent_sa;
 
                 if (cost < best_cost) {
                     best_cost = cost;
                     best_axis = test_axis;
-                    best_split = split_idx;
+                    best_split = split_idx + 1;
                 }
             }
         }
@@ -412,6 +431,7 @@ namespace helios {
         } else {
             // Internal node
             nodes[my_offset].prim_count = 0;
+            nodes[my_offset].split_axis = node->split_axis;
             nodes[my_offset].left_child = flattenTree(node->left, nodes);
             nodes[my_offset].right_child = flattenTree(node->right, nodes);
         }

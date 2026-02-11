@@ -38,7 +38,7 @@ namespace helios {
         uint32_t prim_count; //!< Primitive count (0 = internal node, >0 = leaf)
         uint32_t prim_type; //!< Primitive type (0-5) for leaf nodes
         uint32_t first_prim; //!< Index of first primitive in leaf
-        uint32_t padding; //!< Padding to 48 bytes for alignment
+        uint32_t split_axis; //!< Split axis for internal nodes (0=x, 1=y, 2=z)
     };
 
     static_assert(sizeof(BVHNode) == 48, "BVHNode must be exactly 48 bytes");

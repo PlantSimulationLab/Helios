@@ -2,6 +2,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_shader_atomic_float : enable
 #extension GL_GOOGLE_include_directive : enable
+#extension GL_KHR_shader_subgroup_arithmetic : enable
 
 // Diffuse ray generation shader (Phase 2)
 // Launches rays from surfaces in hemispherical directions for diffuse radiation transfer
@@ -64,6 +65,10 @@ layout(set = 0, binding = 8) readonly buffer PatchVerticesBuffer {
 layout(set = 0, binding = 9) readonly buffer TriangleVerticesBuffer {
     float vertices[]; // 9 floats per triangle (3 vec3 vertices)
 } triangle_vertices_buf;
+
+layout(set = 0, binding = 10) readonly buffer NormalsBuffer {
+    float normals[]; // 3 floats per primitive (pre-computed world-space normal)
+} normals_buf;
 
 // ========== Descriptor Set 1: Materials/Sources ==========
 layout(set = 1, binding = 0) readonly buffer SourcePositionsBuffer {
@@ -326,18 +331,9 @@ void main() {
     }
     mat4 transform = floats_to_mat4(transform_mat);
 
-    // Get surface normal
-    vec3 normal;
-    if (prim_type == 0 || prim_type == 3) { // Patch or Tile
-        normal = get_patch_normal(transform_mat);
-    } else if (prim_type == 1) { // Triangle
-        normal = get_triangle_normal(transform_mat);
-    } else if (prim_type == 2) { // Disk
-        normal = get_patch_normal(transform_mat); // Disk uses same normal calc as patch
-    } else {
-        // Unsupported primitive type (voxels handled separately)
-        return;
-    }
+    // Read pre-computed world-space normal from buffer
+    uint nbase = prim_idx * 3;
+    vec3 normal = vec3(normals_buf.normals[nbase], normals_buf.normals[nbase + 1], normals_buf.normals[nbase + 2]);
 
     // Ray strength (equal energy per ray)
     float strength = 1.0 / float(dimx);
@@ -413,22 +409,9 @@ void main() {
                 // Get radiation emitted from HIT primitive
                 uint hit_rad_idx = index_prim_band(hit_prim_idx, pc.current_band, pc.band_count);
 
-                // Determine which face of hit primitive is visible based on ray-surface geometry
-                // Get hit primitive's transform matrix
-                float hit_transform[16];
-                for (uint i = 0; i < 16; ++i) {
-                    hit_transform[i] = transform_buf.matrices[hit_prim_idx * 16 + i];
-                }
-
-                // Compute hit surface normal
-                vec3 hit_normal;
-                if (hit_prim_type == 0 || hit_prim_type == 3) { // Patch or Tile
-                    hit_normal = get_patch_normal(hit_transform);
-                } else if (hit_prim_type == 1) { // Triangle
-                    hit_normal = get_triangle_normal(hit_transform);
-                } else { // Disk
-                    hit_normal = get_patch_normal(hit_transform);
-                }
+                // Read pre-computed hit surface normal from buffer
+                uint hit_nbase = hit_prim_idx * 3;
+                vec3 hit_normal = vec3(normals_buf.normals[hit_nbase], normals_buf.normals[hit_nbase + 1], normals_buf.normals[hit_nbase + 2]);
 
                 // Determine hit face: dot(normal, ray_dir) < 0 means we hit the TOP face
                 bool hit_top_face = dot(hit_normal, ray_direction) < 0.0;
@@ -442,19 +425,35 @@ void main() {
 
                 float hit_energy = incoming * strength;
 
-                // Absorption (energy absorbed by origin primitive)
+                // Absorption (energy absorbed by origin primitive) with subgroup reduction
                 uint origin_rad_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
-                atomicAdd(rad_in_buf.radiation_in[origin_rad_idx], hit_energy * (1.0 - rho - tau));
+                float absorption_energy = hit_energy * (1.0 - rho - tau);
+                float absorption_sum = subgroupAdd(absorption_energy);
+                if (subgroupElect()) {
+                    atomicAdd(rad_in_buf.radiation_in[origin_rad_idx], absorption_sum);
+                }
 
-                // Scattering (reflected and transmitted energy)
+                // Scattering (reflected and transmitted energy) with subgroup reduction
                 if (pc.launch_face == 1) {
                     // Launched from top face
-                    atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], hit_energy * rho);    // Reflection
-                    atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], hit_energy * tau); // Transmission
+                    float reflect_energy = hit_energy * rho;
+                    float transmit_energy = hit_energy * tau;
+                    float reflect_sum = subgroupAdd(reflect_energy);
+                    float transmit_sum = subgroupAdd(transmit_energy);
+                    if (subgroupElect()) {
+                        atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], reflect_sum);
+                        atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], transmit_sum);
+                    }
                 } else {
                     // Launched from bottom face
-                    atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], hit_energy * rho);    // Reflection
-                    atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], hit_energy * tau); // Transmission
+                    float reflect_energy = hit_energy * rho;
+                    float transmit_energy = hit_energy * tau;
+                    float reflect_sum = subgroupAdd(reflect_energy);
+                    float transmit_sum = subgroupAdd(transmit_energy);
+                    if (subgroupElect()) {
+                        atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], reflect_sum);
+                        atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], transmit_sum);
+                    }
                 }
 
             } else {
@@ -479,19 +478,35 @@ void main() {
 
                     float sky_energy = fd * diffuse_flux * strength;
 
-                    // Absorption
+                    // Absorption with subgroup reduction
                     uint origin_rad_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
-                    atomicAdd(rad_in_buf.radiation_in[origin_rad_idx], sky_energy * (1.0 - rho - tau));
+                    float sky_absorption = sky_energy * (1.0 - rho - tau);
+                    float sky_absorption_sum = subgroupAdd(sky_absorption);
+                    if (subgroupElect()) {
+                        atomicAdd(rad_in_buf.radiation_in[origin_rad_idx], sky_absorption_sum);
+                    }
 
-                    // Scattering
+                    // Scattering with subgroup reduction
                     if (pc.launch_face == 1) {
                         // Launched from top face
-                        atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], sky_energy * rho);
-                        atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], sky_energy * tau);
+                        float sky_reflect = sky_energy * rho;
+                        float sky_transmit = sky_energy * tau;
+                        float sky_reflect_sum = subgroupAdd(sky_reflect);
+                        float sky_transmit_sum = subgroupAdd(sky_transmit);
+                        if (subgroupElect()) {
+                            atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], sky_reflect_sum);
+                            atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], sky_transmit_sum);
+                        }
                     } else {
                         // Launched from bottom face
-                        atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], sky_energy * rho);
-                        atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], sky_energy * tau);
+                        float sky_reflect = sky_energy * rho;
+                        float sky_transmit = sky_energy * tau;
+                        float sky_reflect_sum = subgroupAdd(sky_reflect);
+                        float sky_transmit_sum = subgroupAdd(sky_transmit);
+                        if (subgroupElect()) {
+                            atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], sky_reflect_sum);
+                            atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], sky_transmit_sum);
+                        }
                     }
                 }
             }

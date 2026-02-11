@@ -85,6 +85,7 @@ namespace helios {
         destroyBuffer(twosided_flag_buffer);
         destroyBuffer(patch_vertices_buffer);
         destroyBuffer(triangle_vertices_buffer);
+        destroyBuffer(normal_buffer);
         destroyBuffer(source_positions_buffer);
         destroyBuffer(source_types_buffer);
         destroyBuffer(source_rotations_buffer);
@@ -231,22 +232,123 @@ namespace helios {
             uploadBufferData(twosided_flag_buffer, twosided_uint.data(), twosided_uint.size() * sizeof(uint));
         }
 
-        // Upload patch vertices
-        if (!geometry.patches.vertices.empty()) {
+        // Build pre-transformed (world-space) vertex buffers indexed by global primitive index.
+        // Vertices are transformed from canonical local space to world space using each primitive's
+        // transform matrix. This eliminates per-ray matrix loads and transform_point() calls in the
+        // BVH traversal shader inner loop — the single biggest GPU performance optimization.
+        {
+            static const helios::vec3 canonical_quad[4] = {
+                {-0.5f, -0.5f, 0.f}, {0.5f, -0.5f, 0.f},
+                {0.5f, 0.5f, 0.f}, {-0.5f, 0.5f, 0.f}
+            };
+            static const helios::vec3 canonical_tri[3] = {
+                {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {1.f, 1.f, 0.f}
+            };
+
+            // Patch/tile vertex buffer: 4 vec3s per primitive slot, indexed by global prim_idx
+            std::vector<helios::vec3> patch_verts(primitive_count * 4, helios::make_vec3(0.f, 0.f, 0.f));
+            // Triangle vertex buffer: 3 vec3s per primitive slot, indexed by global prim_idx
+            std::vector<helios::vec3> tri_verts(primitive_count * 3, helios::make_vec3(0.f, 0.f, 0.f));
+
+            for (size_t i = 0; i < primitive_count; ++i) {
+                uint prim_type = geometry.primitive_types[i];
+                const float *transform = &geometry.transform_matrices[i * 16];
+
+                if (prim_type == 0 || prim_type == 3) { // Patch or Tile
+                    for (int v = 0; v < 4; ++v) {
+                        const helios::vec3 &p = canonical_quad[v];
+                        helios::vec3 world_v;
+                        world_v.x = transform[0] * p.x + transform[1] * p.y + transform[2] * p.z + transform[3];
+                        world_v.y = transform[4] * p.x + transform[5] * p.y + transform[6] * p.z + transform[7];
+                        world_v.z = transform[8] * p.x + transform[9] * p.y + transform[10] * p.z + transform[11];
+                        patch_verts[i * 4 + v] = world_v;
+                    }
+                } else if (prim_type == 1) { // Triangle
+                    for (int v = 0; v < 3; ++v) {
+                        const helios::vec3 &p = canonical_tri[v];
+                        helios::vec3 world_v;
+                        world_v.x = transform[0] * p.x + transform[1] * p.y + transform[2] * p.z + transform[3];
+                        world_v.y = transform[4] * p.x + transform[5] * p.y + transform[6] * p.z + transform[7];
+                        world_v.z = transform[8] * p.x + transform[9] * p.y + transform[10] * p.z + transform[11];
+                        tri_verts[i * 3 + v] = world_v;
+                    }
+                }
+            }
+
             if (patch_vertices_buffer.buffer != VK_NULL_HANDLE) {
                 destroyBuffer(patch_vertices_buffer);
             }
-            patch_vertices_buffer = createBuffer(geometry.patches.vertices.size() * sizeof(helios::vec3), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-            uploadBufferData(patch_vertices_buffer, geometry.patches.vertices.data(), geometry.patches.vertices.size() * sizeof(helios::vec3));
-        }
+            patch_vertices_buffer = createBuffer(patch_verts.size() * sizeof(helios::vec3), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(patch_vertices_buffer, patch_verts.data(), patch_verts.size() * sizeof(helios::vec3));
 
-        // Upload triangle vertices
-        if (!geometry.triangles.vertices.empty()) {
             if (triangle_vertices_buffer.buffer != VK_NULL_HANDLE) {
                 destroyBuffer(triangle_vertices_buffer);
             }
-            triangle_vertices_buffer = createBuffer(geometry.triangles.vertices.size() * sizeof(helios::vec3), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-            uploadBufferData(triangle_vertices_buffer, geometry.triangles.vertices.data(), geometry.triangles.vertices.size() * sizeof(helios::vec3));
+            triangle_vertices_buffer = createBuffer(tri_verts.size() * sizeof(helios::vec3), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(triangle_vertices_buffer, tri_verts.data(), tri_verts.size() * sizeof(helios::vec3));
+        }
+
+        // Pre-compute world-space normals for each primitive.
+        // Eliminates per-thread get_patch_normal() / get_triangle_normal() (3 transform_point + cross product)
+        // in both direct and diffuse shaders, and also eliminates the per-hit normal computation in diffuse.
+        {
+            static const helios::vec3 patch_v0 = {0.f, 0.f, 0.f};
+            static const helios::vec3 patch_v1 = {1.f, 0.f, 0.f};
+            static const helios::vec3 patch_v2 = {0.f, 1.f, 0.f};
+            static const helios::vec3 tri_v0 = {0.f, 0.f, 0.f};
+            static const helios::vec3 tri_v1 = {0.f, 1.f, 0.f};
+            static const helios::vec3 tri_v2 = {1.f, 1.f, 0.f};
+
+            std::vector<helios::vec3> normals(primitive_count);
+
+            for (size_t i = 0; i < primitive_count; ++i) {
+                const float *t = &geometry.transform_matrices[i * 16];
+                uint prim_type = geometry.primitive_types[i];
+
+                // Choose canonical vertices based on primitive type
+                helios::vec3 cv0, cv1, cv2;
+                if (prim_type == 0 || prim_type == 2 || prim_type == 3) { // Patch, Disk, or Tile
+                    cv0 = patch_v0;
+                    cv1 = patch_v1;
+                    cv2 = patch_v2;
+                } else if (prim_type == 1) { // Triangle
+                    cv0 = tri_v0;
+                    cv1 = tri_v1;
+                    cv2 = tri_v2;
+                } else {
+                    normals[i] = helios::make_vec3(0.f, 0.f, 1.f);
+                    continue;
+                }
+
+                // Transform canonical vertices to world space
+                helios::vec3 w0, w1, w2;
+                w0.x = t[0] * cv0.x + t[1] * cv0.y + t[2] * cv0.z + t[3];
+                w0.y = t[4] * cv0.x + t[5] * cv0.y + t[6] * cv0.z + t[7];
+                w0.z = t[8] * cv0.x + t[9] * cv0.y + t[10] * cv0.z + t[11];
+                w1.x = t[0] * cv1.x + t[1] * cv1.y + t[2] * cv1.z + t[3];
+                w1.y = t[4] * cv1.x + t[5] * cv1.y + t[6] * cv1.z + t[7];
+                w1.z = t[8] * cv1.x + t[9] * cv1.y + t[10] * cv1.z + t[11];
+                w2.x = t[0] * cv2.x + t[1] * cv2.y + t[2] * cv2.z + t[3];
+                w2.y = t[4] * cv2.x + t[5] * cv2.y + t[6] * cv2.z + t[7];
+                w2.z = t[8] * cv2.x + t[9] * cv2.y + t[10] * cv2.z + t[11];
+
+                // cross(w1 - w0, w2 - w0) then normalize
+                helios::vec3 e1 = w1 - w0;
+                helios::vec3 e2 = w2 - w0;
+                helios::vec3 n = cross(e1, e2);
+                float len = std::sqrt(n.x * n.x + n.y * n.y + n.z * n.z);
+                if (len > 1e-8f) {
+                    normals[i] = n / len;
+                } else {
+                    normals[i] = helios::make_vec3(0.f, 0.f, 1.f);
+                }
+            }
+
+            if (normal_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(normal_buffer);
+            }
+            normal_buffer = createBuffer(normals.size() * sizeof(helios::vec3), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(normal_buffer, normals.data(), normals.size() * sizeof(helios::vec3));
         }
 
         descriptors_dirty = true;  // Geometry changed, need descriptor update
@@ -1442,6 +1544,7 @@ namespace helios {
             {7, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},  // Twosided flags
             {8, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},  // Patch vertices
             {9, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},  // Triangle vertices
+            {10, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // World-space normals
             // TODO Phase 2+: Add disk, tile, voxel, bbox vertices, mask data, UV data
         };
 
@@ -1509,7 +1612,7 @@ namespace helios {
         // ========== Create Descriptor Pool ==========
 
         std::vector<VkDescriptorPoolSize> pool_sizes = {
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 35}, // Enough for all 4 sets (10 geometry + 7 material + 4 result + 5 sky + margin)
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 36}, // Enough for all 4 sets (11 geometry + 7 material + 5 result + 5 sky + margin)
         };
 
         VkDescriptorPoolCreateInfo pool_info{};
@@ -1804,6 +1907,11 @@ namespace helios {
         triangle_vertices_info.offset = 0;
         triangle_vertices_info.range = VK_WHOLE_SIZE;
 
+        VkDescriptorBufferInfo normal_info{};
+        normal_info.buffer = normal_buffer.buffer;
+        normal_info.offset = 0;
+        normal_info.range = VK_WHOLE_SIZE;
+
         // Only add descriptor writes for non-null buffers
         if (bvh_buffer.buffer != VK_NULL_HANDLE) {
             VkWriteDescriptorSet write{};
@@ -1922,6 +2030,18 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &triangle_vertices_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (normal_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_geometry;
+            write.dstBinding = 10;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &normal_info;
             descriptor_writes.push_back(write);
         }
 
