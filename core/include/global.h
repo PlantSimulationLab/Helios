@@ -1,7 +1,7 @@
 /**
  * \file "global.h" Header file for all global function/object definitions.
  *
- * Copyright (C) 2016-2025 Brian Bailey
+ * Copyright (C) 2016-2026 Brian Bailey
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,37 +15,6 @@
 
 #ifndef HELIOS_GLOBAL
 #define HELIOS_GLOBAL
-
-//! Macro for marking functions as deprecated with optional custom message.
-// MSVC requires __declspec to come BEFORE the function declaration
-#if __cplusplus >= 201402L && defined(__has_cpp_attribute) && __has_cpp_attribute(deprecated)
-#define DEPRECATED_MSG(msg, func) [[deprecated(msg)]] func
-#define DEPRECATED_NOMSG(func) [[deprecated]] func
-#elif defined(__GNUC__) || defined(__clang__)
-#define DEPRECATED_MSG(msg, func) func __attribute__((deprecated(msg)))
-#define DEPRECATED_NOMSG(func) func __attribute__((deprecated))
-#elif defined(_MSC_VER)
-// MSVC has issues with custom deprecation messages, use simple deprecation
-#define DEPRECATED_MSG(msg, func) __declspec(deprecated) func
-#define DEPRECATED_NOMSG(func) __declspec(deprecated) func
-#else
-#pragma message("WARNING: You need to implement DEPRECATED for this compiler")
-#define DEPRECATED_MSG(msg, func) func
-#define DEPRECATED_NOMSG(func) func
-#endif
-
-// Helper macro to count arguments
-#define GET_ARG_COUNT(...) GET_ARG_COUNT_IMPL(__VA_ARGS__, 2, 1)
-#define GET_ARG_COUNT_IMPL(_1, _2, N, ...) N
-
-// Main DEPRECATED macro that dispatches based on argument count with corrected parameter order
-#define DEPRECATED(...) GET_DEPRECATED_MACRO(__VA_ARGS__)(__VA_ARGS__)
-#define GET_DEPRECATED_MACRO(...) GET_DEPRECATED_MACRO_IMPL(GET_ARG_COUNT(__VA_ARGS__))
-#define GET_DEPRECATED_MACRO_IMPL(count) GET_DEPRECATED_MACRO_IMPL2(count)
-#define GET_DEPRECATED_MACRO_IMPL2(count) DEPRECATED_##count##_ARGS
-
-#define DEPRECATED_1_ARGS(func) DEPRECATED_NOMSG(func)
-#define DEPRECATED_2_ARGS(func, msg) DEPRECATED_MSG(msg, func)
 
 //! Pi constant.
 #ifndef M_PI
@@ -101,6 +70,9 @@ constexpr To scast(From &&v) noexcept {
 
 // Standard library for file path resolution
 #include <filesystem>
+
+// Thread synchronization
+#include <mutex>
 
 // *** Groups *** //
 
@@ -1043,6 +1015,9 @@ namespace helios {
      */
     [[nodiscard]] helios::RGBAcolor XMLloadrgba(pugi::xml_node node, const char *field);
 
+    // Forward declaration for fzero()
+    class WarningAggregator;
+
     //! Use Newton-Raphson method to find the zero of a function
     /**
      * \param[in] function Function to be evaluated. The function should take as its first argument the value at which the function should be evaluated, as second argument any function arguments.
@@ -1051,8 +1026,10 @@ namespace helios {
      * \param[in] init_guess Initial guess for the zero of the function.
      * \param[in] err_tol [optional] Maximum allowable relative error in solution.
      * \param[in] max_iterations [optional] Maximum number of iterations to allow before exiting solver.
+     * \param[in] warnings [optional] Pointer to WarningAggregator for collecting convergence warnings. If nullptr, warnings are not collected.
      */
-    [[nodiscard]] float fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f, int max_iterations = 100);
+    [[nodiscard]] float fzero(float (*function)(float value, std::vector<float> &variables, const void *parameters), std::vector<float> &variables, const void *parameters, float init_guess, float err_tol = 0.0001f, int max_iterations = 100,
+                              WarningAggregator *warnings = nullptr);
 
     //! Use Newton-Raphson method to find the zero of a function with convergence status
     /**
@@ -1197,6 +1174,17 @@ namespace helios {
      */
     [[nodiscard]] std::filesystem::path resolvePluginAsset(const std::string &pluginName, const std::string &assetPath);
 
+    //! Attempt to resolve a plugin asset path without throwing exceptions
+    /**
+     * Similar to resolvePluginAsset() but returns an empty path instead of throwing on failure.
+     * Useful for probing whether a plugin asset exists.
+     *
+     * \param[in] pluginName Name of the plugin (e.g., "plantarchitecture")
+     * \param[in] assetPath Path relative to plugin directory (e.g., "assets/textures/leaf.png")
+     * \return Absolute canonical path to the asset if found, empty path otherwise
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path tryResolvePluginAsset(const std::string &pluginName, const std::string &assetPath);
 
     //! Resolve file path using standard Helios resolution hierarchy
     /**
@@ -1211,6 +1199,17 @@ namespace helios {
      * \ingroup functions
      */
     [[nodiscard]] std::filesystem::path resolveFilePath(const std::string &filename);
+
+    //! Attempt to resolve a file path without throwing exceptions
+    /**
+     * Similar to resolveFilePath() but returns an empty path instead of throwing on failure.
+     * Useful for probing whether a file exists at various locations.
+     *
+     * \param[in] filename File name with or without path (e.g., "texture.jpg" or "models/texture.jpg")
+     * \return Absolute canonical path to the file if found, empty path otherwise
+     * \ingroup functions
+     */
+    [[nodiscard]] std::filesystem::path tryResolveFilePath(const std::string &filename);
 
     //! Resolve spectral data file path
     /**
@@ -1295,6 +1294,118 @@ namespace helios {
         std::vector<float> result(vector1.size());
         for (std::size_t i = 0; i < vector1.size(); ++i) {
             result[i] = vector1[i] + vector2[i];
+        }
+        return result;
+    }
+
+    //! Add a scalar to each element of a vector
+    /**
+     * \param[in] vec Vector of floats
+     * \param[in] scalar Scalar value to add
+     * \return New vector with scalar added to each element
+     * \ingroup functions
+     */
+    inline std::vector<float> operator+(const std::vector<float> &vec, float scalar) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = vec[i] + scalar;
+        }
+        return result;
+    }
+
+    //! Add a scalar to each element of a vector (scalar on left)
+    /**
+     * \param[in] scalar Scalar value to add
+     * \param[in] vec Vector of floats
+     * \return New vector with scalar added to each element
+     * \ingroup functions
+     */
+    inline std::vector<float> operator+(float scalar, const std::vector<float> &vec) {
+        return vec + scalar;
+    }
+
+    //! Subtract a scalar from each element of a vector
+    /**
+     * \param[in] vec Vector of floats
+     * \param[in] scalar Scalar value to subtract
+     * \return New vector with scalar subtracted from each element
+     * \ingroup functions
+     */
+    inline std::vector<float> operator-(const std::vector<float> &vec, float scalar) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = vec[i] - scalar;
+        }
+        return result;
+    }
+
+    //! Subtract each element of a vector from a scalar
+    /**
+     * \param[in] scalar Scalar value
+     * \param[in] vec Vector of floats to subtract from scalar
+     * \return New vector with each element being scalar minus the vector element
+     * \ingroup functions
+     */
+    inline std::vector<float> operator-(float scalar, const std::vector<float> &vec) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = scalar - vec[i];
+        }
+        return result;
+    }
+
+    //! Multiply each element of a vector by a scalar
+    /**
+     * \param[in] vec Vector of floats
+     * \param[in] scalar Scalar value to multiply
+     * \return New vector with each element multiplied by scalar
+     * \ingroup functions
+     */
+    inline std::vector<float> operator*(const std::vector<float> &vec, float scalar) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = vec[i] * scalar;
+        }
+        return result;
+    }
+
+    //! Multiply each element of a vector by a scalar (scalar on left)
+    /**
+     * \param[in] scalar Scalar value to multiply
+     * \param[in] vec Vector of floats
+     * \return New vector with each element multiplied by scalar
+     * \ingroup functions
+     */
+    inline std::vector<float> operator*(float scalar, const std::vector<float> &vec) {
+        return vec * scalar;
+    }
+
+    //! Divide each element of a vector by a scalar
+    /**
+     * \param[in] vec Vector of floats
+     * \param[in] scalar Scalar value to divide by
+     * \return New vector with each element divided by scalar
+     * \ingroup functions
+     */
+    inline std::vector<float> operator/(const std::vector<float> &vec, float scalar) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = vec[i] / scalar;
+        }
+        return result;
+    }
+
+    //! Divide a scalar by each element of a vector
+    /**
+     * \param[in] scalar Scalar value (numerator)
+     * \param[in] vec Vector of floats (denominators)
+     * \return New vector with each element being scalar divided by vector element
+     * \ingroup functions
+     */
+    inline std::vector<float> operator/(float scalar, const std::vector<float> &vec) {
+        std::vector<float> result(vec.size());
+        for (std::size_t i = 0; i < vec.size(); ++i) {
+            result[i] = scalar / vec[i];
         }
         return result;
     }
@@ -1410,6 +1521,80 @@ namespace helios {
         }
     };
 
+
+    //! Warning message aggregator for reducing console flooding
+    /**
+     * \brief Accumulates warning messages during loops/iterations and reports aggregated summaries.
+     *
+     * This class helps prevent console flooding when processing millions of primitives/objects
+     * by collecting warnings and reporting counts with example messages instead of printing
+     * each warning individually. Thread-safe for use in OpenMP parallel regions.
+     *
+     * Example usage:
+     * \code{.cpp}
+     * WarningAggregator warnings;
+     * for(uint UUID : UUIDs) {
+     *     if(someCondition) {
+     *         warnings.addWarning("category_name", "Warning message here");
+     *     }
+     * }
+     * warnings.report(std::cerr);  // Prints aggregated summary
+     * \endcode
+     *
+     * \ingroup functions
+     */
+    class WarningAggregator {
+    public:
+        //! Constructor
+        WarningAggregator() = default;
+
+        //! Add a warning to be aggregated
+        /**
+         * \param[in] category Category identifier for this warning type (e.g., "fzero_convergence_failure")
+         * \param[in] message The warning message text
+         * \note Thread-safe: can be called from OpenMP parallel regions
+         */
+        void addWarning(const std::string &category, const std::string &message);
+
+        //! Report all accumulated warnings and clear
+        /**
+         * \param[in] stream Output stream to write warnings to (default: std::cerr)
+         * \param[in] compact If true, output single line per category with count only (default: false)
+         * \note Standard format: "WARNING: N instances of 'category' (showing first 3):"
+         * \note Compact format: "WARNING: N instances of 'category'"
+         */
+        void report(std::ostream &stream = std::cerr, bool compact = false);
+
+        //! Get the count of warnings for a specific category
+        /**
+         * \param[in] category Category identifier
+         * \return Number of warnings accumulated for this category
+         */
+        [[nodiscard]] size_t getCount(const std::string &category) const;
+
+        //! Clear all accumulated warnings
+        void clear();
+
+        //! Enable or disable warning accumulation
+        /**
+         * \param[in] enabled True to enable, false to disable
+         * \note When disabled, calls to addWarning() are ignored
+         */
+        void setEnabled(bool enabled);
+
+        //! Check if warning accumulation is enabled
+        /**
+         * \return True if enabled, false otherwise
+         */
+        [[nodiscard]] bool isEnabled() const;
+
+    private:
+        mutable std::mutex mutex_; //!< Thread safety for OpenMP
+        std::unordered_map<std::string, std::vector<std::string>> warnings_; //!< Storage: category -> messages
+        std::unordered_map<std::string, size_t> counts_; //!< Total count per category (may exceed stored messages)
+        bool enabled_ = true; //!< Whether to accumulate warnings
+        static constexpr size_t MAX_EXAMPLES = 100; //!< Maximum examples to store per category
+    };
 
     //! Default null SphericalCoord that applies no rotation
     extern SphericalCoord nullrotation;

@@ -1,6 +1,6 @@
 /** \file "Assets.cpp" Function definitions for plant organ prototypes plant architecture plug-in.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -22,14 +22,9 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
 
     // If OBJ model file is specified, load it and return the object ID
     if (!prototype_parameters->OBJ_model_file.empty()) {
-        // Use unified file resolution to validate OBJ file existence
-        try {
-            std::filesystem::path resolved_path = helios::resolveFilePath(prototype_parameters->OBJ_model_file);
-            (void) resolved_path; // Suppress unused variable warning
-        } catch (const std::runtime_error &) {
-            helios_runtime_error("ERROR (PlantArchitecture): Leaf prototype OBJ file " + prototype_parameters->OBJ_model_file + " does not exist.");
-        }
-        return context_ptr->addPolymeshObject(context_ptr->loadOBJ(prototype_parameters->OBJ_model_file.c_str(), prototype_parameters->leaf_offset, 0, nullrotation, RGB::black, "ZUP", true));
+        // Resolve OBJ file path (allows users to specify simple paths like "MyLeaf.obj")
+        std::string resolved_obj = PlantArchitecture::resolveTextureFile(prototype_parameters->OBJ_model_file);
+        return context_ptr->addPolymeshObject(context_ptr->loadOBJ(resolved_obj.c_str(), prototype_parameters->leaf_offset, 0, nullrotation, RGB::black, "ZUP", true));
     }
 
     std::string leaf_texture;
@@ -42,6 +37,9 @@ uint GenericLeafPrototype(helios::Context *context_ptr, LeafPrototype *prototype
     } else {
         leaf_texture = prototype_parameters->leaf_texture_file[compound_leaf_index];
     }
+
+    // Resolve leaf texture path (allows users to specify simple paths like "AlmondLeaf.png")
+    leaf_texture = PlantArchitecture::resolveTextureFile(leaf_texture);
 
     // -- main leaf generation code -- //
 

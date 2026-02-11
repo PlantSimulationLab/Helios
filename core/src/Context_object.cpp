@@ -1,7 +1,7 @@
 /**
  * \file "Context_object.cpp" Context compound object definitions and methods.
  *
- * Copyright (C) 2016-2025 Brian Bailey
+ * Copyright (C) 2016-2026 Brian Bailey
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -413,6 +413,20 @@ uint Context::addTileObject(const vec3 &center, const vec2 &size, const Spherica
             patch_new->translate(center);
 
             primitives[currentUUID] = patch_new;
+
+            // Set context pointer
+            patch_new->context_ptr = this;
+
+            // Create or reuse material with de-duplication
+            std::string mat_label = generateMaterialLabel(make_RGBAcolor(0, 0, 0, 1), texturefile, false);
+            if (!doesMaterialExist(mat_label)) {
+                patch_new->materialID = addMaterial_internal(mat_label, make_RGBAcolor(0, 0, 0, 1), texturefile);
+            } else {
+                patch_new->materialID = getMaterialIDFromLabel(mat_label);
+            }
+            // Increment material reference count
+            materials[patch_new->materialID].reference_count++;
+
             currentUUID++;
             UUID.push_back(currentUUID - 1);
         }
@@ -469,6 +483,15 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
         helios_runtime_error("ERROR (Context::addTubeObject): Size of `nodes' and `radius' arguments must agree.");
     } else if (node_count != color.size()) {
         helios_runtime_error("ERROR (Context::addTubeObject): Size of `nodes' and `color' arguments must agree.");
+    }
+
+    // Clamp very small radii to avoid creating degenerate triangles
+    const float min_radius_threshold = 1e-5f;
+    std::vector<float> radius_clamped = radius;
+    for (int i = 0; i < node_count; i++) {
+        if (radius_clamped[i] < min_radius_threshold && radius_clamped[i] >= 0) {
+            radius_clamped[i] = min_radius_threshold;
+        }
     }
 
     vec3 axial_vector;
@@ -546,7 +569,7 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
         orthogonal_dir.normalize();
 
         for (int j = 0; j < radial_subdivisions + 1; j++) {
-            vec3 normal = cfact[j] * radius[i] * radial_dir + sfact[j] * radius[i] * orthogonal_dir;
+            vec3 normal = cfact[j] * radius_clamped[i] * radial_dir + sfact[j] * radius_clamped[i] * orthogonal_dir;
             triangle_vertices[i][j] = nodes[i] + normal;
         }
     }
@@ -614,6 +637,15 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
         helios_runtime_error("ERROR (Context::addTubeObject): Size of `nodes' and `radius' arguments must agree.");
     } else if (node_count != textureuv_ufrac.size()) {
         helios_runtime_error("ERROR (Context::addTubeObject): Size of `nodes' and `textureuv_ufrac' arguments must agree.");
+    }
+
+    // Clamp very small radii to avoid creating degenerate triangles
+    const float min_radius_threshold = 1e-5f;
+    std::vector<float> radius_clamped = radius;
+    for (int i = 0; i < node_count; i++) {
+        if (radius_clamped[i] < min_radius_threshold && radius_clamped[i] >= 0) {
+            radius_clamped[i] = min_radius_threshold;
+        }
     }
 
     vec3 axial_vector;
@@ -693,7 +725,7 @@ uint Context::addTubeObject(uint radial_subdivisions, const std::vector<vec3> &n
         orthogonal_dir.normalize();
 
         for (int j = 0; j < radial_subdivisions + 1; j++) {
-            vec3 normal = cfact[j] * radius[i] * radial_dir + sfact[j] * radius[i] * orthogonal_dir;
+            vec3 normal = cfact[j] * radius_clamped[i] * radial_dir + sfact[j] * radius_clamped[i] * orthogonal_dir;
             triangle_vertices[i][j] = nodes[i] + normal;
 
             uv[i][j].x = textureuv_ufrac[i];
@@ -1728,15 +1760,6 @@ Tile::Tile(uint a_OID, const std::vector<uint> &a_UUIDs, const int2 &a_subdiv, c
     context = a_context;
 }
 
-Tile *Context::getTileObjectPointer(uint ObjID) const {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getTileObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    }
-#endif
-    return dynamic_cast<Tile *>(objects.at(ObjID));
-}
-
 helios::vec2 Tile::getSize() const {
     const std::vector<vec3> &vertices = getVertices();
     float l = (vertices.at(1) - vertices.at(0)).magnitude();
@@ -1815,15 +1838,6 @@ Sphere::Sphere(uint a_OID, const std::vector<uint> &a_UUIDs, uint a_subdiv, cons
     context = a_context;
 }
 
-Sphere *Context::getSphereObjectPointer(uint ObjID) const {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getSphereObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    }
-#endif
-    return dynamic_cast<Sphere *>(objects.at(ObjID));
-}
-
 helios::vec3 Sphere::getRadius() const {
     vec3 n0(0, 0, 0);
     vec3 nx(1, 0, 0);
@@ -1887,15 +1901,6 @@ Tube::Tube(uint a_OID, const std::vector<uint> &a_UUIDs, const std::vector<vec3>
     subdiv = a_subdiv;
     texturefile = a_texturefile;
     context = a_context;
-}
-
-Tube *Context::getTubeObjectPointer(uint ObjID) const {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getTubeObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    }
-#endif
-    return dynamic_cast<Tube *>(objects.at(ObjID));
 }
 
 std::vector<helios::vec3> Tube::getNodes() const {
@@ -2088,16 +2093,18 @@ void Tube::appendTubeSegment(const helios::vec3 &node_position, float node_radiu
 
     // add triangles for new segment
 
+    int second_last = node_count - 2;
+    int last = node_count - 1;
     for (int j = 0; j < radial_subdivisions; j++) {
-        vec3 v0 = triangle_vertices.at(1).at(j);
-        vec3 v1 = triangle_vertices.at(1 + 1).at(j + 1);
-        vec3 v2 = triangle_vertices.at(1).at(j + 1);
+        vec3 v0 = triangle_vertices.at(second_last).at(j);
+        vec3 v1 = triangle_vertices.at(last).at(j + 1);
+        vec3 v2 = triangle_vertices.at(second_last).at(j + 1);
 
         UUIDs.push_back(context->addTriangle(v0, v1, v2, node_color));
 
-        v0 = triangle_vertices.at(1).at(j);
-        v1 = triangle_vertices.at(1 + 1).at(j);
-        v2 = triangle_vertices.at(1 + 1).at(j + 1);
+        v0 = triangle_vertices.at(second_last).at(j);
+        v1 = triangle_vertices.at(last).at(j);
+        v2 = triangle_vertices.at(last).at(j + 1);
 
         UUIDs.push_back(context->addTriangle(v0, v1, v2, node_color));
     }
@@ -2384,15 +2391,6 @@ Box::Box(uint a_OID, const std::vector<uint> &a_UUIDs, const int3 &a_subdiv, con
     context = a_context;
 }
 
-Box *Context::getBoxObjectPointer(uint ObjID) const {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getBoxObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    }
-#endif
-    return dynamic_cast<Box *>(objects.at(ObjID));
-}
-
 vec3 Box::getSize() const {
     vec3 n0(0, 0, 0), nx(1, 0, 0), ny(0, 1, 0), nz(0, 0, 1);
 
@@ -2450,15 +2448,6 @@ Disk::Disk(uint a_OID, const std::vector<uint> &a_UUIDs, int2 a_subdiv, const ch
     context = a_context;
 }
 
-Disk *Context::getDiskObjectPointer(uint ObjID) const {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getDiskObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    }
-#endif
-    return dynamic_cast<Disk *>(objects.at(ObjID));
-}
-
 vec2 Disk::getSize() const {
     vec3 n0(0, 0, 0), nx(1, 0, 0), ny(0, 1, 0);
     vec3 n0_T, nx_T, ny_T;
@@ -2507,15 +2496,6 @@ Polymesh::Polymesh(uint a_OID, const std::vector<uint> &a_UUIDs, const char *a_t
     context = a_context;
 }
 
-Polymesh *Context::getPolymeshObjectPointer(uint ObjID) const {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getPolymeshObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    }
-#endif
-    return dynamic_cast<Polymesh *>(objects.at(ObjID));
-}
-
 float Polymesh::getVolume() const {
     float volume = 0.f;
     for (uint UUID: UUIDs) {
@@ -2548,15 +2528,6 @@ Cone::Cone(uint a_OID, const std::vector<uint> &a_UUIDs, const vec3 &a_node0, co
     context = a_context;
     nodes = {a_node0, a_node1};
     radii = {a_radius0, a_radius1};
-}
-
-Cone *Context::getConeObjectPointer(const uint ObjID) const {
-#ifdef HELIOS_DEBUG
-    if (objects.find(ObjID) == objects.end()) {
-        helios_runtime_error("ERROR (Context::getConeObjectPointer): ObjectID of " + std::to_string(ObjID) + " does not exist in the Context.");
-    }
-#endif
-    return dynamic_cast<Cone *>(objects.at(ObjID));
 }
 
 std::vector<helios::vec3> Cone::getNodeCoordinates() const {
@@ -2639,8 +2610,8 @@ float Cone::getLength() const {
 
 void Cone::scaleLength(float S) {
     // get the nodes and radii of the nodes with transformation matrix applied
-    const std::vector<helios::vec3> &nodes_T = context->getConeObjectPointer(OID)->getNodeCoordinates();
-    const std::vector<float> &radii_T = context->getConeObjectPointer(OID)->getNodeRadii();
+    const std::vector<helios::vec3> &nodes_T = getNodeCoordinates();
+    const std::vector<float> &radii_T = getNodeRadii();
 
     // calculate the transformed axis unit vector of the cone
     vec3 axis_unit_vector = helios::make_vec3(nodes_T.at(1).x - nodes_T.at(0).x, nodes_T.at(1).y - nodes_T.at(0).y, nodes_T.at(1).z - nodes_T.at(0).z);
@@ -2648,7 +2619,7 @@ void Cone::scaleLength(float S) {
     axis_unit_vector = axis_unit_vector / length;
 
     // translate node 0 back to origin
-    context->getConeObjectPointer(OID)->translate(-1.0 * nodes_T.at(0));
+    translate(-1.0 * nodes_T.at(0));
 
     // rotate the cone to align with z axis
     helios::vec3 z_axis = make_vec3(0, 0, 1);
@@ -2659,8 +2630,8 @@ void Cone::scaleLength(float S) {
     float angle = acos_safe(dot);
 
     // only rotate if the cone is not alread aligned with the z axis (i.e., angle is not zero. If zero, the axis of rotation is 0,0,0 and we end up with problems)
-    if (angle != float(0.0)) {
-        context->getConeObjectPointer(OID)->rotate(-1 * angle, ra);
+    if (angle != 0.f) {
+        rotate(-1 * angle, ra);
     }
 
     // scale the cone in the z (length) dimension
@@ -2676,25 +2647,25 @@ void Cone::scaleLength(float S) {
     }
 
     // rotate back
-    if (angle != 0.0) {
-        context->getConeObjectPointer(OID)->rotate(angle, ra);
+    if (angle != 0.f) {
+        rotate(angle, ra);
     }
 
     // translate back
-    context->getConeObjectPointer(OID)->translate(nodes_T.at(0));
+    translate(nodes_T.at(0));
 }
 
 void Cone::scaleGirth(float S) {
     // get the nodes and radii of the nodes with transformation matrix applied
-    const std::vector<helios::vec3> &nodes_T = context->getConeObjectPointer(OID)->getNodeCoordinates();
-    const std::vector<float> &radii_T = context->getConeObjectPointer(OID)->getNodeRadii();
+    const std::vector<helios::vec3> &nodes_T = getNodeCoordinates();
+    const std::vector<float> &radii_T = getNodeRadii();
 
     // calculate the transformed axis unit vector of the cone
     vec3 axis_unit_vector = helios::make_vec3(nodes_T.at(1).x - nodes_T.at(0).x, nodes_T.at(1).y - nodes_T.at(0).y, nodes_T.at(1).z - nodes_T.at(0).z);
     axis_unit_vector.normalize();
 
     // translate node 0 back to origin
-    context->getConeObjectPointer(OID)->translate(-1.0 * nodes_T.at(0));
+    translate(-1.0 * nodes_T.at(0));
     // rotate the cone to align with z axis
     helios::vec3 z_axis = make_vec3(0, 0, 1);
     // get the axis about which to rotate
@@ -2703,8 +2674,8 @@ void Cone::scaleGirth(float S) {
     float dot = axis_unit_vector * z_axis;
     float angle = acos_safe(dot);
     // only rotate if the cone is not already aligned with the z axis (i.e., angle is not zero. If zero, the axis of rotation is 0,0,0 and we end up with problems)
-    if (angle != float(0.0)) {
-        context->getConeObjectPointer(OID)->rotate(-1 * angle, ra);
+    if (angle != 0.f) {
+        rotate(-1 * angle, ra);
     }
 
     // scale the cone in the x and y dimensions
@@ -2712,12 +2683,12 @@ void Cone::scaleGirth(float S) {
 
 
     // rotate back
-    if (angle != 0.0) {
-        context->getConeObjectPointer(OID)->rotate(angle, ra);
+    if (angle != 0.f) {
+        rotate(angle, ra);
     }
 
     // translate back
-    context->getConeObjectPointer(OID)->translate(nodes_T.at(0));
+    translate(nodes_T.at(0));
 
     radii.at(0) *= S;
     radii.at(1) *= S;

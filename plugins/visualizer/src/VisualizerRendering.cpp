@@ -1,6 +1,6 @@
 /** \file "VisualizerRendering.cpp" Visualizer rendering and display functions.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -262,6 +262,11 @@ void Visualizer::displayImage(const std::vector<unsigned char> &pixel_data, uint
     geometry_handler.addGeometry(UUID, GeometryHandler::GEOMETRY_TYPE_RECTANGLE, vertices, RGBA::black, uvs, textureID, false, false, COORDINATES_WINDOW_NORMALIZED, true, false);
 
     hideWatermark();
+
+    // Save navigation gizmo state before hiding it (so we can restore it when building geometry)
+    navigation_gizmo_was_enabled_before_image_display = navigation_gizmo_enabled;
+    hideNavigationGizmo();
+
     plotInteractive();
 }
 
@@ -511,15 +516,8 @@ std::vector<helios::vec3> Visualizer::plotInteractive() {
         }
     }
 
-    // Update
-    if (colorbar_flag == 2) {
-        if (!colorbar_IDs.empty()) {
-            geometry_handler.deleteGeometry(colorbar_IDs);
-            colorbar_IDs.clear();
-        }
-        colorbar_IDs = addColorbarByCenter(colorbar_title.c_str(), colorbar_size, colorbar_position, colorbar_fontcolor, colormap_current);
-    }
-
+    // Colorbar - update with aspect ratio correction
+    updateColorbar();
 
     // Watermark
     updateWatermark();
@@ -1355,14 +1353,8 @@ void Visualizer::plotUpdate(bool hide_window) {
         }
     }
 
-    // Update
-    if (colorbar_flag == 2) {
-        if (!colorbar_IDs.empty()) {
-            geometry_handler.deleteGeometry(colorbar_IDs);
-            colorbar_IDs.clear();
-        }
-        colorbar_IDs = addColorbarByCenter(colorbar_title.c_str(), colorbar_size, colorbar_position, colorbar_fontcolor, colormap_current);
-    }
+    // Colorbar - update with aspect ratio correction
+    updateColorbar();
 
     // Watermark
     updateWatermark();
@@ -1936,6 +1928,35 @@ void Visualizer::updateWatermark() {
     }
     std::string watermarkPath = helios::resolvePluginAsset("visualizer", "textures/Helios_watermark.png").string();
     watermark_ID = addRectangleByCenter(make_vec3(0.75f * width, 0.95f, 0), make_vec2(width, 0.07), make_SphericalCoord(0, 0), watermarkPath.c_str(), COORDINATES_WINDOW_NORMALIZED);
+}
+
+void Visualizer::updateColorbar() {
+    // Check if colorbar should be displayed
+    if (colorbar_flag != 2) {
+        // If disabled, delete geometry if it exists
+        if (!colorbar_IDs.empty()) {
+            geometry_handler.deleteGeometry(colorbar_IDs);
+            colorbar_IDs.clear();
+        }
+        return;
+    }
+
+    // Calculate window aspect ratio
+    float window_aspect = float(Wframebuffer) / float(Hframebuffer);
+
+    // Apply aspect ratio correction to width to maintain intended aspect ratio
+    // Formula: corrected_width = height * intended_aspect / window_aspect
+    // This keeps the colorbar height constant in normalized coordinates while adjusting width
+    float corrected_width = colorbar_size.y * colorbar_intended_aspect_ratio / window_aspect;
+
+    // Delete old colorbar geometry
+    if (!colorbar_IDs.empty()) {
+        geometry_handler.deleteGeometry(colorbar_IDs);
+        colorbar_IDs.clear();
+    }
+
+    // Create new colorbar with aspect-corrected size
+    colorbar_IDs = addColorbarByCenter(colorbar_title.c_str(), make_vec2(corrected_width, colorbar_size.y), colorbar_position, colorbar_fontcolor, colormap_current);
 }
 
 

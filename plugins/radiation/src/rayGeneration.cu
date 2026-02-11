@@ -1,6 +1,6 @@
 /** \file "rayGeneration.cu" File containing OptiX ray generation programs
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -67,7 +67,8 @@ RT_PROGRAM void direct_raygen() {
                 sp.z = 0.f;
 
                 int ID = maskID[objID];
-                if (ID >= 0 && primitive_solid_fraction[UUID] > 0.f && primitive_solid_fraction[UUID] < 1.f) { // has texture transparency
+                // FIX: Use objID (position) instead of UUID for primitive_solid_fraction access
+                if (ID >= 0 && primitive_solid_fraction[objID] > 0.f && primitive_solid_fraction[objID] < 1.f) { // has texture transparency
 
                     d_sampleTexture_patch(sp, optix::make_int2(ii, jj), optix::make_float2(dx, dy), prd, ID, puvID);
                 }
@@ -102,10 +103,11 @@ RT_PROGRAM void direct_raygen() {
                 float3 v2 = make_float3(1, 1, 0);
                 d_transformPoint(m_trans, v2);
 
-                normal = normalize(cross(v1 - v0, v2 - v1));
+                normal = normalize(cross(v1 - v0, v2 - v0));
 
                 int ID = maskID[objID];
-                if (ID >= 0 && primitive_solid_fraction[UUID] > 0.f && primitive_solid_fraction[UUID] < 1.f) { // has texture transparency
+                // FIX: Use objID (position) instead of UUID for primitive_solid_fraction access
+                if (ID >= 0 && primitive_solid_fraction[objID] > 0.f && primitive_solid_fraction[objID] < 1.f) { // has texture transparency
 
                     d_sampleTexture_triangle(sp, v0, v1, v2, prd, m_trans, ID, puvID);
                 }
@@ -286,11 +288,6 @@ RT_PROGRAM void diffuse_raygen() {
             float Rx = rnd(prd.seed);
             float Ry = rnd(prd.seed);
 
-            if (ptype > 4) {
-                printf("objID = %d\n", objID);
-                printf("Invalid primitive type in diffuse ray launch.\n");
-            }
-
             if (ptype == 0 || ptype == 3) { // Patch or Tile
 
                 // calculate rectangle normal vector (world coordinates)
@@ -337,7 +334,7 @@ RT_PROGRAM void diffuse_raygen() {
                 float3 v2 = make_float3(1, 1, 0);
                 d_transformPoint(m_trans, v2);
 
-                normal = normalize(cross(v1 - v0, v2 - v1));
+                normal = normalize(cross(v1 - v0, v2 - v0));
 
                 int ID = maskID[objID];
                 if (ID >= 0) { // has texture transparency
@@ -472,6 +469,7 @@ RT_PROGRAM void diffuse_raygen() {
 
                     // ---- "bottom" surface launch -------
                 } else if (launch_face == 0 && twosided_flag[objID] == 1) {
+
                     ray_direction = -ray_direction;
                     ray = optix::make_Ray(ray_origin, ray_direction, diffuse_ray_type, 1e-5, RT_DEFAULT_MAX);
 
@@ -487,6 +485,7 @@ RT_PROGRAM void diffuse_raygen() {
                         prd.hit_periodic_boundary = false;
                     }
                 }
+                // else: Skip ray trace for bottom face of one-sided primitives
             }
         }
     }
@@ -497,16 +496,18 @@ RT_PROGRAM void camera_raygen() {
     uint dimx = launch_dim.x * launch_dim.y; // x number of ray, y width, z length
     uint indx = launch_dim.x * launch_index.y + launch_index.x;
 
-    optix::int2 camera_resolution = optix::make_int2(launch_dim.y, launch_dim.z);
+    // Use full camera resolution (not tile size) for correct pixel calculations
+    optix::int2 camera_resolution = camera_resolution_full;
 
     PerRayData prd;
     prd.seed = tea<16>(indx + dimx * launch_index.z, random_seed);
 
     float3 sp;
 
-    uint ii = launch_index.y; // x-pixel
-    uint jj = launch_index.z; // y-pixel
-    size_t origin_ID = jj * launch_dim.y + ii; // global pixel index
+    // Calculate global pixel coordinates including tile offsets
+    uint ii = camera_pixel_offset_x + launch_index.y; // global x-pixel
+    uint jj = camera_pixel_offset_y + launch_index.z; // global y-pixel
+    size_t origin_ID = jj * camera_resolution_full.x + ii; // global pixel index
 
 
     // distortion
@@ -540,6 +541,7 @@ RT_PROGRAM void camera_raygen() {
     sp.x = camera_viewplane_length;
 
     // *** Determine point 'p' on focal plane that passes through the lens center (0,0) and pixel sample (view direction coordinate aligned) *** //
+    // Note: camera_focal_length is the focal plane distance (working distance), not the lens optical focal length
 
     float3 p = make_float3(camera_focal_length, sp.y / camera_viewplane_length * camera_focal_length, sp.z / camera_viewplane_length * camera_focal_length);
 
@@ -589,18 +591,20 @@ RT_PROGRAM void pixel_label_raygen() {
 
     uint indx = launch_dim.y * launch_index.z + launch_index.y;
 
-    optix::int2 camera_resolution = optix::make_int2(launch_dim.y, launch_dim.z);
+    // Use full camera resolution (not tile size) for correct pixel calculations
+    optix::int2 camera_resolution = camera_resolution_full;
 
     PerRayData prd;
     prd.seed = tea<16>(indx, random_seed);
 
     float3 sp;
 
-    uint ii = launch_index.y; // x-pixel
+    // Calculate global pixel coordinates including tile offsets
+    uint ii = camera_pixel_offset_x + launch_index.y; // global x-pixel
 
-    uint jj = launch_index.z; // y-pixel
+    uint jj = camera_pixel_offset_y + launch_index.z; // global y-pixel
 
-    size_t origin_ID = jj * launch_dim.y + ii; // global pixel index
+    size_t origin_ID = jj * camera_resolution_full.x + ii; // global pixel index
 
     // Map sample to center of pixel
     // Calculate VFOV scaling factor directly from aspect ratio
@@ -613,6 +617,7 @@ RT_PROGRAM void pixel_label_raygen() {
 
 
     // *** Determine point 'p' on focal plane that passes through the lens center (0,0) and pixel sample (view direction coordinate aligned) *** //
+    // Note: camera_focal_length is the focal plane distance (working distance), not the lens optical focal length
 
     float3 p = make_float3(camera_focal_length, sp.y / camera_viewplane_length * camera_focal_length, sp.z / camera_viewplane_length * camera_focal_length);
 

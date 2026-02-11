@@ -33,7 +33,8 @@ PenaltyBreakString: 1000
 BreakStringLiterals: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 ContinuationIndentWidth: 8
-IncludeCategories: 
+SortIncludes: Never
+IncludeCategories:
   - Regex: '^<.*'
     Priority: 1
   - Regex: '^".*'

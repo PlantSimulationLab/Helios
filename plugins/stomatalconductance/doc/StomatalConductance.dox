@@ -594,6 +594,56 @@ In order to modify model coefficients from the default values, one should 1) dec
  modelcoeffs.b = 6.7;
 ```
 
+\subsubsection MaterialBasedCoeffs Material-Based Coefficients (Recommended)
+
+The recommended approach for setting model coefficients is to use materials. This provides several advantages:
+
+- **Memory efficiency**: Coefficients stored once per material, not per primitive
+- **Automatic XML serialization**: Material coefficients save and load automatically with Context
+- **Easier management**: Change coefficients for entire plant/canopy by updating one material
+- **Performance**: Coefficient retrieval is cached per material during run()
+
+Example usage:
+
+```cpp
+Context context;
+StomatalConductanceModel gs_model(&context);
+
+// 1. Create materials for different species/organs
+context.addMaterial("almond_leaf");
+context.addMaterial("grape_leaf");
+
+// 2. Set coefficients from species library
+gs_model.setBMFCoefficientsFromLibrary("Almond", "almond_leaf");
+gs_model.setBMFCoefficientsFromLibrary("Grape", "grape_leaf");
+
+// 3. Create primitives and assign materials
+std::vector<uint> almond_leaves = context.addPatch(...);
+std::vector<uint> grape_leaves = context.addPatch(...);
+
+context.assignMaterialToPrimitive(almond_leaves, "almond_leaf");
+context.assignMaterialToPrimitive(grape_leaves, "grape_leaf");
+
+// 4. Run model - coefficients automatically applied based on material
+gs_model.run();
+```
+
+You can also set custom coefficients:
+
+```cpp
+context.addMaterial("custom_leaf");
+
+BMFcoefficients custom_coeffs;
+custom_coeffs.Em = 500.0f;
+custom_coeffs.i0 = 100.0f;
+custom_coeffs.k = 5000.0f;
+custom_coeffs.b = 1000.0f;
+
+gs_model.setModelCoefficients("custom_leaf", custom_coeffs);
+```
+
+**Backward Compatibility**: The legacy UUID-based coefficient setting methods continue to work alongside the material-based approach.
+
 \subsection StomatalRun Running the Model (steady-state mode)
 
 There are two possible functions to run the model: one to run the model for all primitives in the Context (see \ref StomatalConductanceModel::run "run()"), and another to run the model only for a subset of primitives given their UUIDs (see \ref StomatalConductanceModel::run "run()").

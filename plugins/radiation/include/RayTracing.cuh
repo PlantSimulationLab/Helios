@@ -1,6 +1,6 @@
 /** \file "RayTracing.cu.h" This file contains definitions and helper functions for CUDA/OptiX routines
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -28,6 +28,9 @@ typedef unsigned int uint;
 rtDeclareVariable(rtObject, top_object, , );
 rtDeclareVariable(unsigned int, random_seed, , );
 rtDeclareVariable(unsigned int, launch_offset, , );
+rtDeclareVariable(unsigned int, camera_pixel_offset_x, , );
+rtDeclareVariable(unsigned int, camera_pixel_offset_y, , );
+rtDeclareVariable(optix::int2, camera_resolution_full, , );
 rtDeclareVariable(unsigned int, launch_face, , );
 rtDeclareVariable(unsigned int, Nbands_launch, , );
 rtDeclareVariable(unsigned int, Nbands_global, , );
@@ -56,9 +59,15 @@ rtBuffer<int2, 1> object_subdivisions;
 // ID for first primitive in an object
 rtBuffer<uint, 1> primitiveID;
 
+// UUID to array position lookup (indexed by UUID, returns array position)
+// Size: max_UUID + 1 (sparse array)
+// Usage: uint position = primitive_positions[UUID];
+rtBuffer<uint, 1> primitive_positions;
+
 // Radiation sources buffers
 rtDeclareVariable(unsigned int, Nsources, , );
 rtBuffer<float, 1> source_fluxes;
+rtBuffer<float, 1> source_fluxes_cam; // Camera-weighted source fluxes for specular [source * Nbands * Ncameras]
 rtBuffer<float3, 1> source_positions;
 rtBuffer<float3, 1> source_rotations;
 rtBuffer<float2, 1> source_widths;
@@ -70,6 +79,15 @@ rtBuffer<float, 1> diffuse_extinction;
 rtBuffer<float3, 1> diffuse_peak_dir;
 rtBuffer<float, 1> diffuse_dist_norm;
 rtBuffer<float, 1> Rsky;
+
+// Atmospheric sky radiance parameters (for camera miss rays)
+rtBuffer<float4, 1> sky_radiance_params; // Per-band: (circumsolar_strength, circumsolar_width, horizon_coeff, zenith_scale)
+rtBuffer<float, 1> camera_sky_radiance; // Per-band: base sky radiance (W/m²/sr) for camera atmospheric model
+rtDeclareVariable(float3, sun_direction, , ); // Sun direction vector for sky radiance evaluation
+
+// Solar disk rendering for camera (lens flare support)
+rtBuffer<float, 1> solar_disk_radiance; // Per-band: solar disk radiance (W/m²/sr) when looking directly at sun
+rtDeclareVariable(float, solar_disk_cos_angle, , ); // Cosine of solar angular radius (~0.265°, cos ≈ 0.99999)
 
 //--- Patches ---//
 rtBuffer<float3, 2> patch_vertices;
@@ -92,6 +110,7 @@ rtBuffer<unsigned int, 1> bbox_UUID;
 
 // Primitive data
 rtDeclareVariable(unsigned int, Nprimitives, , );
+rtDeclareVariable(unsigned int, bbox_UUID_base, , ); // Starting UUID for bboxes (max_real_UUID + 1)
 rtDeclareVariable(float2, periodic_flag, , );
 rtBuffer<char, 1> twosided_flag;
 rtBuffer<float, 2> transform_matrix;
@@ -104,6 +123,7 @@ rtBuffer<float, 1> rho_cam, tau_cam;
 rtBuffer<float, 1> specular_exponent;
 rtBuffer<float, 1> specular_scale;
 rtDeclareVariable(unsigned int, specular_reflection_enabled, , );
+rtDeclareVariable(unsigned int, scattering_iteration, , ); // Current scattering iteration (0-based)
 
 // Output buffers
 rtBuffer<float, 1> radiation_in;
@@ -114,6 +134,7 @@ rtBuffer<float, 1> scatter_buff_top;
 rtBuffer<float, 1> scatter_buff_bottom;
 rtBuffer<float, 1> scatter_buff_top_cam;
 rtBuffer<float, 1> scatter_buff_bottom_cam;
+rtBuffer<float, 1> radiation_specular; // Incident radiation for specular (per source, camera-weighted) [source * Ncameras * Nprimitives * Nbands + camera * Nprimitives * Nbands + primitive * Nbands + band]
 
 // Camera variables
 rtBuffer<unsigned int, 1> camera_pixel_label;
@@ -124,8 +145,9 @@ rtDeclareVariable(float3, camera_position, , );
 rtDeclareVariable(float2, camera_direction, , );
 rtDeclareVariable(float, camera_lens_diameter, , );
 rtDeclareVariable(float, FOV_aspect_ratio, , );
-rtDeclareVariable(float, camera_focal_length, , );
+rtDeclareVariable(float, camera_focal_length, , ); // Focal plane distance (working distance for ray generation), NOT lens optical focal length
 rtDeclareVariable(float, camera_viewplane_length, , );
+rtDeclareVariable(float, camera_pixel_solid_angle, , ); // Solid angle subtended by a single pixel (steradians)
 
 
 void queryGPUMemory(void);
@@ -590,7 +612,7 @@ static __host__ __device__ __inline__ float asin_safe(float x) {
     return asin(x);
 }
 
-// ––––– auxiliary helpers ––––––––––––––––––––––––––––––––––––––
+// ----- auxiliary helpers --------------------------------------
 static __forceinline__ __device__ uint32_t reverseBits32(uint32_t v) {
     // bitwise reverse (Van-der-Corput direction numbers for dim0)
     v = (v << 16) | (v >> 16);
@@ -636,7 +658,7 @@ static __forceinline__ __device__ float sobolDim1(uint32_t idx, uint32_t scrambl
     return uint32ToUnitFloat(res);
 }
 
-// ––––– public entry point –––––––––––––––––––––––––––––––––––––
+// ----- public entry point -------------------------------------
 static __forceinline__ __device__ float2 sobol2D(uint32_t sampleIdx) {
     // Independent Owen scrambles for each dimension
     uint32_t scramble0 = pcgHash(sampleIdx);
@@ -661,6 +683,119 @@ __forceinline__ __device__ float2 hash2D(uint32_t s) {
     float v = uint32_to_unit_float(s);
 
     return make_float2(u, v);
+}
+
+// Ray-source intersection helpers for camera rendering
+
+//! Test if ray intersects a spherical radiation source
+/**
+ * \param[in] ray_origin Origin point of the ray
+ * \param[in] ray_direction Direction vector of the ray (must be normalized)
+ * \param[in] sphere_center Center position of the sphere
+ * \param[in] sphere_radius Radius of the sphere
+ * \return True if ray intersects sphere in front of origin
+ */
+__device__ __forceinline__ bool d_raySphereIntersect(const optix::float3 &ray_origin, const optix::float3 &ray_direction, const optix::float3 &sphere_center, float sphere_radius) {
+    optix::float3 oc = ray_origin - sphere_center;
+    float b = optix::dot(oc, ray_direction);
+    float c = optix::dot(oc, oc) - sphere_radius * sphere_radius;
+    float discriminant = b * b - c;
+
+    if (discriminant < 0.0f)
+        return false;
+
+    float t = -b - sqrtf(discriminant);
+    return t > 0.0f; // Hit if in front of camera
+}
+
+//! Test if ray intersects a rectangular radiation source
+/**
+ * \param[in] ray_origin Origin point of the ray
+ * \param[in] ray_direction Direction vector of the ray (must be normalized)
+ * \param[in] rect_center Center position of the rectangle
+ * \param[in] rect_width Width of the rectangle (x dimension)
+ * \param[in] rect_length Length of the rectangle (y dimension)
+ * \param[in] rect_rotation Rotation angles (rx, ry, rz) of the rectangle
+ * \param[out] out_cos_angle Cosine of angle between ray and rectangle normal
+ * \return True if ray intersects front face of rectangle in front of origin
+ */
+__device__ __forceinline__ bool d_rayRectangleIntersect(const optix::float3 &ray_origin, const optix::float3 &ray_direction, const optix::float3 &rect_center, float rect_width, float rect_length, const optix::float3 &rect_rotation,
+                                                        float &out_cos_angle) {
+    // Build transform matrix
+    float transform[16];
+    d_makeTransformMatrix(rect_rotation, transform);
+
+    // Get normal vector (transformed +Z axis)
+    optix::float3 normal = optix::make_float3(transform[2], transform[6], transform[10]);
+
+    // Ray-plane intersection
+    float denom = optix::dot(ray_direction, normal);
+    if (denom >= -1e-6f)
+        return false; // Parallel or back-facing
+
+    optix::float3 oc = rect_center - ray_origin;
+    float t = optix::dot(oc, normal) / denom;
+    if (t <= 0.0f)
+        return false; // Behind camera
+
+    // Hit point in world space
+    optix::float3 hit_point = ray_origin + t * ray_direction;
+
+    // Transform to local coordinates
+    optix::float3 local_hit = hit_point - rect_center;
+    float inv_transform[16];
+    d_invertMatrix(transform, inv_transform);
+    d_transformPoint(inv_transform, local_hit);
+
+    // Point-in-rectangle test
+    if (fabsf(local_hit.x) > rect_width * 0.5f)
+        return false;
+    if (fabsf(local_hit.y) > rect_length * 0.5f)
+        return false;
+
+    out_cos_angle = -denom; // Cosine of angle between ray and normal
+    return true;
+}
+
+//! Test if ray intersects a disk radiation source
+/**
+ * \param[in] ray_origin Origin point of the ray
+ * \param[in] ray_direction Direction vector of the ray (must be normalized)
+ * \param[in] disk_center Center position of the disk
+ * \param[in] disk_radius Radius of the disk
+ * \param[in] disk_rotation Rotation angles (rx, ry, rz) of the disk
+ * \param[out] out_cos_angle Cosine of angle between ray and disk normal
+ * \return True if ray intersects front face of disk in front of origin
+ */
+__device__ __forceinline__ bool d_rayDiskIntersect(const optix::float3 &ray_origin, const optix::float3 &ray_direction, const optix::float3 &disk_center, float disk_radius, const optix::float3 &disk_rotation, float &out_cos_angle) {
+    // Build transform matrix
+    float transform[16];
+    d_makeTransformMatrix(disk_rotation, transform);
+
+    // Get normal vector (transformed +Z axis)
+    optix::float3 normal = optix::make_float3(transform[2], transform[6], transform[10]);
+
+    // Ray-plane intersection
+    float denom = optix::dot(ray_direction, normal);
+    if (denom >= -1e-6f)
+        return false; // Parallel or back-facing
+
+    optix::float3 oc = disk_center - ray_origin;
+    float t = optix::dot(oc, normal) / denom;
+    if (t <= 0.0f)
+        return false; // Behind camera
+
+    // Hit point in world space
+    optix::float3 hit_point = ray_origin + t * ray_direction;
+
+    // Point-in-disk test (distance from center)
+    optix::float3 offset = hit_point - disk_center;
+    float dist_sq = optix::dot(offset, offset);
+    if (dist_sq > disk_radius * disk_radius)
+        return false;
+
+    out_cos_angle = -denom; // Cosine of angle between ray and normal
+    return true;
 }
 
 

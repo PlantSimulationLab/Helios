@@ -1,6 +1,6 @@
 /** \file "ProjectBuilder.h" ProjectBuilder header.
 
-Copyright (C) 2016-2025 Brian Bailey
+Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -295,13 +295,13 @@ private:
     bool built = false;
 
     //! Absorbed PAR value
-    float PAR_absorbed;
+    float PAR_absorbed = 0.f;
 
     //! Absorbed NIR value
-    float NIR_absorbed;
+    float NIR_absorbed = 0.f;
 
     //! Absorbed LW value
-    float LW_absorbed;
+    float LW_absorbed = 0.f;
 
     //! Turbidity
     float turbidity;
@@ -1992,32 +1992,40 @@ public:
     ~ProjectBuilder() {
         std::cout.rdbuf(old_cout_stream_buf);
 
-        delete context;
+        // Delete plugins BEFORE context - they hold pointers to context
+        // and may access it during destruction
 
-#ifdef HELIOS_VISUALIZER
-        delete visualizer;
-#endif // HELIOS_VISUALIZER
+#ifdef ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
+        delete boundarylayerconductance;
+#endif // ENABLE_BOUNDARYLAYERCONDUCTANCEMODEL
 
-#ifdef PLANT_ARCHITECTURE
-        delete plantarchitecture;
-#endif // PLANT_ARCHITECTURE
+#ifdef ENABLE_ENERGYBALANCEMODEL
+        delete energybalancemodel;
+#endif // ENABLE_ENERGYBALANCEMODEL
 
-#ifdef RADIATION_MODEL
+#ifdef ENABLE_SOLARPOSITION
+        delete solarposition;
+#endif // ENABLE_SOLARPOSITION
+
+#ifdef ENABLE_RADIATION_MODEL
         delete radiation;
         delete cameraproperties;
-#endif // RADIATION_MODEL
+#endif // ENABLE_RADIATION_MODEL
 
-#ifdef SOLARPOSITION
-        delete solarposition;
-#endif // SOLARPOSITION
+#ifdef ENABLE_CANOPY_GENERATOR
+        delete canopygenerator;
+#endif // ENABLE_CANOPY_GENERATOR
 
-#ifdef ENERGYBALANCEMODEL
-        delete energybalancemodel;
-#endif // ENERGYBALANCEMODEL
+#ifdef ENABLE_PLANT_ARCHITECTURE
+        delete plantarchitecture;
+#endif // ENABLE_PLANT_ARCHITECTURE
 
-#ifdef BOUNDARYLAYERCONDUCTANCEMODEL
-        delete boundarylayerconductance;
-#endif // BOUNDARYLAYERCONDUCTANCEMODEL
+#ifdef ENABLE_HELIOS_VISUALIZER
+        delete visualizer;
+#endif // ENABLE_HELIOS_VISUALIZER
+
+        // Delete context LAST - all plugins depend on it
+        delete context;
     }
 };
 

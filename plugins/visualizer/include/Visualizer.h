@@ -1,6 +1,6 @@
 /** \file "Visualizer.h" Visualizer header.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -779,11 +779,13 @@ public:
      * \param[in] texture_file Name of the texture map file
      * \sa setBackgroundSkyTexture()
      */
-    DEPRECATED(std::vector<size_t> addSkyDomeByCenter(float radius, const helios::vec3 &center, uint Ndivisions, const char *texture_file));
+    [[deprecated]]
+    std::vector<size_t> addSkyDomeByCenter(float radius, const helios::vec3 &center, uint Ndivisions, const char *texture_file);
 
     //! Add a Sky Dome, which is a hemispherical dome colored by a sky texture map
     /** \note This function has been deprecated, as layers are no longer supported. */
-    DEPRECATED(void addSkyDomeByCenter(float radius, const helios::vec3 &center, uint Ndivisions, const char *texture_file, int layer));
+    [[deprecated]]
+    void addSkyDomeByCenter(float radius, const helios::vec3 &center, uint Ndivisions, const char *texture_file, int layer);
 
     //! Add a text box by giving the coordinates of its center
     /**
@@ -1108,7 +1110,8 @@ public:
     /**
      * \param[out] buffer Distance to nearest object from the camera location.
      */
-    DEPRECATED(void getDepthMap(float *buffer));
+    [[deprecated]]
+    void getDepthMap(float *buffer);
 
     void getDepthMap(std::vector<float> &depth_pixels, uint &width_pixels, uint &height_pixels);
 
@@ -1441,6 +1444,9 @@ private:
     //! Track whether watermark was visible before transparent background was enabled (to restore it when switching back to solid color)
     bool watermark_was_visible_before_transparent;
 
+    //! Track whether navigation gizmo was enabled before displaying an image (to restore it when building geometry)
+    bool navigation_gizmo_was_enabled_before_image_display;
+
     //! UUID associated with the background rectangle (used for gradient, transparent checkerboard, or custom image backgrounds)
     size_t background_rectangle_ID;
     std::vector<size_t> background_sky_IDs;
@@ -1500,6 +1506,9 @@ private:
     //! x- and y- dimensions of colorbar in normalized window coordinates
     helios::vec2 colorbar_size;
 
+    //! Intended aspect ratio (width/height) of the colorbar for maintaining proportions across window sizes
+    float colorbar_intended_aspect_ratio;
+
     //! UUIDs associated with the current colorbar geometry
     std::vector<size_t> colorbar_IDs;
 
@@ -1556,6 +1565,9 @@ private:
 
     //! Update navigation gizmo geometry to match current camera orientation
     void updateNavigationGizmo();
+
+    //! Update colorbar geometry to match current window aspect ratio
+    void updateColorbar();
 
     //! Test if a normalized window coordinate hits a navigation gizmo bubble
     /**

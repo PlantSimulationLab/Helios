@@ -1,6 +1,6 @@
 /** \file "VoxelIntersection.cu" CUDA-related functions for voxel-intersection plug-in
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -255,13 +255,13 @@ void VoxelIntersection::calculatePrimitiveVoxelIntersection(std::vector<uint> UU
     if (Nvoxels == 0) {
         if (printmessages) {
             std::cout << "done. ";
+            std::cout << "WARNING: no voxels found in Context, nothing to intersect." << std::endl;
         }
-        std::cout << "WARNING: no voxels found in Context, nothing to intersect." << std::endl;
     } else if (Nprims == 0) {
         if (printmessages) {
             std::cout << "done. ";
+            std::cout << "WARNING: no planar primitives found in Context, nothing to intersect." << std::endl;
         }
-        std::cout << "WARNING: no planar primitives found in Context, nothing to intersect." << std::endl;
     }
 
     UUIDs_voxels.resize(Nvoxels);

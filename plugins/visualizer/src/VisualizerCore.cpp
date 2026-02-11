@@ -1,6 +1,6 @@
 /** \file "VisualizerCore.cpp" Visualizer core functions including constructors, initialization, and utility functions.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -26,6 +26,11 @@ extern "C" {
 #include "Visualizer.h"
 
 using namespace helios;
+
+// Reference counter for GLFW initialization
+// GLFW should be initialized once and kept alive for the entire application lifetime
+// This avoids macOS-specific issues with reinitializing GLFW after termination
+static int glfw_reference_count = 0;
 
 int read_JPEG_file(const char *filename, std::vector<unsigned char> &texture, uint &height, uint &width) {
     std::vector<helios::RGBcolor> rgb_data;
@@ -356,6 +361,9 @@ void Visualizer::createOffscreenContext() {
     bool is_ci = (ci_env != nullptr && std::string(ci_env) == "true");
     bool has_display = (display_env != nullptr && std::strlen(display_env) > 0);
     bool force_software = (force_offscreen != nullptr && std::string(force_offscreen) == "1");
+
+    // NOTE: Don't call glfwDefaultWindowHints() here - it was already called in initialize()
+    // We're just adding headless-specific hints on top of the common hints
 
     // Configure GLFW window hints for optimal CI compatibility
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
@@ -857,6 +865,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     background_is_transparent = false;
     watermark_was_visible_before_transparent = false;
+    navigation_gizmo_was_enabled_before_image_display = false;
     background_rectangle_ID = 0;
 
     colorbar_flag = 0;
@@ -871,6 +880,7 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
 
     colorbar_position = make_vec3(0.65, 0.1, 0.1);
     colorbar_size = make_vec2(0.15, 0.1);
+    colorbar_intended_aspect_ratio = 1.5f; // width/height = 0.15/0.1
     colorbar_IDs.clear();
 
     point_width = 1;
@@ -889,10 +899,26 @@ void Visualizer::initialize(uint window_width_pixels, uint window_height_pixels,
     // Initialize OpenGL context for both regular and headless modes
     // Headless mode needs an offscreen context for geometry operations
 
-    // Initialise GLFW
-    if (!glfwInit()) {
-        helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLFW");
+    // Initialize GLFW using reference counting
+    // GLFW should be initialized once and kept alive to avoid macOS-specific issues
+    // with rapid init/terminate cycles (pixel format caching, autorelease pool issues)
+    if (glfw_reference_count == 0) {
+        if (!glfwInit()) {
+            helios_runtime_error("ERROR (Visualizer::initialize): Failed to initialize GLFW");
+        }
+        // CRITICAL for macOS: Process events immediately after first init to drain autorelease pool
+        glfwPollEvents();
     }
+    glfw_reference_count++;
+
+    // CRITICAL for macOS: Process any pending events before configuring new window
+    // This ensures previous window destruction is fully processed
+    glfwPollEvents();
+
+    // Reset all GLFW window hints to defaults before configuring
+    // This is critical when multiple Visualizer instances are created with different modes,
+    // as hints like GLFW_DOUBLEBUFFER persist between glfwCreateWindow calls
+    glfwDefaultWindowHints();
 
     glfwWindowHint(GLFW_SAMPLES, std::max(0, aliasing_samples)); // antialiasing
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
@@ -1425,8 +1451,23 @@ Visualizer::~Visualizer() {
         glDeleteBuffers(1, &uv_rescale_buffer);
         glDeleteTextures(1, &uv_rescale_texture_object);
 
+        // CRITICAL for macOS: Process events to clean up window state before destroying
+        // Without this, macOS Cocoa/NSGL backend leaves cached state that causes crashes
+        // See: https://github.com/glfw/glfw/issues/1412, #1018, #721
+        glfwPollEvents();
+
         glfwDestroyWindow(scast<GLFWwindow *>(window));
-        glfwTerminate();
+
+        // CRITICAL for macOS: Process events again after destroying to drain autorelease pool
+        // This ensures all macOS window resources are properly cleaned up
+        glfwPollEvents();
+
+        // Decrement reference count and only terminate GLFW when last Visualizer is destroyed
+        // Keeping GLFW initialized avoids macOS issues with pixel format caching and context reinitialization
+        glfw_reference_count--;
+        if (glfw_reference_count == 0) {
+            glfwTerminate();
+        }
     }
 }
 
@@ -1894,6 +1935,12 @@ void Visualizer::setColorbarSize(vec2 size) {
         helios_runtime_error("ERROR (Visualizer::setColorbarSize): Size must be greater than 0 and less than the window size (i.e., 1).");
     }
     colorbar_size = size;
+    // Store the intended aspect ratio (width/height) to maintain proportions across window aspect ratios
+    if (size.y > 0) {
+        colorbar_intended_aspect_ratio = size.x / size.y;
+    } else {
+        colorbar_intended_aspect_ratio = 0.1f; // Default thin bar aspect ratio
+    }
 }
 
 void Visualizer::setColorbarRange(float cmin, float cmax) {

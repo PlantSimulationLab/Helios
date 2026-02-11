@@ -412,6 +412,25 @@ TEST_CASE("Visualizer::addLine with line width") {
     size_t UUID4;
     DOCTEST_CHECK_NOTHROW(UUID4 = visualizer.addLine(make_vec3(4, 0, 0), make_vec3(5, 1, 1), RGB::yellow, 10.0f, Visualizer::COORDINATES_CARTESIAN));
     DOCTEST_CHECK(UUID4 != 0);
+
+    // Test with maximum valid width (should work)
+    size_t UUID5;
+    DOCTEST_CHECK_NOTHROW(UUID5 = visualizer.addLine(make_vec3(6, 0, 0), make_vec3(7, 1, 1), RGB::white, 100.0f, Visualizer::COORDINATES_CARTESIAN));
+    DOCTEST_CHECK(UUID5 != 0);
+
+    // Test with zero width (should throw error)
+    DOCTEST_CHECK_THROWS_AS(visualizer.addLine(make_vec3(8, 0, 0), make_vec3(9, 1, 1), RGB::red, 0.0f, Visualizer::COORDINATES_CARTESIAN), std::runtime_error);
+
+    // Test with negative width (should throw error)
+    DOCTEST_CHECK_THROWS_AS(visualizer.addLine(make_vec3(10, 0, 0), make_vec3(11, 1, 1), RGB::green, -1.0f, Visualizer::COORDINATES_CARTESIAN), std::runtime_error);
+
+    // Test with width exceeding maximum (should throw error)
+    DOCTEST_CHECK_THROWS_AS(visualizer.addLine(make_vec3(12, 0, 0), make_vec3(13, 1, 1), RGB::blue, 101.0f, Visualizer::COORDINATES_CARTESIAN), std::runtime_error);
+
+    // Test with normalized window coordinates and custom width (user's specific case)
+    size_t UUID6;
+    DOCTEST_CHECK_NOTHROW(UUID6 = visualizer.addLine(make_vec3(0, 0.5, 0), make_vec3(1, 0.5, 0), RGB::red, 20.0f, Visualizer::COORDINATES_WINDOW_NORMALIZED));
+    DOCTEST_CHECK(UUID6 != 0);
 }
 
 TEST_CASE("Visualizer::validateTextureFile") {
@@ -599,7 +618,13 @@ TEST_CASE("Visualizer::printWindow after plotUpdate regression test") {
 
     // Add some geometry to render (a simple sphere)
     std::vector<uint> sphere_uuids = context.addSphere(10, make_vec3(0, 0, 0), 1.0f);
-    context.setPrimitiveColor(sphere_uuids, RGB::red);
+    // Use material system for test geometry
+    std::string test_material = "test_visualizer_red_sphere";
+    if (!context.doesMaterialExist(test_material)) {
+        context.addMaterial(test_material);
+        context.setMaterialColor(test_material, make_RGBAcolor(RGB::red, 1.0f));
+    }
+    context.assignMaterialToPrimitive(sphere_uuids, test_material);
 
     // Build geometry in visualizer
     visualizer.buildContextGeometry(&context);
@@ -672,7 +697,13 @@ TEST_CASE("Visualizer::printWindow after plotUpdate non-headless regression test
 
     // Add some geometry to render (a simple sphere)
     std::vector<uint> sphere_uuids = context.addSphere(10, make_vec3(0, 0, 0), 1.0f);
-    context.setPrimitiveColor(sphere_uuids, RGB::red);
+    // Use material system for test geometry
+    std::string test_material = "test_visualizer_red_sphere";
+    if (!context.doesMaterialExist(test_material)) {
+        context.addMaterial(test_material);
+        context.setMaterialColor(test_material, make_RGBAcolor(RGB::red, 1.0f));
+    }
+    context.assignMaterialToPrimitive(sphere_uuids, test_material);
 
     // Build geometry in visualizer
     visualizer.buildContextGeometry(&context);
@@ -714,7 +745,7 @@ TEST_CASE("Visualizer::printWindow after plotUpdate non-headless regression test
 
 TEST_CASE("Visualizer::PNG with transparent background") {
     // Test that PNG output with transparent background correctly renders geometry with transparency
-    Visualizer visualizer(200, 200, 16, false, true); // headless mode
+    Visualizer visualizer(200, 200, 16, true, true); // headless mode
     visualizer.disableMessages();
 
     // Add a red rectangle in the center
@@ -775,8 +806,15 @@ TEST_CASE("Visualizer::PNG with transparent background (windowed mode)") {
 
     // Add a red patch via the Context (matching user's workflow)
     uint patch_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.6, 0.6), nullrotation, "plugins/visualizer/textures/AlmondLeaf.png");
-    context.setPrimitiveColor(patch_UUID, make_RGBcolor(1.f, 0.f, 0.f));
-    context.overridePrimitiveTextureColor(patch_UUID); // Required to use vertex color instead of texture color
+    // Use material system for test geometry with texture override
+    std::string test_material = "test_visualizer_red_patch";
+    if (!context.doesMaterialExist(test_material)) {
+        context.addMaterial(test_material);
+        context.setMaterialColor(test_material, make_RGBAcolor(1.f, 0.f, 0.f, 1.f));
+        context.setMaterialTexture(test_material, "plugins/visualizer/textures/AlmondLeaf.png");
+        context.setMaterialTextureColorOverride(test_material, true);
+    }
+    context.assignMaterialToPrimitive(patch_UUID, test_material); // Required to use vertex color instead of texture color
 
     Visualizer visualizer(200, 200, 16, false, true);
     visualizer.disableMessages();
@@ -849,11 +887,19 @@ TEST_CASE("Visualizer::Transparent background with non-square window") {
 
     // Add a small patch to have some geometry
     uint patch_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.3, 0.3), nullrotation, "plugins/visualizer/textures/AlmondLeaf.png");
-    context.setPrimitiveColor(patch_UUID, make_RGBcolor(1.f, 0.f, 0.f));
-    context.overridePrimitiveTextureColor(patch_UUID);
+    // Use material system for test geometry with texture override
+    std::string test_material = "test_visualizer_red_patch_small";
+    if (!context.doesMaterialExist(test_material)) {
+        context.addMaterial(test_material);
+        context.setMaterialColor(test_material, make_RGBAcolor(1.f, 0.f, 0.f, 1.f));
+        context.setMaterialTexture(test_material, "plugins/visualizer/textures/AlmondLeaf.png");
+        context.setMaterialTextureColorOverride(test_material, true);
+    }
+    context.assignMaterialToPrimitive(patch_UUID, test_material);
 
     // Test with a non-square window (800x600, aspect ratio 4:3)
     Visualizer visualizer(800, 600, 16, false, true);
+    visualizer.disableMessages();
 
     // Set transparent background
     DOCTEST_CHECK_NOTHROW(visualizer.setBackgroundTransparent());
@@ -903,11 +949,19 @@ TEST_CASE("Visualizer::Background color/transparent switching") {
 
     Context context;
     uint patch_UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(0.3, 0.3), nullrotation, "plugins/visualizer/textures/AlmondLeaf.png");
-    context.setPrimitiveColor(patch_UUID, make_RGBcolor(1.f, 0.f, 0.f));
-    context.overridePrimitiveTextureColor(patch_UUID);
+    // Use material system for test geometry with texture override
+    std::string test_material = "test_visualizer_red_patch_small";
+    if (!context.doesMaterialExist(test_material)) {
+        context.addMaterial(test_material);
+        context.setMaterialColor(test_material, make_RGBAcolor(1.f, 0.f, 0.f, 1.f));
+        context.setMaterialTexture(test_material, "plugins/visualizer/textures/AlmondLeaf.png");
+        context.setMaterialTextureColorOverride(test_material, true);
+    }
+    context.assignMaterialToPrimitive(patch_UUID, test_material);
 
     SUBCASE("Watermark visible → transparent → solid color (should restore watermark)") {
         Visualizer visualizer(200, 200, 16, false, true);
+        visualizer.disableMessages();
         visualizer.buildContextGeometry(&context);
 
         // Watermark should be visible by default
@@ -934,6 +988,7 @@ TEST_CASE("Visualizer::Background color/transparent switching") {
 
     SUBCASE("Watermark hidden → transparent → solid color (should NOT restore watermark)") {
         Visualizer visualizer(200, 200, 16, false, true);
+        visualizer.disableMessages();
         visualizer.buildContextGeometry(&context);
 
         // Manually hide watermark before enabling transparent background
@@ -959,6 +1014,7 @@ TEST_CASE("Visualizer::Background color/transparent switching") {
 
     SUBCASE("Multiple switches between transparent and solid") {
         Visualizer visualizer(200, 200, 16, false, true);
+        visualizer.disableMessages();
         visualizer.buildContextGeometry(&context);
 
         // Multiple switches should work correctly
@@ -978,6 +1034,7 @@ DOCTEST_TEST_CASE("Visualizer::Navigation Gizmo") {
 
     SUBCASE("Navigation gizmo is enabled by default") {
         Visualizer visualizer(200, 200, 16, false, true);
+        visualizer.disableMessages();
         // Gizmo should be enabled by default
         // We can't directly access the private member, but we can test the behavior
         DOCTEST_CHECK_NOTHROW(visualizer.plotUpdate(true));
@@ -985,6 +1042,7 @@ DOCTEST_TEST_CASE("Visualizer::Navigation Gizmo") {
 
     SUBCASE("Show and hide navigation gizmo") {
         Visualizer visualizer(200, 200, 16, false, true);
+        visualizer.disableMessages();
 
         // Hide the gizmo
         DOCTEST_CHECK_NOTHROW(visualizer.hideNavigationGizmo());
@@ -1004,6 +1062,7 @@ DOCTEST_TEST_CASE("Visualizer::Navigation Gizmo") {
 
     SUBCASE("Navigation gizmo with camera movement") {
         Visualizer visualizer(200, 200, 16, false, true);
+        visualizer.disableMessages();
 
         // Add some geometry to visualize
         auto sphere_center = make_vec3(0, 0, 0);
@@ -1026,6 +1085,7 @@ DOCTEST_TEST_CASE("Visualizer::Navigation Gizmo") {
 
     SUBCASE("Navigation gizmo with printWindow") {
         Visualizer visualizer(200, 200, 16, false, true);
+        visualizer.disableMessages();
 
         // Add some geometry
         auto sphere_uuids = visualizer.addSphereByCenter(1.0f, make_vec3(0, 0, 0), 10, make_RGBcolor(1.f, 0.f, 0.f), Visualizer::COORDINATES_CARTESIAN);
@@ -1047,6 +1107,7 @@ DOCTEST_TEST_CASE("Visualizer::Navigation Gizmo") {
 
     SUBCASE("Navigation gizmo state persists after printWindow") {
         Visualizer visualizer(200, 200, 16, false, true);
+        visualizer.disableMessages();
 
         // Enable gizmo
         visualizer.showNavigationGizmo();

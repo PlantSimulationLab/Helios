@@ -1,7 +1,7 @@
 /**
  * \file "Context_data.cpp" Context primitive data, object data, and global data declarations.
  *
- * Copyright (C) 2016-2025 Brian Bailey
+ * Copyright (C) 2016-2026 Brian Bailey
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -537,6 +537,126 @@ void Context::calculatePrimitiveDataMean(const std::vector<uint> &UUIDs, const s
     }
 }
 
+void Context::setObjectDataFromPrimitiveDataMean(uint objID, const std::string &label) {
+#ifdef HELIOS_DEBUG
+    if (!doesObjectExist(objID)) {
+        helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): Object ID of " + std::to_string(objID) + " does not exist in the Context.");
+    }
+#endif
+
+    // Get primitive UUIDs for this object
+    std::vector<uint> UUIDs = getObjectPrimitiveUUIDs(objID);
+
+    if (UUIDs.empty()) {
+        helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): Object ID " + std::to_string(objID) + " has no primitive children.");
+    }
+
+    // Determine the data type by checking the first primitive that has this data
+    HeliosDataType data_type = HELIOS_TYPE_UNKNOWN;
+    for (uint UUID: UUIDs) {
+        if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
+            data_type = getPrimitiveDataType(label.c_str());
+            break;
+        }
+    }
+
+    if (data_type == HELIOS_TYPE_UNKNOWN) {
+        helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): Primitive data '" + label + "' does not exist for any primitives in object " + std::to_string(objID) + ".");
+    }
+
+    // Validate data type is supported for mean calculation
+    if (data_type != HELIOS_TYPE_FLOAT && data_type != HELIOS_TYPE_DOUBLE && data_type != HELIOS_TYPE_VEC2 && data_type != HELIOS_TYPE_VEC3 && data_type != HELIOS_TYPE_VEC4) {
+        helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): Cannot calculate mean for primitive data type. Only float, double, vec2, vec3, and vec4 are supported.");
+    }
+
+    // Calculate mean based on data type
+    if (data_type == HELIOS_TYPE_FLOAT) {
+        float value;
+        float sum = 0.f;
+        size_t count = 0;
+        for (uint UUID: UUIDs) {
+            if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
+                getPrimitiveData(UUID, label.c_str(), value);
+                sum += value;
+                count++;
+            }
+        }
+        if (count == 0) {
+            helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): No primitives in object " + std::to_string(objID) + " have primitive data '" + label + "'.");
+        }
+        float mean = sum / float(count);
+        setObjectData(objID, label.c_str(), mean);
+
+    } else if (data_type == HELIOS_TYPE_DOUBLE) {
+        double value;
+        double sum = 0.0;
+        size_t count = 0;
+        for (uint UUID: UUIDs) {
+            if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
+                getPrimitiveData(UUID, label.c_str(), value);
+                sum += value;
+                count++;
+            }
+        }
+        if (count == 0) {
+            helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): No primitives in object " + std::to_string(objID) + " have primitive data '" + label + "'.");
+        }
+        double mean = sum / double(count);
+        setObjectData(objID, label.c_str(), mean);
+
+    } else if (data_type == HELIOS_TYPE_VEC2) {
+        vec2 value;
+        vec2 sum(0.f, 0.f);
+        size_t count = 0;
+        for (uint UUID: UUIDs) {
+            if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
+                getPrimitiveData(UUID, label.c_str(), value);
+                sum = sum + value;
+                count++;
+            }
+        }
+        if (count == 0) {
+            helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): No primitives in object " + std::to_string(objID) + " have primitive data '" + label + "'.");
+        }
+        vec2 mean = sum / float(count);
+        setObjectData(objID, label.c_str(), mean);
+
+    } else if (data_type == HELIOS_TYPE_VEC3) {
+        vec3 value;
+        vec3 sum(0.f, 0.f, 0.f);
+        size_t count = 0;
+        for (uint UUID: UUIDs) {
+            if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
+                getPrimitiveData(UUID, label.c_str(), value);
+                sum = sum + value;
+                count++;
+            }
+        }
+        if (count == 0) {
+            helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): No primitives in object " + std::to_string(objID) + " have primitive data '" + label + "'.");
+        }
+        vec3 mean = sum / float(count);
+        setObjectData(objID, label.c_str(), mean);
+
+    } else if (data_type == HELIOS_TYPE_VEC4) {
+        vec4 value;
+        vec4 sum(0.f, 0.f, 0.f, 0.f);
+        size_t count = 0;
+        for (uint UUID: UUIDs) {
+            if (doesPrimitiveExist(UUID) && doesPrimitiveDataExist(UUID, label.c_str())) {
+                getPrimitiveData(UUID, label.c_str(), value);
+                sum = sum + value;
+                count++;
+            }
+        }
+        if (count == 0) {
+            helios_runtime_error("ERROR (Context::setObjectDataFromPrimitiveDataMean): No primitives in object " + std::to_string(objID) + " have primitive data '" + label + "'.");
+        }
+        vec4 mean = sum / float(count);
+        setObjectData(objID, label.c_str(), mean);
+    }
+}
+
 void Context::calculatePrimitiveDataAreaWeightedMean(const std::vector<uint> &UUIDs, const std::string &label, float &awt_mean) const {
     float value, A;
     float sum = 0.f;
@@ -968,6 +1088,8 @@ void Context::scalePrimitiveData(const std::string &label, float scaling_factor)
 
 void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char *label, int increment) {
 
+    WarningAggregator warnings;
+
     for (uint UUID: UUIDs) {
 
         if (!doesPrimitiveDataExist(UUID, label)) {
@@ -982,12 +1104,16 @@ void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char 
             }
             primitives.at(UUID)->dirty_flag = true;
         } else {
-            std::cerr << "WARNING (Context::incrementPrimitiveData): Attempted to increment primitive data for type int, but data '" << label << "' does not have type int." << std::endl;
+            warnings.addWarning("increment_type_mismatch", "Attempted to increment primitive data for type int, but data '" + std::string(label) + "' does not have type int.");
         }
     }
+
+    warnings.report(std::cerr);
 }
 
 void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char *label, uint increment) {
+
+    WarningAggregator warnings;
 
     for (uint UUID: UUIDs) {
 
@@ -1003,12 +1129,16 @@ void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char 
             }
             primitives.at(UUID)->dirty_flag = true;
         } else {
-            std::cerr << "WARNING (Context::incrementPrimitiveData): Attempted to increment Primitive data for type uint, but data '" << label << "' does not have type uint." << std::endl;
+            warnings.addWarning("increment_type_mismatch", "Attempted to increment Primitive data for type uint, but data '" + std::string(label) + "' does not have type uint.");
         }
     }
+
+    warnings.report(std::cerr);
 }
 
 void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char *label, float increment) {
+
+    WarningAggregator warnings;
 
     for (uint UUID: UUIDs) {
 
@@ -1024,12 +1154,16 @@ void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char 
             }
             primitives.at(UUID)->dirty_flag = true;
         } else {
-            std::cerr << "WARNING (Context::incrementPrimitiveData): Attempted to increment Primitive data for type float, but data '" << label << "' does not have type float." << std::endl;
+            warnings.addWarning("increment_type_mismatch", "Attempted to increment Primitive data for type float, but data '" + std::string(label) + "' does not have type float.");
         }
     }
+
+    warnings.report(std::cerr);
 }
 
 void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char *label, double increment) {
+
+    WarningAggregator warnings;
 
     for (uint UUID: UUIDs) {
 
@@ -1045,9 +1179,11 @@ void Context::incrementPrimitiveData(const std::vector<uint> &UUIDs, const char 
             }
             primitives.at(UUID)->dirty_flag = true;
         } else {
-            std::cerr << "WARNING (Context::incrementPrimitiveData): Attempted to increment Primitive data for type double, but data '" << label << "' does not have type double." << std::endl;
+            warnings.addWarning("increment_type_mismatch", "Attempted to increment Primitive data for type double, but data '" + std::string(label) + "' does not have type double.");
         }
     }
+
+    warnings.report(std::cerr);
 }
 
 void Context::aggregatePrimitiveDataSum(const std::vector<uint> &UUIDs, const std::vector<std::string> &primitive_data_labels, const std::string &result_primitive_data_label) {
@@ -2132,6 +2268,15 @@ size_t Context::getGlobalDataSize(const char *label) const {
     }
 
     return globaldata.at(label).size;
+}
+
+uint64_t Context::getGlobalDataVersion(const char *label) const {
+
+    if (!doesGlobalDataExist(label)) {
+        return 0; // Return 0 for non-existent data (consistent with version = 0 initialization)
+    }
+
+    return globaldata.at(label).version;
 }
 
 std::vector<std::string> Context::listGlobalData() const {

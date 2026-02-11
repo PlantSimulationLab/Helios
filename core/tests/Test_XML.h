@@ -291,5 +291,76 @@ TEST_CASE("Context XML I/O Functions") {
         std::remove(test_file);
     }
 
+    SUBCASE("vector global data XML formatting") {
+        Context ctx;
+
+        // Add various vector type global data
+        std::vector<vec2> vec2_data = {make_vec2(400, 0.0666747f), make_vec2(401, 0.0640556f), make_vec2(402, 0.0619332f)};
+        std::vector<vec3> vec3_data = {make_vec3(1.1f, 2.2f, 3.3f), make_vec3(4.4f, 5.5f, 6.6f)};
+        std::vector<vec4> vec4_data = {make_vec4(1.1f, 2.2f, 3.3f, 4.4f), make_vec4(5.5f, 6.6f, 7.7f, 8.8f)};
+        std::vector<int2> int2_data = {make_int2(1, 2), make_int2(3, 4)};
+        std::vector<int3> int3_data = {make_int3(1, 2, 3), make_int3(4, 5, 6)};
+        std::vector<int4> int4_data = {make_int4(1, 2, 3, 4), make_int4(5, 6, 7, 8)};
+
+        ctx.setGlobalData("test_vec2", vec2_data);
+        ctx.setGlobalData("test_vec3", vec3_data);
+        ctx.setGlobalData("test_vec4", vec4_data);
+        ctx.setGlobalData("test_int2", int2_data);
+        ctx.setGlobalData("test_int3", int3_data);
+        ctx.setGlobalData("test_int4", int4_data);
+
+        const char *test_file = "helios_vector_test.xml";
+        ctx.writeXML(test_file, true);
+
+        // Load and verify all vector data
+        Context ctx2;
+        ctx2.loadXML(test_file, true);
+
+        // Verify vec2
+        std::vector<vec2> loaded_vec2;
+        ctx2.getGlobalData("test_vec2", loaded_vec2);
+        DOCTEST_CHECK(loaded_vec2.size() == 3);
+        DOCTEST_CHECK(loaded_vec2[0].x == doctest::Approx(400.0f));
+        DOCTEST_CHECK(loaded_vec2[0].y == doctest::Approx(0.0666747f));
+        DOCTEST_CHECK(loaded_vec2[2].x == doctest::Approx(402.0f));
+
+        // Verify vec3
+        std::vector<vec3> loaded_vec3;
+        ctx2.getGlobalData("test_vec3", loaded_vec3);
+        DOCTEST_CHECK(loaded_vec3.size() == 2);
+        DOCTEST_CHECK(loaded_vec3[0] == vec3(1.1f, 2.2f, 3.3f));
+        DOCTEST_CHECK(loaded_vec3[1] == vec3(4.4f, 5.5f, 6.6f));
+
+        // Verify vec4
+        std::vector<vec4> loaded_vec4;
+        ctx2.getGlobalData("test_vec4", loaded_vec4);
+        DOCTEST_CHECK(loaded_vec4.size() == 2);
+        DOCTEST_CHECK(loaded_vec4[0] == vec4(1.1f, 2.2f, 3.3f, 4.4f));
+        DOCTEST_CHECK(loaded_vec4[1] == vec4(5.5f, 6.6f, 7.7f, 8.8f));
+
+        // Verify int2
+        std::vector<int2> loaded_int2;
+        ctx2.getGlobalData("test_int2", loaded_int2);
+        DOCTEST_CHECK(loaded_int2.size() == 2);
+        DOCTEST_CHECK(loaded_int2[0] == int2(1, 2));
+        DOCTEST_CHECK(loaded_int2[1] == int2(3, 4));
+
+        // Verify int3
+        std::vector<int3> loaded_int3;
+        ctx2.getGlobalData("test_int3", loaded_int3);
+        DOCTEST_CHECK(loaded_int3.size() == 2);
+        DOCTEST_CHECK(loaded_int3[0] == int3(1, 2, 3));
+        DOCTEST_CHECK(loaded_int3[1] == int3(4, 5, 6));
+
+        // Verify int4
+        std::vector<int4> loaded_int4;
+        ctx2.getGlobalData("test_int4", loaded_int4);
+        DOCTEST_CHECK(loaded_int4.size() == 2);
+        DOCTEST_CHECK(loaded_int4[0] == int4(1, 2, 3, 4));
+        DOCTEST_CHECK(loaded_int4[1] == int4(5, 6, 7, 8));
+
+        std::remove(test_file);
+    }
+
     // Note: scanXMLForTag testing removed due to complex XML tag structure requirements
 }

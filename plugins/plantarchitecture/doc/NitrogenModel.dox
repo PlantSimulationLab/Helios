@@ -1,0 +1,468 @@
+/*! \page NitrogenModelDoc Nitrogen Model
+
+\section NitroIntro Overview
+
+The nitrogen model is an optional feature in the PlantArchitecture plugin that simulates nitrogen uptake, allocation, and stress effects on plant growth. When enabled, the model mechanistically tracks nitrogen in a three-level pool structure (root, available, and per-leaf pools), simulates rate-limited nitrogen accumulation in leaves, implements age-based nitrogen remobilization from old to young leaves, and calculates a nitrogen stress factor that other plugins can use to modify photosynthesis and growth rates.
+
+<b>Important architectural note:</b> Nitrogen is tracked on an <b>area basis (g N/m²)</b> rather than a mass basis (g N/g DW). This design choice:
+- Eliminates the need for an SLA parameter (simpler model with 7 parameters instead of 8)
+- Provides direct compatibility with PROSPECT leaf optical models
+- Aligns with physiological reality where leaf N content per area remains relatively constant as leaves thicken (LMA increases) while mass-based concentration decreases
+- Matches remote sensing approaches which measure area-based nitrogen
+- Simplifies calculations by working directly with leaf area without biomass conversion
+
+The model integrates loosely with other plugins through a single output variable (`nitrogen_stress_factor`, range 0-1) written to plant object data. The Photosynthesis plugin or other growth models can optionally read this stress factor and use it to scale parameters like Vcmax/Jmax or growth rates.
+
+Key features of the nitrogen model include:
+- Area-based nitrogen tracking (g N/m²) for simplicity and PROSPECT compatibility
+- Three-level pool structure: root pool → available pool → per-leaf pools
+- Rate-limited nitrogen accumulation in leaves (prevents instantaneous uptake)
+- Age-based nitrogen remobilization from old leaves (>70% lifespan) to young leaves (<50% lifespan)
+- 70% remobilization efficiency with stress-dependent acceleration
+- Fruit nitrogen removal during fruit growth
+- Single output: nitrogen stress factor (0-1) for use by other plugins
+- Only 7 user-configurable parameters
+
+\section NitroEnable Enabling the Nitrogen Model
+
+The nitrogen model is disabled by default. To enable it, call the \ref PlantArchitecture::enableNitrogenModel() method before or after building plant instances:
+
+~~~~~~
+PlantArchitecture plantarchitecture(&context);
+
+// Enable the nitrogen model
+plantarchitecture.enableNitrogenModel();
+
+// Load and build plants
+plantarchitecture.loadPlantModelFromLibrary("bean");
+uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(nullorigin, 0);
+~~~~~~
+
+The model can be disabled at any time using \ref PlantArchitecture::disableNitrogenModel(). Once enabled, the model automatically operates during each call to \ref PlantArchitecture::advanceTime().
+
+\section NitroParameters Model Parameters
+
+The behavior of the nitrogen model is controlled by only 7 parameters stored in the \ref NitrogenParameters structure. Parameters can be set for individual plants or groups of plants using \ref PlantArchitecture::setPlantNitrogenParameters().
+
+\subsection NitroParamTable Parameter Descriptions
+
+Parameters in the \ref NitrogenParameters structure are organized into several categories. <b>Default values are based on typical crop plants (bean, tomato).</b>
+
+| Category | Parameter | Default Value | Units | Description |
+| ------| ------ | ------ | ------ | ------ |
+| **Leaf Nitrogen Content (Area Basis)** |||||
+|| target_leaf_N_area | 1.5 | g N/m² | Target leaf nitrogen content per unit area for unstressed plants. Typical range: 1.0-2.5 g N/m². |
+|| minimum_leaf_N_area | 0.5 | g N/m² | Minimum viable leaf nitrogen content per area below which leaves cannot function. |
+| **Allocation** |||||
+|| root_allocation_fraction | 0.15 | - | Fraction of applied nitrogen allocated to root pool (0-1). Remainder goes to available pool. |
+| **Rate Limiting** |||||
+|| max_N_accumulation_rate | 0.1 | g N/m²/day | Maximum rate at which leaves can accumulate nitrogen per unit area per day. Prevents instantaneous uptake. |
+| **Remobilization** |||||
+|| leaf_remobilization_efficiency | 0.70 | - | Fraction of leaf nitrogen that can be remobilized from old leaves (0-1). Typical range: 0.6-0.8. |
+|| remobilization_age_threshold | 0.70 | - | Fraction of leaf lifespan at which remobilization begins (0-1). Leaves older than this donate N to younger leaves. |
+| **Fruit Nitrogen** |||||
+|| fruit_N_area | 1.0 | g N/m² | Nitrogen content per unit fruit surface area. Used to calculate N demand during fruit growth. |
+
+\subsection NitroParamSet Setting Parameters
+
+Parameters are set using the \ref PlantArchitecture::setPlantNitrogenParameters() method. Default parameter values are used unless explicitly modified:
+
+~~~~~~
+PlantArchitecture plantarchitecture(&context);
+plantarchitecture.enableNitrogenModel();
+
+// Create custom parameter set (all units are area-based)
+NitrogenParameters nitrogen_params;
+nitrogen_params.target_leaf_N_area = 2.0f;  // Higher target (g N/m²)
+nitrogen_params.minimum_leaf_N_area = 0.7f;  // Higher minimum tolerance (g N/m²)
+nitrogen_params.max_N_accumulation_rate = 0.15f;  // Faster N uptake (g N/m²/day)
+nitrogen_params.fruit_N_area = 1.5f;  // Higher fruit N demand (g N/m²)
+
+// Load and build plant
+plantarchitecture.loadPlantModelFromLibrary("tomato");
+uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(nullorigin, 0);
+
+// Apply parameters to plant
+plantarchitecture.setPlantNitrogenParameters(plantID, nitrogen_params);
+~~~~~~
+
+You can also set parameters for multiple plants at once:
+
+~~~~~~
+std::vector<uint> plantIDs = plantarchitecture.buildPlantCanopyFromLibrary(
+    make_vec3(0,0,0), make_vec2(0.5, 0.5), make_int2(10, 10), 30);
+
+plantarchitecture.setPlantNitrogenParameters(plantIDs, nitrogen_params);
+~~~~~~
+
+\section NitroInit Initialization
+
+After enabling the nitrogen model and setting parameters, you should initialize nitrogen pools based on desired initial leaf nitrogen content per area:
+
+~~~~~~
+// Initialize all plants with 1.2 g N/m² initial leaf nitrogen content
+plantarchitecture.initializeNitrogenPools(1.2f);
+
+// Or initialize a specific plant
+plantarchitecture.initializePlantNitrogenPools(plantID, 1.2f);
+~~~~~~
+
+The initialization method:
+1. Clears existing nitrogen pools (root, available, per-leaf)
+2. Sets each leaf's nitrogen content to the specified value (g N/m²)
+3. Calculates total nitrogen by multiplying content × leaf area
+4. Records the initial nitrogen as cumulative uptake for tracking purposes
+
+<b>Note:</b> Because the model uses area-based nitrogen, initialization does not require knowledge of leaf biomass or SLA. This significantly simplifies the initialization process.
+
+\section NitroApplication Nitrogen Application
+
+Nitrogen is applied directly to plants using the \ref PlantArchitecture::addPlantNitrogen() method. This immediately updates plant nitrogen pools:
+
+~~~~~~
+// Apply 0.5 g N to a single plant
+plantarchitecture.addPlantNitrogen(plantID, 0.5f);
+
+// Apply 0.5 g N to each plant in a canopy
+plantarchitecture.addPlantNitrogen(plantIDs, 0.5f);
+~~~~~~
+
+When nitrogen is applied:
+1. It is immediately split between root pool (15% by default) and available pool (85% by default)
+2. The split fraction is controlled by `root_allocation_fraction` parameter
+3. Cumulative nitrogen uptake is tracked for each plant
+4. No scheduling or delayed uptake - application is instantaneous
+
+In a typical simulation, you would apply nitrogen at specific times during the growing season:
+
+~~~~~~
+for (int day = 100; day <= 250; day++) {
+    context.setDate(make_Date(day, 2024));
+
+    // Apply nitrogen on specific days
+    if (day == 115) {
+        plantarchitecture.addPlantNitrogen(plantIDs, 0.5f);  // First application
+    }
+    if (day == 145) {
+        plantarchitecture.addPlantNitrogen(plantIDs, 0.75f);  // Second application
+    }
+
+    // Model runs automatically in advanceTime
+    plantarchitecture.advanceTime(1.0f);
+}
+~~~~~~
+
+\section NitroProcess Nitrogen Dynamics
+
+When \ref PlantArchitecture::advanceTime() is called, the nitrogen model performs several operations in sequence:
+
+\subsection NitroAccumulation 1. Leaf Nitrogen Accumulation
+
+Nitrogen from the available pool is transferred to individual leaves in a rate-limited manner:
+
+- Each leaf's current nitrogen content per area (g N/m²) is compared to the target
+- Nitrogen demand per area is calculated: demand = target - current (g N/m²)
+- Transfer rate is limited by `max_N_accumulation_rate` (g N/m²/day)
+- Total nitrogen transfer is calculated: (limited demand) × leaf area
+- Transfer is also supply-limited by the available pool
+- Leaves with nitrogen below target gradually accumulate nitrogen over time
+
+This rate-limiting prevents instantaneous equilibration and creates realistic lag times between nitrogen application and full uptake.
+
+<b>Key simplification:</b> No biomass calculation or SLA parameter needed. The model works directly with leaf areas.
+
+\subsection NitroRemob 2. Nitrogen Remobilization (Critical Feature)
+
+Nitrogen is redistributed from old leaves to young leaves based on age:
+
+<b>Source leaves (age ≥ 70% of lifespan):</b>
+- Classified as nitrogen donors
+- Calculate remobilizable nitrogen per area: (current_N_area - minimum_N_area) × 70% efficiency
+- Cannot mobilize nitrogen below the minimum content threshold
+- Remobilization is accelerated by up to 30% under nitrogen stress
+- Total remobilizable N = remobilizable N per area × leaf area
+
+<b>Sink leaves (age < 50% of lifespan):</b>
+- Classified as nitrogen receivers
+- Young expanding leaves have priority for remobilized nitrogen
+- Receive nitrogen in proportion to their demand (target_N_area - current_N_area)
+
+<b>Physiological basis:</b>
+- Research shows ~50% of young leaf nitrogen comes from remobilization during normal growth
+- Typical remobilization efficiency: 70-80% of leaf nitrogen
+- Area-based tracking naturally handles the fact that thicker (higher LMA) older leaves have more total nitrogen to remobilize even if mass-based concentration is similar
+- Nitrogen deficiency accelerates senescence by 5-20 days
+
+This remobilization mechanism reproduces the characteristic symptom of nitrogen deficiency where <b>older leaves yellow first</b> while younger leaves remain green.
+
+\subsection NitroFruit 3. Fruit Nitrogen Removal
+
+When fruit grows (detected by increase in fruit scale factor), nitrogen is deducted from the available pool:
+
+- Fruit area increment is calculated from scale factor changes
+- Nitrogen demand = area increment × `fruit_N_area` (g N/m²)
+- Nitrogen is removed from available pool (supply-limited)
+- This reduces nitrogen available for leaves, potentially creating competition
+
+Fruit nitrogen removal is only active when plants are fruiting.
+
+\subsection NitroStress 4. Nitrogen Stress Factor Calculation
+
+After nitrogen dynamics, the model calculates a single output metric:
+
+- Area-weighted average nitrogen content per area is calculated: Σ(N_area × area) / Σ(area)
+- Stress factor = min(1.0, avg_N_area / target_N_area)
+- Stress factor is clamped to [0, 1] range
+- Written to plant object data with label `"nitrogen_stress_factor"`
+
+<b>Stress factor interpretation:</b>
+- 1.0 = No nitrogen stress (plants at or above target nitrogen)
+- 0.5 = Moderate nitrogen stress (50% of target nitrogen)
+- 0.0 = Severe nitrogen stress (no nitrogen available)
+
+\section NitroIntegration Integration with Other Plugins
+
+The nitrogen model outputs a single variable that other plugins can optionally read:
+
+\subsection NitroPhotosyn Photosynthesis Integration
+
+The Photosynthesis plugin can read the nitrogen stress factor and scale photosynthetic parameters:
+
+~~~~~~
+// In PhotosynthesisModel::run()
+float N_stress = 1.0f;  // Default: no stress
+
+if (context->doesObjectDataExist(objID, "nitrogen_stress_factor")) {
+    N_stress = context->getObjectData<float>(objID, "nitrogen_stress_factor");
+    N_stress = std::clamp(N_stress, 0.0f, 1.0f);
+}
+
+// Scale photosynthetic parameters
+coeffs.Vcmax *= N_stress;
+coeffs.Jmax *= N_stress;
+~~~~~~
+
+This integration is <b>optional</b> - the Photosynthesis plugin works with or without the nitrogen model.
+
+\subsection NitroPROSPECT PROSPECT Leaf Optics Integration
+
+<b>Direct compatibility:</b> The PROSPECT model requires area-based nitrogen (Leaf Nitrogen Density), which is exactly what this model provides.
+
+~~~~~~
+// Get leaf nitrogen content per area directly
+float leaf_N_area = shoot->leaf_nitrogen_gN_m2[leaf_objID];  // g N/m²
+
+// Convert to PROSPECT units (µg/cm² = 0.1 g/m²)
+float leaf_N_PROSPECT = leaf_N_area * 10.0f;  // µg/cm²
+
+// Use in PROSPECT model
+PROSPECT_model.setLeafNitrogen(leaf_N_PROSPECT);
+~~~~~~
+
+<b>Why this matters:</b> PROSPECT and other leaf optical models work with area-based properties because reflectance is determined by the amount of absorbing material per unit leaf area, not per unit mass. Using area-based nitrogen eliminates the need for SLA-based conversions that introduce additional uncertainty.
+
+\subsection NitroGrowth Growth Integration
+
+PlantArchitecture growth calculations can read the stress factor:
+
+~~~~~~
+// In shoot elongation calculation
+float N_stress = 1.0f;
+if (context_ptr->doesObjectDataExist(shoot_objID, "nitrogen_stress_factor")) {
+    N_stress = context_ptr->getObjectData<float>(shoot_objID, "nitrogen_stress_factor");
+}
+
+// Apply to growth rate
+float adjusted_elongation = base_elongation_rate * N_stress;
+~~~~~~
+
+\section NitroExample Complete Usage Example
+
+This example shows a complete simulation with the nitrogen model:
+
+~~~~~~
+#include "Context.h"
+#include "PlantArchitecture.h"
+#include "PhotosynthesisModel.h"
+
+using namespace helios;
+
+int main() {
+    Context context;
+
+    // Build plant canopy
+    PlantArchitecture plantarch(&context);
+    plantarch.loadPlantModelFromLibrary("bean");
+    std::vector<uint> plantIDs = plantarch.buildPlantCanopyFromLibrary(
+        make_vec3(0,0,0), make_vec2(0.3, 0.3), make_int2(10, 10), 30);
+
+    // Enable and configure nitrogen model (area-based parameters)
+    plantarch.enableNitrogenModel();
+
+    NitrogenParameters N_params;
+    N_params.target_leaf_N_area = 1.8f;              // 1.8 g N/m²
+    N_params.minimum_leaf_N_area = 0.6f;             // 0.6 g N/m²
+    N_params.root_allocation_fraction = 0.15f;       // 15% to roots
+    N_params.max_N_accumulation_rate = 0.12f;        // 0.12 g N/m²/day
+    plantarch.setPlantNitrogenParameters(plantIDs, N_params);
+
+    // Initialize nitrogen pools (area basis - no SLA needed!)
+    plantarch.initializeNitrogenPools(1.2f);  // 1.2 g N/m² initial
+
+    // Setup photosynthesis (automatically uses N stress factor if available)
+    PhotosynthesisModel photosynthesis(&context);
+    photosynthesis.setModelCoefficientsFromLibrary("bean");
+
+    // Time loop
+    for (int day = 100; day <= 250; day++) {
+        context.setDate(make_Date(day, 2024));
+
+        // Apply nitrogen on specific days
+        if (day == 115) {
+            plantarch.addPlantNitrogen(plantIDs, 0.5f);  // 0.5 g N per plant
+        }
+        if (day == 145) {
+            plantarch.addPlantNitrogen(plantIDs, 0.75f);  // 0.75 g N per plant
+        }
+
+        // PlantArchitecture accumulates N in leaves and updates stress factor
+        plantarch.advanceTime(1.0f);
+
+        // Photosynthesis reads stress factor and scales Vcmax/Jmax
+        photosynthesis.run();
+
+        // Optional: query nitrogen status
+        std::vector<uint> plant_objIDs = plantarch.getAllPlantObjectIDs(plantIDs[0]);
+        if (!plant_objIDs.empty()) {
+            float N_stress = context.getObjectData<float>(plant_objIDs[0],
+                                                          "nitrogen_stress_factor");
+            std::cout << "Day " << day << " N stress factor: " << N_stress << std::endl;
+        }
+    }
+
+    return 0;
+}
+~~~~~~
+
+\section NitroDesign Design Principles
+
+The nitrogen model follows several key design principles:
+
+\subsection NitroSimplicity 1. Simplicity Through Area-Based Tracking
+
+- Only 7 parameters (compared to 8 in mass-based approach)
+- No SLA parameter needed (eliminated)
+- ~450 lines of code
+- No biomass calculations or unit conversions
+- Always numerically stable
+- Direct compatibility with leaf optical models
+
+\subsection NitroPhysiol 2. Physiological Realism
+
+<b>Why area-based nitrogen is more realistic:</b>
+
+Research indicates that as leaves mature and thicken (LMA increases 2-3×), the <b>nitrogen content per area (g N/m²) remains relatively constant</b>, while <b>mass-based concentration (g N/g DW) decreases</b>. This occurs because:
+
+1. Leaf thickening is primarily due to structural tissue (cell walls, lignin)
+2. Photosynthetic machinery (which contains most leaf N) scales with leaf area, not mass
+3. Rubisco content is determined by light capture, which depends on leaf area
+
+By tracking nitrogen on an area basis, the model:
+- Naturally captures the constancy of N_area as leaves thicken
+- Eliminates the artificial need to track changing LMA or SLA
+- Aligns with how nitrogen actually functions in leaves (per unit light-capturing area)
+
+\subsection NitroIntegrate 3. Integration with PlantArchitecture
+
+- Follows the same pattern as CarbohydrateModel
+- Part of PlantArchitecture plugin, not a separate plugin
+- Shares data structures (PlantInstance, Shoot, Phytomer)
+- Integrates seamlessly with advanceTime() loop
+
+\subsection NitroLoose 4. Loose Coupling
+
+- Single output variable: nitrogen stress factor
+- Other plugins decide whether and how to use it
+- No direct dependencies on Photosynthesis or other plugins
+- Model can be enabled/disabled independently
+
+\subsection NitroFail 5. Fail-Fast Philosophy
+
+- Clear error messages using helios_runtime_error()
+- No silent fallbacks or default behaviors that hide issues
+- Validates inputs (negative amounts, missing plants, etc.)
+- Errors are caught immediately with actionable messages
+
+\section NitroLimitations Model Limitations
+
+The nitrogen model is intentionally simplified and has several limitations:
+
+1. **No soil nitrogen pool**: Nitrogen is applied directly to plants, not through a soil model
+2. **No root nitrogen uptake rate**: Root pool is passive; uptake is instantaneous
+3. **No nitrogen effects on growth built-in**: Growth modifications must be implemented in calling code
+4. **Static LMA assumption**: Model assumes N_area is relatively constant; does not track LMA dynamics
+5. **No temperature effects**: All rates are constant regardless of temperature
+6. **No nitrogen loss mechanisms**: No volatilization, leaching, or denitrification
+7. **Simplified remobilization**: Age-based classification; no explicit senescence tracking
+
+These limitations were intentional design choices to keep the model simple and maintainable while capturing the most important nitrogen dynamics.
+
+\section NitroRef References
+
+The nitrogen model implementation is based on published research:
+
+1. <b>Area-based vs. mass-based nitrogen:</b> Research shows that reflectance spectra are directly sensitive to area-based content rather than mass-based content. The relationship is: N_mass (g/g) = N_area (g/m²) / LMA (g/m²).
+
+2. <b>Remobilization efficiency (70%):</b> Masclaux-Daubresse et al. (2010). "Nitrogen uptake, assimilation and remobilization in plants: challenges for sustainable and productive agriculture." Annals of Botany 105(7): 1141-1157.
+
+3. <b>Age-based remobilization patterns:</b> Hirel et al. (2007). "The challenge of improving nitrogen use efficiency in crop plants: towards a more central role for genetic variability and quantitative genetics within integrated approaches." Journal of Experimental Botany 58(9): 2369-2387.
+
+4. <b>Nitrogen stress effects on photosynthesis:</b> Evans (1989). "Photosynthesis and nitrogen relationships in leaves of C3 plants." Oecologia 78(1): 9-19.
+
+5. <b>LMA dynamics and nitrogen:</b> Poorter et al. (2009). "Causes and consequences of variation in leaf mass per area (LMA): a meta-analysis." New Phytologist 182(3): 565-588.
+
+6. <b>PROSPECT and area-based nitrogen:</b> N-PROSPECT models use Leaf Nitrogen Density (LND, µg/cm²) as input, which is equivalent to area-based nitrogen content.
+
+\section NitroTrouble Troubleshooting
+
+\subsection NitroNoStress No Nitrogen Stress Factor Output
+
+<b>Problem:</b> The `nitrogen_stress_factor` object data does not exist or cannot be read.
+
+<b>Solutions:</b>
+- Verify the nitrogen model is enabled using \ref PlantArchitecture::isNitrogenModelEnabled()
+- Ensure \ref PlantArchitecture::advanceTime() has been called at least once after enabling
+- Check that plants have leaves (stress factor is not calculated for plants without leaves)
+- Use \ref Context::doesObjectDataExist() to verify the data exists before reading
+
+\subsection NitroInstant Nitrogen Uptake Too Fast/Slow
+
+<b>Problem:</b> Leaves reach target nitrogen too quickly or too slowly after application.
+
+<b>Solutions:</b>
+- Adjust `max_N_accumulation_rate` parameter (increase for faster, decrease for slower)
+- Units are g N/m²/day (note: area-based, not total per day)
+- Typical range: 0.05-0.20 g N/m²/day depending on species and growth rate
+- Consider the time step (dt) used in advanceTime() - smaller steps = smoother accumulation
+
+\subsection NitroNoRemob No Nitrogen Remobilization
+
+<b>Problem:</b> Old leaves are not donating nitrogen to young leaves.
+
+<b>Solutions:</b>
+- Check that plants have leaves of different ages (remobilization requires age gradient)
+- Verify `max_leaf_lifespan` is set correctly in PlantInstance (not zero or infinite)
+- Ensure `remobilization_age_threshold` is less than 1.0 (default 0.7)
+- Old leaves must have nitrogen above `minimum_leaf_N_area` to donate
+
+\subsection NitroUnits Parameter Unit Confusion
+
+<b>Problem:</b> Unclear about units or how to convert from literature values.
+
+<b>Solutions:</b>
+- All nitrogen parameters use area basis (g N/m²), not mass basis (g N/g DW)
+- To convert from mass basis: N_area (g/m²) = N_mass (g/g) × LMA (g/m²)
+- Typical crop leaf N_area: 1.0-2.5 g N/m² (equivalent to 2-5% N at LMA = 0.04-0.05 g/m²)
+- For PROSPECT: multiply by 10 to get µg/cm² (1 g/m² = 10 µg/cm²)
+
+*/

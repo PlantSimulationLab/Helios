@@ -14,6 +14,7 @@ add_library( plantarchitecture STATIC "src/PlantArchitecture.cpp"
         "src/Assets.cpp"
         "src/InputOutput.cpp"
         "src/CarbohydrateModel.cpp"
+        "src/NitrogenModel.cpp"
         "src/Hungarian.cpp"
         "tests/selfTest.cpp"
 )

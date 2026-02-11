@@ -1,6 +1,6 @@
 /** \file "CollisionDetection.cpp" Source file for collision detection plugin
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -51,7 +51,7 @@ struct GPUBVHNode {
 extern "C" {
 void launchBVHTraversal(void *h_nodes, int node_count, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_query_aabb_min, float *h_query_aabb_max, int num_queries,
                         unsigned int *h_results, unsigned int *h_result_counts, int max_results_per_query);
-void launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x,
+bool launchVoxelRayPathLengths(int num_rays, float *h_ray_origins, float *h_ray_directions, float grid_center_x, float grid_center_y, float grid_center_z, float grid_size_x, float grid_size_y, float grid_size_z, int grid_divisions_x,
                                int grid_divisions_y, int grid_divisions_z, int primitive_count, int *h_voxel_ray_counts, float *h_voxel_path_lengths, int *h_voxel_transmitted, int *h_voxel_hit_before, int *h_voxel_hit_after, int *h_voxel_hit_inside);
 // Warp-efficient GPU kernels
 void launchWarpEfficientBVH(void *h_bvh_soa_gpu, unsigned int *h_primitive_indices, int primitive_count, float *h_primitive_aabb_min, float *h_primitive_aabb_max, float *h_ray_origins, float *h_ray_directions, float *h_ray_max_distances,
@@ -98,6 +98,16 @@ CollisionDetection::CollisionDetection(helios::Context *a_context) {
     tree_isolation_distance = 5.0f; // Default 5 meter isolation distance
     obstacle_spatial_grid_initialized = false;
 
+// Issue warning if OpenMP not available
+#ifndef _OPENMP
+    static bool openmp_warning_issued = false;
+    if (printmessages && !openmp_warning_issued) {
+        std::cout << "WARNING (CollisionDetection): OpenMP not available. Using serial CPU implementation. "
+                  << "Performance will be significantly slower. Consider installing OpenMP for parallel execution." << std::endl;
+        openmp_warning_issued = true;
+    }
+#endif
+
     // Initialize grid parameters
     grid_center = make_vec3(0, 0, 0);
     grid_size = make_vec3(1, 1, 1);
@@ -126,10 +136,12 @@ std::vector<uint> CollisionDetection::findCollisions(uint UUID, bool allow_spati
 
 std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &UUIDs, bool allow_spatial_culling) {
 
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
+
     if (UUIDs.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findCollisions): No UUIDs provided" << std::endl;
-        }
+        warnings.addWarning("no_uuids_provided", "No UUIDs provided");
+        warnings.report(std::cerr);
         return {};
     }
 
@@ -139,9 +151,6 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &UU
         if (context->doesPrimitiveExist(uuid)) {
             valid_UUIDs.push_back(uuid);
         } else {
-            if (printmessages) {
-                std::cerr << "ERROR (CollisionDetection::findCollisions): Invalid UUID " << uuid << std::endl;
-            }
             helios_runtime_error("ERROR (CollisionDetection::findCollisions): Invalid UUID " + std::to_string(uuid) + " provided");
         }
     }
@@ -188,10 +197,12 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &UU
 
 std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &primitive_UUIDs, const std::vector<uint> &object_IDs, bool allow_spatial_culling) {
 
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
+
     if (primitive_UUIDs.empty() && object_IDs.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findCollisions): No UUIDs or object IDs provided" << std::endl;
-        }
+        warnings.addWarning("no_inputs_provided", "No UUIDs or object IDs provided");
+        warnings.report(std::cerr);
         return {};
     }
 
@@ -212,10 +223,12 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &pr
 
 std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &query_UUIDs, const std::vector<uint> &query_object_IDs, const std::vector<uint> &target_UUIDs, const std::vector<uint> &target_object_IDs, bool allow_spatial_culling) {
 
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
+
     if (query_UUIDs.empty() && query_object_IDs.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findCollisions): No query UUIDs or object IDs provided" << std::endl;
-        }
+        warnings.addWarning("no_query_inputs", "No query UUIDs or object IDs provided");
+        warnings.report(std::cerr);
         return {};
     }
 
@@ -317,10 +330,15 @@ std::vector<uint> CollisionDetection::findCollisions(const std::vector<uint> &qu
     std::sort(all_collisions.begin(), all_collisions.end());
     all_collisions.erase(std::unique(all_collisions.begin(), all_collisions.end()), all_collisions.end());
 
+    warnings.report(std::cerr);
     return all_collisions;
 }
 
 void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
+
+    // Create warning aggregator
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
 
     std::vector<uint> primitives_to_include;
 
@@ -333,9 +351,8 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
 
 
     if (primitives_to_include.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::buildBVH): No primitives found to build BVH" << std::endl;
-        }
+        warnings.addWarning("no_primitives_for_bvh", "No primitives found to build BVH");
+        warnings.report(std::cerr);
         return;
     }
 
@@ -347,9 +364,6 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
             if (context->doesPrimitiveExist(uuid)) {
                 valid_primitives.push_back(uuid);
             } else {
-                if (printmessages) {
-                    std::cerr << "ERROR (CollisionDetection::buildBVH): Invalid UUID " << uuid << std::endl;
-                }
                 helios_runtime_error("ERROR (CollisionDetection::buildBVH): Invalid UUID " + std::to_string(uuid) + " provided");
             }
         }
@@ -358,15 +372,14 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
         for (uint uuid: primitives_to_include) {
             if (context->doesPrimitiveExist(uuid)) {
                 valid_primitives.push_back(uuid);
-            } else if (printmessages) {
-                std::cerr << "WARNING (CollisionDetection::buildBVH): Skipping invalid UUID " << uuid << std::endl;
+            } else {
+                warnings.addWarning("invalid_uuid_skipped", "Skipping invalid UUID " + std::to_string(uuid));
             }
         }
 
         if (valid_primitives.empty()) {
-            if (printmessages) {
-                std::cerr << "WARNING (CollisionDetection::buildBVH): No valid primitives found after filtering" << std::endl;
-            }
+            warnings.addWarning("no_valid_primitives_after_filtering", "No valid primitives found after filtering");
+            warnings.report(std::cerr);
             return;
         }
     }
@@ -464,6 +477,9 @@ void CollisionDetection::buildBVH(const std::vector<uint> &UUIDs) {
     last_bvh_geometry.insert(primitives_to_include.begin(), primitives_to_include.end());
     bvh_dirty = false;
     soa_dirty = true; // SoA needs rebuild after BVH change
+
+    // Report aggregated warnings
+    warnings.report(std::cerr);
 }
 
 void CollisionDetection::rebuildBVH() {
@@ -912,6 +928,11 @@ void CollisionDetection::buildBVHRecursive(uint node_index, size_t primitive_sta
             centroid_b_coord = 0.5f * (aabb_b.first.z + aabb_b.second.z);
         }
 
+        // Add stable tiebreaker using UUID to ensure deterministic BVH construction
+        // This prevents non-deterministic behavior when primitives have equal centroids
+        if (centroid_a_coord == centroid_b_coord) {
+            return a < b;
+        }
         return centroid_a_coord < centroid_b_coord;
     });
 
@@ -1706,6 +1727,18 @@ void CollisionDetection::allocateGPUMemory() {
     d_bvh_nodes = nullptr;
     d_primitive_indices = nullptr;
 
+    // Check if CUDA is actually available at runtime
+    int deviceCount = 0;
+    cudaError_t err = cudaGetDeviceCount(&deviceCount);
+    if (err != cudaSuccess || deviceCount == 0) {
+        // CUDA not available - disable GPU acceleration and fall back to CPU
+        if (printmessages) {
+            std::cout << "WARNING (CollisionDetection::allocateGPUMemory): CUDA runtime unavailable (" << cudaGetErrorString(err) << "). Falling back to CPU-only mode." << std::endl;
+        }
+        gpu_acceleration_enabled = false;
+        return;
+    }
+
     // Calculate sizes
     size_t bvh_size = bvh_nodes.size() * sizeof(GPUBVHNode);
     size_t indices_size = primitive_indices.size() * sizeof(uint);
@@ -1716,17 +1749,27 @@ void CollisionDetection::allocateGPUMemory() {
     }
 
     // Allocate BVH nodes
-    cudaError_t err = cudaMalloc(&d_bvh_nodes, bvh_size);
+    err = cudaMalloc(&d_bvh_nodes, bvh_size);
     if (err != cudaSuccess) {
-        helios_runtime_error("CUDA error allocating BVH nodes: " + std::string(cudaGetErrorString(err)));
+        // GPU allocation failed - fall back to CPU instead of crashing
+        if (printmessages) {
+            std::cout << "WARNING (CollisionDetection::allocateGPUMemory): Failed to allocate GPU memory (" << cudaGetErrorString(err) << "). Falling back to CPU-only mode." << std::endl;
+        }
+        gpu_acceleration_enabled = false;
+        return;
     }
 
     // Allocate primitive indices
     err = cudaMalloc((void **) &d_primitive_indices, indices_size);
     if (err != cudaSuccess) {
+        // GPU allocation failed - clean up and fall back to CPU
         cudaFree(d_bvh_nodes);
         d_bvh_nodes = nullptr;
-        helios_runtime_error("CUDA error allocating primitive indices: " + std::string(cudaGetErrorString(err)));
+        if (printmessages) {
+            std::cout << "WARNING (CollisionDetection::allocateGPUMemory): Failed to allocate primitive indices (" << cudaGetErrorString(err) << "). Falling back to CPU-only mode." << std::endl;
+        }
+        gpu_acceleration_enabled = false;
+        return;
     }
 
     // Mark as allocated only after both allocations succeeded
@@ -1764,6 +1807,12 @@ void CollisionDetection::transferBVHToGPU() {
         freeGPUMemory();
     }
     allocateGPUMemory();
+
+    // Re-check if GPU acceleration is still enabled after allocation attempt
+    // allocateGPUMemory() may have disabled it due to lack of GPU hardware
+    if (!gpu_acceleration_enabled) {
+        return; // Gracefully fall back to CPU mode
+    }
 
     // Verify allocation succeeded
     if (!gpu_memory_allocated || d_bvh_nodes == nullptr || d_primitive_indices == nullptr) {
@@ -1890,15 +1939,18 @@ void CollisionDetection::incrementalUpdateBVH(const std::set<uint> &added_geomet
 }
 
 bool CollisionDetection::validateUUIDs(const std::vector<uint> &UUIDs) const {
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
+
     bool all_valid = true;
     for (uint UUID: UUIDs) {
         if (!context->doesPrimitiveExist(UUID)) {
-            if (printmessages) {
-                std::cerr << "WARNING (CollisionDetection::validateUUIDs): Primitive UUID " + std::to_string(UUID) + " does not exist - skipping" << std::endl;
-            }
+            warnings.addWarning("primitive_uuid_not_exist", "Primitive UUID " + std::to_string(UUID) + " does not exist - skipping");
             all_valid = false;
         }
     }
+
+    warnings.report(std::cerr);
     return all_valid;
 }
 
@@ -2081,23 +2133,30 @@ bool CollisionDetection::rayPrimitiveIntersection(const vec3 &origin, const vec3
 }
 
 void CollisionDetection::calculateGridIntersection(const vec3 &grid_center, const vec3 &grid_size, const helios::int3 &grid_divisions, const std::vector<uint> &UUIDs) {
-    if (printmessages) {
-        std::cerr << "WARNING: calculateGridIntersection not yet implemented" << std::endl;
+    // Use slicePrimitivesUsingGrid to populate grid_cells
+    std::vector<uint> uuids_to_process = UUIDs.empty() ? context->getAllUUIDs() : UUIDs;
+
+    // Filter to only non-voxel primitives
+    std::vector<uint> planar_primitives;
+    for (uint uuid: uuids_to_process) {
+        if (context->getPrimitiveType(uuid) != PRIMITIVE_TYPE_VOXEL) {
+            planar_primitives.push_back(uuid);
+        }
     }
+
+    // This will populate grid_cells
+    slicePrimitivesUsingGrid(planar_primitives, grid_center, grid_size, grid_divisions);
 }
 
 std::vector<std::vector<std::vector<std::vector<uint>>>> CollisionDetection::getGridCells() {
-    if (printmessages) {
-        std::cerr << "WARNING: getGridCells not yet implemented" << std::endl;
-    }
-    return {};
+    return grid_cells;
 }
 
 std::vector<uint> CollisionDetection::getGridIntersections(int i, int j, int k) {
-    if (printmessages) {
-        std::cerr << "WARNING: getGridIntersections not yet implemented" << std::endl;
+    if (i < 0 || i >= static_cast<int>(grid_cells.size()) || j < 0 || j >= static_cast<int>(grid_cells[i].size()) || k < 0 || k >= static_cast<int>(grid_cells[i][j].size())) {
+        helios_runtime_error("ERROR (CollisionDetection::getGridIntersections): Grid indices out of bounds");
     }
-    return {};
+    return grid_cells[i][j][k];
 }
 
 int CollisionDetection::optimizeLayout(const std::vector<uint> &UUIDs, float learning_rate, int max_iterations) {
@@ -2300,19 +2359,20 @@ bool CollisionDetection::findNearestRayIntersection(const vec3 &origin, const ve
 
 bool CollisionDetection::findNearestPrimitiveDistance(const vec3 &origin, const vec3 &direction, const std::vector<uint> &candidate_UUIDs, float &distance, vec3 &obstacle_direction) {
 
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
+
     if (candidate_UUIDs.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): No candidate UUIDs provided" << std::endl;
-        }
+        warnings.addWarning("no_candidate_uuids", "No candidate UUIDs provided");
+        warnings.report(std::cerr);
         return false;
     }
 
     // Validate that direction is normalized
     float dir_magnitude = direction.magnitude();
     if (std::abs(dir_magnitude - 1.0f) > 1e-6f) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): Direction vector is not normalized (magnitude = " << dir_magnitude << ")" << std::endl;
-        }
+        warnings.addWarning("direction_not_normalized", "Direction vector is not normalized (magnitude = " + std::to_string(dir_magnitude) + ")");
+        warnings.report(std::cerr);
         return false;
     }
 
@@ -2322,16 +2382,15 @@ bool CollisionDetection::findNearestPrimitiveDistance(const vec3 &origin, const 
     for (uint uuid: candidate_UUIDs) {
         if (context->doesPrimitiveExist(uuid)) {
             valid_candidates.push_back(uuid);
-        } else if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): Skipping invalid UUID " << uuid << std::endl;
+        } else {
+            warnings.addWarning("invalid_candidate_uuid", "Skipping invalid UUID " + std::to_string(uuid));
         }
     }
 
 
     if (valid_candidates.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestPrimitiveDistance): No valid candidate UUIDs after filtering" << std::endl;
-        }
+        warnings.addWarning("no_valid_candidates", "No valid candidate UUIDs after filtering");
+        warnings.report(std::cerr);
         return false;
     }
 
@@ -2384,14 +2443,18 @@ bool CollisionDetection::findNearestPrimitiveDistance(const vec3 &origin, const 
     if (found_forward_surface) {
         distance = nearest_distance_found;
         obstacle_direction = nearest_obstacle_direction;
+        warnings.report(std::cerr);
         return true;
     }
 
-
+    warnings.report(std::cerr);
     return false;
 }
 
 bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const vec3 &axis, float half_angle, float height, const std::vector<uint> &candidate_UUIDs, float &distance, vec3 &obstacle_direction, int num_rays) {
+
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
 
     // OPTIMIZATION: Use per-tree BVH if enabled for better scaling
     std::vector<uint> effective_candidates;
@@ -2410,16 +2473,14 @@ bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const 
 
     // Validate input parameters
     if (half_angle <= 0.0f || half_angle > M_PI / 2.0f) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestSolidObstacleInCone): Invalid half_angle " << half_angle << std::endl;
-        }
+        warnings.addWarning("invalid_half_angle", "Invalid half_angle " + std::to_string(half_angle));
+        warnings.report(std::cerr);
         return false;
     }
 
     if (height <= 0.0f) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestSolidObstacleInCone): Invalid height " << height << std::endl;
-        }
+        warnings.addWarning("invalid_height", "Invalid height " + std::to_string(height));
+        warnings.report(std::cerr);
         return false;
     }
 
@@ -2467,14 +2528,19 @@ bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const 
     if (found_obstacle) {
         distance = nearest_distance;
         obstacle_direction = nearest_direction;
+        warnings.report(std::cerr);
         return true;
     }
 
+    warnings.report(std::cerr);
     return false;
 }
 
 bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const vec3 &axis, float half_angle, float height, const std::vector<uint> &candidate_UUIDs, const std::vector<uint> &plant_primitives, float &distance,
                                                         vec3 &obstacle_direction, int num_rays) {
+
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
 
     // OPTIMIZATION: Use per-tree BVH with plant primitive identification for better scaling
     std::vector<uint> effective_candidates;
@@ -2495,16 +2561,14 @@ bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const 
 
     // Validate input parameters
     if (half_angle <= 0.0f || half_angle > M_PI / 2.0f) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestSolidObstacleInCone): Invalid half_angle " << half_angle << std::endl;
-        }
+        warnings.addWarning("invalid_half_angle", "Invalid half_angle " + std::to_string(half_angle));
+        warnings.report(std::cerr);
         return false;
     }
 
     if (height <= 0.0f) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::findNearestSolidObstacleInCone): Invalid height " << height << std::endl;
-        }
+        warnings.addWarning("invalid_height", "Invalid height " + std::to_string(height));
+        warnings.report(std::cerr);
         return false;
     }
 
@@ -2552,9 +2616,11 @@ bool CollisionDetection::findNearestSolidObstacleInCone(const vec3 &apex, const 
     if (found_obstacle) {
         distance = nearest_distance;
         obstacle_direction = nearest_direction;
+        warnings.report(std::cerr);
         return true;
     }
 
+    warnings.report(std::cerr);
     return false;
 }
 
@@ -3050,14 +3116,16 @@ std::vector<uint> CollisionDetection::filterGeometryByDistance(const helios::vec
 
 void CollisionDetection::calculateVoxelRayPathLengths(const vec3 &grid_center, const vec3 &grid_size, const helios::int3 &grid_divisions, const std::vector<vec3> &ray_origins, const std::vector<vec3> &ray_directions) {
 
+    helios::WarningAggregator warnings;
+    warnings.setEnabled(printmessages);
+
     if (ray_origins.size() != ray_directions.size()) {
         helios_runtime_error("ERROR (CollisionDetection::calculateVoxelRayPathLengths): ray_origins and ray_directions vectors must have same size");
     }
 
     if (ray_origins.empty()) {
-        if (printmessages) {
-            std::cerr << "WARNING (CollisionDetection::calculateVoxelRayPathLengths): No rays provided" << std::endl;
-        }
+        warnings.addWarning("no_rays_provided", "No rays provided");
+        warnings.report(std::cerr);
         return;
     }
 
@@ -3074,13 +3142,24 @@ void CollisionDetection::calculateVoxelRayPathLengths(const vec3 &grid_center, c
     // Choose GPU or CPU implementation based on acceleration setting
 #ifdef HELIOS_CUDA_AVAILABLE
     if (isGPUAccelerationEnabled()) {
-        calculateVoxelRayPathLengths_GPU(ray_origins, ray_directions);
+        // Try GPU first, but fall back to CPU if GPU fails (no hardware, out of memory, etc.)
+        bool gpu_success = calculateVoxelRayPathLengths_GPU(ray_origins, ray_directions);
+        if (!gpu_success) {
+            // GPU failed - fall back to CPU and disable GPU for future calls
+            if (printmessages) {
+                warnings.addWarning("gpu_voxel_fallback", "GPU voxel calculation failed, falling back to CPU");
+            }
+            gpu_acceleration_enabled = false;
+            calculateVoxelRayPathLengths_CPU(ray_origins, ray_directions);
+        }
     } else {
         calculateVoxelRayPathLengths_CPU(ray_origins, ray_directions);
     }
 #else
     calculateVoxelRayPathLengths_CPU(ray_origins, ray_directions);
 #endif
+
+    warnings.report(std::cerr);
 }
 
 void CollisionDetection::setVoxelTransmissionProbability(int P_denom, int P_trans, const helios::int3 &ijk) {
@@ -3868,7 +3947,15 @@ void CollisionDetection::calculateVoxelRayPathLengths_CPU(const std::vector<vec3
 }
 
 #ifdef HELIOS_CUDA_AVAILABLE
-void CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3> &ray_origins, const std::vector<vec3> &ray_directions) {
+bool CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3> &ray_origins, const std::vector<vec3> &ray_directions) {
+    // Check if GPU is actually available at runtime
+    int deviceCount = 0;
+    cudaError_t err = cudaGetDeviceCount(&deviceCount);
+    if (err != cudaSuccess || deviceCount == 0) {
+        // No GPU hardware available - return false to trigger CPU fallback
+        return false;
+    }
+
     if (printmessages) {
     }
 
@@ -3902,9 +3989,14 @@ void CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3
     int primitive_count = static_cast<int>(primitive_cache.size());
 
     // Launch CUDA kernel
-    launchVoxelRayPathLengths(num_rays, h_ray_origins.data(), h_ray_directions.data(), voxel_grid_center.x, voxel_grid_center.y, voxel_grid_center.z, voxel_grid_size.x, voxel_grid_size.y, voxel_grid_size.z, voxel_grid_divisions.x,
+    bool gpu_success = launchVoxelRayPathLengths(num_rays, h_ray_origins.data(), h_ray_directions.data(), voxel_grid_center.x, voxel_grid_center.y, voxel_grid_center.z, voxel_grid_size.x, voxel_grid_size.y, voxel_grid_size.z, voxel_grid_divisions.x,
                               voxel_grid_divisions.y, voxel_grid_divisions.z, primitive_count, h_voxel_ray_counts.data(), h_voxel_path_lengths.data(), h_voxel_transmitted.data(), h_voxel_hit_before.data(), h_voxel_hit_after.data(),
                               h_voxel_hit_inside.data());
+
+    if (!gpu_success) {
+        // GPU kernel failed - return false to trigger CPU fallback
+        return false;
+    }
 
     // Copy results back to class data structures
     if (use_flat_arrays) {
@@ -4052,6 +4144,8 @@ void CollisionDetection::calculateVoxelRayPathLengths_GPU(const std::vector<vec3
             total_ray_voxel_intersections += count;
         }
     }
+
+    return true; // GPU execution succeeded
 }
 #endif
 

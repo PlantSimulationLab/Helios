@@ -1,6 +1,6 @@
 /** \file "LeafOptics.cpp" Implementation of PROSPECT-PRO leaf optical model.
 
-    Copyright (C) 2016-2025 Brian Bailey
+    Copyright (C) 2016-2026 Brian Bailey
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -149,6 +149,172 @@ LeafOptics::LeafOptics(helios::Context *a_context) {
 
     LeafOptics::surface(90.0, R_spec_diffuse);
     // 0..90° degrees range from the vertical = diffuse incidence on a perfectly smooth leaf
+
+    // Initialize the species library with PROSPECT-D parameters from LOPEX93 dataset
+    initializeSpeciesLibrary();
+}
+
+void LeafOptics::initializeSpeciesLibrary() {
+    // PROSPECT-D parameters fitted to LOPEX93 spectral library samples
+    // All species use PROSPECT-D mode (drymass > 0, protein = 0, carbonconstituents = 0)
+    // Fitted using fit_prospect_visrobust.py with --no-calib flag
+
+    LeafOpticsProperties props;
+
+    // Default species (original Helios default values)
+    props.numberlayers = 1.5f;
+    props.chlorophyllcontent = 30.0f;
+    props.carotenoidcontent = 7.0f;
+    props.anthocyancontent = 1.0f;
+    props.brownpigments = 0.0f;
+    props.watermass = 0.015f;
+    props.drymass = 0.09f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["default"] = props;
+
+    // Garden lettuce (Lactuca sativa L.) - LOPEX93 sample 0021
+    // RMSE: 0.008355
+    props.numberlayers = 2.00517f;
+    props.chlorophyllcontent = 30.2697f;
+    props.carotenoidcontent = 6.9869f;
+    props.anthocyancontent = 1.35975f;
+    props.brownpigments = 0.107067f;
+    props.watermass = 0.0281985f;
+    props.drymass = 0.0052668f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["garden_lettuce"] = props;
+
+    // Alfalfa (Medicago sativa L.) - LOPEX93 sample 0036
+    // RMSE: 0.007743
+    props.numberlayers = 2.00758f;
+    props.chlorophyllcontent = 43.6375f;
+    props.carotenoidcontent = 10.3145f;
+    props.anthocyancontent = 1.33894f;
+    props.brownpigments = 0.0f;
+    props.watermass = 0.0189936f;
+    props.drymass = 0.00473702f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["alfalfa"] = props;
+
+    // Corn (Zea mays L.) - LOPEX93 sample 0041
+    // RMSE: 0.015966
+    props.numberlayers = 1.59203f;
+    props.chlorophyllcontent = 22.8664f;
+    props.carotenoidcontent = 3.9745f;
+    props.anthocyancontent = 0.0f;
+    props.brownpigments = 0.72677f;
+    props.watermass = 0.0149645f;
+    props.drymass = 0.00441283f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["corn"] = props;
+
+    // Sunflower (Helianthus annuus L.) - LOPEX93 sample 0081
+    // RMSE: 0.007353
+    props.numberlayers = 1.76358f;
+    props.chlorophyllcontent = 54.0514f;
+    props.carotenoidcontent = 12.9027f;
+    props.anthocyancontent = 1.75194f;
+    props.brownpigments = 0.0112026f;
+    props.watermass = 0.0185557f;
+    props.drymass = 0.00644855f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["sunflower"] = props;
+
+    // English walnut (Juglans regia L.) - LOPEX93 sample 0091
+    // RMSE: 0.007828
+    props.numberlayers = 1.56274f;
+    props.chlorophyllcontent = 55.9211f;
+    props.carotenoidcontent = 12.4596f;
+    props.anthocyancontent = 1.73981f;
+    props.brownpigments = 0.0f;
+    props.watermass = 0.0127743f;
+    props.drymass = 0.00583351f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["english_walnut"] = props;
+
+    // Rice (Oryza sativa L.) - LOPEX93 sample 0106
+    // RMSE: 0.004041
+    props.numberlayers = 1.67081f;
+    props.chlorophyllcontent = 37.233f;
+    props.carotenoidcontent = 9.98756f;
+    props.anthocyancontent = 0.0f;
+    props.brownpigments = 0.0275106f;
+    props.watermass = 0.0100962f;
+    props.drymass = 0.00484587f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["rice"] = props;
+
+    // Soybean (Glycine max L.) - LOPEX93 sample 0116
+    // RMSE: 0.005875
+    props.numberlayers = 1.5375f;
+    props.chlorophyllcontent = 46.4121f;
+    props.carotenoidcontent = 12.1394f;
+    props.anthocyancontent = 0.648353f;
+    props.brownpigments = 0.0f;
+    props.watermass = 0.0101049f;
+    props.drymass = 0.00292814f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["soybean"] = props;
+
+    // Wine grape (Vitis vinifera L.) - LOPEX93 sample 0276
+    // RMSE: 0.005585
+    props.numberlayers = 1.42673f;
+    props.chlorophyllcontent = 50.918f;
+    props.carotenoidcontent = 12.5466f;
+    props.anthocyancontent = 1.43905f;
+    props.brownpigments = 0.0798702f;
+    props.watermass = 0.010922f;
+    props.drymass = 0.00599315f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["wine_grape"] = props;
+
+    // Tomato (Lycopersicum esculentum) - LOPEX93 sample 0316
+    // RMSE: 0.005524
+    props.numberlayers = 1.40304f;
+    props.chlorophyllcontent = 48.3467f;
+    props.carotenoidcontent = 11.604f;
+    props.anthocyancontent = 1.45113f;
+    props.brownpigments = 0.0f;
+    props.watermass = 0.0155627f;
+    props.drymass = 0.00261571f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["tomato"] = props;
+
+    // Common bean (Phaseolus vulgaris L.) - GEMINI field experiments, day 35
+    // RMSE: 0.009479
+    props.numberlayers = 1.44041f;
+    props.chlorophyllcontent = 42.3619f;
+    props.carotenoidcontent = 15.6263f;
+    props.anthocyancontent = 0.844536f;
+    props.brownpigments = 0.0f;
+    props.watermass = 0.0150048f;
+    props.drymass = 0.00196285f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["common_bean"] = props;
+
+    // Cowpea (Vigna unguiculata L.) - GEMINI field experiments, day 48
+    // RMSE: 0.010680
+    props.numberlayers = 1.22669f;
+    props.chlorophyllcontent = 61.5204f;
+    props.carotenoidcontent = 25.6171f;
+    props.anthocyancontent = 2.51899f;
+    props.brownpigments = 0.0f;
+    props.watermass = 0.0221158f;
+    props.drymass = 0.00108066f;
+    props.protein = 0.0f;
+    props.carbonconstituents = 0.0f;
+    species_library["cowpea"] = props;
 }
 
 void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties &leafproperties, const std::string &label) {
@@ -164,6 +330,9 @@ void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties 
     context->setPrimitiveData(UUIDs, "reflectivity_spectrum", leaf_reflectivity_label);
     context->setPrimitiveData(UUIDs, "transmissivity_spectrum", leaf_transmissivity_label);
     setProperties(UUIDs, leafproperties);
+
+    // Store parameters in map for later retrieval
+    spectrum_parameters_map[label] = leafproperties;
 }
 
 void LeafOptics::run(const LeafOpticsProperties &leafproperties, const std::string &label) {
@@ -175,6 +344,9 @@ void LeafOptics::run(const LeafOpticsProperties &leafproperties, const std::stri
     std::string leaf_transmissivity_label = "leaf_transmissivity_" + label;
     context->setGlobalData(leaf_reflectivity_label.c_str(), reflectivities_fit);
     context->setGlobalData(leaf_transmissivity_label.c_str(), transmissivities_fit);
+
+    // Store parameters in map for later retrieval
+    spectrum_parameters_map[label] = leafproperties;
 }
 
 
@@ -384,19 +556,103 @@ float LeafOptics::transmittance(double k) {
 }
 
 void LeafOptics::setProperties(const std::vector<uint> &UUIDs, const LeafOpticsProperties &leafproperties) {
-
-    context->setPrimitiveData(UUIDs, "chlorophyll", leafproperties.chlorophyllcontent);
-    context->setPrimitiveData(UUIDs, "carotenoid", leafproperties.carotenoidcontent);
-    context->setPrimitiveData(UUIDs, "anthocyanin", leafproperties.anthocyancontent);
-    if (leafproperties.brownpigments > 0.0) {
-        context->setPrimitiveData(UUIDs, "brown", leafproperties.brownpigments);
+    for (const auto &data: output_prim_data) {
+        if (data == "chlorophyll") {
+            context->setPrimitiveData(UUIDs, "chlorophyll", leafproperties.chlorophyllcontent);
+        } else if (data == "carotenoid") {
+            context->setPrimitiveData(UUIDs, "carotenoid", leafproperties.carotenoidcontent);
+        } else if (data == "anthocyanin") {
+            context->setPrimitiveData(UUIDs, "anthocyanin", leafproperties.anthocyancontent);
+        } else if (data == "brown" && leafproperties.brownpigments > 0.0) {
+            context->setPrimitiveData(UUIDs, "brown", leafproperties.brownpigments);
+        } else if (data == "water") {
+            context->setPrimitiveData(UUIDs, "water", leafproperties.watermass);
+        } else if (data == "drymass" && leafproperties.drymass > 0.0) {
+            context->setPrimitiveData(UUIDs, "drymass", leafproperties.drymass);
+        } else if (data == "protein" && leafproperties.drymass == 0.0) {
+            context->setPrimitiveData(UUIDs, "protein", leafproperties.protein);
+        } else if (data == "cellulose" && leafproperties.drymass == 0.0) {
+            context->setPrimitiveData(UUIDs, "cellulose", leafproperties.carbonconstituents);
+        }
     }
-    context->setPrimitiveData(UUIDs, "water", leafproperties.watermass);
-    if (leafproperties.drymass > 0.0) {
-        context->setPrimitiveData(UUIDs, "drymass", leafproperties.drymass);
+}
+
+void LeafOptics::getPropertiesFromSpectrum(const std::vector<uint> &UUIDs) {
+    const std::string prefix = "leaf_reflectivity_";
+
+    for (uint UUID: UUIDs) {
+        // Check if primitive has reflectivity_spectrum data
+        if (!context->doesPrimitiveDataExist(UUID, "reflectivity_spectrum")) {
+            continue; // Skip silently if no spectrum data
+        }
+
+        // Get the spectrum label
+        std::string spectrum_label;
+        context->getPrimitiveData(UUID, "reflectivity_spectrum", spectrum_label);
+
+        // Check if this is a LeafOptics-generated spectrum (starts with prefix)
+        if (spectrum_label.find(prefix) != 0) {
+            continue; // Not a LeafOptics spectrum, skip silently
+        }
+
+        // Extract the user label by removing the prefix
+        std::string user_label = spectrum_label.substr(prefix.length());
+
+        // Check if we have parameters stored for this label
+        auto it = spectrum_parameters_map.find(user_label);
+        if (it == spectrum_parameters_map.end()) {
+            continue; // No parameters found, skip silently
+        }
+
+        // Retrieve the stored parameters
+        const LeafOpticsProperties &props = it->second;
+
+        // Assign primitive data using the same logic as setProperties()
+        for (const auto &data: output_prim_data) {
+            if (data == "chlorophyll") {
+                context->setPrimitiveData(UUID, "chlorophyll", props.chlorophyllcontent);
+            } else if (data == "carotenoid") {
+                context->setPrimitiveData(UUID, "carotenoid", props.carotenoidcontent);
+            } else if (data == "anthocyanin") {
+                context->setPrimitiveData(UUID, "anthocyanin", props.anthocyancontent);
+            } else if (data == "brown" && props.brownpigments > 0.0) {
+                context->setPrimitiveData(UUID, "brown", props.brownpigments);
+            } else if (data == "water") {
+                context->setPrimitiveData(UUID, "water", props.watermass);
+            } else if (data == "drymass" && props.drymass > 0.0) {
+                context->setPrimitiveData(UUID, "drymass", props.drymass);
+            } else if (data == "protein" && props.drymass == 0.0) {
+                context->setPrimitiveData(UUID, "protein", props.protein);
+            } else if (data == "cellulose" && props.drymass == 0.0) {
+                context->setPrimitiveData(UUID, "cellulose", props.carbonconstituents);
+            }
+        }
+    }
+}
+
+void LeafOptics::getPropertiesFromSpectrum(uint UUID) {
+    getPropertiesFromSpectrum(std::vector<uint>{UUID});
+}
+
+void LeafOptics::getPropertiesFromLibrary(const std::string &species, LeafOpticsProperties &leafproperties) {
+    // Convert species name to lowercase for case-insensitive lookup
+    std::string species_lower = species;
+    std::transform(species_lower.begin(), species_lower.end(), species_lower.begin(), ::tolower);
+
+    // Look up species in library
+    auto it = species_library.find(species_lower);
+    if (it != species_library.end()) {
+        // Species found in library
+        leafproperties = it->second;
+        if (message_flag) {
+            std::cout << "Setting Leaf Optics Properties to species: " << species << std::endl;
+        }
     } else {
-        context->setPrimitiveData(UUIDs, "protein", leafproperties.protein);
-        context->setPrimitiveData(UUIDs, "cellulose", leafproperties.carbonconstituents);
+        // Species not found - use default and issue warning
+        if (message_flag) {
+            std::cerr << "WARNING (LeafOptics): unknown species \"" << species << "\". Using default properties." << std::endl;
+        }
+        leafproperties = species_library["default"];
     }
 }
 
@@ -406,4 +662,401 @@ void LeafOptics::disableMessages() {
 
 void LeafOptics::enableMessages() {
     message_flag = true;
+}
+
+void LeafOptics::optionalOutputPrimitiveData(const char *label) {
+    if (strcmp(label, "chlorophyll") == 0 || strcmp(label, "carotenoid") == 0 || strcmp(label, "anthocyanin") == 0 || strcmp(label, "brown") == 0 || strcmp(label, "water") == 0 || strcmp(label, "drymass") == 0 || strcmp(label, "protein") == 0 ||
+        strcmp(label, "cellulose") == 0) {
+        output_prim_data.emplace_back(label);
+    } else {
+        if (message_flag) {
+            std::cout << "WARNING (LeafOptics::optionalOutputPrimitiveData): unknown output primitive data " << label << std::endl;
+        }
+    }
+}
+
+// === Nitrogen mode helper methods ===
+
+LeafOpticsProperties LeafOptics::computePropertiesFromNitrogen(float N_area_gN_m2, const LeafOpticsProperties_Nauto &params) {
+    LeafOpticsProperties props;
+
+    // Convert nitrogen concentration to chlorophyll content
+    // N (g/m2) -> N (ug/cm2): multiply by 100
+    // Then apply photosynthetic fraction and empirical coefficient
+    float N_area_ug_cm2 = N_area_gN_m2 * 100.0f;
+    props.chlorophyllcontent = N_area_ug_cm2 * params.f_photosynthetic * params.N_to_Cab_coefficient;
+
+    // Clamp chlorophyll to physically reasonable range [5, 80] ug/cm2
+    props.chlorophyllcontent = std::max(5.0f, std::min(80.0f, props.chlorophyllcontent));
+
+    // Calculate carotenoids from chlorophyll ratio
+    props.carotenoidcontent = props.chlorophyllcontent * params.Car_to_Cab_ratio;
+
+    // Copy fixed parameters from Nauto struct
+    props.numberlayers = params.numberlayers;
+    props.anthocyancontent = params.anthocyancontent;
+    props.brownpigments = params.brownpigments;
+    props.watermass = params.watermass;
+    props.drymass = params.drymass;
+    props.protein = params.protein;
+    props.carbonconstituents = params.carbonconstituents;
+
+    return props;
+}
+
+std::map<uint, std::vector<uint>> LeafOptics::groupPrimitivesByObject(const std::vector<uint> &UUIDs) {
+    std::map<uint, std::vector<uint>> object_groups;
+
+    for (uint UUID: UUIDs) {
+        if (!context->doesPrimitiveExist(UUID)) {
+            if (message_flag) {
+                std::cerr << "WARNING (LeafOptics::groupPrimitivesByObject): Primitive UUID " << UUID << " does not exist, skipping." << std::endl;
+            }
+            continue;
+        }
+
+        uint objID = context->getPrimitiveParentObjectID(UUID);
+
+        // Object ID 0 means no parent object
+        if (objID == 0) {
+            if (message_flag) {
+                std::cerr << "WARNING (LeafOptics::groupPrimitivesByObject): Primitive UUID " << UUID << " has no parent object, skipping." << std::endl;
+            }
+            continue;
+        }
+
+        object_groups[objID].push_back(UUID);
+    }
+
+    return object_groups;
+}
+
+void LeafOptics::createAdaptiveBins(const std::vector<float> &nitrogen_values) {
+    nitrogen_bins.clear();
+
+    if (nitrogen_values.empty()) {
+        return;
+    }
+
+    // Sort nitrogen values for quantile calculation
+    std::vector<float> sorted_N = nitrogen_values;
+    std::sort(sorted_N.begin(), sorted_N.end());
+
+    uint count = sorted_N.size();
+    uint target_bins = nitrogen_params.num_bins;
+
+    // Adjust number of bins if fewer unique values than requested bins
+    if (count < target_bins) {
+        target_bins = count;
+    }
+
+    // Create quantile-based bin centers
+    std::vector<float> bin_centers;
+    for (uint i = 0; i < target_bins; i++) {
+        // Calculate index for quantile center
+        uint idx = (i * count / target_bins) + (count / (2 * target_bins));
+        if (idx >= count) {
+            idx = count - 1;
+        }
+        float center = sorted_N[idx];
+
+        // Only add if not a duplicate (within tolerance)
+        bool is_duplicate = false;
+        for (float existing: bin_centers) {
+            if (std::abs(center - existing) < 0.001f) {
+                is_duplicate = true;
+                break;
+            }
+        }
+        if (!is_duplicate) {
+            bin_centers.push_back(center);
+        }
+    }
+
+    // Generate PROSPECT spectrum for each bin
+    for (uint i = 0; i < bin_centers.size(); i++) {
+        SpectrumBin bin;
+        bin.N_center = bin_centers[i];
+        bin.spectrum_label = "Nauto_" + std::to_string(i);
+
+        // Compute PROSPECT properties and generate spectrum
+        LeafOpticsProperties props = computePropertiesFromNitrogen(bin.N_center, nitrogen_params);
+        run(props, bin.spectrum_label);
+
+        nitrogen_bins.push_back(bin);
+    }
+
+    if (message_flag) {
+        std::cout << "LeafOptics: Created " << nitrogen_bins.size() << " nitrogen-based spectrum bins." << std::endl;
+    }
+}
+
+uint LeafOptics::findNearestBin(float N_value) {
+    if (nitrogen_bins.empty()) {
+        helios_runtime_error("ERROR (LeafOptics::findNearestBin): No nitrogen bins have been created.");
+    }
+
+    uint best_bin = 0;
+    float best_distance = std::abs(N_value - nitrogen_bins[0].N_center);
+
+    for (uint i = 1; i < nitrogen_bins.size(); i++) {
+        float distance = std::abs(N_value - nitrogen_bins[i].N_center);
+        if (distance < best_distance) {
+            best_distance = distance;
+            best_bin = i;
+        }
+    }
+
+    return best_bin;
+}
+
+bool LeafOptics::shouldReassign(float current_N, uint current_bin) {
+    if (current_bin >= nitrogen_bins.size()) {
+        return false;
+    }
+
+    float bin_center = nitrogen_bins[current_bin].N_center;
+    float absolute_change = std::abs(current_N - bin_center);
+
+    // Check absolute threshold first
+    if (absolute_change < nitrogen_params.min_reassignment_change) {
+        return false;
+    }
+
+    // Check relative threshold
+    float relative_change = (bin_center > 0.0f) ? (absolute_change / bin_center) : 0.0f;
+    return relative_change > nitrogen_params.reassignment_threshold;
+}
+
+bool LeafOptics::isSignificantImprovement(float current_N, uint old_bin, uint new_bin) {
+    if (old_bin >= nitrogen_bins.size() || new_bin >= nitrogen_bins.size()) {
+        return false;
+    }
+
+    float old_distance = std::abs(current_N - nitrogen_bins[old_bin].N_center);
+    float new_distance = std::abs(current_N - nitrogen_bins[new_bin].N_center);
+
+    // Require improvement of at least half the minimum change threshold (hysteresis)
+    return (old_distance - new_distance) > nitrogen_params.min_reassignment_change * 0.5f;
+}
+
+void LeafOptics::assignSpectrumToPrimitives(const std::vector<uint> &UUIDs, uint bin_index) {
+    if (bin_index >= nitrogen_bins.size()) {
+        helios_runtime_error("ERROR (LeafOptics::assignSpectrumToPrimitives): Invalid bin index " + std::to_string(bin_index));
+    }
+
+    const std::string &label = nitrogen_bins[bin_index].spectrum_label;
+    std::string refl_label = "leaf_reflectivity_" + label;
+    std::string trans_label = "leaf_transmissivity_" + label;
+
+    context->setPrimitiveData(UUIDs, "reflectivity_spectrum", refl_label);
+    context->setPrimitiveData(UUIDs, "transmissivity_spectrum", trans_label);
+
+    // Write optional primitive data if any are enabled
+    if (!output_prim_data.empty()) {
+        // Compute properties from the bin's nitrogen center value
+        LeafOpticsProperties props = computePropertiesFromNitrogen(nitrogen_bins[bin_index].N_center, nitrogen_params);
+
+        for (const auto &data: output_prim_data) {
+            if (data == "chlorophyll") {
+                context->setPrimitiveData(UUIDs, "chlorophyll", props.chlorophyllcontent);
+            } else if (data == "carotenoid") {
+                context->setPrimitiveData(UUIDs, "carotenoid", props.carotenoidcontent);
+            } else if (data == "anthocyanin") {
+                context->setPrimitiveData(UUIDs, "anthocyanin", props.anthocyancontent);
+            } else if (data == "brown" && props.brownpigments > 0.0) {
+                context->setPrimitiveData(UUIDs, "brown", props.brownpigments);
+            } else if (data == "water") {
+                context->setPrimitiveData(UUIDs, "water", props.watermass);
+            } else if (data == "drymass" && props.drymass > 0.0) {
+                context->setPrimitiveData(UUIDs, "drymass", props.drymass);
+            } else if (data == "protein" && props.drymass == 0.0) {
+                context->setPrimitiveData(UUIDs, "protein", props.protein);
+            } else if (data == "cellulose" && props.drymass == 0.0) {
+                context->setPrimitiveData(UUIDs, "cellulose", props.carbonconstituents);
+            }
+        }
+    }
+}
+
+void LeafOptics::run(const std::vector<uint> &UUIDs, const LeafOpticsProperties_Nauto &params) {
+    if (UUIDs.empty()) {
+        if (message_flag) {
+            std::cout << "LeafOptics: Empty UUID list provided to nitrogen mode, nothing to do." << std::endl;
+        }
+        return;
+    }
+
+    // Group primitives by parent object
+    std::map<uint, std::vector<uint>> object_groups = groupPrimitivesByObject(UUIDs);
+
+    if (object_groups.empty()) {
+        if (message_flag) {
+            std::cerr << "WARNING (LeafOptics::run): No valid objects found for nitrogen-based leaf optics." << std::endl;
+        }
+        return;
+    }
+
+    // Collect nitrogen values from all objects
+    std::vector<float> nitrogen_values;
+    std::map<uint, float> object_nitrogen;
+
+    for (const auto &pair: object_groups) {
+        uint objID = pair.first;
+
+        // Check if nitrogen data exists on this object
+        if (!context->doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
+            helios_runtime_error("ERROR (LeafOptics::run): Object " + std::to_string(objID) + " does not have 'leaf_nitrogen_gN_m2' data. Enable PlantArchitecture nitrogen model first.");
+        }
+
+        float N_area;
+        context->getObjectData(objID, "leaf_nitrogen_gN_m2", N_area);
+        nitrogen_values.push_back(N_area);
+        object_nitrogen[objID] = N_area;
+    }
+
+    if (!nitrogen_mode_active) {
+        // First call: Initialize nitrogen mode
+        nitrogen_params = params;
+
+        // Create adaptive bins based on nitrogen distribution
+        createAdaptiveBins(nitrogen_values);
+
+        // Assign each object to nearest bin
+        for (const auto &pair: object_groups) {
+            uint objID = pair.first;
+            const std::vector<uint> &obj_UUIDs = pair.second;
+            float N_area = object_nitrogen[objID];
+
+            uint best_bin = findNearestBin(N_area);
+            assignSpectrumToPrimitives(obj_UUIDs, best_bin);
+
+            // Track assignment
+            ObjectAssignment assignment;
+            assignment.bin_index = best_bin;
+            assignment.N_at_assignment = N_area;
+            assignment.primitive_UUIDs = obj_UUIDs;
+            object_assignments[objID] = assignment;
+
+            // Track primitive to object mapping
+            for (uint UUID: obj_UUIDs) {
+                primitive_to_object[UUID] = objID;
+            }
+        }
+
+        nitrogen_mode_active = true;
+
+        if (message_flag) {
+            std::cout << "LeafOptics: Nitrogen mode initialized with " << object_assignments.size() << " leaf objects assigned to " << nitrogen_bins.size() << " spectrum bins." << std::endl;
+        }
+
+    } else {
+        // Subsequent call: Update assignments
+
+        // Build set of current object IDs
+        std::set<uint> current_objects;
+        for (const auto &pair: object_groups) {
+            current_objects.insert(pair.first);
+        }
+
+        // Build set of previously tracked objects
+        std::set<uint> tracked_objects;
+        for (const auto &pair: object_assignments) {
+            tracked_objects.insert(pair.first);
+        }
+
+        // Find removed objects (tracked but not in current)
+        std::vector<uint> removed_objects;
+        for (uint objID: tracked_objects) {
+            if (current_objects.find(objID) == current_objects.end()) {
+                removed_objects.push_back(objID);
+            }
+        }
+
+        // Remove tracking for removed objects
+        for (uint objID: removed_objects) {
+            const ObjectAssignment &assignment = object_assignments[objID];
+            for (uint UUID: assignment.primitive_UUIDs) {
+                primitive_to_object.erase(UUID);
+            }
+            object_assignments.erase(objID);
+        }
+
+        // Process current objects
+        for (const auto &pair: object_groups) {
+            uint objID = pair.first;
+            const std::vector<uint> &obj_UUIDs = pair.second;
+            float N_area = object_nitrogen[objID];
+
+            if (tracked_objects.find(objID) == tracked_objects.end()) {
+                // New object: assign to nearest existing bin
+                uint best_bin = findNearestBin(N_area);
+                assignSpectrumToPrimitives(obj_UUIDs, best_bin);
+
+                ObjectAssignment assignment;
+                assignment.bin_index = best_bin;
+                assignment.N_at_assignment = N_area;
+                assignment.primitive_UUIDs = obj_UUIDs;
+                object_assignments[objID] = assignment;
+
+                for (uint UUID: obj_UUIDs) {
+                    primitive_to_object[UUID] = objID;
+                }
+
+            } else {
+                // Existing object: check for reassignment
+                ObjectAssignment &assignment = object_assignments[objID];
+
+                // Update primitive list (in case it changed)
+                assignment.primitive_UUIDs = obj_UUIDs;
+                for (uint UUID: obj_UUIDs) {
+                    primitive_to_object[UUID] = objID;
+                }
+
+                if (shouldReassign(N_area, assignment.bin_index)) {
+                    uint best_bin = findNearestBin(N_area);
+
+                    if (best_bin != assignment.bin_index && isSignificantImprovement(N_area, assignment.bin_index, best_bin)) {
+                        assignSpectrumToPrimitives(obj_UUIDs, best_bin);
+                        assignment.bin_index = best_bin;
+                        assignment.N_at_assignment = N_area;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void LeafOptics::updateNitrogenBasedSpectra() {
+    if (!nitrogen_mode_active) {
+        helios_runtime_error("ERROR (LeafOptics::updateNitrogenBasedSpectra): Nitrogen mode is not active. "
+                             "Call run() with LeafOpticsProperties_Nauto first to initialize nitrogen mode.");
+    }
+
+    for (auto &pair: object_assignments) {
+        uint objID = pair.first;
+        ObjectAssignment &assignment = pair.second;
+
+        // Read current nitrogen value
+        if (!context->doesObjectDataExist(objID, "leaf_nitrogen_gN_m2")) {
+            if (message_flag) {
+                std::cerr << "WARNING (LeafOptics::updateNitrogenBasedSpectra): Object " << objID << " no longer has 'leaf_nitrogen_gN_m2' data, skipping." << std::endl;
+            }
+            continue;
+        }
+
+        float current_N;
+        context->getObjectData(objID, "leaf_nitrogen_gN_m2", current_N);
+
+        // Check for reassignment
+        if (shouldReassign(current_N, assignment.bin_index)) {
+            uint best_bin = findNearestBin(current_N);
+
+            if (best_bin != assignment.bin_index && isSignificantImprovement(current_N, assignment.bin_index, best_bin)) {
+                assignSpectrumToPrimitives(assignment.primitive_UUIDs, best_bin);
+                assignment.bin_index = best_bin;
+                assignment.N_at_assignment = current_N;
+            }
+        }
+    }
 }
