@@ -176,6 +176,10 @@ namespace helios {
         VkFence transfer_fence = VK_NULL_HANDLE; // For synchronizing buffer operations
         VkFence compute_fence = VK_NULL_HANDLE;  // For synchronizing compute operations
 
+        // Timestamp queries for GPU profiling
+        VkQueryPool timestamp_query_pool = VK_NULL_HANDLE;
+        float timestamp_period = 1.0f; // Nanoseconds per timestamp unit
+
         // Geometry cache
         size_t primitive_count = 0;
         size_t band_count = 0;

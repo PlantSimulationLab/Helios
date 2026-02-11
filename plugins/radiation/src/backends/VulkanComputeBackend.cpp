@@ -110,6 +110,8 @@ namespace helios {
             vkDestroyFence(vk_device, transfer_fence, nullptr);
         if (compute_fence != VK_NULL_HANDLE)
             vkDestroyFence(vk_device, compute_fence, nullptr);
+        if (timestamp_query_pool != VK_NULL_HANDLE)
+            vkDestroyQueryPool(vk_device, timestamp_query_pool, nullptr);
         if (command_pool != VK_NULL_HANDLE)
             vkDestroyCommandPool(vk_device, command_pool, nullptr);
 
@@ -493,7 +495,7 @@ namespace helios {
         VkDescriptorSet sets[] = {set_geometry, set_materials, set_results};
         vkCmdBindDescriptorSets(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 3, sets, 0, nullptr);
 
-        // Push constants (expanded for 3D dispatch)
+        // Push constants (expanded for 3D dispatch with 2D primitive tiling)
         struct PushConstants {
             uint launch_offset;
             uint launch_count;
@@ -506,6 +508,8 @@ namespace helios {
             uint debug_mode;  // 1 = enable bounds checking, 0 = production
             uint launch_dim_x;    // Grid dimension X for stratified sampling
             uint launch_dim_y;    // Grid dimension Y for stratified sampling
+            uint prim_tiles_y;    // Number of primitive tiles in Y dimension
+            uint prims_per_tile;  // Primitives per tile (65535 max)
         } push_constants;
 
         // Compute 2D grid dimensions for stratified sampling (matches OptiX)
@@ -530,41 +534,29 @@ namespace helios {
             push_constants.debug_mode = 0;
         #endif
 
-        // 3D dispatch: X/Y = ray grid workgroups, Z = primitives
-        // Matches OptiX: rtContextLaunch3D(context, RAYTYPE_DIRECT, n, n, launch_count)
-        const uint32_t WG_X = 16; // Must match shader local_size_x
-        const uint32_t WG_Y = 16; // Must match shader local_size_y
+        // 3D dispatch with 2D primitive tiling to avoid sub-batching
+        // Tile primitives into Y dimension when count exceeds 65535 to use full Vulkan dispatch space
+        const uint32_t WG_X = 8; // Must match shader local_size_x
+        const uint32_t WG_Y = 32; // Must match shader local_size_y
+        const uint32_t MAX_PRIMS_PER_TILE = 65535;
+
         uint32_t dispatch_x = (launch_dim_x + WG_X - 1) / WG_X;
-        uint32_t dispatch_y = (launch_dim_y + WG_Y - 1) / WG_Y;
+        uint32_t dispatch_y_rays = (launch_dim_y + WG_Y - 1) / WG_Y;
 
-        // Sub-batch primitives to stay within Vulkan spec limit (65535 per dimension)
-        const uint32_t MAX_Z_DISPATCH = 65535;
-        uint32_t prims_remaining = params.launch_count;
-        uint32_t prim_sub_offset = 0;
+        // Compute primitive tiling
+        uint32_t prims_per_tile = std::min(params.launch_count, MAX_PRIMS_PER_TILE);
+        uint32_t prim_tiles_y = (params.launch_count + MAX_PRIMS_PER_TILE - 1) / MAX_PRIMS_PER_TILE;
 
-        while (prims_remaining > 0) {
-            uint32_t prims_this_dispatch = std::min(prims_remaining, MAX_Z_DISPATCH);
+        uint32_t dispatch_y = dispatch_y_rays * prim_tiles_y;
+        uint32_t dispatch_z = prims_per_tile;
 
-            push_constants.launch_offset = params.launch_offset + prim_sub_offset;
-            push_constants.launch_count = prims_this_dispatch;
+        push_constants.launch_offset = params.launch_offset;
+        push_constants.launch_count = params.launch_count;
+        push_constants.prim_tiles_y = prim_tiles_y;
+        push_constants.prims_per_tile = prims_per_tile;
 
-            vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
-            vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, prims_this_dispatch);
-
-            prims_remaining -= prims_this_dispatch;
-            prim_sub_offset += prims_this_dispatch;
-
-            // Pipeline barrier between sub-batches to ensure atomicAdd visibility
-            if (prims_remaining > 0) {
-                VkMemoryBarrier mem_barrier{};
-                mem_barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-                mem_barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-                mem_barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
-                vkCmdPipelineBarrier(compute_command_buffer,
-                                     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                                     0, 1, &mem_barrier, 0, nullptr, 0, nullptr);
-            }
-        }
+        vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
+        vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, dispatch_z);
 
         // Buffer memory barrier to ensure storage buffer writes are visible for readback
         // CRITICAL: Use buffer-specific barrier instead of global barrier for MoltenVK compatibility
@@ -626,8 +618,8 @@ namespace helios {
                 // Print progress every 5 seconds for large scenes
                 if (elapsed_seconds % 5 == 0) {
                     std::cout << "  Direct rays still computing... " << elapsed_seconds << "s elapsed "
-                              << "(dispatch: " << dispatch_x << "×" << dispatch_y << "×" << params.launch_count
-                              << ", rays: " << launch_dim_x << "×" << launch_dim_y << ")" << std::endl;
+                              << "(dispatch: " << dispatch_x << "×" << dispatch_y << "×" << dispatch_z
+                              << ", rays: " << launch_dim_x << "×" << launch_dim_y << ", prims: " << params.launch_count << ")" << std::endl;
                 }
             } else {
                 helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): vkWaitForFences failed. VkResult: " + std::to_string(result));
@@ -799,6 +791,9 @@ namespace helios {
             begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
             vkBeginCommandBuffer(compute_command_buffer, &begin_info);
 
+            // Reset timestamp queries for this command buffer
+            vkCmdResetQueryPool(compute_command_buffer, timestamp_query_pool, 0, 2);
+
             // Bind pipeline
             vkCmdBindPipeline(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_diffuse);
 
@@ -820,6 +815,8 @@ namespace helios {
                 uint32_t launch_face;     // 0 = bottom, 1 = top
                 uint32_t launch_dim_x;    // Grid dimension X
                 uint32_t launch_dim_y;    // Grid dimension Y
+                uint32_t prim_tiles_y;    // Number of primitive tiles in Y dimension
+                uint32_t prims_per_tile;  // Primitives per tile (65535 max)
             } push_constants;
 
             push_constants.launch_offset = params.launch_offset;
@@ -842,41 +839,36 @@ namespace helios {
                 push_constants.debug_mode = 0;
             #endif
 
-            // 3D dispatch: X/Y = ray grid workgroups, Z = primitives
-            // Matches OptiX: rtContextLaunch3D(context, RAYTYPE_DIFFUSE, n, n, launch_count)
-            const uint32_t WG_X = 16; // Must match shader local_size_x
-            const uint32_t WG_Y = 16; // Must match shader local_size_y
+            // 3D dispatch with 2D primitive tiling to avoid sub-batching
+            // Tile primitives into Y dimension when count exceeds 65535 to use full Vulkan dispatch space
+            const uint32_t WG_X = 8; // Must match shader local_size_x
+            const uint32_t WG_Y = 32; // Must match shader local_size_y
+            const uint32_t MAX_PRIMS_PER_TILE = 65535;
+
             uint32_t dispatch_x = (launch_dim_x + WG_X - 1) / WG_X;
-            uint32_t dispatch_y = (launch_dim_y + WG_Y - 1) / WG_Y;
+            uint32_t dispatch_y_rays = (launch_dim_y + WG_Y - 1) / WG_Y;
 
-            // Sub-batch primitives to stay within Vulkan spec limit (65535 per dimension)
-            const uint32_t MAX_Z_DISPATCH = 65535;
-            uint32_t prims_remaining = params.launch_count;
-            uint32_t prim_sub_offset = 0;
+            // Compute primitive tiling
+            uint32_t prims_per_tile = std::min(params.launch_count, MAX_PRIMS_PER_TILE);
+            uint32_t prim_tiles_y = (params.launch_count + MAX_PRIMS_PER_TILE - 1) / MAX_PRIMS_PER_TILE;
 
-            while (prims_remaining > 0) {
-                uint32_t prims_this_dispatch = std::min(prims_remaining, MAX_Z_DISPATCH);
+            uint32_t dispatch_y = dispatch_y_rays * prim_tiles_y;
+            uint32_t dispatch_z = prims_per_tile;
 
-                push_constants.launch_offset = params.launch_offset + prim_sub_offset;
-                push_constants.launch_count = prims_this_dispatch;
+            push_constants.launch_offset = params.launch_offset;
+            push_constants.launch_count = params.launch_count;
+            push_constants.prim_tiles_y = prim_tiles_y;
+            push_constants.prims_per_tile = prims_per_tile;
 
-                vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
-                vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, prims_this_dispatch);
+            vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
 
-                prims_remaining -= prims_this_dispatch;
-                prim_sub_offset += prims_this_dispatch;
+            // Write timestamp before dispatch (measures GPU start time)
+            vkCmdWriteTimestamp(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestamp_query_pool, 0);
 
-                // Pipeline barrier between sub-batches to ensure atomicAdd visibility
-                if (prims_remaining > 0) {
-                    VkMemoryBarrier mem_barrier{};
-                    mem_barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-                    mem_barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-                    mem_barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
-                    vkCmdPipelineBarrier(compute_command_buffer,
-                                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                                         0, 1, &mem_barrier, 0, nullptr, 0, nullptr);
-                }
-            }
+            vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, dispatch_z);
+
+            // Write timestamp after dispatch (measures GPU end time)
+            vkCmdWriteTimestamp(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestamp_query_pool, 1);
 
             // Final buffer memory barriers to ensure storage buffer writes are visible
             VkBufferMemoryBarrier buffer_barriers[4];
@@ -953,15 +945,26 @@ namespace helios {
                 result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, poll_interval_ns);
                 if (result == VK_SUCCESS) {
                     completed = true;
+
+                    // Read GPU timestamps to measure actual shader execution time
+                    uint64_t timestamps[2];
+                    vkGetQueryPoolResults(vk_device, timestamp_query_pool, 0, 2, sizeof(timestamps), timestamps,
+                                          sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+
+                    double gpu_time_ms = double(timestamps[1] - timestamps[0]) * timestamp_period / 1e6;
+                    std::cout << "  [GPU TIMING] Diffuse dispatch (face " << launch_face << "): "
+                              << gpu_time_ms << " ms GPU execution, "
+                              << elapsed_seconds << " s fence wait" << std::endl;
+
                     break;
                 } else if (result == VK_TIMEOUT) {
                     elapsed_seconds++;
                     // Print progress every 5 seconds for large scenes
                     if (elapsed_seconds % 5 == 0) {
                         std::cout << "  Diffuse rays still computing... " << elapsed_seconds << "s elapsed "
-                                  << "(dispatch: " << dispatch_x << "×" << dispatch_y << "×" << params.launch_count
+                                  << "(dispatch: " << dispatch_x << "×" << dispatch_y << "×" << dispatch_z
                                   << ", rays: " << launch_dim_x << "×" << launch_dim_y
-                                  << ", face: " << launch_face << ")" << std::endl;
+                                  << ", face: " << launch_face << ", prims: " << params.launch_count << ")" << std::endl;
                     }
                 } else {
                     helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): vkWaitForFences failed. VkResult: " + std::to_string(result));
@@ -1525,6 +1528,23 @@ namespace helios {
         if (result != VK_SUCCESS) {
             helios_runtime_error("ERROR (VulkanComputeBackend::createCommandResources): Failed to create compute fence. VkResult: " + std::to_string(result));
         }
+
+        // Create timestamp query pool for GPU profiling (2 queries: start and end)
+        VkQueryPoolCreateInfo query_pool_info{};
+        query_pool_info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+        query_pool_info.queryType = VK_QUERY_TYPE_TIMESTAMP;
+        query_pool_info.queryCount = 2;
+
+        result = vkCreateQueryPool(vk_device, &query_pool_info, nullptr, &timestamp_query_pool);
+        if (result != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::createCommandResources): Failed to create timestamp query pool. VkResult: " + std::to_string(result));
+        }
+
+        // Get timestamp period (nanoseconds per tick) for converting timestamps to time
+        VkPhysicalDeviceProperties props;
+        vkGetPhysicalDeviceProperties(device->getPhysicalDevice(), &props);
+        timestamp_period = props.limits.timestampPeriod;
+        std::cout << "GPU timestamp period: " << timestamp_period << " ns/tick" << std::endl;
     }
 
     void VulkanComputeBackend::createDescriptorSets() {

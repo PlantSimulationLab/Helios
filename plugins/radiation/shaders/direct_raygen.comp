@@ -7,7 +7,7 @@
 // Direct ray generation shader (Phase 1)
 // Launches rays from surfaces toward radiation sources
 
-layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+layout(local_size_x = 8, local_size_y = 32, local_size_z = 1) in;
 
 // Push constants (launch parameters)
 layout(push_constant) uniform PushConstants {
@@ -22,6 +22,8 @@ layout(push_constant) uniform PushConstants {
     uint debug_mode;  // 1 = enable bounds checking with error codes, 0 = production (no checks)
     uint launch_dim_x;    // Grid dimension X for stratified sampling
     uint launch_dim_y;    // Grid dimension Y for stratified sampling
+    uint prim_tiles_y;    // Number of primitive tiles in Y dimension (for large primitive counts)
+    uint prims_per_tile;  // Primitives per tile (65535 max)
 } pc;
 
 // ========== Descriptor Set 0: Geometry ==========
@@ -234,18 +236,23 @@ float calc_collimated_strength(vec3 normal, vec3 ray_dir, uint Nrays) {
 
 // ========== Main Shader ==========
 void main() {
-    // 3D dispatch: X/Y = ray grid position, Z = primitive index
-    // Matches OptiX: rtContextLaunch3D(context, RAYTYPE_DIRECT, n, n, launch_count)
-    uint launch_x = gl_GlobalInvocationID.x;       // Ray grid X [0, launch_dim_x)
-    uint launch_y = gl_GlobalInvocationID.y;       // Ray grid Y [0, launch_dim_y)
-    uint prim_batch_idx = gl_GlobalInvocationID.z; // Primitive index within batch
+    // 3D dispatch with 2D primitive tiling: X = ray grid X, Y = ray grid Y + primitive tiles, Z = primitives
+    // For large primitive counts (>65535), primitives are tiled into the Y dimension to avoid sub-batching
+    uint launch_x = gl_GlobalInvocationID.x;  // Ray grid X [0, launch_dim_x)
+
+    // Decode Y dimension: lower bits = ray grid Y, upper bits = primitive tile index
+    uint prim_tile_y = gl_GlobalInvocationID.y / pc.launch_dim_y;
+    uint launch_y = gl_GlobalInvocationID.y % pc.launch_dim_y;  // Ray grid Y [0, launch_dim_y)
+
+    // Decode primitive index from 2D tiling
+    uint prim_batch_idx = prim_tile_y * pc.prims_per_tile + gl_GlobalInvocationID.z;
 
     // Bounds check: ray grid
     if (launch_x >= pc.launch_dim_x || launch_y >= pc.launch_dim_y) {
         return;
     }
 
-    // Bounds check: primitive batch
+    // Bounds check: primitive index
     if (prim_batch_idx >= pc.launch_count) {
         return;
     }
