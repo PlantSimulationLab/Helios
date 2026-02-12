@@ -446,4 +446,275 @@ namespace helios {
         allocated_nodes.clear();
     }
 
+    // ========== CWBVH Conversion Implementation ==========
+
+    std::vector<CWBVH_Node> BVHBuilder::convertToCWBVH(const std::vector<BVHNode> &bvh2_nodes) {
+        if (bvh2_nodes.empty()) {
+            return {};
+        }
+
+        std::cout << "Converting BVH2 (" << bvh2_nodes.size() << " nodes) to CWBVH..." << std::endl;
+
+        // Step 1: Reconstruct tree from flat BVH2
+        BuildNode *root = reconstructTree(bvh2_nodes, 0);
+
+        // Step 2: Collapse to BVH8
+        BVH8Node *root8 = collapseToBVH8(root);
+
+        // Step 3: Flatten with compression
+        std::vector<CWBVH_Node> cwbvh_nodes;
+        flattenBVH8(root8, cwbvh_nodes);
+
+        // Cleanup
+        for (BVH8Node *node : allocated_bvh8_nodes) {
+            delete node;
+        }
+        allocated_bvh8_nodes.clear();
+
+        std::cout << "CWBVH conversion complete: " << cwbvh_nodes.size() << " BVH8 nodes ("
+                  << (cwbvh_nodes.size() * 80 / 1024.0 / 1024.0) << " MB)" << std::endl;
+
+        return cwbvh_nodes;
+    }
+
+    BVHBuilder::BuildNode *BVHBuilder::reconstructTree(const std::vector<BVHNode> &bvh2_nodes, uint32_t node_idx) {
+        if (node_idx >= bvh2_nodes.size()) {
+            return nullptr;
+        }
+
+        const BVHNode &flat_node = bvh2_nodes[node_idx];
+        BuildNode *node = new BuildNode();
+        allocated_nodes.push_back(node);
+
+        // Copy AABB
+        node->bounds.min = helios::make_vec3(flat_node.aabb_min[0], flat_node.aabb_min[1], flat_node.aabb_min[2]);
+        node->bounds.max = helios::make_vec3(flat_node.aabb_max[0], flat_node.aabb_max[1], flat_node.aabb_max[2]);
+
+        if (flat_node.right_child == UINT32_MAX) {
+            // Leaf node
+            node->prim_count = flat_node.prim_count;
+            node->prim_type = flat_node.prim_type;
+            node->first_prim_offset = flat_node.first_prim;
+            node->left = nullptr;
+            node->right = nullptr;
+        } else {
+            // Internal node
+            node->prim_count = 0;
+            node->split_axis = flat_node.split_axis;
+            node->left = reconstructTree(bvh2_nodes, flat_node.left_child);
+            node->right = reconstructTree(bvh2_nodes, flat_node.right_child);
+        }
+
+        return node;
+    }
+
+    BVHBuilder::BVH8Node *BVHBuilder::collapseToBVH8(BuildNode *bvh2_node, int depth) {
+        // Helper lambda: Count total primitives in a subtree
+        auto countPrimitivesInSubtree = [](BuildNode *node, auto& self) -> uint32_t {
+            if (!node) return 0;
+            if (node->prim_count > 0) return node->prim_count;
+            return self(node->left, self) + self(node->right, self);
+        };
+        BVH8Node *node8 = new BVH8Node();
+        allocated_bvh8_nodes.push_back(node8);
+
+        node8->aabb = bvh2_node->bounds;
+
+        // If already a leaf, create a BVH8 leaf with one child
+        if (bvh2_node->prim_count > 0) {
+            node8->children[0] = bvh2_node;
+            node8->is_leaf[0] = true;
+            node8->first_prim[0] = bvh2_node->first_prim_offset;
+            node8->prim_count[0] = bvh2_node->prim_count;
+            node8->prim_type[0] = bvh2_node->prim_type;
+            return node8;
+        }
+
+        // Greedy collapse: collect up to 8 BuildNode children from BVH2 subtree
+        std::vector<BuildNode *> candidates = {bvh2_node};
+
+        while (candidates.size() < 8) {
+            // Find node with most primitives to expand (better load balancing than surface area)
+            int best_idx = -1;
+            uint32_t max_prim_count = 0;
+
+            for (size_t i = 0; i < candidates.size(); i++) {
+                if (candidates[i]->prim_count > 0) continue; // Skip leaves
+
+                // Count total primitives in this subtree (recursive count)
+                uint32_t subtree_prims = countPrimitivesInSubtree(candidates[i], countPrimitivesInSubtree);
+
+                if (subtree_prims > max_prim_count) {
+                    max_prim_count = subtree_prims;
+                    best_idx = static_cast<int>(i);
+                }
+            }
+
+            if (best_idx == -1) break; // All leaves
+
+            // Expand the node with most primitives
+            BuildNode *expand = candidates[best_idx];
+            candidates.erase(candidates.begin() + best_idx);
+            if (expand->left) candidates.push_back(expand->left);
+            if (expand->right) candidates.push_back(expand->right);
+        }
+
+        // Assign BuildNode children to octants
+        assignChildrenToOctants(node8, candidates);
+
+        return node8;
+    }
+
+    void BVHBuilder::assignChildrenToOctants(BVH8Node *node8, std::vector<BuildNode *> &children) {
+        helios::vec3 center = node8->aabb.centroid();
+
+        // 8 octant directions (Morton order) - bit 1 = positive direction
+        static const helios::vec3 octants[8] = {
+            {1, 1, 1},      // 000
+            {-1, 1, 1},     // 001 (x negative)
+            {1, -1, 1},     // 010 (y negative)
+            {-1, -1, 1},    // 011 (x,y negative)
+            {1, 1, -1},     // 100 (z negative)
+            {-1, 1, -1},    // 101 (x,z negative)
+            {1, -1, -1},    // 110 (y,z negative)
+            {-1, -1, -1}    // 111 (all negative)
+        };
+
+        // Greedy assignment: minimize distance to octant direction
+        for (int slot = 0; slot < 8; slot++) {
+            if (children.empty()) break;
+
+            int best = -1;
+            float best_score = 1e30f;
+
+            for (size_t c = 0; c < children.size(); c++) {
+                helios::vec3 child_center = children[c]->bounds.centroid();
+                helios::vec3 offset = child_center - center;
+
+                // Negative dot product = child is in this octant's direction
+                float score = -(offset.x * octants[slot].x + offset.y * octants[slot].y + offset.z * octants[slot].z);
+
+                if (score < best_score) {
+                    best_score = score;
+                    best = static_cast<int>(c);
+                }
+            }
+
+            if (best >= 0) {
+                BuildNode *child = children[best];
+                node8->children[slot] = child;
+                node8->is_leaf[slot] = (child->prim_count > 0);
+
+                if (node8->is_leaf[slot]) {
+                    node8->first_prim[slot] = child->first_prim_offset;
+                    node8->prim_count[slot] = child->prim_count;
+                    node8->prim_type[slot] = child->prim_type;
+                }
+
+                children.erase(children.begin() + best);
+            }
+        }
+    }
+
+    void BVHBuilder::compressNode(const BVH8Node *src, CWBVH_Node &dst) {
+        // Compute quantization parameters for each axis
+        float extent_x = src->aabb.max.x - src->aabb.min.x;
+        float extent_y = src->aabb.max.y - src->aabb.min.y;
+        float extent_z = src->aabb.max.z - src->aabb.min.z;
+
+        dst.p[0] = src->aabb.min.x;
+        dst.p[1] = src->aabb.min.y;
+        dst.p[2] = src->aabb.min.z;
+
+        // Compute exponents: ceil(log2(extent / 255))
+        int exp_x = (extent_x > 1e-6f) ? static_cast<int>(std::ceil(std::log2(extent_x / 255.0f))) : 0;
+        int exp_y = (extent_y > 1e-6f) ? static_cast<int>(std::ceil(std::log2(extent_y / 255.0f))) : 0;
+        int exp_z = (extent_z > 1e-6f) ? static_cast<int>(std::ceil(std::log2(extent_z / 255.0f))) : 0;
+
+        dst.e_packed = (exp_x & 0xFF) | ((exp_y & 0xFF) << 8) | ((exp_z & 0xFF) << 16);
+        dst.imask = 0;
+
+        float scale_x = std::pow(2.0f, static_cast<float>(exp_x));
+        float scale_y = std::pow(2.0f, static_cast<float>(exp_y));
+        float scale_z = std::pow(2.0f, static_cast<float>(exp_z));
+
+        // Quantize each child's AABB
+        for (int child = 0; child < 8; child++) {
+            if (!src->children[child]) {
+                // Empty slot - set inverted bounds so AABB test fails
+                dst.qmin_x[child] = 255;
+                dst.qmin_y[child] = 255;
+                dst.qmin_z[child] = 255;
+                dst.qmax_x[child] = 0;
+                dst.qmax_y[child] = 0;
+                dst.qmax_z[child] = 0;
+                continue;
+            }
+
+            BuildNode *child_node = src->children[child];
+
+            // Quantize X axis
+            float min_qx = (child_node->bounds.min.x - dst.p[0]) / scale_x;
+            float max_qx = (child_node->bounds.max.x - dst.p[0]) / scale_x;
+            int qmin_x = std::max(0, std::min(255, static_cast<int>(std::floor(min_qx - 0.001f))));
+            int qmax_x = std::max(0, std::min(255, static_cast<int>(std::ceil(max_qx + 0.001f))));
+            dst.qmin_x[child] = static_cast<uint8_t>(qmin_x);
+            dst.qmax_x[child] = static_cast<uint8_t>(qmax_x);
+
+            // Quantize Y axis
+            float min_qy = (child_node->bounds.min.y - dst.p[1]) / scale_y;
+            float max_qy = (child_node->bounds.max.y - dst.p[1]) / scale_y;
+            int qmin_y = std::max(0, std::min(255, static_cast<int>(std::floor(min_qy - 0.001f))));
+            int qmax_y = std::max(0, std::min(255, static_cast<int>(std::ceil(max_qy + 0.001f))));
+            dst.qmin_y[child] = static_cast<uint8_t>(qmin_y);
+            dst.qmax_y[child] = static_cast<uint8_t>(qmax_y);
+
+            // Quantize Z axis
+            float min_qz = (child_node->bounds.min.z - dst.p[2]) / scale_z;
+            float max_qz = (child_node->bounds.max.z - dst.p[2]) / scale_z;
+            int qmin_z = std::max(0, std::min(255, static_cast<int>(std::floor(min_qz - 0.001f))));
+            int qmax_z = std::max(0, std::min(255, static_cast<int>(std::ceil(max_qz + 0.001f))));
+            dst.qmin_z[child] = static_cast<uint8_t>(qmin_z);
+            dst.qmax_z[child] = static_cast<uint8_t>(qmax_z);
+
+            // Set imask bit if child is internal (not a leaf)
+            if (!src->is_leaf[child]) {
+                dst.imask |= (1 << child);
+            }
+
+            // Store per-child leaf data in extended fields
+            dst.child_first_prim[child] = src->first_prim[child];
+            dst.child_prim_count[child] = static_cast<uint8_t>(src->prim_count[child]);
+            dst.child_prim_type[child] = static_cast<uint8_t>(src->prim_type[child]);
+        }
+    }
+
+    uint32_t BVHBuilder::flattenBVH8(BVH8Node *root, std::vector<CWBVH_Node> &cwbvh_nodes) {
+        CWBVH_Node flat_node = {};
+
+        // Compress this node
+        compressNode(root, flat_node);
+
+        uint32_t my_offset = static_cast<uint32_t>(cwbvh_nodes.size());
+        cwbvh_nodes.push_back(flat_node);
+
+        // Reserve space for child indices - will be filled by recursive calls
+        uint32_t child_base = static_cast<uint32_t>(cwbvh_nodes.size());
+
+        // Recursively collapse and flatten children that are internal nodes
+        for (int i = 0; i < 8; i++) {
+            if (root->children[i] && !root->is_leaf[i]) {
+                // Internal child - needs recursive collapse to BVH8
+                BVH8Node *child8 = collapseToBVH8(root->children[i]);
+                flattenBVH8(child8, cwbvh_nodes);
+            }
+        }
+
+        // Update base indices now that children are written
+        cwbvh_nodes[my_offset].base_index_child = child_base;
+        cwbvh_nodes[my_offset].base_index_triangle = 0; // TODO: Triangle interleaving
+
+        return my_offset;
+    }
+
 } // namespace helios

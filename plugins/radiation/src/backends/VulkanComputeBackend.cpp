@@ -73,6 +73,8 @@ namespace helios {
             vkDestroyDescriptorSetLayout(vk_device, set_layout_results, nullptr);
         if (set_layout_sky != VK_NULL_HANDLE)
             vkDestroyDescriptorSetLayout(vk_device, set_layout_sky, nullptr);
+        if (set_layout_debug != VK_NULL_HANDLE)
+            vkDestroyDescriptorSetLayout(vk_device, set_layout_debug, nullptr);
 
         // Destroy buffers
         destroyBuffer(bvh_buffer);
@@ -104,6 +106,7 @@ namespace helios {
         destroyBuffer(diffuse_extinction_buffer);
         destroyBuffer(diffuse_dist_norm_buffer);
         destroyBuffer(sky_radiance_params_buffer);
+        destroyBuffer(debug_counters_buffer);
 
         // Destroy command resources
         if (transfer_fence != VK_NULL_HANDLE)
@@ -128,12 +131,15 @@ namespace helios {
             return; // Empty geometry
         }
 
-        // Build BVH on CPU
-        std::cout << "Building BVH for " << primitive_count << " primitives..." << std::endl;
+        // Build BVH2 on CPU
+        std::cout << "Building BVH2 for " << primitive_count << " primitives..." << std::endl;
         bvh_nodes = bvh_builder.build(geometry);
-        std::cout << "BVH built with " << bvh_nodes.size() << " nodes." << std::endl;
+        std::cout << "BVH2 built with " << bvh_nodes.size() << " nodes." << std::endl;
 
-        // Upload BVH
+        // TEMPORARILY DISABLED: Test shared memory with BVH2 first
+        // std::vector<CWBVH_Node> cwbvh_nodes = bvh_builder.convertToCWBVH(bvh_nodes);
+
+        // Upload BVH2 (not CWBVH) for testing
         if (!bvh_nodes.empty()) {
             if (bvh_buffer.buffer != VK_NULL_HANDLE) {
                 destroyBuffer(bvh_buffer);
@@ -771,6 +777,17 @@ namespace helios {
             descriptors_dirty = true;
         }
 
+        // Create debug counters buffer if needed (5 uint32_t counters)
+        // MUST be before descriptor update check
+        if (debug_counters_buffer.buffer == VK_NULL_HANDLE) {
+            debug_counters_buffer = createBuffer(5 * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            zeroBuffer(debug_counters_buffer);
+            descriptors_dirty = true;
+        } else {
+            // Zero counters before each dispatch
+            zeroBuffer(debug_counters_buffer);
+        }
+
         // Update descriptor sets only if buffers changed
         if (descriptors_dirty) {
             updateDescriptorSets();
@@ -797,9 +814,9 @@ namespace helios {
             // Bind pipeline
             vkCmdBindPipeline(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_diffuse);
 
-            // Bind descriptor sets (geometry, materials, results, sky)
-            VkDescriptorSet sets[] = {set_geometry, set_materials, set_results, set_sky};
-            vkCmdBindDescriptorSets(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 4, sets, 0, nullptr);
+            // Bind descriptor sets (geometry, materials, results, sky, debug)
+            VkDescriptorSet sets[] = {set_geometry, set_materials, set_results, set_sky, set_debug};
+            vkCmdBindDescriptorSets(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 5, sets, 0, nullptr);
 
             // Push constants (expanded for diffuse rays)
             struct PushConstants {
@@ -839,9 +856,8 @@ namespace helios {
                 push_constants.debug_mode = 0;
             #endif
 
-            // 3D dispatch with 2D primitive tiling to avoid sub-batching
-            // Tile primitives into Y dimension when count exceeds 65535 to use full Vulkan dispatch space
-            const uint32_t WG_X = 8; // Must match shader local_size_x
+            // 3D dispatch with 2D primitive tiling (8×32 workgroup optimal from tuning)
+            const uint32_t WG_X = 8;  // Must match shader local_size_x
             const uint32_t WG_Y = 32; // Must match shader local_size_y
             const uint32_t MAX_PRIMS_PER_TILE = 65535;
 
@@ -952,9 +968,19 @@ namespace helios {
                                           sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
 
                     double gpu_time_ms = double(timestamps[1] - timestamps[0]) * timestamp_period / 1e6;
+
+                    // Read debug counters
+                    uint32_t counters[5] = {0};
+                    downloadBufferData(debug_counters_buffer, counters, sizeof(counters));
+
                     std::cout << "  [GPU TIMING] Diffuse dispatch (face " << launch_face << "): "
                               << gpu_time_ms << " ms GPU execution, "
                               << elapsed_seconds << " s fence wait" << std::endl;
+                    std::cout << "  [PROFILING] AABB tests: " << (counters[0] / 1e9) << "B, "
+                              << "Primitive tests: " << (counters[1] / 1e6) << "M, "
+                              << "Atomics: " << (counters[2] / 1e6) << "M, "
+                              << "BVH steps: " << (counters[3] / 1e9) << "B, "
+                              << "Subdivisions: " << (counters[4] / 1e9) << "B" << std::endl;
 
                     break;
                 } else if (result == VK_TIMEOUT) {
@@ -1629,17 +1655,29 @@ namespace helios {
             helios_runtime_error("ERROR (VulkanComputeBackend::createDescriptorSets): Failed to create sky descriptor set layout");
         }
 
+        // Set 4: Debug counters (profiling/diagnostics)
+        std::vector<VkDescriptorSetLayoutBinding> debug_bindings = {
+            {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // debug_counters
+        };
+
+        layout_info.bindingCount = static_cast<uint32_t>(debug_bindings.size());
+        layout_info.pBindings = debug_bindings.data();
+
+        if (vkCreateDescriptorSetLayout(vk_device, &layout_info, nullptr, &set_layout_debug) != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::createDescriptorSets): Failed to create debug descriptor set layout");
+        }
+
         // ========== Create Descriptor Pool ==========
 
         std::vector<VkDescriptorPoolSize> pool_sizes = {
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 36}, // Enough for all 4 sets (11 geometry + 7 material + 5 result + 5 sky + margin)
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 40}, // All sets: 11 geo + 7 mat + 5 result + 5 sky + 1 debug + margin
         };
 
         VkDescriptorPoolCreateInfo pool_info{};
         pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         pool_info.poolSizeCount = static_cast<uint32_t>(pool_sizes.size());
         pool_info.pPoolSizes = pool_sizes.data();
-        pool_info.maxSets = 4; // geometry, materials, results, sky
+        pool_info.maxSets = 5; // geometry, materials, results, sky, debug
 
         if (vkCreateDescriptorPool(vk_device, &pool_info, nullptr, &descriptor_pool) != VK_SUCCESS) {
             helios_runtime_error("ERROR (VulkanComputeBackend::createDescriptorSets): Failed to create descriptor pool");
@@ -1647,15 +1685,15 @@ namespace helios {
 
         // ========== Allocate Descriptor Sets ==========
 
-        VkDescriptorSetLayout layouts[] = {set_layout_geometry, set_layout_materials, set_layout_results, set_layout_sky};
+        VkDescriptorSetLayout layouts[] = {set_layout_geometry, set_layout_materials, set_layout_results, set_layout_sky, set_layout_debug};
 
         VkDescriptorSetAllocateInfo alloc_info{};
         alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         alloc_info.descriptorPool = descriptor_pool;
-        alloc_info.descriptorSetCount = 4;
+        alloc_info.descriptorSetCount = 5;
         alloc_info.pSetLayouts = layouts;
 
-        VkDescriptorSet sets[4];
+        VkDescriptorSet sets[5];
         if (vkAllocateDescriptorSets(vk_device, &alloc_info, sets) != VK_SUCCESS) {
             helios_runtime_error("ERROR (VulkanComputeBackend::createDescriptorSets): Failed to allocate descriptor sets");
         }
@@ -1664,6 +1702,7 @@ namespace helios {
         set_materials = sets[1];
         set_results = sets[2];
         set_sky = sets[3];
+        set_debug = sets[4];
 
         // ========== Create placeholder sky parameter buffers ==========
         // MoltenVK requires all descriptor buffers to exist before pipeline creation
@@ -1743,7 +1782,7 @@ namespace helios {
 
         // ========== Create Pipeline Layout ==========
 
-        VkDescriptorSetLayout set_layouts[] = {set_layout_geometry, set_layout_materials, set_layout_results, set_layout_sky};
+        VkDescriptorSetLayout set_layouts[] = {set_layout_geometry, set_layout_materials, set_layout_results, set_layout_sky, set_layout_debug};
 
         // Push constants (128 bytes max for MoltenVK compatibility)
         // Phase 2 needs 48 bytes (12 uint32_t for diffuse raygen)
@@ -1768,7 +1807,7 @@ namespace helios {
 
         VkPipelineLayoutCreateInfo pipeline_layout_info{};
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipeline_layout_info.setLayoutCount = 4; // geometry, materials, results, sky
+        pipeline_layout_info.setLayoutCount = 5; // geometry, materials, results, sky, debug
         pipeline_layout_info.pSetLayouts = set_layouts;
         pipeline_layout_info.pushConstantRangeCount = 1;
         pipeline_layout_info.pPushConstantRanges = &push_constant_range;
@@ -2357,6 +2396,25 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &sky_radiance_params_info;
+            descriptor_writes.push_back(write);
+        }
+
+        // ========== Set 4: Debug Counters ==========
+
+        VkDescriptorBufferInfo debug_counters_info{};
+        debug_counters_info.buffer = debug_counters_buffer.buffer;
+        debug_counters_info.offset = 0;
+        debug_counters_info.range = VK_WHOLE_SIZE;
+
+        if (debug_counters_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_debug;
+            write.dstBinding = 0;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &debug_counters_info;
             descriptor_writes.push_back(write);
         }
 

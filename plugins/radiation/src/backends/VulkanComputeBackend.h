@@ -151,16 +151,21 @@ namespace helios {
         Buffer diffuse_dist_norm_buffer;
         Buffer sky_radiance_params_buffer;
 
+        // Debug/profiling buffers (Set 4)
+        Buffer debug_counters_buffer;
+
         // Descriptor sets
         VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
         VkDescriptorSetLayout set_layout_geometry = VK_NULL_HANDLE;
         VkDescriptorSetLayout set_layout_materials = VK_NULL_HANDLE;
         VkDescriptorSetLayout set_layout_results = VK_NULL_HANDLE;
         VkDescriptorSetLayout set_layout_sky = VK_NULL_HANDLE; // Phase 2+: Sky parameters
+        VkDescriptorSetLayout set_layout_debug = VK_NULL_HANDLE; // Debug counters
         VkDescriptorSet set_geometry = VK_NULL_HANDLE;
         VkDescriptorSet set_materials = VK_NULL_HANDLE;
         VkDescriptorSet set_results = VK_NULL_HANDLE;
         VkDescriptorSet set_sky = VK_NULL_HANDLE; // Phase 2+: Sky parameters
+        VkDescriptorSet set_debug = VK_NULL_HANDLE; // Debug counters
 
         // Compute pipelines
         VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;

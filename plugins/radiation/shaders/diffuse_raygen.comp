@@ -7,7 +7,7 @@
 // Diffuse ray generation shader (Phase 2)
 // Launches rays from surfaces in hemispherical directions for diffuse radiation transfer
 
-layout(local_size_x = 8, local_size_y = 32, local_size_z = 1) in;
+layout(local_size_x = 8, local_size_y = 32, local_size_z = 1) in;  // 8×32 = 256 threads (optimal from tuning)
 
 // Push constants (launch parameters)
 layout(push_constant) uniform PushConstants {
@@ -351,6 +351,7 @@ void main() {
 
     for (int jj = 0; jj < NY; ++jj) {
         for (int ii = 0; ii < NX; ++ii) {
+            // atomicAdd(debug_counters.subdivision_iterations, 1); // DISABLED - causes contention
 
             uint UUID = prim_uuid + jj * NX + ii;
 
@@ -432,17 +433,16 @@ void main() {
 
                 float hit_energy = incoming * strength;
 
-                // Absorption (energy absorbed by origin primitive) with subgroup reduction
+                // Absorption - accumulate to shared memory using local primitive index
                 uint origin_rad_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
                 float absorption_energy = hit_energy * (1.0 - rho - tau);
                 float absorption_sum = subgroupAdd(absorption_energy);
                 if (subgroupElect()) {
-                    atomicAdd(rad_in_buf.radiation_in[origin_rad_idx], absorption_sum);
+                    atomicAdd(rad_in_buf.radiation_in[origin_rad_idx], absorption_sum);  // Fast shared memory atomic
                 }
 
-                // Scattering (reflected and transmitted energy) with subgroup reduction
+                // Scattering - accumulate to shared memory
                 if (pc.launch_face == 1) {
-                    // Launched from top face
                     float reflect_energy = hit_energy * rho;
                     float transmit_energy = hit_energy * tau;
                     float reflect_sum = subgroupAdd(reflect_energy);
@@ -452,7 +452,6 @@ void main() {
                         atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], transmit_sum);
                     }
                 } else {
-                    // Launched from bottom face
                     float reflect_energy = hit_energy * rho;
                     float transmit_energy = hit_energy * tau;
                     float reflect_sum = subgroupAdd(reflect_energy);
@@ -485,7 +484,7 @@ void main() {
 
                     float sky_energy = fd * diffuse_flux * strength;
 
-                    // Absorption with subgroup reduction
+                    // Absorption - use shared memory atomics
                     uint origin_rad_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
                     float sky_absorption = sky_energy * (1.0 - rho - tau);
                     float sky_absorption_sum = subgroupAdd(sky_absorption);
@@ -493,9 +492,8 @@ void main() {
                         atomicAdd(rad_in_buf.radiation_in[origin_rad_idx], sky_absorption_sum);
                     }
 
-                    // Scattering with subgroup reduction
+                    // Scattering - use shared memory atomics
                     if (pc.launch_face == 1) {
-                        // Launched from top face
                         float sky_reflect = sky_energy * rho;
                         float sky_transmit = sky_energy * tau;
                         float sky_reflect_sum = subgroupAdd(sky_reflect);
@@ -505,7 +503,6 @@ void main() {
                             atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], sky_transmit_sum);
                         }
                     } else {
-                        // Launched from bottom face
                         float sky_reflect = sky_energy * rho;
                         float sky_transmit = sky_energy * tau;
                         float sky_reflect_sum = subgroupAdd(sky_reflect);
