@@ -123,6 +123,13 @@ layout(set = 2, binding = 3) buffer ScatterBottomBuffer {
 #include "common/transforms.glsl"
 #include "common/buffer_indexing.glsl"
 
+const float PI = 3.14159265359;
+
+// Safe acos that clamps input to [-1, 1] to avoid NaN
+float acos_safe(float x) {
+    return acos(clamp(x, -1.0, 1.0));
+}
+
 // ========== Helper Functions ==========
 
 // Sample stratified random point on patch (matches CUDA rayGeneration.cu lines 57-67)
@@ -232,6 +239,25 @@ vec3 get_triangle_normal(uint prim_idx, float transform_mat[16]) {
 // Calculate ray strength for collimated source (sun)
 float calc_collimated_strength(vec3 normal, vec3 ray_dir, uint Nrays) {
     return abs(dot(normal, ray_dir)) / float(Nrays);
+}
+
+// Calculate ray strength for sphere source via numerical integration over visible hemisphere
+// (matches CUDA rayGeneration.cu lines 160-172)
+float calc_sphere_strength(vec3 normal, vec3 ray_dir, float ray_magnitude, float sphere_diameter, uint Nrays) {
+    float strength = 0.0;
+    const uint N = 10;
+    for (uint j = 0; j < N; j++) {
+        for (uint i = 0; i < N; i++) {
+            float theta = acos_safe(1.0 - 2.0 * (float(i) + 0.5) / float(N));
+            float phi = (float(j) + 0.5) * 2.0 * PI / float(N);
+            vec3 light_direction = vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
+            if (dot(light_direction, ray_dir) < 0.0) {
+                strength += 1.0 / float(Nrays) * abs(dot(normal, ray_dir)) * abs(dot(light_direction, ray_dir))
+                            / (ray_magnitude * ray_magnitude) / float(N * N) * sphere_diameter * sphere_diameter;
+            }
+        }
+    }
+    return strength;
 }
 
 // ========== Main Shader ==========
@@ -360,9 +386,23 @@ void main() {
                     ray_dir = normalize(source_pos); // source_pos is direction for collimated
                     strength = calc_collimated_strength(normal, ray_dir, Nrays);
 
+                } else if (source_type == 1 || source_type == 2) { // Sphere or sun-sphere source
+                    // Sample random point on sphere surface (matches CUDA rayGeneration.cu lines 152-154)
+                    float theta_s = acos_safe(1.0 - 2.0 * rng_float(rng));
+                    float phi_s = rng_float(rng) * 2.0 * PI;
+                    float radius = source_widths_buf.widths[src_idx].x * 0.5; // width stores diameter
+                    vec3 sphere_point = radius * vec3(sin(theta_s) * cos(phi_s), sin(theta_s) * sin(phi_s), cos(theta_s));
+
+                    // Ray from surface point toward sampled point on sphere
+                    ray_dir = sphere_point + source_pos - ray_origin;
+                    float ray_magnitude = length(ray_dir);
+                    ray_dir = normalize(ray_dir);
+
+                    // Numerical integration over visible hemisphere of sphere
+                    strength = calc_sphere_strength(normal, ray_dir, ray_magnitude, source_widths_buf.widths[src_idx].x, Nrays);
+
                 } else {
-                    // Point/sphere/disk/rectangle sources not yet implemented
-                    // TODO Phase 2+: Implement other source types
+                    // Rectangle/disk/other sources not yet implemented
                     continue;
                 }
 
