@@ -832,8 +832,6 @@ namespace helios {
                 uint32_t launch_face;     // 0 = bottom, 1 = top
                 uint32_t launch_dim_x;    // Grid dimension X
                 uint32_t launch_dim_y;    // Grid dimension Y
-                uint32_t prim_tiles_y;    // Number of primitive tiles in Y dimension
-                uint32_t prims_per_tile;  // Primitives per tile (65535 max)
             } push_constants;
 
             push_constants.launch_offset = params.launch_offset;
@@ -856,25 +854,18 @@ namespace helios {
                 push_constants.debug_mode = 0;
             #endif
 
-            // 3D dispatch with 2D primitive tiling (8×32 workgroup optimal from tuning)
+            // 3D dispatch with simple direct indexing (8×32×1 workgroup with shared memory histogram)
+            // Workgroup: 8×32×1 = 256 threads, processing 1 primitive per workgroup
             const uint32_t WG_X = 8;  // Must match shader local_size_x
             const uint32_t WG_Y = 32; // Must match shader local_size_y
-            const uint32_t MAX_PRIMS_PER_TILE = 65535;
+            const uint32_t MAX_Z_DISPATCH = 65535; // Vulkan spec limit
 
             uint32_t dispatch_x = (launch_dim_x + WG_X - 1) / WG_X;
-            uint32_t dispatch_y_rays = (launch_dim_y + WG_Y - 1) / WG_Y;
-
-            // Compute primitive tiling
-            uint32_t prims_per_tile = std::min(params.launch_count, MAX_PRIMS_PER_TILE);
-            uint32_t prim_tiles_y = (params.launch_count + MAX_PRIMS_PER_TILE - 1) / MAX_PRIMS_PER_TILE;
-
-            uint32_t dispatch_y = dispatch_y_rays * prim_tiles_y;
-            uint32_t dispatch_z = prims_per_tile;
+            uint32_t dispatch_y = (launch_dim_y + WG_Y - 1) / WG_Y;
+            uint32_t dispatch_z = std::min(params.launch_count, MAX_Z_DISPATCH);
 
             push_constants.launch_offset = params.launch_offset;
             push_constants.launch_count = params.launch_count;
-            push_constants.prim_tiles_y = prim_tiles_y;
-            push_constants.prims_per_tile = prims_per_tile;
 
             vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
 

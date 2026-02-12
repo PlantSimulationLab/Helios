@@ -7,7 +7,9 @@
 // Diffuse ray generation shader (Phase 2)
 // Launches rays from surfaces in hemispherical directions for diffuse radiation transfer
 
-layout(local_size_x = 8, local_size_y = 32, local_size_z = 1) in;  // 8×32 = 256 threads (optimal from tuning)
+// Workgroup size: 8×32×1 = 256 threads
+// Single primitive per workgroup with shared memory histogram to reduce atomic contention
+layout(local_size_x = 8, local_size_y = 32, local_size_z = 1) in;
 
 // Push constants (launch parameters)
 layout(push_constant) uniform PushConstants {
@@ -23,8 +25,6 @@ layout(push_constant) uniform PushConstants {
     uint launch_face;      // 0 = bottom face, 1 = top face
     uint launch_dim_x;     // Grid dimension X for stratified hemisphere sampling
     uint launch_dim_y;     // Grid dimension Y for stratified hemisphere sampling
-    uint prim_tiles_y;     // Number of primitive tiles in Y dimension (for large primitive counts)
-    uint prims_per_tile;   // Primitives per tile (65535 max)
 } pc;
 
 // ========== Descriptor Set 0: Geometry ==========
@@ -142,6 +142,13 @@ layout(set = 3, binding = 3) readonly buffer DiffuseDistNormBuffer {
 layout(set = 3, binding = 4) readonly buffer SkyRadianceParamsBuffer {
     vec4 sky_radiance_params[]; // [band] - Prague model params (circ_str, circ_width, horiz_bright, norm)
 } sky_radiance_params_buf;
+
+// ========== Shared Memory for Atomic Reduction ==========
+// Each workgroup processes 1 primitive (8×32×1 = 256 threads)
+// Shared memory reduces atomic contention by ~256× (256 threads → 1 flush atomic per workgroup)
+shared float shared_rad_in;
+shared float shared_scatter_top;
+shared float shared_scatter_bottom;
 
 // ========== Include common shader utilities ==========
 #include "common/random.glsl"
@@ -286,45 +293,48 @@ vec3 rotate_to_normal(vec3 dir_local, vec3 normal) {
 
 // ========== Main Shader ==========
 void main() {
-    // 3D dispatch with 2D primitive tiling: X = ray grid X, Y = ray grid Y + primitive tiles, Z = primitives
-    // For large primitive counts (>65535), primitives are tiled into the Y dimension to avoid sub-batching
-    uint launch_x = gl_GlobalInvocationID.x;  // Ray grid X [0, launch_dim_x)
-
-    // Decode Y dimension: lower bits = ray grid Y, upper bits = primitive tile index
-    uint prim_tile_y = gl_GlobalInvocationID.y / pc.launch_dim_y;
-    uint launch_y = gl_GlobalInvocationID.y % pc.launch_dim_y;  // Ray grid Y [0, launch_dim_y)
-
-    // Decode primitive index from 2D tiling
-    uint prim_batch_idx = prim_tile_y * pc.prims_per_tile + gl_GlobalInvocationID.z;
-
-    // Bounds check: ray grid
-    if (launch_x >= pc.launch_dim_x || launch_y >= pc.launch_dim_y) {
-        return;
+    // Initialize shared memory (single primitive per workgroup)
+    // CRITICAL: All threads must participate in barriers to avoid hangs
+    if (gl_LocalInvocationIndex == 0) {
+        shared_rad_in = 0.0;
+        shared_scatter_top = 0.0;
+        shared_scatter_bottom = 0.0;
     }
+    barrier();  // Wait for initialization to complete
 
-    // Bounds check: primitive index
-    if (prim_batch_idx >= pc.launch_count) {
-        return;
-    }
+    // 3D dispatch: X/Y = ray grid position, Z = primitive index
+    // Simple direct indexing (fast - no division/modulo overhead)
+    uint launch_x = gl_GlobalInvocationID.x;       // Ray grid X [0, launch_dim_x)
+    uint launch_y = gl_GlobalInvocationID.y;       // Ray grid Y [0, launch_dim_y)
+    uint prim_batch_idx = gl_GlobalInvocationID.z; // Primitive index within batch
+
+    // Bounds check: ray grid and primitive index
+    // Don't return early - must reach final barrier for correctness
+    bool is_active = (launch_x < pc.launch_dim_x && launch_y < pc.launch_dim_y &&
+                      prim_batch_idx < pc.launch_count);
 
     uint prim_idx = pc.launch_offset + prim_batch_idx;
 
     if (prim_idx >= pc.primitive_count) {
-        return; // Safety check
+        is_active = false; // Safety check
     }
 
-    // Get primitive data
-    uint prim_type = prim_types_buf.types[prim_idx];
-    uint prim_uuid = prim_uuids_buf.uuids[prim_idx];
-    ivec2 subdivisions = obj_subdivisions_buf.subdivisions[prim_idx];
-    uint twosided = twosided_buf.twosided_flags[prim_idx];
+    // Only active threads do actual work (others skip to barrier at end)
+    if (is_active) {
+        // Get primitive data
+        uint prim_type = prim_types_buf.types[prim_idx];
+        uint prim_uuid = prim_uuids_buf.uuids[prim_idx];
+        ivec2 subdivisions = obj_subdivisions_buf.subdivisions[prim_idx];
+        uint twosided = twosided_buf.twosided_flags[prim_idx];
 
-    // Skip if launching from bottom face and twosided_flag = 0 (single-sided, top only)
-    if (pc.launch_face == 0 && twosided == 0) {
-        return;
-    }
+        // Skip if launching from bottom face and twosided_flag = 0 (single-sided, top only)
+        if (pc.launch_face == 0 && twosided == 0) {
+            is_active = false;
+        }
 
-    // Total rays per primitive (matches CUDA: dimx = launch_dim.x * launch_dim.y)
+        // Continue with actual ray tracing work (only if still active after twosided check)
+        if (is_active) {
+            // Total rays per primitive (matches CUDA: dimx = launch_dim.x * launch_dim.y)
     uint dimx = pc.launch_dim_x * pc.launch_dim_y;
 
     // Per-ray RNG seed (matches CUDA: tea(indx + dimx * launch_index.z, random_seed))
@@ -434,11 +444,10 @@ void main() {
                 float hit_energy = incoming * strength;
 
                 // Absorption - accumulate to shared memory using local primitive index
-                uint origin_rad_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
                 float absorption_energy = hit_energy * (1.0 - rho - tau);
                 float absorption_sum = subgroupAdd(absorption_energy);
                 if (subgroupElect()) {
-                    atomicAdd(rad_in_buf.radiation_in[origin_rad_idx], absorption_sum);  // Fast shared memory atomic
+                    atomicAdd(shared_rad_in, absorption_sum);  // Shared memory atomic (10-30× faster)
                 }
 
                 // Scattering - accumulate to shared memory
@@ -448,8 +457,8 @@ void main() {
                     float reflect_sum = subgroupAdd(reflect_energy);
                     float transmit_sum = subgroupAdd(transmit_energy);
                     if (subgroupElect()) {
-                        atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], reflect_sum);
-                        atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], transmit_sum);
+                        atomicAdd(shared_scatter_top, reflect_sum);
+                        atomicAdd(shared_scatter_bottom, transmit_sum);
                     }
                 } else {
                     float reflect_energy = hit_energy * rho;
@@ -457,8 +466,8 @@ void main() {
                     float reflect_sum = subgroupAdd(reflect_energy);
                     float transmit_sum = subgroupAdd(transmit_energy);
                     if (subgroupElect()) {
-                        atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], reflect_sum);
-                        atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], transmit_sum);
+                        atomicAdd(shared_scatter_bottom, reflect_sum);
+                        atomicAdd(shared_scatter_top, transmit_sum);
                     }
                 }
 
@@ -485,11 +494,10 @@ void main() {
                     float sky_energy = fd * diffuse_flux * strength;
 
                     // Absorption - use shared memory atomics
-                    uint origin_rad_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
                     float sky_absorption = sky_energy * (1.0 - rho - tau);
                     float sky_absorption_sum = subgroupAdd(sky_absorption);
                     if (subgroupElect()) {
-                        atomicAdd(rad_in_buf.radiation_in[origin_rad_idx], sky_absorption_sum);
+                        atomicAdd(shared_rad_in, sky_absorption_sum);
                     }
 
                     // Scattering - use shared memory atomics
@@ -499,8 +507,8 @@ void main() {
                         float sky_reflect_sum = subgroupAdd(sky_reflect);
                         float sky_transmit_sum = subgroupAdd(sky_transmit);
                         if (subgroupElect()) {
-                            atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], sky_reflect_sum);
-                            atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], sky_transmit_sum);
+                            atomicAdd(shared_scatter_top, sky_reflect_sum);
+                            atomicAdd(shared_scatter_bottom, sky_transmit_sum);
                         }
                     } else {
                         float sky_reflect = sky_energy * rho;
@@ -508,12 +516,39 @@ void main() {
                         float sky_reflect_sum = subgroupAdd(sky_reflect);
                         float sky_transmit_sum = subgroupAdd(sky_transmit);
                         if (subgroupElect()) {
-                            atomicAdd(scatter_bottom_buf.scatter_bottom[origin_rad_idx], sky_reflect_sum);
-                            atomicAdd(scatter_top_buf.scatter_top[origin_rad_idx], sky_transmit_sum);
+                            atomicAdd(shared_scatter_bottom, sky_reflect_sum);
+                            atomicAdd(shared_scatter_top, sky_transmit_sum);
                         }
                     }
                 }
             }
-        } // ii loop (sub-patches)
-    } // jj loop (sub-patches)
+            } // ii loop (sub-patches)
+        } // jj loop (sub-patches)
+        } // if (is_active) - actual ray tracing work
+    } // if (is_active) - outer block including primitive data load
+
+    // ========== Flush Shared Memory to Global Memory ==========
+    // Wait for all threads in workgroup to finish accumulating to shared memory
+    barrier();
+
+    // Only one thread (0,0,0) flushes the accumulated values for this primitive
+    // This reduces global atomic operations by ~256× (256 threads → 1 flush atomic per workgroup)
+    if (gl_LocalInvocationIndex == 0) {
+        // Check if this primitive index is valid
+        if (prim_batch_idx < pc.launch_count && prim_idx < pc.primitive_count) {
+            // Compute global buffer index for this primitive
+            uint global_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
+
+            // Flush accumulated values if non-zero (skip zero writes to reduce contention)
+            if (shared_rad_in != 0.0) {
+                atomicAdd(rad_in_buf.radiation_in[global_idx], shared_rad_in);
+            }
+            if (shared_scatter_top != 0.0) {
+                atomicAdd(scatter_top_buf.scatter_top[global_idx], shared_scatter_top);
+            }
+            if (shared_scatter_bottom != 0.0) {
+                atomicAdd(scatter_bottom_buf.scatter_bottom[global_idx], shared_scatter_bottom);
+            }
+        }
+    }
 }
