@@ -481,6 +481,48 @@ namespace helios {
             return; // No geometry or sources
         }
 
+        // Ensure scatter and radiation_out buffers exist (direct shader writes scatter buffers)
+        size_t buf_size = primitive_count * band_count * sizeof(float);
+        VkBufferUsageFlags scatter_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+        if (scatter_top_buffer.buffer == VK_NULL_HANDLE || scatter_top_buffer.size != buf_size) {
+            if (scatter_top_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(scatter_top_buffer);
+            }
+            scatter_top_buffer = createBuffer(buf_size, scatter_usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            descriptors_dirty = true;
+        }
+        if (scatter_bottom_buffer.buffer == VK_NULL_HANDLE || scatter_bottom_buffer.size != buf_size) {
+            if (scatter_bottom_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(scatter_bottom_buffer);
+            }
+            scatter_bottom_buffer = createBuffer(buf_size, scatter_usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            descriptors_dirty = true;
+        }
+
+        // Ensure radiation_out buffers exist (needed for descriptor set completeness)
+        VkBufferUsageFlags rad_out_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        if (radiation_out_top_buffer.buffer == VK_NULL_HANDLE || radiation_out_top_buffer.size != buf_size) {
+            if (radiation_out_top_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(radiation_out_top_buffer);
+            }
+            radiation_out_top_buffer = createBuffer(buf_size, rad_out_usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            zeroBuffer(radiation_out_top_buffer);
+            descriptors_dirty = true;
+        }
+        if (radiation_out_bottom_buffer.buffer == VK_NULL_HANDLE || radiation_out_bottom_buffer.size != buf_size) {
+            if (radiation_out_bottom_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(radiation_out_bottom_buffer);
+            }
+            radiation_out_bottom_buffer = createBuffer(buf_size, rad_out_usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            zeroBuffer(radiation_out_bottom_buffer);
+            descriptors_dirty = true;
+        }
+
+        // Zero scatter buffers before each direct launch (runBand does not zero them before direct)
+        zeroBuffer(scatter_top_buffer);
+        zeroBuffer(scatter_bottom_buffer);
+
         // Update descriptor sets only if buffers changed
         if (descriptors_dirty) {
             updateDescriptorSets();
@@ -566,7 +608,7 @@ namespace helios {
 
         // Buffer memory barrier to ensure storage buffer writes are visible for readback
         // CRITICAL: Use buffer-specific barrier instead of global barrier for MoltenVK compatibility
-        VkBufferMemoryBarrier buffer_barriers[2];
+        VkBufferMemoryBarrier buffer_barriers[3];
 
         // Radiation_in buffer barrier
         buffer_barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -579,20 +621,31 @@ namespace helios {
         buffer_barriers[0].offset = 0;
         buffer_barriers[0].size = VK_WHOLE_SIZE;
 
-        // Radiation_out buffer barrier
+        // Scatter_top buffer barrier (direct shader writes scatter)
         buffer_barriers[1].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
         buffer_barriers[1].pNext = nullptr;
         buffer_barriers[1].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
         buffer_barriers[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
         buffer_barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         buffer_barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        buffer_barriers[1].buffer = radiation_out_buffer.buffer;
+        buffer_barriers[1].buffer = scatter_top_buffer.buffer;
         buffer_barriers[1].offset = 0;
         buffer_barriers[1].size = VK_WHOLE_SIZE;
 
+        // Scatter_bottom buffer barrier
+        buffer_barriers[2].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        buffer_barriers[2].pNext = nullptr;
+        buffer_barriers[2].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        buffer_barriers[2].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+        buffer_barriers[2].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        buffer_barriers[2].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        buffer_barriers[2].buffer = scatter_bottom_buffer.buffer;
+        buffer_barriers[2].offset = 0;
+        buffer_barriers[2].size = VK_WHOLE_SIZE;
+
         vkCmdPipelineBarrier(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
                              0, nullptr,  // No global memory barriers
-                             2, buffer_barriers,  // Buffer-specific barriers
+                             3, buffer_barriers,  // Buffer-specific barriers
                              0, nullptr);  // No image barriers
 
         vkEndCommandBuffer(compute_command_buffer);
@@ -838,7 +891,6 @@ namespace helios {
             push_constants.launch_count = params.launch_count;
             push_constants.rays_per_primitive = params.rays_per_primitive;
             push_constants.random_seed = params.random_seed;
-            push_constants.current_band = params.current_band;
             push_constants.band_count = band_count;
 
             push_constants.source_count = source_count;
@@ -867,14 +919,18 @@ namespace helios {
             push_constants.launch_offset = params.launch_offset;
             push_constants.launch_count = params.launch_count;
 
-            vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
-
-            // Write timestamp before dispatch (measures GPU start time)
+            // Write timestamp before dispatches (measures GPU start time)
             vkCmdWriteTimestamp(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestamp_query_pool, 0);
 
-            vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, dispatch_z);
+            // Dispatch once per band (Vulkan shader processes one band per dispatch,
+            // unlike OptiX which processes all bands in a single launch)
+            for (uint32_t band = 0; band < band_count; band++) {
+                push_constants.current_band = band;
+                vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
+                vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, dispatch_z);
+            }
 
-            // Write timestamp after dispatch (measures GPU end time)
+            // Write timestamp after all band dispatches (measures GPU end time)
             vkCmdWriteTimestamp(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestamp_query_pool, 1);
 
             // Final buffer memory barriers to ensure storage buffer writes are visible
@@ -1057,13 +1113,89 @@ namespace helios {
             std::cout << "WARNING: radiation_in_buffer is NULL!" << std::endl;
         }
 
-        // Phase 1: radiation_out and scatter buffers not used (no emission, no scattering)
-        std::fill(results.radiation_out_top.begin(), results.radiation_out_top.end(), 0.0f);
-        std::fill(results.radiation_out_bottom.begin(), results.radiation_out_bottom.end(), 0.0f);
+        // Download radiation_out_top buffer
+        if (radiation_out_top_buffer.buffer != VK_NULL_HANDLE) {
+            void *mapped;
+            VkResult result = vmaMapMemory(device->getAllocator(), radiation_out_top_buffer.allocation, &mapped);
+            if (result == VK_SUCCESS) {
+                VkMappedMemoryRange range{};
+                range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+                VmaAllocationInfo alloc_info;
+                vmaGetAllocationInfo(device->getAllocator(), radiation_out_top_buffer.allocation, &alloc_info);
+                range.memory = alloc_info.deviceMemory;
+                range.offset = alloc_info.offset;
+                range.size = VK_WHOLE_SIZE;
+                vkInvalidateMappedMemoryRanges(device->getDevice(), 1, &range);
+                std::memcpy(results.radiation_out_top.data(), mapped, buffer_size * sizeof(float));
+                vmaUnmapMemory(device->getAllocator(), radiation_out_top_buffer.allocation);
+            }
+        } else {
+            std::fill(results.radiation_out_top.begin(), results.radiation_out_top.end(), 0.0f);
+        }
 
-        // Initialize scatter buffers (needed by RadiationModel even if not used in Phase 1)
-        results.scatter_buff_top.resize(buffer_size, 0.0f);
-        results.scatter_buff_bottom.resize(buffer_size, 0.0f);
+        // Download radiation_out_bottom buffer
+        if (radiation_out_bottom_buffer.buffer != VK_NULL_HANDLE) {
+            void *mapped;
+            VkResult result = vmaMapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation, &mapped);
+            if (result == VK_SUCCESS) {
+                VkMappedMemoryRange range{};
+                range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+                VmaAllocationInfo alloc_info;
+                vmaGetAllocationInfo(device->getAllocator(), radiation_out_bottom_buffer.allocation, &alloc_info);
+                range.memory = alloc_info.deviceMemory;
+                range.offset = alloc_info.offset;
+                range.size = VK_WHOLE_SIZE;
+                vkInvalidateMappedMemoryRanges(device->getDevice(), 1, &range);
+                std::memcpy(results.radiation_out_bottom.data(), mapped, buffer_size * sizeof(float));
+                vmaUnmapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation);
+            }
+        } else {
+            std::fill(results.radiation_out_bottom.begin(), results.radiation_out_bottom.end(), 0.0f);
+        }
+
+        // Download scatter_top buffer
+        results.scatter_buff_top.resize(buffer_size);
+        if (scatter_top_buffer.buffer != VK_NULL_HANDLE) {
+            void *mapped;
+            VkResult result = vmaMapMemory(device->getAllocator(), scatter_top_buffer.allocation, &mapped);
+            if (result == VK_SUCCESS) {
+                VkMappedMemoryRange range{};
+                range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+                VmaAllocationInfo alloc_info;
+                vmaGetAllocationInfo(device->getAllocator(), scatter_top_buffer.allocation, &alloc_info);
+                range.memory = alloc_info.deviceMemory;
+                range.offset = alloc_info.offset;
+                range.size = VK_WHOLE_SIZE;
+                vkInvalidateMappedMemoryRanges(device->getDevice(), 1, &range);
+                std::memcpy(results.scatter_buff_top.data(), mapped, buffer_size * sizeof(float));
+                vmaUnmapMemory(device->getAllocator(), scatter_top_buffer.allocation);
+            }
+        } else {
+            std::fill(results.scatter_buff_top.begin(), results.scatter_buff_top.end(), 0.0f);
+        }
+
+        // Download scatter_bottom buffer
+        results.scatter_buff_bottom.resize(buffer_size);
+        if (scatter_bottom_buffer.buffer != VK_NULL_HANDLE) {
+            void *mapped;
+            VkResult result = vmaMapMemory(device->getAllocator(), scatter_bottom_buffer.allocation, &mapped);
+            if (result == VK_SUCCESS) {
+                VkMappedMemoryRange range{};
+                range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+                VmaAllocationInfo alloc_info;
+                vmaGetAllocationInfo(device->getAllocator(), scatter_bottom_buffer.allocation, &alloc_info);
+                range.memory = alloc_info.deviceMemory;
+                range.offset = alloc_info.offset;
+                range.size = VK_WHOLE_SIZE;
+                vkInvalidateMappedMemoryRanges(device->getDevice(), 1, &range);
+                std::memcpy(results.scatter_buff_bottom.data(), mapped, buffer_size * sizeof(float));
+                vmaUnmapMemory(device->getAllocator(), scatter_bottom_buffer.allocation);
+            }
+        } else {
+            std::fill(results.scatter_buff_bottom.begin(), results.scatter_buff_bottom.end(), 0.0f);
+        }
+
+        // Camera scatter buffers (not yet implemented)
         results.scatter_buff_top_cam.resize(buffer_size, 0.0f);
         results.scatter_buff_bottom_cam.resize(buffer_size, 0.0f);
     }

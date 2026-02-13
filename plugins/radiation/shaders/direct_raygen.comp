@@ -106,15 +106,19 @@ layout(set = 2, binding = 0) buffer RadiationInBuffer {
     float radiation_in[]; // [primitive * band_count + band]
 } rad_in_buf;
 
-layout(set = 2, binding = 1) buffer RadiationOutBuffer {
-    float radiation_out[];
-} rad_out_buf;
+layout(set = 2, binding = 1) buffer RadiationOutTopBuffer {
+    float radiation_out_top[];
+} rad_out_top_buf;
 
-layout(set = 2, binding = 2) buffer ScatterTopBuffer {
+layout(set = 2, binding = 2) buffer RadiationOutBottomBuffer {
+    float radiation_out_bottom[];
+} rad_out_bottom_buf;
+
+layout(set = 2, binding = 3) buffer ScatterTopBuffer {
     float scatter_top[];
 } scatter_top_buf;
 
-layout(set = 2, binding = 3) buffer ScatterBottomBuffer {
+layout(set = 2, binding = 4) buffer ScatterBottomBuffer {
     float scatter_bottom[];
 } scatter_bottom_buf;
 
@@ -438,6 +442,21 @@ void main() {
                     float subgroup_sum = subgroupAdd(energy);
                     if (subgroupElect()) {
                         atomicAdd(rad_in_buf.radiation_in[rad_idx], subgroup_sum);
+                    }
+
+                    // Scatter: reflected and transmitted energy from direct illumination
+                    float scatter_rho = flux * strength * rho;
+                    float scatter_tau = flux * strength * tau;
+                    float scatter_rho_sum = subgroupAdd(scatter_rho);
+                    float scatter_tau_sum = subgroupAdd(scatter_tau);
+                    if (subgroupElect()) {
+                        if (is_top_face) {
+                            atomicAdd(scatter_top_buf.scatter_top[rad_idx], scatter_rho_sum);
+                            atomicAdd(scatter_bottom_buf.scatter_bottom[rad_idx], scatter_tau_sum);
+                        } else {
+                            atomicAdd(scatter_bottom_buf.scatter_bottom[rad_idx], scatter_rho_sum);
+                            atomicAdd(scatter_top_buf.scatter_top[rad_idx], scatter_tau_sum);
+                        }
                     }
                 }
             }
