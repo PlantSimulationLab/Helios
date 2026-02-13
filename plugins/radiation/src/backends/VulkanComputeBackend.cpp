@@ -132,9 +132,7 @@ namespace helios {
         }
 
         // Build BVH2 on CPU
-        std::cout << "Building BVH2 for " << primitive_count << " primitives..." << std::endl;
         bvh_nodes = bvh_builder.build(geometry);
-        std::cout << "BVH2 built with " << bvh_nodes.size() << " nodes." << std::endl;
 
         // TEMPORARILY DISABLED: Test shared memory with BVH2 first
         // std::vector<CWBVH_Node> cwbvh_nodes = bvh_builder.convertToCWBVH(bvh_nodes);
@@ -360,7 +358,6 @@ namespace helios {
         }
 
         descriptors_dirty = true;  // Geometry changed, need descriptor update
-        std::cout << "Geometry uploaded successfully." << std::endl;
     }
 
     void VulkanComputeBackend::buildAccelerationStructure() {
@@ -407,7 +404,6 @@ namespace helios {
         }
 
         descriptors_dirty = true;  // Materials changed, need descriptor update
-        std::cout << "Materials uploaded successfully (" << band_count << " bands)." << std::endl;
     }
 
     void VulkanComputeBackend::updateSources(const std::vector<RayTracingSource> &sources) {
@@ -463,7 +459,6 @@ namespace helios {
         source_widths_buffer = createBuffer(widths.size() * sizeof(helios::vec2), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         uploadBufferData(source_widths_buffer, widths.data(), widths.size() * sizeof(helios::vec2));
 
-        std::cout << "Sources uploaded successfully (" << source_count << " sources)." << std::endl;
     }
 
     void VulkanComputeBackend::updateDiffuseRadiation(const std::vector<float> &flux, const std::vector<float> &extinction, const std::vector<helios::vec3> &peak_dir, const std::vector<float> &dist_norm,
@@ -1020,15 +1015,6 @@ namespace helios {
                     uint32_t counters[5] = {0};
                     downloadBufferData(debug_counters_buffer, counters, sizeof(counters));
 
-                    std::cout << "  [GPU TIMING] Diffuse dispatch (face " << launch_face << "): "
-                              << gpu_time_ms << " ms GPU execution, "
-                              << elapsed_seconds << " s fence wait" << std::endl;
-                    std::cout << "  [PROFILING] AABB tests: " << (counters[0] / 1e9) << "B, "
-                              << "Primitive tests: " << (counters[1] / 1e6) << "M, "
-                              << "Atomics: " << (counters[2] / 1e6) << "M, "
-                              << "BVH steps: " << (counters[3] / 1e9) << "B, "
-                              << "Subdivisions: " << (counters[4] / 1e9) << "B" << std::endl;
-
                     break;
                 } else if (result == VK_TIMEOUT) {
                     elapsed_seconds++;
@@ -1077,14 +1063,8 @@ namespace helios {
             VkResult result = vmaMapMemory(device->getAllocator(), radiation_in_buffer.allocation, &mapped);
             if (result == VK_SUCCESS) {
                 // Invalidate mapped memory range to ensure coherency with GPU writes
-                VkMappedMemoryRange range{};
-                range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-                VmaAllocationInfo alloc_info;
-                vmaGetAllocationInfo(device->getAllocator(), radiation_in_buffer.allocation, &alloc_info);
-                range.memory = alloc_info.deviceMemory;
-                range.offset = alloc_info.offset;
-                range.size = VK_WHOLE_SIZE;  // Use VK_WHOLE_SIZE to avoid alignment issues
-                vkInvalidateMappedMemoryRanges(device->getDevice(), 1, &range);
+                // Use VMA's invalidate which handles nonCoherentAtomSize alignment automatically
+                vmaInvalidateAllocation(device->getAllocator(), radiation_in_buffer.allocation, 0, VK_WHOLE_SIZE);
 
                 std::memcpy(results.radiation_in.data(), mapped, buffer_size * sizeof(float));
                 vmaUnmapMemory(device->getAllocator(), radiation_in_buffer.allocation);
@@ -1118,14 +1098,7 @@ namespace helios {
             void *mapped;
             VkResult result = vmaMapMemory(device->getAllocator(), radiation_out_top_buffer.allocation, &mapped);
             if (result == VK_SUCCESS) {
-                VkMappedMemoryRange range{};
-                range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-                VmaAllocationInfo alloc_info;
-                vmaGetAllocationInfo(device->getAllocator(), radiation_out_top_buffer.allocation, &alloc_info);
-                range.memory = alloc_info.deviceMemory;
-                range.offset = alloc_info.offset;
-                range.size = VK_WHOLE_SIZE;
-                vkInvalidateMappedMemoryRanges(device->getDevice(), 1, &range);
+                vmaInvalidateAllocation(device->getAllocator(), radiation_out_top_buffer.allocation, 0, VK_WHOLE_SIZE);
                 std::memcpy(results.radiation_out_top.data(), mapped, buffer_size * sizeof(float));
                 vmaUnmapMemory(device->getAllocator(), radiation_out_top_buffer.allocation);
             }
@@ -1138,14 +1111,7 @@ namespace helios {
             void *mapped;
             VkResult result = vmaMapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation, &mapped);
             if (result == VK_SUCCESS) {
-                VkMappedMemoryRange range{};
-                range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-                VmaAllocationInfo alloc_info;
-                vmaGetAllocationInfo(device->getAllocator(), radiation_out_bottom_buffer.allocation, &alloc_info);
-                range.memory = alloc_info.deviceMemory;
-                range.offset = alloc_info.offset;
-                range.size = VK_WHOLE_SIZE;
-                vkInvalidateMappedMemoryRanges(device->getDevice(), 1, &range);
+                vmaInvalidateAllocation(device->getAllocator(), radiation_out_bottom_buffer.allocation, 0, VK_WHOLE_SIZE);
                 std::memcpy(results.radiation_out_bottom.data(), mapped, buffer_size * sizeof(float));
                 vmaUnmapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation);
             }
@@ -1159,14 +1125,7 @@ namespace helios {
             void *mapped;
             VkResult result = vmaMapMemory(device->getAllocator(), scatter_top_buffer.allocation, &mapped);
             if (result == VK_SUCCESS) {
-                VkMappedMemoryRange range{};
-                range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-                VmaAllocationInfo alloc_info;
-                vmaGetAllocationInfo(device->getAllocator(), scatter_top_buffer.allocation, &alloc_info);
-                range.memory = alloc_info.deviceMemory;
-                range.offset = alloc_info.offset;
-                range.size = VK_WHOLE_SIZE;
-                vkInvalidateMappedMemoryRanges(device->getDevice(), 1, &range);
+                vmaInvalidateAllocation(device->getAllocator(), scatter_top_buffer.allocation, 0, VK_WHOLE_SIZE);
                 std::memcpy(results.scatter_buff_top.data(), mapped, buffer_size * sizeof(float));
                 vmaUnmapMemory(device->getAllocator(), scatter_top_buffer.allocation);
             }
@@ -1180,14 +1139,7 @@ namespace helios {
             void *mapped;
             VkResult result = vmaMapMemory(device->getAllocator(), scatter_bottom_buffer.allocation, &mapped);
             if (result == VK_SUCCESS) {
-                VkMappedMemoryRange range{};
-                range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-                VmaAllocationInfo alloc_info;
-                vmaGetAllocationInfo(device->getAllocator(), scatter_bottom_buffer.allocation, &alloc_info);
-                range.memory = alloc_info.deviceMemory;
-                range.offset = alloc_info.offset;
-                range.size = VK_WHOLE_SIZE;
-                vkInvalidateMappedMemoryRanges(device->getDevice(), 1, &range);
+                vmaInvalidateAllocation(device->getAllocator(), scatter_bottom_buffer.allocation, 0, VK_WHOLE_SIZE);
                 std::memcpy(results.scatter_buff_bottom.data(), mapped, buffer_size * sizeof(float));
                 vmaUnmapMemory(device->getAllocator(), scatter_bottom_buffer.allocation);
             }
@@ -1896,8 +1848,6 @@ namespace helios {
         descriptor_writes.push_back(write);
 
         vkUpdateDescriptorSets(vk_device, static_cast<uint32_t>(descriptor_writes.size()), descriptor_writes.data(), 0, nullptr);
-
-        std::cout << "Descriptor sets created successfully." << std::endl;
     }
 
     void VulkanComputeBackend::createPipelines() {
@@ -1988,8 +1938,6 @@ namespace helios {
         vkDestroyShaderModule(vk_device, shader_diffuse, nullptr);
         vkDestroyShaderModule(vk_device, shader_camera, nullptr);
         vkDestroyShaderModule(vk_device, shader_pixel_label, nullptr);
-
-        std::cout << "Compute pipelines created successfully." << std::endl;
     }
 
     VkShaderModule VulkanComputeBackend::loadShader(const std::string &filename) {
