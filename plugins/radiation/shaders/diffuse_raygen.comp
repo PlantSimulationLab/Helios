@@ -25,6 +25,8 @@ layout(push_constant) uniform PushConstants {
     uint launch_face;      // 0 = bottom face, 1 = top face
     uint launch_dim_x;     // Grid dimension X for stratified hemisphere sampling
     uint launch_dim_y;     // Grid dimension Y for stratified hemisphere sampling
+    uint material_band_count;  // Global band count (for material buffers)
+    uint global_band_index;    // Global band index for this dispatch
 } pc;
 
 // ========== Descriptor Set 0: Geometry ==========
@@ -71,6 +73,14 @@ layout(set = 0, binding = 9) readonly buffer TriangleVerticesBuffer {
 layout(set = 0, binding = 10) readonly buffer NormalsBuffer {
     float normals[]; // 3 floats per primitive (pre-computed world-space normal)
 } normals_buf;
+
+// ---- Texture masking buffers ----
+layout(set = 0, binding = 11) readonly buffer MaskDataBuffer { uint mask_data[]; } mask_data_buf;
+layout(set = 0, binding = 12) readonly buffer MaskSizesBuffer { ivec2 mask_sizes[]; } mask_sizes_buf;
+layout(set = 0, binding = 13) readonly buffer MaskOffsetsBuffer { uint mask_offsets[]; } mask_offsets_buf;
+layout(set = 0, binding = 14) readonly buffer MaskIDsBuffer { int mask_ids[]; } mask_ids_buf;
+layout(set = 0, binding = 15) readonly buffer UVDataBuffer { vec2 uv_data[]; } uv_data_buf;
+layout(set = 0, binding = 16) readonly buffer UVIDsBuffer { int uv_ids[]; } uv_ids_buf;
 
 // ========== Descriptor Set 1: Materials/Sources ==========
 layout(set = 1, binding = 0) readonly buffer SourcePositionsBuffer {
@@ -156,6 +166,7 @@ shared float shared_scatter_bottom;
 #include "common/buffer_indexing.glsl"
 #include "common/bvh_traversal.glsl"
 #include "common/sky_distribution.glsl"
+#include "common/texture_mask.glsl"
 
 // ========== Helper Functions ==========
 
@@ -375,6 +386,27 @@ void main() {
                 sp_local = sample_disk(rng);
             }
 
+            // Origin masking: reject transparent texels (matches OptiX d_sampleTexture_patch, RayTracing.cuh:504)
+            if (prim_type == 0 || prim_type == 3) { // Patch or Tile
+                int mask_id_check = mask_ids_buf.mask_ids[prim_idx];
+                if (mask_id_check >= 0) {
+                    vec2 sample_uv = vec2(sp_local.x + 0.5, sp_local.y + 0.5);
+                    int resample_count = 0;
+                    while (!check_texture_mask(prim_idx, sample_uv) && resample_count < 10) {
+                        resample_count++;
+                        float dx = 1.0 / float(NX);
+                        float dy = 1.0 / float(NY);
+                        sp_local.x = -0.5 + (float(ii) + rng_float(rng)) * dx;
+                        sp_local.y = -0.5 + (float(jj) + rng_float(rng)) * dy;
+                        sp_local.z = 0.0;
+                        sample_uv = vec2(sp_local.x + 0.5, sp_local.y + 0.5);
+                    }
+                    if (!check_texture_mask(prim_idx, sample_uv)) {
+                        continue; // Skip ray after 10 failed retries
+                    }
+                }
+            }
+
             // Transform to world space
             vec3 ray_origin = transform_point(transform, sp_local);
 
@@ -420,7 +452,8 @@ void main() {
                 // ========== HIT: Ray intersected another surface ==========
 
                 // Get material properties of ORIGIN primitive (where energy is absorbed)
-                uint mat_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
+                // Use global band index for material buffer access (material buffers use global stride)
+                uint mat_idx = prim_idx * pc.material_band_count + pc.global_band_index;
                 float rho = reflectivity_buf.reflectivity[mat_idx];
                 float tau = transmissivity_buf.transmissivity[mat_idx];
 
@@ -475,7 +508,8 @@ void main() {
                 // ========== MISS: Ray hit sky ==========
 
                 // Get material properties of origin primitive
-                uint mat_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
+                // Use global band index for material buffer access (material buffers use global stride)
+                uint mat_idx = prim_idx * pc.material_band_count + pc.global_band_index;
                 float rho = reflectivity_buf.reflectivity[mat_idx];
                 float tau = transmissivity_buf.transmissivity[mat_idx];
 

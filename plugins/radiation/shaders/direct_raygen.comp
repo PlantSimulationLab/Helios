@@ -24,6 +24,8 @@ layout(push_constant) uniform PushConstants {
     uint launch_dim_y;    // Grid dimension Y for stratified sampling
     uint prim_tiles_y;    // Number of primitive tiles in Y dimension (for large primitive counts)
     uint prims_per_tile;  // Primitives per tile (65535 max)
+    uint material_band_count;  // Global band count (for material buffers)
+    uint band_map[4];          // Maps launch band index → global band index (max 4 bands)
 } pc;
 
 // ========== Descriptor Set 0: Geometry ==========
@@ -71,6 +73,14 @@ layout(set = 0, binding = 9) readonly buffer TriangleVerticesBuffer {
 layout(set = 0, binding = 10) readonly buffer NormalsBuffer {
     float normals[]; // 3 floats per primitive (pre-computed world-space normal)
 } normals_buf;
+
+// ---- Texture masking buffers ----
+layout(set = 0, binding = 11) readonly buffer MaskDataBuffer { uint mask_data[]; } mask_data_buf;
+layout(set = 0, binding = 12) readonly buffer MaskSizesBuffer { ivec2 mask_sizes[]; } mask_sizes_buf;
+layout(set = 0, binding = 13) readonly buffer MaskOffsetsBuffer { uint mask_offsets[]; } mask_offsets_buf;
+layout(set = 0, binding = 14) readonly buffer MaskIDsBuffer { int mask_ids[]; } mask_ids_buf;
+layout(set = 0, binding = 15) readonly buffer UVDataBuffer { vec2 uv_data[]; } uv_data_buf;
+layout(set = 0, binding = 16) readonly buffer UVIDsBuffer { int uv_ids[]; } uv_ids_buf;
 
 // ========== Descriptor Set 1: Materials/Sources ==========
 layout(set = 1, binding = 0) readonly buffer SourcePositionsBuffer {
@@ -126,6 +136,8 @@ layout(set = 2, binding = 4) buffer ScatterBottomBuffer {
 #include "common/random.glsl"
 #include "common/transforms.glsl"
 #include "common/buffer_indexing.glsl"
+#include "common/bvh_traversal.glsl"
+#include "common/texture_mask.glsl"
 
 const float PI = 3.14159265359;
 
@@ -370,6 +382,27 @@ void main() {
                 continue;
             }
 
+            // Origin masking: reject transparent texels (matches OptiX d_sampleTexture_patch, RayTracing.cuh:504)
+            if (prim_type == 0 || prim_type == 3) { // Patch or Tile
+                int mask_id_check = mask_ids_buf.mask_ids[prim_idx];
+                if (mask_id_check >= 0) {
+                    vec2 sample_uv = vec2(sp_local.x + 0.5, sp_local.y + 0.5);
+                    int resample_count = 0;
+                    while (!check_texture_mask(prim_idx, sample_uv) && resample_count < 10) {
+                        resample_count++;
+                        float dx = 1.0 / float(NX);
+                        float dy = 1.0 / float(NY);
+                        sp_local.x = -0.5 + (float(ii) + rng_float(rng)) * dx;
+                        sp_local.y = -0.5 + (float(jj) + rng_float(rng)) * dy;
+                        sp_local.z = 0.0;
+                        sample_uv = vec2(sp_local.x + 0.5, sp_local.y + 0.5);
+                    }
+                    if (!check_texture_mask(prim_idx, sample_uv)) {
+                        continue; // Skip ray after 10 failed retries
+                    }
+                }
+            }
+
             // Read pre-computed world-space normal from buffer
             uint nbase = prim_idx * 3;
             vec3 normal = vec3(normals_buf.normals[nbase], normals_buf.normals[nbase + 1], normals_buf.normals[nbase + 2]);
@@ -419,7 +452,26 @@ void main() {
                     continue;
                 }
 
-                // Phase 1: Direct illumination (no ray tracing)
+                // Trace ray to check for occlusion (matches OptiX rtTrace in rayGeneration.cu:224)
+                float occlusion_t;
+                uint occlusion_prim_type;
+                uint occluder = traverse_bvh(ray_origin, ray_dir, 1e-4, prim_idx, occlusion_t, occlusion_prim_type);
+
+                // Check if ray is blocked before reaching the source
+                bool is_occluded = false;
+                if (occluder != 0xFFFFFFFF) {
+                    if (source_type == 0) { // Collimated — any hit blocks (source at infinity)
+                        is_occluded = true;
+                    } else { // Sphere — blocked only if hit is closer than source
+                        float dist_to_source = length(source_pos - ray_origin);
+                        is_occluded = (occlusion_t < dist_to_source);
+                    }
+                }
+                if (is_occluded) {
+                    continue; // Ray blocked - no direct illumination from this source
+                }
+
+                // Direct illumination with occlusion
                 // Loop over all launched bands
                 for (uint band = 0; band < pc.band_count; ++band) {
                     // Get source flux for this band
@@ -427,7 +479,9 @@ void main() {
                     float flux = source_fluxes_buf.fluxes[flux_idx];
 
                     // Get material properties for this primitive and band
-                    uint mat_idx = index_source_band_prim(src_idx, band, prim_idx, pc.band_count, pc.primitive_count);
+                    // Use global band index for material buffer access (material buffers use global stride)
+                    uint global_b = pc.band_map[band];
+                    uint mat_idx = prim_idx * pc.material_band_count + global_b;
                     float rho = reflectivity_buf.reflectivity[mat_idx];
                     float tau = transmissivity_buf.transmissivity[mat_idx];
 

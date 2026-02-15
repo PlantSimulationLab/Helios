@@ -88,6 +88,12 @@ namespace helios {
         destroyBuffer(patch_vertices_buffer);
         destroyBuffer(triangle_vertices_buffer);
         destroyBuffer(normal_buffer);
+        destroyBuffer(mask_data_buffer);
+        destroyBuffer(mask_sizes_buffer);
+        destroyBuffer(mask_offsets_buffer);
+        destroyBuffer(mask_IDs_buffer);
+        destroyBuffer(uv_data_buffer);
+        destroyBuffer(uv_IDs_buffer);
         destroyBuffer(source_positions_buffer);
         destroyBuffer(source_types_buffer);
         destroyBuffer(source_rotations_buffer);
@@ -130,6 +136,27 @@ namespace helios {
         if (primitive_count == 0) {
             return; // Empty geometry
         }
+
+        std::cout << "[Vulkan] Uploading " << primitive_count << " primitives" << std::endl;
+        std::cout << "Position -> UUID mapping:" << std::endl;
+        for (size_t i = 0; i < std::min(size_t(5), primitive_count); ++i) {
+            std::cout << "  Position " << i << " -> UUID " << geometry.primitive_UUIDs[i];
+            const float *t = &geometry.transform_matrices[i * 16];
+            vec3 pos = make_vec3(t[3], t[7], t[11]);
+            std::cout << ", pos=(" << pos.x << "," << pos.y << "," << pos.z << ")";
+            std::cout << ", type=" << geometry.primitive_types[i];
+            std::cout << ", twosided=" << (int)geometry.twosided_flags[i];
+            std::cout << ", mask_ID=" << (geometry.mask_IDs.empty() ? -1 : geometry.mask_IDs[i]);
+            std::cout << std::endl;
+        }
+        std::cout << "UUID -> Position lookup (first 5 UUIDs):" << std::endl;
+        for (size_t uuid = 0; uuid < std::min(size_t(5), geometry.primitive_positions.size()); ++uuid) {
+            uint pos = geometry.primitive_positions[uuid];
+            if (pos != static_cast<uint>(-1) && pos < primitive_count) {
+                std::cout << "  UUID " << uuid << " -> Position " << pos << std::endl;
+            }
+        }
+
 
         // Build BVH2 on CPU
         bvh_nodes = bvh_builder.build(geometry);
@@ -357,6 +384,115 @@ namespace helios {
             uploadBufferData(normal_buffer, normals.data(), normals.size() * sizeof(helios::vec3));
         }
 
+        // Upload texture mask and UV data
+        {
+            // Convert mask_data from vector<bool> to flat uint32_t array (0 or 1 per texel)
+            std::vector<uint32_t> mask_offsets;
+            uint32_t current_offset = 0;
+            for (const auto &sz : geometry.mask_sizes) {
+                mask_offsets.push_back(current_offset);
+                current_offset += static_cast<uint32_t>(sz.x) * static_cast<uint32_t>(sz.y);
+            }
+
+            std::vector<uint32_t> mask_data_uint;
+            if (current_offset > 0) {
+                if (geometry.mask_data.size() < current_offset) {
+                    helios_runtime_error("ERROR (VulkanComputeBackend::updateGeometry): mask_data size mismatch. Expected " + std::to_string(current_offset) + " texels, got " +
+                                        std::to_string(geometry.mask_data.size()));
+                }
+                mask_data_uint.resize(current_offset, 0);
+                for (size_t i = 0; i < current_offset; ++i) {
+                    mask_data_uint[i] = geometry.mask_data[i] ? 1 : 0;
+                }
+
+            }
+
+            // Reformat UV data: allocate 4 vec2 per primitive (flat array)
+            std::vector<helios::vec2> uv_flat(primitive_count * 4, helios::make_vec2(0.f, 0.f));
+            size_t uv_read_offset = 0;
+            for (size_t p = 0; p < primitive_count; ++p) {
+                if (!geometry.uv_IDs.empty() && geometry.uv_IDs[p] >= 0) {
+                    // This primitive has custom UVs - read next 4 from uv_data
+                    for (int v = 0; v < 4 && uv_read_offset < geometry.uv_data.size(); ++v) {
+                        uv_flat[p * 4 + v] = geometry.uv_data[uv_read_offset++];
+                    }
+                }
+                // If uv_IDs[p] == -1, keep default zeros (unused, will use parametric UVs in shader)
+            }
+
+
+            // Upload mask_data_buffer
+            if (mask_data_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(mask_data_buffer);
+            }
+            if (!mask_data_uint.empty()) {
+                mask_data_buffer = createBuffer(mask_data_uint.size() * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                uploadBufferData(mask_data_buffer, mask_data_uint.data(), mask_data_uint.size() * sizeof(uint32_t));
+            } else {
+                // Keep placeholder buffer if no mask data
+                mask_data_buffer = createBuffer(sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            }
+
+            // Upload mask_sizes_buffer
+            if (mask_sizes_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(mask_sizes_buffer);
+            }
+            if (!geometry.mask_sizes.empty()) {
+                mask_sizes_buffer = createBuffer(geometry.mask_sizes.size() * sizeof(helios::int2), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                uploadBufferData(mask_sizes_buffer, geometry.mask_sizes.data(), geometry.mask_sizes.size() * sizeof(helios::int2));
+            } else {
+                mask_sizes_buffer = createBuffer(sizeof(int32_t) * 2, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            }
+
+            // Upload mask_offsets_buffer
+            if (mask_offsets_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(mask_offsets_buffer);
+            }
+            if (!mask_offsets.empty()) {
+                mask_offsets_buffer = createBuffer(mask_offsets.size() * sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                uploadBufferData(mask_offsets_buffer, mask_offsets.data(), mask_offsets.size() * sizeof(uint32_t));
+            } else {
+                mask_offsets_buffer = createBuffer(sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            }
+
+            // Upload mask_IDs_buffer
+            if (mask_IDs_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(mask_IDs_buffer);
+            }
+            if (!geometry.mask_IDs.empty()) {
+                // Convert to int32_t
+                std::vector<int32_t> mask_IDs_int32(geometry.mask_IDs.begin(), geometry.mask_IDs.end());
+                mask_IDs_buffer = createBuffer(mask_IDs_int32.size() * sizeof(int32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                uploadBufferData(mask_IDs_buffer, mask_IDs_int32.data(), mask_IDs_int32.size() * sizeof(int32_t));
+            } else {
+                mask_IDs_buffer = createBuffer(sizeof(int32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            }
+
+            // Upload uv_data_buffer
+            if (uv_data_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(uv_data_buffer);
+            }
+            if (!uv_flat.empty()) {
+                uv_data_buffer = createBuffer(uv_flat.size() * sizeof(helios::vec2), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                uploadBufferData(uv_data_buffer, uv_flat.data(), uv_flat.size() * sizeof(helios::vec2));
+            } else {
+                uv_data_buffer = createBuffer(sizeof(float) * 2, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            }
+
+            // Upload uv_IDs_buffer
+            if (uv_IDs_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(uv_IDs_buffer);
+            }
+            if (!geometry.uv_IDs.empty()) {
+                // Convert to int32_t
+                std::vector<int32_t> uv_IDs_int32(geometry.uv_IDs.begin(), geometry.uv_IDs.end());
+                uv_IDs_buffer = createBuffer(uv_IDs_int32.size() * sizeof(int32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                uploadBufferData(uv_IDs_buffer, uv_IDs_int32.data(), uv_IDs_int32.size() * sizeof(int32_t));
+            } else {
+                uv_IDs_buffer = createBuffer(sizeof(int32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            }
+        }
+
         descriptors_dirty = true;  // Geometry changed, need descriptor update
     }
 
@@ -476,8 +612,21 @@ namespace helios {
             return; // No geometry or sources
         }
 
+        // Build band mapping (same logic as diffuse)
+        launch_to_global_band.clear();
+        for (uint32_t g = 0; g < band_count; g++) {
+            if (!params.band_launch_flag.empty() && params.band_launch_flag[g]) {
+                launch_to_global_band.push_back(g);
+            }
+        }
+        if (launch_to_global_band.empty()) {
+            for (uint32_t g = 0; g < launch_band_count; g++) {
+                launch_to_global_band.push_back(g);
+            }
+        }
+
         // Ensure scatter and radiation_out buffers exist (direct shader writes scatter buffers)
-        size_t buf_size = primitive_count * band_count * sizeof(float);
+        size_t buf_size = primitive_count * launch_band_count * sizeof(float);
         VkBufferUsageFlags scatter_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
         if (scatter_top_buffer.buffer == VK_NULL_HANDLE || scatter_top_buffer.size != buf_size) {
@@ -553,6 +702,8 @@ namespace helios {
             uint launch_dim_y;    // Grid dimension Y for stratified sampling
             uint prim_tiles_y;    // Number of primitive tiles in Y dimension
             uint prims_per_tile;  // Primitives per tile (65535 max)
+            uint material_band_count;  // Global band count (for material buffers)
+            uint band_map[4];  // Maps launch band index → global band index (max 4 bands)
         } push_constants;
 
         // Compute 2D grid dimensions for stratified sampling (matches OptiX)
@@ -564,11 +715,21 @@ namespace helios {
         push_constants.rays_per_primitive = params.rays_per_primitive;
         push_constants.random_seed = params.random_seed;
         push_constants.current_band = params.current_band;
-        push_constants.band_count = band_count;
+        push_constants.band_count = launch_band_count;  // Use launch band count (not global)
         push_constants.source_count = source_count;
         push_constants.primitive_count = primitive_count;
         push_constants.launch_dim_x = launch_dim_x;
         push_constants.launch_dim_y = launch_dim_y;
+        push_constants.material_band_count = band_count;  // Global band count for material indexing
+
+        // Initialize band_map (max 4 bands)
+        for (uint i = 0; i < 4; i++) {
+            if (i < launch_to_global_band.size()) {
+                push_constants.band_map[i] = launch_to_global_band[i];
+            } else {
+                push_constants.band_map[i] = 0;
+            }
+        }
 
         // Enable debug bounds checking (can be disabled in production builds)
         #ifdef HELIOS_DEBUG
@@ -687,7 +848,7 @@ namespace helios {
         }
 
         // Ensure radiation_out_top/bottom buffers exist (required by shader)
-        size_t rad_out_size = primitive_count * band_count * sizeof(float);
+        size_t rad_out_size = primitive_count * launch_band_count * sizeof(float);
         if (radiation_out_top_buffer.buffer == VK_NULL_HANDLE || radiation_out_top_buffer.size != rad_out_size) {
             if (radiation_out_top_buffer.buffer != VK_NULL_HANDLE) {
                 destroyBuffer(radiation_out_top_buffer);
@@ -850,6 +1011,20 @@ namespace helios {
         // Use the launch_face specified by the caller (RadiationModel already loops over faces)
         uint32_t launch_face = params.launch_face;
 
+        // Build band mapping: launch band index → global band index
+        launch_to_global_band.clear();
+        for (uint32_t g = 0; g < band_count; g++) {
+            if (!params.band_launch_flag.empty() && params.band_launch_flag[g]) {
+                launch_to_global_band.push_back(g);
+            }
+        }
+        if (launch_to_global_band.empty()) {
+            // Fallback: identity mapping (all bands active)
+            for (uint32_t g = 0; g < launch_band_count; g++) {
+                launch_to_global_band.push_back(g);
+            }
+        }
+
             // Record COMPUTE command buffer
             VkCommandBufferBeginInfo begin_info{};
             begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -880,13 +1055,16 @@ namespace helios {
                 uint32_t launch_face;     // 0 = bottom, 1 = top
                 uint32_t launch_dim_x;    // Grid dimension X
                 uint32_t launch_dim_y;    // Grid dimension Y
+                uint32_t material_band_count;  // Global band count (for material buffers)
+                uint32_t global_band_index;    // Global band index for this dispatch
             } push_constants;
 
             push_constants.launch_offset = params.launch_offset;
             push_constants.launch_count = params.launch_count;
             push_constants.rays_per_primitive = params.rays_per_primitive;
             push_constants.random_seed = params.random_seed;
-            push_constants.band_count = band_count;
+            push_constants.band_count = launch_band_count;  // Use launch band count (not global)
+            push_constants.material_band_count = band_count;  // Global band count for material indexing
 
             push_constants.source_count = source_count;
             push_constants.primitive_count = primitive_count;
@@ -919,8 +1097,9 @@ namespace helios {
 
             // Dispatch once per band (Vulkan shader processes one band per dispatch,
             // unlike OptiX which processes all bands in a single launch)
-            for (uint32_t band = 0; band < band_count; band++) {
+            for (uint32_t band = 0; band < launch_band_count; band++) {
                 push_constants.current_band = band;
+                push_constants.global_band_index = launch_to_global_band[band];
                 vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
                 vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, dispatch_z);
             }
@@ -1040,18 +1219,18 @@ namespace helios {
     }
 
     void VulkanComputeBackend::getRadiationResults(RayTracingResults &results) {
-        if (primitive_count == 0 || band_count == 0) {
+        if (primitive_count == 0 || launch_band_count == 0) {
             return; // No results to download
         }
 
-        size_t buffer_size = primitive_count * band_count;
+        size_t buffer_size = primitive_count * launch_band_count;
 
         // Resize output vectors
         results.radiation_in.resize(buffer_size);
         results.radiation_out_top.resize(buffer_size);
         results.radiation_out_bottom.resize(buffer_size);
         results.num_primitives = primitive_count;
-        results.num_bands = band_count;
+        results.num_bands = launch_band_count;
 
         // Download radiation_in buffer
         if (radiation_in_buffer.buffer != VK_NULL_HANDLE) {
@@ -1156,12 +1335,15 @@ namespace helios {
         // TODO: Download camera buffers in Phase 7
     }
 
-    void VulkanComputeBackend::zeroRadiationBuffers(size_t launch_band_count) {
+    void VulkanComputeBackend::zeroRadiationBuffers(size_t launch_band_count_param) {
         if (primitive_count == 0 || band_count == 0) {
             return; // No geometry or bands
         }
 
-        size_t buffer_size = primitive_count * band_count;
+        // Store launch band count for this runBand() call
+        launch_band_count = static_cast<uint32_t>(launch_band_count_param);
+
+        size_t buffer_size = primitive_count * launch_band_count;
 
         // Create or resize radiation_in buffer
         // CRITICAL: Use AUTO_PREFER_HOST for coherent memory (matches working Vulkan compute examples)
@@ -1191,11 +1373,11 @@ namespace helios {
     }
 
     void VulkanComputeBackend::zeroScatterBuffers() {
-        if (primitive_count == 0 || band_count == 0) {
+        if (primitive_count == 0 || launch_band_count == 0) {
             return; // No geometry or bands
         }
 
-        size_t buffer_size = primitive_count * band_count;
+        size_t buffer_size = primitive_count * launch_band_count;
 
         // Create or resize scatter_top buffer
         if (scatter_top_buffer.buffer == VK_NULL_HANDLE || scatter_top_buffer.size != buffer_size * sizeof(float)) {
@@ -1317,8 +1499,8 @@ namespace helios {
         }
 
         // Fluxes are indexed by [source * Nbands_launch + band]
-        // For Phase 1, we expect Nsources * Nbands_launch entries
-        size_t expected_size = source_count * band_count; // Assuming single-band launch for Phase 1
+        // We expect Nsources * Nbands_launch entries
+        size_t expected_size = source_count * launch_band_count;
 
         if (fluxes.size() != expected_size && fluxes.size() != source_count) {
             // Allow single-band upload (size = Nsources) or full upload (size = Nsources * Nbands)
@@ -1666,7 +1848,13 @@ namespace helios {
             {8, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},  // Patch vertices
             {9, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr},  // Triangle vertices
             {10, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // World-space normals
-            // TODO Phase 2+: Add disk, tile, voxel, bbox vertices, mask data, UV data
+            {11, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Mask data (uint)
+            {12, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Mask sizes (ivec2)
+            {13, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Mask offsets (uint)
+            {14, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Mask IDs (int)
+            {15, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // UV data (vec2)
+            {16, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // UV IDs (int)
+            // TODO Phase 2+: Add disk, tile, voxel, bbox vertices
         };
 
         VkDescriptorSetLayoutCreateInfo layout_info{};
@@ -1745,7 +1933,7 @@ namespace helios {
         // ========== Create Descriptor Pool ==========
 
         std::vector<VkDescriptorPoolSize> pool_sizes = {
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 40}, // All sets: 11 geo + 7 mat + 5 result + 5 sky + 1 debug + margin
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 46}, // All sets: 17 geo + 7 mat + 5 result + 5 sky + 1 debug + margin
         };
 
         VkDescriptorPoolCreateInfo pool_info{};
@@ -1791,6 +1979,15 @@ namespace helios {
         diffuse_extinction_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         diffuse_dist_norm_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         sky_radiance_params_buffer = createBuffer(sizeof(helios::vec4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+
+        // ========== Create placeholder mask/UV buffers ==========
+        // Same requirement as sky parameters — needed before pipeline creation for MoltenVK
+        mask_data_buffer = createBuffer(sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        mask_sizes_buffer = createBuffer(sizeof(int32_t) * 2, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        mask_offsets_buffer = createBuffer(sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        mask_IDs_buffer = createBuffer(sizeof(int32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        uv_data_buffer = createBuffer(sizeof(float) * 2, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        uv_IDs_buffer = createBuffer(sizeof(int32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
         // Update descriptor set 3 (sky parameters) with placeholder buffers
         // Note: Geometry/material/result buffers don't exist yet, so we only update set 3
@@ -1845,6 +2042,62 @@ namespace helios {
 
         write.dstBinding = 4;
         write.pBufferInfo = &sky_radiance_params_info;
+        descriptor_writes.push_back(write);
+
+        // Descriptor writes for mask/UV placeholder buffers (set_geometry bindings 11-16)
+        VkDescriptorBufferInfo mask_data_info{};
+        mask_data_info.buffer = mask_data_buffer.buffer;
+        mask_data_info.offset = 0;
+        mask_data_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo mask_sizes_info{};
+        mask_sizes_info.buffer = mask_sizes_buffer.buffer;
+        mask_sizes_info.offset = 0;
+        mask_sizes_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo mask_offsets_info{};
+        mask_offsets_info.buffer = mask_offsets_buffer.buffer;
+        mask_offsets_info.offset = 0;
+        mask_offsets_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo mask_IDs_info{};
+        mask_IDs_info.buffer = mask_IDs_buffer.buffer;
+        mask_IDs_info.offset = 0;
+        mask_IDs_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo uv_data_info{};
+        uv_data_info.buffer = uv_data_buffer.buffer;
+        uv_data_info.offset = 0;
+        uv_data_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo uv_IDs_info{};
+        uv_IDs_info.buffer = uv_IDs_buffer.buffer;
+        uv_IDs_info.offset = 0;
+        uv_IDs_info.range = VK_WHOLE_SIZE;
+
+        write.dstSet = set_geometry;
+        write.dstBinding = 11;
+        write.pBufferInfo = &mask_data_info;
+        descriptor_writes.push_back(write);
+
+        write.dstBinding = 12;
+        write.pBufferInfo = &mask_sizes_info;
+        descriptor_writes.push_back(write);
+
+        write.dstBinding = 13;
+        write.pBufferInfo = &mask_offsets_info;
+        descriptor_writes.push_back(write);
+
+        write.dstBinding = 14;
+        write.pBufferInfo = &mask_IDs_info;
+        descriptor_writes.push_back(write);
+
+        write.dstBinding = 15;
+        write.pBufferInfo = &uv_data_info;
+        descriptor_writes.push_back(write);
+
+        write.dstBinding = 16;
+        write.pBufferInfo = &uv_IDs_info;
         descriptor_writes.push_back(write);
 
         vkUpdateDescriptorSets(vk_device, static_cast<uint32_t>(descriptor_writes.size()), descriptor_writes.data(), 0, nullptr);
@@ -2172,6 +2425,109 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &normal_info;
+            descriptor_writes.push_back(write);
+        }
+
+        // Mask/UV texture data buffers (bindings 11-16)
+        VkDescriptorBufferInfo mask_data_info{};
+        mask_data_info.buffer = mask_data_buffer.buffer;
+        mask_data_info.offset = 0;
+        mask_data_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo mask_sizes_info{};
+        mask_sizes_info.buffer = mask_sizes_buffer.buffer;
+        mask_sizes_info.offset = 0;
+        mask_sizes_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo mask_offsets_info{};
+        mask_offsets_info.buffer = mask_offsets_buffer.buffer;
+        mask_offsets_info.offset = 0;
+        mask_offsets_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo mask_IDs_info{};
+        mask_IDs_info.buffer = mask_IDs_buffer.buffer;
+        mask_IDs_info.offset = 0;
+        mask_IDs_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo uv_data_info{};
+        uv_data_info.buffer = uv_data_buffer.buffer;
+        uv_data_info.offset = 0;
+        uv_data_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo uv_IDs_info{};
+        uv_IDs_info.buffer = uv_IDs_buffer.buffer;
+        uv_IDs_info.offset = 0;
+        uv_IDs_info.range = VK_WHOLE_SIZE;
+
+        if (mask_data_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_geometry;
+            write.dstBinding = 11;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &mask_data_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (mask_sizes_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_geometry;
+            write.dstBinding = 12;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &mask_sizes_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (mask_offsets_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_geometry;
+            write.dstBinding = 13;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &mask_offsets_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (mask_IDs_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_geometry;
+            write.dstBinding = 14;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &mask_IDs_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (uv_data_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_geometry;
+            write.dstBinding = 15;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &uv_data_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (uv_IDs_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_geometry;
+            write.dstBinding = 16;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &uv_IDs_info;
             descriptor_writes.push_back(write);
         }
 

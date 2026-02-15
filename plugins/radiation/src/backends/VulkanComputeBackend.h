@@ -123,7 +123,13 @@ namespace helios {
         Buffer patch_vertices_buffer;
         Buffer triangle_vertices_buffer;
         Buffer normal_buffer; //!< Pre-computed world-space normals (vec3 per primitive)
-        // TODO Phase 2+: Add disk, tile, voxel, bbox vertices, mask data, UV data
+        Buffer mask_data_buffer;    //!< Flat uint mask texels: 0=transparent, 1=opaque
+        Buffer mask_sizes_buffer;   //!< ivec2 (width, height) per unique mask texture
+        Buffer mask_offsets_buffer; //!< uint offset into mask_data for start of each mask
+        Buffer mask_IDs_buffer;     //!< int per primitive: mask index (-1 = no mask)
+        Buffer uv_data_buffer;      //!< vec2 UV coords: 4 per primitive (flat, indexed by prim_idx*4)
+        Buffer uv_IDs_buffer;       //!< int per primitive: -1 = default UVs, >=0 = has custom UVs
+        // TODO Phase 2+: Add disk, tile, voxel, bbox vertices
 
         // Material/Source buffers (Set 1)
         Buffer source_positions_buffer;
@@ -187,8 +193,12 @@ namespace helios {
 
         // Geometry cache
         size_t primitive_count = 0;
-        size_t band_count = 0;
+        size_t band_count = 0;  // Global band count (material buffer stride)
         size_t source_count = 0;
+
+        // Per-launch band tracking (for radiation I/O buffers)
+        uint32_t launch_band_count = 0;  // Current runBand() band count (set by zeroRadiationBuffers)
+        std::vector<uint32_t> launch_to_global_band;  // Maps launch band index → global band index
 
         // Descriptor set update tracking
         bool descriptors_dirty = false;
