@@ -1007,7 +1007,63 @@ namespace helios {
             }
         }
 
-            // Record COMPUTE command buffer
+        // Push constants struct (expanded for diffuse rays)
+        struct PushConstants {
+            uint32_t launch_offset;
+            uint32_t launch_count;
+            uint32_t rays_per_primitive;
+            uint32_t random_seed;
+            uint32_t current_band;
+            uint32_t band_count;
+            uint32_t source_count;
+            uint32_t primitive_count;
+            uint32_t debug_mode;
+            uint32_t launch_face;     // 0 = bottom, 1 = top
+            uint32_t launch_dim_x;    // Grid dimension X
+            uint32_t launch_dim_y;    // Grid dimension Y
+            uint32_t material_band_count;  // Global band count (for material buffers)
+            uint32_t global_band_index;    // Global band index for this dispatch
+        } push_constants;
+
+        // Initialize invariant push constants (same across all batches)
+        push_constants.rays_per_primitive = params.rays_per_primitive;
+        push_constants.random_seed = params.random_seed;
+        push_constants.band_count = launch_band_count;  // Use launch band count (not global)
+        push_constants.material_band_count = band_count;  // Global band count for material indexing
+        push_constants.source_count = source_count;
+        push_constants.primitive_count = primitive_count;
+        push_constants.launch_face = launch_face;
+        push_constants.launch_dim_x = launch_dim_x;
+        push_constants.launch_dim_y = launch_dim_y;
+
+        // Enable debug bounds checking (can be disabled in production builds)
+        #ifdef HELIOS_DEBUG
+            push_constants.debug_mode = 1;
+        #else
+            push_constants.debug_mode = 0;
+        #endif
+
+        // 3D dispatch with simple direct indexing (8×32×1 workgroup with shared memory histogram)
+        // Workgroup: 8×32×1 = 256 threads, processing 1 primitive per workgroup
+        const uint32_t WG_X = 8;  // Must match shader local_size_x
+        const uint32_t WG_Y = 32; // Must match shader local_size_y
+        const uint32_t MAX_Z_DISPATCH = 65535; // Vulkan spec limit
+
+        uint32_t dispatch_x = (launch_dim_x + WG_X - 1) / WG_X;
+        uint32_t dispatch_y = (launch_dim_y + WG_Y - 1) / WG_Y;
+
+        // Batch primitives to stay within Vulkan Z dispatch limit (65535).
+        // The diffuse shader uses per-workgroup shared memory, so all threads in a workgroup
+        // must process the same primitive - 2D tiling (as used by the direct shader) would break
+        // this invariant. Instead, we submit multiple command buffers with different launch_offsets.
+        uint32_t total_prims = params.launch_count;
+        uint32_t batch_offset = 0;
+        int total_elapsed_seconds = 0;
+
+        while (batch_offset < total_prims) {
+            uint32_t batch_count = std::min(total_prims - batch_offset, MAX_Z_DISPATCH);
+
+            // Record COMPUTE command buffer for this batch
             VkCommandBufferBeginInfo begin_info{};
             begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
             begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -1023,56 +1079,9 @@ namespace helios {
             VkDescriptorSet sets[] = {set_geometry, set_materials, set_results, set_sky, set_debug};
             vkCmdBindDescriptorSets(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 5, sets, 0, nullptr);
 
-            // Push constants (expanded for diffuse rays)
-            struct PushConstants {
-                uint32_t launch_offset;
-                uint32_t launch_count;
-                uint32_t rays_per_primitive;
-                uint32_t random_seed;
-                uint32_t current_band;
-                uint32_t band_count;
-                uint32_t source_count;
-                uint32_t primitive_count;
-                uint32_t debug_mode;
-                uint32_t launch_face;     // 0 = bottom, 1 = top
-                uint32_t launch_dim_x;    // Grid dimension X
-                uint32_t launch_dim_y;    // Grid dimension Y
-                uint32_t material_band_count;  // Global band count (for material buffers)
-                uint32_t global_band_index;    // Global band index for this dispatch
-            } push_constants;
-
-            push_constants.launch_offset = params.launch_offset;
-            push_constants.launch_count = params.launch_count;
-            push_constants.rays_per_primitive = params.rays_per_primitive;
-            push_constants.random_seed = params.random_seed;
-            push_constants.band_count = launch_band_count;  // Use launch band count (not global)
-            push_constants.material_band_count = band_count;  // Global band count for material indexing
-
-            push_constants.source_count = source_count;
-            push_constants.primitive_count = primitive_count;
-            push_constants.launch_face = launch_face;
-            push_constants.launch_dim_x = launch_dim_x;
-            push_constants.launch_dim_y = launch_dim_y;
-
-            // Enable debug bounds checking (can be disabled in production builds)
-            #ifdef HELIOS_DEBUG
-                push_constants.debug_mode = 1;
-            #else
-                push_constants.debug_mode = 0;
-            #endif
-
-            // 3D dispatch with simple direct indexing (8×32×1 workgroup with shared memory histogram)
-            // Workgroup: 8×32×1 = 256 threads, processing 1 primitive per workgroup
-            const uint32_t WG_X = 8;  // Must match shader local_size_x
-            const uint32_t WG_Y = 32; // Must match shader local_size_y
-            const uint32_t MAX_Z_DISPATCH = 65535; // Vulkan spec limit
-
-            uint32_t dispatch_x = (launch_dim_x + WG_X - 1) / WG_X;
-            uint32_t dispatch_y = (launch_dim_y + WG_Y - 1) / WG_Y;
-            uint32_t dispatch_z = std::min(params.launch_count, MAX_Z_DISPATCH);
-
-            push_constants.launch_offset = params.launch_offset;
-            push_constants.launch_count = params.launch_count;
+            // Set batch-specific push constants
+            push_constants.launch_offset = params.launch_offset + batch_offset;
+            push_constants.launch_count = batch_count;
 
             // Write timestamp before dispatches (measures GPU start time)
             vkCmdWriteTimestamp(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, timestamp_query_pool, 0);
@@ -1083,7 +1092,7 @@ namespace helios {
                 push_constants.current_band = band;
                 push_constants.global_band_index = launch_to_global_band[band];
                 vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
-                vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, dispatch_z);
+                vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, batch_count);
             }
 
             // Write timestamp after all band dispatches (measures GPU end time)
@@ -1158,38 +1167,29 @@ namespace helios {
             // Wait for compute to complete with progress updates (no timeout - large scenes can take minutes)
             const uint64_t poll_interval_ns = 1000000000ULL; // 1 second
             bool completed = false;
-            int elapsed_seconds = 0;
 
             while (!completed) {
                 result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, poll_interval_ns);
                 if (result == VK_SUCCESS) {
                     completed = true;
-
-                    // Read GPU timestamps to measure actual shader execution time
-                    uint64_t timestamps[2];
-                    vkGetQueryPoolResults(vk_device, timestamp_query_pool, 0, 2, sizeof(timestamps), timestamps,
-                                          sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
-
-                    double gpu_time_ms = double(timestamps[1] - timestamps[0]) * timestamp_period / 1e6;
-
-                    // Read debug counters
-                    uint32_t counters[5] = {0};
-                    downloadBufferData(debug_counters_buffer, counters, sizeof(counters));
-
                     break;
                 } else if (result == VK_TIMEOUT) {
-                    elapsed_seconds++;
+                    total_elapsed_seconds++;
                     // Print progress every 5 seconds for large scenes
-                    if (elapsed_seconds % 5 == 0) {
-                        std::cout << "  Diffuse rays still computing... " << elapsed_seconds << "s elapsed "
-                                  << "(dispatch: " << dispatch_x << "×" << dispatch_y << "×" << dispatch_z
+                    if (total_elapsed_seconds % 5 == 0) {
+                        std::cout << "  Diffuse rays still computing... " << total_elapsed_seconds << "s elapsed "
+                                  << "(batch " << (batch_offset / MAX_Z_DISPATCH + 1) << "/" << ((total_prims + MAX_Z_DISPATCH - 1) / MAX_Z_DISPATCH)
+                                  << ", dispatch: " << dispatch_x << "×" << dispatch_y << "×" << batch_count
                                   << ", rays: " << launch_dim_x << "×" << launch_dim_y
-                                  << ", face: " << launch_face << ", prims: " << params.launch_count << ")" << std::endl;
+                                  << ", face: " << launch_face << ", prims: " << total_prims << ")" << std::endl;
                     }
                 } else {
                     helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): vkWaitForFences failed. VkResult: " + std::to_string(result));
                 }
             }
+
+            batch_offset += batch_count;
+        } // end primitive batching loop
     }
 
     void VulkanComputeBackend::launchCameraRays(const RayTracingLaunchParams &params) {
