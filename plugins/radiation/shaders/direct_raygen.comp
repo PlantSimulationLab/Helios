@@ -383,12 +383,13 @@ void main() {
             }
 
             // Origin masking: reject transparent texels (matches OptiX d_sampleTexture_patch, RayTracing.cuh:504)
+            // Note: OptiX ignores the return value and traces the ray anyway if masking fails after 10 retries
             if (prim_type == 0 || prim_type == 3) { // Patch or Tile
                 int mask_id_check = mask_ids_buf.mask_ids[prim_idx];
                 if (mask_id_check >= 0) {
                     vec2 sample_uv = vec2(sp_local.x + 0.5, sp_local.y + 0.5);
                     int resample_count = 0;
-                    while (!check_texture_mask(prim_idx, sample_uv) && resample_count < 10) {
+                    while (!check_texture_mask(prim_idx, sample_uv, prim_type) && resample_count < 10) {
                         resample_count++;
                         float dx = 1.0 / float(NX);
                         float dy = 1.0 / float(NY);
@@ -397,9 +398,33 @@ void main() {
                         sp_local.z = 0.0;
                         sample_uv = vec2(sp_local.x + 0.5, sp_local.y + 0.5);
                     }
-                    if (!check_texture_mask(prim_idx, sample_uv)) {
-                        continue; // Skip ray after 10 failed retries
-                    }
+                    // Don't skip ray - OptiX uses the last sample even if origin masking failed
+                }
+            } else if (prim_type == 1 && mask_ids_buf.mask_ids[prim_idx] >= 0) {
+                // Triangle origin masking via rejection sampling
+                vec2 uv0 = uv_data_buf.uv_data[prim_idx * 4 + 0];
+                vec2 uv1 = uv_data_buf.uv_data[prim_idx * 4 + 1];
+                vec2 uv2 = uv_data_buf.uv_data[prim_idx * 4 + 2];
+                bool masked = true;
+                for (int attempt = 0; attempt < 50 && masked; attempt++) {
+                    // Generate random point on canonical triangle
+                    float r1 = rng_float(rng);
+                    float r2 = rng_float(rng);
+                    if (r1 + r2 > 1.0) { r1 = 1.0 - r1; r2 = 1.0 - r2; }
+                    sp_local = vec3(r2, r1 + r2, 0.0); // canonical: x=gamma, y=beta+gamma
+                    float beta = r1;  // sp_local.y - sp_local.x
+                    float gamma = r2; // sp_local.x
+                    vec2 tex_uv = uv0 + beta * (uv1 - uv0) + gamma * (uv2 - uv0);
+                    tex_uv.y = 1.0 - tex_uv.y;
+                    int mask_id = mask_ids_buf.mask_ids[prim_idx];
+                    ivec2 sz = mask_sizes_buf.mask_sizes[mask_id];
+                    uint offset = mask_offsets_buf.mask_offsets[mask_id];
+                    int tx = clamp(int(floor(float(sz.x - 1) * tex_uv.x)), 0, sz.x - 1);
+                    int ty = clamp(int(floor(float(sz.y - 1) * tex_uv.y)), 0, sz.y - 1);
+                    masked = (mask_data_buf.mask_data[offset + ty * sz.x + tx] == 0);
+                }
+                if (masked) {
+                    continue; // Skip this ray - all 50 attempts hit transparent texels
                 }
             }
 

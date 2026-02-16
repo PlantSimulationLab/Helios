@@ -7,6 +7,7 @@
 #define BVH_TRAVERSAL_GLSL
 
 #include "intersections.glsl"
+#include "texture_mask.glsl"
 
 const uint MAX_STACK_DEPTH = 64; // Sufficient for typical BVH scenes
 const uint UINT_MAX = 0xFFFFFFFF;
@@ -95,7 +96,7 @@ uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_i
             // Leaf node - test all primitives in this leaf
             for (uint i = 0; i < node.prim_count; ++i) {
                 uint prim_idx = prim_indices_buf.indices[node.first_prim + i];
-                uint prim_type = node.prim_type;
+                uint prim_type = prim_types_buf.types[prim_idx];
 
                 // Skip self-intersection (ray hitting the surface it originated from)
                 if (prim_idx == origin_prim_idx) {
@@ -134,8 +135,13 @@ uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_i
                     continue;
                 }
 
-                // Update closest hit if this intersection is nearer
+                // Update closest hit if this intersection is nearer AND passes texture mask
                 if (hit.hit && hit.t < closest_t && hit.t > t_min) {
+                    // Check texture mask at hit point (transparent texels = ray passes through)
+                    if (!check_texture_mask(prim_idx, hit.uv, prim_type)) {
+                        continue; // Skip this primitive - ray passes through transparent texel
+                    }
+
                     closest_t = hit.t;
                     closest_prim = prim_idx;
                     hit_prim_type = prim_type;

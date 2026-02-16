@@ -31,6 +31,9 @@ namespace helios {
             return {}; // Empty BVH
         }
 
+        // Clear state from previous build (prevents accumulation across multiple updateGeometry calls)
+        primitive_indices.clear();
+
         // Step 1: Pre-compute type-specific offset tables (O(N) instead of O(N²))
         type_offsets.resize(geom.primitive_count);
         std::array<uint32_t, 6> type_counters = {0}; // 6 primitive types

@@ -138,24 +138,6 @@ namespace helios {
         }
 
         std::cout << "[Vulkan] Uploading " << primitive_count << " primitives" << std::endl;
-        std::cout << "Position -> UUID mapping:" << std::endl;
-        for (size_t i = 0; i < std::min(size_t(5), primitive_count); ++i) {
-            std::cout << "  Position " << i << " -> UUID " << geometry.primitive_UUIDs[i];
-            const float *t = &geometry.transform_matrices[i * 16];
-            vec3 pos = make_vec3(t[3], t[7], t[11]);
-            std::cout << ", pos=(" << pos.x << "," << pos.y << "," << pos.z << ")";
-            std::cout << ", type=" << geometry.primitive_types[i];
-            std::cout << ", twosided=" << (int)geometry.twosided_flags[i];
-            std::cout << ", mask_ID=" << (geometry.mask_IDs.empty() ? -1 : geometry.mask_IDs[i]);
-            std::cout << std::endl;
-        }
-        std::cout << "UUID -> Position lookup (first 5 UUIDs):" << std::endl;
-        for (size_t uuid = 0; uuid < std::min(size_t(5), geometry.primitive_positions.size()); ++uuid) {
-            uint pos = geometry.primitive_positions[uuid];
-            if (pos != static_cast<uint>(-1) && pos < primitive_count) {
-                std::cout << "  UUID " << uuid << " -> Position " << pos << std::endl;
-            }
-        }
 
 
         // Build BVH2 on CPU

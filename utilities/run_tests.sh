@@ -19,6 +19,7 @@ usage() {
     echo "  --list-tests         Build test executables and list available test cases without running them"
     echo "  --project-dir <dir>  Use specified directory for project (persistent, not cleaned up)"
     echo "  --disableopenmp      Disable OpenMP by passing -DENABLE_OPENMP=OFF to cmake"
+    echo "  --cmake-args <args>  Pass custom arguments to cmake (e.g., --cmake-args \"-DSOME_OPTION=ON -DANOTHER=OFF\")"
     echo
     exit ${1:-1}
 }
@@ -180,6 +181,15 @@ while [ $# -gt 0 ]; do
 
   --disableopenmp)
     DISABLE_OPENMP="ON"
+    ;;
+
+  --cmake-args)
+    if [ -z "$2" ]; then
+      echo "Error: --cmake-args requires arguments."
+      usage
+    fi
+    CUSTOM_CMAKE_ARGS="$2"
+    shift
     ;;
 
   --help|-h)
@@ -368,6 +378,9 @@ else
     CMAKE_ARGS="-DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DBUILD_TESTS=ON"
     if [ "${DISABLE_OPENMP}" == "ON" ]; then
       CMAKE_ARGS="${CMAKE_ARGS} -DENABLE_OPENMP=OFF"
+    fi
+    if [ -n "${CUSTOM_CMAKE_ARGS}" ]; then
+      CMAKE_ARGS="${CMAKE_ARGS} ${CUSTOM_CMAKE_ARGS}"
     fi
 
     run_command cmake .. ${CMAKE_ARGS}

@@ -4986,14 +4986,15 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
         geometry_data.twosided_flags[prim_idx] = context->getPrimitiveTwosidedFlag(UUID, 1) ? 1 : 0;
 
         if (parentID > 0 && context->getObjectType(parentID) == helios::OBJECT_TYPE_TILE) {
-            // Tile object - set per-primitive data for ALL subpatches
-            geometry_data.primitive_types[prim_idx] = 3; // tile
+            // Tile object - Vulkan simplified approach: treat each sub-patch as individual patch
+            // TODO: Implement memory-efficient tile intersection like OptiX (1 BVH node per parent)
+            geometry_data.primitive_types[prim_idx] = 0; // patch (treat tiles as patches for now)
 
-            context->getObjectTransformationMatrix(parentID, m);
+            // Use individual sub-patch transform (not parent transform)
+            context->getPrimitiveTransformationMatrix(UUID, m);
             memcpy(&geometry_data.transform_matrices[prim_idx * 16], m, 16 * sizeof(float));
 
             // Individual tile subpatches should NOT be subdivided (they're already the result of subdivision)
-            // Only the parent tile geometry entry uses the subdivision count
             geometry_data.object_subdivisions[prim_idx] = helios::make_int2(1, 1);
 
             // Only add ONE tile geometry entry per parent tile object (not per subpatch)
