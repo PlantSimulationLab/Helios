@@ -79,6 +79,46 @@ RadiationModel::RadiationModel(helios::Context *context_a) {
     backend->initialize();
 }
 
+RadiationModel::RadiationModel(helios::Context *context_a, bool skip_backend_init) {
+    context = context_a;
+
+    // Initialize all default values (same as main constructor)
+    message_flag = true;
+    directRayCount_default = 100;
+    diffuseRayCount_default = 1000;
+    diffuseFlux_default = -1.f;
+    minScatterEnergy_default = 0.1;
+    scatteringDepth_default = 0;
+    rho_default = 0.f;
+    tau_default = 0.f;
+    eps_default = 1.f;
+    kappa_default = 1.f;
+    sigmas_default = 0.f;
+    temperature_default = 300;
+    periodic_flag = make_vec2(0, 0);
+
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/camera_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/light_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/soil_surface_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/leaf_surface_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/bark_surface_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/fruit_surface_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/solar_spectrum_ASTMG173.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/DGK_DKK_colorboard.xml").string());
+
+    // Skip backend creation - will be injected by caller
+}
+
+RadiationModel RadiationModel::createWithBackend(helios::Context *context, std::unique_ptr<helios::RayTracingBackend> backend) {
+    RadiationModel model(context, true);  // Use private constructor, skip backend init
+
+    // Inject the provided backend
+    model.backend = std::move(backend);
+
+    return model;  // Uses move constructor
+}
+
 RadiationModel::~RadiationModel() {
     // Backend's unique_ptr will automatically clean up OptiX context
 }

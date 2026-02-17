@@ -48,6 +48,39 @@ Useful OS-specific information for installing CUDA can be found here: \ref Depen
 
 If you are using a PC, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: \ref PCGPUTimeout
 
+ \section RadKnownIssues Known Issues
+
+ \subsection VulkanInstanceLimitation Vulkan Backend: Repeated RadiationModel Creation Limitation (Linux NVIDIA Drivers)
+
+ <b>Issue:</b> On Linux systems with NVIDIA GPUs (driver versions 465+), creating and destroying more than approximately 25-30 RadiationModel instances within a single process will cause the Vulkan backend to fail with <tt>VK_ERROR_INCOMPATIBLE_DRIVER</tt>.
+
+ <b>Root Cause:</b> This is a long-standing NVIDIA Linux driver limitation where repeated Vulkan instance creation/destruction cycles exhaust internal driver resources. This issue has been present since driver version 465 (2021) and remains unfixed as of driver version 550+ (2025). The limitation appears to be intentional rather than a bug that will be fixed.
+
+ <b>Workaround:</b> <b>Reuse a single RadiationModel instance</b> across multiple simulation runs instead of creating/destroying instances in a loop:
+
+ ~~~~~~{.cpp}
+ // INCORRECT - Will fail after ~25 iterations with Vulkan backend:
+ for (auto& scenario : scenarios) {
+     RadiationModel model(&context);
+     model.runBand("PAR");
+ }
+
+ // CORRECT - Reuse the same instance:
+ RadiationModel model(&context);
+ for (auto& scenario : scenarios) {
+     context.loadXML(scenario.geometry);
+     model.updateGeometry();  // Update backend with new geometry
+     model.runBand("PAR");
+ }
+ ~~~~~~
+
+ <b>Note:</b> This limitation only affects the Vulkan backend on Linux NVIDIA systems. The OptiX backend is unaffected. Reusing RadiationModel instances is recommended practice regardless, as it avoids repeated GPU resource allocation overhead.
+
+ <b>References:</b>
+ - <a href="https://forums.developer.nvidia.com/t/issue-with-repeated-instance-creation-in-one-process/176978">NVIDIA Developer Forums: Instance Creation Issue</a>
+ - <a href="https://github.com/qdrant/qdrant/pull/6031">Qdrant's Workaround (2024)</a>
+ - <a href="https://github.com/Igalia/vkrunner/issues/7">VkRunner's Workaround (2019)</a>
+
  \section RadIntro Introduction
 
  This model simulates the transport of radiative energy for arbitrary wavelength bands using a GPU-accelerated ray-tracing model. The model details are described in <a href="http://dx.doi.org/10.1016/j.ecolmodel.2017.11.022">Bailey (2018)</a>. Briefly, the model uses a reverse ray-tracing approach to simulate emission from primitive elements, collimated radiation sources, and point radiation sources.

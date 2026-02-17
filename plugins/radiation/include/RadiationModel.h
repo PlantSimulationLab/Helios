@@ -644,11 +644,31 @@ public:
     //! Destructor
     ~RadiationModel();
 
+    // Move constructor and assignment for test support
+    RadiationModel(RadiationModel&&) = default;
+    RadiationModel& operator=(RadiationModel&&) = default;
+
+    // Disable copy operations (unique_ptr member makes this non-copyable)
+    RadiationModel(const RadiationModel&) = delete;
+    RadiationModel& operator=(const RadiationModel&) = delete;
+
     //! Self-test
     /**
      * \return 0 if test was successful, 1 if test failed
      */
     static int selfTest(int argc = 0, char **argv = nullptr);
+
+    /**
+     * @brief Create RadiationModel with custom backend (for testing)
+     *
+     * @param context Helios context
+     * @param backend Pre-initialized backend to use
+     * @return RadiationModel instance with injected backend (uses move semantics)
+     *
+     * INTERNAL TEST-ONLY: Allows test suite to inject shared VulkanDevice.
+     * Not for production use - use default constructor instead.
+     */
+    static RadiationModel createWithBackend(helios::Context *context, std::unique_ptr<helios::RayTracingBackend> backend);
 
     //! Disable/silence status messages
     /**
@@ -1831,6 +1851,10 @@ public:
 
     //! Test helper: Build all backend data (Phase 1 testing only)
     void testBuildAllBackendData();
+
+private:
+    //! Private constructor for test infrastructure (no backend initialization)
+    RadiationModel(helios::Context *context_a, bool skip_backend_init);
 
 protected:
     //! Flag to determine if status messages are output to the screen

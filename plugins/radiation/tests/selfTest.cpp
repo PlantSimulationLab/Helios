@@ -1,12 +1,42 @@
 #include "CameraCalibration.h"
 #include "RadiationModel.h"
 #include "BufferIndexing.h"
+#include "test_helpers.h"
+#include "VulkanComputeBackend.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
 #include "doctest_utils.h"
 
 using namespace helios;
+
+namespace helios {
+    /**
+     * @brief Test helper for creating RadiationModel with backend selection
+     *
+     * INTERNAL TEST-ONLY HELPER
+     * - OptiX builds: Use default constructor (no singleton needed)
+     * - Vulkan builds: Use shared VulkanDevice singleton (NVIDIA driver bug workaround)
+     */
+    class RadiationModelTestHelper {
+    public:
+        static RadiationModel createWithSharedDevice(Context* context) {
+#if defined(HELIOS_HAVE_OPTIX) && !defined(FORCE_VULKAN_BACKEND)
+            // OptiX available and not forced to Vulkan - use default constructor
+            return RadiationModel(context);
+#else
+            // Vulkan backend - use shared device (workaround for NVIDIA driver bug)
+            auto backend = std::make_unique<VulkanComputeBackend>(
+                TestVulkanDeviceManager::getSharedDevice()
+            );
+            backend->initialize();
+
+            // Use static factory method to inject pre-configured backend
+            return RadiationModel::createWithBackend(context, std::move(backend));
+#endif
+        }
+    };
+}
 
 int RadiationModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
@@ -133,7 +163,7 @@ DOCTEST_TEST_CASE("RadiationModel Vulkan Phase 1 - Simple Direct") {
     context.setPrimitiveData(patch, "twosided_flag", uint(0)); // One-sided
     context.setPrimitiveData(patch, "reflectivity_SW", 0.0f); // No reflection (100% absorption)
 
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Add shortwave band
@@ -186,7 +216,7 @@ DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Squares") {
     float shortwave_rho = 0.3f;
     context_1.setPrimitiveData(0, "reflectivity_SW", shortwave_rho);
 
-    RadiationModel radiationmodel_1(&context_1);
+    RadiationModel radiationmodel_1 = RadiationModelTestHelper::createWithSharedDevice(&context_1);
     radiationmodel_1.disableMessages();
 
     // Longwave band
@@ -271,7 +301,7 @@ DOCTEST_TEST_CASE("RadiationModel Black Parallel Rectangles") {
     context_2.setPrimitiveData(patch0, "twosided_flag", flag);
     context_2.setPrimitiveData(patch1, "twosided_flag", flag);
 
-    RadiationModel radiationmodel_2(&context_2);
+    RadiationModel radiationmodel_2 = RadiationModelTestHelper::createWithSharedDevice(&context_2);
     radiationmodel_2.disableMessages();
 
     // Shortwave band
@@ -349,7 +379,7 @@ DOCTEST_TEST_CASE("RadiationModel Gray Parallel Rectangles") {
     context_3.setPrimitiveData(0, "twosided_flag", flag);
     context_3.setPrimitiveData(1, "twosided_flag", flag);
 
-    RadiationModel radiationmodel_3(&context_3);
+    RadiationModel radiationmodel_3 = RadiationModelTestHelper::createWithSharedDevice(&context_3);
     radiationmodel_3.disableMessages();
 
     // Longwave band
@@ -402,7 +432,7 @@ DOCTEST_TEST_CASE("RadiationModel Sphere Source") {
     Context context_4;
     context_4.addPatch(make_vec3(0.5f * l1, 0.5f * l2, 0), make_vec2(l1, l2));
 
-    RadiationModel radiationmodel_4(&context_4);
+    RadiationModel radiationmodel_4 = RadiationModelTestHelper::createWithSharedDevice(&context_4);
     radiationmodel_4.disableMessages();
 
     uint Source_4 = radiationmodel_4.addSphereRadiationSource(make_vec3(0, 0, d), r);
@@ -469,7 +499,7 @@ DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Sub-Triangles") {
     context_5.setPrimitiveData(2, "twosided_flag", flag);
     context_5.setPrimitiveData(3, "twosided_flag", flag);
 
-    RadiationModel radiationmodel_5(&context_5);
+    RadiationModel radiationmodel_5 = RadiationModelTestHelper::createWithSharedDevice(&context_5);
     radiationmodel_5.disableMessages();
 
     // Longwave band
@@ -577,7 +607,7 @@ DOCTEST_TEST_CASE("RadiationModel Parallel Disks Texture Masked Patches") {
     context_6.setPrimitiveData(1, "twosided_flag", flag);
     context_6.setPrimitiveData(2, "twosided_flag", flag);
 
-    RadiationModel radiationmodel_6(&context_6);
+    RadiationModel radiationmodel_6 = RadiationModelTestHelper::createWithSharedDevice(&context_6);
     radiationmodel_6.disableMessages();
 
     uint SunSource_6 = radiationmodel_6.addCollimatedRadiationSource(make_vec3(0, 0, 1));
@@ -656,7 +686,7 @@ DOCTEST_TEST_CASE("RadiationModel Second Law Equilibrium Test") {
 
     context_7.setPrimitiveData(UUIDt, "temperature", T);
 
-    RadiationModel radiationmodel_7(&context_7);
+    RadiationModel radiationmodel_7 = RadiationModelTestHelper::createWithSharedDevice(&context_7);
     radiationmodel_7.disableMessages();
 
     // Longwave band
@@ -711,7 +741,7 @@ DOCTEST_TEST_CASE("RadiationModel Texture Mapping") {
 
     Context context_8;
 
-    RadiationModel radiation(&context_8);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context_8);
 
     uint source = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
 
@@ -906,7 +936,7 @@ DOCTEST_TEST_CASE("RadiationModel Homogeneous Canopy of Patches") {
     std::vector<uint> UUIDs_ground = context_9.addTile(make_vec3(0, 0, 0), make_vec2(D_9, D_9), make_SphericalCoord(0, 0), make_int2(100, 100));
     context_9.setPrimitiveData(UUIDs_ground, "twosided_flag", uint(0));
 
-    RadiationModel radiation_9(&context_9);
+    RadiationModel radiation_9 = RadiationModelTestHelper::createWithSharedDevice(&context_9);
     radiation_9.disableMessages();
 
     radiation_9.addRadiationBand("direct");
@@ -1015,7 +1045,7 @@ DOCTEST_TEST_CASE("RadiationModel Gas-filled Furnace") {
     context_10.setPrimitiveData(UUIDs_patches, "emissivity_LW", eps_m_10);
     context_10.setPrimitiveData(UUIDs_patches, "reflectivity_LW", 1.f - eps_m_10);
 
-    RadiationModel radiation_10(&context_10);
+    RadiationModel radiation_10 = RadiationModelTestHelper::createWithSharedDevice(&context_10);
     radiation_10.disableMessages();
 
     radiation_10.addRadiationBand("LW");
@@ -1097,7 +1127,7 @@ DOCTEST_TEST_CASE("RadiationModel Purely Scattering Medium Between Infinite Plat
     context_11.setPrimitiveData(UUIDs_patches_11, "emissivity_LW", 1.f - omega_11);
     context_11.setPrimitiveData(UUIDs_patches_11, "reflectivity_LW", omega_11);
 
-    RadiationModel radiation_11(&context_11);
+    RadiationModel radiation_11 = RadiationModelTestHelper::createWithSharedDevice(&context_11);
     radiation_11.disableMessages();
 
     radiation_11.addRadiationBand("LW");
@@ -1155,7 +1185,7 @@ DOCTEST_TEST_CASE("RadiationModel Homogeneous Canopy with Periodic Boundaries") 
     std::vector<uint> UUIDs_ground_12 = context_12.addTile(make_vec3(0, 0, 0), make_vec2(D_12, D_12), make_SphericalCoord(0, 0), make_int2(100, 100));
     context_12.setPrimitiveData(UUIDs_ground_12, "twosided_flag", uint(0));
 
-    RadiationModel radiation_12(&context_12);
+    RadiationModel radiation_12 = RadiationModelTestHelper::createWithSharedDevice(&context_12);
     radiation_12.disableMessages();
 
     radiation_12.addRadiationBand("direct");
@@ -1265,7 +1295,7 @@ DOCTEST_TEST_CASE("RadiationModel Texture-masked Tile Objects with Periodic Boun
     std::vector<uint> UUIDs_ground_13 = context_13.addTile(make_vec3(0, 0, 0), make_vec2(D_13, D_13), make_SphericalCoord(0, 0), make_int2(100, 100));
     context_13.setPrimitiveData(UUIDs_ground_13, "twosided_flag", uint(0));
 
-    RadiationModel radiation_13(&context_13);
+    RadiationModel radiation_13 = RadiationModelTestHelper::createWithSharedDevice(&context_13);
     radiation_13.disableMessages();
 
     radiation_13.addRadiationBand("direct");
@@ -1350,7 +1380,7 @@ DOCTEST_TEST_CASE("RadiationModel Anisotropic Diffuse Radiation Horizontal Patch
     uint UUID_14 = context_14.addPatch();
     context_14.setPrimitiveData(UUID_14, "twosided_flag", uint(0));
 
-    RadiationModel radiation_14(&context_14);
+    RadiationModel radiation_14 = RadiationModelTestHelper::createWithSharedDevice(&context_14);
     radiation_14.disableMessages();
 
     radiation_14.addRadiationBand("diffuse");
@@ -1409,7 +1439,7 @@ DOCTEST_TEST_CASE("RadiationModel Prague Sky Diffuse Radiation Normalization") {
     uint UUID_prague = context_prague.addPatch();
     context_prague.setPrimitiveData(UUID_prague, "twosided_flag", uint(0));
 
-    RadiationModel radiation_prague(&context_prague);
+    RadiationModel radiation_prague = RadiationModelTestHelper::createWithSharedDevice(&context_prague);
     radiation_prague.disableMessages();
 
     radiation_prague.addRadiationBand("diffuse");
@@ -1496,7 +1526,7 @@ DOCTEST_TEST_CASE("RadiationModel Disk Radiation Source Above Circular Element")
     float a_15 = 0.5; // distance between radiation source and element
 
     Context context_15;
-    RadiationModel radiation_15(&context_15);
+    RadiationModel radiation_15 = RadiationModelTestHelper::createWithSharedDevice(&context_15);
     radiation_15.disableMessages();
 
     uint UUID_15 = context_15.addPatch(make_vec3(0, 0, 0), make_vec2(2 * r2_15, 2 * r2_15), make_SphericalCoord(0.5 * M_PI, 0), "lib/images/disk_texture.png");
@@ -1532,7 +1562,7 @@ DOCTEST_TEST_CASE("RadiationModel Rectangular Radiation Source Above Patch") {
     float c_16 = 0.5; // distance between source and patch
 
     Context context_16;
-    RadiationModel radiation_16(&context_16);
+    RadiationModel radiation_16 = RadiationModelTestHelper::createWithSharedDevice(&context_16);
     radiation_16.disableMessages();
 
     uint UUID_16 = context_16.addPatch(make_vec3(0, 0, 0), make_vec2(a_16, b_16), nullrotation);
@@ -1614,7 +1644,7 @@ DOCTEST_TEST_CASE("RadiationModel ROMC Camera Test Verification") {
     // Add sensors to receive radiation
     vec3 camera_lookat = make_vec3(0, 0, heightscene);
     std::vector<std::string> cameralabels;
-    RadiationModel radiation_17(&context_17);
+    RadiationModel radiation_17 = RadiationModelTestHelper::createWithSharedDevice(&context_17);
     radiation_17.disableMessages();
     for (float viewangle: viewangles) {
         // Set camera properties
@@ -1671,7 +1701,7 @@ DOCTEST_TEST_CASE("RadiationModel ROMC Camera Test Verification") {
 DOCTEST_TEST_CASE("RadiationModel Spectral Integration and Interpolation Tests") {
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Test 1: Basic spectral integration
@@ -1742,7 +1772,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Integration and Interpolation Tests")
 DOCTEST_TEST_CASE("RadiationModel Spectral Radiative Properties Setting and Validation") {
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create test geometry
@@ -1859,7 +1889,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Radiative Properties Setting and Vali
 DOCTEST_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Test 1: Empty spectrum handling
@@ -1959,7 +1989,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
 DOCTEST_TEST_CASE("RadiationModel Spectral Caching and Performance Validation") {
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Test spectral caching by using identical spectra on multiple primitives
@@ -2012,7 +2042,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Caching and Performance Validation") 
 DOCTEST_TEST_CASE("RadiationModel Spectral Library Integration") {
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Test standard spectral library data if available
@@ -2047,7 +2077,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Library Integration") {
 DOCTEST_TEST_CASE("RadiationModel Multi-Spectrum Primitive Assignment") {
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create three different spectra with distinct reflectivity values
@@ -2239,7 +2269,7 @@ DOCTEST_TEST_CASE("RadiationModel Multi-Spectrum Primitive Assignment") {
 DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create distinct spectral properties with clear peaks
@@ -2434,7 +2464,7 @@ DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
 DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary") {
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Test 1: Load Canon_20D camera
@@ -2518,7 +2548,7 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary") {
 DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary with custom band labels") {
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     vec3 position(0, 0, 5);
@@ -2566,7 +2596,7 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary with custom ba
 
     // Test 3: Empty custom labels uses default behavior (XML labels)
     Context context2;
-    RadiationModel radiation2(&context2);
+    RadiationModel radiation2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
     radiation2.disableMessages();
 
     // Suppress expected band auto-creation warnings
@@ -2583,7 +2613,7 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary with custom ba
     // Test 4: Verify spectral response association works correctly with custom labels
     // The custom band should be associated with the corresponding XML spectral response
     Context context3;
-    RadiationModel radiation3(&context3);
+    RadiationModel radiation3 = RadiationModelTestHelper::createWithSharedDevice(&context3);
     radiation3.disableMessages();
 
     std::vector<std::string> custom_labels2 = {"NIR", "VIS", "UV"};
@@ -2608,7 +2638,7 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary with custom ba
 DOCTEST_TEST_CASE("RadiationModel - updateCameraParameters") {
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Add radiation bands first
@@ -2774,7 +2804,7 @@ DOCTEST_TEST_CASE("RadiationModel - updateCameraParameters") {
 DOCTEST_TEST_CASE("RadiationModel - getCameraParameters") {
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Add radiation bands first
@@ -3065,7 +3095,7 @@ DOCTEST_TEST_CASE("CameraCalibration Multiple Colorboards") {
 
 DOCTEST_TEST_CASE("RadiationModel CCM Export and Import") {
     Context context;
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Create a simple test camera with RGB bands
@@ -3234,7 +3264,7 @@ DOCTEST_TEST_CASE("RadiationModel CCM Export and Import") {
 
 DOCTEST_TEST_CASE("RadiationModel CCM Error Handling") {
     Context context;
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
 
     // Test 1: Invalid file path for loading
     {
@@ -3300,7 +3330,7 @@ DOCTEST_TEST_CASE("RadiationModel CCM Error Handling") {
 DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
 
     Context context;
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Create test spectra as global data
@@ -3362,7 +3392,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     // Test with transmissivity spectrum
     DOCTEST_SUBCASE("Interpolation with transmissivity_spectrum") {
         Context context2;
-        RadiationModel radiationmodel2(&context2);
+        RadiationModel radiationmodel2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiationmodel2.disableMessages();
 
         context2.setGlobalData("trans_young", spectrum_young);
@@ -3397,7 +3427,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     // Test error handling - mismatched vector lengths
     DOCTEST_SUBCASE("Error: mismatched vector lengths") {
         Context context3;
-        RadiationModel radiationmodel3(&context3);
+        RadiationModel radiationmodel3 = RadiationModelTestHelper::createWithSharedDevice(&context3);
         radiationmodel3.disableMessages();
 
         context3.setGlobalData("spec1", spectrum_young);
@@ -3423,7 +3453,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     // Test error handling - empty vectors
     DOCTEST_SUBCASE("Error: empty vectors") {
         Context context4;
-        RadiationModel radiationmodel4(&context4);
+        RadiationModel radiationmodel4 = RadiationModelTestHelper::createWithSharedDevice(&context4);
         radiationmodel4.disableMessages();
 
         uint uuid = context4.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
@@ -3446,7 +3476,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     // Test error handling - invalid global data (caught during runBand/updateRadiativeProperties)
     DOCTEST_SUBCASE("Error: invalid global data label") {
         Context context5;
-        RadiationModel radiationmodel5(&context5);
+        RadiationModel radiationmodel5 = RadiationModelTestHelper::createWithSharedDevice(&context5);
         radiationmodel5.disableMessages();
 
         uint uuid = context5.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
@@ -3479,7 +3509,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     // Test error handling - wrong global data type (caught during runBand/updateRadiativeProperties)
     DOCTEST_SUBCASE("Error: wrong global data type") {
         Context context6;
-        RadiationModel radiationmodel6(&context6);
+        RadiationModel radiationmodel6 = RadiationModelTestHelper::createWithSharedDevice(&context6);
         radiationmodel6.disableMessages();
 
         context6.setGlobalData("wrong_type", 42.0f); // Float instead of vec2
@@ -3514,7 +3544,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     // Test with invalid UUID (should be silently skipped during updateRadiativeProperties)
     DOCTEST_SUBCASE("Invalid UUID is silently skipped") {
         Context context7;
-        RadiationModel radiationmodel7(&context7);
+        RadiationModel radiationmodel7 = RadiationModelTestHelper::createWithSharedDevice(&context7);
         radiationmodel7.disableMessages();
 
         context7.setGlobalData("spec", spectrum_young);
@@ -3546,7 +3576,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     // Test error handling - wrong primitive data type for query data
     DOCTEST_SUBCASE("Error: wrong primitive data type for query") {
         Context context8;
-        RadiationModel radiationmodel8(&context8);
+        RadiationModel radiationmodel8 = RadiationModelTestHelper::createWithSharedDevice(&context8);
         radiationmodel8.disableMessages();
 
         context8.setGlobalData("spec", spectrum_young);
@@ -3581,7 +3611,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     // Test with primitive missing query data (should not crash, just skip)
     DOCTEST_SUBCASE("Primitive without query data is skipped") {
         Context context9;
-        RadiationModel radiationmodel9(&context9);
+        RadiationModel radiationmodel9 = RadiationModelTestHelper::createWithSharedDevice(&context9);
         radiationmodel9.disableMessages();
 
         context9.setGlobalData("spec1", spectrum_young);
@@ -3622,7 +3652,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
 DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
 
     Context context;
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Create test spectra as global data
@@ -3699,7 +3729,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test with transmissivity spectrum
     DOCTEST_SUBCASE("Interpolation with transmissivity_spectrum") {
         Context context2;
-        RadiationModel radiationmodel2(&context2);
+        RadiationModel radiationmodel2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiationmodel2.disableMessages();
 
         context2.setGlobalData("trans_young", spectrum_young);
@@ -3740,7 +3770,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test error handling - mismatched vector lengths
     DOCTEST_SUBCASE("Error: mismatched vector lengths") {
         Context context3;
-        RadiationModel radiationmodel3(&context3);
+        RadiationModel radiationmodel3 = RadiationModelTestHelper::createWithSharedDevice(&context3);
         radiationmodel3.disableMessages();
 
         uint obj_test = context3.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
@@ -3760,7 +3790,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test error handling - empty spectra vector
     DOCTEST_SUBCASE("Error: empty spectra vector") {
         Context context4;
-        RadiationModel radiationmodel4(&context4);
+        RadiationModel radiationmodel4 = RadiationModelTestHelper::createWithSharedDevice(&context4);
         radiationmodel4.disableMessages();
 
         uint obj_test = context4.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
@@ -3780,7 +3810,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test error handling - empty object_IDs vector
     DOCTEST_SUBCASE("Error: empty object_IDs vector") {
         Context context5;
-        RadiationModel radiationmodel5(&context5);
+        RadiationModel radiationmodel5 = RadiationModelTestHelper::createWithSharedDevice(&context5);
         radiationmodel5.disableMessages();
 
         std::vector<uint> obj_ids;
@@ -3799,7 +3829,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test error handling - empty query label
     DOCTEST_SUBCASE("Error: empty query label") {
         Context context6;
-        RadiationModel radiationmodel6(&context6);
+        RadiationModel radiationmodel6 = RadiationModelTestHelper::createWithSharedDevice(&context6);
         radiationmodel6.disableMessages();
 
         uint obj_test = context6.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
@@ -3819,7 +3849,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test error handling - empty target label
     DOCTEST_SUBCASE("Error: empty target label") {
         Context context7;
-        RadiationModel radiationmodel7(&context7);
+        RadiationModel radiationmodel7 = RadiationModelTestHelper::createWithSharedDevice(&context7);
         radiationmodel7.disableMessages();
 
         uint obj_test = context7.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
@@ -3839,7 +3869,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test graceful handling - object doesn't have the data field
     DOCTEST_SUBCASE("Graceful skip: object without query data") {
         Context context8;
-        RadiationModel radiationmodel8(&context8);
+        RadiationModel radiationmodel8 = RadiationModelTestHelper::createWithSharedDevice(&context8);
         radiationmodel8.disableMessages();
 
         context8.setGlobalData("spec1", spectrum_young);
@@ -3881,7 +3911,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test graceful handling - invalid object ID (deleted object)
     DOCTEST_SUBCASE("Graceful skip: invalid object ID") {
         Context context9;
-        RadiationModel radiationmodel9(&context9);
+        RadiationModel radiationmodel9 = RadiationModelTestHelper::createWithSharedDevice(&context9);
         radiationmodel9.disableMessages();
 
         context9.setGlobalData("spec1", spectrum_young);
@@ -3918,7 +3948,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test error handling - wrong object data type (int instead of float)
     DOCTEST_SUBCASE("Error: wrong object data type") {
         Context context10;
-        RadiationModel radiationmodel10(&context10);
+        RadiationModel radiationmodel10 = RadiationModelTestHelper::createWithSharedDevice(&context10);
         radiationmodel10.disableMessages();
 
         context10.setGlobalData("spec1", spectrum_young);
@@ -3949,7 +3979,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test error handling - invalid global data (doesn't exist)
     DOCTEST_SUBCASE("Error: invalid global data") {
         Context context11;
-        RadiationModel radiationmodel11(&context11);
+        RadiationModel radiationmodel11 = RadiationModelTestHelper::createWithSharedDevice(&context11);
         radiationmodel11.disableMessages();
 
         uint obj_test = context11.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
@@ -3978,7 +4008,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test error handling - wrong global data type
     DOCTEST_SUBCASE("Error: wrong global data type") {
         Context context12;
-        RadiationModel radiationmodel12(&context12);
+        RadiationModel radiationmodel12 = RadiationModelTestHelper::createWithSharedDevice(&context12);
         radiationmodel12.disableMessages();
 
         context12.setGlobalData("wrong_type", 42.0f); // float, not vec2 vector
@@ -4012,7 +4042,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation - Duplicate Handling") 
     // Test merging of duplicate primitive UUIDs with same spectra/values
     DOCTEST_SUBCASE("Primitive: Merge duplicates with matching spectra") {
         Context context;
-        RadiationModel radiationmodel(&context);
+        RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
         radiationmodel.disableMessages();
 
         std::vector<vec2> spectrum1 = {{400, 0.1}, {500, 0.15}};
@@ -4055,7 +4085,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation - Duplicate Handling") 
     // Test replacement when spectra/values change
     DOCTEST_SUBCASE("Primitive: Replace config with different spectra") {
         Context context2;
-        RadiationModel radiationmodel2(&context2);
+        RadiationModel radiationmodel2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiationmodel2.disableMessages();
 
         std::vector<vec2> spectrum1 = {{400, 0.1}, {500, 0.15}};
@@ -4095,7 +4125,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation - Duplicate Handling") 
     // Test merging of duplicate object IDs with same spectra/values
     DOCTEST_SUBCASE("Object: Merge duplicates with matching spectra") {
         Context context3;
-        RadiationModel radiationmodel3(&context3);
+        RadiationModel radiationmodel3 = RadiationModelTestHelper::createWithSharedDevice(&context3);
         radiationmodel3.disableMessages();
 
         std::vector<vec2> spectrum1 = {{400, 0.1}, {500, 0.15}};
@@ -4147,7 +4177,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation - Duplicate Handling") 
     // Test replacement when spectra/values change for objects
     DOCTEST_SUBCASE("Object: Replace config with different spectra") {
         Context context4;
-        RadiationModel radiationmodel4(&context4);
+        RadiationModel radiationmodel4 = RadiationModelTestHelper::createWithSharedDevice(&context4);
         radiationmodel4.disableMessages();
 
         std::vector<vec2> spectrum1 = {{400, 0.1}, {500, 0.15}};
@@ -4193,7 +4223,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation - Duplicate Handling") 
     // Test that different query/target label pairs create separate configs
     DOCTEST_SUBCASE("Primitive: Separate configs for different labels") {
         Context context5;
-        RadiationModel radiationmodel5(&context5);
+        RadiationModel radiationmodel5 = RadiationModelTestHelper::createWithSharedDevice(&context5);
         radiationmodel5.disableMessages();
 
         std::vector<vec2> spectrum1 = {{400, 0.1}, {500, 0.15}};
@@ -4235,7 +4265,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Metadata Export") {
     context.setTime(0, 30, 10); // second, minute, hour
     context.setLocation(make_Location(34.0522, -118.2437, 8.0)); // Los Angeles
 
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Add a simple surface for the camera to image
@@ -4339,7 +4369,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Metadata Export") {
 
         // Test with no sources (already has collimated source, so remove it for clean test)
         Context context2;
-        RadiationModel radiationmodel2(&context2);
+        RadiationModel radiationmodel2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiationmodel2.disableMessages();
 
         radiationmodel2.addRadiationBand("test");
@@ -4583,7 +4613,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Metadata Agronomic Properties") {
     context.setTime(0, 0, 12);
     context.setLocation(make_Location(38.0, -120.0, -8.0));
 
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Add radiation bands
@@ -4914,7 +4944,7 @@ DOCTEST_TEST_CASE("RadiationModel - FOV_aspect_ratio Deprecation") {
     Context context;
 
     // Create a basic radiation model
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Add a radiation band
@@ -5012,7 +5042,7 @@ DOCTEST_TEST_CASE("RadiationModel Atmospheric Sky Model for Camera") {
     context.setGlobalData("atmosphere_humidity_rel", humidity_rel);
     context.setGlobalData("atmosphere_turbidity", turbidity);
 
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     DOCTEST_SUBCASE("Sky model requires wavelength bounds with uniform response") {
@@ -5118,7 +5148,7 @@ DOCTEST_TEST_CASE("RadiationModel Atmospheric Sky Model for Camera") {
 DOCTEST_TEST_CASE("RadiationModel - Camera White Balance") {
     Context context;
 
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Add a simple surface for the camera to image
@@ -5286,7 +5316,7 @@ DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior"
     test_spectrum.emplace_back(700.f, 0.5f);
     context.setGlobalData("test_spectrum", test_spectrum);
 
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     DOCTEST_SUBCASE("setDiffuseSpectrum applies to all bands") {
@@ -5365,7 +5395,7 @@ DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior"
         // Create a fresh radiation model with no bands
         Context context2;
         context2.setGlobalData("test_spectrum", test_spectrum);
-        RadiationModel radiation2(&context2);
+        RadiationModel radiation2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiation2.disableMessages();
 
         // Should not throw when called with no bands
@@ -5377,7 +5407,7 @@ DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior"
         // Create a fresh radiation model with no bands
         Context context2;
         context2.setGlobalData("test_spectrum", test_spectrum);
-        RadiationModel radiation2(&context2);
+        RadiationModel radiation2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiation2.disableMessages();
 
         // Set spectrum BEFORE adding bands
@@ -5403,7 +5433,7 @@ DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior"
         // Create a fresh radiation model with no bands
         Context context2;
         context2.setGlobalData("test_spectrum", test_spectrum);
-        RadiationModel radiation2(&context2);
+        RadiationModel radiation2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiation2.disableMessages();
 
         // Set spectrum and integral BEFORE adding bands
@@ -5427,7 +5457,7 @@ DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior"
         // Create a fresh radiation model with no bands
         Context context2;
         context2.setGlobalData("test_spectrum", test_spectrum);
-        RadiationModel radiation2(&context2);
+        RadiationModel radiation2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiation2.disableMessages();
 
         // Set spectrum and integral with wavelength bounds BEFORE adding bands
@@ -5462,7 +5492,7 @@ DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior"
 
 TEST_CASE("Radiation - Prague Context data fallback behavior") {
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Add a simple camera with RGB bands
@@ -5490,7 +5520,7 @@ TEST_CASE("Radiation - Prague Context data fallback behavior") {
 
 TEST_CASE("Radiation - Prague Context data integration end-to-end") {
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Mock Prague data in Context (simulating what SolarPosition would provide)
@@ -5551,7 +5581,7 @@ TEST_CASE("Radiation - Prague Context data integration end-to-end") {
 DOCTEST_TEST_CASE("RadiationModel Automatic Spectrum Update Detection") {
 
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create initial direct spectrum
@@ -5616,7 +5646,7 @@ DOCTEST_TEST_CASE("RadiationModel Automatic Spectrum Update Detection") {
 DOCTEST_TEST_CASE("RadiationModel Multiple Sources Same Spectrum Update") {
 
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create spectrum used by multiple sources
@@ -5662,7 +5692,7 @@ DOCTEST_TEST_CASE("RadiationModel Multiple Sources Same Spectrum Update") {
 DOCTEST_TEST_CASE("RadiationModel No Update When Spectrum Unchanged") {
 
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create spectrum
@@ -5708,7 +5738,7 @@ DOCTEST_TEST_CASE("RadiationModel - CameraProperties equality with camera_zoom")
 
 DOCTEST_TEST_CASE("RadiationModel - camera_zoom validation in updateCameraParameters") {
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     CameraProperties props;
@@ -5732,7 +5762,7 @@ DOCTEST_TEST_CASE("RadiationModel - camera_zoom validation in updateCameraParame
 
 DOCTEST_TEST_CASE("RadiationModel - camera_zoom parameter get/set") {
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     CameraProperties props;
@@ -5750,7 +5780,7 @@ DOCTEST_TEST_CASE("RadiationModel - camera_zoom parameter get/set") {
 
 DOCTEST_TEST_CASE("RadiationModel - update camera_zoom") {
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     CameraProperties props;
@@ -5772,7 +5802,7 @@ DOCTEST_TEST_CASE("RadiationModel - update camera_zoom") {
 }
 DOCTEST_TEST_CASE("Lens Flare - Enable/Disable API") {
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
 
     // Add a camera
     CameraProperties camera_props;
@@ -5799,7 +5829,7 @@ DOCTEST_TEST_CASE("Lens Flare - Enable/Disable API") {
 
 DOCTEST_TEST_CASE("Lens Flare - Properties API") {
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
 
     // Add a camera
     CameraProperties camera_props;
@@ -5871,7 +5901,7 @@ DOCTEST_TEST_CASE("Lens Flare - Properties API") {
 
 DOCTEST_TEST_CASE("Lens Flare - Application to Camera Image") {
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create a simple scene with a bright light source
@@ -5945,7 +5975,7 @@ DOCTEST_TEST_CASE("Lens Flare - Application to Camera Image") {
 
 DOCTEST_TEST_CASE("Lens Flare - Disabled Does Nothing") {
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create a simple scene
@@ -5997,7 +6027,7 @@ DOCTEST_TEST_CASE("Lens Flare - Disabled Does Nothing") {
 
 DOCTEST_TEST_CASE("RadiationModel - Camera Sphere Source Rendering") {
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     uint ground = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(2.0f, 2.0f));
@@ -6033,7 +6063,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Sphere Source Rendering") {
 
 DOCTEST_TEST_CASE("RadiationModel - Camera Rectangle Source Rendering") {
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     uint ground = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(2.0f, 2.0f));
@@ -6069,7 +6099,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Rectangle Source Rendering") {
 
 DOCTEST_TEST_CASE("RadiationModel - Camera Disk Source Rendering") {
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     uint ground = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(2.0f, 2.0f));
@@ -6110,7 +6140,7 @@ DOCTEST_TEST_CASE("Phase1.E Step2: Backend GPU Memory Query Integration") {
     // This proves backend is accessible and the integration path works
 
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Should call backend->queryGPUMemory() without crashing
@@ -6130,7 +6160,7 @@ DOCTEST_TEST_CASE("RadiationModel buildGeometryData() Extraction") {
     context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
     context.addTriangle(helios::make_vec3(2, 0, 0), helios::make_vec3(3, 0, 0), helios::make_vec3(2.5, 1, 0));
 
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Build geometry data - should extract 2 primitives
@@ -6154,7 +6184,7 @@ DOCTEST_TEST_CASE("Phase1.E Step4: updateGeometry() Backend Integration") {
     context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
     context.addTriangle(helios::make_vec3(2, 0, 0), helios::make_vec3(3, 0, 0), helios::make_vec3(2.5, 1, 0));
 
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Call updateGeometry - should use backend path now
@@ -6183,7 +6213,7 @@ DOCTEST_TEST_CASE("Phase1.E Step5: Backend Functional Validation - Direct Radiat
     context.setPrimitiveData(patch, "reflectivity_PAR", 0.0f);
     context.setPrimitiveData(patch, "transmissivity_PAR", 0.0f);
 
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Add radiation band
@@ -6248,7 +6278,7 @@ DOCTEST_TEST_CASE("Phase1.E Step6: Backend Functional Validation - Diffuse Radia
     context.setPrimitiveData(patch, "reflectivity_SW", 0.0f);
     context.setPrimitiveData(patch, "transmissivity_SW", 0.0f);
 
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Add radiation band with diffuse radiation
@@ -6327,7 +6357,7 @@ DOCTEST_TEST_CASE("Phase1.E Step6b: Backend Diffuse With Partial Occlusion") {
     context.setPrimitiveData(patch1, "transmissivity_SW", 0.0f);
     context.setPrimitiveData(patch1, "twosided_flag", flag);
 
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Add radiation band with diffuse
@@ -6398,7 +6428,7 @@ DOCTEST_TEST_CASE("RadiationModel Multi-Patch Direct Radiation Occlusion Test") 
     context.setPrimitiveData(patch1, "transmissivity_PAR", 0.0f);
     context.setPrimitiveData(patch1, "twosided_flag", flag);
 
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Add band with direct source from above
@@ -6459,7 +6489,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Pixel UUID Indexing Validation") {
     context.setPrimitiveData(right_patch, "patch_id", uint(3));
 
     // Set up radiation model with camera looking down from above
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     CameraProperties cam_props;
@@ -6562,7 +6592,7 @@ DOCTEST_TEST_CASE("RadiationModel - Pixel Labeling with Fine Tessellation") {
     context.setPrimitiveData(ground, "ground_id", uint(42));
 
     // Camera looking straight down
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     CameraProperties cam_props;
@@ -6625,7 +6655,7 @@ DOCTEST_TEST_CASE("RadiationModel - runBand Invalid Band Error Handling") {
     // Test 1: Single invalid band label
     DOCTEST_SUBCASE("Single invalid band") {
         Context context1;
-        RadiationModel radiation1(&context1);
+        RadiationModel radiation1 = RadiationModelTestHelper::createWithSharedDevice(&context1);
         radiation1.disableMessages();
 
         uint uuid = context1.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
@@ -6654,7 +6684,7 @@ DOCTEST_TEST_CASE("RadiationModel - runBand Invalid Band Error Handling") {
     // Test 2: Vector with mixed valid and invalid bands
     DOCTEST_SUBCASE("Mixed valid and invalid bands") {
         Context context2;
-        RadiationModel radiation2(&context2);
+        RadiationModel radiation2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiation2.disableMessages();
 
         uint uuid = context2.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
@@ -6686,7 +6716,7 @@ DOCTEST_TEST_CASE("RadiationModel - runBand Invalid Band Error Handling") {
     // Test 3: All invalid bands in vector
     DOCTEST_SUBCASE("All invalid bands") {
         Context context3;
-        RadiationModel radiation3(&context3);
+        RadiationModel radiation3 = RadiationModelTestHelper::createWithSharedDevice(&context3);
         radiation3.disableMessages();
 
         uint uuid = context3.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
@@ -6735,7 +6765,7 @@ DOCTEST_TEST_CASE("RadiationModel - Segmentation Mask to Image Coordinate Alignm
     context.setPrimitiveData(right_patch, "patch_id", uint(4));
 
     // Set up radiation model
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     CameraProperties cam_props;
@@ -6842,7 +6872,7 @@ DOCTEST_TEST_CASE("RadiationModel - Mask Spatial Ordering Matches Image") {
     context.setPrimitiveData(center_patch, "patch_id", uint(20));
     context.setPrimitiveData(right_patch, "patch_id", uint(30));
 
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     CameraProperties cam_props;
@@ -6965,7 +6995,7 @@ DOCTEST_TEST_CASE("RadiationModel - Data Label Maps Match Segmentation Mask Coor
     context.setObjectData(obj2, "obj_id", uint(200));
     context.setObjectData(obj3, "obj_id", uint(300));
 
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     CameraProperties cam_props;
@@ -7092,7 +7122,7 @@ DOCTEST_TEST_CASE("Material Backend Migration - Spectrum Interpolation Integrati
     // Test that spectrum interpolation configs are properly applied in buildMaterialData()
 
     helios::Context context;
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Create spectral data for different ages
@@ -7136,7 +7166,7 @@ DOCTEST_TEST_CASE("Material Backend Migration - Camera Weighted Materials") {
     // Test that camera-weighted materials are correctly calculated with spectral responses
 
     helios::Context context;
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Create object spectrum (reflectivity)
@@ -7196,7 +7226,7 @@ DOCTEST_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
     // This verifies specular reflection is enabled and working correctly
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create patch at origin facing +Z

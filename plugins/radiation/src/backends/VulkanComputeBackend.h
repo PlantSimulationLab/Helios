@@ -47,6 +47,18 @@ namespace helios {
     class VulkanComputeBackend : public RayTracingBackend {
     public:
         VulkanComputeBackend();
+
+        /**
+         * @brief Constructor for test mode with shared device
+         *
+         * @param external_device Non-owning pointer to shared VulkanDevice (must be pre-initialized)
+         *
+         * INTERNAL TEST-ONLY CONSTRUCTOR
+         * Used by test suite to share single VulkanDevice across all test cases.
+         * Precondition: external_device must outlive this backend (satisfied by static singleton).
+         */
+        explicit VulkanComputeBackend(VulkanDevice* external_device);
+
         ~VulkanComputeBackend() override;
 
         // ========== Lifecycle Management ==========
@@ -97,8 +109,9 @@ namespace helios {
         }
 
     private:
-        // Vulkan device and allocator
-        std::unique_ptr<VulkanDevice> device;
+        // Vulkan device - either owned (production) or borrowed (test shared device)
+        VulkanDevice* device;
+        bool owns_device;  // true = we own device, false = borrowed from test singleton
         BVHBuilder bvh_builder;
 
         // BVH data

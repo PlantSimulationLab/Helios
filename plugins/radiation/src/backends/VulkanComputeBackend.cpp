@@ -20,17 +20,52 @@
 
 namespace helios {
 
-    VulkanComputeBackend::VulkanComputeBackend() {
-        device = std::make_unique<VulkanDevice>();
+    VulkanComputeBackend::VulkanComputeBackend()
+        : device(new VulkanDevice()), owns_device(true) {
+        // Production mode: own the device
+    }
+
+    VulkanComputeBackend::VulkanComputeBackend(VulkanDevice* external_device)
+        : device(external_device), owns_device(false) {
+        // Test mode: borrow pre-initialized device from test singleton
+        if (!device) {
+            helios_runtime_error("ERROR (VulkanComputeBackend): external_device cannot be nullptr");
+        }
     }
 
     VulkanComputeBackend::~VulkanComputeBackend() {
         shutdown();
+        if (owns_device) {
+            delete device;
+        }
     }
 
     void VulkanComputeBackend::initialize() {
-        // Initialize Vulkan device (validation enabled in debug builds)
-        device->initialize(true);
+        // Determine whether to enable validation layers
+        // Default: disabled for tests (20-30% faster), enabled in debug builds
+        // Can be explicitly controlled via HELIOS_VULKAN_VALIDATION environment variable
+        bool enable_validation = false;
+
+        #ifndef NDEBUG
+            // Debug builds: enable validation by default
+            enable_validation = true;
+        #endif
+
+        // Allow environment variable override
+        const char* validation_env = std::getenv("HELIOS_VULKAN_VALIDATION");
+        if (validation_env != nullptr) {
+            std::string val(validation_env);
+            if (val == "1" || val == "true" || val == "TRUE") {
+                enable_validation = true;
+            } else if (val == "0" || val == "false" || val == "FALSE") {
+                enable_validation = false;
+            }
+        }
+
+        // Initialize Vulkan device (only if we own it - shared device already initialized)
+        if (owns_device) {
+            device->initialize(enable_validation);
+        }
 
         // Create command resources
         createCommandResources();
@@ -124,8 +159,10 @@ namespace helios {
         if (command_pool != VK_NULL_HANDLE)
             vkDestroyCommandPool(vk_device, command_pool, nullptr);
 
-        // Shutdown device
-        device->shutdown();
+        // Only shutdown device if we own it (shared device managed by singleton)
+        if (owns_device) {
+            device->shutdown();
+        }
     }
 
     void VulkanComputeBackend::updateGeometry(const RayTracingGeometry &geometry) {
