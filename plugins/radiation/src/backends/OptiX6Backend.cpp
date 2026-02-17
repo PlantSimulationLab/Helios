@@ -550,16 +550,52 @@ void OptiX6Backend::launchDirectRays(const RayTracingLaunchParams &params) {
         helios_runtime_error("ERROR (OptiX6Backend::launchDirectRays): Backend not initialized.");
     }
 
-    // Set launch parameters
-    launchParamsToVariables(params);
-
     // Validate context to ensure acceleration structure is built and buffers are synchronized
     RT_CHECK_ERROR(rtContextValidate(OptiX_Context));
 
-    // Launch direct rays: dimension = (n, n, primitives) where n = sqrt(rays_per_primitive)
-    // This matches CUDA code: launch_index.x/y for ray sampling, launch_index.z for primitive
+    // OptiX 6.5 batching: limit total rays per launch to avoid GPU timeout/memory issues
+    // Maximum rays per launch (1 billion = OptiX practical limit)
+    size_t maxRays = 1024 * 1024 * 1024;
     uint n = std::ceil(std::sqrt(static_cast<double>(params.rays_per_primitive)));
-    RT_CHECK_ERROR(rtContextLaunch3D(OptiX_Context, RAYTYPE_DIRECT, n, n, params.launch_count));
+    size_t rays_per_primitive = n * n;
+
+    // Calculate batching parameters
+    size_t maxPrims = std::floor(static_cast<float>(maxRays) / static_cast<float>(rays_per_primitive));
+    size_t Nlaunches = std::ceil(rays_per_primitive * params.launch_count / static_cast<float>(maxRays));
+    size_t prims_per_launch = std::min(static_cast<size_t>(params.launch_count), maxPrims);
+
+    // Batch launches if primitive count exceeds limit
+    for (size_t launch = 0; launch < Nlaunches; launch++) {
+        size_t prims_this_launch;
+        if ((launch + 1) * prims_per_launch > params.launch_count) {
+            prims_this_launch = params.launch_count - launch * prims_per_launch;
+        } else {
+            prims_this_launch = prims_per_launch;
+        }
+
+        // Set launch offset for this batch
+        uint launch_offset = params.launch_offset + launch * prims_per_launch;
+        RT_CHECK_ERROR(rtVariableSet1ui(launch_offset_RTvariable, launch_offset));
+
+        // Set launch parameters for this batch (excluding launch_offset which is set above)
+        RT_CHECK_ERROR(rtVariableSet1ui(random_seed_RTvariable, params.random_seed));
+        RT_CHECK_ERROR(rtVariableSet1ui(Nbands_global_RTvariable, params.num_bands_global));
+        RT_CHECK_ERROR(rtVariableSet1ui(Nbands_launch_RTvariable, params.num_bands_launch));
+        RT_CHECK_ERROR(rtVariableSet1ui(launch_face_RTvariable, params.launch_face));
+        RT_CHECK_ERROR(rtVariableSet1ui(scattering_iteration_RTvariable, params.scattering_iteration));
+
+        // Band launch flags (same for all batches)
+        if (!params.band_launch_flag.empty()) {
+            initializeBuffer1Dbool(band_launch_flag_RTbuffer, params.band_launch_flag);
+        }
+
+        // Specular reflection flag
+        uint specular_enabled = params.specular_reflection_enabled ? 1 : 0;
+        RT_CHECK_ERROR(rtVariableSet1ui(specular_reflection_enabled_RTvariable, specular_enabled));
+
+        // Launch this batch: dimension = (n, n, primitives_this_batch)
+        RT_CHECK_ERROR(rtContextLaunch3D(OptiX_Context, RAYTYPE_DIRECT, n, n, prims_this_launch));
+    }
 }
 
 void OptiX6Backend::launchDiffuseRays(const RayTracingLaunchParams &params) {
@@ -567,10 +603,7 @@ void OptiX6Backend::launchDiffuseRays(const RayTracingLaunchParams &params) {
         helios_runtime_error("ERROR (OptiX6Backend::launchDiffuseRays): Backend not initialized.");
     }
 
-    // Set launch parameters
-    launchParamsToVariables(params);
-
-    // Upload emission/outgoing radiation if provided
+    // Upload emission/outgoing radiation if provided (upload once for all batches)
     if (!params.radiation_out_top.empty()) {
         initializeBuffer1Df(radiation_out_top_RTbuffer, params.radiation_out_top);
     }
@@ -578,7 +611,7 @@ void OptiX6Backend::launchDiffuseRays(const RayTracingLaunchParams &params) {
         initializeBuffer1Df(radiation_out_bottom_RTbuffer, params.radiation_out_bottom);
     }
 
-    // Upload diffuse parameters if provided
+    // Upload diffuse parameters if provided (upload once for all batches)
     if (!params.diffuse_flux.empty()) {
         initializeBuffer1Df(diffuse_flux_RTbuffer, params.diffuse_flux);
     }
@@ -595,10 +628,49 @@ void OptiX6Backend::launchDiffuseRays(const RayTracingLaunchParams &params) {
     // Validate context to ensure acceleration structure is built
     RT_CHECK_ERROR(rtContextValidate(OptiX_Context));
 
-    // Launch diffuse rays: dimension = (n, n, primitives) where n = sqrt(rays_per_primitive)
-    // This matches the diffuse ray generation pattern expecting 2D hemisphere sampling
+    // OptiX 6.5 batching: limit total rays per launch to avoid GPU timeout/memory issues
+    // Maximum rays per launch (1 billion = OptiX practical limit)
+    size_t maxRays = 1024 * 1024 * 1024;
     uint n = std::ceil(std::sqrt(static_cast<double>(params.rays_per_primitive)));
-    RT_CHECK_ERROR(rtContextLaunch3D(OptiX_Context, RAYTYPE_DIFFUSE, n, n, params.launch_count));
+    size_t rays_per_primitive = n * n;
+
+    // Calculate batching parameters
+    size_t maxPrims = std::floor(static_cast<float>(maxRays) / static_cast<float>(rays_per_primitive));
+    size_t Nlaunches = std::ceil(rays_per_primitive * params.launch_count / static_cast<float>(maxRays));
+    size_t prims_per_launch = std::min(static_cast<size_t>(params.launch_count), maxPrims);
+
+    // Batch launches if primitive count exceeds limit
+    for (size_t launch = 0; launch < Nlaunches; launch++) {
+        size_t prims_this_launch;
+        if ((launch + 1) * prims_per_launch > params.launch_count) {
+            prims_this_launch = params.launch_count - launch * prims_per_launch;
+        } else {
+            prims_this_launch = prims_per_launch;
+        }
+
+        // Set launch offset for this batch
+        uint launch_offset = params.launch_offset + launch * prims_per_launch;
+        RT_CHECK_ERROR(rtVariableSet1ui(launch_offset_RTvariable, launch_offset));
+
+        // Set launch parameters for this batch (excluding launch_offset which is set above)
+        RT_CHECK_ERROR(rtVariableSet1ui(random_seed_RTvariable, params.random_seed));
+        RT_CHECK_ERROR(rtVariableSet1ui(Nbands_global_RTvariable, params.num_bands_global));
+        RT_CHECK_ERROR(rtVariableSet1ui(Nbands_launch_RTvariable, params.num_bands_launch));
+        RT_CHECK_ERROR(rtVariableSet1ui(launch_face_RTvariable, params.launch_face));
+        RT_CHECK_ERROR(rtVariableSet1ui(scattering_iteration_RTvariable, params.scattering_iteration));
+
+        // Band launch flags (same for all batches)
+        if (!params.band_launch_flag.empty()) {
+            initializeBuffer1Dbool(band_launch_flag_RTbuffer, params.band_launch_flag);
+        }
+
+        // Specular reflection flag
+        uint specular_enabled = params.specular_reflection_enabled ? 1 : 0;
+        RT_CHECK_ERROR(rtVariableSet1ui(specular_reflection_enabled_RTvariable, specular_enabled));
+
+        // Launch this batch: dimension = (n, n, primitives_this_batch)
+        RT_CHECK_ERROR(rtContextLaunch3D(OptiX_Context, RAYTYPE_DIFFUSE, n, n, prims_this_launch));
+    }
 }
 
 void OptiX6Backend::launchCameraRays(const RayTracingLaunchParams &params) {
@@ -1326,27 +1398,49 @@ void OptiX6Backend::geometryToBuffers(const RayTracingGeometry &geometry) {
     // Convert backend-agnostic geometry data to OptiX buffers
 
     // Transform matrices: 1D vector → 2D buffer [primitive+bbox][16]
-    // Note: includes both real primitives AND bboxes
+    // Geometry data only contains transforms for real primitives (not bboxes)
+    // We append identity transforms for bboxes here
     if (!geometry.transform_matrices.empty()) {
         size_t total_count = geometry.primitive_count + geometry.bbox_count;
         std::vector<std::vector<float>> transform_2d(total_count);
-        for (size_t p = 0; p < total_count; p++) {
+
+        // Copy real primitive transforms
+        for (size_t p = 0; p < geometry.primitive_count; p++) {
             transform_2d[p].resize(16);
             for (int i = 0; i < 16; i++) {
                 transform_2d[p][i] = geometry.transform_matrices[p * 16 + i];
             }
         }
+
+        // Append identity transforms for bboxes
+        for (size_t b = 0; b < geometry.bbox_count; b++) {
+            size_t bbox_idx = geometry.primitive_count + b;
+            transform_2d[bbox_idx].resize(16, 0.0f);
+            transform_2d[bbox_idx][0] = 1.0f;   // m00
+            transform_2d[bbox_idx][5] = 1.0f;   // m11
+            transform_2d[bbox_idx][10] = 1.0f;  // m22
+            transform_2d[bbox_idx][15] = 1.0f;  // m33
+        }
+
         initializeBuffer2Df(transform_matrix_RTbuffer, transform_2d);
     }
 
-    // Primitive types
+    // Primitive types: append bbox entries for OptiX
     if (!geometry.primitive_types.empty()) {
-        initializeBuffer1Dui(primitive_type_RTbuffer, geometry.primitive_types);
+        std::vector<uint> types_with_bbox = geometry.primitive_types;
+        for (size_t i = 0; i < geometry.bbox_count; i++) {
+            types_with_bbox.push_back(5); // type=5 for bbox
+        }
+        initializeBuffer1Dui(primitive_type_RTbuffer, types_with_bbox);
     }
 
-    // Primitive IDs (for sub-patch calculations)
+    // Primitive IDs: append bbox UUIDs for OptiX
     if (!geometry.primitive_IDs.empty()) {
-        initializeBuffer1Dui(primitiveID_RTbuffer, geometry.primitive_IDs);
+        std::vector<uint> ids_with_bbox = geometry.primitive_IDs;
+        for (size_t i = 0; i < geometry.bbox_count; i++) {
+            ids_with_bbox.push_back(geometry.bbox_UUID_base + i);
+        }
+        initializeBuffer1Dui(primitiveID_RTbuffer, ids_with_bbox);
     }
 
     // Primitive positions (UUID → array position lookup)
@@ -1354,19 +1448,40 @@ void OptiX6Backend::geometryToBuffers(const RayTracingGeometry &geometry) {
         initializeBuffer1Dui(primitive_positions_RTbuffer, geometry.primitive_positions);
     }
 
-    // Primitive UUIDs and object IDs
+    // Object IDs: append bbox object IDs for OptiX
     if (!geometry.object_IDs.empty()) {
-        initializeBuffer1Dui(objectID_RTbuffer, geometry.object_IDs);
+        std::vector<uint> obj_ids_with_bbox = geometry.object_IDs;
+        for (size_t i = 0; i < geometry.bbox_count; i++) {
+            obj_ids_with_bbox.push_back(geometry.primitive_count + i);
+        }
+        initializeBuffer1Dui(objectID_RTbuffer, obj_ids_with_bbox);
     }
 
-    // Two-sided flags
+    // Two-sided flags: append bbox flags for OptiX
     if (!geometry.twosided_flags.empty()) {
-        initializeBuffer1Dchar(twosided_flag_RTbuffer, geometry.twosided_flags);
+        std::vector<char> flags_with_bbox = geometry.twosided_flags;
+        for (size_t i = 0; i < geometry.bbox_count; i++) {
+            flags_with_bbox.push_back(1); // bboxes are two-sided
+        }
+        initializeBuffer1Dchar(twosided_flag_RTbuffer, flags_with_bbox);
     }
 
-    // Solid fractions
+    // Solid fractions: append bbox fractions for OptiX
     if (!geometry.solid_fractions.empty()) {
-        initializeBuffer1Df(primitive_solid_fraction_RTbuffer, geometry.solid_fractions);
+        std::vector<float> fractions_with_bbox = geometry.solid_fractions;
+        for (size_t i = 0; i < geometry.bbox_count; i++) {
+            fractions_with_bbox.push_back(1.0f); // bboxes are fully solid
+        }
+        initializeBuffer1Df(primitive_solid_fraction_RTbuffer, fractions_with_bbox);
+    }
+
+    // Object subdivisions: append bbox subdivisions for OptiX
+    if (!geometry.object_subdivisions.empty()) {
+        std::vector<helios::int2> subdivs_with_bbox = geometry.object_subdivisions;
+        for (size_t i = 0; i < geometry.bbox_count; i++) {
+            subdivs_with_bbox.push_back(helios::make_int2(1, 1)); // no subdivisions
+        }
+        initializeBuffer1Dint2(object_subdivisions_RTbuffer, subdivs_with_bbox);
     }
 
     // Patch vertices: std::vector<vec3> → 2D buffer [patch][4]

@@ -4936,7 +4936,7 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
         uint UUID = primitive_UUIDs_ordered[u];
         uint parentID = context->getPrimitiveParentObjectID(UUID);
 
-        if (last_parentID != parentID || parentID == 0 || context->getObjectType(parentID) != helios::OBJECT_TYPE_TILE) {
+        if (last_parentID != parentID || parentID == 0 || context->getObjectType(parentID) == helios::OBJECT_TYPE_TILE) {
             primitiveID_indices.push_back(u);
             last_parentID = parentID;
             current_objID++;
@@ -4963,11 +4963,7 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
     geometry_data.primitive_IDs = primitiveID_for_backend;
 
     // Populate geometry for each primitive
-    size_t patch_idx = 0, tri_idx = 0, disk_idx = 0, tile_idx = 0, voxel_idx = 0, bbox_idx = 0;
-
-    // Track which parent tile objects have been added to tile geometry
-    // (tiles should have ONE geometry entry per parent object, not per subpatch)
-    std::set<uint> processed_tile_parents;
+    size_t patch_idx = 0, tri_idx = 0, disk_idx = 0, voxel_idx = 0, bbox_idx = 0;
 
     // Iterate over ALL primitives to set per-primitive data
     // (not just Nobjects, which only has one entry per object group)
@@ -4986,31 +4982,22 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
         geometry_data.twosided_flags[prim_idx] = context->getPrimitiveTwosidedFlag(UUID, 1) ? 1 : 0;
 
         if (parentID > 0 && context->getObjectType(parentID) == helios::OBJECT_TYPE_TILE) {
-            // Tile object - Vulkan simplified approach: treat each sub-patch as individual patch
-            // TODO: Implement memory-efficient tile intersection like OptiX (1 BVH node per parent)
-            geometry_data.primitive_types[prim_idx] = 0; // patch (treat tiles as patches for now)
+            // Tile subpatch: treat as individual patch for both OptiX and Vulkan backends.
+            // Each subpatch gets its own world-space vertices in the patch geometry,
+            // its own transform matrix, and type=0 (patch). tile_count will be 0.
+            geometry_data.primitive_types[prim_idx] = 0; // patch
 
-            // Use individual sub-patch transform (not parent transform)
             context->getPrimitiveTransformationMatrix(UUID, m);
             memcpy(&geometry_data.transform_matrices[prim_idx * 16], m, 16 * sizeof(float));
 
-            // Individual tile subpatches should NOT be subdivided (they're already the result of subdivision)
-            geometry_data.object_subdivisions[prim_idx] = helios::make_int2(1, 1);
-
-            // Only add ONE tile geometry entry per parent tile object (not per subpatch)
-            // The tile intersection program handles subpatch selection internally
-            if (processed_tile_parents.find(parentID) == processed_tile_parents.end()) {
-                processed_tile_parents.insert(parentID);
-
-                std::vector<vec3> verts = context->getTileObjectVertices(parentID);
-                for (const auto &v: verts) {
-                    geometry_data.tiles.vertices.push_back(v);
-                }
-
-                // Use the first subpatch's UUID as the tile geometry UUID
-                geometry_data.tiles.UUIDs.push_back(UUID);
-                tile_idx++;
+            std::vector<vec3> verts = context->getPrimitiveVertices(UUID);
+            for (const auto &v : verts) {
+                geometry_data.patches.vertices.push_back(v);
             }
+
+            geometry_data.object_subdivisions[prim_idx] = helios::make_int2(1, 1);
+            geometry_data.patches.UUIDs.push_back(UUID);
+            patch_idx++;
 
         } else if (type == helios::PRIMITIVE_TYPE_PATCH) {
             geometry_data.primitive_types[prim_idx] = 0; // patch
@@ -5066,7 +5053,7 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
     geometry_data.patch_count = patch_idx;
     geometry_data.triangle_count = tri_idx;
     geometry_data.disk_count = disk_idx;
-    geometry_data.tile_count = tile_idx;
+    geometry_data.tile_count = 0; // Tile subpatches are treated as individual patches
     geometry_data.voxel_count = voxel_idx;
 
     // ========== Periodic Boundary Bboxes ==========
@@ -5158,33 +5145,10 @@ void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
         geometry_data.bbox_UUID_base = UINT_MAX;
     }
 
-    // Add bbox primitive data so hit/intersection shaders can access them
-    // Bbox positions are after real primitives: primitive_count + bbox_idx
-    if (bbox_idx > 0) {
-        geometry_data.primitive_types.resize(geometry_data.primitive_count + bbox_idx, UINT_MAX);
-        geometry_data.twosided_flags.resize(geometry_data.primitive_count + bbox_idx, 0);
-        geometry_data.solid_fractions.resize(geometry_data.primitive_count + bbox_idx, 1.0f);
-        geometry_data.object_IDs.resize(geometry_data.primitive_count + bbox_idx, UINT_MAX);
-        geometry_data.object_subdivisions.resize(geometry_data.primitive_count + bbox_idx, make_int2(1, 1));
-        geometry_data.transform_matrices.resize((geometry_data.primitive_count + bbox_idx) * 16, 0.0f);
-        geometry_data.primitive_IDs.resize(geometry_data.primitive_count + bbox_idx, UINT_MAX);
-
-        for (size_t i = 0; i < bbox_idx; i++) {
-            size_t bbox_pos = geometry_data.primitive_count + i;
-            geometry_data.primitive_types[bbox_pos] = 5; // type=5 for bbox
-            geometry_data.twosided_flags[bbox_pos] = 1; // bboxes are two-sided
-            geometry_data.solid_fractions[bbox_pos] = 1.0f; // bboxes are fully solid
-            geometry_data.object_IDs[bbox_pos] = geometry_data.primitive_count + i; // Match master: Nobjects + i
-            geometry_data.object_subdivisions[bbox_pos] = make_int2(1, 1); // no subdivisions
-            geometry_data.primitive_IDs[bbox_pos] = bbox_UUID_base + i; // bbox UUID
-
-            // Set identity transform matrix for bbox
-            geometry_data.transform_matrices[bbox_pos * 16 + 0] = 1.0f; // m00
-            geometry_data.transform_matrices[bbox_pos * 16 + 5] = 1.0f; // m11
-            geometry_data.transform_matrices[bbox_pos * 16 + 10] = 1.0f; // m22
-            geometry_data.transform_matrices[bbox_pos * 16 + 15] = 1.0f; // m33
-        }
-    }
+    // NOTE: Bbox primitive data is NOT included in the shared geometry arrays
+    // Bboxes are OptiX-specific constructs for periodic boundaries
+    // OptiX backend will build bbox data internally from bbox_count and bbox_UUID_base
+    // This keeps the geometry data compatible with non-OptiX backends (Vulkan, etc.)
 
     // Periodic boundary condition
     geometry_data.periodic_flag = periodic_flag;
