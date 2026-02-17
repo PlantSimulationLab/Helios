@@ -142,7 +142,7 @@ namespace helios {
         Buffer mask_IDs_buffer;     //!< int per primitive: mask index (-1 = no mask)
         Buffer uv_data_buffer;      //!< vec2 UV coords: 4 per primitive (flat, indexed by prim_idx*4)
         Buffer uv_IDs_buffer;       //!< int per primitive: -1 = default UVs, >=0 = has custom UVs
-        // TODO Phase 2+: Add disk, tile, voxel, bbox vertices
+        Buffer bbox_vertices_buffer; //!< Bbox face vertices for periodic boundaries (12 floats per face)
 
         // Material/Source buffers (Set 1)
         Buffer source_positions_buffer;
@@ -208,6 +208,12 @@ namespace helios {
         size_t primitive_count = 0;
         size_t band_count = 0;  // Global band count (material buffer stride)
         size_t source_count = 0;
+
+        // Periodic boundary state
+        uint32_t bbox_count = 0;       //!< Number of bbox faces (0-4)
+        float periodic_flag_x = 0;     //!< 1.0 if periodic in X direction
+        float periodic_flag_y = 0;     //!< 1.0 if periodic in Y direction
+        float domain_bounds[4] = {};   //!< Domain bounds: xmin, xmax, ymin, ymax
 
         // Per-launch band tracking (for radiation I/O buffers)
         uint32_t launch_band_count = 0;  // Current runBand() band count (set by zeroRadiationBuffers)

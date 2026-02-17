@@ -253,6 +253,26 @@ if [ "${MEMCHECK}" == "ON" ];then
   BUILD_TYPE="Debug"
 fi
 
+# Configure Vulkan for GPU tests
+if [ "$TEST_PLUGINS" != "$TEST_PLUGINS_NOGPU" ]; then
+    # NVIDIA Linux driver workaround for sequential instance creation bug
+    # See: https://forums.developer.nvidia.com/t/issue-with-repeated-instance-creation-in-one-process/176978
+    # After ~25-35 vkCreateInstance/vkDestroyInstance cycles, NVIDIA driver fails with VK_ERROR_INITIALIZATION_FAILED
+
+    # Solution 1: Use only NVIDIA ICD (modern Vulkan loader method)
+    export VK_LOADER_DRIVERS_SELECT="nvidia*"
+    echo "Vulkan configuration: Using NVIDIA GPU only (VK_LOADER_DRIVERS_SELECT=nvidia*)"
+
+    # Solution 2: Increase file descriptor limit
+    # NVIDIA driver has FD leak issue with VkFence objects
+    # See: https://github.com/ValveSoftware/gamescope/pull/454
+    if command -v ulimit >/dev/null 2>&1; then
+        ulimit -n 65536 2>/dev/null
+        CURRENT_FD_LIMIT=$(ulimit -n 2>/dev/null || echo "unknown")
+        echo "File descriptor limit: $CURRENT_FD_LIMIT (raised to avoid NVIDIA driver FD exhaustion)"
+    fi
+fi
+
 ERROR_COUNT=0
 
 # Determine directory to use for project - either temporary or persistent

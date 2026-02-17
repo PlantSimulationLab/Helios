@@ -332,6 +332,7 @@ set(SHADER_COMMON_INCLUDES
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/transforms.glsl
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/buffer_indexing.glsl
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/bvh_traversal.glsl
+	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/periodic_boundary.glsl
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/intersections.glsl
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/material.glsl
 	${CMAKE_CURRENT_SOURCE_DIR}/shaders/common/texture_mask.glsl

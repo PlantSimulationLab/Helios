@@ -27,6 +27,13 @@ layout(push_constant) uniform PushConstants {
     uint launch_dim_y;     // Grid dimension Y for stratified hemisphere sampling
     uint material_band_count;  // Global band count (for material buffers)
     uint global_band_index;    // Global band index for this dispatch
+    uint periodic_flag_x;      // 1 if periodic in X direction
+    uint periodic_flag_y;      // 1 if periodic in Y direction
+    uint bbox_count;           // Number of bbox faces (0-4)
+    float domain_xmin;         // Domain bounds for periodic wrapping
+    float domain_xmax;
+    float domain_ymin;
+    float domain_ymax;
 } pc;
 
 // ========== Descriptor Set 0: Geometry ==========
@@ -81,6 +88,11 @@ layout(set = 0, binding = 13) readonly buffer MaskOffsetsBuffer { uint mask_offs
 layout(set = 0, binding = 14) readonly buffer MaskIDsBuffer { int mask_ids[]; } mask_ids_buf;
 layout(set = 0, binding = 15) readonly buffer UVDataBuffer { vec2 uv_data[]; } uv_data_buf;
 layout(set = 0, binding = 16) readonly buffer UVIDsBuffer { int uv_ids[]; } uv_ids_buf;
+
+// ---- Periodic boundary bbox vertices ----
+layout(set = 0, binding = 17) readonly buffer BboxVerticesBuffer {
+    float vertices[]; // 12 floats per face (4 vec3 vertices)
+} bbox_verts_buf;
 
 // ========== Descriptor Set 1: Materials/Sources ==========
 layout(set = 1, binding = 0) readonly buffer SourcePositionsBuffer {
@@ -165,6 +177,7 @@ shared float shared_scatter_bottom;
 #include "common/transforms.glsl"
 #include "common/buffer_indexing.glsl"
 #include "common/bvh_traversal.glsl"
+#include "common/periodic_boundary.glsl"
 #include "common/sky_distribution.glsl"
 #include "common/texture_mask.glsl"
 
@@ -459,17 +472,35 @@ void main() {
                 ray_direction = -ray_direction;
             }
 
-            // Trace ray through BVH (buffers accessed globally)
+            // Trace ray through BVH with periodic boundary wrap loop
+            // If ray hits a bbox face, wrap to opposite side and re-trace (up to 10 wraps)
             float closest_t;
             uint hit_prim_type;
-            uint hit_prim_idx = traverse_bvh(
-                ray_origin,
-                ray_direction,
-                1e-5, // t_min (avoid self-intersection)
-                prim_idx, // origin primitive index (skip self-hits)
-                closest_t,
-                hit_prim_type
-            );
+            uint hit_prim_idx;
+            vec3 trace_origin = ray_origin;
+
+            for (int wrap = 0; wrap < 10; ++wrap) {
+                hit_prim_idx = traverse_bvh(
+                    trace_origin,
+                    ray_direction,
+                    1e-5, // t_min (avoid self-intersection)
+                    prim_idx, // origin primitive index (skip self-hits)
+                    closest_t,
+                    hit_prim_type
+                );
+
+                if (pc.bbox_count == 0) break; // No periodic boundaries
+
+                vec3 wrapped_origin;
+                bool hit_periodic = check_periodic_boundary(
+                    trace_origin, ray_direction, closest_t,
+                    pc.periodic_flag_x, pc.periodic_flag_y, pc.bbox_count,
+                    pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax,
+                    wrapped_origin);
+
+                if (!hit_periodic) break; // Real hit or miss
+                trace_origin = wrapped_origin;
+            }
 
             // Process hit or miss
             bool hit_found = (hit_prim_idx != 0xFFFFFFFF);

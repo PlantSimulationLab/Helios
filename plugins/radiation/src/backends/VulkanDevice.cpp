@@ -185,11 +185,50 @@ namespace helios {
 
     void VulkanDevice::selectPhysicalDevice() {
         uint32_t device_count = 0;
-        vkEnumeratePhysicalDevices(instance, &device_count, nullptr);
+        VkResult result = vkEnumeratePhysicalDevices(instance, &device_count, nullptr);
+
+        // Check for enumeration errors first
+        if (result != VK_SUCCESS) {
+            std::stringstream error_msg;
+            error_msg << "ERROR (VulkanDevice::selectPhysicalDevice): "
+                      << "Failed to enumerate physical devices (VkResult: " << result << ")\n"
+                      << "This indicates a driver installation or compatibility issue.";
+            helios_runtime_error(error_msg.str());
+        }
 
         if (device_count == 0) {
-            helios_runtime_error("ERROR (VulkanDevice::selectPhysicalDevice): No Vulkan-capable GPU found. "
-                                 "Ensure your GPU drivers support Vulkan 1.1 or higher.");
+            // Provide detailed diagnostic information
+            std::stringstream diagnostic;
+            diagnostic << "ERROR (VulkanDevice::selectPhysicalDevice): "
+                       << "No Vulkan-capable GPU found.\n\n";
+
+            // Show environment state
+            const char* icd_filenames = std::getenv("VK_ICD_FILENAMES");
+            const char* loader_debug = std::getenv("VK_LOADER_DEBUG");
+
+            diagnostic << "=== Environment ===\n";
+            diagnostic << "VK_ICD_FILENAMES: "
+                       << (icd_filenames ? icd_filenames : "(using system default)") << "\n";
+            diagnostic << "VK_LOADER_DEBUG: "
+                       << (loader_debug ? loader_debug : "(not set)") << "\n\n";
+
+            diagnostic << "=== Possible Causes ===\n";
+            diagnostic << "1. Vulkan driver library version mismatch (common with mixed compiler environments)\n";
+            diagnostic << "2. Incompatible ICD files failing to load (check for GLIBCXX errors)\n";
+            diagnostic << "3. GPU does not support Vulkan 1.1 or higher\n";
+            diagnostic << "4. Vulkan loader contamination from failed ICD loading attempts\n\n";
+
+            diagnostic << "=== Troubleshooting Steps ===\n";
+            diagnostic << "1. Check driver loading:\n";
+            diagnostic << "   ldd /usr/lib/x86_64-linux-gnu/libvulkan_*.so\n";
+            diagnostic << "2. Debug Vulkan loader:\n";
+            diagnostic << "   VK_LOADER_DEBUG=all vulkaninfo --summary\n";
+            diagnostic << "3. Filter working ICDs:\n";
+            diagnostic << "   export VK_ICD_FILENAMES=/path/to/working_icd.json\n";
+            diagnostic << "4. Verify GPU Vulkan support:\n";
+            diagnostic << "   vulkaninfo | grep 'apiVersion'\n";
+
+            helios_runtime_error(diagnostic.str());
         }
 
         std::vector<VkPhysicalDevice> devices(device_count);

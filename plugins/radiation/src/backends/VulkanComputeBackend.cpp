@@ -512,6 +512,47 @@ namespace helios {
             }
         }
 
+        // Upload periodic boundary bbox data
+        {
+            bbox_count = geometry.bbox_count;
+            periodic_flag_x = geometry.periodic_flag.x;
+            periodic_flag_y = geometry.periodic_flag.y;
+
+            if (bbox_vertices_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(bbox_vertices_buffer);
+            }
+
+            if (bbox_count > 0 && !geometry.bboxes.vertices.empty()) {
+                // Flatten vec3 vertices to float array (4 vertices per face, 3 floats each = 12 floats per face)
+                std::vector<float> bbox_verts_flat;
+                bbox_verts_flat.reserve(bbox_count * 12);
+                for (size_t i = 0; i < bbox_count * 4; ++i) {
+                    bbox_verts_flat.push_back(geometry.bboxes.vertices[i].x);
+                    bbox_verts_flat.push_back(geometry.bboxes.vertices[i].y);
+                    bbox_verts_flat.push_back(geometry.bboxes.vertices[i].z);
+                }
+                bbox_vertices_buffer = createBuffer(bbox_verts_flat.size() * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                uploadBufferData(bbox_vertices_buffer, bbox_verts_flat.data(), bbox_verts_flat.size() * sizeof(float));
+
+                // Compute domain bounds from all bbox vertices (min/max across all faces)
+                float xmin = 1e30f, xmax = -1e30f, ymin = 1e30f, ymax = -1e30f;
+                for (size_t i = 0; i < bbox_count * 4; ++i) {
+                    xmin = std::min(xmin, geometry.bboxes.vertices[i].x);
+                    xmax = std::max(xmax, geometry.bboxes.vertices[i].x);
+                    ymin = std::min(ymin, geometry.bboxes.vertices[i].y);
+                    ymax = std::max(ymax, geometry.bboxes.vertices[i].y);
+                }
+                domain_bounds[0] = xmin;
+                domain_bounds[1] = xmax;
+                domain_bounds[2] = ymin;
+                domain_bounds[3] = ymax;
+            } else {
+                // No bboxes - create placeholder buffer
+                bbox_vertices_buffer = createBuffer(sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                domain_bounds[0] = domain_bounds[1] = domain_bounds[2] = domain_bounds[3] = 0.f;
+            }
+        }
+
         descriptors_dirty = true;  // Geometry changed, need descriptor update
     }
 
@@ -723,6 +764,13 @@ namespace helios {
             uint prims_per_tile;  // Primitives per tile (65535 max)
             uint material_band_count;  // Global band count (for material buffers)
             uint band_map[4];  // Maps launch band index → global band index (max 4 bands)
+            uint periodic_flag_x;   // 1 if periodic in X direction
+            uint periodic_flag_y;   // 1 if periodic in Y direction
+            uint bbox_count;         // Number of bbox faces (0-4)
+            float domain_xmin;       // Domain bounds for periodic wrapping
+            float domain_xmax;
+            float domain_ymin;
+            float domain_ymax;
         } push_constants;
 
         // Compute 2D grid dimensions for stratified sampling (matches OptiX)
@@ -756,6 +804,15 @@ namespace helios {
         #else
             push_constants.debug_mode = 0;
         #endif
+
+        // Periodic boundary parameters
+        push_constants.periodic_flag_x = static_cast<uint32_t>(periodic_flag_x);
+        push_constants.periodic_flag_y = static_cast<uint32_t>(periodic_flag_y);
+        push_constants.bbox_count = bbox_count;
+        push_constants.domain_xmin = domain_bounds[0];
+        push_constants.domain_xmax = domain_bounds[1];
+        push_constants.domain_ymin = domain_bounds[2];
+        push_constants.domain_ymax = domain_bounds[3];
 
         // 3D dispatch with 2D primitive tiling to avoid sub-batching
         // Tile primitives into Y dimension when count exceeds 65535 to use full Vulkan dispatch space
@@ -1060,6 +1117,13 @@ namespace helios {
             uint32_t launch_dim_y;    // Grid dimension Y
             uint32_t material_band_count;  // Global band count (for material buffers)
             uint32_t global_band_index;    // Global band index for this dispatch
+            uint32_t periodic_flag_x;   // 1 if periodic in X direction
+            uint32_t periodic_flag_y;   // 1 if periodic in Y direction
+            uint32_t bbox_count;         // Number of bbox faces (0-4)
+            float domain_xmin;       // Domain bounds for periodic wrapping
+            float domain_xmax;
+            float domain_ymin;
+            float domain_ymax;
         } push_constants;
 
         // Initialize invariant push constants (same across all batches)
@@ -1079,6 +1143,15 @@ namespace helios {
         #else
             push_constants.debug_mode = 0;
         #endif
+
+        // Periodic boundary parameters
+        push_constants.periodic_flag_x = static_cast<uint32_t>(periodic_flag_x);
+        push_constants.periodic_flag_y = static_cast<uint32_t>(periodic_flag_y);
+        push_constants.bbox_count = bbox_count;
+        push_constants.domain_xmin = domain_bounds[0];
+        push_constants.domain_xmax = domain_bounds[1];
+        push_constants.domain_ymin = domain_bounds[2];
+        push_constants.domain_ymax = domain_bounds[3];
 
         // 3D dispatch with simple direct indexing (8×32×1 workgroup with shared memory histogram)
         // Workgroup: 8×32×1 = 256 threads, processing 1 primitive per workgroup
@@ -1873,7 +1946,7 @@ namespace helios {
             {14, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Mask IDs (int)
             {15, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // UV data (vec2)
             {16, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // UV IDs (int)
-            // TODO Phase 2+: Add disk, tile, voxel, bbox vertices
+            {17, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Bbox vertices (periodic boundary)
         };
 
         VkDescriptorSetLayoutCreateInfo layout_info{};
@@ -1952,7 +2025,7 @@ namespace helios {
         // ========== Create Descriptor Pool ==========
 
         std::vector<VkDescriptorPoolSize> pool_sizes = {
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 46}, // All sets: 17 geo + 7 mat + 5 result + 5 sky + 1 debug + margin
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 47}, // All sets: 18 geo + 7 mat + 5 result + 5 sky + 1 debug + margin
         };
 
         VkDescriptorPoolCreateInfo pool_info{};
@@ -2007,6 +2080,7 @@ namespace helios {
         mask_IDs_buffer = createBuffer(sizeof(int32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         uv_data_buffer = createBuffer(sizeof(float) * 2, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         uv_IDs_buffer = createBuffer(sizeof(int32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        bbox_vertices_buffer = createBuffer(sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
         // Update descriptor set 3 (sky parameters) with placeholder buffers
         // Note: Geometry/material/result buffers don't exist yet, so we only update set 3
@@ -2117,6 +2191,15 @@ namespace helios {
 
         write.dstBinding = 16;
         write.pBufferInfo = &uv_IDs_info;
+        descriptor_writes.push_back(write);
+
+        VkDescriptorBufferInfo bbox_verts_info{};
+        bbox_verts_info.buffer = bbox_vertices_buffer.buffer;
+        bbox_verts_info.offset = 0;
+        bbox_verts_info.range = VK_WHOLE_SIZE;
+
+        write.dstBinding = 17;
+        write.pBufferInfo = &bbox_verts_info;
         descriptor_writes.push_back(write);
 
         vkUpdateDescriptorSets(vk_device, static_cast<uint32_t>(descriptor_writes.size()), descriptor_writes.data(), 0, nullptr);
@@ -2547,6 +2630,23 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &uv_IDs_info;
+            descriptor_writes.push_back(write);
+        }
+
+        VkDescriptorBufferInfo bbox_verts_info{};
+        bbox_verts_info.buffer = bbox_vertices_buffer.buffer;
+        bbox_verts_info.offset = 0;
+        bbox_verts_info.range = VK_WHOLE_SIZE;
+
+        if (bbox_vertices_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_geometry;
+            write.dstBinding = 17;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &bbox_verts_info;
             descriptor_writes.push_back(write);
         }
 
