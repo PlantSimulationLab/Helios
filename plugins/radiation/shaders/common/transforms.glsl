@@ -43,4 +43,24 @@ mat4 floats_to_mat4(float m[16]) {
     );
 }
 
+// Build ZYX Euler angle rotation matrix (matches OptiX d_makeTransformMatrix)
+// Input: rotation angles (rx, ry, rz) in radians
+// Output: 4x4 rotation matrix (column-major)
+mat4 make_rotation_matrix(vec3 rotation) {
+    float cx = cos(rotation.x);
+    float sx = sin(rotation.x);
+    float cy = cos(rotation.y);
+    float sy = sin(rotation.y);
+    float cz = cos(rotation.z);
+    float sz = sin(rotation.z);
+
+    // ZYX Euler order: Rz * Ry * Rx (matches OptiX RayTracing.cuh:289-307)
+    return mat4(
+        cz * cy,                    sz * cy,                    -sy,      0.0,
+        cz * sy * sx - sz * cx,     sz * sy * sx + cz * cx,     cy * sx,  0.0,
+        cz * sy * cx + sz * sx,     sz * sy * cx - cz * sx,     cy * cx,  0.0,
+        0.0,                        0.0,                        0.0,      1.0
+    );
+}
+
 #endif // TRANSFORMS_GLSL

@@ -243,6 +243,14 @@ vec3 sample_disk(inout RNGState rng) {
     return sp;
 }
 
+// Sample uniform point on square [-0.5, 0.5]²
+// Matches CUDA d_sampleSquare() (RayTracing.cuh:490-502)
+vec3 sample_square(inout RNGState rng) {
+    float Rx = rng_float(rng);
+    float Ry = rng_float(rng);
+    return vec3(-0.5 + Rx, -0.5 + Ry, 0.0);
+}
+
 // Get patch normal in world space
 vec3 get_patch_normal(uint prim_idx, float transform_mat[16]) {
     mat4 transform = floats_to_mat4(transform_mat);
@@ -476,8 +484,71 @@ void main() {
                     // Numerical integration over visible hemisphere of sphere
                     strength = calc_sphere_strength(normal, ray_dir, ray_magnitude, source_widths_buf.widths[src_idx].x, Nrays);
 
+                } else if (source_type == 3) { // Rectangle source
+                    vec3 source_rotation = source_rotations_buf.rotations[src_idx];
+                    vec2 source_size = source_widths_buf.widths[src_idx]; // (width, height)
+
+                    // Sample random point on rectangle [-0.5, 0.5]²
+                    vec3 square_point = sample_square(rng);
+
+                    // Scale by rectangle dimensions (matches OptiX line 183)
+                    square_point.x *= source_size.x;
+                    square_point.y *= source_size.y;
+
+                    // Apply rotation matrix (matches OptiX line 184)
+                    mat4 light_transform = make_rotation_matrix(source_rotation);
+                    vec3 light_point = transform_point(light_transform, square_point);
+
+                    // Transform light direction (matches OptiX line 186-187)
+                    vec3 light_direction = normalize(transform_direction(light_transform, vec3(0, 0, 1)));
+
+                    // Ray from surface to light sample point
+                    ray_dir = light_point + source_pos - ray_origin;
+
+                    // Back-face rejection: skip if ray hits back side of light
+                    if (dot(ray_dir, light_direction) > 0.0) {
+                        continue;
+                    }
+
+                    float ray_magnitude = length(ray_dir);
+                    ray_dir = normalize(ray_dir);
+
+                    // Strength calculation (matches OptiX rayGeneration.cu:197)
+                    float area = source_size.x * source_size.y;
+                    strength = (1.0 / float(Nrays)) * abs(dot(normal, ray_dir)) * abs(dot(light_direction, ray_dir))
+                               / (ray_magnitude * ray_magnitude) * area / PI;
+
+                } else if (source_type == 4) { // Disk source
+                    vec3 source_rotation = source_rotations_buf.rotations[src_idx];
+                    float radius = source_widths_buf.widths[src_idx].x; // x component stores radius
+
+                    // Sample random point on unit disk (function already exists in shader)
+                    vec3 disk_point = sample_disk(rng);
+
+                    // Apply rotation matrix to unit disk point (matches OptiX line 208)
+                    mat4 light_transform = make_rotation_matrix(source_rotation);
+                    vec3 light_point = transform_point(light_transform, disk_point);
+
+                    // Transform light direction (matches OptiX line 210-211)
+                    vec3 light_direction = normalize(transform_direction(light_transform, vec3(0, 0, 1)));
+
+                    // Ray from surface to light sample point (scale AFTER transform, matches OptiX line 213)
+                    ray_dir = radius * light_point + source_pos - ray_origin;
+
+                    // Back-face rejection
+                    if (dot(ray_dir, light_direction) > 0.0) {
+                        continue;
+                    }
+
+                    float ray_magnitude = length(ray_dir);
+                    ray_dir = normalize(ray_dir);
+
+                    // Strength calculation (matches OptiX rayGeneration.cu:221)
+                    strength = (1.0 / float(Nrays)) * abs(dot(normal, ray_dir)) * abs(dot(light_direction, ray_dir))
+                               / (ray_magnitude * ray_magnitude) * radius * radius;
+
                 } else {
-                    // Rectangle/disk/other sources not yet implemented
+                    // Unsupported source type
                     continue;
                 }
 
