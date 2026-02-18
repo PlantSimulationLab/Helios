@@ -1053,13 +1053,18 @@ namespace helios {
             descriptors_dirty = true;
         }
 
-        // Sky radiance params (Prague model) - create zero-filled buffer for Phase 2 (isotropic sky)
+        // Sky radiance params (Prague model) - ensure properly sized and zeroed
         // TODO Phase 3+: Upload actual sky_radiance_params from updateSkyModel
-        if (sky_radiance_params_buffer.buffer == VK_NULL_HANDLE) {
-            size_t sky_params_size = band_count * sizeof(helios::vec4);
-            sky_radiance_params_buffer = createBuffer(sky_params_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        {
+            size_t sky_params_size = launch_band_count * sizeof(helios::vec4);
+            if (sky_radiance_params_buffer.buffer == VK_NULL_HANDLE || sky_radiance_params_buffer.size != sky_params_size) {
+                if (sky_radiance_params_buffer.buffer != VK_NULL_HANDLE) {
+                    destroyBuffer(sky_radiance_params_buffer);
+                }
+                sky_radiance_params_buffer = createBuffer(sky_params_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+                descriptors_dirty = true;
+            }
             zeroBuffer(sky_radiance_params_buffer);
-            descriptors_dirty = true;
         }
 
         // Create debug counters buffer if needed (5 uint32_t counters)
@@ -2065,12 +2070,18 @@ namespace helios {
         // These will be resized properly when launchDiffuseRays() is first called.
 
         const size_t placeholder_size = sizeof(float); // Minimal 1-element buffer
+        // All placeholders include TRANSFER_DST for zeroing - VMA may reuse freed memory with stale data
 
-        diffuse_flux_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-        diffuse_peak_dir_buffer = createBuffer(sizeof(helios::vec3), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-        diffuse_extinction_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-        diffuse_dist_norm_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-        sky_radiance_params_buffer = createBuffer(sizeof(helios::vec4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        diffuse_flux_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(diffuse_flux_buffer);
+        diffuse_peak_dir_buffer = createBuffer(sizeof(helios::vec3), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(diffuse_peak_dir_buffer);
+        diffuse_extinction_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(diffuse_extinction_buffer);
+        diffuse_dist_norm_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(diffuse_dist_norm_buffer);
+        sky_radiance_params_buffer = createBuffer(sizeof(helios::vec4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(sky_radiance_params_buffer);
 
         // ========== Create placeholder mask/UV buffers ==========
         // Same requirement as sky parameters — needed before pipeline creation for MoltenVK
