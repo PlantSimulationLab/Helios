@@ -1686,14 +1686,40 @@ DOCTEST_TEST_CASE("RadiationModel ROMC Camera Test Verification") {
         std::string global_UUID = "camera_" + cameralabels.at(i) + "_pixel_UUID";
         context_17.getGlobalData(global_data_label.c_str(), camera_data);
         context_17.getGlobalData(global_UUID.c_str(), camera_UUID);
+        std::cout << "Camera " << i << ": camera_UUID size=" << camera_UUID.size()
+                  << " first 5 UUIDs: [" << (camera_UUID.size() > 0 ? std::to_string(camera_UUID[0]) : "empty")
+                  << ", " << (camera_UUID.size() > 1 ? std::to_string(camera_UUID[1]) : "")
+                  << ", " << (camera_UUID.size() > 2 ? std::to_string(camera_UUID[2]) : "")
+                  << ", " << (camera_UUID.size() > 3 ? std::to_string(camera_UUID[3]) : "")
+                  << ", " << (camera_UUID.size() > 4 ? std::to_string(camera_UUID[4]) : "") << "]" << std::endl;
         float camera_all_data = 0;
+        int filtered_count = 0, uuid_zero_count = 0, uuid_invalid_count = 0;
+        float unfiltered_sum = 0, uuid_zero_sum = 0;
         for (int v = 0; v < camera_data.size(); v++) {
-            uint iUUID = camera_UUID.at(v) - 1;
-            if (camera_data.at(v) > 0 && context_17.doesPrimitiveExist(iUUID)) {
-                camera_all_data += camera_data.at(v);
+            if (camera_data.at(v) > 0) {
+                unfiltered_sum += camera_data.at(v);
+                uint raw_uuid = camera_UUID.at(v);
+                if (raw_uuid == 0) {
+                    uuid_zero_count++;
+                    uuid_zero_sum += camera_data.at(v);
+                } else {
+                    uint iUUID = raw_uuid - 1;
+                    if (context_17.doesPrimitiveExist(iUUID)) {
+                        camera_all_data += camera_data.at(v);
+                        filtered_count++;
+                    } else {
+                        uuid_invalid_count++;
+                    }
+                }
             }
         }
+        std::cout << "Camera " << i << ": unfiltered_sum=" << unfiltered_sum
+                  << ", filtered_sum=" << camera_all_data << " (" << filtered_count << " pixels)"
+                  << ", UUID=0: " << uuid_zero_count << " pixels (sum=" << uuid_zero_sum << ")"
+                  << ", invalid UUID: " << uuid_invalid_count << " pixels" << std::endl;
         cameravalue = std::abs(referencevalues.at(i) - camera_all_data);
+        std::cout << "Camera " << i << " (" << viewangles[i] << "°): expected=" << referencevalues.at(i)
+                  << " actual=" << camera_all_data << " error=" << cameravalue << std::endl;
         DOCTEST_CHECK(cameravalue <= 1.5f);
     }
 }

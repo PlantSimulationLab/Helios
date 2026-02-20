@@ -161,7 +161,11 @@ namespace helios {
         Buffer radiation_out_bottom_buffer; // Phase 2+ separate bottom face
         Buffer scatter_top_buffer;
         Buffer scatter_bottom_buffer;
-        // TODO: Add camera pixel buffers
+        Buffer camera_radiation_buffer;      //!< Camera pixel radiation values
+        Buffer camera_pixel_label_buffer;    //!< Camera pixel UUID labels
+        Buffer camera_pixel_depth_buffer;    //!< Camera pixel depth values
+        Buffer camera_scatter_top_buffer;    //!< Camera-weighted scatter (top face)
+        Buffer camera_scatter_bottom_buffer; //!< Camera-weighted scatter (bottom face)
 
         // Sky parameter buffers (Set 3) - Phase 2+
         Buffer diffuse_flux_buffer;
@@ -169,6 +173,8 @@ namespace helios {
         Buffer diffuse_extinction_buffer;
         Buffer diffuse_dist_norm_buffer;
         Buffer sky_radiance_params_buffer;
+        Buffer camera_sky_radiance_buffer;   //!< Zenith sky radiance for camera miss shader
+        Buffer solar_disk_radiance_buffer;   //!< Solar disk radiance for camera miss shader
 
         // Debug/profiling buffers (Set 4)
         Buffer debug_counters_buffer;
@@ -185,6 +191,10 @@ namespace helios {
         VkDescriptorSet set_results = VK_NULL_HANDLE;
         VkDescriptorSet set_sky = VK_NULL_HANDLE; // Phase 2+: Sky parameters
         VkDescriptorSet set_debug = VK_NULL_HANDLE; // Debug counters
+
+        // Cached sky/sun parameters (for camera push constants)
+        helios::vec3 cached_sun_direction;
+        float cached_solar_disk_cos_angle = 0.0f;
 
         // Compute pipelines
         VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;

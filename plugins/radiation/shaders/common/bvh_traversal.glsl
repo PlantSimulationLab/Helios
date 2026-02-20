@@ -51,8 +51,8 @@ HitInfo intersect_triangle(vec3 ray_origin, vec3 ray_dir, vec3 v0, vec3 v1, vec3
 // Parameters:
 //   origin_prim_idx: Index of primitive shooting the ray (to skip self-intersection)
 // Returns: closest hit primitive index or UINT_MAX if miss
-// Outputs: closest_t (intersection distance), hit_prim_type
-uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_idx, inout float closest_t, out uint hit_prim_type) {
+// Outputs: closest_t (intersection distance), hit_prim_type, hit_uv (UV coordinates at hit point)
+uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_idx, inout float closest_t, out uint hit_prim_type, out vec2 hit_uv) {
 
     // Pre-compute inverse ray direction for AABB tests
     vec3 ray_dir_inv = vec3(1.0) / ray_dir;
@@ -64,6 +64,7 @@ uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_i
     uint closest_prim = UINT_MAX;
     closest_t = 1e30;
     hit_prim_type = 0;
+    hit_uv = vec2(0.0, 0.0);
 
     // Start at root (index 0)
     stack[stack_ptr++] = 0;
@@ -145,6 +146,7 @@ uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_i
                     closest_t = hit.t;
                     closest_prim = prim_idx;
                     hit_prim_type = prim_type;
+                    hit_uv = hit.uv;
                 }
             }
         } else {

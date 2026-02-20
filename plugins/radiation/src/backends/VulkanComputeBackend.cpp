@@ -142,12 +142,20 @@ namespace helios {
         destroyBuffer(radiation_out_bottom_buffer);
         destroyBuffer(scatter_top_buffer);
         destroyBuffer(scatter_bottom_buffer);
+        destroyBuffer(camera_radiation_buffer);
+        destroyBuffer(camera_pixel_label_buffer);
+        destroyBuffer(camera_pixel_depth_buffer);
+        destroyBuffer(camera_scatter_top_buffer);
+        destroyBuffer(camera_scatter_bottom_buffer);
         destroyBuffer(diffuse_flux_buffer);
         destroyBuffer(diffuse_peak_dir_buffer);
         destroyBuffer(diffuse_extinction_buffer);
         destroyBuffer(diffuse_dist_norm_buffer);
         destroyBuffer(sky_radiance_params_buffer);
+        destroyBuffer(camera_sky_radiance_buffer);
+        destroyBuffer(solar_disk_radiance_buffer);
         destroyBuffer(debug_counters_buffer);
+        destroyBuffer(bbox_vertices_buffer);
 
         // Destroy command resources
         if (transfer_fence != VK_NULL_HANDLE)
@@ -664,7 +672,48 @@ namespace helios {
 
     void VulkanComputeBackend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction,
                                               const std::vector<float> &solar_disk_radiance, float solar_disk_cos_angle) {
-        // TODO: Upload sky model params in Phase 7+
+        // Store sun parameters for push constants
+        cached_sun_direction = sun_direction;
+        cached_solar_disk_cos_angle = solar_disk_cos_angle;
+
+        // Upload sky_radiance_params to existing buffer (already used by diffuse shader)
+        if (!sky_radiance_params.empty()) {
+            size_t params_size = sky_radiance_params.size() * sizeof(helios::vec4);
+            if (sky_radiance_params_buffer.buffer == VK_NULL_HANDLE || sky_radiance_params_buffer.size != params_size) {
+                if (sky_radiance_params_buffer.buffer != VK_NULL_HANDLE) {
+                    destroyBuffer(sky_radiance_params_buffer);
+                }
+                sky_radiance_params_buffer = createBuffer(params_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                descriptors_dirty = true;
+            }
+            uploadBufferData(sky_radiance_params_buffer, sky_radiance_params.data(), params_size);
+        }
+
+        // Upload camera_sky_radiance (zenith sky radiance for camera miss shader)
+        if (!camera_sky_radiance.empty()) {
+            size_t sky_size = camera_sky_radiance.size() * sizeof(float);
+            if (camera_sky_radiance_buffer.buffer == VK_NULL_HANDLE || camera_sky_radiance_buffer.size != sky_size) {
+                if (camera_sky_radiance_buffer.buffer != VK_NULL_HANDLE) {
+                    destroyBuffer(camera_sky_radiance_buffer);
+                }
+                camera_sky_radiance_buffer = createBuffer(sky_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                descriptors_dirty = true;
+            }
+            uploadBufferData(camera_sky_radiance_buffer, camera_sky_radiance.data(), sky_size);
+        }
+
+        // Upload solar_disk_radiance (solar disk radiance for camera miss shader)
+        if (!solar_disk_radiance.empty()) {
+            size_t solar_size = solar_disk_radiance.size() * sizeof(float);
+            if (solar_disk_radiance_buffer.buffer == VK_NULL_HANDLE || solar_disk_radiance_buffer.size != solar_size) {
+                if (solar_disk_radiance_buffer.buffer != VK_NULL_HANDLE) {
+                    destroyBuffer(solar_disk_radiance_buffer);
+                }
+                solar_disk_radiance_buffer = createBuffer(solar_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                descriptors_dirty = true;
+            }
+            uploadBufferData(solar_disk_radiance_buffer, solar_disk_radiance.data(), solar_size);
+        }
     }
 
     void VulkanComputeBackend::launchDirectRays(const RayTracingLaunchParams &params) {
@@ -1308,11 +1357,366 @@ namespace helios {
     }
 
     void VulkanComputeBackend::launchCameraRays(const RayTracingLaunchParams &params) {
-        // TODO: Implement in Phase 7
+        if (primitive_count == 0) {
+            return; // No geometry
+        }
+
+        // Build band mapping (same logic as direct/diffuse)
+        launch_to_global_band.clear();
+        for (uint32_t g = 0; g < band_count; g++) {
+            if (!params.band_launch_flag.empty() && params.band_launch_flag[g]) {
+                launch_to_global_band.push_back(g);
+            }
+        }
+        if (launch_to_global_band.empty()) {
+            for (uint32_t g = 0; g < launch_band_count; g++) {
+                launch_to_global_band.push_back(g);
+            }
+        }
+
+        // Ensure camera_radiation_buffer exists at FULL resolution
+        size_t total_pixels = size_t(params.camera_resolution_full.x) * size_t(params.camera_resolution_full.y);
+        size_t radiation_size = total_pixels * launch_band_count * sizeof(float);
+        if (camera_radiation_buffer.buffer == VK_NULL_HANDLE || camera_radiation_buffer.size != radiation_size) {
+            if (camera_radiation_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(camera_radiation_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            camera_radiation_buffer = createBuffer(radiation_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            descriptors_dirty = true;
+        }
+
+        // Zero camera radiation buffer before tile loop (matches OptiX line 713)
+        // CRITICAL: Only zero if this is the first tile (pixel_offset == 0,0)
+        // Subsequent tiles accumulate into the same buffer
+        if (params.camera_pixel_offset.x == 0 && params.camera_pixel_offset.y == 0) {
+            zeroBuffer(camera_radiation_buffer);
+        }
+
+        // Update descriptor sets if buffers changed
+        std::cout << "[VULKAN DEBUG] launchCameraRays: descriptors_dirty=" << descriptors_dirty
+                  << " radiation_out_top_buffer=" << radiation_out_top_buffer.buffer << std::endl;
+        if (descriptors_dirty) {
+            std::cout << "[VULKAN DEBUG] Updating descriptor sets in launchCameraRays" << std::endl;
+            updateDescriptorSets();
+            descriptors_dirty = false;
+        }
+
+        VkDevice vk_device = device->getDevice();
+
+        // Record COMPUTE command buffer
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer(compute_command_buffer, &begin_info);
+
+        // Bind pipeline
+        vkCmdBindPipeline(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_camera);
+
+        // Bind descriptor sets
+        VkDescriptorSet sets[] = {set_geometry, set_materials, set_results, set_sky, set_debug};
+        vkCmdBindDescriptorSets(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 5, sets, 0, nullptr);
+
+        // Build push constants
+        struct PushConstants {
+            helios::vec3 camera_position;      // 12 bytes
+            float viewplane_length;            // 4 bytes
+            float camera_direction_x;          // 4 bytes
+            float camera_direction_y;          // 4 bytes
+            float focal_length;                // 4 bytes
+            float lens_diameter;               // 4 bytes
+            float fov_aspect_ratio;            // 4 bytes
+            uint32_t resolution_x;             // 4 bytes
+            uint32_t resolution_y;             // 4 bytes
+            uint32_t resolution_full_x;        // 4 bytes
+            uint32_t resolution_full_y;        // 4 bytes
+            uint32_t pixel_offset_x;           // 4 bytes
+            uint32_t pixel_offset_y;           // 4 bytes
+            uint32_t antialiasing_samples;     // 4 bytes
+            uint32_t random_seed;              // 4 bytes
+            uint32_t band_count;               // 4 bytes
+            uint32_t source_count;             // 4 bytes
+            uint32_t primitive_count;          // 4 bytes
+            helios::vec3 sun_direction;        // 12 bytes
+            float solar_disk_cos_angle;        // 4 bytes
+            uint32_t periodic_flag_x;          // 4 bytes
+            uint32_t periodic_flag_y;          // 4 bytes
+            uint32_t bbox_count;               // 4 bytes
+            float domain_xmin;                 // 4 bytes
+            float domain_xmax;                 // 4 bytes
+            float domain_ymin;                 // 4 bytes
+            float domain_ymax;                 // 4 bytes
+            uint32_t padding;                  // 4 bytes
+        } push_constants{};  // Total: 128 bytes
+
+        push_constants.camera_position = params.camera_position;
+        push_constants.viewplane_length = params.camera_viewplane_length;
+        push_constants.camera_direction_x = params.camera_direction.x;
+        push_constants.camera_direction_y = params.camera_direction.y;
+        push_constants.focal_length = params.camera_focal_length;
+        push_constants.lens_diameter = params.camera_lens_diameter;
+        push_constants.fov_aspect_ratio = params.camera_fov_aspect;
+        push_constants.resolution_x = params.camera_resolution.x;
+        push_constants.resolution_y = params.camera_resolution.y;
+        push_constants.resolution_full_x = params.camera_resolution_full.x;
+        push_constants.resolution_full_y = params.camera_resolution_full.y;
+        push_constants.pixel_offset_x = params.camera_pixel_offset.x;
+        push_constants.pixel_offset_y = params.camera_pixel_offset.y;
+        push_constants.antialiasing_samples = params.antialiasing_samples;
+        push_constants.random_seed = params.random_seed;
+        push_constants.band_count = launch_band_count;
+        push_constants.source_count = source_count;
+        push_constants.primitive_count = primitive_count;
+        push_constants.sun_direction = cached_sun_direction;
+        push_constants.solar_disk_cos_angle = cached_solar_disk_cos_angle;
+        push_constants.periodic_flag_x = static_cast<uint32_t>(periodic_flag_x);
+        push_constants.periodic_flag_y = static_cast<uint32_t>(periodic_flag_y);
+        push_constants.bbox_count = bbox_count;
+        push_constants.domain_xmin = domain_bounds[0];
+        push_constants.domain_xmax = domain_bounds[1];
+        push_constants.domain_ymin = domain_bounds[2];
+        push_constants.domain_ymax = domain_bounds[3];
+        push_constants.padding = 0;
+
+        vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
+
+        // DIAGNOSTIC: Read back radiation_out to verify it has data before camera dispatch
+        {
+            void *verify_ptr = nullptr;
+            if (vmaMapMemory(device->getAllocator(), radiation_out_top_buffer.allocation, &verify_ptr) == VK_SUCCESS) {
+                vmaInvalidateAllocation(device->getAllocator(), radiation_out_top_buffer.allocation, 0, VK_WHOLE_SIZE);
+                float verify_sum = 0;
+                for (size_t i = 0; i < std::min(size_t(100), size_t(primitive_count * launch_band_count)); i++) {
+                    verify_sum += static_cast<float*>(verify_ptr)[i];
+                }
+                std::cout << "[VULKAN DEBUG] Pre-dispatch readback: radiation_out first 100 sum=" << verify_sum << std::endl;
+                vmaUnmapMemory(device->getAllocator(), radiation_out_top_buffer.allocation);
+            }
+        }
+
+        // Compute dispatch dimensions (workgroup size 16x16x1)
+        const uint32_t WG_X = 16;
+        const uint32_t WG_Y = 16;
+        uint32_t dispatch_x = (params.camera_resolution.x + WG_X - 1) / WG_X;
+        uint32_t dispatch_y = (params.camera_resolution.y + WG_Y - 1) / WG_Y;
+        uint32_t dispatch_z = params.antialiasing_samples;
+
+        vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, dispatch_z);
+
+        // Buffer memory barrier for camera_radiation_buffer
+        VkBufferMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.buffer = camera_radiation_buffer.buffer;
+        barrier.offset = 0;
+        barrier.size = VK_WHOLE_SIZE;
+
+        vkCmdPipelineBarrier(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+                             0, nullptr, 1, &barrier, 0, nullptr);
+
+        vkEndCommandBuffer(compute_command_buffer);
+
+        // Submit command buffer
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &compute_command_buffer;
+
+        vkResetFences(vk_device, 1, &compute_fence);
+        VkResult result = vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, compute_fence);
+        if (result != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::launchCameraRays): vkQueueSubmit failed. VkResult: " + std::to_string(result));
+        }
+
+        // Wait for compute to complete with polling
+        const uint64_t poll_interval_ns = 1000000000ULL; // 1 second
+        bool completed = false;
+        int elapsed_seconds = 0;
+
+        while (!completed) {
+            result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, poll_interval_ns);
+            if (result == VK_SUCCESS) {
+                completed = true;
+                break;
+            } else if (result == VK_TIMEOUT) {
+                elapsed_seconds++;
+                // Print progress every 5 seconds for large scenes
+                if (elapsed_seconds % 5 == 0) {
+                    std::cout << "  Camera rays still computing... " << elapsed_seconds << "s elapsed "
+                              << "(dispatch: " << dispatch_x << "×" << dispatch_y << "×" << dispatch_z
+                              << ", resolution: " << params.camera_resolution.x << "×" << params.camera_resolution.y
+                              << ", AA samples: " << params.antialiasing_samples << ")" << std::endl;
+                }
+            } else {
+                helios_runtime_error("ERROR (VulkanComputeBackend::launchCameraRays): vkWaitForFences failed. VkResult: " + std::to_string(result));
+            }
+        }
     }
 
     void VulkanComputeBackend::launchPixelLabelRays(const RayTracingLaunchParams &params) {
-        // TODO: Implement in Phase 7
+        if (primitive_count == 0) {
+            return; // No geometry
+        }
+
+        // Update descriptor sets if buffers changed
+        if (descriptors_dirty) {
+            updateDescriptorSets();
+            descriptors_dirty = false;
+        }
+
+        VkDevice vk_device = device->getDevice();
+
+        // Record COMPUTE command buffer
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer(compute_command_buffer, &begin_info);
+
+        // Bind pipeline
+        vkCmdBindPipeline(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_pixel_label);
+
+        // Bind descriptor sets
+        VkDescriptorSet sets[] = {set_geometry, set_materials, set_results, set_sky, set_debug};
+        vkCmdBindDescriptorSets(compute_command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 5, sets, 0, nullptr);
+
+        // Build push constants (same layout as camera_raygen)
+        struct PushConstants {
+            helios::vec3 camera_position;
+            float viewplane_length;
+            float camera_direction_x;
+            float camera_direction_y;
+            float focal_length;
+            float lens_diameter;
+            float fov_aspect_ratio;
+            uint32_t resolution_x;
+            uint32_t resolution_y;
+            uint32_t resolution_full_x;
+            uint32_t resolution_full_y;
+            uint32_t pixel_offset_x;
+            uint32_t pixel_offset_y;
+            uint32_t antialiasing_samples;
+            uint32_t random_seed;
+            uint32_t band_count;
+            uint32_t source_count;
+            uint32_t primitive_count;
+            helios::vec3 sun_direction;
+            float solar_disk_cos_angle;
+            uint32_t periodic_flag_x;
+            uint32_t periodic_flag_y;
+            uint32_t bbox_count;
+            float domain_xmin;
+            float domain_xmax;
+            float domain_ymin;
+            float domain_ymax;
+            uint32_t padding;
+        } push_constants{};
+
+        push_constants.camera_position = params.camera_position;
+        push_constants.viewplane_length = params.camera_viewplane_length;
+        push_constants.camera_direction_x = params.camera_direction.x;
+        push_constants.camera_direction_y = params.camera_direction.y;
+        push_constants.focal_length = params.camera_focal_length;
+        push_constants.lens_diameter = params.camera_lens_diameter;
+        push_constants.fov_aspect_ratio = params.camera_fov_aspect;
+        push_constants.resolution_x = params.camera_resolution.x;
+        push_constants.resolution_y = params.camera_resolution.y;
+        push_constants.resolution_full_x = params.camera_resolution_full.x;
+        push_constants.resolution_full_y = params.camera_resolution_full.y;
+        push_constants.pixel_offset_x = params.camera_pixel_offset.x;
+        push_constants.pixel_offset_y = params.camera_pixel_offset.y;
+        push_constants.antialiasing_samples = 1;  // No AA for pixel label
+        push_constants.random_seed = params.random_seed;
+        push_constants.band_count = launch_band_count;
+        push_constants.source_count = source_count;
+        push_constants.primitive_count = primitive_count;
+        push_constants.sun_direction = cached_sun_direction;
+        push_constants.solar_disk_cos_angle = cached_solar_disk_cos_angle;
+        push_constants.periodic_flag_x = static_cast<uint32_t>(periodic_flag_x);
+        push_constants.periodic_flag_y = static_cast<uint32_t>(periodic_flag_y);
+        push_constants.bbox_count = bbox_count;
+        push_constants.domain_xmin = domain_bounds[0];
+        push_constants.domain_xmax = domain_bounds[1];
+        push_constants.domain_ymin = domain_bounds[2];
+        push_constants.domain_ymax = domain_bounds[3];
+        push_constants.padding = 0;
+
+        vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
+
+        // Compute dispatch dimensions (workgroup size 16x16x1, no AA dimension)
+        const uint32_t WG_X = 16;
+        const uint32_t WG_Y = 16;
+        uint32_t dispatch_x = (params.camera_resolution.x + WG_X - 1) / WG_X;
+        uint32_t dispatch_y = (params.camera_resolution.y + WG_Y - 1) / WG_Y;
+        uint32_t dispatch_z = 1;  // No antialiasing
+
+        vkCmdDispatch(compute_command_buffer, dispatch_x, dispatch_y, dispatch_z);
+
+        // Buffer memory barriers for pixel label and depth buffers
+        VkBufferMemoryBarrier barriers[2];
+
+        barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        barriers[0].pNext = nullptr;
+        barriers[0].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+        barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barriers[0].buffer = camera_pixel_label_buffer.buffer;
+        barriers[0].offset = 0;
+        barriers[0].size = VK_WHOLE_SIZE;
+
+        barriers[1].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        barriers[1].pNext = nullptr;
+        barriers[1].srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        barriers[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+        barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barriers[1].buffer = camera_pixel_depth_buffer.buffer;
+        barriers[1].offset = 0;
+        barriers[1].size = VK_WHOLE_SIZE;
+
+        vkCmdPipelineBarrier(compute_command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+                             0, nullptr, 2, barriers, 0, nullptr);
+
+        vkEndCommandBuffer(compute_command_buffer);
+
+        // Submit command buffer
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &compute_command_buffer;
+
+        vkResetFences(vk_device, 1, &compute_fence);
+        VkResult result = vkQueueSubmit(device->getComputeQueue(), 1, &submit_info, compute_fence);
+        if (result != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::launchPixelLabelRays): vkQueueSubmit failed. VkResult: " + std::to_string(result));
+        }
+
+        // Wait for compute to complete
+        const uint64_t poll_interval_ns = 1000000000ULL;
+        bool completed = false;
+        int elapsed_seconds = 0;
+
+        while (!completed) {
+            result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, poll_interval_ns);
+            if (result == VK_SUCCESS) {
+                completed = true;
+                break;
+            } else if (result == VK_TIMEOUT) {
+                elapsed_seconds++;
+                if (elapsed_seconds % 5 == 0) {
+                    std::cout << "  Pixel label rays still computing... " << elapsed_seconds << "s elapsed "
+                              << "(dispatch: " << dispatch_x << "×" << dispatch_y << "×" << dispatch_z
+                              << ", resolution: " << params.camera_resolution.x << "×" << params.camera_resolution.y << ")" << std::endl;
+                }
+            } else {
+                helios_runtime_error("ERROR (VulkanComputeBackend::launchPixelLabelRays): vkWaitForFences failed. VkResult: " + std::to_string(result));
+            }
+        }
     }
 
     void VulkanComputeBackend::getRadiationResults(RayTracingResults &results) {
@@ -1423,13 +1827,81 @@ namespace helios {
             std::fill(results.scatter_buff_bottom.begin(), results.scatter_buff_bottom.end(), 0.0f);
         }
 
-        // Camera scatter buffers (not yet implemented)
-        results.scatter_buff_top_cam.resize(buffer_size, 0.0f);
-        results.scatter_buff_bottom_cam.resize(buffer_size, 0.0f);
+        // Camera scatter buffers: use regular scatter as proxy for camera-weighted scatter.
+        // This is exact when camera spectral response is uniform (1.0 across all wavelengths).
+        // For non-uniform camera responses, Vulkan shaders would need dedicated camera scatter
+        // buffers with camera-weighted materials (rho_cam, tau_cam), matching OptiX (rayHit.cu:223-236).
+        float sum_scatter = 0;
+        for (auto v : results.scatter_buff_top) sum_scatter += v;
+        std::cout << "[VULKAN DEBUG] getRadiationResults: scatter_buff_top size=" << results.scatter_buff_top.size()
+                  << ", scatter_buff_top_cam size before=" << results.scatter_buff_top_cam.size();
+        results.scatter_buff_top_cam = results.scatter_buff_top;
+        results.scatter_buff_bottom_cam = results.scatter_buff_bottom;
+        std::cout << ", after=" << results.scatter_buff_top_cam.size()
+                  << ", sum=" << sum_scatter << std::endl;
     }
 
     void VulkanComputeBackend::getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels, std::vector<float> &pixel_depths, uint camera_id, const helios::int2 &resolution) {
-        // TODO: Download camera buffers in Phase 7
+        size_t total_pixels = size_t(resolution.x) * size_t(resolution.y);
+        if (total_pixels == 0) {
+            return; // No pixels
+        }
+
+        // Download camera_radiation_buffer (pixel_data)
+        pixel_data.resize(total_pixels * launch_band_count);
+        if (camera_radiation_buffer.buffer != VK_NULL_HANDLE && !pixel_data.empty()) {
+            vkQueueWaitIdle(device->getComputeQueue()); // Ensure compute is done
+
+            void *mapped;
+            VkResult result = vmaMapMemory(device->getAllocator(), camera_radiation_buffer.allocation, &mapped);
+            if (result == VK_SUCCESS) {
+                vmaInvalidateAllocation(device->getAllocator(), camera_radiation_buffer.allocation, 0, VK_WHOLE_SIZE);
+                std::memcpy(pixel_data.data(), mapped, pixel_data.size() * sizeof(float));
+                vmaUnmapMemory(device->getAllocator(), camera_radiation_buffer.allocation);
+                float sum_pixels = 0;
+                for (auto v : pixel_data) sum_pixels += v;
+                std::cout << "[VULKAN DEBUG] getCameraResults: downloaded " << pixel_data.size()
+                          << " pixels, sum=" << sum_pixels << std::endl;
+            } else {
+                std::cout << "ERROR: Failed to map camera_radiation_buffer, falling back to transfer" << std::endl;
+                downloadBufferData(camera_radiation_buffer, pixel_data.data(), pixel_data.size() * sizeof(float));
+            }
+        } else {
+            std::cout << "[VULKAN DEBUG] getCameraResults: camera_radiation_buffer is NULL or pixel_data empty!" << std::endl;
+            std::fill(pixel_data.begin(), pixel_data.end(), 0.0f);
+        }
+
+        // Download camera_pixel_label_buffer (pixel_labels)
+        pixel_labels.resize(total_pixels);
+        if (camera_pixel_label_buffer.buffer != VK_NULL_HANDLE && !pixel_labels.empty()) {
+            void *mapped;
+            VkResult result = vmaMapMemory(device->getAllocator(), camera_pixel_label_buffer.allocation, &mapped);
+            if (result == VK_SUCCESS) {
+                vmaInvalidateAllocation(device->getAllocator(), camera_pixel_label_buffer.allocation, 0, VK_WHOLE_SIZE);
+                std::memcpy(pixel_labels.data(), mapped, pixel_labels.size() * sizeof(uint));
+                vmaUnmapMemory(device->getAllocator(), camera_pixel_label_buffer.allocation);
+            } else {
+                downloadBufferData(camera_pixel_label_buffer, pixel_labels.data(), pixel_labels.size() * sizeof(uint));
+            }
+        } else {
+            std::fill(pixel_labels.begin(), pixel_labels.end(), 0u);
+        }
+
+        // Download camera_pixel_depth_buffer (pixel_depths)
+        pixel_depths.resize(total_pixels);
+        if (camera_pixel_depth_buffer.buffer != VK_NULL_HANDLE && !pixel_depths.empty()) {
+            void *mapped;
+            VkResult result = vmaMapMemory(device->getAllocator(), camera_pixel_depth_buffer.allocation, &mapped);
+            if (result == VK_SUCCESS) {
+                vmaInvalidateAllocation(device->getAllocator(), camera_pixel_depth_buffer.allocation, 0, VK_WHOLE_SIZE);
+                std::memcpy(pixel_depths.data(), mapped, pixel_depths.size() * sizeof(float));
+                vmaUnmapMemory(device->getAllocator(), camera_pixel_depth_buffer.allocation);
+            } else {
+                downloadBufferData(camera_pixel_depth_buffer, pixel_depths.data(), pixel_depths.size() * sizeof(float));
+            }
+        } else {
+            std::fill(pixel_depths.begin(), pixel_depths.end(), 0.0f);
+        }
     }
 
     void VulkanComputeBackend::zeroRadiationBuffers(size_t launch_band_count_param) {
@@ -1502,7 +1974,36 @@ namespace helios {
     }
 
     void VulkanComputeBackend::zeroCameraPixelBuffers(const helios::int2 &resolution) {
-        // TODO: Zero camera pixel buffers in Phase 7
+        size_t total_pixels = size_t(resolution.x) * size_t(resolution.y);
+        if (total_pixels == 0) {
+            return; // No pixels
+        }
+
+        // Create or resize camera_pixel_label_buffer
+        VkDeviceSize label_size = total_pixels * sizeof(uint32_t);
+        if (camera_pixel_label_buffer.buffer == VK_NULL_HANDLE || camera_pixel_label_buffer.size != label_size) {
+            if (camera_pixel_label_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(camera_pixel_label_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            camera_pixel_label_buffer = createBuffer(label_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            descriptors_dirty = true;
+        }
+
+        // Create or resize camera_pixel_depth_buffer
+        VkDeviceSize depth_size = total_pixels * sizeof(float);
+        if (camera_pixel_depth_buffer.buffer == VK_NULL_HANDLE || camera_pixel_depth_buffer.size != depth_size) {
+            if (camera_pixel_depth_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(camera_pixel_depth_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            camera_pixel_depth_buffer = createBuffer(depth_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            descriptors_dirty = true;
+        }
+
+        // Zero both buffers
+        zeroBuffer(camera_pixel_label_buffer);
+        zeroBuffer(camera_pixel_depth_buffer);
     }
 
     void VulkanComputeBackend::copyScatterToRadiation() {
@@ -1552,10 +2053,16 @@ namespace helios {
 
     void VulkanComputeBackend::uploadRadiationOut(const std::vector<float> &radiation_out_top, const std::vector<float> &radiation_out_bottom) {
         if (radiation_out_top.empty() || radiation_out_bottom.empty()) {
+            std::cout << "[VULKAN DEBUG] uploadRadiationOut: empty vectors, returning" << std::endl;
             return; // No data to upload
         }
 
+        float sum_top = 0;
+        for (auto v : radiation_out_top) sum_top += v;
         size_t buffer_size = radiation_out_top.size() * sizeof(float);
+        std::cout << "[VULKAN DEBUG] uploadRadiationOut: size=" << radiation_out_top.size()
+                  << " bytes=" << buffer_size << " sum=" << sum_top
+                  << " buffer_obj=" << radiation_out_top_buffer.buffer << std::endl;
 
         // Create radiation_out_top buffer if needed
         if (radiation_out_top_buffer.buffer == VK_NULL_HANDLE || radiation_out_top_buffer.size != buffer_size) {
@@ -1577,17 +2084,91 @@ namespace helios {
             descriptors_dirty = true;
         }
 
-        // Upload data to both buffers
-        uploadBufferData(radiation_out_top_buffer, radiation_out_top.data(), buffer_size);
-        uploadBufferData(radiation_out_bottom_buffer, radiation_out_bottom.data(), buffer_size);
+        // Upload data using direct mapping (HOST_VISIBLE buffers, matching copyScatterToRadiation approach)
+        void *dst_top = nullptr;
+        void *dst_bottom = nullptr;
+        VkResult result_top = vmaMapMemory(device->getAllocator(), radiation_out_top_buffer.allocation, &dst_top);
+        VkResult result_bottom = vmaMapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation, &dst_bottom);
+
+        if (result_top == VK_SUCCESS && result_bottom == VK_SUCCESS) {
+            std::memcpy(dst_top, radiation_out_top.data(), buffer_size);
+            std::memcpy(dst_bottom, radiation_out_bottom.data(), buffer_size);
+            vmaFlushAllocation(device->getAllocator(), radiation_out_top_buffer.allocation, 0, VK_WHOLE_SIZE);
+            vmaFlushAllocation(device->getAllocator(), radiation_out_bottom_buffer.allocation, 0, VK_WHOLE_SIZE);
+
+            // Verify the upload by reading back first few values
+            float readback_sum = 0;
+            for (size_t i = 0; i < std::min(size_t(100), radiation_out_top.size()); i++) {
+                readback_sum += static_cast<float*>(dst_top)[i];
+            }
+            std::cout << "[VULKAN DEBUG] Upload verification: first 100 elements sum=" << readback_sum << std::endl;
+        }
+        vmaUnmapMemory(device->getAllocator(), radiation_out_top_buffer.allocation);
+        vmaUnmapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation);
     }
 
     void VulkanComputeBackend::uploadCameraScatterBuffers(const std::vector<float> &scatter_top_cam, const std::vector<float> &scatter_bottom_cam) {
-        // TODO: Upload camera scatter in Phase 7
+        if (scatter_top_cam.empty() || scatter_bottom_cam.empty()) {
+            return; // No data to upload
+        }
+
+        size_t buffer_size = scatter_top_cam.size() * sizeof(float);
+
+        // Create or resize camera_scatter_top_buffer
+        if (camera_scatter_top_buffer.buffer == VK_NULL_HANDLE || camera_scatter_top_buffer.size != buffer_size) {
+            if (camera_scatter_top_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(camera_scatter_top_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            camera_scatter_top_buffer = createBuffer(buffer_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            descriptors_dirty = true;
+        }
+
+        // Create or resize camera_scatter_bottom_buffer
+        if (camera_scatter_bottom_buffer.buffer == VK_NULL_HANDLE || camera_scatter_bottom_buffer.size != buffer_size) {
+            if (camera_scatter_bottom_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(camera_scatter_bottom_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            camera_scatter_bottom_buffer = createBuffer(buffer_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            descriptors_dirty = true;
+        }
+
+        // Upload data to both buffers
+        uploadBufferData(camera_scatter_top_buffer, scatter_top_cam.data(), buffer_size);
+        uploadBufferData(camera_scatter_bottom_buffer, scatter_bottom_cam.data(), buffer_size);
     }
 
-    void VulkanComputeBackend::zeroCameraScatterBuffers(size_t launch_band_count) {
-        // TODO: Zero camera scatter in Phase 7
+    void VulkanComputeBackend::zeroCameraScatterBuffers(size_t launch_band_count_param) {
+        if (primitive_count == 0 || launch_band_count_param == 0) {
+            return; // No geometry or bands
+        }
+
+        size_t buffer_size = primitive_count * launch_band_count_param * sizeof(float);
+
+        // Create or resize camera_scatter_top_buffer
+        if (camera_scatter_top_buffer.buffer == VK_NULL_HANDLE || camera_scatter_top_buffer.size != buffer_size) {
+            if (camera_scatter_top_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(camera_scatter_top_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            camera_scatter_top_buffer = createBuffer(buffer_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            descriptors_dirty = true;
+        }
+
+        // Create or resize camera_scatter_bottom_buffer
+        if (camera_scatter_bottom_buffer.buffer == VK_NULL_HANDLE || camera_scatter_bottom_buffer.size != buffer_size) {
+            if (camera_scatter_bottom_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(camera_scatter_bottom_buffer);
+            }
+            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            camera_scatter_bottom_buffer = createBuffer(buffer_size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            descriptors_dirty = true;
+        }
+
+        // Zero both buffers
+        zeroBuffer(camera_scatter_top_buffer);
+        zeroBuffer(camera_scatter_bottom_buffer);
     }
 
     void VulkanComputeBackend::uploadSourceFluxes(const std::vector<float> &fluxes) {
@@ -1989,7 +2570,11 @@ namespace helios {
             {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_out_bottom (Phase 2+)
             {3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // scatter_top
             {4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // scatter_bottom
-            // TODO Phase 7: Add camera buffers
+            {5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // camera_radiation
+            {6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // camera_pixel_label
+            {7, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // camera_pixel_depth
+            {8, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // camera_scatter_top
+            {9, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // camera_scatter_bottom
         };
 
         layout_info.bindingCount = static_cast<uint32_t>(result_bindings.size());
@@ -2006,6 +2591,8 @@ namespace helios {
             {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // diffuse_extinction
             {3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // diffuse_dist_norm
             {4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // sky_radiance_params
+            {5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // camera_sky_radiance
+            {6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // solar_disk_radiance
         };
 
         layout_info.bindingCount = static_cast<uint32_t>(sky_bindings.size());
@@ -2030,7 +2617,7 @@ namespace helios {
         // ========== Create Descriptor Pool ==========
 
         std::vector<VkDescriptorPoolSize> pool_sizes = {
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 47}, // All sets: 18 geo + 7 mat + 5 result + 5 sky + 1 debug + margin
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 57}, // All sets: 18 geo + 7 mat + 10 result + 7 sky + 1 debug + margin
         };
 
         VkDescriptorPoolCreateInfo pool_info{};
@@ -2082,6 +2669,23 @@ namespace helios {
         zeroBuffer(diffuse_dist_norm_buffer);
         sky_radiance_params_buffer = createBuffer(sizeof(helios::vec4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         zeroBuffer(sky_radiance_params_buffer);
+        camera_sky_radiance_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(camera_sky_radiance_buffer);
+        solar_disk_radiance_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(solar_disk_radiance_buffer);
+
+        // ========== Create placeholder camera result buffers ==========
+        // MoltenVK requires these before pipeline creation (camera shaders reference them)
+        camera_radiation_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        zeroBuffer(camera_radiation_buffer);
+        camera_pixel_label_buffer = createBuffer(sizeof(uint32_t), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        zeroBuffer(camera_pixel_label_buffer);
+        camera_pixel_depth_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        zeroBuffer(camera_pixel_depth_buffer);
+        camera_scatter_top_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        zeroBuffer(camera_scatter_top_buffer);
+        camera_scatter_bottom_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+        zeroBuffer(camera_scatter_bottom_buffer);
 
         // ========== Create placeholder mask/UV buffers ==========
         // Same requirement as sky parameters — needed before pipeline creation for MoltenVK
@@ -2146,6 +2750,71 @@ namespace helios {
 
         write.dstBinding = 4;
         write.pBufferInfo = &sky_radiance_params_info;
+        descriptor_writes.push_back(write);
+
+        VkDescriptorBufferInfo camera_sky_radiance_info{};
+        camera_sky_radiance_info.buffer = camera_sky_radiance_buffer.buffer;
+        camera_sky_radiance_info.offset = 0;
+        camera_sky_radiance_info.range = VK_WHOLE_SIZE;
+
+        write.dstBinding = 5;
+        write.pBufferInfo = &camera_sky_radiance_info;
+        descriptor_writes.push_back(write);
+
+        VkDescriptorBufferInfo solar_disk_radiance_info{};
+        solar_disk_radiance_info.buffer = solar_disk_radiance_buffer.buffer;
+        solar_disk_radiance_info.offset = 0;
+        solar_disk_radiance_info.range = VK_WHOLE_SIZE;
+
+        write.dstBinding = 6;
+        write.pBufferInfo = &solar_disk_radiance_info;
+        descriptor_writes.push_back(write);
+
+        // Descriptor writes for camera result placeholder buffers (set_results bindings 5-9)
+        VkDescriptorBufferInfo camera_radiation_info{};
+        camera_radiation_info.buffer = camera_radiation_buffer.buffer;
+        camera_radiation_info.offset = 0;
+        camera_radiation_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo camera_pixel_label_info{};
+        camera_pixel_label_info.buffer = camera_pixel_label_buffer.buffer;
+        camera_pixel_label_info.offset = 0;
+        camera_pixel_label_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo camera_pixel_depth_info{};
+        camera_pixel_depth_info.buffer = camera_pixel_depth_buffer.buffer;
+        camera_pixel_depth_info.offset = 0;
+        camera_pixel_depth_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo camera_scatter_top_info{};
+        camera_scatter_top_info.buffer = camera_scatter_top_buffer.buffer;
+        camera_scatter_top_info.offset = 0;
+        camera_scatter_top_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo camera_scatter_bottom_info{};
+        camera_scatter_bottom_info.buffer = camera_scatter_bottom_buffer.buffer;
+        camera_scatter_bottom_info.offset = 0;
+        camera_scatter_bottom_info.range = VK_WHOLE_SIZE;
+
+        write.dstSet = set_results;
+        write.dstBinding = 5;
+        write.pBufferInfo = &camera_radiation_info;
+        descriptor_writes.push_back(write);
+
+        write.dstBinding = 6;
+        write.pBufferInfo = &camera_pixel_label_info;
+        descriptor_writes.push_back(write);
+
+        write.dstBinding = 7;
+        write.pBufferInfo = &camera_pixel_depth_info;
+        descriptor_writes.push_back(write);
+
+        write.dstBinding = 8;
+        write.pBufferInfo = &camera_scatter_top_info;
+        descriptor_writes.push_back(write);
+
+        write.dstBinding = 9;
+        write.pBufferInfo = &camera_scatter_bottom_info;
         descriptor_writes.push_back(write);
 
         // Descriptor writes for mask/UV placeholder buffers (set_geometry bindings 11-16)
@@ -2831,6 +3500,10 @@ namespace helios {
             write.descriptorCount = 1;
             write.pBufferInfo = &rad_out_top_info;
             descriptor_writes.push_back(write);
+            std::cout << "[VULKAN DEBUG] updateDescriptorSets: BINDING radiation_out_top=" << rad_out_top_info.buffer
+                      << " (member=" << radiation_out_top_buffer.buffer << ") to binding 1" << std::endl;
+        } else {
+            std::cout << "[VULKAN DEBUG] updateDescriptorSets: radiation_out_top_buffer is NULL!" << std::endl;
         }
 
         if (radiation_out_bottom_buffer.buffer != VK_NULL_HANDLE) {
@@ -2866,6 +3539,92 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &scatter_bottom_info;
+            descriptor_writes.push_back(write);
+        }
+
+        // Camera result buffers (bindings 5-9)
+        VkDescriptorBufferInfo camera_radiation_info{};
+        camera_radiation_info.buffer = camera_radiation_buffer.buffer;
+        camera_radiation_info.offset = 0;
+        camera_radiation_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo camera_pixel_label_info{};
+        camera_pixel_label_info.buffer = camera_pixel_label_buffer.buffer;
+        camera_pixel_label_info.offset = 0;
+        camera_pixel_label_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo camera_pixel_depth_info{};
+        camera_pixel_depth_info.buffer = camera_pixel_depth_buffer.buffer;
+        camera_pixel_depth_info.offset = 0;
+        camera_pixel_depth_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo camera_scatter_top_info{};
+        camera_scatter_top_info.buffer = camera_scatter_top_buffer.buffer;
+        camera_scatter_top_info.offset = 0;
+        camera_scatter_top_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo camera_scatter_bottom_info{};
+        camera_scatter_bottom_info.buffer = camera_scatter_bottom_buffer.buffer;
+        camera_scatter_bottom_info.offset = 0;
+        camera_scatter_bottom_info.range = VK_WHOLE_SIZE;
+
+        if (camera_radiation_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 5;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &camera_radiation_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (camera_pixel_label_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 6;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &camera_pixel_label_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (camera_pixel_depth_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 7;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &camera_pixel_depth_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (camera_scatter_top_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 8;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &camera_scatter_top_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (camera_scatter_bottom_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 9;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &camera_scatter_bottom_info;
             descriptor_writes.push_back(write);
         }
 
@@ -2953,6 +3712,41 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &sky_radiance_params_info;
+            descriptor_writes.push_back(write);
+        }
+
+        // Camera sky buffers (bindings 5-6)
+        VkDescriptorBufferInfo camera_sky_radiance_info{};
+        camera_sky_radiance_info.buffer = camera_sky_radiance_buffer.buffer;
+        camera_sky_radiance_info.offset = 0;
+        camera_sky_radiance_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo solar_disk_radiance_info{};
+        solar_disk_radiance_info.buffer = solar_disk_radiance_buffer.buffer;
+        solar_disk_radiance_info.offset = 0;
+        solar_disk_radiance_info.range = VK_WHOLE_SIZE;
+
+        if (camera_sky_radiance_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_sky;
+            write.dstBinding = 5;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &camera_sky_radiance_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (solar_disk_radiance_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_sky;
+            write.dstBinding = 6;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &solar_disk_radiance_info;
             descriptor_writes.push_back(write);
         }
 

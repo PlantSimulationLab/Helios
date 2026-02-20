@@ -63,4 +63,29 @@ mat4 make_rotation_matrix(vec3 rotation) {
     );
 }
 
+// Camera pose rotation: Rz(phi) * Ry(theta) * position
+// Matches OptiX d_rotatePoint() from RayTracing.cuh:233-287
+// Camera calls with theta = -PI/2 + elevation, phi = PI/2 - azimuth
+vec3 camera_rotate_point(vec3 position, float theta, float phi) {
+    float st = sin(theta);
+    float ct = cos(theta);
+    float sp = sin(phi);
+    float cp = cos(phi);
+
+    // Rz(phi) * Ry(theta)
+    // Ry: [ ct  0  st]   Rz: [ cp -sp  0]
+    //     [  0  1   0]       [ sp  cp  0]
+    //     [-st  0  ct]       [  0   0  1]
+    //
+    // Combined = Rz * Ry:
+    // [ cp*ct  -sp  cp*st]
+    // [ sp*ct   cp  sp*st]
+    // [   -st    0     ct]
+    return vec3(
+        cp * ct * position.x - sp * position.y + cp * st * position.z,
+        sp * ct * position.x + cp * position.y + sp * st * position.z,
+        -st * position.x + ct * position.z
+    );
+}
+
 #endif // TRANSFORMS_GLSL

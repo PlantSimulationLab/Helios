@@ -476,6 +476,7 @@ void main() {
             // If ray hits a bbox face, wrap to opposite side and re-trace (up to 10 wraps)
             float closest_t;
             uint hit_prim_type;
+            vec2 hit_uv;
             uint hit_prim_idx;
             vec3 trace_origin = ray_origin;
 
@@ -486,7 +487,8 @@ void main() {
                     1e-5, // t_min (avoid self-intersection)
                     prim_idx, // origin primitive index (skip self-hits)
                     closest_t,
-                    hit_prim_type
+                    hit_prim_type,
+                    hit_uv
                 );
 
                 if (pc.bbox_count == 0) break; // No periodic boundaries

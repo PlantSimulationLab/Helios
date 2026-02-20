@@ -18,7 +18,7 @@ int main() {
     context.translatePrimitive(UUIDs_bunny_2, make_vec3(-0.15, 0, 0));
 
     // Load and scale the Stanford Dragon model, positioned at center
-    std::vector<uint> UUIDs_dragon = context.loadPLY("../../../PLY/StanfordDragon.ply", make_vec3(0.025, 0, 0), 0.2, nullrotation);
+    std::vector<uint> UUIDs_dragon;// = context.loadPLY("../../../PLY/StanfordDragon.ply", make_vec3(0.025, 0, 0), 0.2, nullrotation);
 
     // Create a ground plane to provide realistic lighting and context
     std::vector<uint> UUIDs_tile = context.addTile(nullorigin, make_vec2(1, 1), nullrotation, make_int2(1000, 1000));
@@ -138,6 +138,9 @@ int main() {
 
     // Auto-calibrate camera image using colorboard reference values with quality report
     std::string corrected_image = radiation.autoCalibrateCameraImage("bunnycam", "red", "green", "blue", "../output/auto_calibrated_bunnycam.jpeg", true);
+
+    // Display auto-calibrated image
+    vis.displayImage(corrected_image);
 
     // Note: Use the Python script 'visualize_segmentation.py' to view segmentation masks
 

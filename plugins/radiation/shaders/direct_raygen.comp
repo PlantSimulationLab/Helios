@@ -304,7 +304,12 @@ void main() {
     uint launch_x = gl_GlobalInvocationID.x;  // Ray grid X [0, launch_dim_x)
 
     // Decode Y dimension: lower bits = ray grid Y, upper bits = primitive tile index
-    uint prim_tile_y = gl_GlobalInvocationID.y / pc.launch_dim_y;
+    // FIX: Tile by workgroup boundaries (WG_Y), not by logical ray grid size (launch_dim_y).
+    // The dispatch allocates dispatch_y_rays * WG_Y threads per tile, where dispatch_y_rays = ceil(launch_dim_y / WG_Y).
+    // For launch_dim_y <= WG_Y, this is exactly WG_Y threads per tile.
+    const uint WG_Y = 32;  // Must match layout(local_size_y = 32)
+    uint threads_per_tile = ((pc.launch_dim_y + WG_Y - 1) / WG_Y) * WG_Y;  // Round up to workgroup multiple
+    uint prim_tile_y = gl_GlobalInvocationID.y / threads_per_tile;
     uint launch_y = gl_GlobalInvocationID.y % pc.launch_dim_y;  // Ray grid Y [0, launch_dim_y)
 
     // Decode primitive index from 2D tiling
@@ -565,11 +570,12 @@ void main() {
                 // Periodic boundary wrap loop: if ray hits bbox face, wrap and re-trace (up to 10 wraps)
                 float occlusion_t;
                 uint occlusion_prim_type;
+                vec2 occlusion_uv;
                 uint occluder;
                 vec3 trace_origin = ray_origin;
 
                 for (int wrap = 0; wrap < 10; ++wrap) {
-                    occluder = traverse_bvh(trace_origin, ray_dir, 1e-4, prim_idx, occlusion_t, occlusion_prim_type);
+                    occluder = traverse_bvh(trace_origin, ray_dir, 1e-4, prim_idx, occlusion_t, occlusion_prim_type, occlusion_uv);
 
                     if (pc.bbox_count == 0) break; // No periodic boundaries
 

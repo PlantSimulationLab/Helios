@@ -1,26 +1,158 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_GOOGLE_include_directive : enable
 
-// Pixel label ray generation shader (Phase 7+)
-// Launches center-of-pixel rays for primitive identification
+// Pixel label ray generation shader (Phase 7)
+// Launches center-of-pixel rays for primitive identification and depth
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
-// Push constants (launch parameters)
+// Push constants (camera parameters)
 layout(push_constant) uniform PushConstants {
-    uint camera_id;
-    uint resolution_x;
-    uint resolution_y;
-} pc;
+    vec3 camera_position;          // 12 bytes, offset 0
+    float viewplane_length;        // 4 bytes, offset 12
+    float camera_direction_x;      // 4 bytes, offset 16 (elevation)
+    float camera_direction_y;      // 4 bytes, offset 20 (azimuth)
+    float focal_length;            // 4 bytes, offset 24
+    float lens_diameter;           // 4 bytes, offset 28 (unused for pixel_label)
+    float fov_aspect_ratio;        // 4 bytes, offset 32
+    uint resolution_x;             // 4 bytes, offset 36
+    uint resolution_y;             // 4 bytes, offset 40
+    uint resolution_full_x;        // 4 bytes, offset 44
+    uint resolution_full_y;        // 4 bytes, offset 48
+    uint pixel_offset_x;           // 4 bytes, offset 52
+    uint pixel_offset_y;           // 4 bytes, offset 56
+    uint antialiasing_samples;     // 4 bytes, offset 60 (unused=1)
+    uint random_seed;              // 4 bytes, offset 64
+    uint band_count;               // 4 bytes, offset 68
+    uint source_count;             // 4 bytes, offset 72
+    uint primitive_count;          // 4 bytes, offset 76
+    vec3 sun_direction;            // 12 bytes, offset 80 (unused)
+    float solar_disk_cos_angle;    // 4 bytes, offset 92 (unused)
+    uint periodic_flag_x;          // 4 bytes, offset 96
+    uint periodic_flag_y;          // 4 bytes, offset 100
+    uint bbox_count;               // 4 bytes, offset 104
+    float domain_xmin;             // 4 bytes, offset 108
+    float domain_xmax;             // 4 bytes, offset 112
+    float domain_ymin;             // 4 bytes, offset 116
+    float domain_ymax;             // 4 bytes, offset 120
+    uint padding;                  // 4 bytes, offset 124
+} pc; // Total: 128 bytes
 
-// Placeholder main (to be implemented in Phase 7)
+// ========== Descriptor Set 0: Geometry (same as other shaders) ==========
+layout(set = 0, binding = 0) readonly buffer BVHBuffer { float data[]; } bvh_buf;
+layout(set = 0, binding = 1) readonly buffer PrimIndicesBuffer { uint indices[]; } prim_indices_buf;
+layout(set = 0, binding = 2) readonly buffer TransformMatricesBuffer { float matrices[]; } transform_buf;
+layout(set = 0, binding = 3) readonly buffer PrimTypesBuffer { uint types[]; } prim_types_buf;
+layout(set = 0, binding = 4) readonly buffer PrimUUIDsBuffer { uint uuids[]; } prim_uuids_buf;
+layout(set = 0, binding = 5) readonly buffer PrimPositionsBuffer { uint positions[]; } prim_positions_buf;
+layout(set = 0, binding = 6) readonly buffer ObjectSubdivisionsBuffer { ivec2 subdivisions[]; } obj_subdivisions_buf;
+layout(set = 0, binding = 7) readonly buffer TwosidedFlagBuffer { uint twosided_flags[]; } twosided_buf;
+layout(set = 0, binding = 8) readonly buffer PatchVerticesBuffer { float vertices[]; } patch_vertices_buf;
+layout(set = 0, binding = 9) readonly buffer TriangleVerticesBuffer { float vertices[]; } triangle_vertices_buf;
+layout(set = 0, binding = 10) readonly buffer NormalsBuffer { float normals[]; } normals_buf;
+layout(set = 0, binding = 11) readonly buffer MaskDataBuffer { uint mask_data[]; } mask_data_buf;
+layout(set = 0, binding = 12) readonly buffer MaskSizesBuffer { ivec2 mask_sizes[]; } mask_sizes_buf;
+layout(set = 0, binding = 13) readonly buffer MaskOffsetsBuffer { uint mask_offsets[]; } mask_offsets_buf;
+layout(set = 0, binding = 14) readonly buffer MaskIDsBuffer { int mask_ids[]; } mask_ids_buf;
+layout(set = 0, binding = 15) readonly buffer UVDataBuffer { vec2 uv_data[]; } uv_data_buf;
+layout(set = 0, binding = 16) readonly buffer UVIDsBuffer { int uv_ids[]; } uv_ids_buf;
+layout(set = 0, binding = 17) readonly buffer BboxVerticesBuffer { float vertices[]; } bbox_verts_buf;
+
+// ========== Descriptor Set 2: Result Buffers ==========
+layout(set = 2, binding = 6) buffer CameraPixelLabelBuffer { uint camera_pixel_label[]; };
+layout(set = 2, binding = 7) buffer CameraPixelDepthBuffer { float camera_pixel_depth[]; };
+
+// ========== Include common shader utilities ==========
+#include "common/random.glsl"
+#include "common/transforms.glsl"
+#include "common/bvh_traversal.glsl"
+#include "common/periodic_boundary.glsl"
+
+#ifndef PI
+const float PI = 3.14159265359;
+#endif
+
 void main() {
     uint pixel_x = gl_GlobalInvocationID.x;
     uint pixel_y = gl_GlobalInvocationID.y;
 
+    // Bounds check
     if (pixel_x >= pc.resolution_x || pixel_y >= pc.resolution_y) {
         return;
     }
 
-    // TODO: Implement pixel label ray generation in Phase 7
+    // Compute global pixel coordinates (including tile offset)
+    uint ii = pc.pixel_offset_x + pixel_x;  // global x-pixel
+    uint jj = pc.pixel_offset_y + pixel_y;  // global y-pixel
+    uint pixel_index = jj * pc.resolution_full_x + ii;  // global pixel linear index
+
+    // ========== Camera Ray Generation ==========
+
+    // Calculate VFOV scaling: multiplier = 1/FOV_aspect_ratio
+    float multiplier = 1.0 / pc.fov_aspect_ratio;
+
+    // Sample through center of pixel (no jitter for pixel labeling)
+    vec3 sp;
+    sp.y = (-0.5 + (float(ii) + 0.5) / float(pc.resolution_full_x));
+    sp.z = (0.5 - (float(jj) + 0.5) / float(pc.resolution_full_y)) * multiplier;
+    sp.x = pc.viewplane_length;
+
+    // Point on focal plane through lens center and pixel center
+    vec3 p = vec3(
+        pc.focal_length,
+        sp.y / pc.viewplane_length * pc.focal_length,
+        sp.z / pc.viewplane_length * pc.focal_length
+    );
+
+    // Ray from center of lens (pinhole for pixel labeling)
+    vec3 ray_origin = vec3(0, 0, 0);
+    vec3 ray_dir = p;
+
+    // Rotate into world space using camera direction
+    float theta = -0.5 * PI + pc.camera_direction_x;  // elevation
+    float phi = 0.5 * PI - pc.camera_direction_y;      // azimuth
+    ray_origin = camera_rotate_point(ray_origin, theta, phi) + pc.camera_position;
+    ray_dir = normalize(camera_rotate_point(ray_dir, theta, phi));
+
+    // ========== BVH Traversal with Periodic Boundary Wrapping ==========
+
+    float accumulated_depth = 0.0;
+    uint hit_prim = UINT_MAX;
+    float closest_t;
+    uint hit_prim_type;
+    vec2 hit_uv;
+
+    for (int wrap = 0; wrap < 10; ++wrap) {
+        hit_prim = traverse_bvh(ray_origin, ray_dir, 1e-5, UINT_MAX, closest_t, hit_prim_type, hit_uv);
+
+        if (pc.bbox_count == 0) break; // No periodic boundaries
+
+        vec3 wrapped_origin;
+        bool hit_periodic = check_periodic_boundary(
+            ray_origin, ray_dir, closest_t,
+            pc.periodic_flag_x, pc.periodic_flag_y, pc.bbox_count,
+            pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax,
+            wrapped_origin);
+
+        if (!hit_periodic) break; // Real hit or miss
+        accumulated_depth += closest_t;
+        ray_origin = wrapped_origin;
+        hit_prim = UINT_MAX; // Reset for next iteration
+    }
+
+    // ========== Store Results ==========
+
+    if (hit_prim != UINT_MAX) {
+        // Hit: Store UUID+1 (0 reserved for sky)
+        camera_pixel_label[pixel_index] = prim_uuids_buf.uuids[hit_prim] + 1u;
+
+        // Compute depth projected along camera view direction
+        float total_depth = accumulated_depth + closest_t;
+        vec3 camera_forward = camera_rotate_point(vec3(1, 0, 0), theta, phi);
+        camera_pixel_depth[pixel_index] = abs(dot(camera_forward, ray_dir)) * total_depth;
+    } else {
+        // Miss: depth = -1 (label stays 0 from zeroing)
+        camera_pixel_depth[pixel_index] = -1.0;
+    }
 }
