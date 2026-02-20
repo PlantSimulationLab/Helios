@@ -101,6 +101,7 @@ namespace helios {
         void uploadCameraScatterBuffers(const std::vector<float> &scatter_top_cam, const std::vector<float> &scatter_bottom_cam) override;
         void zeroCameraScatterBuffers(size_t launch_band_count) override;
         void uploadSourceFluxes(const std::vector<float> &fluxes) override;
+        void uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) override;
 
         // ========== Diagnostics ==========
         void queryGPUMemory() const override;
@@ -152,7 +153,9 @@ namespace helios {
         Buffer source_fluxes_buffer;
         Buffer reflectivity_buffer;
         Buffer transmissivity_buffer;
-        // TODO Phase 2+: Add diffuse params, specular
+        Buffer specular_exponent_buffer;     //!< Per-primitive Blinn-Phong exponent
+        Buffer specular_scale_buffer;        //!< Per-primitive specular scale coefficient
+        Buffer source_fluxes_cam_buffer;     //!< Camera spectral response weights [source × band]
 
         // Result buffers (Set 2)
         Buffer radiation_in_buffer;
@@ -166,6 +169,7 @@ namespace helios {
         Buffer camera_pixel_depth_buffer;    //!< Camera pixel depth values
         Buffer camera_scatter_top_buffer;    //!< Camera-weighted scatter (top face)
         Buffer camera_scatter_bottom_buffer; //!< Camera-weighted scatter (bottom face)
+        Buffer radiation_specular_buffer;    //!< Accumulated incident radiation for specular [source × primitive × band]
 
         // Sky parameter buffers (Set 3) - Phase 2+
         Buffer diffuse_flux_buffer;

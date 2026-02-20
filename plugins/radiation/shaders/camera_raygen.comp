@@ -37,7 +37,7 @@ layout(push_constant) uniform PushConstants {
     float domain_xmax;             // 4 bytes, offset 112
     float domain_ymin;             // 4 bytes, offset 116
     float domain_ymax;             // 4 bytes, offset 120
-    uint padding;                  // 4 bytes, offset 124
+    uint specular_reflection_enabled;  // 4 bytes, offset 124 (0=disabled, 1=default scale, 2=user scale)
 } pc; // Total: 128 bytes
 
 // ========== Descriptor Set 0: Geometry ==========
@@ -66,11 +66,15 @@ layout(set = 1, binding = 1) readonly buffer SourceTypesBuffer { uint types[]; }
 layout(set = 1, binding = 2) readonly buffer SourceRotationsBuffer { vec3 rotations[]; } source_rotations_buf;
 layout(set = 1, binding = 3) readonly buffer SourceWidthsBuffer { vec2 widths[]; } source_widths_buf;
 layout(set = 1, binding = 4) readonly buffer SourceFluxesBuffer { float fluxes[]; } source_fluxes_buf;
+layout(set = 1, binding = 7) readonly buffer SpecularExponentBuffer { float specular_exponent[]; } specular_exponent_buf;
+layout(set = 1, binding = 8) readonly buffer SpecularScaleBuffer { float specular_scale[]; } specular_scale_buf;
+layout(set = 1, binding = 9) readonly buffer SourceFluxesCamBuffer { float source_fluxes_cam[]; } source_fluxes_cam_buf;
 
 // ========== Descriptor Set 2: Result Buffers ==========
 layout(set = 2, binding = 1) readonly buffer RadiationOutTopBuffer { float radiation_out_top[]; };
 layout(set = 2, binding = 2) readonly buffer RadiationOutBottomBuffer { float radiation_out_bottom[]; };
 layout(set = 2, binding = 5) buffer CameraRadiationBuffer { float camera_radiation[]; };
+layout(set = 2, binding = 10) readonly buffer RadiationSpecularBuffer { float radiation_specular[]; } radiation_specular_buf;
 
 // ========== Descriptor Set 3: Sky Parameters ==========
 layout(set = 3, binding = 4) readonly buffer SkyRadianceParamsBuffer { vec4 sky_radiance_params[]; };
@@ -355,10 +359,59 @@ void main() {
                 surface_strength += source_radiance * strength;
             }
 
+            // ========== Specular Reflection (Blinn-Phong) ==========
+            // Compute specular highlights using incident radiation accumulated during direct ray tracing
+            // Matches OptiX closest_hit_camera (rayHit.cu lines 438-483)
+            float strength_spec = 0.0;
+            if (pc.specular_reflection_enabled > 0 && specular_exponent_buf.specular_exponent[hit_position] > 0.0) {
+                // Loop over all sources to accumulate specular contribution
+                for (uint s = 0; s < pc.source_count; s++) {
+                    // Read accumulated incident radiation from direct rays
+                    // radiation_specular is indexed as [source][primitive][band]
+                    uint spec_idx = s * pc.primitive_count * pc.band_count + hit_position * pc.band_count + b;
+                    float spec = radiation_specular_buf.radiation_specular[spec_idx];
+
+                    // Apply camera spectral response weight and Fresnel factor
+                    // source_fluxes_cam stores ∫(source_spectrum × camera_response) / ∫(source_spectrum)
+                    float cam_weight = source_fluxes_cam_buf.source_fluxes_cam[s * pc.band_count + b];
+                    spec *= cam_weight * 0.25;  // 0.25 = default Fresnel reflectance
+
+                    if (spec > 0.0) {
+                        // Determine light direction based on source type
+                        vec3 light_direction;
+                        uint source_type = source_types_buf.types[s];
+                        if (source_type == 0u || source_type == 2u) {
+                            // Collimated or sun-sphere: parallel rays from source direction
+                            light_direction = normalize(source_positions_buf.positions[s]);
+                        } else {
+                            // Sphere, disk, or rectangle: direction from hit point to source center
+                            vec3 hit_point = ray_origin + closest_t * ray_dir;
+                            light_direction = normalize(source_positions_buf.positions[s] - hit_point);
+                        }
+
+                        // Blinn-Phong half-vector (between light direction and view direction)
+                        vec3 half_vec = normalize(light_direction - ray_dir);
+                        float exp_val = specular_exponent_buf.specular_exponent[hit_position];
+
+                        // Apply user-defined scale coefficient if mode == 2
+                        float scale = 1.0;
+                        if (pc.specular_reflection_enabled == 2) {
+                            scale = specular_scale_buf.specular_scale[hit_position];
+                        }
+
+                        // Blinn-Phong specular BRDF:
+                        // (exp+2)/(2π) normalizes the distribution to unity
+                        // Division by antialiasing_samples averages over Monte Carlo samples
+                        strength_spec += spec * scale * pow(max(0.0, dot(half_vec, normal)), exp_val)
+                                       * (exp_val + 2.0) / (float(pc.antialiasing_samples) * 2.0 * PI);
+                    }
+                }
+            }
+
             // Accumulate into camera pixel buffer (with pi conversion)
             // Note: pi factor converts flux to intensity assuming Lambertian surface
             uint camera_idx = pixel_index * pc.band_count + b;
-            atomicAdd(camera_radiation[camera_idx], surface_strength / PI);
+            atomicAdd(camera_radiation[camera_idx], (surface_strength + strength_spec) / PI);
         }
 
     } else {

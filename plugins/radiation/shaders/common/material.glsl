@@ -18,14 +18,6 @@ float get_transmissivity(uint source, uint band, uint prim, uint Nbands, uint Np
     return 0.0;
 }
 
-float get_specular_exponent(uint prim) {
-    // TODO: Read from specular_exponent buffer
-    return 10.0;
-}
-
-float get_specular_scale(uint prim) {
-    // TODO: Read from specular_scale buffer
-    return 0.0;
-}
+// Note: Specular property functions removed - camera shader reads directly from buffers
 
 #endif // MATERIAL_GLSL

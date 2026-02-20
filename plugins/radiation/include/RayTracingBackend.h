@@ -250,6 +250,17 @@ namespace helios {
          */
         virtual void uploadSourceFluxes(const std::vector<float> &fluxes) = 0;
 
+        /**
+         * @brief Upload camera-weighted source flux values for specular reflection
+         *
+         * @param[in] fluxes_cam Camera spectral response weights indexed by [source * Nbands_launch + band]
+         *
+         * Uploads per-camera spectral response weights used for specular reflection in camera rendering.
+         * The weights represent ∫(source_spectrum × camera_response) / ∫(source_spectrum) for each
+         * source/band combination. Called before each camera render with the current camera's weights.
+         */
+        virtual void uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) = 0;
+
         // ========== Diagnostics ==========
 
         /**

@@ -912,6 +912,12 @@ void OptiX6Backend::uploadSourceFluxes(const std::vector<float> &fluxes) {
     }
 }
 
+void OptiX6Backend::uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) {
+    // No-op for OptiX backend - source_fluxes_cam is uploaded as part of updateSources()
+    // via sourcesToBuffers() which calls initializeBuffer1Df(source_fluxes_cam_RTbuffer, fluxes_cam)
+    // OptiX handles camera spectral weights through its own mechanism in the source data structure
+}
+
 void OptiX6Backend::queryGPUMemory() const {
     if (!is_initialized) {
         std::cout << "Backend not initialized - cannot query GPU memory." << std::endl;

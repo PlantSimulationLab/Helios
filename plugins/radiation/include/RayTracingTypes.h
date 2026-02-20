@@ -235,7 +235,7 @@ namespace helios {
         std::vector<float> radiation_out_bottom; //!< Emitted/outgoing radiation (bottom face) per [primitive][band]
 
         // Flags
-        bool specular_reflection_enabled = false; //!< Enable specular reflections
+        uint specular_reflection_enabled = 0; //!< Specular reflection mode: 0=disabled, 1=default 0.25 scale, 2=user-defined scale
     };
 
     /**

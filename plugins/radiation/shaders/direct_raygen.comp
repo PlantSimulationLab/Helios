@@ -33,6 +33,7 @@ layout(push_constant) uniform PushConstants {
     float domain_xmax;
     float domain_ymin;
     float domain_ymax;
+    uint specular_reflection_enabled;  // 0=disabled, 1=default scale, 2=user scale
 } pc;
 
 // ========== Descriptor Set 0: Geometry ==========
@@ -143,6 +144,10 @@ layout(set = 2, binding = 3) buffer ScatterTopBuffer {
 layout(set = 2, binding = 4) buffer ScatterBottomBuffer {
     float scatter_bottom[];
 } scatter_bottom_buf;
+
+layout(set = 2, binding = 10) buffer RadiationSpecularBuffer {
+    float radiation_specular[]; // [source * primitive * band] accumulated incident radiation
+} radiation_specular_buf;
 
 // ========== Include common shader utilities ==========
 #include "common/random.glsl"
@@ -644,6 +649,17 @@ void main() {
                         } else {
                             atomicAdd(scatter_bottom_buf.scatter_bottom[rad_idx], scatter_rho_sum);
                             atomicAdd(scatter_top_buf.scatter_top[rad_idx], scatter_tau_sum);
+                        }
+                    }
+
+                    // Accumulate incident radiation for specular reflection
+                    // radiation_specular stores per-source incident energy for camera specular shading
+                    if (pc.specular_reflection_enabled > 0) {
+                        float spec_energy = flux * strength;
+                        float spec_sum = subgroupAdd(spec_energy);
+                        if (subgroupElect()) {
+                            uint spec_idx = src_idx * pc.primitive_count * pc.band_count + prim_idx * pc.band_count + band;
+                            atomicAdd(radiation_specular_buf.radiation_specular[spec_idx], spec_sum);
                         }
                     }
                 }

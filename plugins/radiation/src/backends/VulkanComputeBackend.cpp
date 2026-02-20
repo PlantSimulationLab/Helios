@@ -134,8 +134,11 @@ namespace helios {
         destroyBuffer(source_rotations_buffer);
         destroyBuffer(source_widths_buffer);
         destroyBuffer(source_fluxes_buffer);
+        destroyBuffer(source_fluxes_cam_buffer);
         destroyBuffer(reflectivity_buffer);
         destroyBuffer(transmissivity_buffer);
+        destroyBuffer(specular_exponent_buffer);
+        destroyBuffer(specular_scale_buffer);
         destroyBuffer(radiation_in_buffer);
         destroyBuffer(radiation_out_buffer);
         destroyBuffer(radiation_out_top_buffer);
@@ -147,6 +150,7 @@ namespace helios {
         destroyBuffer(camera_pixel_depth_buffer);
         destroyBuffer(camera_scatter_top_buffer);
         destroyBuffer(camera_scatter_bottom_buffer);
+        destroyBuffer(radiation_specular_buffer);
         destroyBuffer(diffuse_flux_buffer);
         destroyBuffer(diffuse_peak_dir_buffer);
         destroyBuffer(diffuse_extinction_buffer);
@@ -577,12 +581,14 @@ namespace helios {
             return; // No geometry uploaded yet
         }
 
-        size_t expected_size = primitive_count * band_count;
+        // Material buffers are indexed as [source * Nbands * Nprims + band * Nprims + prim]
+        // Use materials.num_sources for validation (source_count may not be set yet if updateSources hasn't been called)
+        size_t expected_size = materials.num_sources * band_count * primitive_count;
 
         // Upload reflectivity buffer
         if (!materials.reflectivity.empty()) {
             if (materials.reflectivity.size() != expected_size) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): reflectivity size mismatch. Expected " + std::to_string(expected_size) + " entries (Nprims * Nbands), got " +
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): reflectivity size mismatch. Expected " + std::to_string(expected_size) + " entries (Nsources * Nprims * Nbands), got " +
                                      std::to_string(materials.reflectivity.size()));
             }
 
@@ -596,7 +602,7 @@ namespace helios {
         // Upload transmissivity buffer
         if (!materials.transmissivity.empty()) {
             if (materials.transmissivity.size() != expected_size) {
-                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): transmissivity size mismatch. Expected " + std::to_string(expected_size) + " entries (Nprims * Nbands), got " +
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): transmissivity size mismatch. Expected " + std::to_string(expected_size) + " entries (Nsources * Nprims * Nbands), got " +
                                      std::to_string(materials.transmissivity.size()));
             }
 
@@ -605,6 +611,34 @@ namespace helios {
             }
             transmissivity_buffer = createBuffer(materials.transmissivity.size() * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
             uploadBufferData(transmissivity_buffer, materials.transmissivity.data(), materials.transmissivity.size() * sizeof(float));
+        }
+
+        // Upload specular exponent buffer (per primitive)
+        if (!materials.specular_exponent.empty()) {
+            if (materials.specular_exponent.size() != primitive_count) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): specular_exponent size mismatch. Expected " + std::to_string(primitive_count) + " entries (Nprims), got " +
+                                     std::to_string(materials.specular_exponent.size()));
+            }
+
+            if (specular_exponent_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(specular_exponent_buffer);
+            }
+            specular_exponent_buffer = createBuffer(materials.specular_exponent.size() * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(specular_exponent_buffer, materials.specular_exponent.data(), materials.specular_exponent.size() * sizeof(float));
+        }
+
+        // Upload specular scale buffer (per primitive)
+        if (!materials.specular_scale.empty()) {
+            if (materials.specular_scale.size() != primitive_count) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::updateMaterials): specular_scale size mismatch. Expected " + std::to_string(primitive_count) + " entries (Nprims), got " +
+                                     std::to_string(materials.specular_scale.size()));
+            }
+
+            if (specular_scale_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(specular_scale_buffer);
+            }
+            specular_scale_buffer = createBuffer(materials.specular_scale.size() * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(specular_scale_buffer, materials.specular_scale.data(), materials.specular_scale.size() * sizeof(float));
         }
 
         descriptors_dirty = true;  // Materials changed, need descriptor update
@@ -820,6 +854,7 @@ namespace helios {
             float domain_xmax;
             float domain_ymin;
             float domain_ymax;
+            uint specular_reflection_enabled;  // 0=disabled, 1=default scale, 2=user scale
         } push_constants;
 
         // Compute 2D grid dimensions for stratified sampling (matches OptiX)
@@ -862,6 +897,7 @@ namespace helios {
         push_constants.domain_xmax = domain_bounds[1];
         push_constants.domain_ymin = domain_bounds[2];
         push_constants.domain_ymax = domain_bounds[3];
+        push_constants.specular_reflection_enabled = params.specular_reflection_enabled;
 
         // 3D dispatch with 2D primitive tiling to avoid sub-batching
         // Tile primitives into Y dimension when count exceeds 65535 to use full Vulkan dispatch space
@@ -1446,7 +1482,7 @@ namespace helios {
             float domain_xmax;                 // 4 bytes
             float domain_ymin;                 // 4 bytes
             float domain_ymax;                 // 4 bytes
-            uint32_t padding;                  // 4 bytes
+            uint32_t specular_reflection_enabled;  // 4 bytes
         } push_constants{};  // Total: 128 bytes
 
         push_constants.camera_position = params.camera_position;
@@ -1476,7 +1512,7 @@ namespace helios {
         push_constants.domain_xmax = domain_bounds[1];
         push_constants.domain_ymin = domain_bounds[2];
         push_constants.domain_ymax = domain_bounds[3];
-        push_constants.padding = 0;
+        push_constants.specular_reflection_enabled = params.specular_reflection_enabled;
 
         vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
 
@@ -1934,7 +1970,21 @@ namespace helios {
             radiation_out_buffer = createBuffer(buffer_size * sizeof(float), usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
         }
 
-        // Zero both buffers
+        // Create or resize radiation_specular buffer [source * primitive * band]
+        // Only create if source_count > 0 (specular requires sources)
+        if (source_count > 0) {
+            size_t specular_buffer_size = source_count * primitive_count * launch_band_count;
+            if (radiation_specular_buffer.buffer == VK_NULL_HANDLE || radiation_specular_buffer.size != specular_buffer_size * sizeof(float)) {
+                if (radiation_specular_buffer.buffer != VK_NULL_HANDLE) {
+                    destroyBuffer(radiation_specular_buffer);
+                }
+                VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+                radiation_specular_buffer = createBuffer(specular_buffer_size * sizeof(float), usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
+            }
+            zeroBuffer(radiation_specular_buffer);
+        }
+
+        // Zero radiation buffers
         zeroBuffer(radiation_in_buffer);
         zeroBuffer(radiation_out_buffer);
 
@@ -2193,6 +2243,28 @@ namespace helios {
         }
         source_fluxes_buffer = createBuffer(fluxes.size() * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         uploadBufferData(source_fluxes_buffer, fluxes.data(), fluxes.size() * sizeof(float));
+    }
+
+    void VulkanComputeBackend::uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) {
+        if (fluxes_cam.empty() || source_count == 0) {
+            return; // No camera weights or sources
+        }
+
+        // Camera spectral response weights indexed by [source * Nbands_launch + band]
+        size_t expected_size = source_count * launch_band_count;
+
+        if (fluxes_cam.size() != expected_size) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::uploadSourceFluxesCam): fluxes_cam size mismatch. Expected " + std::to_string(expected_size) +
+                                 " (Nsources * Nbands_launch), got " + std::to_string(fluxes_cam.size()));
+        }
+
+        if (source_fluxes_cam_buffer.buffer != VK_NULL_HANDLE) {
+            destroyBuffer(source_fluxes_cam_buffer);
+        }
+        source_fluxes_cam_buffer = createBuffer(fluxes_cam.size() * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        uploadBufferData(source_fluxes_cam_buffer, fluxes_cam.data(), fluxes_cam.size() * sizeof(float));
+
+        descriptors_dirty = true; // New buffer uploaded, descriptors need update
     }
 
     void VulkanComputeBackend::queryGPUMemory() const {
@@ -2553,7 +2625,9 @@ namespace helios {
             {4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Source fluxes
             {5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Reflectivity
             {6, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Transmissivity
-            // TODO Phase 2+: Add diffuse params, specular
+            {7, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Specular exponent
+            {8, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Specular scale
+            {9, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Source fluxes (camera-weighted)
         };
 
         layout_info.bindingCount = static_cast<uint32_t>(material_bindings.size());
@@ -2575,6 +2649,7 @@ namespace helios {
             {7, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // camera_pixel_depth
             {8, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // camera_scatter_top
             {9, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // camera_scatter_bottom
+            {10, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_specular
         };
 
         layout_info.bindingCount = static_cast<uint32_t>(result_bindings.size());
@@ -2617,7 +2692,7 @@ namespace helios {
         // ========== Create Descriptor Pool ==========
 
         std::vector<VkDescriptorPoolSize> pool_sizes = {
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 57}, // All sets: 18 geo + 7 mat + 10 result + 7 sky + 1 debug + margin
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 62}, // All sets: 18 geo + 10 mat + 11 result + 7 sky + 1 debug + margin
         };
 
         VkDescriptorPoolCreateInfo pool_info{};
@@ -2686,6 +2761,17 @@ namespace helios {
         zeroBuffer(camera_scatter_top_buffer);
         camera_scatter_bottom_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
         zeroBuffer(camera_scatter_bottom_buffer);
+
+        // ========== Create placeholder specular buffers ==========
+        // MoltenVK requires these before pipeline creation (camera/direct shaders reference them)
+        specular_exponent_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(specular_exponent_buffer);
+        specular_scale_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(specular_scale_buffer);
+        source_fluxes_cam_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(source_fluxes_cam_buffer);
+        radiation_specular_buffer = createBuffer(placeholder_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+        zeroBuffer(radiation_specular_buffer);
 
         // ========== Create placeholder mask/UV buffers ==========
         // Same requirement as sky parameters — needed before pipeline creation for MoltenVK
@@ -3451,6 +3537,58 @@ namespace helios {
             descriptor_writes.push_back(write);
         }
 
+        // Specular property buffers
+        VkDescriptorBufferInfo specular_exponent_info{};
+        specular_exponent_info.buffer = specular_exponent_buffer.buffer;
+        specular_exponent_info.offset = 0;
+        specular_exponent_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo specular_scale_info{};
+        specular_scale_info.buffer = specular_scale_buffer.buffer;
+        specular_scale_info.offset = 0;
+        specular_scale_info.range = VK_WHOLE_SIZE;
+
+        VkDescriptorBufferInfo source_fluxes_cam_info{};
+        source_fluxes_cam_info.buffer = source_fluxes_cam_buffer.buffer;
+        source_fluxes_cam_info.offset = 0;
+        source_fluxes_cam_info.range = VK_WHOLE_SIZE;
+
+        if (specular_exponent_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_materials;
+            write.dstBinding = 7;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &specular_exponent_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (specular_scale_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_materials;
+            write.dstBinding = 8;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &specular_scale_info;
+            descriptor_writes.push_back(write);
+        }
+
+        if (source_fluxes_cam_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_materials;
+            write.dstBinding = 9;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &source_fluxes_cam_info;
+            descriptor_writes.push_back(write);
+        }
+
         // ========== Set 2: Result Buffers ==========
 
         VkDescriptorBufferInfo rad_in_info{};
@@ -3625,6 +3763,23 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &camera_scatter_bottom_info;
+            descriptor_writes.push_back(write);
+        }
+
+        VkDescriptorBufferInfo radiation_specular_info{};
+        radiation_specular_info.buffer = radiation_specular_buffer.buffer;
+        radiation_specular_info.offset = 0;
+        radiation_specular_info.range = VK_WHOLE_SIZE;
+
+        if (radiation_specular_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_results;
+            write.dstBinding = 10;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &radiation_specular_info;
             descriptor_writes.push_back(write);
         }
 

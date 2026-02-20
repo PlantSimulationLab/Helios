@@ -3171,7 +3171,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         params.random_seed = std::chrono::system_clock::now().time_since_epoch().count();
         params.num_bands_global = Nbands_global;
         params.num_bands_launch = Nbands_launch;
-        params.specular_reflection_enabled = false;
+        params.specular_reflection_enabled = specular_reflection_mode;
 
         // Use the band_launch_flag already built above (lines 3375-3383)
         std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
@@ -3594,6 +3594,19 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 if (message_flag && tiles.size() > 1) {
                     std::cout << "Camera '" << camera.second.label << "' requires " << tiles.size() << " tiles" << std::endl;
                 }
+
+                // Upload camera spectral response weights for specular reflection
+                // Extract per-camera slice from source_data[s].fluxes_cam
+                // fluxes_cam is indexed as [band * Ncameras + cam], we need [source * band]
+                std::vector<float> cam_weights(Nsources * Nbands_launch, 1.0f);
+                for (uint s = 0; s < Nsources; s++) {
+                    for (uint b = 0; b < Nbands_launch; b++) {
+                        if (!source_data[s].fluxes_cam.empty() && source_data[s].fluxes_cam.size() == Nbands_launch * Ncameras) {
+                            cam_weights[s * Nbands_launch + b] = source_data[s].fluxes_cam[b * Ncameras + cam];
+                        }
+                    }
+                }
+                backend->uploadSourceFluxesCam(cam_weights);
 
                 // Launch camera rays (tiled or full)
                 for (size_t tile_idx = 0; tile_idx < tiles.size(); tile_idx++) {
