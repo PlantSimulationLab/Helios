@@ -3,6 +3,7 @@
 #extension GL_EXT_shader_atomic_float : enable
 #extension GL_GOOGLE_include_directive : enable
 #extension GL_KHR_shader_subgroup_arithmetic : enable
+#extension GL_KHR_shader_subgroup_basic : enable
 
 // Diffuse ray generation shader (Phase 2)
 // Launches rays from surfaces in hemispherical directions for diffuse radiation transfer
@@ -168,9 +169,12 @@ layout(set = 3, binding = 4) readonly buffer SkyRadianceParamsBuffer {
 // ========== Shared Memory for Atomic Reduction ==========
 // Each workgroup processes 1 primitive (8×32×1 = 256 threads)
 // Shared memory reduces atomic contention by ~256× (256 threads → 1 flush atomic per workgroup)
-shared float shared_rad_in;
-shared float shared_scatter_top;
-shared float shared_scatter_bottom;
+// Per-subgroup slots replace float atomics (Metal doesn't support threadgroup float atomics)
+// Max 64 subgroups = 256 threads / min_subgroup_size(4)
+const uint MAX_SUBGROUP_COUNT = 64u;
+shared float shared_rad_in[MAX_SUBGROUP_COUNT];
+shared float shared_scatter_top[MAX_SUBGROUP_COUNT];
+shared float shared_scatter_bottom[MAX_SUBGROUP_COUNT];
 
 // ========== Include common shader utilities ==========
 #include "common/random.glsl"
@@ -319,10 +323,11 @@ vec3 rotate_to_normal(vec3 dir_local, vec3 normal) {
 void main() {
     // Initialize shared memory (single primitive per workgroup)
     // CRITICAL: All threads must participate in barriers to avoid hangs
-    if (gl_LocalInvocationIndex == 0) {
-        shared_rad_in = 0.0;
-        shared_scatter_top = 0.0;
-        shared_scatter_bottom = 0.0;
+    // First 64 threads each initialize one subgroup slot
+    if (gl_LocalInvocationIndex < MAX_SUBGROUP_COUNT) {
+        shared_rad_in[gl_LocalInvocationIndex] = 0.0;
+        shared_scatter_top[gl_LocalInvocationIndex] = 0.0;
+        shared_scatter_bottom[gl_LocalInvocationIndex] = 0.0;
     }
     barrier();  // Wait for initialization to complete
 
@@ -539,7 +544,7 @@ void main() {
                 float absorption_energy = hit_energy * (1.0 - rho - tau);
                 float absorption_sum = subgroupAdd(absorption_energy);
                 if (subgroupElect()) {
-                    atomicAdd(shared_rad_in, absorption_sum);  // Shared memory atomic (10-30× faster)
+                    shared_rad_in[gl_SubgroupID] += absorption_sum;  // Non-atomic: exclusive slot per subgroup
                 }
 
                 // Scattering - accumulate to shared memory
@@ -549,8 +554,8 @@ void main() {
                     float reflect_sum = subgroupAdd(reflect_energy);
                     float transmit_sum = subgroupAdd(transmit_energy);
                     if (subgroupElect()) {
-                        atomicAdd(shared_scatter_top, reflect_sum);
-                        atomicAdd(shared_scatter_bottom, transmit_sum);
+                        shared_scatter_top[gl_SubgroupID] += reflect_sum;   // Non-atomic: exclusive slot per subgroup
+                        shared_scatter_bottom[gl_SubgroupID] += transmit_sum;
                     }
                 } else {
                     float reflect_energy = hit_energy * rho;
@@ -558,8 +563,8 @@ void main() {
                     float reflect_sum = subgroupAdd(reflect_energy);
                     float transmit_sum = subgroupAdd(transmit_energy);
                     if (subgroupElect()) {
-                        atomicAdd(shared_scatter_bottom, reflect_sum);
-                        atomicAdd(shared_scatter_top, transmit_sum);
+                        shared_scatter_bottom[gl_SubgroupID] += reflect_sum;  // Non-atomic: exclusive slot per subgroup
+                        shared_scatter_top[gl_SubgroupID] += transmit_sum;
                     }
                 }
 
@@ -590,7 +595,7 @@ void main() {
                     float sky_absorption = sky_energy * (1.0 - rho - tau);
                     float sky_absorption_sum = subgroupAdd(sky_absorption);
                     if (subgroupElect()) {
-                        atomicAdd(shared_rad_in, sky_absorption_sum);
+                        shared_rad_in[gl_SubgroupID] += sky_absorption_sum;  // Non-atomic: exclusive slot per subgroup
                     }
 
                     // Scattering - use shared memory atomics
@@ -600,8 +605,8 @@ void main() {
                         float sky_reflect_sum = subgroupAdd(sky_reflect);
                         float sky_transmit_sum = subgroupAdd(sky_transmit);
                         if (subgroupElect()) {
-                            atomicAdd(shared_scatter_top, sky_reflect_sum);
-                            atomicAdd(shared_scatter_bottom, sky_transmit_sum);
+                            shared_scatter_top[gl_SubgroupID] += sky_reflect_sum;   // Non-atomic: exclusive slot per subgroup
+                            shared_scatter_bottom[gl_SubgroupID] += sky_transmit_sum;
                         }
                     } else {
                         float sky_reflect = sky_energy * rho;
@@ -609,8 +614,8 @@ void main() {
                         float sky_reflect_sum = subgroupAdd(sky_reflect);
                         float sky_transmit_sum = subgroupAdd(sky_transmit);
                         if (subgroupElect()) {
-                            atomicAdd(shared_scatter_bottom, sky_reflect_sum);
-                            atomicAdd(shared_scatter_top, sky_transmit_sum);
+                            shared_scatter_bottom[gl_SubgroupID] += sky_reflect_sum;  // Non-atomic: exclusive slot per subgroup
+                            shared_scatter_top[gl_SubgroupID] += sky_transmit_sum;
                         }
                     }
                 }
@@ -632,15 +637,26 @@ void main() {
             // Compute global buffer index for this primitive
             uint global_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
 
+            // Sum all subgroup slots (unused slots are zero)
+            float total_rad_in = 0.0;
+            float total_scatter_top = 0.0;
+            float total_scatter_bottom = 0.0;
+            uint num_subgroups = 256u / gl_SubgroupSize;  // e.g. 256/32=8 on Apple Silicon
+            for (uint sg = 0u; sg < num_subgroups; sg++) {
+                total_rad_in += shared_rad_in[sg];
+                total_scatter_top += shared_scatter_top[sg];
+                total_scatter_bottom += shared_scatter_bottom[sg];
+            }
+
             // Flush accumulated values if non-zero (skip zero writes to reduce contention)
-            if (shared_rad_in != 0.0) {
-                atomicAdd(rad_in_buf.radiation_in[global_idx], shared_rad_in);
+            if (total_rad_in != 0.0) {
+                atomicAdd(rad_in_buf.radiation_in[global_idx], total_rad_in);
             }
-            if (shared_scatter_top != 0.0) {
-                atomicAdd(scatter_top_buf.scatter_top[global_idx], shared_scatter_top);
+            if (total_scatter_top != 0.0) {
+                atomicAdd(scatter_top_buf.scatter_top[global_idx], total_scatter_top);
             }
-            if (shared_scatter_bottom != 0.0) {
-                atomicAdd(scatter_bottom_buf.scatter_bottom[global_idx], shared_scatter_bottom);
+            if (total_scatter_bottom != 0.0) {
+                atomicAdd(scatter_bottom_buf.scatter_bottom[global_idx], total_scatter_bottom);
             }
         }
     }
