@@ -310,7 +310,7 @@ void main() {
     const uint WG_Y = 32;  // Must match layout(local_size_y = 32)
     uint threads_per_tile = ((pc.launch_dim_y + WG_Y - 1) / WG_Y) * WG_Y;  // Round up to workgroup multiple
     uint prim_tile_y = gl_GlobalInvocationID.y / threads_per_tile;
-    uint launch_y = gl_GlobalInvocationID.y % pc.launch_dim_y;  // Ray grid Y [0, launch_dim_y)
+    uint launch_y = gl_GlobalInvocationID.y % threads_per_tile;  // Position within tile [0, threads_per_tile)
 
     // Decode primitive index from 2D tiling
     uint prim_batch_idx = prim_tile_y * pc.prims_per_tile + gl_GlobalInvocationID.z;
