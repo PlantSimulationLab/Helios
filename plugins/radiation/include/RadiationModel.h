@@ -1823,38 +1823,30 @@ public:
     //! Set camera pixel data for a specific band
     void setCameraPixelData(const std::string &camera_label, const std::string &band_label, const std::vector<float> &pixel_data);
 
-    //! Query GPU memory available via backend abstraction layer
-    /**
-     * Phase 1: Integration test method - proves backend is accessible and functional.
-     * This method uses the backend instead of direct OptiX calls.
-     */
-    void queryBackendGPUMemory() const;
-
-    //! Test helper: Build geometry data and return primitive count (Phase 1 testing)
-    /**
-     * Phase 1: Testing helper to verify buildGeometryData() works correctly.
-     * Returns the number of primitives extracted from Context.
-     */
-    size_t testBuildGeometryData();
-
-    //! Test helper: Get backend pointer for direct testing (Phase 1 only)
-    helios::RayTracingBackend *getBackend();
-
-    //! Test helper: Get geometry data reference (Phase 1 only)
-    helios::RayTracingGeometry &getGeometryData();
-
-    //! Test helper: Get material data reference (Phase 1 only)
-    helios::RayTracingMaterial &getMaterialData();
-
-    //! Test helper: Get source data reference (Phase 1 only)
-    std::vector<helios::RayTracingSource> &getSourceData();
-
-    //! Test helper: Build all backend data (Phase 1 testing only)
-    void testBuildAllBackendData();
-
 private:
     //! Private constructor for test infrastructure (no backend initialization)
     RadiationModel(helios::Context *context_a, bool skip_backend_init);
+
+    //! Test helper: Build geometry data and return primitive count
+    size_t testBuildGeometryData();
+
+    //! Test helper: Get backend pointer for direct testing
+    helios::RayTracingBackend *getBackend();
+
+    //! Test helper: Get geometry data reference
+    helios::RayTracingGeometry &getGeometryData();
+
+    //! Test helper: Get material data reference
+    helios::RayTracingMaterial &getMaterialData();
+
+    //! Test helper: Get source data reference
+    std::vector<helios::RayTracingSource> &getSourceData();
+
+    //! Test helper: Build all backend data
+    void testBuildAllBackendData();
+
+    //! Query GPU memory available via backend abstraction layer
+    void queryBackendGPUMemory() const;
 
 protected:
     //! Flag to determine if status messages are output to the screen

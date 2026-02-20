@@ -2243,6 +2243,8 @@ namespace helios {
         }
         source_fluxes_buffer = createBuffer(fluxes.size() * sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
         uploadBufferData(source_fluxes_buffer, fluxes.data(), fluxes.size() * sizeof(float));
+
+        descriptors_dirty = true;  // New buffer created, descriptors need update
     }
 
     void VulkanComputeBackend::uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) {
