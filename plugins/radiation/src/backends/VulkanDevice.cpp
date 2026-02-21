@@ -137,10 +137,8 @@ namespace helios {
 
             if (result == VK_SUCCESS) {
                 validation_enabled = true;
-                std::cout << "Vulkan validation layers enabled" << std::endl;
             } else if (result == VK_ERROR_LAYER_NOT_PRESENT || result == VK_ERROR_EXTENSION_NOT_PRESENT) {
                 // Validation not available, try without it
-                std::cout << "Vulkan validation layers not available, continuing without validation" << std::endl;
                 extensions.pop_back(); // Remove debug utils extension
             } else {
                 // Other error - fail
@@ -361,7 +359,6 @@ namespace helios {
             create_info.pEnabledFeatures = nullptr;  // Use features2 instead
         } else {
             create_info.pEnabledFeatures = &device_features;
-            std::cout << "WARNING: GPU does not support atomic float add - shader atomics may use software fallback" << std::endl;
         }
 
         create_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions.size());
@@ -451,38 +448,7 @@ namespace helios {
     }
 
     void VulkanDevice::printDeviceInfo() const {
-        std::cout << "========== Vulkan Device Information ==========" << std::endl;
-        std::cout << "Device name: " << device_properties.deviceName << std::endl;
-        std::cout << "Vendor ID: 0x" << std::hex << device_properties.vendorID << std::dec << std::endl;
-        std::cout << "Device ID: 0x" << std::hex << device_properties.deviceID << std::dec << std::endl;
-        std::cout << "Driver version: " << VK_VERSION_MAJOR(device_properties.driverVersion) << "." << VK_VERSION_MINOR(device_properties.driverVersion) << "." << VK_VERSION_PATCH(device_properties.driverVersion)
-                  << std::endl;
-        std::cout << "Vulkan API version: " << VK_VERSION_MAJOR(device_properties.apiVersion) << "." << VK_VERSION_MINOR(device_properties.apiVersion) << "." << VK_VERSION_PATCH(device_properties.apiVersion)
-                  << std::endl;
-
-        std::string device_type_str;
-        switch (device_properties.deviceType) {
-        case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-            device_type_str = "Discrete GPU";
-            break;
-        case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-            device_type_str = "Integrated GPU";
-            break;
-        case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-            device_type_str = "Virtual GPU";
-            break;
-        case VK_PHYSICAL_DEVICE_TYPE_CPU:
-            device_type_str = "CPU";
-            break;
-        default:
-            device_type_str = "Other";
-            break;
-        }
-
-        std::cout << "Device type: " << device_type_str << std::endl;
-        std::cout << "Atomic float support: " << (has_atomic_float ? "YES" : "NO (using atomicCompSwap fallback)") << std::endl;
-        std::cout << "MoltenVK detected: " << (is_moltenvk ? "YES" : "NO") << std::endl;
-        std::cout << "===============================================" << std::endl;
+        // Device info is not printed during normal operation
     }
 
 } // namespace helios

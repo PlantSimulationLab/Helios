@@ -6,7 +6,7 @@ usage() {
     echo
     echo "Options:"
     echo "  --checkout       Clone the latest Helios repo to /tmp and run tests"
-    echo "  --nogpu          Run only tests that do not require GPU"
+    echo "  --force-vulkan   Force use of Vulkan backend (passes -DFORCE_VULKAN_BACKEND to cmake)"
     echo "  --visbuildonly   Build only, do not run visualizer tests"
     echo "  --memcheck       Enable memory checking tools (requires leaks on macOS or valgrind on Linux)"
     echo "  --debugbuild     Build with Debug configuration"
@@ -41,8 +41,7 @@ run_command() {
 }
 
 # Test plugins to include in unified build
-TEST_PLUGINS="energybalance lidar aeriallidar photosynthesis radiation leafoptics solarposition stomatalconductance visualizer voxelintersection weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture projectbuilder planthydraulics parameteroptimization collisiondetection"
-TEST_PLUGINS_NOGPU="energybalance lidar leafoptics photosynthesis solarposition stomatalconductance visualizer weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture projectbuilder planthydraulics parameteroptimization collisiondetection"
+TEST_PLUGINS="energybalance lidar aeriallidar photosynthesis radiation leafoptics solarposition stomatalconductance visualizer weberpenntree canopygenerator boundarylayerconductance syntheticannotation plantarchitecture projectbuilder planthydraulics parameteroptimization collisiondetection"
 
 BUILD_TYPE="Release"
 
@@ -95,8 +94,8 @@ while [ $# -gt 0 ]; do
     cd ./helios_test/samples || exit 1
     ;;
 
-  --nogpu)
-    TEST_PLUGINS=${TEST_PLUGINS_NOGPU}
+  --force-vulkan)
+    FORCE_VULKAN="ON"
     ;;
 
   --visbuildonly)
@@ -212,15 +211,11 @@ fi
 if [ -n "$SPECIFIC_TESTS" ]; then
   TEST_SPEC_COUNT=$((TEST_SPEC_COUNT + 1))
 fi
-if [ "$TEST_PLUGINS" = "$TEST_PLUGINS_NOGPU" ]; then
-  TEST_SPEC_COUNT=$((TEST_SPEC_COUNT + 1))
-fi
 
 if [ $TEST_SPEC_COUNT -gt 1 ]; then
   echo "Error: Only one test specification method can be used at a time:"
   echo "  --test <name>     (run single test)"
   echo "  --tests <list>    (run multiple specific tests)"
-  echo "  --nogpu           (run all non-GPU tests)"
   echo ""
   usage
 fi
@@ -254,22 +249,19 @@ if [ "${MEMCHECK}" == "ON" ];then
 fi
 
 # Configure Vulkan for GPU tests
-if [ "$TEST_PLUGINS" != "$TEST_PLUGINS_NOGPU" ]; then
+if [[ "${OSTYPE}" == "linux"* ]]; then
     # NVIDIA Linux driver workaround for sequential instance creation bug
     # See: https://forums.developer.nvidia.com/t/issue-with-repeated-instance-creation-in-one-process/176978
     # After ~25-35 vkCreateInstance/vkDestroyInstance cycles, NVIDIA driver fails with VK_ERROR_INITIALIZATION_FAILED
 
     # Solution 1: Use only NVIDIA ICD (modern Vulkan loader method)
     export VK_LOADER_DRIVERS_SELECT="nvidia*"
-    echo "Vulkan configuration: Using NVIDIA GPU only (VK_LOADER_DRIVERS_SELECT=nvidia*)"
 
     # Solution 2: Increase file descriptor limit
     # NVIDIA driver has FD leak issue with VkFence objects
     # See: https://github.com/ValveSoftware/gamescope/pull/454
     if command -v ulimit >/dev/null 2>&1; then
         ulimit -n 65536 2>/dev/null
-        CURRENT_FD_LIMIT=$(ulimit -n 2>/dev/null || echo "unknown")
-        echo "File descriptor limit: $CURRENT_FD_LIMIT (raised to avoid NVIDIA driver FD exhaustion)"
     fi
 fi
 
@@ -398,6 +390,9 @@ else
     CMAKE_ARGS="-DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DBUILD_TESTS=ON"
     if [ "${DISABLE_OPENMP}" == "ON" ]; then
       CMAKE_ARGS="${CMAKE_ARGS} -DENABLE_OPENMP=OFF"
+    fi
+    if [ "${FORCE_VULKAN}" == "ON" ]; then
+      CMAKE_ARGS="${CMAKE_ARGS} -DFORCE_VULKAN_BACKEND=ON"
     fi
     if [ -n "${CUSTOM_CMAKE_ARGS}" ]; then
       CMAKE_ARGS="${CMAKE_ARGS} ${CUSTOM_CMAKE_ARGS}"

@@ -186,9 +186,6 @@ namespace helios {
             return; // Empty geometry
         }
 
-        std::cout << "[Vulkan] Uploading " << primitive_count << " primitives" << std::endl;
-
-
         // Build BVH2 on CPU
         bvh_nodes = bvh_builder.build(geometry);
 
@@ -979,28 +976,14 @@ namespace helios {
             helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): vkQueueSubmit failed. VkResult: " + std::to_string(result));
         }
 
-        // Wait for compute to complete with progress updates (no timeout - large scenes can take minutes)
-        const uint64_t poll_interval_ns = 1000000000ULL; // 1 second
-        bool completed = false;
-        int elapsed_seconds = 0;
-
-        while (!completed) {
-            result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, poll_interval_ns);
-            if (result == VK_SUCCESS) {
-                completed = true;
-                break;
-            } else if (result == VK_TIMEOUT) {
-                elapsed_seconds++;
-                // Print progress every 5 seconds for large scenes
-                if (elapsed_seconds % 5 == 0) {
-                    std::cout << "  Direct rays still computing... " << elapsed_seconds << "s elapsed "
-                              << "(dispatch: " << dispatch_x << "×" << dispatch_y << "×" << dispatch_z
-                              << ", rays: " << launch_dim_x << "×" << launch_dim_y << ", prims: " << params.launch_count << ")" << std::endl;
-                }
-            } else {
-                helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): vkWaitForFences failed. VkResult: " + std::to_string(result));
+        // Wait for compute to complete (no timeout - large scenes can take minutes)
+        VkResult wait_result;
+        do {
+            wait_result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, 1000000000ULL);
+            if (wait_result != VK_SUCCESS && wait_result != VK_TIMEOUT) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::launchDirectRays): vkWaitForFences failed. VkResult: " + std::to_string(wait_result));
             }
-        }
+        } while (wait_result == VK_TIMEOUT);
     }
 
     void VulkanComputeBackend::launchDiffuseRays(const RayTracingLaunchParams &params) {
@@ -1258,8 +1241,6 @@ namespace helios {
         // this invariant. Instead, we submit multiple command buffers with different launch_offsets.
         uint32_t total_prims = params.launch_count;
         uint32_t batch_offset = 0;
-        int total_elapsed_seconds = 0;
-
         while (batch_offset < total_prims) {
             uint32_t batch_count = std::min(total_prims - batch_offset, MAX_Z_DISPATCH);
 
@@ -1364,29 +1345,14 @@ namespace helios {
                 helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): vkQueueSubmit failed. VkResult: " + std::to_string(result));
             }
 
-            // Wait for compute to complete with progress updates (no timeout - large scenes can take minutes)
-            const uint64_t poll_interval_ns = 1000000000ULL; // 1 second
-            bool completed = false;
-
-            while (!completed) {
-                result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, poll_interval_ns);
-                if (result == VK_SUCCESS) {
-                    completed = true;
-                    break;
-                } else if (result == VK_TIMEOUT) {
-                    total_elapsed_seconds++;
-                    // Print progress every 5 seconds for large scenes
-                    if (total_elapsed_seconds % 5 == 0) {
-                        std::cout << "  Diffuse rays still computing... " << total_elapsed_seconds << "s elapsed "
-                                  << "(batch " << (batch_offset / MAX_Z_DISPATCH + 1) << "/" << ((total_prims + MAX_Z_DISPATCH - 1) / MAX_Z_DISPATCH)
-                                  << ", dispatch: " << dispatch_x << "×" << dispatch_y << "×" << batch_count
-                                  << ", rays: " << launch_dim_x << "×" << launch_dim_y
-                                  << ", face: " << launch_face << ", prims: " << total_prims << ")" << std::endl;
-                    }
-                } else {
-                    helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): vkWaitForFences failed. VkResult: " + std::to_string(result));
+            // Wait for compute to complete (no timeout - large scenes can take minutes)
+            VkResult wait_result;
+            do {
+                wait_result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, 1000000000ULL);
+                if (wait_result != VK_SUCCESS && wait_result != VK_TIMEOUT) {
+                    helios_runtime_error("ERROR (VulkanComputeBackend::launchDiffuseRays): vkWaitForFences failed. VkResult: " + std::to_string(wait_result));
                 }
-            }
+            } while (wait_result == VK_TIMEOUT);
 
             batch_offset += batch_count;
         } // end primitive batching loop
@@ -1430,10 +1396,7 @@ namespace helios {
         }
 
         // Update descriptor sets if buffers changed
-        std::cout << "[VULKAN DEBUG] launchCameraRays: descriptors_dirty=" << descriptors_dirty
-                  << " radiation_out_top_buffer=" << radiation_out_top_buffer.buffer << std::endl;
         if (descriptors_dirty) {
-            std::cout << "[VULKAN DEBUG] Updating descriptor sets in launchCameraRays" << std::endl;
             updateDescriptorSets();
             descriptors_dirty = false;
         }
@@ -1516,20 +1479,6 @@ namespace helios {
 
         vkCmdPushConstants(compute_command_buffer, pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push_constants);
 
-        // DIAGNOSTIC: Read back radiation_out to verify it has data before camera dispatch
-        {
-            void *verify_ptr = nullptr;
-            if (vmaMapMemory(device->getAllocator(), radiation_out_top_buffer.allocation, &verify_ptr) == VK_SUCCESS) {
-                vmaInvalidateAllocation(device->getAllocator(), radiation_out_top_buffer.allocation, 0, VK_WHOLE_SIZE);
-                float verify_sum = 0;
-                for (size_t i = 0; i < std::min(size_t(100), size_t(primitive_count * launch_band_count)); i++) {
-                    verify_sum += static_cast<float*>(verify_ptr)[i];
-                }
-                std::cout << "[VULKAN DEBUG] Pre-dispatch readback: radiation_out first 100 sum=" << verify_sum << std::endl;
-                vmaUnmapMemory(device->getAllocator(), radiation_out_top_buffer.allocation);
-            }
-        }
-
         // Compute dispatch dimensions (workgroup size 16x16x1)
         const uint32_t WG_X = 16;
         const uint32_t WG_Y = 16;
@@ -1568,29 +1517,14 @@ namespace helios {
             helios_runtime_error("ERROR (VulkanComputeBackend::launchCameraRays): vkQueueSubmit failed. VkResult: " + std::to_string(result));
         }
 
-        // Wait for compute to complete with polling
-        const uint64_t poll_interval_ns = 1000000000ULL; // 1 second
-        bool completed = false;
-        int elapsed_seconds = 0;
-
-        while (!completed) {
-            result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, poll_interval_ns);
-            if (result == VK_SUCCESS) {
-                completed = true;
-                break;
-            } else if (result == VK_TIMEOUT) {
-                elapsed_seconds++;
-                // Print progress every 5 seconds for large scenes
-                if (elapsed_seconds % 5 == 0) {
-                    std::cout << "  Camera rays still computing... " << elapsed_seconds << "s elapsed "
-                              << "(dispatch: " << dispatch_x << "×" << dispatch_y << "×" << dispatch_z
-                              << ", resolution: " << params.camera_resolution.x << "×" << params.camera_resolution.y
-                              << ", AA samples: " << params.antialiasing_samples << ")" << std::endl;
-                }
-            } else {
-                helios_runtime_error("ERROR (VulkanComputeBackend::launchCameraRays): vkWaitForFences failed. VkResult: " + std::to_string(result));
+        // Wait for compute to complete (no timeout - large scenes can take minutes)
+        VkResult wait_result;
+        do {
+            wait_result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, 1000000000ULL);
+            if (wait_result != VK_SUCCESS && wait_result != VK_TIMEOUT) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::launchCameraRays): vkWaitForFences failed. VkResult: " + std::to_string(wait_result));
             }
-        }
+        } while (wait_result == VK_TIMEOUT);
     }
 
     void VulkanComputeBackend::launchPixelLabelRays(const RayTracingLaunchParams &params) {
@@ -1732,27 +1666,14 @@ namespace helios {
             helios_runtime_error("ERROR (VulkanComputeBackend::launchPixelLabelRays): vkQueueSubmit failed. VkResult: " + std::to_string(result));
         }
 
-        // Wait for compute to complete
-        const uint64_t poll_interval_ns = 1000000000ULL;
-        bool completed = false;
-        int elapsed_seconds = 0;
-
-        while (!completed) {
-            result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, poll_interval_ns);
-            if (result == VK_SUCCESS) {
-                completed = true;
-                break;
-            } else if (result == VK_TIMEOUT) {
-                elapsed_seconds++;
-                if (elapsed_seconds % 5 == 0) {
-                    std::cout << "  Pixel label rays still computing... " << elapsed_seconds << "s elapsed "
-                              << "(dispatch: " << dispatch_x << "×" << dispatch_y << "×" << dispatch_z
-                              << ", resolution: " << params.camera_resolution.x << "×" << params.camera_resolution.y << ")" << std::endl;
-                }
-            } else {
-                helios_runtime_error("ERROR (VulkanComputeBackend::launchPixelLabelRays): vkWaitForFences failed. VkResult: " + std::to_string(result));
+        // Wait for compute to complete (no timeout - large scenes can take minutes)
+        VkResult wait_result;
+        do {
+            wait_result = vkWaitForFences(vk_device, 1, &compute_fence, VK_TRUE, 1000000000ULL);
+            if (wait_result != VK_SUCCESS && wait_result != VK_TIMEOUT) {
+                helios_runtime_error("ERROR (VulkanComputeBackend::launchPixelLabelRays): vkWaitForFences failed. VkResult: " + std::to_string(wait_result));
             }
-        }
+        } while (wait_result == VK_TIMEOUT);
     }
 
     void VulkanComputeBackend::getRadiationResults(RayTracingResults &results) {
@@ -1801,12 +1722,10 @@ namespace helios {
                 }
 
             } else {
-                std::cout << "ERROR: Failed to map radiation_in buffer, falling back to transfer" << std::endl;
                 downloadBufferData(radiation_in_buffer, results.radiation_in.data(), buffer_size * sizeof(float));
             }
         } else {
             std::fill(results.radiation_in.begin(), results.radiation_in.end(), 0.0f);
-            std::cout << "WARNING: radiation_in_buffer is NULL!" << std::endl;
         }
 
         // Download radiation_out_top buffer
@@ -1867,14 +1786,8 @@ namespace helios {
         // This is exact when camera spectral response is uniform (1.0 across all wavelengths).
         // For non-uniform camera responses, Vulkan shaders would need dedicated camera scatter
         // buffers with camera-weighted materials (rho_cam, tau_cam), matching OptiX (rayHit.cu:223-236).
-        float sum_scatter = 0;
-        for (auto v : results.scatter_buff_top) sum_scatter += v;
-        std::cout << "[VULKAN DEBUG] getRadiationResults: scatter_buff_top size=" << results.scatter_buff_top.size()
-                  << ", scatter_buff_top_cam size before=" << results.scatter_buff_top_cam.size();
         results.scatter_buff_top_cam = results.scatter_buff_top;
         results.scatter_buff_bottom_cam = results.scatter_buff_bottom;
-        std::cout << ", after=" << results.scatter_buff_top_cam.size()
-                  << ", sum=" << sum_scatter << std::endl;
     }
 
     void VulkanComputeBackend::getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels, std::vector<float> &pixel_depths, uint camera_id, const helios::int2 &resolution) {
@@ -1894,16 +1807,10 @@ namespace helios {
                 vmaInvalidateAllocation(device->getAllocator(), camera_radiation_buffer.allocation, 0, VK_WHOLE_SIZE);
                 std::memcpy(pixel_data.data(), mapped, pixel_data.size() * sizeof(float));
                 vmaUnmapMemory(device->getAllocator(), camera_radiation_buffer.allocation);
-                float sum_pixels = 0;
-                for (auto v : pixel_data) sum_pixels += v;
-                std::cout << "[VULKAN DEBUG] getCameraResults: downloaded " << pixel_data.size()
-                          << " pixels, sum=" << sum_pixels << std::endl;
             } else {
-                std::cout << "ERROR: Failed to map camera_radiation_buffer, falling back to transfer" << std::endl;
                 downloadBufferData(camera_radiation_buffer, pixel_data.data(), pixel_data.size() * sizeof(float));
             }
         } else {
-            std::cout << "[VULKAN DEBUG] getCameraResults: camera_radiation_buffer is NULL or pixel_data empty!" << std::endl;
             std::fill(pixel_data.begin(), pixel_data.end(), 0.0f);
         }
 
@@ -2103,16 +2010,10 @@ namespace helios {
 
     void VulkanComputeBackend::uploadRadiationOut(const std::vector<float> &radiation_out_top, const std::vector<float> &radiation_out_bottom) {
         if (radiation_out_top.empty() || radiation_out_bottom.empty()) {
-            std::cout << "[VULKAN DEBUG] uploadRadiationOut: empty vectors, returning" << std::endl;
             return; // No data to upload
         }
 
-        float sum_top = 0;
-        for (auto v : radiation_out_top) sum_top += v;
         size_t buffer_size = radiation_out_top.size() * sizeof(float);
-        std::cout << "[VULKAN DEBUG] uploadRadiationOut: size=" << radiation_out_top.size()
-                  << " bytes=" << buffer_size << " sum=" << sum_top
-                  << " buffer_obj=" << radiation_out_top_buffer.buffer << std::endl;
 
         // Create radiation_out_top buffer if needed
         if (radiation_out_top_buffer.buffer == VK_NULL_HANDLE || radiation_out_top_buffer.size != buffer_size) {
@@ -2145,13 +2046,6 @@ namespace helios {
             std::memcpy(dst_bottom, radiation_out_bottom.data(), buffer_size);
             vmaFlushAllocation(device->getAllocator(), radiation_out_top_buffer.allocation, 0, VK_WHOLE_SIZE);
             vmaFlushAllocation(device->getAllocator(), radiation_out_bottom_buffer.allocation, 0, VK_WHOLE_SIZE);
-
-            // Verify the upload by reading back first few values
-            float readback_sum = 0;
-            for (size_t i = 0; i < std::min(size_t(100), radiation_out_top.size()); i++) {
-                readback_sum += static_cast<float*>(dst_top)[i];
-            }
-            std::cout << "[VULKAN DEBUG] Upload verification: first 100 elements sum=" << readback_sum << std::endl;
         }
         vmaUnmapMemory(device->getAllocator(), radiation_out_top_buffer.allocation);
         vmaUnmapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation);
@@ -2579,7 +2473,6 @@ namespace helios {
         VkPhysicalDeviceProperties props;
         vkGetPhysicalDeviceProperties(device->getPhysicalDevice(), &props);
         timestamp_period = props.limits.timestampPeriod;
-        std::cout << "GPU timestamp period: " << timestamp_period << " ns/tick" << std::endl;
     }
 
     void VulkanComputeBackend::createDescriptorSets() {
@@ -2989,11 +2882,6 @@ namespace helios {
         if (push_constant_size > props.limits.maxPushConstantsSize) {
             helios_runtime_error("ERROR (VulkanComputeBackend::createPipelines): Push constant size (" + std::to_string(push_constant_size) + " bytes) exceeds device limit (" +
                                  std::to_string(props.limits.maxPushConstantsSize) + " bytes)");
-        }
-
-        // Warn if approaching MoltenVK's 128-byte limit
-        if (device->isMoltenVK() && push_constant_size > 96) {
-            std::cout << "WARNING: Push constants (" << push_constant_size << " bytes) are close to MoltenVK's 128-byte limit. Consider moving large parameters to UBO." << std::endl;
         }
 
         VkPushConstantRange push_constant_range{};
@@ -3640,10 +3528,8 @@ namespace helios {
             write.descriptorCount = 1;
             write.pBufferInfo = &rad_out_top_info;
             descriptor_writes.push_back(write);
-            std::cout << "[VULKAN DEBUG] updateDescriptorSets: BINDING radiation_out_top=" << rad_out_top_info.buffer
-                      << " (member=" << radiation_out_top_buffer.buffer << ") to binding 1" << std::endl;
         } else {
-            std::cout << "[VULKAN DEBUG] updateDescriptorSets: radiation_out_top_buffer is NULL!" << std::endl;
+            // radiation_out_top_buffer not yet allocated; descriptor update skipped
         }
 
         if (radiation_out_bottom_buffer.buffer != VK_NULL_HANDLE) {

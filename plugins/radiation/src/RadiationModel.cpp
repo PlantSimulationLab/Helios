@@ -1920,15 +1920,6 @@ void RadiationModel::updateRadiativeProperties() {
                         rho_unique[spectrum.first][b][s] = rho_cam_sum_for_averaging / float(cam);
                     }
 
-                    // DEBUG: Print material values for first spectrum/band/source to verify rho vs rho_cam
-                    if (Ncameras > 0 && b == 0 && s == 0) {
-                        std::cout << "[MAT DEBUG] spectrum=" << spectrum.first << " band=" << b << " source=" << s
-                                  << ": rho=" << rho_unique[spectrum.first][b][s];
-                        if (cam > 0) {
-                            std::cout << ", rho_cam[0]=" << rho_cam_unique[spectrum.first][b][s][0];
-                        }
-                        std::cout << std::endl;
-                    }
                 }
             }
         }
@@ -3209,15 +3200,10 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
         // Accumulate camera scatter from direct rays
         if (Ncameras > 0) {
-            float sum_before = 0, sum_after = 0;
-            for (auto v : scatter_top_cam) sum_before += v;
             for (size_t i = 0; i < scatter_results.scatter_buff_top_cam.size(); i++) {
                 scatter_top_cam[i] += scatter_results.scatter_buff_top_cam[i];
                 scatter_bottom_cam[i] += scatter_results.scatter_buff_bottom_cam[i];
             }
-            for (auto v : scatter_top_cam) sum_after += v;
-            std::cout << "[DEBUG] After direct rays: scatter_top_cam sum " << sum_before << " → " << sum_after
-                      << " (added " << (sum_after - sum_before) << ")" << std::endl;
             // Zero GPU camera scatter buffers to prevent double-counting on next iteration
             backend->zeroCameraScatterBuffers(Nbands_launch);
         }
@@ -3360,15 +3346,10 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         if (Ncameras > 0) {
             helios::RayTracingResults primary_results;
             backend->getRadiationResults(primary_results);
-            float sum_before = 0, sum_after = 0;
-            for (auto v : scatter_top_cam) sum_before += v;
             for (size_t i = 0; i < primary_results.scatter_buff_top_cam.size(); i++) {
                 scatter_top_cam[i] += primary_results.scatter_buff_top_cam[i];
                 scatter_bottom_cam[i] += primary_results.scatter_buff_bottom_cam[i];
             }
-            for (auto v : scatter_top_cam) sum_after += v;
-            std::cout << "[DEBUG] After primary diffuse: scatter_top_cam sum " << sum_before << " → " << sum_after
-                      << " (added " << (sum_after - sum_before) << ")" << std::endl;
             // Zero GPU camera scatter buffers to prevent double-counting on next iteration
             backend->zeroCameraScatterBuffers(Nbands_launch);
         }
@@ -3481,15 +3462,10 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             if (Ncameras > 0) {
                 helios::RayTracingResults post_launch;
                 backend->getRadiationResults(post_launch);
-                float sum_before = 0, sum_after = 0;
-                for (auto v : scatter_top_cam) sum_before += v;
                 for (size_t i = 0; i < post_launch.scatter_buff_top_cam.size(); i++) {
                     scatter_top_cam[i] += post_launch.scatter_buff_top_cam[i];
                     scatter_bottom_cam[i] += post_launch.scatter_buff_bottom_cam[i];
                 }
-                for (auto v : scatter_top_cam) sum_after += v;
-                std::cout << "[DEBUG] After scattering iteration " << s << ": scatter_top_cam sum " << sum_before
-                          << " → " << sum_after << " (added " << (sum_after - sum_before) << ")" << std::endl;
                 // Zero GPU camera scatter buffers to prevent double-counting on next iteration
                 backend->zeroCameraScatterBuffers(Nbands_launch);
             }
@@ -3505,22 +3481,13 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
     }
 
     // **** CAMERA RAY TRACE **** //
-    std::cout << "[DEBUG] Camera section: Ncameras=" << Ncameras << " scatteringenabled=" << scatteringenabled << std::endl;
     if (Ncameras > 0) {
 
         // Upload accumulated camera scatter to radiation_out for cameras to read
         // scatter_top_cam contains camera-weighted scattered energy from all ray types
         // Cameras read from radiation_out during hits, so we upload camera scatter there
-        std::cout << "[DEBUG] Inside Ncameras>0 block, checking scatteringenabled=" << scatteringenabled << std::endl;
         if (Ncameras > 0 && scatteringenabled) {
-            float sum_cam = 0;
-            for (auto v : scatter_top_cam) sum_cam += v;
-            std::cout << "[DEBUG] Before camera launch: scatter_top_cam sum=" << sum_cam
-                      << " size=" << scatter_top_cam.size() << std::endl;
             backend->uploadRadiationOut(scatter_top_cam, scatter_bottom_cam);
-            std::cout << "[DEBUG] uploadRadiationOut completed" << std::endl;
-        } else {
-            std::cout << "[DEBUG] SKIPPING uploadRadiationOut - scatteringenabled=" << scatteringenabled << std::endl;
         }
 
         // Setup solar disk rendering for cameras (enables lens flare effects)
