@@ -18,11 +18,12 @@
 #include <algorithm>
 #include <cmath>
 // #include <Eigen/Dense>  // For matrix operations
-#include <unordered_set>  // For std::unordered_set
-#include <queue>          // For std::queue
-#include <iomanip>  // for std::setw and std::setprecision
+#include <unordered_set>
+#include <queue>
+#include <iomanip>
 
-#include <algorithm> // For std::find
+#include <algorithm>
+#include <climits>
 
 #include "global.h"
 
@@ -44,11 +45,10 @@ void IrrigationModel::validateParameters(double fieldLength, double fieldWidth,
 std::string IrrigationModel::getSystemSummary() const {
     std::string summary;
     summary += "\nSystem Summary:\n";
-    summary += "========================\n";
     summary += "Total nodes: " + std::to_string(nodes.size()) + "\n";
     summary += "Total links: " + std::to_string(links.size()) + "\n";
 
-    // Node type counts
+    // Node counts
     std::unordered_map<std::string, int> nodeCounts;
     for (const auto& [id, node] : nodes) {
         nodeCounts[node.type]++;
@@ -59,7 +59,7 @@ std::string IrrigationModel::getSystemSummary() const {
         summary += "- " + type + ": " + std::to_string(count) + "\n";
     }
 
-    // Link type counts
+    // Link counts
     std::unordered_map<std::string, int> linkCounts;
     for (const auto& link : links) {
         linkCounts[link.type]++;
@@ -70,60 +70,61 @@ std::string IrrigationModel::getSystemSummary() const {
         summary += "- " + type + ": " + std::to_string(count) + "\n";
     }
 
-    summary += "========================\n";
+    summary += "-----------------------\n";
     return summary;
 }
 
 
 
-Position IrrigationModel::calculateWaterSourcePosition(double fieldLength, double fieldWidth,
-                                                     const std::string& lateralDirection) const {
-    if (lateralDirection == "vertical") {
-        return {
-            //fieldLength / 3.0 + 5.0,  // x
-            18.4112,
-            fieldWidth - fieldWidth / 3.0 - 0.5  // y
-        };
-    } else {
-        return {
-            fieldLength / 2.0,  // x
-            0.0  // y
-        };
-    }
-}
+// Position IrrigationModel::calculateWaterSourcePosition(double fieldLength, double fieldWidth,
+//                                                      const std::string& lateralDirection) const {
+//     if (lateralDirection == "vertical") {
+//         return {
+//             //fieldLength / 3.0 + 5.0,  // x
+//             18.4112,
+//             fieldWidth - fieldWidth / 3.0 - 0.5  // y
+//         };
+//     } else {
+//         return {
+//             fieldLength / 2.0,  // x
+//             0.0  // y
+//         };
+//     }
+// }
+
+
 
 void IrrigationModel::createSprinklerSystemGeneral(double fieldLength, double fieldWidth,
                                           double sprinklerSpacing, double lineSpacing,
                                           const std::string& connectionType,
-                                          const std::string& sprinklerConfig) {
+                                          const std::string& sprinklerConfig, double minX, double minY, int zoneID) {
     std::cout<<"Sprinkler Config: " <<sprinklerConfig<<"\n";
     const SprinklerAssembly& config = sprinklerLibrary.getSprinklerType(sprinklerConfig);
     double stake_height = config.stakeHeight;
 
-    const int num_laterals = static_cast<int>(std::ceil(fieldLength / lineSpacing)) + 1;//x direction
-    const int num_sprinklers_perline = static_cast<int>(std::ceil(fieldWidth /sprinklerSpacing)) + 1; // y direction
-    int nodeId = 1;
+    const int num_laterals = static_cast<int>(std::ceil(fieldLength / lineSpacing)) + 1;
+    const int num_sprinklers_perline = static_cast<int>(std::ceil(fieldWidth / sprinklerSpacing)) + 1;
+    int nodeId = getNextNodeId(); //assign unique node number regardless of zones
+  //  int nodeId = 1; //to repeat the same node numbers by different zone number
     const double barbOffset = 0;
     const double emitterOffset = 0;
 
     // Grid to track valid junction nodes for lateral connections
     std::vector<std::vector<int>> junctionGrid(num_laterals, std::vector<int>(num_sprinklers_perline, -1));
 
-    // Create sprinklers only inside polygon
     for (int i = 0; i < num_laterals; ++i) {
         for (int j = 0; j < num_sprinklers_perline; ++j) {
-            double x = i * lineSpacing;
-            double y = j * sprinklerSpacing;
+            double x = minX + i * lineSpacing;
+            double y = minY + j * sprinklerSpacing;
 
             Position testPoint{x, y};
 
-            // Skip points outside the boundary polygon
             if (!boundaryPolygon.empty() && !isPointInsidePolygon(testPoint)) {
                 continue;
             }
 
             // Create junction node for sprinkler assembly connection
-            nodes[nodeId] = {nodeId, "lateral_sprinkler_jn", {x, y}, 0.0, false};
+            nodes[nodeId] = {nodeId, "lateral_sprinkler_jn", {x, y}, 0.0, false, 0.0, {}, zoneID};
             int junctionId = nodeId++;
             junctionGrid[i][j] = junctionId;
 
@@ -131,12 +132,12 @@ void IrrigationModel::createSprinklerSystemGeneral(double fieldLength, double fi
             double barbX = x + barbOffset * cos(M_PI/4);
             double barbY = y + barbOffset * sin(M_PI/4);
 
-            nodes[nodeId] = {nodeId, "barb", {barbX, barbY}, 0.0, false};
+            nodes[nodeId] = {nodeId, "barb", {barbX, barbY}, 0.0, false, 0.0, {}, zoneID};
             int barbId = nodeId++;
 
             double emitterX = barbX + emitterOffset * cos(M_PI/4);
             double emitterY = barbY + emitterOffset * sin(M_PI/4);
-            nodes[nodeId] = {nodeId, "emitter", {emitterX, emitterY, stake_height}, 0.0, false};
+            nodes[nodeId] = {nodeId, "emitter", {emitterX, emitterY, stake_height}, 0.0, false, 0.0, {},  zoneID};
             int emitterId = nodeId++;
 
             // Connect barb to emitter
@@ -145,7 +146,8 @@ void IrrigationModel::createSprinklerSystemGeneral(double fieldLength, double fi
                 config.barbToEmitter.diameter, // 0.154* INCH_TO_METER,
                 config.barbToEmitter.length, //30 * INCH_TO_METER,
                 "barbToemitter",
-                0.0
+                0.0,
+                zoneID
             });
 
             // Connect junction to barb
@@ -154,7 +156,8 @@ void IrrigationModel::createSprinklerSystemGeneral(double fieldLength, double fi
                 config.lateralToBarb.diameter, //0.12 * INCH_TO_METER,
                 config.lateralToBarb.length, // 0.5 * INCH_TO_METER,
                 "lateralTobarb",
-                0.0
+                0.0,
+                zoneID
             });
         }
     }
@@ -171,7 +174,9 @@ void IrrigationModel::createSprinklerSystemGeneral(double fieldLength, double fi
                     junctionGrid[i][j], junctionGrid[i][j+1],
                     0.67 * INCH_TO_METER,
                     sprinklerSpacing,
-                    "lateral"
+                    "lateral",
+                    0.0,
+                    zoneID
                 });
             }
             else if (connectionType == "horizontal" && i < num_laterals - 1 &&
@@ -180,7 +185,9 @@ void IrrigationModel::createSprinklerSystemGeneral(double fieldLength, double fi
                     junctionGrid[i][j], junctionGrid[i+1][j],
                     0.67 * INCH_TO_METER,
                     sprinklerSpacing,
-                    "lateral"
+                    "lateral",
+                    0.0,
+                    zoneID
                 });
             }
         }
@@ -350,6 +357,635 @@ std::vector<std::pair<int, int>> IrrigationModel::findConnectedNodePairs(const s
     return connectedPairs;
 }
 
+void IrrigationModel::createAssembliesFromIrricad(const std::string& sprinklerAssemblyType) {
+    waterSourceId = getMaxNodeId();
+    Position waterSourcePos = nodes[waterSourceId].position;
+    nodes[waterSourceId] = {
+        waterSourceId,
+        "waterSource",
+        waterSourcePos,
+         0.0, //check if the pressure is set correctly for water source
+        true
+    };
+
+    const SprinklerAssembly& config = sprinklerLibrary.getSprinklerType(sprinklerAssemblyType);
+    int nextNodeId = getMaxNodeId() + 1;
+
+    // Group emitters by lateral line Y-coordinate
+    std::map<double, std::vector<std::pair<int, Node>>> lateralLines;
+
+    for (const auto& [nodeId, node] : nodes) {
+        if (node.type == "emitter") {
+            lateralLines[node.position.y].emplace_back(nodeId, node);
+        }
+    }
+
+    // Store the first junction of each lateral line for water source connection
+    std::vector<int> firstLateralJunctions;
+
+    for (auto& [yCoord, emitters] : lateralLines) {
+        std::sort(emitters.begin(), emitters.end(),
+                 [](const auto& a, const auto& b) {
+                     return a.second.position.x < b.second.position.x;
+                 });
+
+        // First, create all lateral junctions and barb assemblies for this lateral line
+        std::vector<int> lateralJunctionIds;
+
+        for (const auto& [emitterId, emitter] : emitters) {
+            int lateralJunctionId = nextNodeId++;
+            nodes[lateralJunctionId] = {
+                lateralJunctionId,
+                "lateral_sprinkler_jn",
+                {emitter.position.x, emitter.position.y},
+                0.0,
+                false
+            };
+            lateralJunctionIds.push_back(lateralJunctionId);
+
+            int barbId = nextNodeId++;
+            nodes[barbId] = {
+                barbId,
+                "barb",
+                {emitter.position.x, emitter.position.y - 0.1},
+                0.0,
+                false
+            };
+
+            // Sprinkler assembly connections
+       createVirtualConnection(lateralJunctionId, barbId, config.lateralToBarb,
+                             "lateralTobarb", sprinklerAssemblyType);
+       createVirtualConnection(barbId, emitterId, config.barbToEmitter,
+                             "barbToemitter", sprinklerAssemblyType);
+        }
+
+        // create continuous lateral pipe connections between all lateral junctions
+        // for (size_t i = 1; i < lateralJunctionIds.size(); i++) {
+        //     int prevJunctionId = lateralJunctionIds[i-1];
+        //     int currJunctionId = lateralJunctionIds[i];
+        //
+        //     double distance = nodes[prevJunctionId].position.distanceTo(
+        //         nodes[currJunctionId].position);
+        //
+        //     // createVirtualConnection(prevJunctionId, currJunctionId,
+        //     //                       {0.75 * INCH_TO_METER, distance, "PVC"},
+        //     //                       "lateral", "");
+        //
+        //     std::cout << "Created lateral connection: " << prevJunctionId
+        //               << " -> " << currJunctionId << " (distance: " << distance << "m)" << std::endl;
+        // }
+
+        // Store the first junction for water source connection
+        // if (!lateralJunctionIds.empty()) {
+        //     firstLateralJunctions.push_back(lateralJunctionIds[0]);
+        // }
+    }
+
+    recreateLateralConnections();
+    // double fieldLength = 0.0;
+    // double fieldWidth = 0.0;
+    // calculateFieldDimensions(fieldLength, fieldWidth);
+    //
+    // std::cout << "Calculated field dimensions: " << fieldLength << "m x " << fieldWidth << "m" << std::endl;
+    //
+    // // Add water source to the system
+    // addWaterSource(fieldLength, fieldWidth, "vertical", SubmainPosition::MIDDLE);
+
+    validateHydraulicSystem();
+}
+
+// void IrrigationModel::calculateFieldDimensions(double& length, double& width) {
+//     if (nodes.empty()) {
+//         length = 0.0;
+//         width = 0.0;
+//         return;
+//     }
+//
+//     double minX = std::numeric_limits<double>::max();
+//     double maxX = std::numeric_limits<double>::lowest();
+//     double minY = std::numeric_limits<double>::max();
+//     double maxY = std::numeric_limits<double>::lowest();
+//
+//     // Calculate bounding box from all nodes
+//     for (const auto& [nodeId, node] : nodes) {
+//         minX = std::min(minX, node.position.x);
+//         maxX = std::max(maxX, node.position.x);
+//         minY = std::min(minY, node.position.y);
+//         maxY = std::max(maxY, node.position.y);
+//     }
+//
+//     length = maxX - minX;
+//     width = maxY - minY;
+//
+//     std::cout << "Field bounds: X[" << minX << " - " << maxX << "], Y["
+//               << minY << " - " << maxY << "]" << std::endl;
+//     std::cout << "Calculated dimensions: " << length << "m x " << width << "m" << std::endl;
+// }
+
+// void IrrigationModel::addWaterSource(double fieldLength, double fieldWidth,
+//                                    const std::string& lateralDirection,
+//                                    SubmainPosition submainPosition) {
+//
+//     // Get the next available node ID (this will be the last node)
+//     int waterSourceId = getNextNodeId();
+//     Position waterSourcePos;
+//
+//     // Calculate submain position based on field dimensions
+//     double submainY = 0.0;
+//     double submainX = 0.0;
+//
+//     if (lateralDirection == "vertical") {
+//         // Position logic for vertical laterals
+//         waterSourcePos = {fieldLength / 2.0 - 2.0, fieldWidth - fieldWidth / 3.0 + 2.0};
+//
+//         // Adjust based on submain position
+//         switch (submainPosition) {
+//             case SubmainPosition::NORTH:
+//                 waterSourcePos.y = fieldWidth - 1.0;
+//                 submainY = fieldWidth;
+//                 break;
+//             case SubmainPosition::SOUTH:
+//                 waterSourcePos.y = 1.0;
+//                 submainY = 0.0;
+//                 break;
+//             case SubmainPosition::MIDDLE:
+//                 waterSourcePos.y = fieldWidth - fieldWidth / 3.0 + 2.0;
+//                 submainY = fieldWidth - fieldWidth / 3.0 - 0.5;
+//                 break;
+//         }
+//     } else {
+//         // Position for horizontal laterals
+//         waterSourcePos = {fieldLength / 2.0, 0.0};
+//         submainX = fieldLength / 2.0;
+//     }
+//
+//     // Create the water source node
+//     nodes[waterSourceId] = {
+//         waterSourceId,
+//         "waterSource",
+//         waterSourcePos,
+//         0.0,
+//         true
+//     };
+//
+//     std::cout << "Created water source at ID: " << waterSourceId
+//               << " position: (" << waterSourcePos.x << ", " << waterSourcePos.y << ")" << std::endl;
+//
+//     // Find closest submain LINK to water source
+//     int closestLinkIndex = -1;
+//     double minDistance = std::numeric_limits<double>::max();
+//     Position closestPoint;
+//
+//     for (size_t i = 0; i < links.size(); ++i) {
+//         const auto& link = links[i];
+//         if (link.type != "submain") continue;
+//
+//         const auto& nodeA = nodes[link.from];
+//         const auto& nodeB = nodes[link.to];
+//
+//         // Check if both endpoints are submain_junction nodes
+//         if (nodeA.type != "submain_junction" || nodeB.type != "submain_junction") {
+//             continue;
+//         }
+//
+//         // Check if water source X position is within this submain segment's range
+//         double minX = std::min(nodeA.position.x, nodeB.position.x);
+//         double maxX = std::max(nodeA.position.x, nodeB.position.x);
+//
+//         if (waterSourcePos.x >= minX && waterSourcePos.x <= maxX) {
+//             // Calculate closest point on the segment to water source
+//             Position vecAB = {nodeB.position.x - nodeA.position.x, nodeB.position.y - nodeA.position.y};
+//             Position vecAW = {waterSourcePos.x - nodeA.position.x, waterSourcePos.y - nodeA.position.y};
+//             double dotProduct = vecAB.x * vecAW.x + vecAB.y * vecAW.y;
+//             double lengthSquared = vecAB.x * vecAB.x + vecAB.y * vecAB.y;
+//
+//             // Avoid division by zero
+//             if (lengthSquared < 1e-12) continue;
+//
+//             double t = std::max(0.0, std::min(1.0, dotProduct / lengthSquared));
+//
+//             Position pointOnSegment = {
+//                 nodeA.position.x + t * vecAB.x,
+//                 nodeA.position.y + t * vecAB.y
+//             };
+//
+//             double dist = waterSourcePos.distanceTo(pointOnSegment);
+//             if (dist < minDistance) {
+//                 minDistance = dist;
+//                 closestLinkIndex = i;
+//                 closestPoint = pointOnSegment;
+//             }
+//         }
+//     }
+//
+//     if (closestLinkIndex != -1) {
+//         // Create new junction on the submain
+//         int newJunctionId = getNextNodeId();
+//         nodes[newJunctionId] = {
+//             newJunctionId,
+//             "submain_junction",
+//             closestPoint,
+//             0.0,
+//             false
+//         };
+//
+//         // Splitting the closest submain link
+//         const Link& oldLink = links[closestLinkIndex];
+//         double length1 = nodes[oldLink.from].position.distanceTo(closestPoint);
+//         double length2 = nodes[oldLink.to].position.distanceTo(closestPoint);
+//
+//         links.push_back({
+//             oldLink.from,
+//             newJunctionId,
+//             oldLink.diameter,
+//             length1,
+//             "submain"
+//         });
+//         links.push_back({
+//             newJunctionId,
+//             oldLink.to,
+//             oldLink.diameter,
+//             length2,
+//             "submain"
+//         });
+//         links.erase(links.begin() + closestLinkIndex);
+//
+//         // Connect new submain junction to water source
+//         double mainlineLength = waterSourcePos.distanceTo(closestPoint);
+//         links.push_back({
+//             newJunctionId,
+//             waterSourceId,
+//             5.0 * INCH_TO_METER,
+//             mainlineLength,
+//             "mainline"
+//         });
+//
+//         std::cout << "Connected water source to submain via new junction " << newJunctionId
+//                   << " (mainline length: " << mainlineLength << "m)" << std::endl;
+//     } else {
+//         // Fallback: connect to closest existing submain junction node
+//         int closestSubmainId = -1;
+//         double minDist = std::numeric_limits<double>::max();
+//         for (const auto& [id, node] : nodes) {
+//             if (node.type == "submain_junction") {
+//                 double dist = node.position.distanceTo(waterSourcePos);
+//                 if (dist < minDist) {
+//                     minDist = dist;
+//                     closestSubmainId = id;
+//                 }
+//             }
+//         }
+//
+//         if (closestSubmainId != -1) {
+//             // Connect water source to closest existing submain junction
+//             links.push_back({
+//                 closestSubmainId,
+//                 waterSourceId,
+//                 5.0 * INCH_TO_METER,
+//                 minDist,
+//                 "mainline"
+//             });
+//             std::cout << "Connected water source to existing submain junction " << closestSubmainId
+//                       << " (distance: " << minDist << "m)" << std::endl;
+//         } else {
+//             // Create a new submain junction at calculated position
+//             int newSubmainId = getNextNodeId();
+//             Position newSubmainPos = (lateralDirection == "vertical") ?
+//                 Position{fieldLength / 2.0, submainY} :
+//                 Position{submainX, fieldWidth / 2.0};
+//
+//             nodes[newSubmainId] = {
+//                 newSubmainId,
+//                 "submain_junction",
+//                 newSubmainPos,
+//                 0.0,
+//                 false
+//             };
+//
+//             // Connect new submain junction to water source
+//             double mainlineLength = waterSourcePos.distanceTo(newSubmainPos);
+//             links.push_back({
+//                 newSubmainId,
+//                 waterSourceId,
+//                 5.0 * INCH_TO_METER,
+//                 mainlineLength,
+//                 "mainline"
+//             });
+//
+//             std::cout << "Created new submain junction " << newSubmainId
+//                       << " and connected to water source (mainline length: " << mainlineLength << "m)" << std::endl;
+//         }
+//     }
+// }
+
+int IrrigationModel::getMaxNodeId() const {
+    int maxId = 0;
+    for (const auto& [nodeId, node] : nodes) {
+        if (nodeId > maxId) maxId = nodeId;
+    }
+    return maxId;
+}
+
+int IrrigationModel::countNodesByType(const std::string& type) const {
+    int count = 0;
+    for (const auto& [nodeId, node] : nodes) {
+        if (node.type == type) count++;
+    }
+    return count;
+}
+
+void IrrigationModel::createVirtualConnection(int node1, int node2,
+                                           const ComponentSpecs& specs,
+                                           const std::string& connectionType,
+                                           const std::string& assemblyType) {
+    links.push_back({
+        node1, node2,
+        specs.diameter,
+        specs.length,
+        connectionType,
+        true  // virtual flag
+    });
+
+    // Update neighbors
+    nodes[node1].neighbors.push_back(node2);
+    nodes[node2].neighbors.push_back(node1);
+}
+
+bool IrrigationModel::connectionExists(int node1, int node2) const {
+    for (const auto& link : links) {
+        if ((link.from == node1 && link.to == node2) ||
+            (link.from == node2 && link.to == node1)) {
+            return true;
+            }
+    }
+    return false;
+}
+
+
+/////////////////////////////////
+void IrrigationModel::recreateLateralConnections() { //function for re-creating Irricad systems
+    // Remove all existing lateral connections
+    removeExistingLateralConnections();
+
+    // Create lateral segments between lateral_sprinkler_jn nodes
+    createLateralSegments();
+
+    // Create lateral-to-submain connections
+    // connectLateralsToSubmain();
+    std::vector<int> submainNodeIds = getSubmainNodeIdsFromLinks();
+    // for (int i = 177 ; i < 192; i++) {
+    //     std::cout << "submainID: " << submainNodeIds[i] << std::endl;
+    // }
+    connectSubmainToLaterals(submainNodeIds, "vertical", 1);
+
+    std::cout << "Recreated lateral connections successfully." << std::endl;
+}
+
+std::vector<int> IrrigationModel::getSubmainNodeIdsFromLinks() {
+    std::vector<int> submainNodeIds;
+    std::set<int> uniqueNodes; // Use set to avoid duplicates
+
+    // Extract all node IDs from submain links excluding valve nodes
+    for (const auto& link : links) {
+        if (link.type.find("submain") != std::string::npos ||
+            link.type == "submain") {
+
+            // Check if start node is not a valve before adding
+            if (nodes.count(link.from) && nodes.at(link.from).type != "waterSource" && nodes.at(link.from).type != "submain_junction" ) { //may need to ignore the valve type also
+                uniqueNodes.insert(link.from);
+            }
+
+            // Check if end node is not a valve before adding
+            if (nodes.count(link.to) && nodes.at(link.to).type != "waterSource" && nodes.at(link.to).type != "submain_junction" ) {
+                uniqueNodes.insert(link.to);
+            }
+            }
+    }
+
+    // Convert set to vector
+    submainNodeIds.assign(uniqueNodes.begin(), uniqueNodes.end());
+
+    std::cout << "Found " << submainNodeIds.size() << " submain nodes from links (excluding valves)." << std::endl;
+
+    // update submain junction name
+    for (int nodeId : submainNodeIds) {
+        nodes[nodeId].type = "submain_junction";
+        if (nodes.count(nodeId)) {
+            const auto& node = nodes.at(nodeId);
+            // std::cout << "  Submain node " << nodeId << " (" << node.type
+            //           << ") at (" << node.position.x << ", " << node.position.y << ")" << std::endl;
+        }
+    }
+
+    return submainNodeIds;
+}
+
+void IrrigationModel::removeExistingLateralConnections() {
+    // Remove links with "lateral" type from the LINKS section
+    auto it = links.begin();
+    while (it != links.end()) {
+        if (it->type.find("lateral") != std::string::npos &&
+            it->type != "lateralTobarb" &&
+            it->type != "lateralToBarb") {
+            std::cout << "Removing lateral connection: " << it->from << " -> " << it->to << std::endl;
+            it = links.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
+    // remove from node neighbors
+    for (auto& [nodeId, node] : nodes) {
+        auto neighborIt = node.neighbors.begin();
+        while (neighborIt != node.neighbors.end()) {
+            // Check if this neighbor connection should be a lateral
+            if (shouldRemoveLateralNeighbor(nodeId, *neighborIt)) {
+                neighborIt = node.neighbors.erase(neighborIt);
+            } else {
+                ++neighborIt;
+            }
+        }
+    }
+}
+
+bool IrrigationModel::shouldRemoveLateralNeighbor(int nodeId1, int nodeId2) {
+    const Node& node1 = nodes.at(nodeId1);
+    const Node& node2 = nodes.at(nodeId2);
+
+    // Remove if both are lateral_sprinkler_jn or junction types that form lateral lines
+    if (node1.type == "junction" && node2.type == "junction" &&
+         std::abs(node1.position.y - node2.position.y) < 0.1) { // Same Y-coordinate line?
+        return true;
+    }
+
+    return false;
+}
+
+void IrrigationModel::createLateralSegments() {
+    // Group lateral_sprinkler_jn nodes by x-coordinate (This ONLY works for vertical orientation)
+    // change to y-coordinate for horizontal orientation
+    std::map<double, std::vector<int>> lateralLines;
+
+    for (const auto& [nodeId, node] : nodes) {
+        if (node.type == "lateral_sprinkler_jn" || node.type == "end_junction") {
+            lateralLines[node.position.x].push_back(nodeId);
+        }
+    }
+
+    // Create lateral segments for each lateral line
+    for (auto& [yCoord, lateralNodes] : lateralLines) {
+        // Sort by X-coordinate
+        std::sort(lateralNodes.begin(), lateralNodes.end(),
+                 [this](int a, int b) {
+                     return nodes[a].position.y < nodes[b].position.y;
+                 });
+
+        // Create lateral segments between consecutive lateral_sprinkler_jn nodes
+        for (size_t i = 1; i < lateralNodes.size(); i++) {
+            int prevNodeId = lateralNodes[i-1];
+            int currNodeId = lateralNodes[i];
+
+            double distance = nodes[prevNodeId].position.distanceTo(nodes[currNodeId].position);
+
+            // Create lateral segment
+            createLateralConnection(prevNodeId, currNodeId, distance);
+
+            std::cout << "Created lateral segment: " << prevNodeId << " -> " << currNodeId
+                      << " (distance: " << distance << "m)" << std::endl;
+        }
+    }
+}
+
+void IrrigationModel::createLateralConnection(int startNode, int endNode, double distance) {
+    // Create the lateral connection
+    links.push_back({
+        startNode,
+        endNode,
+        0.05,  // diameter from your data
+        distance,
+        "lateral",
+        false
+    });
+
+    // Update neighbors
+    nodes[startNode].neighbors.push_back(endNode);
+    nodes[endNode].neighbors.push_back(startNode);
+}
+void IrrigationModel::connectLateralsToSubmain() {
+    // Find all junction nodes (submain junctions at Y=167.616)
+    std::vector<int> submainJunctions;
+    for (const auto& [nodeId, node] : nodes) {
+        if (node.type == "junction" && std::abs(node.position.y - 167.616) < 0.1) {
+            submainJunctions.push_back(nodeId);
+        }
+    }
+
+    if (submainJunctions.empty()) {
+        std::cout << "Warning: No submain junction nodes found at Y=167.616." << std::endl;
+        return;
+    }
+
+    // Group lateral_sprinkler_jn nodes by Y-coordinate (lateral lines)
+    std::map<double, std::vector<int>> lateralLines;
+    for (const auto& [nodeId, node] : nodes) {
+        if (node.type == "lateral_sprinkler_jn") {
+            lateralLines[node.position.y].push_back(nodeId);
+        }
+    }
+
+    std::cout << "Found " << lateralLines.size() << " lateral lines." << std::endl;
+
+    int connectionsCreated = 0;
+
+    // For each lateral line, find the lateral_sprinkler_jn closest to ANY submain junction
+    for (auto& [yCoord, lateralNodes] : lateralLines) {
+        if (lateralNodes.empty()) continue;
+
+        // Find the lateral_sprinkler_jn in this line that is closest to any submain junction
+        int closestLateralNode = findClosestLateralToSubmain(lateralNodes, submainJunctions);
+        int closestSubmainNode = findClosestSubmainNode(closestLateralNode, submainJunctions);
+
+        if (closestLateralNode != -1 && closestSubmainNode != -1) {
+            double distance = nodes[closestLateralNode].position.distanceTo(
+                nodes[closestSubmainNode].position);
+
+            // Create lateral-to-submain connection
+            createLateralToSubmainConnection(closestLateralNode, closestSubmainNode, distance);
+            connectionsCreated++;
+
+            std::cout << "Connected lateral line (Y=" << yCoord << ") - lateral " << closestLateralNode
+                      << " to submain " << closestSubmainNode << " (distance: " << distance << "m)" << std::endl;
+        }
+    }
+
+    std::cout << "Created " << connectionsCreated << " lateral-to-submain connections." << std::endl;
+}
+
+int IrrigationModel::findClosestLateralToSubmain(const std::vector<int>& lateralNodes,
+                                               const std::vector<int>& submainNodes) {
+    if (lateralNodes.empty() || submainNodes.empty()) return -1;
+
+    int closestLateral = lateralNodes[0];
+    double minDistance = std::numeric_limits<double>::max();
+
+    // Find which lateral node in this line is closest to ANY submain node
+    for (int lateralNode : lateralNodes) {
+        for (int submainNode : submainNodes) {
+            double distance = nodes[lateralNode].position.distanceTo(nodes[submainNode].position);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestLateral = lateralNode;
+            }
+        }
+    }
+
+    return closestLateral;
+}
+
+int IrrigationModel::findClosestSubmainNode(int lateralNode, const std::vector<int>& submainNodes) {
+    if (submainNodes.empty()) return -1;
+
+    int closestSubmain = submainNodes[0];
+    double minDistance = std::numeric_limits<double>::max();
+
+    for (int submainNode : submainNodes) {
+        double distance = nodes[lateralNode].position.distanceTo(nodes[submainNode].position);
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestSubmain = submainNode;
+        }
+    }
+
+    return closestSubmain;
+}
+
+void IrrigationModel::createLateralToSubmainConnection(int lateralNode, int submainNode, double distance) {
+    // Check if connection already exists
+    if (connectionExists(lateralNode, submainNode)) {
+        std::cout << "Connection already exists between lateral " << lateralNode
+                  << " and submain " << submainNode << std::endl;
+        return;
+    }
+
+    // Create lateral-to-submain connection
+    links.push_back({
+        lateralNode,
+        submainNode,
+        0.75 * INCH_TO_METER,  // diameter from your data
+        distance,
+        "lateralTosubmain",
+        false
+    });
+
+    // Update neighbors
+    nodes[lateralNode].neighbors.push_back(submainNode);
+    nodes[submainNode].neighbors.push_back(lateralNode);
+}
+
+
+
+/////////////////////////////////
+
 void IrrigationModel::printPressureLossAnalysis(const IrrigationModel& system) {
     // Barb to Emitter analysis
     auto barbEmitterPairs = system.findConnectedNodePairs("barb", "emitter");
@@ -488,389 +1124,6 @@ void printLateralToBarbAnalysis(const IrrigationModel& system) {
     std::cout << "LATERAL TO BARB PRESSURE LOSS ANALYSIS\n";
     std::cout << std::string(60, '=') << "\n";
 
-    // Similar implementation as above but for lateral→barb
-    // Expected range: 0.4-0.9 psi
-}
-
-
-void IrrigationModel::addSubmainAndWaterSource(double fieldLength, double fieldWidth,
-                                             const std::string& lateralDirection,
-                                             SubmainPosition submainPosition) {
-    // Determine submain position based on both direction and placement option
-    double submainY = 0.0;
-    double submainX = 0.0;
-
-    if (lateralDirection == "vertical") {
-        // For vertical laterals, use position options
-        switch (submainPosition) {
-            case SubmainPosition::NORTH:
-                submainY = fieldWidth;
-                break;
-            case SubmainPosition::SOUTH:
-                submainY = 0.0;
-                break;
-            case SubmainPosition::MIDDLE:
-                submainY = fieldWidth - fieldWidth / 3.0 - 0.5; // manual setting
-                break;
-        }
-    } else {
-        // For horizontal laterals, place submain at x midpoint
-        submainX = fieldLength / 2.0 + 1.0;
-    }
-
-    // Find all lateral links that connect to the submain
-    std::vector<int> connectingLaterals;
-    std::vector<int> connectingNodes;
-
-    if (submainPosition == SubmainPosition::MIDDLE) {
-        // Use intersection method for middle position
-        for (size_t i = 0; i < links.size(); ++i) {
-            const auto& link = links[i];
-            if (link.type == "lateral") {
-                const auto& fromNode = nodes[link.from];
-                const auto& toNode = nodes[link.to];
-
-                if (lateralDirection == "vertical") {
-                    // Check if this lateral intersects with submain Y position
-                    if ((fromNode.position.y < submainY && toNode.position.y > submainY) ||
-                        (fromNode.position.y > submainY && toNode.position.y < submainY)) {
-                        connectingLaterals.push_back(i);
-                    }
-                } else {
-                    // For horizontal laterals, check X intersection
-                    if ((fromNode.position.x < submainX && toNode.position.x > submainX) ||
-                        (fromNode.position.x > submainX && toNode.position.x < submainX)) {
-                        connectingLaterals.push_back(i);
-                    }
-                }
-            }
-        }
-    } else {
-        // For north/south positions, find nodes at the edge
-        for (const auto& [id, node] : nodes) {
-            if (node.type == "lateral_sprinkler_jn") {
-                if (lateralDirection == "vertical") {
-                    if (std::abs(node.position.y - submainY) < 0.001) {
-                        connectingNodes.push_back(id);
-                    }
-                } else {
-                    if (std::abs(node.position.x - submainX) < 0.001) {
-                        connectingNodes.push_back(id);
-                    }
-                }
-            }
-        }
-    }
-
-    // Create submain nodes and connections
-    int submainNodeId = getNextNodeId();
-    int submainLinkId = links.size();
-
-    if (submainPosition == SubmainPosition::MIDDLE) {
-        // Middle position - use intersection method
-        for (size_t i = 0; i < connectingLaterals.size(); ++i) {
-            int lateralIdx = connectingLaterals[i];
-            auto& lateral = links[lateralIdx];
-
-            // Calculate intersection point
-            Position fromPos = nodes[lateral.from].position;
-            Position toPos = nodes[lateral.to].position;
-            Position intersectPos;
-
-            if (lateralDirection == "vertical") {
-                intersectPos = {fromPos.x, submainY};
-            } else {
-                intersectPos = {submainX, fromPos.y};
-            }
-
-            // Create new submain node
-            nodes[submainNodeId] = {
-                submainNodeId,
-                "submain_junction",
-                intersectPos,
-                0.0,
-                false,
-                0.0
-            };
-
-            // Split the lateral into two segments
-            int originalTo = lateral.to;
-
-            // First segment: from original from to new submain node
-            lateral.to = submainNodeId;
-            lateral.length = fromPos.distanceTo(intersectPos);
-
-            // Second segment: from submain node to original to
-            int newLateralId = links.size();
-            links.push_back({
-                submainNodeId,
-                originalTo,
-                0.67 * INCH_TO_METER,
-                toPos.distanceTo(intersectPos), //split half sum not add up sprinklerSpacing
-                "lateral"
-            });
-
-            // Create connection from submain node to submain
-            if (i < connectingLaterals.size() - 1) {
-                int nextSubmainNodeId = submainNodeId + 1;
-
-                // Get the NEXT lateral's intersection point
-                auto& nextLateral = links[connectingLaterals[i+1]];
-                Position nextFromPos = nodes[nextLateral.from].position;
-                Position nextIntersectPos = {nextFromPos.x, submainY};  // For vertical
-
-                // Calculate ACTUAL pipe length needed
-                double spacing = (lateralDirection == "vertical") ?
-                    std::abs(nextIntersectPos.x - intersectPos.x) :  // Horizontal distance
-                    std::abs(nextIntersectPos.y - intersectPos.y);   // Vertical distance
-
-                // Ensure minimum length
-                spacing = std::max(spacing, 0.1);  // At least 10cm
-
-                links.push_back({
-                    submainNodeId,
-                    nextSubmainNodeId,
-                    4.0 * INCH_TO_METER,
-                    spacing,
-                    "submain"
-                });
-            }
-
-            submainNodeId++;
-        }
-    } else {
-        // North/South positions then connect edge nodes directly
-        std::sort(connectingNodes.begin(), connectingNodes.end(), [this](int a, int b) {
-            return nodes[a].position.x < nodes[b].position.x;
-        });
-
-        for (size_t i = 0; i < connectingNodes.size(); ++i) {
-            Position pos = nodes[connectingNodes[i]].position;
-
-            // Adjust position to be exactly on submain line
-            if (lateralDirection == "vertical") {
-                pos.y = submainY;
-            } else {
-                pos.x = submainX;
-            }
-
-            // Create submain connection node
-            nodes[submainNodeId] = {
-                submainNodeId,
-                "submain_junction",
-                pos,
-                0.0,
-                false,
-                0.0
-            };
-
-            // Connect lateral to submain
-            links.push_back({
-                connectingNodes[i],
-                submainNodeId,
-                0.67 * INCH_TO_METER,
-                nodes[connectingNodes[i]].position.distanceTo(pos),
-                "lateralToSubmain"
-            });
-
-            // Connect to previous submain node if exists
-            if (i > 0) {
-                double dist = pos.distanceTo(nodes[submainNodeId-1].position);
-
-                if (dist > 0) {
-                    links.push_back({
-                        submainNodeId - 1,
-                        submainNodeId,
-                        4.0 * INCH_TO_METER,
-                        dist,
-                        "submain"
-                    });
-                }
-                std::cout << "Created submain node " << submainNodeId << " at (" << pos.x << "," << pos.y << ")\n";
-            }
-
-            submainNodeId++;
-        }
-    }
-
-     // Create water source node (ALWAYS as the last node)
-    waterSourceId = getNextNodeId();
-    Position waterSourcePos;
-
-    if (lateralDirection == "vertical") {
-        // manual setting: water source position logic for vertical laterals
-        waterSourcePos = {fieldLength /2-2, fieldWidth - fieldWidth / 3.0 +2};
-
-        // Adjust based on submain position
-        if (submainPosition == SubmainPosition::NORTH) {
-            waterSourcePos.y = fieldWidth - 1.0;
-        } else if (submainPosition == SubmainPosition::SOUTH) {
-            waterSourcePos.y = 1.0;
-        }
-    } else {
-        // position for horizontal laterals
-        waterSourcePos = {fieldLength / 2.0, 0.0};
-    }
-
-    nodes[waterSourceId] = {
-        waterSourceId,
-        "waterSource",
-        waterSourcePos,
-        0.0,
-        true
-    };
-
-    // Find closest submain LINK (not node) to water source
-    int closestLinkIndex = -1;
-    double minDistance = std::numeric_limits<double>::max();
-    Position closestPoint;
-
-    // Determine submain Y position for range checking
-    if (lateralDirection == "vertical") {
-        switch (submainPosition) {
-            case SubmainPosition::NORTH:
-                submainY = fieldWidth;
-                break;
-            case SubmainPosition::SOUTH:
-                submainY = 0.0;
-                break;
-            case SubmainPosition::MIDDLE:
-                submainY = fieldWidth - fieldWidth / 3.0 - 0.5;
-                break;
-        }
-    }
-
-    for (size_t i = 0; i < links.size(); ++i) {
-        const auto& link = links[i];
-        if (link.type != "submain") continue;
-
-        const auto& nodeA = nodes[link.from];
-        const auto& nodeB = nodes[link.to];
-
-        // Check if both endpoints are submain_junction nodes
-        if (nodeA.type != "submain_junction" || nodeB.type != "submain_junction") {
-            continue;
-        }
-
-        // Check if water source X position is within this submain segment's range
-        double minX = std::min(nodeA.position.x, nodeB.position.x);
-        double maxX = std::max(nodeA.position.x, nodeB.position.x);
-
-        if (waterSourcePos.x >= minX && waterSourcePos.x <= maxX) {
-            // Calculate closest point on the segment to water source
-            Position vecAB = {nodeB.position.x - nodeA.position.x, nodeB.position.y - nodeA.position.y};
-            Position vecAW = {waterSourcePos.x - nodeA.position.x, waterSourcePos.y - nodeA.position.y};
-            double dotProduct = vecAB.x * vecAW.x + vecAB.y * vecAW.y;
-            double lengthSquared = vecAB.x * vecAB.x + vecAB.y * vecAB.y;
-
-            // Avoid division by zero
-            if (lengthSquared < 1e-12) continue;
-
-            double t = std::max(0.0, std::min(1.0, dotProduct / lengthSquared));
-
-            Position pointOnSegment = {
-                nodeA.position.x + t * vecAB.x,
-                nodeA.position.y + t * vecAB.y
-            };
-
-            double dist = waterSourcePos.distanceTo(pointOnSegment);
-            if (dist < minDistance) {
-                minDistance = dist;
-                closestLinkIndex = i;
-                closestPoint = pointOnSegment;
-            }
-        }
-    }
-
-    if (closestLinkIndex != -1) {
-        //create new junction on the submain
-        int newJunctionId = getNextNodeId();
-        nodes[newJunctionId] = {
-            newJunctionId,
-            "submain_junction",
-            closestPoint,
-            0.0,
-            false
-        };
-
-        // splitting the closest submain link
-        const Link& oldLink = links[closestLinkIndex];
-        double length1 = nodes[oldLink.from].position.distanceTo(closestPoint);
-        double length2 = nodes[oldLink.to].position.distanceTo(closestPoint);
-
-        links.push_back({
-            oldLink.from,
-            newJunctionId,       // to: new submain junction
-            oldLink.diameter,
-            length1,
-            "submain"
-        });
-        links.push_back({
-            newJunctionId,
-            oldLink.to,
-            oldLink.diameter,
-            length2,
-            "submain"
-        });
-        links.erase(links.begin() + closestLinkIndex);         // Remove the old link and add two new submain segments
-
-        // Connect new submain junction (second last) to water source (last)
-        links.push_back({
-            newJunctionId,
-            waterSourceId,
-            2.0 * INCH_TO_METER,
-            waterSourcePos.distanceTo(closestPoint),
-            "mainline"
-        });
-    } else {
-        // Fallback: connect to closest existing SUBMAIN JUNCTION node only
-        int closestSubmainId = -1;
-        double minDist = std::numeric_limits<double>::max();
-        for (const auto& [id, node] : nodes) {
-            if (node.type == "submain_junction") {
-                double dist = node.position.distanceTo(waterSourcePos);
-                if (dist < minDist) {
-                    minDist = dist;
-                    closestSubmainId = id;
-                }
-            }
-        }
-
-        if (closestSubmainId != -1) {
-            // Connect water source (last node) to closest existing submain junction
-            links.push_back({
-                closestSubmainId,
-                waterSourceId,
-                2.0 * INCH_TO_METER,
-                minDist,
-                "mainline"
-            });
-        } else {
-            // Create a new submain junction (this will be second last node)
-            int newSubmainId = getNextNodeId();
-            Position newSubmainPos = (lateralDirection == "vertical") ?
-                Position{fieldLength / 2.0, submainY} :
-                Position{submainX, fieldWidth / 2.0};
-
-            nodes[newSubmainId] = {
-                newSubmainId,
-                "submain_junction",
-                newSubmainPos,
-                0.0,
-                false,
-                0.0
-            };
-
-            // Connect new submain junction (second last) to water source (last)
-            links.push_back({
-                newSubmainId,          // from: new submain junction (second last)
-                waterSourceId,         // to: water source (always last node)
-                2.0 * INCH_TO_METER,
-                waterSourcePos.distanceTo(newSubmainPos),
-                "mainline"
-            });
-        }
-    }
 }
 
 
@@ -899,87 +1152,6 @@ void IrrigationModel::setBoundaryPolygon(const std::vector<Position>& polygon) {
 
 }
 
-void IrrigationModel::createIrregularSystem(double Pw, const std::vector<Position>& boundary,
-                                         double sprinklerSpacing, double lineSpacing,
-                                         const std::string& connectionType,
-                                         const std::string& sprinklerConfig,
-                                         SubmainPosition submainPos) {
-    // Clear existing system
-    nodes.clear();
-    links.clear();
-
-    setBoundaryPolygon(boundary);
-
-    if (Pw <= 0) {
-        helios::helios_runtime_error("ERROR (IrrigationModel::createIrregularSystem(): Water source pressure must be positive");
-     //   throw std::invalid_argument("Water source pressure must be positive. Got: " + std::to_string(Pw));
-    }
-
-    // Validate boundary area is reasonable
-    if (boundary.size() < 3) {
-        helios::helios_runtime_error("ERROR (IrrigationModel::createIrregularSystem(): invalid Boundary size");
-    //    throw std::invalid_argument("Boundary must have at least 3 points");
-    }
-
-    if (connectionType != "vertical" && connectionType != "horizontal") {
-        helios::helios_runtime_error("ERROR (IrrigationModel::createSprinklerSystemGeneral(): invalid lateral connection orientation");
-     //   throw std::invalid_argument("Invalid lateral connection orientation: " + connectionType);
-
-    }
-
-    // bounding box for grid generation
-    double minX = std::numeric_limits<double>::max();
-    double maxX = std::numeric_limits<double>::lowest();
-    double minY = std::numeric_limits<double>::max();
-    double maxY = std::numeric_limits<double>::lowest();
-
-    for (const auto& point : boundary) {
-        minX = std::min(minX, point.x);
-        maxX = std::max(maxX, point.x);
-        minY = std::min(minY, point.y);
-        maxY = std::max(maxY, point.y);
-    }
-
-    double fieldLength = maxX - minX;
-    double fieldWidth = maxY - minY;
-
-    // Create sprinkler system within the boundary
-    createSprinklerSystemGeneral(fieldLength, fieldWidth, sprinklerSpacing, lineSpacing, connectionType,  sprinklerConfig);
-
-    // Add submain and water source (modified to handle irregular layouts)
-    addSubmainAndWaterSourceIrregular(fieldLength, fieldWidth, connectionType, submainPos);
-
-    // Validate and set water source pressure
-    validateParameters(fieldLength, fieldWidth, sprinklerSpacing, lineSpacing);
-    //validateHydraulicSystem();
-
-    if (waterSourceId != -1) {
-        nodes[waterSourceId].pressure = Pw;
-        nodes[waterSourceId].is_fixed = true;
-    }
-}
-
-void IrrigationModel::addSubmainAndWaterSourceIrregular(double fieldLength, double fieldWidth,
-                                                      const std::string& lateralDirection,
-                                                      SubmainPosition submainPosition) {
-    // Create submain nodes
-    // should it be placed at the center of the row, or center of the chosen lateral?
-    Position submainLinePos = calculateOptimalSubmainPosition(submainPosition, fieldLength, fieldWidth);
-    std::vector<int> submainNodeIds;
-
-    if (lateralDirection == "vertical") {
-      submainNodeIds = createHorizontalSubmain(submainLinePos, fieldLength);
-    } else {
-        submainNodeIds = createVerticalSubmain(submainLinePos, fieldWidth);
-    }
-    connectSubmainToLaterals(submainNodeIds, lateralDirection);
-
-     // Create water source and final connections
-     createAndConnectWaterSource(submainNodeIds);
-
-    // Final validation
-     // validateHydraulicSystem();
-}
 
 const Link* IrrigationModel::findOptimalLateralForConnection(
     const std::map<double, std::vector<size_t>>& rowLaterals, // map of rowKey -> lateral indices
@@ -1020,31 +1192,35 @@ const Link* IrrigationModel::findOptimalLateralForConnection(
         // printing lateral info
         const auto& fromNode = nodes.at(lateral.from);
         const auto& toNode = nodes.at(lateral.to);
-        std::cout << "  Considering lateral " << lateral.from << "-" << lateral.to
-                  << " from (" << fromNode.position.x << "," << fromNode.position.y << ")"
-                  << " to (" << toNode.position.x << "," << toNode.position.y << ")"
-                  << ", Distance: " << distance << std::endl;
+        // std::cout << "  Considering lateral " << lateral.from << "-" << lateral.to
+        //           << " from (" << fromNode.position.x << "," << fromNode.position.y << ")"
+        //           << " to (" << toNode.position.x << "," << toNode.position.y << ")"
+        //           << ", Distance: " << distance << std::endl;
     }
 
     if (optimalLateral) {
         const auto& fromNode = nodes.at(optimalLateral->from);
         const auto& toNode = nodes.at(optimalLateral->to);
-        std::cout << "✅ Selected optimal lateral: " << optimalLateral->from << "-"
-                  << optimalLateral->to
-                  << " from (" << fromNode.position.x << "," << fromNode.position.y << ")"
-                  << " to (" << toNode.position.x << "," << toNode.position.y << ")"
-                  << ", Distance: " << bestScore << std::endl;
+        // std::cout << "✅ Selected optimal lateral: " << optimalLateral->from << "-"
+        //           << optimalLateral->to
+        //           << " from (" << fromNode.position.x << "," << fromNode.position.y << ")"
+        //           << " to (" << toNode.position.x << "," << toNode.position.y << ")"
+        //           << ", Distance: " << bestScore << std::endl;        // std::cout << "✅ Selected optimal lateral: " << optimalLateral->from << "-"
+        //           << optimalLateral->to
+        //           << " from (" << fromNode.position.x << "," << fromNode.position.y << ")"
+        //           << " to (" << toNode.position.x << "," << toNode.position.y << ")"
+        //           << ", Distance: " << bestScore << std::endl;
     }
 
     return optimalLateral;
 }
 
 
-double IrrigationModel::calculateLateralLength(const Link* lateral) const {
-    const auto& fromNode = nodes.at(lateral->from);
-    const auto& toNode = nodes.at(lateral->to);
-    return fromNode.position.distanceTo(toNode.position);
-}
+// double IrrigationModel::calculateLateralLength(const Link* lateral) const {
+//     const auto& fromNode = nodes.at(lateral->from);
+//     const auto& toNode = nodes.at(lateral->to);
+//     return fromNode.position.distanceTo(toNode.position);
+// }
 
 Position IrrigationModel::calculateLateralMidpoint(const Link* lateral) const {
     const auto& fromNode = nodes.at(lateral->from);
@@ -1084,42 +1260,137 @@ Position IrrigationModel::findOptimalConnectionPointOnLateral(const Link* latera
     };
 }
 
-void IrrigationModel::connectSubmainToLaterals(
-    const std::vector<int>& submainNodeIds,
-    const std::string& lateralDirection)
+// void IrrigationModel::connectSubmainToLaterals(
+//     const std::vector<int>& submainNodeIds,
+//     const std::string& lateralDirection)
+// {
+//     //  Group laterals by their row position
+//     std::map<double, std::vector<size_t>> lateralsByRow;
+//
+//     for (size_t i = 0; i < links.size(); ++i) {
+//         const auto& link = links[i];
+//         if (link.type != "lateral") continue;
+//
+//         if (!validateLink(link)) {
+//             std::cerr << "Warning: Invalid lateral link " << link.from
+//                       << "-" << link.to << std::endl;
+//             continue;
+//         }
+//
+//         double rowKey = getLateralRowKey(link, lateralDirection);
+//         lateralsByRow[rowKey].push_back(i);
+//     }
+//
+//     // Track connected rows
+//     std::set<double> connectedRows;
+//
+//     //  Loop through each submain node
+//     for (int submainNodeId : submainNodeIds) {
+//         const auto& submainPos = nodes.at(submainNodeId).position;
+//
+//         for (const auto& [rowKey, lateralIndices] : lateralsByRow) {
+//             if (lateralIndices.empty()) continue;
+//             if (connectedRows.find(rowKey) != connectedRows.end()) continue;
+//
+//             std::cout << "\n Processing Row Key: " << rowKey
+//                       << " Laterals in this row: " << lateralIndices.size() << std::endl;
+//
+//             //  Find the optimal lateral in this row
+//             const Link* optimalLateral = findOptimalLateralForConnection(
+//                 lateralsByRow,
+//                 submainPos,
+//                 rowKey,
+//                 lateralDirection
+//             );
+//
+//             if (!optimalLateral) {
+//             //    std::cerr << "No optimal lateral found for row: " << rowKey << std::endl;
+//                 helios::helios_runtime_error("ERROR (IrrigationModel::connectSubmainToLaterals) No optimal lateral found for row");
+//                 continue;
+//             }
+//
+//             // Copy the lateral before splitting since splitLateralAndConnect
+//             // erases from links and would invalidate any pointers into it.
+//             Link optimalLateralCopy = *optimalLateral;
+//
+//             // split lateral and connect to submain
+//             splitLateralAndConnect(&optimalLateralCopy, submainNodeId, lateralsByRow, lateralDirection);
+//
+//             connectedRows.insert(rowKey);  // Mark this row as connected
+//
+//             const auto& fromNode = nodes.at(optimalLateralCopy.from);
+//             const auto& toNode = nodes.at(optimalLateralCopy.to);
+//             // std::cout << " Connected lateral " << optimalLateral->from << "-"
+//             //           << optimalLateral->to << " to submain node " << submainNodeId << std::endl;
+//             break;
+//         }
+//     }
+// }
+
+void IrrigationModel::connectSubmainToLaterals(const std::vector<int>& submainNodeIds, const std::string& lateralDirection, int zoneID)
 {
-    //  Group laterals by their row position
+   // std::cout << " DEBUG connectSubmainToLaterals for zone " << zoneID << " " << std::endl;
+
+    // Group laterals by their row position(only original laterals), not lateralToSubmain
     std::map<double, std::vector<size_t>> lateralsByRow;
 
     for (size_t i = 0; i < links.size(); ++i) {
         const auto& link = links[i];
-        if (link.type != "lateral") continue;
+
+        // Only process the original lateral pipes, not lateralToSubmain connections
+        if (link.type != "lateral" || link.zoneID != zoneID) continue;
 
         if (!validateLink(link)) {
             std::cerr << "Warning: Invalid lateral link " << link.from
-                      << "-" << link.to << std::endl;
+                      << "-" << link.to << " in zone " << zoneID << std::endl;
             continue;
         }
 
         double rowKey = getLateralRowKey(link, lateralDirection);
         lateralsByRow[rowKey].push_back(i);
+      //  std::cout << "DEBUG - Added ORIGINAL lateral " << i << " to row " << rowKey << std::endl;
     }
+
+    // std::cout << "DEBUG - Zone " << zoneID << " has " << lateralsByRow.size()
+    //           << " ORIGINAL lateral rows to connect" << std::endl;
+
+    // Debug: Show only original lateral rows
+    // for (const auto& [rowKey, lateralIndices] : lateralsByRow) {
+    //     std::cout << "DEBUG - ORIGINAL Row " << rowKey << " has " << lateralIndices.size() << " laterals" << std::endl;
+    //     for (size_t idx : lateralIndices) {
+    //         const auto& link = links[idx];
+    //         std::cout << "    ORIGINAL Lateral " << link.from << "-" << link.to
+    //                   << " type: " << link.type << std::endl;
+    //     }
+    // }
 
     // Track connected rows
     std::set<double> connectedRows;
 
-    //  Loop through each submain node
+    // Loop through each submain node
     for (int submainNodeId : submainNodeIds) {
+        // Verify this submain node belongs to the correct zone
+        if (!nodes.count(submainNodeId) || nodes.at(submainNodeId).zoneID != zoneID) {
+            continue;
+        }
+
         const auto& submainPos = nodes.at(submainNodeId).position;
+
+        // std::cout << "DEBUG - Processing submain node " << submainNodeId
+        //           << " at (" << submainPos.x << ", " << submainPos.y << ")" << std::endl;
 
         for (const auto& [rowKey, lateralIndices] : lateralsByRow) {
             if (lateralIndices.empty()) continue;
-            if (connectedRows.find(rowKey) != connectedRows.end()) continue;
+            if (connectedRows.find(rowKey) != connectedRows.end()) {
+              //  std::cout << "DEBUG - ORIGINAL Row " << rowKey << " already connected" << std::endl;
+                continue;
+            }
 
-            std::cout << "\n--- Processing Row Key: " << rowKey
-                      << " --- Laterals in this row: " << lateralIndices.size() << std::endl;
+            // std::cout << "DEBUG - Trying to connect ORIGINAL row " << rowKey
+            //           << " with " << lateralIndices.size() << " laterals to submain "
+            //           << submainNodeId << std::endl;
 
-            //  Find the optimal lateral in this row
+            // Find the optimal lateral in this row to ensure it only considers original laterals
             const Link* optimalLateral = findOptimalLateralForConnection(
                 lateralsByRow,
                 submainPos,
@@ -1128,20 +1399,45 @@ void IrrigationModel::connectSubmainToLaterals(
             );
 
             if (!optimalLateral) {
-                std::cout << " No optimal lateral found for row " << rowKey << std::endl;
+             //   std::cout << "DEBUG - No optimal lateral found for ORIGINAL row " << rowKey << std::endl;
                 continue;
             }
 
-            // split lateral and connect to submain
-            splitLateralAndConnect(optimalLateral, submainNodeId, lateralsByRow, lateralDirection);
+            // Copy the lateral before splitting since splitLateralAndConnect
+            // erases from links and would invalidate any pointers into it.
+            Link optimalLateralCopy = *optimalLateral;
 
-            connectedRows.insert(rowKey);  // Mark this row as connected
+            // Verify this is an ORIGINAL lateral, not a lateralToSubmain
+            if (optimalLateralCopy.type != "lateral") {
+                // std::cout << "ERROR: Optimal lateral is not an original lateral! Type: "
+                //           << optimalLateral->type << std::endl;
+                continue;
+            }
 
-            const auto& fromNode = nodes.at(optimalLateral->from);
-            const auto& toNode = nodes.at(optimalLateral->to);
-            std::cout << " Connected lateral " << optimalLateral->from << "-"
-                      << optimalLateral->to << " to submain node " << submainNodeId << std::endl;
+            // std::cout << "DEBUG - Found optimal ORIGINAL lateral: " << optimalLateral->from
+            //           << "-" << optimalLateral->to << std::endl;
+
+            // Split lateral and connect to submain
+            splitLateralAndConnect(&optimalLateralCopy, submainNodeId, lateralsByRow, lateralDirection, zoneID);
+
+            connectedRows.insert(rowKey);
+            // std::cout << "DEBUG - SUCCESS: Connected ORIGINAL row " << rowKey << " to submain "
+            //           << submainNodeId << std::endl;
             break;
+        }
+    }
+
+    // connection report
+    // std::cout << "=== CONNECTION SUMMARY for zone " << zoneID << " ===" << std::endl;
+    // std::cout << "Total ORIGINAL lateral rows: " << lateralsByRow.size() << std::endl;
+    // std::cout << "Connected ORIGINAL rows: " << connectedRows.size() << std::endl;
+
+    // List connected and unconnected rows
+    for (const auto& [rowKey, lateralIndices] : lateralsByRow) {
+        if (connectedRows.find(rowKey) != connectedRows.end()) {
+         //   std::cout << "  CONNECTED: Row " << rowKey << std::endl;
+        } else {
+            std::cout << "  UNCONNECTED: Row " << rowKey << std::endl;
         }
     }
 }
@@ -1162,91 +1458,23 @@ double IrrigationModel::getLateralRowKey(const Link& lateral, const std::string&
     }
 }
 
-int IrrigationModel::findNearestSubmainNode(const Position& point,
-                                          const std::vector<int>& submainNodeIds,
-                                          double expectedRowKey,
-                                          const std::string& lateralDirection,
-                                          double tolerance) const {
-    int nearestId = -1;
-    double minDistance = std::numeric_limits<double>::max();
-
-    std::cout << "   Looking for submain in row " << expectedRowKey
-              << " (tolerance: ±" << tolerance << ")" << std::endl;
-
-    for (int submainId : submainNodeIds) {
-        const auto& submainPos = nodes.at(submainId).position;
-
-        double submainRowKey;
-        if (lateralDirection == "vertical") {
-            submainRowKey = std::round(submainPos.x * 100.0) / 100.0;
-        } else {
-            submainRowKey = std::round(submainPos.y * 100.0) / 100.0;
-        }
-
-        double rowDifference = std::abs(submainRowKey - expectedRowKey);
-
-        if (rowDifference > tolerance) {
-            std::cout << "     Submain " << submainId << " at (" << submainPos.x << "," << submainPos.y
-                      << ") is in row " << submainRowKey << " - TOO FAR (diff: " << rowDifference << ")" << std::endl;
-            continue;
-        }
-
-        double distance = point.distanceTo(submainPos);
-        std::cout << "     Submain " << submainId << " at (" << submainPos.x << "," << submainPos.y
-                  << ") in row " << submainRowKey << " - distance: " << distance << "m" << std::endl;
-
-        if (distance < minDistance) {
-            minDistance = distance;
-            nearestId = submainId;
-        }
-    }
-
-    if (nearestId != -1) {
-        std::cout << "   Selected submain " << nearestId << " with distance " << minDistance << "m" << std::endl;
-    } else {
-        std::cout << "   No suitable submain found in row " << expectedRowKey << std::endl;
-    }
-
-    return nearestId;
-}
-
-double IrrigationModel::calculateLateralCentrality(const Link* lateral,
-                                                 const std::vector<const Link*>& rowLaterals) const {
-    // Calculate how central this lateral is within its row
-    std::vector<double> positions;
-    for (const Link* l : rowLaterals) {
-        positions.push_back(calculateLateralMidpoint(l).y); // Use Y for vertical laterals
-    }
-
-    std::sort(positions.begin(), positions.end());
-    double median = positions[positions.size() / 2];
-
-    double currentPos = calculateLateralMidpoint(lateral).y;
-    return std::abs(currentPos - median) / median;
-}
 
 bool IrrigationModel::validateLink(const Link& link) const {
     return nodes.count(link.from) > 0 && nodes.count(link.to) > 0;
 }
 
-Position IrrigationModel::calculateSubmainLateralIntersection(const Position& submainPos,
-                                                            const Position& lateralStart,
-                                                            const Position& lateralEnd,
-                                                            const std::string& lateralDirection) const {
-    if (lateralDirection == "vertical") {
-        // Horizontal submain + vertical lateral: intersection at (submainX, lateralY)
-        return {submainPos.x, lateralStart.y};
-    } else {
-        // Vertical submain + horizontal lateral: intersection at (lateralX, submainY)
-        return {lateralStart.x, submainPos.y};
-    }
-}
+
+
+// add zoneID for assignZones
 void IrrigationModel::splitLateralAndConnect(
     const Link* lateral,
     int submainNodeId,
     std::map<double, std::vector<size_t>>& rowLaterals,
-    const std::string& lateralDirection)
+    const std::string& lateralDirection,
+    int zoneID)
 {
+    // std::cout << "splitLateralAndConnect called for lateral "
+    //         << lateral->from << "-" << lateral->to << " to submain " << submainNodeId << std::endl;
     // Find the index of the original lateral in links
     size_t lateralIndex = SIZE_MAX;
     for (size_t i = 0; i < links.size(); ++i) {
@@ -1261,8 +1489,8 @@ void IrrigationModel::splitLateralAndConnect(
     }
 
     if (lateralIndex == SIZE_MAX) {
-        std::cerr << " Could not find the original lateral to split: "
-                  << lateral->from << "-" << lateral->to << std::endl;
+        std::cerr << "ERROR: Could not find the original lateral to split: "
+                  << lateral->from << "-" << lateral->to << " in zone " << zoneID << std::endl;
         return;
     }
 
@@ -1276,10 +1504,10 @@ void IrrigationModel::splitLateralAndConnect(
     auto& rowVector = rowLaterals[originalRowKey];
     rowVector.erase(std::remove(rowVector.begin(), rowVector.end(), lateralIndex), rowVector.end());
 
-    // now erase the original lateral using indexing
+    // Now erase the original lateral using indexing
     links.erase(links.begin() + lateralIndex);
 
-    // Adjust rowLaterals indices for all remaining laterals (must update to avoid empty indexing)
+    // Adjust rowLaterals indices for all remaining laterals
     for (auto& [key, vec] : rowLaterals) {
         for (auto& idx : vec) {
             if (idx > lateralIndex) idx--;
@@ -1289,12 +1517,26 @@ void IrrigationModel::splitLateralAndConnect(
     // Calculate lengths of new segments
     double length1 = fromNode.position.distanceTo(submainPos);
     double length2 = submainPos.distanceTo(toNode.position);
+    // Reconnect the two new lateral segments WITH ZONE ID
+    links.push_back({
+        originalLateral.from,
+        submainNodeId,
+        originalLateral.diameter,
+        length1,
+        "lateralToSubmain",
+        0.0,
+        zoneID  // Set zone ID
+    });
 
-    // reconnect the two new lateral segments
-    links.push_back({originalLateral.from, submainNodeId,
-                     originalLateral.diameter, length1, "lateralToSubmain"});
-    links.push_back({submainNodeId, originalLateral.to,
-                     originalLateral.diameter, length2, "lateralToSubmain"});
+    links.push_back({
+        submainNodeId,
+        originalLateral.to,
+        originalLateral.diameter,
+        length2,
+        "lateralToSubmain",
+        0.0,
+        zoneID  // Set zone ID
+    });
 
     // Update rowLaterals with new segment indices
     size_t indexNew1 = links.size() - 2;
@@ -1306,9 +1548,9 @@ void IrrigationModel::splitLateralAndConnect(
     rowLaterals[rowKey1].push_back(indexNew1);
     rowLaterals[rowKey2].push_back(indexNew2);
 
-    std::cout << "Split lateral " << originalLateral.from << "-" << originalLateral.to
-              << " into " << originalLateral.from << "-" << submainNodeId
-              << " and " << submainNodeId << "-" << originalLateral.to << std::endl;
+    // std::cout << "DEBUG - Split lateral " << originalLateral.from << "-" << originalLateral.to
+    //           << " in zone " << zoneID << " into " << originalLateral.from << "-" << submainNodeId
+    //           << " and " << submainNodeId << "-" << originalLateral.to << std::endl;
 }
 
 
@@ -1340,67 +1582,132 @@ void IrrigationModel::validateSubmainConnections(const std::vector<int>& submain
     }
 }
 
-std::vector<int> IrrigationModel::createHorizontalSubmain(const Position& startPos, double fieldLength) {
+
+std::vector<int> IrrigationModel::createHorizontalSubmain(const Position& startPos, double fieldLength, const std::vector<Position>& boundary, double lineSpacing, int zoneID) {
     std::vector<int> submainNodeIds;
 
-    // get lateral pipe X-positions and store lateral links
-    std::map<double, const Link*> lateralMap; // X-position -> Lateral link
+    // Calculate the actual X bounds from the boundary
+    double minX = std::numeric_limits<double>::max();
+    double maxX = std::numeric_limits<double>::lowest();
 
-    for (const auto& link : links) {
-        if (link.type == "lateral") {
-            const auto& fromNode = nodes.at(link.from);
-            const auto& toNode = nodes.at(link.to);
+    for (const auto& point : boundary) {
+        minX = std::min(minX, point.x);
+        maxX = std::max(maxX, point.x);
+    }
 
-            // Use midpoint of lateral pipe for better alignment
-            double midpointX = (fromNode.position.x + toNode.position.x) / 2.0;
-            lateralMap[midpointX] = &link;
+    // For horizontal submain, create nodes along the Y-position of startPos, but spanning the X-range of the boundary
+
+    // Calculate number of nodes based on field length and typical spacing
+    int numNodes = std::max(2, static_cast<int>(fieldLength/ lineSpacing) + 1);
+    //std::cout << "Creating " << numNodes << " submain nodes" << std::endl;
+
+    for (int i = 0; i < numNodes; ++i) {
+        Position nodePos;
+
+        // Position along X-axis from minX to maxX
+        nodePos.x = minX + i * (lineSpacing );
+
+        // Y-position from startPos for submain line
+        nodePos.y = startPos.y;
+
+        // Z-position
+        nodePos.z = startPos.z;
+
+       // std::cout << "Creating submain node at (" << nodePos.x << ", " << nodePos.y << ")" << std::endl;
+
+        int nodeId = getNextNodeId();
+        nodes[nodeId] = {
+            nodeId,
+            "submain_junction",
+            nodePos,
+            0.0,
+            false,
+            0.0,
+            {}, // neighbors
+            zoneID
+        };
+        submainNodeIds.push_back(nodeId);
+
+        // Connect to previous submain node
+        if (i > 0) {
+            double length = nodes[submainNodeIds[i-1]].position.distanceTo(nodePos);
+            links.push_back({
+                submainNodeIds[i-1],
+                nodeId,
+                3.0 * INCH_TO_METER,
+                length,
+                "submain",
+                0.0,
+                zoneID
+            });
+            // std::cout << " Connected node " << submainNodeIds[i-1] << " to " << nodeId
+            //           << " (length: " << length << "m)" << std::endl;
         }
     }
 
-    if (lateralMap.empty()) {
-        // fall backt to make sure evenly spaced nodes
-        int numNodes = std::max(2, static_cast<int>(fieldLength / (22.0*FEET_TO_METER))); //assign minimum of 3 nodes
-        for (int i = 0; i < numNodes; ++i) {
-            Position nodePos = startPos;
-            nodePos.x += i * (fieldLength / (numNodes - 1));
+    // std::cout << "Successfully created horizontal submain with " << submainNodeIds.size()
+    //           << " nodes from X=" << minX << " to X=" << maxX << std::endl;
+    /////           Print all created node positions
+    // std::cout << "Submain node positions:" << std::endl;
+    // for (int nodeId : submainNodeIds) {
+    //     const auto& node = nodes[nodeId];
+    //     std::cout << "  Node " << nodeId << ": (" << node.position.x << ", " << node.position.y << ")" << std::endl;
+    // }
 
-            int nodeId = getNextNodeId();
-            nodes[nodeId] = {nodeId, "submain_junction", nodePos, 0.0, false};
-            submainNodeIds.push_back(nodeId);
+    return submainNodeIds;
+}
 
-            if (i > 0) {
-                double length = nodes[submainNodeIds[i-1]].position.distanceTo(nodePos);
-                links.push_back({
-                    submainNodeIds[i-1], nodeId,
-                    4.0 * INCH_TO_METER, length, "submain"
-                });
-            }
-        }
-    } else {
-        // Create submain nodes aligned with lateral pipe positions
-        std::vector<double> sortedLateralX;
-        for (const auto& entry : lateralMap) {
-            sortedLateralX.push_back(entry.first);
-        }
-        std::sort(sortedLateralX.begin(), sortedLateralX.end());
 
-        for (size_t i = 0; i < sortedLateralX.size(); ++i) {
-            Position nodePos = startPos;
-            nodePos.x = sortedLateralX[i]; // Align with lateral pipe position
+std::vector<int> IrrigationModel::createVerticalSubmain(const Position& startPos, double fieldWidth,
+                                     const std::vector<Position>& boundary, double lineSpacing, int zoneID) {
+    std::vector<int> submainNodeIds;
 
-            int nodeId = getNextNodeId();
-            nodes[nodeId] = {nodeId, "submain_junction", nodePos, 0.0, false};
-            submainNodeIds.push_back(nodeId);
+    // Calculate Y bounds from the zone boundary
+    double minY = std::numeric_limits<double>::max();
+    double maxY = std::numeric_limits<double>::lowest();
 
-            // Connect to previous submain node
-            if (i > 0) {
-                double length = nodes[submainNodeIds[i-1]].position.distanceTo(nodePos);
-                links.push_back({
-                    submainNodeIds[i-1], nodeId,
-                    4.0 * INCH_TO_METER, length, "submain"
-                });
-            }
-      //updateLateralSubmainConnection(nodeId, lateralMap[sortedLateralX[i]]);
+    for (const auto& point : boundary) {
+        minY = std::min(minY, point.y);
+        maxY = std::max(maxY, point.y);
+    }
+
+    if (!std::isfinite(minY) || !std::isfinite(maxY) || minY >= maxY) {
+        return submainNodeIds;
+    }
+
+    // check if spacing doesnt divide evenly, it may go beyond the boundary point
+    int numNodes = std::max(2, static_cast<int>(fieldWidth / lineSpacing) + 1);
+
+    for (int i = 0; i < numNodes; ++i) {
+        Position nodePos;
+        nodePos.x = startPos.x;
+        nodePos.y = minY + i * lineSpacing;
+        nodePos.z = startPos.z;
+
+        int nodeId = getNextNodeId();
+        nodes[nodeId] = {
+            nodeId,
+            "submain_junction",
+            nodePos,
+            0.0,
+            false,
+            0.0,
+            {}, // neighbors
+            zoneID
+        };
+        submainNodeIds.push_back(nodeId);
+
+        if (i > 0) {
+            double length = nodes[submainNodeIds[i - 1]].position.distanceTo(nodePos);
+            links.push_back({
+                submainNodeIds[i - 1],
+                nodeId,
+                3.0 * INCH_TO_METER,
+                length,
+                "submain",
+                0.0,
+                zoneID
+            });
         }
     }
 
@@ -1408,84 +1715,6 @@ std::vector<int> IrrigationModel::createHorizontalSubmain(const Position& startP
 }
 
 
-Position IrrigationModel::calculateLineIntersection(const Position& p1, const Position& p2,
-                                                  const Position& p3, const Position& p4) const {
-    // Line-line intersection formula
-    double denom = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
-
-    if (std::abs(denom) < 1e-12) {
-        // Lines are parallel, return midpoint
-        return {(p3.x + p4.x) / 2.0, (p3.y + p4.y) / 2.0};
-    }
-
-    double t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / denom;
-
-    return {
-        p1.x + t * (p2.x - p1.x),
-        p1.y + t * (p2.y - p1.y)
-    };
-}
-
-
-std::vector<int> IrrigationModel::createVerticalSubmain(const Position& startPos, double fieldWidth) {
-    std::vector<int> submainNodeIds;
-
-    // Collect lateral pipe Y-positions for horizontal laterals
-    std::set<double> lateralYPositions;
-
-    for (const auto& link : links) {
-        if (link.type == "lateral") {
-            const auto& fromNode = nodes.at(link.from);
-            const auto& toNode = nodes.at(link.to);
-
-            double midpointY = (fromNode.position.y + toNode.position.y) / 2.0;
-            lateralYPositions.insert(midpointY);
-        }
-    }
-
-    if (lateralYPositions.empty()) {
-        // create evenly spaced nodes
-        int numNodes = std::max(2, static_cast<int>(fieldWidth / (22.0* FEET_TO_METER))); //create a minimum of 2
-        for (int i = 0; i < numNodes; ++i) {
-            Position nodePos = startPos;
-            nodePos.y += i * (fieldWidth / (numNodes - 1));
-
-            int nodeId = getNextNodeId();
-            nodes[nodeId] = {nodeId, "submain_junction", nodePos, 0.0, false};
-            submainNodeIds.push_back(nodeId);
-
-            if (i > 0) {
-                double length = nodes[submainNodeIds[i-1]].position.distanceTo(nodePos);
-                links.push_back({
-                    submainNodeIds[i-1], nodeId,
-                    4.0 * INCH_TO_METER, length, "submain"
-                });
-            }
-        }
-    } else {
-        // Create submain nodes aligned with lateral pipe positions
-        std::vector<double> sortedLateralY(lateralYPositions.begin(), lateralYPositions.end());
-
-        for (size_t i = 0; i < sortedLateralY.size(); ++i) {
-            Position nodePos = startPos;
-            nodePos.y = sortedLateralY[i]; // Align with lateral position
-
-            int nodeId = getNextNodeId();
-            nodes[nodeId] = {nodeId, "submain_junction", nodePos, 0.0, false};
-            submainNodeIds.push_back(nodeId);
-
-            if (i > 0) {
-                double length = nodes[submainNodeIds[i-1]].position.distanceTo(nodePos);
-                links.push_back({
-                    submainNodeIds[i-1], nodeId,
-                    4.0 * INCH_TO_METER, length, "submain"
-                });
-            }
-        }
-    }
-
-    return submainNodeIds;
-}
 
 void IrrigationModel::validateSubmainConnectivity() const {
     if (boundaryPolygon.empty()) return;
@@ -1848,8 +2077,6 @@ double IrrigationModel::pointToSegmentDistance(const Position& point,
 
 void IrrigationModel::validateMinimumSprinklersPerRow() const {
     if (boundaryPolygon.empty()) return;
-
-    // Organize sprinkler junctions by lateral row
     std::map<double, std::vector<int>> sprinklersByLateralRow;
 
     for (const auto& [id, node] : nodes) {
@@ -1859,17 +2086,14 @@ void IrrigationModel::validateMinimumSprinklersPerRow() const {
         }
     }
 
-    // Check each row has at least 2 sprinkler junctions
+    // check if each row has at least 2 sprinkler junctions
     for (const auto& [row, sprinklerIds] : sprinklersByLateralRow) {
         if (sprinklerIds.size() < 2) {
             helios::helios_runtime_error("ERROR (IrrigationModel::validateMinimumSprinklersPerRow()) Minimum sprinkler numbers not met");
 
         }
     }
-   // ensureMinimumSprinklersPerRow();
-
-    // Also validate complete sprinkler units (junction + barb + emitter)
-   validateCompleteSprinklerUnits();
+   validateCompleteSprinklerUnits();     // validate complete sprinkler units (junction, barb & emitter)
 }
 
 void IrrigationModel::validateCompleteSprinklerUnits() const {
@@ -1880,18 +2104,19 @@ void IrrigationModel::validateCompleteSprinklerUnits() const {
             // Check if this junction has complete sprinkler unit
             if (!hasCompleteSprinklerUnit(id)) {
                 incompleteUnits++;
-                std::cerr << "Warning: Incomplete sprinkler unit at junction " << id << std::endl;
+                helios::helios_runtime_error("ERROR (IrrigationModel::validateCompleteSprinklerUnits()) Incomplete sprinkler unit at junction"+ std::to_string(id));
             }
         }
     }
 
     if (incompleteUnits > 0) {
-        std::cerr << "Warning: " << incompleteUnits << " incomplete sprinkler units found." << std::endl;
+        helios::helios_runtime_error("ERROR (IrrigationModel::validateCompleteSprinklerUnits()) "+ std::to_string(incompleteUnits)
+            + " incomplete sprinkler units found");
     }
 }
 
 bool IrrigationModel::hasCompleteSprinklerUnit(int junctionId) const {
-    // A complete unit has: junction -> barb -> emitter
+    // complete unit: junction -> barb -> emitter
     bool hasBarb = false;
     bool hasEmitter = false;
 
@@ -1953,39 +2178,72 @@ void IrrigationModel::preSizePipes(double V_main, double V_lateral) {
     std::vector<double> availableSizes = {
         0.025, 0.032, 0.040, 0.050, 0.063,
         0.075, 0.090, 0.110, 0.125, 0.140,
-        0.160, 0.200, 0.225, 0.250, 0.315, 0.355, 0.400
+        0.160, 0.200, 0.225, 0.250, 0.315, 0.355, 0.400,
+        0.450, 0.500, 0.550, 0.600, 0.750, 0.900
     }; // commercially available pipes in meters
 
+    buildNeighborLists();
+
+    //  reachable set using BFS by zone
+    int sourceId = getWaterSourceId();
+    if (sourceId == -1 || !nodes.count(sourceId)) {
+
+        std::cerr << "Warning: preSizePipes skipped (no valid water source)." << std::endl;
+        return;
+    }
+
+    std::unordered_set<int> zoneIds;
+    for (const auto& [id, node] : nodes) {
+        if (node.zoneID > 0) zoneIds.insert(node.zoneID);
+    }
+
+    std::unordered_set<int> reachable;
+    if (zoneIds.empty()) {
+        bfsCollectNodes(sourceId, 0, reachable);
+    } else {
+        for (int zoneId : zoneIds) {
+            bfsCollectNodes(sourceId, zoneId, reachable);
+        }
+    }
+
+    // Build adjacency only on reachable nodes
     std::unordered_map<int, std::vector<int>> adj;
-    for (const auto& link : links) {
+    for (auto& link : links) {
+        link.flow = 0.0;
+        if (reachable.count(link.from) == 0 || reachable.count(link.to) == 0) continue;
         adj[link.from].push_back(link.to);
         adj[link.to].push_back(link.from);
     }
 
-    // Start recursive flow calculation from water source
-    int sourceId = getWaterSourceId();
-    computeLinkFlows(sourceId, -1, adj);
+    if (adj.empty()) {
+        helios::helios_runtime_error("ERROR (IrrigationModel::preSizePipes()) preSizePipes found no reachable active graph");
+        return;
+    }
 
+    std::unordered_set<int> visited;
+    computeLinkFlows(sourceId, -1, adj, visited);
     for (auto& link : links) {
         double Vmax = 0.0;
+        const double oldDiameter = link.diameter;
 
-        if (link.type == "main") {
-            Vmax = V_main;      // mainline rule
+        if (link.type == "mainline_to_zone") {
+            Vmax = V_main;      // mainline velocity
         }
         else if (link.type == "submain") {
-            Vmax = V_main;      // same rule as main (or define separate V_submain)
+            Vmax = V_main;      // or  separate V_submain
         }
         // else if (link.type == "lateral") {
         //     Vmax = V_lateral;
         // } //skip re-sizing lateral pipes
         else {
+            std::cout << link.type << std::endl;
             continue;  // skip unknown pipe types
         }
-        double Q = link.flow;
-        if (Q <= 0.0) continue;
 
-        double Dreq = std::sqrt(4.0 * Q / (M_PI * Vmax));
-        //selecting pipe based on maximum allowable velocity
+        double Q = std::abs(link.flow);
+        if (Q <= 0.0 || Vmax <= 0.0) continue;
+
+        double Dreq = std::sqrt(4.0 * Q / (M_PI * Vmax)); //selecting pipe based on maximum allowable velocity
 
         auto it = std::find_if(availableSizes.begin(), availableSizes.end(),
                                [&](double d) { return d >= Dreq; });
@@ -1995,11 +2253,20 @@ void IrrigationModel::preSizePipes(double V_main, double V_lateral) {
         } else {
             link.diameter = availableSizes.back();
         }
+
+        std::cout << "Presize compare [" << link.type << "] "
+                  << link.from << "->" << link.to
+                  << " flow=" << Q << " m3/s" << " before D=" << oldDiameter << " m" << " after D=" << link.diameter << " m"
+                  << std::endl;
     }
 }
 
 double IrrigationModel::computeLinkFlows(int nodeId, int parentId,
-                        const std::unordered_map<int, std::vector<int>>& adj) {
+                        const std::unordered_map<int, std::vector<int>>& adj,
+                        std::unordered_set<int>& visited) {
+    if (visited.count(nodeId)) return 0.0;
+    visited.insert(nodeId);
+
     double totalFlow = 0.0;
 
     // If this node is an emitter, add its demand
@@ -2007,17 +2274,20 @@ double IrrigationModel::computeLinkFlows(int nodeId, int parentId,
         totalFlow += nodes[nodeId].flow;  // or currentSources[idx]
     }
 
-    // Recurse into neighbors (children)
-    for (int childId : adj.at(nodeId)) {
+    auto itAdj = adj.find(nodeId);
+    if (itAdj == adj.end()) return totalFlow;
+
+    // Recurse into neighbors
+    for (int childId : itAdj->second) {
         if (childId == parentId) continue;  // avoid backtracking
 
-        double childFlow = computeLinkFlows(childId, nodeId, adj);
+        double childFlow = computeLinkFlows(childId, nodeId, adj, visited);
 
-        // Assign flow to the link between nodeId ↔ childId
+        // Assign flow to the link between nodeId (childId)
         Link* lnk = findLink(nodeId, childId);
-        if (lnk) lnk->flow = childFlow;  // flow carried by this pipe
+        if (lnk) lnk->flow = childFlow;
 
-        totalFlow += childFlow;  // accumulate flows upstream
+        totalFlow += childFlow;
     }
 
     return totalFlow;
@@ -2035,347 +2305,459 @@ Link* IrrigationModel::findLink(int from, int to) {
 }
 
 
-//linear solver without using external package
+// //linear solver without using external package
+// old solver for dense matrix
 
-HydraulicResults IrrigationModel::calculateHydraulics(bool doPreSize, const std::string& sprinklerAssemblyType,
-                                                     double Qspecified, double Pw,
-                                                     double V_main, double V_lateral) {
-    const SprinklerAssembly & config = sprinklerLibrary.getSprinklerType(sprinklerAssemblyType);
-    std::string barbType = config.barbType;
-    std::string nozzleType = config.emitterType;
+// HydraulicResults IrrigationModel::calculateHydraulics(bool doPreSize, const std::string& sprinklerAssemblyType,
+//                                                      double Qspecified, double Pw,
+//                                                      double V_main, double V_lateral) {
+//
+//     //Check for lateral_sprinkler_jn to barb connections
+//     std::vector<std::pair<int, int>> lateralToBarbPairs = findConnectedNodePairs("barb", "emitter");
+//
+//     if (lateralToBarbPairs.empty()) {
+//         std::cout << "No lateral_sprinkler_jn to barb connections found. Creating virtual connections..." << std::endl;
+//      //   createVirtualConnections(sprinklerAssemblyType);
+//         std::cout << "Created virtual connections..." << std::endl;
+//     }
+//
+//     // const SprinklerAssembly & config = sprinklerLibrary.getSprinklerType(sprinklerAssemblyType);
+//     // std::string barbType = config.barbType;
+//     // std::string nozzleType = config.emitterType;
+//
+//
+//     // Constants
+//     const double rho = 997.0;     // kg/m3
+//     const double mu = 8.90e-04;   // Pas
+//     const double err_max = 1e-3;
+//     const int max_iter = 100;
+//
+//     buildNeighborLists();
+//     const int numNodes = nodes.size();
+//     if (numNodes == 0) return HydraulicResults();
+//
+//     // Create ordered list and mapping
+//     std::vector<int> orderedNodeIds;
+//
+//
+//     for (const auto& [id, node] : nodes) orderedNodeIds.push_back(id);
+//     // check if the nodes need to be ordered
+//     std::sort(orderedNodeIds.begin(), orderedNodeIds.end()); // for irregularShape
+//
+//     std::unordered_map<int, int> nodeIndexMap;
+//     for (int i = 0; i < orderedNodeIds.size(); ++i) {
+//         nodeIndexMap[orderedNodeIds.at(i)] = i;  // 0-based indexing
+//     }
+//
+//    //  node and index numbers in nodeIndexMap
+//     std::cout << "Node Index Map:\n";
+//     for (const auto& [id, node] : nodeIndexMap) {
+//         std::cout << "Node " << id << " -> index " << node << "\n";
+//     }
+//
+//     int waterSourceId = getWaterSourceId();
+//         //orderedNodeIds.back();
+//     int waterSourceIndex = nodeIndexMap.at(waterSourceId);     // water source fixed on the last row
+//
+//     //  matrices initialization
+//     std::vector<std::vector<double>> A(numNodes, std::vector<double>(numNodes, 0.0));
+//     std::vector<double> RHS(numNodes, 0.0);
+//     std::vector<double> nodalPressure(numNodes, 0.0);
+//     std::vector<double> nodalPressure_old(numNodes, 0.0);
+//
+//     //std::cout << "number of nodes " << numNodes << std::endl;
+//     // set water source for once
+//
+//     A[waterSourceIndex][waterSourceIndex] = 1.0;
+//     RHS[waterSourceIndex] = Pw * 6894.76;
+//
+//     // Initialize current sources
+//   //  std::vector<double> currentSources(numNodes, 0.0);
+//     for (auto& [id, node] : nodes) {
+//         int idx = nodeIndexMap[id];
+//         if (node.type == "emitter" && idx != waterSourceIndex) {
+//          //   currentSources[idx] = Qspecified;
+//             node.flow = Qspecified;
+//         }
+//     }
+//
+//     // Flow variables
+//     std::unordered_map<int, std::vector<double>> Re, W_bar, vol_rate, R, delta_P;
+//     for (const auto& [id, node] : nodes) {
+//         int size = node.neighbors.size();
+//         Re[id] = std::vector<double>(size, 0.0);
+//         W_bar[id] = std::vector<double>(size, 0.0);
+//         vol_rate[id] = std::vector<double>(size, 0.0);
+//         R[id] = std::vector<double>(size, 0.0);
+//         delta_P[id] = std::vector<double>(size, 0.0);
+//     }
+//
+//     double err = 1e6;
+//     int iter = 1;
+//
+//     while (std::abs(err) > err_max && iter < max_iter) {
+//         std::cout << "\n=== Iteration " << iter << " ===\n";
+//
+//         // Build matrix A (water source row remains A[ws][ws] = 1.0)
+//         for (int orderedIndex = 0; orderedIndex < orderedNodeIds.size(); ++orderedIndex) {
+//             int id = orderedNodeIds.at(orderedIndex);
+//             const auto& node = nodes[id];
+//
+//             std::cout << "\n orderedIndex" << orderedIndex << " id " << id << "\n";
+//
+//            // skipping isolated nodes, starts with node 0
+//             if (node.neighbors.empty()) {
+//                 A.at(orderedIndex).at(orderedIndex) = 1.0;  // Set diagonal to 1
+//                // A.at(orderedIndex).at(orderedIndex+1) = -1.0; // diagonal is downstream the previous node
+//                 RHS.at(orderedIndex) = 0;              // Set RHS to 0
+//                // continue;
+//             }
+//
+//             if (orderedIndex == waterSourceIndex) continue;  // Skip water source
+//             std::cout << "\n watersourceId " << waterSourceId << "\n";
+//
+//             // Reset row
+//           //  std::fill(A[orderedIndex].begin(), A[orderedIndex].end(), 0.0);
+//             A[orderedIndex][orderedIndex] = 0.0;
+//
+//
+//             for (size_t j = 0; j < node.neighbors.size(); ++j) {
+//                 int neighborId = node.neighbors[j];
+//                 std::cout << neighborId << "\n";
+//
+//                 if (!nodeIndexMap.count(neighborId)) continue;
+//
+//                 int neighborIdx = nodeIndexMap[neighborId];
+//                 const Link* link = findLink(id, neighborId);
+//                 if (!link) continue;
+//                 double Kf_barb = minorLoss_kf(Re[id][j], sprinklerAssemblyType);
+//                 double Rval = 0.0;
+//
+//                 Rval = calculateResistance(Re[id][j], W_bar[id][j],Kf_barb, *link, iter);
+//                 std::cout << "velocity: "<< W_bar[id][j] << "\n";
+//                 std::cout << "other Rval: "<< "Rval " << Rval << "\n";
+//
+//                 R[id][j] = Rval;
+//
+//                 //Rval = std::max(Rval, 1e-12);
+//
+//
+//                 A[orderedIndex][orderedIndex] -= 1.0 / Rval;
+//                 A[orderedIndex][neighborIdx] = 1.0 / Rval;
+//             }
+//         }
+//
+//         // Update RHS with elevation effect
+//         for (int n = 0; n < numNodes; ++n) {
+//             if (n == waterSourceIndex) continue;
+//
+//             int nodeId = orderedNodeIds[n];
+//             RHS[n] = nodes[nodeId].flow;
+//
+//             //    RHS[n] = currentSources[n];
+//             std::cout << RHS[n] << "\n";
+//             // Add elevation contribution to RHS
+//             // For each neighbor connection, add elevation difference term
+//             const auto& node = nodes[nodeId];
+//             double elevation_contribution = 0.0;
+//
+//             for (size_t j = 0; j < node.neighbors.size(); ++j) {
+//                 int neighborId = node.neighbors[j];
+//                 if (!nodeIndexMap.count(neighborId)) continue;
+//
+//                 const Link* link = findLink(nodeId, neighborId);
+//                 if (!link) continue;
+//
+//                 const auto& neighborNode = nodes[neighborId];
+//                 double elevation_diff = node.position.z - neighborNode.position.z;
+//
+//                 // elevation effect rho*g*h in Pa
+//                 double elevation_pressure_diff = rho * 9.81 * elevation_diff;
+//
+//                 // Distribute elevation contribution
+//                 // include rho*g*h in pressure difference calculation?
+//                 elevation_contribution += elevation_pressure_diff / R[nodeId][j];
+//             }
+//
+//             RHS[n] += elevation_contribution;
+//         }
+//
+//         //  output
+//         std::cout << "Matrix A (water source at " << waterSourceIndex << "):\n";
+//         for (int i = 0; i < numNodes; i++) {
+//             std::cout << "Row " << i << ": ";
+//             for (int j = 0; j < numNodes; j++) {
+//                 std::cout << std::setw(12) << std::setprecision(6) << A[i][j] << " ";
+//             }
+//             std::cout << " | RHS: " << RHS[i] << std::endl;
+//         }
+//
+//         // Solve linear system
+//         for (int gs_iter = 0; gs_iter < 100; ++gs_iter) {
+//             for (int i = 0; i < numNodes; ++i) {
+//                 //if (i == waterSourceIndex) continue;
+//
+//                //check if row is valid
+//                 if (std::abs(A[i][i]) < 1e-12) {
+//                     nodalPressure[i] = 0.0;
+//                     continue;
+//                 }
+//
+//                 double sum = RHS[i];
+//                 for (int j = 0; j < numNodes; ++j) {
+//                     if (i != j) sum -= A[i][j] * nodalPressure[j]; // Aij*Xj)
+//                 }
+//
+//                 double new_pressure = sum / A[i][i]; // Xi = (bi - sum( Aij*Xj)) / Aii
+//                 if (std::isnan(new_pressure) || std::isinf(new_pressure)) {
+//                     std::cerr << "NaN pressure at node " << i << ", using old value\n";
+//                     new_pressure = nodalPressure_old[i];
+//                 }
+//                 nodalPressure[i] = new_pressure;
+//             }
+//         }
+//         // Eigen::MatrixXd A_eigen(numNodes, numNodes);
+//         // Eigen::VectorXd RHS_eigen(numNodes);
+//         //
+//         // // Copy your A and RHS to Eigen matrices
+//         // for (int i = 0; i < numNodes; ++i) {
+//         //     for (int j = 0; j < numNodes; ++j) {
+//         //         A_eigen(i, j) = A[i][j];
+//         //     }
+//         //     RHS_eigen(i) = RHS[i];
+//         // }
+//         //
+//         // // Solve using Eigen (similar to MATLAB's \)
+//         // Eigen::VectorXd nodalPressure_eigen = A_eigen.colPivHouseholderQr().solve(RHS_eigen);
+//         //
+//         //
+//         // for (int i = 0; i < numNodes; ++i) {
+//         //     nodalPressure[i] = nodalPressure_eigen(i);
+//         // }
+//
+//         // Update flow variables with safety checks
+//         for (const auto& [id, node] : nodes) {
+//             int idx = nodeIndexMap[id];
+//
+//             for (size_t j = 0; j < node.neighbors.size(); ++j) {
+//                 int neighborId = node.neighbors[j];
+//                 if (!nodeIndexMap.count(neighborId)) continue;
+//
+//                 int neighborIdx = nodeIndexMap[neighborId];
+//                 Link* link = findLink(id, neighborId);
+//                 if (!link) continue;
+//
+//                 delta_P[id][j] = nodalPressure[idx] - nodalPressure[neighborIdx];
+//
+//                 //  Avoid division by zero
+//                 double denominator = R[id][j] * (M_PI/4.0) * pow(link->diameter, 2);
+//                 if (std::abs(denominator) < 1e-12) {
+//                     W_bar[id][j] = 0.0;
+//                     std::cout << "denominator: " << denominator << std::endl;
+//                 } else {
+//                     W_bar[id][j] = std::abs(delta_P[id][j]) / denominator;
+//                     std::cout << "denominator: " << denominator << std::endl;
+//
+//                     std::cout<<"velocity:" << W_bar[id][j]<<"\n";
+//                 }
+//
+//                 vol_rate[id][j] = W_bar[id][j] * (M_PI/4.0) * pow(link->diameter, 2);
+//                 link->flow = vol_rate[id][j];
+//                 Re[id][j] = std::abs(W_bar[id][j]) * link->diameter * rho / mu;
+//                 if (link->type == "lateralTobarb") {
+//                     std::cout <<"flow_rate" << vol_rate[id][j] <<" Re:" << Re[id][j] << "\n";
+//
+//                 }
+//                 // Debug NaN values
+//                 if (std::isnan(W_bar[id][j])) {
+//                     std::cerr << "NaN W_bar at node " << id << "->" << neighborId
+//                               << ": R=" << R[id][j] << ", dP=" << delta_P[id][j] << "\n";
+//                 }
+//             }
+//         }
+//
+//         // Update emitter flows with safety
+//         for (auto& [id, node] : nodes) {
+//             int idx = nodeIndexMap[id];
+//             if (node.type == "emitter" && idx != waterSourceIndex) {
+//                 double new_flow = calculateEmitterFlow(sprinklerAssemblyType, nodalPressure[idx], false);
+//                 if (std::isnan(new_flow) || std::isinf(new_flow)) {
+//                     std::cerr << "NaN flow at emitter " << id << ", pressure: " << nodalPressure[idx] << "\n";
+//                     new_flow = 0.0;
+//                 }
+//                 node.flow = new_flow;
+//               //  currentSources[idx] = new_flow;
+//             }
+//         }
+//
+//         // Error calculation
+//         if (iter>1) {
+//             double norm_diff = 0.0, norm_old = 0.0;
+//             for (int i = 0; i < numNodes; ++i) {
+//                 if (i == waterSourceIndex) continue;
+//                 double diff = nodalPressure[i] - nodalPressure_old[i];
+//                 norm_diff += diff * diff;
+//                 norm_old += nodalPressure_old[i] * nodalPressure_old[i];
+//             }
+//
+//             err = (norm_old > 1e-12) ? std::sqrt(norm_diff / norm_old) : std::sqrt(norm_diff); //relative error
+//            //err = std::sqrt(norm_diff/ numNodes);//RMS error
+//         }
+//
+//         std::cout << "Error: " << err << std::endl;
+//
+//         if (std::isnan(err)) break;
+//         nodalPressure_old = nodalPressure;
+//         iter++;
+//     }
+//
+//     // Prepare results
+//     HydraulicResults results;
+//     results.nodalPressures.resize(numNodes);
+//     results.flowRates.resize(links.size());
+//     results.converged = (err <= err_max);
+//     results.iterations = iter;
+//
+//     // Convert pressures to psi
+//     for (int i = 0; i < numNodes; ++i) {
+//         results.nodalPressures[i] = nodalPressure[i] / 6894.76;
+//     }
+//
+//     // update nodal pressure
+//     for (const auto& [id, node] : nodes) {
+//         if (nodeIndexMap.count(id)) {
+//             int matrixIndex = nodeIndexMap[id];
+//             nodes[id].pressure = results.nodalPressures[matrixIndex];
+//         }
+//     }
+//
+//     // link flows
+//     for (size_t i = 0; i < links.size(); ++i) {
+//         const auto& link = links[i];
+//         int from = link.from;
+//         int to = link.to;
+//
+//         if (!nodeIndexMap.count(from) || !nodeIndexMap.count(to)) {
+//             results.flowRates[i] = 0.0;
+//             continue;
+//         }
+//
+//         auto it = std::find(nodes[from].neighbors.begin(), nodes[from].neighbors.end(), to);
+//         if (it != nodes[from].neighbors.end()) {
+//             size_t idx = std::distance(nodes[from].neighbors.begin(), it);
+//             results.flowRates[i] = vol_rate[from][idx];
+//         } else {
+//             results.flowRates[i] = 0.0;
+//         }
+//     }
+//     // Save emitter flows
+//     // results.emitterFlows.clear();
+//     for (const auto& [id, node] : nodes) {
+//         if (node.type == "emitter") {
+//             results.emitterFlows[id] = node.flow;
+//         }
+//     }
+//
+//     if (!results.converged) {
+//       //  std::cerr << "Warning: Solver did not converge after " << iter << " iterations\n";
+//         results.converged = false;
+//         helios::helios_runtime_error("ERROR (IrrigationModel::calculateHydraulics): Solver did not converge after " + std::to_string(iter) + " iterations\n");
+//     }
+//
+//
+//     writeMatrixToFile(A, RHS, orderedNodeIds, "matrix_debug.txt");
+//
+//     return results;
+// }
 
-    // Constants
-    const double rho = 997.0;     // kg/m^3
-    const double mu = 8.90e-04;   // Pa·s
-    const double err_max = 1e-3;
-    const int max_iter = 100;
-
-    buildNeighborLists();
-    const int numNodes = nodes.size();
-    if (numNodes == 0) return HydraulicResults();
-
-    // Create ordered list and mapping
-    std::vector<int> orderedNodeIds;
-    for (const auto& [id, node] : nodes) orderedNodeIds.push_back(id);
-    std::sort(orderedNodeIds.begin(), orderedNodeIds.end());
-
-    std::unordered_map<int, int> nodeIndexMap;
-    for (int i = 0; i < orderedNodeIds.size(); ++i) {
-        nodeIndexMap[orderedNodeIds[i]] = i;  // 0-based indexing
+void IrrigationModel::writeMatrixToFile(const std::vector<std::vector<double>>& A,
+                                      const std::vector<double>& RHS,
+                                      const std::vector<int>& orderedNodeIds,
+                                      const std::string& filename) {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open file " << filename << std::endl;
+        return;
     }
 
-   //  node and index numbers in nodeIndexMap
-    std::cout << "Node Index Map:\n";
-    for (const auto& [id, node] : nodeIndexMap) {
-        std::cout << "Node " << id << " -> index " << node << "\n";
+    const int numNodes = orderedNodeIds.size();
+
+    file << "=== HYDRAULIC SYSTEM MATRIX ===" << std::endl;
+    file << "Matrix A (" << numNodes << "x" << numNodes << ") with RHS vector" << std::endl;
+    file << "Format: Row_Node -> [Col_Node_Values] | RHS" << std::endl;
+    file << "=================================" << std::endl << std::endl;
+
+    // Write column headers
+    file << std::setw(12) << "Row\\Col";
+    for (int j = 0; j < numNodes; ++j) {
+        file << std::setw(12) << orderedNodeIds[j];
     }
+    file << " | " << std::setw(12) << "RHS" << std::endl;
 
-    // water source fixed on the last row
-    int waterSourceId = orderedNodeIds.back();
-    int waterSourceIndex = nodeIndexMap[waterSourceId];
-
-    // Initialize matrices
-    std::vector<std::vector<double>> A(numNodes, std::vector<double>(numNodes, 0.0));
-    std::vector<double> RHS(numNodes, 0.0);
-    std::vector<double> nodalPressure(numNodes, 0.0);
-    std::vector<double> nodalPressure_old(numNodes, 0.0);
-
-    // set water source for once
-    A[waterSourceIndex][waterSourceIndex] = 1.0;
-    RHS[waterSourceIndex] = Pw * 6894.76;
-
-    // Initialize current sources
-  //  std::vector<double> currentSources(numNodes, 0.0);
-    for (auto& [id, node] : nodes) {
-        int idx = nodeIndexMap[id];
-        if (node.type == "emitter" && idx != waterSourceIndex) {
-         //   currentSources[idx] = Qspecified;
-            node.flow = Qspecified;
-        }
+    // Write separator line
+    file << std::setw(12) << "--------";
+    for (int j = 0; j < numNodes; ++j) {
+        file << std::setw(12) << "---";
     }
+    file << "-+-" << std::setw(12) << "---" << std::endl;
 
-    // Flow variables
-    std::unordered_map<int, std::vector<double>> Re, W_bar, vol_rate, R, delta_P;
-    for (const auto& [id, node] : nodes) {
-        int size = node.neighbors.size();
-        Re[id] = std::vector<double>(size, 0.0);
-        W_bar[id] = std::vector<double>(size, 0.0);
-        vol_rate[id] = std::vector<double>(size, 0.0);
-        R[id] = std::vector<double>(size, 0.0);
-        delta_P[id] = std::vector<double>(size, 0.0);
-    }
-
-    double err = 1e6;
-    int iter = 1;
-
-    while (std::abs(err) > err_max && iter < max_iter) {
-        std::cout << "\n=== Iteration " << iter << " ===\n";
-
-        // Build matrix A (water source row remains A[ws][ws] = 1.0)
-        for (int orderedIndex = 0; orderedIndex < orderedNodeIds.size(); ++orderedIndex) {
-            int id = orderedNodeIds[orderedIndex];
-            const auto& node = nodes[id];
-
-            std::cout << "\n orderedIndex" << orderedIndex << " id " << id << "\n";
-
-            if (orderedIndex == waterSourceIndex) continue;  // Skip water source
-            std::cout << "\n watersourceId " << waterSourceId << "\n";
-
-            A[orderedIndex][orderedIndex] = 0.0;
-
-            for (size_t j = 0; j < node.neighbors.size(); ++j) {
-                int neighborId = node.neighbors[j];
-                std::cout << neighborId << "\n";
-
-                if (!nodeIndexMap.count(neighborId)) continue;
-
-                int neighborIdx = nodeIndexMap[neighborId];
-                const Link* link = findLink(id, neighborId);
-                if (!link) continue;
-                double Kf_barb = minorLoss_kf(Re[id][j], barbType);
-                double Rval = 0.0;
-                // if (link->type == "lateralTobarb" && Kf_barb > 0) {
-                //     Rval  = 2.0 * W_bar[id][j] * Kf_barb * rho / (M_PI * pow(link->diameter, 2));
-                //     R[id][j] = Rval;
-                //     std::cout << "velocity: "<< W_bar[id][j] << "\n";
-                //
-                //     std::cout << "diameter: "<< link->diameter << "\n";
-                //    std::cout << "Kf"<< Kf_barb<< "Rval " << Rval << "\n";
-                // }
-
-                Rval = calculateResistance(Re[id][j], W_bar[id][j],Kf_barb, *link, iter);
-                std::cout << "velocity: "<< W_bar[id][j] << "\n";
-                std::cout << "other Rval: "<< "Rval " << Rval << "\n";
-
-                R[id][j] = Rval;
-
-                //Rval = std::max(Rval, 1e-12);
-
-
-                A[orderedIndex][orderedIndex] -= 1.0 / Rval;
-                A[orderedIndex][neighborIdx] = 1.0 / Rval;
-            }
-        }
-
-        // Update RHS with elevation effect
-        for (int n = 0; n < numNodes; ++n) {
-            if (n == waterSourceIndex) continue;
-
-            int nodeId = orderedNodeIds[n];
-            RHS[n] = nodes[nodeId].flow;
-
-            //    RHS[n] = currentSources[n];
-            std::cout << RHS[n] << "\n";
-            // Add elevation contribution to RHS
-            // For each neighbor connection, add elevation difference term
-            const auto& node = nodes[nodeId];
-            double elevation_contribution = 0.0;
-
-            for (size_t j = 0; j < node.neighbors.size(); ++j) {
-                int neighborId = node.neighbors[j];
-                if (!nodeIndexMap.count(neighborId)) continue;
-
-                const Link* link = findLink(nodeId, neighborId);
-                if (!link) continue;
-
-                const auto& neighborNode = nodes[neighborId];
-                double elevation_diff = node.position.z - neighborNode.position.z;
-
-                // elevation effect rho*g*h in Pa
-                double elevation_pressure_diff = rho * 9.81 * elevation_diff;
-
-                // Distribute elevation contribution
-                // include rho*g*h in pressure difference calculation?
-                elevation_contribution += elevation_pressure_diff / R[nodeId][j];
-            }
-
-            RHS[n] += elevation_contribution;
-        }
-
-        //  output
-        std::cout << "Matrix A (water source at " << waterSourceIndex << "):\n";
-        for (int i = 0; i < numNodes; i++) {
-            std::cout << "Row " << i << ": ";
-            for (int j = 0; j < numNodes; j++) {
-                std::cout << std::setw(12) << std::setprecision(6) << A[i][j] << " ";
-            }
-            std::cout << " | RHS: " << RHS[i] << std::endl;
-        }
-
-        // Solve linear system
-        for (int gs_iter = 0; gs_iter < 100; ++gs_iter) {
-            for (int i = 0; i < numNodes; ++i) {
-                //if (i == waterSourceIndex) continue;
-
-               //check if row is valid
-                if (std::abs(A[i][i]) < 1e-12) {
-                    nodalPressure[i] = 0.0;
-                    continue;
-                }
-
-                double sum = RHS[i];
-                for (int j = 0; j < numNodes; ++j) {
-                    if (i != j) sum -= A[i][j] * nodalPressure[j]; // Aij·Xj)
-                }
-
-                double new_pressure = sum / A[i][i]; // Xi = (bi - Σ Aij·Xj) / Aii
-                if (std::isnan(new_pressure) || std::isinf(new_pressure)) {
-                    std::cerr << "NaN pressure at node " << i << ", using old value\n";
-                    new_pressure = nodalPressure_old[i];
-                }
-                nodalPressure[i] = new_pressure;
-            }
-        }
-        // Eigen::MatrixXd A_eigen(numNodes, numNodes);
-        // Eigen::VectorXd RHS_eigen(numNodes);
-        //
-        // // Copy your A and RHS to Eigen matrices
-        // for (int i = 0; i < numNodes; ++i) {
-        //     for (int j = 0; j < numNodes; ++j) {
-        //         A_eigen(i, j) = A[i][j];
-        //     }
-        //     RHS_eigen(i) = RHS[i];
-        // }
-        //
-        // // Solve using Eigen (similar to MATLAB's backslash)
-        // Eigen::VectorXd nodalPressure_eigen = A_eigen.colPivHouseholderQr().solve(RHS_eigen);
-        //
-        //
-        // for (int i = 0; i < numNodes; ++i) {
-        //     nodalPressure[i] = nodalPressure_eigen(i);
-        // }
-
-        // Update flow variables with safety checks
-        for (const auto& [id, node] : nodes) {
-            int idx = nodeIndexMap[id];
-
-            for (size_t j = 0; j < node.neighbors.size(); ++j) {
-                int neighborId = node.neighbors[j];
-                if (!nodeIndexMap.count(neighborId)) continue;
-
-                int neighborIdx = nodeIndexMap[neighborId];
-                Link* link = findLink(id, neighborId);
-                if (!link) continue;
-
-                delta_P[id][j] = nodalPressure[idx] - nodalPressure[neighborIdx];
-
-                //  Avoid division by zero
-                double denominator = R[id][j] * (M_PI/4.0) * pow(link->diameter, 2);
-                if (std::abs(denominator) < 1e-12) {
-                    W_bar[id][j] = 0.0;
-                    std::cout << "denominator: " << denominator << std::endl;
-                } else {
-                    W_bar[id][j] = std::abs(delta_P[id][j]) / denominator;
-                    std::cout << "denominator: " << denominator << std::endl;
-
-                    std::cout<<"velocity:" << W_bar[id][j]<<"\n";
-                }
-
-                vol_rate[id][j] = W_bar[id][j] * (M_PI/4.0) * pow(link->diameter, 2);
-                link->flow = vol_rate[id][j];
-                Re[id][j] = std::abs(W_bar[id][j]) * link->diameter * rho / mu;
-                if (link->type == "lateralTobarb") {
-                    std::cout <<"flow_rate" << vol_rate[id][j] <<" Re:" << Re[id][j] << "\n";
-
-                }
-                // Debug NaN values
-                if (std::isnan(W_bar[id][j])) {
-                    std::cerr << "NaN W_bar at node " << id << "->" << neighborId
-                              << ": R=" << R[id][j] << ", dP=" << delta_P[id][j] << "\n";
-                }
-            }
-        }
-
-        // Update emitter flows with safety
-        for (auto& [id, node] : nodes) {
-            int idx = nodeIndexMap[id];
-            if (node.type == "emitter" && idx != waterSourceIndex) {
-                double new_flow = calculateEmitterFlow(sprinklerAssemblyType, nodalPressure[idx]);
-                if (std::isnan(new_flow) || std::isinf(new_flow)) {
-                    std::cerr << "NaN flow at emitter " << id << ", pressure: " << nodalPressure[idx] << "\n";
-                    new_flow = 0.0;
-                }
-                node.flow = new_flow;
-              //  currentSources[idx] = new_flow;
-            }
-        }
-
-        // Error calculation
-        if (iter>1) {
-            double norm_diff = 0.0, norm_old = 0.0;
-            for (int i = 0; i < numNodes; ++i) {
-                if (i == waterSourceIndex) continue;
-                double diff = nodalPressure[i] - nodalPressure_old[i];
-                norm_diff += diff * diff;
-                norm_old += nodalPressure_old[i] * nodalPressure_old[i];
-            }
-
-            err = (norm_old > 1e-12) ? std::sqrt(norm_diff / norm_old) : std::sqrt(norm_diff); //relative error
-           //err = std::sqrt(norm_diff/ numNodes);//RMS error
-        }
-
-        std::cout << "Error: " << err << std::endl;
-
-        if (std::isnan(err)) break;
-        nodalPressure_old = nodalPressure;
-        iter++;
-    }
-
-    // Prepare results
-    HydraulicResults results;
-    results.nodalPressures.resize(numNodes);
-    results.flowRates.resize(links.size());
-    results.converged = (err <= err_max);
-    results.iterations = iter;
-
-    // Convert pressures to psi
+    // Write matrix rows
     for (int i = 0; i < numNodes; ++i) {
-        results.nodalPressures[i] = nodalPressure[i] / 6894.76;
+        int rowNodeId = orderedNodeIds[i];
+        const auto& rowNode = nodes.at(rowNodeId);
+
+        // Row header with node info
+        file << std::setw(6) << rowNodeId << "(" << std::setw(8) << rowNode.type << ")";
+
+        // Matrix values
+        for (int j = 0; j < numNodes; ++j) {
+            file << std::setw(12) << std::scientific << std::setprecision(3) << A[i][j];
+        }
+
+        // RHS value
+        file << " | " << std::setw(12) << std::scientific << std::setprecision(3) << RHS[i];
+
+        // Additional node info
+        file << "  // Neighbors: ";
+        for (int neighbor : rowNode.neighbors) {
+            file << neighbor << " ";
+        }
+        if (rowNode.neighbors.empty()) {
+            file << "ISOLATED";
+        }
+
+        file << std::endl;
     }
 
-    // update nodal pressure
-    for (const auto& [id, node] : nodes) {
-        if (nodeIndexMap.count(id)) {
-            int matrixIndex = nodeIndexMap[id];
-            nodes[id].pressure = results.nodalPressures[matrixIndex];
+    // Add summary information
+    file << std::endl << "=== MATRIX SUMMARY ===" << std::endl;
+    file << "Total nodes: " << numNodes << std::endl;
+    file << "Water source node: " << getWaterSourceId() << std::endl;
+
+    // Count non-zero entries
+    int nonZeroCount = 0;
+    double maxVal = 0.0, minVal = 0.0;
+    for (int i = 0; i < numNodes; ++i) {
+        for (int j = 0; j < numNodes; ++j) {
+            if (std::abs(A[i][j]) > 1e-12) {
+                nonZeroCount++;
+                maxVal = std::max(maxVal, std::abs(A[i][j]));
+                if (std::abs(A[i][j]) > 1e-12) {
+                    minVal = (minVal == 0.0) ? std::abs(A[i][j]) : std::min(minVal, std::abs(A[i][j]));
+                }
+            }
         }
     }
 
-    // link flows
-    for (size_t i = 0; i < links.size(); ++i) {
-        const auto& link = links[i];
-        int from = link.from;
-        int to = link.to;
+    file << "Non-zero entries: " << nonZeroCount << "/" << (numNodes * numNodes)
+         << " (" << (100.0 * nonZeroCount / (numNodes * numNodes)) << "%)" << std::endl;
+    file << "Max |A_ij|: " << maxVal << std::endl;
+    file << "Min non-zero |A_ij|: " << minVal << std::endl;
 
-        if (!nodeIndexMap.count(from) || !nodeIndexMap.count(to)) {
-            results.flowRates[i] = 0.0;
-            continue;
-        }
-
-        auto it = std::find(nodes[from].neighbors.begin(), nodes[from].neighbors.end(), to);
-        if (it != nodes[from].neighbors.end()) {
-            size_t idx = std::distance(nodes[from].neighbors.begin(), it);
-            results.flowRates[i] = vol_rate[from][idx];
-        } else {
-            results.flowRates[i] = 0.0;
-        }
-    }
-    // Save emitter flows
-    // results.emitterFlows.clear();
-    // for (const auto& [id, node] : nodes) {
-    //     if (node.type == "emitter") {
-    //         results.emitterFlows[id] = node.flow;
-    //     }
-    // }
-
-    if (!results.converged) {
-        std::cerr << "Warning: Solver did not converge after " << iter << " iterations\n";
-        results.converged = false;
-
-    }
-
-    return results;
+    file.close();
+    std::cout << "Matrix written to: " << filename << std::endl;
 }
+
 
 const Link* IrrigationModel::findLink(int from, int to) const {
     for (const auto& l : links) {
@@ -2392,196 +2774,883 @@ int IrrigationModel::getWaterSourceId() const { return waterSourceId; }
  *
  */
 
-void IrrigationModel::assignZones(int numZones, ZoningMode mode, int zonesX, int zonesY) {
-    struct LateralInfo {
-        Link* link;
-        double avgX;
-        double avgY;
-    };
-    std::vector<LateralInfo> lateralLinks;
+// void IrrigationModel::assignZones(
+//     int numZones,
+//     const std::vector<std::vector<Position>>& zoneBoundaries,
+//     double Pw,
+//     double sprinklerSpacing,
+//     double lineSpacing,
+//     const std::string& connectionType,
+//     const std::string& sprinklerConfig,
+//     SubmainPosition submainPos)
+// {
+//     if (zoneBoundaries.size() != static_cast<size_t>(numZones)) {
+//         std::cerr << "Error: Number of boundaries (" << zoneBoundaries.size()
+//                   << ") does not match numZones (" << numZones << ")." << std::endl;
+//         return;
+//     }
+//
+//     // Clear existing system
+//     nodes.clear();
+//     links.clear();
+//     boundaryPolygon.clear();
+//     waterSourceId = -1;
+//
+//     // Create the main water source first (shared by all zones)
+//     waterSourceId = getNextNodeId();
+//     Position waterSourcePos = {-5.0, 0.0, 0.0}; // You might want to calculate a better position
+//
+//     nodes[waterSourceId] = {
+//         waterSourceId,
+//         "waterSource",
+//         waterSourcePos,
+//         Pw, // Set the water source pressure
+//         true
+//     };
+//
+//     // Store base counts before creating zones
+//     size_t baseNodeCount = nodes.size();
+//     size_t baseLinkCount = links.size();
+//
+//     for (int z = 0; z < numZones; ++z) {
+//         std::cout << "Creating zone " << (z + 1) << "..." << std::endl;
+//
+//         // Store current counts before creating this zone
+//         size_t zoneStartNodeCount = nodes.size();
+//         size_t zoneStartLinkCount = links.size();
+//
+//         // Generate the irrigation system for this zone
+//         createIrregularSystemForZone(Pw, zoneBoundaries[z], sprinklerSpacing, lineSpacing,
+//                                    connectionType, sprinklerConfig, submainPos, z + 1);
+//
+//
+//
+//         // Add zone valve and connect to main water source
+//         addZoneValveAndConnect(z + 1, zoneBoundaries[z]);
+//     //     std::cout << "Zone " << (z + 1) << " created with "
+//     //               << (nodes.size() - zoneStartNodeCount) << " nodes and "
+//     //               << (links.size() - zoneStartLinkCount) << " links" << std::endl;
+//      }
+//
+//   //  validateHydraulicSystem();
+// }
 
-    // Step 1: Collect laterals
-    for (auto& link : links) {
-        if (link.type == "lateral") {
-            const Node& n1 = nodes[link.from];
-            const Node& n2 = nodes[link.to];
-            double avgX = 0.5 * (n1.position.x + n2.position.x);
-            double avgY = 0.5 * (n1.position.y + n2.position.y);
-            lateralLinks.push_back({&link, avgX, avgY});
+
+void IrrigationModel::createIrregularSystemForZone(
+    const std::vector<Position>& boundary,
+    double sprinklerSpacing,
+    double lineSpacing,
+    const std::string& connectionType,
+    const std::string& sprinklerConfig,
+    SubmainPosition submainPos,
+    int zoneID)
+{
+    // Set boundary for this zone
+    setBoundaryPolygon(boundary);
+
+
+    // std::cout << "Boundary points: " << boundary.size() << std::endl;
+    // for (const auto& p : boundary) {
+    //     std::cout << "  (" << p.x << ", " << p.y << ")" << std::endl;
+    // }
+
+    // Validate boundary
+    if (boundary.size() < 3) {
+        helios::helios_runtime_error("ERROR (IrrigationModel::createIrregularSystemForZone): Invalid boundary size");
+    }
+
+    if (connectionType != "vertical" && connectionType != "horizontal") {
+        helios::helios_runtime_error("ERROR (IrrigationModel::createIrregularSystemForZone): Invalid lateral connection orientation");
+    }
+
+    // Calculate bounding box for grid generation
+    double minX = std::numeric_limits<double>::max();
+    double maxX = std::numeric_limits<double>::lowest();
+    double minY = std::numeric_limits<double>::max();
+    double maxY = std::numeric_limits<double>::lowest();
+
+    for (const auto& point : boundary) {
+        minX = std::min(minX, point.x);
+        maxX = std::max(maxX, point.x);
+        minY = std::min(minY, point.y);
+        maxY = std::max(maxY, point.y);
+    }
+
+    double fieldLength = maxX - minX;
+    double fieldWidth = maxY - minY;
+    // std::cout<<"fieldLength = "<<fieldLength<<std::endl;
+    // std::cout<<"fieldWidth = "<<fieldWidth<<std::endl;
+
+    // Create sprinkler system within the boundary
+    createSprinklerSystemGeneral(fieldLength, fieldWidth, sprinklerSpacing, lineSpacing,
+                               connectionType, sprinklerConfig,
+                               minX, minY, zoneID);
+
+    // Add submain for this zone (no water source connection yet)
+    addSubmainForZone(fieldLength, fieldWidth, connectionType, submainPos, zoneID, lineSpacing);
+
+    // Validate
+    validateParameters(fieldLength, fieldWidth, sprinklerSpacing, lineSpacing);
+}
+
+void IrrigationModel::addSubmainForZone(double fieldLength, double fieldWidth,
+                                      const std::string& lateralDirection,
+                                      SubmainPosition submainPosition,
+                                      int zoneID,
+                                      double lateralSpacing)
+{
+    // Calculate the actual bounds from the boundary polygon for this zone
+    double minX = std::numeric_limits<double>::max();
+    double minY = std::numeric_limits<double>::max();
+    double maxX = std::numeric_limits<double>::lowest();
+    double maxY = std::numeric_limits<double>::lowest();
+
+    for (const auto& point : boundaryPolygon) {
+        minX = std::min(minX, point.x);
+        minY = std::min(minY, point.y);
+        maxX = std::max(maxX, point.x);
+        maxY = std::max(maxY, point.y);
+    }
+
+    std::cout << "Zone " << zoneID << " bounds: X[" << minX << " - " << maxX
+              << "], Y[" << minY << " - " << maxY << "]" << std::endl;
+
+    // Calculate submain position based on the actual zone bounds
+    Position submainLinePos = calculateOptimalSubmainPositionForZone(submainPosition, minX, minY, fieldLength, fieldWidth);
+
+    std::cout << "Calculated submain start position: ("
+              << submainLinePos.x << ", " << submainLinePos.y << ")" << std::endl;
+
+    std::vector<int> submainNodeIds;
+
+    if (lateralDirection == "vertical") {
+        // Use existing createHorizontalSubmain but pass the correct starting position
+        // will create nodes relative to the position we give it
+        submainNodeIds = createHorizontalSubmain(submainLinePos, fieldLength, boundaryPolygon, lateralSpacing, zoneID);
+    } else {
+        submainNodeIds = createVerticalSubmain(submainLinePos, fieldWidth, boundaryPolygon, lateralSpacing, zoneID);
+    }
+
+    // Connect laterals to submain within this zone
+    connectSubmainToLaterals(submainNodeIds, lateralDirection, zoneID);
+
+    // Assign zone ID to submain nodes
+    for (int nodeId : submainNodeIds) {
+        if (nodes.count(nodeId)) {
+            nodes[nodeId].zoneID = zoneID;
         }
     }
 
-    int lateralCount = lateralLinks.size();
-    if (lateralCount == 0 || numZones <= 0) return;
 
-    // 🔎 Handle AUTO mode by switching to X or Y based
-    if (mode == ZoningMode::AUTO_BASED) {
-        double minX = std::numeric_limits<double>::max();
-        double maxX = std::numeric_limits<double>::lowest();
-        double minY = std::numeric_limits<double>::max();
-        double maxY = std::numeric_limits<double>::lowest();
+}
 
-        for (auto& entry : lateralLinks) {
-            minX = std::min(minX, entry.avgX);
-            maxX = std::max(maxX, entry.avgX);
-            minY = std::min(minY, entry.avgY);
-            maxY = std::max(maxY, entry.avgY);
+
+Position IrrigationModel::calculateOptimalSubmainPositionForZone(
+    SubmainPosition position, double minX, double minY,
+    double fieldLength, double fieldWidth)
+{
+    double submainX = 0.0;
+    double submainY = 0.0;
+
+    switch (position) {
+        case SubmainPosition::NORTH:
+            submainY = minY + fieldWidth + 2.0; // Above the zone
+            submainX = minX; //  start at left edge of the zone
+            break;
+        case SubmainPosition::SOUTH:
+            submainY = minY - 2.0; // Below the zone
+            submainX = minX; //  left edge
+            break;
+        case SubmainPosition::MIDDLE:
+        default:
+            submainY = minY + fieldWidth / 2.0;
+            submainX = minX; // left edge
+            break;
+    }
+
+  //  std::cout << "Submain position for zone: (" << submainX << ", " << submainY << ")" << std::endl;
+
+    return {submainX, submainY};
+}
+
+// void IrrigationModel::addZoneValveAndConnect(int zoneID, const std::vector<Position>& zoneBoundary)
+// {
+//     // Find the submain junction in this zone FIRST
+//     int zoneSubmainId = findZoneSubmainJunction(zoneID);
+//     std::cout << "zoneSubmainId: " << zoneSubmainId << std::endl;
+//
+//     if (zoneSubmainId == -1) {
+//         std::cerr << "Warning: No submain junction found in zone " << zoneID
+//                   << ". Creating one manually." << std::endl;
+//         zoneSubmainId = createZoneSubmainJunction(zoneID, zoneBoundary);
+//     }
+//
+//     // Position valve near the submain junction but offset for proper routing
+//     Position submainPos = nodes[zoneSubmainId].position;
+//     Position valvePos = calculateOptimalValvePosition(submainPos, zoneBoundary);
+//
+//     std::cout << "Valve position calculated: (" << valvePos.x << ", " << valvePos.y << ")" << std::endl;
+//
+//     // Create zone valve
+//     int valveId = getNextNodeId();
+//     std::cout << "Valve ID: " << valveId << std::endl;
+//
+//     nodes[valveId] = {
+//         valveId,
+//         "zone_valve",
+//         valvePos,
+//         0.0, // Pressure will be calculated
+//         false,
+//         0.0,
+//         {},
+//         zoneID
+//     };
+//
+//     // Connect valve to zone submain with 90-degree routing if needed
+//     connectValveToSubmainWith90Degree(valveId, zoneSubmainId, zoneID);
+//
+//     // Connect water source to valve with 90-degree routing
+//     connectWaterSourceToValveWith90Degree(valveId, zoneID);
+//
+//     std::cout << "Zone " << zoneID << ": Added valve " << valveId
+//               << " connected to submain " << zoneSubmainId
+//               << " and water source " << waterSourceId << std::endl;
+// }
+
+Position IrrigationModel::calculateOptimalValvePosition(const Position& submainPos,
+                                                       const std::vector<Position>& zoneBoundary)
+{
+    // Place valve near submain but outside the main irrigation area
+    // positions should allow straight-line connections
+
+    // zone bounds
+    double minX = std::numeric_limits<double>::max();
+    double maxX = std::numeric_limits<double>::lowest();
+    double minY = std::numeric_limits<double>::max();
+    double maxY = std::numeric_limits<double>::lowest();
+
+    for (const auto& point : zoneBoundary) {
+        minX = std::min(minX, point.x);
+        maxX = std::max(maxX, point.x);
+        minY = std::min(minY, point.y);
+        maxY = std::max(maxY, point.y);
+    }
+
+    // Try different positions around the submain
+    std::vector<Position> candidatePositions;
+
+    // Position offsets in meters
+    double offset = -(maxX-minX)/2; // offset left/right of the submain
+
+    // Candidate positions: left, right, above, below the submain
+ //   candidatePositions.push_back({submainPos.x - offset, submainPos.y, 0.0});      // Left
+    candidatePositions.push_back({submainPos.x + offset, submainPos.y, 0.0});      // Right
+  //  candidatePositions.push_back({submainPos.x, submainPos.y - offset, 0.0});      // Below
+  //  candidatePositions.push_back({submainPos.x, submainPos.y + offset, 0.0});      // Above
+
+    // Also try corners for better routing
+ //   candidatePositions.push_back({submainPos.x - offset, submainPos.y - offset, 0.0}); // Bottom-left
+    // candidatePositions.push_back({submainPos.x + offset, submainPos.y - offset, 0.0}); // Bottom-right
+    // candidatePositions.push_back({submainPos.x - offset, submainPos.y + offset, 0.0}); // Top-left
+    // candidatePositions.push_back({submainPos.x + offset, submainPos.y + offset, 0.0}); // Top-right
+
+    // Score candidates based on:
+    // 1. Distance to water source (shorter)
+    // 2. Clear path to water source (not crossing irrigation area)
+    // 3. Position relative to zone boundary (prefer outside or edge)
+
+    Position waterSourcePos = nodes[waterSourceId].position;
+    Position bestPosition = candidatePositions[0];
+    double bestScore = std::numeric_limits<double>::lowest();
+
+    for (const auto& candidate : candidatePositions) {
+        double score = 0.0;
+
+        // Prefer positions that allow straight lines to water source
+        bool straightLineX = std::abs(candidate.x - waterSourcePos.x) < 1.0;
+        bool straightLineY = std::abs(candidate.y - waterSourcePos.y) < 1.0;
+
+        if (straightLineX || straightLineY) {
+            score += 10.0; // Bonus for alignment
         }
 
-        double width  = maxX - minX;
-        double height = maxY - minY;
+        // Prefer positions near zone boundary for easier access
+        double distToBoundary = std::min({
+            candidate.x - minX, maxX - candidate.x,
+            candidate.y - minY, maxY - candidate.y
+        });
 
-        if (width > height) {
-            mode = ZoningMode::X_BASED;
+        if (distToBoundary < 2.0) {
+            score += 5.0; // Bonus for boundary proximity
+        }
+
+        // Small penalty for distance (we want reasonably close but not necessarily closest)
+        double distanceToSubmain = candidate.distanceTo(submainPos);
+        score -= distanceToSubmain * 0.1;
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestPosition = candidate;
+        }
+    }
+
+    return bestPosition;
+}
+
+void IrrigationModel::connectValveToSubmainWith90Degree(int valveId, int submainId, int zoneID)
+{
+    Position valvePos = nodes[valveId].position;
+    Position submainPos = nodes[submainId].position;
+
+    // For direct connection (if aligned)
+    if (std::abs(valvePos.x - submainPos.x) < 0.1 || std::abs(valvePos.y - submainPos.y) < 0.1) {
+        // Straight line connection
+        double length = valvePos.distanceTo(submainPos);
+        links.push_back({
+            valveId,
+            submainId,
+            3.0 * INCH_TO_METER,
+            length,
+            "zone_valve",
+            false,
+            zoneID
+        });
+
+        // Update neighbors
+        nodes[valveId].neighbors.push_back(submainId);
+        nodes[submainId].neighbors.push_back(valveId);
+    } else {
+        // Create 90-degree connection with intermediate point
+        int intermediateId = getNextNodeId();
+        Position intermediatePos;
+
+        // Choose whether to go horizontal then vertical or vertical then horizontal
+        // Based on which requires less total length
+        double option1Length = std::abs(valvePos.x - submainPos.x) + std::abs(valvePos.y - submainPos.y);
+        double option2Length = std::abs(valvePos.y - submainPos.y) + std::abs(valvePos.x - submainPos.x);
+
+        if (option1Length <= option2Length) {
+            // Horizontal then vertical
+            intermediatePos = {submainPos.x, valvePos.y, 0.0};
         } else {
-            mode = ZoningMode::Y_BASED;
-        }
-    }
-
-    // 🔎 Existing zoning logic
-    if (mode == ZoningMode::X_BASED) {
-        std::sort(lateralLinks.begin(), lateralLinks.end(),
-                  [](const LateralInfo& a, const LateralInfo& b) {
-                      return a.avgX < b.avgX;
-                  });
-
-        int perZone = (lateralCount + numZones - 1) / numZones;
-        int zone = 1, count = 0;
-
-        for (auto& entry : lateralLinks) {
-            Link* link = entry.link;
-            link->zoneID = zone;
-            nodes[link->from].zoneID = zone;
-            nodes[link->to].zoneID   = zone;
-
-            count++;
-            if (count >= perZone && zone < numZones) {
-                zone++;
-                count = 0;
-            }
-        }
-    }
-    else if (mode == ZoningMode::Y_BASED) {
-        std::sort(lateralLinks.begin(), lateralLinks.end(),
-                  [](const LateralInfo& a, const LateralInfo& b) {
-                      return a.avgY < b.avgY;
-                  });
-
-        int perZone = (lateralCount + numZones - 1) / numZones;
-        int zone = 1, count = 0;
-
-        for (auto& entry : lateralLinks) {
-            Link* link = entry.link;
-            link->zoneID = zone;
-            nodes[link->from].zoneID = zone;
-            nodes[link->to].zoneID   = zone;
-
-            count++;
-            if (count >= perZone && zone < numZones) {
-                zone++;
-                count = 0;
-            }
-        }
-    }
-    else if (mode == ZoningMode::XY_BASED) {
-        double minX = std::numeric_limits<double>::max();
-        double maxX = std::numeric_limits<double>::lowest();
-        double minY = std::numeric_limits<double>::max();
-        double maxY = std::numeric_limits<double>::lowest();
-
-        for (auto& entry : lateralLinks) {
-            minX = std::min(minX, entry.avgX);
-            maxX = std::max(maxX, entry.avgX);
-            minY = std::min(minY, entry.avgY);
-            maxY = std::max(maxY, entry.avgY);
+            // Vertical then horizontal
+            intermediatePos = {valvePos.x, submainPos.y, 0.0};
         }
 
-        for (auto& entry : lateralLinks) {
-            int xBin = std::min(int((entry.avgX - minX) / (maxX - minX + 1e-9) * zonesX), zonesX - 1);
-            int yBin = std::min(int((entry.avgY - minY) / (maxY - minY + 1e-9) * zonesY), zonesY - 1);
+        // Create intermediate node
+        nodes[intermediateId] = {
+            intermediateId,
+            "valve_connection_junction",
+            intermediatePos,
+            0.0,
+            false,
+            0.0,
+            {},
+            zoneID
+        };
 
-            int zone = yBin * zonesX + xBin + 1;
+        // Create first segment (valve to intermediate)
+        double length1 = valvePos.distanceTo(intermediatePos);
+        links.push_back({
+            valveId,
+            intermediateId,
+            3.0 * INCH_TO_METER,
+            length1,
+            "zone_valve",
+            false,
+            zoneID
+        });
 
-            Link* link = entry.link;
-            link->zoneID = zone;
-            nodes[link->from].zoneID = zone;
-            nodes[link->to].zoneID   = zone;
-        }
-    }
+        // Create second segment (intermediate to submain)
+        double length2 = intermediatePos.distanceTo(submainPos);
+        links.push_back({
+            intermediateId,
+            submainId,
+            3.0 * INCH_TO_METER,
+            length2,
+            "zone_valve",
+            false,
+            zoneID
+        });
 
-    // Step 3: Create submains and valves
-    for (int z = 1; z <= numZones; ++z) {
-        addSubmainAndValve(z);
+        // Update neighbors
+        nodes[valveId].neighbors.push_back(intermediateId);
+        nodes[intermediateId].neighbors.push_back(valveId);
+        nodes[intermediateId].neighbors.push_back(submainId);
+        nodes[submainId].neighbors.push_back(intermediateId);
+
+        std::cout << "Created 90-degree valve connection via intermediate node " << intermediateId << std::endl;
     }
 }
 
-void IrrigationModel::addSubmainAndValve(int zoneId) {
-    // add valve node
-    int valveId = getNextNodeId();
-    Node valveNode;
-    valveNode.id = valveId;
-    valveNode.type = "valve";
-    const auto& node = nodes.at(waterSourceId);
-    valveNode.position = node.position; // place near mainline
-    valveNode.zoneID = zoneId;
-    valveNode.pressure = 0.0;
-    valveNode.is_fixed = false;
-    valveNode.flow = 0.0;
-    nodes[valveId] = valveNode;
+// void IrrigationModel::connectWaterSourceToValveWith90Degree(int valveId, int zoneID)
+// {
+//     Position valvePos = nodes[valveId].position;
+//     Position sourcePos = nodes[waterSourceId].position;
+//
+//     // For direct connection (if aligned)
+//     if (std::abs(valvePos.x - sourcePos.x) < 0.1 || std::abs(valvePos.y - sourcePos.y) < 0.1) {
+//         // Straight line connection
+//         double length = sourcePos.distanceTo(valvePos);
+//         links.push_back({
+//             waterSourceId,
+//             valveId,
+//             5.0 * INCH_TO_METER, // Mainline diameter
+//             length,
+//             "mainline_to_zone",
+//             false,
+//             zoneID
+//         });
+//
+//         // Update neighbors
+//         nodes[waterSourceId].neighbors.push_back(valveId);
+//         nodes[valveId].neighbors.push_back(waterSourceId);
+//     } else {
+//         // Create 90-degree connection with intermediate point(s)
+//         // Try to route around the irrigation area
+//
+//         std::vector<Position> route = calculate90DegreeRoute(sourcePos, valvePos, zoneID);
+//
+//         int previousNodeId = waterSourceId;
+//
+//         for (size_t i = 0; i < route.size(); ++i) {
+//             int intermediateId = getNextNodeId();
+//
+//             nodes[intermediateId] = {
+//                 intermediateId,
+//                 "mainline_junction",
+//                 route[i],
+//                 0.0,
+//                 false,
+//                 0.0,
+//                 {},
+//                 zoneID
+//             };
+//
+//             double segmentLength = nodes[previousNodeId].position.distanceTo(route[i]);
+//             links.push_back({
+//                 previousNodeId,
+//                 intermediateId,
+//                 5.0 * INCH_TO_METER,
+//                 segmentLength,
+//                 "mainline_to_zone",
+//                 false,
+//                 zoneID
+//             });
+//
+//             // Update neighbors
+//             nodes[previousNodeId].neighbors.push_back(intermediateId);
+//             nodes[intermediateId].neighbors.push_back(previousNodeId);
+//
+//             previousNodeId = intermediateId;
+//         }
+//
+//         // Final connection to valve
+//         double finalLength = nodes[previousNodeId].position.distanceTo(valvePos);
+//         links.push_back({
+//             previousNodeId,
+//             valveId,
+//             5.0 * INCH_TO_METER,
+//             finalLength,
+//             "mainline_to_zone",
+//             false,
+//             zoneID
+//         });
+//
+//         nodes[previousNodeId].neighbors.push_back(valveId);
+//         nodes[valveId].neighbors.push_back(previousNodeId);
+//
+//         std::cout << "Created 90-degree mainline connection with " << route.size() << " intermediate points" << std::endl;
+//     }
+// }
 
-    // connect mainline to valve
-    Link valveLink;
- //   valveLink.from = mainlineSourceId; // assumed ID of global mainline source
-    valveLink.to   = valveId;
-    valveLink.type = "valve";
-    valveLink.diameter = 5.0;
-    valveLink.length = 0.5; // short stub length
-    valveLink.zoneID = zoneId;
-    links.push_back(valveLink);
 
-    // creating submain node (junction for laterals in this zone)
-    int submainId = getNextNodeId();
-    Node submainNode;
-    submainNode.id = submainId;
-    submainNode.type = "submain";
-  //  submainNode.position = estimateZoneCentroid(zoneId); // put submain near the zone
-    submainNode.zoneID = zoneId;
-    submainNode.pressure = 0.0;
-    submainNode.is_fixed = false;
-    submainNode.flow = 0.0;
-    nodes[submainId] = submainNode;
+// connect water source to valve updated using nearest neighbor
 
-    // Connect valve to submain
-    Link submainLink;
-    submainLink.from = valveId;
-    submainLink.to   = submainId;
-    submainLink.type = "submain";
-    submainLink.diameter = 5.0;
-    submainLink.length = nodes[valveId].position.distanceTo(submainNode.position);
-    submainLink.zoneID = zoneId;
-    links.push_back(submainLink);
+void IrrigationModel::connectWaterSourceToValveWith90Degree(int valveId, int zoneID)
+{
+    Position valvePos = nodes[valveId].position;
+    Position sourcePos = nodes[waterSourceId].position;
 
-    // Step 5: Re-attach laterals in this zone to the submain
-    for (auto& link : links) {
-        if (link.zoneID == zoneId && link.type == "lateral") {
-            // ensure lateral connects to submain
-            nodes[link.from].neighbors.push_back(submainId);
-            nodes[link.to].neighbors.push_back(submainId);
+    // Find all existing mainline junctions and zone valves
+    std::vector<int> existingMainlineNodes;
+    existingMainlineNodes.push_back(waterSourceId); // Start with water source
 
-            // Optionally insert a link submain -> lateral head
-            // Link feeder;
-            // feeder.from = submainId;
-            // feeder.to   = link.from; // attach to first node of lateral
-            // feeder.type = "feeder";
-            // feeder.diameter = defaultFeederDiameter;
-            // feeder.length = distance(nodes[submainId].position, nodes[link.from].position);
-            // feeder.zoneId = zoneId;
-            // links.push_back(feeder);
+    for (const auto& [id, node] : nodes) {
+        if (node.type == "mainline_junction") {
+            existingMainlineNodes.push_back(id);
         }
     }
 
-    std::cout << "Zone " << zoneId << ": added valve " << valveId
-              << " and submain " << submainId << std::endl;
+    // Find the closest existing mainline node to connect to
+    int closestNodeId = -1;
+    double minDistance = std::numeric_limits<double>::max();
+    Position closestNodePos;
+
+    for (int existingNodeId : existingMainlineNodes) {
+        // Don't connect to yourself
+        if (existingNodeId == valveId) continue;
+
+        Position existingPos = nodes[existingNodeId].position;
+        double distance = valvePos.distanceTo(existingPos);
+
+        // Prefer connecting to water source if it's reasonably close
+        if (existingNodeId == waterSourceId) {
+            distance *= 0.9; // Slight bias toward water source
+        }
+
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestNodeId = existingNodeId;
+            closestNodePos = existingPos;
+        }
+    }
+
+    if (closestNodeId == -1) {
+        // Fallback: connect directly to water source
+        closestNodeId = waterSourceId;
+        closestNodePos = sourcePos;
+        minDistance = valvePos.distanceTo(sourcePos);
+    }
+
+    std::cout << "Connecting zone valve " << valveId << " to node " << closestNodeId
+              << " (type: " << nodes[closestNodeId].type
+              << ", distance: " << minDistance << "m)" << std::endl;
+
+    // Check if alignment allows straight connection
+    bool isAlignedX = std::abs(valvePos.x - closestNodePos.x) < 0.1;
+    bool isAlignedY = std::abs(valvePos.y - closestNodePos.y) < 0.1;
+
+    if (isAlignedX || isAlignedY) {
+        // Straight line connection
+        double length = valvePos.distanceTo(closestNodePos);
+        links.push_back({
+            closestNodeId,
+            valveId,
+            5.0 * INCH_TO_METER, // Mainline diameter
+            length,
+            "mainline_to_zone",
+            false,
+            zoneID
+        });
+
+        // Update neighbors
+        nodes[closestNodeId].neighbors.push_back(valveId);
+        nodes[valveId].neighbors.push_back(closestNodeId);
+
+        std::cout << "Created straight connection from zone valve " << valveId
+                  << " to node " << closestNodeId << " (length: " << length << "m)" << std::endl;
+    } else {
+        // Create 90-degree connection
+        create90DegreeConnection(closestNodeId, valveId, zoneID);
+    }
+}
+
+void IrrigationModel::create90DegreeConnection(int fromNodeId, int toNodeId, int zoneID)
+{
+    Position fromPos = nodes[fromNodeId].position;
+    Position toPos = nodes[toNodeId].position;
+
+    // Determine the optimal 90-degree routing
+    // Option 1: Horizontal then vertical
+    Position option1Point = {toPos.x, fromPos.y, 0.0};
+    double option1Length = fromPos.distanceTo(option1Point) + option1Point.distanceTo(toPos);
+
+    // Option 2: Vertical then horizontal
+    Position option2Point = {fromPos.x, toPos.y, 0.0};
+    double option2Length = fromPos.distanceTo(option2Point) + option2Point.distanceTo(toPos);
+
+    // Choose the shorter route
+    Position cornerPoint;
+    if (option1Length <= option2Length) {
+        cornerPoint = option1Point; // Horizontal then vertical
+    } else {
+        cornerPoint = option2Point; // Vertical then horizontal
+    }
+
+    // Check if corner point is too close to either endpoint
+    if (fromPos.distanceTo(cornerPoint) < 0.5 || toPos.distanceTo(cornerPoint) < 0.5) {
+        // If too close, connect directly
+        double directLength = fromPos.distanceTo(toPos);
+        links.push_back({
+            fromNodeId,
+            toNodeId,
+            5.0 * INCH_TO_METER,
+            directLength,
+            "mainline_to_zone",
+            false,
+            zoneID
+        });
+
+        nodes[fromNodeId].neighbors.push_back(toNodeId);
+        nodes[toNodeId].neighbors.push_back(fromNodeId);
+
+        std::cout << "Created direct connection (corner too close)" << std::endl;
+        return;
+    }
+
+    // Create intermediate corner node
+    int cornerNodeId = getNextNodeId();
+    nodes[cornerNodeId] = {
+        cornerNodeId,
+        "mainline_junction",
+        cornerPoint,
+        0.0,
+        false,
+        0.0,
+        {},
+        zoneID
+    };
+
+    // Create first segment
+    double length1 = fromPos.distanceTo(cornerPoint);
+    links.push_back({
+        fromNodeId,
+        cornerNodeId,
+        5.0 * INCH_TO_METER,
+        length1,
+        "mainline_to_zone",
+        false,
+        zoneID
+    });
+
+    // Create second segment
+    double length2 = cornerPoint.distanceTo(toPos);
+    links.push_back({
+        cornerNodeId,
+        toNodeId,
+        5.0 * INCH_TO_METER,
+        length2,
+        "mainline_to_zone",
+        false,
+        zoneID
+    });
+
+    // Update neighbors
+    nodes[fromNodeId].neighbors.push_back(cornerNodeId);
+    nodes[cornerNodeId].neighbors.push_back(fromNodeId);
+    nodes[cornerNodeId].neighbors.push_back(toNodeId);
+    nodes[toNodeId].neighbors.push_back(cornerNodeId);
+
+    std::cout << "Created 90-degree connection via corner node " << cornerNodeId
+              << " (total length: " << (length1 + length2) << "m)" << std::endl;
+}
+
+
+
+// Modified addZoneValveAndConnect to use optimized connections
+void IrrigationModel::addZoneValveAndConnect(int zoneID, const std::vector<Position>& zoneBoundary)
+{
+    // Find the submain junction in this zone
+    int zoneSubmainId = findZoneSubmainJunction(zoneID);
+
+    if (zoneSubmainId == -1) {
+        std::cerr << "No submain junction found in zone " << zoneID
+                  << ". Creating one manually." << std::endl;
+        zoneSubmainId = createZoneSubmainJunction(zoneID, zoneBoundary);
+    }
+
+    // Position valve near the submain junction
+    Position submainPos = nodes[zoneSubmainId].position;
+    Position valvePos = calculateOptimalValvePosition(submainPos, zoneBoundary);
+
+    // Create zone valve
+    int valveId = getNextNodeId();
+
+    nodes[valveId] = {
+        valveId,
+        "zone_valve",
+        valvePos,
+        0.0,
+        false,
+        0.0,
+        {},
+        zoneID,
+        false,    // isActive = false initially
+        false     // isValveOpen = false initially
+    };
+
+    // Connect valve to zone submain
+    connectValveToSubmainWith90Degree(valveId, zoneSubmainId, zoneID);
+
+    // Connect valve to mainline network
+    connectWaterSourceToValveWith90Degree(valveId, zoneID);
+
+    std::cout << "Zone " << zoneID << ": Added valve " << valveId
+              << " connected to submain " << zoneSubmainId << std::endl;
+
+    // Rebuild valve mapping if this is a new valve
+    if (valveToNodes.find(valveId) == valveToNodes.end()) {
+        buildValveToNodesMapping();
+    }
+}
+
+// Add this to assignZones function after creating all zones
+void IrrigationModel::assignZones(
+    int numZones,
+    const std::vector<std::vector<Position>>& zoneBoundaries,
+    double Pw,
+    double sprinklerSpacing,
+    double lineSpacing,
+    const std::string& connectionType,
+    const std::string& sprinklerConfig,
+    SubmainPosition submainPos)
+{
+    if (zoneBoundaries.size() != static_cast<size_t>(numZones)) {
+        helios::helios_runtime_error("ERROR (IrrigationModel::assignZones) Number of boundaries " + std::to_string(zoneBoundaries.size())
+                 + " does not match numZones " + std::to_string(numZones));
+        return;
+    }
+
+    // Clear existing system
+    nodes.clear();
+    links.clear();
+    boundaryPolygon.clear();
+    waterSourceId = -1;
+
+    // Create the main water source (assume one system flow for all zones)
+    waterSourceId = getNextNodeId();
+    Position waterSourcePos = {-5.0, -10.0, 0.0}; // Position water source at a central location
+
+    nodes[waterSourceId] = {
+        waterSourceId,
+        "waterSource",
+        waterSourcePos,
+        Pw,
+        true
+    };
+
+    for (int z = 0; z < numZones; ++z) {
+        std::cout << "Creating zone " << (z + 1) << "..." << std::endl;
+
+        // Generate the irrigation system for this zone
+        createIrregularSystemForZone(zoneBoundaries[z], sprinklerSpacing, lineSpacing,
+                                   connectionType, sprinklerConfig, submainPos, z + 1);
+
+        // Add zone valve and connect to main water source
+        addZoneValveAndConnect(z + 1, zoneBoundaries[z]);
+
+    }
+    buildNeighborLists();
+
+}
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+
+
+Position IrrigationModel::calculateZoneCentroid(const std::vector<Position>& boundary) const
+{
+    if (boundary.empty()) {
+        return {0.0, 0.0, 0.0};
+    }
+
+    double sumX = 0.0, sumY = 0.0;
+    for (const auto& point : boundary) {
+        sumX += point.x;
+        sumY += point.y;
+    }
+
+    return {
+        sumX / boundary.size(),
+        sumY / boundary.size(),
+        0.0
+    };
+}
+
+int IrrigationModel::findZoneSubmainJunction(int zoneID) const
+{
+    // Look for submain junctions in the specified zone
+    for (const auto& [id, node] : nodes) {
+        if (node.zoneID == zoneID && node.type == "submain_junction") {
+            return id;
+        }
+    }
+
+    // If no submain junction found, try to find any junction in the zone
+    for (const auto& [id, node] : nodes) {
+        if (node.zoneID == zoneID &&
+            (node.type.find("junction") != std::string::npos ||
+             node.type.find("submain") != std::string::npos)) {
+            return id;
+        }
+    }
+
+    return -1;
+}
+
+int IrrigationModel::createZoneSubmainJunction(int zoneID, const std::vector<Position>& zoneBoundary)
+{
+    // Create a submain junction at the centroid of the zone
+    Position junctionPos = calculateZoneCentroid(zoneBoundary);
+    int junctionId = getNextNodeId();
+
+    nodes[junctionId] = {
+        junctionId,
+        "submain_junction",
+        junctionPos,
+        0.0,
+        false,
+        0.0,
+        {},
+        zoneID
+    };
+
+    return junctionId;
+}
+
+const std::unordered_map<int, Node>& IrrigationModel::getNodes() const {
+    return nodes;
+}
+
+const std::vector<Link>& IrrigationModel::getLinks() const {
+    return links;
+}
+
+
+std::vector<int> IrrigationModel::getNodesByType(const std::string& type) const {
+    std::vector<int> result;
+    for (const auto& [id, node] : nodes) {
+        if (node.type == type) {
+            result.push_back(id);
+        }
+    }
+    return result;
+}
+
+std::vector<Link> IrrigationModel::getLinksByType(const std::string& type) const {
+    std::vector<Link> result;
+    for (const auto& link : links) {
+        if (link.type == type) {
+            result.push_back(link);
+        }
+    }
+    return result;
+}
+
+// Helper function to get nodes by zone
+std::vector<int> IrrigationModel::getNodesByZone(int zoneID) const
+{
+    std::vector<int> zoneNodes;
+    for (const auto& [id, node] : nodes) {
+        if (node.zoneID == zoneID) {
+            zoneNodes.push_back(id);
+        }
+    }
+    return zoneNodes;
+}
+
+// Helper function to get links by zone
+std::vector<size_t> IrrigationModel::getLinksByZone(int zoneID) const
+{
+    std::vector<size_t> zoneLinks;
+    for (size_t i = 0; i < links.size(); ++i) {
+        if (links[i].zoneID == zoneID) {
+            zoneLinks.push_back(i);
+        }
+    }
+    return zoneLinks;
 }
 
 
@@ -2621,9 +3690,7 @@ void IrrigationModel::validateHydraulicSystem() const {
     // Report disconnected nodes
     size_t disconnectedCount = nodes.size() - connectedNodes.size();
     if (disconnectedCount > 0) {
-        std::cerr << "Warning: " << disconnectedCount
-                 << " nodes are disconnected from the water source!" << std::endl;
-
+        helios::helios_runtime_error("ERROR (IrrigationModel::validateHydraulicSystem) Nodes are disconnected from water source");
         // List disconnected nodes
         for (const auto& [id, node] : nodes) {
             if (!connectedNodes.count(id)) {
@@ -2634,7 +3701,7 @@ void IrrigationModel::validateHydraulicSystem() const {
         }
     }
 
-    // Link property validation
+    // Link validation
     for (const auto& link : links) {
         if (link.diameter <= 0) {
             helios::helios_runtime_error("ERROR (IrrigationModel::validateHydraulicSystem) Invalid diameter (<= 0) in link between nodes " +
@@ -2679,17 +3746,16 @@ double IrrigationModel::calculateResistance(double Re, double Wbar, double Kf_ba
     // depends on laminar or turbulent flow
     if (Re < 2000 || iter == 1) {
         R = mu * link.length * 128.0 / (M_PI * pow(link.diameter, 4));
-        std::cout << "it is laminar flow" << std::endl;
+    //    std::cout << "it is laminar flow" << std::endl;
     } else {
         R = 0.6328 * pow(Wbar, 0.75) * pow(mu, 0.25) * link.length * pow(rho, 0.75) /
             (M_PI * pow(link.diameter, 3.25));
-        std::cout << "it is turbulent flow" << std::endl;
-        std::cout << "link type: " << link.type << "\n";
+      //  std::cout << "it is turbulent flow" << std::endl;
+      //  std::cout << "link type: " << link.type << "\n";
 
-
-    // using minor loss equation if the link is lateralToBarb
+        // using minor loss equation if the link is lateralToBarb
         if (link.type == "lateralTobarb" && Kf_barb > 0) {
-            std::cout << "calling lateralTobarb" << std::endl;
+       //     std::cout << "calling lateralTobarb" << std::endl;
             R =  2.0 * Wbar * Kf_barb * rho / (M_PI * pow(link.diameter, 2));
         }
     }
@@ -2721,13 +3787,13 @@ double IrrigationModel::minorLoss_kf(const double Re, const std::string& sprinkl
     } else if (barbType == "PC_Toro_sharp_barb") {
         kf = 2.86;
     } else if (barbType  == "NPC_Nelson_flat_barb") {
-        std::cout<<"reading the minor loss of NelsonFlat" <<std::endl;
+   //    std::cout<<"reading the minor loss of NelsonFlat" <<std::endl;
 
         kf = 1.73;
     } else if (barbType  == "NPC_Toro_flat_barb") {
         kf = 1.48; //1.50 for half tube
     } else if (barbType  == "NPC_Toro_sharp_barb") {
-        std::cout<<"reading the minor loss of ToroSharp" <<std::endl;
+    //    std::cout<<"reading the minor loss of ToroSharp" <<std::endl;
         kf = 3.12;
     } else if (barbType  == "Standard elbow, 45 deg") { //need to add a function for valve
         if (Re <= 50) {
@@ -2775,30 +3841,43 @@ double IrrigationModel::minorLoss_kf(const double Re, const std::string& sprinkl
     return kf;
 }
 
-double IrrigationModel::calculateEmitterFlow(const std::string& sprinklerAssemblyType, double pressure) {
+double IrrigationModel::calculateEmitterFlow(const std::string& sprinklerAssemblyType,
+                                             double pressure,
+                                             bool updateEmitterNodes) {
+
     const SprinklerAssembly & config = sprinklerLibrary.getSprinklerType(sprinklerAssemblyType);
     std::string nozzleType = config.emitterType;
 
     // Convert pressure from Pa to psi
-    double pressure_psi = pressure / 6894.76;
+    double pressure_psi = pressure ;
+
+    double computedFlow = 0.0;
 
     if (nozzleType == "PC") {
         // Linear relationship for PC nozzle (GPH to m3/s)
-        return std::max(0.0, std::min(1.6049e-5, (0.9 * pressure_psi * 1.052e-6)));
-    }
-    else if (nozzleType == "NPC") {
+        computedFlow = std::max(0.0, std::min(1.6049e-5, (0.9 * pressure_psi * 1.052e-6)));
+    } else if (nozzleType == "NPC") {
         // Non-linear relationship for NPC nozzle
         // const double x = 0.477; //fan jet J2 orange 0.53 0.477;
         // const double k = 3.317; //1.76;
-        return config.emitter_k * pow(pressure_psi, config.emitter_x)*1.052e-6; //get coefficients directly from library
-    }
-    else {
+        computedFlow = config.emitter_k * pow(pressure_psi, config.emitter_x)*1.052e-6; //get coefficients directly from library
+    } else {
         helios::helios_runtime_error("ERROR (IrrigationModel::calculateEmitterFlow): Unknown nozzle type");
         return 0.0;
     }
+
+    // update all emitter nodes so preSizePipes can roll up branch flows
+    if (updateEmitterNodes) {
+        for (auto& [id, node] : nodes) {
+            if (node.type == "emitter") {
+                node.flow = computedFlow;
+            }
+        }
+    }
+
+    return computedFlow;
 }
 
-// add to library after creating the item
 SprinklerConfigLibrary::SprinklerConfigLibrary() {
     // Register assemblies to the library
     registerSprinklerAssembly(create_NPC_Nelson_flat());
@@ -2837,7 +3916,7 @@ std::vector<std::string> SprinklerConfigLibrary::getAvailableTypes() const {
 // add sprinkler types default or custom
 SprinklerAssembly SprinklerConfigLibrary:: create_NPC_Nelson_flat() {
     SprinklerAssembly type;
-    type.name = "NPC_Nelson_flat_barb";
+    type.name = "NPC_Nelson_flat";
     type.lateralToBarb = {0.12 * INCH_TO_METER, 0.75* INCH_TO_METER, "PVC"};
     type.barbToEmitter = { 0.154 * INCH_TO_METER, 30*INCH_TO_METER,"PVC"};
     type.emitterType = "NPC";
@@ -2850,7 +3929,7 @@ SprinklerAssembly SprinklerConfigLibrary:: create_NPC_Nelson_flat() {
 
 SprinklerAssembly SprinklerConfigLibrary:: create_NPC_Toro_flat() {
     SprinklerAssembly type;
-    type.name = "NPC_Toro_flat_barb";
+    type.name = "NPC_Toro_flat";
     type.lateralToBarb = {0.104* INCH_TO_METER, 0.74*INCH_TO_METER, "PVC"};
     type.barbToEmitter = { 0.154 * INCH_TO_METER, 30*INCH_TO_METER,"PVC"};
     type.emitterType = "NPC";
@@ -2863,7 +3942,7 @@ SprinklerAssembly SprinklerConfigLibrary:: create_NPC_Toro_flat() {
 
 SprinklerAssembly SprinklerConfigLibrary:: create_NPC_Toro_sharp() {
     SprinklerAssembly type;
-    type.name = "NPC_Toro_sharp_barb";
+    type.name = "NPC_Toro_sharp";
     type.lateralToBarb = {0.118* INCH_TO_METER, 0.74* INCH_TO_METER, "PVC"};
     type.barbToEmitter = { 0.154 * INCH_TO_METER, 30*INCH_TO_METER,"PVC"};
     type.emitterType = "NPC";
@@ -2876,7 +3955,7 @@ SprinklerAssembly SprinklerConfigLibrary:: create_NPC_Toro_sharp() {
 
 SprinklerAssembly SprinklerConfigLibrary:: create_PC_Nelson_flat() {
     SprinklerAssembly type;
-    type.name = "PC_Nelson_flat_barb";
+    type.name = "PC_Nelson_flat";
     type.lateralToBarb = {0.12 * INCH_TO_METER, 0.74* INCH_TO_METER, "PVC"};
     type.barbToEmitter = { 0.154 * INCH_TO_METER, 30*INCH_TO_METER,"PVC"};
     type.emitterType = "PC";
@@ -2889,7 +3968,7 @@ SprinklerAssembly SprinklerConfigLibrary:: create_PC_Nelson_flat() {
 
 SprinklerAssembly SprinklerConfigLibrary:: create_PC_Toro_flat() {
     SprinklerAssembly type;
-    type.name = "PC_Toro_flat_barb";
+    type.name = "PC_Toro_flat";
     type.lateralToBarb = {0.104* INCH_TO_METER, 0.74* INCH_TO_METER, "PVC"};
     type.barbToEmitter = { 0.154 * INCH_TO_METER, 30*INCH_TO_METER,"PVC"};
     type.emitterType = "PC";
@@ -2902,7 +3981,7 @@ SprinklerAssembly SprinklerConfigLibrary:: create_PC_Toro_flat() {
 
 SprinklerAssembly SprinklerConfigLibrary:: create_PC_Toro_sharp() {
     SprinklerAssembly type;
-    type.name = "PC_Toro_sharp_barb";
+    type.name = "PC_Toro_sharp";
     type.lateralToBarb = {0.118* INCH_TO_METER, 0.74* INCH_TO_METER, "PVC"};
     type.barbToEmitter = { 0.154 * INCH_TO_METER, 30*INCH_TO_METER,"PVC"};
     type.emitterType = "PC";
@@ -2912,6 +3991,1166 @@ SprinklerAssembly SprinklerConfigLibrary:: create_PC_Toro_sharp() {
     type.barbType =  "PC_Toro_sharp_barb";
     return type;
 }
+
+
+// adjusted to start the nodeID from 1
+bool IrrigationModel::loadFromTextFile(const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        helios::helios_runtime_error("IrrigationModel::loadFromTextFile(): fail to open IRRICAD file");
+        return false;
+    }
+
+    std::string line;
+    bool readingNodes = false;
+    bool readingLinks = false;
+    int nodeCount = 0;
+    int linkCount = 0;
+    const int ID_OFFSET = 0; // Shift all IDs by 1
+
+    while (std::getline(file, line)) {
+        // Skip empty lines and comments
+        if (line.empty() || line[0] == '#') continue;
+
+        // Check section headers
+        if (line == "NODES_START") {
+            readingNodes = true;
+            readingLinks = false;
+            continue;
+        } else if (line == "NODES_END") {
+            readingNodes = false;
+            continue;
+        } else if (line == "LINKS_START") {
+            readingLinks = true;
+            readingNodes = false;
+            continue;
+        } else if (line == "LINKS_END") {
+            readingLinks = false;
+            continue;
+        }
+
+        if (readingNodes) {
+            std::istringstream iss(line);
+            Node node;
+            int originalId;
+
+            // Format: id x y type pressure is_fixed flow elevation
+            if (iss >> originalId >> node.position.x >> node.position.y >> node.position.z >> node.type
+                >> node.pressure >> node.is_fixed >> node.flow) {
+
+                // Apply offset to node ID
+                node.id = originalId + ID_OFFSET;
+                nodes[node.id] = node;
+                nodeCount++;
+            } else {
+                std::cerr << "Warning: Could not parse node line: " << line << std::endl;
+            }
+        } else if (readingLinks) {
+            std::istringstream iss(line);
+            Link link;
+            int originalFrom, originalTo;
+
+            // Format: from to diameter length type flow
+            if (iss >> originalFrom >> originalTo >> link.diameter >> link.length
+                >> link.type >> link.flow) {
+
+                // Apply offset to link endpoints
+                link.from = originalFrom + ID_OFFSET;
+                link.to = originalTo + ID_OFFSET;
+
+                links.push_back(link);
+                linkCount++;
+            } else {
+                std::cerr << "Warning: Could not parse link line: " << line << std::endl;
+            }
+        }
+    }
+
+    // Build neighbor lists
+    buildNeighborLists();
+
+    std::cout << "Successfully loaded text file: " << nodeCount << " nodes, "
+              << linkCount << " links" << std::endl;
+    std::cout << "Node IDs shifted from 0-based to 1-based indexing" << std::endl;
+
+    return true;
+}
+
+
+//functions to help simulate any combination of active zones
+void IrrigationModel::openZoneValve(int zoneID)
+{
+    bool changed = false;
+    for (auto& [id, node] : nodes) {
+        if (node.type == "zone_valve" && node.zoneID == zoneID) {
+            if (!node.isValveOpen) {
+                node.isValveOpen = true;
+                changed = true;
+                std::cout << "Opened valve for zone " << zoneID << " (node " << id << ")" << std::endl;
+            }
+        }
+    }
+
+    if (changed) {
+        updateActiveNodesFast();
+    } else {
+        std::cout << "Valve for zone " << zoneID << " was already open or not found" << std::endl;
+    }
+}
+
+void IrrigationModel::closeZoneValve(int zoneID)
+{
+    bool changed = false;
+    for (auto& [id, node] : nodes) {
+        if (node.type == "zone_valve" && node.zoneID == zoneID) {
+            if (node.isValveOpen) {
+                node.isValveOpen = false;
+                changed = true;
+                std::cout << "Closed valve for zone " << zoneID << " (node " << id << ")" << std::endl;
+            }
+        }
+    }
+
+    if (changed) {
+        updateActiveNodesFast();
+    } else {
+        std::cout << "Valve for zone " << zoneID << " was already closed or not found" << std::endl;
+    }
+}
+
+void IrrigationModel::setZoneValveState(int zoneID, bool open)
+{
+    if (open) {
+        openZoneValve(zoneID);
+    } else {
+        closeZoneValve(zoneID);
+    }
+}
+
+bool IrrigationModel::isZoneValveOpen(int zoneID) const
+{
+    for (const auto& [id, node] : nodes) {
+        if (node.type == "zone_valve" && node.zoneID == zoneID) {
+            return node.isValveOpen;
+        }
+    }
+    return false;
+}
+
+
+void IrrigationModel::buildValveToNodesMapping()
+{
+    std::cout << "\n building zone map" << std::endl;
+
+    valveToNodes.clear();
+
+    // find all zone valves
+    std::vector<int> zoneValves;
+    for (const auto& [id, node] : nodes) {
+        if (node.type == "zone_valve") {
+            zoneValves.push_back(id);
+        }
+    }
+
+    // For each valve, find all nodes in its zone
+    for (int valveId : zoneValves) {
+        int zoneID = nodes[valveId].zoneID;
+
+        std::unordered_set<int> allNodesInZone;
+
+        // Find by zone ID (make sure to get all nodes in the zone)
+        for (const auto& [id, node] : nodes) {
+            if (node.zoneID == zoneID) {
+                allNodesInZone.insert(id);
+            }
+        }
+
+        // ensure connectivity via bfs
+        std::unordered_set<int> connectedNodes;
+        bfsCollectNodes(valveId, zoneID, connectedNodes);
+
+        // Combine both sets
+        allNodesInZone.insert(connectedNodes.begin(), connectedNodes.end());
+
+        valveToNodes[valveId] = allNodesInZone;
+
+        std::cout << "Valve " << valveId << " (Zone " << zoneID
+                  << ") can reach " << allNodesInZone.size()
+                  << " nodes in its zone" << std::endl;
+    }
+
+   // std::cout << "  zone map completed\n" << std::endl;
+}
+
+void IrrigationModel::bfsCollectNodes(int startId, int targetZoneID,
+                                            std::unordered_set<int>& result)
+{
+    std::queue<int> q;
+    std::unordered_set<int> visited;
+    q.push(startId);
+    visited.insert(startId);
+
+    while (!q.empty()) {
+        int current = q.front();
+        q.pop();
+
+        result.insert(current);
+
+        const Node& currentNode = nodes.at(current);
+
+        for (int neighbor : currentNode.neighbors) {
+            if (visited.count(neighbor)) continue;
+
+            const Node& neighborNode = nodes.at(neighbor);
+
+            // Allow traversal if neighbor is in the same zone or it's infrastructure (water source/mainline)
+            // or current is infrastructure
+            if (neighborNode.zoneID == targetZoneID ||
+                currentNode.type == "zone_valve" ||
+                neighborNode.type == "waterSource" ||
+                neighborNode.type == "mainline_junction" ||
+                currentNode.type == "waterSource" ||
+                currentNode.type == "mainline_junction") {
+
+                visited.insert(neighbor);
+                q.push(neighbor);
+            }
+        }
+    }
+}
+
+void IrrigationModel::checkUnassignedNodes()
+{
+    std::cout << "\n Check unassigned nodes " << std::endl;
+
+    int unassignedCount = 0;
+    int irrigationUnassigned = 0;
+
+    for (const auto& [id, node] : nodes) {
+        if (node.zoneID == 0) {
+            unassignedCount++;
+            if (node.type == "lateral_sprinkler_jn" || node.type == "barb" || node.type == "emitter") {
+                irrigationUnassigned++;
+                std::cout << "  Unassigned irrigation node: " << id
+                          << " (" << node.type << ")" << std::endl;
+                }
+        }
+    }
+
+    std::cout << "Total unassigned nodes: " << unassignedCount << std::endl;
+    std::cout << "Unassigned irrigation nodes: " << irrigationUnassigned << std::endl;
+
+    if (irrigationUnassigned > 0) {
+        std::cout << "\n Problem: Irrigation nodes exist but have zoneID = 0" << std::endl;
+        std::cout << "Nodes not included in any zone's active set!" << std::endl;
+    }
+}
+
+std::vector<std::pair<double, double>> IrrigationModel::generateSystemCurve(
+        const std::vector<double>& emitterRequiredPressure,
+        const std::string& sprinklerAssemblyType,
+        double V_main,
+        double V_lateral,
+        int referenceNodeId,
+        double staticHead) {
+
+    std::vector<std::pair<double, double>> systemCurvePoints;
+    if (emitterRequiredPressure.empty()) return systemCurvePoints;
+
+    // // Ensure water source ID is set
+    // if (waterSourceId == -1) {
+    //     for (const auto& [id, node] : nodes) {
+    //         if (node.type == "waterSource") {
+    //             waterSourceId = id;
+    //             break;
+    //         }
+    //     }
+    // }
+    if (waterSourceId == -1) {
+        helios::helios_runtime_error("ERROR (IrrigationModel::generateSystemCurve): No waterSource found");
+        return systemCurvePoints;
+    }
+
+    // set a reference node if not provided farthest active emitter from water source
+    if (referenceNodeId == -1) {
+        double maxDist = -1.0;
+        int bestId = -1;
+        const auto& wsPos = nodes.at(waterSourceId).position;
+        for (const auto& [id, node] : nodes) {
+            if (node.type != "emitter") continue;
+            if (!node.isActive) continue;
+            double dist = wsPos.distanceTo(node.position);
+            if (dist > maxDist) {
+                maxDist = dist;
+                bestId = id;
+            }
+        }
+        referenceNodeId = bestId;
+    }
+
+    if (referenceNodeId == -1 || !nodes.count(referenceNodeId)) {
+        std::cerr << "Warning: No valid reference node found for system curve." << std::endl;
+        return systemCurvePoints;
+    }
+
+    for (double emitterPressure : emitterRequiredPressure) {
+        if (emitterPressure <= 0.0) continue;
+
+        const double Qspecified =  calculateEmitterFlow(sprinklerAssemblyType,emitterPressure);
+        const double Pw = 0.0;
+        preSizePipes(1.5, 2.0);
+        HydraulicResults results = calculateHydraulicsMultiZoneOptimized(
+            false, sprinklerAssemblyType, Qspecified, Pw, V_main, V_lateral);
+
+        double totalFlow = 0.0;
+        for (double q : results.emitterFlows) {
+            totalFlow += q;
+        }
+
+        // Pressure loss from water source to reference (psi) and convert to feet, add static head (feet)
+        double totalHead = (-nodes[referenceNodeId].pressure + emitterPressure)*2.31 + staticHead;
+
+        // Convert flow to GPM
+        const double totalFlowGpm = totalFlow * 15850.323141489; // m3/s -> GPM
+        systemCurvePoints.emplace_back(totalFlowGpm, totalHead);
+    }
+
+    return systemCurvePoints;
+}
+
+
+void IrrigationModel::writeSystemCurveToCsvWithFit(
+    const std::string& filename,
+    const std::vector<std::pair<double, double>>& curve) const
+{
+    std::ofstream out(filename);
+    if (!out.is_open()) {
+        std::cerr << "Error: Could not open file " << filename << " for writing\n";
+        return;
+    }
+
+    auto [a, b, c] = fitCurveQuadratic(curve);
+    out << "# Head = a + b*GPM + c*GPM^2\n";
+    out << "# a=" << a << ", b=" << b << ", c=" << c << "\n";
+    out << "gpm,head_ft\n";
+    for (const auto& point : curve) {
+        out << point.first << "," << point.second << "\n";
+    }
+}
+
+std::tuple<double, double, double> IrrigationModel::fitCurveQuadratic(
+    const std::vector<std::pair<double, double>>& curve)
+{
+    // Fit Head = a + b*GPM + c*GPM^2 using least squares.
+    // Returns coefficients  If insufficient data, returns zeros.
+    const size_t n = curve.size();
+    if (n < 3) {
+        helios::helios_runtime_error("ERROR (IrrigationModel::fitCurveQuadratic): Need at least 3 points to fit quadratic system curve");
+        return {0.0, 0.0, 0.0};
+    }
+
+    double Sx = 0.0, Sx2 = 0.0, Sx3 = 0.0, Sx4 = 0.0;
+    double Sy = 0.0, Sxy = 0.0, Sx2y = 0.0;
+
+    for (const auto& [x, y] : curve) {
+        const double x2 = x * x;
+        Sx += x;
+        Sx2 += x2;
+        Sx3 += x2 * x;
+        Sx4 += x2 * x2;
+        Sy += y;
+        Sxy += x * y;
+        Sx2y += x2 * y;
+    }
+
+    // Solve normal equations:
+    // [ n   Sx   Sx2 ] [a] = [ Sy  ]
+    // [ Sx  Sx2  Sx3 ] [b] = [ Sxy ]
+    // [ Sx2 Sx3  Sx4 ] [c] = [ Sx2y]
+    const double A00 = static_cast<double>(n), A01 = Sx,  A02 = Sx2;
+    const double A10 = Sx,  A11 = Sx2, A12 = Sx3;
+    const double A20 = Sx2, A21 = Sx3, A22 = Sx4;
+
+    const double B0 = Sy, B1 = Sxy, B2 = Sx2y;
+
+    const double det =
+        A00 * (A11 * A22 - A12 * A21) -
+        A01 * (A10 * A22 - A12 * A20) +
+        A02 * (A10 * A21 - A11 * A20);
+
+    if (std::abs(det) < 1e-12) {
+        helios::helios_runtime_error("ERROR (IrrigationModel::fitCurveQuadratic): Warning: Quadratic fit is ill-conditioned.");
+        return {0.0, 0.0, 0.0};
+    }
+
+    const double detA =
+        B0 * (A11 * A22 - A12 * A21) -
+        A01 * (B1 * A22 - A12 * B2) +
+        A02 * (B1 * A21 - A11 * B2);
+
+    const double detB =
+        A00 * (B1 * A22 - A12 * B2) -
+        B0 * (A10 * A22 - A12 * A20) +
+        A02 * (A10 * B2 - B1 * A20);
+
+    const double detC =
+        A00 * (A11 * B2 - B1 * A21) -
+        A01 * (A10 * B2 - B1 * A20) +
+        B0 * (A10 * A21 - A11 * A20);
+
+    const double a = detA / det;
+    const double b = detB / det;
+    const double c = detC / det;
+
+    return {a, b, c};
+}
+
+
+uint32_t IrrigationModel::computeValveConfigHash() const
+{
+    uint32_t hash = 0;
+    int valveIndex = 0;
+
+    std::vector<int> valveIds;     // Sort valves by ID for consistent hashing
+
+    for (const auto& [id, node] : nodes) {
+        if (node.type == "zone_valve") {
+            valveIds.push_back(id);
+        }
+    }
+    std::sort(valveIds.begin(), valveIds.end());
+
+    // Create hash from sorted valve states
+    for (int valveId : valveIds) {
+        const Node& valve = nodes.at(valveId);
+        // Each valve contributes 2 bits to the hash
+        hash = (hash << 2) | (valve.isValveOpen ? 0b11 : 0b00);
+        valveIndex++;
+
+        if (valveIndex >= 16) break; // Limit to 16 valves for 32-bit hash
+    }
+
+    // Ensure hash is never 0 (0 means no configuration
+    if (hash == 0 && !valveIds.empty()) {
+        hash = 1;
+    }
+
+    return hash;
+}
+
+const std::unordered_set<int>& IrrigationModel::getActiveNodesCached()
+{
+    uint32_t configHash = computeValveConfigHash();
+
+    // Show current valve states
+    // std::cout << " Computing Active Nodes" << std::endl;
+    // std::cout << "Valve configuration hash: " << configHash << std::endl;
+    // std::cout << "Current valve states:" << std::endl;
+
+    std::vector<std::pair<int, bool>> valveStates;
+    for (const auto& [id, node] : nodes) {
+        if (node.type == "zone_valve") {
+            valveStates.emplace_back(node.zoneID, node.isValveOpen);
+            std::cout << "  Zone " << node.zoneID << " (valve " << id
+                      << "): " << (node.isValveOpen ? "OPEN" : "CLOSED") << std::endl;
+        }
+    }
+
+    // Cache lookup
+    auto it = activeNodeCache.find(configHash);
+    if (it != activeNodeCache.end()) {
+        // std::cout << "Cache hit. Using cached result with "
+        //           << it->second.size() << " active nodes" << std::endl;
+        currentValveConfigHash = configHash;
+        return it->second;
+    }
+
+    //std::cout << "Cache miss. Computing active nodes." << std::endl;
+
+    // Compute new active node set
+    std::unordered_set<int> activeNodes;
+
+    // Always include water source
+    if (waterSourceId != -1) {
+        activeNodes.insert(waterSourceId);
+        nodes[waterSourceId].isActive = true;
+    } else {
+        // Find water source if not set
+        for (const auto& [id, node] : nodes) {
+            if (node.type == "waterSource") {
+                waterSourceId = id;
+                activeNodes.insert(id);
+                nodes[id].isActive = true;
+                break;
+            }
+        }
+    }
+
+    // Add nodes from open valves using pre-computed mapping
+    for (const auto& [valveId, valveNodes] : valveToNodes) {
+        if (nodes[valveId].isValveOpen) {
+            activeNodes.insert(valveNodes.begin(), valveNodes.end());
+        }
+    }
+
+    // Ensure connectivity between active zones via mainline
+   // ensureMainlineConnectivity(activeNodes);
+
+    // Update node active states
+    for (auto& [id, node] : nodes) {
+        node.isActive = (activeNodes.find(id) != activeNodes.end());
+    }
+
+    // Cache the result
+    activeNodeCache[configHash] = activeNodes;
+    currentValveConfigHash = configHash;
+
+    // std::cout << "Computed active nodes for hash " << configHash
+    //           << ": " << activeNodes.size() << " nodes active" << std::endl;
+
+    return activeNodeCache[configHash];
+}
+
+void IrrigationModel::ensureMainlineConnectivity(std::unordered_set<int>& activeNodes)
+{
+    bool changed = true;
+
+    while (changed) {
+        changed = false;
+
+        for (const auto& link : links) {
+            bool fromActive = (activeNodes.find(link.from) != activeNodes.end());
+            bool toActive = (activeNodes.find(link.to) != activeNodes.end());
+
+            // If link is mainline and one end is active, activate the other end
+            if (link.type.find("mainline_to_zone") != std::string::npos) {
+
+                if (fromActive && !toActive) {
+                    // Check if to-node is a valve (don't activate through closed valves)
+                    if (nodes[link.to].type == "zone_valve" && !nodes[link.to].isValveOpen) {
+                        continue;
+                    }
+                    activeNodes.insert(link.to);
+                    changed = true;
+                } else if (!fromActive && toActive) {
+                    // Check if from-node is a valve
+                    if (nodes[link.from].type == "zone_valve" && !nodes[link.from].isValveOpen) {
+                        continue;
+                    }
+                    activeNodes.insert(link.from);
+                    changed = true;
+                }
+            }
+        }
+    }
+}
+
+void IrrigationModel::updateActiveNodesFast()
+{
+    // Use cached computation
+    const std::unordered_set<int>& activeNodes = getActiveNodesCached();
+
+    // Update all nodes (already done in getActiveNodesCached, but ensure)
+    for (auto& [id, node] : nodes) {
+        node.isActive = (activeNodes.find(id) != activeNodes.end());
+    }
+}
+
+void IrrigationModel::updateActiveNodesByTreeTraversal()
+{
+    // Reset all nodes to inactive
+    for (auto& [id, node] : nodes) {
+        node.isActive = false;
+    }
+
+    // Mark water source as always active
+    if (waterSourceId != -1) {
+        nodes[waterSourceId].isActive = true;
+    } else {
+        // Find water source
+        for (auto& [id, node] : nodes) {
+            if (node.type == "waterSource") {
+                waterSourceId = id;
+                node.isActive = true;
+                break;
+            }
+        }
+    }
+
+    // Start BFS from each open zone valve
+    for (const auto& [id, node] : nodes) {
+        if (node.type == "zone_valve" && node.isValveOpen) {
+            bfsFromValve(id);
+        }
+    }
+
+    // Ensure mainline connectivity
+    propagateMainlineActivation();
+}
+
+void IrrigationModel::bfsFromValve(int valveId)
+{
+    std::queue<int> nodeQueue;
+    std::unordered_set<int> visited;
+
+    nodeQueue.push(valveId);
+    visited.insert(valveId);
+    nodes[valveId].isActive = true;
+
+    while (!nodeQueue.empty()) {
+        int currentId = nodeQueue.front();
+        nodeQueue.pop();
+
+        // Traverse to neighbors (except through closed valves)
+        for (int neighborId : nodes[currentId].neighbors) {
+            // Skip if already visited
+            if (visited.count(neighborId)) continue;
+
+            // Don't traverse through closed valves (except water source direction)
+            if (nodes[neighborId].type == "zone_valve" && !nodes[neighborId].isValveOpen) {
+                continue;
+            }
+
+            visited.insert(neighborId);
+            nodeQueue.push(neighborId);
+            nodes[neighborId].isActive = true;
+        }
+    }
+}
+
+void IrrigationModel::propagateMainlineActivation()
+{
+    // Ensure mainline junctions between active zones are active
+    // This is a second pass to connect isolated active zones via mainline
+    bool changed = true;
+
+    while (changed) {
+        changed = false;
+
+        for (const auto& link : links) {
+            if (link.type.find("mainline_to_zone") != std::string::npos ||
+                link.type == "zone_valve") {
+
+                bool fromActive = nodes[link.from].isActive;
+                bool toActive = nodes[link.to].isActive;
+
+                // If one end is active and the other isn't a closed valve, activate it
+                if (fromActive && !toActive) {
+                    // Don't activate through closed valves
+                    if (nodes[link.to].type == "zone_valve" && !nodes[link.to].isValveOpen) {
+                        continue;
+                    }
+                    nodes[link.to].isActive = true;
+                    changed = true;
+                } else if (!fromActive && toActive) {
+                    if (nodes[link.from].type == "zone_valve" && !nodes[link.from].isValveOpen) {
+                        continue;
+                    }
+                    nodes[link.from].isActive = true;
+                    changed = true;
+                }
+            }
+        }
+    }
+}
+
+HydraulicResults IrrigationModel::calculateHydraulicsMultiZoneOptimized(
+    bool doPreSize,
+    const std::string& sprinklerAssemblyType,
+    double Qspecified,
+    double Pw,
+    double V_main,
+    double V_lateral)
+{
+    // call active nodes from cache (for activated zones)
+    const std::unordered_set<int>& activeNodeIds = getActiveNodesCached();
+
+    if (activeNodeIds.empty()) {
+        helios::helios_runtime_error("ERROR (IrrigationModel::calculateHydraulicsMultiZoneOptimized): No active nodes in the system.");
+        return HydraulicResults();
+    }
+
+    // call active links
+    std::vector<Link*> activeLinks;
+    activeLinks.reserve(links.size());
+    for (auto& link : links) {
+        if (activeNodeIds.find(link.from) != activeNodeIds.end() &&
+            activeNodeIds.find(link.to) != activeNodeIds.end()) {
+            activeLinks.push_back(&link);
+        }
+    }
+
+    // std::cout << "Found " << activeNodeIds.size() << " active nodes and "
+    //           << activeLinks.size() << " active links" << std::endl;
+
+    // ordered node list and mapping
+    std::vector<int> orderedNodeIds(activeNodeIds.begin(), activeNodeIds.end());
+    std::sort(orderedNodeIds.begin(), orderedNodeIds.end());
+
+    std::unordered_map<int, int> nodeIndexMap;
+    for (int i = 0; i < orderedNodeIds.size(); ++i) {
+        nodeIndexMap[orderedNodeIds[i]] = i;
+    }
+
+    // create adjacency list for active nodes
+    std::unordered_map<int, std::vector<int>> activeNeighbors;
+    for (const Link* link : activeLinks) {
+        activeNeighbors[link->from].push_back(link->to);
+        activeNeighbors[link->to].push_back(link->from);
+    }
+
+
+
+    // Constants
+    const double rho = 997.0;
+    const double mu = 8.90e-04;
+    const double err_max = 1e-3;
+    const int max_iter = 1000;
+
+    const int numNodes = orderedNodeIds.size();
+
+    // water source index
+    int waterSourceIndex = -1;
+    if (nodeIndexMap.find(waterSourceId) != nodeIndexMap.end()) {
+        waterSourceIndex = nodeIndexMap[waterSourceId];
+    } else {
+        helios::helios_runtime_error("ERROR (IrrigationModel::calculateHydraulicsMultiZoneOptimized): Water source not in active nodes.");
+        return HydraulicResults();
+    }
+
+    // std::cout << "Water source index = " << waterSourceIndex
+    //           << " (node ID = " << waterSourceId << ")" << std::endl;
+
+    // Build compressed sparse row structure
+    std::vector<int> rowPtr(numNodes + 1, 0);
+    std::vector<std::vector<int>> neighborIdxList(numNodes);
+    std::vector<std::vector<Link*>> neighborLinkList(numNodes);
+    std::vector<std::vector<double>> neighborResistance(numNodes);
+
+    // Link lookup map
+    auto makeKey = [](int a, int b) -> uint64_t {
+        int lo = std::min(a, b);
+        int hi = std::max(a, b);
+        return (static_cast<uint64_t>(lo) << 32) | static_cast<uint32_t>(hi);
+    };
+
+    std::unordered_map<uint64_t, Link*> linkByKey;
+    linkByKey.reserve(activeLinks.size() * 2);
+    for (Link* link : activeLinks) {
+        linkByKey[makeKey(link->from, link->to)] = link;
+    }
+
+    // Build neighbor lists and count non-zeros
+    for (int i = 0; i < numNodes; ++i) {
+        int nodeId = orderedNodeIds[i];
+        if (activeNeighbors.count(nodeId)) {
+            for (int neighborId : activeNeighbors[nodeId]) {
+                auto it = nodeIndexMap.find(neighborId);
+                if (it == nodeIndexMap.end()) continue;
+
+                uint64_t key = makeKey(nodeId, neighborId);
+                auto linkIt = linkByKey.find(key);
+                if (linkIt == linkByKey.end()) continue;
+
+                neighborIdxList[i].push_back(it->second);
+                neighborLinkList[i].push_back(linkIt->second);
+                neighborResistance[i].push_back(0.0); // Will be filled later
+            }
+        }
+        // Each node has diagonal  & one entry per neighbor
+        rowPtr[i + 1] = rowPtr[i] + 1 + static_cast<int>(neighborIdxList[i].size());
+    }
+
+    // Allocate CSR arrays
+    std::vector<int> colIdx(rowPtr.back());
+    std::vector<double> values(rowPtr.back(), 0.0);
+    std::vector<double> RHS(numNodes, 0.0);
+
+    // Fill column indices
+    for (int i = 0; i < numNodes; ++i) {
+        int base = rowPtr[i];
+        colIdx[base] = i; // Diagonal
+
+        for (size_t k = 0; k < neighborIdxList[i].size(); ++k) {
+            colIdx[base + 1 + static_cast<int>(k)] = neighborIdxList[i][k];
+        }
+    }
+
+    // Initialize flow variables
+    std::vector<double> nodalPressure(numNodes, 0.0);
+    std::vector<double> nodalPressure_old(numNodes, 0.0);
+
+    // Set initial emitter flows
+    double waterSourcePressurePa = Pw * 6894.76;
+    for (int nodeId : orderedNodeIds) {
+        Node& node = nodes[nodeId];
+        if (node.type == "emitter" && node.isActive) {
+            node.flow = Qspecified;
+        }
+    }
+
+    // Main iteration loop
+    double err = 1e6;
+    int iter = 1;
+
+    // set initial pressure guess for a start
+    for (int i = 0; i < numNodes; ++i) {
+        if (i == waterSourceIndex) {
+            nodalPressure[i] = waterSourcePressurePa;
+        } else {
+            // Linear decay from source
+            nodalPressure[i] = waterSourcePressurePa * 0.5; //check this decay
+        }
+    }
+
+    while (std::abs(err) > err_max && iter < max_iter) {
+       // std::cout << "Iteration " << iter << ", current error: " << err << std::endl;
+
+        // Reset matrix and RHS
+        std::fill(values.begin(), values.end(), 0.0);
+        std::fill(RHS.begin(), RHS.end(), 0.0);
+
+        // Build matrix and RHS
+        for (int i = 0; i < numNodes; ++i) {
+            int nodeId = orderedNodeIds[i];
+
+            if (i == waterSourceIndex) {
+                // Fixed pressure boundary condition
+                int base = rowPtr[i];
+                values[base] = 1.0;  // A[i][i] = 1
+                RHS[i] = waterSourcePressurePa;  // b[i] = Pw
+                continue;
+            }
+
+            int base = rowPtr[i];
+            double diag = 0.0;
+
+            if (neighborIdxList[i].empty()) {
+                // Isolated node - no flow condition
+                values[base] = 1.0;  // Pi = 0
+                RHS[i] = 0.0;
+                continue;
+            }
+
+            // For each neighbor
+            for (size_t k = 0; k < neighborIdxList[i].size(); ++k) {
+                int j = neighborIdxList[i][k];
+                Link* link = neighborLinkList[i][k];
+
+                // Calculate current flow velocity for this link
+                double deltaP = nodalPressure[i] - nodalPressure[j];
+                double W_bar_ij = 0.0;
+
+                // Estimate current velocity (use previous iteration or initial guess)
+                if (iter == 1) {
+                    // Initial guess based on pressure difference
+                    W_bar_ij = std::abs(deltaP) / (rho * 9.81 * link->length);
+                } else {
+                    // Use velocity from previous iteration
+                    W_bar_ij = std::abs(link->flow) / (M_PI/4.0 * link->diameter * link->diameter);
+                }
+
+                // Reynolds number
+                double Re_ij = std::abs(W_bar_ij) * link->diameter * rho / mu;
+
+                // call minor loss coefficient
+                double Kf_barb = minorLoss_kf(Re_ij, sprinklerAssemblyType);
+
+                // Calculate resistance term
+                double Rval = calculateResistance(Re_ij, W_bar_ij, Kf_barb, *link, iter);
+                neighborResistance[i][k] = Rval;
+
+                if (Rval > 1e-12) {
+                    double invR = 1.0 / Rval;
+
+                    // Diagonal contribution
+                    diag += invR;
+
+                    // Off-diagonal contribution
+                    values[base + 1 + static_cast<int>(k)] = -invR;
+
+                    // Elevation contributions to RHS
+                    const auto& node_i = nodes[nodeId];
+                    const auto& node_j = nodes[orderedNodeIds[j]];
+                    double elevation_diff = node_i.position.z - node_j.position.z;
+                    double elevation_pressure = rho * 9.81 * elevation_diff;
+
+                    // Distribute elevation effect (half to each node)
+                    RHS[i] += elevation_pressure * invR * 0.5;
+                }
+            }
+
+            // Set diagonal
+            values[base] = diag;
+
+            // Flow demand (negative for outflow, positive for inflow)
+            if (nodes[nodeId].type == "emitter") {
+                RHS[i] -= nodes[nodeId].flow;  // Outflow is negative source
+            }
+        }
+
+        // Solve linear system with Gauss-seidel
+        std::vector<double> x = nodalPressure;
+
+        // run Gauss-Seidel iterations
+        const int gs_max_iter = 1000;
+        const double gs_tol = 1e-6;
+
+        for (int gs_iter = 0; gs_iter < gs_max_iter; ++gs_iter) {
+            double max_diff = 0.0;
+
+            for (int i = 0; i < numNodes; ++i) {
+                if (i == waterSourceIndex) {
+                    x[i] = waterSourcePressurePa;  // Fixed
+                    continue;
+                }
+
+                double sum = RHS[i];
+                double diag = values[rowPtr[i]];
+
+                // Subtract contributions from neighbors
+                for (int idx = rowPtr[i] + 1; idx < rowPtr[i + 1]; ++idx) {
+                    int j = colIdx[idx];
+                    sum -= values[idx] * x[j];
+                }
+
+                if (std::abs(diag) > 1e-12) {
+                    double x_new = sum / diag;
+                    max_diff = std::max(max_diff, std::abs(x_new - x[i]));
+                    x[i] = x_new;
+                }
+            }
+
+            if (max_diff < gs_tol) {
+                std::cout << "  GS converged in " << gs_iter << " iterations" << std::endl;
+                break;
+            }
+        }
+
+        nodalPressure = x;
+
+        // Update link flows based on new pressures
+        for (int i = 0; i < numNodes; ++i) {
+            for (size_t k = 0; k < neighborIdxList[i].size(); ++k) {
+                int j = neighborIdxList[i][k];
+                Link* link = neighborLinkList[i][k];
+
+                double deltaP = nodalPressure[i] - nodalPressure[j];
+                double Rval = neighborResistance[i][k];
+
+                if (Rval > 1e-12) {
+                    double Q = deltaP / Rval;
+                    link->flow = std::abs(Q);
+                }
+            }
+        }
+
+        // Update emitter flows based on new pressures
+        for (int i = 0; i < numNodes; ++i) {
+            int nodeId = orderedNodeIds[i];
+            Node& node = nodes[nodeId];
+
+            if (node.type == "emitter" && node.isActive) {
+
+                double pressure_psi = nodalPressure[i] / 6894.76;
+                double new_flow = Qspecified;
+                if (Pw > 0) {
+                    new_flow = calculateEmitterFlow (sprinklerAssemblyType, pressure_psi,false); //default is True and enables global update
+
+                    if (std::isnan(new_flow) || std::isinf(new_flow)) {
+                        new_flow = 0.0;
+                    }
+                    node.flow = new_flow;
+                }
+            }
+        }
+
+        // Error calculation
+        if (iter > 1) {
+            err = 0.0;
+            for (int i = 0; i < numNodes; ++i) {
+                if (i == waterSourceIndex) continue;
+                double diff = nodalPressure[i] - nodalPressure_old[i];
+                err += diff * diff;
+            }
+            err = std::sqrt(err / (numNodes - 1));
+          //  std::cout << "  Pressure change RMS: " << err << " Pa" << std::endl;
+        }
+
+        nodalPressure_old = nodalPressure;
+        iter++;
+
+        // Early convergence check
+        if (err < err_max) {
+            std::cout << "Converged at iteration " << iter << std::endl;
+            break;
+        }
+    }
+
+    // check pressure distribution
+    std::cout << "\n Final pressure distribution" << std::endl;
+    std::cout << "Node id | Type | Pressure (psi) | Flow (m3/s)" << std::endl;
+
+    for (int i = 0; i < numNodes; ++i) {
+        int nodeId = orderedNodeIds[i];
+        const Node& node = nodes[nodeId];
+        double pressure_psi = nodalPressure[i] / 6894.76;
+
+        std::cout << std::setw(6) << nodeId << " | "
+                  << std::setw(15) << node.type << " | "
+                  << std::setw(10) << std::fixed << std::setprecision(2) << pressure_psi << " | ";
+
+        if (node.type == "emitter") {
+            std::cout << std::scientific << std::setprecision(4) << node.flow;
+        } else {
+            std::cout << "N/A";
+        }
+        std::cout << std::endl;
+    }
+
+    // Check water source
+    if (waterSourceIndex >= 0) {
+        std::cout << "\nWater source: P = " << nodalPressure[waterSourceIndex]/6894.76
+                  << " psi (target: " << Pw << " psi)" << std::endl;
+    }
+
+    // Prepare results
+    HydraulicResults results;
+    results.nodalPressures.resize(numNodes);
+    results.flowRates.resize(activeLinks.size());
+    results.converged = (err <= err_max);
+    results.iterations = iter;
+
+    // Convert pressures to psi and update nodes
+    double totalEmitterFlow = 0.0;
+    for (int i = 0; i < numNodes; ++i) {
+        results.nodalPressures[i] = nodalPressure[i] / 6894.76;
+        int nodeId = orderedNodeIds[i];
+        nodes[nodeId].pressure = results.nodalPressures[i];
+
+        // Collect emitter flows
+        if (nodes[nodeId].type == "emitter" && nodes[nodeId].isActive) {
+            results.emitterFlows.push_back(nodes[nodeId].flow);
+            totalEmitterFlow += nodes[nodeId].flow;
+        }
+    }
+
+    // Update link flows
+    for (size_t i = 0; i < activeLinks.size(); ++i) {
+        results.flowRates[i] = activeLinks[i]->flow;
+    }
+
+    std::cout << "\n Hydraulic result summary" << std::endl;
+    std::cout << "Converged: " << (results.converged ? "YES" : "NO") << std::endl;
+    std::cout << "Iterations: " << iter << std::endl;
+    std::cout << "Final error: " << err << std::endl;
+    std::cout << "Total emitter flow: " << totalEmitterFlow * 1000 * 3600 << " L/hr" << std::endl;
+    std::cout << "Number of emitters: " << results.emitterFlows.size() << std::endl;
+
+    if (!results.converged && iter >= max_iter) {
+        helios::helios_runtime_error("ERROR (IrrigationModel::calculateHydraulicsMultiZoneOptimized): Solver did not converge in " +
+            std::to_string(max_iter) + " iterations");
+    }
+
+    return results;
+}
+
+void IrrigationModel::clearActiveNodeCache()
+{
+    activeNodeCache.clear();
+    currentValveConfigHash = 0;
+    std::cout << "Active node cache cleared." << std::endl;
+}
+
+size_t IrrigationModel::getCacheSize() const
+{
+    return activeNodeCache.size();
+}
+
+void IrrigationModel::printActiveNodeStats() const
+{
+    std::cout << "\n Active Node Info" << std::endl;
+    std::cout << "Cache size: " << activeNodeCache.size() << " configurations" << std::endl;
+    std::cout << "Current valve configuration hash: " << currentValveConfigHash << std::endl;
+
+    // Count active nodes in current configuration
+    int activeCount = 0;
+    for (const auto& [id, node] : nodes) {
+        if (node.isActive) activeCount++;
+    }
+    std::cout << "Currently active nodes: " << activeCount << " / " << nodes.size() << std::endl;
+
+    // Print valve states
+    std::cout << "\nValve States:" << std::endl;
+    for (const auto& [id, node] : nodes) {
+        if (node.type == "zone_valve") {
+            std::cout << "  Valve " << id << " (Zone " << node.zoneID
+                      << "): " << (node.isValveOpen ? "OPEN" : "CLOSED") << std::endl;
+        }
+    }
+}
+
+void IrrigationModel::activateAllZones()
+{
+    std::cout << "Activating all zones..." << std::endl;
+    for (auto& [id, node] : nodes) {
+        if (node.type == "zone_valve") {
+            node.isValveOpen = true;
+        }
+    }
+    updateActiveNodesFast();
+}
+
+void IrrigationModel::deactivateAllZones()
+{
+    std::cout << "Deactivating all zones..." << std::endl;
+    for (auto& [id, node] : nodes) {
+        if (node.type == "zone_valve") {
+            node.isValveOpen = false;
+        }
+    }
+    updateActiveNodesFast();
+}
+
+void IrrigationModel::activateSingleZone(int zoneID)
+{
+    std::cout << "Activating single zone " << zoneID << "..." << std::endl;
+    deactivateAllZones();
+    openZoneValve(zoneID);
+}
+
+void IrrigationModel::activateZones(const std::vector<int>& zoneIDs)
+{
+    std::cout << "Activating zones: ";
+    for (int zoneID : zoneIDs) {
+        std::cout << zoneID << " ";
+    }
+    std::cout << std::endl;
+
+    deactivateAllZones();
+    for (int zoneID : zoneIDs) {
+        openZoneValve(zoneID);
+    }
+}
+
+void IrrigationModel::initialize()
+{
+    // valve-to-nodes mapping
+    buildValveToNodesMapping();
+    updateActiveNodesFast(); //default
+}
+
+// Provide both for flexibility
+void IrrigationModel::setActiveNodeMethod(bool useFastMethod)
+{
+    if (useFastMethod) {
+        updateActiveNodesFast();          // Use cached fast method
+    } else {
+        updateActiveNodesByTreeTraversal();         // Use simple tree traversal
+    }
+}
+
+
 
 // // ─────────────── Global DXF-parsing constants ─────────────────────────── //
 // namespace {

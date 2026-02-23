@@ -16,12 +16,14 @@
 #ifndef IRRIGATIONMODEL_H
 #define IRRIGATIONMODEL_H
 
-#include <vector>
+#include <cmath>
+#include <cstdint>
 #include <map>
+#include <stdexcept> // For std::runtime_error
 #include <string>
 #include <unordered_map>
-#include <cmath>
-#include <stdexcept>  // For std::runtime_error
+#include <unordered_set>
+#include <vector>
 
 const double INCH_TO_METER = 0.0254;
 const double FEET_TO_METER = 0.3048;
@@ -36,11 +38,11 @@ struct SprinklerAssembly {
     std::string name;
     ComponentSpecs barbToEmitter;
     ComponentSpecs lateralToBarb;
-    std:: string emitterType;
+    std::string emitterType;
     double emitter_x;  // flow power
     double emitter_k; // flow coefficient
     double stakeHeight;
-    std:: string barbType;
+    std::string barbType;
 };
 
 
@@ -49,6 +51,7 @@ class SprinklerConfigLibrary {
     std::unordered_map<std::string, SprinklerAssembly> sprinklerLibrary;
 
 public:
+
     SprinklerConfigLibrary();
 
     void registerSprinklerAssembly(const SprinklerAssembly& type);
@@ -56,7 +59,7 @@ public:
     const SprinklerAssembly& getSprinklerType(const std::string& typeName) const;
     std::vector<std::string> getAvailableTypes() const;
 
-    // Pre-configured sprinkler types
+    // sprinkler types stored based on experimental data
     static SprinklerAssembly create_NPC_Nelson_flat();
     static SprinklerAssembly create_NPC_Toro_flat();
     static SprinklerAssembly create_NPC_Toro_sharp();
@@ -86,7 +89,9 @@ struct Node {
     bool is_fixed;
     double flow; //include flow rate if the node is an emitter
     std::vector<int> neighbors;
-    int zoneID = 0; // default one zone
+    int zoneID = 0; //
+    bool isActive = false;  // node active state for hydraulic calculation later
+    bool isValveOpen = false; // this is for zone_valve nodes only
 };
 
 struct Link {
@@ -97,7 +102,6 @@ struct Link {
     std::string type;
     double flow; //m3/s
     int zoneID = 0;
-    //velocity
 
     // Helper method
     std::string toString() const {
@@ -142,24 +146,28 @@ class IrrigationModel {
 public:
     std::unordered_map<int, Node> nodes;
     std::vector<Link> links;
+    size_t getCacheSize() const;
 
     // Main system creation
     IrrigationModel() : sprinklerLibrary() {} // calls SprinklerConfigLibrary constructor
     int getWaterSourceId() const;
     int getNextNodeId() const;
+    const std::unordered_map<int, Node>& getNodes() const;
+    const std::vector<Link>& getLinks() const;
+    std::vector<int> getNodesByType(const std::string& type) const;
+    std::vector<Link> getLinksByType(const std::string& type) const;
+
     // Print network in visualization format
     void printNetwork() const;
     HydraulicResults calculateHydraulics(bool doPreSize, const std::string& sprinklerAssemblyType,
                                                      double Qspecified, double Pw,
                                                      double V_main, double V_lateral);
     std::string getSystemSummary() const;
-    double calculateEmitterFlow(const std::string& sprinklerAssemblyType, double pressure);
+    double calculateEmitterFlow(const std::string& sprinklerAssemblyType,
+                                double pressure,
+                                bool updateEmitterNodes = true);
     void setBoundaryPolygon(const std::vector<Position>& polygon);
-    void createIrregularSystem(double Pw, const std::vector<Position>& boundary,
-                                 double sprinklerSpacing, double lineSpacing,
-                                 const std::string& connectionType,
-                                 const std::string& sprinklerConfig,
-                                 SubmainPosition submainPos);
+
     void preSizePipes(double V_main = 1.5, double V_lateral = 2.0);
     //! Self-test
     /**
@@ -171,10 +179,90 @@ public:
     void printPressureLossAnalysis(const IrrigationModel& system);
     void writePressureLossesToFile(const IrrigationModel& system, const std::string& filename);
 
- //   std::vector<double> getBarbToEmitterPressureLosses() const;
- //   std::vector<double> getLateralToBarbPressureLosses() const;
     double getPressureDifference(int nodeId1, int nodeId2) const;
     std::vector<std::pair<int, int>> findConnectedNodePairs(const std::string& type1, const std::string& type2) const;
+    bool connectionExists(int node1, int node2) const;
+    void createVirtualConnection(int node1, int node2,
+                                               const ComponentSpecs& specs,
+                                               const std::string& connectionType,
+                                               const std::string& assemblyType);
+    int countNodesByType(const std::string& type) const;
+    int getMaxNodeId() const;
+    void createAssembliesFromIrricad(const std::string& sprinklerAssemblyType);
+    // void addWaterSource(double fieldLength, double fieldWidth,
+    //                                const std::string& lateralDirection,
+    //                                SubmainPosition submainPosition);
+    bool loadFromTextFile(const std::string& filename);
+
+    void validateHydraulicSystem() const;
+    void writeMatrixToFile(const std::vector<std::vector<double>>& A,
+                                          const std::vector<double>& RHS,
+                                          const std::vector<int>& orderedNodeIds,
+                                          const std::string& filename);
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Multi-zone functionality
+    void assignZones(
+        int numZones,
+        const std::vector<std::vector<Position>>& zoneBoundaries,
+        double Pw,
+        double sprinklerSpacing,
+        double lineSpacing,
+        const std::string& connectionType,
+        const std::string& sprinklerConfig,
+        SubmainPosition submainPos
+    );
+
+    // Zone query functions
+    std::vector<int> getNodesByZone(int zoneID) const;
+    std::vector<size_t> getLinksByZone(int zoneID) const;
+
+
+    //functions to help simulate any combination of active zones
+    // HydraulicResults calculateHydraulicsByZone(int activeZoneID,
+    //                                          bool doPreSize,
+    //                                          const std::string& sprinklerAssemblyType,
+    //                                          double Qspecified,
+    //                                          double Pw,
+    //                                          double V_main,
+    //                                          double V_lateral);
+
+    // Helper methods
+    // using cached BFS using valve control
+    void openZoneValve(int zoneID);
+    void closeZoneValve(int zoneID);
+    bool isZoneValveOpen(int zoneID) const;
+    void setZoneValveState(int zoneID, bool open);
+    // fast call for changing zone_valve state
+    void activateAllZones();
+    void deactivateAllZones();
+    void activateSingleZone(int zoneID);
+    void activateZones(const std::vector<int>& zoneIDs);
+    HydraulicResults calculateHydraulicsMultiZoneOptimized(
+        bool doPreSize,
+        const std::string& sprinklerAssemblyType,
+        double Qspecified,
+        double Pw,
+        double V_main,
+        double V_lateral);
+    void initialize();
+    void setActiveNodeMethod(bool useFastMethod);
+    void checkUnassignedNodes();
+
+    // function to generate the system curve (GPM vs head in feet)
+    std::vector<std::pair<double, double>> generateSystemCurve(
+            const std::vector<double>& emitterRequiredPressure,
+            const std::string& sprinklerAssemblyType,
+            double V_main,
+            double V_lateral,
+            int referenceNodeId = -1,
+            double staticHead = 0.0);
+
+    void writeSystemCurveToCsvWithFit(const std::string& filename,
+                                      const std::vector<std::pair<double, double>>& curve) const;
+    static std::tuple<double, double, double> fitCurveQuadratic(
+            const std::vector<std::pair<double, double>>& curve);
+
 
 private:
 
@@ -197,23 +285,28 @@ private:
                                                  const Position& segStart,
                                                  const Position& segEnd) const; //helper
     void createAndConnectWaterSource(const std::vector<int>& submainNodeIds);
-    void addSubmainAndWaterSourceIrregular(double fieldLength, double fieldWidth,
-                                                          const std::string& lateralDirection,
-                                                          SubmainPosition submainPosition);
+    // void addSubmainAndWaterSourceIrregular(double fieldLength, double fieldWidth,
+    //                                                       const std::string& lateralDirection,
+    //                                                       SubmainPosition submainPosition);
 
-    std::vector<int> createHorizontalSubmain(const Position& startPos, double fieldLength);
-    std::vector<int> createVerticalSubmain(const Position& startPos, double fieldWidth);
+    std::vector<int> createHorizontalSubmain(const Position& startPos, double fieldLength,
+                                             const std::vector<Position>& boundary, double lineSpacing, int zoneID);
+    std::vector<int> createVerticalSubmain(const Position& startPos, double fieldWidth,
+                                         const std::vector<Position>& boundary, double lineSpacing, int zoneID);
+    // std::vector<int> createHorizontalSubmain(const Position& startPos, double fieldLength);
+    // std::vector<int> createVerticalSubmain(const Position& startPos, double fieldWidth);
+
     void createSprinklerSystemGeneral(double fieldLength, double fieldWidth,
                                               double sprinklerSpacing, double lineSpacing,
                                               const std::string& connectionType,
-                                              const std::string& sprinklerAssembly);
+                                              const std::string& sprinklerConfig, double minX, double minY, int zoneID);
 
-    Position calculateWaterSourcePosition(double fieldLength, double fieldWidth,
-                                        const std::string& lateralDirection) const;
+    // Position calculateWaterSourcePosition(double fieldLength, double fieldWidth,
+    //                                     const std::string& lateralDirection) const;
 
     void validateParameters(double fieldLength, double fieldWidth,
                   double sprinklerSpacing, double lineSpacing) const; //include into the createCompleteSystem()
-    void validateHydraulicSystem() const;
+    // void validateHydraulicSystem() const;
     void validateSubmainConnectivity() const;
     void validateMinimumSprinklersPerRow() const;
     void validateCompleteSprinklerUnits() const;
@@ -223,31 +316,23 @@ private:
     Position calculateLateralMidpoint(const Link* lateral) const;
     bool hasCompleteSprinklerUnit(int junctionId) const;
 
-    void splitLateralAndConnect(const Link* lateral, int submainNodeId, std::map<double, std::vector<size_t>>& rowLaterals, const std::string& lateralDirection);
+    void splitLateralAndConnect(const Link* lateral, int submainNodeId, std::map<double, std::vector<size_t>>& rowLaterals,
+        const std::string& lateralDirection, int zoneID);
     Position findOptimalConnectionPointOnLateral(const Link* lateral, const Position& submainPos) const;
     // to ensure that there are at least two microsprinkler assemblies in each row
     bool hasEmitterConnection(int barbId) const;
-    void addSubmainAndWaterSource(double fieldLength, double fieldWidth,
-                                             const std::string& lateralDirection,
-                                             SubmainPosition submainPosition);
 
     void buildNeighborLists();
     static double calculateResistance(double Re, double Wbar, double Kf_barb, const Link& link, int iter);
-   // double minorLoss_kf(double Re, const std::string& name = "NPC_flat_barb");
     double minorLoss_kf(const double Re, const std::string& sprinklerAssemblyType);
     const Link* findLink(int from, int to) const;
     Link* findLink(int from, int to); //for updating flow
-
 
     //adding new functions
     Position calculatePolygonBasedSubmainPosition(SubmainPosition position,
                                                              double fieldLength, double fieldWidth) const;
 
-    Position calculateLineIntersection(const Position& p1, const Position& p2,
-                                                  const Position& p3, const Position& p4) const;
-
-    void connectSubmainToLaterals(const std::vector<int>& submainNodeIds,
-                                             const std::string& lateralDirection);
+    void connectSubmainToLaterals(const std::vector<int>& submainNodeIds, const std::string& lateralDirection, int zoneID);
 
     const Link* findOptimalLateralForConnection(
         const std::map<double, std::vector<size_t>>& rowLaterals, // map of rowKey -> lateral indices
@@ -255,98 +340,101 @@ private:
         double expectedRowKey,          // Ensure same row
         const std::string& lateralDirection) const;
 
-    Position calculateSubmainLateralIntersection(const Position& submainPos,
-                                                            const Position& lateralStart,
-                                                            const Position& lateralEnd,
-                                                            const std::string& lateralDirection) const;
     void validateSubmainConnections(const std::vector<int>& submainNodeIds) const;
-    int findNearestSubmainNode(const Position& point,
-                                          const std::vector<int>& submainNodeIds,
-                                          double expectedRowKey,
-                                          const std::string& lateralDirection,
-                                          double tolerance = 1.0) const;
-    double calculateLateralCentrality(const Link* lateral,
-                                                 const std::vector<const Link*>& rowLaterals) const;
+
     bool validateLink(const Link& link) const;
 
-    double calculateLateralLength(const Link* lateral) const;
+   // double calculateLateralLength(const Link* lateral) const;
     double computeLinkFlows(int nodeId, int parentId,
-                        const std::unordered_map<int, std::vector<int>>& adj);
-    // recursion function to calculate flows upstream
-    //double getFlowUpstream(int nodeId, int parentId);
-    // help functions for delineating irrigation zones
-    void assignZones(int numZones, ZoningMode mode, int zonesX = 1, int zonesY = 1);
-    void addSubmainAndValve(int zoneId);
-   // void activateZone(int zoneId, double Qspecified);
+                        const std::unordered_map<int, std::vector<int>>& adj,
+                        std::unordered_set<int>& visited); // recursion function to calculate flows upstream
+
+    /////// functions to assist irricad layout re creation
+    void recreateLateralConnections();
+    void removeExistingLateralConnections();
+    void createLateralSegments();
+    void connectLateralsToSubmain();
+    bool shouldRemoveLateralNeighbor(int nodeId1, int nodeId2);
+    void createLateralConnection(int startNode, int endNode, double distance);
+    int findClosestLateralToSubmain(const std::vector<int>& lateralNodes,
+                                               const std::vector<int>& submainNodes);
+    int findClosestSubmainNode(int lateralNode, const std::vector<int>& submainNodes);
+    void createLateralToSubmainConnection(int lateralNode, int submainNode, double distance);
+    std::vector<int> getSubmainNodeIdsFromLinks();
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////
+    ///
+    // Zone-specific system creation
+    void createIrregularSystemForZone(
+        const std::vector<Position>& boundary,
+        double sprinklerSpacing,
+        double lineSpacing,
+        const std::string& connectionType,
+        const std::string& sprinklerConfig,
+        SubmainPosition submainPos,
+        int zoneID
+    );
+    Position calculateOptimalSubmainPositionForZone(
+        SubmainPosition position, double minX, double minY,
+        double fieldLength, double fieldWidth);
+
+    // Zone submain management
+    void addSubmainForZone(double fieldLength, double fieldWidth,
+                                          const std::string& lateralDirection,
+                                          SubmainPosition submainPosition,
+                                          int zoneID,
+                                          double lateralSpacing);
+
+    // Valve and connection management
+    void addZoneValveAndConnect(int zoneID, const std::vector<Position>& zoneBoundary);
+    Position calculateZoneCentroid(const std::vector<Position>& boundary) const;
+    int findZoneSubmainJunction(int zoneID) const;
+    int createZoneSubmainJunction(int zoneID, const std::vector<Position>& zoneBoundary);
+
+    // newly added functions
+    Position calculateOptimalValvePosition(const Position& submainPos,
+                                      const std::vector<Position>& zoneBoundary);
+
+    void connectValveToSubmainWith90Degree(int valveId, int submainId, int zoneID);
+
+    void connectWaterSourceToValveWith90Degree(int valveId, int zoneID);
+
+
+    //Helper functions for updated assignZone function
+    void create90DegreeConnection(int fromNodeId, int toNodeId, int zoneID);
+    void optimizeZoneValveConnections();
+    void cleanupMainlineNetwork();
+
+
+    // adding function to track irrigation zone active state
+    std::unordered_map<int, bool> zoneActiveState; // zoneID -> isActive
+    std::unordered_map<int, double> zoneDemand;    // zoneID -> total flow demand
+
+
+    // functions to do BFS for checking node active state & option to do cached optimization
+    std::unordered_map<std::uint32_t, std::unordered_set<int>> activeNodeCache;
+    uint32_t currentValveConfigHash = 0;
+
+    // Pre-computed valve-to-nodes mapping
+    std::unordered_map<int, std::unordered_set<int>> valveToNodes;
+
+    // Helper methods
+    void bfsCollectNodes(int startId, int targetZoneID, std::unordered_set<int>& result);
+    uint32_t computeValveConfigHash() const;
+    void ensureMainlineConnectivity(std::unordered_set<int>& activeNodes);
+    void propagateMainlineActivation();
+    const std::unordered_set<int>& getActiveNodesCached();
+    void updateActiveNodesFast();
+    void updateActiveNodesByTreeTraversal();
+    void bfsFromValve(int valveId);
+    void buildValveToNodesMapping();
+
+
+    void clearActiveNodeCache();
+    void printActiveNodeStats() const;
+
 
 };
-
-/*
-struct IrrigationPipe {
-    int    n1{-1}, n2{-1}; //!< node indices
-    double length{0.0};    //!< centre-to-centre length [m]
-    double diameter{0.05}; //!< internal diameter [m]
-    double kminor{1.0};    //!< minor-loss coefficient
-    double resistance{0.0};
-};
-*/
-
-// ─────────────────────── Main class ───────────────────────────────────── //
-/*class IrrigationModel {
-public:
-    explicit IrrigationModel(helios::Context* ctx);
-
-    int readDXF (const std::string& filename); //!< import geometry
-    int solve();                            //!< compute pressures
-    int writeDXF(const std::string& filename) const;
-
-    int selfTest();
-
-private:
-    // ――― utilities ――― //
-    int  getOrCreateNode(double x, double y);
-    int  addPipe(int n1, int n2, double L,
-                 double diameter, double kminor = 1.0);
-
-    static double pipeResistance(const IrrigationPipe& p);
-    void checkConnectivity() const;
-
-    // ――― DXF helpers ――― //
-    int parseLineEntity     (const std::map<int, std::string>& ent);
-    int parseLWPolylineEntity(const std::vector<std::pair<int, std::string>>&);
-    int parsePolylineEntity (const std::vector<std::pair<int, std::string>>&,
-                             const std::vector<std::vector<
-                                 std::pair<int, std::string>>>&);
-
-    // ――― internal solver ――― //
-    std::vector<double> solveLinear(std::vector<std::vector<double>> A,
-                                    std::vector<double>              b) const;
-
-    // ――― data ――― //
-    helios::Context*               context{nullptr};
-    std::vector<IrrigationNode>    nodes;
-    std::vector<IrrigationPipe>    pipes;
-};*/
-//
-// class IrrigationModel{
-// public:
-//     explicit IrrigationModel(helios::Context* context);
-//
-//     // Core functionality
-//     void createBasicSystem(float field_length, float field_width);
-//     void solveHydraulics();
-//
-//     // Getters
-//     const std::vector<IrrigationNode>& getNodes() const { return nodes; }
-//     const std::vector<IrrigationPipe>& getPipes() const { return pipes; }
-//
-// private:
-//     helios::Context* context;
-//     std::vector<IrrigationNode> nodes;
-//     std::vector<IrrigationPipe> pipes;
-//
-//     void calculatePipeResistances();
-// };
-
 
 #endif

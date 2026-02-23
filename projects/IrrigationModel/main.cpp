@@ -1,7 +1,13 @@
 #include "/home/yuanzzzy/CLionProjects/Helios/plugins/irrigation/include/IrrigationModel.h"
 
-#include <iostream>
+#include <cmath>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <numeric>
+#include <filesystem>
+
+
 
 int main(){
 
@@ -9,65 +15,70 @@ int main(){
     //IrrigationModel model(&context);
     IrrigationModel system;
 
+
+    // Load the converted IRRICAD data
+    // if (!system.loadFromTextFile("/home/yuanzzzy/CLionProjects/Helios/plugins/irrigation/utilities/convertedIrricad_system.txt")) {
+    //     std::cerr << "Failed to load system data" << std::endl;
+    //     return 1;
+    // }
+
     // Create a sprinkler system with parameters:
     // - Working pressure (Pw): 30 psi
     // - Field dimensions: 100m x 50m
     // - Sprinkler spacing: 10m
     // - Lateral spacing: 12m
-    // - Connection type: "vertical" (could also be "horizontal")
-
-    double Pw = 35.0;
-        // system.createCompleteSystem(
-        //     Pw,    // Pw (psi)
-        //     44.0 * IrrigationModel::FEET_TO_METER,   // fieldLength (m)
-        //     32.0 * IrrigationModel::FEET_TO_METER,    // fieldWidth (m)
-        //     22.0 * IrrigationModel::FEET_TO_METER,    // lineSpacing (m)
-        //     16.0 * IrrigationModel::FEET_TO_METER,    // sprinklerSpacing (m)
-        //     "vertical", // lateralDirection
-        //     SubmainPosition:: MIDDLE
-        // );
-    //
-    // std::vector<Position> boundary = {
-    //     {0, 0}, {44.0 * IrrigationModel::FEET_TO_METER, 0}, {0, 32.0 * IrrigationModel::FEET_TO_METER}, {44.0 * IrrigationModel::FEET_TO_METER, 32.0 * IrrigationModel::FEET_TO_METER}
-    // };
+    // - Connection type: "vertical" (or be "horizontal")
 
 
-    double lineSpacing = 22.0* FEET_TO_METER;
-    double sprinklerSpacing = 16.0* FEET_TO_METER;
-    double fieldWidth = 3*sprinklerSpacing;
-    double fieldLength = 3*lineSpacing;
-    std::vector<Position> Boundary = { //rectangular field
-         {0, 0}, {fieldLength,0}, {fieldLength, fieldWidth}, {0,fieldWidth} //coordinates need to be in anti-clockwise
+    std::vector<Position> boundary = {
+        {0, 0}, {2*44.0 * 0.305, 0}, {0, 2*32.0 * 0.305}, {2*44.0 * 0.305, 2*32.0 * 0.305}
     };
+
+        // double lineSpacing = 22.0* FEET_TO_METER;
+        // double sprinklerSpacing = 16.0* FEET_TO_METER;
+        // double fieldWidth = 4 *sprinklerSpacing;
+        // double fieldLength =3* lineSpacing;
+        //
+        // std::vector<Position> Boundary = { //rectangular field
+        //      {0, 0}, {fieldLength,0}, {fieldLength, fieldWidth}, {0,fieldWidth} //coordinates need to be in anti-clockwise
+        // };
 
    // Example of how to use the irregular system
    // std::vector<Position> irregularBoundary = {
    //     {0, 0}, {50, 0}, {75, 25}, {50, 50}, {25, 75}, {0, 50} };
 
-    std::vector<Position> irregularBoundary = {
-        {0, 0}, {100, 0}, {140, 50}, {100, 100}, {50, 150}, {0, 100}
-    };
+    // std::vector<Position> irregularBoundary = {
+    //     {0, 0}, {100, 0}, {140, 50}, {100, 100}, {50, 150}, {0, 100}
+    // };
+    // system.createIrregularSystem(Pw, Boundary, sprinklerSpacing, lineSpacing, "vertical", "NPC_Nelson_flat_barb",
+    //                            SubmainPosition::NORTH);
 
-  // system.createIrregularSystem(Pw, Boundary, sprinklerSpacing, lineSpacing, "vertical", "NPC_Nelson_flat_barb"
-  //                            SubmainPosition::NORTH);
-    system.createIrregularSystem(Pw, Boundary, sprinklerSpacing, lineSpacing, "vertical", "NPC_Toro_sharp_barb",
-                           SubmainPosition::NORTH);
-   // system.createIrregularSystem(Pw, Boundary, sprinklerSpacing, lineSpacing, "vertical",
-                          //     SubmainPosition::MIDDLE);
-    // system.createIrregularSystem(Pw, irregularBoundary, 16.0, 16.0, "vertical", SubmainPosition::MIDDLE);
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///using zone assignment
+    //std::vector<Position> zone1 = {{0,0}, {13.5,0}, {13.5,14.7}, {0,14.7}};
+    // std::vector<Position> zone2 = {{50, 20},{90,20}, {90, 70}, {50, 70}};
+    // std::vector<Position> zone3 = {{120, 20},{160,20}, {160, 70}, {120, 70}};
+   // std::vector<Position> zone1 = { {0, 0}, {50, 0},  {50, 50}, {25, 75}, {0, 50} };                 // Bottom left
+   // std::vector<Position> zone1 = { {0, 0}, {50, 0},  {50, 50}, {0, 50} };                 // Bottom left
+    std::vector<Position> zone1 = { {0, 0}, {339, 0},  {339, 198}, {0, 198} };                 // Bottom left
+    std::vector<Position> zone2 = {{-70,0}, {-10,0}, {-10,70}, {-70,100}};                 // Top left
+    std::vector<Position> zone3 = {{-70,-90}, {-10, -90}, {-10,-20}, {-70, -20}};       // Bottom right (trapezoid)
+    std::vector<Position> zone4 = {{0,-90}, {50, -90}, {50, -20}, {20, -20}, {0, -40}};
 
-    // Calculate hydraulics
-    //auto results = system.calculateHydraulics("PC", 1.0, 50.0);
+    std::string sprinklerType = "NPC_Nelson_flat";
+    double Pw = 0;
+    system.assignZones(1,{ zone1}, Pw,
+                                  16.0 * FEET_TO_METER,
+                                  22.0 * FEET_TO_METER,
+                                  "vertical", sprinklerType,
+                                  SubmainPosition::MIDDLE);
+    system.validateHydraulicSystem();
 
     // Print system summary
     std::cout << system.getSystemSummary() << std::endl;
 
-
-
-    // Create irregular irrigation system
-    //system.createIrregularSystem(Pw, Boundary,60.0 * IrrigationModel::FEET_TO_METER, 40.0 * IrrigationModel::FEET_TO_METER, "vertical", SubmainPosition::MIDDLE);
-
-    system.printNetwork();
+  //system.createAssembliesFromIrricad(sprinklerType);
+  //  system.printNetwork();
     // Get water source info
     int wsID = system.getWaterSourceId();
     if (wsID != -1) {
@@ -84,11 +95,43 @@ int main(){
     std::cout << "Total nodes: " << system.nodes.size() << "\n";
     std::cout << "Total links: " << system.links.size() << "\n";
 
-    const double Q_specified = system.calculateEmitterFlow("NPC_Toro_sharp_barb", Pw);
-    HydraulicResults results = system.calculateHydraulics(false, "NPC_Toro_sharp_barb",Q_specified, Pw, 1.5, 2.0);     std::cout << "NodalPressures: ";
+    const double Q_specified = system.calculateEmitterFlow(sprinklerType, Pw, false);
+    std::cout << "Q_specified = " << Q_specified << std::endl;
+    std::cout << "NodalPressures: ";
 
-   // HydraulicResults results = system.calculateHydraulics(false, "NPC_Nelson_flat_barb", Q_specified, Pw, 1.5, 2.0);
-   // std::cout << "NodalPressures: ";
+    system.initialize(); // Builds valveToNodes mapping
+    system.checkUnassignedNodes();
+    system.activateZones({1});
+
+    namespace fs = std::filesystem;
+    fs::path projectDir = fs::path(__FILE__).parent_path();              // .../projects/IrrigationModel
+    fs::path heliosRoot = projectDir.parent_path().parent_path();        // .../Helios
+
+    ///////////////////////////////////////codes for generating system curve///////////////////////////////////
+    /////simulate system at 100% pump capacity
+    // std::vector<double> emitterRequiredPressure;
+    // for (double p = 5.0; p <= 35.0; p += 5.0) { //feed a range of working pressures
+    //     emitterRequiredPressure.push_back(p);
+    // }
+    // auto curve = system.generateSystemCurve(emitterRequiredPressure, "NPC_Nelson_flat", 1.5, 2.0);
+    //fs::path outPath_systecurve = heliosRoot / "plugins/irrigation/utilities/system_curve.csv";
+    // //system.writeSystemCurveToCsvWithFit(outPath_systecurve, curve);
+    // //system curve function Head  = a + b*GPM + c*GPM^2
+    // auto [a, b, c] = system.fitCurveQuadratic(curve);
+    // std::cout << "Head = " << a << " + " << b << "*GPM + " << c << "*GPM^2\n";
+    /////////////////////////////////////above codes for generating system curve//////////////////////////////
+
+    // presize function is not called in the solver
+    HydraulicResults results = system.calculateHydraulicsMultiZoneOptimized(false, sprinklerType,Q_specified, Pw, 1.5, 2.0);
+
+    double totalFlow = std::accumulate(
+        results.emitterFlows.begin(),
+        results.emitterFlows.end(),
+        0.0
+    );
+    std::cout << "Raw total flow: " << totalFlow << "\n";
+    std::cout << "Total Flow (L/hr): " << totalFlow * 3600000 << "\n";
+
      for (double p : results.nodalPressures) {
          std::cout << p << " ";
      }
@@ -109,7 +152,11 @@ int main(){
          }
      }
 
-    std::ofstream out("/home/yuanzzzy/CLionProjects/Helios/plugins/irrigation/utilities/hydraulics_output.txt");
+    fs::path outPath = heliosRoot / "plugins/irrigation/utilities/hydraulics_output.txt";
+
+    fs::create_directories(outPath.parent_path());
+    std::ofstream out(outPath);
+
 
     out << "NODES_START\n";
     for (const auto& [id, node] : system.nodes) {
@@ -118,6 +165,7 @@ int main(){
             << node.position.y << " "
             << node.position.z << " "
             << node.type << " "
+            //<<node.zoneID <<" "
             << node.pressure << " "
             << (node.is_fixed ? 1 : 0) << " "
             << node.flow << " " << "\n";
@@ -140,8 +188,10 @@ int main(){
     std::cout << "Hydraulic results written to hydraulics_output.txt\n";
 
     std::vector<PressureLossResult> barbToEmitterLosses = system.getBarbToEmitterPressureLosses();
-    system.printPressureLossAnalysis(system);
-    system.writePressureLossesToFile(system, "/home/yuanzzzy/CLionProjects/Helios/plugins/irrigation/utilities/pressure_losses.txt");
+    //system.printPressureLossAnalysis(system);
+    fs::path outPath_pressureLoss = heliosRoot / "plugins/irrigation/utilities/pressure_losses.txt";
+
+    system.writePressureLossesToFile(system, outPath_pressureLoss);
 
 
 

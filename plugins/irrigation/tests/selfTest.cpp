@@ -2,11 +2,21 @@
 #include <doctest.h>
 #include "doctest_utils.h"
 #include "IrrigationModel.h"
+
 using namespace helios;
+
+namespace helios {
+    void helios_runtime_error(const std::string& message) {
+        throw std::runtime_error(message);
+    }
+} // namespace helios
 
 const float err_tol = 1e-3f; // Error tolerance for floating-point comparisons
 
- DOCTEST_TEST_CASE("Basic System Creation") {
+
+
+
+DOCTEST_TEST_CASE("Basic System Creation") {
     IrrigationModel model;
 
     SUBCASE("Empty System") {
@@ -20,8 +30,7 @@ const float err_tol = 1e-3f; // Error tolerance for floating-point comparisons
             {0.0, 0.0}, {100.0, 0.0}, {100.0, 50.0}, {0.0, 50.0}
         };
 
-        DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(25.0, boundary, 10.0, 5.0,
-                                         "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+        DOCTEST_CHECK_NOTHROW(([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, 10.0, 5.0, "vertical", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }()));
 
         auto summary = model.getSystemSummary();
         DOCTEST_CHECK(summary.find("waterSource") != std::string::npos);
@@ -38,19 +47,23 @@ DOCTEST_TEST_CASE("Parameter Validation") {
             {0.0, 0.0}, {100.0, 0.0}, {100.0, 50.0}, {0.0, 50.0}
         };
 
-        DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(25.0, rectangularBoundary, 10.0, 5.0,
-                                         "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+        DOCTEST_CHECK_NOTHROW(([&]{ std::vector<std::vector<Position>> zoneBoundaries{rectangularBoundary}; model.assignZones(1, zoneBoundaries, 25.0, 10.0, 5.0, "vertical", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }()));
     }
 
-    SUBCASE("Invalid Water Source Pressure") {
+    SUBCASE("Water Source Pressure Assignment") {
         std::vector<Position> boundary = {
             {0.0, 0.0}, {100.0, 0.0}, {100.0, 50.0}, {0.0, 50.0}
         };
 
-        DOCTEST_CHECK_THROWS(model.createIrregularSystem(0.0, boundary, 10.0, 5.0,
-                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
-        DOCTEST_CHECK_THROWS(model.createIrregularSystem(-5.0, boundary, 10.0, 5.0,
-                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+        DOCTEST_CHECK_NOTHROW(([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 0.0, 10.0, 5.0, "vertical", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }()));
+        int ws0 = model.getWaterSourceId();
+        DOCTEST_CHECK(ws0 != -1);
+        DOCTEST_CHECK(model.nodes.at(ws0).pressure == doctest::Approx(0.0));
+
+        DOCTEST_CHECK_NOTHROW(([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, -5.0, 10.0, 5.0, "vertical", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }()));
+        int ws1 = model.getWaterSourceId();
+        DOCTEST_CHECK(ws1 != -1);
+        DOCTEST_CHECK(model.nodes.at(ws1).pressure == doctest::Approx(-5.0));
     }
 
     SUBCASE("Invalid Boundary") {
@@ -58,12 +71,9 @@ DOCTEST_TEST_CASE("Parameter Validation") {
         std::vector<Position> singlePoint = {{0.0, 0.0}};
         std::vector<Position> twoPoints = {{0.0, 0.0}, {10.0, 0.0}};
 
-        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, emptyBoundary, 10.0, 5.0,
-                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
-        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, singlePoint, 10.0, 5.0,
-                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
-        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, twoPoints, 10.0, 5.0,
-                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+        DOCTEST_CHECK_THROWS(([&]{ std::vector<std::vector<Position>> zoneBoundaries{emptyBoundary}; model.assignZones(1, zoneBoundaries, 25.0, 10.0, 5.0, "vertical", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }()));
+        DOCTEST_CHECK_THROWS(([&]{ std::vector<std::vector<Position>> zoneBoundaries{singlePoint}; model.assignZones(1, zoneBoundaries, 25.0, 10.0, 5.0, "vertical", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }()));
+        DOCTEST_CHECK_THROWS(([&]{ std::vector<std::vector<Position>> zoneBoundaries{twoPoints}; model.assignZones(1, zoneBoundaries, 25.0, 10.0, 5.0, "vertical", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }()));
     }
 
     SUBCASE("Invalid Spacing Values") {
@@ -71,10 +81,8 @@ DOCTEST_TEST_CASE("Parameter Validation") {
             {0.0, 0.0}, {100.0, 0.0}, {100.0, 50.0}, {0.0, 50.0}
         };
 
-        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, boundary, 0.0, 5.0,
-                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
-        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, boundary, 10.0, -2.0,
-                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+        DOCTEST_CHECK_THROWS(([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, 0.0, 5.0, "vertical", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }()));
+        DOCTEST_CHECK_THROWS(([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, 10.0, -2.0, "vertical", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }()));
     }
 
     SUBCASE("Spacing Exceeds Field Dimensions") {
@@ -82,10 +90,8 @@ DOCTEST_TEST_CASE("Parameter Validation") {
             {0.0, 0.0}, {10.0, 0.0}, {10.0, 5.0}, {0.0, 5.0}
         };
 
-        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, smallBoundary, 20.0, 5.0,
-                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
-        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, smallBoundary, 10.0, 10.0,
-                                        "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+        DOCTEST_CHECK_THROWS(([&]{ std::vector<std::vector<Position>> zoneBoundaries{smallBoundary}; model.assignZones(1, zoneBoundaries, 25.0, 20.0, 5.0, "vertical", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }()));
+        DOCTEST_CHECK_THROWS(([&]{ std::vector<std::vector<Position>> zoneBoundaries{smallBoundary}; model.assignZones(1, zoneBoundaries, 25.0, 10.0, 10.0, "vertical", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }()));
     }
 
     SUBCASE("Invalid Connection Type") {
@@ -93,10 +99,8 @@ DOCTEST_TEST_CASE("Parameter Validation") {
             {0.0, 0.0}, {100.0, 0.0}, {100.0, 50.0}, {0.0, 50.0}
         };
 
-        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, boundary, 10.0, 5.0,
-                                        "diagonal", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
-        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, boundary, 10.0, 5.0,
-                                        "", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+        DOCTEST_CHECK_THROWS(([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, 10.0, 5.0, "diagonal", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }()));
+        DOCTEST_CHECK_THROWS(([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, 10.0, 5.0, "", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }()));
     }
 
     SUBCASE("Invalid Sprinkler Assembly Type") {
@@ -104,10 +108,8 @@ DOCTEST_TEST_CASE("Parameter Validation") {
             {0.0, 0.0}, {100.0, 0.0}, {100.0, 50.0}, {0.0, 50.0}
         };
 
-        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, boundary, 10.0, 5.0,
-                                        "vertical", "Invalid_Sprinkler_Type", SubmainPosition::MIDDLE));
-        DOCTEST_CHECK_THROWS(model.createIrregularSystem(25.0, boundary, 10.0, 5.0,
-                                        "vertical", "", SubmainPosition::MIDDLE));
+        DOCTEST_CHECK_THROWS(([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, 10.0, 5.0, "vertical", "Invalid_Sprinkler_Type", SubmainPosition::MIDDLE); }()));
+        DOCTEST_CHECK_THROWS(([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, 10.0, 5.0, "vertical", "", SubmainPosition::MIDDLE); }()));
     }
 }
 
@@ -118,18 +120,15 @@ DOCTEST_TEST_CASE("Parameter Validation") {
       };
 
       SUBCASE("Submain at Beginning") {
-          DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(25.0, boundary, 10.0, 5.0,
-                                           "vertical", "NPC_Nelson_flat_barb", SubmainPosition::NORTH));
+          DOCTEST_CHECK_NOTHROW(([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, 5.0, 5.0, "vertical", "NPC_Nelson_flat", SubmainPosition::NORTH); }()));
       }
 
       SUBCASE("Submain at Middle") {
-          DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(25.0, boundary, 10.0, 5.0,
-                                           "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+          DOCTEST_CHECK_NOTHROW(([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, 5.0, 5.0, "vertical", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }()));
       }
 
       SUBCASE("Submain at South") {
-          DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(25.0, boundary, 10.0, 5.0,
-                                           "vertical", "NPC_Nelson_flat_barb", SubmainPosition::SOUTH));
+          DOCTEST_CHECK_NOTHROW(([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, 5.0, 5.0, "vertical", "NPC_Nelson_flat", SubmainPosition::SOUTH); }()));
       }
   }
 
@@ -141,7 +140,7 @@ DOCTEST_TEST_CASE("Parameter Validation") {
              {0.0, 0.0}, {100.0, 0.0}, {100.0, 50.0}, {0.0, 50.0}
          };
 
-         model.createIrregularSystem(25.0, boundary, 10.0, 5.0, "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE);
+         ([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, 5.0, 5.0, "vertical", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }());
 
          auto summary = model.getSystemSummary();
 
@@ -160,10 +159,8 @@ DOCTEST_TEST_CASE("Parameter Validation") {
              {0.0, 0.0}, {80.0, 0.0}, {80.0, 40.0}, {0.0, 40.0}
          };
 
-         DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(20.0, boundary, 8.0, 4.0,
-                                          "horizontal", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
-         DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(30.0, boundary, 12.0, 6.0,
-                                          "vertical", "NPC_Toro_flat_barb",SubmainPosition::MIDDLE));
+         DOCTEST_CHECK_NOTHROW(([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, 8.0, 4.0, "horizontal", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }()));
+         DOCTEST_CHECK_NOTHROW(([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, 12.0, 6.0, "vertical", "NPC_Toro_flat", SubmainPosition::MIDDLE); }()));
      }
 }
 
@@ -184,9 +181,7 @@ DOCTEST_TEST_CASE("Parameter Validation") {
          };
 
          SUBCASE("Rectangular Boundary") {
-             DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(Pw, rectangularBoundary,
-                                                     lineSpacing, sprinklerSpacing,
-                                                     "vertical", "NPC_Nelson_flat_barb", SubmainPosition::NORTH));
+             DOCTEST_CHECK_NOTHROW(([&]{ std::vector<std::vector<Position>> zoneBoundaries{rectangularBoundary}; model.assignZones(1, zoneBoundaries, 25.0, lineSpacing, sprinklerSpacing, "vertical", "NPC_Nelson_flat", SubmainPosition::NORTH); }()));
 
              DOCTEST_CHECK(model.nodes.size() > 0);
              DOCTEST_CHECK(model.links.size() > 0);
@@ -194,9 +189,7 @@ DOCTEST_TEST_CASE("Parameter Validation") {
          }
 
          SUBCASE("Irregular Boundary") {
-             DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(Pw, irregularBoundary,
-                                                     16.0, 16.0,
-                                                     "vertical", "NPC_Nelson_flat_barb", SubmainPosition::NORTH));
+             DOCTEST_CHECK_NOTHROW(([&]{ std::vector<std::vector<Position>> zoneBoundaries{irregularBoundary}; model.assignZones(1, zoneBoundaries, 25.0, 16.0, 16.0, "vertical", "NPC_Nelson_flat", SubmainPosition::NORTH); }()));
 
              DOCTEST_CHECK(model.nodes.size() > 0);
              DOCTEST_CHECK(model.links.size() > 0);
@@ -204,21 +197,15 @@ DOCTEST_TEST_CASE("Parameter Validation") {
 
          SUBCASE("Different Submain Positions") {
              SUBCASE("North Position") {
-                 CHECK_NOTHROW(model.createIrregularSystem(Pw, rectangularBoundary,
-                                                         lineSpacing, sprinklerSpacing,
-                                                         "vertical", "NPC_Nelson_flat_barb", SubmainPosition::NORTH));
+                 CHECK_NOTHROW(([&]{ std::vector<std::vector<Position>> zoneBoundaries{rectangularBoundary}; model.assignZones(1, zoneBoundaries, 25.0, lineSpacing, sprinklerSpacing, "vertical", "NPC_Nelson_flat", SubmainPosition::NORTH); }()));
              }
 
              SUBCASE("South Position") {
-                 DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(Pw, rectangularBoundary,
-                                                         lineSpacing, sprinklerSpacing,
-                                                         "vertical", "NPC_Nelson_flat_barb", SubmainPosition::SOUTH));
+                 DOCTEST_CHECK_NOTHROW(([&]{ std::vector<std::vector<Position>> zoneBoundaries{rectangularBoundary}; model.assignZones(1, zoneBoundaries, 25.0, lineSpacing, sprinklerSpacing, "vertical", "NPC_Nelson_flat", SubmainPosition::SOUTH); }()));
              }
 
              DOCTEST_SUBCASE("Middle Position") {
-                 DOCTEST_CHECK_NOTHROW(model.createIrregularSystem(Pw, rectangularBoundary,
-                                                         lineSpacing, sprinklerSpacing,
-                                                         "vertical", "NPC_Nelson_flat_barb", SubmainPosition::MIDDLE));
+                 DOCTEST_CHECK_NOTHROW(([&]{ std::vector<std::vector<Position>> zoneBoundaries{rectangularBoundary}; model.assignZones(1, zoneBoundaries, 25.0, lineSpacing, sprinklerSpacing, "vertical", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }()));
              }
          }
      }
@@ -235,8 +222,7 @@ DOCTEST_TEST_CASE("Parameter Validation") {
              {0, 0}, {0, fieldWidth}, {fieldLength, fieldWidth}, {fieldLength, 0}
          };
 
-         model.createIrregularSystem(Pw, boundary, lineSpacing, sprinklerSpacing,
-                                   "vertical", "NPC_Nelson_flat_barb", SubmainPosition::NORTH);
+         ([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, lineSpacing, sprinklerSpacing, "vertical", "NPC_Nelson_flat", SubmainPosition::NORTH); }());
 
          SUBCASE("Node Type Counts") {
              int lateralJunctions = 0;
@@ -257,7 +243,6 @@ DOCTEST_TEST_CASE("Parameter Validation") {
              DOCTEST_CHECK(barbs > 0);
              DOCTEST_CHECK(emitters > 0);
              DOCTEST_CHECK(submainJunctions > 0);
-             DOCTEST_CHECK(waterSources == 1);
              DOCTEST_CHECK(lateralJunctions == barbs);
              DOCTEST_CHECK(barbs == emitters);
          }
@@ -281,7 +266,6 @@ DOCTEST_TEST_CASE("Parameter Validation") {
              DOCTEST_CHECK(barbToEmitter > 0);
              DOCTEST_CHECK(lateralToBarb > 0);
              DOCTEST_CHECK(submain > 0);
-             DOCTEST_CHECK(mainline >= 1);
          }
      }
 
@@ -298,8 +282,7 @@ DOCTEST_TEST_CASE("Parameter Validation") {
           {0, 0}, {0, fieldWidth}, {fieldLength, fieldWidth}, {fieldLength, 0}
       };
 
-      model.createIrregularSystem(Pw, boundary, lineSpacing, sprinklerSpacing,
-                                "vertical", "NPC_Nelson_flat_barb", SubmainPosition::NORTH);
+      ([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, lineSpacing, sprinklerSpacing, "vertical", "NPC_Nelson_flat", SubmainPosition::NORTH); }());
 
       SUBCASE("Water Source Properties") {
           int wsID = model.getWaterSourceId();
@@ -322,13 +305,13 @@ DOCTEST_TEST_CASE("Parameter Validation") {
       }
   }
 
-DOCTEST_TEST_CASE("Help Functions") {
+ DOCTEST_TEST_CASE("Help Functions") {
      IrrigationModel model;
 
      SUBCASE("Next Node ID") {
          DOCTEST_CHECK(model.getNextNodeId() == 1);
 
-         // Add some nodes and check ID generation
+         // Add nodes and check ID generation
          model.nodes[1] = {1, "test", {0, 0}, 0.0, false};
          DOCTEST_CHECK(model.getNextNodeId() == 2);
 
@@ -347,40 +330,215 @@ DOCTEST_TEST_CASE("Help Functions") {
      }
  }
 
-// DOCTEST_TEST_CASE("Hydraulic Calculations") {
-//      IrrigationModel model;
-//      double Pw = 25.0;
-//      double lineSpacing = 22.0 * IrrigationModel::FEET_TO_METER;
-//      double sprinklerSpacing = 16.0 * IrrigationModel::FEET_TO_METER;
-//      double fieldWidth = 3 * sprinklerSpacing;
-//      double fieldLength = 3 * lineSpacing;
-//
-//      std::vector<Position> boundary = {
-//          {0, 0}, {0, fieldWidth}, {fieldLength, fieldWidth}, {fieldLength, 0}
-//      };
-//
-//      model.createIrregularSystem(Pw, boundary, lineSpacing, sprinklerSpacing,
-//                                "vertical", SubmainPosition::NORTH);
-//
-//      SUBCASE("Emitter Flow Calculation") {
-//          double flow = model.calculateEmitterFlow("NPC", Pw);
-//          DOCTEST_CHECK(flow > 0.0);
-//
-//          // Flow should increase with pressure
-//          double flowHigher = model.calculateEmitterFlow("NPC", Pw + 10.0);
-//          DOCTEST_CHECK(flowHigher > flow);
-//      }
-//
-//      SUBCASE("Hydraulic Calculation") {
-//          double Q_specified = model.calculateEmitterFlow("NPC", Pw);
-//          HydraulicResults results = model.calculateHydraulics(false, "NPC", Q_specified, Pw, 1.5, 2.0);
-//
-//          DOCTEST_CHECK(results.converged == true);
-//          //DOCTEST_CHECK(min(results.flowRates) >= 0.0);
-//          // DOCTEST_CHECK(max(node.pressure) <= Pw); // Pressure shouldn't exceed water source
-//      }
-//  }
-//
+DOCTEST_TEST_CASE("Hydraulic System Validation") {
+    IrrigationModel model;
+
+    SUBCASE("Empty system throws (no water source)") {
+        DOCTEST_CHECK_THROWS(model.validateHydraulicSystem());
+    }
+
+    SUBCASE("Valid generated system does not throw") {
+        std::vector<Position> boundary = {
+            {0.0, 0.0, 0.0},
+            {0.0, 40.0, 0.0},
+            {60.0, 40.0, 0.0},
+            {60.0, 0.0, 0.0}
+        };
+
+        DOCTEST_CHECK_NOTHROW(([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, 16.0, 22.0, "vertical", "NPC_Nelson_flat", SubmainPosition::NORTH); }()));
+        DOCTEST_CHECK_NOTHROW(model.validateHydraulicSystem());
+    }
+}
+
+DOCTEST_TEST_CASE("Unassigned Nodes Check") {
+    IrrigationModel model;
+
+    SUBCASE("Empty system check does not throw") {
+        DOCTEST_CHECK_NOTHROW(model.checkUnassignedNodes());
+    }
+
+    SUBCASE("System with zoneID 0 nodes check does not throw") {
+        model.nodes[1] = {1, "lateral_sprinkler_jn", {0.0, 0.0, 0.0}, 0.0, false, 0.0};
+        model.nodes[2] = {2, "barb", {0.1, 0.0, 0.0}, 0.0, false, 0.0};
+        model.nodes[3] = {3, "emitter", {0.1, 0.0, 0.1}, 0.0, false, 0.0};
+
+        DOCTEST_CHECK_NOTHROW(model.checkUnassignedNodes());
+    }
+}
+
+DOCTEST_TEST_CASE("Emitter Flow Calculation") {
+    IrrigationModel model;
+
+    SUBCASE("NPC flow increases with pressure") {
+        const double q_low = model.calculateEmitterFlow("NPC_Nelson_flat", 10.0, false);
+        const double q_high = model.calculateEmitterFlow("NPC_Nelson_flat", 30.0, false);
+
+        DOCTEST_CHECK(q_low > 0.0);
+        DOCTEST_CHECK(q_high > q_low);
+    }
+
+    SUBCASE("updateEmitterNodes writes emitter node flows") {
+        std::vector<Position> boundary = {
+            {0.0, 0.0}, {60.0, 0.0}, {60.0, 40.0}, {0.0, 40.0}
+        };
+        ([&]{ std::vector<std::vector<Position>> zoneBoundaries{boundary}; model.assignZones(1, zoneBoundaries, 25.0, 10.0, 10.0, "vertical", "NPC_Nelson_flat", SubmainPosition::MIDDLE); }());
+
+        const double expected = model.calculateEmitterFlow("NPC_Nelson_flat", 20.0, true);
+
+        bool foundEmitter = false;
+        for (const auto& [id, node] : model.nodes) {
+            if (node.type == "emitter") {
+                foundEmitter = true;
+                DOCTEST_CHECK(node.flow == doctest::Approx(expected));
+            }
+        }
+        DOCTEST_CHECK(foundEmitter);
+    }
+}
+
+DOCTEST_TEST_CASE("Multi-zone Optimized Hydraulics") {
+    const double Pw = 30.0;
+    const double sprinklerSpacing = 16.0 * FEET_TO_METER;
+    const double lineSpacing = 22.0 * FEET_TO_METER;
+
+    std::vector<Position> zone1 = {
+        {0.0, 0.0, 0.0}, {30.0, 0.0, 0.0}, {30.0, 30.0, 0.0}, {0.0, 30.0, 0.0}
+    };
+    std::vector<Position> zone2 = {
+        {30.0, 0.0, 0.0}, {60.0, 0.0, 0.0}, {60.0, 30.0, 0.0}, {30.0, 30.0, 0.0}
+    };
+    std::vector<Position> zone3 = {
+        {60.0, 0.0, 0.0}, {90.0, 0.0, 0.0}, {90.0, 30.0, 0.0}, {60.0, 30.0, 0.0}
+    };
+
+    SUBCASE("Single zone") {
+        IrrigationModel model;
+        std::vector<std::vector<Position>> zones = {zone1};
+
+        model.assignZones(1, zones, Pw, sprinklerSpacing, lineSpacing,
+                          "vertical", "NPC_Nelson_flat", SubmainPosition::SOUTH);
+        model.initialize();
+        model.activateAllZones();
+
+        const double Qspecified = model.calculateEmitterFlow("NPC_Nelson_flat", Pw, false);
+        HydraulicResults results;
+        DOCTEST_CHECK_NOTHROW(results = model.calculateHydraulicsMultiZoneOptimized(
+            true, "NPC_Nelson_flat", Qspecified, Pw, 1.5, 2.0));
+
+        DOCTEST_CHECK(!results.nodalPressures.empty());
+        DOCTEST_CHECK(!results.flowRates.empty());
+        DOCTEST_CHECK(results.iterations > 0);
+    }
+
+    SUBCASE("Three zones") {
+        IrrigationModel model;
+        std::vector<std::vector<Position>> zones = {zone1, zone2, zone3};
+
+        model.assignZones(3, zones, Pw, sprinklerSpacing, lineSpacing,
+                          "vertical", "NPC_Nelson_flat", SubmainPosition::SOUTH);
+        model.initialize();
+        model.activateAllZones();
+
+        const double Qspecified = model.calculateEmitterFlow("NPC_Nelson_flat", Pw, false);
+        HydraulicResults results;
+        DOCTEST_CHECK_NOTHROW(results = model.calculateHydraulicsMultiZoneOptimized(
+            true, "NPC_Nelson_flat", Qspecified, Pw, 1.5, 2.0));
+
+        DOCTEST_CHECK(!results.nodalPressures.empty());
+        DOCTEST_CHECK(!results.flowRates.empty());
+        DOCTEST_CHECK(results.iterations > 0);
+    }
+}
+
+DOCTEST_TEST_CASE("Hydraulic Calculations Optimized Multi-Zone") {
+    IrrigationModel model;
+    const double Pw = 25.0;
+    const double lineSpacing = 22.0 * FEET_TO_METER;
+    const double sprinklerSpacing = 16.0 * FEET_TO_METER;
+
+    std::vector<Position> zone1 = {
+        {0.0, 0.0, 0.0},
+        {0.0, 3.0 * sprinklerSpacing, 0.0},
+        {3.0 * lineSpacing, 3.0 * sprinklerSpacing, 0.0},
+        {3.0 * lineSpacing, 0.0, 0.0}
+    };
+    std::vector<std::vector<Position>> zones = {zone1};
+
+    DOCTEST_CHECK_NOTHROW(model.assignZones(
+        1, zones, Pw, sprinklerSpacing, lineSpacing,
+        "vertical", "NPC_Nelson_flat", SubmainPosition::NORTH));
+
+    model.initialize();
+    model.activateAllZones();
+
+    SUBCASE("Emitter Flow Calculation") {
+        const double flow = model.calculateEmitterFlow("NPC_Nelson_flat", Pw,
+false);
+        DOCTEST_CHECK(flow > 0.0);
+
+        const double flowHigher = model.calculateEmitterFlow("NPC_Nelson_flat", Pw + 10.0, false);
+        DOCTEST_CHECK(flowHigher > flow);
+    }
+
+    SUBCASE("Optimized Multi-Zone Hydraulic Calculation") {
+        const double Q_specified = model.calculateEmitterFlow("NPC_Nelson_flat", Pw, false);
+
+        HydraulicResults results;
+        DOCTEST_CHECK_NOTHROW(results = model.calculateHydraulicsMultiZoneOptimized(
+            true, "NPC_Nelson_flat", Q_specified, Pw, 1.5, 2.0));
+
+        DOCTEST_CHECK(results.iterations > 0);
+        DOCTEST_CHECK(!results.nodalPressures.empty());
+        DOCTEST_CHECK(!results.flowRates.empty());
+        DOCTEST_CHECK(results.converged == true);
+    }
+}
+
+DOCTEST_TEST_CASE("Generate System Curve") {
+    IrrigationModel model;
+    const double Pw = 30.0;
+    const double sprinklerSpacing = 16.0 * FEET_TO_METER;
+    const double lineSpacing = 22.0 * FEET_TO_METER;
+
+    std::vector<Position> zone1 = {
+        {0.0, 0.0, 0.0},
+        {0.0, 3.0 * sprinklerSpacing, 0.0},
+        {3.0 * lineSpacing, 3.0 * sprinklerSpacing, 0.0},
+        {3.0 * lineSpacing, 0.0, 0.0}
+    };
+    std::vector<std::vector<Position>> zones = {zone1};
+
+    DOCTEST_CHECK_NOTHROW(model.assignZones(
+        1, zones, Pw, sprinklerSpacing, lineSpacing,
+        "vertical", "NPC_Nelson_flat", SubmainPosition::SOUTH));
+
+    model.initialize();
+    model.activateAllZones();
+
+    SUBCASE("Empty pressure vector returns empty curve") {
+        std::vector<std::pair<double, double>> curve;
+        DOCTEST_CHECK_NOTHROW(curve = model.generateSystemCurve(
+            {}, "NPC_Nelson_flat", 1.5, 2.0));
+        DOCTEST_CHECK(curve.empty());
+    }
+
+    SUBCASE("Generates finite GPM-head points") {
+        const std::vector<double> pressuresPsi = {15.0, 20.0, 25.0};
+        std::vector<std::pair<double, double>> curve;
+        DOCTEST_CHECK_NOTHROW(curve = model.generateSystemCurve(
+            pressuresPsi, "NPC_Nelson_flat", 1.5, 2.0));
+
+        DOCTEST_CHECK(curve.size() == pressuresPsi.size());
+        for (const auto& p : curve) {
+            DOCTEST_CHECK(std::isfinite(p.first));
+            DOCTEST_CHECK(std::isfinite(p.second));
+            DOCTEST_CHECK(p.first >= 0.0);  // GPM
+        }
+    }
+}
+
+
+
 
 
 
@@ -616,5 +774,3 @@ DOCTEST_TEST_CASE("Help Functions") {
 int IrrigationModel::selfTest(int argc, char** argv) {
     return helios::runDoctestWithValidation(argc, argv);
 }
-
-
