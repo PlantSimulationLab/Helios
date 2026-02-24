@@ -9,7 +9,6 @@
 // Launches rays from surfaces in hemispherical directions for diffuse radiation transfer
 
 // Workgroup size: 8×32×1 = 256 threads
-// Single primitive per workgroup with shared memory histogram to reduce atomic contention
 layout(local_size_x = 8, local_size_y = 32, local_size_z = 1) in;
 
 // Push constants (launch parameters)
@@ -18,16 +17,14 @@ layout(push_constant) uniform PushConstants {
     uint launch_count;
     uint rays_per_primitive;
     uint random_seed;
-    uint current_band;
     uint band_count;
     uint source_count;
     uint primitive_count;
-    uint debug_mode;       // 1 = enable bounds checking with error codes, 0 = production
     uint launch_face;      // 0 = bottom face, 1 = top face
     uint launch_dim_x;     // Grid dimension X for stratified hemisphere sampling
     uint launch_dim_y;     // Grid dimension Y for stratified hemisphere sampling
     uint material_band_count;  // Global band count (for material buffers)
-    uint global_band_index;    // Global band index for this dispatch
+    uint band_map[4];          // Maps launch band index → global band index (max 4 bands)
     uint periodic_flag_x;      // 1 if periodic in X direction
     uint periodic_flag_y;      // 1 if periodic in Y direction
     uint bbox_count;           // Number of bbox faces (0-4)
@@ -165,16 +162,6 @@ layout(set = 3, binding = 3) readonly buffer DiffuseDistNormBuffer {
 layout(set = 3, binding = 4) readonly buffer SkyRadianceParamsBuffer {
     vec4 sky_radiance_params[]; // [band] - Prague model params (circ_str, circ_width, horiz_bright, norm)
 } sky_radiance_params_buf;
-
-// ========== Shared Memory for Atomic Reduction ==========
-// Each workgroup processes 1 primitive (8×32×1 = 256 threads)
-// Shared memory reduces atomic contention by ~256× (256 threads → 1 flush atomic per workgroup)
-// Per-subgroup slots replace float atomics (Metal doesn't support threadgroup float atomics)
-// Max 64 subgroups = 256 threads / min_subgroup_size(4)
-const uint MAX_SUBGROUP_COUNT = 64u;
-shared float shared_rad_in[MAX_SUBGROUP_COUNT];
-shared float shared_scatter_top[MAX_SUBGROUP_COUNT];
-shared float shared_scatter_bottom[MAX_SUBGROUP_COUNT];
 
 // ========== Include common shader utilities ==========
 #include "common/random.glsl"
@@ -321,49 +308,35 @@ vec3 rotate_to_normal(vec3 dir_local, vec3 normal) {
 
 // ========== Main Shader ==========
 void main() {
-    // Initialize shared memory (single primitive per workgroup)
-    // CRITICAL: All threads must participate in barriers to avoid hangs
-    // First 64 threads each initialize one subgroup slot
-    if (gl_LocalInvocationIndex < MAX_SUBGROUP_COUNT) {
-        shared_rad_in[gl_LocalInvocationIndex] = 0.0;
-        shared_scatter_top[gl_LocalInvocationIndex] = 0.0;
-        shared_scatter_bottom[gl_LocalInvocationIndex] = 0.0;
-    }
-    barrier();  // Wait for initialization to complete
-
     // 3D dispatch: X/Y = ray grid position, Z = primitive index
-    // Simple direct indexing (fast - no division/modulo overhead)
-    uint launch_x = gl_GlobalInvocationID.x;       // Ray grid X [0, launch_dim_x)
-    uint launch_y = gl_GlobalInvocationID.y;       // Ray grid Y [0, launch_dim_y)
-    uint prim_batch_idx = gl_GlobalInvocationID.z; // Primitive index within batch
+    uint launch_x = gl_GlobalInvocationID.x;
+    uint launch_y = gl_GlobalInvocationID.y;
+    uint prim_batch_idx = gl_GlobalInvocationID.z;
 
-    // Bounds check: ray grid and primitive index
-    // Don't return early - must reach final barrier for correctness
-    bool is_active = (launch_x < pc.launch_dim_x && launch_y < pc.launch_dim_y &&
-                      prim_batch_idx < pc.launch_count);
+    // Bounds check — early return (no barriers to worry about)
+    if (launch_x >= pc.launch_dim_x || launch_y >= pc.launch_dim_y ||
+        prim_batch_idx >= pc.launch_count) {
+        return;
+    }
 
     uint prim_idx = pc.launch_offset + prim_batch_idx;
 
     if (prim_idx >= pc.primitive_count) {
-        is_active = false; // Safety check
+        return;
     }
 
-    // Only active threads do actual work (others skip to barrier at end)
-    if (is_active) {
-        // Get primitive data
-        uint prim_type = prim_types_buf.types[prim_idx];
-        uint prim_uuid = prim_uuids_buf.uuids[prim_idx];
-        ivec2 subdivisions = obj_subdivisions_buf.subdivisions[prim_idx];
-        uint twosided = twosided_buf.twosided_flags[prim_idx];
+    // Get primitive data
+    uint prim_type = prim_types_buf.types[prim_idx];
+    uint prim_uuid = prim_uuids_buf.uuids[prim_idx];
+    ivec2 subdivisions = obj_subdivisions_buf.subdivisions[prim_idx];
+    uint twosided = twosided_buf.twosided_flags[prim_idx];
 
-        // Skip if launching from bottom face and twosided_flag = 0 (single-sided, top only)
-        if (pc.launch_face == 0 && twosided == 0) {
-            is_active = false;
-        }
+    // Skip if launching from bottom face and twosided_flag = 0 (single-sided, top only)
+    if (pc.launch_face == 0 && twosided == 0) {
+        return;
+    }
 
-        // Continue with actual ray tracing work (only if still active after twosided check)
-        if (is_active) {
-            // Total rays per primitive (matches CUDA: dimx = launch_dim.x * launch_dim.y)
+    // Total rays per primitive (matches CUDA: dimx = launch_dim.x * launch_dim.y)
     uint dimx = pc.launch_dim_x * pc.launch_dim_y;
 
     // Per-ray RNG seed (matches CUDA: tea(indx + dimx * launch_index.z, random_seed))
@@ -390,8 +363,6 @@ void main() {
 
     for (int jj = 0; jj < NY; ++jj) {
         for (int ii = 0; ii < NX; ++ii) {
-            // atomicAdd(debug_counters.subdivision_iterations, 1); // DISABLED - causes contention
-
             uint UUID = prim_uuid + jj * NX + ii;
 
             // Sample random point on primitive surface (per-ray, matching CUDA)
@@ -509,155 +480,96 @@ void main() {
                 trace_origin = wrapped_origin;
             }
 
-            // Process hit or miss
+            // Process hit or miss — loop over all bands (BVH traversal is band-independent)
             bool hit_found = (hit_prim_idx != 0xFFFFFFFF);
 
+            // Read hit surface normal once (shared across bands)
+            vec3 hit_normal;
+            bool hit_top_face;
             if (hit_found) {
-                // ========== HIT: Ray intersected another surface ==========
-
-                // Get material properties of ORIGIN primitive (where energy is absorbed)
-                // Use global band index for material buffer access (material buffers use global stride)
-                uint mat_idx = prim_idx * pc.material_band_count + pc.global_band_index;
-                float rho = reflectivity_buf.reflectivity[mat_idx];
-                float tau = transmissivity_buf.transmissivity[mat_idx];
-
-                // Get radiation emitted from HIT primitive
-                uint hit_rad_idx = index_prim_band(hit_prim_idx, pc.current_band, pc.band_count);
-
-                // Read pre-computed hit surface normal from buffer
                 uint hit_nbase = hit_prim_idx * 3;
-                vec3 hit_normal = vec3(normals_buf.normals[hit_nbase], normals_buf.normals[hit_nbase + 1], normals_buf.normals[hit_nbase + 2]);
+                hit_normal = vec3(normals_buf.normals[hit_nbase], normals_buf.normals[hit_nbase + 1], normals_buf.normals[hit_nbase + 2]);
+                hit_top_face = dot(hit_normal, ray_direction) < 0.0;
+            }
 
-                // Determine hit face: dot(normal, ray_dir) < 0 means we hit the TOP face
-                bool hit_top_face = dot(hit_normal, ray_direction) < 0.0;
-
-                float incoming;
-                if (hit_top_face) {
-                    incoming = rad_out_top_buf.radiation_out_top[hit_rad_idx];
-                } else {
-                    incoming = rad_out_bottom_buf.radiation_out_bottom[hit_rad_idx];
-                }
-
-                float hit_energy = incoming * strength;
-
-                // Absorption - accumulate to shared memory using local primitive index
-                float absorption_energy = hit_energy * (1.0 - rho - tau);
-                float absorption_sum = subgroupAdd(absorption_energy);
-                if (subgroupElect()) {
-                    shared_rad_in[gl_SubgroupID] += absorption_sum;  // Non-atomic: exclusive slot per subgroup
-                }
-
-                // Scattering - accumulate to shared memory
-                if (pc.launch_face == 1) {
-                    float reflect_energy = hit_energy * rho;
-                    float transmit_energy = hit_energy * tau;
-                    float reflect_sum = subgroupAdd(reflect_energy);
-                    float transmit_sum = subgroupAdd(transmit_energy);
-                    if (subgroupElect()) {
-                        shared_scatter_top[gl_SubgroupID] += reflect_sum;   // Non-atomic: exclusive slot per subgroup
-                        shared_scatter_bottom[gl_SubgroupID] += transmit_sum;
-                    }
-                } else {
-                    float reflect_energy = hit_energy * rho;
-                    float transmit_energy = hit_energy * tau;
-                    float reflect_sum = subgroupAdd(reflect_energy);
-                    float transmit_sum = subgroupAdd(transmit_energy);
-                    if (subgroupElect()) {
-                        shared_scatter_bottom[gl_SubgroupID] += reflect_sum;  // Non-atomic: exclusive slot per subgroup
-                        shared_scatter_top[gl_SubgroupID] += transmit_sum;
-                    }
-                }
-
-            } else {
-                // ========== MISS: Ray hit sky ==========
-
-                // Get material properties of origin primitive
-                // Use global band index for material buffer access (material buffers use global stride)
-                uint mat_idx = prim_idx * pc.material_band_count + pc.global_band_index;
+            for (uint band = 0; band < pc.band_count; ++band) {
+                uint global_b = pc.band_map[band];
+                uint global_idx = index_prim_band(prim_idx, band, pc.band_count);
+                uint mat_idx = prim_idx * pc.material_band_count + global_b;
                 float rho = reflectivity_buf.reflectivity[mat_idx];
                 float tau = transmissivity_buf.transmissivity[mat_idx];
 
-                // Get sky parameters for current band
-                float diffuse_flux = diffuse_flux_buf.diffuse_flux[pc.current_band];
+                // Compute energy contributions unconditionally (zero for inactive path).
+                // subgroupAdd must be called by all active threads in the subgroup at the same
+                // point — calling it inside divergent if/else branches is undefined per spec.
+                float absorption_val = 0.0;
+                float scatter_top_val = 0.0;
+                float scatter_bottom_val = 0.0;
 
-                if (diffuse_flux > 0.0) {
-                    vec3 peak_dir = diffuse_peak_dir_buf.diffuse_peak_dir[pc.current_band];
-                    float extinction = diffuse_extinction_buf.diffuse_extinction[pc.current_band];
-                    float dist_norm = diffuse_dist_norm_buf.diffuse_dist_norm[pc.current_band];
-                    vec4 sky_params = sky_radiance_params_buf.sky_radiance_params[pc.current_band];
+                if (hit_found) {
+                    // ========== HIT: Ray intersected another surface ==========
+                    uint hit_rad_idx = index_prim_band(hit_prim_idx, band, pc.band_count);
 
-                    // Evaluate sky angular distribution
-                    float fd = evaluate_sky_distribution(ray_direction, peak_dir, extinction, dist_norm, sky_params);
-
-                    float sky_energy = fd * diffuse_flux * strength;
-
-                    // Absorption - use shared memory atomics
-                    float sky_absorption = sky_energy * (1.0 - rho - tau);
-                    float sky_absorption_sum = subgroupAdd(sky_absorption);
-                    if (subgroupElect()) {
-                        shared_rad_in[gl_SubgroupID] += sky_absorption_sum;  // Non-atomic: exclusive slot per subgroup
+                    float incoming;
+                    if (hit_top_face) {
+                        incoming = rad_out_top_buf.radiation_out_top[hit_rad_idx];
+                    } else {
+                        incoming = rad_out_bottom_buf.radiation_out_bottom[hit_rad_idx];
                     }
 
-                    // Scattering - use shared memory atomics
+                    float hit_energy = incoming * strength;
+                    absorption_val = hit_energy * (1.0 - rho - tau);
+
+                    float reflect_energy = hit_energy * rho;
+                    float transmit_energy = hit_energy * tau;
                     if (pc.launch_face == 1) {
-                        float sky_reflect = sky_energy * rho;
-                        float sky_transmit = sky_energy * tau;
-                        float sky_reflect_sum = subgroupAdd(sky_reflect);
-                        float sky_transmit_sum = subgroupAdd(sky_transmit);
-                        if (subgroupElect()) {
-                            shared_scatter_top[gl_SubgroupID] += sky_reflect_sum;   // Non-atomic: exclusive slot per subgroup
-                            shared_scatter_bottom[gl_SubgroupID] += sky_transmit_sum;
-                        }
+                        scatter_top_val    = reflect_energy;
+                        scatter_bottom_val = transmit_energy;
                     } else {
-                        float sky_reflect = sky_energy * rho;
+                        scatter_bottom_val = reflect_energy;
+                        scatter_top_val    = transmit_energy;
+                    }
+
+                } else {
+                    // ========== MISS: Ray hit sky ==========
+                    float diffuse_flux = diffuse_flux_buf.diffuse_flux[band];
+
+                    if (diffuse_flux > 0.0) {
+                        vec3 peak_dir = diffuse_peak_dir_buf.diffuse_peak_dir[band];
+                        float extinction = diffuse_extinction_buf.diffuse_extinction[band];
+                        float dist_norm = diffuse_dist_norm_buf.diffuse_dist_norm[band];
+                        vec4 sky_params = sky_radiance_params_buf.sky_radiance_params[band];
+
+                        float fd = evaluate_sky_distribution(ray_direction, peak_dir, extinction, dist_norm, sky_params);
+                        float sky_energy = fd * diffuse_flux * strength;
+
+                        absorption_val = sky_energy * (1.0 - rho - tau);
+
+                        float sky_reflect  = sky_energy * rho;
                         float sky_transmit = sky_energy * tau;
-                        float sky_reflect_sum = subgroupAdd(sky_reflect);
-                        float sky_transmit_sum = subgroupAdd(sky_transmit);
-                        if (subgroupElect()) {
-                            shared_scatter_bottom[gl_SubgroupID] += sky_reflect_sum;  // Non-atomic: exclusive slot per subgroup
-                            shared_scatter_top[gl_SubgroupID] += sky_transmit_sum;
+                        if (pc.launch_face == 1) {
+                            scatter_top_val    = sky_reflect;
+                            scatter_bottom_val = sky_transmit;
+                        } else {
+                            scatter_bottom_val = sky_reflect;
+                            scatter_top_val    = sky_transmit;
                         }
                     }
                 }
-            }
-            } // ii loop (sub-patches)
-        } // jj loop (sub-patches)
-        } // if (is_active) - actual ray tracing work
-    } // if (is_active) - outer block including primitive data load
 
-    // ========== Flush Shared Memory to Global Memory ==========
-    // Wait for all threads in workgroup to finish accumulating to shared memory
-    barrier();
-
-    // Only one thread (0,0,0) flushes the accumulated values for this primitive
-    // This reduces global atomic operations by ~256× (256 threads → 1 flush atomic per workgroup)
-    if (gl_LocalInvocationIndex == 0) {
-        // Check if this primitive index is valid
-        if (prim_batch_idx < pc.launch_count && prim_idx < pc.primitive_count) {
-            // Compute global buffer index for this primitive
-            uint global_idx = index_prim_band(prim_idx, pc.current_band, pc.band_count);
-
-            // Sum all subgroup slots (unused slots are zero)
-            float total_rad_in = 0.0;
-            float total_scatter_top = 0.0;
-            float total_scatter_bottom = 0.0;
-            uint num_subgroups = 256u / gl_SubgroupSize;  // e.g. 256/32=8 on Apple Silicon
-            for (uint sg = 0u; sg < num_subgroups; sg++) {
-                total_rad_in += shared_rad_in[sg];
-                total_scatter_top += shared_scatter_top[sg];
-                total_scatter_bottom += shared_scatter_bottom[sg];
-            }
-
-            // Flush accumulated values if non-zero (skip zero writes to reduce contention)
-            if (total_rad_in != 0.0) {
-                atomicAdd(rad_in_buf.radiation_in[global_idx], total_rad_in);
-            }
-            if (total_scatter_top != 0.0) {
-                atomicAdd(scatter_top_buf.scatter_top[global_idx], total_scatter_top);
-            }
-            if (total_scatter_bottom != 0.0) {
-                atomicAdd(scatter_bottom_buf.scatter_bottom[global_idx], total_scatter_bottom);
-            }
-        }
-    }
+                // Subgroup reductions called uniformly by all threads (inactive paths contribute 0)
+                float absorption_sum    = subgroupAdd(absorption_val);
+                float scatter_top_sum   = subgroupAdd(scatter_top_val);
+                float scatter_bottom_sum = subgroupAdd(scatter_bottom_val);
+                if (subgroupElect()) {
+                    if (absorption_sum != 0.0)
+                        atomicAdd(rad_in_buf.radiation_in[global_idx], absorption_sum);
+                    if (scatter_top_sum != 0.0)
+                        atomicAdd(scatter_top_buf.scatter_top[global_idx], scatter_top_sum);
+                    if (scatter_bottom_sum != 0.0)
+                        atomicAdd(scatter_bottom_buf.scatter_bottom[global_idx], scatter_bottom_sum);
+                }
+            } // band loop
+        } // ii loop (sub-patches)
+    } // jj loop (sub-patches)
 }

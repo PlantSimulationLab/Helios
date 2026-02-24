@@ -9,7 +9,7 @@
 #include "intersections.glsl"
 #include "texture_mask.glsl"
 
-const uint MAX_STACK_DEPTH = 64; // Sufficient for typical BVH scenes
+const uint MAX_STACK_DEPTH = 36; // BVH MAX_DEPTH=32, so 36 provides headroom
 const uint UINT_MAX = 0xFFFFFFFF;
 
 // BVH node structure (matches BVHNode in BVHBuilder.h)
@@ -57,8 +57,8 @@ uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_i
     // Pre-compute inverse ray direction for AABB tests
     vec3 ray_dir_inv = vec3(1.0) / ray_dir;
 
-    // Stack for BVH traversal (64 elements sufficient for typical scenes)
-    uint stack[64];
+    // Stack for BVH traversal (36 elements: BVH MAX_DEPTH=32, +4 headroom)
+    uint stack[36];
     int stack_ptr = 0;
 
     uint closest_prim = UINT_MAX;
@@ -152,7 +152,7 @@ uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_i
         } else {
             // Internal node - push children onto stack with near-child-first ordering
             // Use split axis and ray direction to determine which child is nearer
-            if (stack_ptr + 2 <= 64) {
+            if (stack_ptr + 2 <= MAX_STACK_DEPTH) {
                 bool near_is_left = ray_dir_inv[node.split_axis] > 0.0;
                 uint near_child = near_is_left ? node.left_child : node.right_child;
                 uint far_child = near_is_left ? node.right_child : node.left_child;
