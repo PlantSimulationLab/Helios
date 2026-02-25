@@ -156,6 +156,7 @@ namespace helios {
         Buffer specular_exponent_buffer;     //!< Per-primitive Blinn-Phong exponent
         Buffer specular_scale_buffer;        //!< Per-primitive specular scale coefficient
         Buffer source_fluxes_cam_buffer;     //!< Camera spectral response weights [source × band]
+        Buffer band_map_buffer;              //!< Maps launch band index → global band index [launch_band_count]
 
         // Result buffers (Set 2)
         Buffer radiation_in_buffer;

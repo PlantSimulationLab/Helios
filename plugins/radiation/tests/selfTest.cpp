@@ -7007,3 +7007,50 @@ DOCTEST_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
                                                        "No specular: "
                                                                << avg_no_specular << ", With specular: " << avg_with_specular << ", Difference: " << difference);
 }
+
+DOCTEST_TEST_CASE("RadiationModel More Than 4 Simultaneous Radiation Bands") {
+    // Verify the Vulkan backend has no hard-coded 4-band limit.
+    // Run 6 bands simultaneously and check that each receives the correct flux
+    // from an overhead collimated source hitting an opaque patch.
+
+    const int Nbands = 6;
+    const float error_threshold = 0.005f;
+    const uint Ndirect = 10000;
+
+    Context context;
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    // One opaque patch at origin facing up
+    uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation);
+
+    // Collimated source straight overhead
+    uint src = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+
+    std::vector<std::string> band_names;
+    std::vector<float> expected_flux;
+
+    for (int b = 0; b < Nbands; b++) {
+        std::string name = "band_" + std::to_string(b);
+        band_names.push_back(name);
+        float flux = float(b + 1) * 100.f; // 100, 200, 300, 400, 500, 600
+        expected_flux.push_back(flux);
+
+        radiation.addRadiationBand(name);
+        radiation.disableEmission(name);
+        radiation.setSourceFlux(src, name, flux);
+        radiation.setDirectRayCount(name, Ndirect);
+    }
+
+    radiation.updateGeometry();
+    radiation.runBand(band_names);
+
+    for (int b = 0; b < Nbands; b++) {
+        float measured;
+        context.getPrimitiveData(UUID, ("radiation_flux_" + band_names[b]).c_str(), measured);
+        float rel_error = std::abs(measured - expected_flux[b]) / expected_flux[b];
+        DOCTEST_CHECK_MESSAGE(rel_error <= error_threshold,
+                              "Band " << band_names[b] << ": expected " << expected_flux[b]
+                                      << ", got " << measured << " (error " << rel_error << ")");
+    }
+}

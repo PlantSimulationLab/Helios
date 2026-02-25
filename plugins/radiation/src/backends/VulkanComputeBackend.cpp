@@ -763,6 +763,10 @@ namespace helios {
             }
         }
 
+        // Upload band mapping to GPU buffer
+        uploadBufferData(band_map_buffer, launch_to_global_band.data(),
+                         launch_to_global_band.size() * sizeof(uint32_t));
+
         // Ensure scatter and radiation_out buffers exist (direct shader writes scatter buffers)
         size_t buf_size = primitive_count * launch_band_count * sizeof(float);
         VkBufferUsageFlags scatter_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -841,7 +845,6 @@ namespace helios {
             uint prim_tiles_y;    // Number of primitive tiles in Y dimension
             uint prims_per_tile;  // Primitives per tile (65535 max)
             uint material_band_count;  // Global band count (for material buffers)
-            uint band_map[4];  // Maps launch band index → global band index (max 4 bands)
             uint periodic_flag_x;   // 1 if periodic in X direction
             uint periodic_flag_y;   // 1 if periodic in Y direction
             uint bbox_count;         // Number of bbox faces (0-4)
@@ -867,15 +870,6 @@ namespace helios {
         push_constants.launch_dim_x = launch_dim_x;
         push_constants.launch_dim_y = launch_dim_y;
         push_constants.material_band_count = band_count;  // Global band count for material indexing
-
-        // Initialize band_map (max 4 bands)
-        for (uint i = 0; i < 4; i++) {
-            if (i < launch_to_global_band.size()) {
-                push_constants.band_map[i] = launch_to_global_band[i];
-            } else {
-                push_constants.band_map[i] = 0;
-            }
-        }
 
         // Enable debug bounds checking (can be disabled in production builds)
         #ifdef HELIOS_DEBUG
@@ -1172,6 +1166,10 @@ namespace helios {
             }
         }
 
+        // Upload band mapping to GPU buffer
+        uploadBufferData(band_map_buffer, launch_to_global_band.data(),
+                         launch_to_global_band.size() * sizeof(uint32_t));
+
         // Push constants struct (expanded for diffuse rays)
         struct PushConstants {
             uint32_t launch_offset;
@@ -1185,7 +1183,6 @@ namespace helios {
             uint32_t launch_dim_x;    // Grid dimension X
             uint32_t launch_dim_y;    // Grid dimension Y
             uint32_t material_band_count;  // Global band count (for material buffers)
-            uint32_t band_map[4];          // Maps launch band index → global band index (max 4 bands)
             uint32_t periodic_flag_x;   // 1 if periodic in X direction
             uint32_t periodic_flag_y;   // 1 if periodic in Y direction
             uint32_t bbox_count;         // Number of bbox faces (0-4)
@@ -1205,11 +1202,6 @@ namespace helios {
         push_constants.launch_face = launch_face;
         push_constants.launch_dim_x = launch_dim_x;
         push_constants.launch_dim_y = launch_dim_y;
-
-        // Populate band_map: maps launch band index → global band index (max 4 bands)
-        for (uint32_t i = 0; i < 4; i++) {
-            push_constants.band_map[i] = (i < launch_band_count) ? launch_to_global_band[i] : 0;
-        }
 
         // Periodic boundary parameters
         push_constants.periodic_flag_x = static_cast<uint32_t>(periodic_flag_x);
@@ -1831,6 +1823,16 @@ namespace helios {
 
         // Store launch band count for this runBand() call
         launch_band_count = static_cast<uint32_t>(launch_band_count_param);
+
+        // Create or resize band_map buffer [launch_band_count × uint32]
+        size_t band_map_size = launch_band_count * sizeof(uint32_t);
+        if (band_map_buffer.buffer == VK_NULL_HANDLE || band_map_buffer.size != band_map_size) {
+            if (band_map_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(band_map_buffer);
+            }
+            band_map_buffer = createBuffer(band_map_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            descriptors_dirty = true;
+        }
 
         size_t buffer_size = primitive_count * launch_band_count;
 
@@ -2500,6 +2502,7 @@ namespace helios {
             {7, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Specular exponent
             {8, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Specular scale
             {9, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Source fluxes (camera-weighted)
+            {10, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // Band map
         };
 
         layout_info.bindingCount = static_cast<uint32_t>(material_bindings.size());
@@ -2564,7 +2567,7 @@ namespace helios {
         // ========== Create Descriptor Pool ==========
 
         std::vector<VkDescriptorPoolSize> pool_sizes = {
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 62}, // All sets: 18 geo + 10 mat + 11 result + 7 sky + 1 debug + margin
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 62}, // All sets: 18 geo + 11 mat + 11 result + 7 sky + 1 debug + margin
         };
 
         VkDescriptorPoolCreateInfo pool_info{};
@@ -3453,6 +3456,23 @@ namespace helios {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = 1;
             write.pBufferInfo = &source_fluxes_cam_info;
+            descriptor_writes.push_back(write);
+        }
+
+        VkDescriptorBufferInfo band_map_info{};
+        band_map_info.buffer = band_map_buffer.buffer;
+        band_map_info.offset = 0;
+        band_map_info.range = VK_WHOLE_SIZE;
+
+        if (band_map_buffer.buffer != VK_NULL_HANDLE) {
+            VkWriteDescriptorSet write{};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = set_materials;
+            write.dstBinding = 10;
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &band_map_info;
             descriptor_writes.push_back(write);
         }
 

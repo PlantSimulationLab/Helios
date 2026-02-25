@@ -24,7 +24,6 @@ layout(push_constant) uniform PushConstants {
     uint launch_dim_x;     // Grid dimension X for stratified hemisphere sampling
     uint launch_dim_y;     // Grid dimension Y for stratified hemisphere sampling
     uint material_band_count;  // Global band count (for material buffers)
-    uint band_map[4];          // Maps launch band index → global band index (max 4 bands)
     uint periodic_flag_x;      // 1 if periodic in X direction
     uint periodic_flag_y;      // 1 if periodic in Y direction
     uint bbox_count;           // Number of bbox faces (0-4)
@@ -120,6 +119,10 @@ layout(set = 1, binding = 5) readonly buffer ReflectivityBuffer {
 layout(set = 1, binding = 6) readonly buffer TransmissivityBuffer {
     float transmissivity[];
 } transmissivity_buf;
+
+layout(set = 1, binding = 10) readonly buffer BandMapBuffer {
+    uint map[]; // Maps launch band index → global band index
+} band_map_buf;
 
 // ========== Descriptor Set 2: Results ==========
 layout(set = 2, binding = 0) buffer RadiationInBuffer {
@@ -493,7 +496,7 @@ void main() {
             }
 
             for (uint band = 0; band < pc.band_count; ++band) {
-                uint global_b = pc.band_map[band];
+                uint global_b = band_map_buf.map[band];
                 uint global_idx = index_prim_band(prim_idx, band, pc.band_count);
                 uint mat_idx = prim_idx * pc.material_band_count + global_b;
                 float rho = reflectivity_buf.reflectivity[mat_idx];

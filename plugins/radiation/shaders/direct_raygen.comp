@@ -25,7 +25,6 @@ layout(push_constant) uniform PushConstants {
     uint prim_tiles_y;    // Number of primitive tiles in Y dimension (for large primitive counts)
     uint prims_per_tile;  // Primitives per tile (65535 max)
     uint material_band_count;  // Global band count (for material buffers)
-    uint band_map[4];          // Maps launch band index → global band index (max 4 bands)
     uint periodic_flag_x;      // 1 if periodic in X direction
     uint periodic_flag_y;      // 1 if periodic in Y direction
     uint bbox_count;           // Number of bbox faces (0-4)
@@ -123,6 +122,10 @@ layout(set = 1, binding = 5) readonly buffer ReflectivityBuffer {
 layout(set = 1, binding = 6) readonly buffer TransmissivityBuffer {
     float transmissivity[];
 } transmissivity_buf;
+
+layout(set = 1, binding = 10) readonly buffer BandMapBuffer {
+    uint map[]; // Maps launch band index → global band index
+} band_map_buf;
 
 // ========== Descriptor Set 2: Results ==========
 layout(set = 2, binding = 0) buffer RadiationInBuffer {
@@ -619,7 +622,7 @@ void main() {
 
                     // Get material properties for this primitive and band
                     // Use global band index for material buffer access (material buffers use global stride)
-                    uint global_b = pc.band_map[band];
+                    uint global_b = band_map_buf.map[band];
                     uint mat_idx = prim_idx * pc.material_band_count + global_b;
                     float rho = reflectivity_buf.reflectivity[mat_idx];
                     float tau = transmissivity_buf.transmissivity[mat_idx];

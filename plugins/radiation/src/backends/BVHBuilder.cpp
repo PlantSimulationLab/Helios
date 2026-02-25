@@ -485,8 +485,6 @@ namespace helios {
             return {};
         }
 
-        std::cout << "Converting BVH2 (" << bvh2_nodes.size() << " nodes) to CWBVH..." << std::endl;
-
         // Step 1: Reconstruct tree from flat BVH2
         BuildNode *root = reconstructTree(bvh2_nodes, 0);
 
@@ -502,9 +500,6 @@ namespace helios {
             delete node;
         }
         allocated_bvh8_nodes.clear();
-
-        std::cout << "CWBVH conversion complete: " << cwbvh_nodes.size() << " BVH8 nodes ("
-                  << (cwbvh_nodes.size() * 128 / 1024.0 / 1024.0) << " MB)" << std::endl;
 
         return cwbvh_nodes;
     }
