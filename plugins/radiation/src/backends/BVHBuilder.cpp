@@ -504,7 +504,7 @@ namespace helios {
         allocated_bvh8_nodes.clear();
 
         std::cout << "CWBVH conversion complete: " << cwbvh_nodes.size() << " BVH8 nodes ("
-                  << (cwbvh_nodes.size() * 80 / 1024.0 / 1024.0) << " MB)" << std::endl;
+                  << (cwbvh_nodes.size() * 128 / 1024.0 / 1024.0) << " MB)" << std::endl;
 
         return cwbvh_nodes;
     }
@@ -663,7 +663,11 @@ namespace helios {
         int exp_y = (extent_y > 1e-6f) ? static_cast<int>(std::ceil(std::log2(extent_y / 255.0f))) : 0;
         int exp_z = (extent_z > 1e-6f) ? static_cast<int>(std::ceil(std::log2(extent_z / 255.0f))) : 0;
 
-        dst.e_packed = (exp_x & 0xFF) | ((exp_y & 0xFF) << 8) | ((exp_z & 0xFF) << 16);
+        // Store IEEE754-biased exponents so the GPU can decode via uintBitsToFloat(byte << 23)
+        uint8_t biased_x = static_cast<uint8_t>(std::max(0, std::min(255, 127 + exp_x)));
+        uint8_t biased_y = static_cast<uint8_t>(std::max(0, std::min(255, 127 + exp_y)));
+        uint8_t biased_z = static_cast<uint8_t>(std::max(0, std::min(255, 127 + exp_z)));
+        dst.e_packed = biased_x | (biased_y << 8) | (biased_z << 16);
         dst.imask = 0;
 
         float scale_x = std::pow(2.0f, static_cast<float>(exp_x));
@@ -722,31 +726,50 @@ namespace helios {
     }
 
     uint32_t BVHBuilder::flattenBVH8(BVH8Node *root, std::vector<CWBVH_Node> &cwbvh_nodes) {
-        CWBVH_Node flat_node = {};
+        // BFS flattening ensures internal children of each parent occupy consecutive
+        // array slots, which is required for the GPU popcount-based child indexing:
+        //   child_index = base_index_child + bitCount(imask & ((1 << slot) - 1))
 
-        // Compress this node
-        compressNode(root, flat_node);
+        struct QueueEntry {
+            BVH8Node *node;
+            uint32_t array_index;
+        };
+        std::queue<QueueEntry> bfs_queue;
 
-        uint32_t my_offset = static_cast<uint32_t>(cwbvh_nodes.size());
-        cwbvh_nodes.push_back(flat_node);
+        // Place root
+        CWBVH_Node root_flat = {};
+        compressNode(root, root_flat);
+        cwbvh_nodes.push_back(root_flat);
+        bfs_queue.push({root, 0});
 
-        // Reserve space for child indices - will be filled by recursive calls
-        uint32_t child_base = static_cast<uint32_t>(cwbvh_nodes.size());
+        while (!bfs_queue.empty()) {
+            auto [current, my_idx] = bfs_queue.front();
+            bfs_queue.pop();
 
-        // Recursively collapse and flatten children that are internal nodes
-        for (int i = 0; i < 8; i++) {
-            if (root->children[i] && !root->is_leaf[i]) {
-                // Internal child - needs recursive collapse to BVH8
-                BVH8Node *child8 = collapseToBVH8(root->children[i]);
-                flattenBVH8(child8, cwbvh_nodes);
+            // Collect internal children (need recursive collapse to BVH8)
+            std::vector<std::pair<int, BVH8Node *>> internal_children;
+            for (int i = 0; i < 8; i++) {
+                if (current->children[i] && !current->is_leaf[i]) {
+                    BVH8Node *child8 = collapseToBVH8(current->children[i]);
+                    internal_children.push_back({i, child8});
+                }
+            }
+            if (internal_children.empty()) continue;
+
+            // Children placed contiguously starting at current array end
+            uint32_t child_base = static_cast<uint32_t>(cwbvh_nodes.size());
+            cwbvh_nodes[my_idx].base_index_child = child_base;
+
+            for (auto &[slot, child8] : internal_children) {
+                CWBVH_Node child_flat = {};
+                compressNode(child8, child_flat);
+                uint32_t child_idx = static_cast<uint32_t>(cwbvh_nodes.size());
+                cwbvh_nodes.push_back(child_flat);
+                bfs_queue.push({child8, child_idx});
             }
         }
 
-        // Update base indices now that children are written
-        cwbvh_nodes[my_offset].base_index_child = child_base;
-        cwbvh_nodes[my_offset].base_index_triangle = 0; // TODO: Triangle interleaving
-
-        return my_offset;
+        return 0; // Root is always at index 0
     }
 
 } // namespace helios

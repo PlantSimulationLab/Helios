@@ -580,7 +580,7 @@ void main() {
                 vec3 trace_origin = ray_origin;
 
                 for (int wrap = 0; wrap < 10; ++wrap) {
-                    occluder = traverse_bvh(trace_origin, ray_dir, 1e-4, prim_idx, occlusion_t, occlusion_prim_type, occlusion_uv);
+                    occluder = traverse_cwbvh(trace_origin, ray_dir, 1e-4, prim_idx, occlusion_t, occlusion_prim_type, occlusion_uv);
 
                     if (pc.bbox_count == 0) break; // No periodic boundaries
 

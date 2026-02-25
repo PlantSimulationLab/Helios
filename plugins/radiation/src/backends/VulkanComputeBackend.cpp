@@ -186,19 +186,17 @@ namespace helios {
             return; // Empty geometry
         }
 
-        // Build BVH2 on CPU
+        // Build BVH2 on CPU, then convert to CWBVH (8-wide with quantized AABBs)
         bvh_nodes = bvh_builder.build(geometry);
+        std::vector<CWBVH_Node> cwbvh_nodes = bvh_builder.convertToCWBVH(bvh_nodes);
 
-        // TEMPORARILY DISABLED: Test shared memory with BVH2 first
-        // std::vector<CWBVH_Node> cwbvh_nodes = bvh_builder.convertToCWBVH(bvh_nodes);
-
-        // Upload BVH2 (not CWBVH) for testing
-        if (!bvh_nodes.empty()) {
+        // Upload CWBVH to GPU
+        if (!cwbvh_nodes.empty()) {
             if (bvh_buffer.buffer != VK_NULL_HANDLE) {
                 destroyBuffer(bvh_buffer);
             }
-            bvh_buffer = createBuffer(bvh_nodes.size() * sizeof(BVHNode), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
-            uploadBufferData(bvh_buffer, bvh_nodes.data(), bvh_nodes.size() * sizeof(BVHNode));
+            bvh_buffer = createBuffer(cwbvh_nodes.size() * sizeof(CWBVH_Node), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+            uploadBufferData(bvh_buffer, cwbvh_nodes.data(), cwbvh_nodes.size() * sizeof(CWBVH_Node));
         }
 
         // Upload primitive indices

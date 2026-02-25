@@ -124,7 +124,7 @@ void main() {
     vec2 hit_uv;
 
     for (int wrap = 0; wrap < 10; ++wrap) {
-        hit_prim = traverse_bvh(ray_origin, ray_dir, 1e-5, UINT_MAX, closest_t, hit_prim_type, hit_uv);
+        hit_prim = traverse_cwbvh(ray_origin, ray_dir, 1e-5, UINT_MAX, closest_t, hit_prim_type, hit_uv);
 
         if (pc.bbox_count == 0) break; // No periodic boundaries
 

@@ -457,7 +457,7 @@ void main() {
             vec3 trace_origin = ray_origin;
 
             for (int wrap = 0; wrap < 10; ++wrap) {
-                hit_prim_idx = traverse_bvh(
+                hit_prim_idx = traverse_cwbvh(
                     trace_origin,
                     ray_direction,
                     1e-5, // t_min (avoid self-intersection)
