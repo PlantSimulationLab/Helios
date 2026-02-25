@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <limits>
 #include <cmath>
+#include <queue>
 
 // TODO: Add TBB parallelization in future optimization phase
 // #include <tbb/parallel_for.h>
@@ -411,35 +412,63 @@ namespace helios {
     }
 
     uint32_t BVHBuilder::flattenTree(BuildNode *node, std::vector<BVHNode> &nodes) {
-        BVHNode flat_node{};
+        // Breadth-first layout: nodes are stored level by level so that upper-level
+        // nodes (visited by all rays) are contiguous at the start of the buffer and
+        // remain cache-resident during traversal.
 
-        // AABB
-        flat_node.aabb_min[0] = node->bounds.min.x;
-        flat_node.aabb_min[1] = node->bounds.min.y;
-        flat_node.aabb_min[2] = node->bounds.min.z;
-        flat_node.aabb_max[0] = node->bounds.max.x;
-        flat_node.aabb_max[1] = node->bounds.max.y;
-        flat_node.aabb_max[2] = node->bounds.max.z;
-
-        uint32_t my_offset = static_cast<uint32_t>(nodes.size());
-        nodes.push_back(flat_node);
-
-        if (node->prim_count > 0) {
-            // Leaf node
-            nodes[my_offset].prim_count = node->prim_count;
-            nodes[my_offset].prim_type = node->prim_type;
-            nodes[my_offset].first_prim = node->first_prim_offset;
-            nodes[my_offset].left_child = node->first_prim_offset; // Reuse field
-            nodes[my_offset].right_child = UINT32_MAX; // Mark as leaf
-        } else {
-            // Internal node
-            nodes[my_offset].prim_count = 0;
-            nodes[my_offset].split_axis = node->split_axis;
-            nodes[my_offset].left_child = flattenTree(node->left, nodes);
-            nodes[my_offset].right_child = flattenTree(node->right, nodes);
+        // First pass: BFS to assign indices and collect nodes in level order
+        std::queue<BuildNode *> bfs_queue;
+        std::vector<BuildNode *> bfs_order;
+        bfs_queue.push(node);
+        while (!bfs_queue.empty()) {
+            BuildNode *current = bfs_queue.front();
+            bfs_queue.pop();
+            bfs_order.push_back(current);
+            if (current->prim_count == 0) {
+                // Internal node: enqueue children (left then right)
+                bfs_queue.push(current->left);
+                bfs_queue.push(current->right);
+            }
         }
 
-        return my_offset;
+        // Build a map from BuildNode pointer to its BFS index
+        std::unordered_map<BuildNode *, uint32_t> node_to_index;
+        for (uint32_t i = 0; i < bfs_order.size(); ++i) {
+            node_to_index[bfs_order[i]] = i;
+        }
+
+        // Second pass: write BVHNode entries in BFS order with correct child indices
+        nodes.resize(bfs_order.size());
+        for (uint32_t i = 0; i < bfs_order.size(); ++i) {
+            BuildNode *current = bfs_order[i];
+            BVHNode flat_node{};
+
+            flat_node.aabb_min[0] = current->bounds.min.x;
+            flat_node.aabb_min[1] = current->bounds.min.y;
+            flat_node.aabb_min[2] = current->bounds.min.z;
+            flat_node.aabb_max[0] = current->bounds.max.x;
+            flat_node.aabb_max[1] = current->bounds.max.y;
+            flat_node.aabb_max[2] = current->bounds.max.z;
+
+            if (current->prim_count > 0) {
+                // Leaf node
+                flat_node.prim_count = current->prim_count;
+                flat_node.prim_type = current->prim_type;
+                flat_node.first_prim = current->first_prim_offset;
+                flat_node.left_child = current->first_prim_offset; // Reuse field
+                flat_node.right_child = UINT32_MAX; // Mark as leaf
+            } else {
+                // Internal node
+                flat_node.prim_count = 0;
+                flat_node.split_axis = current->split_axis;
+                flat_node.left_child = node_to_index[current->left];
+                flat_node.right_child = node_to_index[current->right];
+            }
+
+            nodes[i] = flat_node;
+        }
+
+        return 0; // Root is always at index 0
     }
 
     void BVHBuilder::cleanup() {
