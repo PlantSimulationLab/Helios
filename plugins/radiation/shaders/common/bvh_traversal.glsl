@@ -127,13 +127,6 @@ uint traverse_bvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_i
 
                     hit = intersect_triangle(ray_origin, ray_dir, v0, v1, v2);
 
-                } else if (prim_type == 2) { // Disk
-                    // TODO: Implement disk intersection
-                    continue;
-
-                } else if (prim_type == 4) { // Voxel
-                    // TODO: Implement voxel intersection
-                    continue;
                 }
 
                 // Update closest hit if this intersection is nearer AND passes texture mask
@@ -322,10 +315,6 @@ uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim
                         vec3 v2 = vec3(triangle_vertices_buf.vertices[vbase + 6], triangle_vertices_buf.vertices[vbase + 7], triangle_vertices_buf.vertices[vbase + 8]);
                         hit = intersect_triangle(ray_origin, ray_dir, v0, v1, v2);
 
-                    } else if (actual_prim_type == 2u) { // Disk
-                        continue;
-                    } else if (actual_prim_type == 4u) { // Voxel
-                        continue;
                     }
 
                     if (hit.hit && hit.t < closest_t && hit.t > t_min) {

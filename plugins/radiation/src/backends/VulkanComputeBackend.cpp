@@ -696,7 +696,10 @@ namespace helios {
 
     void VulkanComputeBackend::updateDiffuseRadiation(const std::vector<float> &flux, const std::vector<float> &extinction, const std::vector<helios::vec3> &peak_dir, const std::vector<float> &dist_norm,
                                                       const std::vector<float> &sky_energy) {
-        // TODO: Upload diffuse radiation params in Phase 2+
+        // Intentional no-op: the Vulkan backend uploads diffuse radiation parameters directly
+        // in launchDiffuseRays() from the RayTracingLaunchParams struct, rather than caching
+        // them here. This method is required by the RayTracingBackend interface but is not
+        // called by RadiationModel.
     }
 
     void VulkanComputeBackend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params, const std::vector<float> &camera_sky_radiance, const helios::vec3 &sun_direction,
@@ -1968,21 +1971,28 @@ namespace helios {
             descriptors_dirty = true;
         }
 
-        // Copy scatter_top → radiation_out_top (using host-coherent memory)
+        // Wait for any pending compute work and invalidate scatter buffers before reading
+        vkQueueWaitIdle(device->getComputeQueue());
+
+        // Copy scatter_top → radiation_out_top
+        vmaInvalidateAllocation(device->getAllocator(), scatter_top_buffer.allocation, 0, VK_WHOLE_SIZE);
         void *src_top = nullptr;
         void *dst_top = nullptr;
         vmaMapMemory(device->getAllocator(), scatter_top_buffer.allocation, &src_top);
         vmaMapMemory(device->getAllocator(), radiation_out_top_buffer.allocation, &dst_top);
         memcpy(dst_top, src_top, buffer_size);
+        vmaFlushAllocation(device->getAllocator(), radiation_out_top_buffer.allocation, 0, VK_WHOLE_SIZE);
         vmaUnmapMemory(device->getAllocator(), scatter_top_buffer.allocation);
         vmaUnmapMemory(device->getAllocator(), radiation_out_top_buffer.allocation);
 
         // Copy scatter_bottom → radiation_out_bottom
+        vmaInvalidateAllocation(device->getAllocator(), scatter_bottom_buffer.allocation, 0, VK_WHOLE_SIZE);
         void *src_bottom = nullptr;
         void *dst_bottom = nullptr;
         vmaMapMemory(device->getAllocator(), scatter_bottom_buffer.allocation, &src_bottom);
         vmaMapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation, &dst_bottom);
         memcpy(dst_bottom, src_bottom, buffer_size);
+        vmaFlushAllocation(device->getAllocator(), radiation_out_bottom_buffer.allocation, 0, VK_WHOLE_SIZE);
         vmaUnmapMemory(device->getAllocator(), scatter_bottom_buffer.allocation);
         vmaUnmapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation);
     }
@@ -2020,14 +2030,19 @@ namespace helios {
         VkResult result_top = vmaMapMemory(device->getAllocator(), radiation_out_top_buffer.allocation, &dst_top);
         VkResult result_bottom = vmaMapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation, &dst_bottom);
 
-        if (result_top == VK_SUCCESS && result_bottom == VK_SUCCESS) {
+        if (result_top == VK_SUCCESS) {
             std::memcpy(dst_top, radiation_out_top.data(), buffer_size);
-            std::memcpy(dst_bottom, radiation_out_bottom.data(), buffer_size);
             vmaFlushAllocation(device->getAllocator(), radiation_out_top_buffer.allocation, 0, VK_WHOLE_SIZE);
-            vmaFlushAllocation(device->getAllocator(), radiation_out_bottom_buffer.allocation, 0, VK_WHOLE_SIZE);
+            vmaUnmapMemory(device->getAllocator(), radiation_out_top_buffer.allocation);
         }
-        vmaUnmapMemory(device->getAllocator(), radiation_out_top_buffer.allocation);
-        vmaUnmapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation);
+        if (result_bottom == VK_SUCCESS) {
+            std::memcpy(dst_bottom, radiation_out_bottom.data(), buffer_size);
+            vmaFlushAllocation(device->getAllocator(), radiation_out_bottom_buffer.allocation, 0, VK_WHOLE_SIZE);
+            vmaUnmapMemory(device->getAllocator(), radiation_out_bottom_buffer.allocation);
+        }
+        if (result_top != VK_SUCCESS || result_bottom != VK_SUCCESS) {
+            helios_runtime_error("ERROR (VulkanComputeBackend::uploadRadiationOut): Failed to map radiation output buffers.");
+        }
     }
 
     void VulkanComputeBackend::uploadCameraScatterBuffers(const std::vector<float> &scatter_top_cam, const std::vector<float> &scatter_bottom_cam) {
