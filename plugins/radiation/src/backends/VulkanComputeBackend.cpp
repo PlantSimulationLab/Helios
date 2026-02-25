@@ -140,7 +140,6 @@ namespace helios {
         destroyBuffer(specular_exponent_buffer);
         destroyBuffer(specular_scale_buffer);
         destroyBuffer(radiation_in_buffer);
-        destroyBuffer(radiation_out_buffer);
         destroyBuffer(radiation_out_top_buffer);
         destroyBuffer(radiation_out_bottom_buffer);
         destroyBuffer(scatter_top_buffer);
@@ -567,8 +566,6 @@ namespace helios {
         // No-op: BVH is built in updateGeometry()
     }
 
-    // ========== Stub implementations (to be completed in later phases) ==========
-
     void VulkanComputeBackend::updateMaterials(const RayTracingMaterial &materials) {
         band_count = materials.num_bands;
 
@@ -907,8 +904,6 @@ namespace helios {
         uint32_t dispatch_y = dispatch_y_rays * prim_tiles_y;
         uint32_t dispatch_z = prims_per_tile;
 
-        push_constants.launch_offset = params.launch_offset;
-        push_constants.launch_count = params.launch_count;
         push_constants.prim_tiles_y = prim_tiles_y;
         push_constants.prims_per_tile = prims_per_tile;
 
@@ -1850,15 +1845,6 @@ namespace helios {
             radiation_in_buffer = createBuffer(buffer_size * sizeof(float), usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
         }
 
-        // Create or resize radiation_out buffer
-        if (radiation_out_buffer.buffer == VK_NULL_HANDLE || radiation_out_buffer.size != buffer_size * sizeof(float)) {
-            if (radiation_out_buffer.buffer != VK_NULL_HANDLE) {
-                destroyBuffer(radiation_out_buffer);
-            }
-            VkBufferUsageFlags usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-            radiation_out_buffer = createBuffer(buffer_size * sizeof(float), usage, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
-        }
-
         // Create or resize radiation_specular buffer [source * primitive * band]
         // Only create if source_count > 0 (specular requires sources)
         if (source_count > 0) {
@@ -1875,7 +1861,6 @@ namespace helios {
 
         // Zero radiation buffers
         zeroBuffer(radiation_in_buffer);
-        zeroBuffer(radiation_out_buffer);
 
         descriptors_dirty = true;  // Result buffers created/changed
     }
@@ -2530,8 +2515,8 @@ namespace helios {
         // Set 2: Result buffers (read/write, zeroed per-launch)
         std::vector<VkDescriptorSetLayoutBinding> result_bindings = {
             {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_in
-            {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_out_top (Phase 2+)
-            {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_out_bottom (Phase 2+)
+            {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_out_top
+            {2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // radiation_out_bottom
             {3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // scatter_top
             {4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // scatter_bottom
             {5, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // camera_radiation
@@ -2549,7 +2534,7 @@ namespace helios {
             helios_runtime_error("ERROR (VulkanComputeBackend::createDescriptorSets): Failed to create result descriptor set layout");
         }
 
-        // Set 3: Sky parameters (Phase 2+, read-only diffuse parameters)
+        // Set 3: Sky parameters (read-only diffuse parameters)
         std::vector<VkDescriptorSetLayoutBinding> sky_bindings = {
             {0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // diffuse_flux
             {1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}, // diffuse_peak_dir
@@ -2869,7 +2854,6 @@ namespace helios {
         VkDescriptorSetLayout set_layouts[] = {set_layout_geometry, set_layout_materials, set_layout_results, set_layout_sky, set_layout_debug};
 
         // Push constants (128 bytes max for MoltenVK compatibility)
-        // Phase 2 needs 48 bytes (12 uint32_t for diffuse raygen)
         const uint32_t push_constant_size = 128;
 
         // Validate against device limits

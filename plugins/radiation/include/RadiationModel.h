@@ -2046,7 +2046,7 @@ protected:
      */
     std::vector<CameraTile> computeCameraTiles(const RadiationCamera &camera, size_t maxRays);
 
-    //! Phase 1: Build backend-agnostic geometry data from Context primitives
+    //! Build backend-agnostic geometry data from Context primitives
     /**
      * Extracts geometry from the specified Context primitives and populates geometry_data structure.
      * This data can then be uploaded to the backend via backend->updateGeometry().
@@ -2066,10 +2066,10 @@ protected:
     //! Must be called after buildGeometryData() and before buildMaterialData()
     void buildUUIDMapping();
 
-    //! Phase 1: Build backend-agnostic material data from Context primitive data
+    //! Build backend-agnostic material data from Context primitive data
     void buildMaterialData();
 
-    //! Phase 1: Build backend-agnostic source data from radiation_sources
+    //! Build backend-agnostic source data from radiation_sources
     void buildSourceData();
 
     //! UUIDs for source 3D object models (for visualization). Key is the source ID, value is a vector of UUIDs for the source model.
@@ -2077,7 +2077,7 @@ protected:
     //! UUIDs for camera 3D object models (for visualization). Key is the camera label, value is a vector of UUIDs for the camera model.
     std::map<std::string, std::vector<uint>> camera_model_UUIDs;
 
-    /* Phase 1: Backend abstraction layer (for incremental OptiX code replacement) */
+    /* Backend abstraction layer */
 
     //! Ray tracing backend (will replace direct OptiX usage)
     std::unique_ptr<helios::RayTracingBackend> backend;

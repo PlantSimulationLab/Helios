@@ -5,7 +5,7 @@
 #extension GL_KHR_shader_subgroup_arithmetic : enable
 #extension GL_KHR_shader_subgroup_basic : enable
 
-// Diffuse ray generation shader (Phase 2)
+// Diffuse ray generation shader
 // Launches rays from surfaces in hemispherical directions for diffuse radiation transfer
 
 // Workgroup size: 8×32×1 = 256 threads

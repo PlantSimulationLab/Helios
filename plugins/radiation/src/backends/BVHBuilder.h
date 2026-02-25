@@ -133,7 +133,6 @@ namespace helios {
      * @brief BVH builder using SAH (Surface Area Heuristic)
      *
      * Constructs a high-quality BVH on CPU using:
-     * - TBB-parallelized AABB computation
      * - Top-down recursive SAH split (16-bin binned SAH)
      * - Type-homogeneous leaves (each leaf contains one primitive type)
      * - Flat array output for GPU traversal

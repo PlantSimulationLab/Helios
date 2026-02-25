@@ -3,7 +3,7 @@
 #extension GL_EXT_shader_atomic_float : enable
 #extension GL_GOOGLE_include_directive : enable
 
-// Camera ray generation shader (Phase 7)
+// Camera ray generation shader
 // Launches rays from camera for image rendering with antialiasing
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;

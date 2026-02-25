@@ -19,10 +19,6 @@
 #include <cmath>
 #include <queue>
 
-// TODO: Add TBB parallelization in future optimization phase
-// #include <tbb/parallel_for.h>
-// #include <tbb/blocked_range.h>
-
 namespace helios {
 
     std::vector<BVHNode> BVHBuilder::build(const RayTracingGeometry &geom) {
@@ -44,7 +40,7 @@ namespace helios {
             type_offsets[i] = type_counters[prim_type]++;
         }
 
-        // Step 2: Compute AABBs for all primitives (serial for now, TODO: parallelize with TBB)
+        // Step 2: Compute AABBs for all primitives
         primitive_refs.resize(geom.primitive_count);
 
         for (size_t i = 0; i < geom.primitive_count; ++i) {
@@ -536,6 +532,8 @@ namespace helios {
     }
 
     BVHBuilder::BVH8Node *BVHBuilder::collapseToBVH8(BuildNode *bvh2_node, int depth) {
+        if (!bvh2_node) return nullptr;
+
         // Helper lambda: Count total primitives in a subtree
         auto countPrimitivesInSubtree = [](BuildNode *node, auto& self) -> uint32_t {
             if (!node) return 0;

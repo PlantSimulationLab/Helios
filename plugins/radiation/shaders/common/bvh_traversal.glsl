@@ -172,8 +172,8 @@ const uint slot_masks[8] = uint[8](0x00u, 0x01u, 0x03u, 0x07u, 0x0Fu, 0x1Fu, 0x3
 // NOTE: This function expects bvh_buf to contain CWBVH_Node data (128 bytes/node, 32 floats/node)
 //
 // Optimized for low register pressure on Apple M2 GPU (Metal via MoltenVK):
-// - Phase 1: Read only quantization params + bounds (16 words), run AABB tests, build hit bitmask
-// - Phase 2: Read metadata + leaf data only for survivors (deferred reads)
+// - Step 1: Read only quantization params + bounds (16 words), run AABB tests, build hit bitmask
+// - Step 2: Read metadata + leaf data only for survivors (deferred reads)
 // - No sort arrays — process children in slot order, push internal nodes in near-first order
 // - Branchless byte extraction via bitfieldExtract
 uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim_idx, inout float closest_t, out uint hit_prim_type, out vec2 hit_uv) {
@@ -197,7 +197,7 @@ uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim
         // CWBVH_Node is 128 bytes = 32 floats
         uint base = node_idx * 32u;
 
-        // ---- Phase 1: Read quantization params + bounds (words 0-15 = 64 bytes) ----
+        // ---- Step 1: Read quantization params + bounds (words 0-15 = 64 bytes) ----
         vec3 p = vec3(bvh_buf.data[base], bvh_buf.data[base + 1], bvh_buf.data[base + 2]);
         uint e_packed = floatBitsToUint(bvh_buf.data[base + 3]);
 
@@ -260,7 +260,7 @@ uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim
 
         if (hit_mask == 0u) continue; // No children hit — skip metadata reads
 
-        // ---- Phase 2: Read metadata only for nodes with survivors (words 16, 18) ----
+        // ---- Step 2: Read metadata only for nodes with survivors (words 16, 18) ----
         uint imask = floatBitsToUint(bvh_buf.data[base + 16]) & 0xFFu;
         uint base_index_child = floatBitsToUint(bvh_buf.data[base + 18]);
 
@@ -280,7 +280,7 @@ uint traverse_cwbvh(vec3 ray_origin, vec3 ray_dir, float t_min, uint origin_prim
                     stack[stack_ptr++] = child_array_idx;
                 }
             } else {
-                // ---- Phase 3: Read leaf data on demand (words 20+slot, 28-31) ----
+                // ---- Step 3: Read leaf data on demand (words 20+slot, 28-31) ----
                 uint first_prim = floatBitsToUint(bvh_buf.data[base + 20u + child_slot]);
 
                 // Read prim_count and prim_type from packed byte arrays

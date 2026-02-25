@@ -4,7 +4,7 @@
 #extension GL_GOOGLE_include_directive : enable
 #extension GL_KHR_shader_subgroup_arithmetic : enable
 
-// Direct ray generation shader (Phase 1)
+// Direct ray generation shader
 // Launches rays from surfaces toward radiation sources
 
 layout(local_size_x = 8, local_size_y = 32, local_size_z = 1) in;
@@ -37,7 +37,6 @@ layout(push_constant) uniform PushConstants {
 
 // ========== Descriptor Set 0: Geometry ==========
 layout(set = 0, binding = 0) readonly buffer BVHBuffer {
-    // BVHNode struct placeholder - not used in Phase 1 (direct rays don't trace)
     float data[];
 } bvh_buf;
 
@@ -408,11 +407,7 @@ void main() {
             } else if (prim_type == 1) { // Triangle
                 sp_local = sample_triangle(rng);
 
-            } else if (prim_type == 2) { // Disk
-                sp_local = sample_disk(rng);
-
             } else {
-                // Unsupported primitive type in Phase 1
                 continue;
             }
 

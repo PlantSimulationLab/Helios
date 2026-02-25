@@ -160,9 +160,8 @@ namespace helios {
 
         // Result buffers (Set 2)
         Buffer radiation_in_buffer;
-        Buffer radiation_out_buffer; // Phase 1 unified buffer (deprecated in Phase 2+)
-        Buffer radiation_out_top_buffer;    // Phase 2+ separate top face
-        Buffer radiation_out_bottom_buffer; // Phase 2+ separate bottom face
+        Buffer radiation_out_top_buffer;
+        Buffer radiation_out_bottom_buffer;
         Buffer scatter_top_buffer;
         Buffer scatter_bottom_buffer;
         Buffer camera_radiation_buffer;      //!< Camera pixel radiation values
@@ -172,7 +171,7 @@ namespace helios {
         Buffer camera_scatter_bottom_buffer; //!< Camera-weighted scatter (bottom face)
         Buffer radiation_specular_buffer;    //!< Accumulated incident radiation for specular [source × primitive × band]
 
-        // Sky parameter buffers (Set 3) - Phase 2+
+        // Sky parameter buffers (Set 3)
         Buffer diffuse_flux_buffer;
         Buffer diffuse_peak_dir_buffer;
         Buffer diffuse_extinction_buffer;
@@ -189,12 +188,12 @@ namespace helios {
         VkDescriptorSetLayout set_layout_geometry = VK_NULL_HANDLE;
         VkDescriptorSetLayout set_layout_materials = VK_NULL_HANDLE;
         VkDescriptorSetLayout set_layout_results = VK_NULL_HANDLE;
-        VkDescriptorSetLayout set_layout_sky = VK_NULL_HANDLE; // Phase 2+: Sky parameters
+        VkDescriptorSetLayout set_layout_sky = VK_NULL_HANDLE;
         VkDescriptorSetLayout set_layout_debug = VK_NULL_HANDLE; // Debug counters
         VkDescriptorSet set_geometry = VK_NULL_HANDLE;
         VkDescriptorSet set_materials = VK_NULL_HANDLE;
         VkDescriptorSet set_results = VK_NULL_HANDLE;
-        VkDescriptorSet set_sky = VK_NULL_HANDLE; // Phase 2+: Sky parameters
+        VkDescriptorSet set_sky = VK_NULL_HANDLE;
         VkDescriptorSet set_debug = VK_NULL_HANDLE; // Debug counters
 
         // Cached sky/sun parameters (for camera push constants)

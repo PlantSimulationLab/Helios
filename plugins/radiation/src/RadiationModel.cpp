@@ -4792,7 +4792,7 @@ void RadiationModel::setCameraPixelData(const std::string &camera_label, const s
     cameras.at(camera_label).pixel_data[band_label] = pixel_data;
 }
 
-// ========== Phase 1: Backend Integration Methods ==========
+// ========== Backend Integration Methods ==========
 
 void RadiationModel::queryBackendGPUMemory() const {
     if (backend) {

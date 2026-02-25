@@ -157,7 +157,7 @@ DOCTEST_TEST_CASE("BufferIndexing Correctness") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Simple Direct") {
-    // Minimal test for Phase 1 Vulkan: single patch, collimated source, no scattering, no emission
+    // Minimal test: single patch, collimated source, no scattering, no emission
     Context context;
     uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1)); // Horizontal 1x1 patch
     context.setPrimitiveData(patch, "twosided_flag", uint(0)); // One-sided
@@ -179,8 +179,6 @@ DOCTEST_TEST_CASE("RadiationModel Simple Direct") {
 
     float flux;
     context.getPrimitiveData(patch, "radiation_flux_SW", flux);
-
-    std::cout << "Simple direct test: flux=" << flux << " expected=1000" << std::endl;
 
     // With no reflection, horizontal patch, downward sun: should absorb ~1000 W/m²
     float error = fabsf(flux - 1000.0f) / 1000.0f;
@@ -1686,12 +1684,6 @@ DOCTEST_TEST_CASE("RadiationModel ROMC Camera Test Verification") {
         std::string global_UUID = "camera_" + cameralabels.at(i) + "_pixel_UUID";
         context_17.getGlobalData(global_data_label.c_str(), camera_data);
         context_17.getGlobalData(global_UUID.c_str(), camera_UUID);
-        std::cout << "Camera " << i << ": camera_UUID size=" << camera_UUID.size()
-                  << " first 5 UUIDs: [" << (camera_UUID.size() > 0 ? std::to_string(camera_UUID[0]) : "empty")
-                  << ", " << (camera_UUID.size() > 1 ? std::to_string(camera_UUID[1]) : "")
-                  << ", " << (camera_UUID.size() > 2 ? std::to_string(camera_UUID[2]) : "")
-                  << ", " << (camera_UUID.size() > 3 ? std::to_string(camera_UUID[3]) : "")
-                  << ", " << (camera_UUID.size() > 4 ? std::to_string(camera_UUID[4]) : "") << "]" << std::endl;
         float camera_all_data = 0;
         int filtered_count = 0, uuid_zero_count = 0, uuid_invalid_count = 0;
         float unfiltered_sum = 0, uuid_zero_sum = 0;
@@ -1713,13 +1705,7 @@ DOCTEST_TEST_CASE("RadiationModel ROMC Camera Test Verification") {
                 }
             }
         }
-        std::cout << "Camera " << i << ": unfiltered_sum=" << unfiltered_sum
-                  << ", filtered_sum=" << camera_all_data << " (" << filtered_count << " pixels)"
-                  << ", UUID=0: " << uuid_zero_count << " pixels (sum=" << uuid_zero_sum << ")"
-                  << ", invalid UUID: " << uuid_invalid_count << " pixels" << std::endl;
         cameravalue = std::abs(referencevalues.at(i) - camera_all_data);
-        std::cout << "Camera " << i << " (" << viewangles[i] << "°): expected=" << referencevalues.at(i)
-                  << " actual=" << camera_all_data << " error=" << cameravalue << std::endl;
         DOCTEST_CHECK(cameravalue <= 1.5f);
     }
 }
