@@ -3480,7 +3480,7 @@ namespace helios {
         VkDescriptorBufferInfo rad_in_info{};
         rad_in_info.buffer = radiation_in_buffer.buffer;
         rad_in_info.offset = 0;
-        rad_in_info.range = radiation_in_buffer.size;  // Use explicit size instead of VK_WHOLE_SIZE for MoltenVK
+        rad_in_info.range = VK_WHOLE_SIZE;
 
         VkDescriptorBufferInfo rad_out_top_info{};
         rad_out_top_info.buffer = radiation_out_top_buffer.buffer;

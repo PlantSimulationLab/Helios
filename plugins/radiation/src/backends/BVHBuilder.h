@@ -70,7 +70,7 @@ namespace helios {
 
         // Metadata (16 bytes)
         uint8_t imask;           //!< Internal/leaf mask (1 bit per child)
-        uint8_t meta[7];         //!< Reserved for future use
+        uint8_t meta[7];         //!< Padding to maintain 128-byte node alignment
         uint32_t base_index_child;    //!< Base index for child nodes
         uint32_t base_index_triangle; //!< Reserved
 

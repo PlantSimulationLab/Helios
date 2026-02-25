@@ -451,7 +451,6 @@ namespace helios {
                 flat_node.prim_count = current->prim_count;
                 flat_node.prim_type = current->prim_type;
                 flat_node.first_prim = current->first_prim_offset;
-                flat_node.left_child = current->first_prim_offset; // Reuse field
                 flat_node.right_child = UINT32_MAX; // Mark as leaf
             } else {
                 // Internal node
