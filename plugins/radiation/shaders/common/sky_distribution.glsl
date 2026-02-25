@@ -111,7 +111,7 @@ float evaluate_sky_distribution(vec3 ray_dir, vec3 peak_dir, float power_law_K, 
         return sky_prague(ray_dir, peak_dir, prague_params);
     }
 
-    // Priority 3: Isotropic (fallback)
+    // Fallback: isotropic distribution
     return sky_isotropic();
 }
 

@@ -1514,6 +1514,75 @@ DOCTEST_TEST_CASE("RadiationModel Prague Sky Diffuse Radiation Normalization") {
     }
 }
 
+DOCTEST_TEST_CASE("RadiationModel Prague Sky Angular Distribution") {
+    // Tests that Prague sky model parameters are correctly applied in the diffuse shader.
+    //
+    // RadiationModel::computeAngularNormalization() always computes the normalization factor
+    // with the sun at zenith. When the actual sun is at a different elevation, the Prague
+    // distribution integrates to a value different from 1.0 on a horizontal patch, making
+    // Prague measurably different from isotropic.
+    //
+    // Test design: horizontal patch, sun at 45° elevation (not zenith).
+    //   - Isotropic: flux = 1.0 (all horizontal rays above horizon, normalization exact)
+    //   - Prague: flux ≈ 0.91 (circumsolar peak at 45° elevation has lower cosine weight
+    //             than the zenith-calibrated normalization expects → total < 1.0)
+    //
+    // If Prague params are zeroed (bug): isotropic fallback → flux ≈ 1.0 → test FAILS
+    // If Prague params are applied (fix): Prague distribution → flux ≈ 0.91 → test PASSES
+
+    Context context;
+
+    // Horizontal patch (default orientation, normal = +Z)
+    uint UUID = context.addPatch();
+    context.setPrimitiveData(UUID, "twosided_flag", uint(0));
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    radiation.addRadiationBand("diffuse");
+    radiation.disableEmission("diffuse");
+    radiation.setDiffuseRayCount("diffuse", 200000);
+    radiation.setDiffuseRadiationFlux("diffuse", 1.f);
+
+    // Diffuse spectrum required for Prague spectral integration
+    std::vector<helios::vec2> diffuse_spectrum = {{400, 1.0}, {550, 1.0}, {700, 1.0}};
+    context.setGlobalData("prague_angular_test_spectrum", diffuse_spectrum);
+    radiation.setDiffuseSpectrum("prague_angular_test_spectrum");
+
+    radiation.updateGeometry();
+
+    // Prague sky: sun at 45° elevation (+Y azimuth), no horizon brightening
+    // Normalization is computed for sun at zenith, so sun at 45° creates a measurable
+    // deficit: circumsolar peak at cos_zenith=0.707 vs. normalization calibrated at cos_zenith=1.0
+    vec3 sun_dir = make_vec3(0, 0.707f, 0.707f); // 45° elevation, toward +Y
+    context.setGlobalData("prague_sky_valid", 1);
+    context.setGlobalData("prague_sky_sun_direction", sun_dir);
+    context.setGlobalData("prague_sky_visibility_km", 50.0f);
+    context.setGlobalData("prague_sky_ground_albedo", 0.2f);
+
+    // Prague spectral params: circ_str=8, circ_width=10°, horiz_bright=1.0
+    // RadiationModel recomputes normalization via computeAngularNormalization(8, 10, 1) ≈ 0.222
+    std::vector<float> prague_params;
+    prague_params.push_back(550.0f); // wavelength
+    prague_params.push_back(0.1f);   // L_zenith (not used in this test)
+    prague_params.push_back(8.0f);   // circumsolar strength
+    prague_params.push_back(10.0f);  // circumsolar width (degrees)
+    prague_params.push_back(1.0f);   // horizon brightness (1.0 = no brightening)
+    prague_params.push_back(0.0f);   // normalization (recomputed by RadiationModel)
+    context.setGlobalData("prague_sky_spectral_params", prague_params);
+
+    radiation.runBand("diffuse");
+
+    float flux;
+    context.getPrimitiveData(UUID, "radiation_flux_diffuse", flux);
+
+    // Isotropic sky on a horizontal patch gives 1.0 (exact, by normalization design)
+    // Prague with sun at 45° and normalization for sun at zenith gives ~0.91 (~9% below isotropic)
+    // This large margin (9%) is well above Monte Carlo noise (~0.2% at 200k rays)
+    DOCTEST_CHECK(flux < 0.97f); // Prague gives measurably less than isotropic (1.0)
+    DOCTEST_CHECK(flux > 0.70f); // Sanity: flux is reasonable
+}
+
 DOCTEST_TEST_CASE("RadiationModel Disk Radiation Source Above Circular Element") {
     float error_threshold = 0.005;
 

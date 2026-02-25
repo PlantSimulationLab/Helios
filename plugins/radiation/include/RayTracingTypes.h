@@ -229,6 +229,7 @@ namespace helios {
         std::vector<float> diffuse_extinction; //!< Diffuse extinction coefficient per band
         std::vector<helios::vec3> diffuse_peak_dir; //!< Peak direction for diffuse distribution per band
         std::vector<float> diffuse_dist_norm; //!< Diffuse distribution normalization per band
+        std::vector<helios::vec4> sky_radiance_params; //!< Prague sky model params per band (circ_str, circ_width, horiz_bright, norm)
 
         // Emission/outgoing radiation (for diffuse ray launches)
         std::vector<float> radiation_out_top; //!< Emitted/outgoing radiation (top face) per [primitive][band]

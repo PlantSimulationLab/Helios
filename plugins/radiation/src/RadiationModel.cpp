@@ -3333,6 +3333,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             peak_dirs[i] = helios::make_vec3(diffuse_peak_dir[i].x, diffuse_peak_dir[i].y, diffuse_peak_dir[i].z);
         }
         params.diffuse_peak_dir = peak_dirs;
+        params.sky_radiance_params = prague_params;
 
         // Top surface launch
         params.launch_face = 1;
@@ -3445,6 +3446,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 peak_dirs[i] = helios::make_vec3(diffuse_peak_dir[i].x, diffuse_peak_dir[i].y, diffuse_peak_dir[i].z);
             }
             params.diffuse_peak_dir = peak_dirs;
+            params.sky_radiance_params = prague_params;
 
             // Set radiation_out for scattering rays
             params.radiation_out_top = flux_top_scatter;

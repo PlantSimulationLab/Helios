@@ -712,7 +712,7 @@ namespace helios {
                 if (sky_radiance_params_buffer.buffer != VK_NULL_HANDLE) {
                     destroyBuffer(sky_radiance_params_buffer);
                 }
-                sky_radiance_params_buffer = createBuffer(params_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+                sky_radiance_params_buffer = createBuffer(params_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
                 descriptors_dirty = true;
             }
             uploadBufferData(sky_radiance_params_buffer, sky_radiance_params.data(), params_size);
@@ -1111,18 +1111,21 @@ namespace helios {
             descriptors_dirty = true;
         }
 
-        // Sky radiance params (Prague model) - ensure properly sized and zeroed
-        // TODO Phase 3+: Upload actual sky_radiance_params from updateSkyModel
+        // Sky radiance params (Prague model) - always recreate with current data
         {
             size_t sky_params_size = launch_band_count * sizeof(helios::vec4);
-            if (sky_radiance_params_buffer.buffer == VK_NULL_HANDLE || sky_radiance_params_buffer.size != sky_params_size) {
-                if (sky_radiance_params_buffer.buffer != VK_NULL_HANDLE) {
-                    destroyBuffer(sky_radiance_params_buffer);
-                }
-                sky_radiance_params_buffer = createBuffer(sky_params_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_HOST);
-                descriptors_dirty = true;
+            if (sky_radiance_params_buffer.buffer != VK_NULL_HANDLE) {
+                destroyBuffer(sky_radiance_params_buffer);
             }
-            zeroBuffer(sky_radiance_params_buffer);
+            sky_radiance_params_buffer = createBuffer(sky_params_size,
+                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                VMA_MEMORY_USAGE_GPU_ONLY);
+            descriptors_dirty = true;
+            if (!params.sky_radiance_params.empty() && params.sky_radiance_params.size() == launch_band_count) {
+                uploadBufferData(sky_radiance_params_buffer, params.sky_radiance_params.data(), sky_params_size);
+            } else {
+                zeroBuffer(sky_radiance_params_buffer);
+            }
         }
 
         // Create debug counters buffer if needed (5 uint32_t counters)
