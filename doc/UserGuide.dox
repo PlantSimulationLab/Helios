@@ -14,7 +14,7 @@
 
   <h1>System Requirements</h1>
 
-  Helios is compatible with Mac, Linux, and PC platforms. Some plug-ins require an <a href="www.nvidia.com">NVIDIA</a> graphics processing unit (GPU), such as the radiation model and LiDAR plug-ins. Note that since modern Mac's don't have NVIDIA GPUs, these plug-ins will not work on MacOS.
+  Helios is compatible with Mac, Linux, and PC platforms. Some plug-ins benefit from or require an NVIDIA GPU. The radiation model uses GPU-accelerated ray tracing, which is supported on all platforms via the <b>Vulkan backend</b> (requires Vulkan SDK). On systems with NVIDIA GPUs, the radiation model can alternatively use the <b>OptiX backend</b> (requires NVIDIA CUDA). The Aerial LiDAR plug-in requires NVIDIA CUDA.
   
   <p> <br></p>
 
@@ -160,11 +160,11 @@
   - \subpage PlantArchitectureDoc "Plant Architecture: Flexible procedural plant generation with dynamic growth and phenology."
   - \subpage PlantHydraulicsDoc "Plant Hydraulics: Models the water potentials, water contents, hydraulic conductances, and hydraulic capacitances."
   - \subpage ProjectBuilderDoc "GUI and XML interface for creating and running Helios projects."
-  - \subpage RadiationDoc "Radiation Model: GPU-accelerated ray-tracing radiation transport model"
+  - \subpage RadiationDoc "Radiation Model: GPU-accelerated ray-tracing radiation transport model (all platforms via Vulkan; NVIDIA systems via OptiX)"
   - \subpage SolarPositionDoc "Solar Position Model: Model for the position of the sun in the sky, as well as models of solar radiation flux and longwave flux from the sky."
   - \subpage StomatalDoc "Stomatal Conductance Model: Model for the conductance of water vapor through stomatal pores"
   - \subpage VisualizerDoc "Visualizer: visualization of model geometry and data"
-  - \subpage VoxelIntersectionDoc "Voxel Intersection: Determine planar primitive elements that lie within voxel primitives."
+
   - \subpage WeberPennDoc "Weber-Penn Tree: Procedural tree architecture generation"
 
 */
@@ -201,7 +201,7 @@
 
   To install only the dependencies required to run Helios with the visualizer plugin, use the argument "VIS": `source dependencies.sh VIS`
 
-  To install only the dependencies required to run Helios with CUDA (required for the Radiation, Energy Balance, LiDAR, Aerial LiDAR, and Voxel Intersection plugins), use the argument "CUDA": `source dependencies.sh CUDA`
+  To install only the dependencies required to run Helios with CUDA (required for the Aerial LiDAR plugin, and optional for the Radiation plugin when using the OptiX backend on NVIDIA systems), use the argument "CUDA": `source dependencies.sh CUDA`
 
   \section SetupPC Set-up on Windows PC
 
@@ -233,7 +233,7 @@
 
   \subsection SetupPCCUDA Setting up NVIDIA CUDA
 
-  The NVIDIA CUDA library is needed to build and run any plug-ins that run on the GPU. Consult this page for help choosing the right CUDA version based on your C++ compiler and GPU compute capability: \ref ChoosingCUDA.
+  The NVIDIA CUDA library is required to build the Aerial LiDAR plugin. For the radiation model, CUDA enables the OptiX backend (which is the preferred backend on NVIDIA systems), but is not required if you use the Vulkan backend instead. Consult this page for help choosing the right CUDA version based on your C++ compiler and GPU compute capability: \ref ChoosingCUDA.
 
   The latest CUDA version can be downloaded here: <a href="https://developer.nvidia.com/cuda-downloads">https://developer.nvidia.com/cuda-downloads</a> (note that if you installed Visual Studio 2019 instead of 2022, you'll need to install CUDA 10.2 instead of the latest version). Download the base CUDA Toolkit installer for your Windows OS. Installing from the "exe (network)" type will result in a smaller file being downloaded. Click through the installer and accept all the default options. By default, it should have installed to 'C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v1X.X\\', where v1X.X is the version that you installed. You can verify this installation location using the file browser.
 
@@ -277,7 +277,7 @@
 
   \subsection SetupLinuxCUDA Setting up NVIDIA CUDA
 
-  The NVIDIA CUDA library is needed to build and run any plug-ins that run on the GPU. While CUDA can be installed on Linux via apt-get, this tends to often cause problems. It has proven more robust to simply download CUDA from the NVIDIA website and run the installer. Consult this page for help choosing the right CUDA version based on your C++ compiler and GPU compute capability: \ref ChoosingCUDA.
+  The NVIDIA CUDA library is required to build the Aerial LiDAR plugin. For the radiation model, CUDA enables the OptiX backend (preferred on NVIDIA systems), but is not required if you use the Vulkan backend instead. While CUDA can be installed on Linux via apt-get, this tends to often cause problems. It has proven more robust to simply download CUDA from the NVIDIA website and run the installer. Consult this page for help choosing the right CUDA version based on your C++ compiler and GPU compute capability: \ref ChoosingCUDA.
 
   Note that individual plugins may have their own library dependencies.  Consult their documentation for dependency information. The latest CUDA version can be downloaded here: <a href="https://developer.nvidia.com/cuda-downloads">https://developer.nvidia.com/cuda-downloads</a>. However, you'll want to be sure that the version of CUDA that you install works with your compiler version. This website has a table showing compatibility for all versions: <a href="https://gist.github.com/ax3l/9489132">https://gist.github.com/ax3l/9489132</a>, check the g++ column. To figure out which version of g++ you have, you can type the command "g++ --version".
 
@@ -304,7 +304,7 @@
 
   Next, click on the "CMake" tab below Toolchains and be sure the "Generator" drop-down is set to "Unix Makefiles" and NOT Ninja or Default. You can also change the Build directory if you like, such as to simply be "build".
 
-  Once these have been installed at the system level, this is everything you will need to build basic Helios programs that do not use CUDA-based plug-ins or the Visualizer.
+  Once these have been installed at the system level, this is everything you will need to build basic Helios programs that do not use the Visualizer.
 
   If you are not using CLion, you can install and run everything you need from the command-line. Simple command-line tools are available to easily install dependent software libraries.  The appropriate commands will be given in the documentation to install any required libraries. For Mac OSX, <a href="https://brew.sh">homebrew</a> is a great package installer.  Homebrew itself can be installed via a single command:
 
@@ -317,6 +317,16 @@
   CMake: Components of Helios are compiled using the CMake package (<a href="www.cmake.org">www.cmake.org</a>).  Version 3.15+ is required.  CMake can be easily installed via the command line using homebrew "brew install cmake".
 
   C/C++ Compiler: You will also need a C/C++ compiler installed - we recommend using the GNU compilers or the AppleClang compilers.  The GNU compilers can easily be installed via the command line "brew install gcc".
+
+  \subsection SetupMacVulkan Setting up Vulkan for the Radiation Model
+
+  The radiation model uses GPU-accelerated ray tracing via the Vulkan compute backend, which is supported on macOS through <a href="https://github.com/KhronosGroup/MoltenVK">MoltenVK</a> (a Vulkan implementation on top of Metal). Install the required Vulkan libraries with Homebrew:
+
+  ~~~~~~
+  brew install vulkan-headers vulkan-loader molten-vk glslang
+  ~~~~~~
+
+  After installing, CMake will automatically detect the Vulkan SDK and enable the Vulkan backend when building the radiation plugin. No additional configuration is required.
 
 */
 	
@@ -1969,6 +1979,8 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
 */
 
 /*! \page "ChoosingCUDA" Choosing the right CUDA and OptiX version
+
+\note CUDA is <b>not required</b> to use the radiation model. The radiation model supports a Vulkan compute backend that works on all platforms, including macOS and systems without NVIDIA GPUs. CUDA is only needed if you want to use the OptiX backend (NVIDIA systems only) or to build the Aerial LiDAR plugin.
 
 Picking the right version of the NVIDIA CUDA driver can be the most difficult part of the CUDA install. If you choose the wrong version, the resulting error messages may not always be clear. This guide will help you to choose the right CUDA version for your system. It may also be necessary to change your OptiX version if using an old GPU along with the radiation model. Fortunately, this is easy and will also be described below.
 

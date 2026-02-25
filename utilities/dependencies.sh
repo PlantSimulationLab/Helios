@@ -18,9 +18,9 @@
 #   VIS:  Install base dependencies + X11/xorg
 #         Required for Visualizer plugin.
 #   CUDA: Install base dependencies + CUDA
-#         Required for 1. Radiation, 2. Energy
-#         Balance, 3. LiDAR, 4. Aerial LiDAR,
-#         and 5. Voxel Intersection plugins.
+#         Required for Aerial LiDAR plugin.
+#         Optional for Radiation plugin (enables
+#         OptiX backend on NVIDIA systems).
 #   ALL:  Install dependencies for ALL plugins
 #
 # EXAMPLE
