@@ -1191,6 +1191,8 @@ namespace helios {
             float domain_xmax;
             float domain_ymin;
             float domain_ymax;
+            uint32_t prim_tiles_y;    // Number of primitive tiles in Y dimension
+            uint32_t prims_per_tile;  // Primitives per tile (65535 max)
         } push_constants;
 
         // Initialize invariant push constants
@@ -1213,16 +1215,26 @@ namespace helios {
         push_constants.domain_ymin = domain_bounds[2];
         push_constants.domain_ymax = domain_bounds[3];
 
-        // 3D dispatch: X/Y = ray grid, Z = primitives (up to 65535 per dispatch)
+        // 3D dispatch with 2D primitive tiling to avoid exceeding Vulkan maxComputeWorkGroupCount[2] = 65535
+        // Tile primitives into Y dimension when count exceeds 65535, matching the direct shader approach
         const uint32_t WG_X = 8;  // Must match shader local_size_x
         const uint32_t WG_Y = 32; // Must match shader local_size_y
+        const uint32_t MAX_PRIMS_PER_TILE = 65535;
 
         uint32_t dispatch_x = (launch_dim_x + WG_X - 1) / WG_X;
-        uint32_t dispatch_y = (launch_dim_y + WG_Y - 1) / WG_Y;
-        uint32_t dispatch_z = params.launch_count;
+        uint32_t dispatch_y_rays = (launch_dim_y + WG_Y - 1) / WG_Y;
+
+        // Compute primitive tiling
+        uint32_t prims_per_tile = std::min(params.launch_count, MAX_PRIMS_PER_TILE);
+        uint32_t prim_tiles_y = (params.launch_count + MAX_PRIMS_PER_TILE - 1) / MAX_PRIMS_PER_TILE;
+
+        uint32_t dispatch_y = dispatch_y_rays * prim_tiles_y;
+        uint32_t dispatch_z = prims_per_tile;
 
         push_constants.launch_offset = params.launch_offset;
         push_constants.launch_count = params.launch_count;
+        push_constants.prim_tiles_y = prim_tiles_y;
+        push_constants.prims_per_tile = prims_per_tile;
 
         {
             // Record COMPUTE command buffer
