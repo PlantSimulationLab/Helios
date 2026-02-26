@@ -624,6 +624,9 @@ void OptiX6Backend::launchDiffuseRays(const RayTracingLaunchParams &params) {
     if (!params.diffuse_dist_norm.empty()) {
         initializeBuffer1Df(diffuse_dist_norm_RTbuffer, params.diffuse_dist_norm);
     }
+    if (!params.sky_radiance_params.empty()) {
+        initializeBuffer1Dfloat4(sky_radiance_params_RTbuffer, params.sky_radiance_params);
+    }
 
     // Validate context to ensure acceleration structure is built
     RT_CHECK_ERROR(rtContextValidate(OptiX_Context));
