@@ -259,6 +259,18 @@
 
   This will automatically install and configure the Linux drivers (version 470.256.02) to run OptiX.
 
+  \subsection SetupPCVulkan Setting up Vulkan for the Radiation Model
+
+  The radiation model uses GPU-accelerated ray tracing via the Vulkan compute backend, which works natively on Windows through standard GPU drivers (NVIDIA, AMD, and Intel all include Vulkan support in their drivers). The required development libraries are distributed as a single installer from LunarG.
+
+  Download and run the <a href="https://vulkan.lunarg.com/sdk/home">LunarG Vulkan SDK</a> installer for Windows, accepting the default options. The SDK includes the Vulkan headers, the Vulkan loader, and the <tt>glslangValidator</tt> shader compiler required to build Helios shaders.
+
+  \note After installation, you must <b>restart any open terminals and IDEs</b> (including CLion) before CMake can detect the SDK. The installer sets a <tt>VULKAN_SDK</tt> environment variable that is only visible to processes launched after the install completes. You can verify the installation by opening a new PowerShell window and running <tt>glslangValidator --version</tt>.
+
+  After restarting, CMake will automatically detect the Vulkan SDK via the <tt>VULKAN_SDK</tt> environment variable and enable the Vulkan backend when building the radiation plugin. No additional configuration is required.
+
+  \note If you experience a "Display driver stopped responding and has recovered" error during long radiation simulations, increase the Windows TDR delay as described in \ref TdrDelay. This affects GPU compute workloads including the Vulkan backend, not just CUDA.
+
   \section SetupLinux Set-up on Linux
 
   \subsection SetupLinuxCLion Setting up basic build functionality

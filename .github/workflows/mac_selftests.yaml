@@ -30,7 +30,7 @@ jobs:
       - name: Bash script
         run: |
           cd utilities
-          if ! ./run_tests.sh --nogpu --visbuildonly --log-file ../macos_selftests.log; then
+          if ! ./run_tests.sh --visbuildonly --log-file ../macos_selftests.log; then
             echo "==== run_tests.sh failed; dumping macos_selftests.log ===="
             cat ../macos_selftests.log
             exit 1
