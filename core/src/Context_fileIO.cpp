@@ -5207,6 +5207,282 @@ void Context::writePrimitiveData(const std::string &filename, const std::vector<
     file.close();
 }
 
+namespace {
+
+    // Parse a date string with '-' or '/' delimiters, or compact 8-digit YYYYMMDD format.
+    Date parseDateString(const std::string &datestr, const std::string &date_string_format, size_t row, const std::string &data_file) {
+
+        // Check for compact 8-digit format (no delimiters)
+        if (datestr.find('-') == std::string::npos && datestr.find('/') == std::string::npos) {
+            if (datestr.size() == 8) {
+                // Compact 8-digit date: parse according to format
+                int year, month, day;
+                if (date_string_format == "YYYYMMDD" || date_string_format == "YYYY-MM-DD") {
+                    year = std::stoi(datestr.substr(0, 4));
+                    month = std::stoi(datestr.substr(4, 2));
+                    day = std::stoi(datestr.substr(6, 2));
+                } else if (date_string_format == "DDMMYYYY" || date_string_format == "DD-MM-YYYY" || date_string_format == "DD/MM/YYYY") {
+                    day = std::stoi(datestr.substr(0, 2));
+                    month = std::stoi(datestr.substr(2, 2));
+                    year = std::stoi(datestr.substr(4, 4));
+                } else if (date_string_format == "MMDDYYYY" || date_string_format == "MM-DD-YYYY" || date_string_format == "MM/DD/YYYY") {
+                    month = std::stoi(datestr.substr(0, 2));
+                    day = std::stoi(datestr.substr(2, 2));
+                    year = std::stoi(datestr.substr(4, 4));
+                } else if (date_string_format == "YYYYDDMM") {
+                    year = std::stoi(datestr.substr(0, 4));
+                    day = std::stoi(datestr.substr(4, 2));
+                    month = std::stoi(datestr.substr(6, 2));
+                } else {
+                    helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid date string format '" + date_string_format + "' for compact date on line " + std::to_string(row) + " of file " + data_file + ".");
+                }
+                if (year < 1000 || month < 1 || month > 12 || day < 1 || day > 31) {
+                    helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse compact date string on line " + std::to_string(row) + " of file " + data_file + ".");
+                }
+                return make_Date(day, month, year);
+            }
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file +
+                                 ". Expected a delimited date (e.g., YYYY-MM-DD) or an 8-digit compact date (e.g., 20260203).");
+        }
+
+        // Delimited date: try '-' then '/'
+        std::vector<std::string> thisdatestr = separate_string_by_delimiter(datestr, "-");
+        if (thisdatestr.size() != 3) {
+            thisdatestr = separate_string_by_delimiter(datestr, "/");
+        }
+        if (thisdatestr.size() != 3) {
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file +
+                                 ". It should be in the format YYYY-MM-DD, delimited by either '-' or '/'.");
+        }
+
+        std::vector<int> thisdate(3);
+        for (int i = 0; i < 3; i++) {
+            if (!parse_int(thisdatestr.at(i), thisdate.at(i))) {
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file +
+                                     ". It should be in the format YYYY-MM-DD, delimited by either '-' or '/'.");
+            }
+        }
+
+        int year, month, day;
+        if (date_string_format == "YYYYMMDD" || date_string_format == "YYYY-MM-DD") {
+            year = thisdate.at(0);
+            month = thisdate.at(1);
+            day = thisdate.at(2);
+        } else if (date_string_format == "YYYYDDMM") {
+            year = thisdate.at(0);
+            month = thisdate.at(2);
+            day = thisdate.at(1);
+        } else if (date_string_format == "DDMMYYYY" || date_string_format == "DD-MM-YYYY" || date_string_format == "DD/MM/YYYY") {
+            year = thisdate.at(2);
+            month = thisdate.at(1);
+            day = thisdate.at(0);
+        } else if (date_string_format == "MMDDYYYY" || date_string_format == "MM-DD-YYYY" || date_string_format == "MM/DD/YYYY") {
+            year = thisdate.at(2);
+            month = thisdate.at(0);
+            day = thisdate.at(1);
+        } else {
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid date string format in file " + data_file + ": " + date_string_format +
+                                 ". Must be one of YYYYMMDD, YYYYDDMM, DDMMYYYY, MMDDYYYY (or with - or / delimiters, e.g. YYYY-MM-DD, DD/MM/YYYY).");
+        }
+
+        if (year < 1000 || month < 1 || month > 12 || day < 1 || day > 31) {
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file + ".");
+        }
+
+        return make_Date(day, month, year);
+    }
+
+    // Parse a time string: "HH", "HH:MM", or "HH:MM:SS"
+    // Note: may return hour=24 (via direct struct assignment) for midnight rollover; caller must handle.
+    Time parseTimeString(const std::string &timestr, size_t row, const std::string &data_file) {
+        std::string trimmed = trim_whitespace(timestr);
+
+        std::vector<std::string> parts = separate_string_by_delimiter(trimmed, ":");
+        int hour = 0, minute = 0, second = 0;
+
+        if (parts.size() == 1) {
+            // Integer hour
+            if (!parse_int(parts.at(0), hour)) {
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse time string '" + timestr + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+            }
+            // Handle HHMM format (e.g., 1300)
+            if (hour > 24) {
+                int hr_min = hour;
+                hour = hr_min / 100;
+                minute = hr_min - hour * 100;
+            }
+        } else if (parts.size() == 2) {
+            if (!parse_int(parts.at(0), hour) || !parse_int(parts.at(1), minute)) {
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse time string '" + timestr + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+            }
+        } else if (parts.size() == 3) {
+            if (!parse_int(parts.at(0), hour) || !parse_int(parts.at(1), minute)) {
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse time string '" + timestr + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+            }
+            // Handle fractional seconds by truncating at '.'
+            std::string sec_str = parts.at(2);
+            size_t dot_pos = sec_str.find('.');
+            if (dot_pos != std::string::npos) {
+                sec_str = sec_str.substr(0, dot_pos);
+            }
+            if (!parse_int(sec_str, second)) {
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse time string '" + timestr + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+            }
+        } else {
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse time string '" + timestr + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+        }
+
+        // Handle hour=24 by directly setting struct fields (make_Time validates hour < 24)
+        if (hour == 24) {
+            Time t;
+            t.hour = 24;
+            t.minute = minute;
+            t.second = second;
+            return t;
+        }
+
+        return make_Time(hour, minute, second);
+    }
+
+    // Parse an ISO-8601 datetime string (e.g., "2026-02-03T10:00:00Z" or "2026-02-03T02:00:00-08:00")
+    void parseISO8601(const std::string &datetimestr, Date &date, Time &time, float &utc_offset, size_t row, const std::string &data_file) {
+        utc_offset = NAN;
+
+        size_t t_pos = datetimestr.find('T');
+        if (t_pos == std::string::npos) {
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): ISO-8601 datetime string '" + datetimestr + "' on line " + std::to_string(row) + " of file " + data_file + " does not contain 'T' separator.");
+        }
+
+        // Parse date part (always YYYY-MM-DD)
+        std::string date_part = datetimestr.substr(0, t_pos);
+        std::vector<std::string> date_parts = separate_string_by_delimiter(date_part, "-");
+        if (date_parts.size() != 3) {
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date portion of ISO-8601 string '" + datetimestr + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+        }
+        int year, month, day;
+        if (!parse_int(date_parts.at(0), year) || !parse_int(date_parts.at(1), month) || !parse_int(date_parts.at(2), day)) {
+            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date portion of ISO-8601 string '" + datetimestr + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+        }
+        date = make_Date(day, month, year);
+
+        // Parse time part + optional timezone
+        std::string time_tz = datetimestr.substr(t_pos + 1);
+
+        // Strip and parse timezone suffix
+        std::string time_part;
+        if (time_tz.back() == 'Z' || time_tz.back() == 'z') {
+            time_part = time_tz.substr(0, time_tz.size() - 1);
+            utc_offset = 0.0f; // UTC → Helios convention: +West, so UTC = 0
+        } else {
+            // Look for +/- timezone offset (e.g., +05:30, -08:00)
+            // Search from after the hour portion to avoid matching a negative hour (shouldn't happen in ISO-8601 time)
+            size_t tz_pos = std::string::npos;
+            for (size_t i = 1; i < time_tz.size(); i++) {
+                if (time_tz[i] == '+' || time_tz[i] == '-') {
+                    tz_pos = i;
+                    // Keep searching — we want the last +/- that's part of timezone, not inside time
+                    // Actually for ISO-8601, the timezone offset is always at the end, so we want the last occurrence
+                }
+            }
+            if (tz_pos != std::string::npos) {
+                time_part = time_tz.substr(0, tz_pos);
+                std::string tz_str = time_tz.substr(tz_pos); // e.g., "-08:00" or "+05:30"
+                char tz_sign = tz_str[0];
+                std::string tz_num = tz_str.substr(1);
+                std::vector<std::string> tz_parts = separate_string_by_delimiter(tz_num, ":");
+                int tz_hours = 0, tz_minutes = 0;
+                if (!tz_parts.empty()) parse_int(tz_parts.at(0), tz_hours);
+                if (tz_parts.size() > 1) parse_int(tz_parts.at(1), tz_minutes);
+                float iso_offset_hours = static_cast<float>(tz_hours) + static_cast<float>(tz_minutes) / 60.0f;
+                if (tz_sign == '-') iso_offset_hours = -iso_offset_hours;
+                // Helios convention: UTC_offset is +West. ISO convention: +East.
+                // So ISO -08:00 (Pacific) → Helios +8, ISO +05:30 (India) → Helios -5.5
+                utc_offset = -iso_offset_hours;
+            } else {
+                time_part = time_tz; // No timezone info
+            }
+        }
+
+        // Truncate fractional seconds
+        size_t dot_pos = time_part.find('.');
+        if (dot_pos != std::string::npos) {
+            time_part = time_part.substr(0, dot_pos);
+        }
+
+        // Parse the time portion
+        time = parseTimeString(time_part, row, data_file);
+    }
+
+    // Dispatch combined datetime string parsing based on format
+    void parseDatetimeString(const std::string &datetimestr, const std::string &date_string_format,
+                             Date &date, Time &time, float &utc_offset, size_t row, const std::string &data_file) {
+        utc_offset = NAN;
+
+        if (date_string_format == "ISO8601") {
+            parseISO8601(datetimestr, date, time, utc_offset, row, data_file);
+            return;
+        }
+
+        if (date_string_format == "YYYYMMDDHH") {
+            if (datetimestr.size() < 10) {
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): YYYYMMDDHH datetime string '" + datetimestr + "' on line " + std::to_string(row) + " of file " + data_file + " is too short.");
+            }
+            int year = std::stoi(datetimestr.substr(0, 4));
+            int month = std::stoi(datetimestr.substr(4, 2));
+            int day = std::stoi(datetimestr.substr(6, 2));
+            int hour = std::stoi(datetimestr.substr(8, 2));
+            date = make_Date(day, month, year);
+            time = make_Time(hour, 0, 0);
+            return;
+        }
+
+        if (date_string_format == "YYYYMMDDHHMM") {
+            if (datetimestr.size() < 12) {
+                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): YYYYMMDDHHMM datetime string '" + datetimestr + "' on line " + std::to_string(row) + " of file " + data_file + " is too short.");
+            }
+            int year = std::stoi(datetimestr.substr(0, 4));
+            int month = std::stoi(datetimestr.substr(4, 2));
+            int day = std::stoi(datetimestr.substr(6, 2));
+            int hour = std::stoi(datetimestr.substr(8, 2));
+            int minute = std::stoi(datetimestr.substr(10, 2));
+            date = make_Date(day, month, year);
+            time = make_Time(hour, minute, 0);
+            return;
+        }
+
+        // Formats with space separator: "YYYY-MM-DD HH:MM", "DD/MM/YYYY HH:MM", etc.
+        // The space has already been rejoined by the caller, so split at space
+        size_t space_pos = datetimestr.find(' ');
+        if (space_pos != std::string::npos) {
+            std::string date_part = datetimestr.substr(0, space_pos);
+            std::string time_part = datetimestr.substr(space_pos + 1);
+
+            // Determine the date format portion (strip the time portion from format)
+            std::string date_format;
+            size_t fmt_space = date_string_format.find(' ');
+            if (fmt_space != std::string::npos) {
+                date_format = date_string_format.substr(0, fmt_space);
+            } else {
+                date_format = date_string_format;
+            }
+
+            // Normalize date format: "YYYY-MM-DD" → "YYYYMMDD", "DD/MM/YYYY" → "DDMMYYYY", etc.
+            // parseDateString handles both delimited and synonym formats
+            date = parseDateString(date_part, date_format, row, data_file);
+            time = parseTimeString(time_part, row, data_file);
+            return;
+        }
+
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse datetime string '" + datetimestr + "' with format '" + date_string_format + "' on line " + std::to_string(row) + " of file " + data_file + ".");
+    }
+
+    // Check if a datetime format string contains a space (i.e., date and time parts separated by space)
+    bool datetimeFormatHasSpace(const std::string &format) {
+        return format.find(' ') != std::string::npos;
+    }
+
+} // anonymous namespace
+
 void Context::loadTabularTimeseriesData(const std::string &data_file, const std::vector<std::string> &col_labels, const std::string &a_delimeter, const std::string &a_date_string_format, uint headerlines) {
     // Resolve file path using project-based resolution
     std::filesystem::path resolved_path = resolveProjectFile(data_file);
@@ -5221,9 +5497,11 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
     int yearcol = -1;
     int DOYcol = -1;
     int datestrcol = -1;
+    int datetimecol = -1;
     int hourcol = -1;
     int minutecol = -1;
     int secondcol = -1;
+    int timecol = -1;
     std::map<std::string, int> datacols;
 
     size_t Ncolumns = 0;
@@ -5253,12 +5531,16 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
                 DOYcol = col;
             } else if (label == "date" || label == "Date") {
                 datestrcol = col;
+            } else if (label == "datetime" || label == "Datetime" || label == "DateTime") {
+                datetimecol = col;
             } else if (label == "hour" || label == "Hour") {
                 hourcol = col;
             } else if (label == "minute" || label == "Minute") {
                 minutecol = col;
             } else if (label == "second" || label == "Second") {
                 secondcol = col;
+            } else if (label == "time" || label == "Time") {
+                timecol = col;
             } else if (!label.empty()) {
                 if (datacols.find(label) == datacols.end()) {
                     datacols[label] = col;
@@ -5275,7 +5557,7 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
         // If column labels were not provided, read the first line of the text file and parse it for labels
     } else {
         if (headerlines == 0) {
-            std::cout << "WARNING (Context::loadTabularTimeseriesData): "
+            std::cerr << "WARNING (Context::loadTabularTimeseriesData): "
                          "headerlines"
                          " argument was specified as zero, and no column label information was given. Attempting to read the first line to see if it contains label information."
                       << std::endl;
@@ -5301,12 +5583,16 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
                     DOYcol = col;
                 } else if (label == "date" || label == "Date") {
                     datestrcol = col;
+                } else if (label == "datetime" || label == "Datetime" || label == "DateTime") {
+                    datetimecol = col;
                 } else if (label == "hour" || label == "Hour") {
                     hourcol = col;
                 } else if (label == "minute" || label == "Minute") {
                     minutecol = col;
                 } else if (label == "second" || label == "Second") {
                     secondcol = col;
+                } else if (label == "time" || label == "Time") {
+                    timecol = col;
                 } else if (!label.empty()) {
                     if (datacols.find(label) == datacols.end()) {
                         datacols[label] = col;
@@ -5321,26 +5607,37 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
             helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Attempted to parse first line of file for column labels, but read failed.");
         }
 
-        if (yearcol == -1 && DOYcol == -1 && datestrcol == -1) {
+        if (yearcol == -1 && DOYcol == -1 && datestrcol == -1 && datetimecol == -1) {
             helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Attempted to parse first line of file for column labels, but could not find valid label information.");
         }
     }
 
-    if (datestrcol < 0 && (yearcol < 0 || DOYcol < 0)) {
-        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): The date must be specified by either a column labeled "
-                             "date"
-                             ", or by two columns labeled "
-                             "year"
-                             " and "
-                             "DOY"
-                             ".");
-    } else if (hourcol < 0) {
-        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): At a minimum, the time must be specified by a column labeled "
-                             "hour"
-                             ".");
-    } else if (datacols.empty()) {
+    // Validate column combinations
+    bool has_date = (datestrcol >= 0) || (yearcol >= 0 && DOYcol >= 0);
+    bool has_time = (hourcol >= 0) || (timecol >= 0);
+    bool has_datetime = (datetimecol >= 0);
+
+    if (has_datetime && datestrcol >= 0) {
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Cannot specify both 'datetime' and 'date' columns. Use 'datetime' for combined date+time, or 'date' + 'hour'/'time' for separate columns.");
+    }
+    if (has_datetime && hourcol >= 0) {
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Cannot specify both 'datetime' and 'hour' columns. Use 'datetime' for combined date+time, or 'date' + 'hour' for separate columns.");
+    }
+    if (has_datetime && timecol >= 0) {
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Cannot specify both 'datetime' and 'time' columns. The 'datetime' column already includes time information.");
+    }
+    if (!has_datetime && !has_date) {
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): The date must be specified by a column labeled 'datetime', 'date', or by two columns labeled 'year' and 'DOY'.");
+    }
+    if (!has_datetime && !has_time) {
+        helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): The time must be specified by a column labeled 'datetime', 'hour', or 'time'.");
+    }
+    if (datacols.empty()) {
         helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): No columns were found containing data variables (e.g., temperature, humidity, wind speed).");
     }
+
+    // Check if datetime format has a space — we may need to rejoin split columns
+    bool datetime_format_has_space = has_datetime && datetimeFormatHasSpace(date_string_format);
 
     std::string line;
 
@@ -5349,6 +5646,8 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
     for (int i = 0; i < headerlines; i++) {
         std::getline(datafile, line);
     }
+
+    bool utc_offset_set = false;
 
     while (std::getline(datafile, line)) { // loop through file to read data
         row++;
@@ -5360,136 +5659,94 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
         // separate the line by delimiter
         std::vector<std::string> line_separated = separate_string_by_delimiter(line, delimiter);
 
+        // Handle space-delimited datetime auto-rejoin: if the datetime format contains a space
+        // (e.g., "YYYY-MM-DD HH:MM"), the space delimiter will split the datetime into two columns.
+        // Rejoin them here.
+        if (datetime_format_has_space && datetimecol >= 0 && line_separated.size() == Ncolumns + 1 && datetimecol + 1 < static_cast<int>(line_separated.size())) {
+            line_separated[datetimecol] = line_separated[datetimecol] + " " + line_separated[datetimecol + 1];
+            line_separated.erase(line_separated.begin() + datetimecol + 1);
+        }
+
         if (line_separated.size() != Ncolumns) {
             helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Line " + std::to_string(row) + " had " + std::to_string(line_separated.size()) + " columns, but was expecting " + std::to_string(Ncolumns));
         }
 
-        // compile date
         Date date;
-        if (yearcol >= 0 && DOYcol >= 0) {
-            int DOY;
-            parse_int(line_separated.at(DOYcol), DOY);
-            if (DOY < 1 || DOY > 366) {
-                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid date specified on line " + std::to_string(row) + ".");
-            }
-            int year;
-            parse_int(line_separated.at(yearcol), year);
-            if (year < 1000) {
-                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid year specified on line " + std::to_string(row) + ".");
-            }
-            date = make_Date(DOY, year);
-        } else if (datestrcol >= 0) {
-            // parse date string. expecting format YYYY-MM-DD with delimiter '-' or '/'
-            const std::string &datestr = line_separated.at(datestrcol);
-
-            // try parsing date string based on '-' delimiter
-            std::vector<std::string> thisdatestr = separate_string_by_delimiter(datestr, "-");
-
-            if (thisdatestr.size() != 3) {
-                // try parsing date string based on '/' delimiter
-                thisdatestr = separate_string_by_delimiter(datestr, "/");
-            }
-
-            if (thisdatestr.size() != 3) {
-                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file +
-                                     ". It should be in the format YYYY-MM-DD, delimited by either "
-                                     "-"
-                                     " or "
-                                     "/"
-                                     ".");
-            }
-
-            // convert parsed date strings into a vector of integers
-            std::vector<int> thisdate(3);
-            for (int i = 0; i < 3; i++) {
-                if (!parse_int(thisdatestr.at(i), thisdate.at(i))) {
-                    helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file +
-                                         ". It should be in the format YYYY-MM-DD, delimited by either "
-                                         "-"
-                                         " or "
-                                         "/"
-                                         ".");
-                }
-            }
-
-            // figure out ordering of values
-            int year;
-            int month;
-            int day;
-            if (date_string_format == "YYYYMMDD") {
-                year = thisdate.at(0);
-                month = thisdate.at(1);
-                day = thisdate.at(2);
-            } else if (date_string_format == "YYYYDDMM") {
-                year = thisdate.at(0);
-                month = thisdate.at(2);
-                day = thisdate.at(1);
-            } else if (date_string_format == "DDMMYYYY") {
-                year = thisdate.at(2);
-                month = thisdate.at(1);
-                day = thisdate.at(0);
-            } else if (date_string_format == "MMDDYYYY") {
-                year = thisdate.at(2);
-                month = thisdate.at(0);
-                day = thisdate.at(1);
-            } else {
-                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid date string format in file " + data_file + ": " + date_string_format +
-                                     ". Must be one of "
-                                     "YYYYMMDD"
-                                     ", "
-                                     "YYYYDDMM"
-                                     ", "
-                                     "DDMMYYYY"
-                                     ", or "
-                                     "MMDDYYYY"
-                                     ".  Check that the date string does not include a delimiter (i.e., should be MMDDYYYY not MM/DD/YYYY).");
-            }
-
-            if (year < 1000 || month < 1 || month > 12 || day < 1 || day > 31) {
-                helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse date string on line " + std::to_string(row) + " of file " + data_file +
-                                     ". It should be in the format YYYY-MM-DD, delimited by either "
-                                     "-"
-                                     " or "
-                                     "/"
-                                     ".");
-            }
-
-            date = make_Date(day, month, year);
-        } else {
-            assert(1); // shouldn't be here
-        }
-
-        // compile time
         Time time;
-        int hour = 0;
-        int minute = 0;
-        int second = 0;
+        float parsed_utc_offset = NAN;
 
-        if (!parse_int(line_separated.at(hourcol), hour)) {
-            helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse hour string on line " + std::to_string(row) + " of file " + data_file + ".");
+        if (datetimecol >= 0) {
+            // Combined datetime column
+            parseDatetimeString(line_separated.at(datetimecol), date_string_format,
+                                date, time, parsed_utc_offset, row, data_file);
+        } else {
+            // Separate date + time columns
+            if (yearcol >= 0 && DOYcol >= 0) {
+                int DOY;
+                parse_int(line_separated.at(DOYcol), DOY);
+                if (DOY < 1 || DOY > 366) {
+                    helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid date specified on line " + std::to_string(row) + ".");
+                }
+                int year;
+                parse_int(line_separated.at(yearcol), year);
+                if (year < 1000) {
+                    helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Invalid year specified on line " + std::to_string(row) + ".");
+                }
+                date = make_Date(DOY, year);
+            } else if (datestrcol >= 0) {
+                date = parseDateString(line_separated.at(datestrcol), date_string_format, row, data_file);
+            }
+
+            if (timecol >= 0) {
+                time = parseTimeString(line_separated.at(timecol), row, data_file);
+            } else if (hourcol >= 0) {
+                int hour = 0;
+                int minute = 0;
+                int second = 0;
+
+                if (!parse_int(line_separated.at(hourcol), hour)) {
+                    helios_runtime_error("ERROR (Context::loadTabularTimeseriesData): Could not parse hour string on line " + std::to_string(row) + " of file " + data_file + ".");
+                }
+                if (hour > 24 && minutecol < 0 && secondcol < 0) {
+                    int hr_min = hour;
+                    hour = hr_min / 100;
+                    minute = hr_min - hour * 100;
+                }
+                if (hour == 24) {
+                    hour = 0;
+                    date.incrementDay();
+                }
+                if (minutecol >= 0) {
+                    if (!parse_int(line_separated.at(minutecol), minute)) {
+                        minute = 0;
+                        std::cout << "WARNING (Context::loadTabularTimeseriesData): Could not parse minute string on line " << row << " of file " << data_file << ". Setting minute equal to 0." << std::endl;
+                    }
+                }
+                if (secondcol >= 0) {
+                    if (!parse_int(line_separated.at(secondcol), second)) {
+                        second = 0;
+                        std::cout << "WARNING (Context::loadTabularTimeseriesData): Could not parse second string on line " << row << " of file " << data_file << ". Setting second equal to 0." << std::endl;
+                    }
+                }
+                time = make_Time(hour, minute, second);
+            }
         }
-        if (hour > 24 && minutecol < 0 && secondcol < 0) {
-            int hr_min = hour;
-            hour = std::floor(hr_min / 100);
-            minute = hr_min - hour * 100;
-        }
-        if (hour == 24) {
-            hour = 0;
+
+        // Handle hour=24 rollover
+        if (time.hour == 24) {
+            time = make_Time(0, time.minute, time.second);
             date.incrementDay();
         }
-        if (minutecol >= 0) {
-            if (!parse_int(line_separated.at(minutecol), minute)) {
-                minute = 0;
-                std::cout << "WARNING (Context::loadTabularTimeseriesData): Could not parse minute string on line " << row << " of file " << data_file << ". Setting minute equal to 0." << std::endl;
+
+        // Set UTC offset from ISO-8601 if parsed
+        if (!std::isnan(parsed_utc_offset)) {
+            if (!utc_offset_set) {
+                Location loc = getLocation();
+                loc.UTC_offset = parsed_utc_offset;
+                setLocation(loc);
+                utc_offset_set = true;
             }
         }
-        if (secondcol >= 0) {
-            if (!parse_int(line_separated.at(secondcol), second)) {
-                second = 0;
-                std::cout << "WARNING (Context::loadTabularTimeseriesData): Could not parse second string on line " << row << " of file " << data_file << ". Setting second equal to 0." << std::endl;
-            }
-        }
-        time = make_Time(hour, minute, second);
 
         // compile data values
         for (auto &dat: datacols) {
@@ -5498,9 +5755,7 @@ void Context::loadTabularTimeseriesData(const std::string &data_file, const std:
 
             float dataval;
             if (!parse_float(line_separated.at(col), dataval)) {
-                std::cout << "WARNING (Context::loadTabularTimeseriesData): Failed to parse data value as "
-                             "float"
-                             " on line "
+                std::cout << "WARNING (Context::loadTabularTimeseriesData): Failed to parse data value as float on line "
                           << row << ", column " << col + 1 << " of file " << data_file << ". Skipping this value..." << std::endl;
                 continue;
             }

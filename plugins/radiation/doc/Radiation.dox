@@ -7,9 +7,9 @@
  <p> <br><br> </p>
 
  <table>
-   <tr>	
+   <tr>
       <th>Dependencies</th>
-      <td>NVIDIA CUDA 9.0+</td>
+      <td>Vulkan SDK (all platforms) and/or NVIDIA CUDA 9.0+ (NVIDIA systems, enables OptiX backend)</td>
    </tr>
    <tr>	
      <th>CMakeLists.txt</th>
@@ -27,30 +27,80 @@
 
 \section RadDepends Dependencies
 
+The radiation model requires at least one ray-tracing backend. Two backends are available:
+
 <table>
     <tr>
+        <th>Backend</th>
         <th>Package</th>
         <td>\image html apple-logo.png</td>
         <td>\image html unix-logo.png</td>
         <td>\image html windows-logo.png</td>
     </tr>
     <tr>
+        <td><b>Vulkan</b> (all platforms)</td>
+        <td>Vulkan SDK + glslang</td>
+        <td><tt>brew install vulkan-headers vulkan-loader molten-vk glslang</tt></td>
+        <td>Install <a href="https://vulkan.lunarg.com/sdk/home">LunarG Vulkan SDK</a> (includes glslang)</td>
+        <td>Install <a href="https://vulkan.lunarg.com/sdk/home">LunarG Vulkan SDK</a> (includes glslang)</td>
+    </tr>
+    <tr>
+        <td><b>OptiX</b> (NVIDIA only)</td>
         <td>NVIDIA CUDA 9.0+</td>
-        <td>Mac OSX: Not available</td>
+        <td>Not available (no NVIDIA GPU)</td>
         <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
         <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
     </tr>
 </table>
 
+CMake automatically detects which backends are available and enables them. If both are found, the OptiX backend is used by default on NVIDIA systems; otherwise the Vulkan backend is used. You can force the Vulkan backend by setting <tt>-DFORCE_VULKAN_BACKEND=ON</tt>.
+
+\note <b>Performance:</b> The OptiX backend is strongly preferred on NVIDIA systems. For direct radiation source ray traces, performance between the two backends is broadly comparable. However, for diffuse radiation or scattering ray traces, the Vulkan backend can be significantly slower. If you have an NVIDIA GPU and are running simulations with diffuse radiation or multiple scattering iterations, it is strongly recommended to install CUDA and use the OptiX backend.
+
 For help choosing the correct CUDA toolkit version and accompanying OptiX version for your system, consult this page: \ref ChoosingCUDA
 
 Useful OS-specific information for installing CUDA can be found here: \ref DependentSoftware
 
-If you are using a PC, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: \ref PCGPUTimeout
+If you are using a PC with the OptiX backend, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: \ref PCGPUTimeout
+
+ \section RadKnownIssues Known Issues
+
+ \subsection VulkanInstanceLimitation Vulkan Backend: Repeated RadiationModel Creation Limitation (Linux NVIDIA Drivers)
+
+ <b>Issue:</b> On Linux systems with NVIDIA GPUs (driver versions 465+), creating and destroying more than approximately 25-30 RadiationModel instances within a single process will cause the Vulkan backend to fail with <tt>VK_ERROR_INCOMPATIBLE_DRIVER</tt>.
+
+ <b>Root Cause:</b> This is a long-standing NVIDIA Linux driver limitation where repeated Vulkan instance creation/destruction cycles exhaust internal driver resources. This issue has been present since driver version 465 (2021) and remains unfixed as of driver version 550+ (2025). The limitation appears to be intentional rather than a bug that will be fixed.
+
+ <b>Workaround:</b> <b>Reuse a single RadiationModel instance</b> across multiple simulation runs instead of creating/destroying instances in a loop:
+
+ ~~~~~~{.cpp}
+ // INCORRECT - Will fail after ~25 iterations with Vulkan backend:
+ for (auto& scenario : scenarios) {
+     RadiationModel model(&context);
+     model.runBand("PAR");
+ }
+
+ // CORRECT - Reuse the same instance:
+ RadiationModel model(&context);
+ for (auto& scenario : scenarios) {
+     context.loadXML(scenario.geometry);
+     model.updateGeometry();  // Update backend with new geometry
+     model.runBand("PAR");
+ }
+ ~~~~~~
+
+ <b>Note:</b> This limitation only affects the Vulkan backend on Linux NVIDIA systems. The OptiX backend is unaffected. Reusing RadiationModel instances is recommended practice regardless, as it avoids repeated GPU resource allocation overhead.
+
+ <b>References:</b>
+ - <a href="https://forums.developer.nvidia.com/t/issue-with-repeated-instance-creation-in-one-process/176978">NVIDIA Developer Forums: Instance Creation Issue</a>
+ - <a href="https://github.com/qdrant/qdrant/pull/6031">Qdrant's Workaround (2024)</a>
+ - <a href="https://github.com/Igalia/vkrunner/issues/7">VkRunner's Workaround (2019)</a>
 
  \section RadIntro Introduction
 
  This model simulates the transport of radiative energy for arbitrary wavelength bands using a GPU-accelerated ray-tracing model. The model details are described in <a href="http://dx.doi.org/10.1016/j.ecolmodel.2017.11.022">Bailey (2018)</a>. Briefly, the model uses a reverse ray-tracing approach to simulate emission from primitive elements, collimated radiation sources, and point radiation sources.
+
+ The model supports two GPU backends: the <b>Vulkan compute backend</b>, which works on all platforms (macOS, Linux, Windows) including systems without NVIDIA hardware, and the <b>OptiX backend</b>, which is available on NVIDIA systems and requires CUDA. The appropriate backend is selected automatically at build time based on available hardware and libraries.
 
  \section RadConstructor RadiationModel Class Constructor
 

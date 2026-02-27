@@ -14,7 +14,7 @@
 
   <h1>System Requirements</h1>
 
-  Helios is compatible with Mac, Linux, and PC platforms. Some plug-ins require an <a href="www.nvidia.com">NVIDIA</a> graphics processing unit (GPU), such as the radiation model and LiDAR plug-ins. Note that since modern Mac's don't have NVIDIA GPUs, these plug-ins will not work on MacOS.
+  Helios is compatible with Mac, Linux, and PC platforms. Some plug-ins benefit from or require an NVIDIA GPU. The radiation model uses GPU-accelerated ray tracing, which is supported on all platforms via the <b>Vulkan backend</b> (requires Vulkan SDK). On systems with NVIDIA GPUs, the radiation model can alternatively use the <b>OptiX backend</b> (requires NVIDIA CUDA). The Aerial LiDAR plug-in requires NVIDIA CUDA.
   
   <p> <br></p>
 
@@ -160,11 +160,11 @@
   - \subpage PlantArchitectureDoc "Plant Architecture: Flexible procedural plant generation with dynamic growth and phenology."
   - \subpage PlantHydraulicsDoc "Plant Hydraulics: Models the water potentials, water contents, hydraulic conductances, and hydraulic capacitances."
   - \subpage ProjectBuilderDoc "GUI and XML interface for creating and running Helios projects."
-  - \subpage RadiationDoc "Radiation Model: GPU-accelerated ray-tracing radiation transport model"
+  - \subpage RadiationDoc "Radiation Model: GPU-accelerated ray-tracing radiation transport model (all platforms via Vulkan; NVIDIA systems via OptiX)"
   - \subpage SolarPositionDoc "Solar Position Model: Model for the position of the sun in the sky, as well as models of solar radiation flux and longwave flux from the sky."
   - \subpage StomatalDoc "Stomatal Conductance Model: Model for the conductance of water vapor through stomatal pores"
   - \subpage VisualizerDoc "Visualizer: visualization of model geometry and data"
-  - \subpage VoxelIntersectionDoc "Voxel Intersection: Determine planar primitive elements that lie within voxel primitives."
+
   - \subpage WeberPennDoc "Weber-Penn Tree: Procedural tree architecture generation"
 
 */
@@ -201,7 +201,7 @@
 
   To install only the dependencies required to run Helios with the visualizer plugin, use the argument "VIS": `source dependencies.sh VIS`
 
-  To install only the dependencies required to run Helios with CUDA (required for the Radiation, Energy Balance, LiDAR, Aerial LiDAR, and Voxel Intersection plugins), use the argument "CUDA": `source dependencies.sh CUDA`
+  To install only the dependencies required to run Helios with CUDA (required for the Aerial LiDAR plugin, and optional for the Radiation plugin when using the OptiX backend on NVIDIA systems), use the argument "CUDA": `source dependencies.sh CUDA`
 
   \section SetupPC Set-up on Windows PC
 
@@ -233,7 +233,7 @@
 
   \subsection SetupPCCUDA Setting up NVIDIA CUDA
 
-  The NVIDIA CUDA library is needed to build and run any plug-ins that run on the GPU. Consult this page for help choosing the right CUDA version based on your C++ compiler and GPU compute capability: \ref ChoosingCUDA.
+  The NVIDIA CUDA library is required to build the Aerial LiDAR plugin. For the radiation model, CUDA enables the OptiX backend (which is the preferred backend on NVIDIA systems), but is not required if you use the Vulkan backend instead. Consult this page for help choosing the right CUDA version based on your C++ compiler and GPU compute capability: \ref ChoosingCUDA.
 
   The latest CUDA version can be downloaded here: <a href="https://developer.nvidia.com/cuda-downloads">https://developer.nvidia.com/cuda-downloads</a> (note that if you installed Visual Studio 2019 instead of 2022, you'll need to install CUDA 10.2 instead of the latest version). Download the base CUDA Toolkit installer for your Windows OS. Installing from the "exe (network)" type will result in a smaller file being downloaded. Click through the installer and accept all the default options. By default, it should have installed to 'C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v1X.X\\', where v1X.X is the version that you installed. You can verify this installation location using the file browser.
 
@@ -259,6 +259,18 @@
 
   This will automatically install and configure the Linux drivers (version 470.256.02) to run OptiX.
 
+  \subsection SetupPCVulkan Setting up Vulkan for the Radiation Model
+
+  The radiation model uses GPU-accelerated ray tracing via the Vulkan compute backend, which works natively on Windows through standard GPU drivers (NVIDIA, AMD, and Intel all include Vulkan support in their drivers). The required development libraries are distributed as a single installer from LunarG.
+
+  Download and run the <a href="https://vulkan.lunarg.com/sdk/home">LunarG Vulkan SDK</a> installer for Windows, accepting the default options. The SDK includes the Vulkan headers, the Vulkan loader, and the <tt>glslangValidator</tt> shader compiler required to build Helios shaders.
+
+  \note After installation, you must <b>restart any open terminals and IDEs</b> (including CLion) before CMake can detect the SDK. The installer sets a <tt>VULKAN_SDK</tt> environment variable that is only visible to processes launched after the install completes. You can verify the installation by opening a new PowerShell window and running <tt>glslangValidator --version</tt>.
+
+  After restarting, CMake will automatically detect the Vulkan SDK via the <tt>VULKAN_SDK</tt> environment variable and enable the Vulkan backend when building the radiation plugin. No additional configuration is required.
+
+  \note If you experience a "Display driver stopped responding and has recovered" error during long radiation simulations, increase the Windows TDR delay as described in \ref TdrDelay. This affects GPU compute workloads including the Vulkan backend, not just CUDA.
+
   \section SetupLinux Set-up on Linux
 
   \subsection SetupLinuxCLion Setting up basic build functionality
@@ -277,7 +289,7 @@
 
   \subsection SetupLinuxCUDA Setting up NVIDIA CUDA
 
-  The NVIDIA CUDA library is needed to build and run any plug-ins that run on the GPU. While CUDA can be installed on Linux via apt-get, this tends to often cause problems. It has proven more robust to simply download CUDA from the NVIDIA website and run the installer. Consult this page for help choosing the right CUDA version based on your C++ compiler and GPU compute capability: \ref ChoosingCUDA.
+  The NVIDIA CUDA library is required to build the Aerial LiDAR plugin. For the radiation model, CUDA enables the OptiX backend (preferred on NVIDIA systems), but is not required if you use the Vulkan backend instead. While CUDA can be installed on Linux via apt-get, this tends to often cause problems. It has proven more robust to simply download CUDA from the NVIDIA website and run the installer. Consult this page for help choosing the right CUDA version based on your C++ compiler and GPU compute capability: \ref ChoosingCUDA.
 
   Note that individual plugins may have their own library dependencies.  Consult their documentation for dependency information. The latest CUDA version can be downloaded here: <a href="https://developer.nvidia.com/cuda-downloads">https://developer.nvidia.com/cuda-downloads</a>. However, you'll want to be sure that the version of CUDA that you install works with your compiler version. This website has a table showing compatibility for all versions: <a href="https://gist.github.com/ax3l/9489132">https://gist.github.com/ax3l/9489132</a>, check the g++ column. To figure out which version of g++ you have, you can type the command "g++ --version".
 
@@ -304,7 +316,7 @@
 
   Next, click on the "CMake" tab below Toolchains and be sure the "Generator" drop-down is set to "Unix Makefiles" and NOT Ninja or Default. You can also change the Build directory if you like, such as to simply be "build".
 
-  Once these have been installed at the system level, this is everything you will need to build basic Helios programs that do not use CUDA-based plug-ins or the Visualizer.
+  Once these have been installed at the system level, this is everything you will need to build basic Helios programs that do not use the Visualizer.
 
   If you are not using CLion, you can install and run everything you need from the command-line. Simple command-line tools are available to easily install dependent software libraries.  The appropriate commands will be given in the documentation to install any required libraries. For Mac OSX, <a href="https://brew.sh">homebrew</a> is a great package installer.  Homebrew itself can be installed via a single command:
 
@@ -317,6 +329,16 @@
   CMake: Components of Helios are compiled using the CMake package (<a href="www.cmake.org">www.cmake.org</a>).  Version 3.15+ is required.  CMake can be easily installed via the command line using homebrew "brew install cmake".
 
   C/C++ Compiler: You will also need a C/C++ compiler installed - we recommend using the GNU compilers or the AppleClang compilers.  The GNU compilers can easily be installed via the command line "brew install gcc".
+
+  \subsection SetupMacVulkan Setting up Vulkan for the Radiation Model
+
+  The radiation model uses GPU-accelerated ray tracing via the Vulkan compute backend, which is supported on macOS through <a href="https://github.com/KhronosGroup/MoltenVK">MoltenVK</a> (a Vulkan implementation on top of Metal). Install the required Vulkan libraries with Homebrew:
+
+  ~~~~~~
+  brew install vulkan-headers vulkan-loader molten-vk glslang
+  ~~~~~~
+
+  After installing, CMake will automatically detect the Vulkan SDK and enable the Vulkan backend when building the radiation plugin. No additional configuration is required.
 
 */
 	
@@ -1672,10 +1694,12 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
 
   <table>
      <tr><th>Column Label</th><th>Description</th><th>Required?</th></tr>
-     <tr><td>year</td><td>Year (YYYY)</td><td></td>year+DOY -OR- date</tr>
-     <tr><td>DOY or Jul</td><td>Day of year starting at Jan. 1 (DOY=1)</td><td>year+DOY -OR- date</td></tr>
-     <tr><td>date</td><td>Date string delimited by '/' or '-' character (default format YYYY-MM-DD)</td><td>year+DOY -OR- date</td></tr>
-     <tr><td>hour</td><td>Hour of the day. Can be specified either as 13 or 1300 (for 1PM example).</td><td>yes</td></tr>
+     <tr><td>year</td><td>Year (YYYY)</td><td>year+DOY -OR- date -OR- datetime</td></tr>
+     <tr><td>DOY or Jul</td><td>Day of year starting at Jan. 1 (DOY=1)</td><td>year+DOY -OR- date -OR- datetime</td></tr>
+     <tr><td>date</td><td>Date string delimited by '/' or '-' character, or compact 8-digit (e.g., 20260203). Default format YYYY-MM-DD.</td><td>year+DOY -OR- date -OR- datetime</td></tr>
+     <tr><td>datetime</td><td>Combined date+time string (e.g., ISO-8601 "2026-02-03T10:00:00Z", compact "2026020310", or space-separated "2026-02-03 10:00"). Cannot be combined with 'date' or 'hour'.</td><td>year+DOY -OR- date -OR- datetime</td></tr>
+     <tr><td>hour</td><td>Hour of the day. Can be specified either as 13 or 1300 (for 1PM example).</td><td>hour -OR- time -OR- datetime</td></tr>
+     <tr><td>time</td><td>Time string in HH, HH:MM, or HH:MM:SS format. Auto-detected based on presence of colons.</td><td>hour -OR- time -OR- datetime</td></tr>
      <tr><td>minute</td><td>Minute of the hour. If 'hour' above is specified with minute included (e.g., 1315), the minute field will be automatically added.</td><td>no</td></tr>
      <tr><td>second</td><td>Second of the minute.</td><td>no</td></tr>
   </table>
@@ -1685,7 +1709,10 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
   1. A string specifying the file to be loaded, with path relative to the current working directory or as an absolute path.
   2. A vector of strings specifying labels for the columns in the file. If an empty vector is specified ('{}'), the labels given in the first line of the file will be used. Otherwise, the length of the vector must match the number of columns in the file.
   3. The delimiter character separating values in each row (e.g., ',').
-  4. (optional) The format of the date string used to specify date values (e.g., 'YYYYMMDD', 'MMDDYYYY'; month and day should always be two values, and year should be four values). This is not used if dates are specified using the year and DOY. The default format is 'YYYYMMDD'.
+  4. (optional) The format of the date/datetime string. Supported formats include:
+     - Date-only formats (for "date" column): 'YYYYMMDD', 'MMDDYYYY', 'DDMMYYYY', 'YYYYDDMM'. Delimiter-style synonyms like 'YYYY-MM-DD', 'DD/MM/YYYY' are also accepted. Compact 8-digit dates without delimiters (e.g., '20260203') are auto-detected.
+     - Combined datetime formats (for "datetime" column): 'ISO8601' (e.g., '2026-02-03T10:00:00Z' or '2026-02-03T02:00:00-08:00'), 'YYYYMMDDHH', 'YYYYMMDDHHMM', 'YYYY-MM-DD HH:MM', 'YYYY-MM-DD HH:MM:SS', 'DD/MM/YYYY HH:MM', 'MM/DD/YYYY HH:MM'.
+     - For ISO-8601 strings with timezone offsets, the local time from the string is used and the Context's UTC_offset is set from the offset. The default format is 'YYYYMMDD'.
   5. (optional) Number of header lines in the file. By default, headerlines=0.
 
   There is a special shortcut for reading <a href="https://cimis.water.ca.gov">CIMIS weather station</a> files. To read these files, simply specify the second argument as a vector of length 1 containing the string "CIMIS" (e.g., {"CIMIS"}), which will automatically set column labels as:
@@ -1711,6 +1738,27 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
   ~~~~~~
 
   The above example would read the comma-delimited file "../input/weatherfile.csv". Timeseries data would be added to the Context for values of "temperature", which could be queried based on this label.
+
+  \subsection TimeseriesISO ISO-8601 and Combined Datetime Columns
+
+  For files with combined date+time columns, use the "datetime" column label instead of separate "date" and "hour" columns. This is useful for ISO-8601 formatted data commonly found in NOAA, NASA, CAMS, and other international weather data sources.
+
+  ~~~~~~{.cpp}
+   // ISO-8601 formatted data (e.g., from NOAA or CAMS)
+   context.loadTabularTimeseriesData("../input/iso_weather.csv", {"datetime", "temperature", "humidity"}, ",", "ISO8601", 1);
+
+   // Compact datetime format (YYYYMMDDHH)
+   context.loadTabularTimeseriesData("../input/compact_weather.csv", {"datetime", "temperature"}, ",", "YYYYMMDDHH", 1);
+
+   // Space-separated datetime with European date ordering
+   context.loadTabularTimeseriesData("../input/eu_weather.csv", {"datetime", "temperature"}, ",", "DD/MM/YYYY HH:MM", 1);
+  ~~~~~~
+
+  For files using a separate "time" column (HH:MM or HH:MM:SS format) instead of an integer "hour" column:
+
+  ~~~~~~{.cpp}
+   context.loadTabularTimeseriesData("../input/precise_weather.csv", {"date", "time", "temperature"}, ",", "YYYYMMDD", 1);
+  ~~~~~~
 
   \section XMLread Reading XML Files
 
@@ -1969,6 +2017,8 @@ This will first rotate the patch by 0.25\f$\pi\f$ rad about the x-axis such that
 */
 
 /*! \page "ChoosingCUDA" Choosing the right CUDA and OptiX version
+
+\note CUDA is <b>not required</b> to use the radiation model. The radiation model supports a Vulkan compute backend that works on all platforms, including macOS and systems without NVIDIA GPUs. CUDA is only needed if you want to use the OptiX backend (NVIDIA systems only) or to build the Aerial LiDAR plugin.
 
 Picking the right version of the NVIDIA CUDA driver can be the most difficult part of the CUDA install. If you choose the wrong version, the resulting error messages may not always be clear. This guide will help you to choose the right CUDA version for your system. It may also be necessary to change your OptiX version if using an old GPU along with the radiation model. Fortunately, this is easy and will also be described below.
 

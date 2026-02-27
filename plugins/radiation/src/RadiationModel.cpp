@@ -65,8 +65,58 @@ RadiationModel::RadiationModel(helios::Context *context_a) {
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/DGK_DKK_colorboard.xml").string());
 
     // Initialize backend abstraction layer
-    backend = helios::RayTracingBackend::create("optix6");
+    // Auto-detect available backend
+    std::string backend_type;
+#ifdef HELIOS_HAVE_OPTIX
+    backend_type = "optix6";
+#elif defined(HELIOS_HAVE_VULKAN)
+    backend_type = "vulkan_compute";
+#else
+#error "No ray tracing backend available"
+#endif
+
+    backend = helios::RayTracingBackend::create(backend_type);
     backend->initialize();
+}
+
+RadiationModel::RadiationModel(helios::Context *context_a, bool skip_backend_init) {
+    context = context_a;
+
+    // Initialize all default values (same as main constructor)
+    message_flag = true;
+    directRayCount_default = 100;
+    diffuseRayCount_default = 1000;
+    diffuseFlux_default = -1.f;
+    minScatterEnergy_default = 0.1;
+    scatteringDepth_default = 0;
+    rho_default = 0.f;
+    tau_default = 0.f;
+    eps_default = 1.f;
+    kappa_default = 1.f;
+    sigmas_default = 0.f;
+    temperature_default = 300;
+    periodic_flag = make_vec2(0, 0);
+
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/camera_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/light_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/soil_surface_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/leaf_surface_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/bark_surface_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/fruit_surface_spectral_library.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/solar_spectrum_ASTMG173.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml").string());
+    spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/DGK_DKK_colorboard.xml").string());
+
+    // Skip backend creation - will be injected by caller
+}
+
+RadiationModel RadiationModel::createWithBackend(helios::Context *context, std::unique_ptr<helios::RayTracingBackend> backend) {
+    RadiationModel model(context, true); // Use private constructor, skip backend init
+
+    // Inject the provided backend
+    model.backend = std::move(backend);
+
+    return model; // Uses move constructor
 }
 
 RadiationModel::~RadiationModel() {
@@ -1333,7 +1383,7 @@ void RadiationModel::updateGeometry(const std::vector<uint> &UUIDs) {
     }
 
     // Upload geometry through backend abstraction layer
-    buildGeometryData();
+    buildGeometryData(UUIDs);
     buildUUIDMapping(); // Build UUID↔position mapping for efficient indexing
 
     // CRITICAL: context_UUIDs must match GPU buffer ordering (primitive_UUIDs_ordered)
@@ -3111,7 +3161,7 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         params.random_seed = std::chrono::system_clock::now().time_since_epoch().count();
         params.num_bands_global = Nbands_global;
         params.num_bands_launch = Nbands_launch;
-        params.specular_reflection_enabled = false;
+        params.specular_reflection_enabled = specular_reflection_mode;
 
         // Use the band_launch_flag already built above (lines 3375-3383)
         std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
@@ -3246,87 +3296,66 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         size_t n = ceil(sqrt(double(diffuseRayCount)));
         uint rays_per_primitive = n * n;
 
-        size_t maxPrims = floor(float(maxRays) / float(rays_per_primitive));
-
-        int Nlaunches = ceil(rays_per_primitive * Nprimitives / float(maxRays));
-
-        size_t prims_per_launch = fmin(Nprimitives, maxPrims);
-
-        for (uint launch = 0; launch < Nlaunches; launch++) {
-
-            size_t prims_this_launch;
-            if ((launch + 1) * prims_per_launch > Nprimitives) {
-                prims_this_launch = Nprimitives - launch * prims_per_launch;
-            } else {
-                prims_this_launch = prims_per_launch;
-            }
-
-            if (message_flag) {
-                std::cout << "Performing primary diffuse radiation ray trace for bands ";
-                for (const auto &band: label) {
-                    std::cout << band << " ";
-                }
-                std::cout << " (batch " << launch + 1 << " of " << Nlaunches << ")..." << std::flush;
-            }
-
-            // Build launch parameters for diffuse rays
-            helios::RayTracingLaunchParams params;
-            params.launch_offset = launch * prims_per_launch;
-            params.launch_count = prims_this_launch;
-            params.rays_per_primitive = rays_per_primitive;
-            params.random_seed = std::chrono::system_clock::now().time_since_epoch().count();
-            params.current_band = 0;
-            params.num_bands_global = Nbands_global;
-            params.num_bands_launch = Nbands_launch;
-            std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
-            params.band_launch_flag = band_flags;
-            params.scattering_iteration = 0;
-            params.max_scatters = scatteringDepth;
-            params.radiation_out_top = flux_top;
-            params.radiation_out_bottom = flux_bottom;
-
-            // Pass diffuse radiation parameters to backend
-            params.diffuse_flux = diffuse_flux;
-            params.diffuse_extinction = diffuse_extinction;
-            params.diffuse_dist_norm = diffuse_dist_norm;
-            // Convert helios::vec3 to helios::vec3
-            std::vector<helios::vec3> peak_dirs(diffuse_peak_dir.size());
-            for (size_t i = 0; i < diffuse_peak_dir.size(); i++) {
-                peak_dirs[i] = helios::make_vec3(diffuse_peak_dir[i].x, diffuse_peak_dir[i].y, diffuse_peak_dir[i].z);
-            }
-            params.diffuse_peak_dir = peak_dirs;
-
-            // Top surface launch
-            params.launch_face = 1;
-            backend->launchDiffuseRays(params);
-
-            // Bottom surface launch
-            params.launch_face = 0;
-            backend->launchDiffuseRays(params);
-
-            // Retrieve and accumulate camera scatter from primary diffuse
-            if (Ncameras > 0) {
-                helios::RayTracingResults primary_results;
-                backend->getRadiationResults(primary_results);
-                for (size_t i = 0; i < primary_results.scatter_buff_top_cam.size(); i++) {
-                    scatter_top_cam[i] += primary_results.scatter_buff_top_cam[i];
-                    scatter_bottom_cam[i] += primary_results.scatter_buff_bottom_cam[i];
-                }
-                // Zero GPU camera scatter buffers to prevent double-counting on next iteration
-                backend->zeroCameraScatterBuffers(Nbands_launch);
-            }
-
-            if (message_flag) {
-                std::cout << "\r                                                                                                                               \r" << std::flush;
-            }
-        }
-
         if (message_flag) {
             std::cout << "Performing primary diffuse radiation ray trace for bands ";
             for (const auto &band: label) {
-                std::cout << band << ", ";
+                std::cout << band << " ";
             }
-            std::cout << "...done." << std::endl;
+            std::cout << "..." << std::flush;
+        }
+
+        // Build launch parameters for diffuse rays
+        // Note: OptiX 6.5-specific batching (maxRays limit) should be handled inside the OptiX backend,
+        // not here in RadiationModel. Vulkan and other backends can launch all primitives at once.
+        helios::RayTracingLaunchParams params;
+        params.launch_offset = 0;
+        params.launch_count = Nprimitives; // Launch all primitives at once (backend handles batching if needed)
+        params.rays_per_primitive = rays_per_primitive;
+        params.random_seed = std::chrono::system_clock::now().time_since_epoch().count();
+        params.current_band = 0;
+        params.num_bands_global = Nbands_global;
+        params.num_bands_launch = Nbands_launch;
+        std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
+        params.band_launch_flag = band_flags;
+        params.scattering_iteration = 0;
+        params.max_scatters = scatteringDepth;
+        params.radiation_out_top = flux_top;
+        params.radiation_out_bottom = flux_bottom;
+
+        // Pass diffuse radiation parameters to backend
+        params.diffuse_flux = diffuse_flux;
+        params.diffuse_extinction = diffuse_extinction;
+        params.diffuse_dist_norm = diffuse_dist_norm;
+        // Convert helios::vec3 to helios::vec3
+        std::vector<helios::vec3> peak_dirs(diffuse_peak_dir.size());
+        for (size_t i = 0; i < diffuse_peak_dir.size(); i++) {
+            peak_dirs[i] = helios::make_vec3(diffuse_peak_dir[i].x, diffuse_peak_dir[i].y, diffuse_peak_dir[i].z);
+        }
+        params.diffuse_peak_dir = peak_dirs;
+        params.sky_radiance_params = prague_params;
+
+        // Top surface launch
+        params.launch_face = 1;
+        backend->launchDiffuseRays(params);
+
+        // Bottom surface launch
+        params.launch_face = 0;
+        backend->launchDiffuseRays(params);
+
+        // Retrieve and accumulate camera scatter from primary diffuse
+        if (Ncameras > 0) {
+            helios::RayTracingResults primary_results;
+            backend->getRadiationResults(primary_results);
+            for (size_t i = 0; i < primary_results.scatter_buff_top_cam.size(); i++) {
+                scatter_top_cam[i] += primary_results.scatter_buff_top_cam[i];
+                scatter_bottom_cam[i] += primary_results.scatter_buff_bottom_cam[i];
+            }
+            // Zero GPU camera scatter buffers to prevent double-counting on next iteration
+            backend->zeroCameraScatterBuffers(Nbands_launch);
+        }
+
+        if (message_flag) {
+            std::cout << "done." << std::endl;
         }
     }
 
@@ -3347,12 +3376,6 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
 
         size_t n = ceil(sqrt(double(diffuseRayCount)));
         uint rays_per_primitive = n * n;
-
-        size_t maxPrims = floor(float(maxRays) / float(rays_per_primitive));
-
-        int Nlaunches = ceil(n * n * Nobjects / float(maxRays));
-
-        size_t prims_per_launch = fmin(Nobjects, maxPrims);
 
         uint s;
         // FIX: Use a copy of band_launch_flag for scattering so modifications don't affect primary launch indices
@@ -3397,53 +3420,44 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
             std::vector<float> flux_top_scatter = scatter_results.radiation_out_top;
             std::vector<float> flux_bottom_scatter = scatter_results.radiation_out_bottom;
 
-            for (uint launch = 0; launch < Nlaunches; launch++) {
+            // Build launch parameters for scattering diffuse rays
+            // Launch all primitives at once (backend handles batching if needed)
+            helios::RayTracingLaunchParams params;
+            params.launch_offset = 0;
+            params.launch_count = Nprimitives;
+            params.rays_per_primitive = rays_per_primitive;
+            params.random_seed = std::chrono::system_clock::now().time_since_epoch().count();
+            params.current_band = 0;
+            params.num_bands_global = Nbands_global;
+            params.num_bands_launch = Nbands_launch;
+            std::vector<bool> band_flags(scatter_band_flags.begin(), scatter_band_flags.end()); // FIX: Use scatter copy
+            params.band_launch_flag = band_flags;
+            params.scattering_iteration = s;
+            params.max_scatters = scatteringDepth;
 
-                size_t prims_this_launch;
-                if ((launch + 1) * prims_per_launch > Nprimitives) {
-                    prims_this_launch = Nprimitives - launch * prims_per_launch;
-                } else {
-                    prims_this_launch = prims_per_launch;
-                }
-
-                // Build launch parameters for scattering diffuse rays
-                helios::RayTracingLaunchParams params;
-                params.launch_offset = launch * prims_per_launch;
-                params.launch_count = prims_this_launch;
-                params.rays_per_primitive = rays_per_primitive;
-                params.random_seed = std::chrono::system_clock::now().time_since_epoch().count();
-                params.current_band = 0;
-                params.num_bands_global = Nbands_global;
-                params.num_bands_launch = Nbands_launch;
-                std::vector<bool> band_flags(scatter_band_flags.begin(), scatter_band_flags.end()); // FIX: Use scatter copy
-                params.band_launch_flag = band_flags;
-                params.scattering_iteration = s;
-                params.max_scatters = scatteringDepth;
-
-                // Pass diffuse radiation parameters to backend
-                params.diffuse_flux = diffuse_flux;
-                params.diffuse_extinction = diffuse_extinction;
-                params.diffuse_dist_norm = diffuse_dist_norm;
-                // Convert helios::vec3 to helios::vec3
-                std::vector<helios::vec3> peak_dirs(diffuse_peak_dir.size());
-                for (size_t i = 0; i < diffuse_peak_dir.size(); i++) {
-                    peak_dirs[i] = helios::make_vec3(diffuse_peak_dir[i].x, diffuse_peak_dir[i].y, diffuse_peak_dir[i].z);
-                }
-                params.diffuse_peak_dir = peak_dirs;
-
-                // Set radiation_out for scattering rays
-                params.radiation_out_top = flux_top_scatter;
-                params.radiation_out_bottom = flux_bottom_scatter;
-
-                // Top surface launch
-                params.launch_face = 1;
-                backend->launchDiffuseRays(params);
-
-
-                // Bottom surface launch
-                params.launch_face = 0;
-                backend->launchDiffuseRays(params);
+            // Pass diffuse radiation parameters to backend
+            params.diffuse_flux = diffuse_flux;
+            params.diffuse_extinction = diffuse_extinction;
+            params.diffuse_dist_norm = diffuse_dist_norm;
+            // Convert helios::vec3 to helios::vec3
+            std::vector<helios::vec3> peak_dirs(diffuse_peak_dir.size());
+            for (size_t i = 0; i < diffuse_peak_dir.size(); i++) {
+                peak_dirs[i] = helios::make_vec3(diffuse_peak_dir[i].x, diffuse_peak_dir[i].y, diffuse_peak_dir[i].z);
             }
+            params.diffuse_peak_dir = peak_dirs;
+            params.sky_radiance_params = prague_params;
+
+            // Set radiation_out for scattering rays
+            params.radiation_out_top = flux_top_scatter;
+            params.radiation_out_bottom = flux_bottom_scatter;
+
+            // Top surface launch
+            params.launch_face = 1;
+            backend->launchDiffuseRays(params);
+
+            // Bottom surface launch
+            params.launch_face = 0;
+            backend->launchDiffuseRays(params);
 
             // Accumulate camera scatter from this scattering iteration
             if (Ncameras > 0) {
@@ -3548,6 +3562,19 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
                 if (message_flag && tiles.size() > 1) {
                     std::cout << "Camera '" << camera.second.label << "' requires " << tiles.size() << " tiles" << std::endl;
                 }
+
+                // Upload camera spectral response weights for specular reflection
+                // Extract per-camera slice from source_data[s].fluxes_cam
+                // fluxes_cam is indexed as [band * Ncameras + cam], we need [source * band]
+                std::vector<float> cam_weights(Nsources * Nbands_launch, 1.0f);
+                for (uint s = 0; s < Nsources; s++) {
+                    for (uint b = 0; b < Nbands_launch; b++) {
+                        if (!source_data[s].fluxes_cam.empty() && source_data[s].fluxes_cam.size() == Nbands_launch * Ncameras) {
+                            cam_weights[s * Nbands_launch + b] = source_data[s].fluxes_cam[b * Ncameras + cam];
+                        }
+                    }
+                }
+                backend->uploadSourceFluxesCam(cam_weights);
 
                 // Launch camera rays (tiled or full)
                 for (size_t tile_idx = 0; tile_idx < tiles.size(); tile_idx++) {
@@ -4766,7 +4793,7 @@ void RadiationModel::setCameraPixelData(const std::string &camera_label, const s
     cameras.at(camera_label).pixel_data[band_label] = pixel_data;
 }
 
-// ========== Phase 1: Backend Integration Methods ==========
+// ========== Backend Integration Methods ==========
 
 void RadiationModel::queryBackendGPUMemory() const {
     if (backend) {
@@ -4875,11 +4902,9 @@ std::vector<CameraTile> RadiationModel::computeCameraTiles(const RadiationCamera
     return tiles;
 }
 
-void RadiationModel::buildGeometryData() {
+void RadiationModel::buildGeometryData(const std::vector<uint> &UUIDs) {
     // Build backend-agnostic geometry data from Context primitives
     // This extracts all geometry information needed by the ray tracing backend
-
-    std::vector<uint> UUIDs = context->getAllUUIDs();
 
     // Filter out invalid/zero-area primitives (same as old updateGeometry)
     std::vector<uint> valid_UUIDs;
@@ -4906,7 +4931,12 @@ void RadiationModel::buildGeometryData() {
     std::unordered_set<uint> valid_set(valid_UUIDs.begin(), valid_UUIDs.end());
 
     for (uint objID: objID_all) {
-        const std::vector<uint> &prim_UUIDs = context->getObjectPrimitiveUUIDs(objID);
+        std::vector<uint> prim_UUIDs = context->getObjectPrimitiveUUIDs(objID);
+        if (objID == 0) {
+            // Standalone primitives (parentID=0) come from unordered_map iteration,
+            // which has non-deterministic ordering. Sort by UUID for reproducibility.
+            std::sort(prim_UUIDs.begin(), prim_UUIDs.end());
+        }
         for (uint UUID: prim_UUIDs) {
             if (context->doesPrimitiveExist(UUID) && valid_set.find(UUID) != valid_set.end()) {
                 primitive_UUIDs_ordered.push_back(UUID);
@@ -4961,7 +4991,7 @@ void RadiationModel::buildGeometryData() {
         uint UUID = primitive_UUIDs_ordered[u];
         uint parentID = context->getPrimitiveParentObjectID(UUID);
 
-        if (last_parentID != parentID || parentID == 0 || context->getObjectType(parentID) != helios::OBJECT_TYPE_TILE) {
+        if (last_parentID != parentID || parentID == 0 || context->getObjectType(parentID) == helios::OBJECT_TYPE_TILE) {
             primitiveID_indices.push_back(u);
             last_parentID = parentID;
             current_objID++;
@@ -4988,11 +5018,7 @@ void RadiationModel::buildGeometryData() {
     geometry_data.primitive_IDs = primitiveID_for_backend;
 
     // Populate geometry for each primitive
-    size_t patch_idx = 0, tri_idx = 0, disk_idx = 0, tile_idx = 0, voxel_idx = 0, bbox_idx = 0;
-
-    // Track which parent tile objects have been added to tile geometry
-    // (tiles should have ONE geometry entry per parent object, not per subpatch)
-    std::set<uint> processed_tile_parents;
+    size_t patch_idx = 0, tri_idx = 0, disk_idx = 0, voxel_idx = 0, bbox_idx = 0;
 
     // Iterate over ALL primitives to set per-primitive data
     // (not just Nobjects, which only has one entry per object group)
@@ -5011,30 +5037,22 @@ void RadiationModel::buildGeometryData() {
         geometry_data.twosided_flags[prim_idx] = context->getPrimitiveTwosidedFlag(UUID, 1) ? 1 : 0;
 
         if (parentID > 0 && context->getObjectType(parentID) == helios::OBJECT_TYPE_TILE) {
-            // Tile object - set per-primitive data for ALL subpatches
-            geometry_data.primitive_types[prim_idx] = 3; // tile
+            // Tile subpatch: treat as individual patch for both OptiX and Vulkan backends.
+            // Each subpatch gets its own world-space vertices in the patch geometry,
+            // its own transform matrix, and type=0 (patch). tile_count will be 0.
+            geometry_data.primitive_types[prim_idx] = 0; // patch
 
-            context->getObjectTransformationMatrix(parentID, m);
+            context->getPrimitiveTransformationMatrix(UUID, m);
             memcpy(&geometry_data.transform_matrices[prim_idx * 16], m, 16 * sizeof(float));
 
-            // Individual tile subpatches should NOT be subdivided (they're already the result of subdivision)
-            // Only the parent tile geometry entry uses the subdivision count
-            geometry_data.object_subdivisions[prim_idx] = helios::make_int2(1, 1);
-
-            // Only add ONE tile geometry entry per parent tile object (not per subpatch)
-            // The tile intersection program handles subpatch selection internally
-            if (processed_tile_parents.find(parentID) == processed_tile_parents.end()) {
-                processed_tile_parents.insert(parentID);
-
-                std::vector<vec3> verts = context->getTileObjectVertices(parentID);
-                for (const auto &v: verts) {
-                    geometry_data.tiles.vertices.push_back(v);
-                }
-
-                // Use the first subpatch's UUID as the tile geometry UUID
-                geometry_data.tiles.UUIDs.push_back(UUID);
-                tile_idx++;
+            std::vector<vec3> verts = context->getPrimitiveVertices(UUID);
+            for (const auto &v: verts) {
+                geometry_data.patches.vertices.push_back(v);
             }
+
+            geometry_data.object_subdivisions[prim_idx] = helios::make_int2(1, 1);
+            geometry_data.patches.UUIDs.push_back(UUID);
+            patch_idx++;
 
         } else if (type == helios::PRIMITIVE_TYPE_PATCH) {
             geometry_data.primitive_types[prim_idx] = 0; // patch
@@ -5090,7 +5108,7 @@ void RadiationModel::buildGeometryData() {
     geometry_data.patch_count = patch_idx;
     geometry_data.triangle_count = tri_idx;
     geometry_data.disk_count = disk_idx;
-    geometry_data.tile_count = tile_idx;
+    geometry_data.tile_count = 0; // Tile subpatches are treated as individual patches
     geometry_data.voxel_count = voxel_idx;
 
     // ========== Periodic Boundary Bboxes ==========
@@ -5182,33 +5200,10 @@ void RadiationModel::buildGeometryData() {
         geometry_data.bbox_UUID_base = UINT_MAX;
     }
 
-    // Add bbox primitive data so hit/intersection shaders can access them
-    // Bbox positions are after real primitives: primitive_count + bbox_idx
-    if (bbox_idx > 0) {
-        geometry_data.primitive_types.resize(geometry_data.primitive_count + bbox_idx, UINT_MAX);
-        geometry_data.twosided_flags.resize(geometry_data.primitive_count + bbox_idx, 0);
-        geometry_data.solid_fractions.resize(geometry_data.primitive_count + bbox_idx, 1.0f);
-        geometry_data.object_IDs.resize(geometry_data.primitive_count + bbox_idx, UINT_MAX);
-        geometry_data.object_subdivisions.resize(geometry_data.primitive_count + bbox_idx, make_int2(1, 1));
-        geometry_data.transform_matrices.resize((geometry_data.primitive_count + bbox_idx) * 16, 0.0f);
-        geometry_data.primitive_IDs.resize(geometry_data.primitive_count + bbox_idx, UINT_MAX);
-
-        for (size_t i = 0; i < bbox_idx; i++) {
-            size_t bbox_pos = geometry_data.primitive_count + i;
-            geometry_data.primitive_types[bbox_pos] = 5; // type=5 for bbox
-            geometry_data.twosided_flags[bbox_pos] = 1; // bboxes are two-sided
-            geometry_data.solid_fractions[bbox_pos] = 1.0f; // bboxes are fully solid
-            geometry_data.object_IDs[bbox_pos] = geometry_data.primitive_count + i; // Match master: Nobjects + i
-            geometry_data.object_subdivisions[bbox_pos] = make_int2(1, 1); // no subdivisions
-            geometry_data.primitive_IDs[bbox_pos] = bbox_UUID_base + i; // bbox UUID
-
-            // Set identity transform matrix for bbox
-            geometry_data.transform_matrices[bbox_pos * 16 + 0] = 1.0f; // m00
-            geometry_data.transform_matrices[bbox_pos * 16 + 5] = 1.0f; // m11
-            geometry_data.transform_matrices[bbox_pos * 16 + 10] = 1.0f; // m22
-            geometry_data.transform_matrices[bbox_pos * 16 + 15] = 1.0f; // m33
-        }
-    }
+    // NOTE: Bbox primitive data is NOT included in the shared geometry arrays
+    // Bboxes are OptiX-specific constructs for periodic boundaries
+    // OptiX backend will build bbox data internally from bbox_count and bbox_UUID_base
+    // This keeps the geometry data compatible with non-OptiX backends (Vulkan, etc.)
 
     // Periodic boundary condition
     geometry_data.periodic_flag = periodic_flag;
@@ -5326,7 +5321,7 @@ void RadiationModel::buildTextureData() {
 }
 
 size_t RadiationModel::testBuildGeometryData() {
-    buildGeometryData();
+    buildGeometryData(context->getAllUUIDs());
     return geometry_data.primitive_count;
 }
 
@@ -5663,7 +5658,7 @@ std::vector<helios::RayTracingSource> &RadiationModel::getSourceData() {
 
 
 void RadiationModel::testBuildAllBackendData() {
-    buildGeometryData();
+    buildGeometryData(context->getAllUUIDs());
     buildMaterialData();
     buildSourceData();
 }

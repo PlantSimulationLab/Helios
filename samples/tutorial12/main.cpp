@@ -18,7 +18,7 @@ int main() {
     context.translatePrimitive(UUIDs_bunny_2, make_vec3(-0.15, 0, 0));
 
     // Load and scale the Stanford Dragon model, positioned at center
-    std::vector<uint> UUIDs_dragon = context.loadPLY("../../../PLY/StanfordDragon.ply", make_vec3(0.025, 0, 0), 0.2, nullrotation);
+    std::vector<uint> UUIDs_dragon;// = context.loadPLY("../../../PLY/StanfordDragon.ply", make_vec3(0.025, 0, 0), 0.2, nullrotation);
 
     // Create a ground plane to provide realistic lighting and context
     std::vector<uint> UUIDs_tile = context.addTile(nullorigin, make_vec2(1, 1), nullrotation, make_int2(1000, 1000));
@@ -93,8 +93,8 @@ int main() {
     // Configure camera properties for high-quality imaging
     CameraProperties cameraproperties;
     cameraproperties.camera_resolution = make_int2(1024, 1024); // Square 1024x1024 resolution
-    cameraproperties.focal_plane_distance = 0.5; // Focus distance
-    cameraproperties.lens_diameter = 0.002f; // Small aperture for sharp focus
+    cameraproperties.focal_plane_distance = 0.6; // Focus distance
+    cameraproperties.lens_diameter = 0.018f;
     cameraproperties.HFOV = 50.f; // 50-degree horizontal field of view
 
     // Add the camera to the radiation model with 100 rays per pixel for quality
@@ -138,6 +138,9 @@ int main() {
 
     // Auto-calibrate camera image using colorboard reference values with quality report
     std::string corrected_image = radiation.autoCalibrateCameraImage("bunnycam", "red", "green", "blue", "../output/auto_calibrated_bunnycam.jpeg", true);
+
+    // Display auto-calibrated image
+    vis.displayImage(corrected_image);
 
     // Note: Use the Python script 'visualize_segmentation.py' to view segmentation masks
 

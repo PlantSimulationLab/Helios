@@ -1,5 +1,23 @@
 # Changelog
 
+# [1.3.65] 2026-02-27
+
+## Core
+- Expanded `loadTabularTimeseriesData()` to support combined "datetime" columns (ISO-8601 with timezone offsets, compact YYYYMMDDHH/YYYYMMDDHHMM, space-separated date+time), a "time" column (HH:MM, HH:MM:SS), compact 8-digit date strings, and date format synonyms (e.g., "YYYY-MM-DD", "DD/MM/YYYY").
+- Fixed `Tube::pruneTubeNodes()` to correctly partition and delete primitives using the proper UUID ordering, and fixed `Tube::updateTriangleVertices()` loop order to match `addTubeObject()` so that colors stay mapped to the correct segments.
+
+## Radiation
+- Added Vulkan compute backend with software BVH traversal, enabling GPU-accelerated ray tracing on AMD, Intel, and Apple Silicon GPUs without requiring CUDA or OptiX. Backend selection is now automatic based on available hardware, with `FORCE_VULKAN_BACKEND` CMake option for testing. The OptiX backend now handles its own launch batching internally rather than in `RadiationModel`. Tile sub-patches are treated as individual patches for cross-backend compatibility, and the Prague sky model parameters are now properly passed to all backends.
+
+## Parameter Optimization
+- Major overhaul: added Bayesian Optimization (Gaussian Process with UCB acquisition) and CMA-ES algorithms alongside the existing Genetic Algorithm. New `setAlgorithm()` API replaces the old `OptimizationSettings` struct, with configurable crossover operators (BLX-alpha, BLX-PCA), mutation operators (per-gene, isotropic, hybrid PCA), integer/categorical parameter types, fitness caching, and `explore()`/`exploit()` factory presets for each algorithm.
+
+## Plant Hydraulics
+- Fixed sign error in turgor pressure term of the water potential equation in the documentation.
+
+## LiDAR
+- Updated multi-return triangulation filter documentation to reflect first-return filtering and corrected separation ratio threshold.
+
 # [1.3.64] 2026-01-30
 
 ## Core

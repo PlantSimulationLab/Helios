@@ -1,12 +1,67 @@
 #include "CameraCalibration.h"
 #include "RadiationModel.h"
 #include "BufferIndexing.h"
+#include "test_helpers.h"
+#include "VulkanComputeBackend.h"
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
 #include "doctest_utils.h"
 
 using namespace helios;
+
+namespace helios {
+    /**
+     * @brief Test helper for creating RadiationModel with backend selection
+     *
+     * INTERNAL TEST-ONLY HELPER
+     * - OptiX builds: Use default constructor (no singleton needed)
+     * - Vulkan builds: Use shared VulkanDevice singleton (NVIDIA driver bug workaround)
+     */
+    class RadiationModelTestHelper {
+    public:
+        /**
+         * @brief Check if a GPU backend is available for testing
+         *
+         * @return True if GPU tests can run (always true for OptiX, Vulkan-dependent otherwise)
+         */
+        static bool isGPUAvailable() {
+#if defined(HELIOS_HAVE_OPTIX) && !defined(FORCE_VULKAN_BACKEND)
+            return true;
+#else
+            return TestVulkanDeviceManager::isVulkanAvailable();
+#endif
+        }
+
+        static RadiationModel createWithSharedDevice(Context *context) {
+#if defined(HELIOS_HAVE_OPTIX) && !defined(FORCE_VULKAN_BACKEND)
+            // OptiX available and not forced to Vulkan - use default constructor
+            return RadiationModel(context);
+#else
+            // Vulkan backend - use shared device (workaround for NVIDIA driver bug)
+            VulkanDevice *device = TestVulkanDeviceManager::getSharedDevice();
+            if (!device) {
+                helios_runtime_error("No Vulkan device available for testing");
+            }
+            auto backend = std::make_unique<VulkanComputeBackend>(device);
+            backend->initialize();
+
+            // Use static factory method to inject pre-configured backend
+            return RadiationModel::createWithBackend(context, std::move(backend));
+#endif
+        }
+    };
+} // namespace helios
+
+/// Skip the current test case if no GPU backend is available (e.g., CI runners without GPUs).
+/// Place at the top of any test case that requires RadiationModel GPU execution.
+#define SKIP_IF_NO_GPU() \
+    do { \
+        if (!RadiationModelTestHelper::isGPUAvailable()) { \
+            DOCTEST_MESSAGE("SKIPPED: No GPU/Vulkan device available"); \
+            return; \
+        } \
+    } while (0)
 
 int RadiationModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
@@ -126,7 +181,38 @@ DOCTEST_TEST_CASE("BufferIndexing Correctness") {
     }
 }
 
+DOCTEST_TEST_CASE("RadiationModel Simple Direct") {
+    SKIP_IF_NO_GPU();
+    // Minimal test: single patch, collimated source, no scattering, no emission
+    Context context;
+    uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1)); // Horizontal 1x1 patch
+    context.setPrimitiveData(patch, "twosided_flag", uint(0)); // One-sided
+    context.setPrimitiveData(patch, "reflectivity_SW", 0.0f); // No reflection (100% absorption)
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    // Add shortwave band
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    uint sun = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1)); // Sun pointing down (+Z)
+    radiation.setSourceFlux(sun, "SW", 1000.0f); // 1000 W/m²
+    radiation.setDirectRayCount("SW", 10000);
+    radiation.setScatteringDepth("SW", 0); // No scattering
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    float flux;
+    context.getPrimitiveData(patch, "radiation_flux_SW", flux);
+
+    // With no reflection, horizontal patch, downward sun: should absorb ~1000 W/m²
+    float error = fabsf(flux - 1000.0f) / 1000.0f;
+    DOCTEST_CHECK(error <= 0.01); // 1% tolerance
+}
+
 DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Squares") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.005;
     int Nensemble = 500;
 
@@ -155,7 +241,7 @@ DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Squares") {
     float shortwave_rho = 0.3f;
     context_1.setPrimitiveData(0, "reflectivity_SW", shortwave_rho);
 
-    RadiationModel radiationmodel_1(&context_1);
+    RadiationModel radiationmodel_1 = RadiationModelTestHelper::createWithSharedDevice(&context_1);
     radiationmodel_1.disableMessages();
 
     // Longwave band
@@ -204,7 +290,6 @@ DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Squares") {
     float shortwave_error_1 = fabsf(shortwave_model_1 - shortwave_exact_1) / fabsf(shortwave_exact_1);
     float longwave_error_1 = fabsf(longwave_model_1 - longwave_exact_1) / fabsf(longwave_exact_1);
 
-
     DOCTEST_CHECK(shortwave_error_0 <= error_threshold);
     DOCTEST_CHECK(shortwave_error_1 <= error_threshold);
     // For zero expected value, check direct equality
@@ -213,6 +298,7 @@ DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Squares") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Black Parallel Rectangles") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.005;
     int Nensemble = 500;
 
@@ -241,7 +327,7 @@ DOCTEST_TEST_CASE("RadiationModel Black Parallel Rectangles") {
     context_2.setPrimitiveData(patch0, "twosided_flag", flag);
     context_2.setPrimitiveData(patch1, "twosided_flag", flag);
 
-    RadiationModel radiationmodel_2(&context_2);
+    RadiationModel radiationmodel_2 = RadiationModelTestHelper::createWithSharedDevice(&context_2);
     radiationmodel_2.disableMessages();
 
     // Shortwave band
@@ -274,6 +360,7 @@ DOCTEST_TEST_CASE("RadiationModel Black Parallel Rectangles") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Gray Parallel Rectangles") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.005;
     int Nensemble = 500;
     float sigma = 5.6703744E-8;
@@ -319,7 +406,7 @@ DOCTEST_TEST_CASE("RadiationModel Gray Parallel Rectangles") {
     context_3.setPrimitiveData(0, "twosided_flag", flag);
     context_3.setPrimitiveData(1, "twosided_flag", flag);
 
-    RadiationModel radiationmodel_3(&context_3);
+    RadiationModel radiationmodel_3 = RadiationModelTestHelper::createWithSharedDevice(&context_3);
     radiationmodel_3.disableMessages();
 
     // Longwave band
@@ -352,6 +439,7 @@ DOCTEST_TEST_CASE("RadiationModel Gray Parallel Rectangles") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Sphere Source") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.005;
     int Nensemble = 500;
 
@@ -372,7 +460,7 @@ DOCTEST_TEST_CASE("RadiationModel Sphere Source") {
     Context context_4;
     context_4.addPatch(make_vec3(0.5f * l1, 0.5f * l2, 0), make_vec2(l1, l2));
 
-    RadiationModel radiationmodel_4(&context_4);
+    RadiationModel radiationmodel_4 = RadiationModelTestHelper::createWithSharedDevice(&context_4);
     radiationmodel_4.disableMessages();
 
     uint Source_4 = radiationmodel_4.addSphereRadiationSource(make_vec3(0, 0, d), r);
@@ -402,6 +490,7 @@ DOCTEST_TEST_CASE("RadiationModel Sphere Source") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Sub-Triangles") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.005;
     int Nensemble = 500;
     float sigma = 5.6703744E-8;
@@ -439,7 +528,7 @@ DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Sub-Triangles") {
     context_5.setPrimitiveData(2, "twosided_flag", flag);
     context_5.setPrimitiveData(3, "twosided_flag", flag);
 
-    RadiationModel radiationmodel_5(&context_5);
+    RadiationModel radiationmodel_5 = RadiationModelTestHelper::createWithSharedDevice(&context_5);
     radiationmodel_5.disableMessages();
 
     // Longwave band
@@ -504,6 +593,7 @@ DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Sub-Triangles") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Parallel Disks Texture Masked Patches") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.005;
     int Nensemble = 500;
     float sigma = 5.6703744E-8;
@@ -547,7 +637,7 @@ DOCTEST_TEST_CASE("RadiationModel Parallel Disks Texture Masked Patches") {
     context_6.setPrimitiveData(1, "twosided_flag", flag);
     context_6.setPrimitiveData(2, "twosided_flag", flag);
 
-    RadiationModel radiationmodel_6(&context_6);
+    RadiationModel radiationmodel_6 = RadiationModelTestHelper::createWithSharedDevice(&context_6);
     radiationmodel_6.disableMessages();
 
     uint SunSource_6 = radiationmodel_6.addCollimatedRadiationSource(make_vec3(0, 0, 1));
@@ -604,6 +694,7 @@ DOCTEST_TEST_CASE("RadiationModel Parallel Disks Texture Masked Patches") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Second Law Equilibrium Test") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.005;
     float sigma = 5.6703744E-8;
 
@@ -626,7 +717,7 @@ DOCTEST_TEST_CASE("RadiationModel Second Law Equilibrium Test") {
 
     context_7.setPrimitiveData(UUIDt, "temperature", T);
 
-    RadiationModel radiationmodel_7(&context_7);
+    RadiationModel radiationmodel_7 = RadiationModelTestHelper::createWithSharedDevice(&context_7);
     radiationmodel_7.disableMessages();
 
     // Longwave band
@@ -677,11 +768,12 @@ DOCTEST_TEST_CASE("RadiationModel Second Law Equilibrium Test") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Texture Mapping") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.005;
 
     Context context_8;
 
-    RadiationModel radiation(&context_8);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context_8);
 
     uint source = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
 
@@ -845,6 +937,7 @@ DOCTEST_TEST_CASE("RadiationModel Texture Mapping") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Homogeneous Canopy of Patches") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.005;
     float sigma = 5.6703744E-8;
 
@@ -876,7 +969,7 @@ DOCTEST_TEST_CASE("RadiationModel Homogeneous Canopy of Patches") {
     std::vector<uint> UUIDs_ground = context_9.addTile(make_vec3(0, 0, 0), make_vec2(D_9, D_9), make_SphericalCoord(0, 0), make_int2(100, 100));
     context_9.setPrimitiveData(UUIDs_ground, "twosided_flag", uint(0));
 
-    RadiationModel radiation_9(&context_9);
+    RadiationModel radiation_9 = RadiationModelTestHelper::createWithSharedDevice(&context_9);
     radiation_9.disableMessages();
 
     radiation_9.addRadiationBand("direct");
@@ -943,6 +1036,7 @@ DOCTEST_TEST_CASE("RadiationModel Homogeneous Canopy of Patches") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Gas-filled Furnace") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.005;
     float sigma = 5.6703744E-8;
 
@@ -985,7 +1079,7 @@ DOCTEST_TEST_CASE("RadiationModel Gas-filled Furnace") {
     context_10.setPrimitiveData(UUIDs_patches, "emissivity_LW", eps_m_10);
     context_10.setPrimitiveData(UUIDs_patches, "reflectivity_LW", 1.f - eps_m_10);
 
-    RadiationModel radiation_10(&context_10);
+    RadiationModel radiation_10 = RadiationModelTestHelper::createWithSharedDevice(&context_10);
     radiation_10.disableMessages();
 
     radiation_10.addRadiationBand("LW");
@@ -1010,6 +1104,7 @@ DOCTEST_TEST_CASE("RadiationModel Gas-filled Furnace") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Purely Scattering Medium Between Infinite Plates") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.005;
     float sigma = 5.6703744E-8;
 
@@ -1067,7 +1162,7 @@ DOCTEST_TEST_CASE("RadiationModel Purely Scattering Medium Between Infinite Plat
     context_11.setPrimitiveData(UUIDs_patches_11, "emissivity_LW", 1.f - omega_11);
     context_11.setPrimitiveData(UUIDs_patches_11, "reflectivity_LW", omega_11);
 
-    RadiationModel radiation_11(&context_11);
+    RadiationModel radiation_11 = RadiationModelTestHelper::createWithSharedDevice(&context_11);
     radiation_11.disableMessages();
 
     radiation_11.addRadiationBand("LW");
@@ -1098,6 +1193,7 @@ DOCTEST_TEST_CASE("RadiationModel Purely Scattering Medium Between Infinite Plat
 }
 
 DOCTEST_TEST_CASE("RadiationModel Homogeneous Canopy with Periodic Boundaries") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.005;
 
     uint Ndirect_12 = 1000;
@@ -1125,7 +1221,7 @@ DOCTEST_TEST_CASE("RadiationModel Homogeneous Canopy with Periodic Boundaries") 
     std::vector<uint> UUIDs_ground_12 = context_12.addTile(make_vec3(0, 0, 0), make_vec2(D_12, D_12), make_SphericalCoord(0, 0), make_int2(100, 100));
     context_12.setPrimitiveData(UUIDs_ground_12, "twosided_flag", uint(0));
 
-    RadiationModel radiation_12(&context_12);
+    RadiationModel radiation_12 = RadiationModelTestHelper::createWithSharedDevice(&context_12);
     radiation_12.disableMessages();
 
     radiation_12.addRadiationBand("direct");
@@ -1192,6 +1288,7 @@ DOCTEST_TEST_CASE("RadiationModel Homogeneous Canopy with Periodic Boundaries") 
 }
 
 DOCTEST_TEST_CASE("RadiationModel Texture-masked Tile Objects with Periodic Boundaries") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.005;
 
     uint Ndirect_13 = 1000;
@@ -1235,7 +1332,7 @@ DOCTEST_TEST_CASE("RadiationModel Texture-masked Tile Objects with Periodic Boun
     std::vector<uint> UUIDs_ground_13 = context_13.addTile(make_vec3(0, 0, 0), make_vec2(D_13, D_13), make_SphericalCoord(0, 0), make_int2(100, 100));
     context_13.setPrimitiveData(UUIDs_ground_13, "twosided_flag", uint(0));
 
-    RadiationModel radiation_13(&context_13);
+    RadiationModel radiation_13 = RadiationModelTestHelper::createWithSharedDevice(&context_13);
     radiation_13.disableMessages();
 
     radiation_13.addRadiationBand("direct");
@@ -1302,6 +1399,7 @@ DOCTEST_TEST_CASE("RadiationModel Texture-masked Tile Objects with Periodic Boun
 }
 
 DOCTEST_TEST_CASE("RadiationModel Anisotropic Diffuse Radiation Horizontal Patch") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.005;
 
     uint Ndiffuse_14 = 50000;
@@ -1320,7 +1418,7 @@ DOCTEST_TEST_CASE("RadiationModel Anisotropic Diffuse Radiation Horizontal Patch
     uint UUID_14 = context_14.addPatch();
     context_14.setPrimitiveData(UUID_14, "twosided_flag", uint(0));
 
-    RadiationModel radiation_14(&context_14);
+    RadiationModel radiation_14 = RadiationModelTestHelper::createWithSharedDevice(&context_14);
     radiation_14.disableMessages();
 
     radiation_14.addRadiationBand("diffuse");
@@ -1344,6 +1442,7 @@ DOCTEST_TEST_CASE("RadiationModel Anisotropic Diffuse Radiation Horizontal Patch
 }
 
 DOCTEST_TEST_CASE("RadiationModel Prague Sky Diffuse Radiation Normalization") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.015;
 
     uint Ndiffuse_prague = 100000;
@@ -1379,7 +1478,7 @@ DOCTEST_TEST_CASE("RadiationModel Prague Sky Diffuse Radiation Normalization") {
     uint UUID_prague = context_prague.addPatch();
     context_prague.setPrimitiveData(UUID_prague, "twosided_flag", uint(0));
 
-    RadiationModel radiation_prague(&context_prague);
+    RadiationModel radiation_prague = RadiationModelTestHelper::createWithSharedDevice(&context_prague);
     radiation_prague.disableMessages();
 
     radiation_prague.addRadiationBand("diffuse");
@@ -1456,7 +1555,78 @@ DOCTEST_TEST_CASE("RadiationModel Prague Sky Diffuse Radiation Normalization") {
     }
 }
 
+DOCTEST_TEST_CASE("RadiationModel Prague Sky Angular Distribution") {
+    SKIP_IF_NO_GPU();
+    // Tests that Prague sky model parameters are correctly applied in the diffuse shader.
+    //
+    // RadiationModel::computeAngularNormalization() always computes the normalization factor
+    // with the sun at zenith. When the actual sun is at a different elevation, the Prague
+    // distribution integrates to a value different from 1.0 on a horizontal patch, making
+    // Prague measurably different from isotropic.
+    //
+    // Test design: horizontal patch, sun at 45° elevation (not zenith).
+    //   - Isotropic: flux = 1.0 (all horizontal rays above horizon, normalization exact)
+    //   - Prague: flux ≈ 0.91 (circumsolar peak at 45° elevation has lower cosine weight
+    //             than the zenith-calibrated normalization expects → total < 1.0)
+    //
+    // If Prague params are zeroed (bug): isotropic fallback → flux ≈ 1.0 → test FAILS
+    // If Prague params are applied (fix): Prague distribution → flux ≈ 0.91 → test PASSES
+
+    Context context;
+
+    // Horizontal patch (default orientation, normal = +Z)
+    uint UUID = context.addPatch();
+    context.setPrimitiveData(UUID, "twosided_flag", uint(0));
+
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    radiation.addRadiationBand("diffuse");
+    radiation.disableEmission("diffuse");
+    radiation.setDiffuseRayCount("diffuse", 200000);
+    radiation.setDiffuseRadiationFlux("diffuse", 1.f);
+
+    // Diffuse spectrum required for Prague spectral integration
+    std::vector<helios::vec2> diffuse_spectrum = {{400, 1.0}, {550, 1.0}, {700, 1.0}};
+    context.setGlobalData("prague_angular_test_spectrum", diffuse_spectrum);
+    radiation.setDiffuseSpectrum("prague_angular_test_spectrum");
+
+    radiation.updateGeometry();
+
+    // Prague sky: sun at 45° elevation (+Y azimuth), no horizon brightening
+    // Normalization is computed for sun at zenith, so sun at 45° creates a measurable
+    // deficit: circumsolar peak at cos_zenith=0.707 vs. normalization calibrated at cos_zenith=1.0
+    vec3 sun_dir = make_vec3(0, 0.707f, 0.707f); // 45° elevation, toward +Y
+    context.setGlobalData("prague_sky_valid", 1);
+    context.setGlobalData("prague_sky_sun_direction", sun_dir);
+    context.setGlobalData("prague_sky_visibility_km", 50.0f);
+    context.setGlobalData("prague_sky_ground_albedo", 0.2f);
+
+    // Prague spectral params: circ_str=8, circ_width=10°, horiz_bright=1.0
+    // RadiationModel recomputes normalization via computeAngularNormalization(8, 10, 1) ≈ 0.222
+    std::vector<float> prague_params;
+    prague_params.push_back(550.0f); // wavelength
+    prague_params.push_back(0.1f); // L_zenith (not used in this test)
+    prague_params.push_back(8.0f); // circumsolar strength
+    prague_params.push_back(10.0f); // circumsolar width (degrees)
+    prague_params.push_back(1.0f); // horizon brightness (1.0 = no brightening)
+    prague_params.push_back(0.0f); // normalization (recomputed by RadiationModel)
+    context.setGlobalData("prague_sky_spectral_params", prague_params);
+
+    radiation.runBand("diffuse");
+
+    float flux;
+    context.getPrimitiveData(UUID, "radiation_flux_diffuse", flux);
+
+    // Isotropic sky on a horizontal patch gives 1.0 (exact, by normalization design)
+    // Prague with sun at 45° and normalization for sun at zenith gives ~0.91 (~9% below isotropic)
+    // This large margin (9%) is well above Monte Carlo noise (~0.2% at 200k rays)
+    DOCTEST_CHECK(flux < 0.97f); // Prague gives measurably less than isotropic (1.0)
+    DOCTEST_CHECK(flux > 0.70f); // Sanity: flux is reasonable
+}
+
 DOCTEST_TEST_CASE("RadiationModel Disk Radiation Source Above Circular Element") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.005;
 
     uint Ndirect_15 = 10000;
@@ -1466,7 +1636,7 @@ DOCTEST_TEST_CASE("RadiationModel Disk Radiation Source Above Circular Element")
     float a_15 = 0.5; // distance between radiation source and element
 
     Context context_15;
-    RadiationModel radiation_15(&context_15);
+    RadiationModel radiation_15 = RadiationModelTestHelper::createWithSharedDevice(&context_15);
     radiation_15.disableMessages();
 
     uint UUID_15 = context_15.addPatch(make_vec3(0, 0, 0), make_vec2(2 * r2_15, 2 * r2_15), make_SphericalCoord(0.5 * M_PI, 0), "lib/images/disk_texture.png");
@@ -1493,6 +1663,7 @@ DOCTEST_TEST_CASE("RadiationModel Disk Radiation Source Above Circular Element")
 }
 
 DOCTEST_TEST_CASE("RadiationModel Rectangular Radiation Source Above Patch") {
+    SKIP_IF_NO_GPU();
     float error_threshold = 0.01;
 
     uint Ndirect_16 = 50000;
@@ -1502,7 +1673,7 @@ DOCTEST_TEST_CASE("RadiationModel Rectangular Radiation Source Above Patch") {
     float c_16 = 0.5; // distance between source and patch
 
     Context context_16;
-    RadiationModel radiation_16(&context_16);
+    RadiationModel radiation_16 = RadiationModelTestHelper::createWithSharedDevice(&context_16);
     radiation_16.disableMessages();
 
     uint UUID_16 = context_16.addPatch(make_vec3(0, 0, 0), make_vec2(a_16, b_16), nullrotation);
@@ -1533,6 +1704,7 @@ DOCTEST_TEST_CASE("RadiationModel Rectangular Radiation Source Above Patch") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel ROMC Camera Test Verification") {
+    SKIP_IF_NO_GPU();
     Context context_17;
     float sunzenithd = 30;
     float reflectivityleaf = 0.02; // NIR
@@ -1584,7 +1756,7 @@ DOCTEST_TEST_CASE("RadiationModel ROMC Camera Test Verification") {
     // Add sensors to receive radiation
     vec3 camera_lookat = make_vec3(0, 0, heightscene);
     std::vector<std::string> cameralabels;
-    RadiationModel radiation_17(&context_17);
+    RadiationModel radiation_17 = RadiationModelTestHelper::createWithSharedDevice(&context_17);
     radiation_17.disableMessages();
     for (float viewangle: viewangles) {
         // Set camera properties
@@ -1627,10 +1799,24 @@ DOCTEST_TEST_CASE("RadiationModel ROMC Camera Test Verification") {
         context_17.getGlobalData(global_data_label.c_str(), camera_data);
         context_17.getGlobalData(global_UUID.c_str(), camera_UUID);
         float camera_all_data = 0;
+        int filtered_count = 0, uuid_zero_count = 0, uuid_invalid_count = 0;
+        float unfiltered_sum = 0, uuid_zero_sum = 0;
         for (int v = 0; v < camera_data.size(); v++) {
-            uint iUUID = camera_UUID.at(v) - 1;
-            if (camera_data.at(v) > 0 && context_17.doesPrimitiveExist(iUUID)) {
-                camera_all_data += camera_data.at(v);
+            if (camera_data.at(v) > 0) {
+                unfiltered_sum += camera_data.at(v);
+                uint raw_uuid = camera_UUID.at(v);
+                if (raw_uuid == 0) {
+                    uuid_zero_count++;
+                    uuid_zero_sum += camera_data.at(v);
+                } else {
+                    uint iUUID = raw_uuid - 1;
+                    if (context_17.doesPrimitiveExist(iUUID)) {
+                        camera_all_data += camera_data.at(v);
+                        filtered_count++;
+                    } else {
+                        uuid_invalid_count++;
+                    }
+                }
             }
         }
         cameravalue = std::abs(referencevalues.at(i) - camera_all_data);
@@ -1639,9 +1825,10 @@ DOCTEST_TEST_CASE("RadiationModel ROMC Camera Test Verification") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Spectral Integration and Interpolation Tests") {
+    SKIP_IF_NO_GPU();
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Test 1: Basic spectral integration
@@ -1710,9 +1897,10 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Integration and Interpolation Tests")
 }
 
 DOCTEST_TEST_CASE("RadiationModel Spectral Radiative Properties Setting and Validation") {
+    SKIP_IF_NO_GPU();
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create test geometry
@@ -1827,9 +2015,10 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Radiative Properties Setting and Vali
 }
 
 DOCTEST_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
+    SKIP_IF_NO_GPU();
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Test 1: Empty spectrum handling
@@ -1927,9 +2116,10 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Spectral Caching and Performance Validation") {
+    SKIP_IF_NO_GPU();
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Test spectral caching by using identical spectra on multiple primitives
@@ -1980,9 +2170,10 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Caching and Performance Validation") 
 }
 
 DOCTEST_TEST_CASE("RadiationModel Spectral Library Integration") {
+    SKIP_IF_NO_GPU();
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Test standard spectral library data if available
@@ -2015,9 +2206,10 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Library Integration") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Multi-Spectrum Primitive Assignment") {
+    SKIP_IF_NO_GPU();
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create three different spectra with distinct reflectivity values
@@ -2207,9 +2399,10 @@ DOCTEST_TEST_CASE("RadiationModel Multi-Spectrum Primitive Assignment") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
+    SKIP_IF_NO_GPU();
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create distinct spectral properties with clear peaks
@@ -2402,9 +2595,10 @@ DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary") {
+    SKIP_IF_NO_GPU();
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Test 1: Load Canon_20D camera
@@ -2486,9 +2680,10 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary with custom band labels") {
+    SKIP_IF_NO_GPU();
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     vec3 position(0, 0, 5);
@@ -2536,7 +2731,7 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary with custom ba
 
     // Test 3: Empty custom labels uses default behavior (XML labels)
     Context context2;
-    RadiationModel radiation2(&context2);
+    RadiationModel radiation2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
     radiation2.disableMessages();
 
     // Suppress expected band auto-creation warnings
@@ -2553,7 +2748,7 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary with custom ba
     // Test 4: Verify spectral response association works correctly with custom labels
     // The custom band should be associated with the corresponding XML spectral response
     Context context3;
-    RadiationModel radiation3(&context3);
+    RadiationModel radiation3 = RadiationModelTestHelper::createWithSharedDevice(&context3);
     radiation3.disableMessages();
 
     std::vector<std::string> custom_labels2 = {"NIR", "VIS", "UV"};
@@ -2576,9 +2771,10 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary with custom ba
 }
 
 DOCTEST_TEST_CASE("RadiationModel - updateCameraParameters") {
+    SKIP_IF_NO_GPU();
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Add radiation bands first
@@ -2742,9 +2938,10 @@ DOCTEST_TEST_CASE("RadiationModel - updateCameraParameters") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel - getCameraParameters") {
+    SKIP_IF_NO_GPU();
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Add radiation bands first
@@ -3034,8 +3231,9 @@ DOCTEST_TEST_CASE("CameraCalibration Multiple Colorboards") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel CCM Export and Import") {
+    SKIP_IF_NO_GPU();
     Context context;
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Create a simple test camera with RGB bands
@@ -3203,8 +3401,9 @@ DOCTEST_TEST_CASE("RadiationModel CCM Export and Import") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel CCM Error Handling") {
+    SKIP_IF_NO_GPU();
     Context context;
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
 
     // Test 1: Invalid file path for loading
     {
@@ -3268,9 +3467,10 @@ DOCTEST_TEST_CASE("RadiationModel CCM Error Handling") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
+    SKIP_IF_NO_GPU();
 
     Context context;
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Create test spectra as global data
@@ -3332,7 +3532,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     // Test with transmissivity spectrum
     DOCTEST_SUBCASE("Interpolation with transmissivity_spectrum") {
         Context context2;
-        RadiationModel radiationmodel2(&context2);
+        RadiationModel radiationmodel2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiationmodel2.disableMessages();
 
         context2.setGlobalData("trans_young", spectrum_young);
@@ -3367,7 +3567,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     // Test error handling - mismatched vector lengths
     DOCTEST_SUBCASE("Error: mismatched vector lengths") {
         Context context3;
-        RadiationModel radiationmodel3(&context3);
+        RadiationModel radiationmodel3 = RadiationModelTestHelper::createWithSharedDevice(&context3);
         radiationmodel3.disableMessages();
 
         context3.setGlobalData("spec1", spectrum_young);
@@ -3393,7 +3593,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     // Test error handling - empty vectors
     DOCTEST_SUBCASE("Error: empty vectors") {
         Context context4;
-        RadiationModel radiationmodel4(&context4);
+        RadiationModel radiationmodel4 = RadiationModelTestHelper::createWithSharedDevice(&context4);
         radiationmodel4.disableMessages();
 
         uint uuid = context4.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
@@ -3416,7 +3616,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     // Test error handling - invalid global data (caught during runBand/updateRadiativeProperties)
     DOCTEST_SUBCASE("Error: invalid global data label") {
         Context context5;
-        RadiationModel radiationmodel5(&context5);
+        RadiationModel radiationmodel5 = RadiationModelTestHelper::createWithSharedDevice(&context5);
         radiationmodel5.disableMessages();
 
         uint uuid = context5.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
@@ -3449,7 +3649,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     // Test error handling - wrong global data type (caught during runBand/updateRadiativeProperties)
     DOCTEST_SUBCASE("Error: wrong global data type") {
         Context context6;
-        RadiationModel radiationmodel6(&context6);
+        RadiationModel radiationmodel6 = RadiationModelTestHelper::createWithSharedDevice(&context6);
         radiationmodel6.disableMessages();
 
         context6.setGlobalData("wrong_type", 42.0f); // Float instead of vec2
@@ -3484,7 +3684,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     // Test with invalid UUID (should be silently skipped during updateRadiativeProperties)
     DOCTEST_SUBCASE("Invalid UUID is silently skipped") {
         Context context7;
-        RadiationModel radiationmodel7(&context7);
+        RadiationModel radiationmodel7 = RadiationModelTestHelper::createWithSharedDevice(&context7);
         radiationmodel7.disableMessages();
 
         context7.setGlobalData("spec", spectrum_young);
@@ -3516,7 +3716,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     // Test error handling - wrong primitive data type for query data
     DOCTEST_SUBCASE("Error: wrong primitive data type for query") {
         Context context8;
-        RadiationModel radiationmodel8(&context8);
+        RadiationModel radiationmodel8 = RadiationModelTestHelper::createWithSharedDevice(&context8);
         radiationmodel8.disableMessages();
 
         context8.setGlobalData("spec", spectrum_young);
@@ -3551,7 +3751,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     // Test with primitive missing query data (should not crash, just skip)
     DOCTEST_SUBCASE("Primitive without query data is skipped") {
         Context context9;
-        RadiationModel radiationmodel9(&context9);
+        RadiationModel radiationmodel9 = RadiationModelTestHelper::createWithSharedDevice(&context9);
         radiationmodel9.disableMessages();
 
         context9.setGlobalData("spec1", spectrum_young);
@@ -3590,9 +3790,10 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
+    SKIP_IF_NO_GPU();
 
     Context context;
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Create test spectra as global data
@@ -3669,7 +3870,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test with transmissivity spectrum
     DOCTEST_SUBCASE("Interpolation with transmissivity_spectrum") {
         Context context2;
-        RadiationModel radiationmodel2(&context2);
+        RadiationModel radiationmodel2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiationmodel2.disableMessages();
 
         context2.setGlobalData("trans_young", spectrum_young);
@@ -3710,7 +3911,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test error handling - mismatched vector lengths
     DOCTEST_SUBCASE("Error: mismatched vector lengths") {
         Context context3;
-        RadiationModel radiationmodel3(&context3);
+        RadiationModel radiationmodel3 = RadiationModelTestHelper::createWithSharedDevice(&context3);
         radiationmodel3.disableMessages();
 
         uint obj_test = context3.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
@@ -3730,7 +3931,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test error handling - empty spectra vector
     DOCTEST_SUBCASE("Error: empty spectra vector") {
         Context context4;
-        RadiationModel radiationmodel4(&context4);
+        RadiationModel radiationmodel4 = RadiationModelTestHelper::createWithSharedDevice(&context4);
         radiationmodel4.disableMessages();
 
         uint obj_test = context4.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
@@ -3750,7 +3951,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test error handling - empty object_IDs vector
     DOCTEST_SUBCASE("Error: empty object_IDs vector") {
         Context context5;
-        RadiationModel radiationmodel5(&context5);
+        RadiationModel radiationmodel5 = RadiationModelTestHelper::createWithSharedDevice(&context5);
         radiationmodel5.disableMessages();
 
         std::vector<uint> obj_ids;
@@ -3769,7 +3970,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test error handling - empty query label
     DOCTEST_SUBCASE("Error: empty query label") {
         Context context6;
-        RadiationModel radiationmodel6(&context6);
+        RadiationModel radiationmodel6 = RadiationModelTestHelper::createWithSharedDevice(&context6);
         radiationmodel6.disableMessages();
 
         uint obj_test = context6.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
@@ -3789,7 +3990,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test error handling - empty target label
     DOCTEST_SUBCASE("Error: empty target label") {
         Context context7;
-        RadiationModel radiationmodel7(&context7);
+        RadiationModel radiationmodel7 = RadiationModelTestHelper::createWithSharedDevice(&context7);
         radiationmodel7.disableMessages();
 
         uint obj_test = context7.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
@@ -3809,7 +4010,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test graceful handling - object doesn't have the data field
     DOCTEST_SUBCASE("Graceful skip: object without query data") {
         Context context8;
-        RadiationModel radiationmodel8(&context8);
+        RadiationModel radiationmodel8 = RadiationModelTestHelper::createWithSharedDevice(&context8);
         radiationmodel8.disableMessages();
 
         context8.setGlobalData("spec1", spectrum_young);
@@ -3851,7 +4052,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test graceful handling - invalid object ID (deleted object)
     DOCTEST_SUBCASE("Graceful skip: invalid object ID") {
         Context context9;
-        RadiationModel radiationmodel9(&context9);
+        RadiationModel radiationmodel9 = RadiationModelTestHelper::createWithSharedDevice(&context9);
         radiationmodel9.disableMessages();
 
         context9.setGlobalData("spec1", spectrum_young);
@@ -3888,7 +4089,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test error handling - wrong object data type (int instead of float)
     DOCTEST_SUBCASE("Error: wrong object data type") {
         Context context10;
-        RadiationModel radiationmodel10(&context10);
+        RadiationModel radiationmodel10 = RadiationModelTestHelper::createWithSharedDevice(&context10);
         radiationmodel10.disableMessages();
 
         context10.setGlobalData("spec1", spectrum_young);
@@ -3919,7 +4120,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test error handling - invalid global data (doesn't exist)
     DOCTEST_SUBCASE("Error: invalid global data") {
         Context context11;
-        RadiationModel radiationmodel11(&context11);
+        RadiationModel radiationmodel11 = RadiationModelTestHelper::createWithSharedDevice(&context11);
         radiationmodel11.disableMessages();
 
         uint obj_test = context11.addTileObject(make_vec3(0, 0, 0), make_vec2(1, 1), make_SphericalCoord(0, 0), make_int2(2, 2));
@@ -3948,7 +4149,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     // Test error handling - wrong global data type
     DOCTEST_SUBCASE("Error: wrong global data type") {
         Context context12;
-        RadiationModel radiationmodel12(&context12);
+        RadiationModel radiationmodel12 = RadiationModelTestHelper::createWithSharedDevice(&context12);
         radiationmodel12.disableMessages();
 
         context12.setGlobalData("wrong_type", 42.0f); // float, not vec2 vector
@@ -3978,11 +4179,12 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation - Duplicate Handling") {
+    SKIP_IF_NO_GPU();
 
     // Test merging of duplicate primitive UUIDs with same spectra/values
     DOCTEST_SUBCASE("Primitive: Merge duplicates with matching spectra") {
         Context context;
-        RadiationModel radiationmodel(&context);
+        RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
         radiationmodel.disableMessages();
 
         std::vector<vec2> spectrum1 = {{400, 0.1}, {500, 0.15}};
@@ -4025,7 +4227,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation - Duplicate Handling") 
     // Test replacement when spectra/values change
     DOCTEST_SUBCASE("Primitive: Replace config with different spectra") {
         Context context2;
-        RadiationModel radiationmodel2(&context2);
+        RadiationModel radiationmodel2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiationmodel2.disableMessages();
 
         std::vector<vec2> spectrum1 = {{400, 0.1}, {500, 0.15}};
@@ -4065,7 +4267,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation - Duplicate Handling") 
     // Test merging of duplicate object IDs with same spectra/values
     DOCTEST_SUBCASE("Object: Merge duplicates with matching spectra") {
         Context context3;
-        RadiationModel radiationmodel3(&context3);
+        RadiationModel radiationmodel3 = RadiationModelTestHelper::createWithSharedDevice(&context3);
         radiationmodel3.disableMessages();
 
         std::vector<vec2> spectrum1 = {{400, 0.1}, {500, 0.15}};
@@ -4117,7 +4319,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation - Duplicate Handling") 
     // Test replacement when spectra/values change for objects
     DOCTEST_SUBCASE("Object: Replace config with different spectra") {
         Context context4;
-        RadiationModel radiationmodel4(&context4);
+        RadiationModel radiationmodel4 = RadiationModelTestHelper::createWithSharedDevice(&context4);
         radiationmodel4.disableMessages();
 
         std::vector<vec2> spectrum1 = {{400, 0.1}, {500, 0.15}};
@@ -4163,7 +4365,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation - Duplicate Handling") 
     // Test that different query/target label pairs create separate configs
     DOCTEST_SUBCASE("Primitive: Separate configs for different labels") {
         Context context5;
-        RadiationModel radiationmodel5(&context5);
+        RadiationModel radiationmodel5 = RadiationModelTestHelper::createWithSharedDevice(&context5);
         radiationmodel5.disableMessages();
 
         std::vector<vec2> spectrum1 = {{400, 0.1}, {500, 0.15}};
@@ -4198,6 +4400,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation - Duplicate Handling") 
 }
 
 DOCTEST_TEST_CASE("RadiationModel - Camera Metadata Export") {
+    SKIP_IF_NO_GPU();
     Context context;
 
     // Set context properties for metadata
@@ -4205,7 +4408,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Metadata Export") {
     context.setTime(0, 30, 10); // second, minute, hour
     context.setLocation(make_Location(34.0522, -118.2437, 8.0)); // Los Angeles
 
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Add a simple surface for the camera to image
@@ -4309,7 +4512,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Metadata Export") {
 
         // Test with no sources (already has collimated source, so remove it for clean test)
         Context context2;
-        RadiationModel radiationmodel2(&context2);
+        RadiationModel radiationmodel2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiationmodel2.disableMessages();
 
         radiationmodel2.addRadiationBand("test");
@@ -4546,6 +4749,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Metadata Export") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel - Camera Metadata Agronomic Properties") {
+    SKIP_IF_NO_GPU();
     Context context;
 
     // Set context properties for metadata
@@ -4553,7 +4757,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Metadata Agronomic Properties") {
     context.setTime(0, 0, 12);
     context.setLocation(make_Location(38.0, -120.0, -8.0));
 
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Add radiation bands
@@ -4880,11 +5084,12 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Metadata Agronomic Properties") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel - FOV_aspect_ratio Deprecation") {
+    SKIP_IF_NO_GPU();
 
     Context context;
 
     // Create a basic radiation model
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Add a radiation band
@@ -4962,6 +5167,7 @@ DOCTEST_TEST_CASE("RadiationModel - FOV_aspect_ratio Deprecation") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Atmospheric Sky Model for Camera") {
+    SKIP_IF_NO_GPU();
     // Test that atmospheric sky radiance model is computed when cameras are present
     // and that atmospheric parameters from SolarPosition plugin are used correctly
 
@@ -4982,7 +5188,7 @@ DOCTEST_TEST_CASE("RadiationModel Atmospheric Sky Model for Camera") {
     context.setGlobalData("atmosphere_humidity_rel", humidity_rel);
     context.setGlobalData("atmosphere_turbidity", turbidity);
 
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     DOCTEST_SUBCASE("Sky model requires wavelength bounds with uniform response") {
@@ -5086,9 +5292,10 @@ DOCTEST_TEST_CASE("RadiationModel Atmospheric Sky Model for Camera") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel - Camera White Balance") {
+    SKIP_IF_NO_GPU();
     Context context;
 
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Add a simple surface for the camera to image
@@ -5243,6 +5450,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera White Balance") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior") {
+    SKIP_IF_NO_GPU();
 
     using namespace helios;
 
@@ -5256,7 +5464,7 @@ DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior"
     test_spectrum.emplace_back(700.f, 0.5f);
     context.setGlobalData("test_spectrum", test_spectrum);
 
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     DOCTEST_SUBCASE("setDiffuseSpectrum applies to all bands") {
@@ -5335,7 +5543,7 @@ DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior"
         // Create a fresh radiation model with no bands
         Context context2;
         context2.setGlobalData("test_spectrum", test_spectrum);
-        RadiationModel radiation2(&context2);
+        RadiationModel radiation2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiation2.disableMessages();
 
         // Should not throw when called with no bands
@@ -5347,7 +5555,7 @@ DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior"
         // Create a fresh radiation model with no bands
         Context context2;
         context2.setGlobalData("test_spectrum", test_spectrum);
-        RadiationModel radiation2(&context2);
+        RadiationModel radiation2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiation2.disableMessages();
 
         // Set spectrum BEFORE adding bands
@@ -5373,7 +5581,7 @@ DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior"
         // Create a fresh radiation model with no bands
         Context context2;
         context2.setGlobalData("test_spectrum", test_spectrum);
-        RadiationModel radiation2(&context2);
+        RadiationModel radiation2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiation2.disableMessages();
 
         // Set spectrum and integral BEFORE adding bands
@@ -5397,7 +5605,7 @@ DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior"
         // Create a fresh radiation model with no bands
         Context context2;
         context2.setGlobalData("test_spectrum", test_spectrum);
-        RadiationModel radiation2(&context2);
+        RadiationModel radiation2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiation2.disableMessages();
 
         // Set spectrum and integral with wavelength bounds BEFORE adding bands
@@ -5432,7 +5640,7 @@ DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior"
 
 TEST_CASE("Radiation - Prague Context data fallback behavior") {
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Add a simple camera with RGB bands
@@ -5460,7 +5668,7 @@ TEST_CASE("Radiation - Prague Context data fallback behavior") {
 
 TEST_CASE("Radiation - Prague Context data integration end-to-end") {
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Mock Prague data in Context (simulating what SolarPosition would provide)
@@ -5519,9 +5727,10 @@ TEST_CASE("Radiation - Prague Context data integration end-to-end") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Automatic Spectrum Update Detection") {
+    SKIP_IF_NO_GPU();
 
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create initial direct spectrum
@@ -5584,9 +5793,10 @@ DOCTEST_TEST_CASE("RadiationModel Automatic Spectrum Update Detection") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel Multiple Sources Same Spectrum Update") {
+    SKIP_IF_NO_GPU();
 
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create spectrum used by multiple sources
@@ -5630,9 +5840,10 @@ DOCTEST_TEST_CASE("RadiationModel Multiple Sources Same Spectrum Update") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel No Update When Spectrum Unchanged") {
+    SKIP_IF_NO_GPU();
 
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create spectrum
@@ -5677,8 +5888,9 @@ DOCTEST_TEST_CASE("RadiationModel - CameraProperties equality with camera_zoom")
 }
 
 DOCTEST_TEST_CASE("RadiationModel - camera_zoom validation in updateCameraParameters") {
+    SKIP_IF_NO_GPU();
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     CameraProperties props;
@@ -5701,8 +5913,9 @@ DOCTEST_TEST_CASE("RadiationModel - camera_zoom validation in updateCameraParame
 }
 
 DOCTEST_TEST_CASE("RadiationModel - camera_zoom parameter get/set") {
+    SKIP_IF_NO_GPU();
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     CameraProperties props;
@@ -5719,8 +5932,9 @@ DOCTEST_TEST_CASE("RadiationModel - camera_zoom parameter get/set") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel - update camera_zoom") {
+    SKIP_IF_NO_GPU();
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     CameraProperties props;
@@ -5741,8 +5955,9 @@ DOCTEST_TEST_CASE("RadiationModel - update camera_zoom") {
     DOCTEST_CHECK(final_props.HFOV == 45.0f); // Base HFOV should remain unchanged
 }
 DOCTEST_TEST_CASE("Lens Flare - Enable/Disable API") {
+    SKIP_IF_NO_GPU();
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
 
     // Add a camera
     CameraProperties camera_props;
@@ -5768,8 +5983,9 @@ DOCTEST_TEST_CASE("Lens Flare - Enable/Disable API") {
 }
 
 DOCTEST_TEST_CASE("Lens Flare - Properties API") {
+    SKIP_IF_NO_GPU();
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
 
     // Add a camera
     CameraProperties camera_props;
@@ -5840,8 +6056,9 @@ DOCTEST_TEST_CASE("Lens Flare - Properties API") {
 }
 
 DOCTEST_TEST_CASE("Lens Flare - Application to Camera Image") {
+    SKIP_IF_NO_GPU();
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create a simple scene with a bright light source
@@ -5914,8 +6131,9 @@ DOCTEST_TEST_CASE("Lens Flare - Application to Camera Image") {
 }
 
 DOCTEST_TEST_CASE("Lens Flare - Disabled Does Nothing") {
+    SKIP_IF_NO_GPU();
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create a simple scene
@@ -5966,8 +6184,9 @@ DOCTEST_TEST_CASE("Lens Flare - Disabled Does Nothing") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel - Camera Sphere Source Rendering") {
+    SKIP_IF_NO_GPU();
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     uint ground = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(2.0f, 2.0f));
@@ -6002,8 +6221,9 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Sphere Source Rendering") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel - Camera Rectangle Source Rendering") {
+    SKIP_IF_NO_GPU();
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     uint ground = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(2.0f, 2.0f));
@@ -6038,8 +6258,9 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Rectangle Source Rendering") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel - Camera Disk Source Rendering") {
+    SKIP_IF_NO_GPU();
     helios::Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     uint ground = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(2.0f, 2.0f));
@@ -6073,345 +6294,8 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Disk Source Rendering") {
     DOCTEST_CHECK(pixel_data[center_idx] > 0.0f);
 }
 
-// ========== Phase 1: Backend Integration Tests ==========
-
-DOCTEST_TEST_CASE("Phase1.E Step2: Backend GPU Memory Query Integration") {
-    // Test that RadiationModel can call backend methods
-    // This proves backend is accessible and the integration path works
-
-    helios::Context context;
-    RadiationModel radiation(&context);
-    radiation.disableMessages();
-
-    // Should call backend->queryGPUMemory() without crashing
-    DOCTEST_REQUIRE_NOTHROW(radiation.queryBackendGPUMemory());
-
-    // If we get here, backend method was successfully called
-    // Visual verification: output should show "GPU Memory Available: X MB"
-}
-
-
-DOCTEST_TEST_CASE("RadiationModel buildGeometryData() Extraction") {
-    // Test that buildGeometryData() correctly extracts geometry from Context
-
-    helios::Context context;
-
-    // Create test geometry: 1 patch, 1 triangle
-    context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
-    context.addTriangle(helios::make_vec3(2, 0, 0), helios::make_vec3(3, 0, 0), helios::make_vec3(2.5, 1, 0));
-
-    RadiationModel radiation(&context);
-    radiation.disableMessages();
-
-    // Build geometry data - should extract 2 primitives
-    size_t prim_count = radiation.testBuildGeometryData();
-
-    // Verify primitive count
-    DOCTEST_CHECK(prim_count == 2);
-
-    // If we get here without crashing, buildGeometryData() successfully:
-    // - Extracted primitives from Context
-    // - Populated geometry_data structure
-    // - Handled patches and triangles
-}
-
-DOCTEST_TEST_CASE("Phase1.E Step4: updateGeometry() Backend Integration") {
-    // Test that updateGeometry() now uses backend instead of old OptiX code
-
-    helios::Context context;
-
-    // Create test geometry
-    context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
-    context.addTriangle(helios::make_vec3(2, 0, 0), helios::make_vec3(3, 0, 0), helios::make_vec3(2.5, 1, 0));
-
-    RadiationModel radiation(&context);
-    radiation.disableMessages();
-
-    // Call updateGeometry - should use backend path now
-    DOCTEST_REQUIRE_NOTHROW(radiation.updateGeometry());
-
-    // If we get here, updateGeometry() successfully:
-    // - Called buildGeometryData()
-    // - Called backend->updateGeometry(geometry_data)
-    // - Called backend->buildAccelerationStructure()
-    // - Did NOT crash
-
-    // Verify backend was used by checking geometry was built
-    size_t prim_count = radiation.testBuildGeometryData();
-    DOCTEST_CHECK(prim_count == 2);
-}
-
-DOCTEST_TEST_CASE("Phase1.E Step5: Backend Functional Validation - Direct Radiation") {
-    // CRITICAL TEST: Prove backend can actually trace rays and produce correct results
-
-    helios::Context context;
-
-    // Create single horizontal patch (1m x 1m) facing up
-    uint patch = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
-
-    // Set as perfect absorber (rho=0, tau=0)
-    context.setPrimitiveData(patch, "reflectivity_PAR", 0.0f);
-    context.setPrimitiveData(patch, "transmissivity_PAR", 0.0f);
-
-    RadiationModel radiation(&context);
-    radiation.disableMessages();
-
-    // Add radiation band
-    radiation.addRadiationBand("PAR");
-
-    // Add downward collimated source (1000 W/m²)
-    uint source = radiation.addCollimatedRadiationSource(helios::make_vec3(0, 0, -1));
-    radiation.setSourceFlux(source, "PAR", 1000.0f);
-
-    // Build all data structures
-
-
-    radiation.testBuildAllBackendData();
-
-    // Upload to backend using test helpers
-    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->updateGeometry(radiation.getGeometryData()));
-    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->buildAccelerationStructure());
-    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->updateMaterials(radiation.getMaterialData()));
-    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->updateSources(radiation.getSourceData()));
-
-    // Zero radiation buffers
-    radiation.getBackend()->zeroRadiationBuffers(1);
-
-    // Launch direct rays through backend
-    helios::RayTracingLaunchParams params;
-    params.launch_offset = 0;
-    params.launch_count = 1;
-    params.rays_per_primitive = 100;
-    params.random_seed = 12345;
-    params.num_bands_global = 1;
-    params.num_bands_launch = 1;
-    params.band_launch_flag = {true};
-    params.specular_reflection_enabled = false;
-
-    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->launchDirectRays(params));
-
-    // Get results from backend
-    helios::RayTracingResults results;
-    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->getRadiationResults(results));
-
-    // CRITICAL VALIDATION: Check numerical correctness
-    // Expected: 1m² patch + 1000 W/m² perpendicular + perfect absorber = 1000 W absorbed
-
-    DOCTEST_REQUIRE(results.radiation_in.size() >= 1);
-
-    float expected = 1000.0f;
-    float actual = results.radiation_in[0];
-    float tolerance = 10.0f; // 1% tolerance
-
-    DOCTEST_CHECK_MESSAGE(std::abs(actual - expected) < tolerance, "Backend radiation incorrect: expected " << expected << " W, got " << actual << " W");
-}
-
-DOCTEST_TEST_CASE("Phase1.E Step6: Backend Functional Validation - Diffuse Radiation") {
-    // CRITICAL TEST: Prove backend can handle diffuse radiation (single patch, no shadowing)
-
-    helios::Context context;
-
-    // Create single horizontal patch (1m x 1m) facing up
-    uint patch = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
-
-    // Set as perfect absorber (rho=0, tau=0)
-    context.setPrimitiveData(patch, "reflectivity_SW", 0.0f);
-    context.setPrimitiveData(patch, "transmissivity_SW", 0.0f);
-
-    RadiationModel radiation(&context);
-    radiation.disableMessages();
-
-    // Add radiation band with diffuse radiation
-    radiation.addRadiationBand("SW");
-    radiation.setDiffuseRadiationFlux("SW", 100.0f); // 100 W/m² diffuse from sky
-    radiation.setDiffuseRayCount("SW", 10000); // High ray count for accuracy
-    radiation.disableEmission("SW");
-
-    // Build all data structures
-    radiation.testBuildAllBackendData();
-
-    // Upload to backend
-    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->updateGeometry(radiation.getGeometryData()));
-    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->buildAccelerationStructure());
-    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->updateMaterials(radiation.getMaterialData()));
-
-    // Zero radiation buffers
-    radiation.getBackend()->zeroRadiationBuffers(1);
-
-    // Build diffuse launch parameters
-    helios::RayTracingLaunchParams params;
-    params.launch_offset = 0;
-    params.launch_count = 1;
-    params.rays_per_primitive = 10000; // n*n where n = 100
-    params.random_seed = 12345;
-    params.num_bands_global = 1;
-    params.num_bands_launch = 1;
-    params.band_launch_flag = {true};
-    params.scattering_iteration = 0;
-    params.launch_face = 1; // Top face
-
-    // Set diffuse radiation parameters
-    params.diffuse_flux = {100.0f};
-    params.diffuse_extinction = {0.0f}; // Isotropic
-    params.diffuse_peak_dir = {helios::make_vec3(0, 0, 1)}; // From zenith
-    params.diffuse_dist_norm = {1.0f / M_PI}; // Isotropic normalization
-    params.radiation_out_top = {0.0f}; // No emission
-    params.radiation_out_bottom = {0.0f};
-
-    // Launch diffuse rays
-    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->launchDiffuseRays(params));
-
-    // Get results from backend
-    helios::RayTracingResults results;
-    DOCTEST_REQUIRE_NOTHROW(radiation.getBackend()->getRadiationResults(results));
-
-    // CRITICAL VALIDATION: Check numerical correctness
-    // Expected: 1m² patch + 100 W/m² diffuse + perfect absorber = 100 W absorbed
-
-    DOCTEST_REQUIRE(results.radiation_in.size() >= 1);
-
-    float expected = 100.0f;
-    float actual = results.radiation_in[0];
-    float tolerance = 2.0f; // 2% tolerance for statistical variation
-
-    DOCTEST_CHECK_MESSAGE(std::abs(actual - expected) < tolerance, "Backend diffuse radiation incorrect: expected " << expected << " W, got " << actual << " W");
-}
-
-DOCTEST_TEST_CASE("Phase1.E Step6b: Backend Diffuse With Partial Occlusion") {
-    // Test if diffuse hit program works by adding occluding patch
-
-    helios::Context context;
-
-    // Patch 0: horizontal (1m x 1m) at z=0, facing up
-    uint patch0 = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
-
-    // Patch 1: horizontal (1m x 1m) at z=0.5m above, facing down (blocks ~50% of sky)
-    uint patch1 = context.addPatch(helios::make_vec3(0, 0, 0.5), helios::make_vec2(1, 1), helios::make_SphericalCoord(M_PI, 0)); // Facing down
-
-    // Both perfect absorbers, one-sided (twosided_flag = 0)
-    context.setPrimitiveData(patch0, "reflectivity_SW", 0.0f);
-    context.setPrimitiveData(patch0, "transmissivity_SW", 0.0f);
-    uint flag = 0;
-    context.setPrimitiveData(patch0, "twosided_flag", flag);
-    context.setPrimitiveData(patch1, "reflectivity_SW", 0.0f);
-    context.setPrimitiveData(patch1, "transmissivity_SW", 0.0f);
-    context.setPrimitiveData(patch1, "twosided_flag", flag);
-
-    RadiationModel radiation(&context);
-    radiation.disableMessages();
-
-    // Add radiation band with diffuse
-    radiation.addRadiationBand("SW");
-    radiation.setDiffuseRadiationFlux("SW", 100.0f);
-    radiation.setDiffuseRayCount("SW", 10000);
-    radiation.disableEmission("SW");
-
-    // Build and upload
-    radiation.testBuildAllBackendData();
-    radiation.getBackend()->updateGeometry(radiation.getGeometryData());
-    radiation.getBackend()->buildAccelerationStructure();
-    radiation.getBackend()->updateMaterials(radiation.getMaterialData());
-    radiation.getBackend()->zeroRadiationBuffers(1);
-
-    // Launch diffuse rays FROM PATCH0 ONLY
-    helios::RayTracingLaunchParams params;
-    params.launch_offset = 0;
-    params.launch_count = 1; // ONLY patch0 to test if it sees patch1
-    params.rays_per_primitive = 10000;
-    params.random_seed = 12345;
-    params.num_bands_global = 1;
-    params.num_bands_launch = 1;
-    params.band_launch_flag = {true};
-    params.scattering_iteration = 0;
-    params.launch_face = 1;
-    params.diffuse_flux = {100.0f};
-    params.diffuse_extinction = {0.0f};
-    params.diffuse_peak_dir = {helios::make_vec3(0, 0, 1)};
-    params.diffuse_dist_norm = {1.0f / M_PI};
-    params.radiation_out_top = {0.0f, 0.0f};
-    params.radiation_out_bottom = {0.0f, 0.0f};
-
-    radiation.getBackend()->launchDiffuseRays(params);
-
-    // Get results
-    helios::RayTracingResults results;
-    radiation.getBackend()->getRadiationResults(results);
-
-    DOCTEST_REQUIRE(results.radiation_in.size() == 2);
-
-    float patch0_radiation = results.radiation_in[0];
-    float patch1_radiation = results.radiation_in[1];
-
-    // If hits work: patch0 should get LESS than 100 (blocked by patch1)
-    // If hits don't work: patch0 gets 100 (all rays miss, no blocking detected)
-    DOCTEST_CHECK_MESSAGE(patch0_radiation < 90.0f, "Patch0 should be partially blocked by patch1, got " << patch0_radiation << " W (expected <90)");
-}
-
-DOCTEST_TEST_CASE("RadiationModel Multi-Patch Direct Radiation Occlusion Test") {
-    // Test if DIRECT rays show proper occlusion with multiple patches
-    // This will tell us if the issue is geometry-wide or diffuse-specific
-
-    helios::Context context;
-
-    // Patch 0: horizontal at z=0, facing up
-    uint patch0 = context.addPatch(helios::make_vec3(0, 0, 0), helios::make_vec2(1, 1));
-
-    // Patch 1: horizontal at z=0.5m above, blocks direct source from reaching patch0
-    uint patch1 = context.addPatch(helios::make_vec3(0, 0, 0.5), helios::make_vec2(1, 1));
-
-    // Both perfect absorbers, TWO-SIDED to receive radiation from source above
-    uint flag = 1; // two-sided
-    context.setPrimitiveData(patch0, "reflectivity_PAR", 0.0f);
-    context.setPrimitiveData(patch0, "transmissivity_PAR", 0.0f);
-    context.setPrimitiveData(patch0, "twosided_flag", flag);
-    context.setPrimitiveData(patch1, "reflectivity_PAR", 0.0f);
-    context.setPrimitiveData(patch1, "transmissivity_PAR", 0.0f);
-    context.setPrimitiveData(patch1, "twosided_flag", flag);
-
-    RadiationModel radiation(&context);
-    radiation.disableMessages();
-
-    // Add band with direct source from above
-    radiation.addRadiationBand("PAR");
-    uint source = radiation.addCollimatedRadiationSource(helios::make_vec3(0, 0, 1)); // Upward toward source above
-    radiation.setSourceFlux(source, "PAR", 100.0f);
-
-    // Build and upload
-    radiation.testBuildAllBackendData();
-    radiation.getBackend()->updateGeometry(radiation.getGeometryData());
-    radiation.getBackend()->buildAccelerationStructure();
-    radiation.getBackend()->updateMaterials(radiation.getMaterialData());
-    radiation.getBackend()->updateSources(radiation.getSourceData());
-    radiation.getBackend()->zeroRadiationBuffers(1);
-
-    // Launch direct rays (SMALL ray count for debug)
-    helios::RayTracingLaunchParams params;
-    params.launch_offset = 0;
-    params.launch_count = 2;
-    params.rays_per_primitive = 4;
-    params.random_seed = 12345;
-    params.num_bands_global = 1;
-    params.num_bands_launch = 1;
-    params.band_launch_flag = {true};
-    params.specular_reflection_enabled = false;
-
-    radiation.getBackend()->launchDirectRays(params);
-
-    // Get results
-    helios::RayTracingResults results;
-    radiation.getBackend()->getRadiationResults(results);
-
-    DOCTEST_REQUIRE(results.radiation_in.size() == 2);
-
-    float patch0_radiation = results.radiation_in[0];
-    float patch1_radiation = results.radiation_in[1];
-
-    // If blocking works: patch0 should get ~0 (blocked by patch1)
-    // patch1 should get ~100 (faces source)
-    DOCTEST_CHECK_MESSAGE(patch0_radiation < 10.0f, "Patch0 should be blocked by patch1, got " << patch0_radiation << " W (expected ~0)");
-    DOCTEST_CHECK_MESSAGE(patch1_radiation > 90.0f, "Patch1 should receive full flux, got " << patch1_radiation << " W (expected ~100)");
-}
 DOCTEST_TEST_CASE("RadiationModel - Camera Pixel UUID Indexing Validation") {
+    SKIP_IF_NO_GPU();
     // This test validates that camera pixel-to-UUID mapping is spatially correct
     // by checking that left pixels see left patches, not right patches (which would happen with horizontal flip bug)
 
@@ -6429,7 +6313,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Pixel UUID Indexing Validation") {
     context.setPrimitiveData(right_patch, "patch_id", uint(3));
 
     // Set up radiation model with camera looking down from above
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     CameraProperties cam_props;
@@ -6513,6 +6397,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Pixel UUID Indexing Validation") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel - Pixel Labeling with Fine Tessellation") {
+    SKIP_IF_NO_GPU();
     // Test that pixel labeling doesn't miss primitives when tessellation ≈ camera resolution
     // This validates the epsilon-tolerant boundary test prevents systematic misses
 
@@ -6532,7 +6417,7 @@ DOCTEST_TEST_CASE("RadiationModel - Pixel Labeling with Fine Tessellation") {
     context.setPrimitiveData(ground, "ground_id", uint(42));
 
     // Camera looking straight down
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     CameraProperties cam_props;
@@ -6591,11 +6476,12 @@ DOCTEST_TEST_CASE("RadiationModel - Pixel Labeling with Fine Tessellation") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel - runBand Invalid Band Error Handling") {
+    SKIP_IF_NO_GPU();
 
     // Test 1: Single invalid band label
     DOCTEST_SUBCASE("Single invalid band") {
         Context context1;
-        RadiationModel radiation1(&context1);
+        RadiationModel radiation1 = RadiationModelTestHelper::createWithSharedDevice(&context1);
         radiation1.disableMessages();
 
         uint uuid = context1.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
@@ -6624,7 +6510,7 @@ DOCTEST_TEST_CASE("RadiationModel - runBand Invalid Band Error Handling") {
     // Test 2: Vector with mixed valid and invalid bands
     DOCTEST_SUBCASE("Mixed valid and invalid bands") {
         Context context2;
-        RadiationModel radiation2(&context2);
+        RadiationModel radiation2 = RadiationModelTestHelper::createWithSharedDevice(&context2);
         radiation2.disableMessages();
 
         uint uuid = context2.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
@@ -6656,7 +6542,7 @@ DOCTEST_TEST_CASE("RadiationModel - runBand Invalid Band Error Handling") {
     // Test 3: All invalid bands in vector
     DOCTEST_SUBCASE("All invalid bands") {
         Context context3;
-        RadiationModel radiation3(&context3);
+        RadiationModel radiation3 = RadiationModelTestHelper::createWithSharedDevice(&context3);
         radiation3.disableMessages();
 
         uint uuid = context3.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
@@ -6687,6 +6573,7 @@ DOCTEST_TEST_CASE("RadiationModel - runBand Invalid Band Error Handling") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel - Segmentation Mask to Image Coordinate Alignment") {
+    SKIP_IF_NO_GPU();
     // This test validates that segmentation mask coordinates correctly align with camera images
     // by creating patches at known locations and verifying their bbox coordinates match the image
 
@@ -6705,7 +6592,7 @@ DOCTEST_TEST_CASE("RadiationModel - Segmentation Mask to Image Coordinate Alignm
     context.setPrimitiveData(right_patch, "patch_id", uint(4));
 
     // Set up radiation model
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     CameraProperties cam_props;
@@ -6796,6 +6683,7 @@ DOCTEST_TEST_CASE("RadiationModel - Segmentation Mask to Image Coordinate Alignm
 }
 
 DOCTEST_TEST_CASE("RadiationModel - Mask Spatial Ordering Matches Image") {
+    SKIP_IF_NO_GPU();
     // Verify that left/right/top/bottom spatial relationships are preserved between image and masks
 
     Context context;
@@ -6812,7 +6700,7 @@ DOCTEST_TEST_CASE("RadiationModel - Mask Spatial Ordering Matches Image") {
     context.setPrimitiveData(center_patch, "patch_id", uint(20));
     context.setPrimitiveData(right_patch, "patch_id", uint(30));
 
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     CameraProperties cam_props;
@@ -6910,6 +6798,7 @@ DOCTEST_TEST_CASE("RadiationModel - Mask Spatial Ordering Matches Image") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel - Data Label Maps Match Segmentation Mask Coordinates") {
+    SKIP_IF_NO_GPU();
     // Validates that writePrimitiveDataLabelMap and writeObjectDataLabelMap use the same
     // coordinate system as segmentation masks by comparing their outputs
 
@@ -6935,7 +6824,7 @@ DOCTEST_TEST_CASE("RadiationModel - Data Label Maps Match Segmentation Mask Coor
     context.setObjectData(obj2, "obj_id", uint(200));
     context.setObjectData(obj3, "obj_id", uint(300));
 
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     CameraProperties cam_props;
@@ -7059,10 +6948,11 @@ DOCTEST_TEST_CASE("RadiationModel - Data Label Maps Match Segmentation Mask Coor
 }
 
 DOCTEST_TEST_CASE("Material Backend Migration - Spectrum Interpolation Integration") {
+    SKIP_IF_NO_GPU();
     // Test that spectrum interpolation configs are properly applied in buildMaterialData()
 
     helios::Context context;
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Create spectral data for different ages
@@ -7103,10 +6993,11 @@ DOCTEST_TEST_CASE("Material Backend Migration - Spectrum Interpolation Integrati
 }
 
 DOCTEST_TEST_CASE("Material Backend Migration - Camera Weighted Materials") {
+    SKIP_IF_NO_GPU();
     // Test that camera-weighted materials are correctly calculated with spectral responses
 
     helios::Context context;
-    RadiationModel radiationmodel(&context);
+    RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
 
     // Create object spectrum (reflectivity)
@@ -7162,11 +7053,12 @@ DOCTEST_TEST_CASE("Material Backend Migration - Camera Weighted Materials") {
 }
 
 DOCTEST_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
+    SKIP_IF_NO_GPU();
     // Test that setting specular_exponent affects camera rendering
     // This verifies specular reflection is enabled and working correctly
 
     Context context;
-    RadiationModel radiation(&context);
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
 
     // Create patch at origin facing +Z
@@ -7258,4 +7150,50 @@ DOCTEST_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
     DOCTEST_CHECK_MESSAGE(std::abs(difference) > 1.0f, "Specular exponent should affect camera intensity. "
                                                        "No specular: "
                                                                << avg_no_specular << ", With specular: " << avg_with_specular << ", Difference: " << difference);
+}
+
+DOCTEST_TEST_CASE("RadiationModel More Than 4 Simultaneous Radiation Bands") {
+    SKIP_IF_NO_GPU();
+    // Verify the Vulkan backend has no hard-coded 4-band limit.
+    // Run 6 bands simultaneously and check that each receives the correct flux
+    // from an overhead collimated source hitting an opaque patch.
+
+    const int Nbands = 6;
+    const float error_threshold = 0.005f;
+    const uint Ndirect = 10000;
+
+    Context context;
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    // One opaque patch at origin facing up
+    uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1), nullrotation);
+
+    // Collimated source straight overhead
+    uint src = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+
+    std::vector<std::string> band_names;
+    std::vector<float> expected_flux;
+
+    for (int b = 0; b < Nbands; b++) {
+        std::string name = "band_" + std::to_string(b);
+        band_names.push_back(name);
+        float flux = float(b + 1) * 100.f; // 100, 200, 300, 400, 500, 600
+        expected_flux.push_back(flux);
+
+        radiation.addRadiationBand(name);
+        radiation.disableEmission(name);
+        radiation.setSourceFlux(src, name, flux);
+        radiation.setDirectRayCount(name, Ndirect);
+    }
+
+    radiation.updateGeometry();
+    radiation.runBand(band_names);
+
+    for (int b = 0; b < Nbands; b++) {
+        float measured;
+        context.getPrimitiveData(UUID, ("radiation_flux_" + band_names[b]).c_str(), measured);
+        float rel_error = std::abs(measured - expected_flux[b]) / expected_flux[b];
+        DOCTEST_CHECK_MESSAGE(rel_error <= error_threshold, "Band " << band_names[b] << ": expected " << expected_flux[b] << ", got " << measured << " (error " << rel_error << ")");
+    }
 }

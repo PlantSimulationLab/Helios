@@ -644,11 +644,31 @@ public:
     //! Destructor
     ~RadiationModel();
 
+    // Move constructor and assignment for test support
+    RadiationModel(RadiationModel &&) = default;
+    RadiationModel &operator=(RadiationModel &&) = default;
+
+    // Disable copy operations (unique_ptr member makes this non-copyable)
+    RadiationModel(const RadiationModel &) = delete;
+    RadiationModel &operator=(const RadiationModel &) = delete;
+
     //! Self-test
     /**
      * \return 0 if test was successful, 1 if test failed
      */
     static int selfTest(int argc = 0, char **argv = nullptr);
+
+    /**
+     * @brief Create RadiationModel with custom backend (for testing)
+     *
+     * @param context Helios context
+     * @param backend Pre-initialized backend to use
+     * @return RadiationModel instance with injected backend (uses move semantics)
+     *
+     * INTERNAL TEST-ONLY: Allows test suite to inject shared VulkanDevice.
+     * Not for production use - use default constructor instead.
+     */
+    static RadiationModel createWithBackend(helios::Context *context, std::unique_ptr<helios::RayTracingBackend> backend);
 
     //! Disable/silence status messages
     /**
@@ -1803,34 +1823,30 @@ public:
     //! Set camera pixel data for a specific band
     void setCameraPixelData(const std::string &camera_label, const std::string &band_label, const std::vector<float> &pixel_data);
 
-    //! Query GPU memory available via backend abstraction layer
-    /**
-     * Phase 1: Integration test method - proves backend is accessible and functional.
-     * This method uses the backend instead of direct OptiX calls.
-     */
-    void queryBackendGPUMemory() const;
+private:
+    //! Private constructor for test infrastructure (no backend initialization)
+    RadiationModel(helios::Context *context_a, bool skip_backend_init);
 
-    //! Test helper: Build geometry data and return primitive count (Phase 1 testing)
-    /**
-     * Phase 1: Testing helper to verify buildGeometryData() works correctly.
-     * Returns the number of primitives extracted from Context.
-     */
+    //! Test helper: Build geometry data and return primitive count
     size_t testBuildGeometryData();
 
-    //! Test helper: Get backend pointer for direct testing (Phase 1 only)
+    //! Test helper: Get backend pointer for direct testing
     helios::RayTracingBackend *getBackend();
 
-    //! Test helper: Get geometry data reference (Phase 1 only)
+    //! Test helper: Get geometry data reference
     helios::RayTracingGeometry &getGeometryData();
 
-    //! Test helper: Get material data reference (Phase 1 only)
+    //! Test helper: Get material data reference
     helios::RayTracingMaterial &getMaterialData();
 
-    //! Test helper: Get source data reference (Phase 1 only)
+    //! Test helper: Get source data reference
     std::vector<helios::RayTracingSource> &getSourceData();
 
-    //! Test helper: Build all backend data (Phase 1 testing only)
+    //! Test helper: Build all backend data
     void testBuildAllBackendData();
+
+    //! Query GPU memory available via backend abstraction layer
+    void queryBackendGPUMemory() const;
 
 protected:
     //! Flag to determine if status messages are output to the screen
@@ -2030,12 +2046,13 @@ protected:
      */
     std::vector<CameraTile> computeCameraTiles(const RadiationCamera &camera, size_t maxRays);
 
-    //! Phase 1: Build backend-agnostic geometry data from Context primitives
+    //! Build backend-agnostic geometry data from Context primitives
     /**
-     * Extracts geometry from all Context primitives and populates geometry_data structure.
+     * Extracts geometry from the specified Context primitives and populates geometry_data structure.
      * This data can then be uploaded to the backend via backend->updateGeometry().
+     * \param[in] UUIDs Vector of primitive UUIDs to include in the geometry
      */
-    void buildGeometryData();
+    void buildGeometryData(const std::vector<uint> &UUIDs);
 
     //! Extract texture mask and UV data for all primitives
     /**
@@ -2049,10 +2066,10 @@ protected:
     //! Must be called after buildGeometryData() and before buildMaterialData()
     void buildUUIDMapping();
 
-    //! Phase 1: Build backend-agnostic material data from Context primitive data
+    //! Build backend-agnostic material data from Context primitive data
     void buildMaterialData();
 
-    //! Phase 1: Build backend-agnostic source data from radiation_sources
+    //! Build backend-agnostic source data from radiation_sources
     void buildSourceData();
 
     //! UUIDs for source 3D object models (for visualization). Key is the source ID, value is a vector of UUIDs for the source model.
@@ -2060,7 +2077,7 @@ protected:
     //! UUIDs for camera 3D object models (for visualization). Key is the camera label, value is a vector of UUIDs for the camera model.
     std::map<std::string, std::vector<uint>> camera_model_UUIDs;
 
-    /* Phase 1: Backend abstraction layer (for incremental OptiX code replacement) */
+    /* Backend abstraction layer */
 
     //! Ray tracing backend (will replace direct OptiX usage)
     std::unique_ptr<helios::RayTracingBackend> backend;

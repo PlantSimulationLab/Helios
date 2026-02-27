@@ -19,14 +19,20 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
+      - name: Install Vulkan SDK
+        uses: humbletim/setup-vulkan-sdk@v1.2.1
+        with:
+          vulkan-query-version: latest
+          vulkan-components: Vulkan-Headers, Vulkan-Loader, Glslang
+          vulkan-use-cache: true
 
       - name: Bash script
         shell: bash
         run: |
           cd utilities
-          if ! ./run_tests.sh --nogpu --visbuildonly --log-file ../windows_selftests.log; then
+          if ! ./run_tests.sh --visbuildonly --log-file ../windows_selftests.log; then
             echo "==== run_tests.sh failed; dumping windows_selftests.log ===="
             cat ../windows_selftests.log
             exit 1

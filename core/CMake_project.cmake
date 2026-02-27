@@ -86,7 +86,10 @@ if(NOT HELIOS_PREVIOUS_COMMIT STREQUAL GIT_COMMIT_HASH)
   message(STATUS "[Helios] Git commit version change detected, automatically re-configuring...")
   
   # Clean CUDA object files to prevent linking issues with stale objects
-  find_package(CUDAToolkit QUIET)
+  # Only find CUDA if not forcing Vulkan backend
+  if(NOT FORCE_VULKAN_BACKEND)
+    find_package(CUDAToolkit QUIET)
+  endif()
   if(CUDAToolkit_FOUND)
     message(STATUS "[Helios] Cleaning CUDA object files due to version change...")
     file(GLOB_RECURSE CUDA_OBJECTS 

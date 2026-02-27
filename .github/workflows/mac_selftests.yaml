@@ -19,18 +19,20 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install homebrew
         run: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
       - name: Install XQuartz
         run: brew install Caskroom/cask/xquartz
       - name: Install OpenMP support
         run: brew install libomp
+      - name: Install Vulkan dependencies
+        run: brew install vulkan-headers vulkan-loader molten-vk glslang
 
       - name: Bash script
         run: |
           cd utilities
-          if ! ./run_tests.sh --nogpu --visbuildonly --log-file ../macos_selftests.log; then
+          if ! ./run_tests.sh --visbuildonly --log-file ../macos_selftests.log; then
             echo "==== run_tests.sh failed; dumping macos_selftests.log ===="
             cat ../macos_selftests.log
             exit 1

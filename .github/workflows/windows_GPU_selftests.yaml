@@ -17,7 +17,7 @@ jobs:
   start-gpu:
     runs-on: ubuntu-latest
     steps:
-      - uses: aws-actions/configure-aws-credentials@v2
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
           aws-region: us-west-2
@@ -57,7 +57,7 @@ jobs:
     runs-on: [self-hosted, Windows]
     needs: start-gpu
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
 
       - name: Bash script
@@ -76,7 +76,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: aws-actions/configure-aws-credentials@v2
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
           aws-region: us-west-2
