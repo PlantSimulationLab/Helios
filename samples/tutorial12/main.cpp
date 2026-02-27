@@ -93,8 +93,8 @@ int main() {
     // Configure camera properties for high-quality imaging
     CameraProperties cameraproperties;
     cameraproperties.camera_resolution = make_int2(1024, 1024); // Square 1024x1024 resolution
-    cameraproperties.focal_plane_distance = 0.5; // Focus distance
-    cameraproperties.lens_diameter = 0.002f; // Small aperture for sharp focus
+    cameraproperties.focal_plane_distance = 0.6; // Focus distance
+    cameraproperties.lens_diameter = 0.018f;
     cameraproperties.HFOV = 50.f; // 50-degree horizontal field of view
 
     // Add the camera to the radiation model with 100 rays per pixel for quality
@@ -115,7 +115,7 @@ int main() {
     radiation.runBand(bandlabels);
 
     // Apply standard image processing pipeline (tone mapping, gamma correction, etc.)
-    radiation.applyCameraImageCorrections("bunnycam", "red", "green", "blue", 1, 1, 1);
+    radiation.applyCameraImageCorrections(cameralabel, "red", "green", "blue", 1.2, 1, 1);
 
     // STEP 7: Export results for computer vision applications
 
@@ -138,6 +138,9 @@ int main() {
 
     // Auto-calibrate camera image using colorboard reference values with quality report
     std::string corrected_image = radiation.autoCalibrateCameraImage("bunnycam", "red", "green", "blue", "../output/auto_calibrated_bunnycam.jpeg", true);
+
+    // Display auto-calibrated image
+    vis.displayImage(corrected_image);
 
     // Note: Use the Python script 'visualize_segmentation.py' to view segmentation masks
 

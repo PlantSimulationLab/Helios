@@ -1292,6 +1292,8 @@ namespace helios {
 
         void updateTriangleVertices() const;
 
+        void recomputeCrossSections();
+
         friend class CompoundObject;
         friend class Context;
     };
@@ -6816,9 +6818,27 @@ namespace helios {
         //! Load tabular weather data from text file into timeseries
         /**
          * \param[in] data_file Path to the text file containing the tabular weather data.
-         * \param[in] column_labels Vector of strings indicating which columns to extract.
+         * \param[in] column_labels Vector of strings indicating which columns to extract. Special keywords:
+         *   - "year", "DOY"/"Jul": Specify date via year + day-of-year columns.
+         *   - "date": Date string column (requires date_string_format).
+         *   - "datetime": Combined date+time column (e.g., ISO-8601). Cannot be used with "date" or "hour".
+         *   - "hour": Integer hour column (supports 13 or 1300 formats).
+         *   - "time": Time string column (auto-detects HH, HH:MM, or HH:MM:SS).
+         *   - "minute", "second": Optional sub-hour precision with "hour" column.
+         *   - Any other non-empty label: treated as a data variable.
          * \param[in] delimiter Character or string that separates values in each row.
-         * \param[in] date_string_format [optional] Format of date strings. Default: "YYYYMMDD".
+         * \param[in] date_string_format [optional] Format of date strings. Supported formats:
+         *   - Date-only (for "date" column): "YYYYMMDD", "DDMMYYYY", "MMDDYYYY", "YYYYDDMM"
+         *     (also accepts delimiter-style synonyms: "YYYY-MM-DD", "DD/MM/YYYY", "MM-DD-YYYY", etc.)
+         *     Compact 8-digit dates without delimiters (e.g., "20260203") are auto-detected.
+         *   - Combined datetime (for "datetime" column):
+         *     "ISO8601" — e.g., "2026-02-03T10:00:00Z" or "2026-02-03T02:00:00-08:00"
+         *     "YYYYMMDDHH" — compact 10-digit, e.g., "2026020310"
+         *     "YYYYMMDDHHMM" — compact 12-digit, e.g., "202602031000"
+         *     "YYYY-MM-DD HH:MM", "YYYY-MM-DD HH:MM:SS" — space-separated date and time
+         *     "DD/MM/YYYY HH:MM", "MM/DD/YYYY HH:MM" — with various date orderings
+         *   For ISO-8601 with timezone offsets, the local time is used and the Context UTC_offset is set.
+         *   Default: "YYYYMMDD".
          * \param[in] headerlines [optional] Number of lines to skip at the beginning. Default: 0.
          */
         void loadTabularTimeseriesData(const std::string &data_file, const std::vector<std::string> &column_labels, const std::string &delimiter, const std::string &date_string_format = "YYYYMMDD", uint headerlines = 0);

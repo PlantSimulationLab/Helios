@@ -96,6 +96,7 @@ namespace helios {
         void uploadCameraScatterBuffers(const std::vector<float> &scatter_top_cam, const std::vector<float> &scatter_bottom_cam) override;
         void zeroCameraScatterBuffers(size_t launch_band_count) override;
         void uploadSourceFluxes(const std::vector<float> &fluxes) override;
+        void uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) override;
 
         // Diagnostics
         void queryGPUMemory() const override;

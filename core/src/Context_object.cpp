@@ -2322,14 +2322,9 @@ void Tube::setTubeNodes(const std::vector<helios::vec3> &node_xyz) {
         helios_runtime_error("ERROR (Tube::setTubeNodes): Number of nodes in input vector must match number of tube nodes.");
     }
 
-    for (int segment = 0; segment < triangle_vertices.size(); segment++) {
-        for (vec3 &vertex: triangle_vertices.at(segment)) {
-            vertex = node_xyz.at(segment) + vertex - nodes.at(segment);
-        }
-    }
-
     nodes = node_xyz;
 
+    recomputeCrossSections();
     updateTriangleVertices();
 }
 
@@ -2338,30 +2333,133 @@ void Tube::pruneTubeNodes(uint node_index) {
         helios_runtime_error("ERROR (Tube::pruneTubeNodes): Node index of " + std::to_string(node_index) + " is out of bounds.");
     }
 
-    if (node_index == 0) {
+    if (node_index <= 1) {
+        // 0 or 1 remaining nodes means 0 segments — delete the entire object.
+        // NOTE: this deletes 'this', so we must return immediately after.
         context->deleteObject(this->OID);
         return;
     }
 
+    int original_segment_count = (int)nodes.size() - 1;
+    int segments_to_keep = (int)node_index - 1;
+
+    // Partition UUIDs into kept vs. to-delete. UUIDs are in j-outer, i-inner order.
+    std::vector<uint> kept_UUIDs;
+    std::vector<uint> uuids_to_delete;
+    int ii = 0;
+    for (int j = 0; j < subdiv; j++) {
+        for (int i = 0; i < original_segment_count; i++) {
+            if (i < segments_to_keep) {
+                kept_UUIDs.push_back(UUIDs.at(ii));
+                kept_UUIDs.push_back(UUIDs.at(ii + 1));
+            } else {
+                uuids_to_delete.push_back(UUIDs.at(ii));
+                uuids_to_delete.push_back(UUIDs.at(ii + 1));
+            }
+            ii += 2;
+        }
+    }
+
+    // Update object data first
     nodes.erase(nodes.begin() + node_index, nodes.end());
     triangle_vertices.erase(triangle_vertices.begin() + node_index, triangle_vertices.end());
     radius.erase(radius.begin() + node_index, radius.end());
     colors.erase(colors.begin() + node_index, colors.end());
+    UUIDs = kept_UUIDs;
 
-    int ii = 0;
-    for (int i = node_index; i < nodes.size() - 1; i++) {
-        for (int j = 0; j < subdiv; j++) {
-            context->deletePrimitive(UUIDs.at(ii));
-            context->deletePrimitive(UUIDs.at(ii + 1));
-            ii += 2;
+    // Delete removed primitives. Since we already removed them from UUIDs,
+    // deleteChildPrimitive won't find them and won't trigger object auto-deletion.
+    for (uint uuid : uuids_to_delete) {
+        context->deletePrimitive(uuid);
+    }
+}
+
+void Tube::recomputeCrossSections() {
+    int node_count = (int)nodes.size();
+    uint radial_subdivisions = subdiv;
+
+    // Clamp very small radii to avoid creating degenerate triangles
+    const float min_radius_threshold = 1e-5f;
+    std::vector<float> radius_clamped = radius;
+    for (int i = 0; i < node_count; i++) {
+        if (radius_clamped[i] < min_radius_threshold && radius_clamped[i] >= 0) {
+            radius_clamped[i] = min_radius_threshold;
+        }
+    }
+
+    std::vector<float> cfact(radial_subdivisions + 1);
+    std::vector<float> sfact(radial_subdivisions + 1);
+    for (int j = 0; j < radial_subdivisions + 1; j++) {
+        cfact[j] = cosf(2.f * PI_F * float(j) / float(radial_subdivisions));
+        sfact[j] = sinf(2.f * PI_F * float(j) / float(radial_subdivisions));
+    }
+
+    vec3 axial_vector;
+    vec3 initial_radial(1.0f, 0.0f, 0.0f);
+    vec3 previous_axial_vector;
+    vec3 previous_radial_dir;
+
+    for (int i = 0; i < node_count; i++) {
+        if (i == 0) {
+            axial_vector = nodes[i + 1] - nodes[i];
+            float mag = axial_vector.magnitude();
+            if (mag < 1e-6f) {
+                axial_vector = make_vec3(0, 0, 1);
+            } else {
+                axial_vector = axial_vector / mag;
+            }
+            if (fabs(axial_vector * initial_radial) > 0.95f) {
+                initial_radial = vec3(0.0f, 1.0f, 0.0f);
+            }
+            if (fabs(axial_vector.z) > 0.95f) {
+                initial_radial = vec3(1.0f, 0.0f, 0.0f);
+            }
+            previous_radial_dir = cross(axial_vector, initial_radial).normalize();
+        } else {
+            if (i == node_count - 1) {
+                axial_vector = nodes[i] - nodes[i - 1];
+            } else {
+                axial_vector = 0.5f * ((nodes[i] - nodes[i - 1]) + (nodes[i + 1] - nodes[i]));
+            }
+            float mag = axial_vector.magnitude();
+            if (mag < 1e-6f) {
+                axial_vector = make_vec3(0, 0, 1);
+            } else {
+                axial_vector = axial_vector / mag;
+            }
+
+            vec3 rotation_axis = cross(previous_axial_vector, axial_vector);
+            if (rotation_axis.magnitude() > 1e-5) {
+                float angle = acos(std::clamp(previous_axial_vector * axial_vector, -1.0f, 1.0f));
+                previous_radial_dir = rotatePointAboutLine(previous_radial_dir, nullorigin, rotation_axis, angle);
+            } else {
+                vec3 fallback_radial = vec3(1.0f, 0.0f, 0.0f);
+                if (fabs(axial_vector * fallback_radial) > 0.95f) {
+                    fallback_radial = vec3(0.0f, 1.0f, 0.0f);
+                }
+                if (fabs(axial_vector.z) > 0.95f) {
+                    fallback_radial = vec3(1.0f, 0.0f, 0.0f);
+                }
+                previous_radial_dir = cross(axial_vector, fallback_radial).normalize();
+            }
+        }
+
+        previous_axial_vector = axial_vector;
+
+        vec3 radial_dir = previous_radial_dir;
+        vec3 orthogonal_dir = cross(radial_dir, axial_vector);
+        orthogonal_dir.normalize();
+
+        for (int j = 0; j < radial_subdivisions + 1; j++) {
+            triangle_vertices[i][j] = nodes[i] + cfact[j] * radius_clamped[i] * radial_dir + sfact[j] * radius_clamped[i] * orthogonal_dir;
         }
     }
 }
 
 void Tube::updateTriangleVertices() const {
     int ii = 0;
-    for (int i = 0; i < nodes.size() - 1; i++) {
-        for (int j = 0; j < subdiv; j++) {
+    for (int j = 0; j < subdiv; j++) {
+        for (int i = 0; i < nodes.size() - 1; i++) {
             vec3 v0 = triangle_vertices.at(i).at(j);
             vec3 v1 = triangle_vertices.at(i + 1).at(j + 1);
             vec3 v2 = triangle_vertices.at(i).at(j + 1);

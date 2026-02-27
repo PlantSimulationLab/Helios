@@ -18,10 +18,10 @@ jobs:
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       #- uses: openrndr/setup-opengl@v1.1
       - name: Checkout OPENRNDR repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           repository: openrndr/openrndr
@@ -34,15 +34,15 @@ jobs:
           sudo apt-get install -y mesa-utils xvfb
           xvfb-run glxinfo
 
-      - name: Install dependent packages for visualizer
+      - name: Install dependent packages for visualizer and Vulkan
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y libx11-dev xorg-dev libgl1-mesa-dev libglu1-mesa-dev libxrandr-dev
+          sudo apt-get install -y libx11-dev xorg-dev libgl1-mesa-dev libglu1-mesa-dev libxrandr-dev libvulkan-dev glslang-tools
 
       - name: Bash script
         run: |
           cd utilities
-          if ! ./run_tests.sh --nogpu --visbuildonly --log-file ../linux_selftests.log; then
+          if ! ./run_tests.sh --visbuildonly --log-file ../linux_selftests.log; then
             echo "==== run_tests.sh failed; dumping linux_selftests.log ===="
             cat ../linux_selftests.log
             exit 1

@@ -995,7 +995,7 @@ TEST_CASE("Data and Object Management") {
         std::vector<vec3> new_nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1), make_vec3(0, 0, 2)};
         ctx.setTubeNodes(tube, new_nodes);
         ctx.pruneTubeNodes(tube, 1);
-        DOCTEST_CHECK(ctx.getTubeObjectNodeCount(tube) == 1);
+        DOCTEST_CHECK_FALSE(ctx.doesObjectExist(tube));
     }
 
     SUBCASE("Object appearance and visibility") {
@@ -1501,6 +1501,151 @@ TEST_CASE("Tube Object Management") {
 
         ctx.appendTubeSegment(tube, make_vec3(0, 0, 2), 0.05f, "lib/images/solid.jpg", make_vec2(0.5f, 1.0f));
         DOCTEST_CHECK(ctx.getTubeObjectNodeCount(tube) == 3);
+    }
+
+    SUBCASE("setTubeNodes preserves color-to-segment mapping") {
+        // Regression test: updateTriangleVertices() must use the same loop order
+        // as addTubeObject() to maintain correct UUID-to-vertex mapping.
+        Context ctx;
+        std::vector<vec3> nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1), make_vec3(0, 0, 2), make_vec3(0, 0, 3)};
+        std::vector<float> radii = {0.5f, 0.5f, 0.5f, 0.5f};
+        std::vector<RGBcolor> colors = {RGB::red, RGB::yellow, RGB::green, RGB::blue};
+
+        int subdiv = 8;
+        uint tube = ctx.addTubeObject(subdiv, nodes, radii, colors);
+
+        // Translate nodes slightly — this calls updateTriangleVertices()
+        std::vector<vec3> new_nodes = nodes;
+        for (auto &n : new_nodes) n.x += 0.1f;
+        ctx.setTubeNodes(tube, new_nodes);
+
+        // Verify: each triangle's vertices should be near the segment matching its color.
+        // Segment i spans from new_nodes[i].z to new_nodes[i+1].z.
+        // A triangle with color.at(i) should have all vertices with z in [nodes[i].z, nodes[i+1].z].
+        std::vector<uint> uuids = ctx.getObjectPrimitiveUUIDs(tube);
+        int mismatches = 0;
+        for (uint uuid : uuids) {
+            RGBcolor c = ctx.getPrimitiveColorRGB(uuid);
+
+            // Determine which segment this triangle belongs to based on its color
+            int expected_segment = -1;
+            if (c.r == RGB::red.r && c.g == RGB::red.g && c.b == RGB::red.b) expected_segment = 0;
+            else if (c.r == RGB::yellow.r && c.g == RGB::yellow.g && c.b == RGB::yellow.b) expected_segment = 1;
+            else if (c.r == RGB::green.r && c.g == RGB::green.g && c.b == RGB::green.b) expected_segment = 2;
+
+            DOCTEST_REQUIRE(expected_segment >= 0);
+
+            float z_min = new_nodes[expected_segment].z;
+            float z_max = new_nodes[expected_segment + 1].z;
+
+            // Check all 3 vertices are within the segment's z-range (with tolerance for radial offset)
+            for (uint v = 0; v < 3; v++) {
+                vec3 vert = ctx.getTriangleVertex(uuid, v);
+                if (vert.z < z_min - 0.01f || vert.z > z_max + 0.01f) {
+                    mismatches++;
+                    break;
+                }
+            }
+        }
+        DOCTEST_CHECK_MESSAGE(mismatches == 0, "Found " << mismatches << " triangles with vertices outside their color's segment range after setTubeNodes()");
+    }
+
+    SUBCASE("pruneTubeNodes deletes correct primitives") {
+        Context ctx;
+        // 4 nodes → 3 segments. Prune at index 3 → keep 2 segments (nodes 0,1,2).
+        std::vector<vec3> nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1), make_vec3(0, 0, 2), make_vec3(0, 0, 3)};
+        std::vector<float> radii = {0.5f, 0.5f, 0.5f, 0.5f};
+        std::vector<RGBcolor> colors = {RGB::red, RGB::yellow, RGB::green, RGB::blue};
+
+        int subdiv = 8;
+        uint tube = ctx.addTubeObject(subdiv, nodes, radii, colors);
+
+        uint uuids_before = ctx.getObjectPrimitiveUUIDs(tube).size();
+        // 3 segments * 8 subdivisions * 2 triangles/subdivision = 48
+        DOCTEST_CHECK(uuids_before == 48);
+
+        ctx.pruneTubeNodes(tube, 3);
+
+        // Object should still exist with 3 nodes (2 segments)
+        DOCTEST_CHECK(ctx.doesObjectExist(tube));
+        DOCTEST_CHECK(ctx.getTubeObjectNodeCount(tube) == 3);
+
+        // 2 segments * 8 subdivisions * 2 triangles = 32
+        std::vector<uint> remaining = ctx.getObjectPrimitiveUUIDs(tube);
+        DOCTEST_CHECK(remaining.size() == 32);
+
+        // All remaining triangles should have colors from segments 0 or 1 (red or yellow)
+        int bad_colors = 0;
+        for (uint uuid : remaining) {
+            RGBcolor c = ctx.getPrimitiveColorRGB(uuid);
+            bool is_red = (c.r == RGB::red.r && c.g == RGB::red.g && c.b == RGB::red.b);
+            bool is_yellow = (c.r == RGB::yellow.r && c.g == RGB::yellow.g && c.b == RGB::yellow.b);
+            if (!is_red && !is_yellow) bad_colors++;
+        }
+        DOCTEST_CHECK(bad_colors == 0);
+
+        // Pruning to 1 node should delete the object entirely
+        ctx.pruneTubeNodes(tube, 1);
+        DOCTEST_CHECK_FALSE(ctx.doesObjectExist(tube));
+    }
+
+    SUBCASE("setTubeNodes maintains circular cross-sections after bending") {
+        Context ctx;
+        // Create a straight vertical tube
+        std::vector<vec3> nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1), make_vec3(0, 0, 2)};
+        std::vector<float> radii = {0.5f, 0.5f, 0.5f};
+        int subdiv = 16;
+        uint tube = ctx.addTubeObject(subdiv, nodes, radii);
+
+        // Bend the tube 90 degrees at the tip
+        std::vector<vec3> bent_nodes = {make_vec3(0, 0, 0), make_vec3(0, 0, 1), make_vec3(1, 0, 1)};
+        ctx.setTubeNodes(tube, bent_nodes);
+
+        // Verify cross-sections are circular and perpendicular to the local axis:
+        // For each triangle vertex, find the nearest node, check that the radial vector
+        // (vertex - node) is perpendicular to the local axis and has the correct magnitude.
+        std::vector<uint> uuids = ctx.getObjectPrimitiveUUIDs(tube);
+
+        // Compute axial directions at each node
+        std::vector<vec3> axial(3);
+        axial[0] = (bent_nodes[1] - bent_nodes[0]);
+        axial[0].normalize();
+        axial[1] = 0.5f * ((bent_nodes[1] - bent_nodes[0]) + (bent_nodes[2] - bent_nodes[1]));
+        axial[1].normalize();
+        axial[2] = (bent_nodes[2] - bent_nodes[1]);
+        axial[2].normalize();
+
+        int perp_failures = 0;
+        int radius_failures = 0;
+
+        for (uint uuid : uuids) {
+            for (uint v = 0; v < 3; v++) {
+                vec3 vert = ctx.getTriangleVertex(uuid, v);
+
+                // Find nearest node
+                int nearest = 0;
+                float min_dist = (vert - bent_nodes[0]).magnitude();
+                for (int n = 1; n < 3; n++) {
+                    float d = (vert - bent_nodes[n]).magnitude();
+                    if (d < min_dist) {
+                        min_dist = d;
+                        nearest = n;
+                    }
+                }
+
+                vec3 radial = vert - bent_nodes[nearest];
+                float dot = fabs(radial * axial[nearest]);
+                if (dot > 0.02f) {
+                    perp_failures++;
+                }
+                if (fabs(radial.magnitude() - 0.5f) > 0.02f) {
+                    radius_failures++;
+                }
+            }
+        }
+
+        DOCTEST_CHECK_MESSAGE(perp_failures == 0, "Found " << perp_failures << " vertices not perpendicular to local tube axis after bending");
+        DOCTEST_CHECK_MESSAGE(radius_failures == 0, "Found " << radius_failures << " vertices with incorrect radius after bending");
     }
 }
 
@@ -3012,5 +3157,256 @@ TEST_CASE("File path resolution priority") {
 
         // Material should be same (no copy needed, just modified in place)
         DOCTEST_CHECK(mat1 == mat2);
+    }
+}
+
+TEST_CASE("Context Timeseries File Loading") {
+
+    SUBCASE("ISO-8601 UTC datetime") {
+        Context ctx;
+        std::string warning_msg;
+        {
+            capture_cerr capture;
+            ctx.loadTabularTimeseriesData("lib/testdata/timeseries_iso8601_utc.csv", {}, ",", "ISO8601", 0);
+            warning_msg = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(warning_msg.find("headerlines argument was specified as zero") != std::string::npos);
+
+        Date date = make_Date(3, 2, 2026);
+        float temp = ctx.queryTimeseriesData("temperature", date, make_Time(10, 0, 0));
+        DOCTEST_CHECK(temp == doctest::Approx(15.5f));
+
+        float temp2 = ctx.queryTimeseriesData("temperature", date, make_Time(12, 0, 0));
+        DOCTEST_CHECK(temp2 == doctest::Approx(17.8f));
+
+        float humid = ctx.queryTimeseriesData("humidity", date, make_Time(10, 0, 0));
+        DOCTEST_CHECK(humid == doctest::Approx(0.65f));
+
+        // UTC offset should be set to 0 (ISO offset Z → Helios 0)
+        Location loc = ctx.getLocation();
+        DOCTEST_CHECK(loc.UTC_offset == doctest::Approx(0.0f));
+    }
+
+    SUBCASE("ISO-8601 with timezone offset") {
+        Context ctx;
+        std::string warning_msg;
+        {
+            capture_cerr capture;
+            ctx.loadTabularTimeseriesData("lib/testdata/timeseries_iso8601_offset.csv", {}, ",", "ISO8601", 0);
+            warning_msg = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(warning_msg.find("headerlines argument was specified as zero") != std::string::npos);
+
+        Date date = make_Date(3, 2, 2026);
+        // The local time is used (02:00, 03:00, 04:00)
+        float temp = ctx.queryTimeseriesData("temperature", date, make_Time(2, 0, 0));
+        DOCTEST_CHECK(temp == doctest::Approx(15.5f));
+
+        float temp2 = ctx.queryTimeseriesData("temperature", date, make_Time(4, 0, 0));
+        DOCTEST_CHECK(temp2 == doctest::Approx(17.8f));
+
+        // ISO -08:00 → Helios UTC_offset = +8 (West-positive convention)
+        Location loc = ctx.getLocation();
+        DOCTEST_CHECK(loc.UTC_offset == doctest::Approx(8.0f));
+    }
+
+    SUBCASE("Compact date (YYYYMMDD no delimiters)") {
+        Context ctx;
+        std::string warning_msg;
+        {
+            capture_cerr capture;
+            ctx.loadTabularTimeseriesData("lib/testdata/timeseries_compact_date.csv", {}, ",", "YYYYMMDD", 0);
+            warning_msg = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(warning_msg.find("headerlines argument was specified as zero") != std::string::npos);
+
+        Date date = make_Date(3, 2, 2026);
+        float temp = ctx.queryTimeseriesData("temperature", date, make_Time(10, 0, 0));
+        DOCTEST_CHECK(temp == doctest::Approx(15.5f));
+
+        float temp2 = ctx.queryTimeseriesData("temperature", date, make_Time(12, 0, 0));
+        DOCTEST_CHECK(temp2 == doctest::Approx(17.8f));
+    }
+
+    SUBCASE("Compact datetime (YYYYMMDDHH)") {
+        Context ctx;
+        std::string warning_msg;
+        {
+            capture_cerr capture;
+            ctx.loadTabularTimeseriesData("lib/testdata/timeseries_compact_datetime.csv", {}, ",", "YYYYMMDDHH", 0);
+            warning_msg = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(warning_msg.find("headerlines argument was specified as zero") != std::string::npos);
+
+        Date date = make_Date(3, 2, 2026);
+        float temp = ctx.queryTimeseriesData("temperature", date, make_Time(10, 0, 0));
+        DOCTEST_CHECK(temp == doctest::Approx(15.5f));
+
+        float temp2 = ctx.queryTimeseriesData("temperature", date, make_Time(12, 0, 0));
+        DOCTEST_CHECK(temp2 == doctest::Approx(17.8f));
+    }
+
+    SUBCASE("Time column (HH:MM and HH:MM:SS)") {
+        Context ctx;
+        std::string warning_msg;
+        {
+            capture_cerr capture;
+            ctx.loadTabularTimeseriesData("lib/testdata/timeseries_time_column.csv", {}, ",", "YYYYMMDD", 0);
+            warning_msg = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(warning_msg.find("headerlines argument was specified as zero") != std::string::npos);
+
+        Date date = make_Date(3, 2, 2026);
+        float temp = ctx.queryTimeseriesData("temperature", date, make_Time(10, 30, 0));
+        DOCTEST_CHECK(temp == doctest::Approx(15.5f));
+
+        // HH:MM:SS format: 11:15:30
+        float temp2 = ctx.queryTimeseriesData("temperature", date, make_Time(11, 15, 30));
+        DOCTEST_CHECK(temp2 == doctest::Approx(16.2f));
+
+        float temp3 = ctx.queryTimeseriesData("temperature", date, make_Time(12, 0, 0));
+        DOCTEST_CHECK(temp3 == doctest::Approx(17.8f));
+    }
+
+    SUBCASE("Datetime with space separator") {
+        Context ctx;
+        std::string warning_msg;
+        {
+            capture_cerr capture;
+            ctx.loadTabularTimeseriesData("lib/testdata/timeseries_datetime_space.csv", {}, " ", "YYYY-MM-DD HH:MM", 0);
+            warning_msg = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(warning_msg.find("headerlines argument was specified as zero") != std::string::npos);
+
+        Date date = make_Date(3, 2, 2026);
+        float temp = ctx.queryTimeseriesData("temperature", date, make_Time(10, 0, 0));
+        DOCTEST_CHECK(temp == doctest::Approx(15.5f));
+
+        float temp2 = ctx.queryTimeseriesData("temperature", date, make_Time(12, 0, 0));
+        DOCTEST_CHECK(temp2 == doctest::Approx(17.8f));
+    }
+
+    SUBCASE("European DD/MM/YYYY HH:MM datetime") {
+        Context ctx;
+        std::string warning_msg;
+        {
+            capture_cerr capture;
+            ctx.loadTabularTimeseriesData("lib/testdata/timeseries_ddmmyyyy_hhmm.csv", {}, ",", "DD/MM/YYYY HH:MM", 0);
+            warning_msg = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(warning_msg.find("headerlines argument was specified as zero") != std::string::npos);
+
+        Date date = make_Date(3, 2, 2026); // 03/02/2026 = Feb 3rd in DD/MM/YYYY
+        float temp = ctx.queryTimeseriesData("temperature", date, make_Time(10, 0, 0));
+        DOCTEST_CHECK(temp == doctest::Approx(15.5f));
+
+        float temp2 = ctx.queryTimeseriesData("temperature", date, make_Time(12, 0, 0));
+        DOCTEST_CHECK(temp2 == doctest::Approx(17.8f));
+    }
+
+    SUBCASE("US MM/DD/YYYY HH:MM datetime") {
+        Context ctx;
+        std::string warning_msg;
+        {
+            capture_cerr capture;
+            ctx.loadTabularTimeseriesData("lib/testdata/timeseries_mmddyyyy_hhmm.csv", {}, ",", "MM/DD/YYYY HH:MM", 0);
+            warning_msg = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(warning_msg.find("headerlines argument was specified as zero") != std::string::npos);
+
+        Date date = make_Date(3, 2, 2026); // 02/03/2026 = Feb 3rd in MM/DD/YYYY
+        float temp = ctx.queryTimeseriesData("temperature", date, make_Time(10, 0, 0));
+        DOCTEST_CHECK(temp == doctest::Approx(15.5f));
+
+        float temp2 = ctx.queryTimeseriesData("temperature", date, make_Time(12, 0, 0));
+        DOCTEST_CHECK(temp2 == doctest::Approx(17.8f));
+    }
+
+    SUBCASE("Backward compatibility - existing weather_data.csv") {
+        Context ctx;
+        // weather_data.csv has: date "1-2-2020" with DDMMYYYY = day 1, month 2 = Feb 1
+        std::string warning_msg;
+        {
+            capture_cerr capture;
+            ctx.loadTabularTimeseriesData("lib/testdata/weather_data.csv", {}, ",", "DDMMYYYY", 0);
+            warning_msg = capture.get_captured_output();
+        }
+        DOCTEST_CHECK(warning_msg.find("headerlines argument was specified as zero") != std::string::npos);
+
+        Date date = make_Date(1, 2, 2020);
+        float temp = ctx.queryTimeseriesData("temperature", date, make_Time(13, 0, 0));
+        DOCTEST_CHECK(temp == doctest::Approx(35.32343f));
+
+        float temp2 = ctx.queryTimeseriesData("temperature", date, make_Time(14, 0, 0));
+        DOCTEST_CHECK(temp2 == doctest::Approx(36.23432f));
+    }
+
+    SUBCASE("User-specified column labels") {
+        Context ctx;
+        ctx.loadTabularTimeseriesData("lib/testdata/timeseries_iso8601_utc.csv",
+                                      {"datetime", "temp", "rh"}, ",", "ISO8601", 1);
+
+        Date date = make_Date(3, 2, 2026);
+        float temp = ctx.queryTimeseriesData("temp", date, make_Time(10, 0, 0));
+        DOCTEST_CHECK(temp == doctest::Approx(15.5f));
+
+        float rh = ctx.queryTimeseriesData("rh", date, make_Time(10, 0, 0));
+        DOCTEST_CHECK(rh == doctest::Approx(0.65f));
+    }
+
+    SUBCASE("Real data: Open-Meteo Davis CA (ISO-8601 no seconds)") {
+        // Real Open-Meteo data for Davis, CA. File has 3 metadata header lines + 1 blank line.
+        // Datetime format is ISO-8601 without seconds: "2024-01-01T00:00"
+        // Column header says "time" but it's a full datetime — user must remap with labels.
+        Context ctx;
+        ctx.loadTabularTimeseriesData("lib/testdata/timeseries_openmeteo_davis.csv",
+                                      {"datetime", "temperature", "humidity", "precipitation"},
+                                      ",", "ISO8601", 4);
+
+        Date jan1 = make_Date(1, 1, 2024);
+        Date jan2 = make_Date(2, 1, 2024);
+
+        // First row: 2024-01-01T00:00, 9.1, 96, 0.00
+        float temp_midnight = ctx.queryTimeseriesData("temperature", jan1, make_Time(0, 0, 0));
+        DOCTEST_CHECK(temp_midnight == doctest::Approx(9.1f));
+
+        // Row: 2024-01-01T12:00, 14.1, 66, 0.00
+        float temp_noon = ctx.queryTimeseriesData("temperature", jan1, make_Time(12, 0, 0));
+        DOCTEST_CHECK(temp_noon == doctest::Approx(14.1f));
+
+        float humid_noon = ctx.queryTimeseriesData("humidity", jan1, make_Time(12, 0, 0));
+        DOCTEST_CHECK(humid_noon == doctest::Approx(66.0f));
+
+        // Row: 2024-01-02T18:00, 11.1, 91, 1.20
+        float precip = ctx.queryTimeseriesData("precipitation", jan2, make_Time(18, 0, 0));
+        DOCTEST_CHECK(precip == doctest::Approx(1.20f));
+    }
+
+    SUBCASE("Real data: Open-Meteo NYC (ISO-8601 negative temperatures)") {
+        // Real Open-Meteo data for New York City. Tests negative values and ISO-8601 no-seconds.
+        Context ctx;
+        ctx.loadTabularTimeseriesData("lib/testdata/timeseries_openmeteo_nyc.csv",
+                                      {"datetime", "temperature", "precipitation"},
+                                      ",", "ISO8601", 4);
+
+        Date jan1 = make_Date(1, 1, 2024);
+        Date jan2 = make_Date(2, 1, 2024);
+        Date jan3 = make_Date(3, 1, 2024);
+
+        // Row: 2024-01-01T00:00, 1.8, 0.00
+        float temp = ctx.queryTimeseriesData("temperature", jan1, make_Time(0, 0, 0));
+        DOCTEST_CHECK(temp == doctest::Approx(1.8f));
+
+        // Row: 2024-01-02T07:00, -4.6, 0.00 (negative temperature)
+        float temp_cold = ctx.queryTimeseriesData("temperature", jan2, make_Time(7, 0, 0));
+        DOCTEST_CHECK(temp_cold == doctest::Approx(-4.6f));
+
+        // Row: 2024-01-02T00:00, -1.1, 0.00
+        float temp_neg = ctx.queryTimeseriesData("temperature", jan2, make_Time(0, 0, 0));
+        DOCTEST_CHECK(temp_neg == doctest::Approx(-1.1f));
+
+        // Row: 2024-01-03T13:00, 7.7, 0.00
+        float temp_warm = ctx.queryTimeseriesData("temperature", jan3, make_Time(13, 0, 0));
+        DOCTEST_CHECK(temp_warm == doctest::Approx(7.7f));
     }
 }

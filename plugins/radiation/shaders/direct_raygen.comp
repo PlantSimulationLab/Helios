@@ -1,0 +1,667 @@
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_EXT_shader_atomic_float : enable
+#extension GL_GOOGLE_include_directive : enable
+#extension GL_KHR_shader_subgroup_arithmetic : enable
+
+// Direct ray generation shader
+// Launches rays from surfaces toward radiation sources
+
+layout(local_size_x = 8, local_size_y = 32, local_size_z = 1) in;
+
+// Push constants (launch parameters)
+layout(push_constant) uniform PushConstants {
+    uint launch_offset;
+    uint launch_count;
+    uint rays_per_primitive;
+    uint random_seed;
+    uint current_band;
+    uint band_count;
+    uint source_count;
+    uint primitive_count;
+    uint debug_mode;  // 1 = enable bounds checking with error codes, 0 = production (no checks)
+    uint launch_dim_x;    // Grid dimension X for stratified sampling
+    uint launch_dim_y;    // Grid dimension Y for stratified sampling
+    uint prim_tiles_y;    // Number of primitive tiles in Y dimension (for large primitive counts)
+    uint prims_per_tile;  // Primitives per tile (65535 max)
+    uint material_band_count;  // Global band count (for material buffers)
+    uint periodic_flag_x;      // 1 if periodic in X direction
+    uint periodic_flag_y;      // 1 if periodic in Y direction
+    uint bbox_count;           // Number of bbox faces (0-4)
+    float domain_xmin;         // Domain bounds for periodic wrapping
+    float domain_xmax;
+    float domain_ymin;
+    float domain_ymax;
+    uint specular_reflection_enabled;  // 0=disabled, 1=default scale, 2=user scale
+} pc;
+
+// ========== Descriptor Set 0: Geometry ==========
+layout(set = 0, binding = 0) readonly buffer BVHBuffer {
+    float data[];
+} bvh_buf;
+
+layout(set = 0, binding = 1) readonly buffer PrimIndicesBuffer {
+    uint indices[];
+} prim_indices_buf;
+
+layout(set = 0, binding = 2) readonly buffer TransformMatricesBuffer {
+    float matrices[]; // 16 floats per primitive (row-major)
+} transform_buf;
+
+layout(set = 0, binding = 3) readonly buffer PrimTypesBuffer {
+    uint types[];
+} prim_types_buf;
+
+layout(set = 0, binding = 4) readonly buffer PrimUUIDsBuffer {
+    uint uuids[];
+} prim_uuids_buf;
+
+layout(set = 0, binding = 5) readonly buffer PrimPositionsBuffer {
+    uint positions[];
+} prim_positions_buf;
+
+layout(set = 0, binding = 6) readonly buffer ObjectSubdivisionsBuffer {
+    ivec2 subdivisions[];
+} obj_subdivisions_buf;
+
+layout(set = 0, binding = 7) readonly buffer TwosidedFlagBuffer {
+    uint twosided_flags[];
+} twosided_buf;
+
+layout(set = 0, binding = 8) readonly buffer PatchVerticesBuffer {
+    float vertices[]; // 12 floats per patch (4 vec3 vertices)
+} patch_vertices_buf;
+
+layout(set = 0, binding = 9) readonly buffer TriangleVerticesBuffer {
+    float vertices[]; // 9 floats per triangle (3 vec3 vertices)
+} triangle_vertices_buf;
+
+layout(set = 0, binding = 10) readonly buffer NormalsBuffer {
+    float normals[]; // 3 floats per primitive (pre-computed world-space normal)
+} normals_buf;
+
+// ---- Texture masking buffers ----
+layout(set = 0, binding = 11) readonly buffer MaskDataBuffer { uint mask_data[]; } mask_data_buf;
+layout(set = 0, binding = 12) readonly buffer MaskSizesBuffer { ivec2 mask_sizes[]; } mask_sizes_buf;
+layout(set = 0, binding = 13) readonly buffer MaskOffsetsBuffer { uint mask_offsets[]; } mask_offsets_buf;
+layout(set = 0, binding = 14) readonly buffer MaskIDsBuffer { int mask_ids[]; } mask_ids_buf;
+layout(set = 0, binding = 15) readonly buffer UVDataBuffer { vec2 uv_data[]; } uv_data_buf;
+layout(set = 0, binding = 16) readonly buffer UVIDsBuffer { int uv_ids[]; } uv_ids_buf;
+
+// ---- Periodic boundary bbox vertices ----
+layout(set = 0, binding = 17) readonly buffer BboxVerticesBuffer {
+    float vertices[]; // 12 floats per face (4 vec3 vertices)
+} bbox_verts_buf;
+
+// ========== Descriptor Set 1: Materials/Sources ==========
+layout(set = 1, binding = 0) readonly buffer SourcePositionsBuffer {
+    vec3 positions[];
+} source_positions_buf;
+
+layout(set = 1, binding = 1) readonly buffer SourceTypesBuffer {
+    uint types[];
+} source_types_buf;
+
+layout(set = 1, binding = 2) readonly buffer SourceRotationsBuffer {
+    vec3 rotations[];
+} source_rotations_buf;
+
+layout(set = 1, binding = 3) readonly buffer SourceWidthsBuffer {
+    vec2 widths[];
+} source_widths_buf;
+
+layout(set = 1, binding = 4) readonly buffer SourceFluxesBuffer {
+    float fluxes[];
+} source_fluxes_buf;
+
+layout(set = 1, binding = 5) readonly buffer ReflectivityBuffer {
+    float reflectivity[]; // [primitive * band_count + band]
+} reflectivity_buf;
+
+layout(set = 1, binding = 6) readonly buffer TransmissivityBuffer {
+    float transmissivity[];
+} transmissivity_buf;
+
+layout(set = 1, binding = 10) readonly buffer BandMapBuffer {
+    uint map[]; // Maps launch band index → global band index
+} band_map_buf;
+
+// ========== Descriptor Set 2: Results ==========
+layout(set = 2, binding = 0) buffer RadiationInBuffer {
+    float radiation_in[]; // [primitive * band_count + band]
+} rad_in_buf;
+
+layout(set = 2, binding = 1) buffer RadiationOutTopBuffer {
+    float radiation_out_top[];
+} rad_out_top_buf;
+
+layout(set = 2, binding = 2) buffer RadiationOutBottomBuffer {
+    float radiation_out_bottom[];
+} rad_out_bottom_buf;
+
+layout(set = 2, binding = 3) buffer ScatterTopBuffer {
+    float scatter_top[];
+} scatter_top_buf;
+
+layout(set = 2, binding = 4) buffer ScatterBottomBuffer {
+    float scatter_bottom[];
+} scatter_bottom_buf;
+
+layout(set = 2, binding = 10) buffer RadiationSpecularBuffer {
+    float radiation_specular[]; // [source * primitive * band] accumulated incident radiation
+} radiation_specular_buf;
+
+// ========== Include common shader utilities ==========
+#include "common/random.glsl"
+#include "common/transforms.glsl"
+#include "common/buffer_indexing.glsl"
+#include "common/bvh_traversal.glsl"
+#include "common/periodic_boundary.glsl"
+#include "common/texture_mask.glsl"
+
+const float PI = 3.14159265359;
+
+// Safe acos that clamps input to [-1, 1] to avoid NaN
+float acos_safe(float x) {
+    return acos(clamp(x, -1.0, 1.0));
+}
+
+// ========== Helper Functions ==========
+
+// Sample stratified random point on patch (matches CUDA rayGeneration.cu lines 57-67)
+vec3 sample_patch_stratified(inout RNGState rng, uint prim_idx, ivec2 subdivision, ivec2 sub_cell, ivec2 ray_cell, uint Nrays_per_dim) {
+    int NX = subdivision.x;
+    int NY = subdivision.y;
+
+    float dx = 1.0 / float(NX);
+    float dy = 1.0 / float(NY);
+
+    float Rx = rng_float(rng);
+    float Ry = rng_float(rng);
+
+    // Stratified sampling within subdivision cell
+    // Map to patch local space [-0.5, 0.5] x [-0.5, 0.5]
+    vec3 sp;
+    sp.x = -0.5 + sub_cell.x * dx + float(ray_cell.x) * dx / float(Nrays_per_dim) + Rx * dx / float(Nrays_per_dim);
+    sp.y = -0.5 + sub_cell.y * dy + float(ray_cell.y) * dy / float(Nrays_per_dim) + Ry * dy / float(Nrays_per_dim);
+    sp.z = 0.0;
+
+    return sp;
+}
+
+// Sample random point on triangle
+vec3 sample_triangle(inout RNGState rng) {
+    float Rx = rng_float(rng);
+    float Ry = rng_float(rng);
+
+    vec3 sp;
+    // Map to triangle with vertices (0,0,0), (0,1,0), (1,1,0)
+    if (Rx < Ry) {
+        sp.x = Rx;
+        sp.y = Ry;
+    } else {
+        sp.x = Ry;
+        sp.y = Rx;
+    }
+    sp.z = 0.0;
+
+    return sp;
+}
+
+// Sample random point on disk (uniform distribution)
+vec3 sample_disk(inout RNGState rng) {
+    float Rx = rng_float(rng);
+    float Ry = rng_float(rng);
+
+    // Map to square [-1,1] x [-1,1]
+    vec3 sp;
+    sp.x = -1.0 + 2.0 * Rx;
+    sp.y = -1.0 + 2.0 * Ry;
+
+    // Concentric disk mapping (Shirley & Chiu 1997)
+    float r, phi;
+    if (sp.x > -sp.y) {
+        if (sp.x > sp.y) {
+            r = sp.x;
+            phi = sp.y / sp.x;
+        } else {
+            r = sp.y;
+            phi = 2.0 - sp.x / sp.y;
+        }
+    } else {
+        if (sp.x < sp.y) {
+            r = -sp.x;
+            phi = 4.0 + sp.y / sp.x;
+        } else {
+            r = -sp.y;
+            if (sp.y != 0.0) {
+                phi = 6.0 - sp.x / sp.y;
+            } else {
+                phi = 0.0;
+            }
+        }
+    }
+    phi *= 0.25 * 3.14159265359;
+
+    sp.x = r * cos(phi);
+    sp.y = r * sin(phi);
+    sp.z = 0.0;
+
+    return sp;
+}
+
+// Sample uniform point on square [-0.5, 0.5]²
+// Matches CUDA d_sampleSquare() (RayTracing.cuh:490-502)
+vec3 sample_square(inout RNGState rng) {
+    float Rx = rng_float(rng);
+    float Ry = rng_float(rng);
+    return vec3(-0.5 + Rx, -0.5 + Ry, 0.0);
+}
+
+// Get patch normal in world space
+vec3 get_patch_normal(uint prim_idx, float transform_mat[16]) {
+    mat4 transform = floats_to_mat4(transform_mat);
+
+    vec3 v0 = transform_point(transform, vec3(0, 0, 0));
+    vec3 v1 = transform_point(transform, vec3(1, 0, 0));
+    vec3 v2 = transform_point(transform, vec3(0, 1, 0));
+
+    return normalize(cross(v1 - v0, v2 - v0));
+}
+
+// Get triangle normal in world space
+vec3 get_triangle_normal(uint prim_idx, float transform_mat[16]) {
+    mat4 transform = floats_to_mat4(transform_mat);
+
+    vec3 v0 = transform_point(transform, vec3(0, 0, 0));
+    vec3 v1 = transform_point(transform, vec3(0, 1, 0));
+    vec3 v2 = transform_point(transform, vec3(1, 1, 0));
+
+    return normalize(cross(v1 - v0, v2 - v0));
+}
+
+// Calculate ray strength for collimated source (sun)
+float calc_collimated_strength(vec3 normal, vec3 ray_dir, uint Nrays) {
+    return abs(dot(normal, ray_dir)) / float(Nrays);
+}
+
+// Calculate ray strength for sphere source via numerical integration over visible hemisphere
+// (matches CUDA rayGeneration.cu lines 160-172)
+float calc_sphere_strength(vec3 normal, vec3 ray_dir, float ray_magnitude, float sphere_diameter, uint Nrays) {
+    float strength = 0.0;
+    const uint N = 10;
+    for (uint j = 0; j < N; j++) {
+        for (uint i = 0; i < N; i++) {
+            float theta = acos_safe(1.0 - 2.0 * (float(i) + 0.5) / float(N));
+            float phi = (float(j) + 0.5) * 2.0 * PI / float(N);
+            vec3 light_direction = vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
+            if (dot(light_direction, ray_dir) < 0.0) {
+                strength += 1.0 / float(Nrays) * abs(dot(normal, ray_dir)) * abs(dot(light_direction, ray_dir))
+                            / (ray_magnitude * ray_magnitude) / float(N * N) * sphere_diameter * sphere_diameter;
+            }
+        }
+    }
+    return strength;
+}
+
+// ========== Main Shader ==========
+void main() {
+    // 3D dispatch with 2D primitive tiling: X = ray grid X, Y = ray grid Y + primitive tiles, Z = primitives
+    // For large primitive counts (>65535), primitives are tiled into the Y dimension to avoid sub-batching
+    uint launch_x = gl_GlobalInvocationID.x;  // Ray grid X [0, launch_dim_x)
+
+    // Decode Y dimension: lower bits = ray grid Y, upper bits = primitive tile index
+    // FIX: Tile by workgroup boundaries (WG_Y), not by logical ray grid size (launch_dim_y).
+    // The dispatch allocates dispatch_y_rays * WG_Y threads per tile, where dispatch_y_rays = ceil(launch_dim_y / WG_Y).
+    // For launch_dim_y <= WG_Y, this is exactly WG_Y threads per tile.
+    const uint WG_Y = 32;  // Must match layout(local_size_y = 32)
+    uint threads_per_tile = ((pc.launch_dim_y + WG_Y - 1) / WG_Y) * WG_Y;  // Round up to workgroup multiple
+    uint prim_tile_y = gl_GlobalInvocationID.y / threads_per_tile;
+    uint launch_y = gl_GlobalInvocationID.y % threads_per_tile;  // Position within tile [0, threads_per_tile)
+
+    // Decode primitive index from 2D tiling
+    uint prim_batch_idx = prim_tile_y * pc.prims_per_tile + gl_GlobalInvocationID.z;
+
+    // Bounds check: ray grid
+    if (launch_x >= pc.launch_dim_x || launch_y >= pc.launch_dim_y) {
+        return;
+    }
+
+    // Bounds check: primitive index
+    if (prim_batch_idx >= pc.launch_count) {
+        return;
+    }
+
+    uint prim_idx = pc.launch_offset + prim_batch_idx;
+
+    if (prim_idx >= pc.primitive_count) {
+        return; // Safety check
+    }
+
+    // Total rays per primitive (matches CUDA: Nrays = launch_dim.x * launch_dim.y)
+    uint Nrays = pc.launch_dim_x * pc.launch_dim_y;
+    uint Nrays_per_dim = pc.launch_dim_x; // Square grid, so per-dim = launch_dim_x
+
+    // Per-ray RNG seed (matches CUDA: tea(ray_index + Nrays * launch_index.z, random_seed))
+    uint ray_index = pc.launch_dim_x * launch_y + launch_x;
+    RNGState rng = rng_init(pc.random_seed, ray_index + Nrays * prim_idx);
+
+    // Get primitive data
+    uint prim_type = prim_types_buf.types[prim_idx];
+    uint prim_uuid = prim_uuids_buf.uuids[prim_idx];
+    ivec2 subdivisions = obj_subdivisions_buf.subdivisions[prim_idx];
+    uint twosided = twosided_buf.twosided_flags[prim_idx];
+
+    // Get transform matrix (16 floats per primitive)
+    float transform_mat[16];
+    for (uint i = 0; i < 16; ++i) {
+        transform_mat[i] = transform_buf.matrices[prim_idx * 16 + i];
+    }
+    mat4 transform = floats_to_mat4(transform_mat);
+
+    // Loop over sub-patches (for patches with subdivisions)
+    int NX = subdivisions.x;
+    int NY = subdivisions.y;
+
+    // Debug mode bounds checking (only when pc.debug_mode == 1)
+    if (pc.debug_mode == 1) {
+        // Check for invalid subdivision values
+        if (NX <= 0 || NY <= 0) {
+            rad_in_buf.radiation_in[0] = -999.0; // Error: invalid subdivisions
+            rad_in_buf.radiation_in[1] = float(NX);
+            rad_in_buf.radiation_in[2] = float(NY);
+            return;
+        }
+
+        // Check for unreasonably large subdivisions (likely indicates data corruption)
+        if (NX > 10000 || NY > 10000) {
+            rad_in_buf.radiation_in[0] = -998.0; // Error: subdivisions too large
+            rad_in_buf.radiation_in[1] = float(NX);
+            rad_in_buf.radiation_in[2] = float(NY);
+            return;
+        }
+
+        // Check for invalid ray counts
+        if (Nrays_per_dim == 0) {
+            rad_in_buf.radiation_in[0] = -997.0; // Error: zero rays
+            return;
+        }
+
+        // Check for unreasonably large ray counts per dimension
+        if (Nrays_per_dim > 100000) {
+            rad_in_buf.radiation_in[0] = -996.0; // Error: too many rays per dimension
+            rad_in_buf.radiation_in[1] = float(Nrays_per_dim);
+            return;
+        }
+    }
+
+    for (int jj = 0; jj < NY; ++jj) {
+        for (int ii = 0; ii < NX; ++ii) {
+
+            // Sample random point on primitive surface using ray grid position
+            vec3 sp_local;
+
+            if (prim_type == 0 || prim_type == 3) { // Patch or Tile
+                sp_local = sample_patch_stratified(rng, prim_idx, subdivisions, ivec2(ii, jj), ivec2(launch_x, launch_y), Nrays_per_dim);
+
+            } else if (prim_type == 1) { // Triangle
+                sp_local = sample_triangle(rng);
+
+            } else {
+                continue;
+            }
+
+            // Origin masking: reject transparent texels (matches OptiX d_sampleTexture_patch, RayTracing.cuh:504)
+            // Note: OptiX ignores the return value and traces the ray anyway if masking fails after 10 retries
+            if (prim_type == 0 || prim_type == 3) { // Patch or Tile
+                int mask_id_check = mask_ids_buf.mask_ids[prim_idx];
+                if (mask_id_check >= 0) {
+                    vec2 sample_uv = vec2(sp_local.x + 0.5, sp_local.y + 0.5);
+                    int resample_count = 0;
+                    while (!check_texture_mask(prim_idx, sample_uv, prim_type) && resample_count < 10) {
+                        resample_count++;
+                        float dx = 1.0 / float(NX);
+                        float dy = 1.0 / float(NY);
+                        sp_local.x = -0.5 + (float(ii) + rng_float(rng)) * dx;
+                        sp_local.y = -0.5 + (float(jj) + rng_float(rng)) * dy;
+                        sp_local.z = 0.0;
+                        sample_uv = vec2(sp_local.x + 0.5, sp_local.y + 0.5);
+                    }
+                    // Don't skip ray - OptiX uses the last sample even if origin masking failed
+                }
+            } else if (prim_type == 1 && mask_ids_buf.mask_ids[prim_idx] >= 0) {
+                // Triangle origin masking via rejection sampling
+                vec2 uv0 = uv_data_buf.uv_data[prim_idx * 4 + 0];
+                vec2 uv1 = uv_data_buf.uv_data[prim_idx * 4 + 1];
+                vec2 uv2 = uv_data_buf.uv_data[prim_idx * 4 + 2];
+                bool masked = true;
+                for (int attempt = 0; attempt < 50 && masked; attempt++) {
+                    // Generate random point on canonical triangle
+                    float r1 = rng_float(rng);
+                    float r2 = rng_float(rng);
+                    if (r1 + r2 > 1.0) { r1 = 1.0 - r1; r2 = 1.0 - r2; }
+                    sp_local = vec3(r2, r1 + r2, 0.0); // canonical: x=gamma, y=beta+gamma
+                    float beta = r1;  // sp_local.y - sp_local.x
+                    float gamma = r2; // sp_local.x
+                    vec2 tex_uv = uv0 + beta * (uv1 - uv0) + gamma * (uv2 - uv0);
+                    tex_uv.y = 1.0 - tex_uv.y;
+                    int mask_id = mask_ids_buf.mask_ids[prim_idx];
+                    ivec2 sz = mask_sizes_buf.mask_sizes[mask_id];
+                    uint offset = mask_offsets_buf.mask_offsets[mask_id];
+                    int tx = clamp(int(floor(float(sz.x - 1) * tex_uv.x)), 0, sz.x - 1);
+                    int ty = clamp(int(floor(float(sz.y - 1) * tex_uv.y)), 0, sz.y - 1);
+                    masked = (mask_data_buf.mask_data[offset + ty * sz.x + tx] == 0);
+                }
+                if (masked) {
+                    continue; // Skip this ray - all 50 attempts hit transparent texels
+                }
+            }
+
+            // Read pre-computed world-space normal from buffer
+            uint nbase = prim_idx * 3;
+            vec3 normal = vec3(normals_buf.normals[nbase], normals_buf.normals[nbase + 1], normals_buf.normals[nbase + 2]);
+
+            // Transform to world space
+            vec3 ray_origin = transform_point(transform, sp_local);
+
+            // Send ray to each source
+            for (uint src_idx = 0; src_idx < pc.source_count; ++src_idx) {
+
+                vec3 source_pos = source_positions_buf.positions[src_idx];
+                uint source_type = source_types_buf.types[src_idx];
+
+                vec3 ray_dir;
+                float strength = 0.0;
+
+                if (source_type == 0) { // Collimated source (sun)
+                    ray_dir = normalize(source_pos); // source_pos is direction for collimated
+                    strength = calc_collimated_strength(normal, ray_dir, Nrays);
+
+                } else if (source_type == 1 || source_type == 2) { // Sphere or sun-sphere source
+                    // Sample random point on sphere surface (matches CUDA rayGeneration.cu lines 152-154)
+                    float theta_s = acos_safe(1.0 - 2.0 * rng_float(rng));
+                    float phi_s = rng_float(rng) * 2.0 * PI;
+                    float radius = source_widths_buf.widths[src_idx].x * 0.5; // width stores diameter
+                    vec3 sphere_point = radius * vec3(sin(theta_s) * cos(phi_s), sin(theta_s) * sin(phi_s), cos(theta_s));
+
+                    // Ray from surface point toward sampled point on sphere
+                    ray_dir = sphere_point + source_pos - ray_origin;
+                    float ray_magnitude = length(ray_dir);
+                    ray_dir = normalize(ray_dir);
+
+                    // Numerical integration over visible hemisphere of sphere
+                    strength = calc_sphere_strength(normal, ray_dir, ray_magnitude, source_widths_buf.widths[src_idx].x, Nrays);
+
+                } else if (source_type == 3) { // Rectangle source
+                    vec3 source_rotation = source_rotations_buf.rotations[src_idx];
+                    vec2 source_size = source_widths_buf.widths[src_idx]; // (width, height)
+
+                    // Sample random point on rectangle [-0.5, 0.5]²
+                    vec3 square_point = sample_square(rng);
+
+                    // Scale by rectangle dimensions (matches OptiX line 183)
+                    square_point.x *= source_size.x;
+                    square_point.y *= source_size.y;
+
+                    // Apply rotation matrix (matches OptiX line 184)
+                    mat4 light_transform = make_rotation_matrix(source_rotation);
+                    vec3 light_point = transform_point(light_transform, square_point);
+
+                    // Transform light direction (matches OptiX line 186-187)
+                    vec3 light_direction = normalize(transform_direction(light_transform, vec3(0, 0, 1)));
+
+                    // Ray from surface to light sample point
+                    ray_dir = light_point + source_pos - ray_origin;
+
+                    // Back-face rejection: skip if ray hits back side of light
+                    if (dot(ray_dir, light_direction) > 0.0) {
+                        continue;
+                    }
+
+                    float ray_magnitude = length(ray_dir);
+                    ray_dir = normalize(ray_dir);
+
+                    // Strength calculation (matches OptiX rayGeneration.cu:197)
+                    float area = source_size.x * source_size.y;
+                    strength = (1.0 / float(Nrays)) * abs(dot(normal, ray_dir)) * abs(dot(light_direction, ray_dir))
+                               / (ray_magnitude * ray_magnitude) * area / PI;
+
+                } else if (source_type == 4) { // Disk source
+                    vec3 source_rotation = source_rotations_buf.rotations[src_idx];
+                    float radius = source_widths_buf.widths[src_idx].x; // x component stores radius
+
+                    // Sample random point on unit disk (function already exists in shader)
+                    vec3 disk_point = sample_disk(rng);
+
+                    // Apply rotation matrix to unit disk point (matches OptiX line 208)
+                    mat4 light_transform = make_rotation_matrix(source_rotation);
+                    vec3 light_point = transform_point(light_transform, disk_point);
+
+                    // Transform light direction (matches OptiX line 210-211)
+                    vec3 light_direction = normalize(transform_direction(light_transform, vec3(0, 0, 1)));
+
+                    // Ray from surface to light sample point (scale AFTER transform, matches OptiX line 213)
+                    ray_dir = radius * light_point + source_pos - ray_origin;
+
+                    // Back-face rejection
+                    if (dot(ray_dir, light_direction) > 0.0) {
+                        continue;
+                    }
+
+                    float ray_magnitude = length(ray_dir);
+                    ray_dir = normalize(ray_dir);
+
+                    // Strength calculation (matches OptiX rayGeneration.cu:221)
+                    strength = (1.0 / float(Nrays)) * abs(dot(normal, ray_dir)) * abs(dot(light_direction, ray_dir))
+                               / (ray_magnitude * ray_magnitude) * radius * radius;
+
+                } else {
+                    // Unsupported source type
+                    continue;
+                }
+
+                // Check if ray is facing the correct direction
+                float dot_product = dot(ray_dir, normal);
+                bool is_top_face = (dot_product > 0.0);
+
+                // Skip if wrong face or transparent primitive
+                if (twosided == 3 || (!is_top_face && twosided == 0)) {
+                    continue;
+                }
+
+                // Trace ray to check for occlusion (matches OptiX rtTrace in rayGeneration.cu:224)
+                // Periodic boundary wrap loop: if ray hits bbox face, wrap and re-trace (up to 10 wraps)
+                float occlusion_t;
+                uint occlusion_prim_type;
+                vec2 occlusion_uv;
+                uint occluder;
+                vec3 trace_origin = ray_origin;
+
+                for (int wrap = 0; wrap < 10; ++wrap) {
+                    occluder = traverse_cwbvh(trace_origin, ray_dir, 1e-4, prim_idx, occlusion_t, occlusion_prim_type, occlusion_uv);
+
+                    if (pc.bbox_count == 0) break; // No periodic boundaries
+
+                    vec3 wrapped_origin;
+                    bool hit_periodic = check_periodic_boundary(
+                        trace_origin, ray_dir, occlusion_t,
+                        pc.periodic_flag_x, pc.periodic_flag_y, pc.bbox_count,
+                        pc.domain_xmin, pc.domain_xmax, pc.domain_ymin, pc.domain_ymax,
+                        wrapped_origin);
+
+                    if (!hit_periodic) break; // Real hit or miss
+                    trace_origin = wrapped_origin;
+                    occluder = UINT_MAX; // Reset - bbox is not a real occluder
+                }
+
+                // Check if ray is blocked before reaching the source
+                bool is_occluded = false;
+                if (occluder != 0xFFFFFFFF) {
+                    if (source_type == 0) { // Collimated — any hit blocks (source at infinity)
+                        is_occluded = true;
+                    } else { // Sphere — blocked only if hit is closer than source
+                        float dist_to_source = length(source_pos - ray_origin);
+                        is_occluded = (occlusion_t < dist_to_source);
+                    }
+                }
+                if (is_occluded) {
+                    continue; // Ray blocked - no direct illumination from this source
+                }
+
+                // Direct illumination with occlusion
+                // Loop over all launched bands
+                for (uint band = 0; band < pc.band_count; ++band) {
+                    // Get source flux for this band
+                    uint flux_idx = src_idx * pc.band_count + band;
+                    float flux = source_fluxes_buf.fluxes[flux_idx];
+
+                    // Get material properties for this primitive and band
+                    // Use global band index for material buffer access (material buffers use global stride)
+                    uint global_b = band_map_buf.map[band];
+                    uint mat_idx = prim_idx * pc.material_band_count + global_b;
+                    float rho = reflectivity_buf.reflectivity[mat_idx];
+                    float tau = transmissivity_buf.transmissivity[mat_idx];
+
+                    // Calculate absorbed energy (matches CUDA rayHit.cu line 202)
+                    float absorption_factor = 1.0 - rho - tau;
+                    float energy = flux * strength * absorption_factor;
+
+                    // Accumulate to radiation_in buffer with subgroup reduction
+                    // All threads in this subgroup write to the same rad_idx (same primitive),
+                    // so we reduce within the subgroup before issuing a single atomic.
+                    uint rad_idx = index_prim_band(prim_idx, band, pc.band_count);
+                    float subgroup_sum = subgroupAdd(energy);
+                    if (subgroupElect()) {
+                        atomicAdd(rad_in_buf.radiation_in[rad_idx], subgroup_sum);
+                    }
+
+                    // Scatter: reflected and transmitted energy from direct illumination
+                    float scatter_rho = flux * strength * rho;
+                    float scatter_tau = flux * strength * tau;
+                    float scatter_rho_sum = subgroupAdd(scatter_rho);
+                    float scatter_tau_sum = subgroupAdd(scatter_tau);
+                    if (subgroupElect()) {
+                        if (is_top_face) {
+                            atomicAdd(scatter_top_buf.scatter_top[rad_idx], scatter_rho_sum);
+                            atomicAdd(scatter_bottom_buf.scatter_bottom[rad_idx], scatter_tau_sum);
+                        } else {
+                            atomicAdd(scatter_bottom_buf.scatter_bottom[rad_idx], scatter_rho_sum);
+                            atomicAdd(scatter_top_buf.scatter_top[rad_idx], scatter_tau_sum);
+                        }
+                    }
+
+                    // Accumulate incident radiation for specular reflection
+                    // radiation_specular stores per-source incident energy for camera specular shading
+                    if (pc.specular_reflection_enabled > 0) {
+                        float spec_energy = flux * strength;
+                        float spec_sum = subgroupAdd(spec_energy);
+                        if (subgroupElect()) {
+                            uint spec_idx = src_idx * pc.primitive_count * pc.band_count + prim_idx * pc.band_count + band;
+                            atomicAdd(radiation_specular_buf.radiation_specular[spec_idx], spec_sum);
+                        }
+                    }
+                }
+            }
+        } // ii loop
+    } // jj loop
+}

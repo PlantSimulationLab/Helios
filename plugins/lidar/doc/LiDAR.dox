@@ -264,6 +264,8 @@
 
  The grid cell subdivisions options allow the cells to be easily split up into a grid of smaller cells.  For example, Nx=Ny=Nz=3 would create 27 grid cells similar to a "Rubik's cube".
 
+ \subsection LiDARgridXML Loading grid cells from XML file
+
  Grid cell options can be specified in an XML file using the tags listed in the table above.  Multiple grid cells are added by simply adding more \<grid>...\</grid> groups to the XML file.
 
  ~~~~~~{.xml}
@@ -277,6 +279,47 @@
   </grid>
  ~~~~~~
 
+
+ \subsection LiDARgridAPI Adding grid cells programmatically
+
+ Grid cells can also be added programmatically using the \ref LiDARcloud::addGrid() function, without needing to specify them in an XML file. This is useful when grid parameters are computed at runtime or when setting up scans entirely in code.
+
+ The \ref LiDARcloud::addGrid() function takes four arguments: the (x,y,z) center of the grid, the size of the grid in each dimension, the number of subdivisions in each dimension, and the azimuthal rotation angle in degrees.
+
+ ~~~~~~{.cpp}
+ #include "LiDAR.h"
+ using namespace helios;
+
+ int main(){
+
+    LiDARcloud pointcloud;
+
+    // Define grid parameters
+    vec3 grid_center(0.0f, 0.0f, 0.5f);  // (x,y,z) center of grid
+    vec3 grid_size(1.0f, 1.0f, 1.0f);    // size in x,y,z directions
+    int3 grid_divisions = make_int3(3, 3, 3);  // number of subdivisions (creates 27 cells)
+    float rotation = 0;  // azimuthal rotation in degrees
+
+    pointcloud.addGrid(grid_center, grid_size, grid_divisions, rotation);
+
+ }
+ ~~~~~~
+
+ This is equivalent to specifying the following in an XML file:
+
+ ~~~~~~{.xml}
+ <grid>
+   <center> 0 0 0.5 </center>
+   <size> 1 1 1 </size>
+   <Nx> 3 </Nx>
+   <Ny> 3 </Ny>
+   <Nz> 3 </Nz>
+ </grid>
+ ~~~~~~
+
+ After adding the grid, you can query grid cell properties such as the cell size using \ref LiDARcloud::getCellSize().
+
+ \subsection LiDARgridDimensions Determining grid dimensions
 
  One way to figure out the appropriate dimension and position of the voxel grid is using the visualizer and trial-and-error. Make a guess of the voxel parameters, then visualize the point cloud and voxels together and adjust accordingly. This can be tedious and time-consuming because you need to re-run the entire code each time.
 
@@ -294,7 +337,7 @@ An often faster way to figure out the dimensions of the voxel grid is to use poi
 
   Another optional parameter is the maximum allowable aspect ratio of a triangle, which is the ratio of the length of the longest triangle side to the shortest triangle side. This has a similar effect as the \f$L_{max}\f$ parameter, and works better in some cases.
 
-  \note <b>Multi-Return Data:</b> For multi-return LiDAR data (detected automatically via target_count field), the triangulation uses an adaptive separation ratio filter instead of the aspect ratio parameter. This filter calculates the ratio of spatial distance to angular separation for each triangle edge and rejects triangles where this ratio is anomalously high (indicating points that are angularly close but spatially distant, characteristic of "sliver" triangles from beam spreading). The threshold is automatically calculated as 4.6 times the 25th percentile of the separation ratio distribution, eliminating the need for manual tuning. This approach is robust across different leaf sizes and scan resolutions.
+  \note <b>Multi-Return Data:</b> For multi-return LiDAR data (detected automatically via target_count field), the triangulation automatically filters for first returns only (target_index == 0), since later returns along the same pulse can create spurious triangles between spatially distant surfaces. In addition to the standard aspect ratio filter, an adaptive separation ratio filter is applied. This filter calculates the ratio of spatial distance to angular separation for each triangle edge and rejects triangles where this ratio is anomalously high (indicating points that are angularly close but spatially distant, characteristic of "sliver" triangles from beam spreading). The threshold is automatically calculated as 8.5 times the 25th percentile of the separation ratio distribution, eliminating the need for manual tuning. This approach is robust across different leaf sizes and scan resolutions.
 
   The following code sample illustrates how to perform a triangulation.
 
