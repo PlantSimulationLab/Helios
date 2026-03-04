@@ -173,6 +173,12 @@ namespace helios {
         CUdeviceptr               d_miss_records   = 0;
         CUdeviceptr               d_hitgroup_records= 0;
 
+        // Per-raygen device pointers (byte offsets into d_raygen_records; set in buildSBT)
+        CUdeviceptr               d_raygen_record_direct      = 0;
+        CUdeviceptr               d_raygen_record_diffuse     = 0;
+        CUdeviceptr               d_raygen_record_camera      = 0;
+        CUdeviceptr               d_raygen_record_pixel_label = 0;
+
         // ---- Launch params (device copy) ----
         OptiX8LaunchParams        h_params         = {};
         CUdeviceptr               d_params         = 0;

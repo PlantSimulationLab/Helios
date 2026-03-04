@@ -444,8 +444,30 @@ void OptiX8Backend::updateMaterials(const RayTracingMaterial &materials) {
         }
     };
 
-    upload(d_rho, materials.reflectivity.data(),   materials.reflectivity.size()   * sizeof(float));
-    upload(d_tau, materials.transmissivity.data(),  materials.transmissivity.size() * sizeof(float));
+    // rho/tau: always allocate at least Nprims*Nbands elements (zeroed) to prevent null pointer
+    // dereference in device code when Nsources==0 (diffuse-only scenarios).
+    {
+        const size_t Nprims = current_primitive_count;
+        const size_t Nbands = materials.num_bands;
+        const size_t alloc  = std::max(materials.reflectivity.size(), std::max(Nprims * Nbands, (size_t)1));
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_rho), alloc * sizeof(float)));
+        CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_rho), 0, alloc * sizeof(float)));
+        if (!materials.reflectivity.empty()) {
+            CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_rho), materials.reflectivity.data(),
+                                  materials.reflectivity.size() * sizeof(float), cudaMemcpyHostToDevice));
+        }
+    }
+    {
+        const size_t Nprims = current_primitive_count;
+        const size_t Nbands = materials.num_bands;
+        const size_t alloc  = std::max(materials.transmissivity.size(), std::max(Nprims * Nbands, (size_t)1));
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_tau), alloc * sizeof(float)));
+        CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_tau), 0, alloc * sizeof(float)));
+        if (!materials.transmissivity.empty()) {
+            CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_tau), materials.transmissivity.data(),
+                                  materials.transmissivity.size() * sizeof(float), cudaMemcpyHostToDevice));
+        }
+    }
     if (!materials.reflectivity_cam.empty())
         upload(d_rho_cam, materials.reflectivity_cam.data(),  materials.reflectivity_cam.size()  * sizeof(float));
     if (!materials.transmissivity_cam.empty())
@@ -545,7 +567,40 @@ void OptiX8Backend::updateDiffuseRadiation(const std::vector<float> &flux, const
                                             const std::vector<helios::vec3> &peak_dir,
                                             const std::vector<float> &dist_norm,
                                             const std::vector<float> &sky_energy) {
-    helios_runtime_error("ERROR (OptiX8Backend::updateDiffuseRadiation): Not yet implemented.");
+    freeCUdeviceptr(d_diffuse_flux);
+    freeCUdeviceptr(d_diffuse_extinction);
+    freeCUdeviceptr(d_diffuse_peak_dir);
+    freeCUdeviceptr(d_diffuse_dist_norm);
+    freeCUdeviceptr(d_Rsky);
+
+    auto upload_f = [this](CUdeviceptr &ptr, const std::vector<float> &v) {
+        if (!v.empty()) {
+            CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&ptr), v.size() * sizeof(float)));
+            CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(ptr), v.data(),
+                                  v.size() * sizeof(float), cudaMemcpyHostToDevice));
+        }
+    };
+    upload_f(d_diffuse_flux,       flux);
+    upload_f(d_diffuse_extinction, extinction);
+    upload_f(d_diffuse_dist_norm,  dist_norm);
+    upload_f(d_Rsky,               sky_energy);
+
+    if (!peak_dir.empty()) {
+        std::vector<float3> pd_f3(peak_dir.size());
+        for (size_t i = 0; i < peak_dir.size(); i++) {
+            pd_f3[i] = make_float3(peak_dir[i].x, peak_dir[i].y, peak_dir[i].z);
+        }
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_diffuse_peak_dir),
+                              pd_f3.size() * sizeof(float3)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_diffuse_peak_dir), pd_f3.data(),
+                              pd_f3.size() * sizeof(float3), cudaMemcpyHostToDevice));
+    }
+
+    h_params.diffuse_flux       = reinterpret_cast<float *>(d_diffuse_flux);
+    h_params.diffuse_extinction = reinterpret_cast<float *>(d_diffuse_extinction);
+    h_params.diffuse_peak_dir   = reinterpret_cast<float3 *>(d_diffuse_peak_dir);
+    h_params.diffuse_dist_norm  = reinterpret_cast<float *>(d_diffuse_dist_norm);
+    h_params.Rsky               = reinterpret_cast<float *>(d_Rsky);
 }
 
 void OptiX8Backend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance_params,
@@ -614,8 +669,113 @@ void OptiX8Backend::launchDirectRays(const RayTracingLaunchParams &launch_params
     CUDA_CHECK(cudaStreamSynchronize(cuda_stream));
 }
 
-void OptiX8Backend::launchDiffuseRays(const RayTracingLaunchParams &params) {
-    helios_runtime_error("ERROR (OptiX8Backend::launchDiffuseRays): Not yet implemented.");
+void OptiX8Backend::launchDiffuseRays(const RayTracingLaunchParams &launch_params) {
+    if (!is_initialized) {
+        helios_runtime_error("ERROR (OptiX8Backend::launchDiffuseRays): Backend not initialized.");
+    }
+    if (gas_handle == 0) {
+        helios_runtime_error("ERROR (OptiX8Backend::launchDiffuseRays): No acceleration structure. "
+                             "Call buildAccelerationStructure() first.");
+    }
+
+    applyLaunchParams(launch_params);
+
+    // Upload band_launch_flag
+    if (d_band_launch_flag) { freeCUdeviceptr(d_band_launch_flag); }
+    const size_t Nbands_g = launch_params.band_launch_flag.size();
+    if (Nbands_g > 0) {
+        std::vector<uint8_t> flags_u8(Nbands_g);
+        for (size_t i = 0; i < Nbands_g; i++) {
+            flags_u8[i] = launch_params.band_launch_flag[i] ? 1u : 0u;
+        }
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_band_launch_flag),
+                              Nbands_g * sizeof(uint8_t)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_band_launch_flag), flags_u8.data(),
+                              Nbands_g * sizeof(uint8_t), cudaMemcpyHostToDevice));
+    }
+    h_params.band_launch_flag = reinterpret_cast<bool *>(d_band_launch_flag);
+    h_params.traversable      = gas_handle;
+
+    // Upload diffuse params from launch_params (re-upload each launch since params may vary)
+    freeCUdeviceptr(d_diffuse_flux);
+    freeCUdeviceptr(d_diffuse_extinction);
+    freeCUdeviceptr(d_diffuse_peak_dir);
+    freeCUdeviceptr(d_diffuse_dist_norm);
+    freeCUdeviceptr(d_sky_radiance_params);
+
+    auto upload_f = [this](CUdeviceptr &ptr, const std::vector<float> &v) {
+        if (!v.empty()) {
+            CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&ptr), v.size() * sizeof(float)));
+            CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(ptr), v.data(),
+                                  v.size() * sizeof(float), cudaMemcpyHostToDevice));
+        }
+    };
+    upload_f(d_diffuse_flux,       launch_params.diffuse_flux);
+    upload_f(d_diffuse_extinction, launch_params.diffuse_extinction);
+    upload_f(d_diffuse_dist_norm,  launch_params.diffuse_dist_norm);
+
+    if (!launch_params.diffuse_peak_dir.empty()) {
+        std::vector<float3> pd_f3(launch_params.diffuse_peak_dir.size());
+        for (size_t i = 0; i < launch_params.diffuse_peak_dir.size(); i++) {
+            pd_f3[i] = make_float3(launch_params.diffuse_peak_dir[i].x,
+                                   launch_params.diffuse_peak_dir[i].y,
+                                   launch_params.diffuse_peak_dir[i].z);
+        }
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_diffuse_peak_dir),
+                              pd_f3.size() * sizeof(float3)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_diffuse_peak_dir), pd_f3.data(),
+                              pd_f3.size() * sizeof(float3), cudaMemcpyHostToDevice));
+    }
+
+    if (!launch_params.sky_radiance_params.empty()) {
+        std::vector<float4> sky_f4(launch_params.sky_radiance_params.size());
+        for (size_t i = 0; i < launch_params.sky_radiance_params.size(); i++) {
+            sky_f4[i] = make_float4(launch_params.sky_radiance_params[i].x,
+                                    launch_params.sky_radiance_params[i].y,
+                                    launch_params.sky_radiance_params[i].z,
+                                    launch_params.sky_radiance_params[i].w);
+        }
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_sky_radiance_params),
+                              sky_f4.size() * sizeof(float4)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_sky_radiance_params), sky_f4.data(),
+                              sky_f4.size() * sizeof(float4), cudaMemcpyHostToDevice));
+    }
+
+    h_params.diffuse_flux        = reinterpret_cast<float *>(d_diffuse_flux);
+    h_params.diffuse_extinction  = reinterpret_cast<float *>(d_diffuse_extinction);
+    h_params.diffuse_peak_dir    = reinterpret_cast<float3 *>(d_diffuse_peak_dir);
+    h_params.diffuse_dist_norm   = reinterpret_cast<float *>(d_diffuse_dist_norm);
+    h_params.sky_radiance_params = reinterpret_cast<float4 *>(d_sky_radiance_params);
+
+    // Set up 2D stratification launch dimensions
+    // rays_per_primitive is always n*n (RadiationModel sets it as ceil(sqrt(N))^2)
+    const uint32_t rpp   = launch_params.rays_per_primitive;
+    const uint32_t dim_x = static_cast<uint32_t>(sqrtf(static_cast<float>(rpp)));
+    const uint32_t dim_y = (dim_x > 0) ? (rpp / dim_x) : 1u;
+    h_params.launch_dim_x = dim_x;
+    h_params.launch_dim_y = dim_y;
+    h_params.prd_pool     = nullptr;
+
+    uploadLaunchParams();
+    CUDA_CHECK(cudaStreamSynchronize(cuda_stream));
+
+    // Use diffuse raygen record (index 1 in the raygen records array)
+    OptixShaderBindingTable diffuse_sbt = sbt;
+    diffuse_sbt.raygenRecord = d_raygen_record_diffuse;
+
+    const uint32_t launch_count = launch_params.launch_count;
+    OPTIX_CHECK(optixLaunch(
+        optix_pipeline,
+        cuda_stream,
+        d_params,
+        sizeof(OptiX8LaunchParams),
+        &diffuse_sbt,
+        dim_x,         // width  = theta stratification
+        dim_y,         // height = phi stratification
+        launch_count   // depth  = primitive count
+    ));
+
+    CUDA_CHECK(cudaStreamSynchronize(cuda_stream));
 }
 
 void OptiX8Backend::launchCameraRays(const RayTracingLaunchParams &params) {
@@ -686,12 +846,34 @@ void OptiX8Backend::zeroCameraPixelBuffers(const helios::int2 &resolution) {
 }
 
 void OptiX8Backend::copyScatterToRadiation() {
-    helios_runtime_error("ERROR (OptiX8Backend::copyScatterToRadiation): Not yet implemented.");
+    const size_t total = current_primitive_count * current_band_count * sizeof(float);
+    if (total == 0) return;
+    if (d_scatter_buff_top && d_radiation_out_top) {
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_radiation_out_top),
+                              reinterpret_cast<const void *>(d_scatter_buff_top),
+                              total, cudaMemcpyDeviceToDevice));
+    }
+    if (d_scatter_buff_bottom && d_radiation_out_bottom) {
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_radiation_out_bottom),
+                              reinterpret_cast<const void *>(d_scatter_buff_bottom),
+                              total, cudaMemcpyDeviceToDevice));
+    }
 }
 
 void OptiX8Backend::uploadRadiationOut(const std::vector<float> &radiation_out_top,
                                         const std::vector<float> &radiation_out_bottom) {
-    helios_runtime_error("ERROR (OptiX8Backend::uploadRadiationOut): Not yet implemented.");
+    if (!radiation_out_top.empty() && d_radiation_out_top) {
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_radiation_out_top),
+                              radiation_out_top.data(),
+                              radiation_out_top.size() * sizeof(float),
+                              cudaMemcpyHostToDevice));
+    }
+    if (!radiation_out_bottom.empty() && d_radiation_out_bottom) {
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_radiation_out_bottom),
+                              radiation_out_bottom.data(),
+                              radiation_out_bottom.size() * sizeof(float),
+                              cudaMemcpyHostToDevice));
+    }
 }
 
 void OptiX8Backend::uploadCameraScatterBuffers(const std::vector<float> &scatter_top_cam,
@@ -925,6 +1107,12 @@ void OptiX8Backend::buildSBT() {
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_raygen_records), N_rg * sizeof(RaygenRecord)));
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_raygen_records), rg_recs.data(),
                           N_rg * sizeof(RaygenRecord), cudaMemcpyHostToDevice));
+
+    // Cache individual record device pointers (used to select raygen per launch type)
+    d_raygen_record_direct      = d_raygen_records;
+    d_raygen_record_diffuse     = d_raygen_records + 1 * sizeof(RaygenRecord);
+    d_raygen_record_camera      = d_raygen_records + 2 * sizeof(RaygenRecord);
+    d_raygen_record_pixel_label = d_raygen_records + 3 * sizeof(RaygenRecord);
 
     // Miss records: header only, 4 records
     struct alignas(OPTIX_SBT_RECORD_ALIGNMENT) MissRecord {

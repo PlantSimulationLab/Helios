@@ -75,6 +75,36 @@ __device__ __forceinline__ float d_magnitude(const float3 v) {
     return sqrtf(v.x*v.x + v.y*v.y + v.z*v.z);
 }
 
+static __forceinline__ __device__ float acos_safe(float x) {
+    return acosf(fmaxf(-1.f, fminf(1.f, x)));
+}
+
+static __forceinline__ __device__ float asin_safe(float x) {
+    return asinf(fmaxf(-1.f, fminf(1.f, x)));
+}
+
+// Evaluates the diffuse angular distribution (fd factor).
+// Priority 1: Power-law (Harrison & Coombes) if extinction > 0
+// Priority 2: Prague sky model if sky_params.w > 0
+// Priority 3: Isotropic (returns 1.0)
+static __device__ float evaluateDiffuseAngularDistribution(const float3 &ray_dir, const float3 &peak_dir,
+                                                            float power_law_K, float power_law_norm,
+                                                            const float4 &sky_params) {
+    if (power_law_K > 0.f) {
+        float psi = acos_safe(dot(peak_dir, ray_dir));
+        psi = fmaxf(psi, M_PI / 180.f);
+        return powf(psi, -power_law_K) * power_law_norm;
+    }
+    if (sky_params.w > 0.f) {
+        float gamma     = acos_safe(dot(ray_dir, peak_dir)) * 180.f / M_PI;
+        float cos_theta = fmaxf(ray_dir.z, 0.f);
+        float pattern   = (1.f + sky_params.x * expf(-gamma / sky_params.y))
+                        * (1.f + (sky_params.z - 1.f) * (1.f - cos_theta));
+        return pattern * sky_params.w * M_PI;
+    }
+    return 1.f; // isotropic
+}
+
 // Load transform matrix for primitive at global position pos
 __device__ __forceinline__ void loadTransformMatrix(uint32_t pos, float (&T)[16]) {
     for (int i = 0; i < 16; i++) {
@@ -232,7 +262,51 @@ extern "C" __global__ void __miss__direct() {
 
 extern "C" __global__ void __miss__diffuse() {
     PerRayData *prd = getPayloadPRD();
-    (void)prd;
+
+    const uint32_t origin_position = params.primitive_positions[prd->origin_UUID];
+    if (origin_position == UINT_MAX) return;
+
+    const uint32_t Nprims        = params.Nprimitives;
+    const uint32_t Nbands_global = params.Nbands_global;
+    const uint32_t Nbands_launch = params.Nbands_launch;
+
+    if (params.diffuse_flux == nullptr) return;
+
+    const float3 ray_dir = optixGetWorldRayDirection();
+
+    int b = -1;
+    for (uint32_t b_global = 0; b_global < Nbands_global; b_global++) {
+        if (!params.band_launch_flag[b_global]) continue;
+        b++;
+
+        if (params.diffuse_flux[b] <= 0.f) continue;
+
+        const float4 sky_p   = params.sky_radiance_params  ? params.sky_radiance_params[b]                : make_float4(0.f, 0.f, 0.f, 0.f);
+        const float3 peak_d  = params.diffuse_peak_dir     ? params.diffuse_peak_dir[b]                   : make_float3(0.f, 0.f, 1.f);
+        const float  power_K = params.diffuse_extinction   ? params.diffuse_extinction[b]                 : 0.f;
+        const float  power_N = params.diffuse_dist_norm    ? params.diffuse_dist_norm[b]                  : 1.f;
+
+        const float fd       = evaluateDiffuseAngularDistribution(ray_dir, peak_d, power_K, power_N, sky_p);
+        const float strength = fd * params.diffuse_flux[b] * (float)prd->strength;
+
+        const uint32_t ind_origin   = origin_position * Nbands_launch + (uint32_t)b;
+        const uint32_t radprop_ind  = prd->source_ID * Nprims * Nbands_global
+                                    + origin_position * Nbands_global + b_global;
+        const float t_rho = params.rho[radprop_ind];
+        const float t_tau = params.tau[radprop_ind];
+
+        atomicFloatAdd(&params.radiation_in[ind_origin], strength * (1.f - t_rho - t_tau));
+
+        if (t_rho > 0.f || t_tau > 0.f) {
+            if (prd->face) { // top-face origin
+                atomicFloatAdd(&params.scatter_buff_top[ind_origin],    strength * t_rho);
+                atomicFloatAdd(&params.scatter_buff_bottom[ind_origin], strength * t_tau);
+            } else {         // bottom-face origin
+                atomicFloatAdd(&params.scatter_buff_bottom[ind_origin], strength * t_rho);
+                atomicFloatAdd(&params.scatter_buff_top[ind_origin],    strength * t_tau);
+            }
+        }
+    }
 }
 
 extern "C" __global__ void __miss__camera() {
@@ -250,47 +324,9 @@ extern "C" __global__ void __miss__pixel_label() {
 // ---------------------------------------------------------------------------
 
 extern "C" __global__ void __closesthit__direct() {
-    // Retrieve hit UUID and face from attributes
-    const uint32_t uuid      = optixGetAttribute_0();
-    const uint32_t face_uint = optixGetAttribute_1();
-    const bool     face_top  = (face_uint == 1u);
-
-    PerRayData *prd = getPayloadPRD();
-
-    // Find array position for this UUID
-    const uint32_t pos = params.primitive_positions[uuid];
-    if (pos == UINT_MAX) return; // invalid UUID
-
-    // Source ID and band info
-    const uint32_t src_id      = prd->source_ID;
-    const uint32_t Nprims      = params.Nprimitives;
-    const uint32_t Nbands      = params.Nbands_launch;
-    const uint32_t Nbands_g    = params.Nbands_global;
-
-    // Accumulate absorbed radiation for each launched band
-    for (uint32_t b = 0; b < Nbands_g; b++) {
-        if (!params.band_launch_flag[b]) continue;
-
-        // Source flux for this source and band
-        const float flux = params.source_fluxes[src_id * Nbands + b];
-        if (flux == 0.f) continue;
-
-        // rho and tau for this primitive, source, band
-        const uint32_t mat_idx = src_id * Nbands_g * Nprims + b * Nprims + pos;
-        const float rho = params.rho[mat_idx];
-        const float tau = params.tau[mat_idx];
-
-        // Absorbed = strength * (1 - rho - tau)
-        const float absorbed = (float)prd->strength * flux * (1.f - rho - tau);
-        atomicFloatAdd(&params.radiation_in[pos * Nbands_g + b], absorbed);
-
-        // Transmit if tau > 0: deposit on opposite face
-        if (tau > 0.f) {
-            const float transmitted = (float)prd->strength * flux * tau;
-            // Transmitted radiation goes to radiation_in of the same prim (both faces)
-            atomicFloatAdd(&params.radiation_in[pos * Nbands_g + b], transmitted);
-        }
-    }
+    // A direct ray hit an obstacle — it is simply blocked.
+    // The origin primitive receives no energy (absorption handled in __miss__direct).
+    // Periodic boundary handling deferred to Phase 9.
 }
 
 // ---------------------------------------------------------------------------
@@ -298,10 +334,48 @@ extern "C" __global__ void __closesthit__direct() {
 // ---------------------------------------------------------------------------
 
 extern "C" __global__ void __closesthit__diffuse() {
-    // TODO: Phase 2
-    const uint32_t uuid      = optixGetAttribute_0();
-    const uint32_t face_uint = optixGetAttribute_1();
-    (void)uuid; (void)face_uint;
+    const uint32_t hit_uuid  = optixGetAttribute_0();
+    const bool     face_top  = (optixGetAttribute_1() == 1u);
+
+    PerRayData *prd = getPayloadPRD();
+
+    const uint32_t origin_position = params.primitive_positions[prd->origin_UUID];
+    const uint32_t hit_position    = params.primitive_positions[hit_uuid];
+    if (origin_position == UINT_MAX || hit_position == UINT_MAX) return;
+
+    const uint32_t Nprims        = params.Nprimitives;
+    const uint32_t Nbands_global = params.Nbands_global;
+    const uint32_t Nbands_launch = params.Nbands_launch;
+
+    int b = -1;
+    for (uint32_t b_global = 0; b_global < Nbands_global; b_global++) {
+        if (!params.band_launch_flag[b_global]) continue;
+        b++;
+
+        const uint32_t ind_origin = origin_position * Nbands_launch + (uint32_t)b;
+        const uint32_t ind_hit    = hit_position    * Nbands_launch + (uint32_t)b;
+
+        const double strength = face_top ? params.radiation_out_top[ind_hit]    * prd->strength
+                                         : params.radiation_out_bottom[ind_hit] * prd->strength;
+        if (strength == 0.0) continue;
+
+        const uint32_t radprop_ind = prd->source_ID * Nprims * Nbands_global
+                                   + origin_position * Nbands_global + b_global;
+        const float t_rho = params.rho[radprop_ind];
+        const float t_tau = params.tau[radprop_ind];
+
+        atomicFloatAdd(&params.radiation_in[ind_origin], (float)(strength * (1.0 - t_rho - t_tau)));
+
+        if (t_rho > 0.f || t_tau > 0.f) {
+            if (prd->face) { // top-face origin
+                atomicFloatAdd(&params.scatter_buff_top[ind_origin],    (float)(strength * t_rho));
+                atomicFloatAdd(&params.scatter_buff_bottom[ind_origin], (float)(strength * t_tau));
+            } else {         // bottom-face origin
+                atomicFloatAdd(&params.scatter_buff_bottom[ind_origin], (float)(strength * t_rho));
+                atomicFloatAdd(&params.scatter_buff_top[ind_origin],    (float)(strength * t_tau));
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -453,7 +527,128 @@ extern "C" __global__ void __raygen__direct() {
 // ---------------------------------------------------------------------------
 
 extern "C" __global__ void __raygen__diffuse() {
-    // TODO: Phase 2
+    // 3D launch: x=theta_idx, y=phi_idx, z=prim_local
+    const uint3    idx        = optixGetLaunchIndex();
+    const uint32_t theta_idx  = idx.x;
+    const uint32_t phi_idx    = idx.y;
+    const uint32_t prim_local = idx.z;
+
+    const uint32_t dim_x = params.launch_dim_x;
+    const uint32_t dim_y = params.launch_dim_y;
+    const uint32_t dimxy = dim_x * dim_y;
+
+    const uint32_t prim_pos = params.launch_offset + prim_local;
+    if (prim_pos >= params.Nprimitives) return;
+
+    // Skip bottom-face launch for one-sided primitives
+    if (params.launch_face == 0 && params.twosided_flag[prim_pos] == 0) return;
+
+    const uint32_t ptype = params.primitive_type[prim_pos];
+    const int32_t  NX    = params.object_subdivisions[prim_pos * 2];
+    const int32_t  NY    = params.object_subdivisions[prim_pos * 2 + 1];
+
+    float T[16];
+    loadTransformMatrix(prim_pos, T);
+
+    // Seed once per ray index
+    const uint32_t linear_idx = theta_idx + dim_x * phi_idx;
+    uint32_t seed = tea<16>(linear_idx + dimxy * prim_local, params.random_seed);
+
+    // Stratified cosine-weighted hemisphere sampling
+    const float Rt = (theta_idx + rnd(seed)) / float(dim_x);
+    const float Rp = (phi_idx   + rnd(seed)) / float(dim_y);
+    const float t  = asin_safe(sqrtf(Rt));
+    const float p  = 2.f * M_PI * Rp;
+    float3 ray_dir_canonical;
+    ray_dir_canonical.x = sinf(t) * cosf(p);
+    ray_dir_canonical.y = sinf(t) * sinf(p);
+    ray_dir_canonical.z = cosf(t);
+
+    for (int jj = 0; jj < NY; jj++) {
+        for (int ii = 0; ii < NX; ii++) {
+
+            const uint32_t UUID = params.primitiveID[prim_pos] + (uint32_t)(jj * NX + ii);
+
+            const float Rx = rnd(seed);
+            const float Ry = rnd(seed);
+
+            float3 sp;
+            float3 normal;
+
+            if (ptype == 0 || ptype == 3) { // Patch or Tile
+                const float dx = 1.f / float(NX);
+                const float dy = 1.f / float(NY);
+                sp.x = -0.5f + (ii + Rx) * dx;
+                sp.y = -0.5f + (jj + Ry) * dy;
+                sp.z = 0.f;
+
+                float3 v0 = make_float3(0.f, 0.f, 0.f); d_transformPoint(T, v0);
+                float3 v1 = make_float3(1.f, 0.f, 0.f); d_transformPoint(T, v1);
+                float3 v2 = make_float3(0.f, 1.f, 0.f); d_transformPoint(T, v2);
+                normal = normalize(cross(v1 - v0, v2 - v0));
+
+            } else if (ptype == 1) { // Triangle
+                if (Rx < Ry) { sp.x = Rx; sp.y = Ry; }
+                else          { sp.x = Ry; sp.y = Rx; }
+                sp.z = 0.f;
+
+                float3 v0 = make_float3(0.f, 0.f, 0.f); d_transformPoint(T, v0);
+                float3 v1 = make_float3(0.f, 1.f, 0.f); d_transformPoint(T, v1);
+                float3 v2 = make_float3(1.f, 1.f, 0.f); d_transformPoint(T, v2);
+                normal = normalize(cross(v1 - v0, v2 - v0));
+
+            } else {
+                continue; // Other types handled in later phases
+            }
+
+            // Rotate hemisphere direction by primitive normal orientation
+            float3 ray_dir = d_rotatePoint(ray_dir_canonical,
+                                           acos_safe(normal.z),
+                                           atan2f(normal.y, normal.x));
+
+            // Transform origin point to world space
+            float3 ray_origin = sp;
+            d_transformPoint(T, ray_origin);
+
+            PerRayData prd;
+            prd.seed                  = seed;
+            prd.origin_UUID           = UUID;
+            prd.source_ID             = 0;
+            prd.hit_periodic_boundary = false;
+            prd.strength              = 1.0 / double(dimxy);
+
+            uint32_t u0, u1;
+
+            if (params.launch_face == 1 && params.twosided_flag[prim_pos] != 3) {
+                prd.face = true;
+                packPointer(&prd, u0, u1);
+                optixTrace(
+                    params.traversable,
+                    ray_origin, ray_dir,
+                    1e-4f, 1e38f, 0.f,
+                    OptixVisibilityMask(255),
+                    OPTIX_RAY_FLAG_NONE,
+                    1, 0, 1, // SBT offset=1 (diffuse hit), stride=0, miss index=1 (diffuse miss)
+                    u0, u1
+                );
+            } else if (params.launch_face == 0 && params.twosided_flag[prim_pos] == 1) {
+                prd.face = false;
+                float3 neg_dir = make_float3(-ray_dir.x, -ray_dir.y, -ray_dir.z);
+                packPointer(&prd, u0, u1);
+                optixTrace(
+                    params.traversable,
+                    ray_origin, neg_dir,
+                    1e-4f, 1e38f, 0.f,
+                    OptixVisibilityMask(255),
+                    OPTIX_RAY_FLAG_NONE,
+                    1, 0, 1,
+                    u0, u1
+                );
+            }
+
+            seed = prd.seed;
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
