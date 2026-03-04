@@ -25,6 +25,8 @@
    </tr>
  </table>
 
+ \warning <b>NVIDIA Driver 590+ Incompatibility (OptiX Backend):</b> NVIDIA driver versions 590.x and later are <b>not compatible</b> with the OptiX 6.5 backend used by Helios. This affects both Linux and Windows. If you encounter build errors or runtime failures with the OptiX backend, check your driver version. <b>Workarounds:</b> (1) Downgrade to an NVIDIA driver version below 590 (e.g., 550.x or 535.x LTS), or (2) use the Vulkan compute backend by setting <tt>-DFORCE_VULKAN_BACKEND=ON</tt>. A future Helios release will update to the latest OptiX version to permanently resolve this issue.
+
 \section RadDepends Dependencies
 
 The radiation model requires at least one ray-tracing backend. Two backends are available:
@@ -64,6 +66,19 @@ Useful OS-specific information for installing CUDA can be found here: \ref Depen
 If you are using a PC with the OptiX backend, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: \ref PCGPUTimeout
 
  \section RadKnownIssues Known Issues
+
+ \subsection OptiXDriverIncompat OptiX Backend: NVIDIA Driver 590+ Incompatibility
+
+ <b>Issue:</b> NVIDIA driver versions 590.x and later are not compatible with OptiX 6.5. Users on both Linux and Windows have reported build failures or runtime errors when using the OptiX backend with these newer drivers. CMake will detect this at configure time and report a descriptive error if an incompatible driver is found.
+
+ <b>Root Cause:</b> NVIDIA drivers 590.x and later removed support for the OptiX 6.5 API used by Helios.
+
+ <b>Workarounds:</b>
+ - Downgrade to an NVIDIA driver version below 590 (e.g., 550.x or 535.x LTS drivers).
+ - Use the Vulkan compute backend instead by setting <tt>-DFORCE_VULKAN_BACKEND=ON</tt> when configuring CMake.
+ - If cross-compiling on a machine with a newer driver, the CMake driver check can be bypassed with <tt>-DSKIP_DRIVER_VERSION_CHECK=ON</tt>.
+
+ <b>Permanent Fix:</b> A future Helios release will update to the latest OptiX version to resolve this issue.
 
  \subsection VulkanInstanceLimitation Vulkan Backend: Repeated RadiationModel Creation Limitation (Linux NVIDIA Drivers)
 
