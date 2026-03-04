@@ -331,6 +331,7 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     upload(d_transform_matrix,      geometry.transform_matrices.data(),  geometry.transform_matrices.size()  * sizeof(float));
     upload(d_primitive_type,        geometry.primitive_types.data(),      geometry.primitive_types.size()      * sizeof(uint32_t));
     upload(d_primitive_positions,   geometry.primitive_positions.data(),  geometry.primitive_positions.size()  * sizeof(uint32_t));
+    upload(d_primitive_uuid_arr,    geometry.primitive_UUIDs.data(),      geometry.primitive_UUIDs.size()      * sizeof(uint32_t));
     upload(d_primitiveID,           geometry.primitive_IDs.data(),        geometry.primitive_IDs.size()        * sizeof(uint32_t));
     upload(d_objectID,              geometry.object_IDs.data(),           geometry.object_IDs.size()           * sizeof(uint32_t));
     upload(d_twosided_flag,         geometry.twosided_flags.data(),       geometry.twosided_flags.size()       * sizeof(char));
@@ -387,6 +388,7 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     h_params.transform_matrix         = reinterpret_cast<float *>(d_transform_matrix);
     h_params.primitive_type           = reinterpret_cast<uint32_t *>(d_primitive_type);
     h_params.primitive_positions      = reinterpret_cast<uint32_t *>(d_primitive_positions);
+    h_params.primitive_uuid           = reinterpret_cast<uint32_t *>(d_primitive_uuid_arr);
     h_params.primitiveID              = reinterpret_cast<uint32_t *>(d_primitiveID);
     h_params.objectID                 = reinterpret_cast<uint32_t *>(d_objectID);
     h_params.object_subdivisions      = reinterpret_cast<int32_t *>(d_object_subdivisions);
@@ -944,6 +946,7 @@ void OptiX8Backend::freeGeometryBuffers() {
     freeCUdeviceptr(d_transform_matrix);
     freeCUdeviceptr(d_primitive_type);
     freeCUdeviceptr(d_primitive_positions);
+    freeCUdeviceptr(d_primitive_uuid_arr);
     freeCUdeviceptr(d_primitiveID);
     freeCUdeviceptr(d_objectID);
     freeCUdeviceptr(d_object_subdivisions);

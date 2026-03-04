@@ -119,81 +119,100 @@ __device__ __forceinline__ void loadTransformMatrix(uint32_t pos, float (&T)[16]
 // getPRD() is defined in OptiX8LaunchParams.h (guarded by #ifdef __CUDACC__)
 
 // ---------------------------------------------------------------------------
-// Intersection program: patch (rectangle in canonical [0,1]^2 space)
+// Intersection dispatch: handles all primitive types via primitive_type lookup.
+// All hitgroup SBT records reference this single entry point.
+// prim_idx = optixGetPrimitiveIndex() is the global AABB index (= global pos).
+// UUID is read from params.primitive_uuid[prim_idx] (global pos → UUID array).
+// Triangle and patch vertices are derived from the transform matrix using
+// canonical-space vertices that match those used in buildAABBs() on the host.
 // ---------------------------------------------------------------------------
 
 extern "C" __global__ void __intersection__patch() {
-    const uint32_t prim_idx  = optixGetPrimitiveIndex();
-    const uint32_t obj_idx   = optixGetInstanceIndex(); // 0 (single-instance GAS)
-    (void)obj_idx;
+    const uint32_t prim_idx = optixGetPrimitiveIndex();
+    const uint32_t pos      = prim_idx; // global AABB index == global primitive position
+    const uint32_t ptype    = params.primitive_type[pos];
 
-    // Retrieve the primitive's global position
-    // prim_idx is the index into the AABB array, which equals the global primitive position
-    const uint32_t pos = prim_idx;
+    if (ptype != 0 && ptype != 1) return; // only patch and triangle supported so far
 
-    // Verify this is actually a patch (type 0)
-    if (params.primitive_type[pos] != 0) return;
-
-    // Get transform matrix for this primitive
-    float T[16];
-    loadTransformMatrix(pos, T);
-
-    // Ray in world space
     const float3 ray_origin    = optixGetWorldRayOrigin();
     const float3 ray_direction = optixGetWorldRayDirection();
     const float  t_min         = optixGetRayTmin();
     const float  t_max         = optixGetRayTmax();
 
-    // Patch normal is +Z in canonical space, transformed to world space
-    // Normal = T * (0,0,1,0) = column 2 of rotation part
-    float3 normal = make_float3(T[2], T[6], T[10]);
-    float  denom  = dot(ray_direction, normal);
+    const uint32_t uuid = params.primitive_uuid[prim_idx];
 
-    if (fabsf(denom) < 1e-8f) return; // parallel
+    float T[16];
+    loadTransformMatrix(pos, T);
 
-    // Patch origin is at T * (0,0,0,1) = translation column
-    float3 patch_origin = make_float3(T[3], T[7], T[11]);
-    float  t = dot(patch_origin - ray_origin, normal) / denom;
+    if (ptype == 0) {
+        // ---- Patch: rectangle in canonical [-0.5, 0.5]^2 space ----
+        // Normal = third column of rotation part of T
+        float3 normal = make_float3(T[2], T[6], T[10]);
+        float  nd     = dot(ray_direction, normal);
+        if (fabsf(nd) < 1e-8f) return; // ray parallel to patch plane
 
-    if (t < t_min || t > t_max) return;
+        // Patch centroid is the translation column of T
+        float3 patch_origin = make_float3(T[3], T[7], T[11]);
+        float  t = dot(patch_origin - ray_origin, normal) / nd;
+        if (t < t_min || t > t_max) return;
 
-    // Compute local 2D coordinates of hit point
-    // We need the inverse transform to check if hit is in [0,1]^2
-    float3 hit_world = ray_origin + t * ray_direction;
-    float3 hit_local = hit_world - patch_origin;
+        // Project hit point into patch-local 2D coordinates
+        float3 hit_local = ray_origin + t * ray_direction - patch_origin;
+        float3 local_x   = make_float3(T[0], T[4], T[8]);
+        float3 local_y   = make_float3(T[1], T[5], T[9]);
+        float  lx2 = dot(local_x, local_x);
+        float  ly2 = dot(local_y, local_y);
+        if (lx2 < 1e-12f || ly2 < 1e-12f) return;
+        float u = dot(hit_local, local_x) / lx2;
+        float v = dot(hit_local, local_y) / ly2;
+        if (u < -0.5f || u > 0.5f || v < -0.5f || v > 0.5f) return;
 
-    // Local X axis = T * (1,0,0,0) - T * (0,0,0,0)
-    float3 local_x = make_float3(T[0], T[4], T[8]);
-    float3 local_y = make_float3(T[1], T[5], T[9]);
+        uint32_t face_attr = (nd < 0.f) ? 1u : 0u;
+        if (!face_attr && !params.twosided_flag[pos]) return;
+        optixReportIntersection(t, 0, uuid, face_attr);
 
-    float lx2 = dot(local_x, local_x);
-    float ly2 = dot(local_y, local_y);
-    if (lx2 < 1e-12f || ly2 < 1e-12f) return;
+    } else {
+        // ---- Triangle: canonical vertices (0,0,0), (0,1,0), (1,1,0) ----
+        // World-space vertices via T (consistent with buildAABBs canonical vertices)
+        const float3 v0 = make_float3(T[3], T[7], T[11]);
+        const float3 v1 = make_float3(T[1] + T[3], T[5] + T[7], T[9] + T[11]);
+        const float3 v2 = make_float3(T[0] + T[1] + T[3], T[4] + T[5] + T[7], T[8] + T[9] + T[11]);
 
-    float u = dot(hit_local, local_x) / lx2;
-    float v = dot(hit_local, local_y) / ly2;
+        // Shirley's ray-triangle intersection (Möller–Trumbore style)
+        float a = v0.x - v1.x, b = v0.x - v2.x, c = ray_direction.x, d = v0.x - ray_origin.x;
+        float e = v0.y - v1.y, f = v0.y - v2.y, g = ray_direction.y, h = v0.y - ray_origin.y;
+        float i = v0.z - v1.z, j = v0.z - v2.z, k = ray_direction.z, l = v0.z - ray_origin.z;
 
-    if (u < -0.5f || u > 0.5f || v < -0.5f || v > 0.5f) return;
+        float m = f * k - g * j, n = h * k - g * l, p = f * l - h * j;
+        float q = g * i - e * k, s = e * j - f * i;
 
-    // Solid fraction / texture masking (Phase 7: skip for now, always solid)
-    // float solid_frac = params.primitive_solid_fraction[pos];
+        float tri_denom = a * m + b * q + c * s;
+        if (fabsf(tri_denom) < 1e-12f) return;
+        float inv_denom = 1.f / tri_denom;
 
-    // Determine face: top if ray hits front face (denom < 0)
-    uint32_t face_attr = (denom < 0.f) ? 1u : 0u;
-    // For one-sided primitives, reject back-face hits
-    if (!face_attr && !params.twosided_flag[pos]) return;
+        float e1   = d * m - b * n - c * p;
+        float beta = e1 * inv_denom;
+        if (beta < 0.f) return;
 
-    // Report intersection: attribute0 = UUID, attribute1 = face
-    uint32_t uuid = params.patch_UUIDs[prim_idx];
-    optixReportIntersection(t, 0, uuid, face_attr);
-}
+        float r     = e * l - h * i;
+        float e2    = a * n + d * q + c * r;
+        float gamma = e2 * inv_denom;
+        if (gamma < 0.f || beta + gamma > 1.f) return;
 
-// ---------------------------------------------------------------------------
-// Intersection stubs for other types (Phase 6+)
-// ---------------------------------------------------------------------------
+        float e3 = a * p - b * r + d * s;
+        float t  = e3 * inv_denom;
+        if (t < t_min || t > t_max) return;
 
-extern "C" __global__ void __intersection__triangle() {
-    // TODO: Phase 6
+        // Face from cross product normal vs ray direction
+        float3 edge0   = make_float3(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
+        float3 edge1   = make_float3(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
+        float3 tri_nrm = make_float3(edge0.y * edge1.z - edge0.z * edge1.y,
+                                     edge0.z * edge1.x - edge0.x * edge1.z,
+                                     edge0.x * edge1.y - edge0.y * edge1.x);
+        uint32_t face_attr = (dot(ray_direction, tri_nrm) < 0.f) ? 1u : 0u;
+        if (!face_attr && !params.twosided_flag[pos]) return;
+        optixReportIntersection(t, 0, uuid, face_attr);
+    }
 }
 
 extern "C" __global__ void __intersection__disk() {

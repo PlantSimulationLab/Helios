@@ -77,6 +77,9 @@ struct OptiX8LaunchParams {
     int8_t*   twosided_flag;         //!< 1=two-sided, 0=one-sided
     float*    primitive_solid_fraction;
 
+    // ---- Global UUID lookup (indexed by global primitive position) ----
+    uint32_t* primitive_uuid;        //!< primitive_uuid[global_pos] = UUID of that primitive
+
     // ---- Per-type geometry (also in SBT HitGroupData, mirrored here for easy access) ----
     float3*   patch_vertices;        //!< [patch_idx * 4 + corner_idx]
     uint32_t* patch_UUIDs;

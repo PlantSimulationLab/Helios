@@ -210,6 +210,9 @@ namespace helios {
         CUdeviceptr d_bbox_vertices          = 0;
         CUdeviceptr d_bbox_UUIDs             = 0;
 
+        // Global UUID array: d_primitive_uuid[global_pos] = UUID
+        CUdeviceptr d_primitive_uuid_arr     = 0;
+
         // AABB buffer for GAS build (one AABB per primitive)
         CUdeviceptr d_aabbs                  = 0;
 
