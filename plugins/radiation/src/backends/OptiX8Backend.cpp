@@ -680,6 +680,23 @@ void OptiX8Backend::launchDiffuseRays(const RayTracingLaunchParams &launch_param
 
     applyLaunchParams(launch_params);
 
+    // Upload radiation_out buffers (emission + scattered energy from previous iteration).
+    // This must happen here because RadiationModel adds emission to flux_top/bottom AFTER
+    // calling uploadRadiationOut() for the direct-ray scatter, so the params always carry
+    // the most up-to-date radiation_out data.
+    if (!launch_params.radiation_out_top.empty() && d_radiation_out_top) {
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_radiation_out_top),
+                              launch_params.radiation_out_top.data(),
+                              launch_params.radiation_out_top.size() * sizeof(float),
+                              cudaMemcpyHostToDevice));
+    }
+    if (!launch_params.radiation_out_bottom.empty() && d_radiation_out_bottom) {
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_radiation_out_bottom),
+                              launch_params.radiation_out_bottom.data(),
+                              launch_params.radiation_out_bottom.size() * sizeof(float),
+                              cudaMemcpyHostToDevice));
+    }
+
     // Upload band_launch_flag
     if (d_band_launch_flag) { freeCUdeviceptr(d_band_launch_flag); }
     const size_t Nbands_g = launch_params.band_launch_flag.size();
