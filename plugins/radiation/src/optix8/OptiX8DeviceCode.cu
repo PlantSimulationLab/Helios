@@ -112,6 +112,57 @@ __device__ __forceinline__ void loadTransformMatrix(uint32_t pos, float (&T)[16]
     }
 }
 
+// Sample texture mask at UV (uv_u, uv_v) in [0,1]^2 for mask at index msk_id.
+// Returns true if the texel is opaque (intersection should be reported),
+// false if transparent (reject the hit).
+// Standard texture convention: uv_v=0 maps to the top row (iy=0).
+static __forceinline__ __device__ bool sampleMask(int32_t msk_id, float uv_u, float uv_v) {
+    if (msk_id < 0) return true; // no mask → always opaque
+    const int32_t  width   = params.mask_sizes[msk_id * 2];
+    const int32_t  height  = params.mask_sizes[msk_id * 2 + 1];
+    const uint32_t offset  = params.mask_offsets[msk_id];
+    int ix = (int)(floorf(float(width  - 1) * uv_u));
+    int iy = (int)(floorf(float(height - 1) * (1.f - uv_v)));
+    ix = max(0, min(ix, width  - 1));
+    iy = max(0, min(iy, height - 1));
+    return params.mask_data[offset + (uint32_t)(iy * width + ix)] != 0u;
+}
+
+// Build a rotation-only 4×4 transform matrix (row-major) from Euler angles (rx, ry, rz)
+// Matches OptiX 6's d_makeTransformMatrix convention.
+static __forceinline__ __device__ void d_makeTransformMatrix(float3 rotation, float (&T)[16]) {
+    float sx = sinf(rotation.x), cx = cosf(rotation.x);
+    float sy = sinf(rotation.y), cy = cosf(rotation.y);
+    float sz = sinf(rotation.z), cz = cosf(rotation.z);
+    T[0]  = cz * cy;             T[1]  = cz * sy * sx - sz * cx; T[2]  = cz * sy * cx + sz * sx; T[3]  = 0.f;
+    T[4]  = sz * cy;             T[5]  = sz * sy * sx + cz * cx; T[6]  = sz * sy * cx - cz * sx; T[7]  = 0.f;
+    T[8]  = -sy;                 T[9]  = cy * sx;                T[10] = cy * cx;                T[11] = 0.f;
+    T[12] = 0.f;                 T[13] = 0.f;                    T[14] = 0.f;                    T[15] = 1.f;
+}
+
+// Sample a point uniformly on the unit disk in the xy-plane (z=0).
+// Based on Suffern (2007) "Ray Tracing from the Ground Up", Ch. 6 concentric mapping.
+static __forceinline__ __device__ void d_sampleDisk(uint32_t &seed, float3 &sample) {
+    float Rx = rnd(seed), Ry = rnd(seed);
+    float sp_x = -1.f + 2.f * Rx;
+    float sp_y = -1.f + 2.f * Ry;
+    float r, p;
+    if (sp_x > -sp_y) {
+        if (sp_x > sp_y) { r = sp_x; p = sp_y / sp_x; }
+        else              { r = sp_y; p = 2.f - sp_x / sp_y; }
+    } else {
+        if (sp_x < sp_y) { r = -sp_x; p = 4.f + sp_y / sp_x; }
+        else              { r = -sp_y; p = (sp_y != 0.f) ? 6.f - sp_x / sp_y : 0.f; }
+    }
+    p *= 0.25f * M_PI;
+    sample = make_float3(r * cosf(p), r * sinf(p), 0.f);
+}
+
+// Sample a point uniformly on the unit square [-0.5,0.5]^2 in the xy-plane (z=0).
+static __forceinline__ __device__ void d_sampleSquare(uint32_t &seed, float3 &sample) {
+    sample = make_float3(-0.5f + rnd(seed), -0.5f + rnd(seed), 0.f);
+}
+
 // ---------------------------------------------------------------------------
 // PerRayData accessor (uses getPRD() from OptiX8LaunchParams.h)
 // ---------------------------------------------------------------------------
@@ -167,6 +218,27 @@ extern "C" __global__ void __intersection__patch() {
         float v = dot(hit_local, local_y) / ly2;
         if (u < -0.5f || u > 0.5f || v < -0.5f || v > 0.5f) return;
 
+        // Texture mask check
+        const int32_t msk_id = params.mask_IDs[pos];
+        if (msk_id >= 0) {
+            float uv_u, uv_v;
+            if (params.uv_IDs[pos] >= 0) {
+                // Custom UV: bilinear from stored corner UVs
+                float2 uv0 = params.uv_data[pos * 4 + 0]; // UV at (u=0, v=0) corner
+                float2 uv1 = params.uv_data[pos * 4 + 1]; // UV at (u=1, v=0) corner
+                float2 uv2 = params.uv_data[pos * 4 + 2]; // UV at (u=0, v=1) corner
+                float du = uv1.x - uv0.x;
+                float dv = uv2.y - uv0.y;
+                uv_u = uv0.x + (u + 0.5f) * du;
+                uv_v = uv0.y + (v + 0.5f) * dv;
+            } else {
+                // Parametric UV: remap from [-0.5, 0.5] to [0, 1]
+                uv_u = u + 0.5f;
+                uv_v = v + 0.5f;
+            }
+            if (!sampleMask(msk_id, uv_u, uv_v)) return;
+        }
+
         uint32_t face_attr = (nd < 0.f) ? 1u : 0u;
         if (!face_attr && !params.twosided_flag[pos]) return;
         optixReportIntersection(t, 0, uuid, face_attr);
@@ -202,6 +274,28 @@ extern "C" __global__ void __intersection__patch() {
         float e3 = a * p - b * r + d * s;
         float t  = e3 * inv_denom;
         if (t < t_min || t > t_max) return;
+
+        // Texture mask check (using barycentric UV)
+        const int32_t msk_id = params.mask_IDs[pos];
+        if (msk_id >= 0) {
+            float uv_u, uv_v;
+            if (params.uv_IDs[pos] >= 0) {
+                // Custom UV: interpolate from stored per-vertex UV
+                float2 uv0 = params.uv_data[pos * 4 + 0];
+                float2 uv1 = params.uv_data[pos * 4 + 1];
+                float2 uv2 = params.uv_data[pos * 4 + 2];
+                // beta = weight at v1, gamma = weight at v2, (1-beta-gamma) = weight at v0
+                float2 uv = make_float2(uv0.x + beta * (uv1.x - uv0.x) + gamma * (uv2.x - uv0.x),
+                                        uv0.y + beta * (uv1.y - uv0.y) + gamma * (uv2.y - uv0.y));
+                uv_u = uv.x;
+                uv_v = 1.f - uv.y; // Y-flip to match OptiX 6 convention
+            } else {
+                // Parametric UV: use barycentric coordinates directly
+                uv_u = beta + gamma; // along u-axis (v1 is at u=1)
+                uv_v = gamma;        // along v-axis (v2 is at v=1)
+            }
+            if (!sampleMask(msk_id, uv_u, uv_v)) return;
+        }
 
         // Face from cross product normal vs ray direction
         float3 edge0   = make_float3(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
@@ -424,12 +518,15 @@ extern "C" __global__ void __closesthit__pixel_label() {
 // ---------------------------------------------------------------------------
 
 extern "C" __global__ void __raygen__direct() {
-    // 3D launch: x = ray index [0, Nrays), y = 0, z = primitive index within launch
-    const uint3 idx         = optixGetLaunchIndex();
-    const uint32_t ray_index  = idx.x;
+    // 3D launch: x = x-strat index [0, dim_x), y = y-strat index [0, dim_y), z = prim
+    const uint3    idx        = optixGetLaunchIndex();
+    const uint32_t xi         = idx.x;
+    const uint32_t yi         = idx.y;
     const uint32_t prim_local = idx.z;
 
-    const uint32_t Nrays    = params.launch_dim_x;
+    const uint32_t dim_x  = params.launch_dim_x;
+    const uint32_t dim_y  = params.launch_dim_y;
+    const uint32_t Nrays  = dim_x * dim_y;
     const uint32_t prim_pos = params.launch_offset + prim_local;
 
     if (prim_pos >= params.Nprimitives) return;
@@ -441,7 +538,8 @@ extern "C" __global__ void __raygen__direct() {
     float T[16];
     loadTransformMatrix(prim_pos, T);
 
-    uint32_t seed = tea<16>(ray_index + Nrays * prim_local, params.random_seed);
+    const uint32_t linear_idx = xi + dim_x * yi;
+    uint32_t seed = tea<16>(linear_idx + Nrays * prim_local, params.random_seed);
 
     for (int jj = 0; jj < NY; jj++) {
         for (int ii = 0; ii < NX; ii++) {
@@ -458,9 +556,30 @@ extern "C" __global__ void __raygen__direct() {
             if (ptype == 0 || ptype == 3) { // Patch or Tile: canonical space [-0.5, 0.5]^2
                 const float dx = 1.0f / float(NX);
                 const float dy = 1.0f / float(NY);
-                sp.x = -0.5f + ii * dx + float(ray_index) * dx / float(Nrays) + Rx * dx / float(Nrays);
-                sp.y = -0.5f + jj * dy + Ry * dy;
+                sp.x = -0.5f + ii * dx + (float(xi) + Rx) * dx / float(dim_x);
+                sp.y = -0.5f + jj * dy + (float(yi) + Ry) * dy / float(dim_y);
                 sp.z = 0.f;
+
+                // Origin mask rejection sampling: only launch from opaque regions (matches OptiX 6 raygen behavior)
+                const int32_t msk_orig = params.mask_IDs[prim_pos];
+                if (msk_orig >= 0) {
+                    for (int _try = 0; _try < 10; _try++) {
+                        float uv_u, uv_v;
+                        if (params.uv_IDs[prim_pos] >= 0) {
+                            float2 uv0 = params.uv_data[prim_pos * 4 + 0];
+                            float2 uv1 = params.uv_data[prim_pos * 4 + 1];
+                            float2 uv2 = params.uv_data[prim_pos * 4 + 2];
+                            uv_u = uv0.x + (sp.x + 0.5f) * (uv1.x - uv0.x);
+                            uv_v = uv0.y + (sp.y + 0.5f) * (uv2.y - uv0.y);
+                        } else {
+                            uv_u = sp.x + 0.5f;
+                            uv_v = sp.y + 0.5f;
+                        }
+                        if (sampleMask(msk_orig, uv_u, uv_v)) break;
+                        sp.x = -0.5f + (ii + rnd(seed)) * dx;
+                        sp.y = -0.5f + (jj + rnd(seed)) * dy;
+                    }
+                }
 
                 float3 v0 = make_float3(0.f, 0.f, 0.f); d_transformPoint(T, v0);
                 float3 v1 = make_float3(1.f, 0.f, 0.f); d_transformPoint(T, v1);
@@ -471,6 +590,33 @@ extern "C" __global__ void __raygen__direct() {
                 if (Rx < Ry) { sp.x = Rx; sp.y = Ry; }
                 else          { sp.x = Ry; sp.y = Rx; }
                 sp.z = 0.f;
+
+                // Origin mask rejection sampling
+                const int32_t msk_orig_t = params.mask_IDs[prim_pos];
+                if (msk_orig_t >= 0) {
+                    for (int _try = 0; _try < 10; _try++) {
+                        float uv_u, uv_v;
+                        if (params.uv_IDs[prim_pos] >= 0) {
+                            float2 uv0 = params.uv_data[prim_pos * 4 + 0];
+                            float2 uv1 = params.uv_data[prim_pos * 4 + 1];
+                            float2 uv2 = params.uv_data[prim_pos * 4 + 2];
+                            const float beta  = sp.y - sp.x; // weight at v1
+                            const float gamma = sp.x;        // weight at v2
+                            float2 uv = make_float2(
+                                uv0.x + beta * (uv1.x - uv0.x) + gamma * (uv2.x - uv0.x),
+                                uv0.y + beta * (uv1.y - uv0.y) + gamma * (uv2.y - uv0.y));
+                            uv_u = uv.x;
+                            uv_v = 1.f - uv.y; // Y-flip (matches intersection convention)
+                        } else {
+                            uv_u = sp.y;  // = beta + gamma
+                            uv_v = sp.x;  // = gamma
+                        }
+                        if (sampleMask(msk_orig_t, uv_u, uv_v)) break;
+                        float Rx2 = rnd(seed), Ry2 = rnd(seed);
+                        if (Rx2 < Ry2) { sp.x = Rx2; sp.y = Ry2; }
+                        else            { sp.x = Ry2; sp.y = Rx2; }
+                    }
+                }
 
                 float3 v0 = make_float3(0.f, 0.f, 0.f); d_transformPoint(T, v0);
                 float3 v1 = make_float3(0.f, 1.f, 0.f); d_transformPoint(T, v1);
@@ -493,13 +639,91 @@ extern "C" __global__ void __raygen__direct() {
 
                 float3 ray_direction;
                 float  ray_tmax;
+                double strength;
 
                 if (src_type == 0) { // Collimated source
                     ray_direction = normalize(params.source_positions[rr]);
                     ray_tmax      = 1e38f;
+                    strength = (1.0 / double(dim_x * dim_y)) * (double)fabsf(dot(normal, ray_direction));
+
+                } else if (src_type == 1 || src_type == 2) { // Sphere source (type 1 = point, type 2 = sphere)
+                    float theta_s = acos_safe(1.f - 2.f * rnd(seed));
+                    float phi_s   = rnd(seed) * 2.f * M_PI;
+                    float3 sphere_pt = make_float3(0.5f * params.source_widths[rr].x * sinf(theta_s) * cosf(phi_s),
+                                                   0.5f * params.source_widths[rr].x * sinf(theta_s) * sinf(phi_s),
+                                                   0.5f * params.source_widths[rr].x * cosf(theta_s));
+                    ray_direction = sphere_pt + params.source_positions[rr] - ray_origin;
+                    ray_tmax      = d_magnitude(ray_direction);
+                    ray_direction = normalize(ray_direction);
+
+                    // Integrate over sphere surface for strength
+                    strength = 0.0;
+                    const uint32_t N = 10;
+                    for (uint32_t j = 0; j < N; j++) {
+                        for (uint32_t i = 0; i < N; i++) {
+                            float theta = acos_safe(1.f - 2.f * (float(i) + 0.5f) / float(N));
+                            float phi   = (float(j) + 0.5f) * 2.f * M_PI / float(N);
+                            float3 ldir = make_float3(sinf(theta)*cosf(phi), sinf(theta)*sinf(phi), cosf(theta));
+                            if (dot(ldir, ray_direction) < 0.f) {
+                                strength += (1.0 / double(dim_x * dim_y)) * (double)fabsf(dot(normal, ray_direction))
+                                          * (double)fabsf(dot(ldir, ray_direction))
+                                          / ((double)ray_tmax * (double)ray_tmax)
+                                          / double(N * N)
+                                          * (double)params.source_widths[rr].x * (double)params.source_widths[rr].x;
+                            }
+                        }
+                    }
+
+                } else if (src_type == 3) { // Rectangle source
+                    float light_transform[16];
+                    float3 rot3 = params.source_rotations[rr];
+                    d_makeTransformMatrix(rot3, light_transform);
+
+                    float3 square_pt;
+                    d_sampleSquare(seed, square_pt);
+                    square_pt = make_float3(params.source_widths[rr].x * square_pt.x, params.source_widths[rr].y * square_pt.y, square_pt.z);
+                    d_transformPoint(light_transform, square_pt);
+
+                    float3 light_dir = make_float3(0.f, 0.f, 1.f);
+                    d_transformPoint(light_transform, light_dir);
+
+                    ray_direction = square_pt + params.source_positions[rr] - ray_origin;
+                    if (dot(ray_direction, light_dir) > 0.f) continue; // don't emit from back of source
+
+                    ray_tmax      = d_magnitude(ray_direction);
+                    ray_direction = normalize(ray_direction);
+                    strength = (1.0 / double(dim_x * dim_y))
+                             * (double)fabsf(dot(normal, ray_direction))
+                             * (double)fabsf(dot(light_dir, ray_direction))
+                             / ((double)ray_tmax * (double)ray_tmax)
+                             * (double)params.source_widths[rr].x * (double)params.source_widths[rr].y
+                             / M_PI;
+
+                } else if (src_type == 4) { // Disk source
+                    float light_transform[16];
+                    float3 rot3 = params.source_rotations[rr];
+                    d_makeTransformMatrix(rot3, light_transform);
+
+                    float3 disk_pt;
+                    d_sampleDisk(seed, disk_pt);
+                    d_transformPoint(light_transform, disk_pt);
+
+                    float3 light_dir = make_float3(0.f, 0.f, 1.f);
+                    d_transformPoint(light_transform, light_dir);
+
+                    ray_direction = params.source_widths[rr].x * disk_pt + params.source_positions[rr] - ray_origin;
+                    if (dot(ray_direction, light_dir) > 0.f) continue; // don't emit from back of source
+
+                    ray_tmax      = d_magnitude(ray_direction);
+                    ray_direction = normalize(ray_direction);
+                    strength = (1.0 / double(dim_x * dim_y))
+                             * (double)fabsf(dot(normal, ray_direction))
+                             * (double)fabsf(dot(light_dir, ray_direction))
+                             / ((double)ray_tmax * (double)ray_tmax)
+                             * (double)params.source_widths[rr].x * (double)params.source_widths[rr].x;
+
                 } else {
-                    // Other source types: not implemented in Phase 1
-                    continue;
+                    continue; // Unknown source type
                 }
 
                 PerRayData prd;
@@ -509,8 +733,8 @@ extern "C" __global__ void __raygen__direct() {
                 prd.hit_periodic_boundary = false;
                 prd.face                 = (dot(ray_direction, normal) > 0.f);
 
-                // Strength: Lambert cosine weighting divided by number of rays
-                prd.strength = (1.0 / double(Nrays)) * (double)fabsf(dot(normal, ray_direction));
+                // Strength set above per source type
+                prd.strength = strength;
 
                 // Only fire from the face pointing toward source (or two-sided)
                 const int8_t tsf = params.twosided_flag[prim_pos];
@@ -601,6 +825,27 @@ extern "C" __global__ void __raygen__diffuse() {
                 sp.y = -0.5f + (jj + Ry) * dy;
                 sp.z = 0.f;
 
+                // Origin mask rejection sampling
+                const int32_t msk_orig_d = params.mask_IDs[prim_pos];
+                if (msk_orig_d >= 0) {
+                    for (int _try = 0; _try < 10; _try++) {
+                        float uv_u, uv_v;
+                        if (params.uv_IDs[prim_pos] >= 0) {
+                            float2 uv0 = params.uv_data[prim_pos * 4 + 0];
+                            float2 uv1 = params.uv_data[prim_pos * 4 + 1];
+                            float2 uv2 = params.uv_data[prim_pos * 4 + 2];
+                            uv_u = uv0.x + (sp.x + 0.5f) * (uv1.x - uv0.x);
+                            uv_v = uv0.y + (sp.y + 0.5f) * (uv2.y - uv0.y);
+                        } else {
+                            uv_u = sp.x + 0.5f;
+                            uv_v = sp.y + 0.5f;
+                        }
+                        if (sampleMask(msk_orig_d, uv_u, uv_v)) break;
+                        sp.x = -0.5f + (ii + rnd(seed)) * dx;
+                        sp.y = -0.5f + (jj + rnd(seed)) * dy;
+                    }
+                }
+
                 float3 v0 = make_float3(0.f, 0.f, 0.f); d_transformPoint(T, v0);
                 float3 v1 = make_float3(1.f, 0.f, 0.f); d_transformPoint(T, v1);
                 float3 v2 = make_float3(0.f, 1.f, 0.f); d_transformPoint(T, v2);
@@ -610,6 +855,33 @@ extern "C" __global__ void __raygen__diffuse() {
                 if (Rx < Ry) { sp.x = Rx; sp.y = Ry; }
                 else          { sp.x = Ry; sp.y = Rx; }
                 sp.z = 0.f;
+
+                // Origin mask rejection sampling
+                const int32_t msk_orig_dt = params.mask_IDs[prim_pos];
+                if (msk_orig_dt >= 0) {
+                    for (int _try = 0; _try < 10; _try++) {
+                        float uv_u, uv_v;
+                        if (params.uv_IDs[prim_pos] >= 0) {
+                            float2 uv0 = params.uv_data[prim_pos * 4 + 0];
+                            float2 uv1 = params.uv_data[prim_pos * 4 + 1];
+                            float2 uv2 = params.uv_data[prim_pos * 4 + 2];
+                            const float beta  = sp.y - sp.x;
+                            const float gamma = sp.x;
+                            float2 uv = make_float2(
+                                uv0.x + beta * (uv1.x - uv0.x) + gamma * (uv2.x - uv0.x),
+                                uv0.y + beta * (uv1.y - uv0.y) + gamma * (uv2.y - uv0.y));
+                            uv_u = uv.x;
+                            uv_v = 1.f - uv.y;
+                        } else {
+                            uv_u = sp.y;
+                            uv_v = sp.x;
+                        }
+                        if (sampleMask(msk_orig_dt, uv_u, uv_v)) break;
+                        float Rx2 = rnd(seed), Ry2 = rnd(seed);
+                        if (Rx2 < Ry2) { sp.x = Rx2; sp.y = Ry2; }
+                        else            { sp.x = Ry2; sp.y = Rx2; }
+                    }
+                }
 
                 float3 v0 = make_float3(0.f, 0.f, 0.f); d_transformPoint(T, v0);
                 float3 v1 = make_float3(0.f, 1.f, 0.f); d_transformPoint(T, v1);

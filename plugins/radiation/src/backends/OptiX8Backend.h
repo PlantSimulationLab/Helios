@@ -261,11 +261,12 @@ namespace helios {
         CUdeviceptr d_band_launch_flag       = 0;
 
         // ---- Texture/mask device buffers ----
-        CUdeviceptr d_mask_data              = 0;
-        CUdeviceptr d_mask_sizes             = 0;
-        CUdeviceptr d_mask_IDs               = 0;
-        CUdeviceptr d_uv_data                = 0;
-        CUdeviceptr d_uv_IDs                 = 0;
+        CUdeviceptr d_mask_data              = 0; //!< flat uint8: 1=opaque, 0=transparent
+        CUdeviceptr d_mask_offsets           = 0; //!< cumulative per-mask start index in mask_data
+        CUdeviceptr d_mask_sizes             = 0; //!< 2 ints per mask: width, height
+        CUdeviceptr d_mask_IDs               = 0; //!< per-primitive mask ID (-1 = no mask)
+        CUdeviceptr d_uv_data                = 0; //!< uv_data[pos*4 + vtx]: flat UV, 4 verts per prim
+        CUdeviceptr d_uv_IDs                 = 0; //!< per-primitive: -1=parametric, >=0=custom UV
 
         // ---- State ----
         bool     is_initialized          = false;

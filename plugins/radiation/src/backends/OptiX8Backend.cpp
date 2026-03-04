@@ -383,6 +383,51 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
                geometry.bboxes.UUIDs.size() * sizeof(uint32_t));
     }
 
+    // ---- Texture mask and UV data ----
+    {
+        // Compute per-mask offsets (cumulative start index into mask_data)
+        std::vector<uint32_t> mask_offsets;
+        uint32_t cumulative = 0;
+        for (const auto &sz : geometry.mask_sizes) {
+            mask_offsets.push_back(cumulative);
+            cumulative += static_cast<uint32_t>(sz.x) * static_cast<uint32_t>(sz.y);
+        }
+
+        // Convert vector<bool> to flat uint8 array (1=opaque, 0=transparent)
+        std::vector<uint8_t> mask_data_u8(cumulative);
+        for (uint32_t i = 0; i < cumulative; ++i) {
+            mask_data_u8[i] = geometry.mask_data[i] ? 1u : 0u;
+        }
+
+        // Reformat UV data to flat [Nprims * 4] array (4 UV vertices per primitive).
+        // uv_IDs[p] >= 0 flags whether primitive p has custom UV data; all textured
+        // primitives store exactly 4 UV vertices in uv_data (triangles are padded).
+        const size_t Np = geometry.primitive_count;
+        std::vector<helios::vec2> uv_flat(Np * 4, helios::make_vec2(0.f, 0.f));
+        size_t uv_read = 0;
+        for (size_t p = 0; p < Np; ++p) {
+            if (!geometry.uv_IDs.empty() && geometry.uv_IDs[p] >= 0) {
+                for (int v = 0; v < 4 && uv_read < geometry.uv_data.size(); ++v) {
+                    uv_flat[p * 4 + v] = geometry.uv_data[uv_read++];
+                }
+            }
+        }
+
+        freeCUdeviceptr(d_mask_data);
+        freeCUdeviceptr(d_mask_offsets);
+        freeCUdeviceptr(d_mask_sizes);
+        freeCUdeviceptr(d_mask_IDs);
+        freeCUdeviceptr(d_uv_data);
+        freeCUdeviceptr(d_uv_IDs);
+
+        upload(d_mask_data,    mask_data_u8.data(),                 mask_data_u8.size()  * sizeof(uint8_t));
+        upload(d_mask_offsets, mask_offsets.data(),                 mask_offsets.size()  * sizeof(uint32_t));
+        upload(d_mask_sizes,   geometry.mask_sizes.data(),          geometry.mask_sizes.size()  * sizeof(helios::int2));
+        upload(d_mask_IDs,     geometry.mask_IDs.data(),            geometry.mask_IDs.size()    * sizeof(int32_t));
+        upload(d_uv_data,      uv_flat.data(),                      uv_flat.size()       * sizeof(helios::vec2));
+        upload(d_uv_IDs,       geometry.uv_IDs.data(),              geometry.uv_IDs.size()      * sizeof(int32_t));
+    }
+
     // Update h_params device pointers
     const uint32_t Nprims = static_cast<uint32_t>(geometry.primitive_count);
     h_params.transform_matrix         = reinterpret_cast<float *>(d_transform_matrix);
@@ -411,6 +456,12 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     h_params.Nprimitives              = Nprims;
     h_params.bbox_UUID_base           = geometry.bbox_UUID_base;
     h_params.periodic_flag            = make_float2(geometry.periodic_flag.x, geometry.periodic_flag.y);
+    h_params.mask_data                = reinterpret_cast<uint8_t *>(d_mask_data);
+    h_params.mask_offsets             = reinterpret_cast<uint32_t *>(d_mask_offsets);
+    h_params.mask_sizes               = reinterpret_cast<int32_t *>(d_mask_sizes);
+    h_params.mask_IDs                 = reinterpret_cast<int32_t *>(d_mask_IDs);
+    h_params.uv_data                  = reinterpret_cast<float2 *>(d_uv_data);
+    h_params.uv_IDs                   = reinterpret_cast<int32_t *>(d_uv_IDs);
 
     // Store counts
     current_primitive_count = geometry.primitive_count;
@@ -642,33 +693,38 @@ void OptiX8Backend::launchDirectRays(const RayTracingLaunchParams &launch_params
     h_params.band_launch_flag = reinterpret_cast<bool *>(d_band_launch_flag);
     h_params.traversable      = gas_handle;
 
-    const uint32_t Nrays         = launch_params.rays_per_primitive;
+    // 2D stratification: split rays_per_primitive into dim_x × dim_y grid (same as diffuse)
+    // rays_per_primitive is always n*n (RadiationModel sets it as ceil(sqrt(N))^2)
     const uint32_t launch_count  = launch_params.launch_count;
-    h_params.launch_dim_x        = Nrays;
-    h_params.launch_dim_y        = 1;
+    const uint32_t rpp   = launch_params.rays_per_primitive;
+    const uint32_t dim_x = static_cast<uint32_t>(sqrtf(static_cast<float>(rpp)));
+    const uint32_t dim_y = (dim_x > 0) ? (rpp / dim_x) : 1u;
+    h_params.launch_dim_x        = dim_x;
+    h_params.launch_dim_y        = dim_y;
 
     // prd_pool is unused (PRD allocated on thread stack in raygen)
     h_params.prd_pool = nullptr;
-
-    uploadLaunchParams();
-    CUDA_CHECK(cudaStreamSynchronize(cuda_stream));
 
     // Direct launch uses raygen record 0 (d_raygen_records + 0)
     OptixShaderBindingTable direct_sbt = sbt;
     direct_sbt.raygenRecord = d_raygen_records;
 
-    OPTIX_CHECK(optixLaunch(
-        optix_pipeline,
-        cuda_stream,
-        d_params,
-        sizeof(OptiX8LaunchParams),
-        &direct_sbt,
-        Nrays,         // width
-        1,             // height
-        launch_count   // depth
-    ));
-
-    CUDA_CHECK(cudaStreamSynchronize(cuda_stream));
+    // OptiX depth dimension is limited to 65535; batch if needed
+    const uint32_t MAX_DEPTH = 65535u;
+    uint32_t offset = launch_params.launch_offset;
+    uint32_t remaining = launch_count;
+    while (remaining > 0) {
+        const uint32_t batch = std::min(remaining, MAX_DEPTH);
+        h_params.launch_offset = offset;
+        h_params.launch_count  = batch;
+        uploadLaunchParams();
+        OPTIX_CHECK(optixLaunch(optix_pipeline, cuda_stream, d_params,
+                                sizeof(OptiX8LaunchParams), &direct_sbt,
+                                dim_x, dim_y, batch));
+        CUDA_CHECK(cudaStreamSynchronize(cuda_stream));
+        offset    += batch;
+        remaining -= batch;
+    }
 }
 
 void OptiX8Backend::launchDiffuseRays(const RayTracingLaunchParams &launch_params) {
@@ -775,26 +831,27 @@ void OptiX8Backend::launchDiffuseRays(const RayTracingLaunchParams &launch_param
     h_params.launch_dim_y = dim_y;
     h_params.prd_pool     = nullptr;
 
-    uploadLaunchParams();
-    CUDA_CHECK(cudaStreamSynchronize(cuda_stream));
-
     // Use diffuse raygen record (index 1 in the raygen records array)
     OptixShaderBindingTable diffuse_sbt = sbt;
     diffuse_sbt.raygenRecord = d_raygen_record_diffuse;
 
+    // OptiX depth dimension is limited to 65535; batch if needed
+    const uint32_t MAX_DEPTH    = 65535u;
     const uint32_t launch_count = launch_params.launch_count;
-    OPTIX_CHECK(optixLaunch(
-        optix_pipeline,
-        cuda_stream,
-        d_params,
-        sizeof(OptiX8LaunchParams),
-        &diffuse_sbt,
-        dim_x,         // width  = theta stratification
-        dim_y,         // height = phi stratification
-        launch_count   // depth  = primitive count
-    ));
-
-    CUDA_CHECK(cudaStreamSynchronize(cuda_stream));
+    uint32_t offset    = launch_params.launch_offset;
+    uint32_t remaining = launch_count;
+    while (remaining > 0) {
+        const uint32_t batch = std::min(remaining, MAX_DEPTH);
+        h_params.launch_offset = offset;
+        h_params.launch_count  = batch;
+        uploadLaunchParams();
+        OPTIX_CHECK(optixLaunch(optix_pipeline, cuda_stream, d_params,
+                                sizeof(OptiX8LaunchParams), &diffuse_sbt,
+                                dim_x, dim_y, batch));
+        CUDA_CHECK(cudaStreamSynchronize(cuda_stream));
+        offset    += batch;
+        remaining -= batch;
+    }
 }
 
 void OptiX8Backend::launchCameraRays(const RayTracingLaunchParams &params) {
@@ -966,6 +1023,12 @@ void OptiX8Backend::freeGeometryBuffers() {
     freeCUdeviceptr(d_voxel_UUIDs);
     freeCUdeviceptr(d_bbox_vertices);
     freeCUdeviceptr(d_bbox_UUIDs);
+    freeCUdeviceptr(d_mask_data);
+    freeCUdeviceptr(d_mask_offsets);
+    freeCUdeviceptr(d_mask_sizes);
+    freeCUdeviceptr(d_mask_IDs);
+    freeCUdeviceptr(d_uv_data);
+    freeCUdeviceptr(d_uv_IDs);
     freeCUdeviceptr(d_aabbs);
     freeCUdeviceptr(d_gas_output);
     gas_handle = 0;

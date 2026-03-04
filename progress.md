@@ -86,7 +86,7 @@
 - [x] Added `primitive_uuid[global_pos]` array to LaunchParams for correct UUID lookup (per-type UUID arrays use type-local indices, not global positions)
 - [x] Removed standalone `__intersection__triangle()` (merged into dispatch)
 - Tests passing: All previously passing tests ✓ + "RadiationModel 90 Degree Common-Edge Sub-Triangles" ✓
-- Committed as: (pending)
+- Committed as: 673dc8943
 - Key fix: per-type UUID arrays (patch_UUIDs, triangle_UUIDs) are indexed by type-local index;
   with a single flat AABB array, `optixGetPrimitiveIndex()` returns the GLOBAL position.
   Added `geometry.primitive_UUIDs` upload (global pos → UUID) to avoid out-of-bounds access.

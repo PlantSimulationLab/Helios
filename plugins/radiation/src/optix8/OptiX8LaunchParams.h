@@ -141,11 +141,12 @@ struct OptiX8LaunchParams {
     bool*     band_launch_flag;       //!< [Nbands_global]: which bands to process this launch
 
     // ---- Texture/mask buffers ----
-    bool*     mask_data;              //!< Flattened 3D mask: [mask_id][y][x]
-    int32_t*  mask_sizes;             //!< 2 ints per mask: [width, height]
-    int32_t*  mask_IDs;               //!< Per-primitive mask ID (-1 = no mask)
-    float2*   uv_data;                //!< UV coordinates per primitive vertex
-    int32_t*  uv_IDs;                 //!< Per-primitive UV start index (-1 = no UV)
+    uint8_t*  mask_data;              //!< Flat mask bytes: 1=opaque, 0=transparent; layout [mask0_pixels][mask1_pixels]...
+    uint32_t* mask_offsets;           //!< mask_offsets[k] = start byte index in mask_data for mask k
+    int32_t*  mask_sizes;             //!< 2 ints per mask: mask_sizes[k*2]=width, mask_sizes[k*2+1]=height
+    int32_t*  mask_IDs;               //!< Per-primitive mask ID (-1 = no mask), indexed by global pos
+    float2*   uv_data;                //!< UV coords: uv_data[pos*4 + vertex_idx] (4 vertices per primitive)
+    int32_t*  uv_IDs;                 //!< Per-primitive: -1 = use parametric UV, >=0 = has custom UV in uv_data
 
     // ---- Scalar parameters ----
     uint32_t  Nprimitives;
