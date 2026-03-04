@@ -67,7 +67,9 @@ RadiationModel::RadiationModel(helios::Context *context_a) {
     // Initialize backend abstraction layer
     // Auto-detect available backend
     std::string backend_type;
-#ifdef HELIOS_HAVE_OPTIX
+#ifdef HELIOS_HAVE_OPTIX8
+    backend_type = "optix8";
+#elif defined(HELIOS_HAVE_OPTIX)
     backend_type = "optix6";
 #elif defined(HELIOS_HAVE_VULKAN)
     backend_type = "vulkan_compute";
@@ -137,7 +139,9 @@ bool RadiationModel::isGPUBackendAvailable() {
 
     try {
         std::string backend_type;
-#ifdef HELIOS_HAVE_OPTIX
+#ifdef HELIOS_HAVE_OPTIX8
+        backend_type = "optix8";
+#elif defined(HELIOS_HAVE_OPTIX)
         backend_type = "optix6";
 #elif defined(HELIOS_HAVE_VULKAN)
         backend_type = "vulkan_compute";

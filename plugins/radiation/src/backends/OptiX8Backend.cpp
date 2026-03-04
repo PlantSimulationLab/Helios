@@ -20,6 +20,8 @@
 
 #include "Context.h"
 
+#include <algorithm>
+#include <cfloat>
 #include <fstream>
 
 namespace helios {
@@ -316,11 +318,116 @@ void OptiX8Backend::shutdown() {
 
 void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     validateGeometryBeforeUpload(geometry);
-    helios_runtime_error("ERROR (OptiX8Backend::updateGeometry): Not yet implemented.");
+
+    freeGeometryBuffers();
+
+    auto upload = [this](CUdeviceptr &d_ptr, const void *src, size_t bytes) {
+        if (bytes > 0 && src) {
+            CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_ptr), bytes));
+            CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_ptr), src, bytes, cudaMemcpyHostToDevice));
+        }
+    };
+
+    upload(d_transform_matrix,      geometry.transform_matrices.data(),  geometry.transform_matrices.size()  * sizeof(float));
+    upload(d_primitive_type,        geometry.primitive_types.data(),      geometry.primitive_types.size()      * sizeof(uint32_t));
+    upload(d_primitive_positions,   geometry.primitive_positions.data(),  geometry.primitive_positions.size()  * sizeof(uint32_t));
+    upload(d_primitiveID,           geometry.primitive_IDs.data(),        geometry.primitive_IDs.size()        * sizeof(uint32_t));
+    upload(d_objectID,              geometry.object_IDs.data(),           geometry.object_IDs.size()           * sizeof(uint32_t));
+    upload(d_twosided_flag,         geometry.twosided_flags.data(),       geometry.twosided_flags.size()       * sizeof(char));
+    upload(d_primitive_solid_fraction, geometry.solid_fractions.data(),   geometry.solid_fractions.size()      * sizeof(float));
+
+    // object_subdivisions: vector<helios::int2> → flat int32 array (2 ints per prim)
+    if (!geometry.object_subdivisions.empty()) {
+        const size_t bytes = geometry.object_subdivisions.size() * sizeof(helios::int2);
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_object_subdivisions), bytes));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_object_subdivisions),
+                              geometry.object_subdivisions.data(), bytes, cudaMemcpyHostToDevice));
+    }
+
+    // Per-type geometry
+    if (geometry.patch_count > 0) {
+        upload(d_patch_vertices, geometry.patches.vertices.data(),
+               geometry.patches.vertices.size() * sizeof(helios::vec3));
+        upload(d_patch_UUIDs, geometry.patches.UUIDs.data(),
+               geometry.patches.UUIDs.size() * sizeof(uint32_t));
+    }
+    if (geometry.triangles.count > 0) {
+        upload(d_triangle_vertices, geometry.triangles.vertices.data(),
+               geometry.triangles.vertices.size() * sizeof(helios::vec3));
+        upload(d_triangle_UUIDs, geometry.triangles.UUIDs.data(),
+               geometry.triangles.UUIDs.size() * sizeof(uint32_t));
+    }
+    if (geometry.disk_count > 0) {
+        upload(d_disk_centers, geometry.disk_centers.data(), geometry.disk_centers.size() * sizeof(helios::vec3));
+        upload(d_disk_radii,   geometry.disk_radii.data(),   geometry.disk_radii.size()   * sizeof(float));
+        upload(d_disk_normals, geometry.disk_normals.data(), geometry.disk_normals.size() * sizeof(helios::vec3));
+        upload(d_disk_UUIDs,   geometry.disk_UUIDs.data(),   geometry.disk_UUIDs.size()   * sizeof(uint32_t));
+    }
+    if (geometry.tiles.count > 0) {
+        upload(d_tile_vertices, geometry.tiles.vertices.data(),
+               geometry.tiles.vertices.size() * sizeof(helios::vec3));
+        upload(d_tile_UUIDs, geometry.tiles.UUIDs.data(),
+               geometry.tiles.UUIDs.size() * sizeof(uint32_t));
+    }
+    if (geometry.voxels.count > 0) {
+        upload(d_voxel_vertices, geometry.voxels.vertices.data(),
+               geometry.voxels.vertices.size() * sizeof(helios::vec3));
+        upload(d_voxel_UUIDs, geometry.voxels.UUIDs.data(),
+               geometry.voxels.UUIDs.size() * sizeof(uint32_t));
+    }
+    if (geometry.bboxes.count > 0) {
+        upload(d_bbox_vertices, geometry.bboxes.vertices.data(),
+               geometry.bboxes.vertices.size() * sizeof(helios::vec3));
+        upload(d_bbox_UUIDs, geometry.bboxes.UUIDs.data(),
+               geometry.bboxes.UUIDs.size() * sizeof(uint32_t));
+    }
+
+    // Update h_params device pointers
+    const uint32_t Nprims = static_cast<uint32_t>(geometry.primitive_count);
+    h_params.transform_matrix         = reinterpret_cast<float *>(d_transform_matrix);
+    h_params.primitive_type           = reinterpret_cast<uint32_t *>(d_primitive_type);
+    h_params.primitive_positions      = reinterpret_cast<uint32_t *>(d_primitive_positions);
+    h_params.primitiveID              = reinterpret_cast<uint32_t *>(d_primitiveID);
+    h_params.objectID                 = reinterpret_cast<uint32_t *>(d_objectID);
+    h_params.object_subdivisions      = reinterpret_cast<int32_t *>(d_object_subdivisions);
+    h_params.twosided_flag            = reinterpret_cast<int8_t *>(d_twosided_flag);
+    h_params.primitive_solid_fraction = reinterpret_cast<float *>(d_primitive_solid_fraction);
+    h_params.patch_vertices           = reinterpret_cast<float3 *>(d_patch_vertices);
+    h_params.patch_UUIDs              = reinterpret_cast<uint32_t *>(d_patch_UUIDs);
+    h_params.triangle_vertices        = reinterpret_cast<float3 *>(d_triangle_vertices);
+    h_params.triangle_UUIDs           = reinterpret_cast<uint32_t *>(d_triangle_UUIDs);
+    h_params.disk_centers             = reinterpret_cast<float3 *>(d_disk_centers);
+    h_params.disk_radii               = reinterpret_cast<float *>(d_disk_radii);
+    h_params.disk_normals             = reinterpret_cast<float3 *>(d_disk_normals);
+    h_params.disk_UUIDs               = reinterpret_cast<uint32_t *>(d_disk_UUIDs);
+    h_params.tile_vertices            = reinterpret_cast<float3 *>(d_tile_vertices);
+    h_params.tile_UUIDs               = reinterpret_cast<uint32_t *>(d_tile_UUIDs);
+    h_params.voxel_vertices           = reinterpret_cast<float3 *>(d_voxel_vertices);
+    h_params.voxel_UUIDs              = reinterpret_cast<uint32_t *>(d_voxel_UUIDs);
+    h_params.bbox_vertices            = reinterpret_cast<float3 *>(d_bbox_vertices);
+    h_params.bbox_UUIDs               = reinterpret_cast<uint32_t *>(d_bbox_UUIDs);
+    h_params.Nprimitives              = Nprims;
+    h_params.bbox_UUID_base           = geometry.bbox_UUID_base;
+    h_params.periodic_flag            = make_float2(geometry.periodic_flag.x, geometry.periodic_flag.y);
+
+    // Store counts
+    current_primitive_count = geometry.primitive_count;
+    current_patch_count     = geometry.patch_count;
+    current_triangle_count  = geometry.triangle_count;
+    current_disk_count      = geometry.disk_count;
+    current_tile_count      = geometry.tile_count;
+    current_voxel_count     = geometry.voxel_count;
+    current_bbox_count      = geometry.bbox_count;
+
+    buildAABBs(geometry);
 }
 
 void OptiX8Backend::buildAccelerationStructure() {
-    helios_runtime_error("ERROR (OptiX8Backend::buildAccelerationStructure): Not yet implemented.");
+    if (current_primitive_count == 0) {
+        helios_runtime_error("ERROR (OptiX8Backend::buildAccelerationStructure): No geometry uploaded. Call updateGeometry() first.");
+    }
+    buildGAS(static_cast<uint32_t>(current_primitive_count));
+    buildSBT();
 }
 
 // ---------------------------------------------------------------------------
@@ -328,7 +435,56 @@ void OptiX8Backend::buildAccelerationStructure() {
 // ---------------------------------------------------------------------------
 
 void OptiX8Backend::updateMaterials(const RayTracingMaterial &materials) {
-    helios_runtime_error("ERROR (OptiX8Backend::updateMaterials): Not yet implemented.");
+    freeMaterialBuffers();
+
+    auto upload = [this](CUdeviceptr &d_ptr, const void *src, size_t bytes) {
+        if (bytes > 0 && src) {
+            CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_ptr), bytes));
+            CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_ptr), src, bytes, cudaMemcpyHostToDevice));
+        }
+    };
+
+    upload(d_rho, materials.reflectivity.data(),   materials.reflectivity.size()   * sizeof(float));
+    upload(d_tau, materials.transmissivity.data(),  materials.transmissivity.size() * sizeof(float));
+    if (!materials.reflectivity_cam.empty())
+        upload(d_rho_cam, materials.reflectivity_cam.data(),  materials.reflectivity_cam.size()  * sizeof(float));
+    if (!materials.transmissivity_cam.empty())
+        upload(d_tau_cam, materials.transmissivity_cam.data(), materials.transmissivity_cam.size() * sizeof(float));
+    if (!materials.specular_exponent.empty())
+        upload(d_specular_exponent, materials.specular_exponent.data(), materials.specular_exponent.size() * sizeof(float));
+    if (!materials.specular_scale.empty())
+        upload(d_specular_scale, materials.specular_scale.data(), materials.specular_scale.size() * sizeof(float));
+
+    // Allocate radiation energy buffers (Nprims × Nbands_global)
+    const size_t Nprims = current_primitive_count;
+    const size_t Nbands = materials.num_bands;
+    const size_t rad_bytes = Nprims * Nbands * sizeof(float);
+
+    reallocDevice(d_radiation_in,         rad_bytes);
+    reallocDevice(d_radiation_out_top,    rad_bytes);
+    reallocDevice(d_radiation_out_bottom, rad_bytes);
+    reallocDevice(d_scatter_buff_top,     rad_bytes);
+    reallocDevice(d_scatter_buff_bottom,  rad_bytes);
+
+    current_band_count   = Nbands;
+    current_source_count = materials.num_sources;
+    current_camera_count = materials.num_cameras;
+
+    // Update h_params
+    h_params.rho                  = reinterpret_cast<float *>(d_rho);
+    h_params.tau                  = reinterpret_cast<float *>(d_tau);
+    h_params.rho_cam              = reinterpret_cast<float *>(d_rho_cam);
+    h_params.tau_cam              = reinterpret_cast<float *>(d_tau_cam);
+    h_params.specular_exponent    = reinterpret_cast<float *>(d_specular_exponent);
+    h_params.specular_scale       = reinterpret_cast<float *>(d_specular_scale);
+    h_params.radiation_in         = reinterpret_cast<float *>(d_radiation_in);
+    h_params.radiation_out_top    = reinterpret_cast<float *>(d_radiation_out_top);
+    h_params.radiation_out_bottom = reinterpret_cast<float *>(d_radiation_out_bottom);
+    h_params.scatter_buff_top     = reinterpret_cast<float *>(d_scatter_buff_top);
+    h_params.scatter_buff_bottom  = reinterpret_cast<float *>(d_scatter_buff_bottom);
+    h_params.Nsources             = static_cast<uint32_t>(materials.num_sources);
+    h_params.Ncameras             = static_cast<uint32_t>(materials.num_cameras);
+    h_params.Nbands_global        = static_cast<uint32_t>(Nbands);
 }
 
 // ---------------------------------------------------------------------------
@@ -336,7 +492,49 @@ void OptiX8Backend::updateMaterials(const RayTracingMaterial &materials) {
 // ---------------------------------------------------------------------------
 
 void OptiX8Backend::updateSources(const std::vector<RayTracingSource> &sources) {
-    helios_runtime_error("ERROR (OptiX8Backend::updateSources): Not yet implemented.");
+    auto freePtr = [this](CUdeviceptr &ptr) { freeCUdeviceptr(ptr); };
+    freePtr(d_source_positions);
+    freePtr(d_source_rotations);
+    freePtr(d_source_widths);
+    freePtr(d_source_types);
+    // d_source_fluxes is managed by uploadSourceFluxes()
+
+    const size_t Nsources = sources.size();
+    if (Nsources == 0) {
+        current_source_count = 0;
+        h_params.Nsources = 0;
+        return;
+    }
+
+    std::vector<float3>   positions(Nsources);
+    std::vector<float3>   rotations(Nsources);
+    std::vector<float2>   widths(Nsources);
+    std::vector<uint32_t> types(Nsources);
+
+    for (size_t i = 0; i < Nsources; i++) {
+        positions[i] = make_float3(sources[i].position.x, sources[i].position.y, sources[i].position.z);
+        rotations[i] = make_float3(sources[i].rotation.x, sources[i].rotation.y, sources[i].rotation.z);
+        widths[i]    = make_float2(sources[i].width.x,    sources[i].width.y);
+        types[i]     = sources[i].type;
+    }
+
+    auto upload = [this](CUdeviceptr &d_ptr, const void *src, size_t bytes) {
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_ptr), bytes));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_ptr), src, bytes, cudaMemcpyHostToDevice));
+    };
+
+    upload(d_source_positions, positions.data(), Nsources * sizeof(float3));
+    upload(d_source_rotations, rotations.data(), Nsources * sizeof(float3));
+    upload(d_source_widths,    widths.data(),    Nsources * sizeof(float2));
+    upload(d_source_types,     types.data(),     Nsources * sizeof(uint32_t));
+
+    current_source_count = Nsources;
+
+    h_params.Nsources         = static_cast<uint32_t>(Nsources);
+    h_params.source_positions = reinterpret_cast<float3 *>(d_source_positions);
+    h_params.source_rotations = reinterpret_cast<float3 *>(d_source_rotations);
+    h_params.source_widths    = reinterpret_cast<float2 *>(d_source_widths);
+    h_params.source_types     = reinterpret_cast<uint32_t *>(d_source_types);
 }
 
 // ---------------------------------------------------------------------------
@@ -362,8 +560,58 @@ void OptiX8Backend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance
 // Ray launching
 // ---------------------------------------------------------------------------
 
-void OptiX8Backend::launchDirectRays(const RayTracingLaunchParams &params) {
-    helios_runtime_error("ERROR (OptiX8Backend::launchDirectRays): Not yet implemented.");
+void OptiX8Backend::launchDirectRays(const RayTracingLaunchParams &launch_params) {
+    if (!is_initialized) {
+        helios_runtime_error("ERROR (OptiX8Backend::launchDirectRays): Backend not initialized.");
+    }
+    if (gas_handle == 0) {
+        helios_runtime_error("ERROR (OptiX8Backend::launchDirectRays): No acceleration structure. Call buildAccelerationStructure() first.");
+    }
+
+    applyLaunchParams(launch_params);
+
+    // Upload band_launch_flag (vector<bool> → device bool array)
+    if (d_band_launch_flag) { freeCUdeviceptr(d_band_launch_flag); }
+    const size_t Nbands_g = launch_params.band_launch_flag.size();
+    if (Nbands_g > 0) {
+        std::vector<uint8_t> flags_u8(Nbands_g);
+        for (size_t i = 0; i < Nbands_g; i++) {
+            flags_u8[i] = launch_params.band_launch_flag[i] ? 1u : 0u;
+        }
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_band_launch_flag), Nbands_g * sizeof(uint8_t)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_band_launch_flag), flags_u8.data(),
+                              Nbands_g * sizeof(uint8_t), cudaMemcpyHostToDevice));
+    }
+    h_params.band_launch_flag = reinterpret_cast<bool *>(d_band_launch_flag);
+    h_params.traversable      = gas_handle;
+
+    const uint32_t Nrays         = launch_params.rays_per_primitive;
+    const uint32_t launch_count  = launch_params.launch_count;
+    h_params.launch_dim_x        = Nrays;
+    h_params.launch_dim_y        = 1;
+
+    // prd_pool is unused (PRD allocated on thread stack in raygen)
+    h_params.prd_pool = nullptr;
+
+    uploadLaunchParams();
+    CUDA_CHECK(cudaStreamSynchronize(cuda_stream));
+
+    // Direct launch uses raygen record 0 (d_raygen_records + 0)
+    OptixShaderBindingTable direct_sbt = sbt;
+    direct_sbt.raygenRecord = d_raygen_records;
+
+    OPTIX_CHECK(optixLaunch(
+        optix_pipeline,
+        cuda_stream,
+        d_params,
+        sizeof(OptiX8LaunchParams),
+        &direct_sbt,
+        Nrays,         // width
+        1,             // height
+        launch_count   // depth
+    ));
+
+    CUDA_CHECK(cudaStreamSynchronize(cuda_stream));
 }
 
 void OptiX8Backend::launchDiffuseRays(const RayTracingLaunchParams &params) {
@@ -383,7 +631,22 @@ void OptiX8Backend::launchPixelLabelRays(const RayTracingLaunchParams &params) {
 // ---------------------------------------------------------------------------
 
 void OptiX8Backend::getRadiationResults(RayTracingResults &results) {
-    helios_runtime_error("ERROR (OptiX8Backend::getRadiationResults): Not yet implemented.");
+    const size_t Nprims = current_primitive_count;
+    const size_t Nbands = current_band_count;
+    const size_t total  = Nprims * Nbands;
+
+    results.num_primitives = Nprims;
+    results.num_bands      = Nbands;
+    results.num_sources    = current_source_count;
+    results.num_cameras    = current_camera_count;
+
+    if (total > 0) {
+        if (d_radiation_in)         results.radiation_in         = downloadFloat(d_radiation_in,         total);
+        if (d_radiation_out_top)    results.radiation_out_top    = downloadFloat(d_radiation_out_top,    total);
+        if (d_radiation_out_bottom) results.radiation_out_bottom = downloadFloat(d_radiation_out_bottom, total);
+        if (d_scatter_buff_top)     results.scatter_buff_top     = downloadFloat(d_scatter_buff_top,     total);
+        if (d_scatter_buff_bottom)  results.scatter_buff_bottom  = downloadFloat(d_scatter_buff_bottom,  total);
+    }
 }
 
 void OptiX8Backend::getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels,
@@ -397,11 +660,25 @@ void OptiX8Backend::getCameraResults(std::vector<float> &pixel_data, std::vector
 // ---------------------------------------------------------------------------
 
 void OptiX8Backend::zeroRadiationBuffers(size_t launch_band_count) {
-    helios_runtime_error("ERROR (OptiX8Backend::zeroRadiationBuffers): Not yet implemented.");
+    const size_t Nprims = current_primitive_count;
+    if (Nprims == 0 || launch_band_count == 0) return;
+
+    const size_t bands = std::min(launch_band_count, current_band_count);
+    const size_t bytes = Nprims * bands * sizeof(float);
+
+    if (d_radiation_in)         CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_in),         0, bytes));
+    if (d_radiation_out_top)    CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_out_top),    0, bytes));
+    if (d_radiation_out_bottom) CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_out_bottom), 0, bytes));
+    if (d_scatter_buff_top)     CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_top),     0, bytes));
+    if (d_scatter_buff_bottom)  CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_bottom),  0, bytes));
 }
 
 void OptiX8Backend::zeroScatterBuffers() {
-    helios_runtime_error("ERROR (OptiX8Backend::zeroScatterBuffers): Not yet implemented.");
+    const size_t total_bytes = current_primitive_count * current_band_count * sizeof(float);
+    if (total_bytes == 0) return;
+
+    if (d_scatter_buff_top)    CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_top),    0, total_bytes));
+    if (d_scatter_buff_bottom) CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_bottom), 0, total_bytes));
 }
 
 void OptiX8Backend::zeroCameraPixelBuffers(const helios::int2 &resolution) {
@@ -427,7 +704,13 @@ void OptiX8Backend::zeroCameraScatterBuffers(size_t launch_band_count) {
 }
 
 void OptiX8Backend::uploadSourceFluxes(const std::vector<float> &fluxes) {
-    helios_runtime_error("ERROR (OptiX8Backend::uploadSourceFluxes): Not yet implemented.");
+    freeCUdeviceptr(d_source_fluxes);
+    if (fluxes.empty()) return;
+
+    const size_t bytes = fluxes.size() * sizeof(float);
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_source_fluxes), bytes));
+    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_source_fluxes), fluxes.data(), bytes, cudaMemcpyHostToDevice));
+    h_params.source_fluxes = reinterpret_cast<float *>(d_source_fluxes);
 }
 
 void OptiX8Backend::uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) {
@@ -517,15 +800,174 @@ std::vector<uint32_t> OptiX8Backend::downloadUInt32(CUdeviceptr ptr, size_t coun
 }
 
 void OptiX8Backend::buildAABBs(const RayTracingGeometry &geometry) {
-    helios_runtime_error("ERROR (OptiX8Backend::buildAABBs): Not yet implemented.");
+    const uint32_t Nprims = static_cast<uint32_t>(geometry.primitive_count);
+    if (Nprims == 0) return;
+
+    std::vector<OptixAabb> aabbs(Nprims);
+
+    for (uint32_t pos = 0; pos < Nprims; pos++) {
+        const float *T    = &geometry.transform_matrices[pos * 16];
+        const uint32_t pt = geometry.primitive_types[pos];
+
+        float mn_x = FLT_MAX, mn_y = FLT_MAX, mn_z = FLT_MAX;
+        float mx_x = -FLT_MAX, mx_y = -FLT_MAX, mx_z = -FLT_MAX;
+
+        auto expand = [&](float x, float y, float z) {
+            const float wx = T[0]*x + T[1]*y + T[2]*z + T[3];
+            const float wy = T[4]*x + T[5]*y + T[6]*z + T[7];
+            const float wz = T[8]*x + T[9]*y + T[10]*z + T[11];
+            if (wx < mn_x) mn_x = wx; if (wx > mx_x) mx_x = wx;
+            if (wy < mn_y) mn_y = wy; if (wy > mx_y) mx_y = wy;
+            if (wz < mn_z) mn_z = wz; if (wz > mx_z) mx_z = wz;
+        };
+
+        if (pt == 0 || pt == 3) { // Patch or Tile: canonical space [-0.5, 0.5]^2
+            expand(-0.5f, -0.5f, 0.f); expand( 0.5f, -0.5f, 0.f);
+            expand(-0.5f,  0.5f, 0.f); expand( 0.5f,  0.5f, 0.f);
+        } else if (pt == 1) { // Triangle: (0,0,0)-(0,1,0)-(1,1,0)
+            expand(0.f, 0.f, 0.f); expand(0.f, 1.f, 0.f); expand(1.f, 1.f, 0.f);
+        } else if (pt == 2) { // Disk: bounding box of unit circle
+            expand(-0.5f, -0.5f, 0.f); expand( 0.5f, -0.5f, 0.f);
+            expand(-0.5f,  0.5f, 0.f); expand( 0.5f,  0.5f, 0.f);
+        } else if (pt == 4) { // Voxel: unit cube [0,1]^3
+            for (float fx : {0.f, 1.f})
+                for (float fy : {0.f, 1.f})
+                    for (float fz : {0.f, 1.f})
+                        expand(fx, fy, fz);
+        } else { // Tile (pt==3 above), Bbox, or unknown: unit box
+            expand(-0.5f, -0.5f, -0.5f); expand( 0.5f,  0.5f,  0.5f);
+        }
+
+        // Pad thin AABBs so OptiX doesn't reject them
+        const float eps = 1e-5f;
+        if (mx_x - mn_x < eps) { mn_x -= eps; mx_x += eps; }
+        if (mx_y - mn_y < eps) { mn_y -= eps; mx_y += eps; }
+        if (mx_z - mn_z < eps) { mn_z -= eps; mx_z += eps; }
+
+        aabbs[pos] = {mn_x, mn_y, mn_z, mx_x, mx_y, mx_z};
+    }
+
+    const size_t aabb_bytes = Nprims * sizeof(OptixAabb);
+    reallocDevice(d_aabbs, aabb_bytes);
+    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_aabbs), aabbs.data(), aabb_bytes, cudaMemcpyHostToDevice));
 }
 
 void OptiX8Backend::buildGAS(uint32_t Nprimitives) {
-    helios_runtime_error("ERROR (OptiX8Backend::buildGAS): Not yet implemented.");
+    if (d_gas_output) { cudaFree(reinterpret_cast<void *>(d_gas_output)); d_gas_output = 0; }
+    gas_handle = 0;
+
+    if (Nprimitives == 0 || !d_aabbs) return;
+
+    const unsigned int build_flags[]       = {OPTIX_GEOMETRY_FLAG_NONE};
+    OptixBuildInputCustomPrimitiveArray ca = {};
+    ca.aabbBuffers    = &d_aabbs;
+    ca.numPrimitives  = Nprimitives;
+    ca.strideInBytes  = sizeof(OptixAabb);
+    ca.flags          = build_flags;
+    ca.numSbtRecords  = 1;
+
+    OptixBuildInput bi = {};
+    bi.type                    = OPTIX_BUILD_INPUT_TYPE_CUSTOM_PRIMITIVES;
+    bi.customPrimitiveArray    = ca;
+
+    OptixAccelBuildOptions opts = {};
+    opts.buildFlags = OPTIX_BUILD_FLAG_ALLOW_COMPACTION | OPTIX_BUILD_FLAG_PREFER_FAST_TRACE;
+    opts.operation  = OPTIX_BUILD_OPERATION_BUILD;
+
+    OptixAccelBufferSizes sizes = {};
+    OPTIX_CHECK(optixAccelComputeMemoryUsage(optix_context, &opts, &bi, 1, &sizes));
+
+    CUdeviceptr d_temp = 0, d_pre_compact = 0, d_compact_size = 0;
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_temp),         sizes.tempSizeInBytes));
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_pre_compact),  sizes.outputSizeInBytes));
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_compact_size), sizeof(uint64_t)));
+
+    OptixAccelEmitDesc emit = {};
+    emit.type   = OPTIX_PROPERTY_TYPE_COMPACTED_SIZE;
+    emit.result = d_compact_size;
+
+    OPTIX_CHECK(optixAccelBuild(optix_context, cuda_stream, &opts, &bi, 1,
+                                d_temp, sizes.tempSizeInBytes,
+                                d_pre_compact, sizes.outputSizeInBytes,
+                                &gas_handle, &emit, 1));
+    CUDA_CHECK(cudaStreamSynchronize(cuda_stream));
+
+    uint64_t compact_size = 0;
+    CUDA_CHECK(cudaMemcpy(&compact_size, reinterpret_cast<const void *>(d_compact_size),
+                          sizeof(uint64_t), cudaMemcpyDeviceToHost));
+
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_gas_output), compact_size));
+    OPTIX_CHECK(optixAccelCompact(optix_context, cuda_stream, gas_handle, d_gas_output, compact_size, &gas_handle));
+    CUDA_CHECK(cudaStreamSynchronize(cuda_stream));
+
+    cudaFree(reinterpret_cast<void *>(d_temp));
+    cudaFree(reinterpret_cast<void *>(d_pre_compact));
+    cudaFree(reinterpret_cast<void *>(d_compact_size));
+
+    h_params.traversable = gas_handle;
 }
 
 void OptiX8Backend::buildSBT() {
-    helios_runtime_error("ERROR (OptiX8Backend::buildSBT): Not yet implemented.");
+    if (d_raygen_records)   { cudaFree(reinterpret_cast<void *>(d_raygen_records));   d_raygen_records   = 0; }
+    if (d_miss_records)     { cudaFree(reinterpret_cast<void *>(d_miss_records));     d_miss_records     = 0; }
+    if (d_hitgroup_records) { cudaFree(reinterpret_cast<void *>(d_hitgroup_records)); d_hitgroup_records = 0; }
+
+    // Raygen records: header only (no data), 4 records (direct, diffuse, camera, pixel_label)
+    struct alignas(OPTIX_SBT_RECORD_ALIGNMENT) RaygenRecord {
+        char header[OPTIX_SBT_RECORD_HEADER_SIZE];
+    };
+    constexpr int N_rg = 4;
+    std::vector<RaygenRecord> rg_recs(N_rg);
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_raygen_direct,      &rg_recs[0]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_raygen_diffuse,     &rg_recs[1]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_raygen_camera,      &rg_recs[2]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_raygen_pixel_label, &rg_recs[3]));
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_raygen_records), N_rg * sizeof(RaygenRecord)));
+    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_raygen_records), rg_recs.data(),
+                          N_rg * sizeof(RaygenRecord), cudaMemcpyHostToDevice));
+
+    // Miss records: header only, 4 records
+    struct alignas(OPTIX_SBT_RECORD_ALIGNMENT) MissRecord {
+        char header[OPTIX_SBT_RECORD_HEADER_SIZE];
+    };
+    constexpr int N_ms = 4;
+    std::vector<MissRecord> ms_recs(N_ms);
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_miss_direct,      &ms_recs[0]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_miss_diffuse,     &ms_recs[1]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_miss_camera,      &ms_recs[2]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_miss_pixel_label, &ms_recs[3]));
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_miss_records), N_ms * sizeof(MissRecord)));
+    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_miss_records), ms_recs.data(),
+                          N_ms * sizeof(MissRecord), cudaMemcpyHostToDevice));
+
+    // Hit group records: header + HitGroupData, 4 records (one per ray type)
+    struct alignas(OPTIX_SBT_RECORD_ALIGNMENT) HitRecord {
+        char header[OPTIX_SBT_RECORD_HEADER_SIZE];
+        HitGroupData data;
+    };
+    constexpr int N_hg = 4;
+    std::vector<HitRecord> hg_recs(N_hg);
+    for (auto &r : hg_recs) {
+        r.data.vertices  = reinterpret_cast<float3 *>(d_patch_vertices);
+        r.data.UUIDs     = reinterpret_cast<uint32_t *>(d_patch_UUIDs);
+        r.data.prim_type = 0; // patch
+    }
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_hit_direct,      &hg_recs[0]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_hit_diffuse,     &hg_recs[1]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_hit_camera,      &hg_recs[2]));
+    OPTIX_CHECK(optixSbtRecordPackHeader(pg_hit_pixel_label, &hg_recs[3]));
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_hitgroup_records), N_hg * sizeof(HitRecord)));
+    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_hitgroup_records), hg_recs.data(),
+                          N_hg * sizeof(HitRecord), cudaMemcpyHostToDevice));
+
+    sbt = {};
+    sbt.raygenRecord                = d_raygen_records; // updated per-launch type
+    sbt.missRecordBase              = d_miss_records;
+    sbt.missRecordStrideInBytes     = static_cast<uint32_t>(sizeof(MissRecord));
+    sbt.missRecordCount             = N_ms;
+    sbt.hitgroupRecordBase          = d_hitgroup_records;
+    sbt.hitgroupRecordStrideInBytes = static_cast<uint32_t>(sizeof(HitRecord));
+    sbt.hitgroupRecordCount         = N_hg;
 }
 
 void OptiX8Backend::uploadLaunchParams() {
@@ -562,15 +1004,15 @@ void OptiX8Backend::applyLaunchParams(const RayTracingLaunchParams &params) {
 
 std::string OptiX8Backend::findDeviceCodeFile() const {
     // OptiX 8 uses either PTX or OptixIR (.optixir)
-    // Look for file in the same directory as the radiation plugin's PTX files
-    const std::vector<std::string> candidates = {
-        helios::resolvePluginAsset("radiation", "OptiX8DeviceCode.optixir").string(),
-        helios::resolvePluginAsset("radiation", "OptiX8DeviceCode.ptx").string(),
+    // Use the non-throwing resolver so we can probe each candidate in order
+    const std::vector<std::string> candidate_names = {
+        "OptiX8DeviceCode.optixir",
+        "OptiX8DeviceCode.ptx",
     };
-    for (const auto &path : candidates) {
-        std::ifstream f(path);
-        if (f.good()) {
-            return path;
+    for (const auto &name : candidate_names) {
+        auto path = helios::tryResolveFilePath("plugins/radiation/" + name);
+        if (!path.empty()) {
+            return path.string();
         }
     }
     helios_runtime_error(
