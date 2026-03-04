@@ -93,7 +93,7 @@ struct OptiX8LaunchParams {
     uint32_t* tile_UUIDs;
     float3*   voxel_vertices;        //!< [voxel_idx * 8 + corner_idx]
     uint32_t* voxel_UUIDs;
-    float3*   bbox_vertices;         //!< [bbox_idx * 8 + corner_idx]
+    float3*   bbox_vertices;         //!< [bbox_idx * 4 + corner_idx] (4 vertices per planar face)
     uint32_t* bbox_UUIDs;
 
     // ---- Material buffers ----

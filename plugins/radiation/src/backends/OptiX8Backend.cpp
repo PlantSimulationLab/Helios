@@ -376,11 +376,32 @@ void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
         upload(d_voxel_UUIDs, geometry.voxels.UUIDs.data(),
                geometry.voxels.UUIDs.size() * sizeof(uint32_t));
     }
-    if (geometry.bboxes.count > 0) {
+    if (geometry.bbox_count > 0) {
         upload(d_bbox_vertices, geometry.bboxes.vertices.data(),
                geometry.bboxes.vertices.size() * sizeof(helios::vec3));
         upload(d_bbox_UUIDs, geometry.bboxes.UUIDs.data(),
                geometry.bboxes.UUIDs.size() * sizeof(uint32_t));
+    }
+
+    // Extend primitive_type and primitive_uuid arrays to include bbox entries (type=5).
+    // OptiX AABB indices are global: indices [0, Nprims) are real primitives,
+    // indices [Nprims, Nprims+Nbboxes) are bbox faces.  The intersection dispatch
+    // program reads params.primitive_type[optixGetPrimitiveIndex()] and needs
+    // type-5 entries at those positions.
+    if (geometry.bbox_count > 0) {
+        const size_t Nprims  = geometry.primitive_count;
+        const size_t Nbboxes = geometry.bbox_count;
+
+        freeCUdeviceptr(d_primitive_type);
+        std::vector<uint32_t> ext_types(geometry.primitive_types);
+        ext_types.resize(Nprims + Nbboxes, 5u);
+        upload(d_primitive_type, ext_types.data(), ext_types.size() * sizeof(uint32_t));
+
+        freeCUdeviceptr(d_primitive_uuid_arr);
+        std::vector<uint32_t> ext_uuids(geometry.primitive_UUIDs);
+        ext_uuids.insert(ext_uuids.end(),
+                         geometry.bboxes.UUIDs.begin(), geometry.bboxes.UUIDs.end());
+        upload(d_primitive_uuid_arr, ext_uuids.data(), ext_uuids.size() * sizeof(uint32_t));
     }
 
     // ---- Texture mask and UV data ----
@@ -479,7 +500,7 @@ void OptiX8Backend::buildAccelerationStructure() {
     if (current_primitive_count == 0) {
         helios_runtime_error("ERROR (OptiX8Backend::buildAccelerationStructure): No geometry uploaded. Call updateGeometry() first.");
     }
-    buildGAS(static_cast<uint32_t>(current_primitive_count));
+    buildGAS(static_cast<uint32_t>(current_primitive_count + current_bbox_count));
     buildSBT();
 }
 
@@ -1065,11 +1086,23 @@ std::vector<uint32_t> OptiX8Backend::downloadUInt32(CUdeviceptr ptr, size_t coun
 }
 
 void OptiX8Backend::buildAABBs(const RayTracingGeometry &geometry) {
-    const uint32_t Nprims = static_cast<uint32_t>(geometry.primitive_count);
-    if (Nprims == 0) return;
+    const uint32_t Nprims  = static_cast<uint32_t>(geometry.primitive_count);
+    const uint32_t Nbboxes = static_cast<uint32_t>(geometry.bboxes.UUIDs.size());
+    const uint32_t Ntotal  = Nprims + Nbboxes;
+    if (Ntotal == 0) return;
 
-    std::vector<OptixAabb> aabbs(Nprims);
+    std::vector<OptixAabb> aabbs(Ntotal);
+    const float eps = 1e-5f;
 
+    auto store_aabb = [&](uint32_t pos, float mn_x, float mn_y, float mn_z,
+                                        float mx_x, float mx_y, float mx_z) {
+        if (mx_x - mn_x < eps) { mn_x -= eps; mx_x += eps; }
+        if (mx_y - mn_y < eps) { mn_y -= eps; mx_y += eps; }
+        if (mx_z - mn_z < eps) { mn_z -= eps; mx_z += eps; }
+        aabbs[pos] = {mn_x, mn_y, mn_z, mx_x, mx_y, mx_z};
+    };
+
+    // Real primitives — AABB computed via canonical-space vertices + transform matrix
     for (uint32_t pos = 0; pos < Nprims; pos++) {
         const float *T    = &geometry.transform_matrices[pos * 16];
         const uint32_t pt = geometry.primitive_types[pos];
@@ -1099,20 +1132,27 @@ void OptiX8Backend::buildAABBs(const RayTracingGeometry &geometry) {
                 for (float fy : {0.f, 1.f})
                     for (float fz : {0.f, 1.f})
                         expand(fx, fy, fz);
-        } else { // Tile (pt==3 above), Bbox, or unknown: unit box
+        } else { // Unknown type: unit box fallback
             expand(-0.5f, -0.5f, -0.5f); expand( 0.5f,  0.5f,  0.5f);
         }
 
-        // Pad thin AABBs so OptiX doesn't reject them
-        const float eps = 1e-5f;
-        if (mx_x - mn_x < eps) { mn_x -= eps; mx_x += eps; }
-        if (mx_y - mn_y < eps) { mn_y -= eps; mx_y += eps; }
-        if (mx_z - mn_z < eps) { mn_z -= eps; mx_z += eps; }
-
-        aabbs[pos] = {mn_x, mn_y, mn_z, mx_x, mx_y, mx_z};
+        store_aabb(pos, mn_x, mn_y, mn_z, mx_x, mx_y, mx_z);
     }
 
-    const size_t aabb_bytes = Nprims * sizeof(OptixAabb);
+    // Bbox faces: AABB from actual world-space vertices (4 vertices per face)
+    for (uint32_t b = 0; b < Nbboxes; b++) {
+        float mn_x = FLT_MAX, mn_y = FLT_MAX, mn_z = FLT_MAX;
+        float mx_x = -FLT_MAX, mx_y = -FLT_MAX, mx_z = -FLT_MAX;
+        for (int v = 0; v < 4; v++) {
+            const helios::vec3 &vtx = geometry.bboxes.vertices[b * 4 + v];
+            mn_x = std::min(mn_x, vtx.x); mx_x = std::max(mx_x, vtx.x);
+            mn_y = std::min(mn_y, vtx.y); mx_y = std::max(mx_y, vtx.y);
+            mn_z = std::min(mn_z, vtx.z); mx_z = std::max(mx_z, vtx.z);
+        }
+        store_aabb(Nprims + b, mn_x, mn_y, mn_z, mx_x, mx_y, mx_z);
+    }
+
+    const size_t aabb_bytes = Ntotal * sizeof(OptixAabb);
     reallocDevice(d_aabbs, aabb_bytes);
     CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_aabbs), aabbs.data(), aabb_bytes, cudaMemcpyHostToDevice));
 }

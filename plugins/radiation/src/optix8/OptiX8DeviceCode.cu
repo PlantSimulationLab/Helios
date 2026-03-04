@@ -183,8 +183,6 @@ extern "C" __global__ void __intersection__patch() {
     const uint32_t pos      = prim_idx; // global AABB index == global primitive position
     const uint32_t ptype    = params.primitive_type[pos];
 
-    if (ptype != 0 && ptype != 1) return; // only patch and triangle supported so far
-
     const float3 ray_origin    = optixGetWorldRayOrigin();
     const float3 ray_direction = optixGetWorldRayDirection();
     const float  t_min         = optixGetRayTmin();
@@ -192,10 +190,49 @@ extern "C" __global__ void __intersection__patch() {
 
     const uint32_t uuid = params.primitive_uuid[prim_idx];
 
+    if (ptype == 5) {
+        // ---- Bbox face: planar quad intersection (periodic boundary wall) ----
+        // Each bbox has 4 world-space vertices stored at bbox_vertices[bbox_local * 4 + v].
+        const uint32_t bbox_local = uuid - params.bbox_UUID_base;
+        const float3 v0 = params.bbox_vertices[bbox_local * 4 + 0];
+        const float3 v1 = params.bbox_vertices[bbox_local * 4 + 1];
+        const float3 v2 = params.bbox_vertices[bbox_local * 4 + 2];
+        const float3 v3 = params.bbox_vertices[bbox_local * 4 + 3];
+
+        // Quad normal from two edges
+        float3 e1 = make_float3(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
+        float3 e3 = make_float3(v3.x - v0.x, v3.y - v0.y, v3.z - v0.z);
+        float3 n  = cross(e1, e3);
+        float  nd = dot(ray_direction, n);
+        if (fabsf(nd) < 1e-8f) return; // ray parallel to face
+
+        float t = dot(make_float3(v0.x - ray_origin.x, v0.y - ray_origin.y, v0.z - ray_origin.z), n) / nd;
+        if (t < t_min || t > t_max) return;
+
+        // Hit point must lie within the bounding box of the quad vertices
+        float3 hit = make_float3(ray_origin.x + t * ray_direction.x,
+                                  ray_origin.y + t * ray_direction.y,
+                                  ray_origin.z + t * ray_direction.z);
+        const float slack = 1e-4f;
+        float mnx = fminf(fminf(v0.x, v1.x), fminf(v2.x, v3.x)) - slack;
+        float mxx = fmaxf(fmaxf(v0.x, v1.x), fmaxf(v2.x, v3.x)) + slack;
+        float mny = fminf(fminf(v0.y, v1.y), fminf(v2.y, v3.y)) - slack;
+        float mxy = fmaxf(fmaxf(v0.y, v1.y), fmaxf(v2.y, v3.y)) + slack;
+        float mnz = fminf(fminf(v0.z, v1.z), fminf(v2.z, v3.z)) - slack;
+        float mxz = fmaxf(fmaxf(v0.z, v1.z), fmaxf(v2.z, v3.z)) + slack;
+        if (hit.x < mnx || hit.x > mxx || hit.y < mny || hit.y > mxy ||
+            hit.z < mnz || hit.z > mxz) return;
+
+        optixReportIntersection(t, 0, uuid, 0u);
+        return;
+    }
+
+    if (ptype != 0 && ptype != 1 && ptype != 3) return; // only patch, triangle, tile
+
     float T[16];
     loadTransformMatrix(pos, T);
 
-    if (ptype == 0) {
+    if (ptype == 0 || ptype == 3) {
         // ---- Patch: rectangle in canonical [-0.5, 0.5]^2 space ----
         // Normal = third column of rotation part of T
         float3 normal = make_float3(T[2], T[6], T[10]);
@@ -436,10 +473,54 @@ extern "C" __global__ void __miss__pixel_label() {
 // Closest-hit: direct radiation
 // ---------------------------------------------------------------------------
 
+// Shared helper: populate PerRayData with periodic boundary wrapping info.
+// Called from closesthit programs when a bbox (type-5) face is hit.
+// hit_uuid identifies which bbox face was hit (bbox_local = hit_uuid - bbox_UUID_base).
+// Bbox face ordering in RadiationModel.cpp:
+//   x-only:  0=x-min, 1=x-max
+//   y-only:  0=y-min, 1=y-max
+//   xy:      0=x-min, 1=x-max, 2=y-min, 3=y-max
+// Vertex 0 of each face is always the "min" corner, so bbox_vertices[b*4+0] gives
+// the face's position (x or y coordinate) without floating-point tolerance issues.
+static __forceinline__ __device__ void handlePeriodicBoundaryHit(PerRayData *prd, uint32_t hit_uuid) {
+    const float  t_hit    = optixGetRayTmax();
+    const float3 ray_orig = optixGetWorldRayOrigin();
+    const float3 ray_dir  = optixGetWorldRayDirection();
+    const float3 hit_pos  = make_float3(ray_orig.x + t_hit * ray_dir.x,
+                                         ray_orig.y + t_hit * ray_dir.y,
+                                         ray_orig.z + t_hit * ray_dir.z);
+
+    const uint32_t bbox_local = hit_uuid - params.bbox_UUID_base;
+    prd->periodic_hit = hit_pos;
+
+    if (params.periodic_flag.x == 1 && bbox_local < 2) {
+        // x-faces: bbox 0 = x-min, bbox 1 = x-max
+        // vertex 0 of each face gives the face's x coordinate
+        const float xmin = params.bbox_vertices[0 * 4].x; // x-min face, any vertex .x = xmin
+        const float xmax = params.bbox_vertices[1 * 4].x; // x-max face, any vertex .x = xmax
+        const float width = xmax - xmin;
+        prd->periodic_hit.x += (bbox_local == 0) ? width : -width;
+    } else {
+        // y-faces: if x-periodic exists they are bboxes 2,3; otherwise 0,1
+        const uint32_t y_base = (params.periodic_flag.x == 1) ? 2u : 0u;
+        const float ymin = params.bbox_vertices[y_base * 4].y;       // y-min face vertex 0 .y = ymin
+        const float ymax = params.bbox_vertices[(y_base + 1) * 4].y; // y-max face vertex 0 .y = ymax
+        const float width = ymax - ymin;
+        prd->periodic_hit.y += (bbox_local == y_base) ? width : -width;
+    }
+}
+
 extern "C" __global__ void __closesthit__direct() {
     // A direct ray hit an obstacle — it is simply blocked.
-    // The origin primitive receives no energy (absorption handled in __miss__direct).
-    // Periodic boundary handling deferred to Phase 9.
+    // Exception: bbox (type-5) hits trigger periodic boundary wrapping.
+    if (params.periodic_flag.x == 0 && params.periodic_flag.y == 0) return;
+
+    const uint32_t hit_uuid = optixGetAttribute_0();
+    if (params.bbox_UUID_base == 0xFFFFFFFFu || hit_uuid < params.bbox_UUID_base) return;
+
+    PerRayData *prd = getPayloadPRD();
+    prd->hit_periodic_boundary = true;
+    handlePeriodicBoundaryHit(prd, hit_uuid);
 }
 
 // ---------------------------------------------------------------------------
@@ -451,6 +532,14 @@ extern "C" __global__ void __closesthit__diffuse() {
     const bool     face_top  = (optixGetAttribute_1() == 1u);
 
     PerRayData *prd = getPayloadPRD();
+
+    // Periodic boundary: bbox (type-5) hit — wrap ray and return without depositing energy
+    if ((params.periodic_flag.x == 1 || params.periodic_flag.y == 1) &&
+        params.bbox_UUID_base != 0xFFFFFFFFu && hit_uuid >= params.bbox_UUID_base) {
+        prd->hit_periodic_boundary = true;
+        handlePeriodicBoundaryHit(prd, hit_uuid);
+        return;
+    }
 
     const uint32_t origin_position = params.primitive_positions[prd->origin_UUID];
     const uint32_t hit_position    = params.primitive_positions[hit_uuid];
@@ -742,22 +831,28 @@ extern "C" __global__ void __raygen__direct() {
                 if (tsf == 3) continue; // reserved flag — skip
 
                 uint32_t u0, u1;
-                packPointer(&prd, u0, u1);
+                float3 current_origin = ray_origin;
 
-                optixTrace(
-                    params.traversable,
-                    ray_origin,
-                    ray_direction,
-                    1e-4f,       // tmin
-                    ray_tmax,    // tmax
-                    0.f,         // time
-                    OptixVisibilityMask(255),
-                    OPTIX_RAY_FLAG_NONE,
-                    0,           // SBT offset  (direct hit group = 0)
-                    0,           // SBT stride
-                    0,           // miss SBT index (direct miss = 0)
-                    u0, u1
-                );
+                for (int wrap = 0; wrap < 10; ++wrap) {
+                    packPointer(&prd, u0, u1);
+                    optixTrace(
+                        params.traversable,
+                        current_origin,
+                        ray_direction,
+                        1e-4f,       // tmin
+                        ray_tmax,    // tmax
+                        0.f,         // time
+                        OptixVisibilityMask(255),
+                        OPTIX_RAY_FLAG_NONE,
+                        0,           // SBT offset  (direct hit group = 0)
+                        0,           // SBT stride
+                        0,           // miss SBT index (direct miss = 0)
+                        u0, u1
+                    );
+                    if (!prd.hit_periodic_boundary) break;
+                    current_origin = prd.periodic_hit;
+                    prd.hit_periodic_boundary = false;
+                }
 
                 seed = prd.seed;
             }
@@ -912,29 +1007,41 @@ extern "C" __global__ void __raygen__diffuse() {
 
             if (params.launch_face == 1 && params.twosided_flag[prim_pos] != 3) {
                 prd.face = true;
-                packPointer(&prd, u0, u1);
-                optixTrace(
-                    params.traversable,
-                    ray_origin, ray_dir,
-                    1e-4f, 1e38f, 0.f,
-                    OptixVisibilityMask(255),
-                    OPTIX_RAY_FLAG_NONE,
-                    1, 0, 1, // SBT offset=1 (diffuse hit), stride=0, miss index=1 (diffuse miss)
-                    u0, u1
-                );
+                float3 cur_origin = ray_origin;
+                for (int wrap = 0; wrap < 10; ++wrap) {
+                    packPointer(&prd, u0, u1);
+                    optixTrace(
+                        params.traversable,
+                        cur_origin, ray_dir,
+                        1e-4f, 1e38f, 0.f,
+                        OptixVisibilityMask(255),
+                        OPTIX_RAY_FLAG_NONE,
+                        1, 0, 1, // SBT offset=1 (diffuse hit), stride=0, miss index=1 (diffuse miss)
+                        u0, u1
+                    );
+                    if (!prd.hit_periodic_boundary) break;
+                    cur_origin = prd.periodic_hit;
+                    prd.hit_periodic_boundary = false;
+                }
             } else if (params.launch_face == 0 && params.twosided_flag[prim_pos] == 1) {
                 prd.face = false;
                 float3 neg_dir = make_float3(-ray_dir.x, -ray_dir.y, -ray_dir.z);
-                packPointer(&prd, u0, u1);
-                optixTrace(
-                    params.traversable,
-                    ray_origin, neg_dir,
-                    1e-4f, 1e38f, 0.f,
-                    OptixVisibilityMask(255),
-                    OPTIX_RAY_FLAG_NONE,
-                    1, 0, 1,
-                    u0, u1
-                );
+                float3 cur_origin = ray_origin;
+                for (int wrap = 0; wrap < 10; ++wrap) {
+                    packPointer(&prd, u0, u1);
+                    optixTrace(
+                        params.traversable,
+                        cur_origin, neg_dir,
+                        1e-4f, 1e38f, 0.f,
+                        OptixVisibilityMask(255),
+                        OPTIX_RAY_FLAG_NONE,
+                        1, 0, 1,
+                        u0, u1
+                    );
+                    if (!prd.hit_periodic_boundary) break;
+                    cur_origin = prd.periodic_hit;
+                    prd.hit_periodic_boundary = false;
+                }
             }
 
             seed = prd.seed;
