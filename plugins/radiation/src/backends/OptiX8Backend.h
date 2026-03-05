@@ -52,18 +52,6 @@
         }                                                                                         \
     } while (0)
 
-// Helper to allocate and upload a vector to device memory
-#define CUDA_UPLOAD(d_ptr, host_vec)                                                              \
-    do {                                                                                          \
-        if (!(host_vec).empty()) {                                                                \
-            CUDA_CHECK(cudaMalloc(&(d_ptr), (host_vec).size() * sizeof((host_vec)[0])));          \
-            CUDA_CHECK(cudaMemcpy((d_ptr), (host_vec).data(),                                    \
-                                  (host_vec).size() * sizeof((host_vec)[0]),                     \
-                                  cudaMemcpyHostToDevice));                                       \
-        } else {                                                                                  \
-            (d_ptr) = nullptr;                                                                    \
-        }                                                                                         \
-    } while (0)
 
 namespace helios {
 
@@ -182,7 +170,6 @@ namespace helios {
         // ---- Launch params (device copy) ----
         OptiX8LaunchParams        h_params         = {};
         CUdeviceptr               d_params         = 0;
-        CUdeviceptr               d_prd_pool       = 0; //!< Per-ray-data pool
 
         // ---- Geometry device buffers ----
         CUdeviceptr d_transform_matrix       = 0;

@@ -428,19 +428,21 @@ extern "C" __global__ void __intersection__patch() {
 }
 
 extern "C" __global__ void __intersection__disk() {
-    // TODO: Phase 8
+    // Disk intersection is not yet implemented. Disk primitives are rejected at
+    // the host level in updateGeometry(), so this program is never invoked.
 }
 
 extern "C" __global__ void __intersection__tile() {
-    // TODO: Phase 11
+    // Tile intersection is handled by __intersection__patch (ptype == 3).
 }
 
 extern "C" __global__ void __intersection__voxel() {
-    // TODO: Phase 11
+    // Voxel intersection is not yet implemented. Voxel primitives are rejected at
+    // the host level in updateGeometry(), so this program is never invoked.
 }
 
 extern "C" __global__ void __intersection__bbox() {
-    // TODO: Phase 9
+    // Bbox intersection is not yet implemented in this backend.
 }
 
 // ---------------------------------------------------------------------------
@@ -521,7 +523,11 @@ extern "C" __global__ void __miss__diffuse() {
     const uint32_t Nbands_global = params.Nbands_global;
     const uint32_t Nbands_launch = params.Nbands_launch;
 
-    if (params.diffuse_flux == nullptr) return;
+    if (params.diffuse_flux == nullptr) {
+        printf("ERROR (OptiX8 __miss__diffuse): diffuse_flux is null. "
+               "Call updateDiffuseRadiation() before launchDiffuseRays().\n");
+        __trap();
+    }
 
     const float3 ray_dir = optixGetWorldRayDirection();
 
@@ -983,7 +989,6 @@ extern "C" __global__ void __closesthit__pixel_label() {
 
 // ---------------------------------------------------------------------------
 // Raygen: direct rays
-// Phase 1: launch rays from primitives toward each source
 // ---------------------------------------------------------------------------
 
 extern "C" __global__ void __raygen__direct() {
@@ -1093,8 +1098,10 @@ extern "C" __global__ void __raygen__direct() {
                 normal = normalize(cross(v1 - v0, v2 - v0));
 
             } else {
-                // Unsupported primitive type for Phase 1 — skip
-                continue;
+                // Unsupported primitive type — should have been caught by updateGeometry().
+                printf("ERROR (OptiX8 __raygen__direct): unsupported primitive type %u at index %u\n",
+                       ptype, prim_pos);
+                __trap();
             }
 
             // Transform sample point to world space
@@ -1241,7 +1248,7 @@ extern "C" __global__ void __raygen__direct() {
 }
 
 // ---------------------------------------------------------------------------
-// Raygen: diffuse rays (Phase 2)
+// Raygen: diffuse rays
 // ---------------------------------------------------------------------------
 
 extern "C" __global__ void __raygen__diffuse() {
@@ -1364,7 +1371,10 @@ extern "C" __global__ void __raygen__diffuse() {
                 normal = normalize(cross(v1 - v0, v2 - v0));
 
             } else {
-                continue; // Other types handled in later phases
+                // Unsupported primitive type — should have been caught by updateGeometry().
+                printf("ERROR (OptiX8 __raygen__diffuse): unsupported primitive type %u at index %u\n",
+                       ptype, prim_pos);
+                __trap();
             }
 
             // Rotate hemisphere direction by primitive normal orientation
@@ -1509,7 +1519,7 @@ extern "C" __global__ void __raygen__camera() {
         optixTrace(params.traversable, cur_origin, ray_direction,
                    t_min, t_max, 0.f,
                    OptixVisibilityMask(255), OPTIX_RAY_FLAG_NONE,
-                   2u, 4u, 2u, // SBT: hit=2, miss=2
+                   2u, 0u, 2u, // SBT: offset=2 (camera hit), stride=0, miss=2
                    p0, p1);
         if (!prd.hit_periodic_boundary) break;
         cur_origin = prd.periodic_hit;
@@ -1576,7 +1586,7 @@ extern "C" __global__ void __raygen__pixel_label() {
         optixTrace(params.traversable, cur_origin, ray_direction,
                    t_min, t_max, 0.f,
                    OptixVisibilityMask(255), OPTIX_RAY_FLAG_NONE,
-                   3u, 4u, 3u, // SBT: hit=3, miss=3
+                   3u, 0u, 3u, // SBT: offset=3 (pixel label hit), stride=0, miss=3
                    p0, p1);
         if (!prd.hit_periodic_boundary) break;
         cur_origin = prd.periodic_hit;

@@ -158,7 +158,7 @@ struct OptiX8LaunchParams {
     uint32_t  launch_count;          //!< Primitives to process in this launch
     uint32_t  rays_per_primitive;
     uint32_t  random_seed;
-    uint32_t  launch_face;           //!< 0=top, 1=bottom (diffuse)
+    uint32_t  launch_face;           //!< 1=top face, 0=bottom face (diffuse)
     uint32_t  scattering_iteration;
     uint32_t  specular_reflection_enabled;
     uint32_t  camera_ID;

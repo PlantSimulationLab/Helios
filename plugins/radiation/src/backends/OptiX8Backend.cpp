@@ -60,7 +60,7 @@ void OptiX8Backend::initialize() {
             std::cerr << "[OptiX][" << tag << "] " << message << "\n";
         }
     };
-    ctx_options.logCallbackLevel = 4;
+    ctx_options.logCallbackLevel = 2;
     OPTIX_CHECK(optixDeviceContextCreate(cuda_context, &ctx_options, &optix_context));
 
     // Load device code (PTX or OptixIR) and compile module
@@ -107,10 +107,6 @@ void OptiX8Backend::initialize() {
         log, &log_size,
         &optix_module));
 
-    if (log_size > 1) {
-        std::cerr << "[OptiX8 module log] " << log << "\n";
-    }
-
     // ---- Create program groups ----
     OptixProgramGroupOptions pg_options = {};
 
@@ -122,7 +118,7 @@ void OptiX8Backend::initialize() {
         desc.raygen.entryFunctionName = entry;
         log_size = sizeof(log);
         OPTIX_CHECK(optixProgramGroupCreate(optix_context, &desc, 1, &pg_options, log, &log_size, &pg));
-        if (log_size > 1) { std::cerr << "[OptiX8 pg log] " << log << "\n"; }
+        (void)log_size;
     };
 
     createRaygen("__raygen__direct",       pg_raygen_direct);
@@ -138,7 +134,7 @@ void OptiX8Backend::initialize() {
         desc.miss.entryFunctionName  = entry;
         log_size = sizeof(log);
         OPTIX_CHECK(optixProgramGroupCreate(optix_context, &desc, 1, &pg_options, log, &log_size, &pg));
-        if (log_size > 1) { std::cerr << "[OptiX8 pg log] " << log << "\n"; }
+        (void)log_size;
     };
 
     createMiss("__miss__direct",       pg_miss_direct);
@@ -146,16 +142,9 @@ void OptiX8Backend::initialize() {
     createMiss("__miss__camera",       pg_miss_camera);
     createMiss("__miss__pixel_label",  pg_miss_pixel_label);
 
-    // Hit groups: one per primitive type (patch=0, tri=1, disk=2, tile=3, voxel=4, bbox=5)
-    // All 4 ray types share the same intersection programs but have different closest-hit programs.
-    // We create 4 hit groups (one per ray type); the intersection program is on each.
-    // With a single GAS, the SBT index = ray_type_index, so 4 hit groups suffice (ray type
-    // is used as SBT offset). Each type shares all 4 closest-hit programs.
-    //
-    // Actually, with custom primitives in OptiX 8, the SBT stride/offset determines which
-    // hit group record to use. We use: sbt_offset = primitive_type, sbt_stride = Nraytypes.
-    // So we need Ntypes * Nraytypes = 6 * 4 = 24 hit group records.
-    // For Phase 0, we create minimal hit groups (just patch type, all 4 ray types).
+    // Hit groups: one per ray type (4 total). All geometry uses __intersection__patch,
+    // which dispatches internally on primitive type. With a single GAS and numSbtRecords=1,
+    // the SBT hit record index = sbt_offset from optixTrace (stride=0 for all ray types).
 
     auto createHitGroup = [&](const char *ch_entry, const char *is_entry, OptixProgramGroup &pg) {
         OptixProgramGroupDesc desc = {};
@@ -168,11 +157,9 @@ void OptiX8Backend::initialize() {
         desc.hitgroup.entryFunctionNameAH           = nullptr;
         log_size = sizeof(log);
         OPTIX_CHECK(optixProgramGroupCreate(optix_context, &desc, 1, &pg_options, log, &log_size, &pg));
-        if (log_size > 1) { std::cerr << "[OptiX8 pg log] " << log << "\n"; }
+        (void)log_size;
     };
 
-    // For now create one hit group per ray type (using patch intersection).
-    // Phase 6+ will expand to all primitive types.
     createHitGroup("__closesthit__direct",       "__intersection__patch", pg_hit_direct);
     createHitGroup("__closesthit__diffuse",      "__intersection__patch", pg_hit_diffuse);
     createHitGroup("__closesthit__camera",       "__intersection__patch", pg_hit_camera);
@@ -197,10 +184,6 @@ void OptiX8Backend::initialize() {
         sizeof(all_groups) / sizeof(all_groups[0]),
         log, &log_size,
         &optix_pipeline));
-
-    if (log_size > 1) {
-        std::cerr << "[OptiX8 pipeline log] " << log << "\n";
-    }
 
     // Set pipeline stack sizes using OptiX utilities
     OptixStackSizes stack_sizes = {};
@@ -282,7 +265,6 @@ void OptiX8Backend::shutdown() {
     freePtr(d_mask_IDs);
     freePtr(d_uv_data);
     freePtr(d_uv_IDs);
-    freePtr(d_prd_pool);
     freePtr(d_params);
 
     // Free SBT device memory
@@ -318,6 +300,18 @@ void OptiX8Backend::shutdown() {
 
 void OptiX8Backend::updateGeometry(const RayTracingGeometry &geometry) {
     validateGeometryBeforeUpload(geometry);
+
+    // Validate that all primitive types are supported by the OptiX 8.1 backend.
+    // Supported: patch (0), triangle (1), tile (3). Disk (2), voxel (4), and
+    // bbox (5) intersection programs are not yet implemented.
+    if (geometry.disk_count > 0) {
+        helios_runtime_error("ERROR (OptiX8Backend::updateGeometry): Scene contains disk primitives, "
+                             "which are not yet supported by the OptiX 8.1 backend.");
+    }
+    if (geometry.voxel_count > 0) {
+        helios_runtime_error("ERROR (OptiX8Backend::updateGeometry): Scene contains voxel primitives, "
+                             "which are not yet supported by the OptiX 8.1 backend.");
+    }
 
     freeGeometryBuffers();
 
@@ -1081,8 +1075,12 @@ void OptiX8Backend::zeroRadiationBuffers(size_t launch_band_count) {
     const size_t Nprims = current_primitive_count;
     if (Nprims == 0 || launch_band_count == 0) return;
 
-    const size_t bands = std::min(launch_band_count, current_band_count);
-    const size_t bytes = Nprims * bands * sizeof(float);
+    if (launch_band_count > current_band_count) {
+        helios_runtime_error("ERROR (OptiX8Backend::zeroRadiationBuffers): launch_band_count (" +
+                             std::to_string(launch_band_count) + ") exceeds current_band_count (" +
+                             std::to_string(current_band_count) + "). Call updateMaterials() first.");
+    }
+    const size_t bytes = Nprims * launch_band_count * sizeof(float);
 
     if (d_radiation_in)         CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_in),         0, bytes));
     if (d_radiation_out_top)    CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_out_top),    0, bytes));
@@ -1205,7 +1203,7 @@ void OptiX8Backend::queryGPUMemory() const {
     CUDA_CHECK(cudaMemGetInfo(&free_bytes, &total_bytes));
     const float free_mb  = static_cast<float>(free_bytes)  / (1024.0f * 1024.0f);
     const float total_mb = static_cast<float>(total_bytes) / (1024.0f * 1024.0f);
-    std::cout << "[OptiX8] GPU memory: " << free_mb << " MB free / " << total_mb << " MB total\n";
+    std::cout << "GPU memory: " << free_mb << " MB free / " << total_mb << " MB total" << std::endl;
 }
 
 // ---------------------------------------------------------------------------
@@ -1404,9 +1402,9 @@ void OptiX8Backend::buildGAS(uint32_t Nprimitives) {
     OPTIX_CHECK(optixAccelCompact(optix_context, cuda_stream, gas_handle, d_gas_output, compact_size, &gas_handle));
     CUDA_CHECK(cudaStreamSynchronize(cuda_stream));
 
-    cudaFree(reinterpret_cast<void *>(d_temp));
-    cudaFree(reinterpret_cast<void *>(d_pre_compact));
-    cudaFree(reinterpret_cast<void *>(d_compact_size));
+    CUDA_CHECK(cudaFree(reinterpret_cast<void *>(d_temp)));
+    CUDA_CHECK(cudaFree(reinterpret_cast<void *>(d_pre_compact)));
+    CUDA_CHECK(cudaFree(reinterpret_cast<void *>(d_compact_size)));
 
     h_params.traversable = gas_handle;
 }
