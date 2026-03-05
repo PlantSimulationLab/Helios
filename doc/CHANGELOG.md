@@ -1,5 +1,10 @@
 # Changelog
 
+# [1.3.66] 2026-03-04
+
+## Radiation
+- Added OptiX 8.1 ray tracing backend for NVIDIA systems with driver ≥ 560. This resolves the driver 590+ incompatibility that prevented the OptiX 6.5 backend from working on modern NVIDIA drivers. The backend is selected automatically at build time: driver ≥ 560 uses OptiX 8.1; driver < 560 continues to use OptiX 6.5. OptiX 8.1 implements the full radiation pipeline including direct radiation, diffuse radiation, scattering, emission, triangle geometry, texture masking, periodic boundaries, and camera rendering. The OptiX 8.1 SDK is bundled in-tree; no separate installation is needed.
+
 # [1.3.65] 2026-02-27
 
 ## Core
