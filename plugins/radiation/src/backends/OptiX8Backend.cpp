@@ -682,7 +682,40 @@ void OptiX8Backend::updateSkyModel(const std::vector<helios::vec4> &sky_radiance
                                     const helios::vec3 &sun_direction,
                                     const std::vector<float> &solar_disk_radiance,
                                     float solar_disk_cos_angle) {
-    helios_runtime_error("ERROR (OptiX8Backend::updateSkyModel): Not yet implemented.");
+    // Upload sky_radiance_params (helios::vec4 → float4)
+    freeCUdeviceptr(d_sky_radiance_params);
+    if (!sky_radiance_params.empty()) {
+        std::vector<float4> f4(sky_radiance_params.size());
+        for (size_t i = 0; i < sky_radiance_params.size(); i++) {
+            f4[i] = make_float4(sky_radiance_params[i].x, sky_radiance_params[i].y,
+                                sky_radiance_params[i].z, sky_radiance_params[i].w);
+        }
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_sky_radiance_params), f4.size() * sizeof(float4)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_sky_radiance_params), f4.data(),
+                              f4.size() * sizeof(float4), cudaMemcpyHostToDevice));
+    }
+
+    freeCUdeviceptr(d_camera_sky_radiance);
+    if (!camera_sky_radiance.empty()) {
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_camera_sky_radiance),
+                              camera_sky_radiance.size() * sizeof(float)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_camera_sky_radiance), camera_sky_radiance.data(),
+                              camera_sky_radiance.size() * sizeof(float), cudaMemcpyHostToDevice));
+    }
+
+    freeCUdeviceptr(d_solar_disk_radiance);
+    if (!solar_disk_radiance.empty()) {
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_solar_disk_radiance),
+                              solar_disk_radiance.size() * sizeof(float)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_solar_disk_radiance), solar_disk_radiance.data(),
+                              solar_disk_radiance.size() * sizeof(float), cudaMemcpyHostToDevice));
+    }
+
+    h_params.sky_radiance_params  = reinterpret_cast<float4 *>(d_sky_radiance_params);
+    h_params.camera_sky_radiance  = reinterpret_cast<float *>(d_camera_sky_radiance);
+    h_params.solar_disk_radiance  = reinterpret_cast<float *>(d_solar_disk_radiance);
+    h_params.sun_direction        = make_float3(sun_direction.x, sun_direction.y, sun_direction.z);
+    h_params.solar_disk_cos_angle = solar_disk_cos_angle;
 }
 
 // ---------------------------------------------------------------------------
@@ -843,6 +876,11 @@ void OptiX8Backend::launchDiffuseRays(const RayTracingLaunchParams &launch_param
     h_params.diffuse_dist_norm   = reinterpret_cast<float *>(d_diffuse_dist_norm);
     h_params.sky_radiance_params = reinterpret_cast<float4 *>(d_sky_radiance_params);
 
+    // Early return when there are no rays to launch (e.g. diffuseRayCount=0 during scattering)
+    if (launch_params.rays_per_primitive == 0 || launch_params.launch_count == 0) {
+        return;
+    }
+
     // Set up 2D stratification launch dimensions
     // rays_per_primitive is always n*n (RadiationModel sets it as ceil(sqrt(N))^2)
     const uint32_t rpp   = launch_params.rays_per_primitive;
@@ -875,12 +913,115 @@ void OptiX8Backend::launchDiffuseRays(const RayTracingLaunchParams &launch_param
     }
 }
 
-void OptiX8Backend::launchCameraRays(const RayTracingLaunchParams &params) {
-    helios_runtime_error("ERROR (OptiX8Backend::launchCameraRays): Not yet implemented.");
+void OptiX8Backend::launchCameraRays(const RayTracingLaunchParams &launch_params) {
+    if (!is_initialized) {
+        helios_runtime_error("ERROR (OptiX8Backend::launchCameraRays): Backend not initialized.");
+    }
+    if (gas_handle == 0) {
+        helios_runtime_error("ERROR (OptiX8Backend::launchCameraRays): No acceleration structure. "
+                             "Call buildAccelerationStructure() first.");
+    }
+
+    applyLaunchParams(launch_params);
+
+    const uint32_t tile_w       = launch_params.camera_resolution.x;
+    const uint32_t tile_h       = launch_params.camera_resolution.y;
+    const uint32_t full_w       = launch_params.camera_resolution_full.x;
+    const uint32_t full_h       = launch_params.camera_resolution_full.y;
+    const uint32_t anti_samples = launch_params.antialiasing_samples;
+    const uint32_t Nbands_l     = launch_params.num_bands_launch;
+    const uint32_t cam_id       = launch_params.camera_id;
+
+    // Allocate/zero radiation_in_camera when starting a new camera or when band count changes.
+    // Multiple tiles for the same camera accumulate into the same buffer without re-zeroing.
+    const size_t Npixels   = (size_t)full_w * full_h;
+    const size_t cam_bytes = Npixels * Nbands_l * sizeof(float);
+    if (cam_id != current_camera_launch_id || current_launch_band_count != Nbands_l) {
+        reallocDevice(d_radiation_in_camera, cam_bytes);
+        CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_radiation_in_camera), 0, cam_bytes));
+        // Free pixel label/depth buffers from previous camera so getCameraResults skips them
+        // until zeroCameraPixelBuffers() is called for the new camera.
+        freeCUdeviceptr(d_camera_pixel_label);
+        freeCUdeviceptr(d_camera_pixel_depth);
+        h_params.camera_pixel_label = nullptr;
+        h_params.camera_pixel_depth = nullptr;
+        current_camera_launch_id  = cam_id;
+        current_launch_band_count = Nbands_l;
+    }
+    h_params.radiation_in_camera = reinterpret_cast<float *>(d_radiation_in_camera);
+
+    // Upload band_launch_flag
+    if (d_band_launch_flag) { freeCUdeviceptr(d_band_launch_flag); }
+    const size_t Nbands_g = launch_params.band_launch_flag.size();
+    if (Nbands_g > 0) {
+        std::vector<uint8_t> flags_u8(Nbands_g);
+        for (size_t i = 0; i < Nbands_g; i++) {
+            flags_u8[i] = launch_params.band_launch_flag[i] ? 1u : 0u;
+        }
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_band_launch_flag), Nbands_g * sizeof(uint8_t)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_band_launch_flag), flags_u8.data(),
+                              Nbands_g * sizeof(uint8_t), cudaMemcpyHostToDevice));
+    }
+    h_params.band_launch_flag = reinterpret_cast<bool *>(d_band_launch_flag);
+    h_params.traversable      = gas_handle;
+
+    // Camera launch: x=antialiasing_samples, y=tile_width, z=tile_height
+    h_params.launch_dim_x = anti_samples;
+    h_params.launch_dim_y = tile_w;
+
+    uploadLaunchParams();
+
+    OptixShaderBindingTable camera_sbt = sbt;
+    camera_sbt.raygenRecord = d_raygen_record_camera;
+
+    OPTIX_CHECK(optixLaunch(optix_pipeline, cuda_stream, d_params,
+                            sizeof(OptiX8LaunchParams), &camera_sbt,
+                            anti_samples, tile_w, tile_h));
+    CUDA_CHECK(cudaStreamSynchronize(cuda_stream));
 }
 
-void OptiX8Backend::launchPixelLabelRays(const RayTracingLaunchParams &params) {
-    helios_runtime_error("ERROR (OptiX8Backend::launchPixelLabelRays): Not yet implemented.");
+void OptiX8Backend::launchPixelLabelRays(const RayTracingLaunchParams &launch_params) {
+    if (!is_initialized) {
+        helios_runtime_error("ERROR (OptiX8Backend::launchPixelLabelRays): Backend not initialized.");
+    }
+    if (gas_handle == 0) {
+        helios_runtime_error("ERROR (OptiX8Backend::launchPixelLabelRays): No acceleration structure. "
+                             "Call buildAccelerationStructure() first.");
+    }
+
+    applyLaunchParams(launch_params);
+
+    const uint32_t tile_w = launch_params.camera_resolution.x;
+    const uint32_t tile_h = launch_params.camera_resolution.y;
+
+    // Upload band_launch_flag
+    if (d_band_launch_flag) { freeCUdeviceptr(d_band_launch_flag); }
+    const size_t Nbands_g = launch_params.band_launch_flag.size();
+    if (Nbands_g > 0) {
+        std::vector<uint8_t> flags_u8(Nbands_g);
+        for (size_t i = 0; i < Nbands_g; i++) {
+            flags_u8[i] = launch_params.band_launch_flag[i] ? 1u : 0u;
+        }
+        CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_band_launch_flag), Nbands_g * sizeof(uint8_t)));
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_band_launch_flag), flags_u8.data(),
+                              Nbands_g * sizeof(uint8_t), cudaMemcpyHostToDevice));
+    }
+    h_params.band_launch_flag = reinterpret_cast<bool *>(d_band_launch_flag);
+    h_params.traversable      = gas_handle;
+
+    // Pixel label launch: 1 ray per pixel center, no antialiasing
+    h_params.launch_dim_x = 1u;
+    h_params.launch_dim_y = tile_w;
+
+    uploadLaunchParams();
+
+    OptixShaderBindingTable pixel_label_sbt = sbt;
+    pixel_label_sbt.raygenRecord = d_raygen_record_pixel_label;
+
+    OPTIX_CHECK(optixLaunch(optix_pipeline, cuda_stream, d_params,
+                            sizeof(OptiX8LaunchParams), &pixel_label_sbt,
+                            1u, tile_w, tile_h));
+    CUDA_CHECK(cudaStreamSynchronize(cuda_stream));
 }
 
 // ---------------------------------------------------------------------------
@@ -904,12 +1045,32 @@ void OptiX8Backend::getRadiationResults(RayTracingResults &results) {
         if (d_scatter_buff_top)     results.scatter_buff_top     = downloadFloat(d_scatter_buff_top,     total);
         if (d_scatter_buff_bottom)  results.scatter_buff_bottom  = downloadFloat(d_scatter_buff_bottom,  total);
     }
+
+    // Camera scatter buffers: sized Nprims × Nbands_launch (may differ from Nbands_global)
+    if (Nprims > 0 && current_launch_band_count > 0) {
+        const size_t cam_total = Nprims * current_launch_band_count;
+        if (d_scatter_buff_top_cam)    results.scatter_buff_top_cam    = downloadFloat(d_scatter_buff_top_cam,    cam_total);
+        if (d_scatter_buff_bottom_cam) results.scatter_buff_bottom_cam = downloadFloat(d_scatter_buff_bottom_cam, cam_total);
+    }
 }
 
 void OptiX8Backend::getCameraResults(std::vector<float> &pixel_data, std::vector<uint> &pixel_labels,
                                       std::vector<float> &pixel_depths, uint camera_id,
                                       const helios::int2 &resolution) {
-    helios_runtime_error("ERROR (OptiX8Backend::getCameraResults): Not yet implemented.");
+    const size_t Npixels = (size_t)resolution.x * resolution.y;
+
+    if (d_radiation_in_camera && Npixels > 0 && current_launch_band_count > 0) {
+        pixel_data = downloadFloat(d_radiation_in_camera, Npixels * current_launch_band_count);
+    }
+
+    if (d_camera_pixel_label && Npixels > 0) {
+        auto labels_u32 = downloadUInt32(d_camera_pixel_label, Npixels);
+        pixel_labels.assign(labels_u32.begin(), labels_u32.end());
+    }
+
+    if (d_camera_pixel_depth && Npixels > 0) {
+        pixel_depths = downloadFloat(d_camera_pixel_depth, Npixels);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -939,7 +1100,16 @@ void OptiX8Backend::zeroScatterBuffers() {
 }
 
 void OptiX8Backend::zeroCameraPixelBuffers(const helios::int2 &resolution) {
-    helios_runtime_error("ERROR (OptiX8Backend::zeroCameraPixelBuffers): Not yet implemented.");
+    const size_t Npixels = (size_t)resolution.x * resolution.y;
+    if (Npixels == 0) return;
+
+    reallocDevice(d_camera_pixel_label, Npixels * sizeof(uint32_t));
+    reallocDevice(d_camera_pixel_depth,  Npixels * sizeof(float));
+    CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_camera_pixel_label), 0, Npixels * sizeof(uint32_t)));
+    CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_camera_pixel_depth),  0, Npixels * sizeof(float)));
+
+    h_params.camera_pixel_label = reinterpret_cast<uint32_t *>(d_camera_pixel_label);
+    h_params.camera_pixel_depth = reinterpret_cast<float *>(d_camera_pixel_depth);
 }
 
 void OptiX8Backend::copyScatterToRadiation() {
@@ -975,11 +1145,33 @@ void OptiX8Backend::uploadRadiationOut(const std::vector<float> &radiation_out_t
 
 void OptiX8Backend::uploadCameraScatterBuffers(const std::vector<float> &scatter_top_cam,
                                                 const std::vector<float> &scatter_bottom_cam) {
-    helios_runtime_error("ERROR (OptiX8Backend::uploadCameraScatterBuffers): Not yet implemented.");
+    if (!scatter_top_cam.empty() && d_scatter_buff_top_cam) {
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_scatter_buff_top_cam),
+                              scatter_top_cam.data(),
+                              scatter_top_cam.size() * sizeof(float),
+                              cudaMemcpyHostToDevice));
+    }
+    if (!scatter_bottom_cam.empty() && d_scatter_buff_bottom_cam) {
+        CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_scatter_buff_bottom_cam),
+                              scatter_bottom_cam.data(),
+                              scatter_bottom_cam.size() * sizeof(float),
+                              cudaMemcpyHostToDevice));
+    }
 }
 
 void OptiX8Backend::zeroCameraScatterBuffers(size_t launch_band_count) {
-    helios_runtime_error("ERROR (OptiX8Backend::zeroCameraScatterBuffers): Not yet implemented.");
+    const size_t Nprims = current_primitive_count;
+    if (Nprims == 0 || launch_band_count == 0) return;
+
+    const size_t bytes = Nprims * launch_band_count * sizeof(float);
+    reallocDevice(d_scatter_buff_top_cam,    bytes);
+    reallocDevice(d_scatter_buff_bottom_cam, bytes);
+    CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_top_cam),    0, bytes));
+    CUDA_CHECK(cudaMemset(reinterpret_cast<void *>(d_scatter_buff_bottom_cam), 0, bytes));
+
+    h_params.scatter_buff_top_cam    = reinterpret_cast<float *>(d_scatter_buff_top_cam);
+    h_params.scatter_buff_bottom_cam = reinterpret_cast<float *>(d_scatter_buff_bottom_cam);
+    current_launch_band_count        = launch_band_count;
 }
 
 void OptiX8Backend::uploadSourceFluxes(const std::vector<float> &fluxes) {
@@ -993,7 +1185,14 @@ void OptiX8Backend::uploadSourceFluxes(const std::vector<float> &fluxes) {
 }
 
 void OptiX8Backend::uploadSourceFluxesCam(const std::vector<float> &fluxes_cam) {
-    helios_runtime_error("ERROR (OptiX8Backend::uploadSourceFluxesCam): Not yet implemented.");
+    freeCUdeviceptr(d_source_fluxes_cam);
+    if (fluxes_cam.empty()) return;
+
+    const size_t bytes = fluxes_cam.size() * sizeof(float);
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void **>(&d_source_fluxes_cam), bytes));
+    CUDA_CHECK(cudaMemcpy(reinterpret_cast<void *>(d_source_fluxes_cam), fluxes_cam.data(), bytes,
+                          cudaMemcpyHostToDevice));
+    h_params.source_fluxes_cam = reinterpret_cast<float *>(d_source_fluxes_cam);
 }
 
 // ---------------------------------------------------------------------------

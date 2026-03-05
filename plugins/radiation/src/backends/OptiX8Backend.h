@@ -280,6 +280,8 @@ namespace helios {
         size_t   current_source_count    = 0;
         size_t   current_band_count      = 0;
         size_t   current_camera_count    = 0;
+        size_t   current_launch_band_count = 0;   //!< Nbands_launch used for camera buffers
+        uint32_t current_camera_launch_id  = 0xFFFFFFFFu; //!< Camera ID from last launchCameraRays
 
         // ---- Private helper methods ----
 

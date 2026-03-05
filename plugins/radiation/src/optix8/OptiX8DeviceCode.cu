@@ -163,6 +163,87 @@ static __forceinline__ __device__ void d_sampleSquare(uint32_t &seed, float3 &sa
     sample = make_float3(-0.5f + rnd(seed), -0.5f + rnd(seed), 0.f);
 }
 
+// Invert a 4×4 row-major matrix (used for rect/disk source intersection tests).
+static __forceinline__ __device__ void d_invertMatrix(const float (&m)[16], float (&minv)[16]) {
+    float inv[16];
+    inv[0]  =  m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15] + m[9]*m[7]*m[14] + m[13]*m[6]*m[11] - m[13]*m[7]*m[10];
+    inv[4]  = -m[4]*m[10]*m[15] + m[4]*m[11]*m[14] + m[8]*m[6]*m[15] - m[8]*m[7]*m[14] - m[12]*m[6]*m[11] + m[12]*m[7]*m[10];
+    inv[8]  =  m[4]*m[9]*m[15]  - m[4]*m[11]*m[13] - m[8]*m[5]*m[15] + m[8]*m[7]*m[13] + m[12]*m[5]*m[11] - m[12]*m[7]*m[9];
+    inv[12] = -m[4]*m[9]*m[14]  + m[4]*m[10]*m[13] + m[8]*m[5]*m[14] - m[8]*m[6]*m[13] - m[12]*m[5]*m[10] + m[12]*m[6]*m[9];
+    inv[1]  = -m[1]*m[10]*m[15] + m[1]*m[11]*m[14] + m[9]*m[2]*m[15] - m[9]*m[3]*m[14] - m[13]*m[2]*m[11] + m[13]*m[3]*m[10];
+    inv[5]  =  m[0]*m[10]*m[15] - m[0]*m[11]*m[14] - m[8]*m[2]*m[15] + m[8]*m[3]*m[14] + m[12]*m[2]*m[11] - m[12]*m[3]*m[10];
+    inv[9]  = -m[0]*m[9]*m[15]  + m[0]*m[11]*m[13] + m[8]*m[1]*m[15] - m[8]*m[3]*m[13] - m[12]*m[1]*m[11] + m[12]*m[3]*m[9];
+    inv[13] =  m[0]*m[9]*m[14]  - m[0]*m[10]*m[13] - m[8]*m[1]*m[14] + m[8]*m[2]*m[13] + m[12]*m[1]*m[10] - m[12]*m[2]*m[9];
+    inv[2]  =  m[1]*m[6]*m[15]  - m[1]*m[7]*m[14]  - m[5]*m[2]*m[15] + m[5]*m[3]*m[14] + m[13]*m[2]*m[7]  - m[13]*m[3]*m[6];
+    inv[6]  = -m[0]*m[6]*m[15]  + m[0]*m[7]*m[14]  + m[4]*m[2]*m[15] - m[4]*m[3]*m[14] - m[12]*m[2]*m[7]  + m[12]*m[3]*m[6];
+    inv[10] =  m[0]*m[5]*m[15]  - m[0]*m[7]*m[13]  - m[4]*m[1]*m[15] + m[4]*m[3]*m[13] + m[12]*m[1]*m[7]  - m[12]*m[3]*m[5];
+    inv[14] = -m[0]*m[5]*m[14]  + m[0]*m[6]*m[13]  + m[4]*m[1]*m[14] - m[4]*m[2]*m[13] - m[12]*m[1]*m[6]  + m[12]*m[2]*m[5];
+    inv[3]  = -m[1]*m[6]*m[11]  + m[1]*m[7]*m[10]  + m[5]*m[2]*m[11] - m[5]*m[3]*m[10] - m[9]*m[2]*m[7]   + m[9]*m[3]*m[6];
+    inv[7]  =  m[0]*m[6]*m[11]  - m[0]*m[7]*m[10]  - m[4]*m[2]*m[11] + m[4]*m[3]*m[10] + m[8]*m[2]*m[7]   - m[8]*m[3]*m[6];
+    inv[11] = -m[0]*m[5]*m[11]  + m[0]*m[7]*m[9]   + m[4]*m[1]*m[11] - m[4]*m[3]*m[9]  - m[8]*m[1]*m[7]   + m[8]*m[3]*m[5];
+    inv[15] =  m[0]*m[5]*m[10]  - m[0]*m[6]*m[9]   - m[4]*m[1]*m[10] + m[4]*m[2]*m[9]  + m[8]*m[1]*m[6]   - m[8]*m[2]*m[5];
+    float det = m[0]*inv[0] + m[1]*inv[4] + m[2]*inv[8] + m[3]*inv[12];
+    det = 1.0f / det;
+    for (int i = 0; i < 16; i++) minv[i] = inv[i] * det;
+}
+
+// Test if ray hits a sphere source (any intersection in front of origin)
+static __forceinline__ __device__ bool d_raySphereIntersect(const float3 &ray_origin, const float3 &ray_direction,
+                                                            const float3 &sphere_center, float sphere_radius) {
+    const float3 oc = make_float3(ray_origin.x - sphere_center.x, ray_origin.y - sphere_center.y,
+                                   ray_origin.z - sphere_center.z);
+    const float b = dot(oc, ray_direction);
+    const float c = dot(oc, oc) - sphere_radius * sphere_radius;
+    const float disc = b * b - c;
+    if (disc < 0.0f) return false;
+    return (-b - sqrtf(disc)) > 0.0f;
+}
+
+// Test if ray hits the front face of a rectangular source
+static __forceinline__ __device__ bool d_rayRectangleIntersect(const float3 &ray_origin, const float3 &ray_direction,
+                                                               const float3 &rect_center, float rect_width, float rect_length,
+                                                               const float3 &rect_rotation, float &out_cos_angle) {
+    float transform[16];
+    d_makeTransformMatrix(rect_rotation, transform);
+    const float3 normal = make_float3(transform[2], transform[6], transform[10]);
+    const float denom = dot(ray_direction, normal);
+    if (denom >= -1e-6f) return false;
+    const float3 oc = make_float3(rect_center.x - ray_origin.x, rect_center.y - ray_origin.y,
+                                   rect_center.z - ray_origin.z);
+    const float t = dot(oc, normal) / denom;
+    if (t <= 0.0f) return false;
+    float3 hit = make_float3(ray_origin.x + t * ray_direction.x - rect_center.x,
+                              ray_origin.y + t * ray_direction.y - rect_center.y,
+                              ray_origin.z + t * ray_direction.z - rect_center.z);
+    float inv_t[16];
+    d_invertMatrix(transform, inv_t);
+    d_transformPoint(inv_t, hit);
+    if (fabsf(hit.x) > rect_width * 0.5f || fabsf(hit.y) > rect_length * 0.5f) return false;
+    out_cos_angle = -denom;
+    return true;
+}
+
+// Test if ray hits the front face of a disk source
+static __forceinline__ __device__ bool d_rayDiskIntersect(const float3 &ray_origin, const float3 &ray_direction,
+                                                          const float3 &disk_center, float disk_radius,
+                                                          const float3 &disk_rotation, float &out_cos_angle) {
+    float transform[16];
+    d_makeTransformMatrix(disk_rotation, transform);
+    const float3 normal = make_float3(transform[2], transform[6], transform[10]);
+    const float denom = dot(ray_direction, normal);
+    if (denom >= -1e-6f) return false;
+    const float3 oc = make_float3(disk_center.x - ray_origin.x, disk_center.y - ray_origin.y,
+                                   disk_center.z - ray_origin.z);
+    const float t = dot(oc, normal) / denom;
+    if (t <= 0.0f) return false;
+    const float3 hit = make_float3(ray_origin.x + t * ray_direction.x - disk_center.x,
+                                    ray_origin.y + t * ray_direction.y - disk_center.y,
+                                    ray_origin.z + t * ray_direction.z - disk_center.z);
+    if (dot(hit, hit) > disk_radius * disk_radius) return false;
+    out_cos_angle = -denom;
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // PerRayData accessor (uses getPRD() from OptiX8LaunchParams.h)
 // ---------------------------------------------------------------------------
@@ -407,6 +488,26 @@ extern "C" __global__ void __miss__direct() {
                 atomicFloatAdd(&params.scatter_buff_top[ind_origin],    (float)(strength * t_tau));
             }
         }
+
+        // Camera-weighted scatter: mirrors scatter_buff but uses rho_cam/tau_cam
+        if (params.Ncameras > 0 && params.rho_cam && params.scatter_buff_top_cam) {
+            const uint32_t Ncameras   = params.Ncameras;
+            const uint32_t cam_id     = params.camera_ID;
+            const uint32_t rc_idx     = prd->source_ID * Nprims * Nbands_global * Ncameras
+                                      + origin_position * Nbands_global * Ncameras
+                                      + b_global * Ncameras + cam_id;
+            const float t_rho_cam = params.rho_cam[rc_idx];
+            const float t_tau_cam = params.tau_cam ? params.tau_cam[rc_idx] : 0.f;
+            if ((t_rho_cam > 0.f || t_tau_cam > 0.f) && strength > 0.0) {
+                if (prd->face) {
+                    atomicFloatAdd(&params.scatter_buff_top_cam[ind_origin],    (float)(strength * t_rho_cam));
+                    atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_origin], (float)(strength * t_tau_cam));
+                } else {
+                    atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_origin], (float)(strength * t_rho_cam));
+                    atomicFloatAdd(&params.scatter_buff_top_cam[ind_origin],    (float)(strength * t_tau_cam));
+                }
+            }
+        }
     }
 }
 
@@ -456,17 +557,97 @@ extern "C" __global__ void __miss__diffuse() {
                 atomicFloatAdd(&params.scatter_buff_top[ind_origin],    strength * t_tau);
             }
         }
+
+        // Camera-weighted scatter: mirrors scatter_buff but uses rho_cam/tau_cam
+        if (params.Ncameras > 0 && params.rho_cam && params.scatter_buff_top_cam) {
+            const uint32_t Ncameras   = params.Ncameras;
+            const uint32_t cam_id     = params.camera_ID;
+            const uint32_t rc_idx     = prd->source_ID * Nprims * Nbands_global * Ncameras
+                                      + origin_position * Nbands_global * Ncameras
+                                      + b_global * Ncameras + cam_id;
+            const float t_rho_cam = params.rho_cam[rc_idx];
+            const float t_tau_cam = params.tau_cam ? params.tau_cam[rc_idx] : 0.f;
+            if ((t_rho_cam > 0.f || t_tau_cam > 0.f) && strength > 0.f) {
+                if (prd->face) {
+                    atomicFloatAdd(&params.scatter_buff_top_cam[ind_origin],    strength * t_rho_cam);
+                    atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_origin], strength * t_tau_cam);
+                } else {
+                    atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_origin], strength * t_rho_cam);
+                    atomicFloatAdd(&params.scatter_buff_top_cam[ind_origin],    strength * t_tau_cam);
+                }
+            }
+        }
     }
 }
 
 extern "C" __global__ void __miss__camera() {
-    PerRayData *prd = getPayloadPRD();
-    prd->origin_UUID = 0; // miss = sky
+    PerRayData *prd          = getPayloadPRD();
+    const uint32_t pixel_idx = prd->origin_UUID;
+    const uint32_t Nbands_l  = params.Nbands_launch;
+    const float3   ray_origin = optixGetWorldRayOrigin();
+    const float3   ray_dir    = optixGetWorldRayDirection();
+
+    for (uint32_t b = 0; b < Nbands_l; b++) {
+        float radiance = 0.0f;
+
+        for (uint32_t s = 0; s < params.Nsources; s++) {
+            const float flux = params.source_fluxes[s * Nbands_l + b];
+            if (flux <= 0.0f) continue;
+
+            const uint32_t stype = params.source_types[s];
+            if (stype == 0 || stype == 2) {
+                // Collimated / sun-sphere: treat as solar disk
+                if (params.solar_disk_radiance && params.solar_disk_radiance[b] > 0.0f &&
+                    dot(ray_dir, params.sun_direction) >= params.solar_disk_cos_angle) {
+                    radiance += params.solar_disk_radiance[b];
+                }
+            } else if (stype == 1) {
+                // Sphere
+                if (d_raySphereIntersect(ray_origin, ray_dir, params.source_positions[s],
+                                         params.source_widths[s].x * 0.5f)) {
+                    const float area = 4.0f * M_PI * params.source_widths[s].x * 0.5f * params.source_widths[s].x * 0.5f;
+                    radiance += (flux / area) / M_PI;
+                }
+            } else if (stype == 3) {
+                // Rectangle
+                float cos_angle;
+                if (d_rayRectangleIntersect(ray_origin, ray_dir, params.source_positions[s],
+                                            params.source_widths[s].x, params.source_widths[s].y,
+                                            params.source_rotations[s], cos_angle)) {
+                    const float area = params.source_widths[s].x * params.source_widths[s].y;
+                    radiance += (flux / area) * cos_angle / M_PI;
+                }
+            } else if (stype == 4) {
+                // Disk
+                float cos_angle;
+                if (d_rayDiskIntersect(ray_origin, ray_dir, params.source_positions[s],
+                                       params.source_widths[s].x, params.source_rotations[s], cos_angle)) {
+                    const float area = M_PI * params.source_widths[s].x * params.source_widths[s].x;
+                    radiance += (flux / area) * cos_angle / M_PI;
+                }
+            }
+        }
+
+        // Sky radiance fallback
+        if (radiance <= 0.0f && params.camera_sky_radiance && params.camera_sky_radiance[b] > 0.0f) {
+            const float4 sky_p = params.sky_radiance_params ? params.sky_radiance_params[b]
+                                                             : make_float4(0.f, 0.f, 0.f, 0.f);
+            radiance = params.camera_sky_radiance[b] *
+                       evaluateDiffuseAngularDistribution(ray_dir, params.sun_direction, 0.0f, 1.0f, sky_p);
+        }
+
+        if (radiance > 0.0f) {
+            atomicFloatAdd(&params.radiation_in_camera[pixel_idx * Nbands_l + b],
+                           radiance * (float)prd->strength);
+        }
+    }
 }
 
 extern "C" __global__ void __miss__pixel_label() {
     PerRayData *prd = getPayloadPRD();
-    prd->origin_UUID = 0; // sky pixel
+    if (params.camera_pixel_depth) {
+        params.camera_pixel_depth[prd->origin_UUID] = -1.0f;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -577,6 +758,26 @@ extern "C" __global__ void __closesthit__diffuse() {
                 atomicFloatAdd(&params.scatter_buff_top[ind_origin],    (float)(strength * t_tau));
             }
         }
+
+        // Camera-weighted scatter: mirrors scatter_buff but uses rho_cam/tau_cam
+        if (params.Ncameras > 0 && params.rho_cam && params.scatter_buff_top_cam) {
+            const uint32_t Ncameras   = params.Ncameras;
+            const uint32_t cam_id     = params.camera_ID;
+            const uint32_t rc_idx     = prd->source_ID * Nprims * Nbands_global * Ncameras
+                                      + origin_position * Nbands_global * Ncameras
+                                      + b_global * Ncameras + cam_id;
+            const float t_rho_cam = params.rho_cam[rc_idx];
+            const float t_tau_cam = params.tau_cam ? params.tau_cam[rc_idx] : 0.f;
+            if ((t_rho_cam > 0.f || t_tau_cam > 0.f) && strength > 0.0) {
+                if (prd->face) {
+                    atomicFloatAdd(&params.scatter_buff_top_cam[ind_origin],    (float)(strength * t_rho_cam));
+                    atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_origin], (float)(strength * t_tau_cam));
+                } else {
+                    atomicFloatAdd(&params.scatter_buff_bottom_cam[ind_origin], (float)(strength * t_rho_cam));
+                    atomicFloatAdd(&params.scatter_buff_top_cam[ind_origin],    (float)(strength * t_tau_cam));
+                }
+            }
+        }
     }
 }
 
@@ -585,10 +786,165 @@ extern "C" __global__ void __closesthit__diffuse() {
 // ---------------------------------------------------------------------------
 
 extern "C" __global__ void __closesthit__camera() {
-    // TODO: Phase 10
-    const uint32_t uuid = optixGetAttribute_0();
-    PerRayData *prd = getPayloadPRD();
-    prd->origin_UUID = uuid;
+    const uint32_t hit_uuid     = optixGetAttribute_0();
+    PerRayData    *prd          = getPayloadPRD();
+    const uint32_t hit_position = params.primitive_positions[hit_uuid];
+
+    if (hit_position == 0xFFFFFFFFu) return; // invalid primitive
+
+    // Periodic boundary: treat as transparent wall and re-launch
+    if ((params.periodic_flag.x != 0.f || params.periodic_flag.y != 0.f) &&
+        params.primitive_type[hit_position] == 5) {
+        handlePeriodicBoundaryHit(prd, hit_uuid);
+        prd->hit_periodic_boundary = true;
+        return;
+    }
+
+    const uint32_t pixel_index   = prd->origin_UUID;
+    const uint32_t Nbands_l      = params.Nbands_launch;
+    const uint32_t Nbands_g      = params.Nbands_global;
+    const uint32_t Nprims        = params.Nprimitives;
+    const float    t_hit         = optixGetRayTmax();
+    const float3   ray_origin    = optixGetWorldRayOrigin();
+    const float3   ray_direction = optixGetWorldRayDirection();
+
+    // Determine which face of the hit primitive is visible
+    float T[16];
+    loadTransformMatrix(hit_position, T);
+    float3 n0 = make_float3(0.f, 0.f, 0.f); d_transformPoint(T, n0);
+    float3 n1 = make_float3(1.f, 0.f, 0.f); d_transformPoint(T, n1);
+    float3 n2 = make_float3(0.f, 1.f, 0.f); d_transformPoint(T, n2);
+    const float3 normal    = normalize(cross(n1 - n0, n2 - n0));
+    const bool   face_top  = dot(normal, ray_direction) < 0.f;
+
+    for (uint32_t b = 0; b < Nbands_l; b++) {
+        const uint32_t b_global = b; // band_launch_flag maps launch bands to global bands 1:1
+
+        // Radiance from hit surface (outgoing flux / pi = radiance)
+        const uint32_t ind_hit = hit_position * Nbands_l + b;
+        float strength = (float)prd->strength *
+                         (float)(face_top ? params.radiation_out_top[ind_hit]
+                                          : params.radiation_out_bottom[ind_hit]);
+
+        // Check sources visible between camera origin and hit point
+        for (uint32_t s = 0; s < params.Nsources; s++) {
+            const float flux = params.source_fluxes[s * Nbands_l + b];
+            if (flux <= 0.0f) continue;
+
+            const uint32_t stype = params.source_types[s];
+            float source_radiance = 0.0f;
+
+            if (stype == 1) {
+                // Sphere
+                const float radius = params.source_widths[s].x * 0.5f;
+                const float3 oc = make_float3(ray_origin.x - params.source_positions[s].x,
+                                               ray_origin.y - params.source_positions[s].y,
+                                               ray_origin.z - params.source_positions[s].z);
+                const float bd = dot(oc, ray_direction);
+                const float cd = dot(oc, oc) - radius * radius;
+                const float disc = bd * bd - cd;
+                if (disc >= 0.0f) {
+                    const float t_sphere = -bd - sqrtf(disc);
+                    if (t_sphere > 0.0f && t_sphere < t_hit) {
+                        const float area = 4.0f * M_PI * radius * radius;
+                        source_radiance = (flux / area) / M_PI;
+                    }
+                }
+            } else if (stype == 3) {
+                // Rectangle
+                float trans[16];
+                d_makeTransformMatrix(params.source_rotations[s], trans);
+                const float3 snormal = make_float3(trans[2], trans[6], trans[10]);
+                const float denom = dot(ray_direction, snormal);
+                if (denom < -1e-6f) {
+                    const float3 oc = make_float3(params.source_positions[s].x - ray_origin.x,
+                                                   params.source_positions[s].y - ray_origin.y,
+                                                   params.source_positions[s].z - ray_origin.z);
+                    const float t_r = dot(oc, snormal) / denom;
+                    if (t_r > 0.0f && t_r < t_hit) {
+                        float3 hp = make_float3(ray_origin.x + t_r * ray_direction.x - params.source_positions[s].x,
+                                                ray_origin.y + t_r * ray_direction.y - params.source_positions[s].y,
+                                                ray_origin.z + t_r * ray_direction.z - params.source_positions[s].z);
+                        float inv_t[16];
+                        d_invertMatrix(trans, inv_t);
+                        d_transformPoint(inv_t, hp);
+                        if (fabsf(hp.x) <= params.source_widths[s].x * 0.5f &&
+                            fabsf(hp.y) <= params.source_widths[s].y * 0.5f) {
+                            const float area = params.source_widths[s].x * params.source_widths[s].y;
+                            source_radiance = (flux / area) * (-denom) / M_PI;
+                        }
+                    }
+                }
+            } else if (stype == 4) {
+                // Disk
+                float trans[16];
+                d_makeTransformMatrix(params.source_rotations[s], trans);
+                const float3 snormal = make_float3(trans[2], trans[6], trans[10]);
+                const float denom = dot(ray_direction, snormal);
+                if (denom < -1e-6f) {
+                    const float3 oc = make_float3(params.source_positions[s].x - ray_origin.x,
+                                                   params.source_positions[s].y - ray_origin.y,
+                                                   params.source_positions[s].z - ray_origin.z);
+                    const float t_d = dot(oc, snormal) / denom;
+                    if (t_d > 0.0f && t_d < t_hit) {
+                        const float3 hp = make_float3(ray_origin.x + t_d * ray_direction.x - params.source_positions[s].x,
+                                                       ray_origin.y + t_d * ray_direction.y - params.source_positions[s].y,
+                                                       ray_origin.z + t_d * ray_direction.z - params.source_positions[s].z);
+                        const float radius = params.source_widths[s].x;
+                        if (dot(hp, hp) <= radius * radius) {
+                            const float area = M_PI * radius * radius;
+                            source_radiance = (flux / area) * (-denom) / M_PI;
+                        }
+                    }
+                }
+            }
+
+            if (source_radiance > 0.0f) {
+                strength += source_radiance * (float)prd->strength;
+            }
+        }
+
+        // Specular contribution (only if enabled and on iteration 0)
+        float strength_spec = 0.0f;
+        if (params.specular_reflection_enabled > 0 &&
+            params.specular_exponent && params.specular_exponent[hit_position] > 0.f &&
+            params.scattering_iteration == 0 &&
+            params.radiation_specular) {
+            for (uint32_t rr = 0; rr < params.Nsources; rr++) {
+                const uint32_t ind_spec = rr * params.Ncameras * Nprims * Nbands_l
+                                        + params.camera_ID * Nprims * Nbands_l
+                                        + hit_position * Nbands_l + b;
+                const float spec = params.radiation_specular[ind_spec] * 0.25f;
+                if (spec > 0.0f) {
+                    float3 light_dir;
+                    if (params.source_types[rr] == 0 || params.source_types[rr] == 2) {
+                        light_dir = normalize(params.source_positions[rr]);
+                    } else {
+                        const float3 hp = make_float3(ray_origin.x + t_hit * ray_direction.x,
+                                                       ray_origin.y + t_hit * ray_direction.y,
+                                                       ray_origin.z + t_hit * ray_direction.z);
+                        light_dir = normalize(make_float3(params.source_positions[rr].x - hp.x,
+                                                           params.source_positions[rr].y - hp.y,
+                                                           params.source_positions[rr].z - hp.z));
+                    }
+                    const float3 spec_dir = normalize(light_dir - ray_direction);
+                    const float exponent  = params.specular_exponent[hit_position];
+                    float scale_coeff = 1.0f;
+                    if (params.specular_reflection_enabled == 2 && params.specular_scale) {
+                        scale_coeff = params.specular_scale[hit_position];
+                    }
+                    const float cos_spec = fmaxf(0.f, dot(spec_dir, normal));
+                    strength_spec += spec * scale_coeff
+                                   * powf(cos_spec, exponent) * (exponent + 2.f)
+                                   / ((float)params.launch_dim_x * 2.f * M_PI);
+                }
+            }
+        }
+
+        // Accumulate into camera radiation buffer: [pixel][band]
+        atomicFloatAdd(&params.radiation_in_camera[pixel_index * Nbands_l + b],
+                       (strength + strength_spec) / M_PI);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -596,9 +952,33 @@ extern "C" __global__ void __closesthit__camera() {
 // ---------------------------------------------------------------------------
 
 extern "C" __global__ void __closesthit__pixel_label() {
-    const uint32_t uuid = optixGetAttribute_0();
-    PerRayData *prd = getPayloadPRD();
-    prd->origin_UUID = uuid;
+    const uint32_t hit_uuid     = optixGetAttribute_0();
+    PerRayData    *prd          = getPayloadPRD();
+    const uint32_t origin_UUID  = prd->origin_UUID;
+    const uint32_t hit_position = params.primitive_positions[hit_uuid];
+
+    // Periodic boundary: treat as transparent wall and re-launch
+    if ((params.periodic_flag.x != 0.f || params.periodic_flag.y != 0.f) &&
+        hit_position != 0xFFFFFFFFu && params.primitive_type[hit_position] == 5) {
+        handlePeriodicBoundaryHit(prd, hit_uuid);
+        prd->hit_periodic_boundary = true;
+        return;
+    }
+
+    // Store UUID+1 (0 is reserved for sky/miss)
+    if (params.camera_pixel_label) {
+        params.camera_pixel_label[origin_UUID] = hit_uuid + 1u;
+    }
+
+    // Depth: project ray parameter along camera view direction
+    if (params.camera_pixel_depth) {
+        const float  t_hit    = optixGetRayTmax() + (float)prd->strength; // strength=0 for pixel label
+        const float3 ray_dir  = optixGetWorldRayDirection();
+        const float3 cam_dir  = d_rotatePoint(make_float3(1.f, 0.f, 0.f),
+                                              -0.5f * M_PI + params.camera_direction.x,
+                                               0.5f * M_PI - params.camera_direction.y);
+        params.camera_pixel_depth[origin_UUID] = fabsf(dot(cam_dir, ray_dir)) * t_hit;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1050,17 +1430,155 @@ extern "C" __global__ void __raygen__diffuse() {
 }
 
 // ---------------------------------------------------------------------------
-// Raygen: camera rays (Phase 10)
+// Raygen: camera rays
+// 3D launch: x=ray_within_pixel [0,anti_samples), y=tile_column, z=tile_row
 // ---------------------------------------------------------------------------
 
 extern "C" __global__ void __raygen__camera() {
-    // TODO: Phase 10
+    const uint3    idx         = optixGetLaunchIndex();
+    const uint32_t ray_idx     = idx.x; // sample index within pixel
+    const uint32_t col         = idx.y; // tile column
+    const uint32_t row         = idx.z; // tile row
+
+    const uint32_t dim_x  = params.launch_dim_x; // antialiasing_samples
+    const uint32_t dim_y  = params.launch_dim_y; // tile_width
+
+    // Global pixel coordinates
+    const uint32_t ii = (uint32_t)params.camera_pixel_offset.x + col;
+    const uint32_t jj = (uint32_t)params.camera_pixel_offset.y + row;
+
+    // Linear pixel index in the full image
+    const uint32_t pixel_index = jj * (uint32_t)params.camera_resolution_full.x + ii;
+
+    // Seed: unique per (ray_idx, col, row)
+    const uint32_t linear_idx = dim_x * col + ray_idx;
+    uint32_t seed = tea<16>(linear_idx + dim_x * dim_y * row, params.random_seed);
+
+    const float Rx = rnd(seed);
+    const float Ry = rnd(seed);
+
+    // Map sub-pixel sample to view-space point on viewplane
+    // sp.x = viewplane distance, sp.y/sp.z = horizontal/vertical offsets
+    const float multiplier = 1.0f / params.FOV_aspect_ratio;
+    float3 sp;
+    sp.y = -0.5f + ((float)ii + Rx) / (float)params.camera_resolution.x;
+    sp.z = ( 0.5f - ((float)jj + Ry) / (float)params.camera_resolution.y) * multiplier;
+    sp.x = params.camera_viewplane_length;
+
+    // Focal point on focus plane
+    const float3 p = make_float3(
+        params.camera_focal_length,
+        sp.y / params.camera_viewplane_length * params.camera_focal_length,
+        sp.z / params.camera_viewplane_length * params.camera_focal_length);
+
+    // Sample lens (pinhole if lens_diameter == 0)
+    float3 ray_origin = make_float3(0.f, 0.f, 0.f);
+    if (params.camera_lens_diameter > 0.f) {
+        float3 disk_sample;
+        d_sampleDisk(seed, disk_sample);
+        ray_origin = make_float3(0.f, 0.5f * disk_sample.x * params.camera_lens_diameter,
+                                      0.5f * disk_sample.y * params.camera_lens_diameter);
+    }
+
+    float3 ray_direction = make_float3(p.x - ray_origin.x, p.y - ray_origin.y, p.z - ray_origin.z);
+
+    // Rotate into world space
+    const float theta = -0.5f * M_PI + params.camera_direction.x;
+    const float phi   =  0.5f * M_PI - params.camera_direction.y;
+    ray_origin    = d_rotatePoint(ray_origin,    theta, phi) + params.camera_position;
+    ray_direction = d_rotatePoint(ray_direction, theta, phi);
+    ray_direction = ray_direction * (1.0f / d_magnitude(ray_direction));
+
+    PerRayData prd;
+    prd.strength             = 1.0f / (float)dim_x;
+    prd.origin_UUID          = pixel_index;
+    prd.face                 = true;
+    prd.source_ID            = 0;
+    prd.seed                 = seed;
+    prd.hit_periodic_boundary = false;
+
+    uint32_t p0, p1;
+    packPointer(&prd, p0, p1);
+
+    const float t_min = 1e-5f;
+    const float t_max = 1e30f;
+
+    float3 cur_origin = ray_origin;
+    for (int wrap = 0; wrap < 10; wrap++) {
+        prd.hit_periodic_boundary = false;
+        optixTrace(params.traversable, cur_origin, ray_direction,
+                   t_min, t_max, 0.f,
+                   OptixVisibilityMask(255), OPTIX_RAY_FLAG_NONE,
+                   2u, 4u, 2u, // SBT: hit=2, miss=2
+                   p0, p1);
+        if (!prd.hit_periodic_boundary) break;
+        cur_origin = prd.periodic_hit;
+    }
 }
 
 // ---------------------------------------------------------------------------
-// Raygen: pixel label rays (Phase 10)
+// Raygen: pixel label rays
+// 3D launch: x=1 (always), y=tile_column, z=tile_row
 // ---------------------------------------------------------------------------
 
 extern "C" __global__ void __raygen__pixel_label() {
-    // TODO: Phase 10
+    const uint3    idx  = optixGetLaunchIndex();
+    const uint32_t col  = idx.y;
+    const uint32_t row  = idx.z;
+
+    const uint32_t dim_y = params.launch_dim_y; // tile_width
+
+    // Global pixel coordinates
+    const uint32_t ii = (uint32_t)params.camera_pixel_offset.x + col;
+    const uint32_t jj = (uint32_t)params.camera_pixel_offset.y + row;
+    const uint32_t pixel_index = jj * (uint32_t)params.camera_resolution_full.x + ii;
+
+    uint32_t seed = tea<16>(dim_y * row + col, params.random_seed);
+
+    // Center of pixel, no antialiasing jitter
+    const float multiplier = 1.0f / params.FOV_aspect_ratio;
+    float3 sp;
+    sp.y = -0.5f + ((float)ii + 0.5f) / (float)params.camera_resolution.x;
+    sp.z = ( 0.5f - ((float)jj + 0.5f) / (float)params.camera_resolution.y) * multiplier;
+    sp.x = params.camera_viewplane_length;
+
+    const float3 p = make_float3(
+        params.camera_focal_length,
+        sp.y / params.camera_viewplane_length * params.camera_focal_length,
+        sp.z / params.camera_viewplane_length * params.camera_focal_length);
+
+    float3 ray_origin    = make_float3(0.f, 0.f, 0.f);
+    float3 ray_direction = p;
+
+    const float theta = -0.5f * M_PI + params.camera_direction.x;
+    const float phi   =  0.5f * M_PI - params.camera_direction.y;
+    ray_origin    = d_rotatePoint(ray_origin,    theta, phi) + params.camera_position;
+    ray_direction = d_rotatePoint(ray_direction, theta, phi);
+    ray_direction = ray_direction * (1.0f / d_magnitude(ray_direction));
+
+    PerRayData prd;
+    prd.strength             = 0.f; // used as distance offset (always 0 for pixel label)
+    prd.origin_UUID          = pixel_index;
+    prd.face                 = true;
+    prd.source_ID            = 0;
+    prd.seed                 = seed;
+    prd.hit_periodic_boundary = false;
+
+    uint32_t p0, p1;
+    packPointer(&prd, p0, p1);
+
+    const float t_min = 1e-5f;
+    const float t_max = 1e30f;
+
+    float3 cur_origin = ray_origin;
+    for (int wrap = 0; wrap < 10; wrap++) {
+        prd.hit_periodic_boundary = false;
+        optixTrace(params.traversable, cur_origin, ray_direction,
+                   t_min, t_max, 0.f,
+                   OptixVisibilityMask(255), OPTIX_RAY_FLAG_NONE,
+                   3u, 4u, 3u, // SBT: hit=3, miss=3
+                   p0, p1);
+        if (!prd.hit_periodic_boundary) break;
+        cur_origin = prd.periodic_hit;
+    }
 }

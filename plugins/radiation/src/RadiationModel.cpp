@@ -3207,6 +3207,12 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
         params.band_launch_flag = band_flags;
 
+        // Pre-allocate camera scatter buffers before direct launch so __miss__direct can fill them.
+        // This ensures current_launch_band_count > 0 so getRadiationResults downloads them after.
+        if (Ncameras > 0 && scatteringenabled) {
+            backend->zeroCameraScatterBuffers(Nbands_launch);
+        }
+
         backend->launchDirectRays(params);
 
         if (message_flag) {

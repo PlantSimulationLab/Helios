@@ -91,6 +91,46 @@
   with a single flat AABB array, `optixGetPrimitiveIndex()` returns the GLOBAL position.
   Added `geometry.primitive_UUIDs` upload (global pos → UUID) to avoid out-of-bounds access.
 
-### Phase 7: Texture Mapping — Not Started
-- Next: texture mask upload, UV coords, sampling in intersection
-- Test target: "RadiationModel Texture Mapping"
+### Phase 9: Periodic Boundaries — COMPLETE ✅
+- [x] `__intersection__patch` dispatch: bbox (type-5) face intersection using planar quad
+- [x] `handlePeriodicBoundaryHit()`: robust bbox_local-based wrapping (no float tolerance)
+- [x] `__closesthit__direct` and `__closesthit__diffuse`: bbox hit detection + wrapping
+- [x] `__raygen__direct` and `__raygen__diffuse`: 10-iteration wrap loop around optixTrace
+- [x] `buildAABBs()`: extended to include bbox face AABBs from world-space vertices
+- [x] `buildGAS()` and `buildAccelerationStructure()`: use Nprims + Nbboxes count
+- [x] `updateGeometry()`: extend d_primitive_type and d_primitive_uuid_arr for bbox entries
+- [x] Bug fix: bbox vertex upload guarded by `geometry.bbox_count` (not `geometry.bboxes.count`
+  which RadiationModel never sets → d_bbox_vertices=nullptr crash)
+- Tests passing: "RadiationModel Homogeneous Canopy with Periodic Boundaries" ✅
+                 "RadiationModel Texture-masked Tile Objects with Periodic Boundaries" ✅
+- Committed as: cd71d63e4
+
+### Phase 10: Camera Rendering — COMPLETE ✅
+- [x] updateSkyModel() — upload Prague sky params, camera sky radiance, solar disk params
+- [x] launchCameraRays() — 3D optixLaunch (x=ray, y=col, z=row); cam buffer lifecycle per camera
+- [x] launchPixelLabelRays() — 3D optixLaunch (x=ray, y=col, z=row)
+- [x] zeroCameraPixelBuffers() — zeroes pixel label/depth buffers
+- [x] getCameraResults() — downloads radiation_in_camera, pixel_label, pixel_depth
+- [x] uploadCameraScatterBuffers() — uploads scatter_top_cam/scatter_bottom_cam as radiation_out_cam
+- [x] __raygen__camera — pinhole camera model, UV-jittered anti-aliasing, periodic wrap loop
+- [x] __closesthit__camera — reads radiation_out_top for surface radiance; source type 1/3/4 shadow check
+- [x] __miss__camera — sky model (Prague / isotropic) + solar disk contribution
+- [x] __raygen__pixel_label — same as camera but records hit UUID / pixel depth
+- [x] __closesthit__pixel_label — records UUID and t-value for label/depth
+- [x] __miss__pixel_label — no-op (label stays 0 = sky)
+- [x] Camera scatter buffer pipeline: scatter_buff_top_cam filled by __miss__direct, __miss__diffuse,
+      __closesthit__diffuse; accumulated into scatter_top_cam on host; uploaded via uploadRadiationOut
+      for camera launch to read as radiation_out
+- Tests passing: ALL 73 radiation tests ✅
+- Committed as: (pending commit)
+- Key bugs fixed:
+  - Bug 1: `launchDiffuseRays` width=0 when rays_per_primitive=0 (scattering with diffuseRayCount=0)
+    → Added early return when rpp==0 || launch_count==0
+  - Bug 2: stale pixel label/depth buffers on camera switch in multi-camera test
+    → Free pixel buffers in launchCameraRays new-camera detection block
+  - Bug 3: scatter_buff_top_cam never filled (missing camera scatter in device programs)
+    → Added rho_cam-weighted accumulation to __miss__direct, __miss__diffuse, __closesthit__diffuse
+  - Bug 4: current_launch_band_count=0 prevented cam buffer download in getRadiationResults
+    → zeroCameraScatterBuffers now sets current_launch_band_count
+  - Bug 5: first-order direct sun scatter missing (d_scatter_buff_top_cam NULL during direct launch)
+    → Call zeroCameraScatterBuffers before launchDirectRays in RadiationModel.cpp
