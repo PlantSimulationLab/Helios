@@ -45,6 +45,8 @@ add_dependencies( png_static zlibstatic )
 include_directories("${CMAKE_BINARY_DIR}/lib/libjpeg-9a" "${CMAKE_CURRENT_SOURCE_DIR}/lib/libjpeg-9a")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/lib/libjpeg-9a" "${CMAKE_BINARY_DIR}/lib/libjpeg-9a")
 
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/lib/tinyexr")
+
 target_link_libraries( helios PRIVATE png_static  jpeg ) #note that zlib is already linked by libpng
 
 # Suppress warnings for third-party libraries

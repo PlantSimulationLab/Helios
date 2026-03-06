@@ -16,6 +16,10 @@
 #include "RayTracingBackend.h"
 
 // Conditionally include backend headers based on compile-time definitions
+#ifdef HELIOS_HAVE_OPTIX8
+#include "OptiX8Backend.h"
+#endif
+
 #ifdef HELIOS_HAVE_OPTIX
 #include "OptiX6Backend.h"
 #endif
@@ -24,15 +28,24 @@
 #include "VulkanComputeBackend.h"
 #endif
 
-// Future backend implementations
-// #include "OptiX7Backend.h"
-
 namespace helios {
 
     std::unique_ptr<RayTracingBackend> RayTracingBackend::create(const std::string &backend_type) {
 
-#ifdef HELIOS_HAVE_OPTIX
-        // OptiX 6.5 backend
+#ifdef HELIOS_HAVE_OPTIX8
+        // OptiX 8.1 backend (explicit request)
+        if (backend_type == "optix8" || backend_type == "OptiX8") {
+            return std::make_unique<OptiX8Backend>();
+        }
+#endif
+
+#ifdef HELIOS_HAVE_OPTIX8
+        // "optix" / "optix6" auto-selects: prefer OptiX 8 on modern drivers
+        if (backend_type == "optix" || backend_type == "OptiX" || backend_type == "optix6" || backend_type == "OptiX6") {
+            return std::make_unique<OptiX8Backend>();
+        }
+#elif defined(HELIOS_HAVE_OPTIX)
+        // OptiX 6.5 backend (legacy drivers < 560)
         if (backend_type == "optix6" || backend_type == "OptiX6" || backend_type == "optix" || backend_type == "OptiX") {
             return std::make_unique<OptiX6Backend>();
         }
@@ -45,15 +58,11 @@ namespace helios {
         }
 #endif
 
-        // Future backends:
-        // OptiX 7.7 backend
-        // else if (backend_type == "optix7" || backend_type == "OptiX7") {
-        //     return std::make_unique<OptiX7Backend>();
-        // }
-
         // Unknown backend type - provide helpful error message listing available backends
         std::string available_backends;
-#ifdef HELIOS_HAVE_OPTIX
+#ifdef HELIOS_HAVE_OPTIX8
+        available_backends += "'optix8' (OptiX 8.1), 'optix6' (auto-selects OptiX 8.1)";
+#elif defined(HELIOS_HAVE_OPTIX)
         available_backends += "'optix6' (OptiX 6.5)";
 #endif
 #ifdef HELIOS_HAVE_VULKAN

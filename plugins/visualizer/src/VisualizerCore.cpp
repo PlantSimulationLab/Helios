@@ -2120,6 +2120,11 @@ std::vector<float> Visualizer::generateNiceTicks(float dataMin, float dataMax, b
         }
     }
 
+    // Remove ticks that fall outside the actual data range
+    ticks.erase(std::remove_if(ticks.begin(), ticks.end(),
+                               [dataMin, dataMax](float t) { return t < dataMin - 1e-6f || t > dataMax + 1e-6f; }),
+                ticks.end());
+
     // Ensure we have at least 2 ticks
     if (ticks.size() < 2) {
         ticks.clear();

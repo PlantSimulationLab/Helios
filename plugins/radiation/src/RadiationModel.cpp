@@ -67,7 +67,9 @@ RadiationModel::RadiationModel(helios::Context *context_a) {
     // Initialize backend abstraction layer
     // Auto-detect available backend
     std::string backend_type;
-#ifdef HELIOS_HAVE_OPTIX
+#ifdef HELIOS_HAVE_OPTIX8
+    backend_type = "optix8";
+#elif defined(HELIOS_HAVE_OPTIX)
     backend_type = "optix6";
 #elif defined(HELIOS_HAVE_VULKAN)
     backend_type = "vulkan_compute";
@@ -137,7 +139,9 @@ bool RadiationModel::isGPUBackendAvailable() {
 
     try {
         std::string backend_type;
-#ifdef HELIOS_HAVE_OPTIX
+#ifdef HELIOS_HAVE_OPTIX8
+        backend_type = "optix8";
+#elif defined(HELIOS_HAVE_OPTIX)
         backend_type = "optix6";
 #elif defined(HELIOS_HAVE_VULKAN)
         backend_type = "vulkan_compute";
@@ -3202,6 +3206,12 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         // Use the band_launch_flag already built above (lines 3375-3383)
         std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
         params.band_launch_flag = band_flags;
+
+        // Pre-allocate camera scatter buffers before direct launch so __miss__direct can fill them.
+        // This ensures current_launch_band_count > 0 so getRadiationResults downloads them after.
+        if (Ncameras > 0 && scatteringenabled) {
+            backend->zeroCameraScatterBuffers(Nbands_launch);
+        }
 
         backend->launchDirectRays(params);
 

@@ -15,6 +15,15 @@
 
 #include "global.h"
 
+// EXR Libraries (reading and writing OpenEXR images)
+// NOTE: tinyexr must be included before jpeglib because on Windows, tinyexr
+// includes <windows.h> which defines INT32 as int, and libjpeg's jmorecfg.h
+// has guards (#ifndef _BASETSD_H_) to skip its own conflicting typedef.
+#define TINYEXR_USE_MINIZ 0
+#include "zlib.h"
+#define TINYEXR_IMPLEMENTATION
+#include "tinyexr.h"
+
 // PNG Libraries (reading and writing PNG images)
 //! PNG debug level.
 #define PNG_DEBUG 3
@@ -2058,6 +2067,128 @@ void helios::writeJPEG(const std::string &a_filename, uint width, uint height, c
 
     // Call RGB version of writeJPEG
     writeJPEG(a_filename, width, height, rgb_data);
+}
+
+void helios::writeEXR(const std::string &filename, uint width, uint height, const std::vector<float> &pixel_data, const std::string &channel_name) {
+
+    if (pixel_data.size() != width * height) {
+        helios_runtime_error("ERROR (writeEXR): pixel_data size (" + std::to_string(pixel_data.size()) + ") does not match width*height (" + std::to_string(width * height) + ").");
+    }
+
+    EXRHeader header;
+    InitEXRHeader(&header);
+
+    EXRImage image;
+    InitEXRImage(&image);
+
+    image.num_channels = 1;
+    image.width = scast<int>(width);
+    image.height = scast<int>(height);
+
+    float *image_ptr[1];
+    image_ptr[0] = const_cast<float *>(pixel_data.data());
+
+    image.images = reinterpret_cast<unsigned char **>(image_ptr);
+
+    header.num_channels = 1;
+    header.channels = scast<EXRChannelInfo *>(malloc(sizeof(EXRChannelInfo)));
+    strncpy(header.channels[0].name, channel_name.c_str(), 255);
+    header.channels[0].name[255] = '\0';
+
+    header.pixel_types = scast<int *>(malloc(sizeof(int)));
+    header.requested_pixel_types = scast<int *>(malloc(sizeof(int)));
+    header.pixel_types[0] = TINYEXR_PIXELTYPE_FLOAT;
+    header.requested_pixel_types[0] = TINYEXR_PIXELTYPE_FLOAT;
+
+    header.compression_type = TINYEXR_COMPRESSIONTYPE_ZIP;
+
+    const char *err = nullptr;
+    int ret = SaveEXRImageToFile(&image, &header, filename.c_str(), &err);
+
+    free(header.channels);
+    free(header.pixel_types);
+    free(header.requested_pixel_types);
+
+    if (ret != TINYEXR_SUCCESS) {
+        std::string error_msg = "ERROR (writeEXR): Failed to write EXR file '" + filename + "'";
+        if (err) {
+            error_msg += ": " + std::string(err);
+            FreeEXRErrorMessage(err);
+        }
+        helios_runtime_error(error_msg);
+    }
+}
+
+void helios::writeEXR(const std::string &filename, uint width, uint height, const std::vector<std::vector<float>> &channel_data, const std::vector<std::string> &channel_names) {
+
+    if (channel_data.size() != channel_names.size()) {
+        helios_runtime_error("ERROR (writeEXR): channel_data size (" + std::to_string(channel_data.size()) + ") does not match channel_names size (" + std::to_string(channel_names.size()) + ").");
+    }
+    if (channel_data.empty()) {
+        helios_runtime_error("ERROR (writeEXR): channel_data is empty.");
+    }
+    for (size_t c = 0; c < channel_data.size(); c++) {
+        if (channel_data[c].size() != width * height) {
+            helios_runtime_error("ERROR (writeEXR): channel_data[" + std::to_string(c) + "] size (" + std::to_string(channel_data[c].size()) + ") does not match width*height (" + std::to_string(width * height) + ").");
+        }
+    }
+
+    int num_channels = scast<int>(channel_data.size());
+
+    // Sort channels alphabetically (EXR convention)
+    std::vector<size_t> sort_indices(num_channels);
+    for (size_t i = 0; i < sort_indices.size(); i++) {
+        sort_indices[i] = i;
+    }
+    std::sort(sort_indices.begin(), sort_indices.end(), [&](size_t a, size_t b) {
+        return channel_names[a] < channel_names[b];
+    });
+
+    EXRHeader header;
+    InitEXRHeader(&header);
+
+    EXRImage image;
+    InitEXRImage(&image);
+
+    image.num_channels = num_channels;
+    image.width = scast<int>(width);
+    image.height = scast<int>(height);
+
+    std::vector<float *> image_ptrs(num_channels);
+    for (int c = 0; c < num_channels; c++) {
+        image_ptrs[c] = const_cast<float *>(channel_data[sort_indices[c]].data());
+    }
+    image.images = reinterpret_cast<unsigned char **>(image_ptrs.data());
+
+    header.num_channels = num_channels;
+    header.channels = scast<EXRChannelInfo *>(malloc(sizeof(EXRChannelInfo) * num_channels));
+    header.pixel_types = scast<int *>(malloc(sizeof(int) * num_channels));
+    header.requested_pixel_types = scast<int *>(malloc(sizeof(int) * num_channels));
+
+    for (int c = 0; c < num_channels; c++) {
+        strncpy(header.channels[c].name, channel_names[sort_indices[c]].c_str(), 255);
+        header.channels[c].name[255] = '\0';
+        header.pixel_types[c] = TINYEXR_PIXELTYPE_FLOAT;
+        header.requested_pixel_types[c] = TINYEXR_PIXELTYPE_FLOAT;
+    }
+
+    header.compression_type = TINYEXR_COMPRESSIONTYPE_ZIP;
+
+    const char *err = nullptr;
+    int ret = SaveEXRImageToFile(&image, &header, filename.c_str(), &err);
+
+    free(header.channels);
+    free(header.pixel_types);
+    free(header.requested_pixel_types);
+
+    if (ret != TINYEXR_SUCCESS) {
+        std::string error_msg = "ERROR (writeEXR): Failed to write EXR file '" + filename + "'";
+        if (err) {
+            error_msg += ": " + std::string(err);
+            FreeEXRErrorMessage(err);
+        }
+        helios_runtime_error(error_msg);
+    }
 }
 
 helios::vec3 helios::spline_interp3(float u, const vec3 &x_start, const vec3 &tan_start, const vec3 &x_end, const vec3 &tan_end) {

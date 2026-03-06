@@ -1571,6 +1571,26 @@ public:
      */
     void writeCameraImageData(const std::string &camera, const std::string &band, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
 
+    //! Write camera pixel data to an EXR file with lossless float compression
+    /**
+     * \param[in] camera Label for camera to be queried
+     * \param[in] band Label for radiative band to be written
+     * \param[in] imagefile_base Name for base of output image files (will also include the camera label and a frame number in the file name)
+     * \param[in] image_path [optional] Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame [optional] A frame count number to be appended to the output image file (e.g., camera_thermal_00001.exr). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     */
+    void writeCameraImageDataEXR(const std::string &camera, const std::string &band, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
+
+    //! Write multi-band camera pixel data to a single EXR file with lossless float compression
+    /**
+     * \param[in] camera Label for camera to be queried
+     * \param[in] bands Labels for radiative bands to be written as separate channels in the EXR file
+     * \param[in] imagefile_base Name for base of output image files (will also include the camera label and a frame number in the file name)
+     * \param[in] image_path [optional] Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame [optional] A frame count number to be appended to the output image file (e.g., camera_thermal_00001.exr). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     */
+    void writeCameraImageDataEXR(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
+
     //! Write image pixel labels to text file based on primitive data. Primitive data must have type 'float', 'double', 'uint', or 'int'.
     /**
      * \param[in] cameralabel Label of target camera
@@ -1601,6 +1621,15 @@ public:
      * \param[in] frame [optional] A frame count number to be appended to the output image file (e.g., camera_depth_00001.txt). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
      */
     void writeDepthImageData(const std::string &cameralabel, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
+
+    //! Write depth image data to an EXR file with lossless float compression
+    /**
+     * \param[in] cameralabel Label of target camera
+     * \param[in] imagefile_base Name for base of output image files (will also include the camera label and a frame number in the file name)
+     * \param[in] image_path [optional] Path to directory where images should be saved. By default, it will be placed in the current working directory.
+     * \param[in] frame [optional] A frame count number to be appended to the output image file (e.g., camera_depth_00001.exr). By default, the frame count will be omitted from the file name. This value must be less than or equal to 99,999.
+     */
+    void writeDepthImageDataEXR(const std::string &cameralabel, const std::string &imagefile_base, const std::string &image_path = "./", int frame = -1);
 
     //! Write depth image file, with grayscale normalized to the minimum and maximum depth values
     /**

@@ -251,13 +251,15 @@
   4. Double-click TdrDelay and add 600 for the Value data and make it a Decimal (instead of Hexadecimal). Click OK. If you encounter the same "Display driver stopped responding and has recovered" error in the future, increase the value.
   5. Close the registry editor and restart the computer for the changes to take effect.
 
-  \subsubsection OptiXWSL Manually installing OptiX if using Windows Subsystem for Linux (WSL)
+  \subsubsection OptiXWSL Running OptiX under Windows Subsystem for Linux (WSL)
 
-  OptiX is normally packaged with Helios, such that you do not have to worry about installing it. However, if you are using Windows Subsystem for Linux (WSL), you will need to manually install OptiX since the version included with Helios does not have the required drivers for WSL. You can follow the instructions on this site to perform the installation: <a href="https://forums.developer.nvidia.com/t/problem-running-optix-7-6-in-wsl/239355/7">https://forums.developer.nvidia.com/t/problem-running-optix-7-6-in-wsl/239355/7</a>.
+  Both the OptiX 8.1 and OptiX 6.5 backends are bundled with Helios and do not require a separate OptiX SDK installation. The OptiX runtime is loaded from the NVIDIA driver at runtime via <tt>optixInit()</tt>, so as long as the NVIDIA driver is installed in WSL, no additional steps are needed.
 
-  Alternatively, simply run the dependencies script found in the utilities/ folder: `source dependencies.sh`
+  If you encounter issues finding the NVIDIA driver inside WSL, run the dependencies script in the utilities/ folder:
 
-  This will automatically install and configure the Linux drivers (version 470.256.02) to run OptiX.
+  <tt>source dependencies.sh</tt>
+
+  This will automatically install and configure the Linux driver components needed to run CUDA and OptiX inside WSL.
 
   \subsection SetupPCVulkan Setting up Vulkan for the Radiation Model
 
@@ -2055,13 +2057,21 @@ The table below gives recommendations for Windows and Linux Systems based on you
 
 \section chooseOptiX OptiX Version
 
-The NVIDIA OptiX library is used for ray-tracing calculations associated with the radiation model plug-in. Helios comes packaged with two versions of OptiX: version 5.1 (which we term "legacy") and version 6.5. The newer version (6.5) is what is used by default. If you are using a GPU with compute capability <5.0, you will need to enable the legacy version (see table above).
+The NVIDIA OptiX library is used for ray-tracing calculations in the radiation model. Helios bundles three versions of OptiX and selects among them automatically based on your NVIDIA driver version:
 
-There are several ways to tell Helios to build with the legacy OptiX version, all of which involve setting a CMake variable:
+| Driver version | OptiX version used | CUDA requirement |
+|---|---|---|
+| ≥ 560 | OptiX 8.1 (default, recommended) | CUDA 12.0+ |
+| &lt; 560 | OptiX 6.5 (legacy) | CUDA 9.0+ |
+| Any (or no NVIDIA GPU) | Vulkan compute backend | None |
 
-1. Pass option to CMake: To always build every project with the legacy OptiX version, it is easiest to set the following CMake option in CLion: "-DOPTIX_VERSION_LEGACY=ON". Go to CLion settings, then "build, execution, deployment -> CMake" Then type "-DOPTIX_VERSION_LEGACY=ON" into the CMake Options box. You can also pass this option to CMake if building from the command line.
+\note NVIDIA drivers 590.x and later dropped support for OptiX 6.5. If you have a modern GPU and driver, Helios automatically uses OptiX 8.1, which supports all current and future NVIDIA drivers. The driver 590+ incompatibility that existed in earlier Helios versions is fully resolved.
 
-2. Add the variable directly in your project CMakeLists.txt file: You can add the line "set( OPTIX_VERSION_LEGACY ON )" to your project CMakeLists.txt file.
+<b>Legacy GPUs (compute capability 3.5):</b> If you are using a GPU with compute capability &lt; 5.0, you can force the OptiX 6.5 legacy backend by setting <tt>-DOPTIX_VERSION_LEGACY=ON</tt>. There are two ways to do this:
+
+1. Pass option to CMake: Set the following CMake option in CLion: "-DOPTIX_VERSION_LEGACY=ON". Go to CLion settings, then "build, execution, deployment -> CMake", and type "-DOPTIX_VERSION_LEGACY=ON" into the CMake Options box. You can also pass this option to CMake if building from the command line.
+
+2. Add the variable directly in your project CMakeLists.txt file: Add the line <tt>set( OPTIX_VERSION_LEGACY ON )</tt> to your project CMakeLists.txt file.
 
 
 */

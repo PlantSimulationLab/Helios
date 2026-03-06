@@ -730,6 +730,114 @@ void RadiationModel::writeCameraImageData(const std::string &camera, const std::
     outfilestream.close();
 }
 
+void RadiationModel::writeCameraImageDataEXR(const std::string &camera, const std::string &band, const std::string &imagefile_base, const std::string &image_path, int frame) {
+
+    if (cameras.find(camera) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImageDataEXR): Camera '" + camera + "' does not exist.");
+    }
+
+    if (std::find(cameras.at(camera).band_labels.begin(), cameras.at(camera).band_labels.end(), band) == cameras.at(camera).band_labels.end()) {
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImageDataEXR): Camera '" + camera + "' band with label '" + band + "' does not exist.");
+    }
+
+    std::string global_data_label = "camera_" + camera + "_" + band;
+
+    if (!context->doesGlobalDataExist(global_data_label.c_str())) {
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImageDataEXR): Image data for camera '" + camera + "', band '" + band + "' has not been created. Did you run the radiation model?");
+    }
+
+    std::vector<float> camera_data;
+    context->getGlobalData(global_data_label.c_str(), camera_data);
+
+    std::string output_path = image_path;
+    if (!image_path.empty() && !validateOutputPath(output_path)) {
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImageDataEXR): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
+    } else if (!isDirectoryPath(output_path)) {
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImageDataEXR): Expected a directory path but got a file path for argument 'image_path'.");
+    }
+
+    std::ostringstream outfile;
+    outfile << output_path;
+    if (frame >= 0) {
+        outfile << camera << "_" << imagefile_base << "_" << std::setw(5) << std::setfill('0') << frame << ".exr";
+    } else {
+        outfile << camera << "_" << imagefile_base << ".exr";
+    }
+
+    int2 camera_resolution = cameras.at(camera).resolution;
+
+    // Apply horizontal flip to match writeCameraImageData() convention
+    std::vector<float> flipped_data(camera_resolution.x * camera_resolution.y);
+    for (int j = 0; j < camera_resolution.y; j++) {
+        for (int i = 0; i < camera_resolution.x; i++) {
+            int ii = camera_resolution.x - i - 1;
+            flipped_data[j * camera_resolution.x + i] = camera_data[j * camera_resolution.x + ii];
+        }
+    }
+
+    helios::writeEXR(outfile.str(), camera_resolution.x, camera_resolution.y, flipped_data, band);
+}
+
+void RadiationModel::writeCameraImageDataEXR(const std::string &camera, const std::vector<std::string> &bands, const std::string &imagefile_base, const std::string &image_path, int frame) {
+
+    if (cameras.find(camera) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImageDataEXR): Camera '" + camera + "' does not exist.");
+    }
+    if (bands.empty()) {
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImageDataEXR): 'bands' vector is empty.");
+    }
+
+    int2 camera_resolution = cameras.at(camera).resolution;
+    size_t num_pixels = camera_resolution.x * camera_resolution.y;
+
+    std::vector<std::vector<float>> channel_data(bands.size());
+    std::vector<std::string> channel_names(bands.size());
+
+    for (size_t b = 0; b < bands.size(); b++) {
+        const std::string &band = bands[b];
+
+        if (std::find(cameras.at(camera).band_labels.begin(), cameras.at(camera).band_labels.end(), band) == cameras.at(camera).band_labels.end()) {
+            helios_runtime_error("ERROR (RadiationModel::writeCameraImageDataEXR): Camera '" + camera + "' band with label '" + band + "' does not exist.");
+        }
+
+        std::string global_data_label = "camera_" + camera + "_" + band;
+        if (!context->doesGlobalDataExist(global_data_label.c_str())) {
+            helios_runtime_error("ERROR (RadiationModel::writeCameraImageDataEXR): Image data for camera '" + camera + "', band '" + band + "' has not been created. Did you run the radiation model?");
+        }
+
+        std::vector<float> raw_data;
+        context->getGlobalData(global_data_label.c_str(), raw_data);
+
+        // Apply horizontal flip to match writeCameraImageData() convention
+        channel_data[b].resize(num_pixels);
+        for (int j = 0; j < camera_resolution.y; j++) {
+            for (int i = 0; i < camera_resolution.x; i++) {
+                int ii = camera_resolution.x - i - 1;
+                channel_data[b][j * camera_resolution.x + i] = raw_data[j * camera_resolution.x + ii];
+            }
+        }
+
+        channel_names[b] = band;
+    }
+
+    std::string output_path = image_path;
+    if (!image_path.empty() && !validateOutputPath(output_path)) {
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImageDataEXR): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
+    } else if (!isDirectoryPath(output_path)) {
+        helios_runtime_error("ERROR (RadiationModel::writeCameraImageDataEXR): Expected a directory path but got a file path for argument 'image_path'.");
+    }
+
+    std::ostringstream outfile;
+    outfile << output_path;
+    if (frame >= 0) {
+        outfile << camera << "_" << imagefile_base << "_" << std::setw(5) << std::setfill('0') << frame << ".exr";
+    } else {
+        outfile << camera << "_" << imagefile_base << ".exr";
+    }
+
+    helios::writeEXR(outfile.str(), camera_resolution.x, camera_resolution.y, channel_data, channel_names);
+}
+
 void RadiationModel::setCameraCalibration(CameraCalibration *CameraCalibration) {
     cameracalibration = CameraCalibration;
     calibration_flag = true;
@@ -1194,6 +1302,48 @@ void RadiationModel::writeDepthImageData(const std::string &cameralabel, const s
     }
 
     pixel_data.close();
+}
+
+void RadiationModel::writeDepthImageDataEXR(const std::string &cameralabel, const std::string &imagefile_base, const std::string &image_path, int frame) {
+
+    if (cameras.find(cameralabel) == cameras.end()) {
+        helios_runtime_error("ERROR (RadiationModel::writeDepthImageDataEXR): Camera '" + cameralabel + "' does not exist.");
+    }
+
+    std::string global_data_label = "camera_" + cameralabel + "_pixel_depth";
+    if (!context->doesGlobalDataExist(global_data_label.c_str())) {
+        helios_runtime_error("ERROR (RadiationModel::writeDepthImageDataEXR): Depth data for camera '" + cameralabel + "' does not exist. Was the radiation model run for the camera?");
+    }
+    std::vector<float> camera_depth;
+    context->getGlobalData(global_data_label.c_str(), camera_depth);
+
+    int2 camera_resolution = cameras.at(cameralabel).resolution;
+
+    std::string output_path = image_path;
+    if (!image_path.empty() && !validateOutputPath(output_path)) {
+        helios_runtime_error("ERROR (RadiationModel::writeDepthImageDataEXR): Invalid image output directory '" + image_path + "'. Check that the path exists and that you have write permission.");
+    } else if (!isDirectoryPath(output_path)) {
+        helios_runtime_error("ERROR (RadiationModel::writeDepthImageDataEXR): Expected a directory path but got a file path for argument 'image_path'.");
+    }
+
+    std::ostringstream outfile;
+    outfile << output_path;
+    if (frame >= 0) {
+        outfile << cameralabel << "_" << imagefile_base << "_" << std::setw(5) << std::setfill('0') << frame << ".exr";
+    } else {
+        outfile << cameralabel << "_" << imagefile_base << ".exr";
+    }
+
+    // Apply horizontal flip to match writeDepthImageData() convention
+    std::vector<float> flipped_data(camera_resolution.x * camera_resolution.y);
+    for (int j = 0; j < camera_resolution.y; j++) {
+        for (int i = 0; i < camera_resolution.x; i++) {
+            int ii = camera_resolution.x - i - 1;
+            flipped_data[j * camera_resolution.x + i] = camera_depth[j * camera_resolution.x + ii];
+        }
+    }
+
+    helios::writeEXR(outfile.str(), camera_resolution.x, camera_resolution.y, flipped_data, "Z");
 }
 
 void RadiationModel::writeNormDepthImage(const std::string &cameralabel, const std::string &imagefile_base, float max_depth, const std::string &image_path, int frame) {
