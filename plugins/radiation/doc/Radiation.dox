@@ -9,7 +9,7 @@
  <table>
    <tr>
       <th>Dependencies</th>
-      <td>Vulkan SDK (all platforms) and/or NVIDIA CUDA 9.0+ (NVIDIA systems, enables OptiX backend)</td>
+      <td>Vulkan SDK (all platforms) and/or NVIDIA CUDA 12.0+ with driver ≥ 560 (enables OptiX 8.1 backend); NVIDIA CUDA 9.0+ with driver &lt; 560 (enables OptiX 6.5 backend)</td>
    </tr>
    <tr>	
      <th>CMakeLists.txt</th>
@@ -45,7 +45,14 @@ The radiation model requires at least one ray-tracing backend. Two backends are 
         <td>Install <a href="https://vulkan.lunarg.com/sdk/home">LunarG Vulkan SDK</a> (includes glslang)</td>
     </tr>
     <tr>
-        <td><b>OptiX</b> (NVIDIA only)</td>
+        <td><b>OptiX 8.1</b> (NVIDIA driver ≥ 560, default)</td>
+        <td>NVIDIA CUDA 12.0+</td>
+        <td>Not available (no NVIDIA GPU)</td>
+        <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
+        <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
+    </tr>
+    <tr>
+        <td><b>OptiX 6.5</b> (NVIDIA driver &lt; 560, legacy)</td>
         <td>NVIDIA CUDA 9.0+</td>
         <td>Not available (no NVIDIA GPU)</td>
         <td>Use <a href="https://developer.nvidia.com/cuda-downloads">CUDA installer</a></td>
@@ -53,9 +60,9 @@ The radiation model requires at least one ray-tracing backend. Two backends are 
     </tr>
 </table>
 
-CMake automatically detects which backends are available and enables them. If both are found, the OptiX backend is used by default on NVIDIA systems; otherwise the Vulkan backend is used. You can force the Vulkan backend by setting <tt>-DFORCE_VULKAN_BACKEND=ON</tt>.
+CMake automatically detects which backends are available and enables them. On NVIDIA systems with driver ≥ 560 and CUDA 12.0+, the OptiX 8.1 backend is selected by default; on systems with driver &lt; 560 and CUDA 9.0+, the OptiX 6.5 (legacy) backend is used instead. On systems without NVIDIA hardware or when CUDA is not installed, the Vulkan backend is used. You can force the Vulkan backend by setting <tt>-DFORCE_VULKAN_BACKEND=ON</tt>, or force the OptiX 6.5 legacy backend by setting <tt>-DOPTIX_VERSION_LEGACY=ON</tt>.
 
-\note <b>Performance:</b> The OptiX backend is strongly preferred on NVIDIA systems. For direct radiation source ray traces, performance between the two backends is broadly comparable. However, for diffuse radiation or scattering ray traces, the Vulkan backend can be significantly slower. If you have an NVIDIA GPU and are running simulations with diffuse radiation or multiple scattering iterations, it is strongly recommended to install CUDA and use the OptiX backend.
+\note <b>Performance:</b> The OptiX backend is strongly preferred on NVIDIA systems. For direct radiation source ray traces, performance between the two backends is broadly comparable. However, for diffuse radiation or scattering ray traces, the Vulkan backend can be significantly slower. If you have an NVIDIA GPU and are running simulations with diffuse radiation or multiple scattering iterations, it is strongly recommended to install CUDA and use the OptiX backend. On systems with driver ≥ 560, the OptiX 8.1 backend will be selected automatically.
 
 For help choosing the correct CUDA toolkit version and accompanying OptiX version for your system, consult this page: \ref ChoosingCUDA
 
@@ -64,6 +71,18 @@ Useful OS-specific information for installing CUDA can be found here: \ref Depen
 If you are using a PC with the OptiX backend, it is likely you will need to increase the GPU timeout in the registry, otherwise calculations lasting longer than 2 secs. will timeout and kill your program. A guide on how to increase the timeout can be found here: \ref PCGPUTimeout
 
  \section RadKnownIssues Known Issues
+
+ \subsection OptiXDriverIncompat OptiX Backend: NVIDIA Driver 590+ Incompatibility — <b>RESOLVED</b>
+
+ <b>Status: Resolved.</b> This issue has been permanently fixed by the addition of the OptiX 8.1 backend (Helios 1.3.66+). On systems with NVIDIA driver ≥ 560, Helios now automatically uses the OptiX 8.1 backend, which is fully compatible with all modern NVIDIA drivers.
+
+ <b>Historical context:</b> NVIDIA drivers 590.x and later removed support for the OptiX 6.5 API previously used by Helios. This caused build failures or runtime errors for users with modern NVIDIA drivers.
+
+ <b>Resolution:</b> Helios now selects the correct OptiX backend automatically based on the detected driver version:
+ - Driver ≥ 560: OptiX 8.1 backend is used (supports all modern drivers).
+ - Driver &lt; 560: OptiX 6.5 backend is used (for older systems).
+
+ If you are still seeing this issue, ensure you are using Helios 1.3.66 or later. If you must use an older Helios version, the Vulkan compute backend remains a fully-functional alternative (<tt>-DFORCE_VULKAN_BACKEND=ON</tt>).
 
  \subsection VulkanInstanceLimitation Vulkan Backend: Repeated RadiationModel Creation Limitation (Linux NVIDIA Drivers)
 
@@ -100,7 +119,7 @@ If you are using a PC with the OptiX backend, it is likely you will need to incr
 
  This model simulates the transport of radiative energy for arbitrary wavelength bands using a GPU-accelerated ray-tracing model. The model details are described in <a href="http://dx.doi.org/10.1016/j.ecolmodel.2017.11.022">Bailey (2018)</a>. Briefly, the model uses a reverse ray-tracing approach to simulate emission from primitive elements, collimated radiation sources, and point radiation sources.
 
- The model supports two GPU backends: the <b>Vulkan compute backend</b>, which works on all platforms (macOS, Linux, Windows) including systems without NVIDIA hardware, and the <b>OptiX backend</b>, which is available on NVIDIA systems and requires CUDA. The appropriate backend is selected automatically at build time based on available hardware and libraries.
+ The model supports three GPU backends: the <b>Vulkan compute backend</b>, which works on all platforms (macOS, Linux, Windows) including systems without NVIDIA hardware; the <b>OptiX 8.1 backend</b>, which is the default on NVIDIA systems with driver ≥ 560 and CUDA 12.0+; and the <b>OptiX 6.5 backend</b>, which is used on NVIDIA systems with driver &lt; 560. The appropriate backend is selected automatically at build time based on the available hardware and driver version.
 
  \section RadConstructor RadiationModel Class Constructor
 

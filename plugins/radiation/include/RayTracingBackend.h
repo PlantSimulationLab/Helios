@@ -27,9 +27,9 @@ namespace helios {
      *
      * This interface provides a backend-agnostic API for ray tracing operations.
      * Implementations include:
-     * - OptiX6Backend: OptiX 6.5 implementation (NVIDIA GPUs only)
+     * - OptiX8Backend: OptiX 8.1 implementation (NVIDIA GPUs, drivers >= 560)
+     * - OptiX6Backend: OptiX 6.5 implementation (NVIDIA GPUs, drivers < 560)
      * - VulkanComputeBackend: Vulkan compute shaders with software BVH (AMD, Intel, Apple Silicon GPUs)
-     * - OptiX7Backend: OptiX 7.7 implementation (future)
      *
      * The interface is designed to support:
      * - 4 ray types: direct, diffuse, camera, pixel_label
@@ -303,14 +303,15 @@ namespace helios {
         /**
          * @brief Create a ray tracing backend instance
          *
-         * @param[in] backend_type Backend type string: "optix6", "vulkan_compute"
+         * @param[in] backend_type Backend type string: "optix8", "optix6", "optix", "vulkan_compute"
          * @return Unique pointer to backend instance
          *
          * Factory method that selects and instantiates the appropriate backend.
          * Throws helios_runtime_error if backend type is unknown or unavailable.
          *
          * Available backends depend on compile-time configuration:
-         * - "optix6": Requires CUDA Toolkit and OptiX 6.5 (NVIDIA GPUs)
+         * - "optix8": OptiX 8.1 (NVIDIA drivers >= 560)
+         * - "optix6" / "optix": OptiX 8.1 if available, else OptiX 6.5
          * - "vulkan_compute": Requires Vulkan SDK (AMD, Intel, Apple Silicon GPUs)
          */
         static std::unique_ptr<RayTracingBackend> create(const std::string &backend_type);

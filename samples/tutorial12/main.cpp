@@ -18,7 +18,7 @@ int main() {
     context.translatePrimitive(UUIDs_bunny_2, make_vec3(-0.15, 0, 0));
 
     // Load and scale the Stanford Dragon model, positioned at center
-    std::vector<uint> UUIDs_dragon = context.loadPLY("../../../PLY/StanfordDragon.ply", make_vec3(0.025, 0, 0), 0.2, nullrotation);
+    std::vector<uint> UUIDs_dragon;// = context.loadPLY("../../../PLY/StanfordDragon.ply", make_vec3(0.025, 0, 0), 0.2, nullrotation);
 
     // Create a ground plane to provide realistic lighting and context
     std::vector<uint> UUIDs_tile = context.addTile(nullorigin, make_vec2(1, 1), nullrotation, make_int2(1000, 1000));
@@ -90,21 +90,8 @@ int main() {
     vec3 camera_position = make_vec3(-0.01, 0.05, 0.6f); // Positioned back and slightly elevated
     vec3 camera_lookat = make_vec3(0, 0.05, 0); // Looking at the center of the scene
 
-    // Configure camera properties for high-quality imaging
-    CameraProperties cameraproperties;
-    cameraproperties.camera_resolution = make_int2(1024, 1024); // Square 1024x1024 resolution
-    cameraproperties.focal_plane_distance = 0.6; // Focus distance
-    cameraproperties.lens_diameter = 0.018f;
-    cameraproperties.HFOV = 50.f; // 50-degree horizontal field of view
-
     // Add the camera to the radiation model with 100 rays per pixel for quality
-    radiation.addRadiationCamera(cameralabel, bandlabels, camera_position, camera_lookat, cameraproperties, 100);
-
-    // Load camera spectral response data and simulate iPhone 12 Pro Max camera
-    context.loadXML("plugins/radiation/spectral_data/camera_spectral_library.xml", true);
-    radiation.setCameraSpectralResponse(cameralabel, "red", "iPhone12ProMAX_red");
-    radiation.setCameraSpectralResponse(cameralabel, "green", "iPhone12ProMAX_green");
-    radiation.setCameraSpectralResponse(cameralabel, "blue", "iPhone12ProMAX_blue");
+    radiation.addRadiationCameraFromLibrary(cameralabel, "iPhone12ProMAX", camera_position, camera_lookat, 100);
 
     // STEP 6: Run the radiation simulation and generate outputs
 

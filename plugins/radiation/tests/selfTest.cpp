@@ -26,7 +26,7 @@ namespace helios {
          * @return True if GPU tests can run (always true for OptiX, Vulkan-dependent otherwise)
          */
         static bool isGPUAvailable() {
-#if defined(HELIOS_HAVE_OPTIX) && !defined(FORCE_VULKAN_BACKEND)
+#if defined(HELIOS_HAVE_OPTIX8) || (defined(HELIOS_HAVE_OPTIX) && !defined(FORCE_VULKAN_BACKEND))
             return true;
 #else
             return TestVulkanDeviceManager::isVulkanAvailable();
@@ -34,7 +34,7 @@ namespace helios {
         }
 
         static RadiationModel createWithSharedDevice(Context *context) {
-#if defined(HELIOS_HAVE_OPTIX) && !defined(FORCE_VULKAN_BACKEND)
+#if defined(HELIOS_HAVE_OPTIX8) || (defined(HELIOS_HAVE_OPTIX) && !defined(FORCE_VULKAN_BACKEND))
             // OptiX available and not forced to Vulkan - use default constructor
             return RadiationModel(context);
 #else
