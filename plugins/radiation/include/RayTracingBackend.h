@@ -303,19 +303,33 @@ namespace helios {
         /**
          * @brief Create a ray tracing backend instance
          *
-         * @param[in] backend_type Backend type string: "optix8", "optix6", "optix", "vulkan_compute"
-         * @return Unique pointer to backend instance
+         * @param[in] backend_type Backend type string:
+         *   - "auto": Probe compiled-in backends at runtime in priority order
+         *     (OptiX 8 → OptiX 6 → Vulkan). Throws helios_runtime_error with
+         *     diagnostic instructions if no compatible GPU hardware is found.
+         *   - "optix8": OptiX 8.1 (NVIDIA drivers >= 560)
+         *   - "optix6" / "optix": OptiX 8.1 if available, else OptiX 6.5
+         *   - "vulkan_compute": Vulkan compute shaders (AMD, Intel, Apple Silicon GPUs)
+         * @return Unique pointer to backend instance (not yet initialized — caller must call initialize())
          *
-         * Factory method that selects and instantiates the appropriate backend.
-         * Throws helios_runtime_error if backend type is unknown or unavailable.
-         *
-         * Available backends depend on compile-time configuration:
-         * - "optix8": OptiX 8.1 (NVIDIA drivers >= 560)
-         * - "optix6" / "optix": OptiX 8.1 if available, else OptiX 6.5
-         * - "vulkan_compute": Requires Vulkan SDK (AMD, Intel, Apple Silicon GPUs)
+         * @note For "auto" mode, probe() verifies driver/hardware availability but not full
+         * initialization capability (e.g., missing device code files, insufficient VRAM). If
+         * initialize() fails after a successful probe, the error propagates directly without
+         * fallthrough to the next backend.
          */
         static std::unique_ptr<RayTracingBackend> create(const std::string &backend_type);
     };
+
+    /**
+     * @brief Lightweight probe to check if any compiled-in GPU backend is available
+     *
+     * Probes backends in priority order (OptiX 8 → OptiX 6 → Vulkan) without
+     * constructing or initializing a full backend. Suitable for use in availability
+     * checks where creating a full backend would be wasteful.
+     *
+     * @return true if at least one compiled-in backend's probe() succeeds
+     */
+    bool probeAnyGPUBackend() noexcept;
 
 } // namespace helios
 

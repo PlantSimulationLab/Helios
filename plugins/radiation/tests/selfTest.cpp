@@ -2,7 +2,10 @@
 #include "RadiationModel.h"
 #include "BufferIndexing.h"
 #include "test_helpers.h"
+
+#ifdef HELIOS_HAVE_VULKAN
 #include "VulkanComputeBackend.h"
+#endif
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
@@ -26,18 +29,14 @@ namespace helios {
          * @return True if GPU tests can run (always true for OptiX, Vulkan-dependent otherwise)
          */
         static bool isGPUAvailable() {
-#if defined(HELIOS_HAVE_OPTIX8) || (defined(HELIOS_HAVE_OPTIX) && !defined(FORCE_VULKAN_BACKEND))
-            return true;
-#else
-            return TestVulkanDeviceManager::isVulkanAvailable();
-#endif
+            return helios::probeAnyGPUBackend();
         }
 
         static RadiationModel createWithSharedDevice(Context *context) {
 #if defined(HELIOS_HAVE_OPTIX8) || (defined(HELIOS_HAVE_OPTIX) && !defined(FORCE_VULKAN_BACKEND))
             // OptiX available and not forced to Vulkan - use default constructor
             return RadiationModel(context);
-#else
+#elif defined(HELIOS_HAVE_VULKAN)
             // Vulkan backend - use shared device (workaround for NVIDIA driver bug)
             VulkanDevice *device = TestVulkanDeviceManager::getSharedDevice();
             if (!device) {
@@ -48,6 +47,9 @@ namespace helios {
 
             // Use static factory method to inject pre-configured backend
             return RadiationModel::createWithBackend(context, std::move(backend));
+#else
+            helios_runtime_error("No ray tracing backend available for testing");
+            return RadiationModel(context); // Unreachable, silence compiler warning
 #endif
         }
     };

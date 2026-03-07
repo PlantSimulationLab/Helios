@@ -32,6 +32,20 @@ namespace helios {
 
 OptiX8Backend::OptiX8Backend() = default;
 
+bool OptiX8Backend::probe() noexcept {
+    try {
+        int device_count = 0;
+        cudaError_t rc = cudaGetDeviceCount(&device_count);
+        if (rc != cudaSuccess || device_count == 0) {
+            return false;
+        }
+        OptixResult optix_rc = optixInit();
+        return (optix_rc == OPTIX_SUCCESS);
+    } catch (...) {
+        return false;
+    }
+}
+
 OptiX8Backend::~OptiX8Backend() {
     if (is_initialized) {
         shutdown();

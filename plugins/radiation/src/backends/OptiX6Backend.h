@@ -58,6 +58,16 @@ namespace helios {
         OptiX6Backend();
         ~OptiX6Backend() override;
 
+        /**
+         * @brief Probe whether OptiX 6.5 can create a context
+         *
+         * Creates and immediately destroys an RTcontext. This is the lightest
+         * possible check for OptiX 6.5 since there is no equivalent to optixInit().
+         *
+         * @return true if rtContextCreate succeeds
+         */
+        static bool probe() noexcept;
+
         // Lifecycle
         void initialize() override;
         void shutdown() override;

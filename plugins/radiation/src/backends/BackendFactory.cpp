@@ -32,6 +32,56 @@ namespace helios {
 
     std::unique_ptr<RayTracingBackend> RayTracingBackend::create(const std::string &backend_type) {
 
+        // Auto-detect: probe compiled-in backends in priority order at runtime.
+        // Note: probe() verifies driver/hardware availability but not full initialization
+        // capability (e.g., missing device code files, insufficient VRAM). If initialize()
+        // fails after a successful probe, the error propagates directly — no fallthrough
+        // to the next backend.
+        if (backend_type == "auto") {
+#ifdef HELIOS_HAVE_OPTIX8
+            if (OptiX8Backend::probe()) {
+                return std::make_unique<OptiX8Backend>();
+            }
+#endif
+#ifdef HELIOS_HAVE_OPTIX
+            if (OptiX6Backend::probe()) {
+                return std::make_unique<OptiX6Backend>();
+            }
+#endif
+#ifdef HELIOS_HAVE_VULKAN
+            if (VulkanComputeBackend::probe()) {
+                return std::make_unique<VulkanComputeBackend>();
+            }
+#endif
+            std::string compiled_backends;
+#ifdef HELIOS_HAVE_OPTIX8
+            compiled_backends += "OptiX 8.1 (NVIDIA drivers >= 560)";
+#endif
+#ifdef HELIOS_HAVE_OPTIX
+            if (!compiled_backends.empty()) compiled_backends += ", ";
+            compiled_backends += "OptiX 6.5 (NVIDIA drivers < 590)";
+#endif
+#ifdef HELIOS_HAVE_VULKAN
+            if (!compiled_backends.empty()) compiled_backends += ", ";
+            compiled_backends += "Vulkan Compute (AMD/Intel/Apple Silicon)";
+#endif
+            if (compiled_backends.empty()) {
+                compiled_backends = "(none)";
+            }
+
+            helios_runtime_error(
+                "ERROR (RayTracingBackend::create): No compatible GPU backend found.\n\n"
+                "The radiation plugin requires a GPU with one of the following:\n"
+                "  - NVIDIA GPU with CUDA drivers (for OptiX backend)\n"
+                "  - AMD, Intel, or Apple Silicon GPU with Vulkan support\n\n"
+                "Backends compiled into this build: " + compiled_backends + "\n"
+                "All failed hardware probing. Ensure GPU drivers are installed and up to date.\n\n"
+                "To diagnose:\n"
+                "  - NVIDIA: run 'nvidia-smi' to verify driver is loaded\n"
+                "  - Vulkan: run 'vulkaninfo --summary' to verify Vulkan support"
+            );
+        }
+
 #ifdef HELIOS_HAVE_OPTIX8
         // OptiX 8.1 backend (explicit request)
         if (backend_type == "optix8" || backend_type == "OptiX8") {
@@ -79,6 +129,19 @@ namespace helios {
 
         // Unreachable, but silence compiler warning
         return nullptr;
+    }
+
+    bool probeAnyGPUBackend() noexcept {
+#ifdef HELIOS_HAVE_OPTIX8
+        if (OptiX8Backend::probe()) return true;
+#endif
+#ifdef HELIOS_HAVE_OPTIX
+        if (OptiX6Backend::probe()) return true;
+#endif
+#ifdef HELIOS_HAVE_VULKAN
+        if (VulkanComputeBackend::probe()) return true;
+#endif
+        return false;
     }
 
 } // namespace helios
