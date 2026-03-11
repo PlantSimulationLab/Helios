@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.22.1)
 
 project(helios)
 
@@ -119,28 +119,101 @@ else()
 	message(STATUS "CUDA not found - OptiX backend will NOT be available")
 endif()
 
-# Try to find Vulkan (optional, or force it for testing)
-if(FORCE_VULKAN_BACKEND)
-	find_package(Vulkan REQUIRED)
-else()
-	find_package(Vulkan QUIET)
-endif()
+# Try to find Vulkan headers and libraries
+# Search order: bundled headers → system Vulkan SDK
+set(_VULKAN_BUNDLED_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/lib/vulkan/include")
 
 set(HAVE_VULKAN FALSE)
 set(VULKAN_BACKEND_SOURCES "")
 
-if(Vulkan_FOUND)
-	message(STATUS "Vulkan found - Vulkan compute backend will be available")
+if(EXISTS "${_VULKAN_BUNDLED_INCLUDE}/vulkan/vulkan.h")
+	# Use bundled Vulkan headers - always enable backend when headers are available
+	set(Vulkan_INCLUDE_DIRS "${_VULKAN_BUNDLED_INCLUDE}")
 	set(HAVE_VULKAN TRUE)
+	message(STATUS "[Radiation] Using bundled Vulkan headers: ${_VULKAN_BUNDLED_INCLUDE}")
 
+	# Try to find the Vulkan loader library (needed for linking/runtime)
+	# Do NOT call find_package(Vulkan) here — it would overwrite our bundled Vulkan_INCLUDE_DIRS
+	if(APPLE)
+		find_library(Vulkan_LIBRARIES NAMES vulkan vulkan-1 MoltenVK PATHS
+			"$ENV{VULKAN_SDK}/lib"
+			"/opt/homebrew/lib"
+			"/usr/local/lib"
+		)
+	else()
+		find_library(Vulkan_LIBRARIES NAMES vulkan vulkan-1 PATHS
+			"$ENV{VULKAN_SDK}/Lib"
+			"$ENV{VULKAN_SDK}/lib"
+			"/usr/lib"
+			"/usr/lib/x86_64-linux-gnu"
+			"/usr/lib64"
+			"/usr/local/lib"
+		)
+	endif()
+
+	# Platform-specific fallbacks when find_library fails
+	if(WIN32 AND NOT Vulkan_LIBRARIES)
+		# On Windows, vulkan-1.dll is installed by GPU drivers in System32
+		# but the import library (vulkan-1.lib) is only in the Vulkan SDK.
+		# Generate an import library from a bundled .def file.
+		set(_VULKAN_DEF "${CMAKE_CURRENT_SOURCE_DIR}/lib/vulkan/vulkan-1.def")
+		set(_VULKAN_IMPLIB "${CMAKE_BINARY_DIR}/lib/vulkan-1.lib")
+		if(EXISTS "${_VULKAN_DEF}" AND MSVC)
+			file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+			# Use CMAKE_AR (lib.exe) from the MSVC toolchain
+			execute_process(
+				COMMAND "${CMAKE_AR}" /DEF:${_VULKAN_DEF} /OUT:${_VULKAN_IMPLIB} /MACHINE:X64
+				WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+				OUTPUT_QUIET
+				ERROR_QUIET
+				RESULT_VARIABLE _LIB_RESULT
+			)
+			if(_LIB_RESULT EQUAL 0)
+				set(Vulkan_LIBRARIES "${_VULKAN_IMPLIB}")
+				message(STATUS "[Radiation] Generated Vulkan import library from bundled .def file")
+			else()
+				message(WARNING "[Radiation] Failed to generate Vulkan import library (CMAKE_AR=${CMAKE_AR}). Install Vulkan SDK.")
+				set(Vulkan_LIBRARIES "vulkan-1")
+			endif()
+		else()
+			set(Vulkan_LIBRARIES "vulkan-1")
+			message(STATUS "[Radiation] Using system Vulkan loader (installed by GPU drivers)")
+		endif()
+	elseif(NOT WIN32 AND NOT Vulkan_LIBRARIES)
+		# On Linux/macOS, fall back to default library name so the linker can resolve it
+		if(APPLE)
+			set(Vulkan_LIBRARIES "vulkan")
+			message(STATUS "[Radiation] Vulkan loader not found. Install with: brew install vulkan-loader molten-vk")
+		else()
+			set(Vulkan_LIBRARIES "vulkan")
+			message(STATUS "[Radiation] Vulkan loader not found. Install with: sudo apt-get install libvulkan-dev")
+		endif()
+	elseif(Vulkan_LIBRARIES)
+		message(STATUS "[Radiation] Vulkan loader library found: ${Vulkan_LIBRARIES}")
+	endif()
+else()
+	# Bundled headers not found, try system Vulkan SDK
+	if(FORCE_VULKAN_BACKEND)
+		find_package(Vulkan REQUIRED)
+	else()
+		find_package(Vulkan QUIET)
+	endif()
+
+	if(Vulkan_FOUND)
+		message(STATUS "[Radiation] Using system Vulkan SDK")
+		set(HAVE_VULKAN TRUE)
+	else()
+		message(STATUS "[Radiation] Vulkan not found - Vulkan compute backend will NOT be available")
+	endif()
+endif()
+
+if(HAVE_VULKAN)
 	# Add Vulkan backend sources
 	list(APPEND VULKAN_BACKEND_SOURCES
 		"src/backends/VulkanComputeBackend.cpp"
 		"src/backends/VulkanDevice.cpp"
 		"src/backends/BVHBuilder.cpp"
 	)
-else()
-	message(STATUS "Vulkan not found - Vulkan compute backend will NOT be available")
 endif()
 
 # Ensure at least one backend is available
@@ -469,14 +542,34 @@ endif(HAVE_OPTIX)
 # ========== Vulkan Backend Configuration (if available) ==========
 if(HAVE_VULKAN)
 
-# Find glslangValidator for shader compilation
-find_program(GLSLANG_VALIDATOR glslangValidator REQUIRED)
+# ---- Build glslang from bundled source or find system installation ----
+set(_GLSLANG_BUNDLED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/glslang-16.2.0/glslang-16.2.0")
 
-if(NOT GLSLANG_VALIDATOR)
-	message(FATAL_ERROR "glslangValidator not found. Install Vulkan SDK or glslang-tools package.")
+if(EXISTS "${_GLSLANG_BUNDLED_DIR}/CMakeLists.txt")
+	message(STATUS "[Radiation] Building glslang from bundled source")
+
+	# Configure glslang build options: only build what we need
+	set(ENABLE_GLSLANG_BINARIES ON CACHE BOOL "" FORCE)
+	set(ENABLE_SPIRV ON CACHE BOOL "" FORCE)
+	set(ENABLE_HLSL OFF CACHE BOOL "" FORCE)
+	set(ENABLE_OPT OFF CACHE BOOL "" FORCE)
+	set(GLSLANG_TESTS OFF CACHE BOOL "" FORCE)
+	set(GLSLANG_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+	set(BUILD_EXTERNAL OFF CACHE BOOL "" FORCE)
+	set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
+	add_subdirectory("${_GLSLANG_BUNDLED_DIR}" "${CMAKE_BINARY_DIR}/glslang-build" EXCLUDE_FROM_ALL)
+
+	set(GLSLANG_VALIDATOR $<TARGET_FILE:glslang-standalone>)
+	message(STATUS "[Radiation] glslangValidator will be built from source")
+else()
+	# Fallback: find system-installed glslangValidator
+	find_program(GLSLANG_VALIDATOR glslangValidator REQUIRED)
+	if(NOT GLSLANG_VALIDATOR)
+		message(FATAL_ERROR "glslangValidator not found. Install Vulkan SDK or glslang-tools package.")
+	endif()
+	message(STATUS "[Radiation] Found system glslangValidator: ${GLSLANG_VALIDATOR}")
 endif()
-
-message(STATUS "Found glslangValidator: ${GLSLANG_VALIDATOR}")
 
 # Common shader includes (shaders depend on these) - use absolute paths for proper dependency tracking
 set(SHADER_COMMON_INCLUDES
@@ -531,6 +624,11 @@ add_custom_target(vulkan_shaders ALL
 add_custom_command(TARGET vulkan_shaders PRE_BUILD
 	COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/plugins/radiation/
 )
+
+# If using bundled glslang, shaders must wait for glslang-standalone to be built
+if(TARGET glslang-standalone)
+	add_dependencies(vulkan_shaders glslang-standalone)
+endif()
 
 # Ensure main project depends on shader target
 add_dependencies(radiation vulkan_shaders)

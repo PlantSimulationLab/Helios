@@ -693,6 +693,9 @@ public:
     //! Enable status messages
     void enableMessages();
 
+    //! Get the name of the active ray tracing backend (e.g., "OptiX 8.1", "Vulkan Compute")
+    std::string getBackendName() const;
+
     //! Add optional output primitive data values to the Context
     /**
      * \param[in] label Name of primitive data (e.g., "reflectivity", "transmissivity")

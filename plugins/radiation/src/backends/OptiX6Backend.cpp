@@ -27,6 +27,24 @@ OptiX6Backend::OptiX6Backend() {
     // Constructor - initialization happens in initialize()
 }
 
+bool OptiX6Backend::probe() noexcept {
+    try {
+        RTcontext ctx = nullptr;
+        RTresult rc = rtContextCreate(&ctx);
+        if (rc != RT_SUCCESS) {
+            return false;
+        }
+        // RAII guard ensures context is destroyed even if an exception occurs
+        struct ContextGuard {
+            RTcontext c;
+            ~ContextGuard() { if (c) rtContextDestroy(c); }
+        } guard{ctx};
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
 OptiX6Backend::~OptiX6Backend() {
     if (is_initialized) {
         shutdown();

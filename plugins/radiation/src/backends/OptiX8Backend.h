@@ -73,6 +73,16 @@ namespace helios {
         OptiX8Backend();
         ~OptiX8Backend() override;
 
+        /**
+         * @brief Lightweight probe to check if OptiX 8 hardware is available
+         *
+         * Checks CUDA device availability and OptiX driver initialization without
+         * allocating persistent GPU resources.
+         *
+         * @return true if a CUDA device exists and optixInit() succeeds
+         */
+        static bool probe() noexcept;
+
         // Lifecycle
         void initialize() override;
         void shutdown() override;

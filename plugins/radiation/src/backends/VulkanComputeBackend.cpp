@@ -20,6 +20,17 @@
 
 namespace helios {
 
+    bool VulkanComputeBackend::probe() noexcept {
+        try {
+            VulkanDevice probe_device;
+            probe_device.initialize(false);
+            probe_device.shutdown();
+            return true;
+        } catch (...) {
+            return false;
+        }
+    }
+
     VulkanComputeBackend::VulkanComputeBackend() : device(new VulkanDevice()), owns_device(true) {
         // Production mode: own the device
     }

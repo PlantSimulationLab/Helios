@@ -14,7 +14,11 @@
  */
 
 #pragma once
+
+#ifdef HELIOS_HAVE_VULKAN
 #include "VulkanDevice.h"
+#endif
+
 #include <memory>
 #include <cstdlib>
 #include <iostream>
@@ -46,6 +50,7 @@ namespace helios {
      */
     class TestVulkanDeviceManager {
     public:
+#ifdef HELIOS_HAVE_VULKAN
         /**
          * @brief Get shared test VulkanDevice instance
          *
@@ -94,6 +99,7 @@ namespace helios {
 
             return available ? shared_device.get() : nullptr;
         }
+#endif // HELIOS_HAVE_VULKAN
 
         /**
          * @brief Check if a functional Vulkan device is available for testing
@@ -105,10 +111,14 @@ namespace helios {
          * has been detected during test execution.
          */
         static bool isVulkanAvailable() {
+#ifdef HELIOS_HAVE_VULKAN
             if (gpu_runtime_failed) {
                 return false;
             }
             return getSharedDevice() != nullptr;
+#else
+            return false;
+#endif
         }
 
         /**

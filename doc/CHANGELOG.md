@@ -1,5 +1,11 @@
 # Changelog
 
+# [1.3.67] 2026-03-11
+
+## Radiation
+- Replaced compile-time backend selection with runtime GPU hardware probing: the radiation model now auto-detects the best available backend (OptiX 8 → OptiX 6 → Vulkan) at startup, with clear diagnostic errors when no compatible GPU is found.
+- Bundled Vulkan headers and the glslang shader compiler with the plugin, eliminating the requirement to install the Vulkan SDK on all platforms (Windows now has zero external Vulkan dependencies).
+
 # [1.3.66] 2026-03-05
 
 ## Core

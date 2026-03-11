@@ -64,21 +64,13 @@ RadiationModel::RadiationModel(helios::Context *context_a) {
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml").string());
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/DGK_DKK_colorboard.xml").string());
 
-    // Initialize backend abstraction layer
-    // Auto-detect available backend
-    std::string backend_type;
-#ifdef HELIOS_HAVE_OPTIX8
-    backend_type = "optix8";
-#elif defined(HELIOS_HAVE_OPTIX)
-    backend_type = "optix6";
-#elif defined(HELIOS_HAVE_VULKAN)
-    backend_type = "vulkan_compute";
-#else
-#error "No ray tracing backend available"
-#endif
-
-    backend = helios::RayTracingBackend::create(backend_type);
+    // Initialize backend abstraction layer with runtime hardware detection
+    backend = helios::RayTracingBackend::create("auto");
     backend->initialize();
+
+    if (message_flag) {
+        std::cout << "Radiation model initialized with " << backend->getBackendName() << " backend." << std::endl;
+    }
 }
 
 RadiationModel::RadiationModel(helios::Context *context_a, bool skip_backend_init) {
@@ -137,24 +129,8 @@ bool RadiationModel::isGPUBackendAvailable() {
         return false;
     }
 
-    try {
-        std::string backend_type;
-#ifdef HELIOS_HAVE_OPTIX8
-        backend_type = "optix8";
-#elif defined(HELIOS_HAVE_OPTIX)
-        backend_type = "optix6";
-#elif defined(HELIOS_HAVE_VULKAN)
-        backend_type = "vulkan_compute";
-#else
-        available = false;
-        return false;
-#endif
-        auto probe_backend = helios::RayTracingBackend::create(backend_type);
-        probe_backend->initialize();
-        available = true;
-    } catch (...) {
-        available = false;
-    }
+    // Lightweight probe without constructing a full backend
+    available = helios::probeAnyGPUBackend();
 
     return available;
 }
@@ -169,6 +145,13 @@ void RadiationModel::disableMessages() {
 
 void RadiationModel::enableMessages() {
     message_flag = true;
+}
+
+std::string RadiationModel::getBackendName() const {
+    if (backend) {
+        return backend->getBackendName();
+    }
+    return "none";
 }
 
 void RadiationModel::optionalOutputPrimitiveData(const char *label) {

@@ -2,7 +2,10 @@
 #include "RadiationModel.h"
 #include "BufferIndexing.h"
 #include "test_helpers.h"
+
+#ifdef HELIOS_HAVE_VULKAN
 #include "VulkanComputeBackend.h"
+#endif
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
@@ -26,18 +29,14 @@ namespace helios {
          * @return True if GPU tests can run (always true for OptiX, Vulkan-dependent otherwise)
          */
         static bool isGPUAvailable() {
-#if defined(HELIOS_HAVE_OPTIX8) || (defined(HELIOS_HAVE_OPTIX) && !defined(FORCE_VULKAN_BACKEND))
-            return true;
-#else
-            return TestVulkanDeviceManager::isVulkanAvailable();
-#endif
+            return helios::probeAnyGPUBackend();
         }
 
         static RadiationModel createWithSharedDevice(Context *context) {
 #if defined(HELIOS_HAVE_OPTIX8) || (defined(HELIOS_HAVE_OPTIX) && !defined(FORCE_VULKAN_BACKEND))
             // OptiX available and not forced to Vulkan - use default constructor
             return RadiationModel(context);
-#else
+#elif defined(HELIOS_HAVE_VULKAN)
             // Vulkan backend - use shared device (workaround for NVIDIA driver bug)
             VulkanDevice *device = TestVulkanDeviceManager::getSharedDevice();
             if (!device) {
@@ -48,6 +47,9 @@ namespace helios {
 
             // Use static factory method to inject pre-configured backend
             return RadiationModel::createWithBackend(context, std::move(backend));
+#else
+            helios_runtime_error("No ray tracing backend available for testing");
+            return RadiationModel(context); // Unreachable, silence compiler warning
 #endif
         }
     };
@@ -55,6 +57,30 @@ namespace helios {
 
 int RadiationModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
+}
+
+DOCTEST_TEST_CASE("Backend Identification") {
+    std::string compiled_backends;
+#ifdef HELIOS_HAVE_OPTIX8
+    compiled_backends += "OptiX8 ";
+#endif
+#ifdef HELIOS_HAVE_OPTIX
+    compiled_backends += "OptiX6 ";
+#endif
+#ifdef HELIOS_HAVE_VULKAN
+    compiled_backends += "Vulkan ";
+#endif
+    if (compiled_backends.empty()) compiled_backends = "(none)";
+    DOCTEST_MESSAGE("Compiled backends: " << compiled_backends);
+
+    bool gpu_available = RadiationModelTestHelper::isGPUAvailable();
+    DOCTEST_MESSAGE("GPU available: " << std::string(gpu_available ? "yes" : "no"));
+
+    if (gpu_available) {
+        Context context;
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        DOCTEST_MESSAGE("Active backend: " << model.getBackendName());
+    }
 }
 
 DOCTEST_TEST_CASE("BufferIndexing Correctness") {

@@ -808,7 +808,6 @@ extern "C" __global__ void __closesthit__camera() {
 
     const uint32_t pixel_index   = prd->origin_UUID;
     const uint32_t Nbands_l      = params.Nbands_launch;
-    const uint32_t Nbands_g      = params.Nbands_global;
     const uint32_t Nprims        = params.Nprimitives;
     const float    t_hit         = optixGetRayTmax();
     const float3   ray_origin    = optixGetWorldRayOrigin();
@@ -824,8 +823,6 @@ extern "C" __global__ void __closesthit__camera() {
     const bool   face_top  = dot(normal, ray_direction) < 0.f;
 
     for (uint32_t b = 0; b < Nbands_l; b++) {
-        const uint32_t b_global = b; // band_launch_flag maps launch bands to global bands 1:1
-
         // Radiance from hit surface (outgoing flux / pi = radiance)
         const uint32_t ind_hit = hit_position * Nbands_l + b;
         float strength = (float)prd->strength *
@@ -1037,7 +1034,7 @@ extern "C" __global__ void __raygen__direct() {
                 // Origin mask rejection sampling: only launch from opaque regions (matches OptiX 6 raygen behavior)
                 const int32_t msk_orig = params.mask_IDs[prim_pos];
                 if (msk_orig >= 0) {
-                    for (int _try = 0; _try < 10; _try++) {
+                    for (int attempt = 0; attempt < 10; attempt++) {
                         float uv_u, uv_v;
                         if (params.uv_IDs[prim_pos] >= 0) {
                             float2 uv0 = params.uv_data[prim_pos * 4 + 0];
@@ -1068,7 +1065,7 @@ extern "C" __global__ void __raygen__direct() {
                 // Origin mask rejection sampling
                 const int32_t msk_orig_t = params.mask_IDs[prim_pos];
                 if (msk_orig_t >= 0) {
-                    for (int _try = 0; _try < 10; _try++) {
+                    for (int attempt = 0; attempt < 10; attempt++) {
                         float uv_u, uv_v;
                         if (params.uv_IDs[prim_pos] >= 0) {
                             float2 uv0 = params.uv_data[prim_pos * 4 + 0];
@@ -1310,7 +1307,7 @@ extern "C" __global__ void __raygen__diffuse() {
                 // Origin mask rejection sampling
                 const int32_t msk_orig_d = params.mask_IDs[prim_pos];
                 if (msk_orig_d >= 0) {
-                    for (int _try = 0; _try < 10; _try++) {
+                    for (int attempt = 0; attempt < 10; attempt++) {
                         float uv_u, uv_v;
                         if (params.uv_IDs[prim_pos] >= 0) {
                             float2 uv0 = params.uv_data[prim_pos * 4 + 0];
@@ -1341,7 +1338,7 @@ extern "C" __global__ void __raygen__diffuse() {
                 // Origin mask rejection sampling
                 const int32_t msk_orig_dt = params.mask_IDs[prim_pos];
                 if (msk_orig_dt >= 0) {
-                    for (int _try = 0; _try < 10; _try++) {
+                    for (int attempt = 0; attempt < 10; attempt++) {
                         float uv_u, uv_v;
                         if (params.uv_IDs[prim_pos] >= 0) {
                             float2 uv0 = params.uv_data[prim_pos * 4 + 0];

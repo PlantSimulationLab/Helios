@@ -9,7 +9,7 @@
  <table>
    <tr>
       <th>Dependencies</th>
-      <td>Vulkan SDK (all platforms) and/or NVIDIA CUDA 12.0+ with driver ≥ 560 (enables OptiX 8.1 backend); NVIDIA CUDA 9.0+ with driver &lt; 560 (enables OptiX 6.5 backend)</td>
+      <td>Vulkan loader library (macOS/Linux only; no external dependencies on Windows) and/or NVIDIA CUDA 12.0+ with driver ≥ 560 (enables OptiX 8.1 backend); NVIDIA CUDA 9.0+ with driver &lt; 560 (enables OptiX 6.5 backend)</td>
    </tr>
    <tr>	
      <th>CMakeLists.txt</th>
@@ -39,10 +39,10 @@ The radiation model requires at least one ray-tracing backend. Two backends are 
     </tr>
     <tr>
         <td><b>Vulkan</b> (all platforms)</td>
-        <td>Vulkan SDK + glslang</td>
-        <td><tt>brew install vulkan-headers vulkan-loader molten-vk glslang</tt></td>
-        <td><tt>sudo apt-get install libvulkan-dev glslang-tools</tt></td>
-        <td>Install <a href="https://vulkan.lunarg.com/sdk/home">LunarG Vulkan SDK</a> (includes glslang)</td>
+        <td>Vulkan loader library</td>
+        <td><tt>brew install vulkan-loader molten-vk</tt></td>
+        <td><tt>sudo apt-get install libvulkan-dev</tt></td>
+        <td>No additional packages required (Vulkan headers, glslang shader compiler, and import library are all bundled with Helios)</td>
     </tr>
     <tr>
         <td><b>OptiX 8.1</b> (NVIDIA driver ≥ 560, default)</td>
