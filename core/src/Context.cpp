@@ -802,6 +802,10 @@ std::vector<std::string> Context::listTimeseriesVariables() const {
     return labels;
 }
 
+void Context::clearTimeseriesData() {
+    timeseries_data.clear();
+    timeseries_datevalue.clear();
+}
 
 void Context::getDomainBoundingBox(vec2 &xbounds, vec2 &ybounds, vec2 &zbounds) const {
     getDomainBoundingBox(getAllUUIDs(), xbounds, ybounds, zbounds);
@@ -3771,6 +3775,30 @@ uint Context::copyMaterialForPrimitive(uint primitiveUUID) {
     prim->materialID = newMaterialID;
 
     return newMaterialID;
+}
+
+void Context::renameMaterial(const std::string &old_label, const std::string &new_label) {
+    if (material_label_to_id.find(old_label) == material_label_to_id.end()) {
+        helios_runtime_error("ERROR (Context::renameMaterial): Material with label '" + old_label + "' does not exist.");
+    }
+    if (new_label.empty()) {
+        helios_runtime_error("ERROR (Context::renameMaterial): New material label cannot be empty.");
+    }
+    if (new_label.substr(0, 2) == "__") {
+        helios_runtime_error("ERROR (Context::renameMaterial): Material labels starting with '__' are reserved for internal use.");
+    }
+    if (material_label_to_id.find(new_label) != material_label_to_id.end()) {
+        helios_runtime_error("ERROR (Context::renameMaterial): Material with label '" + new_label + "' already exists.");
+    }
+
+    uint materialID = material_label_to_id.at(old_label);
+    materials.at(materialID).label = new_label;
+    // Keep auto-generated labels in the lookup map so that future primitives with the same
+    // hash-based label will find and reuse the existing material (preserving deduplication).
+    if (old_label.substr(0, 7) != "__auto_") {
+        material_label_to_id.erase(old_label);
+    }
+    material_label_to_id[new_label] = materialID;
 }
 
 bool Context::doesMaterialExist(const std::string &material_label) const {

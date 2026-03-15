@@ -400,56 +400,64 @@ helios::ProgressBar::ProgressBar(size_t total, int width, bool enable, const std
 }
 
 void helios::ProgressBar::update() {
-    if (!enabled)
-        return;
-
     current_step++;
     double progress = (double) current_step / total_steps;
-    int filled = (int) (progress * bar_width);
 
-    std::cout << "\r" << message << ": [";
-    for (int i = 0; i < bar_width; ++i) {
-        if (i < filled)
-            std::cout << "=";
-        else if (i == filled)
-            std::cout << ">";
-        else
-            std::cout << " ";
+    if (enabled) {
+        int filled = (int) (progress * bar_width);
+
+        std::cout << "\r" << message << ": [";
+        for (int i = 0; i < bar_width; ++i) {
+            if (i < filled)
+                std::cout << "=";
+            else if (i == filled)
+                std::cout << ">";
+            else
+                std::cout << " ";
+        }
+        std::cout << "] " << (int) (progress * 100) << "% (" << current_step << "/" << total_steps << ")";
+        std::cout.flush();
+
+        if (current_step >= total_steps) {
+            std::cout << std::endl;
+        }
     }
-    std::cout << "] " << (int) (progress * 100) << "% (" << current_step << "/" << total_steps << ")";
-    std::cout.flush();
 
-    if (current_step >= total_steps) {
-        std::cout << std::endl;
+    if (callback) {
+        callback(static_cast<float>(progress), message);
     }
 }
 
 void helios::ProgressBar::update(size_t step_number) {
-    if (!enabled)
-        return;
-
     current_step = step_number;
     if (current_step > total_steps) {
         current_step = total_steps;
     }
 
     double progress = (double) current_step / total_steps;
-    int filled = (int) (progress * bar_width);
 
-    std::cout << "\r" << message << ": [";
-    for (int i = 0; i < bar_width; ++i) {
-        if (i < filled)
-            std::cout << "=";
-        else if (i == filled)
-            std::cout << ">";
-        else
-            std::cout << " ";
+    if (enabled) {
+        int filled = (int) (progress * bar_width);
+
+        std::cout << "\r" << message << ": [";
+        for (int i = 0; i < bar_width; ++i) {
+            if (i < filled)
+                std::cout << "=";
+            else if (i == filled)
+                std::cout << ">";
+            else
+                std::cout << " ";
+        }
+        std::cout << "] " << (int) (progress * 100) << "% (" << current_step << "/" << total_steps << ")";
+        std::cout.flush();
+
+        if (current_step >= total_steps) {
+            std::cout << std::endl;
+        }
     }
-    std::cout << "] " << (int) (progress * 100) << "% (" << current_step << "/" << total_steps << ")";
-    std::cout.flush();
 
-    if (current_step >= total_steps) {
-        std::cout << std::endl;
+    if (callback) {
+        callback(static_cast<float>(progress), message);
     }
 }
 
@@ -466,6 +474,10 @@ void helios::ProgressBar::setEnabled(bool enable) {
 
 bool helios::ProgressBar::isEnabled() const {
     return enabled;
+}
+
+void helios::ProgressBar::setCallback(std::function<void(float, const std::string&)> cb) {
+    callback = std::move(cb);
 }
 
 void helios::wait(float seconds) {

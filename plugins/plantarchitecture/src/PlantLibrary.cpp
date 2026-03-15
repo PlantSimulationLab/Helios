@@ -139,6 +139,20 @@ uint PlantArchitecture::buildPlantInstanceFromLibrary(const helios::vec3 &base_p
 
     plant_instances.at(plantID).plant_name = current_plant_model;
 
+    // Rename materials that were created with the default "custom" plant name
+    if (current_plant_model != "custom") {
+        std::vector<std::string> material_labels = context_ptr->listMaterials();
+        std::string old_prefix = "custom_";
+        for (const auto &label : material_labels) {
+            if (label.substr(0, old_prefix.size()) == old_prefix) {
+                std::string new_label = current_plant_model + "_" + label.substr(old_prefix.size());
+                if (!context_ptr->doesMaterialExist(new_label)) {
+                    context_ptr->renameMaterial(label, new_label);
+                }
+            }
+        }
+    }
+
     // Update plant_name object data if enabled (geometry was built with temporary "custom" name)
     if (output_object_data.at("plant_name")) {
         std::vector<uint> plant_primitives = getAllPlantObjectIDs(plantID);

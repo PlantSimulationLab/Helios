@@ -1,5 +1,19 @@
 # Changelog
 
+# [1.3.68] 2026-03-15
+
+## Core
+- OBJ loader now registers MTL materials in the Context material system and assigns them to loaded primitives, enabling material-based queries and rendering workflows for imported OBJ meshes.
+- Added `renameMaterial()` method to allow renaming material labels while preserving all properties and deduplication aliases for auto-generated materials.
+- Added `clearTimeseriesData()` method to remove all timeseries variables and their associated date/time values from the Context.
+
+## Plant Architecture
+- Plant organ materials (stems, petioles, leaves, flowers, fruit, peduncles) are now given descriptive names based on plant name and shoot type (e.g., "bean_trifoliate_leaf") instead of opaque auto-generated hash labels.
+- Added `setProgressCallback()` method to `PlantArchitecture` for receiving real-time `(float progress, std::string message)` updates during `advanceTime()` and `adjustFruitForObstacleCollision()`, enabling GUI and Python binding integration. Added `setCallback()` to `ProgressBar` to support this.
+
+## Visualizer
+- Reverted colorbar tick clamping that was incorrectly removing valid tick marks at the data range boundaries.
+
 # [1.3.67] 2026-03-11
 
 ## Radiation

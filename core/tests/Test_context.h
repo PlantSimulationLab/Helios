@@ -2078,6 +2078,28 @@ TEST_CASE("Missing Data and State Functions") {
         DOCTEST_CHECK(std::find(vars.begin(), vars.end(), "humidity") != vars.end());
     }
 
+    SUBCASE("clearTimeseriesData") {
+        Context ctx;
+        Date date = make_Date(1, 1, 2025);
+        Time time = make_Time(0, 0, 12);
+
+        // Add some timeseries data
+        ctx.addTimeseriesData("temp", 25.5f, date, time);
+        ctx.addTimeseriesData("humidity", 60.0f, date, time);
+        DOCTEST_CHECK(ctx.listTimeseriesVariables().size() == 2);
+        DOCTEST_CHECK(ctx.doesTimeseriesVariableExist("temp"));
+
+        // Clear and verify
+        ctx.clearTimeseriesData();
+        DOCTEST_CHECK(ctx.listTimeseriesVariables().empty());
+        DOCTEST_CHECK_FALSE(ctx.doesTimeseriesVariableExist("temp"));
+        DOCTEST_CHECK_FALSE(ctx.doesTimeseriesVariableExist("humidity"));
+
+        // Calling on already-empty context should be a no-op
+        ctx.clearTimeseriesData();
+        DOCTEST_CHECK(ctx.listTimeseriesVariables().empty());
+    }
+
     SUBCASE("getUniquePrimitiveParentObjectIDs") {
         Context ctx;
         uint obj1 = ctx.addBoxObject(make_vec3(0, 0, 0), make_vec3(1, 1, 1), make_int3(1, 1, 1));
@@ -2676,6 +2698,45 @@ TEST_CASE("File path resolution priority") {
 
         // Reserved labels should fail
         DOCTEST_CHECK_THROWS(ctx.addMaterial("__reserved"));
+    }
+
+    SUBCASE("Material System - Rename") {
+        Context ctx;
+
+        // Create a triangle with a texture to generate an auto-material
+        uint UUID = ctx.addTriangle(make_vec3(0, 0, 0), make_vec3(1, 0, 0), make_vec3(0, 1, 0), "lib/images/disk_texture.png", make_vec2(0, 0), make_vec2(1, 0), make_vec2(0, 1));
+        std::string auto_label = ctx.getPrimitiveMaterialLabel(UUID);
+        DOCTEST_CHECK(auto_label.substr(0, 7) == "__auto_");
+        DOCTEST_CHECK(ctx.doesMaterialExist(auto_label));
+
+        // Rename the auto-generated material
+        ctx.renameMaterial(auto_label, "bean_trifoliate_leaf");
+        DOCTEST_CHECK(ctx.doesMaterialExist("bean_trifoliate_leaf"));
+        // Auto-label is retained as a lookup alias for deduplication
+        DOCTEST_CHECK(ctx.doesMaterialExist(auto_label));
+
+        // Primitive should now report the new display label
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID) == "bean_trifoliate_leaf");
+
+        // Properties should be preserved
+        std::string tex = ctx.getMaterialTexture("bean_trifoliate_leaf");
+        DOCTEST_CHECK(tex == "lib/images/disk_texture.png");
+
+        // Deduplication: a new triangle with the same texture should reuse the renamed material
+        uint UUID2 = ctx.addTriangle(make_vec3(2, 0, 0), make_vec3(3, 0, 0), make_vec3(2, 1, 0), "lib/images/disk_texture.png", make_vec2(0, 0), make_vec2(1, 0), make_vec2(0, 1));
+        DOCTEST_CHECK(ctx.getPrimitiveMaterialLabel(UUID2) == "bean_trifoliate_leaf");
+
+        // Rename a user-created (non-auto) material — old label should NOT be retained
+        ctx.addMaterial("old_name");
+        ctx.renameMaterial("old_name", "new_name");
+        DOCTEST_CHECK(ctx.doesMaterialExist("new_name"));
+        DOCTEST_CHECK(!ctx.doesMaterialExist("old_name"));
+
+        // Error cases
+        DOCTEST_CHECK_THROWS(ctx.renameMaterial("nonexistent", "new_name2"));             // old label doesn't exist
+        DOCTEST_CHECK_THROWS(ctx.renameMaterial("bean_trifoliate_leaf", "__reserved"));    // new label reserved
+        DOCTEST_CHECK_THROWS(ctx.renameMaterial("bean_trifoliate_leaf", "new_name"));     // new label already exists
+        DOCTEST_CHECK_THROWS(ctx.renameMaterial("bean_trifoliate_leaf", ""));              // empty label
     }
 
     SUBCASE("Material System - Properties") {

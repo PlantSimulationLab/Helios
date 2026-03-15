@@ -398,6 +398,57 @@ TEST_CASE("OBJ File Loading - Texture and UV Coordinate Testing") {
         }
     }
 
+    SUBCASE("OBJ materials registered in Context material system") {
+        Context ctx;
+
+        std::vector<uint> UUIDs = ctx.loadOBJ("lib/models/test_cube_medium.obj", true);
+        DOCTEST_CHECK(UUIDs.size() == 12);
+
+        // Verify MTL materials are registered in the Context material system
+        std::vector<std::string> mat_labels = ctx.listMaterials();
+        DOCTEST_CHECK(mat_labels.size() == 3);
+
+        DOCTEST_CHECK(ctx.doesMaterialExist("red_material"));
+        DOCTEST_CHECK(ctx.doesMaterialExist("blue_material"));
+        DOCTEST_CHECK(ctx.doesMaterialExist("green_material"));
+
+        // Verify material colors match MTL Kd values
+        RGBAcolor red_color = ctx.getMaterialColor("red_material");
+        DOCTEST_CHECK(red_color.r == doctest::Approx(1.0f));
+        DOCTEST_CHECK(red_color.g == doctest::Approx(0.0f));
+        DOCTEST_CHECK(red_color.b == doctest::Approx(0.0f));
+
+        RGBAcolor blue_color = ctx.getMaterialColor("blue_material");
+        DOCTEST_CHECK(blue_color.r == doctest::Approx(0.0f));
+        DOCTEST_CHECK(blue_color.g == doctest::Approx(0.0f));
+        DOCTEST_CHECK(blue_color.b == doctest::Approx(1.0f));
+
+        RGBAcolor green_color = ctx.getMaterialColor("green_material");
+        DOCTEST_CHECK(green_color.r == doctest::Approx(0.0f));
+        DOCTEST_CHECK(green_color.g == doctest::Approx(1.0f));
+        DOCTEST_CHECK(green_color.b == doctest::Approx(0.0f));
+
+        // Verify every primitive has a material label assigned
+        for (uint uuid : UUIDs) {
+            std::string label = ctx.getPrimitiveMaterialLabel(uuid);
+            DOCTEST_CHECK(!label.empty());
+            bool valid_material = (label == "red_material" || label == "blue_material" || label == "green_material");
+            DOCTEST_CHECK(valid_material);
+        }
+
+        // Verify red_material has 4 triangles (2 faces * 2 tri each), same for others
+        int red_count = 0, blue_count = 0, green_count = 0;
+        for (uint uuid : UUIDs) {
+            std::string label = ctx.getPrimitiveMaterialLabel(uuid);
+            if (label == "red_material") red_count++;
+            else if (label == "blue_material") blue_count++;
+            else if (label == "green_material") green_count++;
+        }
+        DOCTEST_CHECK(red_count == 4);
+        DOCTEST_CHECK(blue_count == 4);
+        DOCTEST_CHECK(green_count == 4);
+    }
+
     SUBCASE("Texture coordinate consistency with transformations") {
         Context ctx;
         std::vector<uint> UUIDs;

@@ -36,6 +36,7 @@ constexpr float PI_F = 3.14159265358979323846f;
 #include <exception>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <map>
@@ -757,6 +758,7 @@ namespace helios {
         int bar_width;
         bool enabled;
         std::string message;
+        std::function<void(float, const std::string&)> callback;
 
     public:
         //! Constructor for ProgressBar
@@ -794,6 +796,12 @@ namespace helios {
 
         //! Disable all progress bar output
         void disableMessages();
+
+        //! Set a callback to receive progress updates
+        /**
+         * \param[in] cb Function that receives (progress_fraction, message_string).
+         */
+        void setCallback(std::function<void(float, const std::string&)> cb);
     };
 
     //! Wait/sleep for a specified amount of time

@@ -4179,8 +4179,23 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
         RGBcolor color;
         bool hasTexture;
         bool textureColorIsOverridden;
+        std::string materialname;
         std::string object;
     };
+
+    // Register all MTL materials in Context material system
+    for (const auto &mat_entry : materials) {
+        const std::string &matname = mat_entry.first;
+        const OBJmaterial &mat = mat_entry.second;
+        if (!doesMaterialExist(matname)) {
+            addMaterial(matname);
+            setMaterialColor(matname, make_RGBAcolor(mat.color.r, mat.color.g, mat.color.b, 1));
+            if (!mat.texture.empty()) {
+                setMaterialTexture(matname, mat.texture);
+            }
+            setMaterialTextureColorOverride(matname, mat.textureColorIsOverridden);
+        }
+    }
 
     std::vector<TriangleData> triangleDataList;
 
@@ -4191,6 +4206,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
         std::string texture;
         RGBcolor color = default_color;
         bool textureColorIsOverridden = false;
+        bool textureHasTransparency = false;
 
         if (materials.find(materialname) != materials.end()) {
             const OBJmaterial &mat = materials.at(materialname);
@@ -4198,8 +4214,8 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
             texture = mat.texture;
             color = mat.color;
             textureColorIsOverridden = mat.textureColorIsOverridden;
+            textureHasTransparency = mat.textureHasTransparency;
         }
-
 
         const auto &material_faces = face_inds.at(materialname);
         const auto &material_texture_inds = texture_inds.count(materialname) ? texture_inds.at(materialname) : std::vector<std::vector<int>>();
@@ -4248,6 +4264,7 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
                         triangleData.texture = texture;
                         triangleData.color = color;
                         triangleData.textureColorIsOverridden = textureColorIsOverridden;
+                        triangleData.materialname = materialname;
                         triangleData.object = objects.at(material_faces[i][0] - 1);
 
                         // Handle texture coordinates if present
@@ -4320,6 +4337,10 @@ std::vector<uint> Context::loadOBJ(const char *filename, const vec3 &origin, con
         }
 
         UUID.push_back(ID);
+
+        if (!triangleData.materialname.empty() && doesMaterialExist(triangleData.materialname)) {
+            assignMaterialToPrimitive(ID, triangleData.materialname);
+        }
 
         if (triangleData.object != "none" && doesPrimitiveExist(ID)) {
             setPrimitiveData(ID, "object_label", triangleData.object);
