@@ -21,14 +21,54 @@ namespace helios {
      */
     inline bool validateDoctestArguments(int argc, char **argv) {
         // List of valid doctest arguments (short and long forms)
-        static const std::vector<std::string> valid_prefixes = {"-?", "--help", "-h", "-v", "--version", "-c", "--count", "-ltc", "--list-test-cases", "-lts", "--list-test-suites", "-lr", "--list-reporters", "-tc", "--test-case", "-tce",
-                                                                "--test-case-exclude", "-sf", "--source-file", "-sfe", "--source-file-exclude", "-ts", "--test-suite", "-tse", "--test-suite-exclude", "-sc", "--subcase", "-sce", "--subcase-exclude",
-                                                                "-r", "--reporters", "-o", "--out", "-ob", "--order-by", "-rs", "--rand-seed", "-f", "--first", "-l", "--last", "-aa", "--abort-after", "-scfl", "--subcase-filter-levels",
-                                                                // dt- prefixed versions
-                                                                "-dt-?", "--dt-help", "-dt-h", "-dt-v", "--dt-version", "-dt-c", "--dt-count", "-dt-ltc", "--dt-list-test-cases", "-dt-lts", "--dt-list-test-suites", "-dt-lr", "--dt-list-reporters",
-                                                                "-dt-tc", "--dt-test-case", "-dt-tce", "--dt-test-case-exclude", "-dt-sf", "--dt-source-file", "-dt-sfe", "--dt-source-file-exclude", "-dt-ts", "--dt-test-suite", "-dt-tse",
-                                                                "--dt-test-suite-exclude", "-dt-sc", "--dt-subcase", "-dt-sce", "--dt-subcase-exclude", "-dt-r", "--dt-reporters", "-dt-o", "--dt-out", "-dt-ob", "--dt-order-by", "-dt-rs",
-                                                                "--dt-rand-seed", "-dt-f", "--dt-first", "-dt-l", "--dt-last", "-dt-aa", "--dt-abort-after", "-dt-scfl", "--dt-subcase-filter-levels"};
+        // Reference: doctest.h parseOption/parseFlag/DOCTEST_PARSE_AS_BOOL_OR_FLAG calls
+        static const std::vector<std::string> valid_prefixes = {
+                // Help, version, counting, listing
+                "-?", "--help", "-h", "-v", "--version", "-c", "--count",
+                "-ltc", "--list-test-cases", "-lts", "--list-test-suites", "-lr", "--list-reporters",
+                // Filters (comma-separated args)
+                "-tc", "--test-case", "-tce", "--test-case-exclude",
+                "-sf", "--source-file", "-sfe", "--source-file-exclude",
+                "-ts", "--test-suite", "-tse", "--test-suite-exclude",
+                "-sc", "--subcase", "-sce", "--subcase-exclude",
+                "-r", "--reporters",
+                // String/int options
+                "-o", "--out", "-ob", "--order-by", "-rs", "--rand-seed",
+                "-f", "--first", "-l", "--last", "-aa", "--abort-after",
+                "-scfl", "--subcase-filter-levels",
+                // Bool/flag options
+                "-s", "--success", "-cs", "--case-sensitive", "-e", "--exit",
+                "-d", "--duration", "-m", "--minimal", "-q", "--quiet",
+                "-nt", "--no-throw", "-ne", "--no-exitcode", "-nr", "--no-run",
+                "-ni", "--no-intro", "-nv", "--no-version", "-nc", "--no-colors",
+                "-fc", "--force-colors", "-nb", "--no-breaks", "-ns", "--no-skip",
+                "-gfl", "--gnu-file-line", "-npf", "--no-path-filenames",
+                "-sfp", "--strip-file-prefixes", "-nln", "--no-line-numbers",
+                "-ndo", "--no-debug-output", "-nss", "--no-skipped-summary",
+                "-ntio", "--no-time-in-output",
+                // dt- prefixed versions (help, version, counting, listing)
+                "-dt-?", "--dt-help", "-dt-h", "-dt-v", "--dt-version", "-dt-c", "--dt-count",
+                "-dt-ltc", "--dt-list-test-cases", "-dt-lts", "--dt-list-test-suites", "-dt-lr", "--dt-list-reporters",
+                // dt- prefixed filters
+                "-dt-tc", "--dt-test-case", "-dt-tce", "--dt-test-case-exclude",
+                "-dt-sf", "--dt-source-file", "-dt-sfe", "--dt-source-file-exclude",
+                "-dt-ts", "--dt-test-suite", "-dt-tse", "--dt-test-suite-exclude",
+                "-dt-sc", "--dt-subcase", "-dt-sce", "--dt-subcase-exclude",
+                "-dt-r", "--dt-reporters",
+                // dt- prefixed string/int options
+                "-dt-o", "--dt-out", "-dt-ob", "--dt-order-by", "-dt-rs", "--dt-rand-seed",
+                "-dt-f", "--dt-first", "-dt-l", "--dt-last", "-dt-aa", "--dt-abort-after",
+                "-dt-scfl", "--dt-subcase-filter-levels",
+                // dt- prefixed bool/flag options
+                "-dt-s", "--dt-success", "-dt-cs", "--dt-case-sensitive", "-dt-e", "--dt-exit",
+                "-dt-d", "--dt-duration", "-dt-m", "--dt-minimal", "-dt-q", "--dt-quiet",
+                "-dt-nt", "--dt-no-throw", "-dt-ne", "--dt-no-exitcode", "-dt-nr", "--dt-no-run",
+                "-dt-ni", "--dt-no-intro", "-dt-nv", "--dt-no-version", "-dt-nc", "--dt-no-colors",
+                "-dt-fc", "--dt-force-colors", "-dt-nb", "--dt-no-breaks", "-dt-ns", "--dt-no-skip",
+                "-dt-gfl", "--dt-gnu-file-line", "-dt-npf", "--dt-no-path-filenames",
+                "-dt-sfp", "--dt-strip-file-prefixes", "-dt-nln", "--dt-no-line-numbers",
+                "-dt-ndo", "--dt-no-debug-output", "-dt-nss", "--dt-no-skipped-summary",
+                "-dt-ntio", "--dt-no-time-in-output"};
 
         auto isValidDoctestArgument = [&](const std::string &arg) -> bool {
             // Check for exact matches or prefix matches with =
@@ -59,6 +99,7 @@ namespace helios {
             std::cerr << "Common valid patterns:" << std::endl;
             std::cerr << "  -tc=\"pattern\"           : Run tests matching pattern" << std::endl;
             std::cerr << "  --test-case=\"pattern\"   : Run tests matching pattern" << std::endl;
+            std::cerr << "  -s                      : Include successful assertions in output" << std::endl;
             std::cerr << "  -c                      : Count matching tests" << std::endl;
             std::cerr << "  --help                  : Show full help" << std::endl;
             std::cerr << std::endl;

@@ -36,6 +36,7 @@ constexpr float PI_F = 3.14159265358979323846f;
 #include <exception>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <map>
@@ -757,6 +758,7 @@ namespace helios {
         int bar_width;
         bool enabled;
         std::string message;
+        std::function<void(float, const std::string&)> callback;
 
     public:
         //! Constructor for ProgressBar
@@ -794,6 +796,12 @@ namespace helios {
 
         //! Disable all progress bar output
         void disableMessages();
+
+        //! Set a callback to receive progress updates
+        /**
+         * \param[in] cb Function that receives (progress_fraction, message_string).
+         */
+        void setCallback(std::function<void(float, const std::string&)> cb);
     };
 
     //! Wait/sleep for a specified amount of time
@@ -877,6 +885,26 @@ namespace helios {
      * \note The length of pixel_data must be width*height*3 (or if it is width*height*4, the last channel is ignored).
      */
     void writeJPEG(const std::string &filename, uint width, uint height, const std::vector<unsigned char> &pixel_data);
+
+    //! Write a single-channel float image to an EXR file with lossless ZIP compression
+    /**
+     * \param[in] filename Name of the EXR image file
+     * \param[in] width Image width in pixels
+     * \param[in] height Image height in pixels
+     * \param[in] pixel_data Float values at each pixel (index at pixel_data[row*width+column])
+     * \param[in] channel_name Name of the EXR channel (default "Y" for grayscale; use "Z" for depth)
+     */
+    void writeEXR(const std::string &filename, uint width, uint height, const std::vector<float> &pixel_data, const std::string &channel_name = "Y");
+
+    //! Write a multi-channel float image to an EXR file with lossless ZIP compression
+    /**
+     * \param[in] filename Name of the EXR image file
+     * \param[in] width Image width in pixels
+     * \param[in] height Image height in pixels
+     * \param[in] channel_data Vector of per-channel float data, each of length width*height
+     * \param[in] channel_names Names for each channel (e.g., {"R", "G", "B"}). Channels are sorted alphabetically per EXR convention.
+     */
+    void writeEXR(const std::string &filename, uint width, uint height, const std::vector<std::vector<float>> &channel_data, const std::vector<std::string> &channel_names);
 
     //! Template function to flatten a 2D vector into a 1D vector
     /**

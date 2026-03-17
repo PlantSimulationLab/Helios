@@ -1,5 +1,72 @@
 # Changelog
 
+# [1.3.69] 2026-03-16
+
+## Core
+- Removed redundant `setColor()` call in `addConeObject()` that was re-applying the color already set on individual triangles during construction.
+
+## Plant Architecture
+- Renamed generic `Material.002` material in `PetiolulePrototype` OBJ/MTL assets to descriptive `petiolule` label.
+
+## Radiation
+- Removed bundled OptiX 5.1 libraries and headers (linux64-5.1.0, windows64-5.1.1) and all legacy `OPTIX_VERSION_LEGACY` CMake code paths, since OptiX 5.1 support was superseded by OptiX 6.5 and 8.1 backends.
+- Fixed multi-tile camera rendering in the OptiX 8 backend where `__raygen__camera()` and `__raygen__pixel_label()` used per-tile resolution instead of full image resolution for ray direction computation, causing black pixels in tiles beyond the first (e.g., iPhone 12 Pro Max at 3024×4032 with 100 AA samples).
+- Fixed camera closest-hit for triangle primitives in the OptiX 8 backend to use the intersection program's face attribute instead of recomputing the surface normal from canonical patch vertices, which produced incorrect face orientation and black triangle pixels.
+- Fixed camera pixel buffer zeroing in the OptiX 6 backend so that multi-tile renders for the same camera accumulate correctly rather than re-zeroing between tiles.
+- Specular reflection was missing in OptiX 8 camera rendering path: camera-weighted source fluxes are now uploaded and specular contributions are accumulated per-camera in the direct miss program.
+
+# [1.3.68] 2026-03-15
+
+## Core
+- OBJ loader now registers MTL materials in the Context material system and assigns them to loaded primitives, enabling material-based queries and rendering workflows for imported OBJ meshes.
+- Added `renameMaterial()` method to allow renaming material labels while preserving all properties and deduplication aliases for auto-generated materials.
+- Added `clearTimeseriesData()` method to remove all timeseries variables and their associated date/time values from the Context.
+
+## Plant Architecture
+- Plant organ materials (stems, petioles, leaves, flowers, fruit, peduncles) are now given descriptive names based on plant name and shoot type (e.g., "bean_trifoliate_leaf") instead of opaque auto-generated hash labels.
+- Added `setProgressCallback()` method to `PlantArchitecture` for receiving real-time `(float progress, std::string message)` updates during `advanceTime()` and `adjustFruitForObstacleCollision()`, enabling GUI and Python binding integration. Added `setCallback()` to `ProgressBar` to support this.
+
+## Visualizer
+- Reverted colorbar tick clamping that was incorrectly removing valid tick marks at the data range boundaries.
+
+# [1.3.67] 2026-03-11
+
+## Radiation
+- Replaced compile-time backend selection with runtime GPU hardware probing: the radiation model now auto-detects the best available backend (OptiX 8 → OptiX 6 → Vulkan) at startup, with clear diagnostic errors when no compatible GPU is found.
+- Bundled Vulkan headers and the glslang shader compiler with the plugin, eliminating the requirement to install the Vulkan SDK on all platforms (Windows now has zero external Vulkan dependencies).
+
+# [1.3.66] 2026-03-05
+
+## Core
+- Added `writeEXR()` functions for writing single-channel and multi-channel float images to OpenEXR files with lossless ZIP compression, using the tinyexr header-only library.
+
+## Radiation
+- Added `writeCameraImageDataEXR()` and `writeDepthImageDataEXR()` methods for exporting camera and depth data to EXR files, preserving full floating-point precision.
+
+## Visualizer
+- Fixed bug in colorbar ticks where ticks could extend past the colorbar.
+
+## Radiation
+- Added OptiX 8.1 ray tracing backend for NVIDIA systems with driver ≥ 560. This resolves the driver 590+ incompatibility that prevented the OptiX 6.5 backend from working on modern NVIDIA drivers. The backend is selected automatically at build time: driver ≥ 560 uses OptiX 8.1; driver < 560 continues to use OptiX 6.5.
+
+# [1.3.65] 2026-02-27
+
+## Core
+- Expanded `loadTabularTimeseriesData()` to support combined "datetime" columns (ISO-8601 with timezone offsets, compact YYYYMMDDHH/YYYYMMDDHHMM, space-separated date+time), a "time" column (HH:MM, HH:MM:SS), compact 8-digit date strings, and date format synonyms (e.g., "YYYY-MM-DD", "DD/MM/YYYY").
+- Fixed `Tube::pruneTubeNodes()` to correctly partition and delete primitives using the proper UUID ordering, and fixed `Tube::updateTriangleVertices()` loop order to match `addTubeObject()` so that colors stay mapped to the correct segments.
+
+## Radiation
+- Added Vulkan compute backend with software BVH traversal, enabling GPU-accelerated ray tracing on AMD, Intel, and Apple Silicon GPUs without requiring CUDA or OptiX. Backend selection is now automatic based on available hardware, with `FORCE_VULKAN_BACKEND` CMake option for testing. The OptiX backend now handles its own launch batching internally rather than in `RadiationModel`. Tile sub-patches are treated as individual patches for cross-backend compatibility, and the Prague sky model parameters are now properly passed to all backends.
+
+## Parameter Optimization
+- Major overhaul: added Bayesian Optimization (Gaussian Process with UCB acquisition) and CMA-ES algorithms alongside the existing Genetic Algorithm. New `setAlgorithm()` API replaces the old `OptimizationSettings` struct, with configurable crossover operators (BLX-alpha, BLX-PCA), mutation operators (per-gene, isotropic, hybrid PCA), integer/categorical parameter types, fitness caching, and `explore()`/`exploit()` factory presets for each algorithm.
+
+## Plant Hydraulics
+- Fixed sign error in turgor pressure term of the water potential equation in the documentation.
+
+## LiDAR
+- Updated multi-return triangulation filter documentation to reflect first-return filtering and corrected separation ratio threshold.
+
 # [1.3.64] 2026-01-30
 
 ## Core

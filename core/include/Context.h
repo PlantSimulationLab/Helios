@@ -4192,6 +4192,14 @@ namespace helios {
          */
         void addMaterial(const std::string &material_label);
 
+        //! Rename a material's label
+        /**
+         * \param[in] old_label Current label of the material
+         * \param[in] new_label New label to assign
+         * \note The new label must not start with '__' (reserved prefix).
+         */
+        void renameMaterial(const std::string &old_label, const std::string &new_label);
+
         //! Check if a material with the given label exists
         /**
          * \param[in] material_label String identifier for the material
@@ -6814,6 +6822,10 @@ namespace helios {
 
         //! List all existing timeseries variables
         [[nodiscard]] std::vector<std::string> listTimeseriesVariables() const;
+
+        //! Clear all timeseries data
+        /** Removes all timeseries variables and their associated date/time values. */
+        void clearTimeseriesData();
 
         //! Load tabular weather data from text file into timeseries
         /**

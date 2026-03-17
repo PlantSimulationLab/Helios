@@ -58,6 +58,16 @@ namespace helios {
         OptiX6Backend();
         ~OptiX6Backend() override;
 
+        /**
+         * @brief Probe whether OptiX 6.5 can create a context
+         *
+         * Creates and immediately destroys an RTcontext. This is the lightest
+         * possible check for OptiX 6.5 since there is no equivalent to optixInit().
+         *
+         * @return true if rtContextCreate succeeds
+         */
+        static bool probe() noexcept;
+
         // Lifecycle
         void initialize() override;
         void shutdown() override;
@@ -382,6 +392,8 @@ namespace helios {
         size_t current_source_count = 0;
         size_t current_band_count = 0;
         size_t current_camera_count = 0;
+        uint32_t current_camera_launch_id = UINT32_MAX;
+        size_t current_launch_band_count = 0;
     };
 
 } // namespace helios

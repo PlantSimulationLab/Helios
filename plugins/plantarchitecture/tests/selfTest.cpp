@@ -109,6 +109,44 @@ DOCTEST_TEST_CASE("Plant Library Model Building - bean") {
     DOCTEST_CHECK_NOTHROW(plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000));
 }
 
+DOCTEST_TEST_CASE("Material Naming - bean plant materials have descriptive names") {
+    Context context;
+    PlantArchitecture plantarchitecture(&context);
+    plantarchitecture.disableMessages();
+    plantarchitecture.loadPlantModelFromLibrary("bean");
+    uint plantID = plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5000);
+
+    // Verify every plant primitive has a descriptive material label (no __auto_ display names)
+    std::vector<uint> all_UUIDs = plantarchitecture.getAllPlantUUIDs(plantID);
+    DOCTEST_CHECK(all_UUIDs.size() > 0);
+    for (uint UUID : all_UUIDs) {
+        std::string label = context.getPrimitiveMaterialLabel(UUID);
+        DOCTEST_CHECK(label.substr(0, 7) != "__auto_");
+    }
+
+    // Verify expected material name patterns exist for bean
+    std::vector<std::string> materials = context.listMaterials();
+    // Note: organs with the same color/texture share a single material, so not every
+    // organ type will necessarily have its own material (e.g., petiole and stem may share).
+    bool found_trifoliate_leaf = false;
+    bool found_unifoliate_leaf = false;
+    bool found_stem = false;
+    for (const auto &label : materials) {
+        if (label.find("bean") != std::string::npos && label.find("trifoliate") != std::string::npos && label.find("leaf") != std::string::npos) {
+            found_trifoliate_leaf = true;
+        }
+        if (label.find("bean") != std::string::npos && label.find("unifoliate") != std::string::npos && label.find("leaf") != std::string::npos) {
+            found_unifoliate_leaf = true;
+        }
+        if (label.find("bean") != std::string::npos && label.find("stem") != std::string::npos) {
+            found_stem = true;
+        }
+    }
+    DOCTEST_CHECK(found_trifoliate_leaf);
+    DOCTEST_CHECK(found_unifoliate_leaf);
+    DOCTEST_CHECK(found_stem);
+}
+
 DOCTEST_TEST_CASE("Plant Library Model Building - cheeseweed") {
     Context context;
     PlantArchitecture plantarchitecture(&context);
@@ -2440,6 +2478,49 @@ DOCTEST_TEST_CASE("PlantArchitecture getPlantInternodeObjectIDs with shoot type 
 
         // Should throw for invalid plant ID
         DOCTEST_CHECK_THROWS(static_cast<void>(plantarchitecture.getPlantInternodeObjectIDs(9999, "unifoliate")));
+    }
+}
+
+DOCTEST_TEST_CASE("PlantArchitecture setProgressCallback") {
+    std::vector<float> progress_values;
+    std::vector<std::string> messages;
+    {
+        capture_cout cout_buffer;
+        capture_cerr cerr_buffer;
+
+        Context context;
+        PlantArchitecture plantarchitecture(&context);
+        plantarchitecture.disableMessages();
+
+        plantarchitecture.setProgressCallback([&](float progress, const std::string &msg) {
+            progress_values.push_back(progress);
+            messages.push_back(msg);
+        });
+
+        plantarchitecture.loadPlantModelFromLibrary("bean");
+        plantarchitecture.buildPlantInstanceFromLibrary(make_vec3(0, 0, 0), 5);
+
+        // advanceTime should trigger the callback
+        plantarchitecture.advanceTime(1.f);
+    }
+
+    // Verify callback was invoked
+    DOCTEST_CHECK(progress_values.size() > 0);
+
+    // Verify progress values are in [0, 1]
+    for (float p : progress_values) {
+        DOCTEST_CHECK(p >= 0.f);
+        DOCTEST_CHECK(p <= 1.f);
+    }
+
+    // Verify the last progress value is 1.0 (complete)
+    if (!progress_values.empty()) {
+        DOCTEST_CHECK(progress_values.back() == doctest::Approx(1.0f));
+    }
+
+    // Verify messages are non-empty
+    for (const auto &msg : messages) {
+        DOCTEST_CHECK(!msg.empty());
     }
 }
 

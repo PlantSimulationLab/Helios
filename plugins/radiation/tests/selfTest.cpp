@@ -2,7 +2,10 @@
 #include "RadiationModel.h"
 #include "BufferIndexing.h"
 #include "test_helpers.h"
+
+#ifdef HELIOS_HAVE_VULKAN
 #include "VulkanComputeBackend.h"
+#endif
 
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <doctest.h>
@@ -26,18 +29,14 @@ namespace helios {
          * @return True if GPU tests can run (always true for OptiX, Vulkan-dependent otherwise)
          */
         static bool isGPUAvailable() {
-#if defined(HELIOS_HAVE_OPTIX) && !defined(FORCE_VULKAN_BACKEND)
-            return true;
-#else
-            return TestVulkanDeviceManager::isVulkanAvailable();
-#endif
+            return helios::probeAnyGPUBackend();
         }
 
         static RadiationModel createWithSharedDevice(Context *context) {
-#if defined(HELIOS_HAVE_OPTIX) && !defined(FORCE_VULKAN_BACKEND)
+#if defined(HELIOS_HAVE_OPTIX8) || (defined(HELIOS_HAVE_OPTIX) && !defined(FORCE_VULKAN_BACKEND))
             // OptiX available and not forced to Vulkan - use default constructor
             return RadiationModel(context);
-#else
+#elif defined(HELIOS_HAVE_VULKAN)
             // Vulkan backend - use shared device (workaround for NVIDIA driver bug)
             VulkanDevice *device = TestVulkanDeviceManager::getSharedDevice();
             if (!device) {
@@ -48,23 +47,40 @@ namespace helios {
 
             // Use static factory method to inject pre-configured backend
             return RadiationModel::createWithBackend(context, std::move(backend));
+#else
+            helios_runtime_error("No ray tracing backend available for testing");
+            return RadiationModel(context); // Unreachable, silence compiler warning
 #endif
         }
     };
 } // namespace helios
 
-/// Skip the current test case if no GPU backend is available (e.g., CI runners without GPUs).
-/// Place at the top of any test case that requires RadiationModel GPU execution.
-#define SKIP_IF_NO_GPU() \
-    do { \
-        if (!RadiationModelTestHelper::isGPUAvailable()) { \
-            DOCTEST_MESSAGE("SKIPPED: No GPU/Vulkan device available"); \
-            return; \
-        } \
-    } while (0)
-
 int RadiationModel::selfTest(int argc, char **argv) {
     return helios::runDoctestWithValidation(argc, argv);
+}
+
+DOCTEST_TEST_CASE("Backend Identification") {
+    std::string compiled_backends;
+#ifdef HELIOS_HAVE_OPTIX8
+    compiled_backends += "OptiX8 ";
+#endif
+#ifdef HELIOS_HAVE_OPTIX
+    compiled_backends += "OptiX6 ";
+#endif
+#ifdef HELIOS_HAVE_VULKAN
+    compiled_backends += "Vulkan ";
+#endif
+    if (compiled_backends.empty()) compiled_backends = "(none)";
+    DOCTEST_MESSAGE("Compiled backends: " << compiled_backends);
+
+    bool gpu_available = RadiationModelTestHelper::isGPUAvailable();
+    DOCTEST_MESSAGE("GPU available: " << std::string(gpu_available ? "yes" : "no"));
+
+    if (gpu_available) {
+        Context context;
+        RadiationModel model = RadiationModelTestHelper::createWithSharedDevice(&context);
+        DOCTEST_MESSAGE("Active backend: " << model.getBackendName());
+    }
 }
 
 DOCTEST_TEST_CASE("BufferIndexing Correctness") {
@@ -181,8 +197,7 @@ DOCTEST_TEST_CASE("BufferIndexing Correctness") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel Simple Direct") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Simple Direct") {
     // Minimal test: single patch, collimated source, no scattering, no emission
     Context context;
     uint patch = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1)); // Horizontal 1x1 patch
@@ -211,8 +226,7 @@ DOCTEST_TEST_CASE("RadiationModel Simple Direct") {
     DOCTEST_CHECK(error <= 0.01); // 1% tolerance
 }
 
-DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Squares") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel 90 Degree Common-Edge Squares") {
     float error_threshold = 0.005;
     int Nensemble = 500;
 
@@ -297,8 +311,7 @@ DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Squares") {
     DOCTEST_CHECK(longwave_error_1 <= error_threshold);
 }
 
-DOCTEST_TEST_CASE("RadiationModel Black Parallel Rectangles") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Black Parallel Rectangles") {
     float error_threshold = 0.005;
     int Nensemble = 500;
 
@@ -359,8 +372,7 @@ DOCTEST_TEST_CASE("RadiationModel Black Parallel Rectangles") {
     DOCTEST_CHECK(shortwave_error_1 <= error_threshold);
 }
 
-DOCTEST_TEST_CASE("RadiationModel Gray Parallel Rectangles") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Gray Parallel Rectangles") {
     float error_threshold = 0.005;
     int Nensemble = 500;
     float sigma = 5.6703744E-8;
@@ -438,8 +450,7 @@ DOCTEST_TEST_CASE("RadiationModel Gray Parallel Rectangles") {
     DOCTEST_CHECK(longwave_error_1 <= error_threshold);
 }
 
-DOCTEST_TEST_CASE("RadiationModel Sphere Source") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Sphere Source") {
     float error_threshold = 0.005;
     int Nensemble = 500;
 
@@ -489,8 +500,7 @@ DOCTEST_TEST_CASE("RadiationModel Sphere Source") {
     DOCTEST_CHECK(shortwave_error_0 <= error_threshold);
 }
 
-DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Sub-Triangles") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel 90 Degree Common-Edge Sub-Triangles") {
     float error_threshold = 0.005;
     int Nensemble = 500;
     float sigma = 5.6703744E-8;
@@ -592,8 +602,7 @@ DOCTEST_TEST_CASE("RadiationModel 90 Degree Common-Edge Sub-Triangles") {
     DOCTEST_CHECK(longwave_error_1 <= error_threshold);
 }
 
-DOCTEST_TEST_CASE("RadiationModel Parallel Disks Texture Masked Patches") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Parallel Disks Texture Masked Patches") {
     float error_threshold = 0.005;
     int Nensemble = 500;
     float sigma = 5.6703744E-8;
@@ -693,8 +702,7 @@ DOCTEST_TEST_CASE("RadiationModel Parallel Disks Texture Masked Patches") {
     DOCTEST_CHECK(longwave_error_1 <= error_threshold);
 }
 
-DOCTEST_TEST_CASE("RadiationModel Second Law Equilibrium Test") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Second Law Equilibrium Test") {
     float error_threshold = 0.005;
     float sigma = 5.6703744E-8;
 
@@ -767,8 +775,7 @@ DOCTEST_TEST_CASE("RadiationModel Second Law Equilibrium Test") {
     DOCTEST_CHECK(flux_err <= error_threshold);
 }
 
-DOCTEST_TEST_CASE("RadiationModel Texture Mapping") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Texture Mapping") {
     float error_threshold = 0.005;
 
     Context context_8;
@@ -936,8 +943,7 @@ DOCTEST_TEST_CASE("RadiationModel Texture Mapping") {
     DOCTEST_CHECK(fabsf(F0 - 1.f) <= error_threshold);
 }
 
-DOCTEST_TEST_CASE("RadiationModel Homogeneous Canopy of Patches") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Homogeneous Canopy of Patches") {
     float error_threshold = 0.005;
     float sigma = 5.6703744E-8;
 
@@ -1035,8 +1041,7 @@ DOCTEST_TEST_CASE("RadiationModel Homogeneous Canopy of Patches") {
     DOCTEST_CHECK(fabsf(intercepted_leaf_diffuse - intercepted_theoretical_diffuse) <= 2.f * error_threshold);
 }
 
-DOCTEST_TEST_CASE("RadiationModel Gas-filled Furnace") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Gas-filled Furnace") {
     float error_threshold = 0.005;
     float sigma = 5.6703744E-8;
 
@@ -1103,8 +1108,7 @@ DOCTEST_TEST_CASE("RadiationModel Gas-filled Furnace") {
     DOCTEST_CHECK(fabsf(R_wall - Rref_10) / Rref_10 <= error_threshold);
 }
 
-DOCTEST_TEST_CASE("RadiationModel Purely Scattering Medium Between Infinite Plates") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Purely Scattering Medium Between Infinite Plates") {
     float error_threshold = 0.005;
     float sigma = 5.6703744E-8;
 
@@ -1192,8 +1196,7 @@ DOCTEST_TEST_CASE("RadiationModel Purely Scattering Medium Between Infinite Plat
     DOCTEST_CHECK(fabsf(R_wall2 - Psi2_exact) <= 10.f * error_threshold);
 }
 
-DOCTEST_TEST_CASE("RadiationModel Homogeneous Canopy with Periodic Boundaries") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Homogeneous Canopy with Periodic Boundaries") {
     float error_threshold = 0.005;
 
     uint Ndirect_12 = 1000;
@@ -1287,8 +1290,7 @@ DOCTEST_TEST_CASE("RadiationModel Homogeneous Canopy with Periodic Boundaries") 
     DOCTEST_CHECK(fabsf(intercepted_leaf_diffuse_12 - intercepted_theoretical_diffuse_12) <= 2.f * error_threshold);
 }
 
-DOCTEST_TEST_CASE("RadiationModel Texture-masked Tile Objects with Periodic Boundaries") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Texture-masked Tile Objects with Periodic Boundaries") {
     float error_threshold = 0.005;
 
     uint Ndirect_13 = 1000;
@@ -1398,8 +1400,7 @@ DOCTEST_TEST_CASE("RadiationModel Texture-masked Tile Objects with Periodic Boun
     DOCTEST_CHECK(fabsf(intercepted_leaf_diffuse_13 - intercepted_theoretical_diffuse_13) <= 4.f * error_threshold);
 }
 
-DOCTEST_TEST_CASE("RadiationModel Anisotropic Diffuse Radiation Horizontal Patch") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Anisotropic Diffuse Radiation Horizontal Patch") {
     float error_threshold = 0.005;
 
     uint Ndiffuse_14 = 50000;
@@ -1441,8 +1442,7 @@ DOCTEST_TEST_CASE("RadiationModel Anisotropic Diffuse Radiation Horizontal Patch
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel Prague Sky Diffuse Radiation Normalization") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Prague Sky Diffuse Radiation Normalization") {
     float error_threshold = 0.015;
 
     uint Ndiffuse_prague = 100000;
@@ -1555,8 +1555,7 @@ DOCTEST_TEST_CASE("RadiationModel Prague Sky Diffuse Radiation Normalization") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel Prague Sky Angular Distribution") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Prague Sky Angular Distribution") {
     // Tests that Prague sky model parameters are correctly applied in the diffuse shader.
     //
     // RadiationModel::computeAngularNormalization() always computes the normalization factor
@@ -1625,8 +1624,7 @@ DOCTEST_TEST_CASE("RadiationModel Prague Sky Angular Distribution") {
     DOCTEST_CHECK(flux > 0.70f); // Sanity: flux is reasonable
 }
 
-DOCTEST_TEST_CASE("RadiationModel Disk Radiation Source Above Circular Element") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Disk Radiation Source Above Circular Element") {
     float error_threshold = 0.005;
 
     uint Ndirect_15 = 10000;
@@ -1662,8 +1660,7 @@ DOCTEST_TEST_CASE("RadiationModel Disk Radiation Source Above Circular Element")
     DOCTEST_CHECK(fabs(F12_15 - F12_exact_15 * r1_15 * r1_15 / r2_15 / r2_15) <= 2.f * error_threshold);
 }
 
-DOCTEST_TEST_CASE("RadiationModel Rectangular Radiation Source Above Patch") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Rectangular Radiation Source Above Patch") {
     float error_threshold = 0.01;
 
     uint Ndirect_16 = 50000;
@@ -1703,8 +1700,7 @@ DOCTEST_TEST_CASE("RadiationModel Rectangular Radiation Source Above Patch") {
     DOCTEST_CHECK(fabs(F12_16 - F12_exact_16) <= error_threshold);
 }
 
-DOCTEST_TEST_CASE("RadiationModel ROMC Camera Test Verification") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel ROMC Camera Test Verification") {
     Context context_17;
     float sunzenithd = 30;
     float reflectivityleaf = 0.02; // NIR
@@ -1824,8 +1820,7 @@ DOCTEST_TEST_CASE("RadiationModel ROMC Camera Test Verification") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel Spectral Integration and Interpolation Tests") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Spectral Integration and Interpolation Tests") {
 
     Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -1896,8 +1891,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Integration and Interpolation Tests")
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel Spectral Radiative Properties Setting and Validation") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Spectral Radiative Properties Setting and Validation") {
 
     Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -2014,8 +2008,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Radiative Properties Setting and Vali
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
 
     Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -2115,8 +2108,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Edge Cases and Error Handling") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel Spectral Caching and Performance Validation") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Spectral Caching and Performance Validation") {
 
     Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -2169,8 +2161,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Caching and Performance Validation") 
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel Spectral Library Integration") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Spectral Library Integration") {
 
     Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -2205,8 +2196,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectral Library Integration") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel Multi-Spectrum Primitive Assignment") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Multi-Spectrum Primitive Assignment") {
 
     Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -2398,8 +2388,7 @@ DOCTEST_TEST_CASE("RadiationModel Multi-Spectrum Primitive Assignment") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
 
     Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -2594,8 +2583,7 @@ DOCTEST_TEST_CASE("RadiationModel Band-Specific Camera Spectral Response") {
     // The original bug would have caused all bands to have the same values
 }
 
-DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary") {
 
     Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -2679,8 +2667,7 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary with custom band labels") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary with custom band labels") {
 
     Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -2770,8 +2757,7 @@ DOCTEST_TEST_CASE("RadiationModel - addRadiationCameraFromLibrary with custom ba
     DOCTEST_CHECK(context3.doesGlobalDataExist("Nikon_D700_blue"));
 }
 
-DOCTEST_TEST_CASE("RadiationModel - updateCameraParameters") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - updateCameraParameters") {
 
     Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -2937,8 +2923,7 @@ DOCTEST_TEST_CASE("RadiationModel - updateCameraParameters") {
     DOCTEST_CHECK(std::find(cameras.begin(), cameras.end(), "cam1") != cameras.end());
 }
 
-DOCTEST_TEST_CASE("RadiationModel - getCameraParameters") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - getCameraParameters") {
 
     Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -3230,8 +3215,7 @@ DOCTEST_TEST_CASE("CameraCalibration Multiple Colorboards") {
     DOCTEST_CHECK(spyder_labeled == 24);
 }
 
-DOCTEST_TEST_CASE("RadiationModel CCM Export and Import") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel CCM Export and Import") {
     Context context;
     RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiationmodel.disableMessages();
@@ -3400,8 +3384,7 @@ DOCTEST_TEST_CASE("RadiationModel CCM Export and Import") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel CCM Error Handling") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel CCM Error Handling") {
     Context context;
     RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
 
@@ -3466,8 +3449,7 @@ DOCTEST_TEST_CASE("RadiationModel CCM Error Handling") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
 
     Context context;
     RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -3789,8 +3771,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Primitive Data") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
 
     Context context;
     RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -4178,8 +4159,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation from Object Data") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation - Duplicate Handling") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Spectrum Interpolation - Duplicate Handling") {
 
     // Test merging of duplicate primitive UUIDs with same spectra/values
     DOCTEST_SUBCASE("Primitive: Merge duplicates with matching spectra") {
@@ -4399,8 +4379,7 @@ DOCTEST_TEST_CASE("RadiationModel Spectrum Interpolation - Duplicate Handling") 
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel - Camera Metadata Export") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - Camera Metadata Export") {
     Context context;
 
     // Set context properties for metadata
@@ -4748,8 +4727,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Metadata Export") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel - Camera Metadata Agronomic Properties") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - Camera Metadata Agronomic Properties") {
     Context context;
 
     // Set context properties for metadata
@@ -5083,8 +5061,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Metadata Agronomic Properties") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel - FOV_aspect_ratio Deprecation") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - FOV_aspect_ratio Deprecation") {
 
     Context context;
 
@@ -5166,8 +5143,7 @@ DOCTEST_TEST_CASE("RadiationModel - FOV_aspect_ratio Deprecation") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel Atmospheric Sky Model for Camera") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Atmospheric Sky Model for Camera") {
     // Test that atmospheric sky radiance model is computed when cameras are present
     // and that atmospheric parameters from SolarPosition plugin are used correctly
 
@@ -5291,8 +5267,7 @@ DOCTEST_TEST_CASE("RadiationModel Atmospheric Sky Model for Camera") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel - Camera White Balance") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - Camera White Balance") {
     Context context;
 
     RadiationModel radiationmodel = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -5449,8 +5424,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera White Balance") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior") {
 
     using namespace helios;
 
@@ -5638,8 +5612,7 @@ DOCTEST_TEST_CASE("RadiationModel setDiffuseSpectrum and emission band behavior"
 
 // ===== Prague Sky Model Integration Tests =====
 
-DOCTEST_TEST_CASE("Radiation - Prague Context data fallback behavior") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("Radiation - Prague Context data fallback behavior") {
     Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
@@ -5667,8 +5640,7 @@ DOCTEST_TEST_CASE("Radiation - Prague Context data fallback behavior") {
     DOCTEST_CHECK_NOTHROW(radiation.updateGeometry());
 }
 
-DOCTEST_TEST_CASE("Radiation - Prague Context data integration end-to-end") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("Radiation - Prague Context data integration end-to-end") {
     Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
@@ -5728,8 +5700,7 @@ DOCTEST_TEST_CASE("Radiation - Prague Context data integration end-to-end") {
     DOCTEST_CHECK_NOTHROW(radiation.updateGeometry());
 }
 
-DOCTEST_TEST_CASE("RadiationModel Automatic Spectrum Update Detection") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Automatic Spectrum Update Detection") {
 
     helios::Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -5794,8 +5765,7 @@ DOCTEST_TEST_CASE("RadiationModel Automatic Spectrum Update Detection") {
     DOCTEST_CHECK(flux_v3 >= flux_v2 * 0.99f); // Allow for small numerical differences
 }
 
-DOCTEST_TEST_CASE("RadiationModel Multiple Sources Same Spectrum Update") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel Multiple Sources Same Spectrum Update") {
 
     helios::Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -5841,8 +5811,7 @@ DOCTEST_TEST_CASE("RadiationModel Multiple Sources Same Spectrum Update") {
     DOCTEST_CHECK(flux_v2 > flux_v1 * 1.8f);
 }
 
-DOCTEST_TEST_CASE("RadiationModel No Update When Spectrum Unchanged") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel No Update When Spectrum Unchanged") {
 
     helios::Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
@@ -5889,8 +5858,7 @@ DOCTEST_TEST_CASE("RadiationModel - CameraProperties equality with camera_zoom")
     DOCTEST_CHECK(props1 == props2); // Same zoom values again
 }
 
-DOCTEST_TEST_CASE("RadiationModel - camera_zoom validation in updateCameraParameters") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - camera_zoom validation in updateCameraParameters") {
     Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
@@ -5914,8 +5882,7 @@ DOCTEST_TEST_CASE("RadiationModel - camera_zoom validation in updateCameraParame
     DOCTEST_CHECK_THROWS_WITH_AS(radiation.updateCameraParameters("test_cam", invalid), "ERROR (RadiationModel::updateCameraParameters): camera_zoom must be greater than 0.", std::runtime_error);
 }
 
-DOCTEST_TEST_CASE("RadiationModel - camera_zoom parameter get/set") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - camera_zoom parameter get/set") {
     Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
@@ -5933,8 +5900,7 @@ DOCTEST_TEST_CASE("RadiationModel - camera_zoom parameter get/set") {
     DOCTEST_CHECK(retrieved.HFOV == 60.0f); // Base HFOV unchanged
 }
 
-DOCTEST_TEST_CASE("RadiationModel - update camera_zoom") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - update camera_zoom") {
     Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
@@ -5956,8 +5922,7 @@ DOCTEST_TEST_CASE("RadiationModel - update camera_zoom") {
     DOCTEST_CHECK(final_props.camera_zoom == 2.5f);
     DOCTEST_CHECK(final_props.HFOV == 45.0f); // Base HFOV should remain unchanged
 }
-DOCTEST_TEST_CASE("Lens Flare - Enable/Disable API") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("Lens Flare - Enable/Disable API") {
     helios::Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
 
@@ -5984,8 +5949,7 @@ DOCTEST_TEST_CASE("Lens Flare - Enable/Disable API") {
     DOCTEST_CHECK_THROWS((void) radiation.isCameraLensFlareEnabled("nonexistent_camera"));
 }
 
-DOCTEST_TEST_CASE("Lens Flare - Properties API") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("Lens Flare - Properties API") {
     helios::Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
 
@@ -6057,8 +6021,7 @@ DOCTEST_TEST_CASE("Lens Flare - Properties API") {
     DOCTEST_CHECK_THROWS(radiation.setCameraLensFlareProperties("test_camera", invalid_props));
 }
 
-DOCTEST_TEST_CASE("Lens Flare - Application to Camera Image") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("Lens Flare - Application to Camera Image") {
     helios::Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
@@ -6132,8 +6095,7 @@ DOCTEST_TEST_CASE("Lens Flare - Application to Camera Image") {
     DOCTEST_CHECK(std::find(all_labels.begin(), all_labels.end(), "test_camera") != all_labels.end());
 }
 
-DOCTEST_TEST_CASE("Lens Flare - Disabled Does Nothing") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("Lens Flare - Disabled Does Nothing") {
     helios::Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
@@ -6185,8 +6147,7 @@ DOCTEST_TEST_CASE("Lens Flare - Disabled Does Nothing") {
     DOCTEST_CHECK_NOTHROW(radiation.applyCameraImageCorrections("test_camera", "red", "green", "blue"));
 }
 
-DOCTEST_TEST_CASE("RadiationModel - Camera Sphere Source Rendering") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - Camera Sphere Source Rendering") {
     helios::Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
@@ -6222,8 +6183,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Sphere Source Rendering") {
     DOCTEST_CHECK(pixel_data[center_idx] > 0.0f);
 }
 
-DOCTEST_TEST_CASE("RadiationModel - Camera Rectangle Source Rendering") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - Camera Rectangle Source Rendering") {
     helios::Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
@@ -6259,8 +6219,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Rectangle Source Rendering") {
     DOCTEST_CHECK(pixel_data[center_idx] > 0.0f);
 }
 
-DOCTEST_TEST_CASE("RadiationModel - Camera Disk Source Rendering") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - Camera Disk Source Rendering") {
     helios::Context context;
     RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
     radiation.disableMessages();
@@ -6296,8 +6255,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Disk Source Rendering") {
     DOCTEST_CHECK(pixel_data[center_idx] > 0.0f);
 }
 
-DOCTEST_TEST_CASE("RadiationModel - Camera Pixel UUID Indexing Validation") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - Camera Pixel UUID Indexing Validation") {
     // This test validates that camera pixel-to-UUID mapping is spatially correct
     // by checking that left pixels see left patches, not right patches (which would happen with horizontal flip bug)
 
@@ -6398,8 +6356,7 @@ DOCTEST_TEST_CASE("RadiationModel - Camera Pixel UUID Indexing Validation") {
     std::remove(test_file.c_str());
 }
 
-DOCTEST_TEST_CASE("RadiationModel - Pixel Labeling with Fine Tessellation") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - Pixel Labeling with Fine Tessellation") {
     // Test that pixel labeling doesn't miss primitives when tessellation ≈ camera resolution
     // This validates the epsilon-tolerant boundary test prevents systematic misses
 
@@ -6477,8 +6434,7 @@ DOCTEST_TEST_CASE("RadiationModel - Pixel Labeling with Fine Tessellation") {
     std::remove(test_file.c_str());
 }
 
-DOCTEST_TEST_CASE("RadiationModel - runBand Invalid Band Error Handling") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - runBand Invalid Band Error Handling") {
 
     // Test 1: Single invalid band label
     DOCTEST_SUBCASE("Single invalid band") {
@@ -6574,8 +6530,7 @@ DOCTEST_TEST_CASE("RadiationModel - runBand Invalid Band Error Handling") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel - Segmentation Mask to Image Coordinate Alignment") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - Segmentation Mask to Image Coordinate Alignment") {
     // This test validates that segmentation mask coordinates correctly align with camera images
     // by creating patches at known locations and verifying their bbox coordinates match the image
 
@@ -6684,8 +6639,7 @@ DOCTEST_TEST_CASE("RadiationModel - Segmentation Mask to Image Coordinate Alignm
     std::remove(image_file.c_str());
 }
 
-DOCTEST_TEST_CASE("RadiationModel - Mask Spatial Ordering Matches Image") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - Mask Spatial Ordering Matches Image") {
     // Verify that left/right/top/bottom spatial relationships are preserved between image and masks
 
     Context context;
@@ -6799,8 +6753,7 @@ DOCTEST_TEST_CASE("RadiationModel - Mask Spatial Ordering Matches Image") {
     std::remove(image_file.c_str());
 }
 
-DOCTEST_TEST_CASE("RadiationModel - Data Label Maps Match Segmentation Mask Coordinates") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - Data Label Maps Match Segmentation Mask Coordinates") {
     // Validates that writePrimitiveDataLabelMap and writeObjectDataLabelMap use the same
     // coordinate system as segmentation masks by comparing their outputs
 
@@ -6949,8 +6902,7 @@ DOCTEST_TEST_CASE("RadiationModel - Data Label Maps Match Segmentation Mask Coor
     std::remove(image_file.c_str());
 }
 
-DOCTEST_TEST_CASE("Material Backend Migration - Spectrum Interpolation Integration") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("Material Backend Migration - Spectrum Interpolation Integration") {
     // Test that spectrum interpolation configs are properly applied in buildMaterialData()
 
     helios::Context context;
@@ -6994,8 +6946,7 @@ DOCTEST_TEST_CASE("Material Backend Migration - Spectrum Interpolation Integrati
     DOCTEST_CHECK(assigned_spectrum == "rho_old");
 }
 
-DOCTEST_TEST_CASE("Material Backend Migration - Camera Weighted Materials") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("Material Backend Migration - Camera Weighted Materials") {
     // Test that camera-weighted materials are correctly calculated with spectral responses
 
     helios::Context context;
@@ -7054,8 +7005,7 @@ DOCTEST_TEST_CASE("Material Backend Migration - Camera Weighted Materials") {
     }
 }
 
-DOCTEST_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
     // Test that setting specular_exponent affects camera rendering
     // This verifies specular reflection is enabled and working correctly
 
@@ -7068,15 +7018,11 @@ DOCTEST_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
     context.setPrimitiveData(UUID, "twosided_flag", uint(1));
 
     // Set low diffuse reflectivity to isolate specular contribution
-    std::vector<helios::vec2> reflectivity;
-    reflectivity.push_back(make_vec2(400, 0.05f));
-    reflectivity.push_back(make_vec2(700, 0.05f));
+    std::vector<helios::vec2> reflectivity = {make_vec2(400, 0.05f), make_vec2(700, 0.05f)};
     context.setGlobalData("reflectivity", reflectivity);
     context.setPrimitiveData(UUID, "reflectivity_spectrum", "reflectivity");
 
-    std::vector<helios::vec2> zero_transmissivity;
-    zero_transmissivity.push_back(make_vec2(400, 0.0f));
-    zero_transmissivity.push_back(make_vec2(700, 0.0f));
+    std::vector<helios::vec2> zero_transmissivity = {make_vec2(400, 0.0f), make_vec2(700, 0.0f)};
     context.setGlobalData("zero_transmissivity", zero_transmissivity);
     context.setPrimitiveData(UUID, "transmissivity_spectrum", "zero_transmissivity");
 
@@ -7099,23 +7045,18 @@ DOCTEST_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
     cam_props.lens_diameter = 0.0f;
     cam_props.focal_plane_distance = 2.0f;
     cam_props.HFOV = 30.0f;
-    radiation.addRadiationCamera("test_cam", {"SUN"}, camera_pos, camera_lookat, cam_props, 1);
+    radiation.addRadiationCamera("test_cam", {"SUN"}, camera_pos, camera_lookat, cam_props, 100);
 
-    // Set camera spectral response
-    std::vector<helios::vec2> camera_response;
-    camera_response.push_back(make_vec2(400, 1.0f));
-    camera_response.push_back(make_vec2(700, 1.0f));
+    std::vector<helios::vec2> camera_response = {make_vec2(400, 1.0f), make_vec2(700, 1.0f)};
     context.setGlobalData("camera_response", camera_response);
     radiation.setCameraSpectralResponse("test_cam", "SUN", "camera_response");
 
     // TEST 1: specular_exponent = -1 (disabled)
-    std::string output1;
     {
         capture_cout capture;
         context.setPrimitiveData(UUID, "specular_exponent", -1.0f);
         radiation.updateGeometry();
         radiation.runBand("SUN");
-        output1 = capture.get_captured_output();
     }
 
     std::vector<float> pixels_no_specular;
@@ -7125,16 +7066,14 @@ DOCTEST_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
     for (float p: pixels_no_specular) {
         sum_no_specular += p;
     }
-    float avg_no_specular = sum_no_specular / pixels_no_specular.size();
+    float avg_no_specular = sum_no_specular / (float)pixels_no_specular.size();
 
     // TEST 2: specular_exponent = 50 (strong specular highlight)
-    std::string output2;
     {
         capture_cout capture;
         context.setPrimitiveData(UUID, "specular_exponent", 50.0f);
         radiation.updateGeometry();
         radiation.runBand("SUN");
-        output2 = capture.get_captured_output();
     }
 
     std::vector<float> pixels_with_specular;
@@ -7144,18 +7083,101 @@ DOCTEST_TEST_CASE("RadiationModel - Specular Reflection Camera Rendering") {
     for (float p: pixels_with_specular) {
         sum_with_specular += p;
     }
-    float avg_with_specular = sum_with_specular / pixels_with_specular.size();
+    float avg_with_specular = sum_with_specular / (float)pixels_with_specular.size();
 
     float difference = avg_with_specular - avg_no_specular;
 
-    // Verify specular exponent changes camera intensity
-    DOCTEST_CHECK_MESSAGE(std::abs(difference) > 1.0f, "Specular exponent should affect camera intensity. "
+    DOCTEST_MESSAGE("No specular avg: " << avg_no_specular << ", With specular avg: " << avg_with_specular << ", Difference: " << difference);
+
+    // Specular should add a visible highlight when sun, camera, and normal are aligned
+    DOCTEST_CHECK_MESSAGE(difference > 5.0f, "Specular exponent should increase camera intensity. "
                                                        "No specular: "
                                                                << avg_no_specular << ", With specular: " << avg_with_specular << ", Difference: " << difference);
 }
 
-DOCTEST_TEST_CASE("RadiationModel More Than 4 Simultaneous Radiation Bands") {
-    SKIP_IF_NO_GPU();
+GPU_TEST_CASE("RadiationModel - Specular Reflection Multiple Cameras") {
+    // Test that specular reflection works correctly with multiple cameras.
+    // Each camera should independently see specular highlights based on its own
+    // viewing geometry relative to the light source.
+
+    Context context;
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    // Create patch at origin facing +Z
+    uint UUID = context.addPatch(make_vec3(0, 0, 0), make_vec2(1, 1));
+    context.setPrimitiveData(UUID, "twosided_flag", uint(1));
+
+    std::vector<helios::vec2> reflectivity = {make_vec2(400, 0.05f), make_vec2(700, 0.05f)};
+    context.setGlobalData("reflectivity", reflectivity);
+    context.setPrimitiveData(UUID, "reflectivity_spectrum", "reflectivity");
+
+    std::vector<helios::vec2> zero_transmissivity = {make_vec2(400, 0.0f), make_vec2(700, 0.0f)};
+    context.setGlobalData("zero_transmissivity", zero_transmissivity);
+    context.setPrimitiveData(UUID, "transmissivity_spectrum", "zero_transmissivity");
+
+    context.setPrimitiveData(UUID, "specular_exponent", 50.0f);
+
+    radiation.addRadiationBand("SUN");
+    radiation.setScatteringDepth("SUN", 1);
+
+    helios::vec3 sun_direction = helios::make_vec3(0, 0, 1); // Sun directly above
+    uint source = radiation.addCollimatedRadiationSource(sun_direction);
+    radiation.setSourceFlux(source, "SUN", 1000.0f);
+    radiation.setDirectRayCount("SUN", 10000);
+    radiation.setDiffuseRayCount("SUN", 0);
+    radiation.disableEmission("SUN");
+
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(32, 32);
+    cam_props.lens_diameter = 0.0f;
+    cam_props.focal_plane_distance = 2.0f;
+    cam_props.HFOV = 30.0f;
+
+    std::vector<helios::vec2> camera_response = {make_vec2(400, 1.0f), make_vec2(700, 1.0f)};
+    context.setGlobalData("camera_response", camera_response);
+
+    // Camera A: directly above, aligned with sun → strong specular
+    radiation.addRadiationCamera("cam_A", {"SUN"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), cam_props, 100);
+    radiation.setCameraSpectralResponse("cam_A", "SUN", "camera_response");
+
+    // Camera B: also directly above (different label) → should also see strong specular
+    radiation.addRadiationCamera("cam_B", {"SUN"}, make_vec3(0, 0, 2), make_vec3(0, 0, 0), cam_props, 100);
+    radiation.setCameraSpectralResponse("cam_B", "SUN", "camera_response");
+
+    {
+        capture_cout capture;
+        radiation.updateGeometry();
+        radiation.runBand("SUN");
+    }
+
+    // Get results for both cameras
+    std::vector<float> pixels_A, pixels_B;
+    context.getGlobalData("camera_cam_A_SUN", pixels_A);
+    context.getGlobalData("camera_cam_B_SUN", pixels_B);
+
+    float sum_A = 0.0f, sum_B = 0.0f;
+    for (float p : pixels_A) sum_A += p;
+    for (float p : pixels_B) sum_B += p;
+    float avg_A = sum_A / (float)pixels_A.size();
+    float avg_B = sum_B / (float)pixels_B.size();
+
+    // Pure diffuse baseline: reflectivity(0.05) * flux(1000) / pi ≈ 15.9
+    float diffuse_baseline = 15.0f;
+
+    DOCTEST_MESSAGE("Camera A avg: " << avg_A << ", Camera B avg: " << avg_B << ", Diffuse baseline ~" << diffuse_baseline);
+
+    // Both cameras should see specular (both are at the same position, both see the highlight)
+    DOCTEST_CHECK_MESSAGE(avg_A > diffuse_baseline * 2.0f, "Camera A should show specular highlight. avg_A: " << avg_A);
+    DOCTEST_CHECK_MESSAGE(avg_B > diffuse_baseline * 2.0f, "Camera B should show specular highlight. avg_B: " << avg_B);
+
+    // Both cameras are in the same position, so their values should be similar
+    float ratio = (avg_A > avg_B) ? avg_B / avg_A : avg_A / avg_B;
+    DOCTEST_CHECK_MESSAGE(ratio > 0.8f, "Both cameras should see similar specular intensity. "
+                                        "avg_A: " << avg_A << ", avg_B: " << avg_B << ", ratio: " << ratio);
+}
+
+GPU_TEST_CASE("RadiationModel More Than 4 Simultaneous Radiation Bands") {
     // Verify the Vulkan backend has no hard-coded 4-band limit.
     // Run 6 bands simultaneously and check that each receives the correct flux
     // from an overhead collimated source hitting an opaque patch.
@@ -7197,5 +7219,223 @@ DOCTEST_TEST_CASE("RadiationModel More Than 4 Simultaneous Radiation Bands") {
         context.getPrimitiveData(UUID, ("radiation_flux_" + band_names[b]).c_str(), measured);
         float rel_error = std::abs(measured - expected_flux[b]) / expected_flux[b];
         DOCTEST_CHECK_MESSAGE(rel_error <= error_threshold, "Band " << band_names[b] << ": expected " << expected_flux[b] << ", got " << measured << " (error " << rel_error << ")");
+    }
+}
+
+// ===========================================================================
+// Bug regression tests for OptiX 8 camera rendering
+// ===========================================================================
+
+GPU_TEST_CASE("RadiationModel - Camera triangle vs patch rendering parity") {
+    // Regression test: triangles must produce non-zero camera radiance when lit,
+    // matching patch behavior. A bug in __closesthit__camera() computed the surface
+    // normal incorrectly for triangles (using patch canonical vertices instead of
+    // triangle canonical vertices), causing it to read radiation_out from the wrong
+    // face buffer and producing black pixels for all triangle primitives.
+
+    Context context;
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    // Create a patch and a triangle side by side at z=0, both facing up (+z).
+    // The patch is on the left (x<0), the triangle on the right (x>0).
+    float reflectivity = 0.5f;
+
+    uint patch_id = context.addPatch(make_vec3(-0.25f, 0, 0), make_vec2(0.4f, 0.4f));
+    context.setPrimitiveData(patch_id, "reflectivity_SW", reflectivity);
+    context.setPrimitiveData(patch_id, "twosided_flag", uint(0));
+
+    // Triangle covering roughly the same area as the patch, on the right side
+    uint tri_id = context.addTriangle(make_vec3(0.05f, -0.2f, 0),
+                                      make_vec3(0.45f, -0.2f, 0),
+                                      make_vec3(0.25f, 0.2f, 0));
+    context.setPrimitiveData(tri_id, "reflectivity_SW", reflectivity);
+
+    // Single radiation band with scattering
+    radiation.addRadiationBand("SW");
+    radiation.disableEmission("SW");
+    radiation.setDirectRayCount("SW", 250);
+    radiation.setDiffuseRayCount("SW", 100);
+    radiation.setScatteringDepth("SW", 1);
+
+    // Collimated source from above (zenith)
+    uint src = radiation.addCollimatedRadiationSource(make_vec3(0, 0, 1));
+    radiation.setSourceFlux(src, "SW", 500.f);
+
+    // Camera looking straight down at the scene
+    CameraProperties cam_props;
+    cam_props.camera_resolution = make_int2(64, 64);
+    cam_props.HFOV = 60.0f;
+    cam_props.lens_diameter = 0.0f;
+    radiation.addRadiationCamera("test_cam", {"SW"},
+                                 make_vec3(0, 0, 1.5f),   // above scene
+                                 make_vec3(0, 0, 0),       // look at center
+                                 cam_props, 50);
+
+    radiation.updateGeometry();
+    radiation.runBand("SW");
+
+    auto pixel_data = radiation.getCameraPixelData("test_cam", "SW");
+    DOCTEST_REQUIRE(pixel_data.size() == 64 * 64);
+
+    // Sample pixels over the patch region (left half, center rows).
+    // Camera image is flipped horizontally (ii = resolution.x - i - 1),
+    // so world-left (x<0) appears on the right side of the pixel buffer.
+    // With a 60-deg HFOV looking from z=1.5 at z=0, the viewable width is
+    // ~1.73m. The patch at x=-0.25 maps to approximately pixel column 48-56 (right side).
+    // The triangle at x=+0.25 maps to approximately pixel column 8-16 (left side).
+    float patch_sum = 0;
+    int patch_count = 0;
+    float tri_sum = 0;
+    int tri_count = 0;
+
+    // Patch region (right side of image = world left where patch is)
+    for (int j = 24; j < 40; j++) {
+        for (int i = 40; i < 56; i++) {
+            patch_sum += pixel_data[j * 64 + i];
+            patch_count++;
+        }
+    }
+
+    // Triangle region (left side of image = world right where triangle is)
+    for (int j = 24; j < 40; j++) {
+        for (int i = 8; i < 24; i++) {
+            tri_sum += pixel_data[j * 64 + i];
+            tri_count++;
+        }
+    }
+
+    float patch_avg = patch_sum / float(patch_count);
+    float tri_avg = tri_sum / float(tri_count);
+
+    // Both regions must have non-zero average radiance (lit surfaces)
+    DOCTEST_CHECK_MESSAGE(patch_avg > 0.0f,
+                          "Patch region average radiance should be > 0, got " << patch_avg);
+    DOCTEST_CHECK_MESSAGE(tri_avg > 0.0f,
+                          "Triangle region average radiance should be > 0, got " << tri_avg);
+
+    // Triangle and patch averages should be within the same order of magnitude
+    // (both have the same reflectivity and similar illumination geometry)
+    if (patch_avg > 0.0f && tri_avg > 0.0f) {
+        float ratio = tri_avg / patch_avg;
+        DOCTEST_CHECK_MESSAGE(ratio > 0.1f,
+                              "Triangle/patch radiance ratio too low: " << ratio
+                              << " (tri_avg=" << tri_avg << ", patch_avg=" << patch_avg << ")");
+        DOCTEST_CHECK_MESSAGE(ratio < 10.0f,
+                              "Triangle/patch radiance ratio too high: " << ratio
+                              << " (tri_avg=" << tri_avg << ", patch_avg=" << patch_avg << ")");
+    }
+}
+
+GPU_TEST_CASE("RadiationModel - Multi-tile camera rendering consistency") {
+    // Regression test: when camera resolution × antialiasing samples exceeds maxRays
+    // (~1 billion), the render is split into multiple tiles. A bug in __raygen__camera()
+    // used camera_resolution (tile dimensions) instead of camera_resolution_full (full
+    // image dimensions) when computing ray directions, causing pixels in tiles 2+ to
+    // point in the wrong direction and produce black output.
+    //
+    // The iPhone12ProMAX camera at 3024×4032 with 100 AA samples produces ~1.22 billion
+    // rays, triggering 2-tile rendering.
+
+    Context context;
+    RadiationModel radiation = RadiationModelTestHelper::createWithSharedDevice(&context);
+    radiation.disableMessages();
+
+    // Minimal scene: single ground patch filling the camera view
+    std::vector<uint> ground = context.addTile(make_vec3(0, 0, 0), make_vec2(10.0f, 10.0f),
+                                               make_SphericalCoord(0, 0), make_int2(1, 1));
+    context.setPrimitiveData(ground, "reflectivity_red", 0.3f);
+    context.setPrimitiveData(ground, "reflectivity_green", 0.3f);
+    context.setPrimitiveData(ground, "reflectivity_blue", 0.3f);
+    context.setPrimitiveData(ground, "twosided_flag", uint(0));
+
+    // Sun source
+    SphericalCoord sun_dir = make_SphericalCoord(deg2rad(45), 0);
+    uint src = radiation.addSunSphereRadiationSource(sun_dir);
+    radiation.setSourceSpectrum(src, "solar_spectrum_ASTMG173");
+
+    // RGB bands with scattering (matching tutorial 12 setup)
+    radiation.addRadiationBand("red");
+    radiation.disableEmission("red");
+    radiation.setScatteringDepth("red", 1);
+    radiation.setDiffuseRadiationExtinctionCoeff("red", 0.2f, sun_dir);
+    radiation.copyRadiationBand("red", "green");
+    radiation.copyRadiationBand("red", "blue");
+
+    radiation.setDiffuseSpectrum("solar_spectrum_ASTMG173");
+    radiation.setDiffuseSpectrumIntegral(100.f);
+
+    // iPhone12ProMAX: 3024×4032, 100 AA → ~1.22B rays → triggers 2-tile rendering
+    vec3 cam_pos = make_vec3(0, -2, 3);
+    vec3 cam_lookat = make_vec3(0, 0, 0);
+
+    {
+        capture_cout capture;
+        radiation.addRadiationCameraFromLibrary("iphone_cam", "iPhone12ProMAX",
+                                                cam_pos, cam_lookat, 100);
+    }
+
+    radiation.updateGeometry();
+
+    {
+        capture_cout capture;
+        radiation.runBand({"red", "green", "blue"});
+    }
+
+    // Get camera resolution (should be 3024×4032)
+    CameraProperties props = radiation.getCameraParameters("iphone_cam");
+    int W = props.camera_resolution.x;
+    int H = props.camera_resolution.y;
+    DOCTEST_REQUIRE(W == 3024);
+    DOCTEST_REQUIRE(H == 4032);
+
+    auto pixel_red = radiation.getCameraPixelData("iphone_cam", "red");
+    DOCTEST_REQUIRE(pixel_red.size() == (size_t)W * H);
+
+    // With maxRays = 1B and 100 AA at 3024×4032:
+    //   rays_per_row = 100 × 3024 = 302,400
+    //   max_rows_per_tile = floor(1B / 302,400) = 3550
+    //   Tile 1: rows 0..3549 (3024×3550)
+    //   Tile 2: rows 3550..4031 (3024×482)
+    // With the bug, ALL pixels in tile 2 (rows 3550-4031) would be black.
+
+    // Sample pixels from tile 1 (top region, rows 500-600)
+    float tile1_sum = 0;
+    int tile1_count = 0;
+    for (int j = 500; j < 600; j++) {
+        for (int i = W / 4; i < 3 * W / 4; i += 10) { // sparse sampling for speed
+            tile1_sum += pixel_red[j * W + i];
+            tile1_count++;
+        }
+    }
+
+    // Sample pixels from tile 2 (bottom region, rows 3600-3700)
+    float tile2_sum = 0;
+    int tile2_count = 0;
+    for (int j = 3600; j < 3700; j++) {
+        for (int i = W / 4; i < 3 * W / 4; i += 10) { // sparse sampling for speed
+            tile2_sum += pixel_red[j * W + i];
+            tile2_count++;
+        }
+    }
+
+    float tile1_avg = tile1_sum / float(tile1_count);
+    float tile2_avg = tile2_sum / float(tile2_count);
+
+    // Both tile regions should have non-zero radiance (looking at a lit ground patch)
+    DOCTEST_CHECK_MESSAGE(tile1_avg > 0.0f,
+                          "Tile 1 (rows 500-600) average radiance should be > 0, got " << tile1_avg);
+    DOCTEST_CHECK_MESSAGE(tile2_avg > 0.0f,
+                          "Tile 2 (rows 3600-3700) average radiance should be > 0, got " << tile2_avg);
+
+    // The two regions should have similar radiance (same ground patch, similar viewing angle)
+    if (tile1_avg > 0.0f && tile2_avg > 0.0f) {
+        float ratio = tile2_avg / tile1_avg;
+        DOCTEST_CHECK_MESSAGE(ratio > 0.1f,
+                              "Tile 2/tile 1 radiance ratio too low: " << ratio
+                              << " (tile1=" << tile1_avg << ", tile2=" << tile2_avg << ")");
+        DOCTEST_CHECK_MESSAGE(ratio < 10.0f,
+                              "Tile 2/tile 1 radiance ratio too high: " << ratio
+                              << " (tile1=" << tile1_avg << ", tile2=" << tile2_avg << ")");
     }
 }

@@ -148,14 +148,15 @@ namespace helios {
         void printDeviceInfo() const;
 
         /**
-         * @brief Verify the device can actually execute compute work
+         * @brief Verify the device can execute compute shaders with storage buffer access
          *
-         * Submits a trivial command buffer (empty) and waits for the fence to complete.
-         * This catches cases where a Vulkan instance and device can be created (e.g.,
-         * MoltenVK on macOS CI runners) but actual GPU execution fails with
-         * VK_ERROR_DEVICE_LOST because there is no real GPU.
+         * Dispatches a minimal compute shader that writes to a storage buffer via a
+         * descriptor set, waits for completion, and reads back the result. This catches
+         * cases where a Vulkan instance and device can be created (e.g., MoltenVK on
+         * macOS CI runners) but actual GPU compute fails with VK_ERROR_DEVICE_LOST
+         * because the VM exposes only graphics acceleration without compute support.
          *
-         * @throws helios_runtime_error if the probe command fails
+         * @throws helios_runtime_error if the probe dispatch fails or produces wrong results
          */
         void probeComputeCapability();
 

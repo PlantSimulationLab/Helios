@@ -13,7 +13,6 @@
       <tab type="user" visible="yes" url="@ref BLConductanceDoc" title="Boundary-Layer Conductance"/>
       <tab type="user" visible="yes" url="@ref CanopyGeneratorDoc" title="Canopy Generator"/>
       <tab type="user" visible="yes" url="@ref EnergyBalanceDoc" title="Energy Balance Model"/>
-      <tab type="user" visible="yes" url="@ref IrrigationDoc" title="Irrigation Model"/>
       <tab type="user" visible="yes" url="@ref LeafOpticsDoc" title="Leaf Optics Model"/>
       <tab type="user" visible="yes" url="@ref ParameterOptimizationDoc" title="Model Parameter Optimization Utility"/>
       <tab type="user" visible="yes" url="@ref PhotosynthesisDoc" title="Photosynthesis Models"/>

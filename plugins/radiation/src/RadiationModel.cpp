@@ -64,19 +64,13 @@ RadiationModel::RadiationModel(helios::Context *context_a) {
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/Calibrite_ColorChecker_Classic_colorboard.xml").string());
     spectral_library_files.push_back(helios::resolvePluginAsset("radiation", "spectral_data/color_board/DGK_DKK_colorboard.xml").string());
 
-    // Initialize backend abstraction layer
-    // Auto-detect available backend
-    std::string backend_type;
-#ifdef HELIOS_HAVE_OPTIX
-    backend_type = "optix6";
-#elif defined(HELIOS_HAVE_VULKAN)
-    backend_type = "vulkan_compute";
-#else
-#error "No ray tracing backend available"
-#endif
-
-    backend = helios::RayTracingBackend::create(backend_type);
+    // Initialize backend abstraction layer with runtime hardware detection
+    backend = helios::RayTracingBackend::create("auto");
     backend->initialize();
+
+    if (message_flag) {
+        std::cout << "Radiation model initialized with " << backend->getBackendName() << " backend." << std::endl;
+    }
 }
 
 RadiationModel::RadiationModel(helios::Context *context_a, bool skip_backend_init) {
@@ -135,22 +129,8 @@ bool RadiationModel::isGPUBackendAvailable() {
         return false;
     }
 
-    try {
-        std::string backend_type;
-#ifdef HELIOS_HAVE_OPTIX
-        backend_type = "optix6";
-#elif defined(HELIOS_HAVE_VULKAN)
-        backend_type = "vulkan_compute";
-#else
-        available = false;
-        return false;
-#endif
-        auto probe_backend = helios::RayTracingBackend::create(backend_type);
-        probe_backend->initialize();
-        available = true;
-    } catch (...) {
-        available = false;
-    }
+    // Lightweight probe without constructing a full backend
+    available = helios::probeAnyGPUBackend();
 
     return available;
 }
@@ -165,6 +145,13 @@ void RadiationModel::disableMessages() {
 
 void RadiationModel::enableMessages() {
     message_flag = true;
+}
+
+std::string RadiationModel::getBackendName() const {
+    if (backend) {
+        return backend->getBackendName();
+    }
+    return "none";
 }
 
 void RadiationModel::optionalOutputPrimitiveData(const char *label) {
@@ -3202,6 +3189,12 @@ void RadiationModel::runBand(const std::vector<std::string> &label) {
         // Use the band_launch_flag already built above (lines 3375-3383)
         std::vector<bool> band_flags(band_launch_flag.begin(), band_launch_flag.end());
         params.band_launch_flag = band_flags;
+
+        // Pre-allocate camera scatter buffers before direct launch so __miss__direct can fill them.
+        // This ensures current_launch_band_count > 0 so getRadiationResults downloads them after.
+        if (Ncameras > 0 && scatteringenabled) {
+            backend->zeroCameraScatterBuffers(Nbands_launch);
+        }
 
         backend->launchDirectRays(params);
 

@@ -5,7 +5,9 @@
 # Please note that the package source code is licensed under its own license.
 
 project ( libjpeg C )
-cmake_minimum_required ( VERSION 2.8 )
+# BNB 2026-03-11: Updated minimum CMake version for compatibility with CMake 4.0+
+cmake_minimum_required ( VERSION 3.15 )
+cmake_policy(VERSION 3.15)
 include ( cmake/dist.cmake )
 
 SET(BUILD_STATIC ON) #BNB 10/13/2021 SET("ON")

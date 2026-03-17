@@ -1,4 +1,6 @@
-cmake_minimum_required(VERSION 2.4.4...3.15.0)
+# BNB 2026-03-11: Updated minimum CMake version for compatibility with CMake 4.0+
+cmake_minimum_required(VERSION 3.15)
+cmake_policy(VERSION 3.15)
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS ON)
 
 project(zlib C)

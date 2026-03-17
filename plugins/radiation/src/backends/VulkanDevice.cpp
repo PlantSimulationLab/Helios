@@ -448,91 +448,252 @@ namespace helios {
     }
 
     void VulkanDevice::probeComputeCapability() {
-        // Allocate a small GPU buffer, fill it with vkCmdFillBuffer, and wait on a fence.
-        // This verifies the device can actually execute GPU memory operations.
+        // Dispatch a compute shader that writes to a storage buffer, then read it back.
+        // This verifies the device can actually execute GPU compute work with memory access.
         //
-        // An empty command buffer is not sufficient: MoltenVK on headless macOS CI runners
-        // can submit/complete empty command buffers, but fails with VK_ERROR_DEVICE_LOST
-        // when actual GPU memory operations are attempted.
+        // A no-op shader (void main(){}) is NOT sufficient: MoltenVK on macOS CI runners
+        // (Apple Silicon VMs via Virtualization.framework) can dispatch trivial shaders
+        // that touch no memory, but fail with VK_ERROR_DEVICE_LOST when a shader reads
+        // or writes storage buffers — which is what the real radiation shaders do.
+        //
+        // This probe exercises the same code path: descriptor set + storage buffer + write.
 
+        // Embedded SPIR-V for:
+        //   #version 450
+        //   layout(local_size_x = 1) in;
+        //   layout(set = 0, binding = 0) buffer ProbeBuffer { uint data[]; } buf;
+        //   void main() { buf.data[0] = 42u; }
+        // Compiled with glslangValidator -V. 568 bytes, 142 words.
+        static const uint32_t probe_spirv[] = {
+            0x07230203, 0x00010000, 0x0008000b, 0x00000013,
+            0x00000000, 0x00020011, 0x00000001, 0x0006000b,
+            0x00000001, 0x4c534c47, 0x6474732e, 0x3035342e,
+            0x00000000, 0x0003000e, 0x00000000, 0x00000001,
+            0x0005000f, 0x00000005, 0x00000004, 0x6e69616d,
+            0x00000000, 0x00060010, 0x00000004, 0x00000011,
+            0x00000001, 0x00000001, 0x00000001, 0x00030003,
+            0x00000002, 0x000001c2, 0x00040005, 0x00000004,
+            0x6e69616d, 0x00000000, 0x00050005, 0x00000008,
+            0x626f7250, 0x66754265, 0x00726566, 0x00050006,
+            0x00000008, 0x00000000, 0x61746164, 0x00000000,
+            0x00030005, 0x0000000a, 0x00667562, 0x00040047,
+            0x00000007, 0x00000006, 0x00000004, 0x00030047,
+            0x00000008, 0x00000003, 0x00050048, 0x00000008,
+            0x00000000, 0x00000023, 0x00000000, 0x00040047,
+            0x0000000a, 0x00000021, 0x00000000, 0x00040047,
+            0x0000000a, 0x00000022, 0x00000000, 0x00040047,
+            0x00000012, 0x0000000b, 0x00000019, 0x00020013,
+            0x00000002, 0x00030021, 0x00000003, 0x00000002,
+            0x00040015, 0x00000006, 0x00000020, 0x00000000,
+            0x0003001d, 0x00000007, 0x00000006, 0x0003001e,
+            0x00000008, 0x00000007, 0x00040020, 0x00000009,
+            0x00000002, 0x00000008, 0x0004003b, 0x00000009,
+            0x0000000a, 0x00000002, 0x00040015, 0x0000000b,
+            0x00000020, 0x00000001, 0x0004002b, 0x0000000b,
+            0x0000000c, 0x00000000, 0x0004002b, 0x00000006,
+            0x0000000d, 0x0000002a, 0x00040020, 0x0000000e,
+            0x00000002, 0x00000006, 0x00040017, 0x00000010,
+            0x00000006, 0x00000003, 0x0004002b, 0x00000006,
+            0x00000011, 0x00000001, 0x0006002c, 0x00000010,
+            0x00000012, 0x00000011, 0x00000011, 0x00000011,
+            0x00050036, 0x00000002, 0x00000004, 0x00000000,
+            0x00000003, 0x000200f8, 0x00000005, 0x00060041,
+            0x0000000e, 0x0000000f, 0x0000000a, 0x0000000c,
+            0x0000000c, 0x0003003e, 0x0000000f, 0x0000000d,
+            0x000100fd, 0x00010038,
+        };
+        static const size_t probe_spirv_size = sizeof(probe_spirv);
+
+        // Vulkan handles for cleanup
         VkCommandPool probe_pool = VK_NULL_HANDLE;
         VkCommandBuffer probe_cmd = VK_NULL_HANDLE;
         VkFence probe_fence = VK_NULL_HANDLE;
+        VkShaderModule probe_shader = VK_NULL_HANDLE;
+        VkPipelineLayout probe_layout = VK_NULL_HANDLE;
+        VkPipeline probe_pipeline = VK_NULL_HANDLE;
+        VkDescriptorSetLayout probe_set_layout = VK_NULL_HANDLE;
+        VkDescriptorPool probe_desc_pool = VK_NULL_HANDLE;
+        VkDescriptorSet probe_desc_set = VK_NULL_HANDLE;
         VkBuffer probe_buffer = VK_NULL_HANDLE;
-        VmaAllocation probe_allocation = VK_NULL_HANDLE;
+        VmaAllocation probe_alloc = VK_NULL_HANDLE;
 
-        // Helper to clean up all probe resources
         auto cleanup = [&]() {
+            if (probe_pipeline != VK_NULL_HANDLE) vkDestroyPipeline(device, probe_pipeline, nullptr);
+            if (probe_layout != VK_NULL_HANDLE) vkDestroyPipelineLayout(device, probe_layout, nullptr);
+            if (probe_shader != VK_NULL_HANDLE) vkDestroyShaderModule(device, probe_shader, nullptr);
+            if (probe_desc_pool != VK_NULL_HANDLE) vkDestroyDescriptorPool(device, probe_desc_pool, nullptr);
+            if (probe_set_layout != VK_NULL_HANDLE) vkDestroyDescriptorSetLayout(device, probe_set_layout, nullptr);
+            if (probe_buffer != VK_NULL_HANDLE) vmaDestroyBuffer(allocator, probe_buffer, probe_alloc);
             if (probe_fence != VK_NULL_HANDLE) vkDestroyFence(device, probe_fence, nullptr);
-            if (probe_buffer != VK_NULL_HANDLE) vmaDestroyBuffer(allocator, probe_buffer, probe_allocation);
             if (probe_pool != VK_NULL_HANDLE) vkDestroyCommandPool(device, probe_pool, nullptr);
         };
 
-        // 1. Allocate a small GPU buffer (256 bytes)
-        VkBufferCreateInfo buffer_info{};
-        buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_info.size = 256;
-        buffer_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        // 1. Create storage buffer (4 bytes, host-visible for readback)
+        VkBufferCreateInfo buf_info{};
+        buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buf_info.size = sizeof(uint32_t);
+        buf_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        VmaAllocationCreateInfo vma_alloc_info{};
-        vma_alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+        VmaAllocationCreateInfo vma_info{};
+        vma_info.usage = VMA_MEMORY_USAGE_AUTO;
+        vma_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-        VkResult result = vmaCreateBuffer(allocator, &buffer_info, &vma_alloc_info, &probe_buffer, &probe_allocation, nullptr);
+        VmaAllocationInfo alloc_result{};
+        VkResult result = vmaCreateBuffer(allocator, &buf_info, &vma_info, &probe_buffer, &probe_alloc, &alloc_result);
         if (result != VK_SUCCESS) {
             cleanup();
-            helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): Failed to allocate probe buffer. "
+            helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): Failed to create probe buffer. "
                                  "VkResult code: " + std::to_string(result));
         }
 
-        // 2. Create command pool and command buffer
-        VkCommandPoolCreateInfo pool_info{};
-        pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        pool_info.queueFamilyIndex = compute_queue_family;
-        pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+        // Zero the buffer so we can verify the shader wrote to it
+        *static_cast<uint32_t *>(alloc_result.pMappedData) = 0;
 
-        result = vkCreateCommandPool(device, &pool_info, nullptr, &probe_pool);
+        // 2. Create descriptor set layout (one storage buffer at binding 0)
+        VkDescriptorSetLayoutBinding binding{};
+        binding.binding = 0;
+        binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        binding.descriptorCount = 1;
+        binding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        VkDescriptorSetLayoutCreateInfo set_layout_info{};
+        set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        set_layout_info.bindingCount = 1;
+        set_layout_info.pBindings = &binding;
+
+        result = vkCreateDescriptorSetLayout(device, &set_layout_info, nullptr, &probe_set_layout);
+        if (result != VK_SUCCESS) {
+            cleanup();
+            helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): Failed to create descriptor set layout. "
+                                 "VkResult code: " + std::to_string(result));
+        }
+
+        // 3. Create descriptor pool and allocate set
+        VkDescriptorPoolSize pool_size{};
+        pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        pool_size.descriptorCount = 1;
+
+        VkDescriptorPoolCreateInfo desc_pool_info{};
+        desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        desc_pool_info.maxSets = 1;
+        desc_pool_info.poolSizeCount = 1;
+        desc_pool_info.pPoolSizes = &pool_size;
+
+        result = vkCreateDescriptorPool(device, &desc_pool_info, nullptr, &probe_desc_pool);
+        if (result != VK_SUCCESS) {
+            cleanup();
+            helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): Failed to create descriptor pool. "
+                                 "VkResult code: " + std::to_string(result));
+        }
+
+        VkDescriptorSetAllocateInfo desc_alloc_info{};
+        desc_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        desc_alloc_info.descriptorPool = probe_desc_pool;
+        desc_alloc_info.descriptorSetCount = 1;
+        desc_alloc_info.pSetLayouts = &probe_set_layout;
+
+        result = vkAllocateDescriptorSets(device, &desc_alloc_info, &probe_desc_set);
+        if (result != VK_SUCCESS) {
+            cleanup();
+            helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): Failed to allocate descriptor set. "
+                                 "VkResult code: " + std::to_string(result));
+        }
+
+        // 4. Update descriptor set to point to the buffer
+        VkDescriptorBufferInfo desc_buf_info{};
+        desc_buf_info.buffer = probe_buffer;
+        desc_buf_info.offset = 0;
+        desc_buf_info.range = VK_WHOLE_SIZE;
+
+        VkWriteDescriptorSet write{};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.dstSet = probe_desc_set;
+        write.dstBinding = 0;
+        write.descriptorCount = 1;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        write.pBufferInfo = &desc_buf_info;
+
+        vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+
+        // 5. Create shader module from embedded SPIR-V
+        VkShaderModuleCreateInfo shader_info{};
+        shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        shader_info.codeSize = probe_spirv_size;
+        shader_info.pCode = probe_spirv;
+
+        result = vkCreateShaderModule(device, &shader_info, nullptr, &probe_shader);
+        if (result != VK_SUCCESS) {
+            cleanup();
+            helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): Failed to create probe shader module. "
+                                 "VkResult code: " + std::to_string(result));
+        }
+
+        // 6. Create pipeline layout with descriptor set layout, and compute pipeline
+        VkPipelineLayoutCreateInfo layout_create_info{};
+        layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        layout_create_info.setLayoutCount = 1;
+        layout_create_info.pSetLayouts = &probe_set_layout;
+
+        result = vkCreatePipelineLayout(device, &layout_create_info, nullptr, &probe_layout);
+        if (result != VK_SUCCESS) {
+            cleanup();
+            helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): Failed to create probe pipeline layout. "
+                                 "VkResult code: " + std::to_string(result));
+        }
+
+        VkComputePipelineCreateInfo pipeline_info{};
+        pipeline_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+        pipeline_info.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        pipeline_info.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+        pipeline_info.stage.module = probe_shader;
+        pipeline_info.stage.pName = "main";
+        pipeline_info.layout = probe_layout;
+
+        result = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &probe_pipeline);
+        if (result != VK_SUCCESS) {
+            cleanup();
+            helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): Failed to create probe compute pipeline. "
+                                 "VkResult code: " + std::to_string(result));
+        }
+
+        // 7. Create command pool and record dispatch with bound descriptor set
+        VkCommandPoolCreateInfo pool_create_info{};
+        pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        pool_create_info.queueFamilyIndex = compute_queue_family;
+        pool_create_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+
+        result = vkCreateCommandPool(device, &pool_create_info, nullptr, &probe_pool);
         if (result != VK_SUCCESS) {
             cleanup();
             helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): Failed to create command pool. "
                                  "VkResult code: " + std::to_string(result));
         }
 
-        VkCommandBufferAllocateInfo alloc_info{};
-        alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        alloc_info.commandPool = probe_pool;
-        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        alloc_info.commandBufferCount = 1;
+        VkCommandBufferAllocateInfo cmd_alloc_info{};
+        cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        cmd_alloc_info.commandPool = probe_pool;
+        cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cmd_alloc_info.commandBufferCount = 1;
 
-        result = vkAllocateCommandBuffers(device, &alloc_info, &probe_cmd);
+        result = vkAllocateCommandBuffers(device, &cmd_alloc_info, &probe_cmd);
         if (result != VK_SUCCESS) {
             cleanup();
             helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): Failed to allocate command buffer. "
                                  "VkResult code: " + std::to_string(result));
         }
 
-        // 3. Record a vkCmdFillBuffer command (same operation that zeroBuffer uses)
         VkCommandBufferBeginInfo begin_info{};
         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-        result = vkBeginCommandBuffer(probe_cmd, &begin_info);
-        if (result != VK_SUCCESS) {
-            cleanup();
-            helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): Failed to begin command buffer. "
-                                 "VkResult code: " + std::to_string(result));
-        }
+        vkBeginCommandBuffer(probe_cmd, &begin_info);
+        vkCmdBindPipeline(probe_cmd, VK_PIPELINE_BIND_POINT_COMPUTE, probe_pipeline);
+        vkCmdBindDescriptorSets(probe_cmd, VK_PIPELINE_BIND_POINT_COMPUTE, probe_layout, 0, 1, &probe_desc_set, 0, nullptr);
+        vkCmdDispatch(probe_cmd, 1, 1, 1); // Single workgroup, writes buf.data[0] = 42
+        vkEndCommandBuffer(probe_cmd);
 
-        vkCmdFillBuffer(probe_cmd, probe_buffer, 0, 256, 0);
-
-        result = vkEndCommandBuffer(probe_cmd);
-        if (result != VK_SUCCESS) {
-            cleanup();
-            helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): Failed to end command buffer. "
-                                 "VkResult code: " + std::to_string(result));
-        }
-
-        // 4. Create fence, submit, and wait
+        // 8. Create fence, submit, and wait
         VkFenceCreateInfo fence_info{};
         fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 
@@ -551,8 +712,7 @@ namespace helios {
         result = vkQueueSubmit(compute_queue, 1, &submit_info, probe_fence);
         if (result != VK_SUCCESS) {
             cleanup();
-            helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): Failed to submit probe command. "
-                                 "The GPU device was created but cannot execute work. "
+            helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): Compute dispatch submission failed. "
                                  "VkResult code: " + std::to_string(result));
         }
 
@@ -566,16 +726,25 @@ namespace helios {
             } else if (result != VK_TIMEOUT) {
                 cleanup();
                 helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): GPU compute probe failed. "
-                                     "The Vulkan device was created but cannot execute work "
-                                     "(common on CI runners without a real GPU). "
+                                     "The Vulkan device was created but cannot execute compute shaders "
+                                     "(common on CI runners or systems without full GPU compute support). "
                                      "VkResult code: " + std::to_string(result));
             }
         }
 
+        if (!completed) {
+            cleanup();
+            helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): GPU compute probe timed out after 5 seconds.");
+        }
+
+        // 9. Verify the shader actually wrote to the buffer
+        uint32_t readback = *static_cast<uint32_t *>(alloc_result.pMappedData);
         cleanup();
 
-        if (!completed) {
-            helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): GPU compute probe timed out after 5 seconds.");
+        if (readback != 42) {
+            helios_runtime_error("ERROR (VulkanDevice::probeComputeCapability): GPU compute probe produced wrong result "
+                                 "(expected 42, got " + std::to_string(readback) + "). "
+                                 "The GPU may not support compute shader storage buffer writes.");
         }
     }
 

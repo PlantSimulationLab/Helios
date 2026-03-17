@@ -49,6 +49,16 @@ namespace helios {
         VulkanComputeBackend();
 
         /**
+         * @brief Probe whether Vulkan compute is available
+         *
+         * Creates a temporary VulkanDevice (which includes compute capability probing),
+         * then destroys it. All resources are cleaned up before returning.
+         *
+         * @return true if a suitable Vulkan compute device exists and can execute shaders
+         */
+        static bool probe() noexcept;
+
+        /**
          * @brief Constructor for test mode with shared device
          *
          * @param external_device Non-owning pointer to shared VulkanDevice (must be pre-initialized)

@@ -17,6 +17,35 @@ GNU General Public License for more details.
 
 using namespace helios;
 
+static void renameAutoMaterial(helios::Context *context_ptr, uint objID, const std::string &desired_base_name) {
+    std::vector<uint> UUIDs = context_ptr->getObjectPrimitiveUUIDs(objID);
+    if (UUIDs.empty()) return;
+
+    std::string current_label = context_ptr->getPrimitiveMaterialLabel(UUIDs.front());
+    if (current_label.substr(0, 7) != "__auto_") return;
+
+    if (!context_ptr->doesMaterialExist(desired_base_name)) {
+        context_ptr->renameMaterial(current_label, desired_base_name);
+    } else {
+        uint existing_id = context_ptr->getMaterialIDFromLabel(desired_base_name);
+        uint current_id = context_ptr->getMaterialIDFromLabel(current_label);
+        if (existing_id == current_id) return;
+
+        int suffix = 1;
+        std::string candidate;
+        do {
+            candidate = desired_base_name + "_" + std::to_string(suffix++);
+        } while (context_ptr->doesMaterialExist(candidate));
+        context_ptr->renameMaterial(current_label, candidate);
+    }
+}
+
+static void renameAutoMaterial(helios::Context *context_ptr, const std::vector<uint> &objIDs, const std::string &desired_base_name) {
+    for (uint objID : objIDs) {
+        renameAutoMaterial(context_ptr, objID, desired_base_name);
+    }
+}
+
 // Helper function for calculating leaf base positions in compound leaves
 static float clampOffset(int count_per_axis, float offset) {
     if (count_per_axis > 2) {
@@ -1726,6 +1755,8 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                         // Set primitive data labels
                         if (!phytomer_ptr->petiole_objIDs[p].empty()) {
                             context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(phytomer_ptr->petiole_objIDs[p]), "object_label", "petiole");
+                            std::string petiole_material_name = plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_petiole";
+                            renameAutoMaterial(context_ptr, phytomer_ptr->petiole_objIDs[p], petiole_material_name);
                         }
 
                         // Restore saved leaf base positions (already in saved_leaf_bases_all_petioles)
@@ -1873,6 +1904,8 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                     context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(objID_leaf), "object_label", "leaf");
                                 }
                                 this->unique_leaf_prototype_objIDs.at(phytomer_ptr->phytomer_parameters.leaf.prototype.unique_prototype_identifier).at(prototype).push_back(objID_leaf);
+                                std::string leaf_material_name = plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_leaf";
+                                renameAutoMaterial(context_ptr, objID_leaf, leaf_material_name);
                                 std::vector<uint> petiolule_UUIDs = context_ptr->filterPrimitivesByData(context_ptr->getObjectPrimitiveUUIDs(objID_leaf), "object_label", "petiolule");
                                 context_ptr->setPrimitiveColor(petiolule_UUIDs, phytomer_ptr->phytomer_parameters.petiole.color);
                                 context_ptr->hideObject(objID_leaf);
@@ -2190,6 +2223,8 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                             std::vector<RGBcolor> colors(peduncle_vertices_computed.size(), phytomer_ptr->phytomer_parameters.peduncle.color);
                                             fbud.peduncle_objIDs.push_back(context_ptr->addTubeObject(Ndiv_peduncle_radius, peduncle_vertices_computed, peduncle_radii_computed, colors));
                                             context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(fbud.peduncle_objIDs.back()), "object_label", "peduncle");
+                                            std::string peduncle_material_name = plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_peduncle";
+                                            renameAutoMaterial(context_ptr, fbud.peduncle_objIDs.back(), peduncle_material_name);
                                         }
                                     }
 
@@ -2197,7 +2232,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                     if (!fbud_data.flower_rotations.empty()) {
 
                                         // Ensure prototype maps are initialized before creating geometry
-                                        ensureInflorescencePrototypesInitialized(phytomer_ptr->phytomer_parameters);
+                                        ensureInflorescencePrototypesInitialized(phytomer_ptr->phytomer_parameters, plant_instances.at(plantID).plant_name);
 
                                         for (size_t i = 0; i < fbud_data.flower_rotations.size(); i++) {
                                             // Get saved base if available (for backward compatibility), otherwise will compute
@@ -2354,6 +2389,8 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                             std::vector<RGBcolor> colors(peduncle_vertices_computed.size(), phytomer_ptr->phytomer_parameters.peduncle.color);
                                             fbud.peduncle_objIDs.push_back(context_ptr->addTubeObject(Ndiv_peduncle_radius, peduncle_vertices_computed, peduncle_radii_computed, colors));
                                             context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(fbud.peduncle_objIDs.back()), "object_label", "peduncle");
+                                            std::string peduncle_material_name = plant_instances.at(plantID).plant_name + "_" + shoot_type_label + "_peduncle";
+                                            renameAutoMaterial(context_ptr, fbud.peduncle_objIDs.back(), peduncle_material_name);
                                         }
                                     }
 
@@ -2361,7 +2398,7 @@ std::vector<uint> PlantArchitecture::readPlantStructureXML(const std::string &fi
                                     if (!fbud_data.flower_rotations.empty()) {
 
                                         // Ensure prototype maps are initialized before creating geometry
-                                        ensureInflorescencePrototypesInitialized(phytomer_ptr->phytomer_parameters);
+                                        ensureInflorescencePrototypesInitialized(phytomer_ptr->phytomer_parameters, plant_instances.at(plantID).plant_name);
 
                                         for (size_t i = 0; i < fbud_data.flower_rotations.size(); i++) {
                                             // Get saved base if available (for backward compatibility), otherwise will compute

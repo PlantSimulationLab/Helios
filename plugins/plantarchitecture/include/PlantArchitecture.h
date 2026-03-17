@@ -1772,6 +1772,14 @@ public:
     //! Unit test routines
     static int selfTest(int argc, char **argv);
 
+    //! Set a callback function to receive progress updates during long-running operations.
+    /**
+     * \param[in] callback Function that receives (progress_fraction, message_string).
+     *   progress_fraction is in [0, 1]. message describes the current operation phase.
+     *   Pass nullptr or an empty std::function to clear the callback.
+     */
+    void setProgressCallback(std::function<void(float, const std::string&)> callback);
+
     //! Add optional output object data values to the Context
     /**
      * \param[in] object_data_label Name of object data (e.g., "age", "rank")
@@ -2999,7 +3007,7 @@ private:
      * when unique_prototypes > 0, otherwise map::at() will throw an out_of_range exception.
      * \param[in] params Phytomer parameters containing inflorescence configuration
      */
-    void ensureInflorescencePrototypesInitialized(const PhytomerParameters &params);
+    void ensureInflorescencePrototypesInitialized(const PhytomerParameters &params, const std::string &plant_name);
 
 protected:
     helios::Context *context_ptr;
@@ -3009,6 +3017,8 @@ protected:
     uint plant_count = 0;
 
     std::string current_plant_model;
+
+    std::function<void(float, const std::string&)> progress_callback;
 
     // Current build parameters for plant construction (set before calling builder functions)
     std::map<std::string, float> current_build_parameters;

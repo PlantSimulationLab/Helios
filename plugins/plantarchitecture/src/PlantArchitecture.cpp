@@ -25,6 +25,35 @@ using namespace helios;
 static const float MIN_TUBE_RADIUS_FOR_GEOMETRY = 1e-5f;
 static const float MIN_TUBE_LENGTH_FOR_GEOMETRY = 1e-4f;
 
+static void renameAutoMaterial(helios::Context *context_ptr, uint objID, const std::string &desired_base_name) {
+    std::vector<uint> UUIDs = context_ptr->getObjectPrimitiveUUIDs(objID);
+    if (UUIDs.empty()) return;
+
+    std::string current_label = context_ptr->getPrimitiveMaterialLabel(UUIDs.front());
+    if (current_label.substr(0, 7) != "__auto_") return;
+
+    if (!context_ptr->doesMaterialExist(desired_base_name)) {
+        context_ptr->renameMaterial(current_label, desired_base_name);
+    } else {
+        uint existing_id = context_ptr->getMaterialIDFromLabel(desired_base_name);
+        uint current_id = context_ptr->getMaterialIDFromLabel(current_label);
+        if (existing_id == current_id) return;
+
+        int suffix = 1;
+        std::string candidate;
+        do {
+            candidate = desired_base_name + "_" + std::to_string(suffix++);
+        } while (context_ptr->doesMaterialExist(candidate));
+        context_ptr->renameMaterial(current_label, candidate);
+    }
+}
+
+static void renameAutoMaterial(helios::Context *context_ptr, const std::vector<uint> &objIDs, const std::string &desired_base_name) {
+    for (uint objID : objIDs) {
+        renameAutoMaterial(context_ptr, objID, desired_base_name);
+    }
+}
+
 static float clampOffset(int count_per_axis, float offset) {
     if (count_per_axis > 2) {
         float denom = 0.5f * float(count_per_axis) - 1.f;
@@ -112,6 +141,10 @@ PlantArchitecture::PlantArchitecture(helios::Context *context_ptr) : context_ptr
     output_object_data["openflowerID"] = false;
     output_object_data["fruitID"] = false;
     output_object_data["carbohydrate_concentration"] = false;
+}
+
+void PlantArchitecture::setProgressCallback(std::function<void(float, const std::string&)> callback) {
+    progress_callback = std::move(callback);
 }
 
 PlantArchitecture::~PlantArchitecture() {
@@ -1799,6 +1832,8 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
                 parent_shoot->internode_tube_objID = context_ptr->addTubeObject(Ndiv_internode_radius, phytomer_internode_vertices, phytomer_internode_radii, internode_colors);
             }
             context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(parent_shoot->internode_tube_objID), "object_label", "shoot");
+            std::string stem_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot->shoot_type_label + "_stem";
+            renameAutoMaterial(context_ptr, parent_shoot->internode_tube_objID, stem_material_name);
         } else {
             // appending internode to shoot
             for (int inode_segment = 1; inode_segment <= Ndiv_internode_length; inode_segment++) {
@@ -1931,6 +1966,8 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             petiole_objIDs.at(petiole) = makeTubeFromCones(Ndiv_petiole_radius, petiole_vertices.at(petiole), petiole_radii.at(petiole), petiole_colors, context_ptr);
             if (!petiole_objIDs.at(petiole).empty()) {
                 context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(petiole_objIDs.at(petiole)), "object_label", "petiole");
+                std::string petiole_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot->shoot_type_label + "_petiole";
+                renameAutoMaterial(context_ptr, petiole_objIDs.at(petiole), petiole_material_name);
             }
         }
 
@@ -1981,6 +2018,8 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
                         context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(objID_leaf), "object_label", "leaf");
                     }
                     plantarchitecture_ptr->unique_leaf_prototype_objIDs.at(phytomer_parameters.leaf.prototype.unique_prototype_identifier).at(prototype).push_back(objID_leaf);
+                    std::string material_base_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot->shoot_type_label + "_leaf";
+                    renameAutoMaterial(context_ptr, objID_leaf, material_base_name);
                     std::vector<uint> petiolule_UUIDs = context_ptr->filterPrimitivesByData(context_ptr->getObjectPrimitiveUUIDs(objID_leaf), "object_label", "petiolule");
                     context_ptr->setPrimitiveColor(petiolule_UUIDs, phytomer_parameters.petiole.color);
                     context_ptr->hideObject(objID_leaf);
@@ -2002,6 +2041,8 @@ Phytomer::Phytomer(const PhytomerParameters &params, Shoot *parent_shoot, uint p
             } else {
                 // load a new prototype
                 objID_leaf = phytomer_parameters.leaf.prototype.prototype_function(context_ptr, &phytomer_parameters.leaf.prototype, ind_from_tip);
+                std::string material_base_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot->shoot_type_label + "_leaf";
+                renameAutoMaterial(context_ptr, objID_leaf, material_base_name);
             }
 
             // -- leaf scaling -- //
@@ -2139,6 +2180,8 @@ void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &
         } else {
             // Load new prototype
             objID_fruit = phytomer_parameters.inflorescence.fruit_prototype_function(context_ptr, 1);
+            std::string fruit_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_fruit";
+            renameAutoMaterial(context_ptr, objID_fruit, fruit_material_name);
         }
     } else {
         // Flower (open or closed)
@@ -2153,6 +2196,8 @@ void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &
         } else {
             // Load new prototype
             objID_fruit = phytomer_parameters.inflorescence.flower_prototype_function(context_ptr, 1, is_open_flower);
+            std::string flower_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + (is_open_flower ? "_flower_open" : "_flower_closed");
+            renameAutoMaterial(context_ptr, objID_fruit, flower_material_name);
         }
     }
 
@@ -2198,7 +2243,7 @@ void Phytomer::createInflorescenceGeometry(FloralBud &fbud, const helios::vec3 &
     assert(fbud.inflorescence_rotation.size() == fbud.inflorescence_base_scales.size());
 }
 
-void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerParameters &params) {
+void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerParameters &params, const std::string &plant_name) {
     if (params.inflorescence.unique_prototypes > 0) {
         // Initialize closed flower prototypes
         if (params.inflorescence.flower_prototype_function != nullptr && unique_closed_flower_prototype_objIDs.find(params.inflorescence.flower_prototype_function) == unique_closed_flower_prototype_objIDs.end()) {
@@ -2206,6 +2251,7 @@ void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerP
             for (int prototype = 0; prototype < params.inflorescence.unique_prototypes; prototype++) {
                 uint objID_flower = params.inflorescence.flower_prototype_function(context_ptr, 1, false);
                 unique_closed_flower_prototype_objIDs.at(params.inflorescence.flower_prototype_function).at(prototype) = objID_flower;
+                renameAutoMaterial(context_ptr, objID_flower, plant_name + "_flower_closed");
                 context_ptr->hideObject(objID_flower);
             }
         }
@@ -2215,6 +2261,7 @@ void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerP
             for (int prototype = 0; prototype < params.inflorescence.unique_prototypes; prototype++) {
                 uint objID_flower = params.inflorescence.flower_prototype_function(context_ptr, 1, true);
                 unique_open_flower_prototype_objIDs.at(params.inflorescence.flower_prototype_function).at(prototype) = objID_flower;
+                renameAutoMaterial(context_ptr, objID_flower, plant_name + "_flower_open");
                 context_ptr->hideObject(objID_flower);
             }
         }
@@ -2224,6 +2271,7 @@ void PlantArchitecture::ensureInflorescencePrototypesInitialized(const PhytomerP
             for (int prototype = 0; prototype < params.inflorescence.unique_prototypes; prototype++) {
                 uint objID_fruit = params.inflorescence.fruit_prototype_function(context_ptr, 1);
                 unique_fruit_prototype_objIDs.at(params.inflorescence.fruit_prototype_function).at(prototype) = objID_fruit;
+                renameAutoMaterial(context_ptr, objID_fruit, plant_name + "_fruit");
                 context_ptr->hideObject(objID_fruit);
             }
         }
@@ -2377,6 +2425,8 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     if (build_context_geometry_peduncle) {
         fbud.peduncle_objIDs.push_back(context_ptr->addTubeObject(Ndiv_peduncle_radius, peduncle_vertices, peduncle_radii, peduncle_colors));
         context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(fbud.peduncle_objIDs.back()), "object_label", "peduncle");
+        std::string peduncle_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot_ptr->shoot_type_label + "_peduncle";
+        renameAutoMaterial(context_ptr, fbud.peduncle_objIDs.back(), peduncle_material_name);
     }
 
     // Store peduncle vertices for later axis vector calculations
@@ -2404,7 +2454,7 @@ void Phytomer::updateInflorescence(FloralBud &fbud) {
     phytomer_parameters.peduncle.pitch.resample();
 
     // Create unique inflorescence prototypes for each shoot type so we can simply copy them for each leaf
-    plantarchitecture_ptr->ensureInflorescencePrototypesInitialized(phytomer_parameters);
+    plantarchitecture_ptr->ensureInflorescencePrototypesInitialized(phytomer_parameters, plantarchitecture_ptr->plant_instances.at(plantID).plant_name);
 
     int flowers_per_peduncle = phytomer_parameters.inflorescence.flowers_per_peduncle.val();
     float flower_offset_val = clampOffset(flowers_per_peduncle, phytomer_parameters.inflorescence.flower_offset.val());
@@ -2728,6 +2778,8 @@ void Phytomer::setLeafScaleFraction(uint petiole_index, float leaf_scale_factor_
         petiole_objIDs.at(petiole_index) = makeTubeFromCones(Ndiv_petiole_radius, petiole_vertices.at(petiole_index), petiole_radii.at(petiole_index), petiole_colors, context_ptr);
         if (!petiole_objIDs.at(petiole_index).empty()) {
             context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(petiole_objIDs.at(petiole_index)), "object_label", "petiole");
+            std::string petiole_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot_ptr->shoot_type_label + "_petiole";
+            renameAutoMaterial(context_ptr, petiole_objIDs.at(petiole_index), petiole_material_name);
         }
     }
 
@@ -2875,6 +2927,8 @@ void Phytomer::scalePetioleGeometry(uint petiole_index, float target_length, flo
         // Restore primitive data labels
         if (!petiole_objIDs.at(petiole_index).empty()) {
             context_ptr->setPrimitiveData(context_ptr->getObjectPrimitiveUUIDs(petiole_objIDs.at(petiole_index)), "object_label", "petiole");
+            std::string petiole_material_name = plantarchitecture_ptr->plant_instances.at(plantID).plant_name + "_" + parent_shoot_ptr->shoot_type_label + "_petiole";
+            renameAutoMaterial(context_ptr, petiole_objIDs.at(petiole_index), petiole_material_name);
         }
     }
 
@@ -4955,6 +5009,9 @@ void PlantArchitecture::advanceTime(const std::vector<uint> &plantIDs, float tim
 
     // Initialize progress bar for timesteps
     helios::ProgressBar progress_bar(Nsteps, 50, Nsteps > 1 && printmessages, "Advancing time");
+    if (progress_callback) {
+        progress_bar.setCallback(progress_callback);
+    }
 
     for (int timestep = 0; timestep < Nsteps; timestep++) {
 
@@ -5424,6 +5481,9 @@ void PlantArchitecture::adjustFruitForObstacleCollision() {
 
     // Initialize progress bar for processing plants
     helios::ProgressBar progress_bar(plant_instances.size(), 50, plant_instances.size() > 1 && printmessages, "Adjusting fruit collisions");
+    if (progress_callback) {
+        progress_bar.setCallback(progress_callback);
+    }
 
     // Process each plant instance
     for (const auto &plant_instance: plant_instances) {

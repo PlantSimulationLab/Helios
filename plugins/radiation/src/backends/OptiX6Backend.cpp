@@ -27,6 +27,24 @@ OptiX6Backend::OptiX6Backend() {
     // Constructor - initialization happens in initialize()
 }
 
+bool OptiX6Backend::probe() noexcept {
+    try {
+        RTcontext ctx = nullptr;
+        RTresult rc = rtContextCreate(&ctx);
+        if (rc != RT_SUCCESS) {
+            return false;
+        }
+        // RAII guard ensures context is destroyed even if an exception occurs
+        struct ContextGuard {
+            RTcontext c;
+            ~ContextGuard() { if (c) rtContextDestroy(c); }
+        } guard{ctx};
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
 OptiX6Backend::~OptiX6Backend() {
     if (is_initialized) {
         shutdown();
@@ -709,11 +727,16 @@ void OptiX6Backend::launchCameraRays(const RayTracingLaunchParams &params) {
     RT_CHECK_ERROR(rtVariableSet1f(camera_pixel_solid_angle_RTvariable, params.camera_pixel_solid_angle));
     RT_CHECK_ERROR(rtVariableSet2i(camera_resolution_full_RTvariable, params.camera_resolution_full.x, params.camera_resolution_full.y));
 
-    // Resize camera buffer for full resolution (not tile resolution!)
+    // Only zero camera buffer when starting a new camera or band count changes.
+    // Multiple tiles for the same camera accumulate into the same buffer without re-zeroing.
     size_t total_pixels = params.camera_resolution_full.x * params.camera_resolution_full.y;
     size_t buffer_size = total_pixels * params.num_bands_launch;
-    if (buffer_size > 0) {
-        zeroBuffer1D(radiation_in_camera_RTbuffer, buffer_size);
+    if (params.camera_id != current_camera_launch_id || params.num_bands_launch != current_launch_band_count) {
+        if (buffer_size > 0) {
+            zeroBuffer1D(radiation_in_camera_RTbuffer, buffer_size);
+        }
+        current_camera_launch_id = params.camera_id;
+        current_launch_band_count = params.num_bands_launch;
     }
 
     // Validate context to ensure acceleration structure is built and buffers are synchronized
